@@ -1,0 +1,38 @@
+name: Build CI
+
+on:
+  - pull_request
+  - push
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-24.04
+        coq_version:
+          - "9.0"
+        ocaml_version:
+          - "4.14-flambda"
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Compiling Code
+        uses: coq-community/docker-coq-action@v1
+        with:
+          opam_file: 'rocq-crane.opam'
+          coq_version: ${{ matrix.coq_version }}
+          ocaml_version: ${{ matrix.ocaml_version }}
+          before_install: |
+            startGroup "Print opam config"
+              opam config list; opam repo list; opam list
+            endGroup
+          custom_script: |
+            startGroup "Build project"
+              opam exec -- dune build -p rocq-crane && dune install
+            endGroup
