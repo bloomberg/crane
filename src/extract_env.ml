@@ -283,7 +283,9 @@ and extract_msignature_spec env mp1 reso = function
 and extract_mbody_spec : 'a. _ -> _ -> 'a generic_module_body -> _ =
   fun env mp mb -> match mb.mod_type_alg with
   | Some ty -> extract_mexpression_spec env mp (mb.mod_type,ty)
-  | None -> extract_msignature_spec env mp mb.mod_delta mb.mod_type
+  | None ->
+      (* Fall back to expanding the signature *)
+      extract_msignature_spec env mp mb.mod_delta mb.mod_type
 
 (* From a [structure_body] (i.e. a list of [structure_field_body])
    to implementations.
@@ -413,6 +415,47 @@ and extract_module access env mp ~all mb =
     | FullStruct ->
       assert (Option.is_empty mb.mod_type_alg);
       mtyp_of_mexpr impl
+    | Algebraic fae when Option.is_empty mb.mod_type_alg ->
+      (* For module applications without explicit type, try to infer from functor *)
+      let inferred_alg_type =
+        match fae with
+        | MENoFunctor me ->
+            (match me with
+            | MEapply (func, _) ->
+                (* Handle both simple (MEident) and nested (MEapply) functor applications *)
+                let rec get_base_functor = function
+                  | MEident mp -> Some mp
+                  | MEapply (f, _) -> get_base_functor f
+                  | _ -> None
+                in
+                (match get_base_functor func with
+                | Some func_mp ->
+                    (try
+                      let func_mb = Global.lookup_module func_mp in
+                      (* Extract the return type from the functor signature *)
+                      let rec get_functor_return_type = function
+                        | MEMoreFunctor fae -> get_functor_return_type fae
+                        | MENoFunctor me ->
+                            (* For MEwith, extract just the base module type *)
+                            let rec extract_base_from_with = function
+                              | MEwith (me', _) -> extract_base_from_with me'
+                              | base -> base
+                            in
+                            Some (MENoFunctor (extract_base_from_with me))
+                      in
+                      (match func_mb.mod_type_alg with
+                      | Some alg -> get_functor_return_type alg
+                      | None -> None)
+                    with _ -> None)
+                | None -> None)
+            | _ -> None)
+        | MEMoreFunctor _ -> None
+      in
+      (match inferred_alg_type with
+      | Some alg_ty ->
+          extract_mexpression_spec env mp (mb.mod_type, alg_ty)
+      | None ->
+          extract_mbody_spec env mp mb)
     | _ -> extract_mbody_spec env mp mb
   in
   { ml_mod_expr = impl;

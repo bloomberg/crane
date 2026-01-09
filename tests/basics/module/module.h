@@ -50,7 +50,7 @@ concept Map = requires {
   typename M::key;
   typename M::value;
   typename M::t;
-  typename M::empty;
+  requires std::same_as<std::remove_cvref_t<decltype(M::empty)>, typename M::t>;
   {
     M::add(std::declval<typename M::key>(), std::declval<typename M::value>(),
            std::declval<typename M::t>())
@@ -97,6 +97,7 @@ template <OrderedType K, BaseType V> struct MakeMap {
 struct NatBase {
   using t = unsigned int;
 };
+static_assert(BaseType<NatBase>);
 
 struct NatOrdered {
   using t = unsigned int;
@@ -104,8 +105,10 @@ struct NatOrdered {
   static std::shared_ptr<typename Comparison::comparison>
   compare(const unsigned int, const unsigned int);
 };
+static_assert(OrderedType<NatOrdered>);
 
 using NatMap = MakeMap<NatOrdered, NatBase>;
+static_assert(Map<NatMap>);
 
 const NatMap::t mymap = NatMap::add(
     (0 + 1), ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),

@@ -798,8 +798,35 @@ and pp_spec_as_requirement = function
       in
       let (args, ret_ty) = get_function_parts t in
       if args = [] then
-        (* For non-function values, require typename *)
-        str "typename M::" ++ name ++ str ";" ++ fnl ()
+        (* For non-function values, generate a requires expression to check the value exists *)
+        let cpp_ret = convert_ml_type_to_cpp_type (empty_env ()) [] [] ret_ty in
+        (* Helper to qualify type names with M:: *)
+        let rec qualify_type = function
+          | Tglob (r, [], _) when not (is_custom r) ->
+              (* Simple type reference - qualify with M:: *)
+              str "typename M::" ++ pp_global Type r
+          | Tglob (r, args, _) when not (is_custom r) ->
+              (* Parametric type - don't qualify the constructor, but qualify type arguments *)
+              pp_global Type r ++ str "<" ++ prlist_with_sep (fun () -> str ", ") qualify_type args ++ str ">"
+          | Tglob (r, args, _) when is_custom r ->
+              (* Custom type - for std types like option, manually construct with qualified args *)
+              let custom_str = find_custom r in
+              if String.contains custom_str '%' then
+                (match args with
+                | [arg] when custom_str = "std::optional<%t0>" ->
+                    str "std::optional<" ++ qualify_type arg ++ str ">"
+                | _ -> pp_cpp_type false [] (Tglob (r, args, [])))
+              else
+                str custom_str
+          | Tshared_ptr ty ->
+              str "std::shared_ptr<" ++ qualify_type ty ++ str ">"
+          | Tvariant tys ->
+              str "std::variant<" ++ prlist_with_sep (fun () -> str ", ") qualify_type tys ++ str ">"
+          | Tnamespace (r, ty) ->
+              pp_cpp_type false [] (Tnamespace (r, ty))
+          | ty -> pp_cpp_type false [] ty
+        in
+        str "requires std::same_as<std::remove_cvref_t<decltype(M::" ++ name ++ str ")>, " ++ qualify_type cpp_ret ++ str ">;" ++ fnl ()
       else
         (* For functions, generate requires expression with parameters and return type *)
         let cpp_args = List.map (convert_ml_type_to_cpp_type (empty_env ()) [] []) args in
@@ -935,12 +962,16 @@ let rec pp_structure_elem ~is_header f = function
              let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
              let using_decl = str "using " ++ name ++ str " = " ++ body ++ str ";" in
              (* Add static_assert for functor applications with known return types *)
-             let static_assert = match m.ml_mod_type with
-             | MTident kn ->
-                 (* Functor returns a module of this type *)
-                 let concept_name = pp_modname kn in
+             let rec get_concept_name = function
+               | MTident kn -> Some (pp_modname kn)
+               | MTwith(mt, _) -> get_concept_name mt
+               | MTfunsig (_, mt, mt') -> get_concept_name mt'
+               | MTsig _ -> None
+             in
+             let static_assert = match get_concept_name m.ml_mod_type with
+             | Some concept_name ->
                  fnl () ++ str "static_assert(" ++ concept_name ++ str "<" ++ name ++ str ">);"
-             | _ -> mt ()
+             | None -> mt ()
              in
              using_decl ++ static_assert
          | MEstruct _ | MEident _ ->
@@ -955,14 +986,17 @@ let rec pp_structure_elem ~is_header f = function
                body ++
                str "};" in
              (* For modules with type annotations, add static_assert *)
-             (* Check if module has a type by looking at ml_mod_type *)
-             let static_assert = match m.ml_mod_type with
-             | MTsig _ -> mt ()  (* No simple type annotation *)
-             | MTident kn ->
-                 (* Module implements a module type - add static_assert *)
-                 let concept_name = pp_modname kn in
+             (* Debug: always try to extract concept name and print if found *)
+             let rec get_concept_name = function
+               | MTident kn -> Some (pp_modname kn)
+               | MTwith(mt, _) -> get_concept_name mt  (* Extract base from 'with' clauses *)
+               | MTfunsig (_, mt, mt') -> get_concept_name mt'  (* Extract return type from functor sig *)
+               | MTsig _ -> None  (* Anonymous signature, no concept *)
+             in
+             let static_assert = match get_concept_name m.ml_mod_type with
+             | Some concept_name ->
                  fnl () ++ str "static_assert(" ++ concept_name ++ str "<" ++ name ++ str ">);"
-             | _ -> mt ()
+             | None -> mt ()
              in
              struct_def ++ static_assert
         )
