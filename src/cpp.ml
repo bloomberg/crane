@@ -826,7 +826,12 @@ and pp_spec_as_requirement = function
               pp_cpp_type false [] (Tnamespace (r, ty))
           | ty -> pp_cpp_type false [] ty
         in
-        str "requires std::same_as<std::remove_cvref_t<decltype(M::" ++ name ++ str ")>, " ++ qualify_type cpp_ret ++ str ">;" ++ fnl ()
+        let (same_as, remove_cvref) =
+          if Table.std_lib () = "BDE"
+          then ("same_as", "bsl::remove_cvref_t")
+          else ("std::same_as", "std::remove_cvref_t")
+        in
+        str "requires " ++ str same_as ++ str "<" ++ str remove_cvref ++ str "<decltype(M::" ++ name ++ str ")>, " ++ qualify_type cpp_ret ++ str ">;" ++ fnl ()
       else
         (* For functions, generate requires expression with parameters and return type *)
         let cpp_args = List.map (convert_ml_type_to_cpp_type (empty_env ()) [] []) args in
@@ -868,11 +873,16 @@ and pp_spec_as_requirement = function
           | ty -> pp_cpp_type false [] ty
         in
         (* Generate: { M::name(std::declval<arg1>(), ...) } -> std::same_as<ret_ty>; *)
+        let (same_as, declval) =
+          if Table.std_lib () = "BDE"
+          then ("same_as", "bsl::declval")
+          else ("std::same_as", "std::declval")
+        in
         let declvals = List.map (fun arg_ty ->
-          str "std::declval<" ++ qualify_type arg_ty ++ str ">()"
+          str declval ++ str "<" ++ qualify_type arg_ty ++ str ">()"
         ) cpp_args in
         let call_expr = str "M::" ++ name ++ str "(" ++ prlist_with_sep (fun () -> str ", ") identity declvals ++ str ")" in
-        str "{ " ++ call_expr ++ str " } -> std::same_as<" ++ qualify_type cpp_ret ++ str ">;" ++ fnl ()
+        str "{ " ++ call_expr ++ str " } -> " ++ str same_as ++ str "<" ++ qualify_type cpp_ret ++ str ">;" ++ fnl ()
   | Stype (r,vl,ot) ->
       (* Generate requires clause for a type *)
       let name = pp_global_name Type r in

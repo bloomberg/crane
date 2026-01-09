@@ -15,6 +15,9 @@ using namespace BloombergLP;
 template <class From, class To>
 concept convertible_to = bsl::is_convertible<From, To>::value;
 
+template <class T, class U>
+concept same_as = bsl::is_same<T, U>::value && bsl::is_same<U, T>::value;
+
 template <class F, class R, class... Args>
 concept MapsTo = requires(F& f, Args&... a) {
     {

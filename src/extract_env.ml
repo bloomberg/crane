@@ -510,7 +510,7 @@ let spec_header () =
   let h = List.fold_left (fun p s -> p ++ mk_include s ++ fnl ()) (str "") (himports @ imps) in
   (* let fun_concept = "template <typename F, typename Out, typename... In>\nconcept MapsTo = requires (const F &f, const In&... args) {\n{ f(args...) } -> std::same_as<Out>;\n};" in *)
   let fun_concept = if Table.std_lib () = "BDE"
- then "template <class From, class To>\nconcept convertible_to = bsl::is_convertible<From, To>::value;\n\ntemplate <class F, class R, class... Args>\nconcept MapsTo =\n requires (F& f, Args&... a) {\n { bsl::invoke(static_cast<F&>(f), static_cast<Args&>(a)...) }\n -> convertible_to<R>;\n };"
+ then "template <class From, class To>\nconcept convertible_to = bsl::is_convertible<From, To>::value;\n\ntemplate <class T, class U>\nconcept same_as = bsl::is_same<T, U>::value && bsl::is_same<U, T>::value;\n\ntemplate <class F, class R, class... Args>\nconcept MapsTo =\n requires (F& f, Args&... a) {\n { bsl::invoke(static_cast<F&>(f), static_cast<Args&>(a)...) }\n -> convertible_to<R>;\n };"
     else  "template <typename F, typename R, typename... Args>\nconcept MapsTo = std::is_invocable_r_v<R, F&, Args&...>;" in
   if Table.std_lib () = "BDE" then h ++ fnl2() ++ str "using namespace BloombergLP;" ++ fnl2 () ++ str fun_concept ++ fnl2()
   else h ++ fnl2 () ++ str fun_concept ++ fnl2() ++ str "template<class... Ts> struct Overloaded : Ts... { using Ts::operator()...; };\ntemplate<class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;" ++ fnl2 ()
