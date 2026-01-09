@@ -16,29 +16,28 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-namespace Vec {
-const std::array<int, int> test1 = []() -> std::array<int, 5> {
-  std::array<int, 5> _arr;
-  _arr.fill(12);
-  return _arr;
-}();
+struct Vec {
+  static inline const std::array<int, int> test1 = []() -> std::array<int, 5> {
+    std::array<int, 5> _arr;
+    _arr.fill(12);
+    return _arr;
+  }();
 
-const int test2 = test1.size();
+  static inline const int test2 = test1.size();
 
-const std::optional<int> test3 = []() -> std::optional<int> {
-  if (3 < 5) {
-    return std::make_optional<int>(test1[3]);
-  } else {
-    return std::nullopt;
-  }
-}();
+  static inline const std::optional<int> test3 = []() -> std::optional<int> {
+    if (3 < 5) {
+      return std::make_optional<int>(test1[3]);
+    } else {
+      return std::nullopt;
+    }
+  }();
 
-const std::array<int, int> test4 = []() -> std::array<int, 5> {
-  std::array<int, 5> _arr = test1;
-  if (2 < 5) {
-    _arr[2] = 14;
-  }
-  return _arr;
-}();
-
-}; // namespace Vec
+  static inline const std::array<int, int> test4 = []() -> std::array<int, 5> {
+    std::array<int, 5> _arr = test1;
+    if (2 < 5) {
+      _arr[2] = 14;
+    }
+    return _arr;
+  }();
+};

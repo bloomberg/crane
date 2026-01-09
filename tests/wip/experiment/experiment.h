@@ -16,13 +16,12 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-namespace TestITree {
-void test1();
+struct TestITree {
+  static void test1();
 
-void test3(const std::string s);
+  static void test3(const std::string s);
 
-std::string test4();
+  static std::string test4();
 
-void test5();
-
-}; // namespace TestITree
+  static void test5();
+};

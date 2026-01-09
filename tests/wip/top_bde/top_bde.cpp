@@ -14,18 +14,15 @@
 namespace BloombergLP {
 
 }
-namespace list {
-
-};
-
-bsl::shared_ptr<list::list<unsigned int> > seq(const unsigned int start,
-                                               const unsigned int len)
+bsl::shared_ptr<typename List::list<unsigned int> > seq(
+                                                      const unsigned int start,
+                                                      const unsigned int len)
 {
     if (len <= 0) {
-        return list::nil<unsigned int>::make();
+        return List::nil<unsigned int>::make();
     }
     else {
         unsigned int len0 = len - 1;
-        return list::cons<unsigned int>::make(start, seq((start + 1), len0));
+        return List::cons<unsigned int>::make(start, seq((start + 1), len0));
     }
 }

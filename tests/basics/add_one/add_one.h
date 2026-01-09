@@ -12,17 +12,17 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-namespace nat {
-struct O;
-struct S;
-using nat = std::variant<O, S>;
-struct O {
-  static std::shared_ptr<nat> make();
+struct Nat {
+  struct O;
+  struct S;
+  using nat = std::variant<O, S>;
+  struct O {
+    static std::shared_ptr<nat> make();
+  };
+  struct S {
+    std::shared_ptr<nat> _a0;
+    static std::shared_ptr<nat> make(std::shared_ptr<nat> _a0);
+  };
 };
-struct S {
-  std::shared_ptr<nat> _a0;
-  static std::shared_ptr<nat> make(std::shared_ptr<nat> _a0);
-};
-}; // namespace nat
 
-const std::shared_ptr<nat::nat> one = nat::S::make(nat::O::make());
+const std::shared_ptr<typename Nat::nat> one = nat::S::make(nat::O::make());

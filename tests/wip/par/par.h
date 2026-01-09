@@ -16,13 +16,12 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-namespace partest {
-unsigned int ack(const std::pair<unsigned int, unsigned int> p);
+struct partest {
+  static unsigned int ack(const std::pair<unsigned int, unsigned int> p);
 
-std::pair<unsigned int, unsigned int> fast(const unsigned int m,
-                                           const unsigned int n);
+  static std::pair<unsigned int, unsigned int> fast(const unsigned int m,
+                                                    const unsigned int n);
 
-std::pair<unsigned int, unsigned int> slow(const unsigned int m,
-                                           const unsigned int n);
-
-}; // namespace partest
+  static std::pair<unsigned int, unsigned int> slow(const unsigned int m,
+                                                    const unsigned int n);
+};

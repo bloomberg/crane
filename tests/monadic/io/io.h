@@ -15,23 +15,22 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-namespace unit {
-struct tt;
-using unit = std::variant<tt>;
-struct tt {
-  static std::shared_ptr<unit> make();
+struct Unit {
+  struct tt;
+  using unit = std::variant<tt>;
+  struct tt {
+    static std::shared_ptr<unit> make();
+  };
 };
-}; // namespace unit
 
-namespace iotest {
-void test1(const std::string _x);
+struct iotest {
+  static void test1(const std::string _x);
 
-std::shared_ptr<unit::unit> test2(const std::string s);
+  static std::shared_ptr<typename Unit::unit> test2(const std::string s);
 
-void test3(const std::string s);
+  static void test3(const std::string s);
 
-std::string test4();
+  static std::string test4();
 
-void test5();
-
-}; // namespace iotest
+  static void test5();
+};

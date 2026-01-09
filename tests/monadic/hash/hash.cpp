@@ -10,16 +10,3 @@
 #include <utility>
 #include <variant>
 #include <vector>
-
-namespace list {};
-
-namespace CHT {
-int max(const int a, const int b) {
-  if (a < b) {
-    return b;
-  } else {
-    return a;
-  }
-}
-
-}; // namespace CHT

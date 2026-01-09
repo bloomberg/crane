@@ -4,5 +4,3 @@
 #include <rev.h>
 #include <string>
 #include <variant>
-
-namespace list {};

@@ -8,10 +8,6 @@
 #include <utility>
 #include <variant>
 
-namespace list {};
-
-namespace sig0 {};
-
 bool le_lt_dec(const unsigned int n, const unsigned int m) {
   if (n <= 0) {
     return true;
@@ -30,40 +26,44 @@ bool le_lt_dec(const unsigned int n, const unsigned int m) {
   }
 }
 
-std::shared_ptr<list::list<unsigned int>>
-merge(const std::shared_ptr<list::list<unsigned int>> l1,
-      const std::shared_ptr<list::list<unsigned int>> l2) {
-  std::function<std::shared_ptr<list::list<unsigned int>>(
-      std::shared_ptr<list::list<unsigned int>>)>
+std::shared_ptr<typename List::list<unsigned int>>
+merge(const std::shared_ptr<typename List::list<unsigned int>> l1,
+      const std::shared_ptr<typename List::list<unsigned int>> l2) {
+  std::function<std::shared_ptr<typename List::list<unsigned int>>(
+      std::shared_ptr<typename List::list<unsigned int>>)>
       merge_aux;
-  merge_aux = [&](std::shared_ptr<list::list<unsigned int>> l3)
-      -> std::shared_ptr<list::list<unsigned int>> {
+  merge_aux = [&](std::shared_ptr<typename List::list<unsigned int>> l3)
+      -> std::shared_ptr<typename List::list<unsigned int>> {
     return std::visit(
         Overloaded{
-            [&](const list::nil<unsigned int> _args)
-                -> std::shared_ptr<list::list<unsigned int>> { return l3; },
-            [&](const list::cons<unsigned int> _args)
-                -> std::shared_ptr<list::list<unsigned int>> {
+            [&](const typename List::nil<unsigned int> _args)
+                -> std::shared_ptr<typename List::list<unsigned int>> {
+              return l3;
+            },
+            [&](const typename List::cons<unsigned int> _args)
+                -> std::shared_ptr<typename List::list<unsigned int>> {
               unsigned int a1 = _args._a0;
-              std::shared_ptr<list::list<unsigned int>> l1_ = _args._a1;
+              std::shared_ptr<typename List::list<unsigned int>> l1_ =
+                  _args._a1;
               return std::visit(
-                  Overloaded{[&](const list::nil<unsigned int> _args)
-                                 -> std::shared_ptr<list::list<unsigned int>> {
-                               return l1;
-                             },
-                             [&](const list::cons<unsigned int> _args)
-                                 -> std::shared_ptr<list::list<unsigned int>> {
-                               unsigned int a2 = _args._a0;
-                               std::shared_ptr<list::list<unsigned int>> l2_ =
-                                   _args._a1;
-                               if (le_lt_dec(a1, a2)) {
-                                 return list::cons<unsigned int>::make(
-                                     a1, merge(l1_, l3));
-                               } else {
-                                 return list::cons<unsigned int>::make(
-                                     a2, merge_aux(l2_));
-                               }
-                             }},
+                  Overloaded{
+                      [&](const typename List::nil<unsigned int> _args)
+                          -> std::shared_ptr<
+                              typename List::list<unsigned int>> { return l1; },
+                      [&](const typename List::cons<unsigned int> _args)
+                          -> std::shared_ptr<
+                              typename List::list<unsigned int>> {
+                        unsigned int a2 = _args._a0;
+                        std::shared_ptr<typename List::list<unsigned int>> l2_ =
+                            _args._a1;
+                        if (le_lt_dec(a1, a2)) {
+                          return List::cons<unsigned int>::make(a1,
+                                                                merge(l1_, l3));
+                        } else {
+                          return List::cons<unsigned int>::make(a2,
+                                                                merge_aux(l2_));
+                        }
+                      }},
                   *l3);
             }},
         *l1);
@@ -71,21 +71,23 @@ merge(const std::shared_ptr<list::list<unsigned int>> l1,
   return merge_aux(l2);
 }
 
-std::shared_ptr<sig0::sig0<std::shared_ptr<list::list<unsigned int>>>>
-merge_prog(const std::shared_ptr<list::list<unsigned int>> _x,
-           const std::shared_ptr<list::list<unsigned int>> _x0,
-           const std::shared_ptr<list::list<unsigned int>> _x1) {
+std::shared_ptr<
+    typename Sig0::sig0<std::shared_ptr<typename List::list<unsigned int>>>>
+merge_prog(const std::shared_ptr<typename List::list<unsigned int>> _x,
+           const std::shared_ptr<typename List::list<unsigned int>> _x0,
+           const std::shared_ptr<typename List::list<unsigned int>> _x1) {
   return merge(_x0, _x1);
 }
 
-std::shared_ptr<sig0::sig0<std::shared_ptr<list::list<unsigned int>>>>
-msort(const std::shared_ptr<list::list<unsigned int>> _x0) {
-  return [&](const std::shared_ptr<list::list<T1>> _x0) {
+std::shared_ptr<
+    typename Sig0::sig0<std::shared_ptr<typename List::list<unsigned int>>>>
+msort(const std::shared_ptr<typename List::list<unsigned int>> _x0) {
+  return [&](const std::shared_ptr<typename List::list<T1>> _x0) {
     return div_conq_split<unsigned int>(
-        list::nil<unsigned int>::make(),
+        List::nil<unsigned int>::make(),
         [&](unsigned int a) {
-          return list::cons<unsigned int>::make(
-              a, list::nil<unsigned int>::make());
+          return List::cons<unsigned int>::make(
+              a, List::nil<unsigned int>::make());
         },
         merge_prog, _x0);
   }(_x0);

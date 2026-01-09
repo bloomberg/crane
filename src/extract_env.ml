@@ -957,12 +957,10 @@ let extract_and_compile ~opaque_access file l =
   let extraction_ok =
     try full_extraction ~opaque_access (Some filename) l; true
     with exn ->
-      ignore (if !Flags.quiet
-        then CErrors.user_err
-               Pp.(pr_enum Libnames.pr_qualid l ++ spc () ++ str "failed to extract.")
-        else CErrors.user_err
+      ignore (CErrors.user_err
                Pp.(pr_enum Libnames.pr_qualid l ++ spc () ++ str "failed to extract:"
-                   ++ fnl () ++ str (Printexc.to_string exn)));
+                   ++ fnl () ++ str (Printexc.to_string exn)
+                   ++ fnl () ++ str (Printexc.get_backtrace ())));
       false
   in
   if extraction_ok then (
