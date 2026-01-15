@@ -10,8 +10,7 @@
 #include <utility>
 #include <variant>
 
-namespace threadtest {
-void fun1(const unsigned int n) {
+void threadtest::fun1(const unsigned int n) {
   if (n <= 0) {
     std::cout << "fun1 is done!!!" << '\n';
     return;
@@ -23,7 +22,7 @@ void fun1(const unsigned int n) {
   }
 }
 
-void fun2(const unsigned int n) {
+void threadtest::fun2(const unsigned int n) {
   if (n <= 0) {
     std::cout << "fun2 is done!!!" << '\n';
     return;
@@ -35,7 +34,7 @@ void fun2(const unsigned int n) {
   }
 }
 
-void test(const unsigned int m, const unsigned int n) {
+void threadtest::test(const unsigned int m, const unsigned int n) {
   std::thread t1 = std::thread(fun1, m);
   std::thread t2 = std::thread(fun2, n);
   t1.join();
@@ -43,6 +42,6 @@ void test(const unsigned int m, const unsigned int n) {
   return;
 }
 
-void test2(const unsigned int m, const unsigned int n) { return test(m, n); }
-
-}; // namespace threadtest
+void threadtest::test2(const unsigned int m, const unsigned int n) {
+  return test(m, n);
+}

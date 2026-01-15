@@ -13,43 +13,31 @@
 namespace BloombergLP {
 
 }
-namespace Nat {
-namespace nat {
-bsl::shared_ptr<nat> O::make()
-{
-    return bsl::make_shared<nat>(O{});
-}
-bsl::shared_ptr<nat> S::make(bsl::shared_ptr<nat> _a0)
-{
-    return bsl::make_shared<nat>(S{_a0});
-}
-};
-
-bsl::shared_ptr<nat::nat> add(const bsl::shared_ptr<nat::nat> m,
-                              const bsl::shared_ptr<nat::nat> n)
+bsl::shared_ptr<Nat::nat> Nat::add(const bsl::shared_ptr<Nat::nat>& m,
+                                   const bsl::shared_ptr<Nat::nat>& n)
 {
     return bsl::visit(
-        bdlf::Overloaded{[&](const nat::O _args) -> bsl::shared_ptr<nat::nat> {
-                             return n;
-                         },
-                         [&](const nat::S _args) -> bsl::shared_ptr<nat::nat> {
-                             bsl::shared_ptr<nat::nat> x = _args._a0;
-                             return nat::S::make(add(x, n));
-                         }},
-        *m);
+                  bdlf::Overloaded{[&](const typename Nat::nat::O _args)
+                                       -> bsl::shared_ptr<Nat::nat> {
+                                       return n;
+                                   },
+                                   [&](const typename Nat::nat::S _args)
+                                       -> bsl::shared_ptr<Nat::nat> {
+                                       bsl::shared_ptr<Nat::nat> x = _args._a0;
+                                       return nat::ctor::S_(x->add(n));
+                                   }},
+                  m->v());
 }
 
-int nat_to_int(const bsl::shared_ptr<nat::nat> n)
+int Nat::nat_to_int(const bsl::shared_ptr<Nat::nat>& n)
 {
     return bsl::visit(
-                 bdlf::Overloaded{[&](const nat::O _args) -> int {
-                                      return 0;
-                                  },
-                                  [&](const nat::S _args) -> int {
-                                      bsl::shared_ptr<nat::nat> n_ = _args._a0;
-                                      return 1 + nat_to_int(n_);
-                                  }},
-                 *n);
+                bdlf::Overloaded{[&](const typename Nat::nat::O _args) -> int {
+                                     return 0;
+                                 },
+                                 [&](const typename Nat::nat::S _args) -> int {
+                                     bsl::shared_ptr<Nat::nat> n_ = _args._a0;
+                                     return 1 + n_->nat_to_int();
+                                 }},
+                n->v());
 }
-
-};

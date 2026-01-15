@@ -5,8 +5,3 @@
 #include <memory>
 #include <string>
 #include <variant>
-
-namespace List {
-namespace list {};
-
-}; // namespace List

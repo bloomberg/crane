@@ -74,6 +74,59 @@ let sig_preamble _ comment used_modules usf =
 
 (*s The pretty-printer for C++ syntax*)
 
+(* Context tracking for code generation *)
+let in_struct_context = ref false
+(* Track current struct name for qualifying out-of-struct definitions *)
+let current_struct_name : Pp.t option ref = ref None
+(* Track whether we're inside a template struct (functor) *)
+let in_template_struct = ref false
+(* Track eponymous type info for method generation.
+   When a module M contains an inductive type m (lowercase of M),
+   functions taking shared_ptr<m> as first arg become methods on m. *)
+let eponymous_type_ref : GlobRef.t option ref = ref None
+(* Collected method candidates: (function_ref, body, type, this_position) for current eponymous type.
+   this_position is the index (0-based) of the first argument that matches the eponymous type. *)
+let method_candidates : (GlobRef.t * Miniml.ml_ast * Miniml.ml_type * int) list ref = ref []
+
+(* Global registry of methods across all modules.
+   Maps function GlobRef to (eponymous_type_ref, this_position).
+   This allows cross-module method call transformation. *)
+let global_method_registry : (GlobRef.t, GlobRef.t * int) Hashtbl.t = Hashtbl.create 100
+
+let register_method (func_ref : GlobRef.t) (epon_ref : GlobRef.t) (this_pos : int) =
+  Hashtbl.replace global_method_registry func_ref (epon_ref, this_pos)
+
+let is_registered_method (func_ref : GlobRef.t) : (GlobRef.t * int) option =
+  Hashtbl.find_opt global_method_registry func_ref
+
+(* Track current structure's declarations for finding methods from sibling modules.
+   When processing a module like List inside tree.v, we need to also scan
+   sibling declarations (like app) that are from the same Rocq module. *)
+let current_structure_decls : (Label.t * Miniml.ml_structure_elem) list ref = ref []
+
+(* Reset ALL global state - must be called between extractions to avoid pollution.
+   This prevents state from one extraction affecting another when running multiple
+   extractions in the same process (e.g., during 'dune build'). *)
+let reset_cpp_state () =
+  in_struct_context := false;
+  current_struct_name := None;
+  in_template_struct := false;
+  eponymous_type_ref := None;
+  method_candidates := [];
+  current_structure_decls := [];
+  Hashtbl.clear global_method_registry
+
+(* Extract element at position [pos] from a list, returning (element_opt, remaining_list).
+   Used to extract the 'this' argument from function call arguments for method transformation. *)
+let extract_at_position pos lst =
+  let rec aux i acc = function
+    | [] -> (None, List.rev acc)
+    | x :: rest ->
+      if i = pos then (Some x, List.rev acc @ rest)
+      else aux (i + 1) (x :: acc) rest
+  in
+  aux 0 [] lst
+
 (* Beware of the side-effects of [pp_global] and [pp_modname].
    They are used to update table of content for modules. Many [let]
    below should not be altered since they force evaluation order.
@@ -153,6 +206,31 @@ let pp_field r fields i = pp_one_field r i (List.nth fields i)
 
 let pp_fields r fields = List.map_i (pp_one_field r) 0 fields
 
+(* Helper functions to reduce duplication *)
+
+(* Check if a type name is already qualified (contains ::) *)
+let is_qualified_name name_str = String.contains name_str ':'
+
+(* Add typename prefix for dependent types in template contexts *)
+let typename_prefix_for name_str =
+  if !in_template_struct && is_qualified_name name_str then
+    str "typename "
+  else
+    mt ()
+
+(* Add struct qualification prefix if needed *)
+let struct_qualifier_for r name_str =
+  match !current_struct_name with
+  | Some struct_name when not (is_qualified_name name_str) ->
+    let full_path = Pp.string_of_ppcmds (GlobRef.print r) in
+    let struct_name_str = Pp.string_of_ppcmds struct_name in
+    (* Only qualify if the type belongs to the current struct *)
+    let contains =
+      try let _ = Str.search_forward (Str.regexp_string struct_name_str) full_path 0 in true
+      with Not_found -> false
+    in
+    if contains then struct_name ++ str "::" else mt ()
+  | _ -> mt ()
 
 (* pretty printing c++ syntax *)
 let try_cpp c o =
@@ -280,6 +358,11 @@ let rec pp_cpp_type par vl t =
   let rec pp_rec par = function
     | Tvar (i, None) -> print_cpp_type_var vl i
     | Tvar (_, Some id) -> Id.print id
+    (* NEW: Tid for local type references (e.g., nested structs inside modules).
+       These don't need GlobRef qualification, just simple Id references.
+       Can be parameterized like generic types: Leaf<int> *)
+    | Tid (id, []) -> Id.print id
+    | Tid (id, args) -> Id.print id ++ str "<" ++ pp_list (pp_rec false) args ++ str ">"
     | Tglob (r,tys, args) when is_inline_custom r ->
     let s = find_custom r in
     let cmds = parse_numbered_args "a" (fun i -> CCarg i) s in
@@ -288,19 +371,81 @@ let rec pp_cpp_type par vl t =
                       | CCstring s -> prev @ (parse_numbered_args "t" (fun i -> CCty_arg i) s)
                       | _ -> prev @ [curr]) [] cmds in
     pp_custom (Pp.string_of_ppcmds (GlobRef.print r) ^ " := " ^ s) (empty_env ()) None None tys [] args vl cmds
-    | Tglob (r,[],_) -> pp_global Type r
+    | Tglob (r,[],_) ->
+      let name_str = Pp.string_of_ppcmds (pp_global Type r) in
+      typename_prefix_for name_str ++ struct_qualifier_for r name_str ++ pp_global Type r
     | Tglob (r,l,_) ->
-          pp_global Type r ++ str "<" ++ pp_list (pp_rec false) l ++ str ">"
+      let name_str = Pp.string_of_ppcmds (pp_global Type r) in
+      typename_prefix_for name_str ++ struct_qualifier_for r name_str ++
+      pp_global Type r ++ str "<" ++ pp_list (pp_rec false) l ++ str ">"
     | Tfun (d,c) -> std_angle "function" (pp_rec false c ++ pp_par true (pp_list (pp_rec false) d))
     | Tstruct (id, args) ->
+      let id_str = Pp.string_of_ppcmds (pp_global Type id) in
       let templates =
         (match args with
         | [] -> mt ()
         | args -> str "<" ++ pp_list (pp_rec false) args ++ str ">") in
-      pp_global Type id ++ templates
+      typename_prefix_for id_str ++ pp_global Type id ++ templates
     | Tref t -> pp_rec false t ++ str "&"
     | Tmod (m, t) -> pp_tymod m ++ pp_rec false t
-    | Tnamespace (r,t) -> pp_global Type r ++ str "::" ++ pp_rec false t
+    | Tnamespace (r,t) ->
+        (* DESIGN: Namespace-qualified types for inductive types.
+           Rocq has separate inductive types (lowercase) that live inside wrapper structs (capitalized).
+           Example: type 'list' is wrapped in struct 'List' to avoid name collisions.
+
+           Rationale: When inductives become nested structs inside modules, local inductives
+           don't need Tnamespace wrapping. Non-local inductives get the namespace prefix. *)
+        let is_local_ind = List.exists (Environ.QGlobRef.equal Environ.empty_env r) (get_local_inductives ()) in
+        let name = match r with
+          | GlobRef.IndRef _ when is_local_ind ->
+            (* Local inductive: use lowercase name directly *)
+            pp_global Type r
+          | GlobRef.IndRef _ ->
+            (* Non-local inductive: capitalize the namespace struct name *)
+            str (String.capitalize_ascii (str_global Type r))
+          | _ -> pp_global Type r
+        in
+        (* Check if inner type is Tglob with the same reference *)
+        (match (r, t) with
+         | GlobRef.IndRef (kn, _), Tglob (r', args, _) when Environ.QGlobRef.equal Environ.empty_env r r' ->
+           let templates = match args with
+             | [] -> mt ()
+             | args -> str "<" ++ pp_list (pp_rec false) args ++ str ">"
+           in
+           (* Check if the type name already contains "::" (meaning it's a module-nested type)
+              If so, pp_global already includes the path and we shouldn't add a prefix *)
+           let type_name_str = str_global Type r' in
+           let has_module_path = String.contains type_name_str ':' in
+           if has_module_path then
+             (* Module-nested type: path already in name, just print with templates *)
+             str type_name_str ++ templates
+           else
+             (* Top-level type: add capitalized namespace prefix (e.g., List::list for non-local inductives) *)
+             name ++ str "::" ++ str type_name_str ++ templates
+         | _ ->
+           (* Fallback: generic namespace-qualified type *)
+           str "typename " ++ name ++ str "::" ++ pp_rec false t)
+    | Tqualified (base_ty, nested_id) ->
+        (* DESIGN: Template-dependent type access like 'typename M::Key::t'
+           Used when accessing nested types from module type parameters in templates.
+
+           Rationale: In C++ templates, accessing a nested type from a dependent base type
+           (a template parameter) requires the 'typename' keyword to disambiguate from
+           static members. This is critical for expressing "the key type of module M". *)
+        let base_str = match base_ty with
+          | Tglob (r, _, _) ->
+            let is_local_ind = List.exists (Environ.QGlobRef.equal Environ.empty_env r) (get_local_inductives ()) in
+            (match r with
+             | GlobRef.IndRef _ when is_local_ind ->
+               (* Local inductive: just use the type directly *)
+               pp_rec false base_ty
+             | GlobRef.IndRef _ ->
+               (* Capitalize and add namespace prefix: List::list<T> *)
+               str (String.capitalize_ascii (str_global Type r)) ++ str "::" ++ pp_rec false base_ty
+             | _ -> pp_rec false base_ty)
+          | _ -> pp_rec false base_ty
+        in
+        str "typename " ++ base_str ++ str "::" ++ Id.print nested_id
     | Tvariant tys -> std_angle "variant" (pp_list (pp_rec false) tys)
     | Tshared_ptr t ->
         if Table.std_lib () = "BDE"
@@ -327,12 +472,70 @@ and pp_cpp_expr env args t =
     let cmds = parse_numbered_args "t" (fun i -> CCty_arg i) custom in
     pp_custom (Pp.string_of_ppcmds (GlobRef.print x) ^ " := " ^ custom) env None None tys [] [] [] cmds
   | CPPglob (x, tys) ->
+    (* For inductive types, add the capitalized namespace prefix - unless it's local *)
+    let is_local_ind = List.exists (Environ.QGlobRef.equal Environ.empty_env x) (get_local_inductives ()) in
+    let base_name = match x with
+      | GlobRef.IndRef _ when is_local_ind ->
+        (* Local inductive: just use the lowercase name directly *)
+        pp_global Term x
+      | GlobRef.IndRef (kn, _) ->
+        (* Non-local inductive: check if the name already contains a module path *)
+        let type_name_str = str_global Type x in
+        let has_module_path = String.contains type_name_str ':' in
+        if has_module_path then
+          (* Module-nested type: path already in name, don't duplicate *)
+          pp_global Term x
+        else
+          (* Top-level type: add capitalized namespace prefix (e.g., List::list) *)
+          str (String.capitalize_ascii type_name_str) ++ str "::" ++ pp_global Term x
+      | GlobRef.VarRef _ ->
+        (* VarRef is a local variable reference - never add :: prefix *)
+        pp_global Term x
+      | _ ->
+        (* When generating out-of-struct member function definitions (current_struct_name is set),
+           qualify unqualified global function calls with :: to avoid name collisions.
+           But only if the function is NOT a member of the current struct.
+           Example: NatOrdered::compare calling global ::compare instead of recursing.
+           But Ack::ack calling ack (recursive) should NOT be qualified. *)
+        let name_str = str_global Term x in
+        let needs_global_qualifier = match !current_struct_name with
+          | Some struct_name when not (is_qualified_name name_str) ->
+            (* Check if the function's full path contains the current struct name.
+               If it does, it's a member of the current struct and shouldn't be qualified.
+               Use GlobRef.print to get the full path. *)
+            let full_path = Pp.string_of_ppcmds (GlobRef.print x) in
+            let struct_name_str = Pp.string_of_ppcmds struct_name in
+            (* Function is from different module if its path doesn't contain struct name *)
+            let contains =
+              try let _ = Str.search_forward (Str.regexp_string struct_name_str) full_path 0 in true
+              with Not_found -> false
+            in
+            not contains
+          | _ -> false
+        in
+        if needs_global_qualifier then
+          str "::" ++ pp_global Term x
+        else
+          pp_global Term x
+    in
     (match tys with
-    | [] -> apply (pp_global Term x)
+    | [] -> apply base_name
     | _ ->
       let ty_args = pp_list (pp_cpp_type false []) tys in
-      apply (pp_global Term x) ++ str "<" ++ ty_args ++ str ">")
-  | CPPnamespace (r, t) -> h (pp_global Type r ++ str "::" ++ pp_cpp_expr env args t)
+      apply base_name ++ str "<" ++ ty_args ++ str ">")
+  | CPPnamespace (r, t) ->
+      (* Capitalize inductive references - unless they're local *)
+      let is_local_ind = List.exists (Environ.QGlobRef.equal Environ.empty_env r) (get_local_inductives ()) in
+      let name = match r with
+        | GlobRef.IndRef _ when is_local_ind ->
+          (* Local inductive: use lowercase name *)
+          pp_global Type r
+        | GlobRef.IndRef _ ->
+          (* Non-local inductive: capitalize *)
+          str (String.capitalize_ascii (str_global Type r))
+        | _ -> pp_global Type r
+      in
+      h (name ++ str "::" ++ pp_cpp_expr env args t)
   | CPPfun_call (CPPglob (n,tys), ts) when is_inline_custom n ->
     let s = find_custom n in
     let cmds = parse_numbered_args "a" (fun i -> CCarg i) s in
@@ -341,6 +544,39 @@ and pp_cpp_expr env args t =
                       | CCstring s -> prev @ (parse_numbered_args "t" (fun i -> CCty_arg i) s)
                       | _ -> prev @ [curr]) [] cmds in
     pp_custom (Pp.string_of_ppcmds (GlobRef.print n) ^ " := " ^ s) env None None tys [] (List.rev ts) [] cmds
+  | CPPfun_call (CPPglob (n, _tys), ts) when List.exists (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env n r') !method_candidates ->
+    (* Transform function call to method call: f(a0, a1, a2, ...) -> aN->f(a0, ..., aN-1, aN+1, ...)
+       where N is the this_position. The args in ts are in reverse order. *)
+    let method_name = Id.of_string (Common.pp_global_name Term n) in
+    let this_pos = List.find_map (fun (r', _, _, pos) ->
+      if Environ.QGlobRef.equal Environ.empty_env n r' then Some pos else None
+    ) !method_candidates in
+    let this_pos = match this_pos with Some p -> p | None -> 0 in
+    let args_normal = List.rev ts in  (* Convert to normal order *)
+    let (this_arg_opt, other_args) = extract_at_position this_pos args_normal in
+    (match this_arg_opt with
+     | Some this_arg ->
+       let obj_s = pp_cpp_expr env args this_arg in
+       let args_s = pp_list (pp_cpp_expr env args) other_args in
+       obj_s ++ str "->" ++ Id.print method_name ++ str "(" ++ args_s ++ str ")"
+     | None ->
+       (* Shouldn't happen - method candidates always have the 'this' arg *)
+       pp_cpp_expr env args (CPPglob (n, _tys)) ++ str "()")
+  | CPPfun_call (CPPglob (n, _tys), ts) when is_registered_method n <> None ->
+    (* Transform function call to method call for globally registered methods.
+       This handles cross-module method calls like app from List used in Tree. *)
+    let method_name = Id.of_string (Common.pp_global_name Term n) in
+    let (_epon_ref, this_pos) = match is_registered_method n with Some x -> x | None -> assert false in
+    let args_normal = List.rev ts in  (* Convert to normal order *)
+    let (this_arg_opt, other_args) = extract_at_position this_pos args_normal in
+    (match this_arg_opt with
+     | Some this_arg ->
+       let obj_s = pp_cpp_expr env args this_arg in
+       let args_s = pp_list (pp_cpp_expr env args) other_args in
+       obj_s ++ str "->" ++ Id.print method_name ++ str "(" ++ args_s ++ str ")"
+     | None ->
+       (* Shouldn't happen - registered methods always have the 'this' arg *)
+       pp_cpp_expr env args (CPPglob (n, _tys)) ++ str "()")
   | CPPfun_call (f, ts) ->
     let args_s = pp_list (pp_cpp_expr env args) (List.rev ts) in
     pp_cpp_expr env args f ++ str "(" ++ args_s ++ str ")"
@@ -401,6 +637,13 @@ and pp_cpp_expr env args t =
         | [] -> mt ()
         | _ -> str "<" ++ pp_list (pp_cpp_type false []) tys ++ str ">") in
       pp_global Type id ++ templates ++ str "{" ++ es_s ++ str "}"
+  | CPPstruct_id (id, tys, es) ->
+      let es_s = pp_list (pp_cpp_expr env args) es in
+      let templates =
+        (match tys with
+        | [] -> mt ()
+        | _ -> str "<" ++ pp_list (pp_cpp_type false []) tys ++ str ">") in
+      Id.print id ++ templates ++ str "{" ++ es_s ++ str "}"
   | CPPget (e, id) ->
       (pp_cpp_expr env args e) ++ str "." ++ (Id.print id)
   | CPPget' (e, id) ->
@@ -414,6 +657,21 @@ and pp_cpp_expr env args t =
       let exprs_s = pp_list (fun (e1, e2) ->
         str "{" ++ pp_cpp_expr env args e1 ++ str "} -> " ++ pp_cpp_expr env args e2 ++ str ";") exprs in
       str "requires " ++ ty_vars_s ++ str "{ " ++ exprs_s ++ str " }"
+  | CPPnew (ty, exprs) ->
+      str "new " ++ pp_cpp_type false [] ty ++ str "(" ++ pp_list (pp_cpp_expr env args) exprs ++ str ")"
+  | CPPshared_ptr_ctor (ty, expr) ->
+      let std_shared_ptr = if Table.std_lib () = "BDE" then "bsl::shared_ptr" else "std::shared_ptr" in
+      str std_shared_ptr ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ pp_cpp_expr env args expr ++ str ")"
+  | CPPthis -> str "this"
+  | CPPmember (e, id) ->
+      pp_cpp_expr env args e ++ str "." ++ Id.print id
+  | CPParrow (e, id) ->
+      pp_cpp_expr env args e ++ str "->" ++ Id.print id
+  | CPPmethod_call (obj, method_name, call_args) ->
+      pp_cpp_expr env args obj ++ str "->" ++ Id.print method_name ++
+      str "(" ++ pp_list (pp_cpp_expr env args) call_args ++ str ")"
+  | CPPqualified (e, id) ->
+      pp_cpp_expr env args e ++ str "::" ++ Id.print id
 
 and pp_cpp_stmt env args = function
 | SreturnVoid -> str "return;"
@@ -475,7 +733,13 @@ and pp_custom custom env typ t tyargs cases args vl cmds =
       with Failure _ -> print_endline "Error: custom inlined syntax referencing an unbound term argument in"; print_endline custom; assert false) in
   List.fold_left (fun prev c -> prev ++ pp c) (mt ()) cmds
 
-let pp_cpp_field env = function
+let pp_template_type = function
+  | TTtypename -> str "typename"
+  | TTfun (dom, cod) -> str "MapsTo<" ++ pp_cpp_type false [] cod  ++ str ", " ++ pp_list (pp_cpp_type false []) dom ++ str ">"
+  | TTconcept (concept) -> pp_global Type concept
+
+(* pp_cpp_field takes optional struct_name for printing constructors *)
+let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
 | Fvar (id, ty) ->
     h ((pp_cpp_type false [] ty) ++ str " " ++ Id.print id ++ str ";")
 | Fvar' (id, ty) ->
@@ -492,22 +756,76 @@ let pp_cpp_field env = function
       pp_list (fun (id, ty) ->
           (pp_cpp_type false [] ty) ++ str " " ++ Id.print id) (List.rev params)
     in h ((pp_cpp_type false [] ret_ty) ++ str " " ++ Id.print id ++ pp_par true params_s) ++ str ";"
+| Fmethod (id, template_params, ret_ty, params, body, is_const) ->
+    let params_s =
+      pp_list (fun (id, ty) ->
+          (pp_cpp_type false [] ty) ++ str " " ++ Id.print id) params
+    in
+    let const_s = if is_const then str " const" else mt () in
+    let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
+    let template_s = match template_params with
+      | [] -> mt ()
+      | _ ->
+        let args = pp_list (fun (tt, id) -> pp_template_type tt ++ spc () ++ Id.print id) template_params in
+        str "template <" ++ args ++ str ">" ++ fnl ()
+    in
+    template_s ++
+      h ((pp_cpp_type false [] ret_ty) ++ str " " ++ Id.print id ++ pp_par true params_s ++ const_s ++ str " {") ++ fnl () ++ body_s ++ str "}"
+| Fconstructor (params, init_list, is_explicit) ->
+    let sname = match struct_name with Some s -> s | None -> str "UNKNOWN_STRUCT" in
+    let params_s =
+      pp_list (fun (id, ty) ->
+          (pp_cpp_type false [] ty) ++ str " " ++ Id.print id) params
+    in
+    let init_s = match init_list with
+      | [] -> mt ()
+      | _ -> str " : " ++ pp_list (fun (member, expr) ->
+              Id.print member ++ str "(" ++ pp_cpp_expr env [] expr ++ str ")") init_list
+    in
+    let explicit_s = if is_explicit then str "explicit " else mt () in
+    h (explicit_s ++ sname ++ pp_par true params_s ++ init_s ++ str " {}")
+| Fnested_struct (id, fields) ->
+    let fields_s = pp_cpp_fields_with_vis ~struct_name:(Id.print id) env fields in
+    h (str "struct " ++ Id.print id ++ str " {") ++ fnl () ++ fields_s ++ fnl () ++ str "};"
+| Fnested_using (id, ty) ->
+    h (str "using " ++ Id.print id ++ str " = " ++ pp_cpp_type false [] ty ++ str ";")
+| Fdeleted_ctor ->
+    let sname = match struct_name with Some s -> s | None -> str "UNKNOWN_STRUCT" in
+    h (sname ++ str "() = delete;")
 
-let pp_template_type = function
-  | TTtypename -> str "typename"
-  | TTfun (dom, cod) -> str "MapsTo<" ++ pp_cpp_type false [] cod  ++ str ", " ++ pp_list (pp_cpp_type false []) dom ++ str ">"
-  | TTconcept (concept) -> pp_global Type concept
-
-let rec  pp_cpp_decl env =
-  let pp_cpp_fields_with_pub ls =
-    pp_list_stmt (fun (fld, is_pub) -> pp_cpp_field env fld
-    (*  TODO: Currently every field is public, so not needed
-      let f_s = pp_cpp_field env fld in
-      if is_pub then str "public:" ++ fnl () ++ f_s
-      else           str "private:" ++ fnl () ++ f_s
-    *)
-    ) ls
+(* Helper to print fields with visibility sections *)
+and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) env fields =
+  (* Group consecutive fields by visibility *)
+  let rec group_by_vis current_vis acc result = function
+    | [] ->
+        if acc = [] then List.rev result
+        else List.rev ((current_vis, List.rev acc) :: result)
+    | (fld, vis) :: rest ->
+        if vis = current_vis then
+          group_by_vis current_vis (fld :: acc) result rest
+        else
+          let result' = if acc = [] then result
+                       else (current_vis, List.rev acc) :: result in
+          group_by_vis vis [fld] result' rest
   in
+  let groups = group_by_vis VPublic [] [] fields in
+  (* Check if we need visibility labels (only if mixed or all private) *)
+  let needs_labels = match groups with
+    | [] -> false
+    | [(VPublic, _)] -> false  (* All public - struct default is public *)
+    | _ -> true  (* Mixed or all private *)
+  in
+  let pp_group (vis, flds) =
+    if needs_labels then
+      let vis_str = match vis with VPublic -> "public:" | VPrivate -> "private:" in
+      str vis_str ++ fnl () ++
+      pp_list_stmt (pp_cpp_field ?struct_name env) flds
+    else
+      pp_list_stmt (pp_cpp_field ?struct_name env) flds
+  in
+  prlist_with_sep fnl pp_group groups
+
+let rec pp_cpp_decl env =
 function
 | Dtemplate (temps, cstr, decl) ->
     let args = pp_list (fun (tt, id) -> pp_template_type tt ++ spc () ++ Id.print id) temps in
@@ -520,20 +838,63 @@ function
     let ds = pp_list_stmt (pp_cpp_decl env) decls in
     h (str "namespace " ++ str "{") ++ fnl () ++ ds ++ fnl () ++ str "};"
 | Dnspace (Some id, decls) ->
+    (* CRITICAL DESIGN: Transform namespaces into structs
+       This is the key innovation enabling module support in C++.
+
+       Why:
+       1. C++ doesn't allow namespaces inside structs, but we need inductives to be nested
+       2. Using structs instead of namespaces gives us scoped type definitions
+       3. This aligns with the goal of generating modules as template structs
+
+       Context tracking: Set in_struct_context so nested declarations know they're inside
+       a struct and can apply appropriate transformations (static keywords, nested inductives). *)
+    let old_context = !in_struct_context in
+    in_struct_context := true;
     let ds = pp_list_stmt (pp_cpp_decl env) decls in
-    h (str "namespace " ++ pp_global Type id ++ str "{") ++ fnl () ++ ds ++ fnl () ++ str "};"
+    in_struct_context := old_context;
+
+    (* Generate as struct to allow nesting inside other structs/modules *)
+    (* Capitalize the struct name to avoid conflicts with inner type alias of same name.
+       Example: inductive 'list' becomes struct 'List' containing type 'list'. *)
+    let struct_name = match id with
+      | GlobRef.IndRef (kn, i) ->
+          let base = str_global Type id in
+          str (String.capitalize_ascii base)
+      | _ -> pp_global Type id
+    in
+    h (str "struct " ++ struct_name ++ str " {") ++ fnl () ++ ds ++ fnl () ++ str "};"
 | Dfundef (ids, ret_ty, params, body) ->
     let params_s =
       pp_list (fun (id, ty) ->
           (pp_cpp_type false [] ty) ++ str " " ++ Id.print id) (List.rev params)
     in
-    let name = prlist_with_sep (fun () -> str "::") (fun (n, tys) ->
+    let base_name = prlist_with_sep (fun () -> str "::") (fun (n, tys) ->
       (match tys with
       | [] -> pp_global Type n
       | _ -> pp_global Type n ++ str "<" ++ (pp_list (pp_cpp_type false []) tys) ++ str ">")) ids
       in
+    (* If generating out-of-struct definitions, prepend struct name *)
+    let name = match !current_struct_name with
+      | Some struct_name when not !in_struct_context -> struct_name ++ str "::" ++ base_name
+      | _ -> base_name
+      in
     let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
-      h ((pp_cpp_type false [] ret_ty) ++ str " " ++ name ++ pp_par true params_s) ++ str "{" ++ body_s ++ str "}"
+    (* DESIGN: Static member functions for struct context
+       When a function is inside a struct (module), it needs to be static because:
+       1. Structs don't have implicit 'this' for free functions
+       2. Qualified names (Module::func) indicate out-of-line member definitions
+       3. Template functions at module scope are static helpers
+
+       Heuristics for detecting struct membership:
+       - Multiple IDs: qualified name like MakeMap<K,V>::find indicates member
+       - Non-empty tys: template function likely a member helper
+       - in_struct_context: explicitly tracking struct nesting
+       - current_struct_name set: generating out-of-struct definitions (no static) *)
+    let is_qualified = List.length ids > 1 || (match ids with | [(_, tys)] when tys <> [] -> true | _ -> false) in
+    let is_struct_member = is_qualified || !in_struct_context in
+    let is_out_of_struct_def = match !current_struct_name with | Some _ -> not !in_struct_context | None -> false in
+    let static_kw = if is_struct_member && not is_out_of_struct_def then str "static " else mt () in
+      h (static_kw ++ (pp_cpp_type false [] ret_ty) ++ str " " ++ name ++ pp_par true params_s) ++ str "{" ++ body_s ++ str "}"
 | Dfundecl (ids, ret_ty, params) ->
     let params_s =
       pp_list (fun (id, ty) ->
@@ -545,16 +906,33 @@ function
       | [] -> pp_global Type n
       | _ -> pp_global Type n ++ str "<" ++ (pp_list (pp_cpp_type false []) tys) ++ str ">")) ids
       in
-    h ((pp_cpp_type false [] ret_ty) ++ str " " ++ name ++ pp_par true params_s) ++ str ";"
+    (* Add static for struct member functions *)
+    (* Check if qualified name (out-of-line definition) OR inside a struct context *)
+    let is_qualified = List.length ids > 1 || (match ids with | [(_, tys)] when tys <> [] -> true | _ -> false) in
+    let is_struct_member = is_qualified || !in_struct_context in
+    let static_kw = if is_struct_member then str "static " else mt () in
+    h (static_kw ++ (pp_cpp_type false [] ret_ty) ++ str " " ++ name ++ pp_par true params_s) ++ str ";"
 | Dstruct (id, fields) ->
-    let f_s = pp_cpp_fields_with_pub fields in
-    str "struct " ++ pp_global Type id ++ str "{" ++ fnl () ++ f_s ++ str "};"
+    let struct_name = pp_global Type id in
+    let f_s = pp_cpp_fields_with_vis ~struct_name env fields in
+    str "struct " ++ struct_name ++ str " {" ++ fnl () ++ f_s ++ fnl () ++ str "};"
 | Dstruct_decl id ->
     str "struct " ++ pp_global Type id ++ str ";"
 | Dusing (id, ty) ->
     str "using " ++ pp_global Type id ++ str " = " ++ pp_cpp_type false [] ty ++ str ";"
 | Dasgn (id, ty, e) ->
-    h ((pp_cpp_type false [] ty) ++ str " " ++ pp_global Type id ++ str " = " ++ (pp_cpp_expr env [] e) ++ str ";")
+    (* DESIGN: Static inline member variables for module constants
+       In C++17, static data members can be defined inside the class with 'inline'.
+
+       Why:
+       - 'static': This is a class/struct member variable, not an instance variable
+       - 'inline': Allows definition in header file without violating ODR (One Definition Rule)
+       - Enables constant propagation by the compiler since definitions are available
+
+       Without 'inline', multiple .cpp files including this header would cause linker errors
+       due to duplicate symbol definitions. *)
+    let static_kw = if !in_struct_context then str "static inline " else mt () in
+    h (static_kw ++ (pp_cpp_type false [] ty) ++ str " " ++ pp_global Type id ++ str " = " ++ (pp_cpp_expr env [] e) ++ str ";")
 | Ddecl (id, ty) ->
     h ((pp_cpp_type false [] ty) ++ str " " ++ pp_global Type id ++ str ";")
 | Dconcept (id, cstr) ->
@@ -599,7 +977,7 @@ let pp_cpp_ind kn ind =
       let p = ind.ind_packets.(i) in
       if is_custom (GlobRef.IndRef ip) then pp (i+1)
       else
-        pp_cpp_decl (empty_env ()) (gen_ind_cpp p.ip_vars names.(i) cnames.(i) p.ip_types)
+        pp_cpp_decl (empty_env ()) (gen_ind_cpp p.ip_vars names.(i) cnames.(i) p.ip_types) ++ pp (i+1)
   in
   pp 0
 
@@ -615,7 +993,7 @@ let pp_tydef ids name def =
 let pp_decl = function
     | Dtype (r,_,_) when is_any_inline_custom r -> mt ()
     | Dterm (r,_,_) when is_any_inline_custom r -> mt ()
-    | Dind (kn,i) -> pp_cpp_ind kn i
+    | Dind (kn,i) -> mt ()  (* Inductives are fully defined in headers *)
     | Dtype (r, l, t) -> mt ()
     | Dterm (r, a, Tglob (ty, args,e)) when is_monad ty ->
           let defs = List.filter (fun (_,_,l) -> l == []) (gen_dfuns (Array.of_list [r], Array.of_list [a], Array.of_list [Miniml.Tglob (ty, args,e)])) in
@@ -649,6 +1027,97 @@ let pp_cpp_ind_header kn ind =
   match ind.ind_kind with
   | Record fields -> pp_cpp_decl (empty_env ()) (gen_record_cpp names.(0) fields ind.ind_packets.(0))
   | _ ->
+    (* DESIGN: Mutual inductive support with forward declarations
+       Rocq supports mutually recursive inductive types. In C++, this requires:
+       1. Forward declarations so each struct can reference the others
+       2. Full definitions immediately after
+
+       Example (tree and node are mutually inductive):
+         struct Tree;  // forward decl
+         struct Node;  // forward decl
+         struct Tree { ... Node usage ... };
+         struct Node { ... Tree usage ... }; *)
+    let is_mutual = Array.length ind.ind_packets > 1 in
+    let forward_decls =
+      if is_mutual then
+        let rec fwd i =
+          if i >= Array.length ind.ind_packets then mt ()
+          else
+            let ip = (kn,i) in
+            if is_custom (GlobRef.IndRef ip) then fwd (i+1)
+            else
+              let name = pp_global Type names.(i) in
+              str "struct " ++ name ++ str ";" ++ fnl () ++ fwd (i+1)
+        in
+        fwd 0
+      else mt ()
+    in
+    (* Helper to find method candidates from current_structure_decls for a given inductive.
+       IMPORTANT: Skip functions whose signatures reference type aliases (Dtype) from the
+       same module. This prevents issues like `heap_delete_max : tree -> priqueue` becoming
+       a method on `tree`, where `priqueue` is a type alias not visible from inside `tree`. *)
+    let find_methods_for_inductive ind_ref =
+      let ind_modpath = modpath_of_r ind_ref in
+      (* First, collect all type aliases (Dtype) defined in the same module.
+         These are types like `priqueue := list tree` that become `using` declarations.
+         Methods on nested inductives can't reference these (visibility issue). *)
+      let module_type_aliases = ref [] in
+      List.iter (fun (_l, se) ->
+        match se with
+        | SEdecl (Dtype (r, _, _)) when ModPath.equal (modpath_of_r r) ind_modpath ->
+            module_type_aliases := r :: !module_type_aliases
+        | _ -> ()
+      ) !current_structure_decls;
+      (* Check if a type references any module-level type alias *)
+      let rec refs_module_alias = function
+        | Miniml.Tglob (r, args, _) ->
+            List.exists (Environ.QGlobRef.equal Environ.empty_env r) !module_type_aliases ||
+            List.exists refs_module_alias args
+        | Miniml.Tarr (t1, t2) -> refs_module_alias t1 || refs_module_alias t2
+        | Miniml.Tmeta {contents = Some t} -> refs_module_alias t
+        | _ -> false
+      in
+      (* Find the position of the first argument matching the inductive type *)
+      let rec find_ind_arg_pos pos = function
+        | Miniml.Tarr (Miniml.Tglob (arg_ref, _, _), rest) when Environ.QGlobRef.equal Environ.empty_env arg_ref ind_ref ->
+          Some pos
+        | Miniml.Tarr (_, rest) -> find_ind_arg_pos (pos + 1) rest
+        | _ -> None
+      in
+      (* Check if function comes from the same Rocq module as the inductive *)
+      let same_module r = ModPath.equal (modpath_of_r r) ind_modpath in
+      let methods = ref [] in
+      List.iter (fun (_l, se) ->
+        match se with
+        | SEdecl (Dterm (r, body, ty)) ->
+          (* Skip if function signature references a module-level type alias *)
+          if same_module r && not (refs_module_alias ty) then
+            (match find_ind_arg_pos 0 ty with
+            | Some pos ->
+              (* Note: We allow functions with extra type variables beyond the inductive's.
+                 These extra type vars become template parameters on the method. *)
+              methods := (r, body, ty, pos) :: !methods;
+              register_method r ind_ref pos
+            | None -> ())
+        | SEdecl (Dfix (rv, defs, typs)) ->
+          Array.iteri (fun i r ->
+            let ty = typs.(i) in
+            (* Skip if function signature references a module-level type alias *)
+            if same_module r && not (refs_module_alias ty) then begin
+              let body = defs.(i) in
+              match find_ind_arg_pos 0 ty with
+              | Some pos ->
+                (* Note: We allow functions with extra type variables beyond the inductive's.
+                   These extra type vars become template parameters on the method. *)
+                methods := (r, body, ty, pos) :: !methods;
+                register_method r ind_ref pos
+              | None -> ()
+            end
+          ) rv
+        | _ -> ()
+      ) !current_structure_decls;
+      !methods
+    in
     let rec pp i =
       if i >= Array.length ind.ind_packets then mt ()
       else
@@ -656,9 +1125,64 @@ let pp_cpp_ind_header kn ind =
         let p = ind.ind_packets.(i) in
         if is_custom (GlobRef.IndRef ip) then pp (i+1)
         else
-          pp_cpp_decl (empty_env ()) (gen_ind_header p.ip_vars names.(i) cnames.(i) p.ip_types)
+          (* Get method candidates: first check if set via SEmodule processing,
+             otherwise find from sibling declarations in current_structure_decls.
+             IMPORTANT: Only use find_methods_for_inductive for top-level inductives.
+             For inductives nested inside modules, only the eponymous type gets methods.
+             This prevents issues like tree inside Priqueue getting methods that return
+             priqueue (a sibling type alias not visible from inside tree). *)
+          let ind_ref = GlobRef.IndRef ip in
+          (* Check if ind_ref appears inside any SEmodule in current_structure_decls.
+             This detects when an inductive is declared inside a submodule. *)
+          let is_inside_submodule_decl =
+            let rec find_in_module_expr = function
+              | MEstruct (_, sel') ->
+                  List.exists (fun (_l', se') ->
+                    match se' with
+                    | SEdecl (Dind (kn', ind')) ->
+                        let rec check_packets i' =
+                          if i' >= Array.length ind'.ind_packets then false
+                          else
+                            let r = GlobRef.IndRef (kn', i') in
+                            Environ.QGlobRef.equal Environ.empty_env r ind_ref || check_packets (i' + 1)
+                        in
+                        check_packets 0
+                    | _ -> false
+                  ) sel'
+              | MEfunctor (_, _, me) -> find_in_module_expr me
+              | MEapply (me, _) -> find_in_module_expr me
+              | MEident _ -> false
+            in
+            List.exists (fun (_l, se) ->
+              match se with
+              | SEmodule m -> find_in_module_expr m.ml_mod_expr
+              | _ -> false
+            ) !current_structure_decls
+          in
+          let methods = match !eponymous_type_ref with
+            | Some epon_ref when Environ.QGlobRef.equal Environ.empty_env ind_ref epon_ref ->
+                !method_candidates
+            | _ when not !in_struct_context && not is_inside_submodule_decl ->
+                (* For top-level inductives only, find methods from sibling declarations *)
+                find_methods_for_inductive ind_ref
+            | _ ->
+                (* Inside a module, non-eponymous inductives don't get methods *)
+                []
+          in
+          let decl = gen_ind_header_v2 p.ip_vars names.(i) cnames.(i) p.ip_types methods in
+          (* DESIGN: Contextual wrapping for inductive definitions
+             - If inside a struct/module: generate the inductive directly (no namespace wrapper)
+             - If at module scope: wrap in a namespace struct (which becomes a struct via Dnspace)
+
+             This allows inductives to nest naturally inside modules while maintaining
+             proper scoping at the module level. *)
+          let wrapped_decl =
+            if !in_struct_context then decl
+            else Dnspace (Some names.(i), [decl])
+          in
+          pp_cpp_decl (empty_env ()) wrapped_decl ++ pp (i+1)
     in
-    pp 0
+    forward_decls ++ pp 0
 
 let pp_hdecl = function
     | Dtype (r,_,_) when is_any_inline_custom r -> mt ()
@@ -680,22 +1204,43 @@ let pp_hdecl = function
     | Dterm (r, a, Tglob (ty, args,e)) when is_monad ty ->
           let defs = (gen_dfuns_header (Array.of_list [r], Array.of_list [a], Array.of_list [Miniml.Tglob (ty, args,e)])) in
           pp_list_stmt (fun(ds, env) -> pp_cpp_decl env ds) defs
+    | Dterm (r, _, _) when List.exists (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env r r') !method_candidates ->
+          (* Skip - this function will be generated as a method on the eponymous type *)
+          mt ()
+    | Dterm (r, _, _) when is_registered_method r <> None ->
+          (* Skip - this function is registered as a method in another module *)
+          mt ()
     | Dterm (r, a, t) -> (* ADD CUSTOM for non-inlined *)
       let (ds, env, tvars) = gen_decl_for_pp r a t in
             begin match ds, tvars with
-            | Some ds , [] -> let (ds, env) = gen_spec r a t in
-                              pp_cpp_decl env ds
+            | Some ds , [] ->
+                (* For template structs, use full definitions instead of specs *)
+                if !in_template_struct then
+                  let (ds, env, _) = gen_decl r a t in pp_cpp_decl env ds
+                else
+                  let (ds, env) = gen_spec r a t in pp_cpp_decl env ds
             | Some ds , _::_ -> pp_cpp_decl env ds
-            | None , _ -> let (ds, env) = gen_spec r a t in
-                              pp_cpp_decl env ds
+            | None , _ ->
+                if !in_template_struct then
+                  let (ds, env, _) = gen_decl r a t in pp_cpp_decl env ds
+                else
+                  let (ds, env) = gen_spec r a t in pp_cpp_decl env ds
             end
     | Dfix (rv,defs,typs) ->
-          let filter = Array.to_list (Array.map (fun x -> not (is_inline_custom x)) rv) in
+          (* Filter out inline custom, method candidates, and globally registered methods *)
+          let is_method_candidate x = List.exists (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env x r') !method_candidates in
+          let is_global_method x = is_registered_method x <> None in
+          let filter = Array.to_list (Array.map (fun x -> not (is_inline_custom x) && not (is_method_candidate x) && not (is_global_method x)) rv) in
           let rv = Array.filter_with filter rv in
           let defs = Array.filter_with filter defs in
           let typs = Array.filter_with filter typs in
-          (* pp_list_stmt (fun(ds, env, _) ->  pp_cpp_decl env ds) (gen_dfuns (rv, defs, typs)) *)
-          pp_list_stmt (fun(ds, env) ->  pp_cpp_decl env ds) (gen_dfuns_header (rv, defs, typs))
+          if Array.length rv = 0 then mt ()
+          else
+          (* For template structs, generate full definitions inline, not just declarations *)
+          if !in_template_struct then
+            pp_list_stmt (fun(ds, env, _) ->  pp_cpp_decl env ds) (gen_dfuns (rv, defs, typs))
+          else
+            pp_list_stmt (fun(ds, env) ->  pp_cpp_decl env ds) (gen_dfuns_header (rv, defs, typs))
 
 
 let pp_spec = function
@@ -747,52 +1292,151 @@ let rec pp_specif = function
        | None -> Pp.mt ()
        | Some ren -> fnl () ++ str ("module type "^ren^" = ") ++ name)
 
+(* DESIGN: Convert Rocq specifications to C++ concept requirements
+
+   Rocq module types specify what operations/types are available on a module.
+   In C++, this becomes a concept with 'requires' clauses checking:
+   - Function signatures exist
+   - Type aliases are defined
+
+   Examples:
+   - Sval (foo : int → int) becomes: requires { foo(std::declval<int>()) } -> std::same_as<int>;
+   - Stype (Key) becomes: requires { typename M::Key; };
+
+   This enables compile-time checking that modules satisfy their type signatures. *)
+and pp_spec_as_requirement = function
+  | Sval (r,_,_) when is_inline_custom r -> mt ()
+  | Stype (r,_,_) when is_inline_custom r -> mt ()
+  | Sind (kn,i) -> mt () (* TODO: handle inductive requirements *)
+  | Sval (r,b,t) ->
+      (* Generate requires clause for a function/value *)
+      let name = pp_global_name Term r in
+      (* Check if it's a function by looking at the type *)
+      let rec get_function_parts = function
+        | Tarr (arg, rest) ->
+            let (args, ret) = get_function_parts rest in
+            (arg :: args, ret)
+        | ret_ty -> ([], ret_ty)
+      in
+      let (args, ret_ty) = get_function_parts t in
+      if args = [] then
+        (* For non-function values, generate a requires expression to check the value exists *)
+        let cpp_ret = convert_ml_type_to_cpp_type (empty_env ()) [] [] ret_ty in
+        (* Helper to qualify type names with M:: *)
+        let rec qualify_type = function
+          | Tglob (r, [], _) when not (is_custom r) ->
+              str "typename M::" ++ pp_global Type r
+          | Tglob (r, args, _) when not (is_custom r) ->
+              pp_global Type r ++ str "<" ++ prlist_with_sep (fun () -> str ", ") qualify_type args ++ str ">"
+          | Tglob (r, args, _) when is_custom r ->
+              let custom_str = find_custom r in
+              if String.contains custom_str '%' then
+                (match args with
+                | [arg] when custom_str = "std::optional<%t0>" ->
+                    str "std::optional<" ++ qualify_type arg ++ str ">"
+                | _ -> pp_cpp_type false [] (Tglob (r, args, [])))
+              else
+                str custom_str
+          | Tshared_ptr ty ->
+              str "std::shared_ptr<" ++ qualify_type ty ++ str ">"
+          | Tvariant tys ->
+              str "std::variant<" ++ prlist_with_sep (fun () -> str ", ") qualify_type tys ++ str ">"
+          | Tnamespace (r, ty) ->
+              pp_cpp_type false [] (Tnamespace (r, ty))
+          | ty -> pp_cpp_type false [] ty
+        in
+        let (same_as, remove_cvref) =
+          if Table.std_lib () = "BDE"
+          then ("same_as", "bsl::remove_cvref_t")
+          else ("std::same_as", "std::remove_cvref_t")
+        in
+        str "requires " ++ str same_as ++ str "<" ++ str remove_cvref ++ str "<decltype(M::" ++ name ++ str ")>, " ++ qualify_type cpp_ret ++ str ">;" ++ fnl ()
+      else
+        (* For functions, generate requires expression with parameters and return type *)
+        let cpp_args = List.map (convert_ml_type_to_cpp_type (empty_env ()) [] []) args in
+        let cpp_ret = convert_ml_type_to_cpp_type (empty_env ()) [] [] ret_ty in
+        (* Helper to qualify type names with M:: *)
+        let rec qualify_type = function
+          | Tglob (r, [], _) when not (is_custom r) ->
+              str "typename M::" ++ pp_global Type r
+          | Tglob (r, args, _) when not (is_custom r) ->
+              pp_global Type r ++ str "<" ++ prlist_with_sep (fun () -> str ", ") qualify_type args ++ str ">"
+          | Tglob (r, args, _) when is_custom r ->
+              let custom_str = find_custom r in
+              if String.contains custom_str '%' then
+                (match args with
+                | [arg] when custom_str = "std::optional<%t0>" ->
+                    str "std::optional<" ++ qualify_type arg ++ str ">"
+                | _ -> pp_cpp_type false [] (Tglob (r, args, [])))
+              else
+                str custom_str
+          | Tshared_ptr ty ->
+              str "std::shared_ptr<" ++ qualify_type ty ++ str ">"
+          | Tvariant tys ->
+              str "std::variant<" ++ prlist_with_sep (fun () -> str ", ") qualify_type tys ++ str ">"
+          | Tnamespace (r, ty) ->
+              pp_cpp_type false [] (Tnamespace (r, ty))
+          | ty -> pp_cpp_type false [] ty
+        in
+        (* Generate: { M::name(std::declval<arg1>(), ...) } -> std::same_as<ret_ty>; *)
+        let (same_as, declval) =
+          if Table.std_lib () = "BDE"
+          then ("same_as", "bsl::declval")
+          else ("std::same_as", "std::declval")
+        in
+        let declvals = List.map (fun arg_ty ->
+          str declval ++ str "<" ++ qualify_type arg_ty ++ str ">()"
+        ) cpp_args in
+        let call_expr = str "M::" ++ name ++ str "(" ++ prlist_with_sep (fun () -> str ", ") identity declvals ++ str ")" in
+        str "{ " ++ call_expr ++ str " } -> " ++ str same_as ++ str "<" ++ qualify_type cpp_ret ++ str ">;" ++ fnl ()
+  | Stype (r,vl,ot) ->
+      (* Generate requires clause for a type *)
+      let name = pp_global_name Type r in
+      str "typename M::" ++ name ++ str ";" ++ fnl ()
+
 and pp_module_type params = function
   | MTident kn ->
+      (* Reference to a concept name *)
       pp_modname kn
   | MTfunsig (mbid, mt, mt') ->
-      let typ = pp_module_type [] mt in
-      let name = pp_modname (MPbound mbid) in
-      let def = pp_module_type (MPbound mbid :: params) mt' in
-      str "functor (" ++ name ++ str ":" ++ typ ++ str ") ->" ++ fnl () ++ def
-  | MTsig (mp, sign) ->
-      push_visible mp params;
-      let try_pp_specif l x =
-        let px = pp_specif x in
-        if Pp.ismt px then l else px::l
-      in
-      (* We cannot use fold_right here due to side effects in pp_specif *)
-      let l = List.fold_left try_pp_specif [] sign in
-      let l = List.rev l in
-      pop_visible ();
-      (* str "sig" ++ fnl () ++ *)
-      (if List.is_empty l then mt ()
-       else
-         v 1 (str " " ++ prlist_with_sep cut2 identity l) ++ fnl ())
-      (* ++ str "end" *)
-  | MTwith(mt,ML_With_type(idl,vl,typ)) ->
-      let ids = pp_parameters (rename_tvars keywords vl) in
-      let mp_mt = msid_of_mt mt in
-      let l,idl' = List.sep_last idl in
-      let mp_w =
-        List.fold_left (fun mp l -> MPdot(mp,Label.of_id l)) mp_mt idl'
-      in
-      let r = GlobRef.ConstRef (Constant.make2 mp_w (Label.of_id l)) in
-      push_visible mp_mt [];
-      let pp_w = str " with type " ++ ids ++ pp_global Type r in
-      pop_visible();
-      pp_module_type [] mt ++ pp_w ++ str " = " ++ pp_type false vl typ
-  | MTwith(mt,ML_With_module(idl,mp)) ->
-      let mp_mt = msid_of_mt mt in
-      let mp_w =
-        List.fold_left (fun mp id -> MPdot(mp,Label.of_id id)) mp_mt idl
-      in
-      push_visible mp_mt [];
-      let pp_w = str " with module " ++ pp_modname mp_w in
-      pop_visible ();
-      pp_module_type [] mt ++ pp_w ++ str " = " ++ pp_modname mp
+      (* DESIGN: Functor type signatures
+         For a functor taking parameter Param of type MT returning MT',
+         we just generate MT' since the template parameters are handled
+         separately in pp_structure_elem.
 
-let rec pp_structure_elem f = function
+         Example: module MakeMap(Key: OrderedType)(Value: BaseType) : SigName
+         becomes: template<OrderedType Key, BaseType Value> struct MakeMap { ... };
+         (parameter concepts are in template params, body type is pp_module_type) *)
+      pp_module_type (MPbound mbid :: params) mt'
+  | MTsig (mp, sign) ->
+      (* DESIGN: Module type signatures become concept definitions
+         Each Sval/Stype specification becomes a requires clause that checks
+         the module parameter satisfies the expected interface.
+
+         The signature { type Key; val find : Key -> Value } becomes:
+         template<typename M> concept SigName = requires {
+           typename M::Key;
+           M::find(std::declval<M::Key>()) -> std::same_as<...>;
+         }; *)
+      push_visible mp params;
+      let pp_req (_label, specif) = match specif with
+        | Spec s -> pp_spec_as_requirement s
+        | Smodule _ -> mt () (* TODO: nested modules *)
+        | Smodtype _ -> mt () (* TODO: nested module types *)
+      in
+      let reqs = List.map pp_req sign in
+      let reqs = List.filter (fun p -> not (Pp.ismt p)) reqs in
+      pop_visible ();
+      if List.is_empty reqs then mt ()
+      else prlist identity reqs
+  | MTwith(mt,ML_With_type(idl,vl,typ)) ->
+      (* TODO: handle with type constraints properly *)
+      pp_module_type [] mt
+  | MTwith(mt,ML_With_module(idl,mp)) ->
+      (* TODO: handle with module constraints properly *)
+      pp_module_type [] mt
+
+let rec pp_structure_elem ~is_header f = function
   | (l,SEdecl d) ->
      (match Common.get_duplicate (top_visible_mp ()) l with
       | None -> f d
@@ -800,50 +1444,283 @@ let rec pp_structure_elem f = function
          v 1 (str ("namespace " ^ ren ^ " {") ++ fnl () ++ f d) ++
          fnl () ++ str "};")
   | (l,SEmodule m) ->
-      (* Wrap module contents in a C++ namespace so that references like M::foo resolve *)
+      (* DESIGN: Module generation - three cases
+         1. Regular modules → struct ModuleName { members };
+         2. Functors → template<Concept P1, Concept P2> struct Functor { members };
+         3. Module applications → using Result = Functor<Arg1, Arg2>;
+
+         This enables:
+         - Type parameters via template arguments
+         - Compile-time checking via concepts
+         - Proper scoping and visibility of module members *)
       let mp = MPdot (top_visible_mp (), l) in
       let name = pp_modname mp in
-      let body = pp_module_expr f [] m.ml_mod_expr in
-      if Pp.ismt body then mt ()
-      else
-        (match Common.get_duplicate (top_visible_mp ()) l with
-         | None ->
-            v 1 (str "namespace " ++ name ++ str " {" ++ fnl () ++ body) ++ fnl () ++ str "};"
-         | Some ren ->
-            v 1 (str ("namespace " ^ ren ^ " {") ++ fnl () ++ body) ++ fnl () ++ str "};")
+      (* NOTE: Previously we had an emptiness check here that called pp_module_expr
+         BEFORE setting up context. This caused side effects (method registration)
+         to happen with wrong context. We now handle emptiness within each case. *)
+      (match m.ml_mod_expr with
+         | MEfunctor _ ->
+             (* DESIGN: Functor template generation
+                For a functor taking multiple parameters:
+                  module MakeMap(K: OrderedType)(V: BaseType) = ...
+                Generate:
+                  template<OrderedType K, BaseType V>
+                  struct MakeMap { ... };
+
+                Only generate in header - C++ templates require definitions in headers.
+                Template instantiation happens automatically at compile time. *)
+             if not is_header then mt () else
+             let get_template_and_body = function
+               | MEfunctor (mbid, mt, me) ->
+                   let rec collect_params mbid mt me = match me with
+                     | MEfunctor (mbid', mt', me') ->
+                         let (params_rest, body) = collect_params mbid' mt' me' in
+                         ((mbid, mt) :: params_rest, body)
+                     | _ -> ([(mbid, mt)], me)
+                   in
+                   collect_params mbid mt me
+               | _ -> ([], m.ml_mod_expr)
+             in
+             let (template_params, body) = get_template_and_body m.ml_mod_expr in
+             let pp_template_param (mbid, mt) =
+               let concept_name = pp_module_type [] mt in
+               let param_name = pp_modname (MPbound mbid) in
+               concept_name ++ str " " ++ param_name
+             in
+             let template_decl =
+               str "template<" ++
+               prlist_with_sep (fun () -> str ", ") pp_template_param template_params ++
+               str ">"
+             in
+             (* Set context: we're inside a template struct *)
+             let old_context = !in_struct_context in
+             let old_template = !in_template_struct in
+             in_struct_context := true;
+             in_template_struct := true;  (* Mark that we're in a template *)
+             let struct_body = pp_module_expr ~is_header f (List.map (fun (mbid, _) -> MPbound mbid) template_params) body in
+             in_struct_context := old_context;
+             in_template_struct := old_template;  (* Restore template context *)
+             template_decl ++ fnl () ++
+             str "struct " ++ name ++ str " {" ++ fnl () ++
+             struct_body ++
+             str "};"
+         | MEapply _ ->
+             (* Module application: generate using declaration *)
+             (* Only in header - it's a type alias *)
+             if not is_header then mt () else
+             let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
+             let using_decl = str "using " ++ name ++ str " = " ++ body ++ str ";" in
+             (* Add static_assert for functor applications with known return types *)
+             let rec get_concept_name = function
+               | MTident kn -> Some (pp_modname kn)
+               | MTwith(mt, _) -> get_concept_name mt
+               | MTfunsig (_, mt, mt') -> get_concept_name mt'
+               | MTsig _ -> None
+             in
+             let static_assert = match get_concept_name m.ml_mod_type with
+             | Some concept_name ->
+                 fnl () ++ str "static_assert(" ++ concept_name ++ str "<" ++ name ++ str ">);"
+             | None -> mt ()
+             in
+             using_decl ++ static_assert
+         | MEstruct (_, sel) ->
+             (* Regular module: generate struct in header, member definitions in implementation *)
+             let old_context = !in_struct_context in
+             let old_struct_name = !current_struct_name in
+             let old_eponymous = !eponymous_type_ref in
+             let old_methods = !method_candidates in
+
+             (* Find eponymous inductive: an inductive with lowercase of module name *)
+             let module_name_str = Pp.string_of_ppcmds name in
+             let lowercase_module = String.lowercase_ascii module_name_str in
+             (* Debug: print what's in the sel *)
+             (* List.iter (fun (_l, se) ->
+               match se with
+               | SEdecl d -> Printf.eprintf "DEBUG %s: SEdecl\n" module_name_str
+               | SEmodule m -> Printf.eprintf "DEBUG %s: SEmodule\n" module_name_str
+               | SEmodtype _ -> Printf.eprintf "DEBUG %s: SEmodtype\n" module_name_str
+             ) sel; *)
+             List.iter (fun (_l, se) ->
+               match se with
+               | SEdecl (Dind (kn, ind)) ->
+                 Array.iteri (fun i p ->
+                   let ind_ref = GlobRef.IndRef (kn, i) in
+                   let ind_name = Common.pp_global_name Type ind_ref in
+                   if String.lowercase_ascii ind_name = lowercase_module then
+                     eponymous_type_ref := Some ind_ref
+                 ) ind.ind_packets
+               | _ -> ()
+             ) sel;
+
+             method_candidates := [];
+
+             (* Collect method candidates: functions that take eponymous type as any argument.
+                Find the first argument that matches and record its position.
+                Exclude functions with additional type variables beyond those in the eponymous type.
+                IMPORTANT: Only include functions from the SAME Rocq module as the eponymous type.
+                This ensures that stdlib's app (from Corelib.Init.Datatypes) becomes a method on list
+                (also from Corelib.Init.Datatypes), but rev (from Stdlib.Lists.List) does not.
+
+                We scan BOTH the current module's sel AND the parent structure's decls
+                (current_structure_decls) to find methods. This handles the case where
+                list and app are from the same Rocq module but extracted as siblings. *)
+             (match !eponymous_type_ref with
+             | Some epon_ref ->
+               (* Get the module path of the eponymous type *)
+               let epon_modpath = modpath_of_r epon_ref in
+               (* Find the position of the first argument matching the eponymous type *)
+               let rec find_epon_arg_pos pos = function
+                 | Miniml.Tarr (Miniml.Tglob (arg_ref, _, _), rest) when Environ.QGlobRef.equal Environ.empty_env arg_ref epon_ref ->
+                   Some pos
+                 | Miniml.Tarr (_, rest) -> find_epon_arg_pos (pos + 1) rest
+                 | _ -> None
+               in
+               (* Check if function comes from the same Rocq module as eponymous type *)
+               let same_module r = ModPath.equal (modpath_of_r r) epon_modpath in
+               (* Helper to process a single declaration *)
+               let process_decl (_l, se) =
+                 match se with
+                 | SEdecl (Dterm (r, body, ty)) ->
+                   (* Only consider functions from the same Rocq module as the eponymous type *)
+                   if same_module r then
+                     (match find_epon_arg_pos 0 ty with
+                     | Some pos ->
+                       (* Note: We allow functions with extra type variables beyond the eponymous type's.
+                          These extra type vars become template parameters on the method. *)
+                       method_candidates := (r, body, ty, pos) :: !method_candidates;
+                       register_method r epon_ref pos  (* Register globally for cross-module calls *)
+                     | None -> ())
+                 | SEdecl (Dfix (rv, defs, typs)) ->
+                   (* Handle fixpoints similarly - only from same module *)
+                   Array.iteri (fun i r ->
+                     if same_module r then begin
+                       let ty = typs.(i) in
+                       let body = defs.(i) in
+                       match find_epon_arg_pos 0 ty with
+                       | Some pos ->
+                         (* Note: We allow functions with extra type variables beyond the eponymous type's.
+                            These extra type vars become template parameters on the method. *)
+                         method_candidates := (r, body, ty, pos) :: !method_candidates;
+                         register_method r epon_ref pos  (* Register globally for cross-module calls *)
+                       | None -> ()
+                     end
+                   ) rv
+                 | _ -> ()
+               in
+               (* Scan current module's declarations *)
+               List.iter process_decl sel;
+               (* Also scan parent structure's declarations for sibling functions
+                  from the same Rocq module (e.g., app next to List module) *)
+               List.iter process_decl !current_structure_decls
+             | None -> ());
+
+             (* Only set struct context for header; implementation needs out-of-struct definitions *)
+             if is_header then
+               in_struct_context := true
+             else
+               current_struct_name := Some name;  (* Track struct name for qualification *)
+             let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
+             in_struct_context := old_context;
+             current_struct_name := old_struct_name;
+             eponymous_type_ref := old_eponymous;
+             method_candidates := old_methods;
+             if is_header then
+               (* Header: full struct definition *)
+               let struct_def = str "struct " ++ name ++ str " {" ++ fnl () ++
+                 body ++
+                 str "};" in
+               (* For modules with type annotations, add static_assert *)
+               let rec get_concept_name = function
+                 | MTident kn -> Some (pp_modname kn)
+                 | MTwith(mt, _) -> get_concept_name mt  (* Extract base from 'with' clauses *)
+                 | MTfunsig (_, mt, mt') -> get_concept_name mt'  (* Extract return type from functor sig *)
+                 | MTsig _ -> None  (* Anonymous signature, no concept *)
+               in
+               let static_assert = match get_concept_name m.ml_mod_type with
+               | Some concept_name ->
+                   fnl () ++ str "static_assert(" ++ concept_name ++ str "<" ++ name ++ str ">);"
+               | None -> mt ()
+               in
+               struct_def ++ static_assert
+             else
+               (* Implementation: just the member definitions (body is already processed) *)
+               body
+         | MEident _ ->
+             (* Module alias: generate as is *)
+             let old_context = !in_struct_context in
+             let old_struct_name = !current_struct_name in
+             if is_header then
+               in_struct_context := true
+             else
+               current_struct_name := Some name;
+             let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
+             in_struct_context := old_context;
+             current_struct_name := old_struct_name;
+             if is_header then
+               str "struct " ++ name ++ str " {" ++ fnl () ++ body ++ str "};"
+             else
+               body
+        )
   | (l,SEmodtype m) ->
+      (* Module types become concepts - only in header *)
+      if not is_header then mt () else
       let def = pp_module_type [] m in
       let name = pp_modname (MPdot (top_visible_mp (), l)) in
-      hov 1 (str "concept " ++ name ++ str " = requires {" ++ fnl () ++ def ++ str "}") ++
+      (* Generate a C++ concept with template parameter *)
+      str "template<typename M>" ++ fnl () ++
+      hov 1 (str "concept " ++ name ++ str " = requires {" ++ fnl () ++ def ++ str "};") ++
       (match Common.get_duplicate (top_visible_mp ()) l with
        | None -> mt ()
-       | Some ren -> fnl () ++ str ("concept "^ren^" = ") ++ name) (* FIXME *)
+       | Some ren -> fnl () ++ str ("template<typename M> concept "^ren^" = ") ++ name ++ str "<M>;")
 
-and pp_module_expr f params = function
-  | MEident mp -> pp_modname mp
+and pp_module_expr ~is_header f params = function
+  | MEident mp ->
+      (* Reference to a module name *)
+      pp_modname mp
   | MEapply (me, me') ->
-      pp_module_expr f [] me ++ str "(" ++ pp_module_expr f [] me' ++ str ")"
+      (* Functor application: collect all arguments and generate single template instantiation *)
+      let rec collect_args acc = function
+        | MEapply (f, arg) -> collect_args (arg :: acc) f
+        | base -> (base, acc)
+      in
+      let (base, args) = collect_args [me'] me in
+      let base_pp = pp_module_expr ~is_header f [] base in
+      let args_pp = prlist_with_sep (fun () -> str ", ") (pp_module_expr ~is_header f []) args in
+      base_pp ++ str "<" ++ args_pp ++ str ">"
   | MEfunctor (mbid, mt, me) ->
-      let name = pp_modname (MPbound mbid) in
-      let typ = pp_module_type [] mt in
-      let def = pp_module_expr f (MPbound mbid :: params) me in
-      str "functor (" ++ name ++ str ":" ++ typ ++ str ") ->" ++ fnl () ++ def
+      (* Functor body: just generate the body, template params are handled in pp_structure_elem *)
+      pp_module_expr ~is_header f (MPbound mbid :: params) me
   | MEstruct (mp, sel) ->
+      (* Module structure: generate struct members *)
       push_visible mp params;
+      (* Track current structure's declarations for sibling access *)
+      let old_structure_decls = !current_structure_decls in
+      current_structure_decls := sel;
+      (* Register all inductives defined in this module before processing declarations.
+         This ensures that references to sibling inductives don't get namespace-qualified. *)
+      let old_local_inductives = get_local_inductives () in
+      List.iter (fun (_l, se) ->
+        match se with
+        | SEdecl (Dind (kn, ind)) ->
+          (* Add all inductives in this mutual block *)
+          Array.iteri (fun i _p -> add_local_inductive (GlobRef.IndRef (kn, i))) ind.ind_packets
+        | _ -> ()
+      ) sel;
       let try_pp_structure_elem l x =
-        let px = pp_structure_elem f x in
+        let px = pp_structure_elem ~is_header f x in
         if Pp.ismt px then l else px::l
       in
       (* We cannot use fold_right here due to side effects in pp_structure_elem *)
       let l = List.fold_left try_pp_structure_elem [] sel in
       let l = List.rev l in
+      (* Restore previous local_inductives state for proper nesting *)
+      clear_local_inductives ();
+      List.iter add_local_inductive old_local_inductives;
+      current_structure_decls := old_structure_decls;
       pop_visible ();
       if List.is_empty l then mt ()
       else
-        (* TODO: need to modify naming situation so have prefix for definitions: modname::defname *)
-        (* str "struct " ++ pp_modname mp ++ str "{" ++ fnl () ++ *)
-        v 1 (str " " ++ prlist_with_sep cut2 identity l) ++ fnl ()
-         (* ++ str "};" *)
+        v 1 (prlist_with_sep cut2 identity l) ++ fnl ()
 
 let rec prlist_sep_nonempty sep f = function
   | [] -> mt ()
@@ -853,6 +1730,22 @@ let rec prlist_sep_nonempty sep f = function
      let r = prlist_sep_nonempty sep f t in
      if Pp.ismt e then r
      else e ++ sep () ++ r
+
+let do_struct_with_decl_tracking f s =
+  let ppl (mp,sel) =
+    push_visible mp [];
+    (* Track structure declarations for sibling access during inductive generation *)
+    let old_decls = !current_structure_decls in
+    current_structure_decls := sel;
+    let p = prlist_sep_nonempty cut2 f sel in
+    current_structure_decls := old_decls;
+    (* for monolithic extraction, we try to simulate the unavailability
+       of [MPfile] in names by artificially nesting these [MPfile] *)
+    (if modular () then pop_visible ()); p
+  in
+  let p = prlist_sep_nonempty cut2 ppl s in
+  (if not (modular ()) then repeat (List.length s) pop_visible ());
+  v 0 p ++ fnl ()
 
 let do_struct f s =
   let ppl (mp,sel) =
@@ -866,8 +1759,8 @@ let do_struct f s =
   (if not (modular ()) then repeat (List.length s) pop_visible ());
   v 0 p ++ fnl ()
 
-let pp_struct s = do_struct (pp_structure_elem pp_decl) s
-let pp_hstruct s = do_struct (pp_structure_elem pp_hdecl) s
+let pp_struct s = do_struct_with_decl_tracking (pp_structure_elem ~is_header:false pp_decl) s
+let pp_hstruct s = do_struct_with_decl_tracking (pp_structure_elem ~is_header:true pp_hdecl) s
 
 let pp_signature s = do_struct pp_specif s
 

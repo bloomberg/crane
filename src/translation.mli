@@ -15,16 +15,69 @@ open Miniml
 open Minicpp
 open Names
 
+(** Raised when a translation feature is not yet implemented. *)
 exception TODO
 
+(** {2 Local Inductive Context}
+    Tracks inductives defined in the current module scope.
+    When set, references to these inductives won't be wrapped in Tnamespace,
+    so they appear as sibling types rather than outer-namespace-qualified types. *)
+
+val add_local_inductive : GlobRef.t -> unit
+val clear_local_inductives : unit -> unit
+val get_local_inductives : unit -> GlobRef.t list
+
+(** {2 Type Conversion}
+    Convert Miniml types to Minicpp types. *)
+
+(** Convert an ML type to C++ type representation.
+    @param env The current variable environment
+    @param ns List of inductive references that should be treated as local (no namespace wrapper)
+    @param tvars Type variable names for substitution
+    @param ml_type The ML type to convert *)
 val convert_ml_type_to_cpp_type : env -> GlobRef.t list -> Id.t list -> ml_type -> cpp_type
+
+(** {2 Expression Generation} *)
+
+(** Generate a C++ expression from an ML AST. *)
 val gen_expr : env -> ml_ast -> cpp_expr
-val gen_ind_cpp : variable list -> GlobRef.t -> GlobRef.t array -> ml_type list array -> cpp_decl
-val gen_record_cpp : GlobRef.t -> GlobRef.t option list -> ml_ind_packet -> cpp_decl
+
+(** Generate pattern matching as a C++ expression using std::visit. *)
 val gen_cpp_case : ml_type -> ml_ast -> env -> ml_branch array -> cpp_expr
-val gen_decl_for_pp : GlobRef.t -> ml_ast -> ml_type -> cpp_decl option * env * variable list
+
+(** {2 Declaration Generation} *)
+
+(** Generate C++ declaration for a term definition.
+    Returns (decl, env, type_variables). *)
 val gen_decl : GlobRef.t -> ml_ast -> ml_type -> cpp_decl * env * variable list
+
+(** Similar to gen_decl but returns None for non-function types (used by pp_hdecl). *)
+val gen_decl_for_pp : GlobRef.t -> ml_ast -> ml_type -> cpp_decl option * env * variable list
+
+(** Generate C++ function specification (declaration without body). *)
 val gen_spec : GlobRef.t -> ml_ast -> ml_type -> cpp_decl * env
+
+(** Generate C++ definitions for a group of mutually recursive functions. *)
 val gen_dfuns : GlobRef.t array * ml_ast array * ml_type array -> (cpp_decl * env * variable list) list
+
+(** Generate C++ headers (declarations) for a group of mutually recursive functions. *)
 val gen_dfuns_header : GlobRef.t array * ml_ast array * ml_type array -> (cpp_decl * env) list
+
+(** {2 Inductive Type Generation} *)
+
+(** Generate C++ code for an inductive type (older style with make functions). *)
+val gen_ind_cpp : variable list -> GlobRef.t -> GlobRef.t array -> ml_type list array -> cpp_decl
+
+(** Generate C++ code for a record type. *)
+val gen_record_cpp : GlobRef.t -> GlobRef.t option list -> ml_ind_packet -> cpp_decl
+
+(** Generate C++ header for an inductive type (older style). *)
 val gen_ind_header : variable list -> GlobRef.t -> GlobRef.t array -> ml_type list array -> cpp_decl
+
+(** Generate C++ header for an inductive type (v2 style: encapsulated struct with methods).
+    @param vars Template type parameter names
+    @param name The inductive type reference
+    @param cnames Constructor references
+    @param tys Constructor argument types
+    @param method_candidates Functions to generate as methods: (func_ref, body, type, this_position) *)
+val gen_ind_header_v2 : variable list -> GlobRef.t -> GlobRef.t array -> ml_type list array -> (GlobRef.t * ml_ast * ml_type * int) list -> cpp_decl

@@ -18,39 +18,57 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-namespace list {
-template <typename A> struct nil;
-template <typename A> struct cons;
-template <typename A> using list = std::variant<nil<A>, cons<A>>;
-template <typename A> struct nil {
-  static std::shared_ptr<list<A>> make() {
-    return std::make_shared<list<A>>(nil<A>{});
-  }
-};
-template <typename A> struct cons {
-  A _a0;
-  std::shared_ptr<list<A>> _a1;
-  static std::shared_ptr<list<A>> make(A _a0, std::shared_ptr<list<A>> _a1) {
-    return std::make_shared<list<A>>(cons<A>{_a0, _a1});
-  }
-};
-}; // namespace list
+struct List {
+  template <typename A> struct list {
+  public:
+    struct nil {};
+    struct cons {
+      A _a0;
+      std::shared_ptr<list<A>> _a1;
+    };
+    using variant_t = std::variant<nil, cons>;
 
-template <typename T1>
-std::shared_ptr<list::list<T1>> app(const std::shared_ptr<list::list<T1>> l,
-                                    const std::shared_ptr<list::list<T1>> m) {
-  return std::visit(
-      Overloaded{
-          [&](const list::nil<T1> _args) -> std::shared_ptr<list::list<T1>> {
-            return m;
-          },
-          [&](const list::cons<T1> _args) -> std::shared_ptr<list::list<T1>> {
-            T1 a = _args._a0;
-            std::shared_ptr<list::list<T1>> l1 = _args._a1;
-            return list::cons<T1>::make(a, app<T1>(l1, m));
-          }},
-      *l);
-}
+  private:
+    variant_t v_;
+    explicit list(nil x) : v_(std::move(x)) {}
+    explicit list(cons x) : v_(std::move(x)) {}
+
+  public:
+    struct ctor {
+      ctor() = delete;
+      static std::shared_ptr<list<A>> nil_() {
+        return std::shared_ptr<list<A>>(new list<A>(nil{}));
+      }
+      static std::shared_ptr<list<A>>
+      cons_(A a0, const std::shared_ptr<list<A>> &a1) {
+        return std::shared_ptr<list<A>>(new list<A>(cons{a0, a1}));
+      }
+    };
+    const variant_t &v() const { return v_; }
+    std::shared_ptr<list<A>> app(const std::shared_ptr<list<A>> &m) const {
+      return std::visit(
+          Overloaded{[&](const typename List::list<A>::nil _args)
+                         -> std::shared_ptr<List::list<A>> { return m; },
+                     [&](const typename List::list<A>::cons _args)
+                         -> std::shared_ptr<List::list<A>> {
+                       A a = _args._a0;
+                       std::shared_ptr<List::list<A>> l1 = _args._a1;
+                       return List::list<A>::ctor::cons_(a, l1->app(m));
+                     }},
+          this->v());
+    }
+  };
+};
+
+struct IO_axioms {};
+
+struct STM {
+  struct STM_axioms {};
+};
+
+struct TVar {
+  struct TVar_axioms {};
+};
 
 template <typename T1, MapsTo<T1, T1> F1>
 void modifyTVar(const std::shared_ptr<stm::TVar<T1>> a, F1 &&f) {
@@ -59,49 +77,51 @@ void modifyTVar(const std::shared_ptr<stm::TVar<T1>> a, F1 &&f) {
   return;
 }
 
-namespace stmtest {
-template <typename T1, MapsTo<bool, T1> F1>
-T1 readOrRetry(const std::shared_ptr<stm::TVar<T1>> tv, F1 &&ok) {
-  T1 x = stm::readTVar<T1>(tv);
-  if (ok(x)) {
-    return x;
-  } else {
-    return stm::retry<T1>();
+struct stmtest {
+  template <typename T1, MapsTo<bool, T1> F1>
+  static T1 readOrRetry(const std::shared_ptr<stm::TVar<T1>> tv, F1 &&ok) {
+    T1 x = stm::readTVar<T1>(tv);
+    if (ok(x)) {
+      return x;
+    } else {
+      return stm::retry<T1>();
+    }
   }
-}
 
-unsigned int stm_basic_counter();
+  static unsigned int stm_basic_counter();
 
-unsigned int io_basic_counter();
+  static unsigned int io_basic_counter();
 
-unsigned int stm_inc(const unsigned int x);
+  static unsigned int stm_inc(const unsigned int x);
 
-unsigned int io_inc(const unsigned int x);
+  static unsigned int io_inc(const unsigned int x);
 
-unsigned int stm_add_self(const unsigned int x);
+  static unsigned int stm_add_self(const unsigned int x);
 
-unsigned int io_add_self(const unsigned int x);
+  static unsigned int io_add_self(const unsigned int x);
 
-void stm_enqueue(
-    const std::shared_ptr<stm::TVar<std::shared_ptr<list::list<unsigned int>>>>
-        q,
-    const unsigned int x);
+  static void
+  stm_enqueue(const std::shared_ptr<
+                  stm::TVar<std::shared_ptr<List::list<unsigned int>>>>
+                  q,
+              const unsigned int x);
 
-unsigned int stm_dequeue(
-    const std::shared_ptr<stm::TVar<std::shared_ptr<list::list<unsigned int>>>>
-        q);
+  static unsigned int
+  stm_dequeue(const std::shared_ptr<
+              stm::TVar<std::shared_ptr<List::list<unsigned int>>>>
+                  q);
 
-unsigned int stm_tryDequeue(
-    const std::shared_ptr<stm::TVar<std::shared_ptr<list::list<unsigned int>>>>
-        q,
-    const unsigned int dflt);
+  static unsigned int
+  stm_tryDequeue(const std::shared_ptr<
+                     stm::TVar<std::shared_ptr<List::list<unsigned int>>>>
+                     q,
+                 const unsigned int dflt);
 
-unsigned int stm_queue_roundtrip(const unsigned int x);
+  static unsigned int stm_queue_roundtrip(const unsigned int x);
 
-unsigned int io_queue_roundtrip(const unsigned int x);
+  static unsigned int io_queue_roundtrip(const unsigned int x);
 
-unsigned int stm_orElse_retry_example();
+  static unsigned int stm_orElse_retry_example();
 
-unsigned int io_orElse_retry_example();
-
-}; // namespace stmtest
+  static unsigned int io_orElse_retry_example();
+};

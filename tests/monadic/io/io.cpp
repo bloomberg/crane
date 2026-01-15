@@ -8,24 +8,19 @@
 #include <utility>
 #include <variant>
 
-namespace unit {
-std::shared_ptr<unit> tt::make() { return std::make_shared<unit>(tt{}); }
-}; // namespace unit
+void iotest::test1(const std::string _x) { return; }
 
-namespace iotest {
-void test1(const std::string _x) { return; }
-
-std::shared_ptr<unit::unit> test2(const std::string s) {
+std::shared_ptr<Unit::unit> iotest::test2(const std::string s) {
   std::cout << s;
-  return unit::tt::make();
+  return Unit::unit::ctor::tt_();
 }
 
-void test3(const std::string s) {
+void iotest::test3(const std::string s) {
   std::cout << s << '\n';
   return;
 }
 
-std::string test4() {
+std::string iotest::test4() {
   std::cout << "what is your name?" << '\n';
   std::string s2 = []() -> std::string {
     std::string s;
@@ -36,7 +31,7 @@ std::string test4() {
   return "I read the name " + s2 + " frome the command line!";
 }
 
-void test5() {
+void iotest::test5() {
   std::string s = []() -> std::string {
     std::ifstream file("file.txt");
     if (!file) {
@@ -49,5 +44,3 @@ void test5() {
   std::cout << s << '\n';
   return;
 }
-
-}; // namespace iotest

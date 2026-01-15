@@ -15,7 +15,6 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-namespace Ack {
-unsigned int ack(const unsigned int m, const unsigned int n);
-
+struct Ack {
+  static unsigned int ack(const unsigned int m, const unsigned int n);
 };

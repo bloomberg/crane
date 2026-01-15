@@ -17,13 +17,12 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-namespace threadtest {
-void fun1(const unsigned int n);
+struct threadtest {
+  static void fun1(const unsigned int n);
 
-void fun2(const unsigned int n);
+  static void fun2(const unsigned int n);
 
-void test(const unsigned int m, const unsigned int n);
+  static void test(const unsigned int m, const unsigned int n);
 
-void test2(const unsigned int m, const unsigned int n);
-
-}; // namespace threadtest
+  static void test2(const unsigned int m, const unsigned int n);
+};

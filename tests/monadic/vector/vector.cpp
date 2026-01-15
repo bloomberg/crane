@@ -9,8 +9,7 @@
 #include <vector.h>
 #include <vector>
 
-namespace vectest {
-int test1(const int _x) {
+int vectest::test1(const int _x) {
   std::vector<meta117> v = {};
   v.push_back(3);
   v.push_back(2);
@@ -21,7 +20,7 @@ int test1(const int _x) {
   return x - y;
 }
 
-std::vector<int> test2(const int _x) {
+std::vector<int> vectest::test2(const int _x) {
   std::vector<int> v = {};
   v.push_back(12);
   v.push_back(23);
@@ -34,5 +33,3 @@ std::vector<int> test2(const int _x) {
   v.push_back(y);
   return v;
 }
-
-}; // namespace vectest

@@ -12,43 +12,55 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-namespace list {
-template <typename A> struct nil;
-template <typename A> struct cons;
-template <typename A> using list = std::variant<nil<A>, cons<A>>;
-template <typename A> struct nil {
-  static std::shared_ptr<list<A>> make() {
-    return std::make_shared<list<A>>(nil<A>{});
-  }
+struct List {
+  template <typename A> struct list {
+  public:
+    struct nil {};
+    struct cons {
+      A _a0;
+      std::shared_ptr<list<A>> _a1;
+    };
+    using variant_t = std::variant<nil, cons>;
+
+  private:
+    variant_t v_;
+    explicit list(nil x) : v_(std::move(x)) {}
+    explicit list(cons x) : v_(std::move(x)) {}
+
+  public:
+    struct ctor {
+      ctor() = delete;
+      static std::shared_ptr<list<A>> nil_() {
+        return std::shared_ptr<list<A>>(new list<A>(nil{}));
+      }
+      static std::shared_ptr<list<A>>
+      cons_(A a0, const std::shared_ptr<list<A>> &a1) {
+        return std::shared_ptr<list<A>>(new list<A>(cons{a0, a1}));
+      }
+    };
+    const variant_t &v() const { return v_; }
+  };
 };
-template <typename A> struct cons {
-  A _a0;
-  std::shared_ptr<list<A>> _a1;
-  static std::shared_ptr<list<A>> make(A _a0, std::shared_ptr<list<A>> _a1) {
-    return std::make_shared<list<A>>(cons<A>{_a0, _a1});
-  }
-};
-}; // namespace list
 
 template <typename T1>
-std::shared_ptr<list::list<T1>>
-better_rev(const std::shared_ptr<list::list<T1>> l) {
-  std::function<std::shared_ptr<list::list<meta8>>(
-      std::shared_ptr<list::list<meta8>>, std::shared_ptr<list::list<meta8>>)>
+std::shared_ptr<List::list<T1>>
+better_rev(const std::shared_ptr<List::list<T1>> &l) {
+  std::function<std::shared_ptr<List::list<meta8>>(
+      std::shared_ptr<List::list<meta8>>, std::shared_ptr<List::list<meta8>>)>
       go;
-  go = [&](std::shared_ptr<list::list<meta8>> l0,
-           std::shared_ptr<list::list<meta8>> acc)
-      -> std::shared_ptr<list::list<meta8>> {
+  go = [&](std::shared_ptr<List::list<meta8>> l0,
+           std::shared_ptr<List::list<meta8>> acc)
+      -> std::shared_ptr<List::list<meta8>> {
     return std::visit(
-        Overloaded{[&](const list::nil<meta8> _args)
-                       -> std::shared_ptr<list::list<meta8>> { return acc; },
-                   [&](const list::cons<meta8> _args)
-                       -> std::shared_ptr<list::list<meta8>> {
+        Overloaded{[&](const typename List::list<meta8>::nil _args)
+                       -> std::shared_ptr<List::list<meta8>> { return acc; },
+                   [&](const typename List::list<meta8>::cons _args)
+                       -> std::shared_ptr<List::list<meta8>> {
                      meta8 x = _args._a0;
-                     std::shared_ptr<list::list<meta8>> xs = _args._a1;
-                     return go(xs, list::cons<meta8>::make(x, acc));
+                     std::shared_ptr<List::list<meta8>> xs = _args._a1;
+                     return go(xs, List::list<meta8>::ctor::cons_(x, acc));
                    }},
-        *l0);
+        l0->v());
   };
-  return go(l, list::nil<T1>::make());
+  return go(l, List::list<T1>::ctor::nil_());
 }

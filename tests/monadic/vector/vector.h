@@ -16,9 +16,12 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-namespace vectest {
-int test1(const int _x);
+struct IO_axioms {};
 
-std::vector<int> test2(const int _x);
+struct Vector_axioms {};
 
-}; // namespace vectest
+struct vectest {
+  static int test1(const int _x);
+
+  static std::vector<int> test2(const int _x);
+};
