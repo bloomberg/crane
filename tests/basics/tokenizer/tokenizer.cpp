@@ -11,14 +11,11 @@
 #include <variant>
 #include <vector>
 
-namespace list {};
-
-namespace Tokenizer {
 std::pair<std::optional<std::basic_string_view<char>>,
           std::basic_string_view<char>>
-next_token(const std::basic_string_view<char> input,
-           const std::basic_string_view<char> soft,
-           const std::basic_string_view<char> hard) {
+Tokenizer::next_token(const std::basic_string_view<char> input,
+                      const std::basic_string_view<char> soft,
+                      const std::basic_string_view<char> hard) {
   std::function<std::pair<std::optional<std::basic_string_view<char>>,
                           std::basic_string_view<char>>(
       unsigned int, int, std::basic_string_view<char>)>
@@ -61,17 +58,17 @@ next_token(const std::basic_string_view<char> input,
   return aux(static_cast<unsigned int>(input.length()), 0, input);
 }
 
-std::shared_ptr<list::list<std::basic_string_view<char>>>
-list_tokens(const std::basic_string_view<char> input,
-            const std::basic_string_view<char> soft,
-            const std::basic_string_view<char> hard) {
-  std::function<std::shared_ptr<list::list<std::basic_string_view<char>>>(
+std::shared_ptr<List::list<std::basic_string_view<char>>>
+Tokenizer::list_tokens(const std::basic_string_view<char> input,
+                       const std::basic_string_view<char> soft,
+                       const std::basic_string_view<char> hard) {
+  std::function<std::shared_ptr<List::list<std::basic_string_view<char>>>(
       unsigned int, std::basic_string_view<char>)>
       aux;
   aux = [&](unsigned int fuel, std::basic_string_view<char> rest)
-      -> std::shared_ptr<list::list<std::basic_string_view<char>>> {
+      -> std::shared_ptr<List::list<std::basic_string_view<char>>> {
     if (fuel <= 0) {
-      return list::nil<std::basic_string_view<char>>::make();
+      return List::list<std::basic_string_view<char>>::ctor::nil_();
     } else {
       unsigned int fuel_ = fuel - 1;
       std::pair<std::optional<std::basic_string_view<char>>,
@@ -79,14 +76,12 @@ list_tokens(const std::basic_string_view<char> input,
           t = next_token(rest, soft, hard);
       if (t.first.has_value()) {
         std::basic_string_view<char> t_ = *t.first;
-        return list::cons<std::basic_string_view<char>>::make(
+        return List::list<std::basic_string_view<char>>::ctor::cons_(
             t_, aux(fuel_, t.second));
       } else {
-        return list::nil<std::basic_string_view<char>>::make();
+        return List::list<std::basic_string_view<char>>::ctor::nil_();
       }
     }
   };
   return aux(static_cast<unsigned int>(input.length()), input);
 }
-
-}; // namespace Tokenizer

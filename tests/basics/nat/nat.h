@@ -12,43 +12,70 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-namespace Nat {
-namespace nat {
-struct O;
-struct S;
-using nat = std::variant<O, S>;
-struct O {
-  static std::shared_ptr<nat> make();
+struct Nat {
+  struct nat {
+  public:
+    struct O {};
+    struct S {
+      std::shared_ptr<nat> _a0;
+    };
+    using variant_t = std::variant<O, S>;
+
+  private:
+    variant_t v_;
+    explicit nat(O x) : v_(std::move(x)) {}
+    explicit nat(S x) : v_(std::move(x)) {}
+
+  public:
+    struct ctor {
+      ctor() = delete;
+      static std::shared_ptr<nat> O_() {
+        return std::shared_ptr<nat>(new nat(O{}));
+      }
+      static std::shared_ptr<nat> S_(const std::shared_ptr<nat> &a0) {
+        return std::shared_ptr<nat>(new nat(S{a0}));
+      }
+    };
+    const variant_t &v() const { return v_; }
+    int nat_to_int() const {
+      return std::visit(
+          Overloaded{[&](const typename nat::O _args) -> int { return 0; },
+                     [&](const typename nat::S _args) -> int {
+                       std::shared_ptr<nat> n_ = _args._a0;
+                       return 1 + n_->nat_to_int();
+                     }},
+          this->v());
+    }
+    std::shared_ptr<nat> add(const std::shared_ptr<nat> &n) const {
+      return std::visit(
+          Overloaded{[&](const typename nat::O _args) -> std::shared_ptr<nat> {
+                       return n;
+                     },
+                     [&](const typename nat::S _args) -> std::shared_ptr<nat> {
+                       std::shared_ptr<nat> x = _args._a0;
+                       return nat::ctor::S_(x->add(n));
+                     }},
+          this->v());
+    }
+    template <typename T1, MapsTo<T1, std::shared_ptr<nat>, T1> F1>
+    T1 nat_rec(const T1 f, F1 &&f0) const {
+      return std::visit(
+          Overloaded{[&](const typename nat::O _args) -> T1 { return f; },
+                     [&](const typename nat::S _args) -> T1 {
+                       std::shared_ptr<nat> n0 = _args._a0;
+                       return f0(n0, n0->nat_rec(f, f0));
+                     }},
+          this->v());
+    }
+    template <typename T1, MapsTo<T1, std::shared_ptr<nat>, T1> F1>
+    T1 nat_rect(const T1 f, F1 &&f0) const {
+      return std::visit(
+          Overloaded{[&](const typename nat::O _args) -> T1 { return f; },
+                     [&](const typename nat::S _args) -> T1 {
+                       std::shared_ptr<nat> n0 = _args._a0;
+                       return f0(n0, n0->nat_rect(f, f0));
+                     }},
+          this->v());
+    }
+  };
 };
-struct S {
-  std::shared_ptr<nat> _a0;
-  static std::shared_ptr<nat> make(std::shared_ptr<nat> _a0);
-};
-}; // namespace nat
-
-template <typename T1, MapsTo<T1, std::shared_ptr<nat::nat>, T1> F1>
-T1 nat_rect(const T1 f, F1 &&f0, const std::shared_ptr<nat::nat> n) {
-  return std::visit(Overloaded{[&](const nat::O _args) -> T1 { return f; },
-                               [&](const nat::S _args) -> T1 {
-                                 std::shared_ptr<nat::nat> n0 = _args._a0;
-                                 return f0(n0, nat_rect<T1>(f, f0, n0));
-                               }},
-                    *n);
-}
-
-template <typename T1, MapsTo<T1, std::shared_ptr<nat::nat>, T1> F1>
-T1 nat_rec(const T1 f, F1 &&f0, const std::shared_ptr<nat::nat> n) {
-  return std::visit(Overloaded{[&](const nat::O _args) -> T1 { return f; },
-                               [&](const nat::S _args) -> T1 {
-                                 std::shared_ptr<nat::nat> n0 = _args._a0;
-                                 return f0(n0, nat_rec<T1>(f, f0, n0));
-                               }},
-                    *n);
-}
-
-std::shared_ptr<nat::nat> add(const std::shared_ptr<nat::nat> m,
-                              const std::shared_ptr<nat::nat> n);
-
-int nat_to_int(const std::shared_ptr<nat::nat> n);
-
-}; // namespace Nat

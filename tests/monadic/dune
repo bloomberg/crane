@@ -9,9 +9,7 @@
    Crane)
  (flags (:standard -output-directory ../../tests/monadic)))
 
-(alias
- (name runtest)
- (deps
-  ;; depend on all .vo files in this directory
-  ;; this ensures dune runtest compiles them
-  (glob_files *.vo)))
+(rule
+ (alias runtest)
+ (deps (glob_files *.v) (alias_rec all))
+ (action (progn)))

@@ -12,3 +12,9 @@
 
 val pp_type : bool -> Names.variable list -> Miniml.ml_type -> Pp.t
 val cpp_descr : Miniml.language_descr
+
+(** Reset all C++ extraction global state.
+    MUST be called between separate extractions to avoid state pollution
+    when running multiple extractions in the same process (e.g., during 'dune build').
+    Clears: struct context, template context, method candidates, method registry, etc. *)
+val reset_cpp_state : unit -> unit

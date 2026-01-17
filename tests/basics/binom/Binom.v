@@ -3,7 +3,7 @@
 (* From CertiCoq benchmarks, with its MIT license. *)
 From Stdlib Require Import Nat Lists.List.
 
-Module Binom.
+Module Priqueue.
 
 Import ListNotations.
 Import Nat.
@@ -138,10 +138,10 @@ Definition example2 : key :=
 
 *)
 
-End Binom.
+End Priqueue.
 
 Require Crane.Extraction.
 Require Crane.Mapping.Std.
 Require Crane.Mapping.NatIntStd.
 
-Crane Extraction TestCompile "binom" Binom.
+Crane Extraction TestCompile "binom" Priqueue.

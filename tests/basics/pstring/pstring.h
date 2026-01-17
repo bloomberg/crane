@@ -14,52 +14,82 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-namespace nat {
-struct O;
-struct S;
-using nat = std::variant<O, S>;
-struct O {
-  static std::shared_ptr<nat> make();
-};
-struct S {
-  std::shared_ptr<nat> _a0;
-  static std::shared_ptr<nat> make(std::shared_ptr<nat> _a0);
-};
-}; // namespace nat
+struct Nat {
+  struct nat {
+  public:
+    struct O {};
+    struct S {
+      std::shared_ptr<nat> _a0;
+    };
+    using variant_t = std::variant<O, S>;
 
-namespace list {
-template <typename A> struct nil;
-template <typename A> struct cons;
-template <typename A> using list = std::variant<nil<A>, cons<A>>;
-template <typename A> struct nil {
-  static std::shared_ptr<list<A>> make() {
-    return std::make_shared<list<A>>(nil<A>{});
+  private:
+    variant_t v_;
+    explicit nat(O x) : v_(std::move(x)) {}
+    explicit nat(S x) : v_(std::move(x)) {}
+
+  public:
+    struct ctor {
+      ctor() = delete;
+      static std::shared_ptr<nat> O_() {
+        return std::shared_ptr<nat>(new nat(O{}));
+      }
+      static std::shared_ptr<nat> S_(const std::shared_ptr<nat> &a0) {
+        return std::shared_ptr<nat>(new nat(S{a0}));
+      }
+    };
+    const variant_t &v() const { return v_; }
+  };
+};
+
+struct List {
+  template <typename A> struct list {
+  public:
+    struct nil {};
+    struct cons {
+      A _a0;
+      std::shared_ptr<list<A>> _a1;
+    };
+    using variant_t = std::variant<nil, cons>;
+
+  private:
+    variant_t v_;
+    explicit list(nil x) : v_(std::move(x)) {}
+    explicit list(cons x) : v_(std::move(x)) {}
+
+  public:
+    struct ctor {
+      ctor() = delete;
+      static std::shared_ptr<list<A>> nil_() {
+        return std::shared_ptr<list<A>>(new list<A>(nil{}));
+      }
+      static std::shared_ptr<list<A>>
+      cons_(A a0, const std::shared_ptr<list<A>> &a1) {
+        return std::shared_ptr<list<A>>(new list<A>(cons{a0, a1}));
+      }
+    };
+    const variant_t &v() const { return v_; }
+  };
+};
+
+struct PString {
+  static std::string nat_to_string(const std::shared_ptr<Nat::nat> &n);
+
+  static int nat_to_int(const std::shared_ptr<Nat::nat> &n);
+
+  template <typename T1, MapsTo<std::string, T1> F0>
+  static std::string list_to_string(F0 &&p,
+                                    const std::shared_ptr<List::list<T1>> &l) {
+    return std::visit(
+        Overloaded{
+            [&](const typename List::list<T1>::nil _args) -> std::string {
+              return "[]";
+            },
+            [&](const typename List::list<T1>::cons _args) -> std::string {
+              T1 y = _args._a0;
+              std::shared_ptr<List::list<T1>> l_ = _args._a1;
+              return p(y) + "::" + list_to_string<T1>(p, l_);
+            }},
+        l->v());
   }
 };
-template <typename A> struct cons {
-  A _a0;
-  std::shared_ptr<list<A>> _a1;
-  static std::shared_ptr<list<A>> make(A _a0, std::shared_ptr<list<A>> _a1) {
-    return std::make_shared<list<A>>(cons<A>{_a0, _a1});
-  }
-};
-}; // namespace list
-
-namespace PString {
-std::string nat_to_string(const std::shared_ptr<nat::nat> n);
-
-int nat_to_int(const std::shared_ptr<nat::nat> n);
-
-template <typename T1, MapsTo<std::string, T1> F0>
-std::string list_to_string(F0 &&p, const std::shared_ptr<list::list<T1>> l) {
-  return std::visit(
-      Overloaded{[&](const list::nil<T1> _args) -> std::string { return "[]"; },
-                 [&](const list::cons<T1> _args) -> std::string {
-                   T1 y = _args._a0;
-                   std::shared_ptr<list::list<T1>> l_ = _args._a1;
-                   return p(y) + "::" + list_to_string<T1>(p, l_);
-                 }},
-      *l);
-}
-
-}; // namespace PString

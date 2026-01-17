@@ -12,17 +12,32 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-namespace nat {
-struct O;
-struct S;
-using nat = std::variant<O, S>;
-struct O {
-  static std::shared_ptr<nat> make();
-};
-struct S {
-  std::shared_ptr<nat> _a0;
-  static std::shared_ptr<nat> make(std::shared_ptr<nat> _a0);
-};
-}; // namespace nat
+struct Nat {
+  struct nat {
+  public:
+    struct O {};
+    struct S {
+      std::shared_ptr<nat> _a0;
+    };
+    using variant_t = std::variant<O, S>;
 
-const std::shared_ptr<nat::nat> one = nat::S::make(nat::O::make());
+  private:
+    variant_t v_;
+    explicit nat(O x) : v_(std::move(x)) {}
+    explicit nat(S x) : v_(std::move(x)) {}
+
+  public:
+    struct ctor {
+      ctor() = delete;
+      static std::shared_ptr<nat> O_() {
+        return std::shared_ptr<nat>(new nat(O{}));
+      }
+      static std::shared_ptr<nat> S_(const std::shared_ptr<nat> &a0) {
+        return std::shared_ptr<nat>(new nat(S{a0}));
+      }
+    };
+    const variant_t &v() const { return v_; }
+  };
+};
+
+const std::shared_ptr<Nat::nat> one = Nat::nat::ctor::S_(Nat::nat::ctor::O_());

@@ -34,8 +34,32 @@ void aSsErT(bool condition, const char *message, int line)
     aSsErT(!(X), #X, __LINE__);
 
 int main() {
-  unsigned int test = Ack::ack(3, 7);
-  std::cout << "ack(3,7) = " << test << "\n";
-  // ASSERT(ack(2, 4) == 11);
-  return 0;
+  std::cout << "Testing Ackermann function...\n";
+
+  // Test base cases
+  ASSERT(Ack::ack(0, 0) == 1);
+  ASSERT(Ack::ack(0, 1) == 2);
+  ASSERT(Ack::ack(0, 5) == 6);
+
+  // Test recursive cases
+  ASSERT(Ack::ack(1, 0) == 2);
+  ASSERT(Ack::ack(1, 1) == 3);
+  ASSERT(Ack::ack(1, 5) == 7);
+
+  ASSERT(Ack::ack(2, 0) == 3);
+  ASSERT(Ack::ack(2, 1) == 5);
+  ASSERT(Ack::ack(2, 2) == 7);
+  ASSERT(Ack::ack(2, 4) == 11);
+
+  ASSERT(Ack::ack(3, 0) == 5);
+  ASSERT(Ack::ack(3, 1) == 13);
+  ASSERT(Ack::ack(3, 2) == 29);
+  ASSERT(Ack::ack(3, 3) == 61);
+  ASSERT(Ack::ack(3, 7) == 1021);
+
+  if (testStatus == 0) {
+    std::cout << "All Ackermann tests passed!\n";
+  }
+
+  return testStatus;
 }

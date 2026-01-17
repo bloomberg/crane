@@ -12,6 +12,20 @@ open Str
 
 exception TODO
 
+(* Mutable context tracking inductives defined in the current module scope.
+   When set, references to these inductives won't be wrapped in Tnamespace,
+   so they appear as sibling types rather than outer-namespace-qualified types. *)
+let local_inductives : GlobRef.t list ref = ref []
+
+let add_local_inductive (r : GlobRef.t) =
+  local_inductives := r :: !local_inductives
+
+let clear_local_inductives () =
+  local_inductives := []
+
+let get_local_inductives () =
+  !local_inductives
+
 let contains s1 s2 =
   let re = Str.regexp_string s2 in
   try ignore (Str.search_forward re s1 0); true
@@ -56,9 +70,13 @@ let rec convert_ml_type_to_cpp_type env (ns : GlobRef.t list) (tvars : Id.t list
   | Tglob (g, ts, _) ->
       let core = Tglob (g, List.map (convert_ml_type_to_cpp_type env ns tvars) ts, []) in
       (match g with
-      | GlobRef.IndRef _ -> if List.exists (Environ.QGlobRef.equal Environ.empty_env g) ns then Tshared_ptr core
-      else if not (get_record_fields g == []) then Tshared_ptr core
-      else Tshared_ptr (Tnamespace (g, core))
+      | GlobRef.IndRef _ ->
+        (* Check if this inductive is in the explicit ns list or in local_inductives context *)
+        let is_local = List.exists (Environ.QGlobRef.equal Environ.empty_env g) ns ||
+                       List.exists (Environ.QGlobRef.equal Environ.empty_env g) !local_inductives in
+        if is_local then Tshared_ptr core
+        else if not (get_record_fields g == []) then Tshared_ptr core
+        else Tshared_ptr (Tnamespace (g, core))
       | _ -> core)
   | Tvar i -> (try Tvar (i, Some (List.nth tvars (pred i)))       (* TODO: probs fix/cleanup *)
                               with Failure _ -> Tvar (i, None))
@@ -119,13 +137,29 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     let fds = record_fields_of_type ty in
     (match fds with
       | [] ->
-      let nstempmod args = (match ty with
+      (* Generate: Type<temps>::ctor::Constructor_(args) *)
+      let gen_ctor_call args = (match ty with
       | Tglob (n, tys, _) ->
         let temps = List.map (convert_ml_type_to_cpp_type env [] []) tys in
-        CPPnamespace (n, (CPPstructmk (r, temps, args)))
-      | _ -> CPPstructmk (r, [], args)) in
-      nstempmod (List.map (gen_expr env) ts)
+        (* Get the constructor base name (without module path) and add underscore suffix *)
+        let ctor_name = Common.pp_global_name Type r in
+        let factory_name = Id.of_string (ctor_name ^ "_") in
+        (* Build: Type<temps>::ctor::Factory_(args) *)
+        let type_expr = CPPglob (n, temps) in
+        let ctor_expr = CPPqualified (type_expr, Id.of_string "ctor") in
+        let factory_expr = CPPqualified (ctor_expr, factory_name) in
+        CPPfun_call (factory_expr, args)
+      | _ ->
+        (* Fallback for non-Tglob types - shouldn't happen in practice *)
+        let ctor_name = Common.pp_global_name Type r in
+        let factory_name = Id.of_string (ctor_name ^ "_") in
+        let ctor_expr = CPPqualified (CPPglob (r, []), Id.of_string "ctor") in
+        let factory_expr = CPPqualified (ctor_expr, factory_name) in
+        CPPfun_call (factory_expr, args)) in
+      (* Note: CPPfun_call reverses args when printing, so we reverse here *)
+      gen_ctor_call (List.rev_map (gen_expr env) ts)
     | _ ->
+      (* Records - keep using make_shared pattern for now *)
       let nstempmod args = (match ty with
       | Tglob (n, tys, _) ->
         let temps = List.map (convert_ml_type_to_cpp_type env [] []) tys in
@@ -205,11 +239,47 @@ and eta_fun env f args =
     CPPfun_call (gen_expr env f, List.rev args)
 
 and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body =
+  (* Get the constructor name as a simple Id *)
+  let ctor_name = match cname with
+    | GlobRef.ConstructRef _ -> Id.of_string (Common.pp_global_name Type cname)
+    | _ -> Id.of_string "unknown_ctor"
+  in
+  (* Get type arguments from scrutinee to substitute in branch types *)
+  let type_args = match typ with
+    | Tglob (_, tys, _) -> tys
+    | _ -> []
+  in
+  (* Substitute type variables in return type and argument types *)
+  let rty = if type_args <> [] then
+    (try type_subst_list type_args rty with _ -> rty)
+    else rty
+  in
+  let ids = List.map (fun (id, ty) ->
+    let ty = if type_args <> [] then
+      (try type_subst_list type_args ty with _ -> ty)
+      else ty
+    in
+    (id, ty)) ids
+  in
+  (* Build path: typename InductiveType<temps>::ConstructorName *)
   let constr = match typ with
   | Tglob (r, tys, _) ->
+    (* Simplify ML types first, then substitute type variables, then convert to C++ *)
+    let tys = List.map type_simpl tys in
+    let tys = if type_args <> [] then
+      List.map (fun ty -> try type_subst_list type_args ty with _ -> ty) tys
+      else tys
+    in
     let temps = List.map (convert_ml_type_to_cpp_type env [] []) tys in
-    Tnamespace (r, (Tstruct (cname, temps)))
-  | _ -> Tstruct (cname, []) in
+    (* The constructor struct is nested inside the inductive type *)
+    (* Generate: typename list<unsigned int>::nil *)
+    (* Build the full inductive type first, then qualify with the constructor name *)
+    (* For local inductives (defined in current module), don't wrap in Tnamespace
+       to avoid double qualification like tree::tree::Empty *)
+    let is_local_ind = List.exists (Environ.QGlobRef.equal Environ.empty_env r) (get_local_inductives ()) in
+    let ind_type = if is_local_ind then Tglob (r, temps, []) else Tnamespace (r, Tglob (r, temps, [])) in
+    Tqualified (ind_type, ctor_name)
+  | _ -> Tid (ctor_name, []) in
   let sname = Id.of_string "_args" in
   let ret = convert_ml_type_to_cpp_type env [] [] rty in
   let asgns =  List.mapi (fun i x ->
@@ -222,7 +292,8 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body =
         asgns @ gen_stmts env (fun x -> Sreturn x) body)
 
 and gen_cpp_case (typ : ml_type) t env pv =
-  let outer cases x = (CPPfun_call (CPPvisit, CPPderef x :: [CPPoverloaded cases])) in
+  (* Call v() accessor method to get the variant for pattern matching *)
+  let outer cases x = (CPPfun_call (CPPvisit, CPPmethod_call (x, Id.of_string "v", []) :: [CPPoverloaded cases])) in
   let rec gen_cases = function
   | [] -> []
   | (ids,rty,p,t) :: cs ->
@@ -357,7 +428,7 @@ let gen_record_cpp name fields ind =
     let n = match x with
     | Some n -> n
     | None -> GlobRef.VarRef (Id.of_string ("_field" ^ (string_of_int i))) in
-    (Fvar' (n, convert_ml_type_to_cpp_type (empty_env ()) [] ind.ip_vars t), true)) l in
+    (Fvar' (n, convert_ml_type_to_cpp_type (empty_env ()) [] ind.ip_vars t), VPublic)) l in
   let ty_vars = List.map (fun x -> (TTtypename, x)) ind.ip_vars in
   match ty_vars with
   | [] -> Dstruct (name, l)
@@ -425,7 +496,15 @@ match e2 with
   | CPPget (e', id') -> CPPget (var_subst_expr id e1 e', id')
   | CPPget' (e', id') -> CPPget' (var_subst_expr id e1 e', id')
   | CPPparray (args, e') -> CPPparray (Array.map (var_subst_expr id e1) args, var_subst_expr id e1 e')
-  | _ -> e2 (* lambda needs to be covered *)
+  | CPPmethod_call (obj, meth, args) -> CPPmethod_call (var_subst_expr id e1 obj, meth, List.map (var_subst_expr id e1) args)
+  | CPPmember (e', mid) -> CPPmember (var_subst_expr id e1 e', mid)
+  | CPParrow (e', mid) -> CPParrow (var_subst_expr id e1 e', mid)
+  | CPPforward (ty, e') -> CPPforward (ty, var_subst_expr id e1 e')
+  | CPPnew (ty, args) -> CPPnew (ty, List.map (var_subst_expr id e1) args)
+  | CPPshared_ptr_ctor (ty, e') -> CPPshared_ptr_ctor (ty, var_subst_expr id e1 e')
+  | CPPstruct_id (sid, tys, args) -> CPPstruct_id (sid, tys, List.map (var_subst_expr id e1) args)
+  | CPPqualified (e', qid) -> CPPqualified (var_subst_expr id e1 e', qid)
+  | _ -> e2
 
 and var_subst_stmt (id : Id.t) (e : cpp_expr) (s : cpp_stmt) =
 match s with
@@ -435,6 +514,73 @@ match s with
   | Scustom_case (ty, e', tys, brs, str) -> Scustom_case (ty, var_subst_expr id e e', tys,
     List.map (fun (args, ty, stmts) -> (args, ty, List.map (var_subst_stmt id e) stmts)) brs, str)
   | _ -> s
+
+(* Substitute unnamed type variables with named ones based on a variable list.
+   This is used when generating methods to replace T1, T2, etc. with the struct's
+   template parameter names like A, B, etc. *)
+let rec tvar_subst_type (tvars : Id.t list) (ty : cpp_type) : cpp_type =
+  match ty with
+  | Tvar (i, None) ->
+    (try Tvar (i, Some (List.nth tvars (pred i)))
+     with Failure _ -> ty)
+  | Tvar (_, Some _) -> ty  (* Already named *)
+  | Tglob (r, tys, args) -> Tglob (r, List.map (tvar_subst_type tvars) tys, args)
+  | Tfun (tys, ty) -> Tfun (List.map (tvar_subst_type tvars) tys, tvar_subst_type tvars ty)
+  | Tmod (m, ty) -> Tmod (m, tvar_subst_type tvars ty)
+  | Tnamespace (r, ty) -> Tnamespace (r, tvar_subst_type tvars ty)
+  | Tstruct (r, tys) -> Tstruct (r, List.map (tvar_subst_type tvars) tys)
+  | Tref ty -> Tref (tvar_subst_type tvars ty)
+  | Tvariant tys -> Tvariant (List.map (tvar_subst_type tvars) tys)
+  | Tshared_ptr ty -> Tshared_ptr (tvar_subst_type tvars ty)
+  | Tid (id, tys) -> Tid (id, List.map (tvar_subst_type tvars) tys)
+  | Tqualified (ty, id) -> Tqualified (tvar_subst_type tvars ty, id)
+  | _ -> ty  (* Tvoid, Tstring, Ttodo, Tunknown, Taxiom *)
+
+let rec tvar_subst_expr (tvars : Id.t list) (e : cpp_expr) : cpp_expr =
+  let subst_ty = tvar_subst_type tvars in
+  let subst_e = tvar_subst_expr tvars in
+  match e with
+  | CPPglob (r, tys) -> CPPglob (r, List.map subst_ty tys)
+  | CPPnamespace (r, e') -> CPPnamespace (r, subst_e e')
+  | CPPfun_call (f, args) -> CPPfun_call (subst_e f, List.map subst_e args)
+  | CPPderef e' -> CPPderef (subst_e e')
+  | CPPmove e' -> CPPmove (subst_e e')
+  | CPPlambda (params, ret, body) ->
+      let params' = List.map (fun (ty, id) -> (subst_ty ty, id)) params in
+      let ret' = Option.map subst_ty ret in
+      CPPlambda (params', ret', List.map (tvar_subst_stmt tvars) body)
+  | CPPoverloaded cases -> CPPoverloaded (List.map subst_e cases)
+  | CPPstructmk (r, tys, args) -> CPPstructmk (r, List.map subst_ty tys, List.map subst_e args)
+  | CPPstruct (r, tys, args) -> CPPstruct (r, List.map subst_ty tys, List.map subst_e args)
+  | CPPget (e', id) -> CPPget (subst_e e', id)
+  | CPPget' (e', id) -> CPPget' (subst_e e', id)
+  | CPPparray (args, e') -> CPPparray (Array.map subst_e args, subst_e e')
+  | CPPmethod_call (obj, meth, args) -> CPPmethod_call (subst_e obj, meth, List.map subst_e args)
+  | CPPmember (e', mid) -> CPPmember (subst_e e', mid)
+  | CPParrow (e', mid) -> CPParrow (subst_e e', mid)
+  | CPPforward (ty, e') -> CPPforward (subst_ty ty, subst_e e')
+  | CPPnew (ty, args) -> CPPnew (subst_ty ty, List.map subst_e args)
+  | CPPshared_ptr_ctor (ty, e') -> CPPshared_ptr_ctor (subst_ty ty, subst_e e')
+  | CPPstruct_id (sid, tys, args) -> CPPstruct_id (sid, List.map subst_ty tys, List.map subst_e args)
+  | CPPqualified (e', qid) -> CPPqualified (subst_e e', qid)
+  | CPPmk_shared ty -> CPPmk_shared (subst_ty ty)
+  | _ -> e  (* CPPvar, CPPvar', CPPvisit, CPPstring, CPPuint, CPPthis, CPPrequires *)
+
+and tvar_subst_stmt (tvars : Id.t list) (s : cpp_stmt) : cpp_stmt =
+  let subst_ty = tvar_subst_type tvars in
+  let subst_e = tvar_subst_expr tvars in
+  let subst_s = tvar_subst_stmt tvars in
+  match s with
+  | Sreturn e -> Sreturn (subst_e e)
+  | Sdecl (id, ty) -> Sdecl (id, subst_ty ty)
+  | Sasgn (id, ty_opt, e) -> Sasgn (id, Option.map subst_ty ty_opt, subst_e e)
+  | Sexpr e -> Sexpr (subst_e e)
+  | Scustom_case (ty, e, tys, brs, str) ->
+      Scustom_case (subst_ty ty, subst_e e, List.map subst_ty tys,
+        List.map (fun (args, ty, stmts) ->
+          (List.map (fun (id, ty) -> (id, subst_ty ty)) args, subst_ty ty, List.map subst_s stmts)) brs,
+        str)
+  | SreturnVoid -> SreturnVoid
 
 (* TODO: CLEANUP: dom and cod are redundant with ty *)
 let gen_dfun n b dom cod ty temps =
@@ -449,7 +595,14 @@ let gen_dfun n b dom cod ty temps =
   let missing = List.rev (List.mapi (fun i t -> (Id (Id.of_string ("_x" ^ string_of_int i)), t)) (get_missing mldom ids)) in
   let ids,env = push_vars' (List.map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) (missing @ ids)) (empty_env ()) in
   let ids = List.filter (fun (_, ty) -> not (ml_type_is_void ty)) ids in
-  let ids = List.map (fun (x, ty) -> (x,  (Tmod (TMconst, convert_ml_type_to_cpp_type env [] [] ty)))) ids in
+  (* Convert ML types to C++ types and wrap with const. For shared_ptr, use const ref *)
+  let ids = List.map (fun (x, ty) ->
+    let cpp_ty = convert_ml_type_to_cpp_type env [] [] ty in
+    let wrapped = match cpp_ty with
+      | Tshared_ptr _ -> Tref (Tmod (TMconst, cpp_ty))  (* const std::shared_ptr<T>& *)
+      | _ -> Tmod (TMconst, cpp_ty)  (* const T *)
+    in
+    (x, wrapped)) ids in
   let fun_tys = List.filter_map (fun (x, ty, i) ->
       match ty with
       |  (Tmod (TMconst, Tfun (dom, cod))) -> Some (x, TTfun (dom, cod), Id.of_string ("F" ^ (string_of_int i)))
@@ -488,9 +641,22 @@ let gen_sfun n b dom cod temps =
   let ids,b = collect_lams b in
   let ids,env = push_vars' (List.map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids) (empty_env ()) in
   let ids = List.filter (fun (_, ty) -> not (ml_type_is_void ty)) ids in
-  let ids = List.map (fun (x, ty) -> (Some x,  (Tmod (TMconst, convert_ml_type_to_cpp_type env [] [] ty)))) ids in
+  (* Convert ML types to C++ types and wrap with const. For shared_ptr, use const ref *)
+  let ids = List.map (fun (x, ty) ->
+    let cpp_ty = convert_ml_type_to_cpp_type env [] [] ty in
+    let wrapped = match cpp_ty with
+      | Tshared_ptr _ -> Tref (Tmod (TMconst, cpp_ty))  (* const std::shared_ptr<T>& *)
+      | _ -> Tmod (TMconst, cpp_ty)  (* const T *)
+    in
+    (Some x, wrapped)) ids in
   let dom = List.filter (fun ty -> ty != Tvoid) dom in
-  let args = List.mapi (fun i ty -> (None,  (Tmod (TMconst, ty)))) dom in
+  (* For already-converted C++ types in dom, wrap shared_ptr with const ref *)
+  let args = List.mapi (fun i ty ->
+    let wrapped = match ty with
+      | Tshared_ptr _ -> Tref (Tmod (TMconst, ty))  (* const std::shared_ptr<T>& *)
+      | _ -> Tmod (TMconst, ty)  (* const T *)
+    in
+    (None, wrapped)) dom in
   let inner = if List.length args > List.length ids (* TODO: find/fix bug so we don't need this *)
     then Dfundecl ([n, []], cod, List.rev args)
     else Dfundecl ([n, []], cod, ids) in
@@ -532,6 +698,8 @@ let gen_decl_for_pp n b ty =
 
 (* TODO: maybe cleanup this function/its name etc.. *)
 let gen_decl_for_dfuns n b ty =
+  (* Simplify the ML type to resolve metavariables before converting to C++ *)
+  let ty = type_simpl ty in
   let cty = convert_ml_type_to_cpp_type (empty_env ()) [] [] ty in
   let tvars = get_tvars cty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
@@ -547,6 +715,7 @@ let gen_decl_for_dfuns n b ty =
   | _ -> let (f, env) = gen_dfun n b [Tvoid] cty ty temps in f , env , tvars
 
 let gen_spec n b ty =
+  let ty = type_simpl ty in
   let ty = convert_ml_type_to_cpp_type (empty_env ()) [] [] ty in
   let temps = List.map (fun id -> (TTtypename, id)) (get_tvars ty) in
   match ty with
@@ -560,6 +729,7 @@ let gen_spec n b ty =
 
 (* TODO: maybe cleanup this function/its name etc.. *)
 let gen_spec_for_sfuns n b ty =
+  let ty = type_simpl ty in
   let ty = convert_ml_type_to_cpp_type (empty_env ()) [] [] ty in
   let temps = List.map (fun id -> (TTtypename, id)) (get_tvars ty) in
   match ty with
@@ -588,13 +758,283 @@ let gen_ind_header vars name cnames tys =
       let c = cnames.(i) in
       (* eventually incorporate given names when they exist *)
       let constr = List.mapi (fun i x -> (Id.of_string ("_a" ^ string_of_int i) , convert_ml_type_to_cpp_type (empty_env ()) [name] vars x)) tys in
+      (* For function parameters, use const ref for shared_ptr types *)
+      let constr_params = List.map (fun (x, ty) ->
+        let wrapped = match ty with
+          | Tshared_ptr _ -> Tref (Tmod (TMconst, ty))  (* const std::shared_ptr<T>& *)
+          | _ -> ty
+        in
+        (x, wrapped)) constr in
       let make_args = List.map(fun (x,_) -> CPPglob (GlobRef.VarRef x, [])) constr in
       let ty_vars = List.mapi (fun i x -> Tvar (i, Some x)) vars in
-      let make_decl = Ffundecl (Id.of_string "make", Tmod (TMstatic, (ind_ty_ptr name ty_vars)), List.rev constr) in
-      let make_def = Ffundef (Id.of_string "make", Tmod (TMstatic, Tshared_ptr (Tglob (name, ty_vars, []))), constr,
+      let make_decl = Ffundecl (Id.of_string "make", Tmod (TMstatic, (ind_ty_ptr name ty_vars)), List.rev constr_params) in
+      let make_def = Ffundef (Id.of_string "make", Tmod (TMstatic, Tshared_ptr (Tglob (name, ty_vars, []))), constr_params,
         [Sreturn (CPPfun_call (CPPmk_shared (Tglob (name, ty_vars, [])), [CPPstruct (c, ty_vars, make_args)]))]) in
       if ty_vars == []
-        then add_templates (Dstruct (c, List.append (List.map (fun (x, y) -> (Fvar (x,y), true)) constr) [make_decl,true]))
-        else add_templates (Dstruct (c, List.append (List.map (fun (x, y) -> (Fvar (x,y), true)) constr) [make_def,true])))
+        then add_templates (Dstruct (c, List.append (List.map (fun (x, y) -> (Fvar (x,y), VPublic)) constr) [make_decl,VPublic]))
+        else add_templates (Dstruct (c, List.append (List.map (fun (x, y) -> (Fvar (x,y), VPublic)) constr) [make_def,VPublic])))
     tys) in
   Dnspace (Some name, List.append (List.append header [vartydecl]) constrdecl)
+
+(* New inductive generation: encapsulated struct with methods *)
+(* Generates:
+   struct Tree {
+     struct Leaf {};
+     struct Node { std::shared_ptr<Tree> left; std::shared_ptr<Tree> right; };
+     using variant_t = std::variant<Leaf, Node>;
+   private:
+     variant_t v_;
+     explicit Tree(Leaf x) : v_(x) {}
+     explicit Tree(Node x) : v_(std::move(x)) {}
+   public:
+     struct ctor {
+       ctor() = delete;
+       static std::shared_ptr<Tree> Leaf_() { return std::shared_ptr<Tree>(new Tree(Leaf{})); }
+       static std::shared_ptr<Tree> Node_(std::shared_ptr<Tree> l, std::shared_ptr<Tree> r) { ... }
+     };
+   };
+*)
+let gen_ind_header_v2 vars name cnames tys method_candidates =
+  let templates = List.map (fun n -> (TTtypename, n)) vars in
+  let ty_vars = List.mapi (fun i x -> Tvar (i, Some x)) vars in
+  let add_templates d = match templates with
+    | [] -> d
+    | _ -> Dtemplate (templates, None, d) in
+
+  (* The main struct type: std::shared_ptr<Tree> or std::shared_ptr<Tree<A>> *)
+  let self_ty = Tshared_ptr (Tglob (name, ty_vars, [])) in
+
+  (* 1. Constructor alternative structs (simple, just fields, no make) *)
+  let constructor_structs = Array.to_list (Array.mapi
+    (fun i tys_list ->
+      let c = cnames.(i) in
+      let cname = match c with
+        | GlobRef.ConstructRef ((_, _), _) ->
+            (* Get constructor name from the GlobRef *)
+            Id.of_string (Common.pp_global_name Type c)
+        | _ -> Id.of_string ("Ctor" ^ string_of_int i)
+      in
+      (* Fields: convert types, using self_ty for recursive references *)
+      let fields = List.mapi (fun j ty ->
+        let cpp_ty = convert_ml_type_to_cpp_type (empty_env ()) [name] vars ty in
+        (* Field name: use descriptive names if available, otherwise _a0, _a1, etc. *)
+        let field_name = Id.of_string ("_a" ^ string_of_int j) in
+        (Fvar (field_name, cpp_ty), VPublic)
+      ) tys_list in
+      (Fnested_struct (cname, fields), VPublic)
+    ) tys) in
+
+  (* 2. variant_t type alias - use simple Id-based refs that match nested struct names *)
+  (* Note: nested structs inherit template params from parent, so don't add <A> to them *)
+  let variant_ty = Tvariant (Array.to_list (Array.mapi
+    (fun i c ->
+      let cname_id = match c with
+        | GlobRef.ConstructRef _ -> Id.of_string (Common.pp_global_name Type c)
+        | _ -> Id.of_string ("Ctor" ^ string_of_int i)
+      in
+      (* Use Tid for local nested struct types - no template args since they inherit *)
+      Tid (cname_id, [])
+    ) cnames)) in
+  let variant_using = (Fnested_using (Id.of_string "variant_t", variant_ty), VPublic) in
+
+  (* 3. Private variant member v_ *)
+  let variant_member = (Fvar (Id.of_string "v_", Tid (Id.of_string "variant_t", [])), VPrivate) in
+
+  (* 4. Private explicit constructors for each alternative *)
+  (* Note: nested struct types don't need template args - they inherit from parent *)
+  let private_ctors = Array.to_list (Array.mapi
+    (fun i c ->
+      let cname = match c with
+        | GlobRef.ConstructRef _ -> Id.of_string (Common.pp_global_name Type c)
+        | _ -> Id.of_string ("Ctor" ^ string_of_int i)
+      in
+      let param_name = Id.of_string "x" in
+      let param_ty = Tid (cname, []) in
+      (* Initializer: v_(std::move(x)) *)
+      let init_list = [(Id.of_string "v_", CPPmove (CPPvar param_name))] in
+      (Fconstructor ([(param_name, param_ty)], init_list, true), VPrivate)
+    ) cnames) in
+
+  (* 5. Public ctor struct with factory methods *)
+  let factory_methods = Array.to_list (Array.mapi
+    (fun i tys_list ->
+      let c = cnames.(i) in
+      let cname = match c with
+        | GlobRef.ConstructRef _ -> Common.pp_global_name Type c
+        | _ -> "Ctor" ^ string_of_int i
+      in
+      let factory_name = Id.of_string (cname ^ "_") in
+      (* Parameters - use const ref for shared_ptr types *)
+      let params = List.mapi (fun j ty ->
+        let cpp_ty = convert_ml_type_to_cpp_type (empty_env ()) [name] vars ty in
+        let wrapped = match cpp_ty with
+          | Tshared_ptr _ -> Tref (Tmod (TMconst, cpp_ty))  (* const std::shared_ptr<T>& *)
+          | _ -> cpp_ty
+        in
+        (Id.of_string ("a" ^ string_of_int j), wrapped)
+      ) tys_list in
+      (* Constructor arguments: use params to build the alternative struct *)
+      let ctor_args = List.mapi (fun j _ ->
+        CPPvar (Id.of_string ("a" ^ string_of_int j))
+      ) tys_list in
+      (* Body: return std::shared_ptr<Tree>(new Tree(Ctor{args})) *)
+      (* Note: nested struct types don't need template args - they inherit from parent *)
+      let ctor_struct = CPPstruct_id (Id.of_string cname, [], ctor_args) in
+      let new_expr = CPPnew (Tglob (name, ty_vars, []), [ctor_struct]) in
+      let shared_ptr_expr = CPPshared_ptr_ctor (Tglob (name, ty_vars, []), new_expr) in
+      let body = [Sreturn shared_ptr_expr] in
+      (Ffundef (factory_name, Tmod (TMstatic, self_ty), params, body), VPublic)
+    ) tys) in
+
+  (* Add deleted default constructor to ctor struct *)
+  let ctor_struct_fields = (Fdeleted_ctor, VPublic) :: factory_methods in
+  let ctor_struct = (Fnested_struct (Id.of_string "ctor", ctor_struct_fields), VPublic) in
+
+  (* Add public accessor for v_ to enable pattern matching from outside *)
+  (* const variant_t& v() const { return v_; } *)
+  let v_accessor = (Fmethod (
+    Id.of_string "v",
+    [],  (* no template params *)
+    Tmod (TMconst, Tref (Tid (Id.of_string "variant_t", []))),
+    [],
+    [Sreturn (CPPvar (Id.of_string "v_"))],
+    true (* is_const *)
+  ), VPublic) in
+
+  (* 6. Generate methods from method candidates *)
+  (* Helper: collect all Tvar indices from an ml_type (using Miniml types) *)
+  let rec collect_tvars acc = function
+    | Miniml.Tvar i | Miniml.Tvar' i -> if List.mem i acc then acc else i :: acc
+    | Miniml.Tarr (t1, t2) -> collect_tvars (collect_tvars acc t1) t2
+    | Miniml.Tglob (_, args, _) -> List.fold_left collect_tvars acc args
+    | Miniml.Tmeta { contents = Some t } -> collect_tvars acc t
+    | _ -> acc
+  in
+
+  (* Each method candidate is a function that takes shared_ptr<this_type> as first arg.
+     We convert it to a const method where:
+     - The argument at position this_pos is removed (becomes 'this')
+     - Recursive calls use method syntax (t->method() instead of method(t))
+     - Pattern matching uses this->v() instead of arg->v() *)
+  let gen_method (func_ref, body, ty, this_pos) =
+    let func_name = Id.of_string (Common.pp_global_name Term func_ref) in
+    (* Get the function type: remove first arg, get remaining args and return type *)
+    let rec get_args_and_ret acc = function
+      | Tarr (t, rest) -> get_args_and_ret (t :: acc) rest
+      | ret_ty -> (List.rev acc, ret_ty)
+    in
+    let (_all_args, ret_ty) = get_args_and_ret [] ty in
+
+    (* Collect all type variables from the function signature *)
+    let all_tvars = List.sort compare (collect_tvars [] ty) in
+    (* Filter out the inductive's type variables (indices 1 to len(vars), since Miniml uses 1-based indexing).
+       See convert_ml_type_to_cpp_type which uses (pred i) = i-1 to index into tvars. *)
+    let num_ind_vars = List.length vars in
+    let extra_tvars = List.filter (fun i -> i < 1 || i > num_ind_vars) all_tvars in
+    (* Generate names for extra type vars matching what tvar_subst_type produces.
+       When tvar_subst_type fails to find a name for Tvar i, it stays as Tvar(i, None)
+       which gets printed as "Ti" by cpp.ml. So we use the actual index. *)
+    let extra_tvar_names = List.map (fun i -> Id.of_string ("T" ^ string_of_int i)) extra_tvars in
+    (* Build mapping from Tvar index to name for substitution in return type and params *)
+    let extra_tvar_map = List.combine extra_tvars extra_tvar_names in
+
+    (* Helper to substitute extra type variables in C++ types *)
+    let rec subst_extra_tvars = function
+      | Tvar (i, None) when List.mem_assoc i extra_tvar_map ->
+          Tvar (0, Some (List.assoc i extra_tvar_map))
+      | Tvar (i, None) when i >= 1 && i <= num_ind_vars ->
+          (* Inductive's type var - already handled by tvar_subst which maps to vars.(i-1) *)
+          Tvar (i, None)
+      | Tfun (dom, cod) -> Tfun (List.map subst_extra_tvars dom, subst_extra_tvars cod)
+      | Tshared_ptr t -> Tshared_ptr (subst_extra_tvars t)
+      | Tglob (r, args, e) -> Tglob (r, List.map subst_extra_tvars args, e)
+      | Tref t -> Tref (subst_extra_tvars t)
+      | Tmod (m, t) -> Tmod (m, subst_extra_tvars t)
+      | Tvariant tys -> Tvariant (List.map subst_extra_tvars tys)
+      | Tnamespace (r, t) -> Tnamespace (r, subst_extra_tvars t)
+      | Tqualified (t, id) -> Tqualified (subst_extra_tvars t, id)
+      | t -> t
+    in
+
+    let ret_cpp = convert_ml_type_to_cpp_type (empty_env ()) [name] vars ret_ty in
+    let ret_cpp = subst_extra_tvars ret_cpp in
+    (* Collect lambda parameters from the body - collect_lams returns them in reverse order
+       (innermost/last param first). Keep this order for push_vars' (de Bruijn mapping). *)
+    let ids_with_types, inner_body = Mlutil.collect_lams body in
+    (* Convert ml_ids to Id.t with types (keep original order for de Bruijn) *)
+    let ids_converted = List.map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids_with_types in
+    (* Build env with ALL variables - order must match de Bruijn (innermost first) *)
+    let _all_ids, env = push_vars' ids_converted (empty_env ()) in
+    (* Convert to normal order (outermost first) and extract 'this' at this_pos.
+       Arguments before and after this_pos become method parameters. *)
+    let ids_normal_order = List.rev ids_converted in  (* Outermost first *)
+    let rec extract_at_pos i acc = function
+      | [] -> (None, List.rev acc)
+      | x :: rest ->
+        if i = this_pos then (Some (fst x), List.rev acc @ rest)
+        else extract_at_pos (i + 1) (x :: acc) rest
+    in
+    let (this_arg_id, param_ids) = extract_at_pos 0 [] ids_normal_order in
+    let param_ids = List.filter (fun (_, ty) -> not (ml_type_is_void ty)) param_ids in
+    (* Convert params to C++ types with const ref for shared_ptr *)
+    let params_with_idx = List.mapi (fun i (id, ty) ->
+      let cpp_ty = convert_ml_type_to_cpp_type env [name] vars ty in
+      let cpp_ty = subst_extra_tvars cpp_ty in
+      (id, cpp_ty, i)
+    ) param_ids in
+    (* Extract function-typed parameters for template params (MapsTo pattern) *)
+    let fun_params = List.filter_map (fun (id, cpp_ty, i) ->
+      match cpp_ty with
+      | Tfun (dom, cod) -> Some (id, TTfun (dom, cod), Id.of_string ("F" ^ string_of_int i))
+      | _ -> None
+    ) params_with_idx in
+    (* Build template params: first extra type vars, then MapsTo constraints *)
+    let extra_type_params = List.map (fun name -> (TTtypename, name)) extra_tvar_names in
+    let fun_template_params = List.map (fun (_, tt, fname) -> (tt, fname)) fun_params in
+    let template_params = extra_type_params @ fun_template_params in
+    (* Build final params: function types become forwarding refs, others get const wrapper *)
+    let params = List.map (fun (id, cpp_ty, i) ->
+      let wrapped = match cpp_ty with
+        | Tfun _ ->
+          (* Replace with forwarding reference to template param: F0&& *)
+          Tref (Tref (Tvar (0, Some (Id.of_string ("F" ^ string_of_int i)))))
+        | Tshared_ptr _ -> Tref (Tmod (TMconst, cpp_ty))
+        | _ -> Tmod (TMconst, cpp_ty)
+      in
+      (id, wrapped)
+    ) params_with_idx in
+    (* Generate method body - all variables are in env *)
+    let stmts = gen_stmts env (fun x -> Sreturn x) inner_body in
+    (* Substitute 'this' arg references with CPPthis (this_arg_id computed above) *)
+    let stmts = match this_arg_id with
+      | Some id -> List.map (var_subst_stmt id CPPthis) stmts
+      | None -> stmts
+    in
+    (* Substitute type variables: T1, T2, ... → A, B, ... (the struct's template params) *)
+    let stmts = List.map (tvar_subst_stmt vars) stmts in
+    (* Create the method field with template params if any *)
+    (Fmethod (func_name, template_params, ret_cpp, params, stmts, true (* is_const *)), VPublic)
+  in
+  let method_fields = List.map gen_method method_candidates in
+
+  (* Combine all fields in order:
+     - Constructor structs (public)
+     - variant_t using (public)
+     - v_ member (private)
+     - Private constructors
+     - ctor struct (public)
+     - v() accessor (public)
+     - Methods (public)
+  *)
+  let all_fields =
+    constructor_structs @
+    [variant_using] @
+    [variant_member] @
+    private_ctors @
+    [ctor_struct] @
+    [v_accessor] @
+    method_fields
+  in
+
+  (* Just the struct itself - no extra namespace wrapper *)
+  add_templates (Dstruct (name, all_fields))

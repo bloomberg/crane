@@ -283,7 +283,9 @@ and extract_msignature_spec env mp1 reso = function
 and extract_mbody_spec : 'a. _ -> _ -> 'a generic_module_body -> _ =
   fun env mp mb -> match mb.mod_type_alg with
   | Some ty -> extract_mexpression_spec env mp (mb.mod_type,ty)
-  | None -> extract_msignature_spec env mp mb.mod_delta mb.mod_type
+  | None ->
+      (* Fall back to expanding the signature *)
+      extract_msignature_spec env mp mb.mod_delta mb.mod_type
 
 (* From a [structure_body] (i.e. a list of [structure_field_body])
    to implementations.
@@ -413,6 +415,47 @@ and extract_module access env mp ~all mb =
     | FullStruct ->
       assert (Option.is_empty mb.mod_type_alg);
       mtyp_of_mexpr impl
+    | Algebraic fae when Option.is_empty mb.mod_type_alg ->
+      (* For module applications without explicit type, try to infer from functor *)
+      let inferred_alg_type =
+        match fae with
+        | MENoFunctor me ->
+            (match me with
+            | MEapply (func, _) ->
+                (* Handle both simple (MEident) and nested (MEapply) functor applications *)
+                let rec get_base_functor = function
+                  | MEident mp -> Some mp
+                  | MEapply (f, _) -> get_base_functor f
+                  | _ -> None
+                in
+                (match get_base_functor func with
+                | Some func_mp ->
+                    (try
+                      let func_mb = Global.lookup_module func_mp in
+                      (* Extract the return type from the functor signature *)
+                      let rec get_functor_return_type = function
+                        | MEMoreFunctor fae -> get_functor_return_type fae
+                        | MENoFunctor me ->
+                            (* For MEwith, extract just the base module type *)
+                            let rec extract_base_from_with = function
+                              | MEwith (me', _) -> extract_base_from_with me'
+                              | base -> base
+                            in
+                            Some (MENoFunctor (extract_base_from_with me))
+                      in
+                      (match func_mb.mod_type_alg with
+                      | Some alg -> get_functor_return_type alg
+                      | None -> None)
+                    with _ -> None)
+                | None -> None)
+            | _ -> None)
+        | MEMoreFunctor _ -> None
+      in
+      (match inferred_alg_type with
+      | Some alg_ty ->
+          extract_mexpression_spec env mp (mb.mod_type, alg_ty)
+      | None ->
+          extract_mbody_spec env mp mb)
     | _ -> extract_mbody_spec env mp mb
   in
   { ml_mod_expr = impl;
@@ -467,7 +510,7 @@ let spec_header () =
   let h = List.fold_left (fun p s -> p ++ mk_include s ++ fnl ()) (str "") (himports @ imps) in
   (* let fun_concept = "template <typename F, typename Out, typename... In>\nconcept MapsTo = requires (const F &f, const In&... args) {\n{ f(args...) } -> std::same_as<Out>;\n};" in *)
   let fun_concept = if Table.std_lib () = "BDE"
- then "template <class From, class To>\nconcept convertible_to = bsl::is_convertible<From, To>::value;\n\ntemplate <class F, class R, class... Args>\nconcept MapsTo =\n requires (F& f, Args&... a) {\n { bsl::invoke(static_cast<F&>(f), static_cast<Args&>(a)...) }\n -> convertible_to<R>;\n };"
+ then "template <class From, class To>\nconcept convertible_to = bsl::is_convertible<From, To>::value;\n\ntemplate <class T, class U>\nconcept same_as = bsl::is_same<T, U>::value && bsl::is_same<U, T>::value;\n\ntemplate <class F, class R, class... Args>\nconcept MapsTo =\n requires (F& f, Args&... a) {\n { bsl::invoke(static_cast<F&>(f), static_cast<Args&>(a)...) }\n -> convertible_to<R>;\n };"
     else  "template <typename F, typename R, typename... Args>\nconcept MapsTo = std::is_invocable_r_v<R, F&, Args&...>;" in
   if Table.std_lib () = "BDE" then h ++ fnl2() ++ str "using namespace BloombergLP;" ++ fnl2 () ++ str fun_concept ++ fnl2()
   else h ++ fnl2 () ++ str fun_concept ++ fnl2() ++ str "template<class... Ts> struct Overloaded : Ts... { using Ts::operator()...; };\ntemplate<class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;" ++ fnl2 ()
@@ -697,6 +740,7 @@ let init ?(compute=false) ?(inner=false) modular library =
   set_modular modular;
   set_library library;
   set_extrcompute compute;
+  Cpp.reset_cpp_state ();  (* Reset ALL C++ global state from previous extractions *)
   reset ()
 
 let warns () =
@@ -940,11 +984,14 @@ let compile_and_test ?outfile ?errfile infile =
   );
   if Sys.file_exists errfile then Sys.remove errfile;
   let out = Filename.temp_file "test_out" ".log" in
-  let _ = Sys.command (ofile ^ " >" ^ out) in
+  let test_exit_code = Sys.command (ofile ^ " >" ^ out ^ " 2>&1") in
   let ic = open_in out in
   let out_string = really_input_string ic (in_channel_length ic) in
   close_in ic;
-  if Sys.file_exists errfile then Sys.remove out;
+  if Sys.file_exists out then Sys.remove out;
+  (* If test returns non-zero, it failed *)
+  if test_exit_code <> 0 then
+    raise (Failure ("Test assertions failed (exit code " ^ string_of_int test_exit_code ^ ")"));
   out_string
 
 let extract_and_compile ~opaque_access file l =
@@ -957,12 +1004,10 @@ let extract_and_compile ~opaque_access file l =
   let extraction_ok =
     try full_extraction ~opaque_access (Some filename) l; true
     with exn ->
-      ignore (if !Flags.quiet
-        then CErrors.user_err
-               Pp.(pr_enum Libnames.pr_qualid l ++ spc () ++ str "failed to extract.")
-        else CErrors.user_err
+      ignore (CErrors.user_err
                Pp.(pr_enum Libnames.pr_qualid l ++ spc () ++ str "failed to extract:"
-                   ++ fnl () ++ str (Printexc.to_string exn)));
+                   ++ fnl () ++ str (Printexc.to_string exn)
+                   ++ fnl () ++ str (Printexc.get_backtrace ())));
       false
   in
   if extraction_ok then (
@@ -999,23 +1044,17 @@ let extract_and_compile ~opaque_access file l =
     if compilation_ok && tests_ok then
       Feedback.msg_notice
         Pp.(str "✅ " ++ pr_enum Libnames.pr_qualid l ++ spc ()
-            ++ str "successfully extracted" ++ spc ()
+            ++ str "successfully extracted, compiled, and all tests passed."
             ++ (if !Flags.quiet || Option.is_empty file then mt ()
-                else str "to" ++ spc () ++ str filename ++ spc ())
-            ++ str "and compiled"
-            ++ (if !Flags.quiet || Option.is_empty file then mt ()
-                else spc () ++ str "to" ++ spc () ++ str (base ^ ".o"))
-            ++ str "." ++ fnl () ++ str out ++ fnl ());
+                else spc () ++ str "(" ++ str filename ++ str ")")
+            ++ fnl () ++ str out ++ fnl ());
     if compilation_ok && not tests_ok then
       Feedback.msg_notice
-        Pp.(str "⚠️ " ++ pr_enum Libnames.pr_qualid l ++ spc ()
-            ++ str "successfully extracted" ++ spc ()
+        Pp.(str "❌ " ++ pr_enum Libnames.pr_qualid l ++ spc ()
+            ++ str "extracted and compiled, but test assertions failed."
             ++ (if !Flags.quiet || Option.is_empty file then mt ()
-                else str "to" ++ spc () ++ str filename ++ spc ())
-            ++ str "and compiled"
-            ++ (if !Flags.quiet || Option.is_empty file then mt ()
-                else spc () ++ str "to" ++ spc () ++ str (base ^ ".o"))
-            ++ str ", but the tests failed to compile or execute." ++ fnl ());
+                else spc () ++ str "(" ++ str filename ++ str ")")
+            ++ fnl ());
 
   )
 

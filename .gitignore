@@ -49,6 +49,8 @@ result.html
 *.install
 infer-out
 *.pch
+*.dSYM
+*.bak
 
 /tests/basics/top/benchmark
 /tests/basics/top_bde/benchmark
