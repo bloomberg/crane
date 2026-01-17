@@ -13,31 +13,3 @@
 namespace BloombergLP {
 
 }
-bsl::shared_ptr<Nat::nat> Nat::add(const bsl::shared_ptr<Nat::nat>& m,
-                                   const bsl::shared_ptr<Nat::nat>& n)
-{
-    return bsl::visit(
-                  bdlf::Overloaded{[&](const typename Nat::nat::O _args)
-                                       -> bsl::shared_ptr<Nat::nat> {
-                                       return n;
-                                   },
-                                   [&](const typename Nat::nat::S _args)
-                                       -> bsl::shared_ptr<Nat::nat> {
-                                       bsl::shared_ptr<Nat::nat> x = _args._a0;
-                                       return nat::ctor::S_(x->add(n));
-                                   }},
-                  m->v());
-}
-
-int Nat::nat_to_int(const bsl::shared_ptr<Nat::nat>& n)
-{
-    return bsl::visit(
-                bdlf::Overloaded{[&](const typename Nat::nat::O _args) -> int {
-                                     return 0;
-                                 },
-                                 [&](const typename Nat::nat::S _args) -> int {
-                                     bsl::shared_ptr<Nat::nat> n_ = _args._a0;
-                                     return 1 + n_->nat_to_int();
-                                 }},
-                n->v());
-}

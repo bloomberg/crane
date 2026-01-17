@@ -998,6 +998,12 @@ let pp_decl = function
     | Dterm (r, a, Tglob (ty, args,e)) when is_monad ty ->
           let defs = List.filter (fun (_,_,l) -> l == []) (gen_dfuns (Array.of_list [r], Array.of_list [a], Array.of_list [Miniml.Tglob (ty, args,e)])) in
           pp_list_stmt (fun(ds, env, _) -> pp_cpp_decl env ds) defs
+    | Dterm (r, _, _) when List.exists (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env r r') !method_candidates ->
+          (* Skip - this function is generated as a method on the eponymous type *)
+          mt ()
+    | Dterm (r, _, _) when is_registered_method r <> None ->
+          (* Skip - this function is registered as a method in another module *)
+          mt ()
     | Dterm (r, a, t) ->
         let (ds, env, tvars) = gen_decl_for_pp r a t in
         (*let _ = print_endline (Pp.string_of_ppcmds (pp_type false [] t)) in*)
@@ -1006,10 +1012,15 @@ let pp_decl = function
         | _ , _ -> mt ()
         end
     | Dfix (rv,defs,typs) ->
-          let filter = Array.to_list (Array.map (fun x -> not (is_inline_custom x)) rv) in
+          (* Filter out inline custom, method candidates, and globally registered methods *)
+          let is_method_candidate x = List.exists (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env x r') !method_candidates in
+          let is_global_method x = is_registered_method x <> None in
+          let filter = Array.to_list (Array.map (fun x -> not (is_inline_custom x) && not (is_method_candidate x) && not (is_global_method x)) rv) in
           let rv = Array.filter_with filter rv in
           let defs = Array.filter_with filter defs in
           let typs = Array.filter_with filter typs in
+          if Array.length rv = 0 then mt ()
+          else
           let defs = List.filter (fun (_,_,l) -> l == []) (gen_dfuns (rv, defs, typs)) in
           pp_list_stmt (fun(ds, env, _) -> pp_cpp_decl env ds) defs
 

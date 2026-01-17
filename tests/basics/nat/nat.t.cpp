@@ -45,8 +45,9 @@ std::shared_ptr<Nat::nat> int_to_nat(int x) {
 
 int main() {
 
-  ASSERT(5 == Nat::nat_to_int(int_to_nat(5)));
-  ASSERT(9 == Nat::nat_to_int(Nat::add(int_to_nat(5), int_to_nat(4))));
+  // Functions are now methods on the eponymous nat type
+  ASSERT(5 == int_to_nat(5)->nat_to_int());
+  ASSERT(9 == int_to_nat(5)->add(int_to_nat(4))->nat_to_int());
 
   return 0;
 }
