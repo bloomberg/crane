@@ -13,7 +13,7 @@
 
 ## Rationale
 
-This project provides extraction of [Rocq](https://rocq-prover.org/) (formerly known as Coq) code to (optionally [BDE](https://github.com/bloomberg/bde)-flavored) C++ code, implemented as a Rocq plugin. It extracts Rocq into valid, performant, and memory-safe, modern C++ code. The generated code avoids garbage collection and does not need a separate runtime system, relying instead on `std::shared_ptr` or `bsl::shared_ptr` for reference counting.
+This project provides extraction of [Rocq](https://rocq-prover.org/) (formerly known as Coq) code to (optionally [BDE](https://github.com/bloomberg/bde)-flavored) C++ code, implemented as a Rocq plugin. It extracts Rocq into valid, performant, and memory-safe, modern C++ code. The generated code avoids tracing garbage collection and does not need a separate runtime system, relying instead on `std::shared_ptr` or `bsl::shared_ptr` for reference counting.
 
 The project is a fork of the Rocq-to-OCaml extraction that comes built-in with Rocq.
 
