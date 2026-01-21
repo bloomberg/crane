@@ -200,6 +200,143 @@ struct CHT {
             cht_fallback;
     };
 
+    template <typename T1, typename T2>
+    static bool cht_eqb(const bsl::shared_ptr<CHT<T1, T2> >& c,
+                        const T1                             _x0,
+                        const bsl::shared_ptr<CHT<T1, T2> >& _x1)
+    {
+        return _x1->cht_eqb(_x0, _x1);
+    }
+
+    template <typename T1, typename T2>
+    static int cht_hash(const bsl::shared_ptr<CHT<T1, T2> >& c,
+                        const bsl::shared_ptr<CHT<T1, T2> >& _x0)
+    {
+        return _x0->cht_hash(_x0);
+    }
+
+    template <typename T1, typename T2>
+    static bsl::vector<bsl::shared_ptr<
+        stm::TVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > > > >
+    cht_buckets(const bsl::shared_ptr<CHT<T1, T2> >& c)
+    {
+        return c->cht_buckets;
+    }
+
+    template <typename T1, typename T2>
+    static int cht_nbuckets(const bsl::shared_ptr<CHT<T1, T2> >& c)
+    {
+        return c->cht_nbuckets;
+    }
+
+    template <typename T1, typename T2>
+    static bsl::shared_ptr<
+        stm::TVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > > >
+    cht_fallback(const bsl::shared_ptr<CHT<T1, T2> >& c)
+    {
+        return c->cht_fallback;
+    }
+
+    template <typename T1, typename T2>
+    static bsl::shared_ptr<
+        stm::TVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > > >
+    bucket_of(const bsl::shared_ptr<CHT<T1, T2> >& t, const T1 k)
+    {
+        int i = t->cht_hash(k) % t->cht_nbuckets;
+        return t->cht_buckets.at(i);
+    }
+
+    template <typename T1, typename T2>
+    static bsl::optional<T2> stm_get(const bsl::shared_ptr<CHT<T1, T2> >& t,
+                                     const T1                             k)
+    {
+        bsl::shared_ptr<
+            stm::TVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > > >
+            b = bucket_of<T1, T2>(t, k);
+        bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > xs =
+              stm::readTVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > >(
+                  b);
+        return assoc_lookup<T1, T2>(t->cht_eqb, k, xs);
+    }
+
+    template <typename T1, typename T2>
+    static void stm_put(const bsl::shared_ptr<CHT<T1, T2> >& t,
+                        const T1                             k,
+                        const T2                             v)
+    {
+        bsl::shared_ptr<
+            stm::TVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > > >
+            b = bucket_of<T1, T2>(t, k);
+        bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > xs =
+              stm::readTVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > >(
+                  b);
+        bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > xs_ =
+                         assoc_insert_or_replace<T1, T2>(t->cht_eqb, k, v, xs);
+        stm::writeTVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > >(b,
+                                                                          xs_);
+        return;
+    }
+
+    template <typename T1, typename T2>
+    static bsl::optional<T2> stm_delete(const bsl::shared_ptr<CHT<T1, T2> >& t,
+                                        const T1                             k)
+    {
+        bsl::shared_ptr<
+            stm::TVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > > >
+            b = bucket_of<T1, T2>(t, k);
+        bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > xs =
+              stm::readTVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > >(
+                  b);
+        bsl::pair<bsl::optional<T2>,
+                  bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > >
+            p = assoc_remove<T1, T2>(t->cht_eqb, k, xs);
+        if (p.first.has_value()) {
+            T2 _x = *p.first;
+            stm::writeTVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > >(
+                                                                     b,
+                                                                     p.second);
+            return p.first;
+        }
+        else {
+            return p.first;
+        }
+    }
+
+    template <typename T1, typename T2, MapsTo<T2, bsl::optional<T2> > F2>
+    static T2 stm_update(const bsl::shared_ptr<CHT<T1, T2> >& t,
+                         const T1                             k,
+                         F2&&                                 f)
+    {
+        bsl::shared_ptr<
+            stm::TVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > > >
+            b = bucket_of<T1, T2>(t, k);
+        bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > xs =
+              stm::readTVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > >(
+                  b);
+        bsl::optional<T2> ov = assoc_lookup<T1, T2>(t->cht_eqb, k, xs);
+        T2                v  = f(ov);
+        bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > xs_ =
+                         assoc_insert_or_replace<T1, T2>(t->cht_eqb, k, v, xs);
+        stm::writeTVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > >(b,
+                                                                          xs_);
+        return v;
+    }
+
+    template <typename T1, typename T2>
+    static T2 stm_get_or(const bsl::shared_ptr<CHT<T1, T2> >& t,
+                         const T1                             k,
+                         const T2                             dflt)
+    {
+        bsl::optional<T2> v = stm_get<T1, T2>(t, k);
+        if (v.has_value()) {
+            T2 x = *v;
+            return x;
+        }
+        else {
+            return dflt;
+        }
+    }
+
     static int max(const int a, const int b);
 
     template <typename T1, typename T2>
@@ -270,5 +407,54 @@ struct CHT {
             return bsl::make_shared<CHT<T1, T2> >(
                                              CHT<T1, T2>{eqb, hash, bs, n, b});
         }
+    }
+
+    template <typename T1, typename T2>
+    static void put(const bsl::shared_ptr<CHT<T1, T2> >& t,
+                    const T1                             k,
+                    const T2                             v)
+    {
+        return stm::atomically([&] {
+            return stm_put<T1, T2>(t, k, v);
+        });
+    }
+
+    template <typename T1, typename T2>
+    static bsl::optional<T2> get(const bsl::shared_ptr<CHT<T1, T2> >& t,
+                                 const T1                             k)
+    {
+        return stm::atomically([&] {
+            return stm_get<T1, T2>(t, k);
+        });
+    }
+
+    template <typename T1, typename T2>
+    static bsl::optional<T2> hash_delete(
+                                        const bsl::shared_ptr<CHT<T1, T2> >& t,
+                                        const T1                             k)
+    {
+        return stm::atomically([&] {
+            return stm_delete<T1, T2>(t, k);
+        });
+    }
+
+    template <typename T1, typename T2, MapsTo<T2, bsl::optional<T2> > F2>
+    static T2 hash_update(const bsl::shared_ptr<CHT<T1, T2> >& t,
+                          const T1                             k,
+                          F2&&                                 f)
+    {
+        return stm::atomically([&] {
+            return stm_update<T1, T2>(t, k, f);
+        });
+    }
+
+    template <typename T1, typename T2>
+    static T2 get_or(const bsl::shared_ptr<CHT<T1, T2> >& t,
+                     const T1                             k,
+                     const T2                             dflt)
+    {
+        return stm::atomically([&] {
+            return stm_get_or<T1, T2>(t, k, dflt);
+        });
     }
 };

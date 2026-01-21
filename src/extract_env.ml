@@ -1006,11 +1006,14 @@ let extract_and_compile ~opaque_access file l =
       let dir = Filename.concat (Filename.dirname fn) (Filename.remove_extension (Filename.basename fn)) in
       Filename.concat dir (Filename.basename fn)
     | (None, _, _) -> Filename.temp_file "testextraction" ".cpp" in
+  (* Extract just the output name (e.g., "hash" from "hash.cpp") for unique test identification *)
+  let output_name = Filename.remove_extension (Filename.basename filename) in
+  let test_id = Pp.(str output_name ++ str "/" ++ pr_enum Libnames.pr_qualid l) in
   let extraction_ok =
     try full_extraction ~opaque_access (Some filename) l; true
     with exn ->
       ignore (CErrors.user_err
-               Pp.(pr_enum Libnames.pr_qualid l ++ spc () ++ str "failed to extract:"
+               Pp.(test_id ++ spc () ++ str "failed to extract:"
                    ++ fnl () ++ str (Printexc.to_string exn)
                    ++ fnl () ++ str (Printexc.get_backtrace ())));
       false
@@ -1021,22 +1024,22 @@ let extract_and_compile ~opaque_access file l =
       try compile_cpp ~includes:[Filename.dirname filename] filename; true
       with NoClangFound ->
         ignore (CErrors.user_err
-          Pp.(pr_enum Libnames.pr_qualid l ++ spc () ++ str "extracted but clang cannot be found."));
+          Pp.(test_id ++ spc () ++ str "extracted but clang cannot be found."));
         false
       | ClangError(_exit_code, clang_errors) ->
         ignore (if !Flags.quiet
           then CErrors.user_err
-                Pp.(pr_enum Libnames.pr_qualid l ++ spc () ++ str "extracted but clang failed to compile.")
+                Pp.(test_id ++ spc () ++ str "extracted but clang failed to compile.")
           else CErrors.user_err
-                Pp.(pr_enum Libnames.pr_qualid l ++ spc () ++ str "extracted but clang failed to compile with:"
+                Pp.(test_id ++ spc () ++ str "extracted but clang failed to compile with:"
                     ++ fnl () ++ str clang_errors));
         false
       | exn ->
         ignore (if !Flags.quiet
           then CErrors.user_err
-                Pp.(pr_enum Libnames.pr_qualid l ++ spc () ++ str "extracted but failed to compile.")
+                Pp.(test_id ++ spc () ++ str "extracted but failed to compile.")
           else CErrors.user_err
-                Pp.(pr_enum Libnames.pr_qualid l ++ spc () ++ str "extracted but failed to compile:"
+                Pp.(test_id ++ spc () ++ str "extracted but failed to compile:"
                     ++ fnl () ++ str (Printexc.to_string exn)));
         false
     in
@@ -1048,14 +1051,14 @@ let extract_and_compile ~opaque_access file l =
        if Sys.file_exists base then Sys.remove base);
     if compilation_ok && tests_ok then
       Feedback.msg_notice
-        Pp.(str "✅ " ++ pr_enum Libnames.pr_qualid l ++ spc ()
+        Pp.(str "✅ " ++ test_id ++ spc ()
             ++ str "successfully extracted, compiled, and all tests passed."
             ++ (if !Flags.quiet || Option.is_empty file then mt ()
                 else spc () ++ str "(" ++ str filename ++ str ")")
             ++ fnl () ++ str out ++ fnl ());
     if compilation_ok && not tests_ok then
       Feedback.msg_notice
-        Pp.(str "❌ " ++ pr_enum Libnames.pr_qualid l ++ spc ()
+        Pp.(str "❌ " ++ test_id ++ spc ()
             ++ str "extracted and compiled, but test assertions failed."
             ++ (if !Flags.quiet || Option.is_empty file then mt ()
                 else spc () ++ str "(" ++ str filename ++ str ")")

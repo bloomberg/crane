@@ -1554,12 +1554,17 @@ let rec pp_structure_elem ~is_header f = function
              List.iter (fun (_l, se) ->
                match se with
                | SEdecl (Dind (kn, ind)) ->
-                 Array.iteri (fun i p ->
-                   let ind_ref = GlobRef.IndRef (kn, i) in
-                   let ind_name = Common.pp_global_name Type ind_ref in
-                   if String.lowercase_ascii ind_name = lowercase_module then
-                     eponymous_type_ref := Some ind_ref
-                 ) ind.ind_packets
+                 (* Skip records - they use gen_record_cpp which doesn't support methods.
+                    Only detect eponymous type for non-record inductives. *)
+                 (match ind.ind_kind with
+                 | Record _ -> ()  (* Records don't support method generation *)
+                 | _ ->
+                   Array.iteri (fun i p ->
+                     let ind_ref = GlobRef.IndRef (kn, i) in
+                     let ind_name = Common.pp_global_name Type ind_ref in
+                     if String.lowercase_ascii ind_name = lowercase_module then
+                       eponymous_type_ref := Some ind_ref
+                   ) ind.ind_packets)
                | _ -> ()
              ) sel;
 
