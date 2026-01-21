@@ -77,8 +77,6 @@ std::shared_ptr<List::list<T1>> rev(const std::shared_ptr<List::list<T1>> &l) {
                     l->v());
 }
 
-struct Vector_axioms {};
-
 struct ToString {
   template <typename T1, typename T2, MapsTo<std::string, T1> F0,
             MapsTo<std::string, T2> F1>

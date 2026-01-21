@@ -4,7 +4,6 @@ From Corelib Require Import PrimInt63.
 From Crane Require Extraction.
 From Crane Require Import Mapping.BDE Monads.ITree Monads.IOBDE.
 
-
 Axiom vector : Type -> Type.
 
 Module Vector_axioms.
@@ -16,17 +15,10 @@ Module Vector_axioms.
   Axiom isize : forall {A}, vector A -> iIO int.
   Axiom iisEmpty : forall {A}, vector A -> iIO bool.
   Axiom iassign : forall {A}, vector A -> int -> A -> iIO (vector A).
-
-  Crane Extract Skip iemptyVec.
-  Crane Extract Skip iget.
-  Crane Extract Skip ipush.
-  Crane Extract Skip ipop.
-  Crane Extract Skip isize.
-  Crane Extract Skip iisEmpty.
-  Crane Extract Skip iassign.
 End Vector_axioms.
-Import Vector_axioms.
 
+Crane Extract Skip Vector_axioms.
+Import Vector_axioms.
 
 Definition emptyVec (A : Type) : IO (vector A) := trigger (iemptyVec A).
 Definition get {A} (v  : vector A) (x : int) : IO A := trigger (iget v x).
@@ -35,7 +27,6 @@ Definition pop {A} (v  : vector A) : IO void := trigger (ipop v).
 Definition size {A} (v  : vector A) : IO int := trigger (isize v).
 Definition isEmpty {A} (v  : vector A) : IO bool := trigger (iisEmpty v).
 Definition assign {A} (v  : vector A) (x : int) (a : A) : IO (vector A) := trigger (iassign v x a).
-
 
 (* What if emptyVec wasn't monadic, and get and push etc... took prop args that are generated from monads? *)
 

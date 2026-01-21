@@ -1038,3 +1038,102 @@ let gen_ind_header_v2 vars name cnames tys method_candidates =
 
   (* Just the struct itself - no extra namespace wrapper *)
   add_templates (Dstruct (name, all_fields))
+
+(* Generate methods for eponymous records.
+   Similar to the method generation in gen_ind_header_v2 but for records where
+   the methods are generated directly on the module struct (which has record fields merged).
+   name: the record's GlobRef (e.g., IndRef for CHT)
+   vars: the type variables of the record (e.g., [K; V] for CHT<K, V>)
+   method_candidates: list of (func_ref, body, type, this_position) tuples *)
+let gen_record_methods (name : GlobRef.t) (vars : Id.t list) method_candidates =
+  let num_ind_vars = List.length vars in
+
+  (* Helper: collect all Tvar indices from an ml_type (using Miniml types) *)
+  let rec collect_tvars acc = function
+    | Miniml.Tvar i | Miniml.Tvar' i -> if List.mem i acc then acc else i :: acc
+    | Miniml.Tarr (t1, t2) -> collect_tvars (collect_tvars acc t1) t2
+    | Miniml.Tglob (_, args, _) -> List.fold_left collect_tvars acc args
+    | Miniml.Tmeta { contents = Some t } -> collect_tvars acc t
+    | _ -> acc
+  in
+
+  (* Generate a single method from a method candidate *)
+  let gen_method (func_ref, body, ty, this_pos) =
+    let func_name = Id.of_string (Common.pp_global_name Term func_ref) in
+    (* Get the function type: remove first arg, get remaining args and return type *)
+    let rec get_args_and_ret acc = function
+      | Tarr (t, rest) -> get_args_and_ret (t :: acc) rest
+      | ret_ty -> (List.rev acc, ret_ty)
+    in
+    let (_all_args, ret_ty) = get_args_and_ret [] ty in
+
+    (* Collect all type variables from the function signature *)
+    let all_tvars = List.sort compare (collect_tvars [] ty) in
+    (* Filter out the record's type variables (indices 1 to len(vars), since Miniml uses 1-based indexing). *)
+    let extra_tvars = List.filter (fun i -> i < 1 || i > num_ind_vars) all_tvars in
+    let extra_tvar_names = List.map (fun i -> Id.of_string ("T" ^ string_of_int i)) extra_tvars in
+    let extra_tvar_map = List.combine extra_tvars extra_tvar_names in
+
+    (* Helper to substitute extra type variables in C++ types *)
+    let rec subst_extra_tvars = function
+      | Tvar (i, None) when List.mem_assoc i extra_tvar_map ->
+          Tvar (0, Some (List.assoc i extra_tvar_map))
+      | Tvar (i, None) when i >= 1 && i <= num_ind_vars ->
+          Tvar (i, None)
+      | Tfun (dom, cod) -> Tfun (List.map subst_extra_tvars dom, subst_extra_tvars cod)
+      | Tshared_ptr t -> Tshared_ptr (subst_extra_tvars t)
+      | Tglob (r, args, e) -> Tglob (r, List.map subst_extra_tvars args, e)
+      | Tref t -> Tref (subst_extra_tvars t)
+      | Tmod (m, t) -> Tmod (m, subst_extra_tvars t)
+      | Tvariant tys -> Tvariant (List.map subst_extra_tvars tys)
+      | Tnamespace (r, t) -> Tnamespace (r, subst_extra_tvars t)
+      | Tqualified (t, id) -> Tqualified (subst_extra_tvars t, id)
+      | t -> t
+    in
+
+    let ret_cpp = convert_ml_type_to_cpp_type (empty_env ()) [name] vars ret_ty in
+    let ret_cpp = subst_extra_tvars ret_cpp in
+    let ids_with_types, inner_body = Mlutil.collect_lams body in
+    let ids_converted = List.map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids_with_types in
+    let _all_ids, env = push_vars' ids_converted (empty_env ()) in
+    let ids_normal_order = List.rev ids_converted in
+    let rec extract_at_pos i acc = function
+      | [] -> (None, List.rev acc)
+      | x :: rest ->
+        if i = this_pos then (Some (fst x), List.rev acc @ rest)
+        else extract_at_pos (i + 1) (x :: acc) rest
+    in
+    let (this_arg_id, param_ids) = extract_at_pos 0 [] ids_normal_order in
+    let param_ids = List.filter (fun (_, ty) -> not (ml_type_is_void ty)) param_ids in
+    let params_with_idx = List.mapi (fun i (id, ty) ->
+      let cpp_ty = convert_ml_type_to_cpp_type env [name] vars ty in
+      let cpp_ty = subst_extra_tvars cpp_ty in
+      (id, cpp_ty, i)
+    ) param_ids in
+    let fun_params = List.filter_map (fun (id, cpp_ty, i) ->
+      match cpp_ty with
+      | Tfun (dom, cod) -> Some (id, TTfun (dom, cod), Id.of_string ("F" ^ string_of_int i))
+      | _ -> None
+    ) params_with_idx in
+    let extra_type_params = List.map (fun name -> (TTtypename, name)) extra_tvar_names in
+    let fun_template_params = List.map (fun (_, tt, fname) -> (tt, fname)) fun_params in
+    let template_params = extra_type_params @ fun_template_params in
+    let params = List.map (fun (id, cpp_ty, i) ->
+      let wrapped = match cpp_ty with
+        | Tfun _ ->
+          Tref (Tref (Tvar (0, Some (Id.of_string ("F" ^ string_of_int i)))))
+        | Tshared_ptr _ -> Tref (Tmod (TMconst, cpp_ty))
+        | _ -> Tmod (TMconst, cpp_ty)
+      in
+      (id, wrapped)
+    ) params_with_idx in
+    let stmts = gen_stmts env (fun x -> Sreturn x) inner_body in
+    (* Substitute 'this' arg references with CPPthis *)
+    let stmts = match this_arg_id with
+      | Some id -> List.map (var_subst_stmt id CPPthis) stmts
+      | None -> stmts
+    in
+    let stmts = List.map (tvar_subst_stmt vars) stmts in
+    (Fmethod (func_name, template_params, ret_cpp, params, stmts, true (* is_const *)), VPublic)
+  in
+  List.map gen_method method_candidates

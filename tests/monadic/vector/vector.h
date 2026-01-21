@@ -16,8 +16,6 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-struct Vector_axioms {};
-
 struct vectest {
   static int test1(const int _x);
 

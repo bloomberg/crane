@@ -1619,10 +1619,14 @@ let rec pp_structure_elem ~is_header f = function
                 We scan BOTH the current module's sel AND the parent structure's decls
                 (current_structure_decls) to find methods. This handles the case where
                 list and app are from the same Rocq module but extracted as siblings. *)
-             (* Collect method candidates ONLY for eponymous INDUCTIVES (not records).
-                For eponymous records, the record struct is skipped (fields merged into module),
-                so functions taking the record as first arg should remain as static members. *)
-             let epon_ref_opt = !eponymous_type_ref in
+             (* Collect method candidates for BOTH eponymous inductives AND eponymous records.
+                For inductives, methods are generated on the nested inductive struct.
+                For records, methods are generated directly on the module struct (which has record fields merged). *)
+             let epon_ref_opt = match !eponymous_type_ref, !eponymous_record with
+               | Some r, _ -> Some r
+               | _, Some (r, _, _) -> Some r
+               | None, None -> None
+             in
              (match epon_ref_opt with
              | Some epon_ref ->
                (* Get the module path of the eponymous type/record *)
@@ -1682,6 +1686,8 @@ let rec pp_structure_elem ~is_header f = function
              else
                current_struct_name := Some name;  (* Track struct name for qualification *)
              let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
+             (* Save method_candidates before restoring old state - need them for generating record methods *)
+             let this_method_candidates = !method_candidates in
              in_struct_context := old_context;
              current_struct_name := old_struct_name;
              eponymous_type_ref := old_eponymous;
@@ -1689,9 +1695,9 @@ let rec pp_structure_elem ~is_header f = function
              method_candidates := old_methods;
              if is_header then
                (* Header: full struct definition *)
-               (* For eponymous records: add template params and record fields *)
-               let (template_decl, record_fields_pp) = match this_eponymous_record with
-                 | Some (_, fields, packet) ->
+               (* For eponymous records: add template params, record fields, and methods *)
+               let (template_decl, record_fields_pp, record_methods_pp) = match this_eponymous_record with
+                 | Some (epon_ref, fields, packet) ->
                      (* Generate template parameters from record's type vars *)
                      let ty_vars = packet.ip_vars in
                      let template_str = if ty_vars = [] then mt () else
@@ -1711,12 +1717,22 @@ let rec pp_structure_elem ~is_header f = function
                        cpp_ty ++ spc () ++ field_name ++ str ";"
                      in
                      let fields_pp = prlist_with_sep fnl pp_field field_list ++ fnl () in
-                     (template_str, fields_pp)
-                 | None -> (mt (), mt ())
+                     (* Generate methods from method candidates, filtering out record projections
+                       since they have the same names as fields and are redundant *)
+                     let non_projection_candidates = List.filter (fun (r, _, _, _) ->
+                       not (Table.is_projection r)
+                     ) this_method_candidates in
+                     let method_fields = Translation.gen_record_methods epon_ref ty_vars non_projection_candidates in
+                     let methods_pp = if method_fields = [] then mt () else
+                       prlist_with_sep fnl (fun (fld, _vis) -> pp_cpp_field (empty_env ()) fld) method_fields ++ fnl ()
+                     in
+                     (template_str, fields_pp, methods_pp)
+                 | None -> (mt (), mt (), mt ())
                in
                let struct_def = template_decl ++
                  str "struct " ++ name ++ str " {" ++ fnl () ++
                  record_fields_pp ++
+                 record_methods_pp ++
                  body ++
                  str "};" in
                (* For modules with type annotations, add static_assert *)
