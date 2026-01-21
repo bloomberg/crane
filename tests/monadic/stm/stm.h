@@ -62,9 +62,7 @@ struct List {
 
 struct STM {};
 
-struct TVar {
-  struct TVar_axioms {};
-};
+struct TVar {};
 
 template <typename T1, MapsTo<T1, T1> F1>
 void modifyTVar(const std::shared_ptr<stm::TVar<T1>> a, F1 &&f) {

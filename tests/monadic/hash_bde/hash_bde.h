@@ -71,8 +71,6 @@ struct STM {
 };
 
 struct TVar {
-    struct TVar_axioms {
-    };
 };
 
 template <typename K, typename V>

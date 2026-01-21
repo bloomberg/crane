@@ -17,7 +17,7 @@ Module Vector_axioms.
   Axiom iassign : forall {A}, vector A -> int -> A -> iIO (vector A).
 End Vector_axioms.
 
-Crane Extract Skip Vector_axioms.
+Crane Extract Skip Module Vector_axioms.
 Import Vector_axioms.
 
 Definition emptyVec (A : Type) : IO (vector A) := trigger (iemptyVec A).

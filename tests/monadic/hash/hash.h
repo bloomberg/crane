@@ -50,9 +50,7 @@ struct List {
 
 struct STM {};
 
-struct TVar {
-  struct TVar_axioms {};
-};
+struct TVar {};
 
 template <typename K, typename V> struct CHT {
   std::function<bool(K, K)> cht_eqb;

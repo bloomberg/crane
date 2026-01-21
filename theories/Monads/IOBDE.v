@@ -13,7 +13,7 @@ Module IO_axioms.
 
 End IO_axioms.
 
-Crane Extract Skip IO_axioms.
+Crane Extract Skip Module IO_axioms.
 Import IO_axioms.
 
 Definition IO : Type -> Type := itree iIO.

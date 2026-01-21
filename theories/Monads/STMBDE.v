@@ -21,7 +21,7 @@ Module STM_axioms.
 
 End STM_axioms.
 
-Crane Extract Skip STM_axioms.
+Crane Extract Skip Module STM_axioms.
 Import STM_axioms.
 
 Definition STM : Type -> Type := itree iSTM.
@@ -54,10 +54,9 @@ Module TVar_axioms.
   Axiom ireadTVar : forall {A}, TVar A -> iSTM A.
   Axiom iwriteTVar : forall {A}, TVar A -> A -> iSTM void.
 
-  Crane Extract Skip inewTVar.
-  Crane Extract Skip ireadTVar.
-  Crane Extract Skip iwriteTVar.
 End TVar_axioms.
+
+Crane Extract Skip Module TVar_axioms.
 Import TVar_axioms.
 
 Definition newTVar {A} (a : A) : STM (TVar A) := trigger (inewTVar a).
