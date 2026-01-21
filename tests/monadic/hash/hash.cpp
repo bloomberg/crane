@@ -10,11 +10,3 @@
 #include <utility>
 #include <variant>
 #include <vector>
-
-int CHT::max(const int a, const int b) {
-  if (a < b) {
-    return b;
-  } else {
-    return a;
-  }
-}

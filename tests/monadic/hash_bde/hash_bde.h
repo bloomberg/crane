@@ -78,7 +78,17 @@ struct TVar {
     };
 };
 
+template <typename K, typename V>
 struct CHT {
+    bsl::function<bool(K, K)> cht_eqb;
+    bsl::function<int(K)>     cht_hash;
+    bsl::vector<bsl::shared_ptr<
+        stm::TVar<bsl::shared_ptr<List::list<bsl::pair<K, V> > > > > >
+                              cht_buckets;
+    int                       cht_nbuckets;
+    bsl::shared_ptr<
+        stm::TVar<bsl::shared_ptr<List::list<bsl::pair<K, V> > > > >
+        cht_fallback;
     template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
     static bsl::optional<T2> assoc_lookup(
                    F0&&                                                    eqb,
@@ -185,56 +195,6 @@ struct CHT {
                      }
                  }},
              xs->v());
-    }
-
-    template <typename K, typename V>
-    struct CHT {
-        bsl::function<bool(K, K)> cht_eqb;
-        bsl::function<int(K)>     cht_hash;
-        bsl::vector<bsl::shared_ptr<
-            stm::TVar<bsl::shared_ptr<List::list<bsl::pair<K, V> > > > > >
-                                  cht_buckets;
-        int                       cht_nbuckets;
-        bsl::shared_ptr<
-            stm::TVar<bsl::shared_ptr<List::list<bsl::pair<K, V> > > > >
-            cht_fallback;
-    };
-
-    template <typename T1, typename T2>
-    static bool cht_eqb(const bsl::shared_ptr<CHT<T1, T2> >& c,
-                        const T1                             _x0,
-                        const bsl::shared_ptr<CHT<T1, T2> >& _x1)
-    {
-        return _x1->cht_eqb(_x0, _x1);
-    }
-
-    template <typename T1, typename T2>
-    static int cht_hash(const bsl::shared_ptr<CHT<T1, T2> >& c,
-                        const bsl::shared_ptr<CHT<T1, T2> >& _x0)
-    {
-        return _x0->cht_hash(_x0);
-    }
-
-    template <typename T1, typename T2>
-    static bsl::vector<bsl::shared_ptr<
-        stm::TVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > > > >
-    cht_buckets(const bsl::shared_ptr<CHT<T1, T2> >& c)
-    {
-        return c->cht_buckets;
-    }
-
-    template <typename T1, typename T2>
-    static int cht_nbuckets(const bsl::shared_ptr<CHT<T1, T2> >& c)
-    {
-        return c->cht_nbuckets;
-    }
-
-    template <typename T1, typename T2>
-    static bsl::shared_ptr<
-        stm::TVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > > >
-    cht_fallback(const bsl::shared_ptr<CHT<T1, T2> >& c)
-    {
-        return c->cht_fallback;
     }
 
     template <typename T1, typename T2>

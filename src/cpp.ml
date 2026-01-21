@@ -88,6 +88,11 @@ let eponymous_type_ref : GlobRef.t option ref = ref None
    this_position is the index (0-based) of the first argument that matches the eponymous type. *)
 let method_candidates : (GlobRef.t * Miniml.ml_ast * Miniml.ml_type * int) list ref = ref []
 
+(* Eponymous record: when a module M contains a record with the same name (e.g., module CHT with record CHT),
+   we merge the record fields into the module struct to avoid C++ name conflicts.
+   Stores: (record_ref, field_refs, ind_packet) *)
+let eponymous_record : (GlobRef.t * GlobRef.t option list * Miniml.ml_ind_packet) option ref = ref None
+
 (* Global registry of methods across all modules.
    Maps function GlobRef to (eponymous_type_ref, this_position).
    This allows cross-module method call transformation. *)
@@ -112,6 +117,7 @@ let reset_cpp_state () =
   current_struct_name := None;
   in_template_struct := false;
   eponymous_type_ref := None;
+  eponymous_record := None;
   method_candidates := [];
   current_structure_decls := [];
   Hashtbl.clear global_method_registry
@@ -126,6 +132,19 @@ let extract_at_position pos lst =
       else aux (i + 1) (x :: acc) rest
   in
   aux 0 [] lst
+
+(* Check if a function is a projection for the eponymous record.
+   Such projections are redundant when the record fields are merged into the module struct. *)
+let is_eponymous_record_projection r =
+  match !eponymous_record with
+  | None -> false
+  | Some (epon_ref, _, _) ->
+      if Table.is_projection r then
+        let (ip, _arity) = Table.projection_info r in
+        (* Check if this projection's inductive matches the eponymous record *)
+        Environ.QGlobRef.equal Environ.empty_env (GlobRef.IndRef ip) epon_ref
+      else
+        false
 
 (* Beware of the side-effects of [pp_global] and [pp_modname].
    They are used to update table of content for modules. Many [let]
@@ -993,6 +1012,9 @@ let pp_tydef ids name def =
 let pp_decl = function
     | Dtype (r,_,_) when is_any_inline_custom r -> mt ()
     | Dterm (r,_,_) when is_any_inline_custom r -> mt ()
+    | Dterm (r,_,_) when is_eponymous_record_projection r ->
+          (* Skip - this is a projection for an eponymous record merged into module struct *)
+          mt ()
     | Dind (kn,i) -> mt ()  (* Inductives are fully defined in headers *)
     | Dtype (r, l, t) -> mt ()
     | Dterm (r, a, Tglob (ty, args,e)) when is_monad ty ->
@@ -1012,10 +1034,10 @@ let pp_decl = function
         | _ , _ -> mt ()
         end
     | Dfix (rv,defs,typs) ->
-          (* Filter out inline custom, method candidates, and globally registered methods *)
+          (* Filter out inline custom, method candidates, globally registered methods, and eponymous record projections *)
           let is_method_candidate x = List.exists (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env x r') !method_candidates in
           let is_global_method x = is_registered_method x <> None in
-          let filter = Array.to_list (Array.map (fun x -> not (is_inline_custom x) && not (is_method_candidate x) && not (is_global_method x)) rv) in
+          let filter = Array.to_list (Array.map (fun x -> not (is_inline_custom x) && not (is_method_candidate x) && not (is_global_method x) && not (is_eponymous_record_projection x)) rv) in
           let rv = Array.filter_with filter rv in
           let defs = Array.filter_with filter defs in
           let typs = Array.filter_with filter typs in
@@ -1036,7 +1058,14 @@ let pp_cpp_ind_header kn ind =
            p.ip_types)
       ind.ind_packets in
   match ind.ind_kind with
-  | Record fields -> pp_cpp_decl (empty_env ()) (gen_record_cpp names.(0) fields ind.ind_packets.(0))
+  | Record fields ->
+      (* Check if this is an eponymous record being merged into module struct *)
+      let ind_ref = names.(0) in
+      (match !eponymous_record with
+      | Some (epon_ref, _, _) when Environ.QGlobRef.equal Environ.empty_env ind_ref epon_ref ->
+          mt ()  (* Skip - merged into module struct *)
+      | _ ->
+          pp_cpp_decl (empty_env ()) (gen_record_cpp names.(0) fields ind.ind_packets.(0)))
   | _ ->
     (* DESIGN: Mutual inductive support with forward declarations
        Rocq supports mutually recursive inductive types. In C++, this requires:
@@ -1198,6 +1227,9 @@ let pp_cpp_ind_header kn ind =
 let pp_hdecl = function
     | Dtype (r,_,_) when is_any_inline_custom r -> mt ()
     | Dterm (r,_,_) when is_any_inline_custom r -> mt ()
+    | Dterm (r,_,_) when is_eponymous_record_projection r ->
+          (* Skip - this is a projection for an eponymous record merged into module struct *)
+          mt ()
     | Dind (kn,i) -> pp_cpp_ind_header kn i
     | Dtype (r, l, t) -> (* TODO: Do for real sometime! *)
         let name = pp_global Type r in
@@ -1241,7 +1273,7 @@ let pp_hdecl = function
           (* Filter out inline custom, method candidates, and globally registered methods *)
           let is_method_candidate x = List.exists (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env x r') !method_candidates in
           let is_global_method x = is_registered_method x <> None in
-          let filter = Array.to_list (Array.map (fun x -> not (is_inline_custom x) && not (is_method_candidate x) && not (is_global_method x)) rv) in
+          let filter = Array.to_list (Array.map (fun x -> not (is_inline_custom x) && not (is_method_candidate x) && not (is_global_method x) && not (is_eponymous_record_projection x)) rv) in
           let rv = Array.filter_with filter rv in
           let defs = Array.filter_with filter defs in
           let typs = Array.filter_with filter typs in
@@ -1540,6 +1572,12 @@ let rec pp_structure_elem ~is_header f = function
              let old_struct_name = !current_struct_name in
              let old_eponymous = !eponymous_type_ref in
              let old_methods = !method_candidates in
+             (* Save parent's eponymous_record BEFORE detecting for this module *)
+             let old_eponymous_record = !eponymous_record in
+
+             (* Clear eponymous state for this module - will be set if this module has one *)
+             eponymous_type_ref := None;
+             eponymous_record := None;
 
              (* Find eponymous inductive: an inductive with lowercase of module name *)
              let module_name_str = Pp.string_of_ppcmds name in
@@ -1554,17 +1592,18 @@ let rec pp_structure_elem ~is_header f = function
              List.iter (fun (_l, se) ->
                match se with
                | SEdecl (Dind (kn, ind)) ->
-                 (* Skip records - they use gen_record_cpp which doesn't support methods.
-                    Only detect eponymous type for non-record inductives. *)
-                 (match ind.ind_kind with
-                 | Record _ -> ()  (* Records don't support method generation *)
-                 | _ ->
-                   Array.iteri (fun i p ->
-                     let ind_ref = GlobRef.IndRef (kn, i) in
-                     let ind_name = Common.pp_global_name Type ind_ref in
-                     if String.lowercase_ascii ind_name = lowercase_module then
-                       eponymous_type_ref := Some ind_ref
-                   ) ind.ind_packets)
+                 Array.iteri (fun i p ->
+                   let ind_ref = GlobRef.IndRef (kn, i) in
+                   let ind_name = Common.pp_global_name Type ind_ref in
+                   if String.lowercase_ascii ind_name = lowercase_module then
+                     match ind.ind_kind with
+                     | Record fields ->
+                         (* Eponymous RECORD: merge into module struct to avoid name conflict *)
+                         eponymous_record := Some (ind_ref, fields, p)
+                     | _ ->
+                         (* Eponymous INDUCTIVE: existing method generation behavior *)
+                         eponymous_type_ref := Some ind_ref
+                 ) ind.ind_packets
                | _ -> ()
              ) sel;
 
@@ -1580,24 +1619,28 @@ let rec pp_structure_elem ~is_header f = function
                 We scan BOTH the current module's sel AND the parent structure's decls
                 (current_structure_decls) to find methods. This handles the case where
                 list and app are from the same Rocq module but extracted as siblings. *)
-             (match !eponymous_type_ref with
+             (* Collect method candidates ONLY for eponymous INDUCTIVES (not records).
+                For eponymous records, the record struct is skipped (fields merged into module),
+                so functions taking the record as first arg should remain as static members. *)
+             let epon_ref_opt = !eponymous_type_ref in
+             (match epon_ref_opt with
              | Some epon_ref ->
-               (* Get the module path of the eponymous type *)
+               (* Get the module path of the eponymous type/record *)
                let epon_modpath = modpath_of_r epon_ref in
-               (* Find the position of the first argument matching the eponymous type *)
+               (* Find the position of the first argument matching the eponymous type/record *)
                let rec find_epon_arg_pos pos = function
                  | Miniml.Tarr (Miniml.Tglob (arg_ref, _, _), rest) when Environ.QGlobRef.equal Environ.empty_env arg_ref epon_ref ->
                    Some pos
                  | Miniml.Tarr (_, rest) -> find_epon_arg_pos (pos + 1) rest
                  | _ -> None
                in
-               (* Check if function comes from the same Rocq module as eponymous type *)
+               (* Check if function comes from the same Rocq module as eponymous type/record *)
                let same_module r = ModPath.equal (modpath_of_r r) epon_modpath in
                (* Helper to process a single declaration *)
                let process_decl (_l, se) =
                  match se with
                  | SEdecl (Dterm (r, body, ty)) ->
-                   (* Only consider functions from the same Rocq module as the eponymous type *)
+                   (* Only consider functions from the same Rocq module as the eponymous type/record *)
                    if same_module r then
                      (match find_epon_arg_pos 0 ty with
                      | Some pos ->
@@ -1630,6 +1673,9 @@ let rec pp_structure_elem ~is_header f = function
                List.iter process_decl !current_structure_decls
              | None -> ());
 
+             (* Save THIS module's detected eponymous_record for struct generation *)
+             let this_eponymous_record = !eponymous_record in
+
              (* Only set struct context for header; implementation needs out-of-struct definitions *)
              if is_header then
                in_struct_context := true
@@ -1639,10 +1685,38 @@ let rec pp_structure_elem ~is_header f = function
              in_struct_context := old_context;
              current_struct_name := old_struct_name;
              eponymous_type_ref := old_eponymous;
+             eponymous_record := old_eponymous_record;  (* Restore PARENT's value *)
              method_candidates := old_methods;
              if is_header then
                (* Header: full struct definition *)
-               let struct_def = str "struct " ++ name ++ str " {" ++ fnl () ++
+               (* For eponymous records: add template params and record fields *)
+               let (template_decl, record_fields_pp) = match this_eponymous_record with
+                 | Some (_, fields, packet) ->
+                     (* Generate template parameters from record's type vars *)
+                     let ty_vars = packet.ip_vars in
+                     let template_str = if ty_vars = [] then mt () else
+                       str "template<" ++
+                       prlist_with_sep (fun () -> str ", ")
+                         (fun v -> str "typename " ++ Id.print v) ty_vars ++
+                       str ">" ++ fnl ()
+                     in
+                     (* Generate record fields *)
+                     let field_list = List.combine fields packet.ip_types.(0) in
+                     let pp_field (field_ref, field_ty) =
+                       let field_name = match field_ref with
+                         | Some r -> str (Common.pp_global_name Term r)
+                         | None -> str "_field"
+                       in
+                       let cpp_ty = pp_cpp_type false ty_vars (convert_ml_type_to_cpp_type (empty_env ()) [] ty_vars field_ty) in
+                       cpp_ty ++ spc () ++ field_name ++ str ";"
+                     in
+                     let fields_pp = prlist_with_sep fnl pp_field field_list ++ fnl () in
+                     (template_str, fields_pp)
+                 | None -> (mt (), mt ())
+               in
+               let struct_def = template_decl ++
+                 str "struct " ++ name ++ str " {" ++ fnl () ++
+                 record_fields_pp ++
                  body ++
                  str "};" in
                (* For modules with type annotations, add static_assert *)

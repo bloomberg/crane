@@ -21,7 +21,9 @@
 //                     STANDARD BDE ASSERT TEST FUNCTION
 // ----------------------------------------------------------------------------
 
-using namespace CHT;
+// CHT is a template struct, so we access static members via CHT<K,V>::
+template<typename K, typename V>
+using CHT_funcs = CHT<K, V>;
 
 namespace {
 
@@ -64,7 +66,7 @@ void test_no_lost_updates() {
   const int OPS_PER_THREAD = 100'000; // total increments (fast but stressful) ~= 8e5 (fast but stressful)
   const int REQUESTED_BUCKETS = 4096;
 
-  auto tbl = new_hash<int, int>(int_eq, int_hash, REQUESTED_BUCKETS);
+  auto tbl = CHT<int, int>::new_hash<int, int>(int_eq, int_hash, REQUESTED_BUCKETS);
   std::vector<std::atomic<int>> expected(NUM_KEYS);
   for (auto &a : expected) a.store(0, std::memory_order_relaxed);
 
@@ -81,7 +83,7 @@ void test_no_lost_updates() {
       int k = key_dist(rng);
 
       // Increment in the table (monotonic, so we can assert exact totals).
-      (void)hash_update<int, int>(tbl, k, [](std::optional<int> prev) {
+      (void)CHT<int, int>::hash_update<int, int>(tbl, k, [](std::optional<int> prev) {
         return prev.value_or(0) + 1;
       });
 
@@ -98,7 +100,7 @@ void test_no_lost_updates() {
   // Verify exact equality per key.
   for (int k = 0; k < NUM_KEYS; ++k) {
     const int want = expected[k].load(std::memory_order_relaxed);
-    auto got = get<int, int>(tbl, k);
+    auto got = CHT<int, int>::get<int, int>(tbl, k);
     if (want == 0) {
       // Key may never have been touched; should be absent.
       assert(!got.has_value());
@@ -122,11 +124,11 @@ void test_delete_single_winner() {
   const int NUM_THREADS = 6;
   const int REQUESTED_BUCKETS = 8192;
 
-  auto tbl = new_hash<int, int>(int_eq, int_hash, REQUESTED_BUCKETS);
+  auto tbl = CHT<int, int>::new_hash<int, int>(int_eq, int_hash, REQUESTED_BUCKETS);
 
   // Pre-insert unique keys -> value = 10 * key (easy to check).
   for (int k = 0; k < NUM_KEYS; ++k) {
-    put<int, int>(tbl, k, 10 * k);
+    CHT<int, int>::put<int, int>(tbl, k, 10 * k);
   }
 
   std::atomic<int> successes{0};
@@ -139,7 +141,7 @@ void test_delete_single_winner() {
     // Each thread attempts to delete every key once.
     // Only one thread should get a non-empty optional per key.
     for (int k = 0; k < NUM_KEYS; ++k) {
-      auto res = hash_delete<int, int>(tbl, k);
+      auto res = CHT<int, int>::hash_delete<int, int>(tbl, k);
       if (res.has_value()) {
         // If you won, the value must be exactly what we inserted.
         assert(*res == 10 * k);
@@ -158,10 +160,10 @@ void test_delete_single_winner() {
 
   // Now the table must be empty with respect to these keys.
   for (int k = 0; k < NUM_KEYS; ++k) {
-    auto g = get<int, int>(tbl, k);
+    auto g = CHT<int, int>::get<int, int>(tbl, k);
     assert(!g.has_value());
     int dflt = -1;
-    int v = get_or<int, int>(tbl, k, dflt);
+    int v = CHT<int, int>::get_or<int, int>(tbl, k, dflt);
     assert(v == dflt);
   }
 
@@ -180,11 +182,11 @@ void test_racy_puts_gets_smoke() {
   const int OPS_PER_THREAD = 50'000;
   const int REQUESTED_BUCKETS = 2048;
 
-  auto tbl = new_hash<int, int>(int_eq, int_hash, REQUESTED_BUCKETS);
+  auto tbl = CHT<int, int>::new_hash<int, int>(int_eq, int_hash, REQUESTED_BUCKETS);
 
   // Seed some values so gets often find something.
   for (int k = 0; k < NUM_KEYS; ++k) {
-    put<int, int>(tbl, k, 0);
+    CHT<int, int>::put<int, int>(tbl, k, 0);
   }
 
   std::barrier start_barrier(NUM_THREADS);
@@ -202,10 +204,10 @@ void test_racy_puts_gets_smoke() {
 
       if (op < 40) {
         // Concurrent writers keep overwriting; final value should be any thread id.
-        put<int, int>(tbl, k, tid);
+        CHT<int, int>::put<int, int>(tbl, k, tid);
       } else {
         // Concurrent readers just fetch; value (if present) must be a plausible tid.
-        auto v = get<int, int>(tbl, k);
+        auto v = CHT<int, int>::get<int, int>(tbl, k);
         if (v.has_value()) {
           int x = *v;
           assert(x >= 0 && x < NUM_THREADS);
@@ -221,7 +223,7 @@ void test_racy_puts_gets_smoke() {
 
   // Basic post-condition sanity: keys should still be present with a valid tid.
   for (int k = 0; k < NUM_KEYS; ++k) {
-    auto v = get<int, int>(tbl, k);
+    auto v = CHT<int, int>::get<int, int>(tbl, k);
     if (v.has_value()) {
       int x = *v;
       assert(x >= 0 && x < NUM_THREADS);

@@ -56,7 +56,15 @@ struct TVar {
   struct TVar_axioms {};
 };
 
-struct CHT {
+template <typename K, typename V> struct CHT {
+  std::function<bool(K, K)> cht_eqb;
+  std::function<int(K)> cht_hash;
+  std::vector<
+      std::shared_ptr<stm::TVar<std::shared_ptr<List::list<std::pair<K, V>>>>>>
+      cht_buckets;
+  int cht_nbuckets;
+  std::shared_ptr<stm::TVar<std::shared_ptr<List::list<std::pair<K, V>>>>>
+      cht_fallback;
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
   static std::optional<T2>
   assoc_lookup(F0 &&eqb, const T1 k,
@@ -143,48 +151,6 @@ struct CHT {
         xs->v());
   }
 
-  template <typename K, typename V> struct CHT {
-    std::function<bool(K, K)> cht_eqb;
-    std::function<int(K)> cht_hash;
-    std::vector<std::shared_ptr<
-        stm::TVar<std::shared_ptr<List::list<std::pair<K, V>>>>>>
-        cht_buckets;
-    int cht_nbuckets;
-    std::shared_ptr<stm::TVar<std::shared_ptr<List::list<std::pair<K, V>>>>>
-        cht_fallback;
-  };
-
-  template <typename T1, typename T2>
-  static bool cht_eqb(const std::shared_ptr<CHT<T1, T2>> &c, const T1 _x0,
-                      const std::shared_ptr<CHT<T1, T2>> &_x1) {
-    return _x1->cht_eqb(_x0, _x1);
-  }
-
-  template <typename T1, typename T2>
-  static int cht_hash(const std::shared_ptr<CHT<T1, T2>> &c,
-                      const std::shared_ptr<CHT<T1, T2>> &_x0) {
-    return _x0->cht_hash(_x0);
-  }
-
-  template <typename T1, typename T2>
-  static std::vector<std::shared_ptr<
-      stm::TVar<std::shared_ptr<List::list<std::pair<T1, T2>>>>>>
-  cht_buckets(const std::shared_ptr<CHT<T1, T2>> &c) {
-    return c->cht_buckets;
-  }
-
-  template <typename T1, typename T2>
-  static int cht_nbuckets(const std::shared_ptr<CHT<T1, T2>> &c) {
-    return c->cht_nbuckets;
-  }
-
-  template <typename T1, typename T2>
-  static std::shared_ptr<
-      stm::TVar<std::shared_ptr<List::list<std::pair<T1, T2>>>>>
-  cht_fallback(const std::shared_ptr<CHT<T1, T2>> &c) {
-    return c->cht_fallback;
-  }
-
   template <typename T1, typename T2>
   static std::shared_ptr<
       stm::TVar<std::shared_ptr<List::list<std::pair<T1, T2>>>>>
@@ -262,8 +228,6 @@ struct CHT {
     }
   }
 
-  static int max(const int a, const int b);
-
   template <typename T1, typename T2>
   static std::vector<std::shared_ptr<
       stm::TVar<std::shared_ptr<List::list<std::pair<T1, T2>>>>>>
@@ -299,7 +263,7 @@ struct CHT {
             MapsTo<int, T1> F1>
   static std::shared_ptr<CHT<T1, T2>> new_hash(F0 &&eqb, F1 &&hash,
                                                const int requested) {
-    int n = max(requested, 1);
+    int n = std::max(requested, 1);
     std::vector<std::shared_ptr<
         stm::TVar<std::shared_ptr<List::list<std::pair<T1, T2>>>>>>
         bs = mk_buckets<T1, T2>(n);
