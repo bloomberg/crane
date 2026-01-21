@@ -245,6 +245,11 @@ val extract_void :
   qualid -> qualid -> unit
 val extract_skip :
   qualid -> unit
+val is_skip_module : ModPath.t -> bool
+val extract_skip_module :
+  qualid -> unit
+val extract_skip_or_module :
+  qualid -> unit
 val register_glob_def : GlobRef.t -> ml_type -> unit
 
 

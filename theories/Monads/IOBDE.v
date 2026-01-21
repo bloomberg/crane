@@ -11,12 +11,9 @@ Module IO_axioms.
   Axiom iget_line : iIO string.
   Axiom iread : string -> iIO string.
 
-  Crane Extract Skip iIO.
-  Crane Extract Skip iprint.
-  Crane Extract Skip iprint_endline.
-  Crane Extract Skip iget_line.
-  Crane Extract Skip iread.
 End IO_axioms.
+
+Crane Extract Skip IO_axioms.
 Import IO_axioms.
 
 Definition IO : Type -> Type := itree iIO.

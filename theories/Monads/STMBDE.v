@@ -19,16 +19,10 @@ Module STM_axioms.
   Axiom igetSTM : forall {A}, vector A -> int -> iSTM A.
   Axiom iisEmptySTM : forall {A}, vector A -> iSTM bool.
 
-  Crane Extract Skip iSTM.
-  Crane Extract Skip iatomically.
-  Crane Extract Skip iretry.
-  Crane Extract Skip iorElse.
-
-  Crane Extract Skip igetSTM.
-  Crane Extract Skip iisEmptySTM.
 End STM_axioms.
-Import STM_axioms.
 
+Crane Extract Skip STM_axioms.
+Import STM_axioms.
 
 Definition STM : Type -> Type := itree iSTM.
 Definition atomically {A} : STM A -> IO A := hoist (@iatomically).
@@ -38,7 +32,6 @@ Definition check (b : bool) : STM void := if b then Ret ghost else retry.
 
 Definition getSTM {A} (v : vector A) (i : int) : STM A := trigger (igetSTM v i).
 Definition isEmptySTM  {A} (v : vector A) : STM bool := trigger (iisEmptySTM v).
-
 
 Crane Extract Inlined Constant STM => "%t0".
 Crane Extract Inlined Constant atomically => "stm::atomically([&] { return %a0; })". (* Should this be incorported into the c++? *)

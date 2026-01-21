@@ -77,8 +77,6 @@ std::shared_ptr<List::list<T1>> rev(const std::shared_ptr<List::list<T1>> &l) {
                     l->v());
 }
 
-struct IO_axioms {};
-
 struct Vector_axioms {};
 
 struct ToString {

@@ -336,14 +336,19 @@ let rec extract_structure access env mp reso ~all = function
   | (l,SFBmodule mb) :: struc ->
       let ms = extract_structure access env mp reso ~all struc in
       let mp = MPdot (mp,l) in
-      let all' = all || Visit.needed_mp_all mp in
-      if all' || Visit.needed_mp mp then
-        (l,SEmodule (extract_module access env mp ~all:all' mb)) :: ms
-      else ms
+      (* Skip module if it's in the skip module set *)
+      if is_skip_module mp then ms
+      else
+        let all' = all || Visit.needed_mp_all mp in
+        if all' || Visit.needed_mp mp then
+          (l,SEmodule (extract_module access env mp ~all:all' mb)) :: ms
+        else ms
   | (l,SFBmodtype mtb) :: struc ->
       let ms = extract_structure access env mp reso ~all struc in
       let mp = MPdot (mp,l) in
-      if all || Visit.needed_mp mp then
+      (* Skip module type if it's in the skip module set *)
+      if is_skip_module mp then ms
+      else if all || Visit.needed_mp mp then
         (l,SEmodtype (extract_mbody_spec env mp mtb)) :: ms
       else ms
 

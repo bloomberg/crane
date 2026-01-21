@@ -48,13 +48,9 @@ struct List {
   };
 };
 
-struct IO_axioms {};
-
 struct Vector_axioms {};
 
-struct STM {
-  struct STM_axioms {};
-};
+struct STM {};
 
 struct TVar {
   struct TVar_axioms {};

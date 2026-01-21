@@ -36,8 +36,6 @@ struct Unit {
   };
 };
 
-struct IO_axioms {};
-
 struct iotest {
   static void test1(const std::string _x);
 

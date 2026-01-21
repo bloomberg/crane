@@ -1173,6 +1173,44 @@ let extract_skip sk =
         Lib.add_leaf (in_customs (skip,[],""));
   Lib.add_leaf (inline_extraction (true,[skip]))
 
+(* Module skip set - for skipping entire modules during extraction *)
+let empty_skip_module_set = MPset.empty
+
+let skip_module_set = Summary.ref empty_skip_module_set ~name:"CraneExtrSkipModule"
+
+let add_skip_module mp =
+  skip_module_set := MPset.add mp !skip_module_set
+
+let is_skip_module mp =
+  MPset.mem mp !skip_module_set
+
+let in_skip_module : ModPath.t -> obj =
+  declare_object @@ superglobal_object_nodischarge "Crane Skip Module extraction"
+    ~cache:(fun mp -> add_skip_module mp)
+    ~subst:(Some (fun (s, mp) -> Mod_subst.subst_mp s mp))
+
+let extract_skip_module m =
+  check_inside_section ();
+  let mp = try Nametab.locate_module m
+           with Not_found -> error_unknown_module ?loc:m.CAst.loc m in
+  Lib.add_leaf (in_skip_module mp)
+
+(* Try to skip as either a module or a global reference *)
+let extract_skip_or_module q =
+  check_inside_section ();
+  (* First try to resolve as a module *)
+  let mpo = try Some (Nametab.locate_module q) with Not_found -> None in
+  match mpo with
+  | Some mp ->
+      (* It's a module - skip it *)
+      Lib.add_leaf (in_skip_module mp)
+  | None ->
+      (* Not a module, try as a global reference *)
+      let skip = Smartlocate.global_with_alias q in
+      Lib.add_leaf (in_skip skip);
+      Lib.add_leaf (in_customs (skip,[],""));
+      Lib.add_leaf (inline_extraction (true,[skip]))
+
 
 (*s Tables synchronization. *)
 
