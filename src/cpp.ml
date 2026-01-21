@@ -122,17 +122,6 @@ let reset_cpp_state () =
   current_structure_decls := [];
   Hashtbl.clear global_method_registry
 
-(* Extract element at position [pos] from a list, returning (element_opt, remaining_list).
-   Used to extract the 'this' argument from function call arguments for method transformation. *)
-let extract_at_position pos lst =
-  let rec aux i acc = function
-    | [] -> (None, List.rev acc)
-    | x :: rest ->
-      if i = pos then (Some x, List.rev acc @ rest)
-      else aux (i + 1) (x :: acc) rest
-  in
-  aux 0 [] lst
-
 (* Check if a function is a projection for the eponymous record.
    Such projections are redundant when the record fields are merged into the module struct. *)
 let is_eponymous_record_projection r =
@@ -225,31 +214,89 @@ let pp_field r fields i = pp_one_field r i (List.nth fields i)
 
 let pp_fields r fields = List.map_i (pp_one_field r) 0 fields
 
-(* Helper functions to reduce duplication *)
+(* ============================================================================
+   Helper functions to reduce code duplication
+   ============================================================================ *)
 
 (* Check if a type name is already qualified (contains ::) *)
 let is_qualified_name name_str = String.contains name_str ':'
 
-(* Add typename prefix for dependent types in template contexts *)
+(* Check if a GlobRef refers to a local inductive (defined in current module scope).
+   Local inductives don't need namespace qualification (e.g., List::list vs just list). *)
+let is_local_inductive r =
+  List.exists (Environ.QGlobRef.equal Environ.empty_env r) (get_local_inductives ())
+
+(* Get the appropriate name for an inductive reference.
+   - Local inductives: lowercase name directly (e.g., "list")
+   - Non-local inductives: capitalized namespace prefix (e.g., "List::list")
+   Returns (name_pp, needs_namespace) where:
+   - name_pp is the printed name for namespace prefix
+   - needs_namespace indicates if namespace qualification is needed *)
+let inductive_name_info r =
+  match r with
+  | GlobRef.IndRef _ when is_local_inductive r ->
+      (* Local inductive: use lowercase name directly, no namespace *)
+      (pp_global Type r, false)
+  | GlobRef.IndRef _ ->
+      (* Non-local inductive: capitalize for namespace struct name *)
+      (str (String.capitalize_ascii (str_global Type r)), true)
+  | _ ->
+      (* Non-inductive: use as-is, no namespace *)
+      (pp_global Type r, false)
+
+(* Add typename prefix for dependent types in template contexts.
+   C++ requires 'typename' keyword when accessing nested types in templates. *)
 let typename_prefix_for name_str =
   if !in_template_struct && is_qualified_name name_str then
     str "typename "
   else
     mt ()
 
-(* Add struct qualification prefix if needed *)
+(* Add struct qualification prefix if needed.
+   When generating out-of-struct member function definitions, we need to qualify
+   types that belong to the current struct. *)
 let struct_qualifier_for r name_str =
   match !current_struct_name with
   | Some struct_name when not (is_qualified_name name_str) ->
-    let full_path = Pp.string_of_ppcmds (GlobRef.print r) in
-    let struct_name_str = Pp.string_of_ppcmds struct_name in
-    (* Only qualify if the type belongs to the current struct *)
-    let contains =
-      try let _ = Str.search_forward (Str.regexp_string struct_name_str) full_path 0 in true
-      with Not_found -> false
-    in
-    if contains then struct_name ++ str "::" else mt ()
+      let full_path = Pp.string_of_ppcmds (GlobRef.print r) in
+      let struct_name_str = Pp.string_of_ppcmds struct_name in
+      (* Only qualify if the type belongs to the current struct *)
+      if Common.contains_substring full_path struct_name_str then
+        struct_name ++ str "::"
+      else
+        mt ()
   | _ -> mt ()
+
+(* Check if a global function needs :: prefix to avoid name collision.
+   When generating out-of-struct definitions, we add :: to call external functions
+   rather than recursing into the struct's own member. *)
+let needs_global_qualifier x =
+  match !current_struct_name with
+  | Some struct_name ->
+      let name_str = str_global Term x in
+      if is_qualified_name name_str then false  (* Already qualified *)
+      else
+        let full_path = Pp.string_of_ppcmds (GlobRef.print x) in
+        let struct_name_str = Pp.string_of_ppcmds struct_name in
+        (* Function is external if its path doesn't contain struct name *)
+        not (Common.contains_substring full_path struct_name_str)
+  | None -> false
+
+(* Look up method info for a function reference.
+   Checks both local method_candidates and global method_registry.
+   Returns Some this_pos if the function is a method, None otherwise. *)
+let lookup_method_this_pos n =
+  (* First check local method_candidates *)
+  let local_result = List.find_map (fun (r', _, _, pos) ->
+    if Environ.QGlobRef.equal Environ.empty_env n r' then Some pos else None
+  ) !method_candidates in
+  match local_result with
+  | Some pos -> Some pos
+  | None ->
+    (* Fall back to global registry for cross-module methods *)
+    match is_registered_method n with
+    | Some (_, pos) -> Some pos
+    | None -> None
 
 (* pretty printing c++ syntax *)
 let try_cpp c o =
@@ -409,59 +456,35 @@ let rec pp_cpp_type par vl t =
     | Tmod (m, t) -> pp_tymod m ++ pp_rec false t
     | Tnamespace (r,t) ->
         (* DESIGN: Namespace-qualified types for inductive types.
-           Rocq has separate inductive types (lowercase) that live inside wrapper structs (capitalized).
-           Example: type 'list' is wrapped in struct 'List' to avoid name collisions.
-
-           Rationale: When inductives become nested structs inside modules, local inductives
-           don't need Tnamespace wrapping. Non-local inductives get the namespace prefix. *)
-        let is_local_ind = List.exists (Environ.QGlobRef.equal Environ.empty_env r) (get_local_inductives ()) in
-        let name = match r with
-          | GlobRef.IndRef _ when is_local_ind ->
-            (* Local inductive: use lowercase name directly *)
-            pp_global Type r
-          | GlobRef.IndRef _ ->
-            (* Non-local inductive: capitalize the namespace struct name *)
-            str (String.capitalize_ascii (str_global Type r))
-          | _ -> pp_global Type r
-        in
+           Rocq's inductives live in wrapper structs (e.g., type 'list' in struct 'List').
+           Local inductives don't need namespace wrapping; non-local ones get the prefix. *)
+        let (name, _needs_ns) = inductive_name_info r in
         (* Check if inner type is Tglob with the same reference *)
         (match (r, t) with
-         | GlobRef.IndRef (kn, _), Tglob (r', args, _) when Environ.QGlobRef.equal Environ.empty_env r r' ->
+         | GlobRef.IndRef _, Tglob (r', args, _) when Environ.QGlobRef.equal Environ.empty_env r r' ->
            let templates = match args with
              | [] -> mt ()
              | args -> str "<" ++ pp_list (pp_rec false) args ++ str ">"
            in
-           (* Check if the type name already contains "::" (meaning it's a module-nested type)
-              If so, pp_global already includes the path and we shouldn't add a prefix *)
+           (* Skip prefix if type name already contains module path (::) *)
            let type_name_str = str_global Type r' in
-           let has_module_path = String.contains type_name_str ':' in
-           if has_module_path then
-             (* Module-nested type: path already in name, just print with templates *)
+           if is_qualified_name type_name_str then
              str type_name_str ++ templates
            else
-             (* Top-level type: add capitalized namespace prefix (e.g., List::list for non-local inductives) *)
              name ++ str "::" ++ str type_name_str ++ templates
          | _ ->
            (* Fallback: generic namespace-qualified type *)
            str "typename " ++ name ++ str "::" ++ pp_rec false t)
     | Tqualified (base_ty, nested_id) ->
         (* DESIGN: Template-dependent type access like 'typename M::Key::t'
-           Used when accessing nested types from module type parameters in templates.
-
-           Rationale: In C++ templates, accessing a nested type from a dependent base type
-           (a template parameter) requires the 'typename' keyword to disambiguate from
-           static members. This is critical for expressing "the key type of module M". *)
+           C++ templates require 'typename' to access nested types from dependent base types. *)
         let base_str = match base_ty with
           | Tglob (r, _, _) ->
-            let is_local_ind = List.exists (Environ.QGlobRef.equal Environ.empty_env r) (get_local_inductives ()) in
-            (match r with
-             | GlobRef.IndRef _ when is_local_ind ->
-               (* Local inductive: just use the type directly *)
-               pp_rec false base_ty
-             | GlobRef.IndRef _ ->
-               (* Capitalize and add namespace prefix: List::list<T> *)
-               str (String.capitalize_ascii (str_global Type r)) ++ str "::" ++ pp_rec false base_ty
-             | _ -> pp_rec false base_ty)
+            let (ns_name, needs_ns) = inductive_name_info r in
+            if needs_ns then
+              ns_name ++ str "::" ++ pp_rec false base_ty
+            else
+              pp_rec false base_ty
           | _ -> pp_rec false base_ty
         in
         str "typename " ++ base_str ++ str "::" ++ Id.print nested_id
@@ -491,48 +514,22 @@ and pp_cpp_expr env args t =
     let cmds = parse_numbered_args "t" (fun i -> CCty_arg i) custom in
     pp_custom (Pp.string_of_ppcmds (GlobRef.print x) ^ " := " ^ custom) env None None tys [] [] [] cmds
   | CPPglob (x, tys) ->
-    (* For inductive types, add the capitalized namespace prefix - unless it's local *)
-    let is_local_ind = List.exists (Environ.QGlobRef.equal Environ.empty_env x) (get_local_inductives ()) in
+    (* Determine the base name for a global reference *)
     let base_name = match x with
-      | GlobRef.IndRef _ when is_local_ind ->
-        (* Local inductive: just use the lowercase name directly *)
-        pp_global Term x
-      | GlobRef.IndRef (kn, _) ->
-        (* Non-local inductive: check if the name already contains a module path *)
+      | GlobRef.IndRef _ ->
+        let (ns_name, needs_ns) = inductive_name_info x in
         let type_name_str = str_global Type x in
-        let has_module_path = String.contains type_name_str ':' in
-        if has_module_path then
-          (* Module-nested type: path already in name, don't duplicate *)
-          pp_global Term x
+        if needs_ns && not (is_qualified_name type_name_str) then
+          (* Add capitalized namespace prefix: List::list *)
+          ns_name ++ str "::" ++ pp_global Term x
         else
-          (* Top-level type: add capitalized namespace prefix (e.g., List::list) *)
-          str (String.capitalize_ascii type_name_str) ++ str "::" ++ pp_global Term x
+          pp_global Term x
       | GlobRef.VarRef _ ->
-        (* VarRef is a local variable reference - never add :: prefix *)
+        (* Local variable reference - no prefix *)
         pp_global Term x
       | _ ->
-        (* When generating out-of-struct member function definitions (current_struct_name is set),
-           qualify unqualified global function calls with :: to avoid name collisions.
-           But only if the function is NOT a member of the current struct.
-           Example: NatOrdered::compare calling global ::compare instead of recursing.
-           But Ack::ack calling ack (recursive) should NOT be qualified. *)
-        let name_str = str_global Term x in
-        let needs_global_qualifier = match !current_struct_name with
-          | Some struct_name when not (is_qualified_name name_str) ->
-            (* Check if the function's full path contains the current struct name.
-               If it does, it's a member of the current struct and shouldn't be qualified.
-               Use GlobRef.print to get the full path. *)
-            let full_path = Pp.string_of_ppcmds (GlobRef.print x) in
-            let struct_name_str = Pp.string_of_ppcmds struct_name in
-            (* Function is from different module if its path doesn't contain struct name *)
-            let contains =
-              try let _ = Str.search_forward (Str.regexp_string struct_name_str) full_path 0 in true
-              with Not_found -> false
-            in
-            not contains
-          | _ -> false
-        in
-        if needs_global_qualifier then
+        (* Function calls: add :: prefix for external functions to avoid name collision *)
+        if needs_global_qualifier x then
           str "::" ++ pp_global Term x
         else
           pp_global Term x
@@ -543,17 +540,8 @@ and pp_cpp_expr env args t =
       let ty_args = pp_list (pp_cpp_type false []) tys in
       apply base_name ++ str "<" ++ ty_args ++ str ">")
   | CPPnamespace (r, t) ->
-      (* Capitalize inductive references - unless they're local *)
-      let is_local_ind = List.exists (Environ.QGlobRef.equal Environ.empty_env r) (get_local_inductives ()) in
-      let name = match r with
-        | GlobRef.IndRef _ when is_local_ind ->
-          (* Local inductive: use lowercase name *)
-          pp_global Type r
-        | GlobRef.IndRef _ ->
-          (* Non-local inductive: capitalize *)
-          str (String.capitalize_ascii (str_global Type r))
-        | _ -> pp_global Type r
-      in
+      (* Use inductive_name_info to get proper namespace name *)
+      let (name, _) = inductive_name_info r in
       h (name ++ str "::" ++ pp_cpp_expr env args t)
   | CPPfun_call (CPPglob (n,tys), ts) when is_inline_custom n ->
     let s = find_custom n in
@@ -563,38 +551,20 @@ and pp_cpp_expr env args t =
                       | CCstring s -> prev @ (parse_numbered_args "t" (fun i -> CCty_arg i) s)
                       | _ -> prev @ [curr]) [] cmds in
     pp_custom (Pp.string_of_ppcmds (GlobRef.print n) ^ " := " ^ s) env None None tys [] (List.rev ts) [] cmds
-  | CPPfun_call (CPPglob (n, _tys), ts) when List.exists (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env n r') !method_candidates ->
-    (* Transform function call to method call: f(a0, a1, a2, ...) -> aN->f(a0, ..., aN-1, aN+1, ...)
-       where N is the this_position. The args in ts are in reverse order. *)
+  | CPPfun_call (CPPglob (n, _tys), ts) when lookup_method_this_pos n <> None ->
+    (* Transform function call to method call: f(a0, a1, ...) -> a[this_pos]->f(other_args)
+       Handles both local method_candidates and cross-module registered methods. *)
     let method_name = Id.of_string (Common.pp_global_name Term n) in
-    let this_pos = List.find_map (fun (r', _, _, pos) ->
-      if Environ.QGlobRef.equal Environ.empty_env n r' then Some pos else None
-    ) !method_candidates in
-    let this_pos = match this_pos with Some p -> p | None -> 0 in
+    let this_pos = match lookup_method_this_pos n with Some p -> p | None -> 0 in
     let args_normal = List.rev ts in  (* Convert to normal order *)
-    let (this_arg_opt, other_args) = extract_at_position this_pos args_normal in
+    let (this_arg_opt, other_args) = Common.extract_at_pos this_pos args_normal in
     (match this_arg_opt with
      | Some this_arg ->
        let obj_s = pp_cpp_expr env args this_arg in
        let args_s = pp_list (pp_cpp_expr env args) other_args in
        obj_s ++ str "->" ++ Id.print method_name ++ str "(" ++ args_s ++ str ")"
      | None ->
-       (* Shouldn't happen - method candidates always have the 'this' arg *)
-       pp_cpp_expr env args (CPPglob (n, _tys)) ++ str "()")
-  | CPPfun_call (CPPglob (n, _tys), ts) when is_registered_method n <> None ->
-    (* Transform function call to method call for globally registered methods.
-       This handles cross-module method calls like app from List used in Tree. *)
-    let method_name = Id.of_string (Common.pp_global_name Term n) in
-    let (_epon_ref, this_pos) = match is_registered_method n with Some x -> x | None -> assert false in
-    let args_normal = List.rev ts in  (* Convert to normal order *)
-    let (this_arg_opt, other_args) = extract_at_position this_pos args_normal in
-    (match this_arg_opt with
-     | Some this_arg ->
-       let obj_s = pp_cpp_expr env args this_arg in
-       let args_s = pp_list (pp_cpp_expr env args) other_args in
-       obj_s ++ str "->" ++ Id.print method_name ++ str "(" ++ args_s ++ str ")"
-     | None ->
-       (* Shouldn't happen - registered methods always have the 'this' arg *)
+       (* Fallback - shouldn't happen for registered methods *)
        pp_cpp_expr env args (CPPglob (n, _tys)) ++ str "()")
   | CPPfun_call (f, ts) ->
     let args_s = pp_list (pp_cpp_expr env args) (List.rev ts) in

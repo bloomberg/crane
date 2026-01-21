@@ -20,6 +20,49 @@ open Table
 open Miniml
 open Mlutil
 
+(* ============================================================================
+   Generic utility functions (string, list)
+   ============================================================================ *)
+
+(** [contains_substring haystack needle] checks if [haystack] contains [needle].
+    Note: String.contains checks for a char; this checks for a substring. *)
+let contains_substring haystack needle =
+  try ignore (Str.search_forward (Str.regexp_string needle) haystack 0); true
+  with Not_found -> false
+
+(** [last lst] returns the last element of a non-empty list.
+    @raise Failure if the list is empty. *)
+let last lst =
+  let rec aux a = function
+    | [] -> a
+    | b :: rest -> aux b rest
+  in
+  match lst with
+  | a :: rest -> aux a rest
+  | [] -> failwith "last: empty list"
+
+(** [last_two lst] returns the last two elements of a list with at least two elements.
+    @raise Failure if the list has fewer than two elements. *)
+let last_two lst =
+  let rec aux (a, b) = function
+    | [] -> (a, b)
+    | c :: rest -> aux (b, c) rest
+  in
+  match lst with
+  | a :: b :: rest -> aux (a, b) rest
+  | _ -> failwith "last_two: list has fewer than 2 elements"
+
+(** [extract_at_pos pos lst] extracts the element at position [pos] from [lst].
+    Returns (Some element, remaining_list) or (None, original_list) if pos is out of bounds. *)
+let extract_at_pos pos lst =
+  let rec aux i acc = function
+    | [] -> (None, List.rev acc)
+    | x :: rest ->
+      if i = pos then (Some x, List.rev acc @ rest)
+      else aux (i + 1) (x :: acc) rest
+  in
+  aux 0 [] lst
+
 (** [intersperse sep lst] inserts [sep] between each element of [lst]. *)
 let rec intersperse sep = function
   | [] -> []

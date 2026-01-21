@@ -13,6 +13,23 @@
 open Names
 open Miniml
 
+(** {2 Generic utility functions (string, list)} *)
+
+val contains_substring : string -> string -> bool
+(** [contains_substring haystack needle] checks if [haystack] contains [needle]. *)
+
+val last : 'a list -> 'a
+(** [last lst] returns the last element of a non-empty list.
+    @raise Failure if the list is empty. *)
+
+val last_two : 'a list -> 'a * 'a
+(** [last_two lst] returns the last two elements of a list.
+    @raise Failure if the list has fewer than two elements. *)
+
+val extract_at_pos : int -> 'a list -> 'a option * 'a list
+(** [extract_at_pos pos lst] extracts the element at position [pos] from [lst].
+    Returns (Some element, remaining_list) or (None, original_list). *)
+
 val intersperse : 'a -> 'a list -> 'a list
 val prepend_to_all : 'a -> 'a list -> 'a list
 
