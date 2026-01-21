@@ -56,11 +56,15 @@ else
     echo -e "${DIM}Scanning test files...${NC}"
     while IFS= read -r vfile; do
         # Extract test names from Crane Extraction commands
+        # Format: Crane Extraction TestCompile "output_name" Module1 Module2 ...
+        # Test ID format: output_name/Module1 and Module2
         while IFS= read -r line; do
+            output_name=$(echo "$line" | sed 's/.*"\([^"]*\)".*/\1/')
             identifiers=$(echo "$line" | sed 's/.*"\([^"]*\)"\s*\([^.]*\).*/\2/' | xargs)
             identifier=$(echo "$identifiers" | sed 's/ / and /g')
-            if [ -n "$identifier" ]; then
-                echo "$identifier|$vfile" >> "$TEST_FILE_MAP"
+            if [ -n "$output_name" ] && [ -n "$identifier" ]; then
+                # Use format: output_name/identifier to match new test output format
+                echo "${output_name}/${identifier}|$vfile" >> "$TEST_FILE_MAP"
             fi
         done < <(grep 'Crane Extraction' "$vfile" 2>/dev/null)
     done < <(find tests -name "*.v" -type f | sort)
