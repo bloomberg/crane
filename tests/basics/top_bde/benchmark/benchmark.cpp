@@ -11,24 +11,14 @@
 #include <bsl_utility.h>
 #include <bsl_variant.h>
 
-using namespace BloombergLP;
+namespace BloombergLP {
 
-namespace unit {
-bsl::shared_ptr<unit> tt::make()
-{
-    return bsl::make_shared<unit>(tt{});
 }
-};
-
-namespace list {
-
-};
-
-std::string benchmark(const bsl::shared_ptr<unit::unit> _x)
+std::string benchmark(const bsl::shared_ptr<Unit::unit>& _x)
 {
     return ToString::list_to_string<
-        bsl::shared_ptr<list::list<unsigned int> > >(
-                    [&](const bsl::shared_ptr<list::list<unsigned int> > _x0) {
+        bsl::shared_ptr<List::list<unsigned int> > >(
+                    [&](const bsl::shared_ptr<List::list<unsigned int> > _x0) {
                         return ToString::list_to_string<unsigned int>(
                             [&](const unsigned int _x0) {
                                 return std::to_string(_x0);

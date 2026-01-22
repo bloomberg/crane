@@ -97,21 +97,6 @@ struct Colist {
       }
     };
     const variant_t &v() const { return v_; }
-    template <typename T2, MapsTo<T2, A> F0>
-    std::shared_ptr<colist<T2>> comap(F0 &&f) const {
-      return std::visit(Overloaded{[&](const typename colist<A>::conil _args)
-                                       -> std::shared_ptr<colist<T2>> {
-                                     return colist<T2>::ctor::conil_();
-                                   },
-                                   [&](const typename colist<A>::cocons _args)
-                                       -> std::shared_ptr<colist<T2>> {
-                                     A x = _args._a0;
-                                     std::shared_ptr<colist<A>> xs = _args._a1;
-                                     return colist<T2>::ctor::cocons_(
-                                         f(x), xs->comap(f));
-                                   }},
-                        this->v());
-    }
     std::shared_ptr<List::list<A>>
     list_of_colist(const std::shared_ptr<Nat::nat> &fuel) const {
       return std::visit(
@@ -138,6 +123,21 @@ struct Colist {
                            this->v());
                      }},
           fuel->v());
+    }
+    template <typename T2, MapsTo<T2, A> F0>
+    std::shared_ptr<colist<T2>> comap(F0 &&f) const {
+      return std::visit(Overloaded{[&](const typename colist<A>::conil _args)
+                                       -> std::shared_ptr<colist<T2>> {
+                                     return colist<T2>::ctor::conil_();
+                                   },
+                                   [&](const typename colist<A>::cocons _args)
+                                       -> std::shared_ptr<colist<T2>> {
+                                     A x = _args._a0;
+                                     std::shared_ptr<colist<A>> xs = _args._a1;
+                                     return colist<T2>::ctor::cocons_(
+                                         f(x), xs->comap(f));
+                                   }},
+                        this->v());
     }
   };
 

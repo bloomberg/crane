@@ -42,18 +42,6 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
-    std::shared_ptr<list<A>> app(const std::shared_ptr<list<A>> &m) const {
-      return std::visit(
-          Overloaded{[&](const typename List::list<A>::nil _args)
-                         -> std::shared_ptr<List::list<A>> { return m; },
-                     [&](const typename List::list<A>::cons _args)
-                         -> std::shared_ptr<List::list<A>> {
-                       A a = _args._a0;
-                       std::shared_ptr<List::list<A>> l1 = _args._a1;
-                       return List::list<A>::ctor::cons_(a, l1->app(m));
-                     }},
-          this->v());
-    }
     unsigned int length() const {
       return std::visit(
           Overloaded{
@@ -64,6 +52,18 @@ struct List {
                 std::shared_ptr<List::list<A>> l_ = _args._a1;
                 return (l_->length() + 1);
               }},
+          this->v());
+    }
+    std::shared_ptr<list<A>> app(const std::shared_ptr<list<A>> &m) const {
+      return std::visit(
+          Overloaded{[&](const typename List::list<A>::nil _args)
+                         -> std::shared_ptr<List::list<A>> { return m; },
+                     [&](const typename List::list<A>::cons _args)
+                         -> std::shared_ptr<List::list<A>> {
+                       A a = _args._a0;
+                       std::shared_ptr<List::list<A>> l1 = _args._a1;
+                       return List::list<A>::ctor::cons_(a, l1->app(m));
+                     }},
           this->v());
     }
   };

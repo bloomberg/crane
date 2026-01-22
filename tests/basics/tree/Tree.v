@@ -1,6 +1,7 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 From Stdlib Require Import Lists.List.
+From Stdlib Require Import Lia.
 Import ListNotations.
 
 Module Tree.
@@ -61,5 +62,34 @@ Definition tree1 := node (node leaf 3 (node leaf 7 leaf)) 1 (node leaf 4 (node (
 
 End Tree.
 
-Require Crane.Extraction.
+Module Tree_Properties.
+Import Tree.
+
+Lemma height_pos {A : Type} (t : tree A) : 1 <= height t.
+Proof.
+  induction t; simpl; lia.
+Qed.
+
+Theorem merge_height_max {A : Type}
+                         (combine : A -> A -> A)
+                         (t1 t2 : tree A) : height (merge combine t1 t2) <= Nat.max (height t1)
+                         (height t2).
+Proof.
+  revert t2.
+  induction t1 as [| l1 IHl1 a1 r1 IHr1]; intros t2; destruct t2 as [| l2 a2 r2]; simpl.
+  - (* leaf, leaf *)
+    lia.
+  - (* leaf, node *)
+    pose proof (height_pos l2). pose proof (height_pos r2). lia.
+  - (* node, leaf *)
+    pose proof (height_pos l1). pose proof (height_pos r1). lia.
+  - (* node, node *)
+    specialize (IHl1 l2).
+    specialize (IHr1 r2).
+    lia.
+Qed.
+
+End Tree_Properties.
+
+From Crane Require Extraction.
 Crane Extraction TestCompile "tree" Tree.

@@ -15,6 +15,9 @@ using namespace BloombergLP;
 template <class From, class To>
 concept convertible_to = bsl::is_convertible<From, To>::value;
 
+template <class T, class U>
+concept same_as = bsl::is_same<T, U>::value && bsl::is_same<U, T>::value;
+
 template <class F, class R, class... Args>
 concept MapsTo = requires(F& f, Args&... a) {
     {
@@ -22,462 +25,512 @@ concept MapsTo = requires(F& f, Args&... a) {
     } -> convertible_to<R>;
 };
 
-namespace unit {
-struct tt;
-using unit = bsl::variant<tt>;
-struct tt {
-    static bsl::shared_ptr<unit> make();
-};
-};
-
-namespace list {
-template <typename A>
-struct nil;
-template <typename A>
-struct cons;
-template <typename A>
-using list = bsl::variant<nil<A>, cons<A> >;
-template <typename A>
-struct nil {
-    static bsl::shared_ptr<list<A> > make()
-    {
-        return bsl::make_shared<list<A> >(nil<A>{});
-    }
-};
-template <typename A>
-struct cons {
-    A                         _a0;
-    bsl::shared_ptr<list<A> > _a1;
-    static bsl::shared_ptr<list<A> > make(A _a0, bsl::shared_ptr<list<A> > _a1)
-    {
-        return bsl::make_shared<list<A> >(cons<A>{_a0, _a1});
-    }
-};
+struct Unit {
+    struct unit {
+      public:
+        struct tt {
+        };
+        using variant_t = bsl::variant<tt>;
+      private:
+        variant_t v_;
+        explicit unit(tt x)
+        : v_(bsl::move(x))
+        {
+        }
+      public:
+        struct ctor {
+            ctor() = delete;
+            static bsl::shared_ptr<unit> tt_()
+            {
+                return bsl::shared_ptr<unit>(new unit(tt{}));
+            }
+        };
+        const variant_t& v() const { return v_; }
+    };
 };
 
-template <typename T1>
-unsigned int length(const bsl::shared_ptr<list::list<T1> > l)
-{
-    return bsl::visit(
-          bdlf::Overloaded{[&](const list::nil<T1> _args) -> unsigned int {
-                               return 0;
-                           },
-                           [&](const list::cons<T1> _args) -> unsigned int {
-                               bsl::shared_ptr<list::list<T1> > l_ = _args._a1;
-                               return (length<T1>(l_) + 1);
-                           }},
-          *l);
-}
+struct List {
+    template <typename A>
+    struct list {
+      public:
+        struct nil {
+        };
+        struct cons {
+            A                         _a0;
+            bsl::shared_ptr<list<A> > _a1;
+        };
+        using variant_t = bsl::variant<nil, cons>;
+      private:
+        variant_t v_;
+        explicit list(nil x)
+        : v_(bsl::move(x))
+        {
+        }
+        explicit list(cons x)
+        : v_(bsl::move(x))
+        {
+        }
+      public:
+        struct ctor {
+            ctor() = delete;
+            static bsl::shared_ptr<list<A> > nil_()
+            {
+                return bsl::shared_ptr<list<A> >(new list<A>(nil{}));
+            }
+            static bsl::shared_ptr<list<A> > cons_(
+                                           A                                a0,
+                                           const bsl::shared_ptr<list<A> >& a1)
+            {
+                return bsl::shared_ptr<list<A> >(new list<A>(cons{a0, a1}));
+            }
+        };
+        const variant_t& v() const { return v_; }
+        unsigned int     length() const
+        {
+            return bsl::visit(
+                        bdlf::Overloaded{
+                            [&](const typename List::list<A>::nil _args)
+                                -> unsigned int {
+                                return 0;
+                            },
+                            [&](const typename List::list<A>::cons _args)
+                                -> unsigned int {
+                                bsl::shared_ptr<List::list<A> > l_ = _args._a1;
+                                return (l_->length() + 1);
+                            }},
+                        this->v());
+        }
+    };
+};
 
 template <typename T1, typename T2, MapsTo<T2, T1> F0>
-bsl::shared_ptr<list::list<T2> > map(F0&&                                   f,
-                                     const bsl::shared_ptr<list::list<T1> > l)
+bsl::shared_ptr<List::list<T2> > map(F0&&                                    f,
+                                     const bsl::shared_ptr<List::list<T1> >& l)
 {
     return bsl::visit(
-          bdlf::Overloaded{[&](const list::nil<T1> _args)
-                               -> bsl::shared_ptr<list::list<T2> > {
-                               return list::nil<T2>::make();
-                           },
-                           [&](const list::cons<T1> _args)
-                               -> bsl::shared_ptr<list::list<T2> > {
-                               T1                               a  = _args._a0;
-                               bsl::shared_ptr<list::list<T1> > l0 = _args._a1;
-                               return list::cons<T2>::make(f(a),
-                                                           map<T1, T2>(f, l0));
-                           }},
-          *l);
+          bdlf::Overloaded{
+              [&](const typename List::list<T1>::nil _args)
+                  -> bsl::shared_ptr<List::list<T2> > {
+                  return List::list<T2>::ctor::nil_();
+              },
+              [&](const typename List::list<T1>::cons _args)
+                  -> bsl::shared_ptr<List::list<T2> > {
+                  T1                               a  = _args._a0;
+                  bsl::shared_ptr<List::list<T1> > l0 = _args._a1;
+                  return List::list<T2>::ctor::cons_(f(a), map<T1, T2>(f, l0));
+              }},
+          l->v());
 }
 
 template <typename T1, typename T2, MapsTo<T1, T2, T1> F0>
-T1 fold_right(F0&& f, const T1 a0, const bsl::shared_ptr<list::list<T2> > l)
+T1 fold_right(F0&& f, const T1 a0, const bsl::shared_ptr<List::list<T2> >& l)
 {
     return bsl::visit(
-          bdlf::Overloaded{[&](const list::nil<T2> _args) -> T1 {
-                               return a0;
-                           },
-                           [&](const list::cons<T2> _args) -> T1 {
-                               T2                               b  = _args._a0;
-                               bsl::shared_ptr<list::list<T2> > l0 = _args._a1;
-                               return f(b, fold_right<T1, T2>(f, a0, l0));
-                           }},
-          *l);
+        bdlf::Overloaded{[&](const typename List::list<T2>::nil _args) -> T1 {
+                             return a0;
+                         },
+                         [&](const typename List::list<T2>::cons _args) -> T1 {
+                             T2                               b  = _args._a0;
+                             bsl::shared_ptr<List::list<T2> > l0 = _args._a1;
+                             return f(b, fold_right<T1, T2>(f, a0, l0));
+                         }},
+        l->v());
 }
 
 template <typename T1, MapsTo<bool, T1> F0>
-bsl::shared_ptr<list::list<T1> > filter(
-                                      F0&&                                   f,
-                                      const bsl::shared_ptr<list::list<T1> > l)
+bsl::shared_ptr<List::list<T1> > filter(
+                                     F0&&                                    f,
+                                     const bsl::shared_ptr<List::list<T1> >& l)
 {
     return bsl::visit(
-                 bdlf::Overloaded{
-                     [&](const list::nil<T1> _args)
-                         -> bsl::shared_ptr<list::list<T1> > {
-                         return list::nil<T1>::make();
-                     },
-                     [&](const list::cons<T1> _args)
-                         -> bsl::shared_ptr<list::list<T1> > {
-                         T1                               x  = _args._a0;
-                         bsl::shared_ptr<list::list<T1> > l0 = _args._a1;
-                         if (f(x)) {
-                             return list::cons<T1>::make(x, filter<T1>(f, l0));
-                         }
-                         else {
-                             return filter<T1>(f, l0);
-                         }
-                     }},
-                 *l);
+          bdlf::Overloaded{
+              [&](const typename List::list<T1>::nil _args)
+                  -> bsl::shared_ptr<List::list<T1> > {
+                  return List::list<T1>::ctor::nil_();
+              },
+              [&](const typename List::list<T1>::cons _args)
+                  -> bsl::shared_ptr<List::list<T1> > {
+                  T1                               x  = _args._a0;
+                  bsl::shared_ptr<List::list<T1> > l0 = _args._a1;
+                  if (f(x)) {
+                      return List::list<T1>::ctor::cons_(x, filter<T1>(f, l0));
+                  }
+                  else {
+                      return filter<T1>(f, l0);
+                  }
+              }},
+          l->v());
 }
 
 template <typename T1, MapsTo<bool, T1> F0>
-bsl::optional<T1> find(F0&& f, const bsl::shared_ptr<list::list<T1> > l)
+bsl::optional<T1> find(F0&& f, const bsl::shared_ptr<List::list<T1> >& l)
 {
     return bsl::visit(
-        bdlf::Overloaded{[&](const list::nil<T1> _args) -> bsl::optional<T1> {
-                             return bsl::nullopt;
-                         },
-                         [&](const list::cons<T1> _args) -> bsl::optional<T1> {
-                             T1                               x  = _args._a0;
-                             bsl::shared_ptr<list::list<T1> > tl = _args._a1;
-                             if (f(x)) {
-                                 return bsl::make_optional<T1>(x);
-                             }
-                             else {
-                                 return find<T1>(f, tl);
-                             }
-                         }},
-        *l);
-}
-
-namespace ToString {
-template <typename T1, MapsTo<std::string, T1> F0>
-std::string intersperse(F0&&                                   p,
-                        const std::string                      sep,
-                        const bsl::shared_ptr<list::list<T1> > l)
-{
-    return bsl::visit(
-           bdlf::Overloaded{
-               [&](const list::nil<T1> _args) -> std::string {
-                   return "";
-               },
-               [&](const list::cons<T1> _args) -> std::string {
-                   T1                               z  = _args._a0;
-                   bsl::shared_ptr<list::list<T1> > l_ = _args._a1;
-                   return bsl::visit(
-                       bdlf::Overloaded{
-                           [&](const list::nil<T1> _args) -> std::string {
-                               return sep + p(z);
+          bdlf::Overloaded{[&](const typename List::list<T1>::nil _args)
+                               -> bsl::optional<T1> {
+                               return bsl::nullopt;
                            },
-                           [&](const list::cons<T1> _args) -> std::string {
-                               return sep + p(z) + intersperse<T1>(p, sep, l_);
+                           [&](const typename List::list<T1>::cons _args)
+                               -> bsl::optional<T1> {
+                               T1                               x  = _args._a0;
+                               bsl::shared_ptr<List::list<T1> > tl = _args._a1;
+                               if (f(x)) {
+                                   return bsl::make_optional<T1>(x);
+                               }
+                               else {
+                                   return find<T1>(f, tl);
+                               }
                            }},
-                       *l_);
-               }},
-           *l);
+          l->v());
 }
 
-template <typename T1, MapsTo<std::string, T1> F0>
-std::string list_to_string(F0&& p, const bsl::shared_ptr<list::list<T1> > l)
-{
-    return bsl::visit(
-         bdlf::Overloaded{
-             [&](const list::nil<T1> _args) -> std::string {
-                 return "[]";
-             },
-             [&](const list::cons<T1> _args) -> std::string {
-                 T1                               y  = _args._a0;
-                 bsl::shared_ptr<list::list<T1> > l_ = _args._a1;
-                 return bsl::visit(
-                     bdlf::Overloaded{
-                         [&](const list::nil<T1> _args) -> std::string {
-                             return "[" + p(y) + "]";
-                         },
-                         [&](const list::cons<T1> _args) -> std::string {
-                             return "[" + p(y) + intersperse<T1>(p, "; ", l_) +
-                                    "]";
-                         }},
-                     *l_);
-             }},
-         *l);
-}
+struct ToString {
+    template <typename T1, MapsTo<std::string, T1> F0>
+    static std::string intersperse(F0&&                                    p,
+                                   const std::string                       sep,
+                                   const bsl::shared_ptr<List::list<T1> >& l)
+    {
+        return bsl::visit(
+            bdlf::Overloaded{
+                [&](const typename List::list<T1>::nil _args) -> std::string {
+                    return "";
+                },
+                [&](const typename List::list<T1>::cons _args) -> std::string {
+                    T1                               z  = _args._a0;
+                    bsl::shared_ptr<List::list<T1> > l_ = _args._a1;
+                    return bsl::visit(
+                        bdlf::Overloaded{
+                            [&](const typename List::list<T1>::nil _args)
+                                -> std::string {
+                                return sep + p(z);
+                            },
+                            [&](const typename List::list<T1>::cons _args)
+                                -> std::string {
+                                return sep + p(z) +
+                                       intersperse<T1>(p, sep, l_);
+                            }},
+                        l_->v());
+                }},
+            l->v());
+    }
 
+    template <typename T1, MapsTo<std::string, T1> F0>
+    static std::string list_to_string(
+                                     F0&&                                    p,
+                                     const bsl::shared_ptr<List::list<T1> >& l)
+    {
+        return bsl::visit(
+            bdlf::Overloaded{
+                [&](const typename List::list<T1>::nil _args) -> std::string {
+                    return "[]";
+                },
+                [&](const typename List::list<T1>::cons _args) -> std::string {
+                    T1                               y  = _args._a0;
+                    bsl::shared_ptr<List::list<T1> > l_ = _args._a1;
+                    return bsl::visit(
+                        bdlf::Overloaded{
+                            [&](const typename List::list<T1>::nil _args)
+                                -> std::string {
+                                return "[" + p(y) + "]";
+                            },
+                            [&](const typename List::list<T1>::cons _args)
+                                -> std::string {
+                                return "[" + p(y) +
+                                       intersperse<T1>(p, "; ", l_) + "]";
+                            }},
+                        l_->v());
+                }},
+            l->v());
+    }
 };
 
-namespace TopSort {
-template <typename node>
-using entry = bsl::pair<node, bsl::shared_ptr<list::list<node> > >;
+struct TopSort {
+    template <typename node>
+    using entry = bsl::pair<node, bsl::shared_ptr<List::list<node> > >;
 
-template <typename node>
-using graph = bsl::shared_ptr<list::list<entry<node> > >;
+    template <typename node>
+    using graph = bsl::shared_ptr<List::list<entry<node> > >;
 
-template <typename node>
-using order =
-             bsl::shared_ptr<list::list<bsl::shared_ptr<list::list<node> > > >;
+    template <typename node>
+    using order =
+             bsl::shared_ptr<List::list<bsl::shared_ptr<List::list<node> > > >;
 
-template <typename T1, MapsTo<bool, T1, T1> F0>
-bsl::shared_ptr<list::list<T1> > graph_lookup(
-    F0&&     eqb_node,
-    const T1 elem,
-    const bsl::shared_ptr<
-        list::list<bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > > > graph0)
-{
-    if (find<bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > >(
-                 [&](bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > entry0) {
+    template <typename T1, MapsTo<bool, T1, T1> F0>
+    static bsl::shared_ptr<List::list<T1> > graph_lookup(
+           F0&&     eqb_node,
+           const T1 elem,
+           const bsl::shared_ptr<
+               List::list<bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > > >&
+               graph0)
+    {
+        if (find<bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > >(
+                 [&](bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > entry0) {
                      return eqb_node(elem, entry0.first);
                  },
                  graph0)
-            .has_value()) {
-        bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > p =
-             *find<bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > >(
-                 [&](bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > entry0) {
+                .has_value()) {
+            bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > p = *find<
+                bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > >(
+                 [&](bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > entry0) {
                      return eqb_node(elem, entry0.first);
+                 },
+                 graph0);
+            T1                               _x = p.first;
+            bsl::shared_ptr<List::list<T1> > es = p.second;
+            return es;
+        }
+        else {
+            return List::list<T1>::ctor::nil_();
+        }
+    }
+
+    template <typename T1, MapsTo<bool, T1, T1> F0>
+    static bool contains(F0&&                                    eqb_node,
+                         const T1                                elem,
+                         const bsl::shared_ptr<List::list<T1> >& es)
+    {
+        if (find<T1>(
+                [&](T1 x) {
+                    return eqb_node(elem, x);
                 },
-                graph0);
-        T1                               _x = p.first;
-        bsl::shared_ptr<list::list<T1> > es = p.second;
-        return es;
+                es)
+                .has_value()) {
+            T1 _x = *find<T1>(
+                [&](T1 x) {
+                    return eqb_node(elem, x);
+                },
+                es);
+            return true;
+        }
+        else {
+            return false;
+        }
     }
-    else {
-        return list::nil<T1>::make();
-    }
-}
 
-template <typename T1, MapsTo<bool, T1, T1> F0>
-bool contains(F0&&                                   eqb_node,
-              const T1                               elem,
-              const bsl::shared_ptr<list::list<T1> > es)
-{
-    if (find<T1>(
-            [&](T1 x) {
-                return eqb_node(elem, x);
-            },
-            es)
-            .has_value()) {
-        T1 _x = *find<T1>(
-            [&](T1 x) {
-                return eqb_node(elem, x);
-            },
-            es);
-        return true;
-    }
-    else {
-        return false;
-    }
-}
-
-template <typename T1, MapsTo<bool, T1, T1> F0>
-T1 cycle_entry_aux(
-    F0&& eqb_node,
-    const bsl::shared_ptr<
-        list::list<bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > > > graph0,
-    const bsl::shared_ptr<list::list<T1> >                              seens,
-    const T1                                                            elem,
-    const unsigned int counter)
-{
-    if (contains<T1>(eqb_node, elem, seens)) {
-        return elem;
-    }
-    else {
-        if (counter <= 0) {
+    template <typename T1, MapsTo<bool, T1, T1> F0>
+    static T1 cycle_entry_aux(
+           F0&& eqb_node,
+           const bsl::shared_ptr<
+               List::list<bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > > >&
+                                                   graph0,
+           const bsl::shared_ptr<List::list<T1> >& seens,
+           const T1                                elem,
+           const unsigned int                      counter)
+    {
+        if (contains<T1>(eqb_node, elem, seens)) {
             return elem;
         }
         else {
-            unsigned int                     c = counter - 1;
-            bsl::shared_ptr<list::list<T1> > l = graph_lookup<T1>(eqb_node,
-                                                                  elem,
-                                                                  graph0);
-            return bsl::visit(
-                    bdlf::Overloaded{[&](const list::nil<T1> _args) -> T1 {
-                                         return elem;
-                                     },
-                                     [&](const list::cons<T1> _args) -> T1 {
-                                         T1 e_ = _args._a0;
-                                         return cycle_entry_aux<T1>(
-                                             eqb_node,
-                                             graph0,
-                                             list::cons<T1>::make(elem, seens),
-                                             e_,
-                                             c);
-                                     }},
-                    *l);
+            if (counter <= 0) {
+                return elem;
+            }
+            else {
+                unsigned int                     c = counter - 1;
+                bsl::shared_ptr<List::list<T1> > l = graph_lookup<T1>(eqb_node,
+                                                                      elem,
+                                                                      graph0);
+                return bsl::visit(
+                     bdlf::Overloaded{
+                         [&](const typename List::list<T1>::nil _args) -> T1 {
+                             return elem;
+                         },
+                         [&](const typename List::list<T1>::cons _args) -> T1 {
+                             T1 e_ = _args._a0;
+                             return cycle_entry_aux<T1>(
+                                 eqb_node,
+                                 graph0,
+                                 List::list<T1>::ctor::cons_(elem, seens),
+                                 e_,
+                                 c);
+                         }},
+                     l->v());
+            }
         }
     }
-}
 
-template <typename T1, MapsTo<bool, T1, T1> F0>
-bsl::optional<T1> cycle_entry(
-    F0&& eqb_node,
-    const bsl::shared_ptr<
-        list::list<bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > > > graph0)
-{
-    return bsl::visit(
-              bdlf::Overloaded{
-                  [&](const list::nil<
-                      bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > > _args)
-                      -> bsl::optional<T1> {
-                      return bsl::nullopt;
-                  },
-                  [&](const list::cons<
-                      bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > > _args)
-                      -> bsl::optional<T1> {
-                      bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > e0 =
-                          _args._a0;
-                      T1                               e   = e0.first;
-                      bsl::shared_ptr<list::list<T1> > _x0 = e0.second;
-                      return bsl::make_optional<T1>(cycle_entry_aux<T1>(
-                          eqb_node,
-                          graph0,
-                          list::nil<T1>::make(),
-                          e,
-                          length<entry<T1> >(graph0)));
-                  }},
-              *graph0);
-}
-
-template <typename T1, MapsTo<bool, T1, T1> F0>
-bsl::shared_ptr<list::list<T1> > cycle_extract_aux(
-    F0&& eqb_node,
-    const bsl::shared_ptr<
-        list::list<bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > > > graph0,
-    const unsigned int                     counter,
-    const T1                               elem,
-    const bsl::shared_ptr<list::list<T1> > cycl)
-{
-    if (counter <= 0) {
-        return cycl;
+    template <typename T1, MapsTo<bool, T1, T1> F0>
+    static bsl::optional<T1> cycle_entry(
+           F0&& eqb_node,
+           const bsl::shared_ptr<
+               List::list<bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > > >&
+               graph0)
+    {
+        return bsl::visit(
+               bdlf::Overloaded{
+                   [&](const typename List::list<
+                       bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > >::nil
+                           _args) -> bsl::optional<T1> {
+                       return bsl::nullopt;
+                   },
+                   [&](const typename List::list<
+                       bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > >::cons
+                           _args) -> bsl::optional<T1> {
+                       bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > e0 =
+                           _args._a0;
+                       T1                               e   = e0.first;
+                       bsl::shared_ptr<List::list<T1> > _x0 = e0.second;
+                       return bsl::make_optional<T1>(cycle_entry_aux<T1>(
+                           eqb_node,
+                           graph0,
+                           List::list<T1>::ctor::nil_(),
+                           e,
+                           graph0->length()));
+                   }},
+               graph0->v());
     }
-    else {
-        unsigned int c = counter - 1;
-        if (contains<T1>(eqb_node, elem, cycl)) {
+
+    template <typename T1, MapsTo<bool, T1, T1> F0>
+    static bsl::shared_ptr<List::list<T1> > cycle_extract_aux(
+           F0&& eqb_node,
+           const bsl::shared_ptr<
+               List::list<bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > > >&
+                                                   graph0,
+           const unsigned int                      counter,
+           const T1                                elem,
+           const bsl::shared_ptr<List::list<T1> >& cycl)
+    {
+        if (counter <= 0) {
             return cycl;
         }
         else {
-            return fold_right<bsl::shared_ptr<list::list<T1> >, T1>(
-                [&](const T1 _x0, const bsl::shared_ptr<list::list<T1> > _x1) {
-                    return cycle_extract_aux<T1>(eqb_node,
-                                                 graph0,
-                                                 c,
-                                                 _x0,
-                                                 _x1);
-                },
-                list::cons<T1>::make(elem, cycl),
-                graph_lookup<T1>(eqb_node, elem, graph0));
-        }
-    }
-}
-
-template <typename T1, MapsTo<bool, T1, T1> F0>
-bsl::shared_ptr<list::list<T1> > cycle_extract(
-    F0&& eqb_node,
-    const bsl::shared_ptr<
-        list::list<bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > > > graph0)
-{
-    if (cycle_entry<T1>(eqb_node, graph0).has_value()) {
-        T1 elem = *cycle_entry<T1>(eqb_node, graph0);
-        return cycle_extract_aux<T1>(eqb_node,
-                                     graph0,
-                                     length<entry<T1> >(graph0),
-                                     elem,
-                                     list::nil<T1>::make());
-    }
-    else {
-        return list::nil<T1>::make();
-    }
-}
-
-template <typename T1>
-bool null(const bsl::shared_ptr<list::list<T1> > xs)
-{
-    return bsl::visit(
-                     bdlf::Overloaded{[&](const list::nil<T1> _args) -> bool {
-                                          return true;
-                                      },
-                                      [&](const list::cons<T1> _args) -> bool {
-                                          return false;
-                                      }},
-                     *xs);
-}
-
-template <typename T1, MapsTo<bool, T1, T1> F0>
-order<T1> topological_sort_aux(
-    F0&& eqb_node,
-    const bsl::shared_ptr<
-        list::list<bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > > > graph0,
-    const unsigned int counter)
-{
-    if (counter <= 0) {
-        return list::nil<bsl::shared_ptr<list::list<T1> > >::make();
-    }
-    else {
-        unsigned int c = counter - 1;
-        if (null<entry<T1> >(graph0)) {
-            return list::nil<bsl::shared_ptr<list::list<T1> > >::make();
-        }
-        else {
-            bsl::shared_ptr<list::list<T1> > mins =
-                 map<bsl::pair<T1, bsl::shared_ptr<list::list<T1> > >, T1>(
-                     [&](const bsl::pair<T1, bsl::shared_ptr<list::list<T1> > >
-                             _x0) {
-                         return _x0.first;
-                    },
-                    filter<bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > >(
-                           [&](bsl::pair<T1, bsl::shared_ptr<list::list<T1> > >
-                                   p) {
-                               return null<T1>(p.second);
-                           },
-                           graph0));
-            bsl::shared_ptr<list::list<T1> > mins_;
-            if (null<T1>(mins)) {
-                mins_ = cycle_extract<T1>(eqb_node, graph0);
+            unsigned int c = counter - 1;
+            if (contains<T1>(eqb_node, elem, cycl)) {
+                return cycl;
             }
             else {
-                mins_ = mins;
+                return fold_right<bsl::shared_ptr<List::list<T1> >, T1>(
+                              [&](const T1                               _x0,
+                                  const bsl::shared_ptr<List::list<T1> > _x1) {
+                                  return cycle_extract_aux<T1>(eqb_node,
+                                                               graph0,
+                                                               c,
+                                                               _x0,
+                                                               _x1);
+                              },
+                              List::list<T1>::ctor::cons_(elem, cycl),
+                              graph_lookup<T1>(eqb_node, elem, graph0));
             }
-            bsl::shared_ptr<
-                list::list<bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > > >
-                rest =
-                     filter<bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > >(
-                         [&](bsl::pair<T1, bsl::shared_ptr<list::list<T1> > >
-                                 entry0) {
-                             return !contains<T1>(eqb_node,
-                                                  entry0.first,
-                                                  mins_);
-                        },
-                        graph0);
-            bsl::shared_ptr<
-                list::list<bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > > >
-                rest_ = map<bsl::pair<T1, bsl::shared_ptr<list::list<T1> > >,
-                            bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > >(
-                      [&](bsl::pair<T1, bsl::shared_ptr<list::list<T1> > >
-                              entry0) {
-                          return bsl::make_pair(
-                              entry0.first,
-                              filter<T1>(
-                                  [&](T1 e) {
-                                      return !contains<T1>(eqb_node, e, mins_);
-                                  },
-                                  entry0.second));
-                      },
-                      rest);
-            return list::cons<bsl::shared_ptr<list::list<T1> > >::make(
-                                 mins_,
-                                 topological_sort_aux<T1>(eqb_node, rest_, c));
         }
     }
-}
 
-template <typename T1, MapsTo<bool, T1, T1> F0>
-order<T1> topological_sort_graph(
-    F0&& eqb_node,
-    const bsl::shared_ptr<
-        list::list<bsl::pair<T1, bsl::shared_ptr<list::list<T1> > > > > graph0)
-{
-    return topological_sort_aux<T1>(eqb_node,
-                                    graph0,
-                                    length<entry<T1> >(graph0));
-}
+    template <typename T1, MapsTo<bool, T1, T1> F0>
+    static bsl::shared_ptr<List::list<T1> > cycle_extract(
+           F0&& eqb_node,
+           const bsl::shared_ptr<
+               List::list<bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > > >&
+               graph0)
+    {
+        if (cycle_entry<T1>(eqb_node, graph0).has_value()) {
+            T1 elem = *cycle_entry<T1>(eqb_node, graph0);
+            return cycle_extract_aux<T1>(eqb_node,
+                                         graph0,
+                                         graph0->length(),
+                                         elem,
+                                         List::list<T1>::ctor::nil_());
+        }
+        else {
+            return List::list<T1>::ctor::nil_();
+        }
+    }
 
+    template <typename T1>
+    static bool null(const bsl::shared_ptr<List::list<T1> >& xs)
+    {
+        return bsl::visit(
+                   bdlf::Overloaded{
+                       [&](const typename List::list<T1>::nil _args) -> bool {
+                           return true;
+                       },
+                       [&](const typename List::list<T1>::cons _args) -> bool {
+                           return false;
+                       }},
+                   xs->v());
+    }
+
+    template <typename T1, MapsTo<bool, T1, T1> F0>
+    static order<T1> topological_sort_aux(
+           F0&& eqb_node,
+           const bsl::shared_ptr<
+               List::list<bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > > >&
+                              graph0,
+           const unsigned int counter)
+    {
+        if (counter <= 0) {
+            return List::list<bsl::shared_ptr<List::list<T1> > >::ctor::nil_();
+        }
+        else {
+            unsigned int c = counter - 1;
+            if (null<entry<T1> >(graph0)) {
+                return List::list<
+                    bsl::shared_ptr<List::list<T1> > >::ctor::nil_();
+            }
+            else {
+                bsl::shared_ptr<List::list<T1> > mins = map<
+                    bsl::pair<T1, bsl::shared_ptr<List::list<T1> > >,
+                    T1>(
+                     [&](const bsl::pair<T1, bsl::shared_ptr<List::list<T1> > >
+                             _x0) {
+                         return _x0.first;
+                     },
+                     filter<bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > >(
+                         [&](bsl::pair<T1, bsl::shared_ptr<List::list<T1> > >
+                                 p) {
+                             return null<T1>(p.second);
+                         },
+                         graph0));
+                bsl::shared_ptr<List::list<T1> > mins_;
+                if (null<T1>(mins)) {
+                    mins_ = cycle_extract<T1>(eqb_node, graph0);
+                }
+                else {
+                    mins_ = mins;
+                }
+                bsl::shared_ptr<List::list<
+                    bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > > >
+                    rest = filter<
+                        bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > >(
+                           [&](bsl::pair<T1, bsl::shared_ptr<List::list<T1> > >
+                                   entry0) {
+                               return !contains<T1>(eqb_node,
+                                                    entry0.first,
+                                                    mins_);
+                           },
+                           graph0);
+                bsl::shared_ptr<List::list<
+                    bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > > >
+                    rest_ = map<
+                        bsl::pair<T1, bsl::shared_ptr<List::list<T1> > >,
+                        bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > >(
+                        [&](bsl::pair<T1, bsl::shared_ptr<List::list<T1> > >
+                                entry0) {
+                            return bsl::make_pair(entry0.first,
+                                                  filter<T1>(
+                                                      [&](T1 e) {
+                                                          return !contains<T1>(
+                                                              eqb_node,
+                                                              e,
+                                                              mins_);
+                                                      },
+                                                      entry0.second));
+                        },
+                        rest);
+                return List::list<bsl::shared_ptr<List::list<T1> > >::ctor::
+                    cons_(mins_, topological_sort_aux<T1>(eqb_node, rest_, c));
+            }
+        }
+    }
+
+    template <typename T1, MapsTo<bool, T1, T1> F0>
+    static order<T1> topological_sort_graph(
+           F0&& eqb_node,
+           const bsl::shared_ptr<
+               List::list<bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > > >&
+               graph0)
+    {
+        return topological_sort_aux<T1>(eqb_node, graph0, graph0->length());
+    }
 };
 
-const bsl::shared_ptr<list::list<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>> bigDAG = list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(1u, list::cons<unsigned int>::make(2u, list::cons<unsigned int>::make(3u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(2u, list::cons<unsigned int>::make(3u, list::cons<unsigned int>::make(4u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(3u, list::cons<unsigned int>::make(4u, list::cons<unsigned int>::make(5u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(4u, list::cons<unsigned int>::make(5u, list::cons<unsigned int>::make(6u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(5u, list::cons<unsigned int>::make(6u, list::cons<unsigned int>::make(7u, list::cons<unsigned int>::make(10u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(6u, list::cons<unsigned int>::make(7u, list::cons<unsigned int>::make(8u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(7u, list::cons<unsigned int>::make(8u, list::cons<unsigned int>::make(9u, list::cons<unsigned int>::make(14u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(8u, list::cons<unsigned int>::make(9u, list::cons<unsigned int>::make(10u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(9u, list::cons<unsigned int>::make(10u, list::cons<unsigned int>::make(11u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(10u, list::cons<unsigned int>::make(11u, list::cons<unsigned int>::make(12u, list::cons<unsigned int>::make(15u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(11u, list::cons<unsigned int>::make(12u, list::cons<unsigned int>::make(13u, list::cons<unsigned int>::make(22u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(12u, list::cons<unsigned int>::make(13u, list::cons<unsigned int>::make(14u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(13u, list::cons<unsigned int>::make(14u, list::cons<unsigned int>::make(15u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(14u, list::cons<unsigned int>::make(15u, list::cons<unsigned int>::make(16u, list::cons<unsigned int>::make(21u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(15u, list::cons<unsigned int>::make(16u, list::cons<unsigned int>::make(17u, list::cons<unsigned int>::make(20u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(16u, list::cons<unsigned int>::make(17u, list::cons<unsigned int>::make(18u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(17u, list::cons<unsigned int>::make(18u, list::cons<unsigned int>::make(19u, list::cons<unsigned int>::make(24u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(18u, list::cons<unsigned int>::make(19u, list::cons<unsigned int>::make(20u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(19u, list::cons<unsigned int>::make(20u, list::cons<unsigned int>::make(21u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(20u, list::cons<unsigned int>::make(21u, list::cons<unsigned int>::make(22u, list::cons<unsigned int>::make(25u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(21u, list::cons<unsigned int>::make(22u, list::cons<unsigned int>::make(23u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(22u, list::cons<unsigned int>::make(23u, list::cons<unsigned int>::make(24u, list::cons<unsigned int>::make(33u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(23u, list::cons<unsigned int>::make(24u, list::cons<unsigned int>::make(25u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(24u, list::cons<unsigned int>::make(25u, list::cons<unsigned int>::make(26u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(25u, list::cons<unsigned int>::make(26u, list::cons<unsigned int>::make(27u, list::cons<unsigned int>::make(30u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(26u, list::cons<unsigned int>::make(27u, list::cons<unsigned int>::make(28u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(27u, list::cons<unsigned int>::make(28u, list::cons<unsigned int>::make(29u, list::cons<unsigned int>::make(34u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(28u, list::cons<unsigned int>::make(29u, list::cons<unsigned int>::make(30u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(29u, list::cons<unsigned int>::make(30u, list::cons<unsigned int>::make(31u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(30u, list::cons<unsigned int>::make(31u, list::cons<unsigned int>::make(32u, list::cons<unsigned int>::make(35u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(31u, list::cons<unsigned int>::make(32u, list::cons<unsigned int>::make(33u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(32u, list::cons<unsigned int>::make(33u, list::cons<unsigned int>::make(34u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(33u, list::cons<unsigned int>::make(34u, list::cons<unsigned int>::make(35u, list::cons<unsigned int>::make(44u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(34u, list::cons<unsigned int>::make(35u, list::cons<unsigned int>::make(36u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(35u, list::cons<unsigned int>::make(36u, list::cons<unsigned int>::make(37u, list::cons<unsigned int>::make(40u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(36u, list::cons<unsigned int>::make(37u, list::cons<unsigned int>::make(38u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(37u, list::cons<unsigned int>::make(38u, list::cons<unsigned int>::make(39u, list::cons<unsigned int>::make(46u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(38u, list::cons<unsigned int>::make(39u, list::cons<unsigned int>::make(40u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(39u, list::cons<unsigned int>::make(40u, list::cons<unsigned int>::make(41u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(40u, list::cons<unsigned int>::make(41u, list::cons<unsigned int>::make(42u, list::cons<unsigned int>::make(45u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(41u, list::cons<unsigned int>::make(42u, list::cons<unsigned int>::make(43u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(42u, list::cons<unsigned int>::make(43u, list::cons<unsigned int>::make(44u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(43u, list::cons<unsigned int>::make(44u, list::cons<unsigned int>::make(45u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(44u, list::cons<unsigned int>::make(45u, list::cons<unsigned int>::make(46u, list::cons<unsigned int>::make(55u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(45u, list::cons<unsigned int>::make(46u, list::cons<unsigned int>::make(47u, list::cons<unsigned int>::make(50u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(46u, list::cons<unsigned int>::make(47u, list::cons<unsigned int>::make(48u, list::cons<unsigned int>::make(53u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(47u, list::cons<unsigned int>::make(48u, list::cons<unsigned int>::make(49u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(48u, list::cons<unsigned int>::make(49u, list::cons<unsigned int>::make(50u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(49u, list::cons<unsigned int>::make(50u, list::cons<unsigned int>::make(51u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(50u, list::cons<unsigned int>::make(51u, list::cons<unsigned int>::make(52u, list::cons<unsigned int>::make(55u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(51u, list::cons<unsigned int>::make(52u, list::cons<unsigned int>::make(53u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(52u, list::cons<unsigned int>::make(53u, list::cons<unsigned int>::make(54u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(53u, list::cons<unsigned int>::make(54u, list::cons<unsigned int>::make(55u, list::cons<unsigned int>::make(64u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(54u, list::cons<unsigned int>::make(55u, list::cons<unsigned int>::make(56u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(55u, list::cons<unsigned int>::make(56u, list::cons<unsigned int>::make(57u, list::cons<unsigned int>::make(60u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(56u, list::cons<unsigned int>::make(57u, list::cons<unsigned int>::make(58u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(57u, list::cons<unsigned int>::make(58u, list::cons<unsigned int>::make(59u, list::cons<unsigned int>::make(66u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(58u, list::cons<unsigned int>::make(59u, list::cons<unsigned int>::make(60u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(59u, list::cons<unsigned int>::make(60u, list::cons<unsigned int>::make(61u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(60u, list::cons<unsigned int>::make(61u, list::cons<unsigned int>::make(62u, list::cons<unsigned int>::make(65u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(61u, list::cons<unsigned int>::make(62u, list::cons<unsigned int>::make(63u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(62u, list::cons<unsigned int>::make(63u, list::cons<unsigned int>::make(64u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(63u, list::cons<unsigned int>::make(64u, list::cons<unsigned int>::make(65u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(64u, list::cons<unsigned int>::make(65u, list::cons<unsigned int>::make(66u, list::cons<unsigned int>::make(75u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(65u, list::cons<unsigned int>::make(66u, list::cons<unsigned int>::make(67u, list::cons<unsigned int>::make(70u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(66u, list::cons<unsigned int>::make(67u, list::cons<unsigned int>::make(68u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(67u, list::cons<unsigned int>::make(68u, list::cons<unsigned int>::make(69u, list::cons<unsigned int>::make(74u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(68u, list::cons<unsigned int>::make(69u, list::cons<unsigned int>::make(70u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(69u, list::cons<unsigned int>::make(70u, list::cons<unsigned int>::make(71u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(70u, list::cons<unsigned int>::make(71u, list::cons<unsigned int>::make(72u, list::cons<unsigned int>::make(75u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(71u, list::cons<unsigned int>::make(72u, list::cons<unsigned int>::make(73u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(72u, list::cons<unsigned int>::make(73u, list::cons<unsigned int>::make(74u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(73u, list::cons<unsigned int>::make(74u, list::cons<unsigned int>::make(75u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(74u, list::cons<unsigned int>::make(75u, list::cons<unsigned int>::make(76u, list::cons<unsigned int>::make(85u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(75u, list::cons<unsigned int>::make(76u, list::cons<unsigned int>::make(77u, list::cons<unsigned int>::make(80u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(76u, list::cons<unsigned int>::make(77u, list::cons<unsigned int>::make(78u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(77u, list::cons<unsigned int>::make(78u, list::cons<unsigned int>::make(79u, list::cons<unsigned int>::make(84u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(78u, list::cons<unsigned int>::make(79u, list::cons<unsigned int>::make(80u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(79u, list::cons<unsigned int>::make(80u, list::cons<unsigned int>::make(81u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(80u, list::cons<unsigned int>::make(81u, list::cons<unsigned int>::make(82u, list::cons<unsigned int>::make(85u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(81u, list::cons<unsigned int>::make(82u, list::cons<unsigned int>::make(83u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(82u, list::cons<unsigned int>::make(83u, list::cons<unsigned int>::make(84u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(83u, list::cons<unsigned int>::make(84u, list::cons<unsigned int>::make(85u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(84u, list::cons<unsigned int>::make(85u, list::cons<unsigned int>::make(86u, list::cons<unsigned int>::make(95u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(85u, list::cons<unsigned int>::make(86u, list::cons<unsigned int>::make(87u, list::cons<unsigned int>::make(90u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(86u, list::cons<unsigned int>::make(87u, list::cons<unsigned int>::make(88u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(87u, list::cons<unsigned int>::make(88u, list::cons<unsigned int>::make(89u, list::cons<unsigned int>::make(94u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(88u, list::cons<unsigned int>::make(89u, list::cons<unsigned int>::make(90u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(89u, list::cons<unsigned int>::make(90u, list::cons<unsigned int>::make(91u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(90u, list::cons<unsigned int>::make(91u, list::cons<unsigned int>::make(92u, list::cons<unsigned int>::make(95u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(91u, list::cons<unsigned int>::make(92u, list::cons<unsigned int>::make(93u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(92u, list::cons<unsigned int>::make(93u, list::cons<unsigned int>::make(94u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(93u, list::cons<unsigned int>::make(94u, list::cons<unsigned int>::make(95u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(94u, list::cons<unsigned int>::make(95u, list::cons<unsigned int>::make(96u, list::cons<unsigned int>::make(105u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(95u, list::cons<unsigned int>::make(96u, list::cons<unsigned int>::make(97u, list::cons<unsigned int>::make(100u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(96u, list::cons<unsigned int>::make(97u, list::cons<unsigned int>::make(98u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(97u, list::cons<unsigned int>::make(98u, list::cons<unsigned int>::make(99u, list::cons<unsigned int>::make(104u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(98u, list::cons<unsigned int>::make(99u, list::cons<unsigned int>::make(100u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(99u, list::cons<unsigned int>::make(100u, list::cons<unsigned int>::make(101u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(100u, list::cons<unsigned int>::make(101u, list::cons<unsigned int>::make(102u, list::cons<unsigned int>::make(105u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(101u, list::cons<unsigned int>::make(102u, list::cons<unsigned int>::make(103u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(102u, list::cons<unsigned int>::make(103u, list::cons<unsigned int>::make(104u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(103u, list::cons<unsigned int>::make(104u, list::cons<unsigned int>::make(105u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(104u, list::cons<unsigned int>::make(105u, list::cons<unsigned int>::make(106u, list::cons<unsigned int>::make(115u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(105u, list::cons<unsigned int>::make(106u, list::cons<unsigned int>::make(107u, list::cons<unsigned int>::make(110u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(106u, list::cons<unsigned int>::make(107u, list::cons<unsigned int>::make(108u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(107u, list::cons<unsigned int>::make(108u, list::cons<unsigned int>::make(109u, list::cons<unsigned int>::make(114u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(108u, list::cons<unsigned int>::make(109u, list::cons<unsigned int>::make(110u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(109u, list::cons<unsigned int>::make(110u, list::cons<unsigned int>::make(111u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(110u, list::cons<unsigned int>::make(111u, list::cons<unsigned int>::make(112u, list::cons<unsigned int>::make(115u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(111u, list::cons<unsigned int>::make(112u, list::cons<unsigned int>::make(113u, list::cons<unsigned int>::make(122u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(112u, list::cons<unsigned int>::make(113u, list::cons<unsigned int>::make(114u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(113u, list::cons<unsigned int>::make(114u, list::cons<unsigned int>::make(115u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(114u, list::cons<unsigned int>::make(115u, list::cons<unsigned int>::make(116u, list::cons<unsigned int>::make(121u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(115u, list::cons<unsigned int>::make(116u, list::cons<unsigned int>::make(117u, list::cons<unsigned int>::make(120u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(116u, list::cons<unsigned int>::make(117u, list::cons<unsigned int>::make(118u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(117u, list::cons<unsigned int>::make(118u, list::cons<unsigned int>::make(119u, list::cons<unsigned int>::make(124u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(118u, list::cons<unsigned int>::make(119u, list::cons<unsigned int>::make(120u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(119u, list::cons<unsigned int>::make(120u, list::cons<unsigned int>::make(121u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(120u, list::cons<unsigned int>::make(121u, list::cons<unsigned int>::make(122u, list::cons<unsigned int>::make(125u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(121u, list::cons<unsigned int>::make(122u, list::cons<unsigned int>::make(123u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(122u, list::cons<unsigned int>::make(123u, list::cons<unsigned int>::make(124u, list::cons<unsigned int>::make(133u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(123u, list::cons<unsigned int>::make(124u, list::cons<unsigned int>::make(125u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(124u, list::cons<unsigned int>::make(125u, list::cons<unsigned int>::make(126u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(125u, list::cons<unsigned int>::make(126u, list::cons<unsigned int>::make(127u, list::cons<unsigned int>::make(130u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(126u, list::cons<unsigned int>::make(127u, list::cons<unsigned int>::make(128u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(127u, list::cons<unsigned int>::make(128u, list::cons<unsigned int>::make(129u, list::cons<unsigned int>::make(134u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(128u, list::cons<unsigned int>::make(129u, list::cons<unsigned int>::make(130u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(129u, list::cons<unsigned int>::make(130u, list::cons<unsigned int>::make(131u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(130u, list::cons<unsigned int>::make(131u, list::cons<unsigned int>::make(132u, list::cons<unsigned int>::make(135u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(131u, list::cons<unsigned int>::make(132u, list::cons<unsigned int>::make(133u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(132u, list::cons<unsigned int>::make(133u, list::cons<unsigned int>::make(134u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(133u, list::cons<unsigned int>::make(134u, list::cons<unsigned int>::make(135u, list::cons<unsigned int>::make(144u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(134u, list::cons<unsigned int>::make(135u, list::cons<unsigned int>::make(136u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(135u, list::cons<unsigned int>::make(136u, list::cons<unsigned int>::make(137u, list::cons<unsigned int>::make(140u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(136u, list::cons<unsigned int>::make(137u, list::cons<unsigned int>::make(138u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(137u, list::cons<unsigned int>::make(138u, list::cons<unsigned int>::make(139u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(138u, list::cons<unsigned int>::make(139u, list::cons<unsigned int>::make(140u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(139u, list::cons<unsigned int>::make(140u, list::cons<unsigned int>::make(141u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(140u, list::cons<unsigned int>::make(141u, list::cons<unsigned int>::make(142u, list::cons<unsigned int>::make(145u, list::cons<unsigned int>::make(147u, list::nil<unsigned int>::make()))))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(141u, list::cons<unsigned int>::make(142u, list::cons<unsigned int>::make(143u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(142u, list::cons<unsigned int>::make(143u, list::cons<unsigned int>::make(144u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(143u, list::cons<unsigned int>::make(144u, list::cons<unsigned int>::make(145u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(144u, list::cons<unsigned int>::make(145u, list::cons<unsigned int>::make(146u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(145u, list::cons<unsigned int>::make(146u, list::cons<unsigned int>::make(147u, list::cons<unsigned int>::make(150u, list::nil<unsigned int>::make())))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(146u, list::cons<unsigned int>::make(147u, list::cons<unsigned int>::make(148u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(147u, list::cons<unsigned int>::make(148u, list::cons<unsigned int>::make(149u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(148u, list::cons<unsigned int>::make(149u, list::cons<unsigned int>::make(150u, list::nil<unsigned int>::make()))), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(149u, list::cons<unsigned int>::make(150u, list::nil<unsigned int>::make())), list::cons<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make(bsl::make_pair(150u, list::nil<unsigned int>::make()), list::nil<bsl::pair<unsigned int, bsl::shared_ptr<list::list<unsigned int>>>>::make()))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
+const bsl::shared_ptr<List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>> bigDAG = List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(1u, List::list<unsigned int>::ctor::cons_(2u, List::list<unsigned int>::ctor::cons_(3u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(2u, List::list<unsigned int>::ctor::cons_(3u, List::list<unsigned int>::ctor::cons_(4u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(3u, List::list<unsigned int>::ctor::cons_(4u, List::list<unsigned int>::ctor::cons_(5u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(4u, List::list<unsigned int>::ctor::cons_(5u, List::list<unsigned int>::ctor::cons_(6u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(5u, List::list<unsigned int>::ctor::cons_(6u, List::list<unsigned int>::ctor::cons_(7u, List::list<unsigned int>::ctor::cons_(10u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(6u, List::list<unsigned int>::ctor::cons_(7u, List::list<unsigned int>::ctor::cons_(8u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(7u, List::list<unsigned int>::ctor::cons_(8u, List::list<unsigned int>::ctor::cons_(9u, List::list<unsigned int>::ctor::cons_(14u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(8u, List::list<unsigned int>::ctor::cons_(9u, List::list<unsigned int>::ctor::cons_(10u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(9u, List::list<unsigned int>::ctor::cons_(10u, List::list<unsigned int>::ctor::cons_(11u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(10u, List::list<unsigned int>::ctor::cons_(11u, List::list<unsigned int>::ctor::cons_(12u, List::list<unsigned int>::ctor::cons_(15u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(11u, List::list<unsigned int>::ctor::cons_(12u, List::list<unsigned int>::ctor::cons_(13u, List::list<unsigned int>::ctor::cons_(22u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(12u, List::list<unsigned int>::ctor::cons_(13u, List::list<unsigned int>::ctor::cons_(14u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(13u, List::list<unsigned int>::ctor::cons_(14u, List::list<unsigned int>::ctor::cons_(15u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(14u, List::list<unsigned int>::ctor::cons_(15u, List::list<unsigned int>::ctor::cons_(16u, List::list<unsigned int>::ctor::cons_(21u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(15u, List::list<unsigned int>::ctor::cons_(16u, List::list<unsigned int>::ctor::cons_(17u, List::list<unsigned int>::ctor::cons_(20u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(16u, List::list<unsigned int>::ctor::cons_(17u, List::list<unsigned int>::ctor::cons_(18u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(17u, List::list<unsigned int>::ctor::cons_(18u, List::list<unsigned int>::ctor::cons_(19u, List::list<unsigned int>::ctor::cons_(24u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(18u, List::list<unsigned int>::ctor::cons_(19u, List::list<unsigned int>::ctor::cons_(20u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(19u, List::list<unsigned int>::ctor::cons_(20u, List::list<unsigned int>::ctor::cons_(21u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(20u, List::list<unsigned int>::ctor::cons_(21u, List::list<unsigned int>::ctor::cons_(22u, List::list<unsigned int>::ctor::cons_(25u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(21u, List::list<unsigned int>::ctor::cons_(22u, List::list<unsigned int>::ctor::cons_(23u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(22u, List::list<unsigned int>::ctor::cons_(23u, List::list<unsigned int>::ctor::cons_(24u, List::list<unsigned int>::ctor::cons_(33u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(23u, List::list<unsigned int>::ctor::cons_(24u, List::list<unsigned int>::ctor::cons_(25u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(24u, List::list<unsigned int>::ctor::cons_(25u, List::list<unsigned int>::ctor::cons_(26u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(25u, List::list<unsigned int>::ctor::cons_(26u, List::list<unsigned int>::ctor::cons_(27u, List::list<unsigned int>::ctor::cons_(30u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(26u, List::list<unsigned int>::ctor::cons_(27u, List::list<unsigned int>::ctor::cons_(28u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(27u, List::list<unsigned int>::ctor::cons_(28u, List::list<unsigned int>::ctor::cons_(29u, List::list<unsigned int>::ctor::cons_(34u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(28u, List::list<unsigned int>::ctor::cons_(29u, List::list<unsigned int>::ctor::cons_(30u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(29u, List::list<unsigned int>::ctor::cons_(30u, List::list<unsigned int>::ctor::cons_(31u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(30u, List::list<unsigned int>::ctor::cons_(31u, List::list<unsigned int>::ctor::cons_(32u, List::list<unsigned int>::ctor::cons_(35u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(31u, List::list<unsigned int>::ctor::cons_(32u, List::list<unsigned int>::ctor::cons_(33u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(32u, List::list<unsigned int>::ctor::cons_(33u, List::list<unsigned int>::ctor::cons_(34u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(33u, List::list<unsigned int>::ctor::cons_(34u, List::list<unsigned int>::ctor::cons_(35u, List::list<unsigned int>::ctor::cons_(44u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(34u, List::list<unsigned int>::ctor::cons_(35u, List::list<unsigned int>::ctor::cons_(36u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(35u, List::list<unsigned int>::ctor::cons_(36u, List::list<unsigned int>::ctor::cons_(37u, List::list<unsigned int>::ctor::cons_(40u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(36u, List::list<unsigned int>::ctor::cons_(37u, List::list<unsigned int>::ctor::cons_(38u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(37u, List::list<unsigned int>::ctor::cons_(38u, List::list<unsigned int>::ctor::cons_(39u, List::list<unsigned int>::ctor::cons_(46u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(38u, List::list<unsigned int>::ctor::cons_(39u, List::list<unsigned int>::ctor::cons_(40u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(39u, List::list<unsigned int>::ctor::cons_(40u, List::list<unsigned int>::ctor::cons_(41u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(40u, List::list<unsigned int>::ctor::cons_(41u, List::list<unsigned int>::ctor::cons_(42u, List::list<unsigned int>::ctor::cons_(45u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(41u, List::list<unsigned int>::ctor::cons_(42u, List::list<unsigned int>::ctor::cons_(43u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(42u, List::list<unsigned int>::ctor::cons_(43u, List::list<unsigned int>::ctor::cons_(44u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(43u, List::list<unsigned int>::ctor::cons_(44u, List::list<unsigned int>::ctor::cons_(45u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(44u, List::list<unsigned int>::ctor::cons_(45u, List::list<unsigned int>::ctor::cons_(46u, List::list<unsigned int>::ctor::cons_(55u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(45u, List::list<unsigned int>::ctor::cons_(46u, List::list<unsigned int>::ctor::cons_(47u, List::list<unsigned int>::ctor::cons_(50u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(46u, List::list<unsigned int>::ctor::cons_(47u, List::list<unsigned int>::ctor::cons_(48u, List::list<unsigned int>::ctor::cons_(53u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(47u, List::list<unsigned int>::ctor::cons_(48u, List::list<unsigned int>::ctor::cons_(49u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(48u, List::list<unsigned int>::ctor::cons_(49u, List::list<unsigned int>::ctor::cons_(50u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(49u, List::list<unsigned int>::ctor::cons_(50u, List::list<unsigned int>::ctor::cons_(51u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(50u, List::list<unsigned int>::ctor::cons_(51u, List::list<unsigned int>::ctor::cons_(52u, List::list<unsigned int>::ctor::cons_(55u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(51u, List::list<unsigned int>::ctor::cons_(52u, List::list<unsigned int>::ctor::cons_(53u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(52u, List::list<unsigned int>::ctor::cons_(53u, List::list<unsigned int>::ctor::cons_(54u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(53u, List::list<unsigned int>::ctor::cons_(54u, List::list<unsigned int>::ctor::cons_(55u, List::list<unsigned int>::ctor::cons_(64u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(54u, List::list<unsigned int>::ctor::cons_(55u, List::list<unsigned int>::ctor::cons_(56u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(55u, List::list<unsigned int>::ctor::cons_(56u, List::list<unsigned int>::ctor::cons_(57u, List::list<unsigned int>::ctor::cons_(60u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(56u, List::list<unsigned int>::ctor::cons_(57u, List::list<unsigned int>::ctor::cons_(58u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(57u, List::list<unsigned int>::ctor::cons_(58u, List::list<unsigned int>::ctor::cons_(59u, List::list<unsigned int>::ctor::cons_(66u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(58u, List::list<unsigned int>::ctor::cons_(59u, List::list<unsigned int>::ctor::cons_(60u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(59u, List::list<unsigned int>::ctor::cons_(60u, List::list<unsigned int>::ctor::cons_(61u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(60u, List::list<unsigned int>::ctor::cons_(61u, List::list<unsigned int>::ctor::cons_(62u, List::list<unsigned int>::ctor::cons_(65u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(61u, List::list<unsigned int>::ctor::cons_(62u, List::list<unsigned int>::ctor::cons_(63u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(62u, List::list<unsigned int>::ctor::cons_(63u, List::list<unsigned int>::ctor::cons_(64u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(63u, List::list<unsigned int>::ctor::cons_(64u, List::list<unsigned int>::ctor::cons_(65u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(64u, List::list<unsigned int>::ctor::cons_(65u, List::list<unsigned int>::ctor::cons_(66u, List::list<unsigned int>::ctor::cons_(75u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(65u, List::list<unsigned int>::ctor::cons_(66u, List::list<unsigned int>::ctor::cons_(67u, List::list<unsigned int>::ctor::cons_(70u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(66u, List::list<unsigned int>::ctor::cons_(67u, List::list<unsigned int>::ctor::cons_(68u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(67u, List::list<unsigned int>::ctor::cons_(68u, List::list<unsigned int>::ctor::cons_(69u, List::list<unsigned int>::ctor::cons_(74u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(68u, List::list<unsigned int>::ctor::cons_(69u, List::list<unsigned int>::ctor::cons_(70u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(69u, List::list<unsigned int>::ctor::cons_(70u, List::list<unsigned int>::ctor::cons_(71u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(70u, List::list<unsigned int>::ctor::cons_(71u, List::list<unsigned int>::ctor::cons_(72u, List::list<unsigned int>::ctor::cons_(75u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(71u, List::list<unsigned int>::ctor::cons_(72u, List::list<unsigned int>::ctor::cons_(73u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(72u, List::list<unsigned int>::ctor::cons_(73u, List::list<unsigned int>::ctor::cons_(74u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(73u, List::list<unsigned int>::ctor::cons_(74u, List::list<unsigned int>::ctor::cons_(75u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(74u, List::list<unsigned int>::ctor::cons_(75u, List::list<unsigned int>::ctor::cons_(76u, List::list<unsigned int>::ctor::cons_(85u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(75u, List::list<unsigned int>::ctor::cons_(76u, List::list<unsigned int>::ctor::cons_(77u, List::list<unsigned int>::ctor::cons_(80u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(76u, List::list<unsigned int>::ctor::cons_(77u, List::list<unsigned int>::ctor::cons_(78u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(77u, List::list<unsigned int>::ctor::cons_(78u, List::list<unsigned int>::ctor::cons_(79u, List::list<unsigned int>::ctor::cons_(84u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(78u, List::list<unsigned int>::ctor::cons_(79u, List::list<unsigned int>::ctor::cons_(80u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(79u, List::list<unsigned int>::ctor::cons_(80u, List::list<unsigned int>::ctor::cons_(81u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(80u, List::list<unsigned int>::ctor::cons_(81u, List::list<unsigned int>::ctor::cons_(82u, List::list<unsigned int>::ctor::cons_(85u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(81u, List::list<unsigned int>::ctor::cons_(82u, List::list<unsigned int>::ctor::cons_(83u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(82u, List::list<unsigned int>::ctor::cons_(83u, List::list<unsigned int>::ctor::cons_(84u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(83u, List::list<unsigned int>::ctor::cons_(84u, List::list<unsigned int>::ctor::cons_(85u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(84u, List::list<unsigned int>::ctor::cons_(85u, List::list<unsigned int>::ctor::cons_(86u, List::list<unsigned int>::ctor::cons_(95u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(85u, List::list<unsigned int>::ctor::cons_(86u, List::list<unsigned int>::ctor::cons_(87u, List::list<unsigned int>::ctor::cons_(90u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(86u, List::list<unsigned int>::ctor::cons_(87u, List::list<unsigned int>::ctor::cons_(88u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(87u, List::list<unsigned int>::ctor::cons_(88u, List::list<unsigned int>::ctor::cons_(89u, List::list<unsigned int>::ctor::cons_(94u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(88u, List::list<unsigned int>::ctor::cons_(89u, List::list<unsigned int>::ctor::cons_(90u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(89u, List::list<unsigned int>::ctor::cons_(90u, List::list<unsigned int>::ctor::cons_(91u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(90u, List::list<unsigned int>::ctor::cons_(91u, List::list<unsigned int>::ctor::cons_(92u, List::list<unsigned int>::ctor::cons_(95u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(91u, List::list<unsigned int>::ctor::cons_(92u, List::list<unsigned int>::ctor::cons_(93u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(92u, List::list<unsigned int>::ctor::cons_(93u, List::list<unsigned int>::ctor::cons_(94u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(93u, List::list<unsigned int>::ctor::cons_(94u, List::list<unsigned int>::ctor::cons_(95u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(94u, List::list<unsigned int>::ctor::cons_(95u, List::list<unsigned int>::ctor::cons_(96u, List::list<unsigned int>::ctor::cons_(105u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(95u, List::list<unsigned int>::ctor::cons_(96u, List::list<unsigned int>::ctor::cons_(97u, List::list<unsigned int>::ctor::cons_(100u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(96u, List::list<unsigned int>::ctor::cons_(97u, List::list<unsigned int>::ctor::cons_(98u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(97u, List::list<unsigned int>::ctor::cons_(98u, List::list<unsigned int>::ctor::cons_(99u, List::list<unsigned int>::ctor::cons_(104u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(98u, List::list<unsigned int>::ctor::cons_(99u, List::list<unsigned int>::ctor::cons_(100u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(99u, List::list<unsigned int>::ctor::cons_(100u, List::list<unsigned int>::ctor::cons_(101u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(100u, List::list<unsigned int>::ctor::cons_(101u, List::list<unsigned int>::ctor::cons_(102u, List::list<unsigned int>::ctor::cons_(105u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(101u, List::list<unsigned int>::ctor::cons_(102u, List::list<unsigned int>::ctor::cons_(103u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(102u, List::list<unsigned int>::ctor::cons_(103u, List::list<unsigned int>::ctor::cons_(104u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(103u, List::list<unsigned int>::ctor::cons_(104u, List::list<unsigned int>::ctor::cons_(105u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(104u, List::list<unsigned int>::ctor::cons_(105u, List::list<unsigned int>::ctor::cons_(106u, List::list<unsigned int>::ctor::cons_(115u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(105u, List::list<unsigned int>::ctor::cons_(106u, List::list<unsigned int>::ctor::cons_(107u, List::list<unsigned int>::ctor::cons_(110u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(106u, List::list<unsigned int>::ctor::cons_(107u, List::list<unsigned int>::ctor::cons_(108u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(107u, List::list<unsigned int>::ctor::cons_(108u, List::list<unsigned int>::ctor::cons_(109u, List::list<unsigned int>::ctor::cons_(114u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(108u, List::list<unsigned int>::ctor::cons_(109u, List::list<unsigned int>::ctor::cons_(110u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(109u, List::list<unsigned int>::ctor::cons_(110u, List::list<unsigned int>::ctor::cons_(111u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(110u, List::list<unsigned int>::ctor::cons_(111u, List::list<unsigned int>::ctor::cons_(112u, List::list<unsigned int>::ctor::cons_(115u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(111u, List::list<unsigned int>::ctor::cons_(112u, List::list<unsigned int>::ctor::cons_(113u, List::list<unsigned int>::ctor::cons_(122u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(112u, List::list<unsigned int>::ctor::cons_(113u, List::list<unsigned int>::ctor::cons_(114u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(113u, List::list<unsigned int>::ctor::cons_(114u, List::list<unsigned int>::ctor::cons_(115u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(114u, List::list<unsigned int>::ctor::cons_(115u, List::list<unsigned int>::ctor::cons_(116u, List::list<unsigned int>::ctor::cons_(121u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(115u, List::list<unsigned int>::ctor::cons_(116u, List::list<unsigned int>::ctor::cons_(117u, List::list<unsigned int>::ctor::cons_(120u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(116u, List::list<unsigned int>::ctor::cons_(117u, List::list<unsigned int>::ctor::cons_(118u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(117u, List::list<unsigned int>::ctor::cons_(118u, List::list<unsigned int>::ctor::cons_(119u, List::list<unsigned int>::ctor::cons_(124u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(118u, List::list<unsigned int>::ctor::cons_(119u, List::list<unsigned int>::ctor::cons_(120u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(119u, List::list<unsigned int>::ctor::cons_(120u, List::list<unsigned int>::ctor::cons_(121u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(120u, List::list<unsigned int>::ctor::cons_(121u, List::list<unsigned int>::ctor::cons_(122u, List::list<unsigned int>::ctor::cons_(125u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(121u, List::list<unsigned int>::ctor::cons_(122u, List::list<unsigned int>::ctor::cons_(123u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(122u, List::list<unsigned int>::ctor::cons_(123u, List::list<unsigned int>::ctor::cons_(124u, List::list<unsigned int>::ctor::cons_(133u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(123u, List::list<unsigned int>::ctor::cons_(124u, List::list<unsigned int>::ctor::cons_(125u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(124u, List::list<unsigned int>::ctor::cons_(125u, List::list<unsigned int>::ctor::cons_(126u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(125u, List::list<unsigned int>::ctor::cons_(126u, List::list<unsigned int>::ctor::cons_(127u, List::list<unsigned int>::ctor::cons_(130u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(126u, List::list<unsigned int>::ctor::cons_(127u, List::list<unsigned int>::ctor::cons_(128u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(127u, List::list<unsigned int>::ctor::cons_(128u, List::list<unsigned int>::ctor::cons_(129u, List::list<unsigned int>::ctor::cons_(134u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(128u, List::list<unsigned int>::ctor::cons_(129u, List::list<unsigned int>::ctor::cons_(130u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(129u, List::list<unsigned int>::ctor::cons_(130u, List::list<unsigned int>::ctor::cons_(131u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(130u, List::list<unsigned int>::ctor::cons_(131u, List::list<unsigned int>::ctor::cons_(132u, List::list<unsigned int>::ctor::cons_(135u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(131u, List::list<unsigned int>::ctor::cons_(132u, List::list<unsigned int>::ctor::cons_(133u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(132u, List::list<unsigned int>::ctor::cons_(133u, List::list<unsigned int>::ctor::cons_(134u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(133u, List::list<unsigned int>::ctor::cons_(134u, List::list<unsigned int>::ctor::cons_(135u, List::list<unsigned int>::ctor::cons_(144u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(134u, List::list<unsigned int>::ctor::cons_(135u, List::list<unsigned int>::ctor::cons_(136u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(135u, List::list<unsigned int>::ctor::cons_(136u, List::list<unsigned int>::ctor::cons_(137u, List::list<unsigned int>::ctor::cons_(140u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(136u, List::list<unsigned int>::ctor::cons_(137u, List::list<unsigned int>::ctor::cons_(138u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(137u, List::list<unsigned int>::ctor::cons_(138u, List::list<unsigned int>::ctor::cons_(139u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(138u, List::list<unsigned int>::ctor::cons_(139u, List::list<unsigned int>::ctor::cons_(140u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(139u, List::list<unsigned int>::ctor::cons_(140u, List::list<unsigned int>::ctor::cons_(141u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(140u, List::list<unsigned int>::ctor::cons_(141u, List::list<unsigned int>::ctor::cons_(142u, List::list<unsigned int>::ctor::cons_(145u, List::list<unsigned int>::ctor::cons_(147u, List::list<unsigned int>::ctor::nil_()))))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(141u, List::list<unsigned int>::ctor::cons_(142u, List::list<unsigned int>::ctor::cons_(143u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(142u, List::list<unsigned int>::ctor::cons_(143u, List::list<unsigned int>::ctor::cons_(144u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(143u, List::list<unsigned int>::ctor::cons_(144u, List::list<unsigned int>::ctor::cons_(145u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(144u, List::list<unsigned int>::ctor::cons_(145u, List::list<unsigned int>::ctor::cons_(146u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(145u, List::list<unsigned int>::ctor::cons_(146u, List::list<unsigned int>::ctor::cons_(147u, List::list<unsigned int>::ctor::cons_(150u, List::list<unsigned int>::ctor::nil_())))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(146u, List::list<unsigned int>::ctor::cons_(147u, List::list<unsigned int>::ctor::cons_(148u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(147u, List::list<unsigned int>::ctor::cons_(148u, List::list<unsigned int>::ctor::cons_(149u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(148u, List::list<unsigned int>::ctor::cons_(149u, List::list<unsigned int>::ctor::cons_(150u, List::list<unsigned int>::ctor::nil_()))), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(149u, List::list<unsigned int>::ctor::cons_(150u, List::list<unsigned int>::ctor::nil_())), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::cons_(bsl::make_pair(150u, List::list<unsigned int>::ctor::nil_()), List::list<bsl::pair<unsigned int, bsl::shared_ptr<List::list<unsigned int>>>>::ctor::nil_()))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
 
-std::string benchmark(const bsl::shared_ptr<unit::unit> _x);
+std::string benchmark(const bsl::shared_ptr<Unit::unit>& _x);

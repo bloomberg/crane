@@ -530,44 +530,24 @@ struct Chain {
     };
     const variant_t &v() const { return v_; }
     std::shared_ptr<chain>
-    aux_eq_char(const std::shared_ptr<String::string> &_x,
-                const std::shared_ptr<String::string> &_x,
-                const std::shared_ptr<Ascii::ascii> &_x,
-                const std::shared_ptr<String::string> &xs,
-                const std::shared_ptr<Ascii::ascii> &y,
-                const std::shared_ptr<String::string> &ys,
-                const std::shared_ptr<Nat::nat> &n) const {
-      return Chain::chain::ctor::skip_(y, xs, ys, n, c);
+    insert_chain(const std::shared_ptr<Ascii::ascii> &c,
+                 const std::shared_ptr<String::string> &s1,
+                 const std::shared_ptr<String::string> &s2,
+                 const std::shared_ptr<Nat::nat> &n) const {
+      return Chain::chain::ctor::change_(
+          s1, String::string::ctor::String_(c, s1),
+          String::string::ctor::String_(c, s2), n,
+          Edit::edit::ctor::insertion_(c, s1),
+          Chain::chain::ctor::skip_(c, s1, s2, n, c0));
     }
     std::shared_ptr<chain>
-    aux_update(const std::shared_ptr<String::string> &_x,
-               const std::shared_ptr<String::string> &_x,
-               const std::shared_ptr<Ascii::ascii> &x,
-               const std::shared_ptr<String::string> &xs,
-               const std::shared_ptr<Ascii::ascii> &y,
-               const std::shared_ptr<String::string> &ys,
-               const std::shared_ptr<Nat::nat> &n) const {
-      return this->update_chain(x, y, xs, ys, n);
-    }
-    std::shared_ptr<chain>
-    aux_delete(const std::shared_ptr<String::string> &_x,
-               const std::shared_ptr<String::string> &_x,
-               const std::shared_ptr<Ascii::ascii> &x,
-               const std::shared_ptr<String::string> &xs,
-               const std::shared_ptr<Ascii::ascii> &y,
-               const std::shared_ptr<String::string> &ys,
-               const std::shared_ptr<Nat::nat> &n) const {
-      return this->delete_chain(x, xs, String::string::ctor::String_(y, ys), n);
-    }
-    std::shared_ptr<chain>
-    aux_insert(const std::shared_ptr<String::string> &_x,
-               const std::shared_ptr<String::string> &_x,
-               const std::shared_ptr<Ascii::ascii> &x,
-               const std::shared_ptr<String::string> &xs,
-               const std::shared_ptr<Ascii::ascii> &y,
-               const std::shared_ptr<String::string> &ys,
-               const std::shared_ptr<Nat::nat> &n) const {
-      return this->insert_chain(y, String::string::ctor::String_(x, xs), ys, n);
+    delete_chain(const std::shared_ptr<Ascii::ascii> &c,
+                 const std::shared_ptr<String::string> &s1,
+                 const std::shared_ptr<String::string> &s2,
+                 const std::shared_ptr<Nat::nat> &n) const {
+      return Chain::chain::ctor::change_(
+          String::string::ctor::String_(c, s1), s1, s2, n,
+          Edit::edit::ctor::deletion_(c, s1), c0);
     }
     std::shared_ptr<chain>
     update_chain(const std::shared_ptr<Ascii::ascii> &c,
@@ -583,24 +563,44 @@ struct Chain {
           Chain::chain::ctor::skip_(c_, s1, s2, n, c0));
     }
     std::shared_ptr<chain>
-    delete_chain(const std::shared_ptr<Ascii::ascii> &c,
-                 const std::shared_ptr<String::string> &s1,
-                 const std::shared_ptr<String::string> &s2,
-                 const std::shared_ptr<Nat::nat> &n) const {
-      return Chain::chain::ctor::change_(
-          String::string::ctor::String_(c, s1), s1, s2, n,
-          Edit::edit::ctor::deletion_(c, s1), c0);
+    aux_insert(const std::shared_ptr<String::string> &_x,
+               const std::shared_ptr<String::string> &_x,
+               const std::shared_ptr<Ascii::ascii> &x,
+               const std::shared_ptr<String::string> &xs,
+               const std::shared_ptr<Ascii::ascii> &y,
+               const std::shared_ptr<String::string> &ys,
+               const std::shared_ptr<Nat::nat> &n) const {
+      return this->insert_chain(y, String::string::ctor::String_(x, xs), ys, n);
     }
     std::shared_ptr<chain>
-    insert_chain(const std::shared_ptr<Ascii::ascii> &c,
-                 const std::shared_ptr<String::string> &s1,
-                 const std::shared_ptr<String::string> &s2,
-                 const std::shared_ptr<Nat::nat> &n) const {
-      return Chain::chain::ctor::change_(
-          s1, String::string::ctor::String_(c, s1),
-          String::string::ctor::String_(c, s2), n,
-          Edit::edit::ctor::insertion_(c, s1),
-          Chain::chain::ctor::skip_(c, s1, s2, n, c0));
+    aux_delete(const std::shared_ptr<String::string> &_x,
+               const std::shared_ptr<String::string> &_x,
+               const std::shared_ptr<Ascii::ascii> &x,
+               const std::shared_ptr<String::string> &xs,
+               const std::shared_ptr<Ascii::ascii> &y,
+               const std::shared_ptr<String::string> &ys,
+               const std::shared_ptr<Nat::nat> &n) const {
+      return this->delete_chain(x, xs, String::string::ctor::String_(y, ys), n);
+    }
+    std::shared_ptr<chain>
+    aux_update(const std::shared_ptr<String::string> &_x,
+               const std::shared_ptr<String::string> &_x,
+               const std::shared_ptr<Ascii::ascii> &x,
+               const std::shared_ptr<String::string> &xs,
+               const std::shared_ptr<Ascii::ascii> &y,
+               const std::shared_ptr<String::string> &ys,
+               const std::shared_ptr<Nat::nat> &n) const {
+      return this->update_chain(x, y, xs, ys, n);
+    }
+    std::shared_ptr<chain>
+    aux_eq_char(const std::shared_ptr<String::string> &_x,
+                const std::shared_ptr<String::string> &_x,
+                const std::shared_ptr<Ascii::ascii> &_x,
+                const std::shared_ptr<String::string> &xs,
+                const std::shared_ptr<Ascii::ascii> &y,
+                const std::shared_ptr<String::string> &ys,
+                const std::shared_ptr<Nat::nat> &n) const {
+      return Chain::chain::ctor::skip_(y, xs, ys, n, c);
     }
   };
 };

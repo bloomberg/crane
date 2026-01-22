@@ -60,7 +60,22 @@ struct List {
                 return bsl::shared_ptr<list<A> >(new list<A>(cons{a0, a1}));
             }
         };
-        const variant_t&          v() const { return v_; }
+        const variant_t& v() const { return v_; }
+        unsigned int     length() const
+        {
+            return bsl::visit(
+                        bdlf::Overloaded{
+                            [&](const typename List::list<A>::nil _args)
+                                -> unsigned int {
+                                return 0;
+                            },
+                            [&](const typename List::list<A>::cons _args)
+                                -> unsigned int {
+                                bsl::shared_ptr<List::list<A> > l_ = _args._a1;
+                                return (l_->length() + 1);
+                            }},
+                        this->v());
+        }
         bsl::shared_ptr<list<A> > app(const bsl::shared_ptr<list<A> >& m) const
         {
             return bsl::visit(
@@ -76,21 +91,6 @@ struct List {
                               return List::list<A>::ctor::cons_(a, l1->app(m));
                           }},
                       this->v());
-        }
-        unsigned int length() const
-        {
-            return bsl::visit(
-                        bdlf::Overloaded{
-                            [&](const typename List::list<A>::nil _args)
-                                -> unsigned int {
-                                return 0;
-                            },
-                            [&](const typename List::list<A>::cons _args)
-                                -> unsigned int {
-                                bsl::shared_ptr<List::list<A> > l_ = _args._a1;
-                                return (l_->length() + 1);
-                            }},
-                        this->v());
         }
     };
 };

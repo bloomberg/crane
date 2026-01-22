@@ -1179,7 +1179,7 @@ let pp_cpp_ind_header kn ind =
                 (* Inside a module, non-eponymous inductives don't get methods *)
                 []
           in
-          let decl = gen_ind_header_v2 p.ip_vars names.(i) cnames.(i) p.ip_types methods in
+          let decl = gen_ind_header_v2 p.ip_vars names.(i) cnames.(i) p.ip_types (List.rev methods) in
           (* DESIGN: Contextual wrapping for inductive definitions
              - If inside a struct/module: generate the inductive directly (no namespace wrapper)
              - If at module scope: wrap in a namespace struct (which becomes a struct via Dnspace)
@@ -1692,6 +1692,7 @@ let rec pp_structure_elem ~is_header f = function
                      let non_projection_candidates = List.filter (fun (r, _, _, _) ->
                        not (Table.is_projection r)
                      ) this_method_candidates in
+                     (* TODO: Is this being used? seems maybe dead *)
                      let method_fields = Translation.gen_record_methods epon_ref ty_vars non_projection_candidates in
                      let methods_pp = if method_fields = [] then mt () else
                        prlist_with_sep fnl (fun (fld, _vis) -> pp_cpp_field (empty_env ()) fld) method_fields ++ fnl ()

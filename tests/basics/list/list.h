@@ -40,49 +40,25 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
-    template <typename T2, MapsTo<T2, A> F0>
-    std::shared_ptr<list<T2>> map(F0 &&f) const {
-      return std::visit(Overloaded{[&](const typename list<A>::nil _args)
-                                       -> std::shared_ptr<list<T2>> {
-                                     return list<T2>::ctor::nil_();
-                                   },
-                                   [&](const typename list<A>::cons _args)
-                                       -> std::shared_ptr<list<T2>> {
-                                     A x = _args._a0;
-                                     std::shared_ptr<list<A>> l_ = _args._a1;
-                                     return list<T2>::ctor::cons_(f(x),
-                                                                  l_->map(f));
-                                   }},
-                        this->v());
-    }
-    std::shared_ptr<list<A>> app(const std::shared_ptr<list<A>> &l2) const {
+    template <typename T2, MapsTo<T2, A, std::shared_ptr<list<A>>, T2> F1>
+    T2 list_rect(const T2 f, F1 &&f0) const {
       return std::visit(
-          Overloaded{[&](const typename list<A>::nil _args)
-                         -> std::shared_ptr<list<A>> { return l2; },
-                     [&](const typename list<A>::cons _args)
-                         -> std::shared_ptr<list<A>> {
-                       A x = _args._a0;
-                       std::shared_ptr<list<A>> l3 = _args._a1;
-                       return list<A>::ctor::cons_(x, l3->app(l2));
+          Overloaded{[&](const typename list<A>::nil _args) -> T2 { return f; },
+                     [&](const typename list<A>::cons _args) -> T2 {
+                       A y = _args._a0;
+                       std::shared_ptr<list<A>> l0 = _args._a1;
+                       return f0(y, l0, l0->list_rect(f, f0));
                      }},
           this->v());
     }
-    A last(const A x) const {
+    template <typename T2, MapsTo<T2, A, std::shared_ptr<list<A>>, T2> F1>
+    T2 list_rec(const T2 f, F1 &&f0) const {
       return std::visit(
-          Overloaded{[&](const typename list<A>::nil _args) -> A { return x; },
-                     [&](const typename list<A>::cons _args) -> A {
+          Overloaded{[&](const typename list<A>::nil _args) -> T2 { return f; },
+                     [&](const typename list<A>::cons _args) -> T2 {
                        A y = _args._a0;
-                       std::shared_ptr<list<A>> ls = _args._a1;
-                       return ls->last(y);
-                     }},
-          this->v());
-    }
-    A hd(const A x) const {
-      return std::visit(
-          Overloaded{[&](const typename list<A>::nil _args) -> A { return x; },
-                     [&](const typename list<A>::cons _args) -> A {
-                       A y = _args._a0;
-                       return y;
+                       std::shared_ptr<list<A>> l0 = _args._a1;
+                       return f0(y, l0, l0->list_rec(f, f0));
                      }},
           this->v());
     }
@@ -98,27 +74,51 @@ struct List {
                                    }},
                         this->v());
     }
-    template <typename T2, MapsTo<T2, A, std::shared_ptr<list<A>>, T2> F1>
-    T2 list_rec(const T2 f, F1 &&f0) const {
+    A hd(const A x) const {
       return std::visit(
-          Overloaded{[&](const typename list<A>::nil _args) -> T2 { return f; },
-                     [&](const typename list<A>::cons _args) -> T2 {
+          Overloaded{[&](const typename list<A>::nil _args) -> A { return x; },
+                     [&](const typename list<A>::cons _args) -> A {
                        A y = _args._a0;
-                       std::shared_ptr<list<A>> l0 = _args._a1;
-                       return f0(y, l0, l0->list_rec(f, f0));
+                       return y;
                      }},
           this->v());
     }
-    template <typename T2, MapsTo<T2, A, std::shared_ptr<list<A>>, T2> F1>
-    T2 list_rect(const T2 f, F1 &&f0) const {
+    A last(const A x) const {
       return std::visit(
-          Overloaded{[&](const typename list<A>::nil _args) -> T2 { return f; },
-                     [&](const typename list<A>::cons _args) -> T2 {
+          Overloaded{[&](const typename list<A>::nil _args) -> A { return x; },
+                     [&](const typename list<A>::cons _args) -> A {
                        A y = _args._a0;
-                       std::shared_ptr<list<A>> l0 = _args._a1;
-                       return f0(y, l0, l0->list_rect(f, f0));
+                       std::shared_ptr<list<A>> ls = _args._a1;
+                       return ls->last(y);
                      }},
           this->v());
+    }
+    std::shared_ptr<list<A>> app(const std::shared_ptr<list<A>> &l2) const {
+      return std::visit(
+          Overloaded{[&](const typename list<A>::nil _args)
+                         -> std::shared_ptr<list<A>> { return l2; },
+                     [&](const typename list<A>::cons _args)
+                         -> std::shared_ptr<list<A>> {
+                       A x = _args._a0;
+                       std::shared_ptr<list<A>> l3 = _args._a1;
+                       return list<A>::ctor::cons_(x, l3->app(l2));
+                     }},
+          this->v());
+    }
+    template <typename T2, MapsTo<T2, A> F0>
+    std::shared_ptr<list<T2>> map(F0 &&f) const {
+      return std::visit(Overloaded{[&](const typename list<A>::nil _args)
+                                       -> std::shared_ptr<list<T2>> {
+                                     return list<T2>::ctor::nil_();
+                                   },
+                                   [&](const typename list<A>::cons _args)
+                                       -> std::shared_ptr<list<T2>> {
+                                     A x = _args._a0;
+                                     std::shared_ptr<list<A>> l_ = _args._a1;
+                                     return list<T2>::ctor::cons_(f(x),
+                                                                  l_->map(f));
+                                   }},
+                        this->v());
     }
   };
 

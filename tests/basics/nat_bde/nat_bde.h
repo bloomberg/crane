@@ -56,30 +56,18 @@ struct Nat {
             }
         };
         const variant_t& v() const { return v_; }
-        int              nat_to_int() const
+        template <typename T1, MapsTo<T1, bsl::shared_ptr<nat>, T1> F1>
+        T1 nat_rect(const T1 f, F1&& f0) const
         {
             return bsl::visit(
-                     bdlf::Overloaded{[&](const typename nat::O _args) -> int {
-                                          return 0;
-                                      },
-                                      [&](const typename nat::S _args) -> int {
-                                          bsl::shared_ptr<nat> n_ = _args._a0;
-                                          return 1 + n_->nat_to_int();
-                                      }},
-                     this->v());
-        }
-        bsl::shared_ptr<nat> add(const bsl::shared_ptr<nat>& n) const
-        {
-            return bsl::visit(
-                 bdlf::Overloaded{
-                     [&](const typename nat::O _args) -> bsl::shared_ptr<nat> {
-                         return n;
-                     },
-                     [&](const typename nat::S _args) -> bsl::shared_ptr<nat> {
-                         bsl::shared_ptr<nat> x = _args._a0;
-                         return nat::ctor::S_(x->add(n));
-                     }},
-                 this->v());
+                      bdlf::Overloaded{[&](const typename nat::O _args) -> T1 {
+                                           return f;
+                                       },
+                                       [&](const typename nat::S _args) -> T1 {
+                                           bsl::shared_ptr<nat> n0 = _args._a0;
+                                           return f0(n0, n0->nat_rect(f, f0));
+                                       }},
+                      this->v());
         }
         template <typename T1, MapsTo<T1, bsl::shared_ptr<nat>, T1> F1>
         T1 nat_rec(const T1 f, F1&& f0) const
@@ -94,18 +82,30 @@ struct Nat {
                                        }},
                       this->v());
         }
-        template <typename T1, MapsTo<T1, bsl::shared_ptr<nat>, T1> F1>
-        T1 nat_rect(const T1 f, F1&& f0) const
+        bsl::shared_ptr<nat> add(const bsl::shared_ptr<nat>& n) const
         {
             return bsl::visit(
-                      bdlf::Overloaded{[&](const typename nat::O _args) -> T1 {
-                                           return f;
-                                       },
-                                       [&](const typename nat::S _args) -> T1 {
-                                           bsl::shared_ptr<nat> n0 = _args._a0;
-                                           return f0(n0, n0->nat_rect(f, f0));
-                                       }},
-                      this->v());
+                 bdlf::Overloaded{
+                     [&](const typename nat::O _args) -> bsl::shared_ptr<nat> {
+                         return n;
+                     },
+                     [&](const typename nat::S _args) -> bsl::shared_ptr<nat> {
+                         bsl::shared_ptr<nat> x = _args._a0;
+                         return nat::ctor::S_(x->add(n));
+                     }},
+                 this->v());
+        }
+        int nat_to_int() const
+        {
+            return bsl::visit(
+                     bdlf::Overloaded{[&](const typename nat::O _args) -> int {
+                                          return 0;
+                                      },
+                                      [&](const typename nat::S _args) -> int {
+                                          bsl::shared_ptr<nat> n_ = _args._a0;
+                                          return 1 + n_->nat_to_int();
+                                      }},
+                     this->v());
         }
     };
 };

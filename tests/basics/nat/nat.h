@@ -37,12 +37,23 @@ struct Nat {
       }
     };
     const variant_t &v() const { return v_; }
-    int nat_to_int() const {
+    template <typename T1, MapsTo<T1, std::shared_ptr<nat>, T1> F1>
+    T1 nat_rect(const T1 f, F1 &&f0) const {
       return std::visit(
-          Overloaded{[&](const typename nat::O _args) -> int { return 0; },
-                     [&](const typename nat::S _args) -> int {
-                       std::shared_ptr<nat> n_ = _args._a0;
-                       return 1 + n_->nat_to_int();
+          Overloaded{[&](const typename nat::O _args) -> T1 { return f; },
+                     [&](const typename nat::S _args) -> T1 {
+                       std::shared_ptr<nat> n0 = _args._a0;
+                       return f0(n0, n0->nat_rect(f, f0));
+                     }},
+          this->v());
+    }
+    template <typename T1, MapsTo<T1, std::shared_ptr<nat>, T1> F1>
+    T1 nat_rec(const T1 f, F1 &&f0) const {
+      return std::visit(
+          Overloaded{[&](const typename nat::O _args) -> T1 { return f; },
+                     [&](const typename nat::S _args) -> T1 {
+                       std::shared_ptr<nat> n0 = _args._a0;
+                       return f0(n0, n0->nat_rec(f, f0));
                      }},
           this->v());
     }
@@ -57,23 +68,12 @@ struct Nat {
                      }},
           this->v());
     }
-    template <typename T1, MapsTo<T1, std::shared_ptr<nat>, T1> F1>
-    T1 nat_rec(const T1 f, F1 &&f0) const {
+    int nat_to_int() const {
       return std::visit(
-          Overloaded{[&](const typename nat::O _args) -> T1 { return f; },
-                     [&](const typename nat::S _args) -> T1 {
-                       std::shared_ptr<nat> n0 = _args._a0;
-                       return f0(n0, n0->nat_rec(f, f0));
-                     }},
-          this->v());
-    }
-    template <typename T1, MapsTo<T1, std::shared_ptr<nat>, T1> F1>
-    T1 nat_rect(const T1 f, F1 &&f0) const {
-      return std::visit(
-          Overloaded{[&](const typename nat::O _args) -> T1 { return f; },
-                     [&](const typename nat::S _args) -> T1 {
-                       std::shared_ptr<nat> n0 = _args._a0;
-                       return f0(n0, n0->nat_rect(f, f0));
+          Overloaded{[&](const typename nat::O _args) -> int { return 0; },
+                     [&](const typename nat::S _args) -> int {
+                       std::shared_ptr<nat> n_ = _args._a0;
+                       return 1 + n_->nat_to_int();
                      }},
           this->v());
     }
