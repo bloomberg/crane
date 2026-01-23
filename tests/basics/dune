@@ -1,5 +1,7 @@
 (include_subdirs qualified)
 
+(env (_ (env-vars (INSIDE_DUNE "1"))))
+
 (coq.theory
  (name CraneTestsBasics)
  (synopsis "Tests for the rocq-crane plugin")

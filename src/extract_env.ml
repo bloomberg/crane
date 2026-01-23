@@ -859,6 +859,64 @@ let extraction_library ~opaque_access is_rec CAst.{loc;v=m} =
   List.iter print struc;
   reset ()
 
+(* Helper to detect if we're running under dune (for test output formatting).
+   When INSIDE_DUNE=1 is set in the environment, we emit machine-parseable
+   structured output (CRANE_TEST:STATUS:name:file) instead of pretty messages
+   with emojis. This allows run_tests.sh to parse test results reliably. *)
+let is_running_in_dune () =
+  try ignore (Sys.getenv "INSIDE_DUNE"); true
+  with Not_found -> false
+
+(* Helper to emit structured test output for dune.
+   Format: CRANE_TEST:STATUS:test_name:source_file
+   where STATUS is one of: PASS, FAIL_TEST, FAIL_COMPILE, FAIL_EXTRACT
+   This single-line format avoids the multi-line parsing issues we had before. *)
+let emit_test_status status test_id_str source_file =
+  Feedback.msg_notice Pp.(str "CRANE_TEST:" ++ str status ++ str ":" ++ str test_id_str ++ str ":" ++ str source_file)
+
+(* Helper to derive source .v file from output directory.
+   During extraction, we write to paths like:
+     _build/default/../../tests/basics/nat/nat.cpp
+   This function finds the corresponding .v file in that directory and
+   cleans up the path to be relative to project root (e.g., tests/basics/nat/Nat.v).
+   Returns empty string if we can't determine the source file uniquely. *)
+let derive_source_file filename =
+  try
+    let dir = Filename.dirname filename in
+    let files = Sys.readdir dir |> Array.to_list in
+    let v_files = List.filter (fun f -> Filename.check_suffix f ".v") files in
+    match v_files with
+    | [v] ->
+      let full_path = Filename.concat dir v in
+      (* Strip _build/default/ and ../../ prefixes that dune adds *)
+      let cleaned =
+        if String.starts_with ~prefix:"_build/default/" full_path then
+          String.sub full_path 15 (String.length full_path - 15)
+        else if String.starts_with ~prefix:"../../" full_path then
+          String.sub full_path 6 (String.length full_path - 6)
+        else full_path
+      in
+      (* Resolve remaining ../ and ./ references by walking the path components *)
+      let parts = String.split_on_char '/' cleaned in
+      let rec resolve acc = function
+        | [] -> List.rev acc
+        | ".." :: rest ->
+          (* Go up one directory by popping from accumulator *)
+          (match acc with _ :: tail -> resolve tail rest | [] -> resolve acc rest)
+        | "." :: rest -> resolve acc rest
+        | part :: rest -> resolve (part :: acc) rest
+      in
+      let resolved = String.concat "/" (resolve [] parts) in
+      (* If still absolute, make relative to current working directory *)
+      if String.length resolved > 0 && resolved.[0] = '/' then
+        let cwd = Sys.getcwd () in
+        if String.starts_with ~prefix:(cwd ^ "/") resolved then
+          String.sub resolved (String.length cwd + 1) (String.length resolved - String.length cwd - 1)
+        else resolved
+      else resolved
+    | _ -> ""  (* Not exactly one .v file - can't determine source uniquely *)
+  with _ -> ""
+
 (* For the test-suite :
    extraction to a temporary file + run clang on it *)
 
@@ -1006,63 +1064,75 @@ let extract_and_compile ~opaque_access file l =
       let dir = Filename.concat (Filename.dirname fn) (Filename.remove_extension (Filename.basename fn)) in
       Filename.concat dir (Filename.basename fn)
     | (None, _, _) -> Filename.temp_file "testextraction" ".cpp" in
-  (* Extract just the output name (e.g., "hash" from "hash.cpp") for unique test identification *)
+  (* Build test identifier like "nat/Nat" for display *)
   let output_name = Filename.remove_extension (Filename.basename filename) in
   let test_id = Pp.(str output_name ++ str "/" ++ pr_enum Libnames.pr_qualid l) in
+  let test_id_str = Pp.string_of_ppcmds test_id in
+  (* Check if we're running in dune test mode - determines output format *)
+  let in_dune = is_running_in_dune () in
+  (* For dune, derive the source .v file path for structured output.
+     For interactive use (Proof General, VSCode), we don't need this. *)
+  let source_file = if in_dune then derive_source_file filename else "" in
+  (* Phase 1: Extract Rocq definitions to C++ code *)
   let extraction_ok =
     try full_extraction ~opaque_access (Some filename) l; true
     with exn ->
-      ignore (CErrors.user_err
-               Pp.(test_id ++ spc () ++ str "failed to extract:"
-                   ++ fnl () ++ str (Printexc.to_string exn)
-                   ++ fnl () ++ str (Printexc.get_backtrace ())));
+      (* Emit structured output for dune, or pretty error for interactive use *)
+      if in_dune then
+        emit_test_status "FAIL_EXTRACT" test_id_str source_file
+      else
+        ignore (CErrors.user_err Pp.(test_id ++ spc () ++ str "failed to extract:"
+          ++ fnl () ++ str (Printexc.to_string exn) ++ fnl () ++ str (Printexc.get_backtrace ())));
       false
   in
   if extraction_ok then (
     format_file_inplace filename;
+    (* Phase 2: Compile the generated C++ code with clang *)
     let compilation_ok =
       try compile_cpp ~includes:[Filename.dirname filename] filename; true
-      with NoClangFound ->
-        ignore (CErrors.user_err
-          Pp.(test_id ++ spc () ++ str "extracted but clang cannot be found."));
+      with
+      | NoClangFound ->
+        if in_dune then emit_test_status "FAIL_COMPILE" test_id_str source_file
+        else ignore (CErrors.user_err Pp.(test_id ++ spc () ++ str "extracted but clang cannot be found."));
         false
       | ClangError(_exit_code, clang_errors) ->
-        ignore (if !Flags.quiet
-          then CErrors.user_err
-                Pp.(test_id ++ spc () ++ str "extracted but clang failed to compile.")
-          else CErrors.user_err
-                Pp.(test_id ++ spc () ++ str "extracted but clang failed to compile with:"
-                    ++ fnl () ++ str clang_errors));
+        if in_dune then emit_test_status "FAIL_COMPILE" test_id_str source_file
+        else ignore (CErrors.user_err (if !Flags.quiet then
+          Pp.(test_id ++ spc () ++ str "extracted but clang failed to compile.")
+        else
+          Pp.(test_id ++ spc () ++ str "extracted but clang failed to compile with:" ++ fnl () ++ str clang_errors)));
         false
       | exn ->
-        ignore (if !Flags.quiet
-          then CErrors.user_err
-                Pp.(test_id ++ spc () ++ str "extracted but failed to compile.")
-          else CErrors.user_err
-                Pp.(test_id ++ spc () ++ str "extracted but failed to compile:"
-                    ++ fnl () ++ str (Printexc.to_string exn)));
+        if in_dune then emit_test_status "FAIL_COMPILE" test_id_str source_file
+        else ignore (CErrors.user_err (if !Flags.quiet then
+          Pp.(test_id ++ spc () ++ str "extracted but failed to compile.")
+        else
+          Pp.(test_id ++ spc () ++ str "extracted but failed to compile:" ++ fnl () ++ str (Printexc.to_string exn))));
         false
     in
+    (* Phase 3: Run test assertions (if any) embedded in the .v file *)
     let (tests_ok, out) = try let o = compile_and_test filename in (true, o)
                    with _ -> (false, "") in
     let base = Filename.chop_suffix filename ".cpp" in
+    (* Clean up temporary files if this was a temp extraction *)
     if not (Option.has_some file) then
       (if Sys.file_exists filename then Sys.remove filename;
        if Sys.file_exists base then Sys.remove base);
+    (* Report final status: structured for dune, pretty for interactive *)
     if compilation_ok && tests_ok then
-      Feedback.msg_notice
-        Pp.(str "✅ " ++ test_id ++ spc ()
-            ++ str "successfully extracted, compiled, and all tests passed."
-            ++ (if !Flags.quiet || Option.is_empty file then mt ()
-                else spc () ++ str "(" ++ str filename ++ str ")")
-            ++ fnl () ++ str out ++ fnl ());
+      Feedback.msg_notice (if in_dune then
+        Pp.(str "CRANE_TEST:PASS:" ++ str test_id_str ++ str ":" ++ str source_file)
+      else
+        Pp.(str "✅ " ++ test_id ++ spc () ++ str "successfully extracted, compiled, and all tests passed."
+            ++ (if !Flags.quiet || Option.is_empty file then mt () else spc () ++ str "(" ++ str filename ++ str ")")
+            ++ fnl () ++ str out ++ fnl ()));
     if compilation_ok && not tests_ok then
-      Feedback.msg_notice
-        Pp.(str "❌ " ++ test_id ++ spc ()
-            ++ str "extracted and compiled, but test assertions failed."
-            ++ (if !Flags.quiet || Option.is_empty file then mt ()
-                else spc () ++ str "(" ++ str filename ++ str ")")
-            ++ fnl ());
+      Feedback.msg_notice (if in_dune then
+        Pp.(str "CRANE_TEST:FAIL_TEST:" ++ str test_id_str ++ str ":" ++ str source_file)
+      else
+        Pp.(str "❌ " ++ test_id ++ spc () ++ str "extracted and compiled, but test assertions failed."
+            ++ (if !Flags.quiet || Option.is_empty file then mt () else spc () ++ str "(" ++ str filename ++ str ")")
+            ++ fnl ()));
 
   )
 

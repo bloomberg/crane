@@ -73,39 +73,26 @@ else
     # Function to process a line and extract test result
     process_line() {
         local line="$1"
-        local prev_line="$2"
-        local prev_prev_line="$3"
         local TEST_NAME=""
         local STATUS_TYPE=""
         local FILE_PATH=""
 
-        # Check for successful extraction - long format
-        if echo "$line" | grep -q "✅.*successfully extracted, compiled, and all tests passed\."; then
+        # Check for structured output from Crane (preferred)
+        if echo "$line" | grep -q "^CRANE_TEST:"; then
+            # Parse format: CRANE_TEST:STATUS:test_name:source_file
+            STATUS_TYPE=$(echo "$line" | cut -d: -f2)
+            TEST_NAME=$(echo "$line" | cut -d: -f3)
+            FILE_PATH=$(echo "$line" | cut -d: -f4- | sed 's|^\./||')
+        # Fallback: Check for legacy pretty output (for backward compatibility)
+        elif echo "$line" | grep -q "✅.*successfully extracted, compiled, and all tests passed\."; then
             TEST_NAME=$(echo "$line" | sed 's/✅ //' | sed 's/ successfully.*//')
             STATUS_TYPE="PASS"
-        # Check for successful extraction - short format (just ✅ TestName)
         elif echo "$line" | grep -q "^✅ [^[:space:]]"; then
             TEST_NAME=$(echo "$line" | sed 's/✅ //')
             STATUS_TYPE="PASS"
-        # Check for test assertion failures
         elif echo "$line" | grep -q "❌.*extracted and compiled, but test assertions failed\."; then
             TEST_NAME=$(echo "$line" | sed 's/❌ *//' | sed 's/ extracted.*//')
             STATUS_TYPE="FAIL_TEST"
-        # Check for compilation failures (single line format)
-        elif echo "$line" | grep -q "Error:.*extracted but clang failed to compile"; then
-            TEST_NAME=$(echo "$line" | sed 's/.*Error: //' | sed 's/ extracted.*//')
-            STATUS_TYPE="FAIL_COMPILE"
-            FILE_PATH=$(echo "$prev_line" | grep -o 'File "[^"]*\.v"' | sed 's/File "//; s/"//' | sed 's|^\./||')
-        # Check for extraction failures (single line format)
-        elif echo "$line" | grep -q "Error:.*failed to extract:"; then
-            TEST_NAME=$(echo "$line" | sed 's/.*Error: //' | sed 's/ failed.*//')
-            STATUS_TYPE="FAIL_EXTRACT"
-            FILE_PATH=$(echo "$prev_line" | grep -o 'File "[^"]*\.v"' | sed 's/File "//; s/"//' | sed 's|^\./||')
-        # Check for extraction failures (multi-line format)
-        elif echo "$line" | grep -q "^failed to extract:" && echo "$prev_line" | grep -q "^Error:"; then
-            TEST_NAME=$(echo "$prev_line" | sed 's/Error: //')
-            STATUS_TYPE="FAIL_EXTRACT"
-            FILE_PATH=$(echo "$prev_prev_line" | grep -o 'File "[^"]*\.v"' | sed 's/File "//; s/"//' | sed 's|^\./||')
         fi
 
         if [ -n "$TEST_NAME" ] && [ -n "$STATUS_TYPE" ]; then
@@ -192,30 +179,38 @@ else
     echo -e "${DIM}Tests will be displayed as they complete, followed by sorted summary${NC}"
     echo ""
 
-    PREV_LINE=""
-    PREV_PREV_LINE=""
-
     # Run dune and process output line by line in real-time
     dune runtest --no-buffer --force 2>&1 | while IFS= read -r line; do
         # Always output the line for real-time feedback
         echo "$line" >> "$TMPFILE"
 
         # Check if this line contains a test result
-        if process_line "$line" "$PREV_LINE" "$PREV_PREV_LINE"; then
+        if process_line "$line"; then
             # Extract the result for real-time display
-            if echo "$line" | grep -q "✅"; then
+            if echo "$line" | grep -q "^CRANE_TEST:"; then
+                # Structured output
+                STATUS=$(echo "$line" | cut -d: -f2)
+                TEST_NAME=$(echo "$line" | cut -d: -f3)
+                case "$STATUS" in
+                    PASS)
+                        echo -e "  ${GREEN}✓${NC} ${TEST_NAME}"
+                        ;;
+                    FAIL_TEST)
+                        echo -e "  ${YELLOW}✗${NC} ${TEST_NAME} (test assertions failed)"
+                        ;;
+                    FAIL_COMPILE)
+                        echo -e "  ${RED}✗${NC} ${TEST_NAME} (compilation failed)"
+                        ;;
+                    FAIL_EXTRACT)
+                        echo -e "  ${RED}✗${NC} ${TEST_NAME} (extraction failed)"
+                        ;;
+                esac
+            elif echo "$line" | grep -q "✅"; then
                 echo -e "  ${GREEN}✓${NC} $(echo "$line" | sed 's/✅ //')"
             elif echo "$line" | grep -q "❌"; then
                 echo -e "  ${YELLOW}✗${NC} $(echo "$line" | sed 's/❌ //')"
-            elif echo "$line" | grep -q "Error:"; then
-                echo -e "  ${RED}✗${NC} $(echo "$line" | sed 's/.*Error: //')"
-            elif echo "$line" | grep -q "^failed to extract:"; then
-                echo -e "  ${RED}✗${NC} $(echo "$PREV_LINE" | sed 's/Error: //')"
             fi
         fi
-
-        PREV_PREV_LINE="$PREV_LINE"
-        PREV_LINE="$line"
     done
 
     TEST_RESULT=${PIPESTATUS[0]}
@@ -279,20 +274,29 @@ fi
 echo ""
 
 # Extract test names and results (sort alphabetically)
-# Catch both long format and short format success messages
-{ grep "✅.*successfully extracted, compiled, and all tests passed\." "$TMPFILE" | sed 's/✅ //' | sed 's/ successfully.*//' || true; \
+# Prefer structured output, fallback to legacy pretty output
+{ grep "^CRANE_TEST:PASS:" "$TMPFILE" | cut -d: -f3 || true; \
+  grep "✅.*successfully extracted, compiled, and all tests passed\." "$TMPFILE" | sed 's/✅ //' | sed 's/ successfully.*//' || true; \
   grep "^✅ [^[:space:]]" "$TMPFILE" | sed 's/✅ //' || true; } | sort | uniq > "$SUMMARY.passed"
-grep "❌.*extracted and compiled, but test assertions failed\." "$TMPFILE" | sed 's/❌ *//' | sed 's/ extracted.*//' | sort > "$SUMMARY.failed_test" || true
-grep "Error:.*extracted but clang failed to compile" "$TMPFILE" | sed 's/.*Error: //' | sed 's/ extracted.*//' | sort > "$SUMMARY.failed_compile" || true
-# Catch both single-line and multi-line extraction failures
-{ grep "Error:.*failed to extract:" "$TMPFILE" | sed 's/.*Error: //' | sed 's/ failed.*//' || true; \
-  grep -B1 "^failed to extract:" "$TMPFILE" | grep "^Error:" | sed 's/Error: //' || true; } | sort | uniq > "$SUMMARY.failed_extract"
+{ grep "^CRANE_TEST:FAIL_TEST:" "$TMPFILE" | cut -d: -f3 || true; \
+  grep "❌.*extracted and compiled, but test assertions failed\." "$TMPFILE" | sed 's/❌ *//' | sed 's/ extracted.*//' || true; } | sort | uniq > "$SUMMARY.failed_test"
+
+{ grep "^CRANE_TEST:FAIL_COMPILE:" "$TMPFILE" | cut -d: -f3 || true; } | sort | uniq > "$SUMMARY.failed_compile"
+
+{ grep "^CRANE_TEST:FAIL_EXTRACT:" "$TMPFILE" | cut -d: -f3 || true; } | sort | uniq > "$SUMMARY.failed_extract"
 
 # Count results (handling empty files)
-PASSED=$(grep -c . "$SUMMARY.passed" 2>/dev/null || echo 0)
-FAILED_TEST=$(grep -c . "$SUMMARY.failed_test" 2>/dev/null || echo 0)
-FAILED_COMPILE=$(grep -c . "$SUMMARY.failed_compile" 2>/dev/null || echo 0)
-FAILED_EXTRACT=$(grep -c . "$SUMMARY.failed_extract" 2>/dev/null || echo 0)
+PASSED=$(grep -c . "$SUMMARY.passed" 2>/dev/null || echo "0")
+FAILED_TEST=$(grep -c . "$SUMMARY.failed_test" 2>/dev/null || echo "0")
+FAILED_COMPILE=$(grep -c . "$SUMMARY.failed_compile" 2>/dev/null || echo "0")
+FAILED_EXTRACT=$(grep -c . "$SUMMARY.failed_extract" 2>/dev/null || echo "0")
+
+# Ensure all variables are numeric (remove any whitespace/newlines)
+PASSED=$(echo "$PASSED" | tr -d '[:space:]')
+FAILED_TEST=$(echo "$FAILED_TEST" | tr -d '[:space:]')
+FAILED_COMPILE=$(echo "$FAILED_COMPILE" | tr -d '[:space:]')
+FAILED_EXTRACT=$(echo "$FAILED_EXTRACT" | tr -d '[:space:]')
+
 TOTAL=$((PASSED + FAILED_TEST + FAILED_COMPILE + FAILED_EXTRACT))
 
 # Summary
