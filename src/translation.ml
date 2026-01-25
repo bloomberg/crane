@@ -200,7 +200,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       let fld = List.nth (record_fields_of_type typ) (n - i) in
       let _,env' = push_vars' (List.rev_map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids) env in
       (match fld with
-      | Some fld -> CPPfun_call (CPPget' (gen_expr env t, fld), List.map (gen_expr env') args)
+      | Some fld -> CPPfun_call (CPPget' (gen_expr env t, fld), List.rev_map (gen_expr env') args)
       | _ -> CPPstring (Pstring.unsafe_of_string "TODOrecordProj"))
     | _ ->
       let _,env' = push_vars' (List.rev_map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids) env in
@@ -250,7 +250,7 @@ and eta_fun env f args =
       CPPlambda (List.rev eta_args, None,[Sreturn (CPPfun_call (cglob, List.rev call_args))])
     | _ ->
       (* print_endline ("NOT A FUN" ^ Pp.string_of_ppcmds (GlobRef.print id) ^ string_of_int (List.length args)) ; *)
-      CPPfun_call (cglob, args))
+      CPPfun_call (cglob, List.rev args))
   | _ ->
     let args = List.map (fun x -> (gen_expr env x)) args in
     CPPfun_call (gen_expr env f, List.rev args)
