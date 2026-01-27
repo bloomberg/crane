@@ -17,7 +17,7 @@ struct Nat {
   public:
     struct O {};
     struct S {
-      std::shared_ptr<nat> _a0;
+      std::shared_ptr<Nat::nat> _a0;
     };
     using variant_t = std::variant<O, S>;
 
@@ -29,11 +29,11 @@ struct Nat {
   public:
     struct ctor {
       ctor() = delete;
-      static std::shared_ptr<nat> O_() {
-        return std::shared_ptr<nat>(new nat(O{}));
+      static std::shared_ptr<Nat::nat> O_() {
+        return std::shared_ptr<Nat::nat>(new Nat::nat(O{}));
       }
-      static std::shared_ptr<nat> S_(const std::shared_ptr<nat> &a0) {
-        return std::shared_ptr<nat>(new nat(S{a0}));
+      static std::shared_ptr<Nat::nat> S_(const std::shared_ptr<Nat::nat> &a0) {
+        return std::shared_ptr<Nat::nat>(new Nat::nat(S{a0}));
       }
     };
     const variant_t &v() const { return v_; }

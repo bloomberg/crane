@@ -69,4 +69,4 @@ Crane Extract Inlined Constant negb => "!(%a0)".
 
 
 Set Crane BDE Directory "~/bde_install/".
-Crane Extraction TestCompile "nat_bde" Nat.
+Crane Extraction "nat_bde" Nat.

@@ -70,4 +70,4 @@ Crane Extract Inductive bool => "bool" [ "true" "false" ] "if(%scrut){%br0} else
 Crane Extract Inlined Constant negb => "!(%a0)".
 *)
 
-Crane Extraction TestCompile "nat" Nat.
+Crane Extraction "nat" Nat.

@@ -28,8 +28,9 @@ struct Prod {
   public:
     struct ctor {
       ctor() = delete;
-      static std::shared_ptr<prod<A, B>> pair_(A a0, B a1) {
-        return std::shared_ptr<prod<A, B>>(new prod<A, B>(pair{a0, a1}));
+      static std::shared_ptr<Prod::prod<A, B>> pair_(A a0, B a1) {
+        return std::shared_ptr<Prod::prod<A, B>>(
+            new Prod::prod<A, B>(pair{a0, a1}));
       }
     };
     const variant_t &v() const { return v_; }
@@ -42,7 +43,7 @@ struct List {
     struct nil {};
     struct cons {
       A _a0;
-      std::shared_ptr<list<A>> _a1;
+      std::shared_ptr<List::list<A>> _a1;
     };
     using variant_t = std::variant<nil, cons>;
 
@@ -54,16 +55,17 @@ struct List {
   public:
     struct ctor {
       ctor() = delete;
-      static std::shared_ptr<list<A>> nil_() {
-        return std::shared_ptr<list<A>>(new list<A>(nil{}));
+      static std::shared_ptr<List::list<A>> nil_() {
+        return std::shared_ptr<List::list<A>>(new List::list<A>(nil{}));
       }
-      static std::shared_ptr<list<A>>
-      cons_(A a0, const std::shared_ptr<list<A>> &a1) {
-        return std::shared_ptr<list<A>>(new list<A>(cons{a0, a1}));
+      static std::shared_ptr<List::list<A>>
+      cons_(A a0, const std::shared_ptr<List::list<A>> &a1) {
+        return std::shared_ptr<List::list<A>>(new List::list<A>(cons{a0, a1}));
       }
     };
     const variant_t &v() const { return v_; }
-    std::shared_ptr<list<A>> app(const std::shared_ptr<list<A>> &m) const {
+    std::shared_ptr<List::list<A>>
+    app(const std::shared_ptr<List::list<A>> &m) const {
       return std::visit(
           Overloaded{[&](const typename List::list<A>::nil _args)
                          -> std::shared_ptr<List::list<A>> { return m; },

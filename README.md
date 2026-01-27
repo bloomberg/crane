@@ -76,7 +76,19 @@ dune build
 dune runtest
 ```
 
-Tests are organized by category in `tests/basics/` (basic functionality), `tests/monadic/` (monadic code), and `tests/wip/` (work-in-progress). Tests are **not** built by `make build` to keep development builds fast—use `make test` or `dune runtest` to build and run them.
+Tests are organized by category in `tests/basics/` (basic functionality) and `tests/monadic/` (monadic code). Tests are **not** built by `make build` to keep development builds fast—use `make test` or `dune runtest` to build and run them.
+
+### BDE Tests (Optional)
+
+Some tests use [Bloomberg's BDE library](https://github.com/bloomberg/bde). These are optional.
+
+**If you have BDE installed:** The build will auto-detect BDE in common locations (`~/Library/bde_install`, `~/bde_install`, `/opt/bb`). If installed elsewhere, set `BDE_PREFIX`:
+```bash
+export BDE_PREFIX=/path/to/bde_install
+make test-one TEST=nat_bde
+```
+
+**If you don't have BDE:** BDE tests will fail with "file not found" errors—this is expected and can be ignored. All non-BDE tests will still run normally.
 
 To run the `Crane Benchmark` command, you will need to have [hyperfine](https://github.com/sharkdp/hyperfine) installed.
 

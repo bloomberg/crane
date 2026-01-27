@@ -11,4 +11,4 @@ Definition one : nat := add_one zero.
 Require Crane.Extraction.
 Crane Extract Inlined Constant zero => "Nat::nat::ctor::O_()" From "functional".
 Crane Extract Inlined Constant add_one => "Nat::nat::ctor::S_(%a0)".
-Crane Extraction TestCompile "add_one" one.
+Crane Extraction "add_one" one.

@@ -78,4 +78,4 @@ Require Crane.Extraction.
 Require Crane.Mapping.Std.
 Require Crane.Mapping.NatIntStd.
 
-Crane Extraction TestCompile "ind_param" test_size_single test_size_pair test_error.
+Crane Extraction "ind_param" test_size_single test_size_pair test_error.

@@ -451,7 +451,7 @@ levenshtein_chain(const std::shared_ptr<String::string> &s,
                                                        Chain::chain>>::ctor::
                                                    existT_(
                                                        Nat::nat::ctor::O_(),
-                                                       aux_both_empty(_x0, t));
+                                                       aux_both_empty(s, t));
                                              },
                                              [&](const typename String::string::
                                                      String _args)
@@ -515,7 +515,7 @@ levenshtein_chain(const std::shared_ptr<String::string> &s,
                                                                                   chain>>::
                                                                           ctor::existT_(
                                                                               length(
-                                                                                  _x0),
+                                                                                  s),
                                                                               deletes_chain_empty(
                                                                                   String::string::
                                                                                       ctor::String_(
@@ -525,10 +525,10 @@ levenshtein_chain(const std::shared_ptr<String::string> &s,
                                                                     [&](const typename String::
                                                                             string::String
                                                                                 _args)
-                                                                        -> std::function<
-                                                                            std::shared_ptr<
-                                                                                SigT::sigT<
-                                                                                    std::shared_ptr<Nat::nat>, std::shared_ptr<Chain::chain>>>(dummy_prop, dummy_prop)> {
+                                                                        -> std::function<std::shared_ptr<
+                                                                            SigT::
+                                                                                sigT<std::shared_ptr<Nat::nat>, std::shared_ptr<Chain::
+                                                                                                                                    chain>>>(dummy_prop, dummy_prop)> {
                                                                       std::shared_ptr<
                                                                           Ascii::
                                                                               ascii>
@@ -591,7 +591,7 @@ levenshtein_chain(const std::shared_ptr<String::string> &s,
                                                                                                                          ctor::existT_(
                                                                                                                              n,
                                                                                                                              aux_eq_char(
-                                                                                                                                 _x0,
+                                                                                                                                 s,
                                                                                                                                  t,
                                                                                                                                  x,
                                                                                                                                  xs,
@@ -710,7 +710,7 @@ levenshtein_chain(const std::shared_ptr<String::string> &s,
                                                                                                                               Chain::
                                                                                                                                   chain>
                                                                                                                               r1_ = aux_insert(
-                                                                                                                                  _x0,
+                                                                                                                                  s,
                                                                                                                                   t,
                                                                                                                                   x,
                                                                                                                                   xs,
@@ -722,7 +722,7 @@ levenshtein_chain(const std::shared_ptr<String::string> &s,
                                                                                                                               Chain::
                                                                                                                                   chain>
                                                                                                                               r2_ = aux_delete(
-                                                                                                                                  _x0,
+                                                                                                                                  s,
                                                                                                                                   t,
                                                                                                                                   x,
                                                                                                                                   xs,
@@ -734,7 +734,7 @@ levenshtein_chain(const std::shared_ptr<String::string> &s,
                                                                                                                               Chain::
                                                                                                                                   chain>
                                                                                                                               r3_ = aux_update(
-                                                                                                                                  _x0,
+                                                                                                                                  s,
                                                                                                                                   t,
                                                                                                                                   x,
                                                                                                                                   xs,
@@ -774,7 +774,7 @@ levenshtein_chain(const std::shared_ptr<String::string> &s,
                                                                     }},
                                                                 t->v());
                                                           }},
-                               _x0->v());
+                               s->v());
                          };
   return levenshtein_chain1(_x0);
 }

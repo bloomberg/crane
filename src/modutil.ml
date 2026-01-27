@@ -80,7 +80,7 @@ let struct_iter do_decl do_spec do_mp s =
 type do_ref = GlobRef.t -> unit
 
 let record_iter_references do_term = function
-  | Record l -> List.iter (Option.iter do_term) l
+  | Record l | TypeClass l -> List.iter (Option.iter do_term) l
   | _ -> ()
 
 let type_iter_references do_type t =

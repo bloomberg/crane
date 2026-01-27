@@ -73,4 +73,4 @@ Require Crane.Extraction.
 Require Crane.Mapping.Std.
 Require Crane.Mapping.NatIntStd.
 
-Crane Extraction TestCompile "multi_ind_functor" test_is_nothing test_list_len test_tree_size.
+Crane Extraction "multi_ind_functor" test_is_nothing test_list_len test_tree_size.

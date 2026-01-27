@@ -41,4 +41,4 @@ Definition first_three : list nat :=
 End Colist.
 
 Require Crane.Extraction.
-Crane Extraction TestCompile "colist" Colist.
+Crane Extraction "colist" Colist.

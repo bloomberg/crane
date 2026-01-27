@@ -63,6 +63,7 @@ and inductive_kind =
   | Coinductive
   | Standard
   | Record of GlobRef.t option list (* None for anonymous field *)
+  | TypeClass of GlobRef.t option list (* Type class methods *)
 
 (* A [ml_ind_packet] is the miniml counterpart of a [one_inductive_body].
    If the inductive is logical ([ip_logical = false]), then all other fields

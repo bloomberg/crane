@@ -8,19 +8,19 @@
 #include <utility>
 #include <variant>
 
-unsigned int RMatch::f1(const std::shared_ptr<RMatch::MyRec> &m) {
+unsigned int RMatch::f1(const std::shared_ptr<RMatch::myRec> &m) {
   return m->f1;
 }
 
-unsigned int RMatch::f2(const std::shared_ptr<RMatch::MyRec> &m) {
+unsigned int RMatch::f2(const std::shared_ptr<RMatch::myRec> &m) {
   return m->f2;
 }
 
-unsigned int RMatch::f3(const std::shared_ptr<RMatch::MyRec> &m) {
+unsigned int RMatch::f3(const std::shared_ptr<RMatch::myRec> &m) {
   return m->f3;
 }
 
-unsigned int RMatch::sum(const std::shared_ptr<RMatch::MyRec> &r) {
+unsigned int RMatch::sum(const std::shared_ptr<RMatch::myRec> &r) {
   return [&](void) {
     unsigned int n1 = r->f1;
     unsigned int n2 = r->f2;

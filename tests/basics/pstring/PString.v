@@ -39,4 +39,4 @@ Crane Extract Inlined Constant one => "1".
 Crane Extract Inlined Constant iplus => "%a0 + %a1".
 
 Require Crane.Mapping.Std.
-Crane Extraction TestCompile "pstring" PString.
+Crane Extraction "pstring" PString.

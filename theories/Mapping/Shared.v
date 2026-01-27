@@ -12,7 +12,7 @@ Crane Extract Inductive sumbool =>
   [ "true" "false" ]
   "if (%scrut) { %br0 } else { %br1 }".
 
-Crane Extract Inlined Constant negb => "!%a0".
+Crane Extract Inlined Constant negb => "!(%a0)".
 Crane Extract Inlined Constant andb => "(%a0 && %a1)".
 Crane Extract Inlined Constant orb => "(%a0 || %a1)".
 

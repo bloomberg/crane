@@ -30,4 +30,4 @@ Module iotest.
 
 End iotest.
 
-Crane Extraction TestCompile "io" iotest.
+Crane Extraction "io" iotest.

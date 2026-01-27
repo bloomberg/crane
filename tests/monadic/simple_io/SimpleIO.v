@@ -30,4 +30,4 @@ Crane Extract Constant SimpleIO.pure => "pure".
 Crane Extract Constant SimpleIO.bind => "bind".
 Crane Extract Constant SimpleIO.get_line => "get_line".
 Crane Extract Constant SimpleIO.print => "print".
-Crane Extraction TestCompile "simple_io" SimpleIO.
+Crane Extraction "simple_io" SimpleIO.

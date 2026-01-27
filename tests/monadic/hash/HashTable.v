@@ -177,4 +177,4 @@ Definition get_or {K V} (t : CHT K V) (k : K) (dflt : V) : IO V :=
 End CHT.
 
 Crane Extract Inlined Constant CHT.max => "std::max(%a0, %a1)".
-Crane Extraction TestCompile "hash" CHT.
+Crane Extraction "hash" CHT.

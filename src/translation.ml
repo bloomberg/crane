@@ -9,6 +9,7 @@ open Names
 open Mlutil
 open Table
 open Str
+open Util
 
 exception TODO
 
@@ -190,24 +191,35 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
   | MLcase (typ, t, pv) when not (record_fields_of_type typ == []) && Array.length pv == 1 ->
     let (ids,r,pat,body) = pv.(0) in
     let n = List.length ids in
+    (* For type classes, use qualified access (::) instead of arrow (->) since
+       type class instances are template type parameters, not runtime values *)
+    let is_typeclass = Table.is_typeclass_type typ in
+    let make_field_access base_expr fld =
+      if is_typeclass then
+        let fld_name = Id.of_string (Common.pp_global_name Term fld) in
+        CPPqualified (base_expr, fld_name)
+      else
+        CPPget' (base_expr, fld)
+    in
     (match body with
     | MLrel i when i <= n ->
       let fld = List.nth (record_fields_of_type typ) (n - i) in
       (match fld with
-      | Some fld -> CPPget' (gen_expr env t, fld)
+      | Some fld -> make_field_access (gen_expr env t) fld
       | _ -> CPPstring (Pstring.unsafe_of_string "TODOrecordProj"))
     | MLapp (MLrel i, args) when i <= n ->
       let fld = List.nth (record_fields_of_type typ) (n - i) in
       let _,env' = push_vars' (List.rev_map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids) env in
       (match fld with
-      | Some fld -> CPPfun_call (CPPget' (gen_expr env t, fld), List.rev_map (gen_expr env') args)
+      (* CPPfun_call expects args in reverse order; List.rev_map both converts and reverses *)
+      | Some fld -> CPPfun_call (make_field_access (gen_expr env t) fld, List.rev_map (gen_expr env') args)
       | _ -> CPPstring (Pstring.unsafe_of_string "TODOrecordProj"))
     | _ ->
       let _,env' = push_vars' (List.rev_map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids) env in
       let asgns = List.mapi (fun i (id, ty) ->
         let fld = List.nth (record_fields_of_type typ) i in
         let e = (match fld with
-          | Some fld -> CPPget' (gen_expr env t, fld)
+          | Some fld -> make_field_access (gen_expr env t) fld
           | _ -> CPPstring (Pstring.unsafe_of_string "TODOrecordProj")) in
         Sasgn (remove_prime_id (id_of_mlid id), Some (convert_ml_type_to_cpp_type env [] [] ty), e)) ids in
       CPPfun_call (CPPlambda([], None, asgns @ gen_stmts env' (fun x -> Sreturn x) body), []))
@@ -233,15 +245,64 @@ and eta_fun env f args =
     match (dom, args) with
     | _::dom, _::args -> get_eta_args dom args
     | _ , _ -> dom in
+  (* Check if an ML arg is a type class instance (a reference to a struct that implements a type class) *)
+  let is_typeclass_instance_arg ml_arg =
+    match ml_arg with
+    | MLglob (r, _) ->
+        (try
+          let arg_ty = Table.find_type r in
+          Table.is_typeclass_type arg_ty
+        with Not_found -> false)
+    | MLrel i ->
+        (* Check if the referenced parameter is a type class instance *)
+        (try
+          let (db, _) = env in
+          let _name = List.nth db (pred i) in
+          (* Look up the type of this de Bruijn variable in the env's type context *)
+          (* Check if the name matches our typeclass instance naming: _tcI0, _tcI1, etc. *)
+          (* This is a heuristic - ideally we'd track types in the env *)
+          let name_str = Id.to_string _name in
+          String.length name_str >= 5 &&
+          String.sub name_str 0 4 = "_tcI"
+        with _ -> false)
+    | _ -> false
+  in
   match f with
   | MLglob (id , tys) ->
-    let args = List.map (gen_expr env) args in
+    (* Partition args into type class instances and regular args *)
+    let (typeclass_ml_args, regular_ml_args) =
+      List.partition is_typeclass_instance_arg args in
+    (* Reverse typeclass args to match template param order from gen_dfun:
+       gen_dfun iterates collect_lams output (reversed from source) so the first
+       typeclass in that order becomes 'i'. Call sites have args in source order,
+       so we reverse to match. *)
+    let typeclass_ml_args = List.rev typeclass_ml_args in
+    (* Convert type class instance args to template type arguments *)
+    let typeclass_type_args = List.map (fun ml_arg ->
+      match ml_arg with
+      | MLglob (r, ts) ->
+          (* Use the instance struct as a type - convert to Tglob *)
+          Tglob (r, List.map (convert_ml_type_to_cpp_type env [] []) ts, [])
+      | MLrel i ->
+          (* The instance is a lambda parameter - look up its name in the env
+             and create a Tvar reference to the template parameter *)
+          let (db, _) = env in
+          let name = List.nth db (pred i) in
+          Tvar (0, Some name)
+      | _ -> assert false  (* Already filtered by is_typeclass_instance_arg *)
+    ) typeclass_ml_args in
+    (* Generate regular args as expressions *)
+    let args = List.map (gen_expr env) regular_ml_args in
     let ty = find_type id in
     let ty = try (type_subst_list tys ty) with _ -> ty in (* TODO : make less hacky; do a type_subst that can't fail *)
     let ty = convert_ml_type_to_cpp_type env [] [] ty in
-    let cglob = CPPglob (id, List.map (convert_ml_type_to_cpp_type env [] []) tys) in
+    (* Combine: instance types first, then regular type args *)
+    let all_type_args = typeclass_type_args @ (List.map (convert_ml_type_to_cpp_type env [] []) tys) in
+    let cglob = CPPglob (id, all_type_args) in
     (match ty with
     | Tfun (dom, cod) ->
+      (* Filter domain to exclude type class types (they're now template params) *)
+      let dom = List.filter (fun t -> not (Table.is_typeclass_type_cpp t)) dom in
       let missing_args = get_eta_args dom args in
       if missing_args == [] then CPPfun_call (cglob, List.rev args) else
       let eta_args = List.mapi (fun i ty -> (Tmod (TMconst, ty), Some (Id.of_string ("_x" ^ string_of_int i)))) missing_args in
@@ -250,7 +311,7 @@ and eta_fun env f args =
       CPPlambda (List.rev eta_args, None,[Sreturn (CPPfun_call (cglob, List.rev call_args))])
     | _ ->
       (* print_endline ("NOT A FUN" ^ Pp.string_of_ppcmds (GlobRef.print id) ^ string_of_int (List.length args)) ; *)
-      CPPfun_call (cglob, List.rev args))
+      CPPfun_call (cglob, args))
   | _ ->
     let args = List.map (fun x -> (gen_expr env x)) args in
     CPPfun_call (gen_expr env f, List.rev args)
@@ -451,6 +512,158 @@ let gen_record_cpp name fields ind =
   | [] -> Dstruct (name, l)
   | _ -> Dtemplate (ty_vars, None, Dstruct (name, l))
 
+(* Generate a C++ concept from a type class.
+   Type class Eq(A) with method eqb : A -> A -> bool becomes:
+   template<typename I, typename A>
+   concept Eq = requires(A a0, A a1) {
+     { I::eqb(a0, a1) } -> std::convertible_to<bool>;
+   };
+
+   Uses CPPconvertible_to with the actual cpp_type for the constraint,
+   which will be pretty-printed in cpp.ml.
+*)
+let gen_typeclass_cpp name fields ind =
+  let inst_id = Id.of_string "I" in
+  (* Type vars become template parameters after the instance parameter *)
+  let ty_vars = List.map (fun x -> (TTtypename, x)) ind.ip_vars in
+  let all_params = (TTtypename, inst_id) :: ty_vars in
+  (* Generate requires clauses for each method *)
+  let method_list = List.combine fields ind.ip_types.(0) in
+  (* Convert a type to a list of argument types and a return type *)
+  let rec get_args_and_ret acc = function
+    | Miniml.Tarr (arg, rest) -> get_args_and_ret (arg :: acc) rest
+    | ret -> (List.rev acc, ret)
+  in
+  (* Generate a single method requirement *)
+  let gen_method_req i (field_opt, field_ty) =
+    match field_opt with
+    | None -> None  (* Anonymous field, skip *)
+    | Some field_ref ->
+        let (args, ret) = get_args_and_ret [] field_ty in
+        (* Filter out type class instance arguments (they're passed via template) *)
+        let args = List.filter (fun t -> not (Table.is_typeclass_type t)) args in
+        let ret_cpp = convert_ml_type_to_cpp_type (empty_env ()) [] ind.ip_vars ret in
+        (* Create parameter names: a0, a1, a2, ... *)
+        let params = List.mapi (fun j arg_ty ->
+          let arg_cpp = convert_ml_type_to_cpp_type (empty_env ()) [] ind.ip_vars arg_ty in
+          (arg_cpp, Id.of_string ("a" ^ string_of_int j))
+        ) args in
+        (* Method call: I::method_name(a0, a1, ...) *)
+        let method_name = Common.pp_global_name Term field_ref in
+        let call_args = List.map (fun (_, id) -> CPPvar id) params in
+        let call = CPPfun_call (
+          CPPqualified (CPPvar inst_id, Id.of_string method_name),
+          call_args
+        ) in
+        (* Constraint: use the cpp_type directly - cpp.ml will render it *)
+        let constraint_expr = CPPconvertible_to ret_cpp in
+        Some (params, (call, constraint_expr))
+  in
+  let method_reqs = List.filter_map (fun pair -> gen_method_req 0 pair) method_list in
+  (* Collect all unique parameter types for the requires clause *)
+  let all_params_flat = List.concat_map fst method_reqs in
+  (* Deduplicate parameters by keeping first occurrence of each type+name combination *)
+  let seen = ref [] in
+  let dedup_params = List.filter (fun (ty, id) ->
+    let key = (ty, Id.to_string id) in
+    if List.mem key !seen then false
+    else (seen := key :: !seen; true)
+  ) all_params_flat in
+  let constraints = List.map snd method_reqs in
+  let requires_expr = CPPrequires (dedup_params, constraints) in
+  Dtemplate (all_params, None, Dconcept (name, requires_expr))
+
+(* Generate a C++ struct for a type class instance.
+   Type class instances become structs with static methods.
+   Example: Instance IntEq : Eq int := { eqb := Int.eqb }.
+   becomes: struct IntEq { static bool eqb(int a, int b) { ... } };
+
+   Returns: (struct_decl option, class_ref option, type_args)
+   The class_ref and type_args are used to generate static_assert in cpp.ml *)
+let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type)
+    : cpp_decl option * GlobRef.t option * ml_type list =
+  (* Check if the type is a type class type *)
+  match ty with
+  | Tglob (class_ref, type_args, _) when Table.is_typeclass class_ref ->
+      (* Get the type class fields (method names) and field types (from ind_packet) *)
+      let fields = Table.record_fields_of_type ty in
+      let field_types = Table.record_field_types class_ref in
+      (match body with
+      | MLcons (_, _ctor_ref, method_bodies) ->
+          (* Generate static methods for each field *)
+          let gen_method (field_ref, field_ml_ty) field_body =
+            match field_ref with
+            | None -> None  (* Anonymous field, skip *)
+            | Some method_ref ->
+                let method_name = Id.of_string (Common.pp_global_name Term method_ref) in
+                (* Substitute type class parameter with instance's type arg in the field type.
+                   This gives us the concrete return type (e.g., bool for eqb: A -> A -> bool). *)
+                let subst_ty = Mlutil.type_subst_list type_args field_ml_ty in
+                (* Extract return type by stripping Tarr's *)
+                let rec get_ret = function
+                  | Tarr (_, rest) -> get_ret rest
+                  | ret -> ret
+                in
+                let method_ret_ty = convert_ml_type_to_cpp_type (empty_env ()) [] [] (get_ret subst_ty) in
+                (* Extract parameter names and types from the lambda *)
+                let rec extract_params ml_acc cpp_acc body =
+                  match body with
+                  | MLlam (id, ty, rest) ->
+                      let param_name = id_of_mlid id in
+                      let param_cpp_ty = convert_ml_type_to_cpp_type (empty_env ()) [] [] ty in
+                      extract_params ((param_name, ty) :: ml_acc) ((param_name, param_cpp_ty) :: cpp_acc) rest
+                  | _ -> (List.rev ml_acc, List.rev cpp_acc, body)
+                in
+                let (ml_params, cpp_params, inner_body) = extract_params [] [] field_body in
+                (* If no lambdas found, the body is a function reference (like PrimInt63.eqb).
+                   We need to eta-expand: generate parameters based on the method type,
+                   then call the function with those parameters. *)
+                let (cpp_params, ret_ty, body_stmts) =
+                  if ml_params = [] then
+                    match inner_body with
+                    | MLglob (_fn_ref, _) ->
+                        (* Eta-expand: generate parameters based on type args *)
+                        let a_ty = List.hd type_args in
+                        let a_cpp = convert_ml_type_to_cpp_type (empty_env ()) [] [] a_ty in
+                        let p0 = Id.of_string "x" in
+                        let p1 = Id.of_string "y" in
+                        let call_expr = MLapp (inner_body, [MLrel 2; MLrel 1]) in
+                        let env = snd (push_vars' [(p1, a_ty); (p0, a_ty)] (empty_env ())) in
+                        let stmts = gen_stmts env (fun x -> Sreturn x) call_expr in
+                        ([(p0, a_cpp); (p1, a_cpp)], method_ret_ty, stmts)
+                    | _ ->
+                        let env = snd (push_vars' (List.rev ml_params) (empty_env ())) in
+                        let stmts = gen_stmts env (fun x -> Sreturn x) inner_body in
+                        (cpp_params, method_ret_ty, stmts)
+                  else
+                    (* Normal case: we have lambdas - use looked-up return type *)
+                    let env = snd (push_vars' (List.rev ml_params) (empty_env ())) in
+                    let stmts = gen_stmts env (fun x -> Sreturn x) inner_body in
+                    (cpp_params, method_ret_ty, stmts)
+                in
+                Some (Fmethod (method_name, [], ret_ty, List.rev cpp_params, body_stmts, false, true), VPublic)
+          in
+          (* Zip fields with their types from ind_packet *)
+          let fields_with_types =
+            if List.length fields = List.length field_types then
+              List.combine fields field_types
+            else
+              (* Fallback: pair fields with Tunknown if lengths don't match *)
+              List.map (fun f -> (f, Miniml.Tunknown)) fields
+          in
+          let method_pairs = List.combine fields_with_types method_bodies in
+          let methods = List.filter_map (fun ((fld, fty), body) -> gen_method (fld, fty) body) method_pairs in
+          if methods = [] then (None, Some class_ref, type_args)
+          else (Some (Dstruct (name, methods)), Some class_ref, type_args)
+      | _ -> (None, Some class_ref, type_args))
+  | _ -> (None, None, [])
+
+(* Check if a term is a type class instance (constructs a type class record) *)
+let is_typeclass_instance (body : ml_ast) (ty : ml_type) : bool =
+  match ty with
+  | Tglob (class_ref, _, _) -> Table.is_typeclass class_ref
+  | _ -> false
+
 (* order by index! *)
 let get_tvars t =
   let get_name i n =
@@ -606,12 +819,71 @@ let gen_dfun n b dom cod ty temps =
     | Tarr (t1, t2) -> get_dom (t1 :: l) t2
     | _ -> l in
   let mldom = get_dom [] ty in
-  let rec get_missing d a = match (d , a) with
-    | t1 :: d' , t2 :: a' -> get_missing d' a'
-    | _ , _ -> d in
+  (* get_missing computes the types for eta-expansion parameters.
+     mldom contains domain types in reversed order (innermost type first).
+     ids contains explicit lambdas in reversed order (innermost lambda first).
+
+     The explicit lambdas bind the OUTERMOST types (at the END of mldom).
+     The missing parameters should have the INNERMOST types (at the START of mldom).
+
+     Example: For type R -> nat -> nat -> nat with body λr. <match>:
+       mldom = [nat; nat; R]  (innermost nat is first, outermost R is last)
+       ids = [(r, R)]         (one lambda binding the outermost type R)
+       missing types = [nat; nat]  (the first 2 elements of mldom)
+
+     The old code consumed from HEAD of both lists, incorrectly pairing
+     the innermost type (nat) with the outermost lambda (r), causing
+     eta-expansion parameters to get wrong types. *)
+  let get_missing d a =
+    let n_missing = max 0 (List.length d - List.length a) in
+    List.firstn n_missing d in
   let missing = List.rev (List.mapi (fun i t -> (Id (Id.of_string ("_x" ^ string_of_int i)), t)) (get_missing mldom ids)) in
-  let ids,env = push_vars' (List.map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) (missing @ ids)) (empty_env ()) in
-  let ids = List.filter (fun (_, ty) -> not (ml_type_is_void ty)) ids in
+  let all_params = missing @ ids in
+  (* Type class instance parameters become C++ template type parameters.
+     We assign unique names (_tcI0, _tcI1, ...) to avoid collision with:
+     - User variable names like 'i', 'j', etc.
+     - Other generated names in the same scope
+     The original parameter order is preserved for correct de Bruijn indexing. *)
+  let typeclass_counter = ref 0 in
+  let typeclass_temps = ref [] in
+  let all_params_for_env = List.map (fun (ml_id, ty) ->
+    if Table.is_typeclass_type ty then begin
+      let i = !typeclass_counter in
+      typeclass_counter := i + 1;
+      let instance_name = Id.of_string ("_tcI" ^ string_of_int i) in
+      (* Build template param info *)
+      let temp_info = match ty with
+        | Miniml.Tglob (class_ref, type_args, _) ->
+            let type_arg_cpp = List.map (fun t -> convert_ml_type_to_cpp_type (empty_env ()) [] [] t) type_args in
+            (TTtypename, instance_name, Some (class_ref, type_arg_cpp), remove_prime_id (id_of_mlid ml_id))
+        | _ -> (TTtypename, instance_name, None, remove_prime_id (id_of_mlid ml_id))
+      in
+      typeclass_temps := temp_info :: !typeclass_temps;
+      (* Return renamed param for env (use instance_name like 'i' instead of original name) *)
+      (instance_name, ty)
+    end else
+      (* Regular param: keep original name *)
+      (remove_prime_id (id_of_mlid ml_id), ty)
+  ) all_params in
+  let typeclass_temps = List.rev !typeclass_temps in
+  (* Push params into environment for de Bruijn lookup during body generation.
+     collect_lams returns params in reverse order (innermost first), so MLrel 1
+     refers to the last param in the list.
+
+     push_vars' may rename parameters to avoid collisions. For example, if Rocq has:
+       fun (f : T) (f0 : F) (f : forest) => ...
+     push_vars' renames the duplicate 'f' to 'f1', producing: [f; f0; f1]
+
+     We must use these renamed ids (all_ids) for both:
+     1. The environment (for correct de Bruijn lookup in the body)
+     2. The C++ function signature (so parameter names match body references)
+
+     Previously, the code discarded all_ids and used original names for the signature,
+     causing mismatches like: void foo(T f, F f0, forest f) { ... f1->v() ... }
+     where 'f1' in the body didn't match any parameter name. *)
+  let all_ids, env = push_vars' all_params_for_env (empty_env ()) in
+  (* For function signature, use renamed ids but exclude typeclass and void params *)
+  let ids = List.filter (fun (_, ty) -> not (Table.is_typeclass_type ty) && not (ml_type_is_void ty)) all_ids in
   (* Convert ML types to C++ types and wrap with const. For shared_ptr, use const ref *)
   let ids = List.map (fun (x, ty) ->
     let cpp_ty = convert_ml_type_to_cpp_type env [] [] ty in
@@ -636,7 +908,13 @@ let gen_dfun n b dom cod ty temps =
     | _ -> assert false) fun_tys in
   let rec_call = CPPglob (n, List.map (fun (_, id) -> Tvar (0, Some id)) temps @ rec_fun_tys) in *)
   let rec_call = CPPglob (n, List.map (fun (_, id) -> Tvar (0, Some id)) temps) in (* TODO: REMOVE. Hack while we figure out missing type arguments for MLGlob terms when they are given as section variables. NOTE: doesn't work if parameters change in recursive call. *)
-  let temps = temps @ (List.map (fun (_,t,n) -> (t,n)) fun_tys) in
+  (* Add type class instance template parameters - instance types come first *)
+  let typeclass_temps_basic = List.map (fun (tt, id, _, _) -> (tt, id)) typeclass_temps in
+  let temps = typeclass_temps_basic @ temps @ (List.map (fun (_,t,n) -> (t,n)) fun_tys) in
+  (* TODO: Build requires clause for type class constraints
+     For now, type class constraints are not enforced at compile time.
+     The constraints would use the typeclass_temps info to generate
+     requires clauses like: requires Eq<I, T1> *)
   (* let forward_fun_args stmt = List.fold_left (fun s (x, _, fid) ->
     var_subst_stmt x (CPPforward (Tvar (0, Some fid), CPPvar x)) s) stmt fun_tys in *)
   let inner =
@@ -645,8 +923,20 @@ let gen_dfun n b dom cod ty temps =
       (* let b = List.map forward_fun_args b in *)
       Dfundef ([n, []], cod, ids, b)
     else
+      (* Eta-expansion: the body 'b' references original params starting at MLrel 1.
+         After adding k=|missing| new params to the environment, the original params
+         are now at indices k+1, k+2, etc. We must lift 'b' by k to adjust its references.
+
+         Example: For accessor f : R -> nat -> nat -> nat with body λr. match r...
+           - Original body references r as MLrel 1
+           - After adding 2 eta-params (_x0, _x1), environment is [_x1; _x0; r]
+           - r is now at index 3, so we lift b by 2: MLrel 1 -> MLrel 3
+
+         Then we apply the lifted body to the eta-expansion arguments. *)
+      let k = List.length missing in
+      let lifted_b = ast_lift k b in
       let args = List.rev (List.mapi (fun i _ -> MLrel (i + 1)) missing) in
-      let b = List.map (glob_subst_stmt n rec_call) (gen_stmts env (fun x -> Sreturn x) (MLapp (b, args))) in
+      let b = List.map (glob_subst_stmt n rec_call) (gen_stmts env (fun x -> Sreturn x) (MLapp (lifted_b, args))) in
       (* let b = List.map forward_fun_args b in *)
       Dfundef ([n, []], cod, ids, b) in
   (match temps with
@@ -815,13 +1105,22 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let ret_cpp = convert_ml_type_to_cpp_type (empty_env ()) [name] vars ret_ty in
   let ret_cpp = subst_extra_tvars ret_cpp in
 
-  (* Collect lambda parameters and build environment *)
+  (* Collect lambda parameters and build environment for de Bruijn lookup.
+     push_vars' may rename duplicate parameters (e.g., two params named 't' become 't', 't0').
+
+     We must use the renamed ids (all_ids) consistently for:
+     1. The environment - so gen_expr/gen_stmts produce correct variable references
+     2. The C++ method signature - so parameter names match what the body references
+
+     Previously, renamed ids were discarded and original names used for the signature,
+     causing errors like: void method(tree t) { ... t0->v() ... }
+     where 't0' in the body didn't exist as a parameter. *)
   let ids_with_types, inner_body = Mlutil.collect_lams body in
   let ids_converted = List.map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids_with_types in
-  let _all_ids, env = push_vars' ids_converted (empty_env ()) in
+  let all_ids, env = push_vars' ids_converted (empty_env ()) in
 
-  (* Extract 'this' argument at this_pos *)
-  let ids_normal_order = List.rev ids_converted in
+  (* Extract 'this' argument at this_pos - use renamed ids for consistency with body *)
+  let ids_normal_order = List.rev all_ids in
   let (this_arg_id_opt, param_ids) = Common.extract_at_pos this_pos
     (List.map (fun (id, ty) -> (id, ty)) ids_normal_order) in
   let this_arg_id = Option.map fst this_arg_id_opt in
@@ -864,7 +1163,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   in
   let stmts = List.map (tvar_subst_stmt vars) stmts in
 
-  (Fmethod (func_name, template_params, ret_cpp, params, stmts, true), VPublic)
+  (Fmethod (func_name, template_params, ret_cpp, params, stmts, true, false), VPublic)
 
 (* New inductive generation: encapsulated struct with methods *)
 (* Generates:
@@ -988,7 +1287,8 @@ let gen_ind_header_v2 vars name cnames tys method_candidates =
     Tmod (TMconst, Tref (Tid (Id.of_string "variant_t", []))),
     [],
     [Sreturn (CPPvar (Id.of_string "v_"))],
-    true (* is_const *)
+    true, (* is_const *)
+    false (* is_static *)
   ), VPublic) in
 
   (* 6. Generate methods from method candidates using shared helper *)

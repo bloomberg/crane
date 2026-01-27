@@ -207,4 +207,4 @@ Fixpoint levenshtein_chain (s : string)  :=
 (* Eval compute in (levenshtein_chain "pascal" "haskell"). *)
 
 Require Crane.Extraction.
-Crane Extraction TestCompile "levenshtein" levenshtein_chain.
+Crane Extraction "levenshtein" levenshtein_chain.

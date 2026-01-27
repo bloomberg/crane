@@ -16,17 +16,17 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct RMatch {
-  struct MyRec {
+  struct myRec {
     unsigned int f1;
     unsigned int f2;
     unsigned int f3;
   };
 
-  static unsigned int f1(const std::shared_ptr<MyRec> &m);
+  static unsigned int f1(const std::shared_ptr<myRec> &m);
 
-  static unsigned int f2(const std::shared_ptr<MyRec> &m);
+  static unsigned int f2(const std::shared_ptr<myRec> &m);
 
-  static unsigned int f3(const std::shared_ptr<MyRec> &m);
+  static unsigned int f3(const std::shared_ptr<myRec> &m);
 
-  static unsigned int sum(const std::shared_ptr<MyRec> &r);
+  static unsigned int sum(const std::shared_ptr<myRec> &r);
 };

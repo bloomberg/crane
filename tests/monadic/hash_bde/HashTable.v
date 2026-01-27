@@ -176,7 +176,7 @@ Definition get_or {K V} (t : CHT K V) (k : K) (dflt : V) : IO V :=
 
 End CHT.
 
-Crane Extract Inlined Constant max => "bsl::max(%a0, %a1)".
+Crane Extract Inlined Constant CHT.max => "bsl::max(%a0, %a1)".
 
 Set Crane BDE Directory "~/bde_install/".
-Crane Extraction TestCompile "hash_bde" CHT.
+Crane Extraction "hash_bde" CHT.

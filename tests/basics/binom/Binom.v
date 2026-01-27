@@ -144,4 +144,4 @@ Require Crane.Extraction.
 Require Crane.Mapping.Std.
 Require Crane.Mapping.NatIntStd.
 
-Crane Extraction TestCompile "binom" Priqueue.
+Crane Extraction "binom" Priqueue.

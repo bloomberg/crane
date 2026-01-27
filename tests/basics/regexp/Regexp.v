@@ -435,7 +435,7 @@ End Matcher.
 
 Require Crane.Extraction.
 Require Crane.Mapping.Std.
-Crane Extraction TestCompile "regexp" Matcher.
+Crane Extraction "regexp" Matcher.
 (** Exercises:
 
 - Show that (Star (Star r)) is equivalent to (Star r) and incorporate this

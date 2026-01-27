@@ -21,4 +21,4 @@ End RMatch.
 
 Require Crane.Extraction.
 
-Crane Extraction TestCompile "rmatch" RMatch.
+Crane Extraction "rmatch" RMatch.

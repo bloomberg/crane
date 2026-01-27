@@ -73,6 +73,7 @@ and cpp_expr =
   | CPParrow of cpp_expr * Id.t   (* expr->member - for ptr->v_ access *)
   | CPPmethod_call of cpp_expr * Id.t * cpp_expr list  (* obj->method(args) *)
   | CPPqualified of cpp_expr * Id.t  (* expr::id - for qualified name access like Type::ctor *)
+  | CPPconvertible_to of cpp_type  (* std::convertible_to<T> constraint *)
 
 and cpp_constraint = cpp_expr
 
@@ -87,8 +88,8 @@ and cpp_field =
   | Fvar' of GlobRef.t * cpp_type
   | Ffundef of Id.t * cpp_type * (Id.t * cpp_type) list * cpp_stmt list
   | Ffundecl of Id.t * cpp_type * (Id.t * cpp_type) list
-  (* Instance method: name, template_params, return type, params, body, is_const *)
-  | Fmethod of Id.t * (template_type * Id.t) list * cpp_type * (Id.t * cpp_type) list * cpp_stmt list * bool
+  (* Method: name, template_params, return type, params, body, is_const, is_static *)
+  | Fmethod of Id.t * (template_type * Id.t) list * cpp_type * (Id.t * cpp_type) list * cpp_stmt list * bool * bool
   (* Private constructor: params, initializer list (as stmts for v_(x) style) *)
   | Fconstructor of (Id.t * cpp_type) list * (Id.t * cpp_expr) list * bool (* bool = explicit *)
   (* Nested struct with its own visibility-annotated fields *)

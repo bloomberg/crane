@@ -572,10 +572,11 @@ and extract_really_ind env kn mib =
         let typ = p.ip_types.(0) in
         let l = if conservative_types () then [] else List.filter (fun t -> not (isTdummy (expand env t))) typ in
         if List.is_empty l then raise (I Standard);
-        if mib.mind_record == Declarations.NotRecord then
+        if mib.mind_record == Declarations.NotRecord then begin
           if not (keep_singleton ()) && Int.equal (List.length l) 1 && not (type_mem_kn kn (List.hd l))
           then raise (I Singleton)
-          else raise (I Standard);
+          else raise (I Standard)
+        end;
         (* Now we're sure it's a record. *)
         (* First, we find its field names. *)
         let rec names_prod t = match Constr.kind t with
@@ -606,7 +607,10 @@ and extract_really_ind env kn mib =
           | _ -> assert false
         in
         let field_glob = select_fields (1+npar) field_names typ in
-        if not (keep_singleton ()) && Int.equal (List.length l) 1 && not (type_mem_kn kn (List.hd l))
+        (* Check if this is a type class FIRST, before singleton optimization *)
+        let is_class = Option.has_some (Typeclasses.class_info r) in
+        if is_class then TypeClass field_glob
+        else if not (keep_singleton ()) && Int.equal (List.length l) 1 && not (type_mem_kn kn (List.hd l))
         then Singleton (* in passing, we registered the (identity) projection *)
         else Record field_glob
       with (I info) -> info

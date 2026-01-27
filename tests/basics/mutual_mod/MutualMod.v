@@ -41,4 +41,4 @@ Require Crane.Extraction.
 Require Crane.Mapping.Std.
 Require Crane.Mapping.NatIntStd.
 
-Crane Extraction TestCompile "mutual_mod" test_even_len test_odd_len.
+Crane Extraction "mutual_mod" test_even_len test_odd_len.

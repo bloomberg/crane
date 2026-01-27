@@ -35,8 +35,8 @@ struct List {
         struct nil {
         };
         struct cons {
-            A                         _a0;
-            bsl::shared_ptr<list<A> > _a1;
+            A                               _a0;
+            bsl::shared_ptr<List::list<A> > _a1;
         };
         using variant_t = bsl::variant<nil, cons>;
       private:
@@ -52,15 +52,17 @@ struct List {
       public:
         struct ctor {
             ctor() = delete;
-            static bsl::shared_ptr<list<A> > nil_()
+            static bsl::shared_ptr<List::list<A> > nil_()
             {
-                return bsl::shared_ptr<list<A> >(new list<A>(nil{}));
+                return bsl::shared_ptr<List::list<A> >(
+                                                     new List::list<A>(nil{}));
             }
-            static bsl::shared_ptr<list<A> > cons_(
-                                           A                                a0,
-                                           const bsl::shared_ptr<list<A> >& a1)
+            static bsl::shared_ptr<List::list<A> > cons_(
+                                     A                                      a0,
+                                     const bsl::shared_ptr<List::list<A> >& a1)
             {
-                return bsl::shared_ptr<list<A> >(new list<A>(cons{a0, a1}));
+                return bsl::shared_ptr<List::list<A> >(
+                                              new List::list<A>(cons{a0, a1}));
             }
         };
         const variant_t& v() const { return v_; }
@@ -302,8 +304,6 @@ struct CHT {
              xs->v());
     }
 
-    static int max(const int a, const int b);
-
     template <typename T1, typename T2>
     static bsl::vector<bsl::shared_ptr<
         stm::TVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > > > >
@@ -345,7 +345,7 @@ struct CHT {
     static bsl::shared_ptr<CHT<T1, T2> >
     new_hash(F0&& eqb, F1&& hash, const int requested)
     {
-        int  n    = max(requested, 1);
+        int  n    = bsl::max(requested, 1);
         bsl::vector<bsl::shared_ptr<
             stm::TVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > > > >
              bs   = mk_buckets<T1, T2>(n);

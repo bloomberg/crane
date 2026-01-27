@@ -12,4 +12,4 @@ Definition better_map {A B : Type} (f : A -> B) (l : list A) : list B :=
       end
   in go l [].
 
-Crane Extraction TestCompile "map" better_map.
+Crane Extraction "map" better_map.

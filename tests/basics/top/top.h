@@ -21,7 +21,7 @@ struct List {
     struct nil {};
     struct cons {
       A _a0;
-      std::shared_ptr<list<A>> _a1;
+      std::shared_ptr<List::list<A>> _a1;
     };
     using variant_t = std::variant<nil, cons>;
 
@@ -33,12 +33,12 @@ struct List {
   public:
     struct ctor {
       ctor() = delete;
-      static std::shared_ptr<list<A>> nil_() {
-        return std::shared_ptr<list<A>>(new list<A>(nil{}));
+      static std::shared_ptr<List::list<A>> nil_() {
+        return std::shared_ptr<List::list<A>>(new List::list<A>(nil{}));
       }
-      static std::shared_ptr<list<A>>
-      cons_(A a0, const std::shared_ptr<list<A>> &a1) {
-        return std::shared_ptr<list<A>>(new list<A>(cons{a0, a1}));
+      static std::shared_ptr<List::list<A>>
+      cons_(A a0, const std::shared_ptr<List::list<A>> &a1) {
+        return std::shared_ptr<List::list<A>>(new List::list<A>(cons{a0, a1}));
       }
     };
     const variant_t &v() const { return v_; }
@@ -54,7 +54,8 @@ struct List {
               }},
           this->v());
     }
-    std::shared_ptr<list<A>> app(const std::shared_ptr<list<A>> &m) const {
+    std::shared_ptr<List::list<A>>
+    app(const std::shared_ptr<List::list<A>> &m) const {
       return std::visit(
           Overloaded{[&](const typename List::list<A>::nil _args)
                          -> std::shared_ptr<List::list<A>> { return m; },
@@ -525,7 +526,7 @@ struct TopSort {
             List::list<std::pair<T1, std::shared_ptr<List::list<T1>>>>>
             rest = filter<std::pair<T1, std::shared_ptr<List::list<T1>>>>(
                 [&](std::pair<T1, std::shared_ptr<List::list<T1>>> entry0) {
-                  return !contains<T1>(eqb_node, entry0.first, mins_);
+                  return !(contains<T1>(eqb_node, entry0.first, mins_));
                 },
                 graph0);
         std::shared_ptr<
@@ -533,13 +534,13 @@ struct TopSort {
             rest_ = map<std::pair<T1, std::shared_ptr<List::list<T1>>>,
                         std::pair<T1, std::shared_ptr<List::list<T1>>>>(
                 [&](std::pair<T1, std::shared_ptr<List::list<T1>>> entry0) {
-                  return std::make_pair(entry0.first,
-                                        filter<T1>(
-                                            [&](T1 e) {
-                                              return !contains<T1>(eqb_node, e,
-                                                                   mins_);
-                                            },
-                                            entry0.second));
+                  return std::make_pair(
+                      entry0.first,
+                      filter<T1>(
+                          [&](T1 e) {
+                            return !(contains<T1>(eqb_node, e, mins_));
+                          },
+                          entry0.second));
                 },
                 rest);
         return List::list<std::shared_ptr<List::list<T1>>>::ctor::cons_(

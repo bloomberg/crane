@@ -176,13 +176,50 @@ let get_record_fields r =
     | _ -> assert false
   in
   try match Mindmap_env.find kn !inductive_kinds with
-    | Record f -> f
+    | Record f | TypeClass f -> f
     | _ -> []
   with Not_found -> []
 
 let record_fields_of_type = function
   | Tglob (r,_,_) -> get_record_fields r
   | _ -> []
+
+(* Get the field types from a record/typeclass inductive.
+   Returns the ML types for each field in order. *)
+let record_field_types r =
+  let open GlobRef in match r with
+  | IndRef (kn, i) | ConstructRef ((kn, i), _) ->
+      (try
+        let ind = unsafe_lookup_ind kn in
+        let packet = ind.ind_packets.(i) in
+        (* For records/typeclasses, there's one constructor and ip_types.(0)
+           contains the field types as a list *)
+        if Array.length packet.ip_types > 0 then
+          packet.ip_types.(0)
+        else []
+      with Not_found | Invalid_argument _ -> [])
+  | _ -> []
+
+let is_typeclass r =
+  let open GlobRef in match r with
+  | ConstructRef ((kn,_),_) | IndRef (kn,_) ->
+    (try match Mindmap_env.find kn !inductive_kinds with
+      | TypeClass _ -> true
+      | _ -> false
+    with Not_found -> false)
+  | _ -> false  (* ConstRef, VarRef are not type classes *)
+
+let is_typeclass_type = function
+  | Tglob (r,_,_) -> is_typeclass r
+  | _ -> false
+
+(* Check if a C++ type is a type class type (unwrap modifiers first) *)
+let rec is_typeclass_type_cpp = function
+  | Minicpp.Tglob (r,_,_) -> is_typeclass r
+  | Minicpp.Tmod (_, t) -> is_typeclass_type_cpp t  (* Unwrap const/static/extern *)
+  | Minicpp.Tref t -> is_typeclass_type_cpp t       (* Unwrap references *)
+  | Minicpp.Tshared_ptr t -> is_typeclass_type_cpp t (* Unwrap shared_ptr *)
+  | _ -> false
 
 (*s Recursors table. *)
 
@@ -547,6 +584,32 @@ let output_directory () =
     (* Note: in case of error in the caller of output_directory, the effect of the setting will be undo *)
     set_string_option_value ~stage:Summary.Stage.Interp output_directory_key pwd;
     pwd
+
+(* Get output directory with module subdirectory appended.
+   This is used to output files to the same subdirectory structure as the source.
+
+   Example: For a source file at tests/basics/list/List.v with base output ".",
+   the library path is CraneTestsBasics.list.List. This function extracts "list"
+   as the subdirectory and returns "./list/", creating it if needed.
+
+   The subdirectory extraction works by parsing the DirPath which is stored in
+   reverse order: [List; list; CraneTestsBasics]. The second element (subdir)
+   corresponds to the immediate parent directory of the source file.
+
+   Falls back to base_dir if the path structure doesn't match or on any error. *)
+let output_directory_for_module () =
+  let base_dir = output_directory () in
+  try
+    let dp = Lib.library_dp () in
+    let parts = Names.DirPath.repr dp in
+    match parts with
+    | _mod_name :: subdir :: _rest when List.length parts >= 2 ->
+        let subdir_name = Names.Id.to_string subdir in
+        let full_path = Filename.concat base_dir subdir_name in
+        System.mkdir full_path;
+        full_path
+    | _ -> base_dir
+  with _ -> base_dir
 
 (*s Crane Extraction AccessOpaque *)
 

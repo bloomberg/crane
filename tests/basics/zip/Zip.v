@@ -12,4 +12,4 @@ Definition better_zip {A B : Type} (la : list A) (lb : list B) : list (A * B) :=
       end
   in go la lb [].
 
-Crane Extraction TestCompile "zip" better_zip.
+Crane Extraction "zip" better_zip.

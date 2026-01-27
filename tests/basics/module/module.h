@@ -32,14 +32,17 @@ struct Comparison {
   public:
     struct ctor {
       ctor() = delete;
-      static std::shared_ptr<comparison> Eq_() {
-        return std::shared_ptr<comparison>(new comparison(Eq{}));
+      static std::shared_ptr<Comparison::comparison> Eq_() {
+        return std::shared_ptr<Comparison::comparison>(
+            new Comparison::comparison(Eq{}));
       }
-      static std::shared_ptr<comparison> Lt_() {
-        return std::shared_ptr<comparison>(new comparison(Lt{}));
+      static std::shared_ptr<Comparison::comparison> Lt_() {
+        return std::shared_ptr<Comparison::comparison>(
+            new Comparison::comparison(Lt{}));
       }
-      static std::shared_ptr<comparison> Gt_() {
-        return std::shared_ptr<comparison>(new comparison(Gt{}));
+      static std::shared_ptr<Comparison::comparison> Gt_() {
+        return std::shared_ptr<Comparison::comparison>(
+            new Comparison::comparison(Gt{}));
       }
     };
     const variant_t &v() const { return v_; }

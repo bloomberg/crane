@@ -37,4 +37,4 @@ Module vectest.
 
 End vectest.
 
-Crane Extraction TestCompile "vector" vectest.
+Crane Extraction "vector" vectest.

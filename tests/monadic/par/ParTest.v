@@ -39,4 +39,4 @@ Module partest.
 
 End partest.
 
-Crane Extraction TestCompile "par" partest.
+Crane Extraction "par" partest.

@@ -148,7 +148,7 @@ End Tokenizer_Properties.
 From Crane Require Extraction.
 From Crane Require Mapping.Std.
 
-Crane Extraction TestCompile "tokenizer" ToString Tokenizer.
+Crane Extraction "tokenizer" ToString Tokenizer.
 
 (* TODO: most common traits in BDE
          which monads needed most to make our code BDE *)

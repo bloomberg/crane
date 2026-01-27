@@ -28,8 +28,8 @@ struct Unit {
   public:
     struct ctor {
       ctor() = delete;
-      static std::shared_ptr<unit> tt_() {
-        return std::shared_ptr<unit>(new unit(tt{}));
+      static std::shared_ptr<Unit::unit> tt_() {
+        return std::shared_ptr<Unit::unit>(new Unit::unit(tt{}));
       }
     };
     const variant_t &v() const { return v_; }

@@ -59,4 +59,4 @@ Require Crane.Extraction.
 Require Crane.Mapping.Std.
 Require Crane.Mapping.NatIntStd.
 
-Crane Extraction TestCompile "nested_mod" test_area test_combined test_color.
+Crane Extraction "nested_mod" test_area test_combined test_color.

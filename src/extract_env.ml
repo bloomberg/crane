@@ -535,7 +535,7 @@ let mono_filename f =
         in
         let f =
           if Filename.is_relative f then
-            Filename.concat (output_directory ()) f
+            Filename.concat (output_directory_for_module ()) f
           else f
         in
         Some (f^d.file_suffix), Option.map ((^) f) d.sig_suffix, id
@@ -545,10 +545,10 @@ let mono_filename f =
 let module_filename mp =
   let f = file_of_modfile mp in
   let id = Id.of_string f in
-  let f = Filename.concat (output_directory ()) f in
+  let f = Filename.concat (output_directory_for_module ()) f in
   let d = descr () in
   let fimpl_base = d.file_naming mp ^ d.file_suffix in
-  let fimpl = Filename.concat (output_directory ()) fimpl_base in
+  let fimpl = Filename.concat (output_directory_for_module ()) fimpl_base in
   Some fimpl, Option.map ((^) f) d.sig_suffix, id
 
 (*s Extraction of one decl to stdout. *)

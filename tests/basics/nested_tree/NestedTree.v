@@ -37,4 +37,4 @@ End NestedTree.
 
 Require Crane.Extraction.
 Require Crane.Mapping.Std.
-Crane Extraction TestCompile "nested_tree" NestedTree.
+Crane Extraction "nested_tree" NestedTree.

@@ -36,21 +36,19 @@ void aSsErT(bool condition, const char *message, int line)
 #define ASSERT(X)                                              \
     aSsErT(!(X), #X, __LINE__);
 
-using namespace Nat;
-
-bsl::shared_ptr<nat::nat> int_to_nat(int x) {
+bsl::shared_ptr<Nat::nat> int_to_nat(int x) {
   if (x <= 0) {
-    return nat::O::make();
+    return Nat::nat::ctor::O_();
   }
   else {
-    return nat::S::make(int_to_nat(x-1));
+    return Nat::nat::ctor::S_(int_to_nat(x-1));
   }
 }
 
 int main() {
 
-  ASSERT(5 == nat_to_int(int_to_nat(5)));
-  ASSERT(9 == nat_to_int(add(int_to_nat(5), int_to_nat(4))));
+  ASSERT(5 == int_to_nat(5)->nat_to_int());
+  ASSERT(9 == int_to_nat(5)->add(int_to_nat(4))->nat_to_int());
 
   bsl::cout << "hello from BDE!\n";
 

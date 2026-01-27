@@ -104,6 +104,24 @@ let register_method (func_ref : GlobRef.t) (epon_ref : GlobRef.t) (this_pos : in
 let is_registered_method (func_ref : GlobRef.t) : (GlobRef.t * int) option =
   Hashtbl.find_opt global_method_registry func_ref
 
+(* Global registry of eponymous records.
+   When a module M contains a record with the same name (e.g., module CHT with record CHT),
+   the record fields are merged directly into the module struct. This avoids C++ name
+   conflicts where both the module and record would have the same name.
+
+   This registry is global (not per-module) because type references from OTHER modules
+   need to know how to render the type name. Without this registry, a reference to CHT
+   from another module would incorrectly generate "CHT::cHT" instead of just "CHT".
+
+   See also: pp_inductive_type_name which uses this registry for type name rendering. *)
+let global_eponymous_record_registry : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 100
+
+let register_eponymous_record (record_ref : GlobRef.t) =
+  Hashtbl.replace global_eponymous_record_registry record_ref ()
+
+let is_eponymous_record_global (r : GlobRef.t) : bool =
+  Hashtbl.mem global_eponymous_record_registry r
+
 (* Track current structure's declarations for finding methods from sibling modules.
    When processing a module like List inside tree.v, we need to also scan
    sibling declarations (like app) that are from the same Rocq module. *)
@@ -120,7 +138,8 @@ let reset_cpp_state () =
   eponymous_record := None;
   method_candidates := [];
   current_structure_decls := [];
-  Hashtbl.clear global_method_registry
+  Hashtbl.clear global_method_registry;
+  Hashtbl.clear global_eponymous_record_registry
 
 (* Check if a function is a projection for the eponymous record.
    Such projections are redundant when the record fields are merged into the module struct. *)
@@ -234,6 +253,10 @@ let is_local_inductive r =
    - needs_namespace indicates if namespace qualification is needed *)
 let inductive_name_info r =
   match r with
+  | GlobRef.IndRef _ when is_eponymous_record_global r ->
+      (* Eponymous record: merged into module struct, no nested namespace.
+         Check this FIRST because local inductives can also be eponymous. *)
+      (str (String.capitalize_ascii (str_global Type r)), false)
   | GlobRef.IndRef _ when is_local_inductive r ->
       (* Local inductive: use lowercase name directly, no namespace *)
       (pp_global Type r, false)
@@ -243,6 +266,36 @@ let inductive_name_info r =
   | _ ->
       (* Non-inductive: use as-is, no namespace *)
       (pp_global Type r, false)
+
+(* Format an inductive type name for type references.
+   For inductives wrapped in namespace structs (Dnspace), the pattern is:
+   - Wrapper struct: capitalized (e.g., "List", "Ordering")
+   - Inner type: lowercase (e.g., "list", "ordering")
+   So "Ordering::Ordering" becomes "Ordering::ordering".
+   Non-inductives and local inductives are unchanged.
+   EXCEPTION: Eponymous records (module M with record M) are merged into the
+   module struct, so we use just the capitalized name (e.g., "CHT" not "CHT::cHT"). *)
+let pp_inductive_type_name r =
+  let result = match r with
+  | GlobRef.IndRef _ when is_eponymous_record_global r ->
+      (* Eponymous record: use capitalized name directly (merged into module struct)
+         Check this FIRST because local inductives can also be eponymous *)
+      str (String.capitalize_ascii (str_global Type r))
+  | GlobRef.IndRef _ when is_local_inductive r ->
+      (* Local inductive: use lowercase name directly *)
+      str (String.uncapitalize_ascii (str_global Type r))
+  | GlobRef.IndRef _ ->
+      (* Non-local inductive: Wrapper::lowercase_inner
+         The wrapper is capitalized, inner is lowercase *)
+      let base = str_global Type r in
+      let wrapper = String.capitalize_ascii base in
+      let inner = String.uncapitalize_ascii base in
+      str (wrapper ^ "::" ^ inner)
+  | _ ->
+      (* Non-inductive: use as-is *)
+      pp_global Type r
+  in
+  result
 
 (* Add typename prefix for dependent types in template contexts.
    C++ requires 'typename' keyword when accessing nested types in templates. *)
@@ -438,12 +491,15 @@ let rec pp_cpp_type par vl t =
                       | _ -> prev @ [curr]) [] cmds in
     pp_custom (Pp.string_of_ppcmds (GlobRef.print r) ^ " := " ^ s) (empty_env ()) None None tys [] args vl cmds
     | Tglob (r,[],_) ->
-      let name_str = Pp.string_of_ppcmds (pp_global Type r) in
-      typename_prefix_for name_str ++ struct_qualifier_for r name_str ++ pp_global Type r
+      (* Use pp_inductive_type_name for inductives to get Wrapper::lowercase pattern *)
+      let type_name = pp_inductive_type_name r in
+      let name_str = Pp.string_of_ppcmds type_name in
+      typename_prefix_for name_str ++ struct_qualifier_for r name_str ++ type_name
     | Tglob (r,l,_) ->
-      let name_str = Pp.string_of_ppcmds (pp_global Type r) in
+      let type_name = pp_inductive_type_name r in
+      let name_str = Pp.string_of_ppcmds type_name in
       typename_prefix_for name_str ++ struct_qualifier_for r name_str ++
-      pp_global Type r ++ str "<" ++ pp_list (pp_rec false) l ++ str ">"
+      type_name ++ str "<" ++ pp_list (pp_rec false) l ++ str ">"
     | Tfun (d,c) -> std_angle "function" (pp_rec false c ++ pp_par true (pp_list (pp_rec false) d))
     | Tstruct (id, args) ->
       let id_str = Pp.string_of_ppcmds (pp_global Type id) in
@@ -457,7 +513,9 @@ let rec pp_cpp_type par vl t =
     | Tnamespace (r,t) ->
         (* DESIGN: Namespace-qualified types for inductive types.
            Rocq's inductives live in wrapper structs (e.g., type 'list' in struct 'List').
-           Local inductives don't need namespace wrapping; non-local ones get the prefix. *)
+           Local inductives don't need namespace wrapping; non-local ones get the prefix.
+           EXCEPTION: Eponymous records are merged into the module struct, so we use just
+           the capitalized name without namespace qualification (CHT, not CHT::cHT). *)
         let (name, _needs_ns) = inductive_name_info r in
         (* Check if inner type is Tglob with the same reference *)
         (match (r, t) with
@@ -468,10 +526,16 @@ let rec pp_cpp_type par vl t =
            in
            (* Skip prefix if type name already contains module path (::) *)
            let type_name_str = str_global Type r' in
-           if is_qualified_name type_name_str then
+           (* Check eponymous record FIRST because they can also be local *)
+           if is_eponymous_record_global r' then
+             (* Eponymous record: use capitalized name directly, no namespace nesting *)
+             str (String.capitalize_ascii type_name_str) ++ templates
+           else if is_qualified_name type_name_str then
              str type_name_str ++ templates
            else
-             name ++ str "::" ++ str type_name_str ++ templates
+             (* Use lowercase inner name: List::list, Ordering::ordering *)
+             let inner_name = String.uncapitalize_ascii type_name_str in
+             name ++ str "::" ++ str inner_name ++ templates
          | _ ->
            (* Fallback: generic namespace-qualified type *)
            str "typename " ++ name ++ str "::" ++ pp_rec false t)
@@ -519,11 +583,17 @@ and pp_cpp_expr env args t =
       | GlobRef.IndRef _ ->
         let (ns_name, needs_ns) = inductive_name_info x in
         let type_name_str = str_global Type x in
-        if needs_ns && not (is_qualified_name type_name_str) then
-          (* Add capitalized namespace prefix: List::list *)
-          ns_name ++ str "::" ++ pp_global Term x
+        (* Check eponymous record FIRST because they can also be local *)
+        if is_eponymous_record_global x then
+          (* Eponymous record: use capitalized name (merged into module struct) *)
+          str (String.capitalize_ascii type_name_str)
+        else if needs_ns && not (is_qualified_name type_name_str) then
+          (* Add capitalized namespace prefix, lowercase inner: List::list *)
+          let inner_name = str (String.uncapitalize_ascii type_name_str) in
+          ns_name ++ str "::" ++ inner_name
         else
-          pp_global Term x
+          (* Local inductive: use lowercase name directly *)
+          str (String.uncapitalize_ascii type_name_str)
       | GlobRef.VarRef _ ->
         (* Local variable reference - no prefix *)
         pp_global Term x
@@ -643,9 +713,10 @@ and pp_cpp_expr env args t =
   | CPPrequires (ty_vars, exprs) ->
       let ty_vars_s = match ty_vars with [] -> mt () | _ ->
         str "(" ++ pp_list (fun (ty, id) -> (pp_cpp_type false [] ty) ++ spc () ++ Id.print id) ty_vars ++ str ") " in
-      let exprs_s = pp_list (fun (e1, e2) ->
-        str "{" ++ pp_cpp_expr env args e1 ++ str "} -> " ++ pp_cpp_expr env args e2 ++ str ";") exprs in
-      str "requires " ++ ty_vars_s ++ str "{ " ++ exprs_s ++ str " }"
+      (* Use newlines without commas for requires clauses *)
+      let exprs_s = prlist_with_sep fnl (fun (e1, e2) ->
+        str "  { " ++ pp_cpp_expr env args e1 ++ str " } -> " ++ pp_cpp_expr env args e2 ++ str ";") exprs in
+      str "requires " ++ ty_vars_s ++ str "{" ++ fnl () ++ exprs_s ++ fnl () ++ str "}"
   | CPPnew (ty, exprs) ->
       str "new " ++ pp_cpp_type false [] ty ++ str "(" ++ pp_list (pp_cpp_expr env args) exprs ++ str ")"
   | CPPshared_ptr_ctor (ty, expr) ->
@@ -661,6 +732,8 @@ and pp_cpp_expr env args t =
       str "(" ++ pp_list (pp_cpp_expr env args) call_args ++ str ")"
   | CPPqualified (e, id) ->
       pp_cpp_expr env args e ++ str "::" ++ Id.print id
+  | CPPconvertible_to ty ->
+      str "std::convertible_to<" ++ pp_cpp_type false [] ty ++ str ">"
 
 and pp_cpp_stmt env args = function
 | SreturnVoid -> str "return;"
@@ -745,12 +818,13 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
       pp_list (fun (id, ty) ->
           (pp_cpp_type false [] ty) ++ str " " ++ Id.print id) (List.rev params)
     in h ((pp_cpp_type false [] ret_ty) ++ str " " ++ Id.print id ++ pp_par true params_s) ++ str ";"
-| Fmethod (id, template_params, ret_ty, params, body, is_const) ->
+| Fmethod (id, template_params, ret_ty, params, body, is_const, is_static) ->
     let params_s =
       pp_list (fun (id, ty) ->
           (pp_cpp_type false [] ty) ++ str " " ++ Id.print id) params
     in
     let const_s = if is_const then str " const" else mt () in
+    let static_s = if is_static then str "static " else mt () in
     let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
     let template_s = match template_params with
       | [] -> mt ()
@@ -759,7 +833,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
         str "template <" ++ args ++ str ">" ++ fnl ()
     in
     template_s ++
-      h ((pp_cpp_type false [] ret_ty) ++ str " " ++ Id.print id ++ pp_par true params_s ++ const_s ++ str " {") ++ fnl () ++ body_s ++ str "}"
+      h (static_s ++ (pp_cpp_type false [] ret_ty) ++ str " " ++ Id.print id ++ pp_par true params_s ++ const_s ++ str " {") ++ fnl () ++ body_s ++ str "}"
 | Fconstructor (params, init_list, is_explicit) ->
     let sname = match struct_name with Some s -> s | None -> str "UNKNOWN_STRUCT" in
     let params_s =
@@ -843,8 +917,9 @@ function
     in_struct_context := old_context;
 
     (* Generate as struct to allow nesting inside other structs/modules *)
-    (* Capitalize the struct name to avoid conflicts with inner type alias of same name.
-       Example: inductive 'list' becomes struct 'List' containing type 'list'. *)
+    (* Capitalize the struct name. The inner inductive struct is lowercase,
+       so capitalization creates different names: struct List { struct list { ... }; };
+       For already capitalized names like 'Ordering', inner becomes 'ordering'. *)
     let struct_name = match id with
       | GlobRef.IndRef (kn, i) ->
           let base = str_global Type id in
@@ -902,7 +977,21 @@ function
     let static_kw = if is_struct_member then str "static " else mt () in
     h (static_kw ++ (pp_cpp_type false [] ret_ty) ++ str " " ++ name ++ pp_par true params_s) ++ str ";"
 | Dstruct (id, fields) ->
-    let struct_name = pp_global Type id in
+    (* For inductives, use lowercase struct name to avoid conflict with
+       the wrapper namespace struct (which is capitalized).
+       Pattern: struct List { struct list { ... }; };
+       EXCEPTION: Eponymous records are merged into the module struct,
+       so they use the capitalized name directly.
+       Check eponymous FIRST because they can also be local. *)
+    let struct_name = match id with
+      | GlobRef.IndRef _ when is_eponymous_record_global id ->
+          let base = str_global Type id in
+          str (String.capitalize_ascii base)
+      | GlobRef.IndRef _ ->
+          let base = str_global Type id in
+          str (String.uncapitalize_ascii base)
+      | _ -> pp_global Type id
+    in
     let f_s = pp_cpp_fields_with_vis ~struct_name env fields in
     str "struct " ++ struct_name ++ str " {" ++ fnl () ++ f_s ++ fnl () ++ str "};"
 | Dstruct_decl id ->
@@ -925,7 +1014,15 @@ function
 | Ddecl (id, ty) ->
     h ((pp_cpp_type false [] ty) ++ str " " ++ pp_global Type id ++ str ";")
 | Dconcept (id, cstr) ->
-    h (str "concept " ++ pp_global Type id ++ str " = " ++ pp_cpp_expr env [] cstr ++ str ";")
+    (* For hoisted concepts, use only the simple base name without module qualification *)
+    let simple_name = Common.pp_global_name Type id in
+    (* Extract just the last component after :: if present *)
+    let last_component = match String.rindex_opt simple_name ':' with
+      | Some idx when idx > 0 && idx < String.length simple_name - 1 && simple_name.[idx-1] = ':' ->
+          String.sub simple_name (idx + 1) (String.length simple_name - idx - 1)
+      | _ -> simple_name
+    in
+    h (str "concept " ++ str last_component ++ str " = " ++ pp_cpp_expr env [] cstr ++ str ";")
 | Dstatic_assert (e, so) ->
     match so with
     | None -> h (str "static_assert(" ++ pp_cpp_expr env [] e ++ str ");")
@@ -957,7 +1054,7 @@ let pp_cpp_ind kn ind =
            p.ip_types)
       ind.ind_packets in
   match ind.ind_kind with
-  | Record fields -> mt ()
+  | Record fields | TypeClass fields -> mt ()
   | _ ->
   let rec pp i =
     if i >= Array.length ind.ind_packets then mt ()
@@ -996,6 +1093,9 @@ let pp_decl = function
     | Dterm (r, _, _) when is_registered_method r <> None ->
           (* Skip - this function is registered as a method in another module *)
           mt ()
+    | Dterm (r, a, t) when Translation.is_typeclass_instance a t ->
+          (* Type class instances: fully defined in header, skip in implementation *)
+          mt ()
     | Dterm (r, a, t) ->
         let (ds, env, tvars) = gen_decl_for_pp r a t in
         (*let _ = print_endline (Pp.string_of_ppcmds (pp_type false [] t)) in*)
@@ -1028,6 +1128,11 @@ let pp_cpp_ind_header kn ind =
            p.ip_types)
       ind.ind_packets in
   match ind.ind_kind with
+  | TypeClass fields ->
+      (* Type classes become C++ concepts *)
+      (* Skip if inside struct context - concepts are hoisted to namespace scope *)
+      if !in_struct_context then mt ()
+      else pp_cpp_decl (empty_env ()) (gen_typeclass_cpp names.(0) fields ind.ind_packets.(0))
   | Record fields ->
       (* Check if this is an eponymous record being merged into module struct *)
       let ind_ref = names.(0) in
@@ -1223,6 +1328,28 @@ let pp_hdecl = function
     | Dterm (r, _, _) when is_registered_method r <> None ->
           (* Skip - this function is registered as a method in another module *)
           mt ()
+    | Dterm (r, a, t) when Translation.is_typeclass_instance a t ->
+          (* Type class instances: generate struct with static methods and static_assert *)
+          let (ds_opt, class_ref_opt, type_args) = Translation.gen_instance_struct r a t in
+          let struct_pp = match ds_opt with
+            | Some ds -> pp_cpp_decl (empty_env ()) ds
+            | None -> mt ()
+          in
+          (* Generate static_assert to verify the instance satisfies the concept *)
+          let static_assert_pp = match class_ref_opt with
+            | Some class_ref ->
+                let instance_name = pp_global Type r in
+                let class_name = pp_global Type class_ref in
+                let type_args_pp = match type_args with
+                  | [] -> mt ()
+                  | args ->
+                      str ", " ++ prlist_with_sep (fun () -> str ", ")
+                        (fun ty -> pp_cpp_type false [] (convert_ml_type_to_cpp_type (empty_env ()) [] [] ty)) args
+                in
+                fnl () ++ str "static_assert(" ++ class_name ++ str "<" ++ instance_name ++ type_args_pp ++ str ">);"
+            | None -> mt ()
+          in
+          struct_pp ++ static_assert_pp
     | Dterm (r, a, t) -> (* ADD CUSTOM for non-inlined *)
       let (ds, env, tvars) = gen_decl_for_pp r a t in
             begin match ds, tvars with
@@ -1552,27 +1679,25 @@ let rec pp_structure_elem ~is_header f = function
              (* Find eponymous inductive: an inductive with lowercase of module name *)
              let module_name_str = Pp.string_of_ppcmds name in
              let lowercase_module = String.lowercase_ascii module_name_str in
-             (* Debug: print what's in the sel *)
-             (* List.iter (fun (_l, se) ->
-               match se with
-               | SEdecl d -> Printf.eprintf "DEBUG %s: SEdecl\n" module_name_str
-               | SEmodule m -> Printf.eprintf "DEBUG %s: SEmodule\n" module_name_str
-               | SEmodtype _ -> Printf.eprintf "DEBUG %s: SEmodtype\n" module_name_str
-             ) sel; *)
              List.iter (fun (_l, se) ->
                match se with
                | SEdecl (Dind (kn, ind)) ->
                  Array.iteri (fun i p ->
                    let ind_ref = GlobRef.IndRef (kn, i) in
                    let ind_name = Common.pp_global_name Type ind_ref in
-                   if String.lowercase_ascii ind_name = lowercase_module then
+                   if String.lowercase_ascii ind_name = lowercase_module then begin
                      match ind.ind_kind with
+                     | TypeClass _ ->
+                         (* Type classes become concepts, no eponymous handling *)
+                         ()
                      | Record fields ->
                          (* Eponymous RECORD: merge into module struct to avoid name conflict *)
-                         eponymous_record := Some (ind_ref, fields, p)
+                         eponymous_record := Some (ind_ref, fields, p);
+                         register_eponymous_record ind_ref
                      | _ ->
                          (* Eponymous INDUCTIVE: existing method generation behavior *)
                          eponymous_type_ref := Some ind_ref
+                   end
                  ) ind.ind_packets
                | _ -> ()
              ) sel;
@@ -1650,6 +1775,32 @@ let rec pp_structure_elem ~is_header f = function
              (* Save THIS module's detected eponymous_record for struct generation *)
              let this_eponymous_record = !eponymous_record in
 
+             (* DESIGN: Type class concept hoisting
+                Type classes inside modules must be hoisted to namespace scope because C++ concepts
+                can only be declared at namespace or global scope, not inside structs.
+
+                Before generating the module struct:
+                1. Collect all type class inductives from the module
+                2. Generate their concepts at the current scope (before the struct)
+                3. Skip them when generating the struct body *)
+             let typeclass_concepts = if is_header then
+               List.concat_map (fun (_l, se) ->
+                 match se with
+                 | SEdecl (Dind (kn, ind)) ->
+                     List.concat (List.init (Array.length ind.ind_packets) (fun i ->
+                       match ind.ind_kind with
+                       | TypeClass fields ->
+                           let ind_ref = GlobRef.IndRef (kn, i) in
+                           let packet = ind.ind_packets.(i) in
+                           [pp_cpp_decl (empty_env ()) (Translation.gen_typeclass_cpp ind_ref fields packet)]
+                       | _ -> []
+                     ))
+                 | _ -> []
+               ) sel
+             else [] in
+             let typeclasses_pp = prlist_with_sep fnl (fun x -> x) typeclass_concepts in
+             let typeclasses_pp = if typeclass_concepts = [] then mt () else typeclasses_pp ++ fnl () ++ fnl () in
+
              (* Only set struct context for header; implementation needs out-of-struct definitions *)
              if is_header then
                in_struct_context := true
@@ -1717,7 +1868,7 @@ let rec pp_structure_elem ~is_header f = function
                    fnl () ++ str "static_assert(" ++ concept_name ++ str "<" ++ name ++ str ">);"
                | None -> mt ()
                in
-               struct_def ++ static_assert
+               typeclasses_pp ++ struct_def ++ static_assert
              else
                (* Implementation: just the member definitions (body is already processed) *)
                body

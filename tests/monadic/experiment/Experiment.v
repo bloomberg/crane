@@ -104,4 +104,4 @@ Module TestITree.
 End TestITree.
 
 
-Crane Extraction TestCompile "experiment" TestITree.
+Crane Extraction "experiment" TestITree.

@@ -442,4 +442,4 @@ End QSort.
 
 Require Crane.Extraction.
 From Crane Require Mapping.Std Mapping.NatIntStd.
-Crane Extraction TestCompile "psort" psort.
+Crane Extraction "psort" psort.

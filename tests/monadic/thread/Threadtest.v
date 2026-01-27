@@ -37,4 +37,4 @@ Module threadtest.
 
 End threadtest.
 
-Crane Extraction TestCompile "thread" threadtest.
+Crane Extraction "thread" threadtest.

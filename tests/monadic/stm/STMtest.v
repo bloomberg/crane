@@ -142,4 +142,4 @@ Definition io_modify_read (x : nat) : IO nat :=
 *)
 End stmtest.
 
-Crane Extraction TestCompile "stm" stmtest.
+Crane Extraction "stm" stmtest.

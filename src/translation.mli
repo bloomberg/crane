@@ -71,6 +71,9 @@ val gen_ind_cpp : variable list -> GlobRef.t -> GlobRef.t array -> ml_type list 
 (** Generate C++ code for a record type. *)
 val gen_record_cpp : GlobRef.t -> GlobRef.t option list -> ml_ind_packet -> cpp_decl
 
+(** Generate C++ concept for a type class. *)
+val gen_typeclass_cpp : GlobRef.t -> GlobRef.t option list -> ml_ind_packet -> cpp_decl
+
 (** Generate C++ header for an inductive type (older style). *)
 val gen_ind_header : variable list -> GlobRef.t -> GlobRef.t array -> ml_type list array -> cpp_decl
 
@@ -90,3 +93,16 @@ val gen_ind_header_v2 : variable list -> GlobRef.t -> GlobRef.t array -> ml_type
     @param method_candidates Functions to generate as methods: (func_ref, body, type, this_position)
     @return List of method fields with visibility *)
 val gen_record_methods : GlobRef.t -> variable list -> (GlobRef.t * ml_ast * ml_type * int) list -> (cpp_field * cpp_visibility) list
+
+(** {2 Type Class Instance Generation} *)
+
+(** Generate a C++ struct for a type class instance.
+    Type class instances become structs with static methods.
+    Returns (struct_decl option, class_ref option, type_args).
+    The class_ref and type_args are used by cpp.ml to generate static_assert
+    verifying the instance satisfies the concept. *)
+val gen_instance_struct : GlobRef.t -> ml_ast -> ml_type
+    -> cpp_decl option * GlobRef.t option * ml_type list
+
+(** Check if a term is a type class instance (constructs a type class record). *)
+val is_typeclass_instance : ml_ast -> ml_type -> bool

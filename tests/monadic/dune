@@ -5,13 +5,118 @@
 (coq.theory
  (name CraneTestsMonadic)
  (synopsis "Tests for the rocq-crane plugin")
- (modules :standard) ; automatically includes all .v files in this directory
- (theories
-   Stdlib
-   Crane)
- (flags (:standard -output-directory ../../tests/monadic)))
+ (modules :standard)
+ (theories Stdlib Crane)
+ (flags (:standard -output-directory %{project_root}/tests/monadic)))
 
-(rule
- (alias runtest)
- (deps (glob_files *.v) (alias_rec all))
- (action (progn)))
+; Test rules - compile C++ and run tests
+
+(subdir experiment
+ (rule
+  (targets experiment.t.exe)
+  (deps Experiment.vo experiment.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . experiment.cpp experiment.t.cpp -o experiment.t.exe)))
+ (rule
+  (alias runtest)
+  (deps experiment.t.exe)
+  (action (run ./experiment.t.exe))))
+
+(subdir free_monad
+ (rule
+  (targets free_monad.t.exe)
+  (deps FreeMonad.vo free_monad.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . free_monad.cpp free_monad.t.cpp -o free_monad.t.exe)))
+ (rule
+  (alias runtest)
+  (deps free_monad.t.exe)
+  (action (run ./free_monad.t.exe))))
+
+(subdir hash_bde
+ (rule
+  (targets hash_bde.t.exe)
+  (deps HashTable.vo hash_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh hash_bde.t.exe hash_bde.cpp hash_bde.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hash_bde.t.exe)
+  (action (run ./hash_bde.t.exe))))
+
+(subdir hash
+ (rule
+  (targets hash.t.exe)
+  (deps HashTable.vo hash.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . hash.cpp hash.t.cpp -o hash.t.exe)))
+ (rule
+  (alias runtest)
+  (deps hash.t.exe)
+  (action (run ./hash.t.exe))))
+
+(subdir io
+ (rule
+  (targets io.t.exe)
+  (deps IOtest.vo io.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . io.cpp io.t.cpp -o io.t.exe)))
+ (rule
+  (alias runtest)
+  (deps io.t.exe)
+  (action (run ./io.t.exe))))
+
+(subdir par
+ (rule
+  (targets par.t.exe)
+  (deps ParTest.vo par.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . par.cpp par.t.cpp -o par.t.exe)))
+ (rule
+  (alias runtest)
+  (deps par.t.exe)
+  (action (run ./par.t.exe))))
+
+(subdir simple_io
+ (rule
+  (targets simple_io.t.exe)
+  (deps SimpleIO.vo simple_io.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . simple_io.cpp simple_io.t.cpp -o simple_io.t.exe)))
+ (rule
+  (alias runtest)
+  (deps simple_io.t.exe)
+  (action (run ./simple_io.t.exe))))
+
+(subdir stm
+ (rule
+  (targets stm.t.exe)
+  (deps STMtest.vo stm.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . stm.cpp stm.t.cpp -o stm.t.exe)))
+ (rule
+  (alias runtest)
+  (deps stm.t.exe)
+  (action (run ./stm.t.exe))))
+
+(subdir thread
+ (rule
+  (targets thread.t.exe)
+  (deps Threadtest.vo thread.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . thread.cpp thread.t.cpp -o thread.t.exe)))
+ (rule
+  (alias runtest)
+  (deps thread.t.exe)
+  (action (run ./thread.t.exe))))
+
+(subdir vector
+ (rule
+  (targets vector.t.exe)
+  (deps VecTest.vo vector.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . vector.cpp vector.t.cpp -o vector.t.exe)))
+ (rule
+  (alias runtest)
+  (deps vector.t.exe)
+  (action (run ./vector.t.exe))))

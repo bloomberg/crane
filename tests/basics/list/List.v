@@ -60,4 +60,4 @@ Definition test2 := match find (fun x => Nat.eqb x 3) test with
 *)
 End List.
 
-Crane Extraction TestCompile "list" List.
+Crane Extraction "list" List.

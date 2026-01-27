@@ -32,8 +32,8 @@ struct List {
         struct nil {
         };
         struct cons {
-            A                         _a0;
-            bsl::shared_ptr<list<A> > _a1;
+            A                               _a0;
+            bsl::shared_ptr<List::list<A> > _a1;
         };
         using variant_t = bsl::variant<nil, cons>;
       private:
@@ -49,15 +49,17 @@ struct List {
       public:
         struct ctor {
             ctor() = delete;
-            static bsl::shared_ptr<list<A> > nil_()
+            static bsl::shared_ptr<List::list<A> > nil_()
             {
-                return bsl::shared_ptr<list<A> >(new list<A>(nil{}));
+                return bsl::shared_ptr<List::list<A> >(
+                                                     new List::list<A>(nil{}));
             }
-            static bsl::shared_ptr<list<A> > cons_(
-                                           A                                a0,
-                                           const bsl::shared_ptr<list<A> >& a1)
+            static bsl::shared_ptr<List::list<A> > cons_(
+                                     A                                      a0,
+                                     const bsl::shared_ptr<List::list<A> >& a1)
             {
-                return bsl::shared_ptr<list<A> >(new list<A>(cons{a0, a1}));
+                return bsl::shared_ptr<List::list<A> >(
+                                              new List::list<A>(cons{a0, a1}));
             }
         };
         const variant_t& v() const { return v_; }
@@ -76,7 +78,8 @@ struct List {
                             }},
                         this->v());
         }
-        bsl::shared_ptr<list<A> > app(const bsl::shared_ptr<list<A> >& m) const
+        bsl::shared_ptr<List::list<A> > app(
+                                const bsl::shared_ptr<List::list<A> >& m) const
         {
             return bsl::visit(
                       bdlf::Overloaded{
@@ -673,9 +676,9 @@ struct TopSort {
                         bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > >(
                            [&](bsl::pair<T1, bsl::shared_ptr<List::list<T1> > >
                                    entry0) {
-                               return !contains<T1>(eqb_node,
-                                                    entry0.first,
-                                                    mins_);
+                               return !(contains<T1>(eqb_node,
+                                                     entry0.first,
+                                                     mins_));
                            },
                            graph0);
                 bsl::shared_ptr<List::list<
@@ -683,19 +686,19 @@ struct TopSort {
                     rest_ = map<
                         bsl::pair<T1, bsl::shared_ptr<List::list<T1> > >,
                         bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > >(
-                        [&](bsl::pair<T1, bsl::shared_ptr<List::list<T1> > >
-                                entry0) {
-                            return bsl::make_pair(entry0.first,
-                                                  filter<T1>(
-                                                      [&](T1 e) {
-                                                          return !contains<T1>(
-                                                              eqb_node,
-                                                              e,
-                                                              mins_);
-                                                      },
-                                                      entry0.second));
-                        },
-                        rest);
+                           [&](bsl::pair<T1, bsl::shared_ptr<List::list<T1> > >
+                                   entry0) {
+                               return bsl::make_pair(
+                                   entry0.first,
+                                   filter<T1>(
+                                       [&](T1 e) {
+                                           return !(contains<T1>(eqb_node,
+                                                                 e,
+                                                                 mins_));
+                                       },
+                                       entry0.second));
+                           },
+                           rest);
                 return List::list<bsl::shared_ptr<List::list<T1> > >::ctor::
                     cons_(mins_, topological_sort_aux<T1>(eqb_node, rest_, c));
             }

@@ -5,13 +5,371 @@
 (coq.theory
  (name CraneTestsBasics)
  (synopsis "Tests for the rocq-crane plugin")
- (modules :standard) ; automatically includes all .v files in this directory
- (theories
-   Stdlib
-   Crane)
- (flags (:standard -output-directory ../../tests/basics)))
+ (modules :standard)
+ (theories Stdlib Crane)
+ (flags (:standard -output-directory %{project_root}/tests/basics)))
 
-(rule
- (alias runtest)
- (deps (glob_files *.v) (alias_rec all))
- (action (progn)))
+; Test rules - compile C++ and run tests
+
+(subdir ack
+ (rule
+  (targets ack.t.exe)
+  (deps Ack.vo ack.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . ack.cpp ack.t.cpp -o ack.t.exe)))
+ (rule
+  (alias runtest)
+  (deps ack.t.exe)
+  (action (run ./ack.t.exe))))
+
+(subdir add_one
+ (rule
+  (targets add_one.t.exe)
+  (deps AddOne.vo add_one.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . add_one.cpp add_one.t.cpp -o add_one.t.exe)))
+ (rule
+  (alias runtest)
+  (deps add_one.t.exe)
+  (action (run ./add_one.t.exe))))
+
+(subdir binom
+ (rule
+  (targets binom.t.exe)
+  (deps Binom.vo binom.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . binom.cpp binom.t.cpp -o binom.t.exe)))
+ (rule
+  (alias runtest)
+  (deps binom.t.exe)
+  (action (run ./binom.t.exe))))
+
+(subdir colist
+ (rule
+  (targets colist.t.exe)
+  (deps Colist.vo colist.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . colist.cpp colist.t.cpp -o colist.t.exe)))
+ (rule
+  (alias runtest)
+  (deps colist.t.exe)
+  (action (run ./colist.t.exe))))
+
+(subdir graph
+ (rule
+  (targets graph.t.exe)
+  (deps Graph.vo graph.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . graph.cpp graph.t.cpp -o graph.t.exe)))
+ (rule
+  (alias runtest)
+  (deps graph.t.exe)
+  (action (run ./graph.t.exe))))
+
+(subdir ind_param
+ (rule
+  (targets ind_param.t.exe)
+  (deps IndParam.vo ind_param.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . ind_param.cpp ind_param.t.cpp -o ind_param.t.exe)))
+ (rule
+  (alias runtest)
+  (deps ind_param.t.exe)
+  (action (run ./ind_param.t.exe))))
+
+(subdir isort
+ (rule
+  (targets isort.t.exe)
+  (deps Sort.vo isort.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . isort.cpp isort.t.cpp -o isort.t.exe)))
+ (rule
+  (alias runtest)
+  (deps isort.t.exe)
+  (action (run ./isort.t.exe))))
+
+(subdir levenshtein
+ (rule
+  (targets levenshtein.t.exe)
+  (deps Levenshtein.vo levenshtein.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . levenshtein.cpp levenshtein.t.cpp -o levenshtein.t.exe)))
+ (rule
+  (alias runtest)
+  (deps levenshtein.t.exe)
+  (action (run ./levenshtein.t.exe))))
+
+(subdir list
+ (rule
+  (targets list.t.exe)
+  (deps List.vo list.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . list.cpp list.t.cpp -o list.t.exe)))
+ (rule
+  (alias runtest)
+  (deps list.t.exe)
+  (action (run ./list.t.exe))))
+
+(subdir map
+ (rule
+  (targets map.t.exe)
+  (deps Map.vo map.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . map.cpp map.t.cpp -o map.t.exe)))
+ (rule
+  (alias runtest)
+  (deps map.t.exe)
+  (action (run ./map.t.exe))))
+
+(subdir module
+ (rule
+  (targets module.t.exe)
+  (deps Module.vo module.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . module.cpp module.t.cpp -o module.t.exe)))
+ (rule
+  (alias runtest)
+  (deps module.t.exe)
+  (action (run ./module.t.exe))))
+
+(subdir msort
+ (rule
+  (targets msort.t.exe)
+  (deps Sort.vo msort.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . msort.cpp msort.t.cpp -o msort.t.exe)))
+ (rule
+  (alias runtest)
+  (deps msort.t.exe)
+  (action (run ./msort.t.exe))))
+
+(subdir multi_ind_functor
+ (rule
+  (targets multi_ind_functor.t.exe)
+  (deps MultiIndFunctor.vo multi_ind_functor.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . multi_ind_functor.cpp multi_ind_functor.t.cpp -o multi_ind_functor.t.exe)))
+ (rule
+  (alias runtest)
+  (deps multi_ind_functor.t.exe)
+  (action (run ./multi_ind_functor.t.exe))))
+
+(subdir mutual_functor
+ (rule
+  (targets mutual_functor.t.exe)
+  (deps MutualFunctor.vo mutual_functor.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . mutual_functor.cpp mutual_functor.t.cpp -o mutual_functor.t.exe)))
+ (rule
+  (alias runtest)
+  (deps mutual_functor.t.exe)
+  (action (run ./mutual_functor.t.exe))))
+
+(subdir mutual_mod
+ (rule
+  (targets mutual_mod.t.exe)
+  (deps MutualMod.vo mutual_mod.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . mutual_mod.cpp mutual_mod.t.cpp -o mutual_mod.t.exe)))
+ (rule
+  (alias runtest)
+  (deps mutual_mod.t.exe)
+  (action (run ./mutual_mod.t.exe))))
+
+(subdir nat_bde
+ (rule
+  (targets nat_bde.t.exe)
+  (deps Nat.vo nat_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh nat_bde.t.exe nat_bde.cpp nat_bde.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nat_bde.t.exe)
+  (action (run ./nat_bde.t.exe))))
+
+(subdir nat
+ (rule
+  (targets nat.t.exe)
+  (deps Nat.vo nat.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . nat.cpp nat.t.cpp -o nat.t.exe)))
+ (rule
+  (alias runtest)
+  (deps nat.t.exe)
+  (action (run ./nat.t.exe))))
+
+(subdir nested_mod
+ (rule
+  (targets nested_mod.t.exe)
+  (deps NestedMod.vo nested_mod.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . nested_mod.cpp nested_mod.t.cpp -o nested_mod.t.exe)))
+ (rule
+  (alias runtest)
+  (deps nested_mod.t.exe)
+  (action (run ./nested_mod.t.exe))))
+
+(subdir nested_tree
+ (rule
+  (targets nested_tree.t.exe)
+  (deps NestedTree.vo nested_tree.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . nested_tree.cpp nested_tree.t.cpp -o nested_tree.t.exe)))
+ (rule
+  (alias runtest)
+  (deps nested_tree.t.exe)
+  (action (run ./nested_tree.t.exe))))
+
+(subdir psort
+ (rule
+  (targets psort.t.exe)
+  (deps Sort.vo psort.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . psort.cpp psort.t.cpp -o psort.t.exe)))
+ (rule
+  (alias runtest)
+  (deps psort.t.exe)
+  (action (run ./psort.t.exe))))
+
+(subdir pstring
+ (rule
+  (targets pstring.t.exe)
+  (deps PString.vo pstring.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . pstring.cpp pstring.t.cpp -o pstring.t.exe)))
+ (rule
+  (alias runtest)
+  (deps pstring.t.exe)
+  (action (run ./pstring.t.exe))))
+
+(subdir qsort
+ (rule
+  (targets qsort.t.exe)
+  (deps Sort.vo qsort.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . qsort.cpp qsort.t.cpp -o qsort.t.exe)))
+ (rule
+  (alias runtest)
+  (deps qsort.t.exe)
+  (action (run ./qsort.t.exe))))
+
+(subdir rapply
+ (rule
+  (targets rapply.t.exe)
+  (deps Rapply.vo rapply.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . rapply.cpp rapply.t.cpp -o rapply.t.exe)))
+ (rule
+  (alias runtest)
+  (deps rapply.t.exe)
+  (action (run ./rapply.t.exe))))
+
+(subdir regexp
+ (rule
+  (targets regexp.t.exe)
+  (deps Regexp.vo regexp.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . regexp.cpp regexp.t.cpp -o regexp.t.exe)))
+ (rule
+  (alias runtest)
+  (deps regexp.t.exe)
+  (action (run ./regexp.t.exe))))
+
+(subdir rev
+ (rule
+  (targets rev.t.exe)
+  (deps Rev.vo rev.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . rev.cpp rev.t.cpp -o rev.t.exe)))
+ (rule
+  (alias runtest)
+  (deps rev.t.exe)
+  (action (run ./rev.t.exe))))
+
+(subdir rmatch
+ (rule
+  (targets rmatch.t.exe)
+  (deps Rmatch.vo rmatch.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . rmatch.cpp rmatch.t.cpp -o rmatch.t.exe)))
+ (rule
+  (alias runtest)
+  (deps rmatch.t.exe)
+  (action (run ./rmatch.t.exe))))
+
+(subdir eqordshow
+ (rule
+  (targets eqordshow.t.exe)
+  (deps EqOrdShow.vo eqordshow.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . eqordshow.cpp eqordshow.t.cpp -o eqordshow.t.exe)))
+ (rule
+  (alias runtest)
+  (deps eqordshow.t.exe)
+  (action (run ./eqordshow.t.exe))))
+
+(subdir tokenizer
+ (rule
+  (targets tokenizer.t.exe)
+  (deps Tokenizer.vo tokenizer.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . tokenizer.cpp tokenizer.t.cpp -o tokenizer.t.exe)))
+ (rule
+  (alias runtest)
+  (deps tokenizer.t.exe)
+  (action (run ./tokenizer.t.exe))))
+
+(subdir top_bde
+ (rule
+  (targets top_bde.t.exe)
+  (deps Top.vo top_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh top_bde.t.exe top_bde.cpp top_bde.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps top_bde.t.exe)
+  (action (run ./top_bde.t.exe))))
+
+(subdir top
+ (rule
+  (targets top.t.exe)
+  (deps Top.vo top.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . top.cpp top.t.cpp -o top.t.exe)))
+ (rule
+  (alias runtest)
+  (deps top.t.exe)
+  (action (run ./top.t.exe))))
+
+(subdir tree
+ (rule
+  (targets tree.t.exe)
+  (deps Tree.vo tree.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . tree.cpp tree.t.cpp -o tree.t.exe)))
+ (rule
+  (alias runtest)
+  (deps tree.t.exe)
+  (action (run ./tree.t.exe))))
+
+(subdir vec
+ (rule
+  (targets vec.t.exe)
+  (deps Vec.vo vec.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . vec.cpp vec.t.cpp -o vec.t.exe)))
+ (rule
+  (alias runtest)
+  (deps vec.t.exe)
+  (action (run ./vec.t.exe))))
+
+(subdir zip
+ (rule
+  (targets zip.t.exe)
+  (deps Zip.vo zip.t.cpp (source_tree .))
+  (action
+   (run clang++ -std=c++23 -O2 -I . zip.cpp zip.t.cpp -o zip.t.exe)))
+ (rule
+  (alias runtest)
+  (deps zip.t.exe)
+  (action (run ./zip.t.exe))))

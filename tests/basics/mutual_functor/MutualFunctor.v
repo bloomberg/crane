@@ -70,4 +70,4 @@ Require Crane.Extraction.
 Require Crane.Mapping.Std.
 Require Crane.Mapping.NatIntStd.
 
-Crane Extraction TestCompile "mutual_functor" test_tree_size test_forest_size test_tree_sum.
+Crane Extraction "mutual_functor" test_tree_size test_forest_size test_tree_sum.

@@ -42,4 +42,4 @@ Defined.
 *)
 End Vec.
 
-Crane Extraction TestCompile "vec" Vec.
+Crane Extraction "vec" Vec.

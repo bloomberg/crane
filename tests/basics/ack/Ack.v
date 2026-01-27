@@ -18,7 +18,7 @@ End Ack.
 Require Crane.Extraction.
 Require Crane.Mapping.Std.
 Require Crane.Mapping.NatIntStd.
-Crane Extraction TestCompile "ack" Ack.
+Crane Extraction "ack" Ack.
 
 (* Require Extraction. *)
 (* Extraction "ack.ml" Ack. *)

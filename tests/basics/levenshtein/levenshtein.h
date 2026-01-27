@@ -27,11 +27,11 @@ struct Bool0 {
   public:
     struct ctor {
       ctor() = delete;
-      static std::shared_ptr<bool0> true0_() {
-        return std::shared_ptr<bool0>(new bool0(true0{}));
+      static std::shared_ptr<Bool0::bool0> true0_() {
+        return std::shared_ptr<Bool0::bool0>(new Bool0::bool0(true0{}));
       }
-      static std::shared_ptr<bool0> false0_() {
-        return std::shared_ptr<bool0>(new bool0(false0{}));
+      static std::shared_ptr<Bool0::bool0> false0_() {
+        return std::shared_ptr<Bool0::bool0>(new Bool0::bool0(false0{}));
       }
     };
     const variant_t &v() const { return v_; }
@@ -43,7 +43,7 @@ struct Nat {
   public:
     struct O {};
     struct S {
-      std::shared_ptr<nat> _a0;
+      std::shared_ptr<Nat::nat> _a0;
     };
     using variant_t = std::variant<O, S>;
 
@@ -55,11 +55,11 @@ struct Nat {
   public:
     struct ctor {
       ctor() = delete;
-      static std::shared_ptr<nat> O_() {
-        return std::shared_ptr<nat>(new nat(O{}));
+      static std::shared_ptr<Nat::nat> O_() {
+        return std::shared_ptr<Nat::nat>(new Nat::nat(O{}));
       }
-      static std::shared_ptr<nat> S_(const std::shared_ptr<nat> &a0) {
-        return std::shared_ptr<nat>(new nat(S{a0}));
+      static std::shared_ptr<Nat::nat> S_(const std::shared_ptr<Nat::nat> &a0) {
+        return std::shared_ptr<Nat::nat>(new Nat::nat(S{a0}));
       }
     };
     const variant_t &v() const { return v_; }
@@ -82,8 +82,9 @@ struct SigT {
   public:
     struct ctor {
       ctor() = delete;
-      static std::shared_ptr<sigT<A, P>> existT_(A a0, P a1) {
-        return std::shared_ptr<sigT<A, P>>(new sigT<A, P>(existT{a0, a1}));
+      static std::shared_ptr<SigT::sigT<A, P>> existT_(A a0, P a1) {
+        return std::shared_ptr<SigT::sigT<A, P>>(
+            new SigT::sigT<A, P>(existT{a0, a1}));
       }
     };
     const variant_t &v() const { return v_; }
@@ -113,11 +114,11 @@ struct Sumbool {
   public:
     struct ctor {
       ctor() = delete;
-      static std::shared_ptr<sumbool> left_() {
-        return std::shared_ptr<sumbool>(new sumbool(left{}));
+      static std::shared_ptr<Sumbool::sumbool> left_() {
+        return std::shared_ptr<Sumbool::sumbool>(new Sumbool::sumbool(left{}));
       }
-      static std::shared_ptr<sumbool> right_() {
-        return std::shared_ptr<sumbool>(new sumbool(right{}));
+      static std::shared_ptr<Sumbool::sumbool> right_() {
+        return std::shared_ptr<Sumbool::sumbool>(new Sumbool::sumbool(right{}));
       }
     };
     const variant_t &v() const { return v_; }
@@ -153,7 +154,7 @@ struct Ascii {
   public:
     struct ctor {
       ctor() = delete;
-      static std::shared_ptr<ascii>
+      static std::shared_ptr<Ascii::ascii>
       Ascii_(const std::shared_ptr<Bool0::bool0> &a0,
              const std::shared_ptr<Bool0::bool0> &a1,
              const std::shared_ptr<Bool0::bool0> &a2,
@@ -162,13 +163,13 @@ struct Ascii {
              const std::shared_ptr<Bool0::bool0> &a5,
              const std::shared_ptr<Bool0::bool0> &a6,
              const std::shared_ptr<Bool0::bool0> &a7) {
-        return std::shared_ptr<ascii>(
-            new ascii(Ascii{a0, a1, a2, a3, a4, a5, a6, a7}));
+        return std::shared_ptr<Ascii::ascii>(
+            new Ascii::ascii(Ascii{a0, a1, a2, a3, a4, a5, a6, a7}));
       }
     };
     const variant_t &v() const { return v_; }
     std::shared_ptr<Sumbool::sumbool>
-    ascii_dec(const std::shared_ptr<ascii> &b) const {
+    ascii_dec(const std::shared_ptr<Ascii::ascii> &b) const {
       return std::visit(
           Overloaded{[&](const typename Ascii::ascii::Ascii _args) -> T1 {
             std::shared_ptr<Bool0::bool0> b0 = _args._a0;
@@ -391,7 +392,7 @@ struct String {
     struct EmptyString {};
     struct String {
       std::shared_ptr<Ascii::ascii> _a0;
-      std::shared_ptr<string> _a1;
+      std::shared_ptr<String::string> _a1;
     };
     using variant_t = std::variant<EmptyString, String>;
 
@@ -403,13 +404,15 @@ struct String {
   public:
     struct ctor {
       ctor() = delete;
-      static std::shared_ptr<string> EmptyString_() {
-        return std::shared_ptr<string>(new string(EmptyString{}));
+      static std::shared_ptr<String::string> EmptyString_() {
+        return std::shared_ptr<String::string>(
+            new String::string(EmptyString{}));
       }
-      static std::shared_ptr<string>
+      static std::shared_ptr<String::string>
       String_(const std::shared_ptr<Ascii::ascii> &a0,
-              const std::shared_ptr<string> &a1) {
-        return std::shared_ptr<string>(new string(String{a0, a1}));
+              const std::shared_ptr<String::string> &a1) {
+        return std::shared_ptr<String::string>(
+            new String::string(String{a0, a1}));
       }
     };
     const variant_t &v() const { return v_; }
@@ -455,21 +458,21 @@ struct Edit {
   public:
     struct ctor {
       ctor() = delete;
-      static std::shared_ptr<edit>
+      static std::shared_ptr<Edit::edit>
       insertion_(const std::shared_ptr<Ascii::ascii> &a0,
                  const std::shared_ptr<String::string> &a1) {
-        return std::shared_ptr<edit>(new edit(insertion{a0, a1}));
+        return std::shared_ptr<Edit::edit>(new Edit::edit(insertion{a0, a1}));
       }
-      static std::shared_ptr<edit>
+      static std::shared_ptr<Edit::edit>
       deletion_(const std::shared_ptr<Ascii::ascii> &a0,
                 const std::shared_ptr<String::string> &a1) {
-        return std::shared_ptr<edit>(new edit(deletion{a0, a1}));
+        return std::shared_ptr<Edit::edit>(new Edit::edit(deletion{a0, a1}));
       }
-      static std::shared_ptr<edit>
+      static std::shared_ptr<Edit::edit>
       update_(const std::shared_ptr<Ascii::ascii> &a0,
               const std::shared_ptr<Ascii::ascii> &a1,
               const std::shared_ptr<String::string> &a2) {
-        return std::shared_ptr<edit>(new edit(update{a0, a1, a2}));
+        return std::shared_ptr<Edit::edit>(new Edit::edit(update{a0, a1, a2}));
       }
     };
     const variant_t &v() const { return v_; }
@@ -485,7 +488,7 @@ struct Chain {
       std::shared_ptr<String::string> _a1;
       std::shared_ptr<String::string> _a2;
       std::shared_ptr<Nat::nat> _a3;
-      std::shared_ptr<chain> _a4;
+      std::shared_ptr<Chain::chain> _a4;
     };
     struct change {
       std::shared_ptr<String::string> _a0;
@@ -493,7 +496,7 @@ struct Chain {
       std::shared_ptr<String::string> _a2;
       std::shared_ptr<Nat::nat> _a3;
       std::shared_ptr<Edit::edit> _a4;
-      std::shared_ptr<chain> _a5;
+      std::shared_ptr<Chain::chain> _a5;
     };
     using variant_t = std::variant<empty, skip, change>;
 
@@ -506,30 +509,31 @@ struct Chain {
   public:
     struct ctor {
       ctor() = delete;
-      static std::shared_ptr<chain> empty_() {
-        return std::shared_ptr<chain>(new chain(empty{}));
+      static std::shared_ptr<Chain::chain> empty_() {
+        return std::shared_ptr<Chain::chain>(new Chain::chain(empty{}));
       }
-      static std::shared_ptr<chain>
+      static std::shared_ptr<Chain::chain>
       skip_(const std::shared_ptr<Ascii::ascii> &a0,
             const std::shared_ptr<String::string> &a1,
             const std::shared_ptr<String::string> &a2,
             const std::shared_ptr<Nat::nat> &a3,
-            const std::shared_ptr<chain> &a4) {
-        return std::shared_ptr<chain>(new chain(skip{a0, a1, a2, a3, a4}));
+            const std::shared_ptr<Chain::chain> &a4) {
+        return std::shared_ptr<Chain::chain>(
+            new Chain::chain(skip{a0, a1, a2, a3, a4}));
       }
-      static std::shared_ptr<chain>
+      static std::shared_ptr<Chain::chain>
       change_(const std::shared_ptr<String::string> &a0,
               const std::shared_ptr<String::string> &a1,
               const std::shared_ptr<String::string> &a2,
               const std::shared_ptr<Nat::nat> &a3,
               const std::shared_ptr<Edit::edit> &a4,
-              const std::shared_ptr<chain> &a5) {
-        return std::shared_ptr<chain>(
-            new chain(change{a0, a1, a2, a3, a4, a5}));
+              const std::shared_ptr<Chain::chain> &a5) {
+        return std::shared_ptr<Chain::chain>(
+            new Chain::chain(change{a0, a1, a2, a3, a4, a5}));
       }
     };
     const variant_t &v() const { return v_; }
-    std::shared_ptr<chain>
+    std::shared_ptr<Chain::chain>
     insert_chain(const std::shared_ptr<Ascii::ascii> &c,
                  const std::shared_ptr<String::string> &s1,
                  const std::shared_ptr<String::string> &s2,
@@ -538,18 +542,18 @@ struct Chain {
           s1, String::string::ctor::String_(c, s1),
           String::string::ctor::String_(c, s2), n,
           Edit::edit::ctor::insertion_(c, s1),
-          Chain::chain::ctor::skip_(c, s1, s2, n, c0));
+          Chain::chain::ctor::skip_(c, s1, s2, n, this));
     }
-    std::shared_ptr<chain>
+    std::shared_ptr<Chain::chain>
     delete_chain(const std::shared_ptr<Ascii::ascii> &c,
                  const std::shared_ptr<String::string> &s1,
                  const std::shared_ptr<String::string> &s2,
                  const std::shared_ptr<Nat::nat> &n) const {
       return Chain::chain::ctor::change_(
           String::string::ctor::String_(c, s1), s1, s2, n,
-          Edit::edit::ctor::deletion_(c, s1), c0);
+          Edit::edit::ctor::deletion_(c, s1), this);
     }
-    std::shared_ptr<chain>
+    std::shared_ptr<Chain::chain>
     update_chain(const std::shared_ptr<Ascii::ascii> &c,
                  const std::shared_ptr<Ascii::ascii> &c_,
                  const std::shared_ptr<String::string> &s1,
@@ -560,11 +564,11 @@ struct Chain {
           String::string::ctor::String_(c_, s1),
           String::string::ctor::String_(c_, s2), n,
           Edit::edit::ctor::update_(c, c_, s1),
-          Chain::chain::ctor::skip_(c_, s1, s2, n, c0));
+          Chain::chain::ctor::skip_(c_, s1, s2, n, this));
     }
-    std::shared_ptr<chain>
+    std::shared_ptr<Chain::chain>
     aux_insert(const std::shared_ptr<String::string> &_x,
-               const std::shared_ptr<String::string> &_x,
+               const std::shared_ptr<String::string> &_x0,
                const std::shared_ptr<Ascii::ascii> &x,
                const std::shared_ptr<String::string> &xs,
                const std::shared_ptr<Ascii::ascii> &y,
@@ -572,9 +576,9 @@ struct Chain {
                const std::shared_ptr<Nat::nat> &n) const {
       return this->insert_chain(y, String::string::ctor::String_(x, xs), ys, n);
     }
-    std::shared_ptr<chain>
+    std::shared_ptr<Chain::chain>
     aux_delete(const std::shared_ptr<String::string> &_x,
-               const std::shared_ptr<String::string> &_x,
+               const std::shared_ptr<String::string> &_x0,
                const std::shared_ptr<Ascii::ascii> &x,
                const std::shared_ptr<String::string> &xs,
                const std::shared_ptr<Ascii::ascii> &y,
@@ -582,9 +586,9 @@ struct Chain {
                const std::shared_ptr<Nat::nat> &n) const {
       return this->delete_chain(x, xs, String::string::ctor::String_(y, ys), n);
     }
-    std::shared_ptr<chain>
+    std::shared_ptr<Chain::chain>
     aux_update(const std::shared_ptr<String::string> &_x,
-               const std::shared_ptr<String::string> &_x,
+               const std::shared_ptr<String::string> &_x0,
                const std::shared_ptr<Ascii::ascii> &x,
                const std::shared_ptr<String::string> &xs,
                const std::shared_ptr<Ascii::ascii> &y,
@@ -592,15 +596,15 @@ struct Chain {
                const std::shared_ptr<Nat::nat> &n) const {
       return this->update_chain(x, y, xs, ys, n);
     }
-    std::shared_ptr<chain>
+    std::shared_ptr<Chain::chain>
     aux_eq_char(const std::shared_ptr<String::string> &_x,
-                const std::shared_ptr<String::string> &_x,
-                const std::shared_ptr<Ascii::ascii> &_x,
+                const std::shared_ptr<String::string> &_x0,
+                const std::shared_ptr<Ascii::ascii> &_x1,
                 const std::shared_ptr<String::string> &xs,
                 const std::shared_ptr<Ascii::ascii> &y,
                 const std::shared_ptr<String::string> &ys,
                 const std::shared_ptr<Nat::nat> &n) const {
-      return Chain::chain::ctor::skip_(y, xs, ys, n, c);
+      return Chain::chain::ctor::skip_(y, xs, ys, n, this);
     }
   };
 };

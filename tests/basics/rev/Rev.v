@@ -12,4 +12,4 @@ Definition better_rev {A : Type} (l : list A) : list A :=
       end
   in go l [].
 
-Crane Extraction TestCompile "rev" better_rev.
+Crane Extraction "rev" better_rev.

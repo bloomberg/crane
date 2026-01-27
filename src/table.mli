@@ -89,6 +89,10 @@ val is_coinductive_type : ml_type -> bool
 val get_record_fields :
   GlobRef.t -> GlobRef.t option list
 val record_fields_of_type : ml_type -> GlobRef.t option list
+val record_field_types : GlobRef.t -> ml_type list
+val is_typeclass : GlobRef.t -> bool
+val is_typeclass_type : ml_type -> bool
+val is_typeclass_type_cpp : Minicpp.cpp_type -> bool
 
 val add_recursors : Environ.env -> MutInd.t -> unit
 val is_recursor : GlobRef.t -> bool
@@ -112,6 +116,12 @@ val reset_tables : unit -> unit
 (*s Output Directory parameter *)
 
 val output_directory : unit -> string
+
+(** [output_directory_for_module ()] returns the output directory with the
+    module's subdirectory appended, mirroring the source file's location.
+    Creates the subdirectory if it doesn't exist. Falls back to base output
+    directory on error. *)
+val output_directory_for_module : unit -> string
 
 (*s AccessOpaque parameter *)
 

@@ -89,4 +89,4 @@ Require Crane.Extraction.
 Require Crane.Mapping.Std.
 Require Crane.Mapping.NatIntStd.
 
-Crane Extraction TestCompile "module" mymap.
+Crane Extraction "module" mymap.

@@ -68,4 +68,4 @@ End FreeMonad.
 
 Require Crane.Extraction.
 Crane Extract Inlined Constant string => "std::string" From "string".
-Crane Extraction TestCompile "free_monad" FreeMonad.
+Crane Extraction "free_monad" FreeMonad.
