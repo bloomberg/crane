@@ -35,21 +35,19 @@ void aSsErT(bool condition, const char *message, int line)
 #define ASSERT(X)                                              \
     aSsErT(!(X), #X, __LINE__);
 
-using namespace partest;
-
 int main() {
 
   int runs = 3;
 
   auto before1 = std::chrono::high_resolution_clock::now();
   for(int i = 0; i < runs; i++) {
-    fast(std::move(3),std::move(7));
+    partest::fast(std::move(3),std::move(7));
   }
   auto after1 = std::chrono::high_resolution_clock::now();
 
   auto before2 = std::chrono::high_resolution_clock::now();
   for(int i = 0; i < runs; i++) {
-    slow(std::move(3),std::move(7));
+    partest::slow(std::move(3),std::move(7));
   }
   auto after2 = std::chrono::high_resolution_clock::now();
 

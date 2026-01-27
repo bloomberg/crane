@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <any>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -27,8 +28,8 @@ struct List {
 
   private:
     variant_t v_;
-    explicit list(nil x) : v_(std::move(x)) {}
-    explicit list(cons x) : v_(std::move(x)) {}
+    explicit list(nil _v) : v_(std::move(_v)) {}
+    explicit list(cons _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -60,8 +61,8 @@ struct Priqueue {
 
   private:
     variant_t v_;
-    explicit tree(Node x) : v_(std::move(x)) {}
-    explicit tree(Leaf x) : v_(std::move(x)) {}
+    explicit tree(Node _v) : v_(std::move(_v)) {}
+    explicit tree(Leaf _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {

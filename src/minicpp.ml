@@ -29,6 +29,7 @@ type cpp_type =
   | Tvoid
   | Ttodo
   | Tunknown
+  | Tany  (* std::any - for type-erased storage of existential types *)
 
 and cpp_meta = { id : int; mutable contents : cpp_type option }
 

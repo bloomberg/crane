@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <any>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -25,9 +26,9 @@ struct Comparison {
 
   private:
     variant_t v_;
-    explicit comparison(Eq x) : v_(std::move(x)) {}
-    explicit comparison(Lt x) : v_(std::move(x)) {}
-    explicit comparison(Gt x) : v_(std::move(x)) {}
+    explicit comparison(Eq _v) : v_(std::move(_v)) {}
+    explicit comparison(Lt _v) : v_(std::move(_v)) {}
+    explicit comparison(Gt _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -96,8 +97,8 @@ template <OrderedType K, BaseType V> struct MakeMap {
 
   private:
     variant_t v_;
-    explicit tree(Empty x) : v_(std::move(x)) {}
-    explicit tree(Node x) : v_(std::move(x)) {}
+    explicit tree(Empty _v) : v_(std::move(_v)) {}
+    explicit tree(Node _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {

@@ -108,7 +108,7 @@ let rec convert_ml_type_to_cpp_type env (ns : GlobRef.t list) (tvars : Id.t list
   | Tdummy Ktype -> Tglob (GlobRef.VarRef (Id.of_string ("dummy_type")), [], [])
   | Tdummy Kprop -> Tglob (GlobRef.VarRef (Id.of_string ("dummy_prop")), [], [])
   | Tdummy (Kimplicit _) -> Tglob (GlobRef.VarRef (Id.of_string ("dummy_implicit")), [], [])
-  | Tunknown -> Tglob (GlobRef.VarRef (Id.of_string "unknown"), [], [])
+  | Tunknown -> Tany
   | Taxiom -> Tglob (GlobRef.VarRef (Id.of_string ("axiom")), [], [])
   (*
       let _ = print_endline "TODO: TMETA OR TDUMMY OR TUNKNOWN OR TAXIOM"  in
@@ -1259,9 +1259,9 @@ let gen_ind_header_v2 vars name cnames tys method_candidates =
         | GlobRef.ConstructRef _ -> Id.of_string (Common.pp_global_name Type c)
         | _ -> Id.of_string ("Ctor" ^ string_of_int i)
       in
-      let param_name = Id.of_string "x" in
+      let param_name = Id.of_string "_v" in
       let param_ty = Tid (cname, []) in
-      (* Initializer: v_(std::move(x)) *)
+      (* Initializer: v_(std::move(_v)) *)
       let init_list = [(Id.of_string "v_", CPPmove (CPPvar param_name))] in
       (Fconstructor ([(param_name, param_ty)], init_list, true), VPrivate)
     ) cnames) in

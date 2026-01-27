@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <any>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -29,8 +30,8 @@ struct EvenOdd {
 
   private:
     variant_t v_;
-    explicit even_list(ENil x) : v_(std::move(x)) {}
-    explicit even_list(ECons x) : v_(std::move(x)) {}
+    explicit even_list(ENil _v) : v_(std::move(_v)) {}
+    explicit even_list(ECons _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -55,7 +56,7 @@ struct EvenOdd {
 
   private:
     variant_t v_;
-    explicit odd_list(OCons x) : v_(std::move(x)) {}
+    explicit odd_list(OCons _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {

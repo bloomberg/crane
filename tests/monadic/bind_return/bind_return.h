@@ -1,3 +1,4 @@
+#include <any>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -24,7 +25,7 @@ struct Unit {
 
   private:
     variant_t v_;
-    explicit unit(tt x) : v_(std::move(x)) {}
+    explicit unit(tt _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -49,8 +50,8 @@ struct List {
 
   private:
     variant_t v_;
-    explicit list(nil x) : v_(std::move(x)) {}
-    explicit list(cons x) : v_(std::move(x)) {}
+    explicit list(nil _v) : v_(std::move(_v)) {}
+    explicit list(cons _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {

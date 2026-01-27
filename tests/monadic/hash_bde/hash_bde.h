@@ -41,12 +41,12 @@ struct List {
         using variant_t = bsl::variant<nil, cons>;
       private:
         variant_t v_;
-        explicit list(nil x)
-        : v_(bsl::move(x))
+        explicit list(nil _v)
+        : v_(bsl::move(_v))
         {
         }
-        explicit list(cons x)
-        : v_(bsl::move(x))
+        explicit list(cons _v)
+        : v_(bsl::move(_v))
         {
         }
       public:

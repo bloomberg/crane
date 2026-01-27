@@ -1,3 +1,4 @@
+#include <any>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -23,8 +24,8 @@ struct Nat {
 
   private:
     variant_t v_;
-    explicit nat(O x) : v_(std::move(x)) {}
-    explicit nat(S x) : v_(std::move(x)) {}
+    explicit nat(O _v) : v_(std::move(_v)) {}
+    explicit nat(S _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {

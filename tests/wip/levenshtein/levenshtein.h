@@ -1,3 +1,4 @@
+#include <any>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -21,8 +22,8 @@ struct Bool0 {
 
   private:
     variant_t v_;
-    explicit bool0(true0 x) : v_(std::move(x)) {}
-    explicit bool0(false0 x) : v_(std::move(x)) {}
+    explicit bool0(true0 _v) : v_(std::move(_v)) {}
+    explicit bool0(false0 _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -49,8 +50,8 @@ struct Nat {
 
   private:
     variant_t v_;
-    explicit nat(O x) : v_(std::move(x)) {}
-    explicit nat(S x) : v_(std::move(x)) {}
+    explicit nat(O _v) : v_(std::move(_v)) {}
+    explicit nat(S _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -77,7 +78,7 @@ struct SigT {
 
   private:
     variant_t v_;
-    explicit sigT(existT x) : v_(std::move(x)) {}
+    explicit sigT(existT _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -108,8 +109,8 @@ struct Sumbool {
 
   private:
     variant_t v_;
-    explicit sumbool(left x) : v_(std::move(x)) {}
-    explicit sumbool(right x) : v_(std::move(x)) {}
+    explicit sumbool(left _v) : v_(std::move(_v)) {}
+    explicit sumbool(right _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -149,7 +150,7 @@ struct Ascii {
 
   private:
     variant_t v_;
-    explicit ascii(Ascii x) : v_(std::move(x)) {}
+    explicit ascii(Ascii _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -398,8 +399,8 @@ struct String {
 
   private:
     variant_t v_;
-    explicit string(EmptyString x) : v_(std::move(x)) {}
-    explicit string(String x) : v_(std::move(x)) {}
+    explicit string(EmptyString _v) : v_(std::move(_v)) {}
+    explicit string(String _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -451,9 +452,9 @@ struct Edit {
 
   private:
     variant_t v_;
-    explicit edit(insertion x) : v_(std::move(x)) {}
-    explicit edit(deletion x) : v_(std::move(x)) {}
-    explicit edit(update x) : v_(std::move(x)) {}
+    explicit edit(insertion _v) : v_(std::move(_v)) {}
+    explicit edit(deletion _v) : v_(std::move(_v)) {}
+    explicit edit(update _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -502,9 +503,9 @@ struct Chain {
 
   private:
     variant_t v_;
-    explicit chain(empty x) : v_(std::move(x)) {}
-    explicit chain(skip x) : v_(std::move(x)) {}
-    explicit chain(change x) : v_(std::move(x)) {}
+    explicit chain(empty _v) : v_(std::move(_v)) {}
+    explicit chain(skip _v) : v_(std::move(_v)) {}
+    explicit chain(change _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {

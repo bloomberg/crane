@@ -35,9 +35,7 @@ void aSsErT(bool condition, const char *message, int line)
 #define ASSERT(X)                                              \
     aSsErT(!(X), #X, __LINE__);
 
-using namespace threadtest;
-
 int main() {
-  test(std::move(6), std::move(4));
+  threadtest::test(std::move(6), std::move(4));
   return 0;
 }

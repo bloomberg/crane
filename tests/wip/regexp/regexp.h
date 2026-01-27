@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <any>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -27,8 +28,8 @@ struct List {
 
   private:
     variant_t v_;
-    explicit list(nil x) : v_(std::move(x)) {}
-    explicit list(cons x) : v_(std::move(x)) {}
+    explicit list(nil _v) : v_(std::move(_v)) {}
+    explicit list(cons _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -71,13 +72,13 @@ struct Matcher {
 
   private:
     variant_t v_;
-    explicit regexp(Any x) : v_(std::move(x)) {}
-    explicit regexp(Char x) : v_(std::move(x)) {}
-    explicit regexp(Eps x) : v_(std::move(x)) {}
-    explicit regexp(Cat x) : v_(std::move(x)) {}
-    explicit regexp(Alt x) : v_(std::move(x)) {}
-    explicit regexp(Zero x) : v_(std::move(x)) {}
-    explicit regexp(Star x) : v_(std::move(x)) {}
+    explicit regexp(Any _v) : v_(std::move(_v)) {}
+    explicit regexp(Char _v) : v_(std::move(_v)) {}
+    explicit regexp(Eps _v) : v_(std::move(_v)) {}
+    explicit regexp(Cat _v) : v_(std::move(_v)) {}
+    explicit regexp(Alt _v) : v_(std::move(_v)) {}
+    explicit regexp(Zero _v) : v_(std::move(_v)) {}
+    explicit regexp(Star _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {

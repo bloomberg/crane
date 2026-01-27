@@ -1,3 +1,4 @@
+#include <any>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -23,8 +24,8 @@ struct Nat {
 
   private:
     variant_t v_;
-    explicit nat(O x) : v_(std::move(x)) {}
-    explicit nat(S x) : v_(std::move(x)) {}
+    explicit nat(O _v) : v_(std::move(_v)) {}
+    explicit nat(S _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -52,8 +53,8 @@ struct List {
 
   private:
     variant_t v_;
-    explicit list(nil x) : v_(std::move(x)) {}
-    explicit list(cons x) : v_(std::move(x)) {}
+    explicit list(nil _v) : v_(std::move(_v)) {}
+    explicit list(cons _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -82,8 +83,8 @@ struct Colist {
 
   private:
     variant_t v_;
-    explicit colist(conil x) : v_(std::move(x)) {}
-    explicit colist(cocons x) : v_(std::move(x)) {}
+    explicit colist(conil _v) : v_(std::move(_v)) {}
+    explicit colist(cocons _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {

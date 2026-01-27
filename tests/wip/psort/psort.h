@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <any>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -27,8 +28,8 @@ struct List {
 
   private:
     variant_t v_;
-    explicit list(nil x) : v_(std::move(x)) {}
-    explicit list(cons x) : v_(std::move(x)) {}
+    explicit list(nil _v) : v_(std::move(_v)) {}
+    explicit list(cons _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -55,7 +56,7 @@ struct Sig0 {
 
   private:
     variant_t v_;
-    explicit sig0(exist x) : v_(std::move(x)) {}
+    explicit sig0(exist _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {

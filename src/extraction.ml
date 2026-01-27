@@ -522,13 +522,13 @@ and extract_really_ind env kn mib =
            let ar = Inductive.type_of_inductive ((mib,mip),u) in
            let ar = EConstr.of_constr ar in
            let info = (fst (flag_of_type env sg ar) = Info) in
-           let s,v = if info then type_sign_vl env sg ar else [],[] in
+           let s,vars = if info then type_sign_vl env sg ar else [],[] in
            let t = Array.make (Array.length mip.mind_nf_lc) [] in
            { ip_typename = mip.mind_typename;
              ip_consnames = mip.mind_consnames;
              ip_logical = not info;
              ip_sign = s;
-             ip_vars = v;
+             ip_vars = vars;
              ip_types = t }, u)
         mib.mind_packets
     in

@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <any>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -82,9 +83,9 @@ struct Ordering {
 
   private:
     variant_t v_;
-    explicit ordering(LT x) : v_(std::move(x)) {}
-    explicit ordering(EQ x) : v_(std::move(x)) {}
-    explicit ordering(GT x) : v_(std::move(x)) {}
+    explicit ordering(LT _v) : v_(std::move(_v)) {}
+    explicit ordering(EQ _v) : v_(std::move(_v)) {}
+    explicit ordering(GT _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {

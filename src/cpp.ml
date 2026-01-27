@@ -564,6 +564,7 @@ let rec pp_cpp_type par vl t =
     | Tvoid -> str "void"
     | Ttodo -> str "auto"
     | Tunknown -> str "UNKNOWN" (* TODO: BAD *)
+    | Tany -> str "std::any"
   in
   h (pp_rec par t)
 

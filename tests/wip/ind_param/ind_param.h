@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <any>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -48,8 +49,8 @@ template <Container C> struct Wrapper {
 
   private:
     variant_t v_;
-    explicit result(Ok x) : v_(std::move(x)) {}
-    explicit result(Err x) : v_(std::move(x)) {}
+    explicit result(Ok _v) : v_(std::move(_v)) {}
+    explicit result(Err _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -136,9 +137,9 @@ struct NatContainer {
 
   private:
     variant_t v_;
-    explicit t(Empty x) : v_(std::move(x)) {}
-    explicit t(Single x) : v_(std::move(x)) {}
-    explicit t(Pair x) : v_(std::move(x)) {}
+    explicit t(Empty _v) : v_(std::move(_v)) {}
+    explicit t(Single _v) : v_(std::move(_v)) {}
+    explicit t(Pair _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {

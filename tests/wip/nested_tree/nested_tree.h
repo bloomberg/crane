@@ -1,3 +1,4 @@
+#include <any>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -25,8 +26,8 @@ struct Nat {
 
   private:
     variant_t v_;
-    explicit nat(O x) : v_(std::move(x)) {}
-    explicit nat(S x) : v_(std::move(x)) {}
+    explicit nat(O _v) : v_(std::move(_v)) {}
+    explicit nat(S _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -54,8 +55,8 @@ struct List {
 
   private:
     variant_t v_;
-    explicit list(nil x) : v_(std::move(x)) {}
-    explicit list(cons x) : v_(std::move(x)) {}
+    explicit list(nil _v) : v_(std::move(_v)) {}
+    explicit list(cons _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -97,8 +98,8 @@ struct NestedTree {
 
   private:
     variant_t v_;
-    explicit tree(leaf x) : v_(std::move(x)) {}
-    explicit tree(node x) : v_(std::move(x)) {}
+    explicit tree(leaf _v) : v_(std::move(_v)) {}
+    explicit tree(node _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -115,8 +116,8 @@ struct NestedTree {
   };
 
   template <typename T1, typename T2,
-            MapsTo<T1, unknown,
-                   std::shared_ptr<tree<std::pair<unknown, unknown>>>, T1>
+            MapsTo<T1, std::any,
+                   std::shared_ptr<tree<std::pair<std::any, std::any>>>, T1>
                 F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree<T2>> &t) {
     return std::visit(
@@ -132,8 +133,8 @@ struct NestedTree {
   }
 
   template <typename T1, typename T2,
-            MapsTo<T1, unknown,
-                   std::shared_ptr<tree<std::pair<unknown, unknown>>>, T1>
+            MapsTo<T1, std::any,
+                   std::shared_ptr<tree<std::pair<std::any, std::any>>>, T1>
                 F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree<T2>> &t) {
     return std::visit(

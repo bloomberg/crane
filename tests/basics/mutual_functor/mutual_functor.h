@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <any>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -37,8 +38,8 @@ template <Elem E> struct MutualTree {
 
   private:
     variant_t v_;
-    explicit tree(Leaf x) : v_(std::move(x)) {}
-    explicit tree(Node x) : v_(std::move(x)) {}
+    explicit tree(Leaf _v) : v_(std::move(_v)) {}
+    explicit tree(Node _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -64,8 +65,8 @@ template <Elem E> struct MutualTree {
 
   private:
     variant_t v_;
-    explicit forest(FNil x) : v_(std::move(x)) {}
-    explicit forest(FCons x) : v_(std::move(x)) {}
+    explicit forest(FNil _v) : v_(std::move(_v)) {}
+    explicit forest(FCons _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {

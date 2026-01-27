@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <any>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -32,8 +33,8 @@ template <Elem E> struct Container {
 
   private:
     variant_t v_;
-    explicit maybe(Nothing x) : v_(std::move(x)) {}
-    explicit maybe(Just x) : v_(std::move(x)) {}
+    explicit maybe(Nothing _v) : v_(std::move(_v)) {}
+    explicit maybe(Just _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -81,8 +82,8 @@ template <Elem E> struct Container {
 
   private:
     variant_t v_;
-    explicit mlist(MNil x) : v_(std::move(x)) {}
-    explicit mlist(MCons x) : v_(std::move(x)) {}
+    explicit mlist(MNil _v) : v_(std::move(_v)) {}
+    explicit mlist(MCons _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
@@ -136,8 +137,8 @@ template <Elem E> struct Container {
 
   private:
     variant_t v_;
-    explicit mtree(Leaf x) : v_(std::move(x)) {}
-    explicit mtree(Node x) : v_(std::move(x)) {}
+    explicit mtree(Leaf _v) : v_(std::move(_v)) {}
+    explicit mtree(Node _v) : v_(std::move(_v)) {}
 
   public:
     struct ctor {
