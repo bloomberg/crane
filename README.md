@@ -17,7 +17,7 @@ This project provides extraction of [Rocq](https://rocq-prover.org/) (formerly k
 
 The project is a fork of the Rocq-to-OCaml extraction that comes built-in with Rocq.
 
-> [!WARNING]  
+> [!WARNING]
 > Crane is under active development. While many features are functional, parts of the extraction pipeline are still experimental, and you may encounter incomplete features or unexpected behavior. Please report issues on the [GitHub tracker](https://github.com/bloomberg/crane/issues).
 
 ## Examples
@@ -51,12 +51,13 @@ You will also need [Clang](https://clang.llvm.org/) 19 or higher to run the test
 The Makefile provides convenient build commands:
 
 - `make build` - Build only the plugin and theories (recommended for development, fast)
+- `make extract` - Build the plugin and extract all of the tests (without compiling the generated code)
 - `make test` - Build and run all tests with clean summary output
 - `make test-verbose` - Run tests with detailed output
 - `make test-one TEST=name` - Run a single test (e.g., `make test-one TEST=list`)
 - `make test-list` - List all available tests
 - `make all` - Build everything including tests
-- `make clean` - Clean all build artifacts
+- `make clean` - Clean all build and test artifacts
 - `make help` - Show all available commands
 
 To preview the project, you can run `make test` to run the tests and see if the plugin is working properly on your machine. The test command will show a summary of passed/failed tests with a progress indicator. To run a single test during development, use `make test-one TEST=list` (or `tree`, `nat`, etc.). Use `make test-list` to see all available test names. Generated files (such as `list.cpp` for `List.v`) will be in the `tests` directory. **Currently not all tests in the directory are expected to pass (and thus some failing does not mean the plugin is installed incorrectly)**.
