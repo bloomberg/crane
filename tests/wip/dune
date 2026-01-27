@@ -154,17 +154,6 @@
   (deps regexp.t.exe)
   (action (run ./regexp.t.exe))))
 
-(subdir rev
- (rule
-  (targets rev.t.exe)
-  (deps Rev.vo rev.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh rev.t.exe rev.cpp rev.t.cpp)))
- (rule
-  (alias runtest)
-  (deps rev.t.exe)
-  (action (run ./rev.t.exe))))
-
 (subdir vec
  (rule
   (targets vec.t.exe)
@@ -175,14 +164,3 @@
   (alias runtest)
   (deps vec.t.exe)
   (action (run ./vec.t.exe))))
-
-(subdir zip
- (rule
-  (targets zip.t.exe)
-  (deps Zip.vo zip.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh zip.t.exe zip.cpp zip.t.cpp)))
- (rule
-  (alias runtest)
-  (deps zip.t.exe)
-  (action (run ./zip.t.exe))))
