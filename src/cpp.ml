@@ -76,6 +76,9 @@ let sig_preamble _ comment used_modules usf =
 
 (* Context tracking for code generation *)
 let in_struct_context = ref false
+(* Track when we're in a non-local context (static inline variable initialization).
+   Lambdas in non-local contexts cannot have capture-default [&]. *)
+let in_nonlocal_context = ref false
 (* Track current struct name for qualifying out-of-struct definitions *)
 let current_struct_name : Pp.t option ref = ref None
 (* Track whether we're inside a template struct (functor) *)
@@ -132,6 +135,7 @@ let current_structure_decls : (Label.t * Miniml.ml_structure_elem) list ref = re
    extractions in the same process (e.g., during 'dune build'). *)
 let reset_cpp_state () =
   in_struct_context := false;
+  in_nonlocal_context := false;
   current_struct_name := None;
   in_template_struct := false;
   eponymous_type_ref := None;
@@ -350,6 +354,141 @@ let lookup_method_this_pos n =
     match is_registered_method n with
     | Some (_, pos) -> Some pos
     | None -> None
+
+(* Helper module for tracking variable names *)
+module IdSet = Set.Make(Names.Id)
+
+(* Check if a lambda actually needs to capture variables from enclosing scope.
+   A lambda needs [&] capture if its body references variables that are:
+   - Not lambda parameters
+   - Not locally declared within the lambda body
+   Returns true if capture is needed, false if [] can be used.
+
+   Also checks recursively: if a nested lambda captures from the outer lambda's scope,
+   that counts as the outer lambda needing capture. *)
+let rec lambda_needs_capture (params : (Minicpp.cpp_type * Names.Id.t option) list)
+                              (body : Minicpp.cpp_stmt list) : bool =
+  let open Minicpp in
+
+  (* Collect parameter names *)
+  let param_names = List.fold_left (fun acc (_, id_opt) ->
+    match id_opt with Some id -> IdSet.add id acc | None -> acc
+  ) IdSet.empty params in
+
+  (* Collect all variable references and local declarations from expressions and statements *)
+  let rec collect_from_expr (refs, decls) e =
+    match e with
+    | CPPvar id -> (IdSet.add id refs, decls)
+    | CPPvar' _ -> (refs, decls)  (* de Bruijn - ignore *)
+    | CPPfun_call (f, args) ->
+        let acc = collect_from_expr (refs, decls) f in
+        List.fold_left collect_from_expr acc args
+    | CPPnamespace (_, e') -> collect_from_expr (refs, decls) e'
+    | CPPderef e' -> collect_from_expr (refs, decls) e'
+    | CPPmove e' -> collect_from_expr (refs, decls) e'
+    | CPPforward (_, e') -> collect_from_expr (refs, decls) e'
+    | CPPlambda (inner_params, _, inner_body) ->
+        (* For nested lambdas, don't count their parameters or local vars as our refs.
+           But DO check if the nested lambda itself captures from OUR scope. *)
+        let inner_param_names = List.fold_left (fun acc (_, id_opt) ->
+          match id_opt with Some id -> IdSet.add id acc | None -> acc
+        ) IdSet.empty inner_params in
+        let (inner_refs, inner_decls) = List.fold_left collect_from_stmt (IdSet.empty, IdSet.empty) inner_body in
+        (* Variables referenced in inner lambda that aren't its own params/locals
+           might be captured from our scope *)
+        let inner_free = IdSet.diff inner_refs (IdSet.union inner_param_names inner_decls) in
+        (IdSet.union refs inner_free, decls)
+    | CPPoverloaded exprs -> List.fold_left collect_from_expr (refs, decls) exprs
+    | CPPmatch (scrut, cases) ->
+        let acc = collect_from_expr (refs, decls) scrut in
+        List.fold_left (fun a (p, b) -> collect_from_expr (collect_from_expr a p) b) acc cases
+    | CPPstructmk (_, _, args) -> List.fold_left collect_from_expr (refs, decls) args
+    | CPPstruct (_, _, args) -> List.fold_left collect_from_expr (refs, decls) args
+    | CPPstruct_id (_, _, args) -> List.fold_left collect_from_expr (refs, decls) args
+    | CPPget (e', _) -> collect_from_expr (refs, decls) e'
+    | CPPget' (e', _) -> collect_from_expr (refs, decls) e'
+    | CPPparray (arr, e') ->
+        let acc = Array.fold_left (fun a e -> collect_from_expr a e) (refs, decls) arr in
+        collect_from_expr acc e'
+    | CPPnew (_, args) -> List.fold_left collect_from_expr (refs, decls) args
+    | CPPshared_ptr_ctor (_, e') -> collect_from_expr (refs, decls) e'
+    | CPPmember (e', _) -> collect_from_expr (refs, decls) e'
+    | CPParrow (e', _) -> collect_from_expr (refs, decls) e'
+    | CPPmethod_call (obj, _, args) ->
+        let acc = collect_from_expr (refs, decls) obj in
+        List.fold_left collect_from_expr acc args
+    | CPPqualified (e', _) -> collect_from_expr (refs, decls) e'
+    | CPPrequires (_, constraints) ->
+        List.fold_left (fun a (e', _) -> collect_from_expr a e') (refs, decls) constraints
+    | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPstring _ | CPPuint _ | CPPthis | CPPconvertible_to _ ->
+        (refs, decls)
+
+  and collect_from_stmt (refs, decls) stmt =
+    match stmt with
+    | SreturnVoid -> (refs, decls)
+    | Sreturn e -> collect_from_expr (refs, decls) e
+    | Sdecl (id, _) -> (refs, IdSet.add id decls)
+    | Sasgn (id, _, e) ->
+        let (refs', decls') = collect_from_expr (refs, decls) e in
+        (refs', IdSet.add id decls')
+    | Sexpr e -> collect_from_expr (refs, decls) e
+    | Scustom_case (_, scrut, _, branches, _) ->
+        let acc = collect_from_expr (refs, decls) scrut in
+        List.fold_left (fun (r, d) (branch_vars, _, stmts) ->
+          let branch_decls = List.fold_left (fun acc (id, _) -> IdSet.add id acc) d branch_vars in
+          List.fold_left collect_from_stmt (r, branch_decls) stmts
+        ) acc branches
+  in
+
+  let (all_refs, local_decls) = List.fold_left collect_from_stmt (IdSet.empty, IdSet.empty) body in
+  let bound_vars = IdSet.union param_names local_decls in
+  let free_vars = IdSet.diff all_refs bound_vars in
+  not (IdSet.is_empty free_vars)
+
+(* Check if a cpp_expr contains any lambdas that need capture (have free variables).
+   Used to determine if IIFE wrapping is needed for static inline initializers.
+   Closed lambdas (with []) don't need IIFE wrapping. *)
+and expr_contains_capturing_lambda (e : Minicpp.cpp_expr) : bool =
+  let open Minicpp in
+  match e with
+  | CPPlambda (params, _, body) ->
+      (* Check if this lambda needs capture, OR if any nested lambdas need capture *)
+      lambda_needs_capture params body ||
+      List.exists stmt_contains_capturing_lambda body
+  | CPPfun_call (f, args) -> expr_contains_capturing_lambda f || List.exists expr_contains_capturing_lambda args
+  | CPPnamespace (_, e') -> expr_contains_capturing_lambda e'
+  | CPPderef e' -> expr_contains_capturing_lambda e'
+  | CPPmove e' -> expr_contains_capturing_lambda e'
+  | CPPforward (_, e') -> expr_contains_capturing_lambda e'
+  | CPPoverloaded exprs -> List.exists expr_contains_capturing_lambda exprs
+  | CPPmatch (scrut, cases) ->
+      expr_contains_capturing_lambda scrut || List.exists (fun (p, b) -> expr_contains_capturing_lambda p || expr_contains_capturing_lambda b) cases
+  | CPPstructmk (_, _, args) -> List.exists expr_contains_capturing_lambda args
+  | CPPstruct (_, _, args) -> List.exists expr_contains_capturing_lambda args
+  | CPPstruct_id (_, _, args) -> List.exists expr_contains_capturing_lambda args
+  | CPPget (e', _) -> expr_contains_capturing_lambda e'
+  | CPPget' (e', _) -> expr_contains_capturing_lambda e'
+  | CPPparray (args, e') -> Array.exists expr_contains_capturing_lambda args || expr_contains_capturing_lambda e'
+  | CPPnew (_, args) -> List.exists expr_contains_capturing_lambda args
+  | CPPshared_ptr_ctor (_, e') -> expr_contains_capturing_lambda e'
+  | CPPmember (e', _) -> expr_contains_capturing_lambda e'
+  | CPParrow (e', _) -> expr_contains_capturing_lambda e'
+  | CPPmethod_call (obj, _, args) -> expr_contains_capturing_lambda obj || List.exists expr_contains_capturing_lambda args
+  | CPPqualified (e', _) -> expr_contains_capturing_lambda e'
+  | CPPrequires (_, constraints) -> List.exists (fun (e', _) -> expr_contains_capturing_lambda e') constraints
+  | CPPvar _ | CPPvar' _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPstring _ | CPPuint _ | CPPthis | CPPconvertible_to _ -> false
+
+and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
+  let open Minicpp in
+  match s with
+  | SreturnVoid -> false
+  | Sreturn e -> expr_contains_capturing_lambda e
+  | Sdecl _ -> false
+  | Sasgn (_, _, e) -> expr_contains_capturing_lambda e
+  | Sexpr e -> expr_contains_capturing_lambda e
+  | Scustom_case (_, scrut, _, branches, _) ->
+      expr_contains_capturing_lambda scrut ||
+      List.exists (fun (_, _, stmts) -> List.exists stmt_contains_capturing_lambda stmts) branches
 
 (* pretty printing c++ syntax *)
 let try_cpp c o =
@@ -651,15 +790,17 @@ and pp_cpp_expr env args t =
         then str "bsl::forward<" ++ pp_cpp_type false [] ty ++ str ">(" ++ (pp_cpp_expr env args e) ++ str ")"
         else str "std::forward<" ++ pp_cpp_type false [] ty ++ str ">(" ++ (pp_cpp_expr env args e) ++ str ")"
   | CPPlambda (params, ret_ty, body) ->
+      (* Use [] for closed lambdas (no captured variables), [&] otherwise *)
+      let needs_capture = lambda_needs_capture params body in
+      let capture_str = if needs_capture then str "[&](" else str "[](" in
       let (params_s, capture) =
         (match params with
-        | [] -> str "void", str "[&]("
+        | [] -> str "void", capture_str
         | _ -> pp_list (fun (ty, id_opt) ->
             let id_s = match id_opt with None -> str "" | Some id -> Id.print id in
-            (pp_cpp_type false [] ty) ++ spc () ++ id_s) (List.rev params), str "[&](")
+            (pp_cpp_type false [] ty) ++ spc () ++ id_s) (List.rev params), capture_str)
       in
       let body_s = pp_list_stmt (pp_cpp_stmt env args) body in
-      (* h (capture ++ params_s ++ str ")") ++ str " {" ++ fnl () ++ body_s ++ fnl () ++ str "}" *)
       begin match ret_ty with
       | Some ty ->
         h  (capture ++ params_s ++ str ") -> " ++ (pp_cpp_type false [] ty)) ++ str " {" ++ fnl () ++ body_s ++ fnl () ++ str "}"
@@ -1009,9 +1150,26 @@ function
        - Enables constant propagation by the compiler since definitions are available
 
        Without 'inline', multiple .cpp files including this header would cause linker errors
-       due to duplicate symbol definitions. *)
+       due to duplicate symbol definitions.
+
+       Note: When in_struct_context and the expression contains lambdas, we wrap the
+       initializer in an IIFE (Immediately Invoked Function Expression) to allow
+       nested lambdas to use [&] capture. This is necessary because:
+       - C++ forbids capture-default in "non-local" lambdas
+       - ALL lambdas directly in a static inline initializer are "non-local"
+       - But by wrapping in []() { return expr; }(), inner lambdas are now "local" *)
     let static_kw = if !in_struct_context then str "static inline " else mt () in
-    h (static_kw ++ (pp_cpp_type false [] ty) ++ str " " ++ pp_global Type id ++ str " = " ++ (pp_cpp_expr env [] e) ++ str ";")
+    let expr_pp = pp_cpp_expr env [] e in
+    (* Wrap in IIFE only when in struct context AND the expression contains lambdas.
+       This is needed because C++ forbids capture-default [&] in non-local lambdas.
+       If there are no lambdas, no wrapping is needed. *)
+    let needs_iife = !in_struct_context && expr_contains_capturing_lambda e in
+    let wrapped_expr = if needs_iife then
+      str "[]() {" ++ fnl () ++ str "return " ++ expr_pp ++ str ";" ++ fnl () ++ str "}()"
+    else
+      expr_pp
+    in
+    h (static_kw ++ (pp_cpp_type false [] ty) ++ str " " ++ pp_global Type id ++ str " = " ++ wrapped_expr ++ str ";")
 | Ddecl (id, ty) ->
     h ((pp_cpp_type false [] ty) ++ str " " ++ pp_global Type id ++ str ";")
 | Dconcept (id, cstr) ->
@@ -1064,7 +1222,11 @@ let pp_cpp_ind kn ind =
       let p = ind.ind_packets.(i) in
       if is_custom (GlobRef.IndRef ip) then pp (i+1)
       else
-        pp_cpp_decl (empty_env ()) (gen_ind_cpp p.ip_vars names.(i) cnames.(i) p.ip_types) ++ pp (i+1)
+        (* Compute parameter-only type vars (same as in pp_cpp_ind_header) *)
+        let param_sign = List.firstn ind.ind_nparams p.ip_sign in
+        let num_param_vars = List.length (List.filter (fun x -> x == Miniml.Keep) param_sign) in
+        let param_vars = List.firstn num_param_vars p.ip_vars in
+        pp_cpp_decl (empty_env ()) (gen_ind_cpp param_vars names.(i) cnames.(i) p.ip_types) ++ pp (i+1)
   in
   pp 0
 
@@ -1285,7 +1447,16 @@ let pp_cpp_ind_header kn ind =
                 (* Inside a module, non-eponymous inductives don't get methods *)
                 []
           in
-          let decl = gen_ind_header_v2 p.ip_vars names.(i) cnames.(i) p.ip_types (List.rev methods) in
+          (* Compute parameter-only type vars.
+             Parameters (before the colon) become template params.
+             Indices (after the colon) are erased.
+             ind.ind_nparams gives the number of Rocq parameters.
+             p.ip_sign covers all args (params + indices).
+             Count Keep entries in the first nparams positions to get param type var count. *)
+          let param_sign = List.firstn ind.ind_nparams p.ip_sign in
+          let num_param_vars = List.length (List.filter (fun x -> x == Miniml.Keep) param_sign) in
+          let param_vars = List.firstn num_param_vars p.ip_vars in
+          let decl = gen_ind_header_v2 param_vars names.(i) cnames.(i) p.ip_types (List.rev methods) in
           (* DESIGN: Contextual wrapping for inductive definitions
              - If inside a struct/module: generate the inductive directly (no namespace wrapper)
              - If at module scope: wrap in a namespace struct (which becomes a struct via Dnspace)

@@ -21,7 +21,7 @@ Priqueue::smash(const std::shared_ptr<Priqueue::tree> &t,
             std::shared_ptr<Priqueue::tree> t0 = _args._a2;
             return std::visit(
                 Overloaded{
-                    [&](const typename Priqueue::tree::Node _args)
+                    [](const typename Priqueue::tree::Node _args)
                         -> std::shared_ptr<Priqueue::tree> {
                       return tree::ctor::Leaf_();
                     },
@@ -36,8 +36,8 @@ Priqueue::smash(const std::shared_ptr<Priqueue::tree> &t,
                                 std::shared_ptr<Priqueue::tree> t2 = _args._a2;
                                 return std::visit(
                                     Overloaded{
-                                        [&](const typename Priqueue::tree::Node
-                                                _args)
+                                        [](const typename Priqueue::tree::Node
+                                               _args)
                                             -> std::shared_ptr<Priqueue::tree> {
                                           return tree::ctor::Leaf_();
                                         },
@@ -56,7 +56,7 @@ Priqueue::smash(const std::shared_ptr<Priqueue::tree> &t,
                                         }},
                                     t2->v());
                               },
-                              [&](const typename Priqueue::tree::Leaf _args)
+                              [](const typename Priqueue::tree::Leaf _args)
                                   -> std::shared_ptr<Priqueue::tree> {
                                 return tree::ctor::Leaf_();
                               }},
@@ -64,7 +64,7 @@ Priqueue::smash(const std::shared_ptr<Priqueue::tree> &t,
                     }},
                 t0->v());
           },
-          [&](const typename Priqueue::tree::Leaf _args)
+          [](const typename Priqueue::tree::Leaf _args)
               -> std::shared_ptr<Priqueue::tree> {
             return tree::ctor::Leaf_();
           }},
@@ -88,7 +88,7 @@ std::shared_ptr<List::list<std::shared_ptr<Priqueue::tree>>> Priqueue::carry(
                           cons_(t, List::list<std::shared_ptr<Priqueue::tree>>::
                                        ctor::nil_());
                     },
-                    [&](const typename Priqueue::tree::Leaf _args)
+                    [](const typename Priqueue::tree::Leaf _args)
                         -> std::shared_ptr<
                             List::list<std::shared_ptr<Priqueue::tree>>> {
                       return List::list<
@@ -323,13 +323,13 @@ Priqueue::priqueue
 Priqueue::heap_delete_max(const std::shared_ptr<Priqueue::tree> &t) {
   return std::visit(
       Overloaded{
-          [&](const typename Priqueue::tree::Node _args)
+          [](const typename Priqueue::tree::Node _args)
               -> std::shared_ptr<List::list<std::shared_ptr<Priqueue::tree>>> {
             std::shared_ptr<Priqueue::tree> t1 = _args._a1;
             std::shared_ptr<Priqueue::tree> t0 = _args._a2;
             return std::visit(
                 Overloaded{
-                    [&](const typename Priqueue::tree::Node _args)
+                    [](const typename Priqueue::tree::Node _args)
                         -> std::shared_ptr<
                             List::list<std::shared_ptr<Priqueue::tree>>> {
                       return List::list<
@@ -339,13 +339,13 @@ Priqueue::heap_delete_max(const std::shared_ptr<Priqueue::tree> &t) {
                         -> std::shared_ptr<
                             List::list<std::shared_ptr<Priqueue::tree>>> {
                       return unzip(
-                          t1, [&](std::shared_ptr<
+                          t1, [](std::shared_ptr<
                                   List::list<std::shared_ptr<Priqueue::tree>>>
-                                      u) { return u; });
+                                     u) { return u; });
                     }},
                 t0->v());
           },
-          [&](const typename Priqueue::tree::Leaf _args)
+          [](const typename Priqueue::tree::Leaf _args)
               -> std::shared_ptr<List::list<std::shared_ptr<Priqueue::tree>>> {
             return List::list<std::shared_ptr<Priqueue::tree>>::ctor::nil_();
           }},
@@ -391,12 +391,10 @@ std::optional<Priqueue::key> Priqueue::find_max(
     const std::shared_ptr<List::list<std::shared_ptr<Priqueue::tree>>> &q) {
   return std::visit(
       Overloaded{
-          [&](const typename List::list<std::shared_ptr<Priqueue::tree>>::nil
-                  _args) -> std::optional<unsigned int> {
-            return std::nullopt;
-          },
-          [&](const typename List::list<std::shared_ptr<Priqueue::tree>>::cons
-                  _args) -> std::optional<unsigned int> {
+          [](const typename List::list<std::shared_ptr<Priqueue::tree>>::nil
+                 _args) -> std::optional<unsigned int> { return std::nullopt; },
+          [](const typename List::list<std::shared_ptr<Priqueue::tree>>::cons
+                 _args) -> std::optional<unsigned int> {
             std::shared_ptr<Priqueue::tree> t = _args._a0;
             std::shared_ptr<List::list<std::shared_ptr<Priqueue::tree>>> q_ =
                 _args._a1;
@@ -421,8 +419,8 @@ std::pair<Priqueue::priqueue, Priqueue::priqueue> Priqueue::delete_max_aux(
     const std::shared_ptr<List::list<std::shared_ptr<Priqueue::tree>>> &p) {
   return std::visit(
       Overloaded{
-          [&](const typename List::list<std::shared_ptr<Priqueue::tree>>::nil
-                  _args)
+          [](const typename List::list<std::shared_ptr<Priqueue::tree>>::nil
+                 _args)
               -> std::pair<
                   std::shared_ptr<List::list<std::shared_ptr<Priqueue::tree>>>,
                   std::shared_ptr<
@@ -453,7 +451,7 @@ std::pair<Priqueue::priqueue, Priqueue::priqueue> Priqueue::delete_max_aux(
                       std::shared_ptr<Priqueue::tree> t0 = _args._a2;
                       return std::visit(
                           Overloaded{
-                              [&](const typename Priqueue::tree::Node _args)
+                              [](const typename Priqueue::tree::Node _args)
                                   -> std::pair<
                                       std::shared_ptr<List::list<
                                           std::shared_ptr<Priqueue::tree>>>,

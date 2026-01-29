@@ -177,11 +177,11 @@ struct Tree {
           this->v());
     }
     std::shared_ptr<Bool0::bool0> is_leaf() const {
-      return std::visit(Overloaded{[&](const typename tree<A>::leaf _args)
+      return std::visit(Overloaded{[](const typename tree<A>::leaf _args)
                                        -> std::shared_ptr<Bool0::bool0> {
                                      return Bool0::bool0::ctor::true0_();
                                    },
-                                   [&](const typename tree<A>::node _args)
+                                   [](const typename tree<A>::node _args)
                                        -> std::shared_ptr<Bool0::bool0> {
                                      return Bool0::bool0::ctor::false0_();
                                    }},
@@ -189,11 +189,11 @@ struct Tree {
     }
     std::shared_ptr<Nat::nat> size() const {
       return std::visit(
-          Overloaded{[&](const typename tree<A>::leaf _args)
+          Overloaded{[](const typename tree<A>::leaf _args)
                          -> std::shared_ptr<Nat::nat> {
                        return Nat::nat::ctor::S_(Nat::nat::ctor::O_());
                      },
-                     [&](const typename tree<A>::node _args)
+                     [](const typename tree<A>::node _args)
                          -> std::shared_ptr<Nat::nat> {
                        std::shared_ptr<tree<A>> l = _args._a0;
                        std::shared_ptr<tree<A>> r = _args._a2;
@@ -205,11 +205,11 @@ struct Tree {
     }
     std::shared_ptr<Nat::nat> height() const {
       return std::visit(
-          Overloaded{[&](const typename tree<A>::leaf _args)
+          Overloaded{[](const typename tree<A>::leaf _args)
                          -> std::shared_ptr<Nat::nat> {
                        return Nat::nat::ctor::S_(Nat::nat::ctor::O_());
                      },
-                     [&](const typename tree<A>::node _args)
+                     [](const typename tree<A>::node _args)
                          -> std::shared_ptr<Nat::nat> {
                        std::shared_ptr<tree<A>> l = _args._a0;
                        std::shared_ptr<tree<A>> r = _args._a2;
@@ -220,11 +220,11 @@ struct Tree {
     }
     std::shared_ptr<List::list<A>> flatten() const {
       return std::visit(
-          Overloaded{[&](const typename tree<A>::leaf _args)
+          Overloaded{[](const typename tree<A>::leaf _args)
                          -> std::shared_ptr<List::list<A>> {
                        return List::list<A>::ctor::nil_();
                      },
-                     [&](const typename tree<A>::node _args)
+                     [](const typename tree<A>::node _args)
                          -> std::shared_ptr<List::list<A>> {
                        std::shared_ptr<tree<A>> l = _args._a0;
                        A x = _args._a1;
@@ -241,11 +241,11 @@ struct Tree {
           Overloaded{[&](const typename tree<A>::leaf _args)
                          -> std::shared_ptr<tree<A>> {
                        return std::visit(
-                           Overloaded{[&](const typename tree<A>::leaf _args)
+                           Overloaded{[](const typename tree<A>::leaf _args)
                                           -> std::shared_ptr<tree<A>> {
                                         return tree<A>::ctor::leaf_();
                                       },
-                                      [&](const typename tree<A>::node _args)
+                                      [](const typename tree<A>::node _args)
                                           -> std::shared_ptr<tree<A>> {
                                         A a = _args._a1;
                                         return tree<A>::ctor::node_(

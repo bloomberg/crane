@@ -15,14 +15,14 @@ int bindreturn::test1() { return ignoreAndReturn<int>(42); }
 int bindreturn::test2() {
   return transform<std::shared_ptr<Unit::unit>, int>(
       Unit::unit::ctor::tt_(),
-      [&](std::shared_ptr<Unit::unit> _x) { return 42; });
+      [](std::shared_ptr<Unit::unit> _x) { return 42; });
 }
 
 int bindreturn::test3() {
   return nested<std::shared_ptr<Unit::unit>, bool, int>(
       Unit::unit::ctor::tt_(),
-      [&](std::shared_ptr<Unit::unit> _x) { return true; },
-      [&](bool b) {
+      [](std::shared_ptr<Unit::unit> _x) { return true; },
+      [](bool b) {
         if (b) {
           return 1;
         } else {

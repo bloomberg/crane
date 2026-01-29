@@ -56,10 +56,10 @@ sort_cons_prog(const unsigned int a,
 std::shared_ptr<Sig0::sig0<std::shared_ptr<List::list<unsigned int>>>>
 isort(const std::shared_ptr<List::list<T1>> &l) {
   return std::visit(
-      Overloaded{[&](const typename List::list<T1>::nil _args) -> T2 {
+      Overloaded{[](const typename List::list<T1>::nil _args) -> T2 {
                    return List::list<unsigned int>::ctor::nil_();
                  },
-                 [&](const typename List::list<T1>::cons _args) -> T2 {
+                 [](const typename List::list<T1>::cons _args) -> T2 {
                    T1 y = _args._a0;
                    std::shared_ptr<List::list<T1>> l0 = _args._a1;
                    return sort_cons_prog(y, l0, isort(l0));

@@ -204,7 +204,7 @@ struct CHT {
     {
         return bsl::visit(
              bdlf::Overloaded{
-                 [&](const typename List::list<bsl::pair<T1, T2> >::nil _args)
+                 [](const typename List::list<bsl::pair<T1, T2> >::nil _args)
                      -> bsl::optional<T2> {
                      return bsl::nullopt;
                  },

@@ -46,10 +46,10 @@ struct List {
     unsigned int length() const {
       return std::visit(
           Overloaded{
-              [&](const typename List::list<A>::nil _args) -> unsigned int {
+              [](const typename List::list<A>::nil _args) -> unsigned int {
                 return 0;
               },
-              [&](const typename List::list<A>::cons _args) -> unsigned int {
+              [](const typename List::list<A>::cons _args) -> unsigned int {
                 std::shared_ptr<List::list<A>> l_ = _args._a1;
                 return (l_->length() + 1);
               }},
@@ -74,7 +74,7 @@ struct List {
 template <typename T1, typename T2, MapsTo<T2, T1> F0>
 std::shared_ptr<List::list<T2>> map(F0 &&f,
                                     const std::shared_ptr<List::list<T1>> &l) {
-  return std::visit(Overloaded{[&](const typename List::list<T1>::nil _args)
+  return std::visit(Overloaded{[](const typename List::list<T1>::nil _args)
                                    -> std::shared_ptr<List::list<T2>> {
                                  return List::list<T2>::ctor::nil_();
                                },
@@ -96,12 +96,12 @@ std::shared_ptr<List::list<T1>>
 concat(const std::shared_ptr<List::list<std::shared_ptr<List::list<T1>>>> &l) {
   return std::visit(
       Overloaded{
-          [&](const typename List::list<std::shared_ptr<List::list<T1>>>::nil
-                  _args) -> std::shared_ptr<List::list<T1>> {
+          [](const typename List::list<std::shared_ptr<List::list<T1>>>::nil
+                 _args) -> std::shared_ptr<List::list<T1>> {
             return List::list<T1>::ctor::nil_();
           },
-          [&](const typename List::list<std::shared_ptr<List::list<T1>>>::cons
-                  _args) -> std::shared_ptr<List::list<T1>> {
+          [](const typename List::list<std::shared_ptr<List::list<T1>>>::cons
+                 _args) -> std::shared_ptr<List::list<T1>> {
             std::shared_ptr<List::list<T1>> x = _args._a0;
             std::shared_ptr<List::list<std::shared_ptr<List::list<T1>>>> l0 =
                 _args._a1;
@@ -126,7 +126,7 @@ T1 fold_right(F0 &&f, const T1 a0, const std::shared_ptr<List::list<T2>> &l) {
 template <typename T1, MapsTo<bool, T1> F0>
 std::shared_ptr<List::list<T1>>
 filter(F0 &&f, const std::shared_ptr<List::list<T1>> &l) {
-  return std::visit(Overloaded{[&](const typename List::list<T1>::nil _args)
+  return std::visit(Overloaded{[](const typename List::list<T1>::nil _args)
                                    -> std::shared_ptr<List::list<T1>> {
                                  return List::list<T1>::ctor::nil_();
                                },
@@ -148,7 +148,7 @@ template <typename T1, MapsTo<bool, T1> F0>
 std::optional<T1> find(F0 &&f, const std::shared_ptr<List::list<T1>> &l) {
   return std::visit(
       Overloaded{
-          [&](const typename List::list<T1>::nil _args) -> std::optional<T1> {
+          [](const typename List::list<T1>::nil _args) -> std::optional<T1> {
             return std::nullopt;
           },
           [&](const typename List::list<T1>::cons _args) -> std::optional<T1> {
@@ -169,7 +169,7 @@ combine(const std::shared_ptr<List::list<T1>> &l,
         const std::shared_ptr<List::list<T2>> &l_) {
   return std::visit(
       Overloaded{
-          [&](const typename List::list<T1>::nil _args)
+          [](const typename List::list<T1>::nil _args)
               -> std::shared_ptr<List::list<std::pair<T1, T2>>> {
             return List::list<std::pair<T1, T2>>::ctor::nil_();
           },
@@ -179,7 +179,7 @@ combine(const std::shared_ptr<List::list<T1>> &l,
             std::shared_ptr<List::list<T1>> tl = _args._a1;
             return std::visit(
                 Overloaded{
-                    [&](const typename List::list<T2>::nil _args)
+                    [](const typename List::list<T2>::nil _args)
                         -> std::shared_ptr<List::list<std::pair<T1, T2>>> {
                       return List::list<std::pair<T1, T2>>::ctor::nil_();
                     },
@@ -210,7 +210,7 @@ struct ToString {
                                  const std::shared_ptr<List::list<T1>> &l) {
     return std::visit(
         Overloaded{
-            [&](const typename List::list<T1>::nil _args) -> std::string {
+            [](const typename List::list<T1>::nil _args) -> std::string {
               return "";
             },
             [&](const typename List::list<T1>::cons _args) -> std::string {
@@ -233,7 +233,7 @@ struct ToString {
                                     const std::shared_ptr<List::list<T1>> &l) {
     return std::visit(
         Overloaded{
-            [&](const typename List::list<T1>::nil _args) -> std::string {
+            [](const typename List::list<T1>::nil _args) -> std::string {
               return "[]";
             },
             [&](const typename List::list<T1>::cons _args) -> std::string {
@@ -428,7 +428,7 @@ struct TopSort {
           List::list<std::pair<T1, std::shared_ptr<List::list<T1>>>>> &graph0) {
     return std::visit(
         Overloaded{
-            [&](const typename List::list<
+            [](const typename List::list<
                 std::pair<T1, std::shared_ptr<List::list<T1>>>>::nil _args)
                 -> std::optional<T1> { return std::nullopt; },
             [&](const typename List::list<
@@ -485,10 +485,10 @@ struct TopSort {
   template <typename T1>
   static bool null(const std::shared_ptr<List::list<T1>> &xs) {
     return std::visit(
-        Overloaded{[&](const typename List::list<T1>::nil _args) -> bool {
+        Overloaded{[](const typename List::list<T1>::nil _args) -> bool {
                      return true;
                    },
-                   [&](const typename List::list<T1>::cons _args) -> bool {
+                   [](const typename List::list<T1>::cons _args) -> bool {
                      return false;
                    }},
         xs->v());
@@ -509,11 +509,11 @@ struct TopSort {
       } else {
         std::shared_ptr<List::list<T1>> mins =
             map<std::pair<T1, std::shared_ptr<List::list<T1>>>, T1>(
-                [&](const std::pair<T1, std::shared_ptr<List::list<T1>>> _x0) {
+                [](const std::pair<T1, std::shared_ptr<List::list<T1>>> _x0) {
                   return _x0.first;
                 },
                 filter<std::pair<T1, std::shared_ptr<List::list<T1>>>>(
-                    [&](std::pair<T1, std::shared_ptr<List::list<T1>>> p) {
+                    [](std::pair<T1, std::shared_ptr<List::list<T1>>> p) {
                       return null<T1>(p.second);
                     },
                     graph0));
@@ -578,7 +578,7 @@ struct TopSort {
     return concat<std::pair<T1, unsigned int>>(
         map<std::pair<std::shared_ptr<List::list<T1>>, unsigned int>,
             std::shared_ptr<List::list<std::pair<T1, unsigned int>>>>(
-            [&](std::pair<std::shared_ptr<List::list<T1>>, unsigned int> x) {
+            [](std::pair<std::shared_ptr<List::list<T1>>, unsigned int> x) {
               std::shared_ptr<List::list<T1>> fs = x.first;
               unsigned int rk = x.second;
               return map<T1, std::pair<T1, unsigned int>>(

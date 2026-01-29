@@ -48,7 +48,7 @@ struct List {
 template <typename T1, MapsTo<bool, T1> F0>
 std::shared_ptr<List::list<T1>>
 filter(F0 &&f, const std::shared_ptr<List::list<T1>> &l) {
-  return std::visit(Overloaded{[&](const typename List::list<T1>::nil _args)
+  return std::visit(Overloaded{[](const typename List::list<T1>::nil _args)
                                    -> std::shared_ptr<List::list<T1>> {
                                  return List::list<T1>::ctor::nil_();
                                },
@@ -162,20 +162,18 @@ struct Graph {
         std::make_shared<directed<std::any>>(Directed<std::any>{
             List::list<std::any>::ctor::nil_(),
             List::list<std::shared_ptr<directedEdge<std::any>>>::ctor::nil_()}),
-        [&](std::shared_ptr<directed<std::any>> g, T1 n) {
+        [](std::shared_ptr<directed<std::any>> g, T1 n) {
           return std::make_shared<directed<std::any>>(Directed<std::any>{
               List::list<std::any>::ctor::cons_(n, g->directed_nodes),
               g->directed_edges});
         },
-        [&](std::shared_ptr<directed<std::any>> g, std::any e) {
+        [](std::shared_ptr<directed<std::any>> g, std::any e) {
           return std::make_shared<directed<std::any>>(Directed<std::any>{
               g->directed_nodes,
               List::list<std::shared_ptr<directedEdge<std::any>>>::ctor::cons_(
                   e, g->directed_edges)});
         },
-        [&](std::shared_ptr<directed<std::any>> g) {
-          return g->directed_nodes;
-        },
+        [](std::shared_ptr<directed<std::any>> g) { return g->directed_nodes; },
         [&](std::shared_ptr<directed<std::any>> g, T1 n) {
           return filter<std::shared_ptr<directedEdge<T1>>>(
               [&](const std::shared_ptr<directedEdge<T1>> _x0) {
@@ -239,20 +237,20 @@ struct Graph {
                 List::list<std::any>::ctor::nil_(),
                 List::list<
                     std::shared_ptr<undirectedEdge<std::any>>>::ctor::nil_()}),
-            [&](std::shared_ptr<undirected<std::any>> g, T1 n) {
+            [](std::shared_ptr<undirected<std::any>> g, T1 n) {
               return std::make_shared<undirected<std::any>>(
                   Undirected<std::any>{
                       List::list<std::any>::ctor::cons_(n, g->undirected_nodes),
                       g->undirected_edges});
             },
-            [&](std::shared_ptr<undirected<std::any>> g, std::any e) {
+            [](std::shared_ptr<undirected<std::any>> g, std::any e) {
               return std::make_shared<undirected<std::any>>(
                   Undirected<std::any>{
                       g->undirected_nodes,
                       List::list<std::shared_ptr<undirectedEdge<std::any>>>::
                           ctor::cons_(e, g->undirected_edges)});
             },
-            [&](std::shared_ptr<undirected<std::any>> g) {
+            [](std::shared_ptr<undirected<std::any>> g) {
               return g->undirected_nodes;
             },
             [&](std::shared_ptr<undirected<std::any>> g, T1 n) {

@@ -64,11 +64,11 @@ struct List {
           this->v());
     }
     std::shared_ptr<list<A>> tl() const {
-      return std::visit(Overloaded{[&](const typename list<A>::nil _args)
+      return std::visit(Overloaded{[](const typename list<A>::nil _args)
                                        -> std::shared_ptr<list<A>> {
                                      return list<A>::ctor::nil_();
                                    },
-                                   [&](const typename list<A>::cons _args)
+                                   [](const typename list<A>::cons _args)
                                        -> std::shared_ptr<list<A>> {
                                      std::shared_ptr<list<A>> ls = _args._a1;
                                      return ls;
@@ -78,7 +78,7 @@ struct List {
     A hd(const A x) const {
       return std::visit(
           Overloaded{[&](const typename list<A>::nil _args) -> A { return x; },
-                     [&](const typename list<A>::cons _args) -> A {
+                     [](const typename list<A>::cons _args) -> A {
                        A y = _args._a0;
                        return y;
                      }},
@@ -87,7 +87,7 @@ struct List {
     A last(const A x) const {
       return std::visit(
           Overloaded{[&](const typename list<A>::nil _args) -> A { return x; },
-                     [&](const typename list<A>::cons _args) -> A {
+                     [](const typename list<A>::cons _args) -> A {
                        A y = _args._a0;
                        std::shared_ptr<list<A>> ls = _args._a1;
                        return ls->last(y);
@@ -108,7 +108,7 @@ struct List {
     }
     template <typename T2, MapsTo<T2, A> F0>
     std::shared_ptr<list<T2>> map(F0 &&f) const {
-      return std::visit(Overloaded{[&](const typename list<A>::nil _args)
+      return std::visit(Overloaded{[](const typename list<A>::nil _args)
                                        -> std::shared_ptr<list<T2>> {
                                      return list<T2>::ctor::nil_();
                                    },

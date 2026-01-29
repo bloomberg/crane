@@ -151,6 +151,22 @@ let lookup_ind kn mib =
 
 let unsafe_lookup_ind kn = snd (Mindmap_env.find kn !inductives)
 
+(* Get the number of parameters (not indices) for an inductive type.
+   Returns None if the inductive is not in the table. *)
+let get_ind_nparams_opt kn =
+  try Some (unsafe_lookup_ind kn).ind_nparams
+  with Not_found -> None
+
+(* Get the number of parameter type vars for an inductive (via ip_sign).
+   This counts how many Keep entries are in the first nparams positions of ip_sign. *)
+let get_ind_num_param_vars_opt kn =
+  try
+    let ind = unsafe_lookup_ind kn in
+    let packet = ind.ind_packets.(0) in
+    let param_sign = List.firstn ind.ind_nparams packet.ip_sign in
+    Some (List.length (List.filter (fun x -> x == Miniml.Keep) param_sign))
+  with Not_found | Invalid_argument _ -> None
+
 let inductive_kinds =
   ref (Mindmap_env.empty : inductive_kind Mindmap_env.t)
 let init_inductive_kinds () = inductive_kinds := Mindmap_env.empty

@@ -24,7 +24,7 @@ unsigned int stmtest::io_basic_counter() {
 
 unsigned int stmtest::stm_inc(const unsigned int x) {
   std::shared_ptr<stm::TVar<unsigned int>> c = stm::newTVar<unsigned int>(x);
-  ::modifyTVar<unsigned int>(c, [&](unsigned int n) { return (n + 1); });
+  ::modifyTVar<unsigned int>(c, [](unsigned int n) { return (n + 1); });
   return stm::readTVar<unsigned int>(c);
 }
 
@@ -61,7 +61,7 @@ unsigned int stmtest::stm_dequeue(
   std::shared_ptr<List::list<unsigned int>> xs =
       stm::readTVar<std::shared_ptr<List::list<unsigned int>>>(q);
   return std::visit(
-      Overloaded{[&](const typename List::list<unsigned int>::nil _args)
+      Overloaded{[](const typename List::list<unsigned int>::nil _args)
                      -> unsigned int { return stm::retry<unsigned int>(); },
                  [&](const typename List::list<unsigned int>::cons _args)
                      -> unsigned int {

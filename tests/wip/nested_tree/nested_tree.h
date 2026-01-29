@@ -217,7 +217,7 @@ struct NestedTree {
         -> std::shared_ptr<List::list<std::shared_ptr<List::list<T2>>>> {
       return std::visit(
           Overloaded{
-              [&](const typename tree<T1>::leaf _args)
+              [](const typename tree<T1>::leaf _args)
                   -> std::shared_ptr<
                       List::list<std::shared_ptr<List::list<T2>>>> {
                 return List::list<
@@ -238,7 +238,7 @@ struct NestedTree {
           t0->v());
     };
     return go(
-        [&](T1 x) {
+        [](T1 x) {
           return List::list<T1>::ctor::cons_(x, List::list<T1>::ctor::nil_());
         },
         t);

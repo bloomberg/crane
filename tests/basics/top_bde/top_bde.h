@@ -67,11 +67,11 @@ struct List {
         {
             return bsl::visit(
                         bdlf::Overloaded{
-                            [&](const typename List::list<A>::nil _args)
+                            [](const typename List::list<A>::nil _args)
                                 -> unsigned int {
                                 return 0;
                             },
-                            [&](const typename List::list<A>::cons _args)
+                            [](const typename List::list<A>::cons _args)
                                 -> unsigned int {
                                 bsl::shared_ptr<List::list<A> > l_ = _args._a1;
                                 return (l_->length() + 1);
@@ -104,7 +104,7 @@ bsl::shared_ptr<List::list<T2> > map(F0&&                                    f,
 {
     return bsl::visit(
           bdlf::Overloaded{
-              [&](const typename List::list<T1>::nil _args)
+              [](const typename List::list<T1>::nil _args)
                   -> bsl::shared_ptr<List::list<T2> > {
                   return List::list<T2>::ctor::nil_();
               },
@@ -126,12 +126,12 @@ bsl::shared_ptr<List::list<T1> > concat(
 {
     return bsl::visit(
         bdlf::Overloaded{
-            [&](const typename List::list<bsl::shared_ptr<List::list<T1> > >::
-                    nil _args) -> bsl::shared_ptr<List::list<T1> > {
+            [](const typename List::list<bsl::shared_ptr<List::list<T1> > >::
+                   nil _args) -> bsl::shared_ptr<List::list<T1> > {
                 return List::list<T1>::ctor::nil_();
             },
-            [&](const typename List::list<bsl::shared_ptr<List::list<T1> > >::
-                    cons _args) -> bsl::shared_ptr<List::list<T1> > {
+            [](const typename List::list<bsl::shared_ptr<List::list<T1> > >::
+                   cons _args) -> bsl::shared_ptr<List::list<T1> > {
                 bsl::shared_ptr<List::list<T1> > x  = _args._a0;
                 bsl::shared_ptr<List::list<bsl::shared_ptr<List::list<T1> > > >
                                                  l0 = _args._a1;
@@ -162,7 +162,7 @@ bsl::shared_ptr<List::list<T1> > filter(
 {
     return bsl::visit(
           bdlf::Overloaded{
-              [&](const typename List::list<T1>::nil _args)
+              [](const typename List::list<T1>::nil _args)
                   -> bsl::shared_ptr<List::list<T1> > {
                   return List::list<T1>::ctor::nil_();
               },
@@ -184,22 +184,22 @@ template <typename T1, MapsTo<bool, T1> F0>
 bsl::optional<T1> find(F0&& f, const bsl::shared_ptr<List::list<T1> >& l)
 {
     return bsl::visit(
-          bdlf::Overloaded{[&](const typename List::list<T1>::nil _args)
-                               -> bsl::optional<T1> {
-                               return bsl::nullopt;
-                           },
-                           [&](const typename List::list<T1>::cons _args)
-                               -> bsl::optional<T1> {
-                               T1                               x  = _args._a0;
-                               bsl::shared_ptr<List::list<T1> > tl = _args._a1;
-                               if (f(x)) {
-                                   return bsl::make_optional<T1>(x);
-                               }
-                               else {
-                                   return find<T1>(f, tl);
-                               }
-                           }},
-          l->v());
+        bdlf::Overloaded{
+            [](const typename List::list<T1>::nil _args) -> bsl::optional<T1> {
+                return bsl::nullopt;
+            },
+            [&](const typename List::list<T1>::cons _args)
+                -> bsl::optional<T1> {
+                T1                               x  = _args._a0;
+                bsl::shared_ptr<List::list<T1> > tl = _args._a1;
+                if (f(x)) {
+                    return bsl::make_optional<T1>(x);
+                }
+                else {
+                    return find<T1>(f, tl);
+                }
+            }},
+        l->v());
 }
 
 template <typename T1, typename T2>
@@ -209,7 +209,7 @@ bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > combine(
 {
     return bsl::visit(
         bdlf::Overloaded{
-            [&](const typename List::list<T1>::nil _args)
+            [](const typename List::list<T1>::nil _args)
                 -> bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > {
                 return List::list<bsl::pair<T1, T2> >::ctor::nil_();
             },
@@ -219,7 +219,7 @@ bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > combine(
                 bsl::shared_ptr<List::list<T1> > tl = _args._a1;
                 return bsl::visit(
                     bdlf::Overloaded{
-                        [&](const typename List::list<T2>::nil _args)
+                        [](const typename List::list<T2>::nil _args)
                             -> bsl::shared_ptr<
                                 List::list<bsl::pair<T1, T2> > > {
                             return List::list<
@@ -259,7 +259,7 @@ struct ToString {
     {
         return bsl::visit(
             bdlf::Overloaded{
-                [&](const typename List::list<T1>::nil _args) -> std::string {
+                [](const typename List::list<T1>::nil _args) -> std::string {
                     return "";
                 },
                 [&](const typename List::list<T1>::cons _args) -> std::string {
@@ -288,7 +288,7 @@ struct ToString {
     {
         return bsl::visit(
             bdlf::Overloaded{
-                [&](const typename List::list<T1>::nil _args) -> std::string {
+                [](const typename List::list<T1>::nil _args) -> std::string {
                     return "[]";
                 },
                 [&](const typename List::list<T1>::cons _args) -> std::string {
@@ -542,9 +542,9 @@ struct TopSort {
     {
         return bsl::visit(
                bdlf::Overloaded{
-                   [&](const typename List::list<
+                   [](const typename List::list<
                        bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > >::nil
-                           _args) -> bsl::optional<T1> {
+                          _args) -> bsl::optional<T1> {
                        return bsl::nullopt;
                    },
                    [&](const typename List::list<
@@ -622,14 +622,14 @@ struct TopSort {
     static bool null(const bsl::shared_ptr<List::list<T1> >& xs)
     {
         return bsl::visit(
-                   bdlf::Overloaded{
-                       [&](const typename List::list<T1>::nil _args) -> bool {
-                           return true;
-                       },
-                       [&](const typename List::list<T1>::cons _args) -> bool {
-                           return false;
-                       }},
-                   xs->v());
+                    bdlf::Overloaded{
+                        [](const typename List::list<T1>::nil _args) -> bool {
+                            return true;
+                        },
+                        [](const typename List::list<T1>::cons _args) -> bool {
+                            return false;
+                        }},
+                    xs->v());
     }
 
     template <typename T1, MapsTo<bool, T1, T1> F0>
@@ -653,13 +653,13 @@ struct TopSort {
                 bsl::shared_ptr<List::list<T1> > mins = map<
                     bsl::pair<T1, bsl::shared_ptr<List::list<T1> > >,
                     T1>(
-                     [&](const bsl::pair<T1, bsl::shared_ptr<List::list<T1> > >
-                             _x0) {
+                     [](const bsl::pair<T1, bsl::shared_ptr<List::list<T1> > >
+                            _x0) {
                          return _x0.first;
                      },
                      filter<bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > >(
-                         [&](bsl::pair<T1, bsl::shared_ptr<List::list<T1> > >
-                                 p) {
+                         [](bsl::pair<T1, bsl::shared_ptr<List::list<T1> > >
+                                p) {
                              return null<T1>(p.second);
                          },
                          graph0));
@@ -740,8 +740,8 @@ struct TopSort {
         return concat<bsl::pair<T1, unsigned int> >(
               map<bsl::pair<bsl::shared_ptr<List::list<T1> >, unsigned int>,
                   bsl::shared_ptr<List::list<bsl::pair<T1, unsigned int> > > >(
-                  [&](bsl::pair<bsl::shared_ptr<List::list<T1> >, unsigned int>
-                          x) {
+                  [](bsl::pair<bsl::shared_ptr<List::list<T1> >, unsigned int>
+                         x) {
                       bsl::shared_ptr<List::list<T1> > fs = x.first;
                       unsigned int                     rk = x.second;
                       return map<T1, bsl::pair<T1, unsigned int> >(

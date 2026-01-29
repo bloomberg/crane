@@ -104,13 +104,12 @@ template <Container C> struct Wrapper {
 
   static unsigned int get_size(const std::shared_ptr<result> &r) {
     return std::visit(
-        Overloaded{[&](const typename result::Ok _args) -> unsigned int {
-                     std::shared_ptr<C::t> c = _args._a0;
-                     return C::size(c);
-                   },
-                   [&](const typename result::Err _args) -> unsigned int {
-                     return 0;
-                   }},
+        Overloaded{
+            [](const typename result::Ok _args) -> unsigned int {
+              std::shared_ptr<C::t> c = _args._a0;
+              return C::size(c);
+            },
+            [](const typename result::Err _args) -> unsigned int { return 0; }},
         r->v());
   }
 

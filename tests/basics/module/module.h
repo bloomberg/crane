@@ -155,7 +155,7 @@ template <OrderedType K, BaseType V> struct MakeMap {
                                    const std::shared_ptr<tree> &m) {
     return std::visit(
         Overloaded{
-            [&](const typename tree::Empty _args)
+            [](const typename tree::Empty _args)
                 -> std::optional<typename V::t> { return std::nullopt; },
             [&](const typename tree::Node _args)
                 -> std::optional<typename V::t> {

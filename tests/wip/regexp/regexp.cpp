@@ -25,25 +25,25 @@ bool Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
           [&](const typename Matcher::regexp::Any _args) -> T1 {
             return std::visit(
                 Overloaded{
-                    [&](const typename Matcher::regexp::Any _args) -> bool {
+                    [](const typename Matcher::regexp::Any _args) -> bool {
                       return true;
                     },
-                    [&](const typename Matcher::regexp::Char _args) -> bool {
+                    [](const typename Matcher::regexp::Char _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Eps _args) -> bool {
+                    [](const typename Matcher::regexp::Eps _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Cat _args) -> bool {
+                    [](const typename Matcher::regexp::Cat _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Alt _args) -> bool {
+                    [](const typename Matcher::regexp::Alt _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Zero _args) -> bool {
+                    [](const typename Matcher::regexp::Zero _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Star _args) -> bool {
+                    [](const typename Matcher::regexp::Star _args) -> bool {
                       return false;
                     }},
                 x->v());
@@ -52,7 +52,7 @@ bool Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
             int c = _args._a0;
             return std::visit(
                 Overloaded{
-                    [&](const typename Matcher::regexp::Any _args) -> bool {
+                    [](const typename Matcher::regexp::Any _args) -> bool {
                       return false;
                     },
                     [&](const typename Matcher::regexp::Char _args) -> bool {
@@ -63,19 +63,19 @@ bool Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
                         return false;
                       }
                     },
-                    [&](const typename Matcher::regexp::Eps _args) -> bool {
+                    [](const typename Matcher::regexp::Eps _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Cat _args) -> bool {
+                    [](const typename Matcher::regexp::Cat _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Alt _args) -> bool {
+                    [](const typename Matcher::regexp::Alt _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Zero _args) -> bool {
+                    [](const typename Matcher::regexp::Zero _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Star _args) -> bool {
+                    [](const typename Matcher::regexp::Star _args) -> bool {
                       return false;
                     }},
                 x->v());
@@ -83,25 +83,25 @@ bool Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
           [&](const typename Matcher::regexp::Eps _args) -> T1 {
             return std::visit(
                 Overloaded{
-                    [&](const typename Matcher::regexp::Any _args) -> bool {
+                    [](const typename Matcher::regexp::Any _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Char _args) -> bool {
+                    [](const typename Matcher::regexp::Char _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Eps _args) -> bool {
+                    [](const typename Matcher::regexp::Eps _args) -> bool {
                       return true;
                     },
-                    [&](const typename Matcher::regexp::Cat _args) -> bool {
+                    [](const typename Matcher::regexp::Cat _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Alt _args) -> bool {
+                    [](const typename Matcher::regexp::Alt _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Zero _args) -> bool {
+                    [](const typename Matcher::regexp::Zero _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Star _args) -> bool {
+                    [](const typename Matcher::regexp::Star _args) -> bool {
                       return false;
                     }},
                 x->v());
@@ -111,13 +111,13 @@ bool Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
             std::shared_ptr<Matcher::regexp> r2 = _args._a1;
             return std::visit(
                 Overloaded{
-                    [&](const typename Matcher::regexp::Any _args) -> bool {
+                    [](const typename Matcher::regexp::Any _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Char _args) -> bool {
+                    [](const typename Matcher::regexp::Char _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Eps _args) -> bool {
+                    [](const typename Matcher::regexp::Eps _args) -> bool {
                       return false;
                     },
                     [&](const typename Matcher::regexp::Cat _args) -> bool {
@@ -133,13 +133,13 @@ bool Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
                         return false;
                       }
                     },
-                    [&](const typename Matcher::regexp::Alt _args) -> bool {
+                    [](const typename Matcher::regexp::Alt _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Zero _args) -> bool {
+                    [](const typename Matcher::regexp::Zero _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Star _args) -> bool {
+                    [](const typename Matcher::regexp::Star _args) -> bool {
                       return false;
                     }},
                 x->v());
@@ -149,16 +149,16 @@ bool Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
             std::shared_ptr<Matcher::regexp> r2 = _args._a1;
             return std::visit(
                 Overloaded{
-                    [&](const typename Matcher::regexp::Any _args) -> bool {
+                    [](const typename Matcher::regexp::Any _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Char _args) -> bool {
+                    [](const typename Matcher::regexp::Char _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Eps _args) -> bool {
+                    [](const typename Matcher::regexp::Eps _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Cat _args) -> bool {
+                    [](const typename Matcher::regexp::Cat _args) -> bool {
                       return false;
                     },
                     [&](const typename Matcher::regexp::Alt _args) -> bool {
@@ -174,10 +174,10 @@ bool Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
                         return false;
                       }
                     },
-                    [&](const typename Matcher::regexp::Zero _args) -> bool {
+                    [](const typename Matcher::regexp::Zero _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Star _args) -> bool {
+                    [](const typename Matcher::regexp::Star _args) -> bool {
                       return false;
                     }},
                 x->v());
@@ -185,25 +185,25 @@ bool Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
           [&](const typename Matcher::regexp::Zero _args) -> T1 {
             return std::visit(
                 Overloaded{
-                    [&](const typename Matcher::regexp::Any _args) -> bool {
+                    [](const typename Matcher::regexp::Any _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Char _args) -> bool {
+                    [](const typename Matcher::regexp::Char _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Eps _args) -> bool {
+                    [](const typename Matcher::regexp::Eps _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Cat _args) -> bool {
+                    [](const typename Matcher::regexp::Cat _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Alt _args) -> bool {
+                    [](const typename Matcher::regexp::Alt _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Zero _args) -> bool {
+                    [](const typename Matcher::regexp::Zero _args) -> bool {
                       return true;
                     },
-                    [&](const typename Matcher::regexp::Star _args) -> bool {
+                    [](const typename Matcher::regexp::Star _args) -> bool {
                       return false;
                     }},
                 x->v());
@@ -212,22 +212,22 @@ bool Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
             std::shared_ptr<Matcher::regexp> r0 = _args._a0;
             return std::visit(
                 Overloaded{
-                    [&](const typename Matcher::regexp::Any _args) -> bool {
+                    [](const typename Matcher::regexp::Any _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Char _args) -> bool {
+                    [](const typename Matcher::regexp::Char _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Eps _args) -> bool {
+                    [](const typename Matcher::regexp::Eps _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Cat _args) -> bool {
+                    [](const typename Matcher::regexp::Cat _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Alt _args) -> bool {
+                    [](const typename Matcher::regexp::Alt _args) -> bool {
                       return false;
                     },
-                    [&](const typename Matcher::regexp::Zero _args) -> bool {
+                    [](const typename Matcher::regexp::Zero _args) -> bool {
                       return false;
                     },
                     [&](const typename Matcher::regexp::Star _args) -> bool {
@@ -270,7 +270,7 @@ Matcher::OptCat(const std::shared_ptr<Matcher::regexp> &r1,
                         -> std::shared_ptr<Matcher::regexp> {
                       return regexp::ctor::Cat_(r1, r2);
                     },
-                    [&](const typename Matcher::regexp::Zero _args)
+                    [](const typename Matcher::regexp::Zero _args)
                         -> std::shared_ptr<Matcher::regexp> {
                       return regexp::ctor::Zero_();
                     },
@@ -302,7 +302,7 @@ Matcher::OptCat(const std::shared_ptr<Matcher::regexp> &r1,
                         -> std::shared_ptr<Matcher::regexp> {
                       return regexp::ctor::Cat_(r1, r2);
                     },
-                    [&](const typename Matcher::regexp::Zero _args)
+                    [](const typename Matcher::regexp::Zero _args)
                         -> std::shared_ptr<Matcher::regexp> {
                       return regexp::ctor::Zero_();
                     },
@@ -336,7 +336,7 @@ Matcher::OptCat(const std::shared_ptr<Matcher::regexp> &r1,
                         -> std::shared_ptr<Matcher::regexp> {
                       return regexp::ctor::Cat_(r1, r2);
                     },
-                    [&](const typename Matcher::regexp::Zero _args)
+                    [](const typename Matcher::regexp::Zero _args)
                         -> std::shared_ptr<Matcher::regexp> {
                       return regexp::ctor::Zero_();
                     },
@@ -368,7 +368,7 @@ Matcher::OptCat(const std::shared_ptr<Matcher::regexp> &r1,
                         -> std::shared_ptr<Matcher::regexp> {
                       return regexp::ctor::Cat_(r1, r2);
                     },
-                    [&](const typename Matcher::regexp::Zero _args)
+                    [](const typename Matcher::regexp::Zero _args)
                         -> std::shared_ptr<Matcher::regexp> {
                       return regexp::ctor::Zero_();
                     },
@@ -378,7 +378,7 @@ Matcher::OptCat(const std::shared_ptr<Matcher::regexp> &r1,
                     }},
                 r2->v());
           },
-          [&](const typename Matcher::regexp::Zero _args)
+          [](const typename Matcher::regexp::Zero _args)
               -> std::shared_ptr<Matcher::regexp> {
             return regexp::ctor::Zero_();
           },
@@ -404,7 +404,7 @@ Matcher::OptCat(const std::shared_ptr<Matcher::regexp> &r1,
                         -> std::shared_ptr<Matcher::regexp> {
                       return regexp::ctor::Cat_(r1, r2);
                     },
-                    [&](const typename Matcher::regexp::Zero _args)
+                    [](const typename Matcher::regexp::Zero _args)
                         -> std::shared_ptr<Matcher::regexp> {
                       return regexp::ctor::Zero_();
                     },
@@ -766,35 +766,35 @@ Matcher::OptAlt(const std::shared_ptr<Matcher::regexp> &r1,
 std::shared_ptr<Matcher::regexp>
 Matcher::null(const std::shared_ptr<Matcher::regexp> &r) {
   return std::visit(
-      Overloaded{[&](const typename Matcher::regexp::Any _args)
+      Overloaded{[](const typename Matcher::regexp::Any _args)
                      -> std::shared_ptr<Matcher::regexp> {
                    return regexp::ctor::Zero_();
                  },
-                 [&](const typename Matcher::regexp::Char _args)
+                 [](const typename Matcher::regexp::Char _args)
                      -> std::shared_ptr<Matcher::regexp> {
                    return regexp::ctor::Zero_();
                  },
-                 [&](const typename Matcher::regexp::Eps _args)
+                 [](const typename Matcher::regexp::Eps _args)
                      -> std::shared_ptr<Matcher::regexp> {
                    return regexp::ctor::Eps_();
                  },
-                 [&](const typename Matcher::regexp::Cat _args)
+                 [](const typename Matcher::regexp::Cat _args)
                      -> std::shared_ptr<Matcher::regexp> {
                    std::shared_ptr<Matcher::regexp> r1 = _args._a0;
                    std::shared_ptr<Matcher::regexp> r2 = _args._a1;
                    return OptCat(null(r1), null(r2));
                  },
-                 [&](const typename Matcher::regexp::Alt _args)
+                 [](const typename Matcher::regexp::Alt _args)
                      -> std::shared_ptr<Matcher::regexp> {
                    std::shared_ptr<Matcher::regexp> r1 = _args._a0;
                    std::shared_ptr<Matcher::regexp> r2 = _args._a1;
                    return OptAlt(null(r1), null(r2));
                  },
-                 [&](const typename Matcher::regexp::Zero _args)
+                 [](const typename Matcher::regexp::Zero _args)
                      -> std::shared_ptr<Matcher::regexp> {
                    return regexp::ctor::Zero_();
                  },
-                 [&](const typename Matcher::regexp::Star _args)
+                 [](const typename Matcher::regexp::Star _args)
                      -> std::shared_ptr<Matcher::regexp> {
                    return regexp::ctor::Eps_();
                  }},
@@ -808,7 +808,7 @@ bool Matcher::accepts_null(const std::shared_ptr<Matcher::regexp> &r) {
 std::shared_ptr<Matcher::regexp>
 Matcher::deriv(const std::shared_ptr<Matcher::regexp> &r, const int c) {
   return std::visit(
-      Overloaded{[&](const typename Matcher::regexp::Any _args)
+      Overloaded{[](const typename Matcher::regexp::Any _args)
                      -> std::shared_ptr<Matcher::regexp> {
                    return regexp::ctor::Eps_();
                  },
@@ -821,7 +821,7 @@ Matcher::deriv(const std::shared_ptr<Matcher::regexp> &r, const int c) {
                      return regexp::ctor::Zero_();
                    }
                  },
-                 [&](const typename Matcher::regexp::Eps _args)
+                 [](const typename Matcher::regexp::Eps _args)
                      -> std::shared_ptr<Matcher::regexp> {
                    return regexp::ctor::Zero_();
                  },
@@ -838,7 +838,7 @@ Matcher::deriv(const std::shared_ptr<Matcher::regexp> &r, const int c) {
                    std::shared_ptr<Matcher::regexp> r2 = _args._a1;
                    return OptAlt(deriv(r1, c), deriv(r2, c));
                  },
-                 [&](const typename Matcher::regexp::Zero _args)
+                 [](const typename Matcher::regexp::Zero _args)
                      -> std::shared_ptr<Matcher::regexp> {
                    return regexp::ctor::Zero_();
                  },
@@ -877,14 +877,12 @@ bool Matcher::deriv_parse(const std::shared_ptr<Matcher::regexp> &r,
 bool Matcher::NullEpsOrZero(const std::shared_ptr<Matcher::regexp> &r) {
   return std::visit(
       Overloaded{
-          [&](const typename Matcher::regexp::Any _args) -> T1 {
+          [](const typename Matcher::regexp::Any _args) -> T1 { return false; },
+          [](const typename Matcher::regexp::Char _args) -> T1 {
             return false;
           },
-          [&](const typename Matcher::regexp::Char _args) -> T1 {
-            return false;
-          },
-          [&](const typename Matcher::regexp::Eps _args) -> T1 { return true; },
-          [&](const typename Matcher::regexp::Cat _args) -> T1 {
+          [](const typename Matcher::regexp::Eps _args) -> T1 { return true; },
+          [](const typename Matcher::regexp::Cat _args) -> T1 {
             std::shared_ptr<Matcher::regexp> r1 = _args._a0;
             std::shared_ptr<Matcher::regexp> r2 = _args._a1;
             if (NullEpsOrZero(r1)) {
@@ -901,7 +899,7 @@ bool Matcher::NullEpsOrZero(const std::shared_ptr<Matcher::regexp> &r) {
               }
             }
           },
-          [&](const typename Matcher::regexp::Alt _args) -> T1 {
+          [](const typename Matcher::regexp::Alt _args) -> T1 {
             std::shared_ptr<Matcher::regexp> r1 = _args._a0;
             std::shared_ptr<Matcher::regexp> r2 = _args._a1;
             if (NullEpsOrZero(r1)) {
@@ -918,10 +916,10 @@ bool Matcher::NullEpsOrZero(const std::shared_ptr<Matcher::regexp> &r) {
               }
             }
           },
-          [&](const typename Matcher::regexp::Zero _args) -> T1 {
+          [](const typename Matcher::regexp::Zero _args) -> T1 {
             return false;
           },
-          [&](const typename Matcher::regexp::Star _args) -> T1 {
+          [](const typename Matcher::regexp::Star _args) -> T1 {
             return true;
           }},
       r->v());

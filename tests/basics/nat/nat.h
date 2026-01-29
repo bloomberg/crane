@@ -71,8 +71,8 @@ struct Nat {
     }
     int nat_to_int() const {
       return std::visit(
-          Overloaded{[&](const typename nat::O _args) -> int { return 0; },
-                     [&](const typename nat::S _args) -> int {
+          Overloaded{[](const typename nat::O _args) -> int { return 0; },
+                     [](const typename nat::S _args) -> int {
                        std::shared_ptr<nat> n_ = _args._a0;
                        return 1 + n_->nat_to_int();
                      }},

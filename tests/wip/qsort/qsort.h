@@ -81,7 +81,7 @@ split_pivot(F0 &&le_dec0, const T1 pivot,
             const std::shared_ptr<List::list<T1>> &l) {
   return std::visit(
       Overloaded{
-          [&](const typename List::list<T1>::nil _args)
+          [](const typename List::list<T1>::nil _args)
               -> std::pair<std::shared_ptr<List::list<T1>>,
                            std::shared_ptr<List::list<T1>>> {
             return std::make_pair(List::list<T1>::ctor::nil_(),

@@ -101,16 +101,16 @@ struct Colist {
     std::shared_ptr<List::list<A>>
     list_of_colist(const std::shared_ptr<Nat::nat> &fuel) const {
       return std::visit(
-          Overloaded{[&](const typename Nat::nat::O _args)
+          Overloaded{[](const typename Nat::nat::O _args)
                          -> std::shared_ptr<List::list<A>> {
                        return List::list<A>::ctor::nil_();
                      },
-                     [&](const typename Nat::nat::S _args)
+                     [](const typename Nat::nat::S _args)
                          -> std::shared_ptr<List::list<A>> {
                        std::shared_ptr<Nat::nat> fuel_ = _args._a0;
                        return std::visit(
                            Overloaded{
-                               [&](const typename colist<A>::conil _args)
+                               [](const typename colist<A>::conil _args)
                                    -> std::shared_ptr<List::list<A>> {
                                  return List::list<A>::ctor::nil_();
                                },
@@ -127,7 +127,7 @@ struct Colist {
     }
     template <typename T2, MapsTo<T2, A> F0>
     std::shared_ptr<colist<T2>> comap(F0 &&f) const {
-      return std::visit(Overloaded{[&](const typename colist<A>::conil _args)
+      return std::visit(Overloaded{[](const typename colist<A>::conil _args)
                                        -> std::shared_ptr<colist<T2>> {
                                      return colist<T2>::ctor::conil_();
                                    },

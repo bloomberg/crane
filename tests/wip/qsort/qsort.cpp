@@ -84,16 +84,16 @@ merge(const std::shared_ptr<List::list<unsigned int>> &l1,
 
 std::shared_ptr<Sig0::sig0<std::shared_ptr<List::list<unsigned int>>>>
 qsort(const std::shared_ptr<List::list<unsigned int>> &_x0) {
-  return [&](const std::shared_ptr<List::list<T1>> _x0) {
+  return [](const std::shared_ptr<List::list<T1>> _x0) {
     return div_conq_pivot<unsigned int>(
         le_dec, List::list<unsigned int>::ctor::nil_(),
-        [&](unsigned int a, std::shared_ptr<List::list<unsigned int>> _x,
-            std::shared_ptr<
-                Sig0::sig0<std::shared_ptr<List::list<unsigned int>>>>
-                x,
-            std::shared_ptr<
-                Sig0::sig0<std::shared_ptr<List::list<unsigned int>>>>
-                x0) {
+        [](unsigned int a, std::shared_ptr<List::list<unsigned int>> _x,
+           std::shared_ptr<
+               Sig0::sig0<std::shared_ptr<List::list<unsigned int>>>>
+               x,
+           std::shared_ptr<
+               Sig0::sig0<std::shared_ptr<List::list<unsigned int>>>>
+               x0) {
           return merge(x, List::list<unsigned int>::ctor::cons_(a, x0));
         },
         _x0);

@@ -106,6 +106,21 @@ let type_subst_vect v t =
 
 let instantiation (nb,t) = type_subst_vect (Array.init nb new_meta) t
 
+(*s Replace all [Tunknown] in a type with fresh [Tmeta].
+   This is used for existential type variables that were marked as Tunknown
+   during extraction. At use sites, we want fresh metas so they can unify
+   with concrete types. *)
+
+let instantiate_unknowns t =
+  let rec subst t = match t with
+    | Tunknown -> new_meta ()
+    | Tmeta {contents=None} -> t
+    | Tmeta {contents=Some u} -> subst u
+    | Tarr (a,b) -> Tarr (subst a, subst b)
+    | Tglob (r, l, a) -> Tglob (r, List.map subst l, a)
+    | a -> a
+  in subst t
+
 (*s Occur-check of a free meta in a type *)
 
 let rec type_occurs alpha t =

@@ -83,7 +83,7 @@ struct PString {
                                     const std::shared_ptr<List::list<T1>> &l) {
     return std::visit(
         Overloaded{
-            [&](const typename List::list<T1>::nil _args) -> std::string {
+            [](const typename List::list<T1>::nil _args) -> std::string {
               return "[]";
             },
             [&](const typename List::list<T1>::cons _args) -> std::string {

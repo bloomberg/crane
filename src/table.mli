@@ -81,6 +81,8 @@ val lookup_cst_type : Constant.t -> constant_body -> ml_schema option
 
 val add_ind : MutInd.t -> mutual_inductive_body -> ml_ind -> unit
 val lookup_ind : MutInd.t -> mutual_inductive_body -> ml_ind option
+val get_ind_nparams_opt : MutInd.t -> int option
+val get_ind_num_param_vars_opt : MutInd.t -> int option
 
 val add_inductive_kind : MutInd.t -> inductive_kind -> unit
 val is_coinductive : GlobRef.t -> bool

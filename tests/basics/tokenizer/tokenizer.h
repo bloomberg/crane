@@ -64,11 +64,11 @@ struct List {
 
 template <typename T1>
 std::shared_ptr<List::list<T1>> rev(const std::shared_ptr<List::list<T1>> &l) {
-  return std::visit(Overloaded{[&](const typename List::list<T1>::nil _args)
+  return std::visit(Overloaded{[](const typename List::list<T1>::nil _args)
                                    -> std::shared_ptr<List::list<T1>> {
                                  return List::list<T1>::ctor::nil_();
                                },
-                               [&](const typename List::list<T1>::cons _args)
+                               [](const typename List::list<T1>::cons _args)
                                    -> std::shared_ptr<List::list<T1>> {
                                  T1 x = _args._a0;
                                  std::shared_ptr<List::list<T1>> l_ = _args._a1;
@@ -94,7 +94,7 @@ struct ToString {
                                  const std::shared_ptr<List::list<T1>> &l) {
     return std::visit(
         Overloaded{
-            [&](const typename List::list<T1>::nil _args) -> std::string {
+            [](const typename List::list<T1>::nil _args) -> std::string {
               return "";
             },
             [&](const typename List::list<T1>::cons _args) -> std::string {
@@ -117,7 +117,7 @@ struct ToString {
                                     const std::shared_ptr<List::list<T1>> &l) {
     return std::visit(
         Overloaded{
-            [&](const typename List::list<T1>::nil _args) -> std::string {
+            [](const typename List::list<T1>::nil _args) -> std::string {
               return "[]";
             },
             [&](const typename List::list<T1>::cons _args) -> std::string {
@@ -154,10 +154,10 @@ struct Tokenizer {
   list_to_vec_h(const std::shared_ptr<List::list<T1>> &l) {
     return std::visit(
         Overloaded{
-            [&](const typename List::list<T1>::nil _args) -> std::vector<T1> {
+            [](const typename List::list<T1>::nil _args) -> std::vector<T1> {
               return {};
             },
-            [&](const typename List::list<T1>::cons _args) -> std::vector<T1> {
+            [](const typename List::list<T1>::cons _args) -> std::vector<T1> {
               T1 a = _args._a0;
               std::shared_ptr<List::list<T1>> l_ = _args._a1;
               std::vector<T1> v = list_to_vec_h<T1>(l_);
@@ -177,7 +177,7 @@ struct Tokenizer {
   list_to_vec_map_h(F0 &&f, const std::shared_ptr<List::list<T1>> &l) {
     return std::visit(
         Overloaded{
-            [&](const typename List::list<T1>::nil _args) -> std::vector<T2> {
+            [](const typename List::list<T1>::nil _args) -> std::vector<T2> {
               return {};
             },
             [&](const typename List::list<T1>::cons _args) -> std::vector<T2> {

@@ -73,6 +73,25 @@ let make_subst_extra_tvars num_ind_vars extra_tvar_map =
   in
   subst
 
+(* Replace all unnamed Tvars with Tany (for type erasure in indexed inductives).
+   Used when a type has Tvars that don't correspond to any template parameters.
+   This is defined early so it can be used in gen_cpp_pat_lambda and gen_ind_header_v2. *)
+let rec tvar_erase_type (ty : cpp_type) : cpp_type =
+  match ty with
+  | Tvar (_, None) -> Tany
+  | Tvar (_, Some _) -> ty  (* Named Tvars are kept *)
+  | Tglob (r, tys, args) -> Tglob (r, List.map tvar_erase_type tys, args)
+  | Tfun (tys, ty) -> Tfun (List.map tvar_erase_type tys, tvar_erase_type ty)
+  | Tmod (m, ty) -> Tmod (m, tvar_erase_type ty)
+  | Tnamespace (r, ty) -> Tnamespace (r, tvar_erase_type ty)
+  | Tstruct (r, tys) -> Tstruct (r, List.map tvar_erase_type tys)
+  | Tref ty -> Tref (tvar_erase_type ty)
+  | Tvariant tys -> Tvariant (List.map tvar_erase_type tys)
+  | Tshared_ptr ty -> Tshared_ptr (tvar_erase_type ty)
+  | Tid (id, tys) -> Tid (id, List.map tvar_erase_type tys)
+  | Tqualified (ty, id) -> Tqualified (tvar_erase_type ty, id)
+  | _ -> ty  (* Tvoid, Tstring, Ttodo, Tunknown, Taxiom, Tany *)
+
 let rec convert_ml_type_to_cpp_type env (ns : GlobRef.t list) (tvars : Id.t list) (ml_t : ml_type) : cpp_type =
   match ml_t with
   | Tarr (t1, t2) -> (* FIX *)
@@ -86,7 +105,30 @@ let rec convert_ml_type_to_cpp_type env (ns : GlobRef.t list) (tvars : Id.t list
   | Tglob (g, ts, args) when is_custom g ->
     Tglob (g, List.map (convert_ml_type_to_cpp_type env ns tvars) ts, List.map (gen_expr env) args)
   | Tglob (g, ts, _) ->
-      let core = Tglob (g, List.map (convert_ml_type_to_cpp_type env ns tvars) ts, []) in
+      (* For inductives, only keep type args that correspond to parameters (not indices).
+         Parameters become template params in C++; indices are erased. *)
+      let filtered_ts = match g with
+        | GlobRef.IndRef (kn, _) ->
+            (* Filter type args to keep only parameters (not indices).
+               Use get_ind_num_param_vars_opt to determine how many to keep.
+               For local/self-references with non-empty tvars, we can use tvars length
+               as a fallback, but prefer the table lookup for accuracy. *)
+            (match Table.get_ind_num_param_vars_opt kn with
+            | Some num_param_vars ->
+                (* Only keep the first num_param_vars type args - the rest are indices *)
+                List.firstn num_param_vars ts
+            | None ->
+                (* Fallback: if tvars is non-empty and this is a local reference, use tvars length *)
+                let is_local = List.exists (Environ.QGlobRef.equal Environ.empty_env g) ns ||
+                               List.exists (Environ.QGlobRef.equal Environ.empty_env g) !local_inductives in
+                if is_local && tvars <> [] then
+                  List.firstn (List.length tvars) ts
+                else
+                  ts)  (* Keep all if we can't determine *)
+        | _ -> ts
+      in
+      let converted_ts = List.map (convert_ml_type_to_cpp_type env ns tvars) filtered_ts in
+      let core = Tglob (g, converted_ts, []) in
       (match g with
       | GlobRef.IndRef _ ->
         (* Check if this inductive is in the explicit ns list or in local_inductives context *)
@@ -96,15 +138,16 @@ let rec convert_ml_type_to_cpp_type env (ns : GlobRef.t list) (tvars : Id.t list
         else if not (get_record_fields g == []) then Tshared_ptr core
         else Tshared_ptr (Tnamespace (g, core))
       | _ -> core)
-  | Tvar i -> (try Tvar (i, Some (List.nth tvars (pred i)))       (* TODO: probs fix/cleanup *)
-                              with Failure _ -> Tvar (i, None))
-  | Tvar' i ->  (try Tvar (i, Some (List.nth tvars (pred i)))       (* TODO: probs fix/cleanup *)
-                              with Failure _ -> Tvar (i, None))
+  | Tvar i -> (try Tvar (i, Some (List.nth tvars (pred i)))
+               with Failure _ -> Tvar (i, None))
+  | Tvar' i -> (try Tvar (i, Some (List.nth tvars (pred i)))
+                with Failure _ -> Tvar (i, None))
   | Tstring -> assert false (* TODO: get rid of Tstring in both ASTs *)
   | Tmeta {contents = Some t} -> convert_ml_type_to_cpp_type env ns tvars t
   | Tmeta {id = i} ->
-      (* Unresolved meta - generate a bogus type name for debugging *)
-      Tglob (GlobRef.VarRef (Id.of_string ("meta" ^ string_of_int i)), [], [])
+      (* Unresolved meta - use std::any for type erasure.
+         This happens for existential type variables in indexed inductives. *)
+      Tany
   | Tdummy Ktype -> Tglob (GlobRef.VarRef (Id.of_string ("dummy_type")), [], [])
   | Tdummy Kprop -> Tglob (GlobRef.VarRef (Id.of_string ("dummy_prop")), [], [])
   | Tdummy (Kimplicit _) -> Tglob (GlobRef.VarRef (Id.of_string ("dummy_implicit")), [], [])
@@ -149,6 +192,14 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       | _ -> CPPfun_call(x, args)) in
     (match ty with
     | Tglob (n, tys, _) ->
+      (* Filter out index type args - only keep parameters *)
+      let tys = match n with
+        | GlobRef.IndRef (kn, _) ->
+            (match Table.get_ind_num_param_vars_opt kn with
+            | Some num_param_vars -> List.firstn num_param_vars tys
+            | None -> tys)
+        | _ -> tys
+      in
       let temps = List.map (convert_ml_type_to_cpp_type env [] []) tys in
       app (CPPglob (r, temps))
     | _ -> app (CPPglob (r, [])))
@@ -159,6 +210,14 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       (* Generate: Type<temps>::ctor::Constructor_(args) *)
       let gen_ctor_call args = (match ty with
       | Tglob (n, tys, _) ->
+        (* Filter out index type args - only keep parameters *)
+        let tys = match n with
+          | GlobRef.IndRef (kn, _) ->
+              (match Table.get_ind_num_param_vars_opt kn with
+              | Some num_param_vars -> List.firstn num_param_vars tys
+              | None -> tys)
+          | _ -> tys
+        in
         let temps = List.map (convert_ml_type_to_cpp_type env [] []) tys in
         (* Get the constructor base name (without module path) and add underscore suffix *)
         let ctor_name = Common.pp_global_name Type r in
@@ -181,6 +240,14 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       (* Records - keep using make_shared pattern for now *)
       let nstempmod args = (match ty with
       | Tglob (n, tys, _) ->
+        (* Filter out index type args - only keep parameters *)
+        let tys = match n with
+          | GlobRef.IndRef (kn, _) ->
+              (match Table.get_ind_num_param_vars_opt kn with
+              | Some num_param_vars -> List.firstn num_param_vars tys
+              | None -> tys)
+          | _ -> tys
+        in
         let temps = List.map (convert_ml_type_to_cpp_type env [] []) tys in
         CPPfun_call (CPPmk_shared (Tglob (n, temps, [])), [CPPstruct (n, temps, args)])
       | _ -> assert false) in
@@ -349,6 +416,14 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body =
       List.map (fun ty -> try type_subst_list type_args ty with _ -> ty) tys
       else tys
     in
+    (* Filter out index type args - only keep parameters *)
+    let tys = match r with
+      | GlobRef.IndRef (kn, _) ->
+          (match Table.get_ind_num_param_vars_opt kn with
+          | Some num_param_vars -> List.firstn num_param_vars tys
+          | None -> tys)
+      | _ -> tys
+    in
     let temps = List.map (convert_ml_type_to_cpp_type env [] []) tys in
     (* The constructor struct is nested inside the inductive type *)
     (* Generate: typename list<unsigned int>::nil *)
@@ -360,10 +435,26 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body =
     Tqualified (ind_type, ctor_name)
   | _ -> Tid (ctor_name, []) in
   let sname = Id.of_string "_args" in
+  (* Check if this is an indexed inductive (has indices but no params).
+     Only erase Tvars for constructor field types, NOT for the function's return type.
+     The return type's Tvars come from the function's template params, not the inductive's indices. *)
+  let is_indexed_ind = match typ with
+    | Tglob (GlobRef.IndRef (kn, _), tys, _) ->
+        (* It's indexed if: there are type args (indices) AND no param vars *)
+        tys <> [] &&
+        (match Table.get_ind_num_param_vars_opt kn with
+        | Some 0 -> true
+        | _ -> false)
+    | _ -> false
+  in
   let ret = convert_ml_type_to_cpp_type env [] [] rty in
+  (* Don't erase return type - its Tvars are function template params *)
   let asgns =  List.mapi (fun i x ->
       let id = Id.of_string ("_a" ^ string_of_int i) in
-      Sasgn (fst x, Some (convert_ml_type_to_cpp_type env [] [] (snd x)), CPPget (CPPglob (GlobRef.VarRef sname, []), id))) (List.rev ids) in
+      let cpp_ty = convert_ml_type_to_cpp_type env [] [] (snd x) in
+      (* Only erase Tvars in constructor field types for indexed inductives *)
+      let cpp_ty = if is_indexed_ind then tvar_erase_type cpp_ty else cpp_ty in
+      Sasgn (fst x, Some cpp_ty, CPPget (CPPglob (GlobRef.VarRef sname, []), id))) (List.rev ids) in
   let asgns = List.filteri (fun i _ -> List.nth dummies i) asgns in
   CPPlambda(
         [(Tmod (TMconst, constr), Some sname)],
@@ -1228,6 +1319,8 @@ let gen_ind_header_v2 vars name cnames tys method_candidates =
       (* Fields: convert types, using self_ty for recursive references *)
       let fields = List.mapi (fun j ty ->
         let cpp_ty = convert_ml_type_to_cpp_type (empty_env ()) [name] vars ty in
+        (* For indexed inductives (no template params), erase unnamed Tvars to std::any *)
+        let cpp_ty = if vars = [] then tvar_erase_type cpp_ty else cpp_ty in
         (* Field name: use descriptive names if available, otherwise _a0, _a1, etc. *)
         let field_name = Id.of_string ("_a" ^ string_of_int j) in
         (Fvar (field_name, cpp_ty), VPublic)
@@ -1278,6 +1371,8 @@ let gen_ind_header_v2 vars name cnames tys method_candidates =
       (* Parameters - use const ref for shared_ptr types *)
       let params = List.mapi (fun j ty ->
         let cpp_ty = convert_ml_type_to_cpp_type (empty_env ()) [name] vars ty in
+        (* For indexed inductives (no template params), erase unnamed Tvars to std::any *)
+        let cpp_ty = if vars = [] then tvar_erase_type cpp_ty else cpp_ty in
         let wrapped = match cpp_ty with
           | Tshared_ptr _ -> Tref (Tmod (TMconst, cpp_ty))  (* const std::shared_ptr<T>& *)
           | _ -> cpp_ty

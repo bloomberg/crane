@@ -78,10 +78,10 @@ merge_prog(const std::shared_ptr<List::list<unsigned int>> &_x,
 
 std::shared_ptr<Sig0::sig0<std::shared_ptr<List::list<unsigned int>>>>
 msort(const std::shared_ptr<List::list<unsigned int>> &_x0) {
-  return [&](const std::shared_ptr<List::list<T1>> _x0) {
+  return [](const std::shared_ptr<List::list<T1>> _x0) {
     return div_conq_split<unsigned int>(
         List::list<unsigned int>::ctor::nil_(),
-        [&](unsigned int a) {
+        [](unsigned int a) {
           return List::list<unsigned int>::ctor::cons_(
               a, List::list<unsigned int>::ctor::nil_());
         },

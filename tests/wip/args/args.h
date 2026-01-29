@@ -29,7 +29,7 @@ struct Args {
                                    const unsigned int a, const unsigned int b);
 
   static inline const std::shared_ptr<r> r = std::make_shared<r>(
-      R{[&](unsigned int x, unsigned int _x) { return x; }, 3u});
+      R{[](unsigned int x, unsigned int _x) { return x; }, 3u});
 
   static inline const unsigned int three = r->f(3u, 0u);
 };

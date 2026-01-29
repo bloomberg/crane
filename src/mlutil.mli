@@ -23,6 +23,7 @@ val type_subst_list : ml_type list -> ml_type -> ml_type
 val type_subst_vect : ml_type array -> ml_type -> ml_type
 
 val instantiation : ml_schema -> ml_type
+val instantiate_unknowns : ml_type -> ml_type
 
 val try_mgu : ml_type -> ml_type -> unit
 val needs_magic : ml_type * ml_type -> bool
