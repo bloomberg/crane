@@ -301,12 +301,16 @@ let pp_inductive_type_name r =
       (* Local inductive: use lowercase name directly *)
       str (String.uncapitalize_ascii (str_global Type r))
   | GlobRef.IndRef _ ->
-      (* Non-local inductive: Wrapper::lowercase_inner
-         The wrapper is capitalized, inner is lowercase *)
       let base = str_global Type r in
-      let wrapper = String.capitalize_ascii base in
-      let inner = String.uncapitalize_ascii base in
-      str (wrapper ^ "::" ^ inner)
+      if is_qualified_name base then
+        (* Already qualified (e.g., C::t from module parameter): use as-is *)
+        str base
+      else
+        (* Non-local, unqualified inductive: Wrapper::lowercase_inner
+           The wrapper is capitalized, inner is lowercase *)
+        let wrapper = String.capitalize_ascii base in
+        let inner = String.uncapitalize_ascii base in
+        str (wrapper ^ "::" ^ inner)
   | _ ->
       (* Non-inductive: use as-is *)
       pp_global Type r
@@ -374,6 +378,7 @@ module IdSet = Set.Make(Names.Id)
    A lambda needs [&] capture if its body references variables that are:
    - Not lambda parameters
    - Not locally declared within the lambda body
+   - 'this' pointer (always needs capture in a lambda)
    Returns true if capture is needed, false if [] can be used.
 
    Also checks recursively: if a nested lambda captures from the outer lambda's scope,
@@ -387,11 +392,15 @@ let rec lambda_needs_capture (params : (Minicpp.cpp_type * Names.Id.t option) li
     match id_opt with Some id -> IdSet.add id acc | None -> acc
   ) IdSet.empty params in
 
+  (* Track if 'this' is used - it always requires capture *)
+  let uses_this = ref false in
+
   (* Collect all variable references and local declarations from expressions and statements *)
   let rec collect_from_expr (refs, decls) e =
     match e with
     | CPPvar id -> (IdSet.add id refs, decls)
     | CPPvar' _ -> (refs, decls)  (* de Bruijn - ignore *)
+    | CPPthis -> uses_this := true; (refs, decls)  (* 'this' requires capture *)
     | CPPfun_call (f, args) ->
         let acc = collect_from_expr (refs, decls) f in
         List.fold_left collect_from_expr acc args
@@ -432,7 +441,7 @@ let rec lambda_needs_capture (params : (Minicpp.cpp_type * Names.Id.t option) li
     | CPPqualified (e', _) -> collect_from_expr (refs, decls) e'
     | CPPrequires (_, constraints) ->
         List.fold_left (fun a (e', _) -> collect_from_expr a e') (refs, decls) constraints
-    | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPstring _ | CPPuint _ | CPPthis | CPPconvertible_to _ ->
+    | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPstring _ | CPPuint _ | CPPconvertible_to _ ->
         (refs, decls)
 
   and collect_from_stmt (refs, decls) stmt =
@@ -455,7 +464,8 @@ let rec lambda_needs_capture (params : (Minicpp.cpp_type * Names.Id.t option) li
   let (all_refs, local_decls) = List.fold_left collect_from_stmt (IdSet.empty, IdSet.empty) body in
   let bound_vars = IdSet.union param_names local_decls in
   let free_vars = IdSet.diff all_refs bound_vars in
-  not (IdSet.is_empty free_vars)
+  (* Lambda needs capture if it has free variables OR uses 'this' *)
+  not (IdSet.is_empty free_vars) || !uses_this
 
 (* Check if a cpp_expr contains any lambdas that need capture (have free variables).
    Used to determine if IIFE wrapping is needed for static inline initializers.
@@ -682,7 +692,8 @@ let rec pp_cpp_type par vl t =
              (* Eponymous record: use capitalized name directly, no namespace nesting *)
              str (String.capitalize_ascii type_name_str) ++ templates
            else if is_qualified_name type_name_str then
-             str type_name_str ++ templates
+             (* Already qualified (e.g., C::t from module parameter): add typename if in template *)
+             typename_prefix_for type_name_str ++ str type_name_str ++ templates
            else
              (* Use lowercase inner name: List::list, Ordering::ordering *)
              let inner_name = String.uncapitalize_ascii type_name_str in
@@ -739,8 +750,12 @@ and pp_cpp_expr env args t =
         if is_eponymous_record_global x then
           (* Eponymous record: use capitalized name (merged into module struct) *)
           str (String.capitalize_ascii type_name_str)
-        else if needs_ns && not (is_qualified_name type_name_str) then
-          (* Add capitalized namespace prefix, lowercase inner: List::list *)
+        else if is_qualified_name type_name_str then
+          (* Already qualified (e.g., C::t from module parameter): use as-is
+             Do NOT lowercase - the qualifier (like module param C) should keep case *)
+          str type_name_str
+        else if needs_ns then
+          (* Non-local, unqualified inductive: add capitalized namespace prefix, lowercase inner *)
           let inner_name = str (String.uncapitalize_ascii type_name_str) in
           ns_name ++ str "::" ++ inner_name
         else
@@ -2014,7 +2029,10 @@ let rec pp_structure_elem ~is_header f = function
              if is_header then
                in_struct_context := true
              else
-               current_struct_name := Some name;  (* Track struct name for qualification *)
+               (* Track struct name for qualification - combine with parent for nested modules *)
+               current_struct_name := (match old_struct_name with
+                 | Some parent -> Some (parent ++ str "::" ++ name)
+                 | None -> Some name);
              let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
              (* Save method_candidates before restoring old state - need them for generating record methods *)
              let this_method_candidates = !method_candidates in
@@ -2088,7 +2106,10 @@ let rec pp_structure_elem ~is_header f = function
              if is_header then
                in_struct_context := true
              else
-               current_struct_name := Some name;
+               (* Track struct name for qualification - combine with parent for nested modules *)
+               current_struct_name := (match old_struct_name with
+                 | Some parent -> Some (parent ++ str "::" ++ name)
+                 | None -> Some name);
              let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
              in_struct_context := old_context;
              current_struct_name := old_struct_name;

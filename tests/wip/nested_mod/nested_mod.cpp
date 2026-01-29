@@ -35,22 +35,21 @@ unsigned int div(const unsigned int x, const unsigned int y) {
   }
 }
 
-unsigned int Inner::area(const std::shared_ptr<Inner::shape> &s) {
+unsigned int Outer::Inner::area(const std::shared_ptr<shape> &s) {
   return std::visit(
-      Overloaded{
-          [](const typename Inner::shape::Circle _args) -> unsigned int {
-            unsigned int r = _args._a0;
-            return ((r * r) * (((0 + 1) + 1) + 1));
-          },
-          [](const typename Inner::shape::Square _args) -> unsigned int {
-            unsigned int side = _args._a0;
-            return (side * side);
-          },
-          [](const typename Inner::shape::Triangle _args) -> unsigned int {
-            unsigned int a = _args._a0;
-            unsigned int b = _args._a1;
-            return ::div((a * b), ((0 + 1) + 1));
-          }},
+      Overloaded{[](const typename shape::Circle _args) -> unsigned int {
+                   unsigned int r = _args._a0;
+                   return ((r * r) * (((0 + 1) + 1) + 1));
+                 },
+                 [](const typename shape::Square _args) -> unsigned int {
+                   unsigned int side = _args._a0;
+                   return (side * side);
+                 },
+                 [](const typename shape::Triangle _args) -> unsigned int {
+                   unsigned int a = _args._a0;
+                   unsigned int b = _args._a1;
+                   return ::div((a * b), ((0 + 1) + 1));
+                 }},
       s->v());
 }
 

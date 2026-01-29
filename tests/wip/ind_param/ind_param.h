@@ -35,12 +35,12 @@ concept Container = requires {
 };
 
 template <Container C> struct Wrapper {
-  using wrapped = std::shared_ptr<C::t>;
+  using wrapped = std::shared_ptr<typename C::t>;
 
   struct result {
   public:
     struct Ok {
-      std::shared_ptr<C::t> _a0;
+      std::shared_ptr<typename C::t> _a0;
     };
     struct Err {
       unsigned int _a0;
@@ -55,7 +55,8 @@ template <Container C> struct Wrapper {
   public:
     struct ctor {
       ctor() = delete;
-      static std::shared_ptr<result> Ok_(const std::shared_ptr<C::t> &a0) {
+      static std::shared_ptr<result>
+      Ok_(const std::shared_ptr<typename C::t> &a0) {
         return std::shared_ptr<result>(new result(Ok{a0}));
       }
       static std::shared_ptr<result> Err_(unsigned int a0) {
@@ -65,11 +66,12 @@ template <Container C> struct Wrapper {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<C::t>> F0,
+  template <typename T1, MapsTo<T1, std::shared_ptr<typename C::t>> F0,
             MapsTo<T1, unsigned int> F1>
   static T1 result_rect(F0 &&f, F1 &&f0, const std::shared_ptr<result> &r) {
     return std::visit(Overloaded{[&](const typename result::Ok _args) -> T1 {
-                                   std::shared_ptr<C::t> t0 = _args._a0;
+                                   std::shared_ptr<typename C::t> t0 =
+                                       _args._a0;
                                    return f(t0);
                                  },
                                  [&](const typename result::Err _args) -> T1 {
@@ -79,11 +81,12 @@ template <Container C> struct Wrapper {
                       r->v());
   }
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<C::t>> F0,
+  template <typename T1, MapsTo<T1, std::shared_ptr<typename C::t>> F0,
             MapsTo<T1, unsigned int> F1>
   static T1 result_rec(F0 &&f, F1 &&f0, const std::shared_ptr<result> &r) {
     return std::visit(Overloaded{[&](const typename result::Ok _args) -> T1 {
-                                   std::shared_ptr<C::t> t0 = _args._a0;
+                                   std::shared_ptr<typename C::t> t0 =
+                                       _args._a0;
                                    return f(t0);
                                  },
                                  [&](const typename result::Err _args) -> T1 {
@@ -94,19 +97,19 @@ template <Container C> struct Wrapper {
   }
 
   static std::shared_ptr<result> make_single(const typename C::elem e) {
-    return result::ctor::Ok_(c::t::ctor::Single_(e));
+    return result::ctor::Ok_(C::t::ctor::Single_(e));
   }
 
   static std::shared_ptr<result> make_pair(const typename C::elem e1,
                                            const typename C::elem e2) {
-    return result::ctor::Ok_(c::t::ctor::Pair_(e1, e2));
+    return result::ctor::Ok_(C::t::ctor::Pair_(e1, e2));
   }
 
   static unsigned int get_size(const std::shared_ptr<result> &r) {
     return std::visit(
         Overloaded{
             [](const typename result::Ok _args) -> unsigned int {
-              std::shared_ptr<C::t> c = _args._a0;
+              std::shared_ptr<typename C::t> c = _args._a0;
               return C::size(c);
             },
             [](const typename result::Err _args) -> unsigned int { return 0; }},
@@ -114,7 +117,7 @@ template <Container C> struct Wrapper {
   }
 
   static inline std::shared_ptr<result> empty_result =
-      result::ctor::Ok_(c::t::ctor::Empty_());
+      result::ctor::Ok_(C::t::ctor::Empty_());
 
  static inline std::shared_ptr<result> error_result = result::ctor::Err_(((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
 };

@@ -102,9 +102,9 @@ struct Outer {
 };
 
 const std::shared_ptr<Outer::Inner::shape> my_circle =
-    outer::Inner::shape::ctor::Circle_((((((0 + 1) + 1) + 1) + 1) + 1));
+    Outer::Inner::shape::ctor::Circle_((((((0 + 1) + 1) + 1) + 1) + 1));
 
-const std::shared_ptr<Outer::color> my_color = outer::color::ctor::Red_();
+const std::shared_ptr<Outer::color> my_color = Outer::color::ctor::Red_();
 
 const unsigned int test_area = Outer::Inner::area(my_circle);
 

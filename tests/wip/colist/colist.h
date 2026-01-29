@@ -105,7 +105,7 @@ struct Colist {
                          -> std::shared_ptr<List::list<A>> {
                        return List::list<A>::ctor::nil_();
                      },
-                     [](const typename Nat::nat::S _args)
+                     [&](const typename Nat::nat::S _args)
                          -> std::shared_ptr<List::list<A>> {
                        std::shared_ptr<Nat::nat> fuel_ = _args._a0;
                        return std::visit(
