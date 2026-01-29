@@ -19,7 +19,7 @@ for dir in tests/$category/*/; do
   (targets $name.t.exe)
   (deps $vofile $name.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-bde.sh $name.t.exe $name.cpp $name.t.cpp)))
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} $name.t.exe $name.cpp $name.t.cpp)))
  (rule
   (alias runtest)
   (deps $name.t.exe)
@@ -33,7 +33,7 @@ EOF
   (targets $name.t.exe)
   (deps $vofile $name.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh $name.t.exe $name.cpp $name.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} $name.t.exe $name.cpp $name.t.cpp)))
  (rule
   (alias runtest)
   (deps $name.t.exe)

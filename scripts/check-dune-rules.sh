@@ -68,38 +68,37 @@ prompt_user() {
     fi
 }
 
-# Generate expected rule for a test
-generate_expected_rule() {
-    local name=$1
-    local vofile=$2
+# Extract expected rule for a test from generated output
+# Usage: get_expected_rule <test_name>
+# Reads from global variable: expected_rules_file
+get_expected_rule() {
+    local test_name=$1
+    local in_rule=false
+    local paren_depth=0
+    local rule=""
 
-    if [[ "$name" == *_bde ]]; then
-        cat << EOF
-(subdir $name
- (rule
-  (targets $name.t.exe)
-  (deps $vofile $name.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-bde.sh $name.t.exe $name.cpp $name.t.cpp)))
- (rule
-  (alias runtest)
-  (deps $name.t.exe)
-  (action (run ./$name.t.exe))))
-EOF
-    else
-        cat << EOF
-(subdir $name
- (rule
-  (targets $name.t.exe)
-  (deps $vofile $name.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh $name.t.exe $name.cpp $name.t.cpp)))
- (rule
-  (alias runtest)
-  (deps $name.t.exe)
-  (action (run ./$name.t.exe))))
-EOF
-    fi
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^\(subdir\ $test_name$ ]] || [[ "$line" =~ ^\(subdir\ $test_name\  ]]; then
+            in_rule=true
+            paren_depth=1
+            rule="$line"
+            continue
+        fi
+
+        if [ "$in_rule" = true ]; then
+            rule="$rule"$'\n'"$line"
+            # Count parentheses
+            local opens="${line//[^(]/}"
+            local closes="${line//[^)]/}"
+            paren_depth=$((paren_depth + ${#opens} - ${#closes}))
+
+            if [ $paren_depth -le 0 ]; then
+                break
+            fi
+        fi
+    done < "$expected_rules_file"
+
+    echo "$rule"
 }
 
 # Extract a subdir rule from a dune file (returns line numbers too)
@@ -182,6 +181,10 @@ check_category() {
         return
     fi
 
+    # Generate all expected rules for this category using gen-test-dune.sh
+    expected_rules_file=$(mktemp)
+    "$SCRIPT_DIR/gen-test-dune.sh" "$category" > "$expected_rules_file"
+
     # Get list of test directories (those with .t.cpp files)
     local expected_tests=()
     for dir in "$PROJECT_ROOT/tests/$category"/*/; do
@@ -247,12 +250,8 @@ check_category() {
             continue
         fi
 
-        # Get the .vo file for this test
-        local vfile=$(basename "$(ls "$PROJECT_ROOT/tests/$category/$test"/*.v 2>/dev/null | head -1)" 2>/dev/null)
-        local vofile="${vfile%.v}.vo"
-
-        # Generate expected and extract existing
-        local expected=$(generate_expected_rule "$test" "$vofile")
+        # Get expected rule from gen-test-dune.sh output
+        local expected=$(get_expected_rule "$test")
         local existing=$(extract_rule "$dune_file" "$test")
 
         # Normalize and compare
@@ -266,9 +265,7 @@ check_category() {
 
     # Process modified rules (prompt and fix)
     for test in "${modified[@]}"; do
-        local vfile=$(basename "$(ls "$PROJECT_ROOT/tests/$category/$test"/*.v 2>/dev/null | head -1)" 2>/dev/null)
-        local vofile="${vfile%.v}.vo"
-        local expected=$(generate_expected_rule "$test" "$vofile")
+        local expected=$(get_expected_rule "$test")
         local existing=$(extract_rule "$dune_file" "$test")
 
         echo -e "${CYAN}Modified rule:${NC} $category/$test"
@@ -300,11 +297,8 @@ check_category() {
     for test in "${missing[@]}"; do
         echo -e "${YELLOW}Missing rule:${NC} $category/$test"
 
-        local vfile=$(basename "$(ls "$PROJECT_ROOT/tests/$category/$test"/*.v 2>/dev/null | head -1)" 2>/dev/null)
-        local vofile="${vfile%.v}.vo"
-
         echo "" >> "$dune_file"
-        generate_expected_rule "$test" "$vofile" >> "$dune_file"
+        get_expected_rule "$test" >> "$dune_file"
         echo -e "${GREEN}  -> Added rule for $test${NC}"
     done
 
@@ -337,6 +331,9 @@ check_category() {
             errors=$((errors + 1))
         fi
     done
+
+    # Clean up temporary file
+    rm -f "$expected_rules_file"
 }
 
 # Check each category (discovered from tests/ subdirectories)

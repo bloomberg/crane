@@ -16,7 +16,7 @@
   (targets colist.t.exe)
   (deps Colist.vo colist.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh colist.t.exe colist.cpp colist.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} colist.t.exe colist.cpp colist.t.cpp)))
  (rule
   (alias runtest)
   (deps colist.t.exe)
@@ -27,7 +27,7 @@
   (targets graph.t.exe)
   (deps Graph.vo graph.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh graph.t.exe graph.cpp graph.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} graph.t.exe graph.cpp graph.t.cpp)))
  (rule
   (alias runtest)
   (deps graph.t.exe)
@@ -38,7 +38,7 @@
   (targets ind_param.t.exe)
   (deps IndParam.vo ind_param.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh ind_param.t.exe ind_param.cpp ind_param.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ind_param.t.exe ind_param.cpp ind_param.t.cpp)))
  (rule
   (alias runtest)
   (deps ind_param.t.exe)
@@ -49,7 +49,7 @@
   (targets isort.t.exe)
   (deps Sort.vo isort.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh isort.t.exe isort.cpp isort.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} isort.t.exe isort.cpp isort.t.cpp)))
  (rule
   (alias runtest)
   (deps isort.t.exe)
@@ -60,7 +60,7 @@
   (targets levenshtein.t.exe)
   (deps Levenshtein.vo levenshtein.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh levenshtein.t.exe levenshtein.cpp levenshtein.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} levenshtein.t.exe levenshtein.cpp levenshtein.t.cpp)))
  (rule
   (alias runtest)
   (deps levenshtein.t.exe)
@@ -71,7 +71,7 @@
   (targets msort.t.exe)
   (deps Sort.vo msort.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh msort.t.exe msort.cpp msort.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} msort.t.exe msort.cpp msort.t.cpp)))
  (rule
   (alias runtest)
   (deps msort.t.exe)
@@ -82,7 +82,7 @@
   (targets nested_mod.t.exe)
   (deps NestedMod.vo nested_mod.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh nested_mod.t.exe nested_mod.cpp nested_mod.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_mod.t.exe nested_mod.cpp nested_mod.t.cpp)))
  (rule
   (alias runtest)
   (deps nested_mod.t.exe)
@@ -93,7 +93,7 @@
   (targets nested_tree.t.exe)
   (deps NestedTree.vo nested_tree.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh nested_tree.t.exe nested_tree.cpp nested_tree.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_tree.t.exe nested_tree.cpp nested_tree.t.cpp)))
  (rule
   (alias runtest)
   (deps nested_tree.t.exe)
@@ -104,7 +104,7 @@
   (targets psort.t.exe)
   (deps Sort.vo psort.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh psort.t.exe psort.cpp psort.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} psort.t.exe psort.cpp psort.t.cpp)))
  (rule
   (alias runtest)
   (deps psort.t.exe)
@@ -115,7 +115,7 @@
   (targets pstring.t.exe)
   (deps PString.vo pstring.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh pstring.t.exe pstring.cpp pstring.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pstring.t.exe pstring.cpp pstring.t.cpp)))
  (rule
   (alias runtest)
   (deps pstring.t.exe)
@@ -126,7 +126,7 @@
   (targets qsort.t.exe)
   (deps Sort.vo qsort.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh qsort.t.exe qsort.cpp qsort.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} qsort.t.exe qsort.cpp qsort.t.cpp)))
  (rule
   (alias runtest)
   (deps qsort.t.exe)
@@ -137,7 +137,7 @@
   (targets regexp.t.exe)
   (deps Regexp.vo regexp.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh regexp.t.exe regexp.cpp regexp.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} regexp.t.exe regexp.cpp regexp.t.cpp)))
  (rule
   (alias runtest)
   (deps regexp.t.exe)
@@ -148,7 +148,7 @@
   (targets vec.t.exe)
   (deps Vec.vo vec.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh vec.t.exe vec.cpp vec.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} vec.t.exe vec.cpp vec.t.cpp)))
  (rule
   (alias runtest)
   (deps vec.t.exe)

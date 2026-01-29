@@ -16,7 +16,7 @@
   (targets free_monad.t.exe)
   (deps FreeMonad.vo free_monad.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh free_monad.t.exe free_monad.cpp free_monad.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} free_monad.t.exe free_monad.cpp free_monad.t.cpp)))
  (rule
   (alias runtest)
   (deps free_monad.t.exe)
@@ -27,7 +27,7 @@
   (targets hash.t.exe)
   (deps HashTable.vo hash.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh hash.t.exe hash.cpp hash.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hash.t.exe hash.cpp hash.t.cpp)))
  (rule
   (alias runtest)
   (deps hash.t.exe)
@@ -38,7 +38,7 @@
   (targets hash_bde.t.exe)
   (deps HashTable.vo hash_bde.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-bde.sh hash_bde.t.exe hash_bde.cpp hash_bde.t.cpp)))
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} hash_bde.t.exe hash_bde.cpp hash_bde.t.cpp)))
  (rule
   (alias runtest)
   (deps hash_bde.t.exe)
@@ -49,7 +49,7 @@
   (targets io.t.exe)
   (deps IOtest.vo io.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh io.t.exe io.cpp io.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} io.t.exe io.cpp io.t.cpp)))
  (rule
   (alias runtest)
   (deps io.t.exe)
@@ -60,7 +60,7 @@
   (targets par.t.exe)
   (deps ParTest.vo par.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh par.t.exe par.cpp par.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} par.t.exe par.cpp par.t.cpp)))
  (rule
   (alias runtest)
   (deps par.t.exe)
@@ -71,7 +71,7 @@
   (targets stm.t.exe)
   (deps STMtest.vo stm.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh stm.t.exe stm.cpp stm.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} stm.t.exe stm.cpp stm.t.cpp)))
  (rule
   (alias runtest)
   (deps stm.t.exe)
@@ -82,7 +82,7 @@
   (targets thread.t.exe)
   (deps Threadtest.vo thread.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh thread.t.exe thread.cpp thread.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} thread.t.exe thread.cpp thread.t.cpp)))
  (rule
   (alias runtest)
   (deps thread.t.exe)
@@ -93,7 +93,7 @@
   (targets vector.t.exe)
   (deps VecTest.vo vector.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh vector.t.exe vector.cpp vector.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} vector.t.exe vector.cpp vector.t.cpp)))
  (rule
   (alias runtest)
   (deps vector.t.exe)
@@ -104,9 +104,20 @@
   (targets bind_return.t.exe)
   (deps BindReturn.vo bind_return.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh bind_return.t.exe bind_return.cpp bind_return.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bind_return.t.exe bind_return.cpp bind_return.t.cpp)))
  (rule
   (alias runtest)
   (deps bind_return.t.exe)
   (action (run ./bind_return.t.exe))))
 
+
+(subdir skiplist
+ (rule
+  (targets skiplist.t.exe)
+  (deps SkipList.vo skiplist.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} skiplist.t.exe skiplist.cpp skiplist.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps skiplist.t.exe)
+  (action (run ./skiplist.t.exe))))
