@@ -38,7 +38,7 @@
   (targets args.t.exe)
   (deps Args.vo args.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh args.t.exe args.cpp args.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} args.t.exe args.cpp args.t.cpp)))
  (rule
   (alias runtest)
   (deps args.t.exe)
