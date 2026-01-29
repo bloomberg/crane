@@ -11,17 +11,6 @@
    Crane)
  (flags (:standard -output-directory ../../tests/wip)))
 
-(subdir args
- (rule
-  (targets args.t.exe)
-  (deps Args.vo args.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh args.t.exe args.cpp args.t.cpp)))
- (rule
-  (alias runtest)
-  (deps args.t.exe)
-  (action (run ./args.t.exe))))
-
 (subdir colist
  (rule
   (targets colist.t.exe)

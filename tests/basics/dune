@@ -33,6 +33,17 @@
   (deps add_one.t.exe)
   (action (run ./add_one.t.exe))))
 
+(subdir args
+ (rule
+  (targets args.t.exe)
+  (deps Args.vo args.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh args.t.exe args.cpp args.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps args.t.exe)
+  (action (run ./args.t.exe))))
+
 (subdir binom
  (rule
   (targets binom.t.exe)
