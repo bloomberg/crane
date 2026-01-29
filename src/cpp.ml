@@ -244,6 +244,13 @@ let pp_fields r fields = List.map_i (pp_one_field r) 0 fields
 (* Check if a type name is already qualified (contains ::) *)
 let is_qualified_name name_str = String.contains name_str ':'
 
+(* Check if a GlobRef is a record type (not a regular inductive).
+   Records don't get wrapped in namespace structs, so they keep their original case. *)
+let is_record_inductive r =
+  match r with
+  | GlobRef.IndRef _ -> Table.get_record_fields r <> []
+  | _ -> false
+
 (* Check if a GlobRef refers to a local inductive (defined in current module scope).
    Local inductives don't need namespace qualification (e.g., List::list vs just list). *)
 let is_local_inductive r =
@@ -277,14 +284,19 @@ let inductive_name_info r =
    - Inner type: lowercase (e.g., "list", "ordering")
    So "Ordering::Ordering" becomes "Ordering::ordering".
    Non-inductives and local inductives are unchanged.
-   EXCEPTION: Eponymous records (module M with record M) are merged into the
-   module struct, so we use just the capitalized name (e.g., "CHT" not "CHT::cHT"). *)
+   EXCEPTION 1: Eponymous records (module M with record M) are merged into the
+   module struct, so we use just the capitalized name (e.g., "CHT" not "CHT::cHT").
+   EXCEPTION 2: Regular records (not eponymous) keep their original case because
+   they don't get wrapped in namespace structs. *)
 let pp_inductive_type_name r =
   let result = match r with
   | GlobRef.IndRef _ when is_eponymous_record_global r ->
       (* Eponymous record: use capitalized name directly (merged into module struct)
          Check this FIRST because local inductives can also be eponymous *)
       str (String.capitalize_ascii (str_global Type r))
+  | GlobRef.IndRef _ when is_record_inductive r ->
+      (* Regular records: keep original case (no namespace wrapper) *)
+      pp_global Type r
   | GlobRef.IndRef _ when is_local_inductive r ->
       (* Local inductive: use lowercase name directly *)
       str (String.uncapitalize_ascii (str_global Type r))
@@ -830,14 +842,34 @@ and pp_cpp_expr env args t =
         (match tys with
         | [] -> mt ()
         | _ -> str "<" ++ pp_list (pp_cpp_type false []) tys ++ str ">") in
-      pp_global Type id ++  templates ++ str "::make(" ++ es_s ++ str ")"
+      (* Match Dstruct naming: records keep original case, inductives are lowercased. *)
+      let struct_name = match id with
+        | GlobRef.IndRef _ when is_record_inductive id ->
+            (* Records keep original case - no namespace wrapper *)
+            pp_global Type id
+        | GlobRef.IndRef _ ->
+            let base = str_global Type id in
+            str (String.uncapitalize_ascii base)
+        | _ -> pp_global Type id
+      in
+      struct_name ++  templates ++ str "::make(" ++ es_s ++ str ")"
   | CPPstruct (id, tys, es) ->
       let es_s = pp_list (pp_cpp_expr env args) es in
       let templates =
         (match tys with
         | [] -> mt ()
         | _ -> str "<" ++ pp_list (pp_cpp_type false []) tys ++ str ">") in
-      pp_global Type id ++ templates ++ str "{" ++ es_s ++ str "}"
+      (* Match Dstruct naming: records keep original case, inductives are lowercased. *)
+      let struct_name = match id with
+        | GlobRef.IndRef _ when is_record_inductive id ->
+            (* Records keep original case - no namespace wrapper *)
+            pp_global Type id
+        | GlobRef.IndRef _ ->
+            let base = str_global Type id in
+            str (String.uncapitalize_ascii base)
+        | _ -> pp_global Type id
+      in
+      struct_name ++ templates ++ str "{" ++ es_s ++ str "}"
   | CPPstruct_id (id, tys, es) ->
       let es_s = pp_list (pp_cpp_expr env args) es in
       let templates =
@@ -1119,16 +1151,21 @@ function
     let static_kw = if is_struct_member then str "static " else mt () in
     h (static_kw ++ (pp_cpp_type false [] ret_ty) ++ str " " ++ name ++ pp_par true params_s) ++ str ";"
 | Dstruct (id, fields) ->
-    (* For inductives, use lowercase struct name to avoid conflict with
+    (* For regular inductives, use lowercase struct name to avoid conflict with
        the wrapper namespace struct (which is capitalized).
        Pattern: struct List { struct list { ... }; };
-       EXCEPTION: Eponymous records are merged into the module struct,
+       EXCEPTION 1: Records don't get wrapped in namespace structs, so they
+       keep their original case to avoid name collision with values.
+       EXCEPTION 2: Eponymous records are merged into the module struct,
        so they use the capitalized name directly.
-       Check eponymous FIRST because they can also be local. *)
+       Check eponymous FIRST, then records, then default to lowercase. *)
     let struct_name = match id with
       | GlobRef.IndRef _ when is_eponymous_record_global id ->
           let base = str_global Type id in
           str (String.capitalize_ascii base)
+      | GlobRef.IndRef _ when is_record_inductive id ->
+          (* Records keep original case - no namespace wrapper *)
+          pp_global Type id
       | GlobRef.IndRef _ ->
           let base = str_global Type id in
           str (String.uncapitalize_ascii base)

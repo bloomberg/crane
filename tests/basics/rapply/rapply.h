@@ -42,20 +42,20 @@ struct Nat {
 };
 
 struct RApply {
-  struct r {
+  struct R {
     std::function<std::shared_ptr<Nat::nat>(std::shared_ptr<Nat::nat>,
                                             std::shared_ptr<Nat::nat>)>
         f;
     std::shared_ptr<Nat::nat> _tag;
   };
 
-  static std::shared_ptr<Nat::nat> f(const std::shared_ptr<r> &,
+  static std::shared_ptr<Nat::nat> f(const std::shared_ptr<R> &,
                                      const std::shared_ptr<Nat::nat> &,
                                      const std::shared_ptr<Nat::nat> &);
 
-  static std::shared_ptr<Nat::nat> _tag(const std::shared_ptr<r> &r);
+  static std::shared_ptr<Nat::nat> _tag(const std::shared_ptr<R> &r);
 
   static std::shared_ptr<Nat::nat>
-  apply_record(const std::shared_ptr<r> &r, const std::shared_ptr<Nat::nat> &a,
+  apply_record(const std::shared_ptr<R> &r, const std::shared_ptr<Nat::nat> &a,
                const std::shared_ptr<Nat::nat> &b);
 };

@@ -55,7 +55,7 @@ int main() {
     };
 
     // Create record directly using make_shared
-    auto r = std::make_shared<RApply::r>(RApply::r{add_fn, uint_to_nat(0)});
+    auto r = std::make_shared<RApply::R>(RApply::R{add_fn, uint_to_nat(0)});
 
     // Test apply_record
     auto result = RApply::apply_record(r, uint_to_nat(3), uint_to_nat(4));
