@@ -1,8 +1,19 @@
 #!/bin/bash
 # Compile C++ files with BDE libraries using pkg-config
-# Usage: compile-bde.sh output.exe source1.cpp source2.cpp ...
+# Usage: compile-bde.sh <project_root> output.exe source1.cpp source2.cpp ...
 
 set -e
+
+# Resolve project root to absolute path
+PROJECT_ROOT="$(cd "$1" && pwd -P)"
+shift
+
+# If we're in the build directory (_build/default), go up to source root
+if [[ "$PROJECT_ROOT" == */_build/default ]]; then
+    PROJECT_ROOT="${PROJECT_ROOT%/_build/default}"
+fi
+
+THEORIES_CPP_BDE="$PROJECT_ROOT/theories/cpp_bde"
 
 OUTPUT="$1"
 shift
@@ -52,6 +63,7 @@ exec clang++ \
     -Wno-deprecated-literal-operator \
     -O2 \
     -I . \
+    -I "$THEORIES_CPP_BDE" \
     $BDE_CFLAGS \
     $SOURCES \
     $BDE_LIBS \

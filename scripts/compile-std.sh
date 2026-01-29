@@ -1,8 +1,19 @@
 #!/bin/bash
 # Compile C++ files with proper libc++ linking for Homebrew LLVM
-# Usage: compile-std.sh output.exe source1.cpp source2.cpp ...
+# Usage: compile-std.sh <project_root> output.exe source1.cpp source2.cpp ...
 
 set -e
+
+# Resolve project root to absolute path
+PROJECT_ROOT="$(cd "$1" && pwd -P)"
+shift
+
+# If we're in the build directory (_build/default), go up to source root
+if [[ "$PROJECT_ROOT" == */_build/default ]]; then
+    PROJECT_ROOT="${PROJECT_ROOT%/_build/default}"
+fi
+
+THEORIES_CPP="$PROJECT_ROOT/theories/cpp"
 
 OUTPUT="$1"
 shift
@@ -17,6 +28,7 @@ if [ -d "$HB_LLVM" ]; then
         -std=c++23 \
         -O2 \
         -I . \
+        -I "$THEORIES_CPP" \
         -nostdlib++ \
         -stdlib=libc++ \
         -I"$HB_LLVM/include/c++/v1" \
@@ -29,5 +41,5 @@ if [ -d "$HB_LLVM" ]; then
         -o "$OUTPUT"
 else
     # Fallback to system clang++
-    exec clang++ -std=c++23 -O2 -I . $SOURCES -o "$OUTPUT"
+    exec clang++ -std=c++23 -O2 -I . -I "$THEORIES_CPP" $SOURCES -o "$OUTPUT"
 fi
