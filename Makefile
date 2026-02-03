@@ -1,4 +1,4 @@
-.PHONY: build install clean test test-verbose test-raw test-one test-list theories plugin all extract
+.PHONY: build install clean test test-verbose test-sequential test-raw test-one test-list theories plugin all extract
 
 # Default target: build plugin and theories only (not tests)
 build: plugin theories
@@ -37,14 +37,18 @@ install:
 	dune build @install
 	dune install
 
-# Build and run tests with formatted summary
+# Build and run tests with formatted summary (parallel)
 test:
 	@./scripts/check-dune-rules.sh
-	@./scripts/run-tests.sh
+	@dune exec bin/test_runner/main.exe
 
-# Build and run tests with verbose error output
+# Build and run tests with verbose error output (parallel)
 test-verbose:
-	@./scripts/run-tests.sh --verbose
+	@dune exec bin/test_runner/main.exe -- --verbose
+
+# Run tests sequentially (old bash script)
+test-sequential:
+	@./scripts/run-tests.sh
 
 # Raw dune test output (no formatting)
 test-raw:
@@ -121,8 +125,9 @@ help:
 	@echo "Usage:"
 	@echo "  make                    - Build plugin and theories (default)"
 	@echo "  make extract            - Build + generate all test C++ files"
-	@echo "  make test               - Compile and run all tests"
-	@echo "  make test-verbose       - Run tests with error details"
+	@echo "  make test               - Compile and run all tests (parallel)"
+	@echo "  make test-verbose       - Run tests with error details (parallel)"
+	@echo "  make test-sequential    - Run tests sequentially (old bash script)"
 	@echo "  make test-raw           - Run tests with raw dune output"
 	@echo "  make test-one TEST=name - Run a single test (e.g., TEST=list)"
 	@echo "  make test-list          - List all available tests"
