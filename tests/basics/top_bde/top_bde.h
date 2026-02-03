@@ -126,15 +126,21 @@ bsl::shared_ptr<List::list<T1> > concat(
 {
     return bsl::visit(
         bdlf::Overloaded{
-            [](const typename List::list<bsl::shared_ptr<List::list<T1> > >::
-                   nil _args) -> bsl::shared_ptr<List::list<T1> > {
+            [](const typename List::list<bsl::shared_ptr<List::list<
+                   bsl::shared_ptr<List::list<T1> > > > >::nil _args)
+                -> bsl::shared_ptr<
+                    List::list<bsl::shared_ptr<List::list<T1> > > > {
                 return List::list<T1>::ctor::nil_();
             },
-            [](const typename List::list<bsl::shared_ptr<List::list<T1> > >::
-                   cons _args) -> bsl::shared_ptr<List::list<T1> > {
-                bsl::shared_ptr<List::list<T1> > x  = _args._a0;
+            [](const typename List::list<bsl::shared_ptr<List::list<
+                   bsl::shared_ptr<List::list<T1> > > > >::cons _args)
+                -> bsl::shared_ptr<
+                    List::list<bsl::shared_ptr<List::list<T1> > > > {
                 bsl::shared_ptr<List::list<bsl::shared_ptr<List::list<T1> > > >
-                                                 l0 = _args._a1;
+                    x  = _args._a0;
+                bsl::shared_ptr<List::list<bsl::shared_ptr<
+                    List::list<bsl::shared_ptr<List::list<T1> > > > > >
+                    l0 = _args._a1;
                 return x->app(concat<T1>(l0));
             }},
         l->v());
@@ -144,10 +150,10 @@ template <typename T1, typename T2, MapsTo<T1, T2, T1> F0>
 T1 fold_right(F0&& f, const T1 a0, const bsl::shared_ptr<List::list<T2> >& l)
 {
     return bsl::visit(
-        bdlf::Overloaded{[&](const typename List::list<T2>::nil _args) -> T1 {
+        bdlf::Overloaded{[&](const typename List::list<T2>::nil _args) -> T2 {
                              return a0;
                          },
-                         [&](const typename List::list<T2>::cons _args) -> T1 {
+                         [&](const typename List::list<T2>::cons _args) -> T2 {
                              T2                               b  = _args._a0;
                              bsl::shared_ptr<List::list<T2> > l0 = _args._a1;
                              return f(b, fold_right<T1, T2>(f, a0, l0));
@@ -336,65 +342,72 @@ struct TopSort {
                 bsl::shared_ptr<List::list<T1> >                 h)
             -> bsl::shared_ptr<List::list<T1> > {
             return bsl::visit(
-                  bdlf::Overloaded{
-                      [&](const typename List::list<bsl::pair<T1, T1> >::nil
-                              _args) -> bsl::shared_ptr<List::list<T1> > {
-                          return h;
-                      },
-                      [&](const typename List::list<bsl::pair<T1, T1> >::cons
-                              _args) -> bsl::shared_ptr<List::list<T1> > {
-                          bsl::pair<T1, T1> p = _args._a0;
-                          bsl::shared_ptr<List::list<bsl::pair<T1, T1> > > l_ =
-                              _args._a1;
-                          T1                e1 = p.first;
-                          T1                e2 = p.second;
-                          bsl::optional<T1> f1 = find<T1>(
-                              [&](T1 x) {
-                                  return eqb_node(e1, x);
-                              },
-                              h);
-                          bsl::optional<T1> f2 = find<T1>(
-                              [&](T1 x) {
-                                  return eqb_node(e2, x);
-                              },
-                              h);
-                          if (f1.has_value()) {
-                              T1 _x = *f1;
-                              if (f2.has_value()) {
-                                  T1 _x0 = *f2;
-                                  return get_elems_aux(l_, h);
-                              }
-                              else {
-                                  return get_elems_aux(
-                                      l_,
-                                      List::list<T1>::ctor::cons_(e2, h));
-                              }
-                          }
-                          else {
-                              if (f2.has_value()) {
-                                  T1 _x = *f2;
-                                  return get_elems_aux(
-                                      l_,
-                                      List::list<T1>::ctor::cons_(e1, h));
-                              }
-                              else {
-                                  if (eqb_node(e1, e2)) {
-                                      return get_elems_aux(
-                                          l_,
-                                          List::list<T1>::ctor::cons_(e1, h));
-                                  }
-                                  else {
-                                      return get_elems_aux(
-                                          l_,
-                                          List::list<T1>::ctor::cons_(
-                                              e1,
-                                              List::list<T1>::ctor::cons_(e2,
-                                                                          h)));
-                                  }
-                              }
-                          }
-                      }},
-                  l0->v());
+                bdlf::Overloaded{
+                    [&](const typename List::list<
+                        bsl::pair<bsl::pair<T1, T1>, bsl::pair<T1, T1> > >::nil
+                            _args)
+                        -> bsl::shared_ptr<List::list<bsl::pair<T1, T1> > > {
+                        return h;
+                    },
+                    [&](const typename List::list<
+                        bsl::pair<bsl::pair<T1, T1>,
+                                  bsl::pair<T1, T1> > >::cons _args)
+                        -> bsl::shared_ptr<List::list<bsl::pair<T1, T1> > > {
+                        bsl::pair<bsl::pair<T1, T1>, bsl::pair<T1, T1> > p =
+                            _args._a0;
+                        bsl::shared_ptr<
+                            List::list<bsl::pair<bsl::pair<T1, T1>,
+                                                 bsl::pair<T1, T1> > > >
+                                          l_ = _args._a1;
+                        T1                e1 = p.first;
+                        T1                e2 = p.second;
+                        bsl::optional<T1> f1 = find<T1>(
+                            [&](T1 x) {
+                                return eqb_node(e1, x);
+                            },
+                            h);
+                        bsl::optional<T1> f2 = find<T1>(
+                            [&](T1 x) {
+                                return eqb_node(e2, x);
+                            },
+                            h);
+                        if (f1.has_value()) {
+                            T1 _x = *f1;
+                            if (f2.has_value()) {
+                                T1 _x0 = *f2;
+                                return get_elems_aux(l_, h);
+                            }
+                            else {
+                                return get_elems_aux(
+                                    l_,
+                                    List::list<T1>::ctor::cons_(e2, h));
+                            }
+                        }
+                        else {
+                            if (f2.has_value()) {
+                                T1 _x = *f2;
+                                return get_elems_aux(
+                                    l_,
+                                    List::list<T1>::ctor::cons_(e1, h));
+                            }
+                            else {
+                                if (eqb_node(e1, e2)) {
+                                    return get_elems_aux(
+                                        l_,
+                                        List::list<T1>::ctor::cons_(e1, h));
+                                }
+                                else {
+                                    return get_elems_aux(
+                                        l_,
+                                        List::list<T1>::ctor::cons_(
+                                            e1,
+                                            List::list<T1>::ctor::cons_(e2,
+                                                                        h)));
+                                }
+                            }
+                        }
+                    }},
+                l0->v());
         };
         return get_elems_aux(l, List::list<T1>::ctor::nil_());
     }
@@ -541,27 +554,40 @@ struct TopSort {
                graph0)
     {
         return bsl::visit(
-               bdlf::Overloaded{
-                   [](const typename List::list<
-                       bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > >::nil
-                          _args) -> bsl::optional<T1> {
-                       return bsl::nullopt;
-                   },
-                   [&](const typename List::list<
-                       bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > >::cons
-                           _args) -> bsl::optional<T1> {
-                       bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > e0 =
-                           _args._a0;
-                       T1                               e   = e0.first;
-                       bsl::shared_ptr<List::list<T1> > _x0 = e0.second;
-                       return bsl::make_optional<T1>(cycle_entry_aux<T1>(
-                           eqb_node,
-                           graph0,
-                           List::list<T1>::ctor::nil_(),
-                           e,
-                           graph0->length()));
-                   }},
-               graph0->v());
+            bdlf::Overloaded{
+                [](const typename List::list<bsl::pair<
+                       bsl::pair<T1, bsl::shared_ptr<List::list<T1> > >,
+                       bsl::shared_ptr<List::list<bsl::pair<
+                           T1,
+                           bsl::shared_ptr<List::list<T1> > > > > > >::nil
+                       _args)
+                    -> bsl::optional<
+                        bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > > {
+                    return bsl::nullopt;
+                },
+                [&](const typename List::list<bsl::pair<
+                        bsl::pair<T1, bsl::shared_ptr<List::list<T1> > >,
+                        bsl::shared_ptr<List::list<bsl::pair<
+                            T1,
+                            bsl::shared_ptr<List::list<T1> > > > > > >::cons
+                        _args)
+                    -> bsl::optional<
+                        bsl::pair<T1, bsl::shared_ptr<List::list<T1> > > > {
+                    bsl::pair<bsl::pair<T1, bsl::shared_ptr<List::list<T1> > >,
+                              bsl::shared_ptr<List::list<bsl::pair<
+                                  T1,
+                                  bsl::shared_ptr<List::list<T1> > > > > >
+                                                     e0  = _args._a0;
+                    T1                               e   = e0.first;
+                    bsl::shared_ptr<List::list<T1> > _x0 = e0.second;
+                    return bsl::make_optional<T1>(cycle_entry_aux<T1>(
+                        eqb_node,
+                        graph0,
+                        List::list<T1>::ctor::nil_(),
+                        e,
+                        graph0->length()));
+                }},
+            graph0->v());
     }
 
     template <typename T1, MapsTo<bool, T1, T1> F0>

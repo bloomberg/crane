@@ -98,18 +98,17 @@ T2 div_conq(F0 &&splitF, const T2 x, F2 &&x0, F3 &&x1,
               div_conq<T1, T2>(splitF, x, x0, x1, splitF(ls).second));
   } else {
     return std::visit(
-        Overloaded{
-            [&](const typename List::list<T1>::nil _args)
-                -> std::function<T2(
-                    std::function<T2(std::shared_ptr<List::list<T1>>)>)> {
-              return x;
-            },
-            [&](const typename List::list<T1>::cons _args)
-                -> std::function<T2(
-                    std::function<T2(std::shared_ptr<List::list<T1>>)>)> {
-              T1 a = _args._a0;
-              return x0(a);
-            }},
+        Overloaded{[&](const typename List::list<T1>::nil _args)
+                       -> std::function<T2(
+                           std::function<T2(std::shared_ptr<List::list<T1>>)>,
+                           dummy_prop)> { return x; },
+                   [&](const typename List::list<T1>::cons _args)
+                       -> std::function<T2(
+                           std::function<T2(std::shared_ptr<List::list<T1>>)>,
+                           dummy_prop)> {
+                     T1 a = _args._a0;
+                     return x0(a);
+                   }},
         ls->v());
   }
 }

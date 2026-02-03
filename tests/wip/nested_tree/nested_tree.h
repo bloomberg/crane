@@ -121,10 +121,10 @@ struct NestedTree {
                 F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree<T2>> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree<T2>::leaf _args) -> T1 {
+        Overloaded{[&](const typename tree<T2>::leaf _args) -> T2 {
                      return f("dummy");
                    },
-                   [&](const typename tree<T2>::node _args) -> T1 {
+                   [&](const typename tree<T2>::node _args) -> T2 {
                      T2 y = _args._a0;
                      std::shared_ptr<tree<std::pair<T2, T2>>> t0 = _args._a1;
                      return f0("dummy", y, t0, tree_rect<T1, T2>(f, f0, t0));
@@ -138,10 +138,10 @@ struct NestedTree {
                 F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree<T2>> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree<T2>::leaf _args) -> T1 {
+        Overloaded{[&](const typename tree<T2>::leaf _args) -> T2 {
                      return f("dummy");
                    },
-                   [&](const typename tree<T2>::node _args) -> T1 {
+                   [&](const typename tree<T2>::node _args) -> T2 {
                      T2 y = _args._a0;
                      std::shared_ptr<tree<std::pair<T2, T2>>> t0 = _args._a1;
                      return f0("dummy", y, t0, tree_rec<T1, T2>(f, f0, t0));

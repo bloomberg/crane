@@ -79,6 +79,7 @@ and eq_ml_meta m1 m2 =
 let type_subst_list l t =
   let rec subst t = match t with
     | Tvar j -> List.nth l (j-1)
+    | Tvar' j -> List.nth l (j-1)  (* Tvar' is also a type variable that needs substitution *)
     | Tmeta {contents=None} -> t
     | Tmeta {contents=Some u} -> subst u
     | Tarr (a,b) -> Tarr (subst a, subst b)
@@ -95,6 +96,8 @@ let type_subst_vect v t =
   let rec subst t = match t with
     | Tvar j when j >= 1 && j <= n -> v.(j-1)
     | Tvar _ -> t  (* Per-constructor type var, leave unchanged *)
+    | Tvar' j when j >= 1 && j <= n -> v.(j-1)  (* Tvar' is also a type variable *)
+    | Tvar' _ -> t  (* Per-constructor type var, leave unchanged *)
     | Tmeta {contents=None} -> t
     | Tmeta {contents=Some u} -> subst u
     | Tarr (a,b) -> Tarr (subst a, subst b)

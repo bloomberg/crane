@@ -41,8 +41,8 @@ struct Nat {
     template <typename T1, MapsTo<T1, std::shared_ptr<nat>, T1> F1>
     T1 nat_rect(const T1 f, F1 &&f0) const {
       return std::visit(
-          Overloaded{[&](const typename nat::O _args) -> T1 { return f; },
-                     [&](const typename nat::S _args) -> T1 {
+          Overloaded{[&](const typename nat::O _args) -> auto { return f; },
+                     [&](const typename nat::S _args) -> auto {
                        std::shared_ptr<nat> n0 = _args._a0;
                        return f0(n0, n0->nat_rect(f, f0));
                      }},
@@ -51,8 +51,8 @@ struct Nat {
     template <typename T1, MapsTo<T1, std::shared_ptr<nat>, T1> F1>
     T1 nat_rec(const T1 f, F1 &&f0) const {
       return std::visit(
-          Overloaded{[&](const typename nat::O _args) -> T1 { return f; },
-                     [&](const typename nat::S _args) -> T1 {
+          Overloaded{[&](const typename nat::O _args) -> auto { return f; },
+                     [&](const typename nat::S _args) -> auto {
                        std::shared_ptr<nat> n0 = _args._a0;
                        return f0(n0, n0->nat_rec(f, f0));
                      }},

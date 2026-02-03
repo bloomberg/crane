@@ -27,6 +27,7 @@ if [ -d "$HB_LLVM" ]; then
     exec "$HB_LLVM/bin/clang++" \
         -std=c++23 \
         -O2 \
+        -fbracket-depth=1024 \
         -I . \
         -I "$THEORIES_CPP" \
         -nostdlib++ \
@@ -41,5 +42,5 @@ if [ -d "$HB_LLVM" ]; then
         -o "$OUTPUT"
 else
     # Fallback to system clang++
-    exec clang++ -std=c++23 -O2 -I . -I "$THEORIES_CPP" $SOURCES -o "$OUTPUT"
+    exec clang++ -std=c++23 -O2 -fbracket-depth=1024 -I . -I "$THEORIES_CPP" $SOURCES -o "$OUTPUT"
 fi
