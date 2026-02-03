@@ -35,10 +35,8 @@ void aSsErT(bool condition, const char *message, int line)
 #define ASSERT(X)                                              \
     aSsErT(!(X), #X, __LINE__);
 
-using namespace stmtest;
-
 int main() {
-  auto x = io_inc(4);
+  auto x = stmtest::io_inc(4);
   std::cout << std::to_string(x) << '\n';
   // auto p = io_transfer_test(23, 32, 8);
   // std::cout << p.first << ", " << p.second << '\n';

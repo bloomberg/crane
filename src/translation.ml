@@ -27,6 +27,26 @@ let clear_local_inductives () =
 let get_local_inductives () =
   !local_inductives
 
+(* Track type variables (template parameters) in scope for the current function.
+   When converting Tvar to C++ types, we use this to give them proper names. *)
+let current_type_vars : Id.t list ref = ref []
+let set_current_type_vars (tvars : Id.t list) = current_type_vars := tvars
+let get_current_type_vars () = !current_type_vars
+let clear_current_type_vars () = current_type_vars := []
+
+(* Track parameter types for the current function.
+   Maps de Bruijn indices to ML types. Used to refine pattern match types.
+   The params list is in innermost-first order (from collect_lams), matching
+   de Bruijn indexing where MLrel 1 is the first/innermost binding. *)
+let current_param_types : (int * ml_type) list ref = ref []
+let set_current_param_types (params : (Id.t * ml_type) list) =
+  current_param_types := List.mapi (fun i (_, ty) ->
+    (i + 1, ty)) params
+let get_param_type_by_index (idx : int) : ml_type option =
+  try Some (List.assoc idx !current_param_types)
+  with Not_found -> None
+let clear_current_param_types () = current_param_types := []
+
 let ml_type_is_void : ml_type -> bool = function
 | Tglob (r, _, _) -> is_void r
 | _ -> false
@@ -385,6 +405,8 @@ and eta_fun env f args =
     CPPfun_call (gen_expr env f, List.rev args)
 
 and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body =
+  (* Get type variables in scope from enclosing function's template parameters *)
+  let tvars = get_current_type_vars () in
   (* Get the constructor name as a simple Id *)
   let ctor_name = match cname with
     | GlobRef.ConstructRef _ -> Id.of_string (Common.pp_global_name Type cname)
@@ -424,7 +446,7 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body =
           | None -> tys)
       | _ -> tys
     in
-    let temps = List.map (convert_ml_type_to_cpp_type env [] []) tys in
+    let temps = List.map (convert_ml_type_to_cpp_type env [] tvars) tys in
     (* The constructor struct is nested inside the inductive type *)
     (* Generate: typename list<unsigned int>::nil *)
     (* Build the full inductive type first, then qualify with the constructor name *)
@@ -447,11 +469,17 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body =
         | _ -> false)
     | _ -> false
   in
-  let ret = convert_ml_type_to_cpp_type env [] [] rty in
-  (* Don't erase return type - its Tvars are function template params *)
+  let ret = convert_ml_type_to_cpp_type env [] tvars rty in
+  (* For pattern matching lambdas, if the return type would be an unnamed Tvar
+     (like T1, T2 which are not actual template parameters), use 'auto' instead.
+     C++ can deduce the return type from the return statements. *)
+  let ret = match ret with
+    | Minicpp.Tvar (_, None) -> Minicpp.Ttodo  (* Ttodo prints as 'auto' *)
+    | _ -> ret
+  in
   let asgns =  List.mapi (fun i x ->
       let id = Id.of_string ("_a" ^ string_of_int i) in
-      let cpp_ty = convert_ml_type_to_cpp_type env [] [] (snd x) in
+      let cpp_ty = convert_ml_type_to_cpp_type env [] tvars (snd x) in
       (* Only erase Tvars in constructor field types for indexed inductives *)
       let cpp_ty = if is_indexed_ind then tvar_erase_type cpp_ty else cpp_ty in
       Sasgn (fst x, Some cpp_ty, CPPget (CPPglob (GlobRef.VarRef sname, []), id))) (List.rev ids) in
@@ -462,6 +490,28 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body =
         asgns @ gen_stmts env (fun x -> Sreturn x) body)
 
 and gen_cpp_case (typ : ml_type) t env pv =
+  (* When scrutinee is a parameter reference, use parameter's concrete type if available.
+     This handles monomorphic functions where MLcase has Tvar but parameter is concrete. *)
+  let rec has_tvar = function
+    | Miniml.Tvar _ | Miniml.Tvar' _ -> true
+    | Miniml.Tarr (t1, t2) -> has_tvar t1 || has_tvar t2
+    | Miniml.Tglob (_, args, _) -> List.exists has_tvar args
+    | Miniml.Tmeta { contents = Some t } -> has_tvar t
+    | _ -> false
+  in
+  let typ = match t with
+    | MLrel i | MLmagic (MLrel i) ->
+        (match get_param_type_by_index i with
+         | Some (Miniml.Tglob (r2, _, _) as param_ty) ->
+             (match typ with
+              | Miniml.Tglob (r1, _, _)
+                when Environ.QGlobRef.equal Environ.empty_env r1 r2
+                  && has_tvar typ && not (has_tvar param_ty) ->
+                  param_ty
+              | _ -> typ)
+         | _ -> typ)
+    | _ -> typ
+  in
   (* Call v() accessor method to get the variant for pattern matching *)
   let outer cases x = (CPPfun_call (CPPvisit, CPPmethod_call (x, Id.of_string "v", []) :: [CPPoverloaded cases])) in
   let rec gen_cases = function
@@ -499,17 +549,19 @@ and gen_rust_case (typ : ml_type) t env pv =
   outer (gen_cases (Array.to_list pv)) (gen_expr env t)
 
 and gen_cpp_custom_body env k rty ids body =
-  let ret = convert_ml_type_to_cpp_type env [] [] rty in
-  let ids =  List.map (fun (x, ty) -> (x, convert_ml_type_to_cpp_type env [] [] ty)) (List.rev ids) in
+  let tvars = get_current_type_vars () in
+  let ret = convert_ml_type_to_cpp_type env [] tvars rty in
+  let ids =  List.map (fun (x, ty) -> (x, convert_ml_type_to_cpp_type env [] tvars ty)) (List.rev ids) in
   let body = gen_stmts env k body in
   (ids, ret, body)
 
 and gen_custom_cpp_case env k (typ : ml_type) t pv =
+  let tvars = get_current_type_vars () in
   let temps = match typ with
   | Tglob (r, tys, _) ->
-    List.map (convert_ml_type_to_cpp_type env [] []) tys
+    List.map (convert_ml_type_to_cpp_type env [] tvars) tys
   | _ -> [] in
-  let typ = convert_ml_type_to_cpp_type env [] [] typ in
+  let typ = convert_ml_type_to_cpp_type env [] tvars typ in
   let t = gen_expr env t in
   let rec gen_cases = function
   | [] -> []
@@ -530,10 +582,11 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
   let afun v = Sasgn (x', None, v) in
   (* Sasgn (x', Some (convert_ml_type_to_cpp_type env [] [] t), (gen_expr env a)) :: gen_stmts env' k b *)
   let asgn = gen_stmts env afun a in
+  let tvars = get_current_type_vars () in
   begin match asgn with
-  | [ Sasgn (x', None, e) ] -> Sasgn (x', Some (convert_ml_type_to_cpp_type env [] [] t), e) :: gen_stmts env' k b
+  | [ Sasgn (x', None, e) ] -> Sasgn (x', Some (convert_ml_type_to_cpp_type env [] tvars t), e) :: gen_stmts env' k b
   | _ ->
-    Sdecl (x', convert_ml_type_to_cpp_type env [] [] t) :: asgn @ gen_stmts env' k b
+    Sdecl (x', convert_ml_type_to_cpp_type env [] tvars t) :: asgn @ gen_stmts env' k b
   end
 | MLapp (MLfix (x, ids, funs), args) ->
   (* Resolve unresolved metas in fix function types to Tvars using mgu.
@@ -550,11 +603,25 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
   Array.iter (fun (_, ty) -> resolve_metas ty) ids;
   let funs = Array.to_list (Array.map2 (gen_fix env) ids funs) in
   let ids = Array.to_list ids in
-  let decls = List.map (fun (id, ty) -> Sdecl (id, convert_ml_type_to_cpp_type env [] [] ty)) ids in
-  let ret_ty ty = (match convert_ml_type_to_cpp_type env [] [] ty with
-    | Tfun (_,t) -> Some t
+  let tvars = get_current_type_vars () in
+  (* For std::function declarations, if return type is an unnamed Tvar, use void as placeholder.
+     The actual type will be deduced when the lambda is assigned. *)
+  let fix_func_type ty =
+    match ty with
+    | Minicpp.Tfun (params, Minicpp.Tvar (_, None)) ->
+        Minicpp.Tfun (params, Minicpp.Tvoid)
+    | _ -> ty
+  in
+  let decls = List.map (fun (id, ty) ->
+    Sdecl (id, fix_func_type (convert_ml_type_to_cpp_type env [] tvars ty))) ids in
+  let ret_ty ty = (match convert_ml_type_to_cpp_type env [] tvars ty with
+    | Tfun (_,t) ->
+        (* If return type is an unnamed Tvar, use None (auto) instead *)
+        (match t with
+        | Minicpp.Tvar (_, None) -> None
+        | _ -> Some t)
     | _ -> None) in
-  let defs = List.map2 (fun (id, fty) (args, body) -> Sasgn (id, None, CPPlambda (List.map (fun (id, ty) -> convert_ml_type_to_cpp_type env [] [] ty, Some id) args, ret_ty fty, body))) ids funs in
+  let defs = List.map2 (fun (id, fty) (args, body) -> Sasgn (id, None, CPPlambda (List.map (fun (id, ty) -> convert_ml_type_to_cpp_type env [] tvars ty, Some id) args, ret_ty fty, body))) ids funs in
   let args = List.rev_map (gen_expr env) args in
   decls @ defs @ [k (CPPfun_call (CPPvar (fst (List.nth ids x)), args))]
 (* | MLapp (MLglob (h, _), a1 :: a2 :: l) when is_hoist h ->
@@ -575,7 +642,8 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
   let ids,env = push_vars' (List.map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids') env in
   (match ids with
   | (x, ty) :: _ ->
-    let ty = convert_ml_type_to_cpp_type env [] [] ty in
+    let tvars = get_current_type_vars () in
+    let ty = convert_ml_type_to_cpp_type env [] tvars ty in
     if ty == Tvoid || ty == Tunknown then
       Sexpr a :: gen_stmts env k f
     else
@@ -1030,10 +1098,18 @@ let gen_dfun n b dom cod ty temps =
      requires clauses like: requires Eq<I, T1> *)
   (* let forward_fun_args stmt = List.fold_left (fun s (x, _, fid) ->
     var_subst_stmt x (CPPforward (Tvar (0, Some fid), CPPvar x)) s) stmt fun_tys in *)
+  (* Set current type variables for pattern matching lambda generation.
+     These are the template parameters that can be used in type annotations. *)
+  let type_var_ids = List.filter_map (fun (tt, id) ->
+    match tt with TTtypename -> Some id | _ -> None) temps in
+  set_current_type_vars type_var_ids;
+  set_current_param_types all_ids;
   let inner =
     if missing == [] then
       let b = List.map (glob_subst_stmt n rec_call) (gen_stmts env (fun x -> Sreturn x) b) in
       (* let b = List.map forward_fun_args b in *)
+      clear_current_type_vars ();
+      clear_current_param_types ();
       Dfundef ([n, []], cod, ids, b)
     else
       (* Eta-expansion: the body 'b' references original params starting at MLrel 1.
@@ -1051,6 +1127,8 @@ let gen_dfun n b dom cod ty temps =
       let args = List.rev (List.mapi (fun i _ -> MLrel (i + 1)) missing) in
       let b = List.map (glob_subst_stmt n rec_call) (gen_stmts env (fun x -> Sreturn x) (MLapp (lifted_b, args))) in
       (* let b = List.map forward_fun_args b in *)
+      clear_current_type_vars ();
+      clear_current_param_types ();
       Dfundef ([n, []], cod, ids, b) in
   (match temps with
     | [] -> inner, env

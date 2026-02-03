@@ -145,6 +145,119 @@ let reset_cpp_state () =
   Hashtbl.clear global_method_registry;
   Hashtbl.clear global_eponymous_record_registry
 
+(* Pre-register all methods from the entire structure before code generation.
+   This ensures that cross-module method calls (like List.app from stmtest)
+   are recognized correctly during code generation.
+
+   The function recursively scans all modules, finds eponymous types,
+   and registers functions that take those types as their first argument.
+
+   at_top_level: true if we're at the actual top level of the extraction,
+   false if we're inside a module. Top-level inductives (like stdlib's list)
+   may have sibling methods, but inductives inside modules should use the
+   normal eponymous type detection. *)
+let rec pre_register_methods_from_structure ~at_top_level (parent_decls : (Label.t * Miniml.ml_structure_elem) list) (sel : (Label.t * Miniml.ml_structure_elem) list) : unit =
+  (* Helper: find eponymous inductive in a module's declarations *)
+  let find_eponymous_inductive module_name_str decls =
+    let lowercase_module = String.lowercase_ascii module_name_str in
+    List.find_map (fun (_l, se) ->
+      match se with
+      | SEdecl (Dind (kn, ind)) ->
+        let rec find_in_packets i =
+          if i >= Array.length ind.ind_packets then None
+          else
+            let _p = ind.ind_packets.(i) in
+            let ind_ref = GlobRef.IndRef (kn, i) in
+            let ind_name = Common.pp_global_name Type ind_ref in
+            if String.lowercase_ascii ind_name = lowercase_module then
+              match ind.ind_kind with
+              | TypeClass _ -> None  (* Type classes become concepts, not methods *)
+              | Record _ -> Some ind_ref  (* Eponymous record *)
+              | _ -> Some ind_ref  (* Eponymous inductive *)
+            else find_in_packets (i + 1)
+        in
+        find_in_packets 0
+      | _ -> None
+    ) decls
+  in
+  (* Helper: check if first argument matches eponymous type.
+     For methods, the "this" object must be the first argument (position 0).
+     We only register as a method if position 0 matches. *)
+  let first_arg_matches_epon epon_ref = function
+    | Miniml.Tarr (Miniml.Tglob (arg_ref, _, _), _rest) when Environ.QGlobRef.equal Environ.empty_env arg_ref epon_ref ->
+      true
+    | _ -> false
+  in
+  (* Helper: register methods for a given eponymous type from a list of declarations *)
+  let register_methods_for_epon epon_ref decls =
+    let epon_modpath = modpath_of_r epon_ref in
+    let same_module r = ModPath.equal (modpath_of_r r) epon_modpath in
+    List.iter (fun (_l, se) ->
+      match se with
+      | SEdecl (Dterm (r, _body, ty)) ->
+        if same_module r && first_arg_matches_epon epon_ref ty then
+          register_method r epon_ref 0
+      | SEdecl (Dfix (rv, _defs, typs)) ->
+        Array.iteri (fun i r ->
+          if same_module r then
+            let ty = typs.(i) in
+            if first_arg_matches_epon epon_ref ty then
+              register_method r epon_ref 0
+        ) rv
+      | _ -> ()
+    ) decls
+  in
+  (* Handle top-level inductives that may have sibling methods.
+     For example, stdlib's 'list' (Dind) and 'app' (Dfix) appear as siblings at the top level.
+     This only applies at the actual top level of the extraction, not inside modules
+     where the normal eponymous type detection handles method registration. *)
+  if at_top_level then
+    List.iter (fun (_l, se) ->
+      match se with
+      | SEdecl (Dind (kn, ind)) ->
+        Array.iteri (fun i _p ->
+          let ind_ref = GlobRef.IndRef (kn, i) in
+          (* Skip type classes - they become concepts, not eponymous types *)
+          (match ind.ind_kind with
+           | TypeClass _ -> ()
+           | _ ->
+             (* Register methods from sibling declarations *)
+             register_methods_for_epon ind_ref sel;
+             register_methods_for_epon ind_ref parent_decls)
+        ) ind.ind_packets
+      | _ -> ()
+    ) sel;
+  (* Process each declaration in the structure *)
+  List.iter (fun (l, se) ->
+    match se with
+    | SEmodule m ->
+      (match m.ml_mod_expr with
+       | MEstruct (_mp, inner_sel) ->
+         (* Get module name from the label *)
+         let module_name_str = Label.to_string l in
+         (* Find eponymous type in this module *)
+         (match find_eponymous_inductive module_name_str inner_sel with
+          | Some epon_ref ->
+            (* Register methods from both the module itself and parent declarations *)
+            register_methods_for_epon epon_ref inner_sel;
+            register_methods_for_epon epon_ref parent_decls
+          | None -> ());
+         (* Recursively process nested modules - not at top level anymore *)
+         pre_register_methods_from_structure ~at_top_level:false (parent_decls @ sel) inner_sel
+       | MEfunctor (_mbid, _mt, body) ->
+         (* For functors, process the body with current context *)
+         pre_register_methods_from_module_expr (parent_decls @ sel) body
+       | _ -> ())
+    | _ -> ()
+  ) sel
+
+and pre_register_methods_from_module_expr (parent_decls : (Label.t * Miniml.ml_structure_elem) list) = function
+  | MEstruct (_mp, sel) ->
+    pre_register_methods_from_structure ~at_top_level:false parent_decls sel
+  | MEfunctor (_mbid, _mt, body) ->
+    pre_register_methods_from_module_expr parent_decls body
+  | _ -> ()
+
 (* Check if a function is a projection for the eponymous record.
    Such projections are redundant when the record fields are merged into the module struct. *)
 let is_eponymous_record_projection r =
@@ -2190,6 +2303,10 @@ let rec prlist_sep_nonempty sep f = function
      else e ++ sep () ++ r
 
 let do_struct_with_decl_tracking f s =
+  (* Pre-register all methods from the entire structure BEFORE any code generation.
+     This ensures cross-module method calls (like List.app from stmtest) are
+     recognized correctly when generating code. *)
+  List.iter (fun (_mp, sel) -> pre_register_methods_from_structure ~at_top_level:true [] sel) s;
   let ppl (mp,sel) =
     push_visible mp [];
     (* Track structure declarations for sibling access during inductive generation *)

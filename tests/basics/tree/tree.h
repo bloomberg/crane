@@ -151,8 +151,8 @@ struct Tree {
     T2 tree_rect(const T2 f, F1 &&f0) const {
       return std::visit(
           Overloaded{
-              [&](const typename tree<A>::leaf _args) -> T2 { return f; },
-              [&](const typename tree<A>::node _args) -> T2 {
+              [&](const typename tree<A>::leaf _args) -> auto { return f; },
+              [&](const typename tree<A>::node _args) -> auto {
                 std::shared_ptr<tree<A>> t0 = _args._a0;
                 A y = _args._a1;
                 std::shared_ptr<tree<A>> t1 = _args._a2;
@@ -167,8 +167,8 @@ struct Tree {
     T2 tree_rec(const T2 f, F1 &&f0) const {
       return std::visit(
           Overloaded{
-              [&](const typename tree<A>::leaf _args) -> T2 { return f; },
-              [&](const typename tree<A>::node _args) -> T2 {
+              [&](const typename tree<A>::leaf _args) -> auto { return f; },
+              [&](const typename tree<A>::node _args) -> auto {
                 std::shared_ptr<tree<A>> t0 = _args._a0;
                 A y = _args._a1;
                 std::shared_ptr<tree<A>> t1 = _args._a2;

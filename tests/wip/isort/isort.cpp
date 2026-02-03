@@ -32,34 +32,35 @@ sort_cons_prog(const unsigned int a,
                const std::shared_ptr<List::list<unsigned int>> &_x,
                const std::shared_ptr<List::list<unsigned int>> &l_) {
   return std::visit(
-      Overloaded{[&](const typename List::list<T1>::nil _args) -> T2 {
-                   return List::list<unsigned int>::ctor::cons_(
-                       a, List::list<unsigned int>::ctor::nil_());
-                 },
-                 [&](const typename List::list<T1>::cons _args) -> T2 {
-                   T1 y = _args._a0;
-                   std::shared_ptr<List::list<T1>> l = _args._a1;
-                   std::shared_ptr<
-                       Sig0::sig0<std::shared_ptr<List::list<unsigned int>>>>
-                       s = sort_cons_prog(a, l, l);
-                   bool s = le_lt_dec(a, y);
-                   if (s0) {
-                     return List::list<unsigned int>::ctor::cons_(
-                         a, List::list<unsigned int>::ctor::cons_(y, l));
-                   } else {
-                     return List::list<unsigned int>::ctor::cons_(y, s);
-                   }
-                 }},
+      Overloaded{
+          [&](const typename List::list<unsigned int>::nil _args) -> auto {
+            return List::list<unsigned int>::ctor::cons_(
+                a, List::list<unsigned int>::ctor::nil_());
+          },
+          [&](const typename List::list<unsigned int>::cons _args) -> auto {
+            unsigned int y = _args._a0;
+            std::shared_ptr<List::list<unsigned int>> l = _args._a1;
+            std::shared_ptr<
+                Sig0::sig0<std::shared_ptr<List::list<unsigned int>>>>
+                s = sort_cons_prog(a, l, l);
+            bool s = le_lt_dec(a, y);
+            if (s0) {
+              return List::list<unsigned int>::ctor::cons_(
+                  a, List::list<unsigned int>::ctor::cons_(y, l));
+            } else {
+              return List::list<unsigned int>::ctor::cons_(y, s);
+            }
+          }},
       l_->v());
 }
 
 std::shared_ptr<Sig0::sig0<std::shared_ptr<List::list<unsigned int>>>>
 isort(const std::shared_ptr<List::list<T1>> &l) {
   return std::visit(
-      Overloaded{[](const typename List::list<T1>::nil _args) -> T2 {
+      Overloaded{[](const typename List::list<T1>::nil _args) -> auto {
                    return List::list<unsigned int>::ctor::nil_();
                  },
-                 [](const typename List::list<T1>::cons _args) -> T2 {
+                 [](const typename List::list<T1>::cons _args) -> auto {
                    T1 y = _args._a0;
                    std::shared_ptr<List::list<T1>> l0 = _args._a1;
                    return sort_cons_prog(y, l0, isort(l0));

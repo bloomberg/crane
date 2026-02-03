@@ -50,9 +50,8 @@ void stmtest::stm_enqueue(
   std::shared_ptr<List::list<unsigned int>> xs =
       stm::readTVar<std::shared_ptr<List::list<unsigned int>>>(q);
   return stm::writeTVar<std::shared_ptr<List::list<unsigned int>>>(
-      q,
-      ::app<unsigned int>(xs, List::list<unsigned int>::ctor::cons_(
-                                  x, List::list<unsigned int>::ctor::nil_())));
+      q, xs->app(List::list<unsigned int>::ctor::cons_(
+             x, List::list<unsigned int>::ctor::nil_())));
 }
 
 unsigned int stmtest::stm_dequeue(
