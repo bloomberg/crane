@@ -45,7 +45,7 @@ jobs:
             endGroup
             startGroup "Install dependencies"
               opam pin add -n -y -k path rocq-crane .
-              opam install -y -j 2 rocq-crane --deps-only
+              opam install -y -j 2 rocq-crane --deps-only --assume-depexts
             endGroup
             startGroup "Build project"
               opam exec -- dune build
