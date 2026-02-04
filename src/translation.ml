@@ -112,6 +112,19 @@ let rec tvar_erase_type (ty : cpp_type) : cpp_type =
   | Tqualified (ty, id) -> Tqualified (tvar_erase_type ty, id)
   | _ -> ty  (* Tvoid, Tstring, Ttodo, Tunknown, Taxiom, Tany *)
 
+(* Check if a C++ type is Tany or contains an unnamed Tvar (which becomes Tany).
+   This is used to identify methods that return std::any due to type erasure in indexed inductives. *)
+let rec type_is_erased (ty : cpp_type) : bool =
+  match ty with
+  | Tany -> true
+  | Tvar (_, None) -> true  (* Will become Tany after tvar_erase_type *)
+  | Tvar (_, Some _) -> false  (* Named Tvar - not erased *)
+  | Tglob (_, _, _) -> false
+  | Tfun (_, _) -> false  (* Functions aren't erased *)
+  | Tmod (_, inner) -> type_is_erased inner
+  | Tnamespace (_, inner) -> type_is_erased inner
+  | _ -> false
+
 let rec convert_ml_type_to_cpp_type env (ns : GlobRef.t list) (tvars : Id.t list) (ml_t : ml_type) : cpp_type =
   match ml_t with
   | Tarr (t1, t2) -> (* FIX *)
