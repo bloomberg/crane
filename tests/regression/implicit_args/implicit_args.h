@@ -140,6 +140,81 @@ struct ImplicitArgs {
 
   static unsigned int double_nat(const unsigned int n);
 
+  static unsigned int add_implicit(const unsigned int, const unsigned int);
+
+  static inline const unsigned int use_add_implicit = add_implicit(5u, 3u);
+
+  static unsigned int scale(const unsigned int, const unsigned int);
+
+  static inline const unsigned int use_scale = scale(3u, 7u);
+
+  static unsigned int combine(const unsigned int a, const unsigned int b,
+                              const unsigned int x);
+
+  static inline const unsigned int use_combine = combine(2u, 3u, 4u);
+
+  template <MapsTo<unsigned int, unsigned int> F0>
+  static unsigned int apply_implicit(F0 &&f, const unsigned int _x0) {
+    return f(_x0);
+  }
+
+  static inline const unsigned int use_apply_implicit =
+      apply_implicit([](const unsigned int _x0) { return (1u + _x0); }, 5u);
+
+  static unsigned int with_base(const unsigned int, const unsigned int);
+
+  static unsigned int from_zero(const unsigned int);
+
+  static unsigned int from_ten(const unsigned int);
+
+  static inline const unsigned int use_from_zero = from_zero(5u);
+
+  static inline const unsigned int use_from_ten = from_ten(5u);
+
+  template <typename T1>
+  static T1 head_or(const T1 default0, const std::shared_ptr<mylist<T1>> &l) {
+    return std::visit(
+        Overloaded{[&](const typename mylist<T1>::mynil _args) -> T1 {
+                     return default0;
+                   },
+                   [](const typename mylist<T1>::mycons _args) -> T1 {
+                     T1 x = _args._a0;
+                     return x;
+                   }},
+        l->v());
+  }
+
+  static inline const unsigned int use_head_empty =
+      head_or<unsigned int>(0u, mylist<unsigned int>::ctor::mynil_());
+
+  static inline const unsigned int use_head_nonempty =
+      head_or<unsigned int>(0u, mylist<unsigned int>::ctor::mycons_(
+                                    7u, mylist<unsigned int>::ctor::mynil_()));
+
+  static unsigned int
+  sum_with_init(const unsigned int init,
+                const std::shared_ptr<mylist<unsigned int>> &l);
+
+  static inline const unsigned int use_sum_init =
+      sum_with_init(5u, mylist<unsigned int>::ctor::mycons_(
+                            1u, mylist<unsigned int>::ctor::mycons_(
+                                    2u, mylist<unsigned int>::ctor::mynil_())));
+
+  static unsigned int nested_implicits(const unsigned int a,
+                                       const unsigned int b,
+                                       const unsigned int c);
+
+  static inline const unsigned int use_nested = nested_implicits(1u, 2u, 3u);
+
+  static unsigned int choose_branch(const std::shared_ptr<Bool0::bool0> &flag,
+                                    const unsigned int t, const unsigned int f);
+
+  static inline const unsigned int use_choose_true =
+      choose_branch(Bool0::bool0::ctor::true0_(), 7u, 3u);
+
+  static inline const unsigned int use_choose_false =
+      choose_branch(Bool0::bool0::ctor::false0_(), 7u, 3u);
+
   static inline const unsigned int test_id = id<unsigned int>(5u);
 
   static inline const unsigned int test_fst =
@@ -161,4 +236,28 @@ struct ImplicitArgs {
   static inline const unsigned int test_explicit_id = explicit_id;
 
   static inline const unsigned int test_explicit_fst = explicit_fst;
+
+  static inline const unsigned int test_add_implicit = use_add_implicit;
+
+  static inline const unsigned int test_scale = use_scale;
+
+  static inline const unsigned int test_combine = use_combine;
+
+  static inline const unsigned int test_apply_implicit = use_apply_implicit;
+
+  static inline const unsigned int test_from_zero = use_from_zero;
+
+  static inline const unsigned int test_from_ten = use_from_ten;
+
+  static inline const unsigned int test_head_empty = use_head_empty;
+
+  static inline const unsigned int test_head_nonempty = use_head_nonempty;
+
+  static inline const unsigned int test_sum_init = use_sum_init;
+
+  static inline const unsigned int test_nested = use_nested;
+
+  static inline const unsigned int test_choose_true = use_choose_true;
+
+  static inline const unsigned int test_choose_false = use_choose_false;
 };
