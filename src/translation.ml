@@ -604,8 +604,11 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
     | Miniml.Tglob (_, args, _) -> List.iter resolve_metas args
     | _ -> () in
   Array.iter (fun (_, ty) -> resolve_metas ty) ids;
+  (* Call gen_fix with original names - it will handle renaming internally *)
   let funs_compiled = Array.to_list (Array.map2 (gen_fix env) ids funs) in
-  let ids_list = Array.to_list ids in
+  (* Extract the renamed ids from gen_fix results *)
+  let renamed_ids = List.map (fun (renamed_id, _, _) -> renamed_id) funs_compiled in
+  let funs_with_params = List.map (fun (_, params, body) -> (params, body)) funs_compiled in
   let tvars = get_current_type_vars () in
   (* For std::function declarations, if return type is an unnamed Tvar, use void as placeholder. *)
   let fix_func_type ty =
@@ -614,19 +617,21 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
         Minicpp.Tfun (params, Minicpp.Tvoid)
     | _ -> ty
   in
+  (* Use renamed ids for declarations *)
   let decls = List.map (fun (id, ty) ->
-    Sdecl (id, fix_func_type (convert_ml_type_to_cpp_type env [] tvars ty))) ids_list in
+    Sdecl (id, fix_func_type (convert_ml_type_to_cpp_type env [] tvars ty))) renamed_ids in
   let ret_ty ty = (match convert_ml_type_to_cpp_type env [] tvars ty with
     | Tfun (_,t) ->
         (match t with
         | Minicpp.Tvar (_, None) -> None
         | _ -> Some t)
     | _ -> None) in
+  (* Use renamed ids for definitions *)
   let defs = List.map2 (fun (id, fty) (args, body) ->
-    Sasgn (id, None, CPPlambda (List.map (fun (id, ty) -> convert_ml_type_to_cpp_type env [] tvars ty, Some id) args, ret_ty fty, body))) ids_list funs_compiled in
-  (* Add the fix function names to the environment for the body *)
-  let _, env' = push_vars' ids_list env in
-  decls @ defs @ gen_stmts env' k b
+    Sasgn (id, None, CPPlambda (List.map (fun (id, ty) -> convert_ml_type_to_cpp_type env [] tvars ty, Some id) args, ret_ty fty, body))) renamed_ids funs_with_params in
+  (* Add renamed ids to environment for processing body *)
+  let _, env_with_fix = push_vars' renamed_ids env in
+  decls @ defs @ gen_stmts env_with_fix k b
 | MLletin (x, t, a, b) ->
   let x' = remove_prime_id (id_of_mlid x) in
   let _,env' = push_vars' [x', t] env in
@@ -653,8 +658,11 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
     | Miniml.Tglob (_, args, _) -> List.iter resolve_metas args
     | _ -> () in
   Array.iter (fun (_, ty) -> resolve_metas ty) ids;
-  let funs = Array.to_list (Array.map2 (gen_fix env) ids funs) in
-  let ids = Array.to_list ids in
+  (* Call gen_fix with original names - it will handle renaming internally *)
+  let funs_compiled = Array.to_list (Array.map2 (gen_fix env) ids funs) in
+  (* Extract the renamed ids from gen_fix results *)
+  let renamed_ids = List.map (fun (renamed_id, _, _) -> renamed_id) funs_compiled in
+  let funs_with_params = List.map (fun (_, params, body) -> (params, body)) funs_compiled in
   let tvars = get_current_type_vars () in
   (* For std::function declarations, if return type is an unnamed Tvar, use void as placeholder.
      The actual type will be deduced when the lambda is assigned. *)
@@ -665,7 +673,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
     | _ -> ty
   in
   let decls = List.map (fun (id, ty) ->
-    Sdecl (id, fix_func_type (convert_ml_type_to_cpp_type env [] tvars ty))) ids in
+    Sdecl (id, fix_func_type (convert_ml_type_to_cpp_type env [] tvars ty))) renamed_ids in
   let ret_ty ty = (match convert_ml_type_to_cpp_type env [] tvars ty with
     | Tfun (_,t) ->
         (* If return type is an unnamed Tvar, use None (auto) instead *)
@@ -673,9 +681,10 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
         | Minicpp.Tvar (_, None) -> None
         | _ -> Some t)
     | _ -> None) in
-  let defs = List.map2 (fun (id, fty) (args, body) -> Sasgn (id, None, CPPlambda (List.map (fun (id, ty) -> convert_ml_type_to_cpp_type env [] tvars ty, Some id) args, ret_ty fty, body))) ids funs in
+  let defs = List.map2 (fun (id, fty) (params, body) -> Sasgn (id, None, CPPlambda (List.map (fun (id, ty) -> convert_ml_type_to_cpp_type env [] tvars ty, Some id) params, ret_ty fty, body))) renamed_ids funs_with_params in
+  (* Args are in the outer scope, so process with original env *)
   let args = List.rev_map (gen_expr env) args in
-  decls @ defs @ [k (CPPfun_call (CPPvar (fst (List.nth ids x)), args))]
+  decls @ defs @ [k (CPPfun_call (CPPvar (fst (List.nth renamed_ids x)), args))]
 | MLfix (x, ids, funs) ->
   (* Standalone fixpoint (not immediately applied) - e.g., in let binding *)
   (* Resolve unresolved metas in fix function types to Tvars using mgu. *)
@@ -689,8 +698,11 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
     | Miniml.Tglob (_, args, _) -> List.iter resolve_metas args
     | _ -> () in
   Array.iter (fun (_, ty) -> resolve_metas ty) ids;
-  let funs = Array.to_list (Array.map2 (gen_fix env) ids funs) in
-  let ids = Array.to_list ids in
+  (* Call gen_fix with original names - it will handle renaming internally *)
+  let funs_compiled = Array.to_list (Array.map2 (gen_fix env) ids funs) in
+  (* Extract the renamed ids from gen_fix results *)
+  let renamed_ids = List.map (fun (renamed_id, _, _) -> renamed_id) funs_compiled in
+  let funs_with_params = List.map (fun (_, params, body) -> (params, body)) funs_compiled in
   let tvars = get_current_type_vars () in
   (* For std::function declarations, if return type is an unnamed Tvar, use void as placeholder. *)
   let fix_func_type ty =
@@ -700,16 +712,16 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
     | _ -> ty
   in
   let decls = List.map (fun (id, ty) ->
-    Sdecl (id, fix_func_type (convert_ml_type_to_cpp_type env [] tvars ty))) ids in
+    Sdecl (id, fix_func_type (convert_ml_type_to_cpp_type env [] tvars ty))) renamed_ids in
   let ret_ty ty = (match convert_ml_type_to_cpp_type env [] tvars ty with
     | Tfun (_,t) ->
         (match t with
         | Minicpp.Tvar (_, None) -> None
         | _ -> Some t)
     | _ -> None) in
-  let defs = List.map2 (fun (id, fty) (args, body) -> Sasgn (id, None, CPPlambda (List.map (fun (id, ty) -> convert_ml_type_to_cpp_type env [] tvars ty, Some id) args, ret_ty fty, body))) ids funs in
+  let defs = List.map2 (fun (id, fty) (params, body) -> Sasgn (id, None, CPPlambda (List.map (fun (id, ty) -> convert_ml_type_to_cpp_type env [] tvars ty, Some id) params, ret_ty fty, body))) renamed_ids funs_with_params in
   (* Return the fix function itself (for use in let bindings etc.) *)
-  decls @ defs @ [k (CPPvar (fst (List.nth ids x)))]
+  decls @ defs @ [k (CPPvar (fst (List.nth renamed_ids x)))]
 (* | MLapp (MLglob (h, _), a1 :: a2 :: l) when is_hoist h ->
   gen_stmts env k (MLapp (a1, a2::[])) *)
 | MLapp (MLglob (r, bind_tys), a1 :: a2 :: l) when is_bind r ->
@@ -753,9 +765,11 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
 and gen_fix env (n,ty) f =
   let ids, f = collect_lams f in
   let ids,_ = push_vars' (List.map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids) env in
-  let _,env = push_vars' (ids @ [(n,ty)]) env in
+  (* Push the fix function name, which may be renamed to avoid shadowing *)
+  let renamed_fix_ids, env = push_vars' (ids @ [(n,ty)]) env in
+  let renamed_n = fst (List.hd (List.rev renamed_fix_ids)) in
   let ids = List.filter (fun (_,ty) -> not (ml_type_is_void ty)) ids in
-  ids, gen_stmts env (fun x -> Sreturn x) f
+  (renamed_n, ty), ids, gen_stmts env (fun x -> Sreturn x) f
 
 (* TODO: REDO NAMESPACE AS PART OF NAMES!!! *)
 

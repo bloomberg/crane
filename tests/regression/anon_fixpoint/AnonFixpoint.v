@@ -52,6 +52,15 @@ Definition gcd (a b : nat) : nat :=
       end
     end) (Nat.add a b) a b.
 
+Definition test_shadow (n : nat) : nat :=
+   let foo := n + n in
+   let bar := (fix foo (n : nat) : nat :=
+                 match n with
+                 | O => O
+                 | S n' => S (foo n')
+                 end) in
+   bar foo.
+
 (* Test values *)
 Definition test_sum_5 := sum_to five.        (* 5+4+3+2+1 = 15 *)
 Definition test_sum_0 := sum_to zero.        (* 0 *)

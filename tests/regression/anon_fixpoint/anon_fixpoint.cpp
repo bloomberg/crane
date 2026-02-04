@@ -65,3 +65,17 @@ unsigned int AnonFixpoint::gcd(const unsigned int a, const unsigned int b) {
   };
   return go((a + b), a, b);
 }
+
+unsigned int AnonFixpoint::test_shadow(const unsigned int n) {
+  unsigned int foo = (n + n);
+  std::function<unsigned int(unsigned int)> foo0;
+  foo0 = [&](unsigned int n0) -> unsigned int {
+    if (n0 <= 0) {
+      return 0;
+    } else {
+      unsigned int n_ = n0 - 1;
+      return (foo0(n_) + 1);
+    }
+  };
+  return foo0(foo);
+}
