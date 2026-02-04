@@ -17,6 +17,8 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <random>
+#include <thread>
 #include <utility>
 
 namespace bdlcc_compat {
@@ -303,8 +305,7 @@ class SkipList {
     /// Return true if there is a pair with the specified key.
     bool exists(const KEY& key) const {
         return atomic([&]() -> bool {
-            auto result = d_impl->bde_find(keyLt, keyEq, key);
-            return result.first == e_SUCCESS;
+            return d_impl->bde_exists(keyLt, keyEq, key);
         });
     }
 
@@ -442,8 +443,13 @@ class SkipList {
   private:
     // Generate a random level for new nodes
     static unsigned int randomLevel() {
+        // Use thread-local RNG for thread safety
+        // Seed with a hash of thread ID for deterministic but varied seeds
+        thread_local std::mt19937 rng(
+            static_cast<unsigned>(std::hash<std::thread::id>{}(std::this_thread::get_id()))
+        );
         unsigned int level = 0;
-        while ((rand() & 1) && level < 15) {
+        while ((rng() & 1) && level < 15) {
             ++level;
         }
         return level;

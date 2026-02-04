@@ -70,33 +70,30 @@ template <typename K, typename V> struct CHT {
   std::optional<V> stm_get(const K k) const {
     std::shared_ptr<stm::TVar<std::shared_ptr<List::list<std::pair<K, V>>>>> b =
         this->bucket_of(k);
-    std::shared_ptr<List::list<std::pair<K, V>>> xs =
-        stm::readTVar<std::shared_ptr<List::list<std::pair<K, V>>>>(b);
+    std::shared_ptr<List::list<std::pair<K, V>>> xs = b->read();
     return CHT<int, int>::template assoc_lookup<K, V>(this->CHT::cht_eqb, k,
                                                       xs);
   }
   void stm_put(const K k, const V v) const {
     std::shared_ptr<stm::TVar<std::shared_ptr<List::list<std::pair<K, V>>>>> b =
         this->bucket_of(k);
-    std::shared_ptr<List::list<std::pair<K, V>>> xs =
-        stm::readTVar<std::shared_ptr<List::list<std::pair<K, V>>>>(b);
+    std::shared_ptr<List::list<std::pair<K, V>>> xs = b->read();
     std::shared_ptr<List::list<std::pair<K, V>>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
             this->CHT::cht_eqb, k, v, xs);
-    stm::writeTVar<std::shared_ptr<List::list<std::pair<K, V>>>>(b, xs_);
+    b->write(xs_);
     return;
   }
   std::optional<V> stm_delete(const K k) const {
     std::shared_ptr<stm::TVar<std::shared_ptr<List::list<std::pair<K, V>>>>> b =
         this->bucket_of(k);
-    std::shared_ptr<List::list<std::pair<K, V>>> xs =
-        stm::readTVar<std::shared_ptr<List::list<std::pair<K, V>>>>(b);
+    std::shared_ptr<List::list<std::pair<K, V>>> xs = b->read();
     std::pair<std::optional<V>, std::shared_ptr<List::list<std::pair<K, V>>>>
         p = CHT<int, int>::template assoc_remove<K, V>(this->CHT::cht_eqb, k,
                                                        xs);
     if (p.first.has_value()) {
       V _x = *p.first;
-      stm::writeTVar<std::shared_ptr<List::list<std::pair<K, V>>>>(b, p.second);
+      b->write(p.second);
       return p.first;
     } else {
       return p.first;
@@ -106,15 +103,14 @@ template <typename K, typename V> struct CHT {
   V stm_update(const K k, F1 &&f) const {
     std::shared_ptr<stm::TVar<std::shared_ptr<List::list<std::pair<K, V>>>>> b =
         this->bucket_of(k);
-    std::shared_ptr<List::list<std::pair<K, V>>> xs =
-        stm::readTVar<std::shared_ptr<List::list<std::pair<K, V>>>>(b);
+    std::shared_ptr<List::list<std::pair<K, V>>> xs = b->read();
     std::optional<V> ov =
         CHT<int, int>::template assoc_lookup<K, V>(this->CHT::cht_eqb, k, xs);
     V v = f(ov);
     std::shared_ptr<List::list<std::pair<K, V>>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
             this->CHT::cht_eqb, k, v, xs);
-    stm::writeTVar<std::shared_ptr<List::list<std::pair<K, V>>>>(b, xs_);
+    b->write(xs_);
     return v;
   }
   V stm_get_or(const K k, const V dflt) const {

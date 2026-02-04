@@ -69,8 +69,9 @@ Definition writeTVar {A} (v : TVar A) (a : A) : STM void := trigger (iwriteTVar 
 
 Crane Extract Inlined Constant TVar => "std::shared_ptr<stm::TVar<%t0>>" From "mini_stm.h".
 Crane Extract Inlined Constant newTVar => "stm::newTVar<%t0>(%a0)".
-Crane Extract Inlined Constant readTVar => "stm::readTVar<%t0>(%a0)".
-Crane Extract Inlined Constant writeTVar => "stm::writeTVar<%t0>(%a0, %a1)".
+(* Use member functions for better inlining *)
+Crane Extract Inlined Constant readTVar => "%a0->read()".
+Crane Extract Inlined Constant writeTVar => "%a0->write(%a1)".
 
 End TVar.
 

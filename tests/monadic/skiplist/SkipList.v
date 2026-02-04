@@ -120,6 +120,32 @@ Definition writeNext {K V : Type} (n : NodeRef K V) (level : nat) (next : option
 Definition findPredFuel : nat := 10000.
 Crane Extract Inlined Constant findPredFuel => "10000u".
 
+(* ========================================================================= *)
+(*                     Path Type (extracts to fixed array)                   *)
+(* ========================================================================= *)
+
+(* Path stores predecessors at each level - extracts to std::array for efficiency *)
+Module Path_axioms.
+  Axiom Path : Type -> Type -> Type.
+  Axiom iemptyPath : forall {K V : Type}, STM_axioms.iSTM (Path K V).
+  Axiom isetPath : forall {K V : Type}, Path K V -> nat -> NodeRef K V -> STM_axioms.iSTM void.
+  Axiom igetPath : forall {K V : Type}, Path K V -> nat -> STM_axioms.iSTM (NodeRef K V).
+End Path_axioms.
+
+Crane Extract Skip Module Path_axioms.
+Import Path_axioms.
+
+Definition emptyPath {K V : Type} : STM (Path K V) := trigger (@iemptyPath K V).
+Definition setPath {K V : Type} (p : Path K V) (lvl : nat) (n : NodeRef K V) : STM void :=
+  trigger (isetPath p lvl n).
+Definition getPath {K V : Type} (p : Path K V) (lvl : nat) : STM (NodeRef K V) :=
+  trigger (igetPath p lvl).
+
+Crane Extract Inlined Constant Path => "SkipPath<%t0, %t1>" From "skipnode.h".
+Crane Extract Inlined Constant emptyPath => "SkipPath<%t0, %t1>{}".
+Crane Extract Inlined Constant setPath => "%a0.set(%a1, %a2)".
+Crane Extract Inlined Constant getPath => "%a0.get(%a1)".
+
 Fixpoint findPred_go {K V : Type} (ltK : K -> K -> bool)
   (fuel : nat) (curr : NodeRef K V) (target : K) (level : nat)
   : STM (NodeRef K V) :=
@@ -148,8 +174,10 @@ Crane Extract Inlined Constant getKey => "%a0->key".
 Crane Extract Inlined Constant readValue => "stm::readTVar<%t1>(%a0->value)".
 Crane Extract Inlined Constant writeValue => "stm::writeTVar<%t1>(%a0->value, %a1)".
 Crane Extract Inlined Constant getLevel => "%a0->level".
-Crane Extract Inlined Constant readNext => "stm::readTVar<std::optional<std::shared_ptr<SkipNode<%t0, %t1>>>>(%a0->forward[%a1])".
-Crane Extract Inlined Constant writeNext => "stm::writeTVar<std::optional<std::shared_ptr<SkipNode<%t0, %t1>>>>(%a0->forward[%a1], %a2)".
+(* Read returns shared_ptr, convert to optional for Rocq's option type *)
+Crane Extract Inlined Constant readNext => "ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<%t0, %t1>>>(%a0->forward[%a1]))".
+(* Write takes optional, convert to shared_ptr (None -> nullptr) *)
+Crane Extract Inlined Constant writeNext => "stm::writeTVar<std::shared_ptr<SkipNode<%t0, %t1>>>(%a0->forward[%a1], opt_to_ptr(%a2))".
 
 (* ========================================================================= *)
 (*                            Skip List Structure                            *)
@@ -185,19 +213,20 @@ Variable ltK : K -> K -> bool.   (* less-than comparison on keys *)
 Variable eqK : K -> K -> bool.   (* equality on keys *)
 
 (* Collect update path from current level down to 0 *)
-(* Uses structural recursion on level - no fuel needed *)
+(* Uses Path (fixed-size array) for efficiency *)
 Fixpoint findPath_aux (curr : NodeRef K V) (target : K) (level : nat)
-  (acc : list (NodeRef K V)) : STM (list (NodeRef K V)) :=
+  (path : Path K V) : STM (Path K V) :=
   pred <- findPred ltK curr target level ;;
-  let acc' := pred :: acc in
+  setPath path level pred ;;
   match level with
-  | O => Ret acc'
-  | S level' => findPath_aux pred target level' acc'
+  | O => Ret path
+  | S level' => findPath_aux pred target level' path
   end.
 
-Definition findPath (sl : SkipList K V) (target : K) : STM (list (NodeRef K V)) :=
+Definition findPath (sl : SkipList K V) (target : K) : STM (Path K V) :=
   lvl <- readTVar (slLevel sl) ;;
-  findPath_aux (slHead sl) target lvl [].
+  path <- emptyPath ;;
+  findPath_aux (slHead sl) target lvl path.
 
 (* ------------------------------------------------------------------------ *)
 (*                              lookup                                      *)
@@ -205,19 +234,16 @@ Definition findPath (sl : SkipList K V) (target : K) : STM (list (NodeRef K V)) 
 
 Definition lookup (k : K) (sl : SkipList K V) : STM (option V) :=
   path <- findPath sl k ;;
-  match path with
-  | [] => Ret None
-  | pred0 :: _ =>
-      nextOpt <- readNext pred0 0 ;;
-      match nextOpt with
-      | None => Ret None
-      | Some node =>
-          if eqK (getKey node) k then
-            v <- readValue node ;;
-            Ret (Some v)
-          else
-            Ret None
-      end
+  pred0 <- getPath path 0 ;;
+  nextOpt <- readNext pred0 0 ;;
+  match nextOpt with
+  | None => Ret None
+  | Some node =>
+      if eqK (getKey node) k then
+        v <- readValue node ;;
+        Ret (Some v)
+      else
+        Ret None
   end.
 
 (* ------------------------------------------------------------------------ *)
@@ -230,63 +256,73 @@ Definition linkAtLevel (pred newNode : NodeRef K V) (level : nat) : STM void :=
   writeNext pred level (Some newNode) ;;
   writeNext newNode level oldNext.
 
-(* Link at all levels from 0 to nodeLevel *)
-Fixpoint linkNode_aux (preds : list (NodeRef K V)) (newNode : NodeRef K V) (level : nat)
+(* Link at all levels from nodeLevel down to 0 *)
+Fixpoint linkNode_aux (path : Path K V) (head : NodeRef K V) (newNode : NodeRef K V) (level : nat)
   : STM void :=
-  match preds, level with
-  | [], _ => Ret ghost
-  | pred :: rest, O => linkAtLevel pred newNode 0
-  | pred :: rest, S level' =>
-      linkAtLevel pred newNode level ;;
-      linkNode_aux rest newNode level'
+  pred <- getPath path level ;;
+  (* If path doesn't have this level (returns null), use head *)
+  let actualPred := pred in (* Path always returns head for unset levels *)
+  linkAtLevel actualPred newNode level ;;
+  match level with
+  | O => Ret ghost
+  | S level' => linkNode_aux path head newNode level'
   end.
 
-(* Extend path with head node for levels above slLevel *)
-(* path is [level0_pred, level1_pred, ..., levelN_pred] *)
-(* We need to extend it to include head for higher levels *)
-Definition extendPath (path : list (NodeRef K V)) (head : NodeRef K V) (needed : nat) : list (NodeRef K V) :=
-  let have := length path in
-  if Nat.leb needed have then path
-  else path ++ repeat head (needed - have).
+(* Ensure path has head node for levels above what findPath found *)
+(* Fills from level down to maxLevel (inclusive) *)
+Fixpoint extendPath_aux (path : Path K V) (head : NodeRef K V) (level : nat) (maxLevel : nat) : STM void :=
+  match level with
+  | O => setPath path 0 head
+  | S level' =>
+      setPath path level head ;;
+      (* Continue recursing while level > maxLevel (i.e., level' >= maxLevel) *)
+      if Nat.leb maxLevel level' then
+        extendPath_aux path head level' maxLevel
+      else
+        Ret ghost
+  end.
 
-Definition linkNode (path : list (NodeRef K V)) (newNode : NodeRef K V) : STM void :=
+Definition extendPath (path : Path K V) (head : NodeRef K V) (needed : nat) (currentMax : nat) : STM void :=
+  (* Fill levels from currentMax+1 up to needed-1 with head *)
+  (* If needed <= currentMax + 1, there are no new levels to fill *)
+  if Nat.leb needed (S currentMax) then Ret ghost
+  else
+    (* Set levels from needed-1 down to currentMax+1 *)
+    extendPath_aux path head (needed - 1) (currentMax + 1).
+
+Definition linkNode (path : Path K V) (head : NodeRef K V) (newNode : NodeRef K V) : STM void :=
   let lvl := getLevel newNode in
-  let relevantPath := firstn (S lvl) path in
-  linkNode_aux (rev relevantPath) newNode lvl.
+  linkNode_aux path head newNode lvl.
 
 Definition insert (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : STM void :=
   path <- findPath sl k ;;
+  curLvl <- readTVar (slLevel sl) ;;
   (* Extend path with head for levels above current slLevel *)
-  let fullPath := extendPath path (slHead sl) (S newLevel) in
-  match fullPath with
-  | [] => Ret ghost
-  | pred0 :: _ =>
-      nextOpt <- readNext pred0 0 ;;
-      match nextOpt with
-      | Some existing =>
-          if eqK (getKey existing) k then
-            writeValue existing v
-          else
-            newN <- newNode k v newLevel ;;
-            linkNode fullPath newN ;;
-            curLvl <- readTVar (slLevel sl) ;;
-            (if Nat.ltb curLvl newLevel then
-              writeTVar (slLevel sl) newLevel
-            else
-              Ret ghost) ;;
-            len <- readTVar (slLength sl) ;;
-            writeTVar (slLength sl) (S len)
-      | None =>
-          newN <- newNode k v newLevel ;;
-          linkNode fullPath newN ;;
-          curLvl <- readTVar (slLevel sl) ;;
-          (if Nat.ltb curLvl newLevel then
-            writeTVar (slLevel sl) newLevel
-          else
-            Ret ghost) ;;
-          len <- readTVar (slLength sl) ;;
-          writeTVar (slLength sl) (S len)
-      end
+  extendPath path (slHead sl) (S newLevel) curLvl ;;
+  pred0 <- getPath path 0 ;;
+  nextOpt <- readNext pred0 0 ;;
+  match nextOpt with
+  | Some existing =>
+      if eqK (getKey existing) k then
+        writeValue existing v
+      else
+        newN <- newNode k v newLevel ;;
+        linkNode path (slHead sl) newN ;;
+        (if Nat.ltb curLvl newLevel then
+          writeTVar (slLevel sl) newLevel
+        else
+          Ret ghost) ;;
+        len <- readTVar (slLength sl) ;;
+        writeTVar (slLength sl) (S len)
+  | None =>
+      newN <- newNode k v newLevel ;;
+      linkNode path (slHead sl) newN ;;
+      (if Nat.ltb curLvl newLevel then
+        writeTVar (slLevel sl) newLevel
+      else
+        Ret ghost) ;;
+      len <- readTVar (slLength sl) ;;
+      writeTVar (slLength sl) (S len)
   end.
 
 (* ------------------------------------------------------------------------ *)
@@ -297,39 +333,35 @@ Definition unlinkAtLevel (pred target : NodeRef K V) (level : nat) : STM void :=
   targetNext <- readNext target level ;;
   writeNext pred level targetNext.
 
-Fixpoint unlinkNode_aux (preds : list (NodeRef K V)) (target : NodeRef K V) (level : nat)
+Fixpoint unlinkNode_aux (path : Path K V) (target : NodeRef K V) (level : nat)
   : STM void :=
-  match preds, level with
-  | [], _ => Ret ghost
-  | pred :: rest, O => unlinkAtLevel pred target 0
-  | pred :: rest, S level' =>
-      unlinkAtLevel pred target level ;;
-      unlinkNode_aux rest target level'
+  pred <- getPath path level ;;
+  unlinkAtLevel pred target level ;;
+  match level with
+  | O => Ret ghost
+  | S level' => unlinkNode_aux path target level'
   end.
 
-Definition unlinkNode (path : list (NodeRef K V)) (target : NodeRef K V) : STM void :=
+Definition unlinkNode (path : Path K V) (target : NodeRef K V) : STM void :=
   let lvl := getLevel target in
-  let relevantPath := firstn (S lvl) path in
-  unlinkNode_aux (rev relevantPath) target lvl.
+  unlinkNode_aux path target lvl.
 
 Definition remove (k : K) (sl : SkipList K V) : STM void :=
   path <- findPath sl k ;;
-  match path with
-  | [] => Ret ghost
-  | pred0 :: _ =>
-      nextOpt <- readNext pred0 0 ;;
-      match nextOpt with
-      | Some node =>
-          if eqK (getKey node) k then
-            (* Extend path for the target node's level *)
-            let fullPath := extendPath path (slHead sl) (S (getLevel node)) in
-            unlinkNode fullPath node ;;
-            len <- readTVar (slLength sl) ;;
-            writeTVar (slLength sl) (len - 1)
-          else
-            Ret ghost
-      | None => Ret ghost
-      end
+  pred0 <- getPath path 0 ;;
+  nextOpt <- readNext pred0 0 ;;
+  match nextOpt with
+  | Some node =>
+      if eqK (getKey node) k then
+        curLvl <- readTVar (slLevel sl) ;;
+        (* Extend path for the target node's level *)
+        extendPath path (slHead sl) (S (getLevel node)) curLvl ;;
+        unlinkNode path node ;;
+        len <- readTVar (slLength sl) ;;
+        writeTVar (slLength sl) (len - 1)
+      else
+        Ret ghost
+  | None => Ret ghost
   end.
 
 (* ------------------------------------------------------------------------ *)
@@ -349,9 +381,28 @@ Definition minimum (sl : SkipList K V) : STM (option (K * V)) :=
 (*                              member                                      *)
 (* ------------------------------------------------------------------------ *)
 
+(* Fast traversal without building path - just finds if key exists *)
+Fixpoint findKey_aux (curr : NodeRef K V) (target : K) (level : nat) : STM bool :=
+  pred <- findPred ltK curr target level ;;
+  match level with
+  | O =>
+      nextOpt <- readNext pred 0 ;;
+      match nextOpt with
+      | None => Ret false
+      | Some node => Ret (eqK (getKey node) target)
+      end
+  | S level' => findKey_aux pred target level'
+  end.
+
+Definition memberFast (k : K) (sl : SkipList K V) : STM bool :=
+  lvl <- readTVar (slLevel sl) ;;
+  findKey_aux (slHead sl) k lvl.
+
+(* Original member using lookup - kept for compatibility *)
+(* Note: Inlined body to avoid extraction bug with simple function aliases *)
 Definition member (k : K) (sl : SkipList K V) : STM bool :=
-  result <- lookup k sl ;;
-  Ret (match result with Some _ => true | None => false end).
+  lvl <- readTVar (slLevel sl) ;;
+  findKey_aux (slHead sl) k lvl.
 
 (* ========================================================================= *)
 (*                     BDE-Compatible Operations                             *)
@@ -373,7 +424,8 @@ Definition length (sl : SkipList K V) : STM nat :=
 (* ------------------------------------------------------------------------ *)
 
 Definition exists_ (k : K) (sl : SkipList K V) : STM bool :=
-  member k sl.
+  lvl <- readTVar (slLevel sl) ;;
+  findKey_aux (slHead sl) k lvl.
 
 (* ------------------------------------------------------------------------ *)
 (*                         front / back                                      *)
@@ -458,23 +510,22 @@ Fixpoint unlinkNodeAtAllLevels (head node : NodeRef K V) (lvl : nat) : STM void 
   | S lvl' => unlinkNodeAtAllLevels head node lvl'
   end.
 
-(* Remove all items from the list *)
-Fixpoint removeAll_aux (fuel : nat) (head : NodeRef K V) (maxLvl : nat) : STM nat :=
+(* Remove all items from the list - uses accumulator for tail-call optimization *)
+Fixpoint removeAll_aux (fuel : nat) (head : NodeRef K V) (maxLvl : nat) (acc : nat) : STM nat :=
   match fuel with
-  | O => Ret 0
+  | O => Ret acc
   | S fuel' =>
       firstOpt <- readNext head 0 ;;
       match firstOpt with
-      | None => Ret 0
+      | None => Ret acc
       | Some node =>
           unlinkNodeAtAllLevels head node maxLvl ;;
-          rest <- removeAll_aux fuel' head maxLvl ;;
-          Ret (S rest)
+          removeAll_aux fuel' head maxLvl (S acc)  (* Tail call with accumulated count *)
       end
   end.
 
 Definition removeAll (sl : SkipList K V) : STM nat :=
-  count <- removeAll_aux findPredFuel (slHead sl) (maxLevels - 1) ;;
+  count <- removeAll_aux findPredFuel (slHead sl) (maxLevels - 1) 0 ;;
   writeTVar (slLength sl) 0 ;;
   writeTVar (slLevel sl) 0 ;;
   Ret count.
@@ -486,74 +537,65 @@ Definition removeAll (sl : SkipList K V) : STM nat :=
 (* add - Add key/data pair to the list (allows duplicates) - renamed from insert *)
 Definition add (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : STM void :=
   path <- findPath sl k ;;
-  let fullPath := extendPath path (slHead sl) (S newLevel) in
-  match fullPath with
-  | [] => Ret ghost
-  | pred0 :: _ =>
-      nextOpt <- readNext pred0 0 ;;
-      match nextOpt with
-      | Some existing =>
-          if eqK (getKey existing) k then
-            (* Update existing value *)
-            writeValue existing v
-          else
-            newN <- newNode k v newLevel ;;
-            linkNode fullPath newN ;;
-            curLvl <- readTVar (slLevel sl) ;;
-            (if Nat.ltb curLvl newLevel then
-              writeTVar (slLevel sl) newLevel
-            else
-              Ret ghost) ;;
-            len <- readTVar (slLength sl) ;;
-            writeTVar (slLength sl) (S len)
-      | None =>
-          newN <- newNode k v newLevel ;;
-          linkNode fullPath newN ;;
-          curLvl <- readTVar (slLevel sl) ;;
-          (if Nat.ltb curLvl newLevel then
-            writeTVar (slLevel sl) newLevel
-          else
-            Ret ghost) ;;
-          len <- readTVar (slLength sl) ;;
-          writeTVar (slLength sl) (S len)
-      end
+  curLvl <- readTVar (slLevel sl) ;;
+  extendPath path (slHead sl) (S newLevel) curLvl ;;
+  pred0 <- getPath path 0 ;;
+  nextOpt <- readNext pred0 0 ;;
+  match nextOpt with
+  | Some existing =>
+      if eqK (getKey existing) k then
+        writeValue existing v
+      else
+        newN <- newNode k v newLevel ;;
+        linkNode path (slHead sl) newN ;;
+        (if Nat.ltb curLvl newLevel then
+          writeTVar (slLevel sl) newLevel
+        else
+          Ret ghost) ;;
+        len <- readTVar (slLength sl) ;;
+        writeTVar (slLength sl) (S len)
+  | None =>
+      newN <- newNode k v newLevel ;;
+      linkNode path (slHead sl) newN ;;
+      (if Nat.ltb curLvl newLevel then
+        writeTVar (slLevel sl) newLevel
+      else
+        Ret ghost) ;;
+      len <- readTVar (slLength sl) ;;
+      writeTVar (slLength sl) (S len)
   end.
 
 (* addUnique - Add only if key doesn't already exist. Returns true on success. *)
 Definition addUnique (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : STM bool :=
   path <- findPath sl k ;;
-  let fullPath := extendPath path (slHead sl) (S newLevel) in
-  match fullPath with
-  | [] => Ret false
-  | pred0 :: _ =>
-      nextOpt <- readNext pred0 0 ;;
-      match nextOpt with
-      | Some existing =>
-          if eqK (getKey existing) k then
-            Ret false  (* Key already exists *)
-          else
-            newN <- newNode k v newLevel ;;
-            linkNode fullPath newN ;;
-            curLvl <- readTVar (slLevel sl) ;;
-            (if Nat.ltb curLvl newLevel then
-              writeTVar (slLevel sl) newLevel
-            else
-              Ret ghost) ;;
-            len <- readTVar (slLength sl) ;;
-            writeTVar (slLength sl) (S len) ;;
-            Ret true
-      | None =>
-          newN <- newNode k v newLevel ;;
-          linkNode fullPath newN ;;
-          curLvl <- readTVar (slLevel sl) ;;
-          (if Nat.ltb curLvl newLevel then
-            writeTVar (slLevel sl) newLevel
-          else
-            Ret ghost) ;;
-          len <- readTVar (slLength sl) ;;
-          writeTVar (slLength sl) (S len) ;;
-          Ret true
-      end
+  curLvl <- readTVar (slLevel sl) ;;
+  extendPath path (slHead sl) (S newLevel) curLvl ;;
+  pred0 <- getPath path 0 ;;
+  nextOpt <- readNext pred0 0 ;;
+  match nextOpt with
+  | Some existing =>
+      if eqK (getKey existing) k then
+        Ret false
+      else
+        newN <- newNode k v newLevel ;;
+        linkNode path (slHead sl) newN ;;
+        (if Nat.ltb curLvl newLevel then
+          writeTVar (slLevel sl) newLevel
+        else
+          Ret ghost) ;;
+        len <- readTVar (slLength sl) ;;
+        writeTVar (slLength sl) (S len) ;;
+        Ret true
+  | None =>
+      newN <- newNode k v newLevel ;;
+      linkNode path (slHead sl) newN ;;
+      (if Nat.ltb curLvl newLevel then
+        writeTVar (slLevel sl) newLevel
+      else
+        Ret ghost) ;;
+      len <- readTVar (slLength sl) ;;
+      writeTVar (slLength sl) (S len) ;;
+      Ret true
   end.
 
 (* ------------------------------------------------------------------------ *)
@@ -563,18 +605,15 @@ Definition addUnique (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : STM 
 (* find - Find element by key and return reference to the pair *)
 Definition find (k : K) (sl : SkipList K V) : STM (option (Pair K V)) :=
   path <- findPath sl k ;;
-  match path with
-  | [] => Ret None
-  | pred0 :: _ =>
-      nextOpt <- readNext pred0 0 ;;
-      match nextOpt with
-      | None => Ret None
-      | Some node =>
-          if eqK (getKey node) k then
-            Ret (Some node)
-          else
-            Ret None
-      end
+  pred0 <- getPath path 0 ;;
+  nextOpt <- readNext pred0 0 ;;
+  match nextOpt with
+  | None => Ret None
+  | Some node =>
+      if eqK (getKey node) k then
+        Ret (Some node)
+      else
+        Ret None
   end.
 
 (* ------------------------------------------------------------------------ *)
@@ -621,35 +660,29 @@ Definition previous (pair : Pair K V) (sl : SkipList K V) : STM (option (Pair K 
 (* findLowerBound - Find first element whose key is not less than given key *)
 Definition findLowerBound (k : K) (sl : SkipList K V) : STM (option (Pair K V)) :=
   path <- findPath sl k ;;
-  match path with
-  | [] => Ret None
-  | pred0 :: _ =>
-      nextOpt <- readNext pred0 0 ;;
-      match nextOpt with
-      | None => Ret None
-      | Some node =>
-          (* node's key is >= k (since pred's key < k and node is next) *)
-          Ret (Some node)
-      end
+  pred0 <- getPath path 0 ;;
+  nextOpt <- readNext pred0 0 ;;
+  match nextOpt with
+  | None => Ret None
+  | Some node =>
+      (* node's key is >= k (since pred's key < k and node is next) *)
+      Ret (Some node)
   end.
 
 (* findUpperBound - Find first element whose key is greater than given key *)
 Definition findUpperBound (k : K) (sl : SkipList K V) : STM (option (Pair K V)) :=
   path <- findPath sl k ;;
-  match path with
-  | [] => Ret None
-  | pred0 :: _ =>
-      nextOpt <- readNext pred0 0 ;;
-      match nextOpt with
-      | None => Ret None
-      | Some node =>
-          if eqK (getKey node) k then
-            (* Key matches, need to get the next one *)
-            readNext node 0
-          else
-            (* Key is already greater *)
-            Ret (Some node)
-      end
+  pred0 <- getPath path 0 ;;
+  nextOpt <- readNext pred0 0 ;;
+  match nextOpt with
+  | None => Ret None
+  | Some node =>
+      if eqK (getKey node) k then
+        (* Key matches, need to get the next one *)
+        readNext node 0
+      else
+        (* Key is already greater *)
+        Ret (Some node)
   end.
 
 (* ------------------------------------------------------------------------ *)
@@ -660,22 +693,20 @@ Definition findUpperBound (k : K) (sl : SkipList K V) : STM (option (Pair K V)) 
 Definition removePair (pair : Pair K V) (sl : SkipList K V) : STM bool :=
   let k := getKey pair in
   path <- findPath sl k ;;
-  match path with
-  | [] => Ret false
-  | pred0 :: _ =>
-      nextOpt <- readNext pred0 0 ;;
-      match nextOpt with
-      | Some node =>
-          if eqK (getKey node) k then
-            let fullPath := extendPath path (slHead sl) (S (getLevel node)) in
-            unlinkNode fullPath node ;;
-            len <- readTVar (slLength sl) ;;
-            writeTVar (slLength sl) (len - 1) ;;
-            Ret true
-          else
-            Ret false
-      | None => Ret false
-      end
+  curLvl <- readTVar (slLevel sl) ;;
+  pred0 <- getPath path 0 ;;
+  nextOpt <- readNext pred0 0 ;;
+  match nextOpt with
+  | Some node =>
+      if eqK (getKey node) k then
+        extendPath path (slHead sl) (S (getLevel node)) curLvl ;;
+        unlinkNode path node ;;
+        len <- readTVar (slLength sl) ;;
+        writeTVar (slLength sl) (len - 1) ;;
+        Ret true
+      else
+        Ret false
+  | None => Ret false
   end.
 
 (* ------------------------------------------------------------------------ *)
@@ -721,48 +752,41 @@ Variable eqK : K -> K -> bool.
 Definition bde_add (key : K) (data : V) (sl : SkipList K V) (level : nat)
   : STM (Pair K V * bool) :=
   path <- findPath ltK sl key ;;
-  let fullPath := extendPath path (slHead sl) (S level) in
+  curLvl <- readTVar (slLevel sl) ;;
+  extendPath path (slHead sl) (S level) curLvl ;;
   (* Check if this will be at front *)
   curFront <- readNext (slHead sl) 0 ;;
   let isNewFront := match curFront with
                     | None => true
                     | Some frontNode => ltK key (getKey frontNode)
                     end in
-  match fullPath with
-  | [] =>
-      (* Should not happen - create dummy node *)
+  pred0 <- getPath path 0 ;;
+  nextOpt <- readNext pred0 0 ;;
+  match nextOpt with
+  | Some existing =>
+      if eqK (getKey existing) key then
+        writeValue existing data ;;
+        Ret (existing, false)  (* Update existing, not new front *)
+      else
+        newN <- newNode key data level ;;
+        linkNode path (slHead sl) newN ;;
+        (if Nat.ltb curLvl level then
+          writeTVar (slLevel sl) level
+        else
+          Ret ghost) ;;
+        len <- readTVar (slLength sl) ;;
+        writeTVar (slLength sl) (S len) ;;
+        Ret (newN, isNewFront)
+  | None =>
       newN <- newNode key data level ;;
-      Ret (newN, true)
-  | pred0 :: _ =>
-      nextOpt <- readNext pred0 0 ;;
-      match nextOpt with
-      | Some existing =>
-          if eqK (getKey existing) key then
-            writeValue existing data ;;
-            Ret (existing, false)  (* Update existing, not new front *)
-          else
-            newN <- newNode key data level ;;
-            linkNode fullPath newN ;;
-            curLvl <- readTVar (slLevel sl) ;;
-            (if Nat.ltb curLvl level then
-              writeTVar (slLevel sl) level
-            else
-              Ret ghost) ;;
-            len <- readTVar (slLength sl) ;;
-            writeTVar (slLength sl) (S len) ;;
-            Ret (newN, isNewFront)
-      | None =>
-          newN <- newNode key data level ;;
-          linkNode fullPath newN ;;
-          curLvl <- readTVar (slLevel sl) ;;
-          (if Nat.ltb curLvl level then
-            writeTVar (slLevel sl) level
-          else
-            Ret ghost) ;;
-          len <- readTVar (slLength sl) ;;
-          writeTVar (slLength sl) (S len) ;;
-          Ret (newN, isNewFront)
-      end
+      linkNode path (slHead sl) newN ;;
+      (if Nat.ltb curLvl level then
+        writeTVar (slLevel sl) level
+      else
+        Ret ghost) ;;
+      len <- readTVar (slLength sl) ;;
+      writeTVar (slLength sl) (S len) ;;
+      Ret (newN, isNewFront)
   end.
 
 (* ------------------------------------------------------------------------ *)
@@ -775,43 +799,39 @@ Definition bde_add (key : K) (data : V) (sl : SkipList K V) (level : nat)
 Definition bde_addUnique (key : K) (data : V) (sl : SkipList K V) (level : nat)
   : STM (nat * option (Pair K V) * bool) :=
   path <- findPath ltK sl key ;;
-  let fullPath := extendPath path (slHead sl) (S level) in
+  curLvl <- readTVar (slLevel sl) ;;
+  extendPath path (slHead sl) (S level) curLvl ;;
   curFront <- readNext (slHead sl) 0 ;;
   let isNewFront := match curFront with
                     | None => true
                     | Some frontNode => ltK key (getKey frontNode)
                     end in
-  match fullPath with
-  | [] => Ret (e_INVALID, None, false)
-  | pred0 :: _ =>
-      nextOpt <- readNext pred0 0 ;;
-      match nextOpt with
-      | Some existing =>
-          if eqK (getKey existing) key then
-            Ret (e_DUPLICATE, None, false)
-          else
-            newN <- newNode key data level ;;
-            linkNode fullPath newN ;;
-            curLvl <- readTVar (slLevel sl) ;;
-            (if Nat.ltb curLvl level then
-              writeTVar (slLevel sl) level
-            else
-              Ret ghost) ;;
-            len <- readTVar (slLength sl) ;;
-            writeTVar (slLength sl) (S len) ;;
-            Ret (e_SUCCESS, Some newN, isNewFront)
-      | None =>
-          newN <- newNode key data level ;;
-          linkNode fullPath newN ;;
-          curLvl <- readTVar (slLevel sl) ;;
-          (if Nat.ltb curLvl level then
-            writeTVar (slLevel sl) level
-          else
-            Ret ghost) ;;
-          len <- readTVar (slLength sl) ;;
-          writeTVar (slLength sl) (S len) ;;
-          Ret (e_SUCCESS, Some newN, isNewFront)
-      end
+  pred0 <- getPath path 0 ;;
+  nextOpt <- readNext pred0 0 ;;
+  match nextOpt with
+  | Some existing =>
+      if eqK (getKey existing) key then
+        Ret (e_DUPLICATE, None, false)
+      else
+        newN <- newNode key data level ;;
+        linkNode path (slHead sl) newN ;;
+        (if Nat.ltb curLvl level then
+          writeTVar (slLevel sl) level
+        else
+          Ret ghost) ;;
+        len <- readTVar (slLength sl) ;;
+        writeTVar (slLength sl) (S len) ;;
+        Ret (e_SUCCESS, Some newN, isNewFront)
+  | None =>
+      newN <- newNode key data level ;;
+      linkNode path (slHead sl) newN ;;
+      (if Nat.ltb curLvl level then
+        writeTVar (slLevel sl) level
+      else
+        Ret ghost) ;;
+      len <- readTVar (slLength sl) ;;
+      writeTVar (slLength sl) (S len) ;;
+      Ret (e_SUCCESS, Some newN, isNewFront)
   end.
 
 (* ------------------------------------------------------------------------ *)
@@ -822,18 +842,15 @@ Definition bde_addUnique (key : K) (data : V) (sl : SkipList K V) (level : nat)
 
 Definition bde_find (key : K) (sl : SkipList K V) : STM (nat * option (Pair K V)) :=
   path <- findPath ltK sl key ;;
-  match path with
-  | [] => Ret (e_NOT_FOUND, None)
-  | pred0 :: _ =>
-      nextOpt <- readNext pred0 0 ;;
-      match nextOpt with
-      | None => Ret (e_NOT_FOUND, None)
-      | Some node =>
-          if eqK (getKey node) key then
-            Ret (e_SUCCESS, Some node)
-          else
-            Ret (e_NOT_FOUND, None)
-      end
+  pred0 <- getPath path 0 ;;
+  nextOpt <- readNext pred0 0 ;;
+  match nextOpt with
+  | None => Ret (e_NOT_FOUND, None)
+  | Some node =>
+      if eqK (getKey node) key then
+        Ret (e_SUCCESS, Some node)
+      else
+        Ret (e_NOT_FOUND, None)
   end.
 
 (* ------------------------------------------------------------------------ *)
@@ -898,7 +915,8 @@ Definition bde_removeAll (sl : SkipList K V) : STM nat :=
 (* ------------------------------------------------------------------------ *)
 
 Definition bde_exists (key : K) (sl : SkipList K V) : STM bool :=
-  member ltK eqK key sl.
+  lvl <- readTVar (slLevel sl) ;;
+  findKey_aux ltK eqK (slHead sl) key lvl.
 
 (* ------------------------------------------------------------------------ *)
 (*  bool isEmpty() const;                                                   *)

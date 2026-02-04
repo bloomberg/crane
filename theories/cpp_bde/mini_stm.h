@@ -59,6 +59,12 @@ struct TVar : TVarBase {
     T read_value() const {
         return value;
     }
+
+    // STM-aware read - defined after Transaction is declared
+    inline T read() const;
+
+    // STM-aware write - defined after Transaction is declared
+    inline void write(T newVal);
 };
 
 // Staged write entry - stores type-erased value
@@ -173,6 +179,56 @@ namespace detail {
         }
         tx.keepAlive.push_back(sp);
     }
+}
+
+// ---- TVar member function definitions (for better inlining) ----
+
+template <typename T>
+inline T TVar<T>::read() const {
+    BSLS_ASSERT(g_tx && "read() must be called inside atomically()");
+    Transaction& tx = *g_tx;
+    auto self = bsl::const_pointer_cast<TVarBase>(shared_from_this());
+    detail::track_keepalive(tx, self);
+
+    // Read-your-own-writes: return staged value if present
+    if (void* staged = tx.find_staged(self.get())) {
+        return *static_cast<T*>(staged);
+    }
+
+    // Check if already in read set
+    if (tx.find_or_add_read(self.get())) {
+        // Already read this TVar, just return current value
+        // (optimistic read - will validate at commit)
+        return value;
+    }
+
+    // First read: snapshot version and value atomically
+    bsl::unique_lock<bsl::mutex> lk(m);
+    T result = value;
+    uint64_t ver = version.load(bsl::memory_order_acquire);
+    lk.unlock();
+
+    tx.add_read(self.get(), ver);
+    return result;
+}
+
+template <typename T>
+inline void TVar<T>::write(T newVal) {
+    BSLS_ASSERT(g_tx && "write() must be called inside atomically()");
+    Transaction& tx = *g_tx;
+    auto self = bsl::const_pointer_cast<TVarBase>(shared_from_this());
+    detail::track_keepalive(tx, self);
+
+    // Record read version if not already tracked
+    if (!tx.find_or_add_read(self.get())) {
+        bsl::unique_lock<bsl::mutex> lk(m);
+        uint64_t ver = version.load(bsl::memory_order_acquire);
+        lk.unlock();
+        tx.add_read(self.get(), ver);
+    }
+
+    // Stage the new value
+    tx.add_or_update_staged(StagedWrite::create(static_cast<TVar<T>*>(self.get()), bsl::move(newVal)));
 }
 
 template <typename T>

@@ -68,15 +68,15 @@ struct TVar {};
 
 template <typename T1, MapsTo<T1, T1> F1>
 void modifyTVar(const std::shared_ptr<stm::TVar<T1>> a, F1 &&f) {
-  T1 val0 = stm::readTVar<T1>(a);
-  stm::writeTVar<T1>(a, f(val0));
+  T1 val0 = a->read();
+  a->write(f(val0));
   return;
 }
 
 struct stmtest {
   template <typename T1, MapsTo<bool, T1> F1>
   static T1 readOrRetry(const std::shared_ptr<stm::TVar<T1>> tv, F1 &&ok) {
-    T1 x = stm::readTVar<T1>(tv);
+    T1 x = tv->read();
     if (ok(x)) {
       return x;
     } else {
