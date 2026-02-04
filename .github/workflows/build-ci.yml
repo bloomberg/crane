@@ -28,34 +28,25 @@ jobs:
           opam_file: 'rocq-crane.opam'
           coq_version: ${{ matrix.coq_version }}
           ocaml_version: ${{ matrix.ocaml_version }}
-          before_install: |
-            startGroup "Print opam config"
-              opam config list; opam repo list; opam list
-            endGroup
+          custom_script: |
             startGroup "Fix permissions"
               sudo chown -R coq:coq .
             endGroup
-          before_script: |
             startGroup "Install clang-19 for C++23 support"
-              # Use LLVM's automatic install script which detects the distro
               sudo apt-get update
               sudo apt-get install -y wget lsb-release software-properties-common gnupg
               wget https://apt.llvm.org/llvm.sh
               chmod +x llvm.sh
               sudo ./llvm.sh 19
-              # Install libc++ for the STM threading tests
               sudo apt-get install -y libc++-19-dev libc++abi-19-dev
-              # Make clang-19 the default
               sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-19 100
               sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-19 100
               clang++ --version
             endGroup
-          custom_script: |
             startGroup "Build project"
               opam exec -- dune build -p rocq-crane && opam exec -- dune install
             endGroup
             startGroup "Run tests (excluding tests/wip)"
-              # Dynamically find all test directories except wip
               TEST_DIRS=$(find tests -maxdepth 1 -mindepth 1 -type d ! -name wip | sort)
               echo "Running tests in: $TEST_DIRS"
               opam exec -- dune runtest $TEST_DIRS
