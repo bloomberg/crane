@@ -4,6 +4,7 @@
 #include <implicit_args.h>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <variant>
 

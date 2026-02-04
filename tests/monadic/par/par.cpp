@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <par.h>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <variant>

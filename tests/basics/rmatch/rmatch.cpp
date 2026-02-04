@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <rmatch.h>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <variant>

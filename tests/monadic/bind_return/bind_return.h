@@ -1,9 +1,11 @@
+#include <algorithm>
 #include <any>
 #include <fstream>
 #include <functional>
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <variant>

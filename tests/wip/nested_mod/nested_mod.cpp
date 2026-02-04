@@ -5,6 +5,7 @@
 #include <memory>
 #include <nested_mod.h>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <variant>

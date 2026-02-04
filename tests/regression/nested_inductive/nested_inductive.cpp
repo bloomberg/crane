@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <nested_inductive.h>
+#include <stdexcept>
 #include <string>
 #include <variant>
 

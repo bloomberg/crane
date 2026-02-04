@@ -1,8 +1,10 @@
+#include <algorithm>
 #include <any>
 #include <functional>
 #include <iostream>
 #include <levenshtein.h>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <variant>
 

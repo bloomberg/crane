@@ -22,10 +22,12 @@
 #include <variant>
 #include <vector>
 
-// Initialize random seed
-struct RandomInit {
-    RandomInit() { std::srand(42); }  // Fixed seed for reproducibility
-} random_init;
+// Thread-safe random number generator
+static int thread_safe_rand() {
+    thread_local std::mt19937 gen(std::random_device{}());
+    thread_local std::uniform_int_distribution<int> dist(0, RAND_MAX);
+    return dist(gen);
+}
 
 // Helper for comparison functions
 static bool nat_lt(unsigned int a, unsigned int b) { return a < b; }
@@ -54,7 +56,7 @@ bool test_concurrent_insert() {
                 unsigned int value = key * 10;
                 try {
                     stm::atomically([&] {
-                        sl->insert(nat_lt, nat_eq, key, value, std::rand() % 16);
+                        sl->insert(nat_lt, nat_eq, key, value, thread_safe_rand() % 16);
                     });
                 } catch (...) {
                     failed = true;
@@ -111,7 +113,7 @@ bool test_concurrent_read_write() {
     // Pre-populate with some items
     stm::atomically([&] {
         for (unsigned int i = 0; i < 50; i++) {
-            sl->insert(nat_lt, nat_eq, i, i * 10, std::rand() % 16);
+            sl->insert(nat_lt, nat_eq, i, i * 10, thread_safe_rand() % 16);
         }
     });
 
@@ -126,7 +128,7 @@ bool test_concurrent_read_write() {
                 unsigned int key = 1000 + w * ITEMS_PER_WRITER + i;
                 try {
                     stm::atomically([&] {
-                        sl->insert(nat_lt, nat_eq, key, key * 10, std::rand() % 16);
+                        sl->insert(nat_lt, nat_eq, key, key * 10, thread_safe_rand() % 16);
                     });
                 } catch (...) {
                     failed = true;
@@ -139,7 +141,7 @@ bool test_concurrent_read_write() {
     for (int r = 0; r < NUM_READERS; r++) {
         threads.emplace_back([&sl, &failed, &successful_reads]() {
             for (int i = 0; i < READS_PER_READER; i++) {
-                unsigned int key = std::rand() % 50;  // Read from pre-populated range
+                unsigned int key = thread_safe_rand() % 50;  // Read from pre-populated range
                 try {
                     auto result = stm::atomically([&] {
                         return sl->lookup(nat_lt, nat_eq, key);
@@ -191,7 +193,7 @@ bool test_concurrent_producer_consumer() {
         for (int i = 1; i <= NUM_ITEMS; i++) {
             try {
                 stm::atomically([&] {
-                    sl->insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10), std::rand() % 16);
+                    sl->insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10), thread_safe_rand() % 16);
                 });
             } catch (...) {
                 failed = true;
@@ -258,7 +260,7 @@ bool test_concurrent_mixed_operations() {
     // Pre-populate
     stm::atomically([&] {
         for (unsigned int i = 0; i < 100; i++) {
-            sl->insert(nat_lt, nat_eq, i, i * 10, std::rand() % 16);
+            sl->insert(nat_lt, nat_eq, i, i * 10, thread_safe_rand() % 16);
         }
     });
 
@@ -269,13 +271,13 @@ bool test_concurrent_mixed_operations() {
         threads.emplace_back([&sl, t, &failed]() {
             for (int i = 0; i < OPS_PER_THREAD; i++) {
                 try {
-                    int op = std::rand() % 4;
-                    unsigned int key = std::rand() % 200;
+                    int op = thread_safe_rand() % 4;
+                    unsigned int key = thread_safe_rand() % 200;
 
                     switch (op) {
                         case 0:  // Insert
                             stm::atomically([&] {
-                                sl->insert(nat_lt, nat_eq, key, key * 10, std::rand() % 16);
+                                sl->insert(nat_lt, nat_eq, key, key * 10, thread_safe_rand() % 16);
                             });
                             break;
                         case 1:  // Lookup
@@ -443,7 +445,7 @@ int main(int argc, char* argv[]) {
             });
             for (int i = 0; i < LARGE_N; i++) {
                 stm::atomically([&] {
-                    sl->insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10), std::rand() % 16);
+                    sl->insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10), thread_safe_rand() % 16);
                 });
             }
             std::cout << std::left << std::setw(30) << "Sequential insert (10000):"
@@ -454,7 +456,7 @@ int main(int argc, char* argv[]) {
         // Benchmark 2: Random insert
         {
             std::vector<unsigned int> keys(LARGE_N);
-            for (int i = 0; i < LARGE_N; i++) keys[i] = std::rand();
+            for (int i = 0; i < LARGE_N; i++) keys[i] = thread_safe_rand();
 
             auto start = timer();
             auto sl = stm::atomically([] {
@@ -462,7 +464,7 @@ int main(int argc, char* argv[]) {
             });
             for (int i = 0; i < LARGE_N; i++) {
                 stm::atomically([&] {
-                    sl->insert(nat_lt, nat_eq, keys[i], keys[i] * 10, std::rand() % 16);
+                    sl->insert(nat_lt, nat_eq, keys[i], keys[i] * 10, thread_safe_rand() % 16);
                 });
             }
             std::cout << std::left << std::setw(30) << "Random insert (10000):"
@@ -477,7 +479,7 @@ int main(int argc, char* argv[]) {
             });
             for (int i = 0; i < SMALL_N; i++) {
                 stm::atomically([&] {
-                    sl->insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10), std::rand() % 16);
+                    sl->insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10), thread_safe_rand() % 16);
                 });
             }
 
@@ -499,7 +501,7 @@ int main(int argc, char* argv[]) {
             });
             for (int i = 0; i < SMALL_N; i++) {
                 stm::atomically([&] {
-                    sl->insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10), std::rand() % 16);
+                    sl->insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10), thread_safe_rand() % 16);
                 });
             }
 
@@ -521,7 +523,7 @@ int main(int argc, char* argv[]) {
             });
             for (int i = 0; i < SMALL_N; i++) {
                 stm::atomically([&] {
-                    sl->insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10), std::rand() % 16);
+                    sl->insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10), thread_safe_rand() % 16);
                 });
             }
 
@@ -575,7 +577,7 @@ int main(int argc, char* argv[]) {
             });
             for (int i = 0; i < SMALL_N; i++) {
                 stm::atomically([&] {
-                    sl->insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10), std::rand() % 16);
+                    sl->insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10), thread_safe_rand() % 16);
                 });
             }
 

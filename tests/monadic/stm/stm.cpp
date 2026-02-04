@@ -6,6 +6,7 @@
 #include <memory>
 #include <mini_stm.h>
 #include <optional>
+#include <stdexcept>
 #include <stm.h>
 #include <string>
 #include <utility>

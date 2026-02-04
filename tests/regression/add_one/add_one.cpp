@@ -1,7 +1,9 @@
 #include <add_one.h>
+#include <algorithm>
 #include <any>
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <variant>

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <singleton_record.h>
+#include <stdexcept>
 #include <string>
 #include <variant>
 

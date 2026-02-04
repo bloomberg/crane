@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <prop_erasure.h>
+#include <stdexcept>
 #include <string>
 #include <variant>
 

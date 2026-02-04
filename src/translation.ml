@@ -339,6 +339,9 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
   | MLmagic t -> gen_expr env t
   | MLdummy _ ->
     CPPstring (Pstring.unsafe_of_string "dummy")
+  | MLexn msg ->
+    (* Unreachable/absurd case - e.g., match on empty type *)
+    CPPabort msg
   | _ -> raise TODO
 
 and eta_fun env f args =
@@ -669,6 +672,12 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
     [gen_custom_cpp_case env k typ t pv]
 | MLglob (r, _) when is_ghost r ->
   [SreturnVoid]
+| MLexn msg ->
+  (* Generate throw statement for unreachable/absurd cases (e.g., empty match) *)
+  [Sthrow msg]
+| MLmagic (MLexn msg) ->
+  (* Handle MLexn wrapped in MLmagic *)
+  [Sthrow msg]
 | t -> [k (gen_expr env t)]
 
 and gen_fix env (n,ty) f =
@@ -1005,6 +1014,7 @@ and tvar_subst_stmt (tvars : Id.t list) (s : cpp_stmt) : cpp_stmt =
           (List.map (fun (id, ty) -> (id, subst_ty ty)) args, subst_ty ty, List.map subst_s stmts)) brs,
         str)
   | SreturnVoid -> SreturnVoid
+  | Sthrow msg -> Sthrow msg  (* throw statements don't need substitution *)
 
 (* TODO: CLEANUP: dom and cod are redundant with ty *)
 let gen_dfun n b dom cod ty temps =
@@ -1393,6 +1403,22 @@ let gen_ind_header_v2 vars name cnames tys method_candidates =
   let add_templates d = match templates with
     | [] -> d
     | _ -> Dtemplate (templates, None, d) in
+
+  (* Handle empty inductives (no constructors) - generate uninhabitable struct *)
+  if Array.length cnames = 0 then
+    (* For empty types like `Inductive empty : Type := .`, generate:
+       struct empty {
+       public:
+         struct ctor {
+           ctor() = delete;
+         };
+       };
+       This type cannot be constructed, matching the semantics of empty types. *)
+    let ctor_struct_fields = [(Fdeleted_ctor, VPublic)] in
+    let ctor_struct = (Fnested_struct (Id.of_string "ctor", ctor_struct_fields), VPublic) in
+    let method_fields = List.map (gen_single_method name vars) method_candidates in
+    add_templates (Dstruct (name, [ctor_struct] @ method_fields))
+  else
 
   (* The main struct type: std::shared_ptr<Tree> or std::shared_ptr<Tree<A>> *)
   let self_ty = Tshared_ptr (Tglob (name, ty_vars, [])) in

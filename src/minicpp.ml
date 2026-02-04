@@ -40,6 +40,7 @@ and cpp_stmt =
   | Sasgn of Id.t * cpp_type option * cpp_expr
   | Sexpr of cpp_expr
   | Scustom_case of cpp_type * cpp_expr * cpp_type list * ((Id.t * cpp_type) list * cpp_type * cpp_stmt list) list * string
+  | Sthrow of string  (* throw statement for unreachable/absurd cases *)
 
 (* add something for (mutual) fixpoints? *)
 and cpp_expr =
@@ -75,6 +76,7 @@ and cpp_expr =
   | CPPmethod_call of cpp_expr * Id.t * cpp_expr list  (* obj->method(args) *)
   | CPPqualified of cpp_expr * Id.t  (* expr::id - for qualified name access like Type::ctor *)
   | CPPconvertible_to of cpp_type  (* std::convertible_to<T> constraint *)
+  | CPPabort of string  (* unreachable code / absurd case - calls std::abort() *)
 
 and cpp_constraint = cpp_expr
 

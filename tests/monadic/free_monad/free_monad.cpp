@@ -1,7 +1,9 @@
+#include <algorithm>
 #include <any>
 #include <free_monad.h>
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <variant>

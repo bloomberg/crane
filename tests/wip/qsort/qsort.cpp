@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <qsort.h>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <variant>

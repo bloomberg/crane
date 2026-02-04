@@ -5,6 +5,7 @@
 #include <memory>
 #include <option.h>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <variant>

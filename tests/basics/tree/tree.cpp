@@ -1,7 +1,9 @@
+#include <algorithm>
 #include <any>
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <tree.h>
 #include <variant>

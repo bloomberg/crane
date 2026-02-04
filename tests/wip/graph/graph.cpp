@@ -1,9 +1,11 @@
+#include <algorithm>
 #include <any>
 #include <functional>
 #include <graph.h>
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <variant>

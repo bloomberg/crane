@@ -5,6 +5,7 @@
 #include <memory>
 #include <multi_ind_functor.h>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <variant>

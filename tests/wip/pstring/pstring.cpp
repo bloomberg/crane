@@ -1,9 +1,11 @@
+#include <algorithm>
 #include <any>
 #include <functional>
 #include <iostream>
 #include <memory>
 #include <optional>
 #include <pstring.h>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <variant>

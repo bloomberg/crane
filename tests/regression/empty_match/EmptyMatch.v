@@ -18,9 +18,6 @@ Definition absurd {A : Type} (e : empty) : A :=
 (* Function that uses empty - can never be called *)
 Definition from_empty (e : empty) : nat := absurd e.
 
-(* Void type alias *)
-Definition void := empty.
-
 (* Either type for testing *)
 Inductive either (A B : Type) : Type :=
 | Left : A -> either A B

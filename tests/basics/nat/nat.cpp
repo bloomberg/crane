@@ -1,7 +1,9 @@
+#include <algorithm>
 #include <any>
 #include <functional>
 #include <iostream>
 #include <memory>
 #include <nat.h>
+#include <stdexcept>
 #include <string>
 #include <variant>

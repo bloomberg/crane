@@ -5,6 +5,7 @@
 #include <memory>
 #include <mutual_recursion.h>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <variant>

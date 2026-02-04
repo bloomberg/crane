@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <sections.h>
+#include <stdexcept>
 #include <string>
 #include <variant>
 

@@ -8,6 +8,7 @@
 #include <mini_stm.h>
 #include <optional>
 #include <skipnode.h>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <variant>

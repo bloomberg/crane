@@ -594,7 +594,7 @@ let rec lambda_needs_capture (params : (Minicpp.cpp_type * Names.Id.t option) li
     | CPPqualified (e', _) -> collect_from_expr (refs, decls) e'
     | CPPrequires (_, constraints) ->
         List.fold_left (fun a (e', _) -> collect_from_expr a e') (refs, decls) constraints
-    | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPstring _ | CPPuint _ | CPPconvertible_to _ ->
+    | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPstring _ | CPPuint _ | CPPconvertible_to _ | CPPabort _ ->
         (refs, decls)
 
   and collect_from_stmt (refs, decls) stmt =
@@ -612,6 +612,7 @@ let rec lambda_needs_capture (params : (Minicpp.cpp_type * Names.Id.t option) li
           let branch_decls = List.fold_left (fun acc (id, _) -> IdSet.add id acc) d branch_vars in
           List.fold_left collect_from_stmt (r, branch_decls) stmts
         ) acc branches
+    | Sthrow _ -> (refs, decls)  (* throw doesn't reference or declare any variables *)
   in
 
   let (all_refs, local_decls) = List.fold_left collect_from_stmt (IdSet.empty, IdSet.empty) body in
@@ -651,7 +652,7 @@ and expr_contains_capturing_lambda (e : Minicpp.cpp_expr) : bool =
   | CPPmethod_call (obj, _, args) -> expr_contains_capturing_lambda obj || List.exists expr_contains_capturing_lambda args
   | CPPqualified (e', _) -> expr_contains_capturing_lambda e'
   | CPPrequires (_, constraints) -> List.exists (fun (e', _) -> expr_contains_capturing_lambda e') constraints
-  | CPPvar _ | CPPvar' _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPstring _ | CPPuint _ | CPPthis | CPPconvertible_to _ -> false
+  | CPPvar _ | CPPvar' _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPstring _ | CPPuint _ | CPPthis | CPPconvertible_to _ | CPPabort _ -> false
 
 and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
   let open Minicpp in
@@ -664,6 +665,7 @@ and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
   | Scustom_case (_, scrut, _, branches, _) ->
       expr_contains_capturing_lambda scrut ||
       List.exists (fun (_, _, stmts) -> List.exists stmt_contains_capturing_lambda stmts) branches
+  | Sthrow _ -> false  (* throw statement doesn't contain any lambdas *)
 
 (* pretty printing c++ syntax *)
 let try_cpp c o =
@@ -1139,6 +1141,13 @@ and pp_cpp_expr env args t =
       pp_cpp_expr env args e ++ str "::" ++ Id.print id
   | CPPconvertible_to ty ->
       str "std::convertible_to<" ++ pp_cpp_type false [] ty ++ str ">"
+  | CPPabort msg ->
+      (* Generate unreachable code for absurd cases like empty match.
+         We use a lambda with auto return type that throws - this works in any expression context
+         because the lambda's return type is deduced (though never used since it throws). *)
+      if Table.std_lib () = "BDE"
+        then str "([&]() -> auto { throw bsl::logic_error(\"" ++ str msg ++ str "\"); })()"
+        else str "([&]() -> auto { throw std::logic_error(\"" ++ str msg ++ str "\"); })()"
 
 and pp_cpp_stmt env args = function
 | SreturnVoid -> str "return;"
@@ -1151,6 +1160,11 @@ and pp_cpp_stmt env args = function
     Id.print id ++ str " = " ++ (pp_cpp_expr env args e) ++ str ";"
 | Sexpr e ->
     pp_cpp_expr env args e ++ str ";"
+| Sthrow msg ->
+    (* Generate a throw statement for unreachable/absurd cases *)
+    if Table.std_lib () = "BDE"
+      then str "throw bsl::logic_error(\"" ++ str msg ++ str "\");"
+      else str "throw std::logic_error(\"" ++ str msg ++ str "\");"
 | Scustom_case (typ,t,tyargs,cases,cmatch) ->
   let cmds = parse_custom_fixed "scrut" CCscrut cmatch in
   let cmds = List.fold_left

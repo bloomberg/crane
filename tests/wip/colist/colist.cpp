@@ -1,8 +1,10 @@
+#include <algorithm>
 #include <any>
 #include <colist.h>
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <variant>
 

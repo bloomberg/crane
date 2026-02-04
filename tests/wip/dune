@@ -176,17 +176,6 @@
   (deps comparison.t.exe)
   (action (run ./comparison.t.exe))))
 
-(subdir empty_match
- (rule
-  (targets empty_match.t.exe)
-  (deps EmptyMatch.vo empty_match.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} empty_match.t.exe empty_match.cpp empty_match.t.cpp)))
- (rule
-  (alias runtest)
-  (deps empty_match.t.exe)
-  (action (run ./empty_match.t.exe))))
-
 (subdir mutual_recursion
  (rule
   (targets mutual_recursion.t.exe)

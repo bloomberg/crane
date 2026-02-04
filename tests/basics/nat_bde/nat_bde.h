@@ -4,6 +4,7 @@
 #include <bsl_iostream.h>
 #include <bsl_memory.h>
 #include <bsl_optional.h>
+#include <bsl_stdexcept.h>
 #include <bsl_string.h>
 #include <bsl_type_traits.h>
 #include <bsl_utility.h>

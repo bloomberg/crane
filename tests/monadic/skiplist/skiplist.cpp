@@ -9,6 +9,7 @@
 #include <optional>
 #include <skiplist.h>
 #include <skipnode.h>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <variant>

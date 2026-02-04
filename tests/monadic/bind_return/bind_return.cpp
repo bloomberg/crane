@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <any>
 #include <bind_return.h>
 #include <fstream>
@@ -5,6 +6,7 @@
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <variant>
