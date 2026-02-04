@@ -37,6 +37,10 @@ val get_local_inductives : unit -> GlobRef.t list
     @param ml_type The ML type to convert *)
 val convert_ml_type_to_cpp_type : env -> GlobRef.t list -> Id.t list -> ml_type -> cpp_type
 
+(** Check if a C++ type is erased to std::any (for indexed inductive methods).
+    Returns true if the type is Tany or contains an unnamed Tvar. *)
+val type_is_erased : cpp_type -> bool
+
 (** {2 Expression Generation} *)
 
 (** Generate a C++ expression from an ML AST. *)
