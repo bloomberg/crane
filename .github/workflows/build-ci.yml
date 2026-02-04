@@ -22,38 +22,84 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Build and Test
+      - name: Build and Extract
         uses: coq-community/docker-coq-action@v1
         with:
           opam_file: 'rocq-crane.opam'
           coq_version: ${{ matrix.coq_version }}
           ocaml_version: ${{ matrix.ocaml_version }}
+          before_install: |
+            startGroup "Print opam config"
+              opam config list; opam repo list; opam list
+            endGroup
           custom_script: |
-            startGroup "Fix permissions"
-              sudo chown -R $(id -u):$(id -g) .
-            endGroup
-            startGroup "Install clang-19 for C++23 support"
-              sudo apt-get update
-              sudo apt-get install -y wget lsb-release software-properties-common gnupg
-              wget https://apt.llvm.org/llvm.sh
-              chmod +x llvm.sh
-              sudo ./llvm.sh 19
-              sudo apt-get install -y libc++-19-dev libc++abi-19-dev clang-format-19
-              sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-19 100
-              sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-19 100
-              sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-19 100
-              clang++ --version
-            endGroup
-            startGroup "Install dependencies"
-              opam pin add -n -y -k path rocq-crane .
-              opam install -y -j 2 rocq-crane --deps-only --assume-depexts
-            endGroup
             startGroup "Build project"
-              opam exec -- dune build
-              opam exec -- dune install
+              opam exec -- dune build -p rocq-crane && dune install
             endGroup
-            startGroup "Run tests (excluding tests/wip)"
-              TEST_DIRS=$(find tests -maxdepth 1 -mindepth 1 -type d ! -name wip | sort)
-              echo "Running tests in: $TEST_DIRS"
-              opam exec -- dune runtest $TEST_DIRS
-            endGroup
+
+      - name: Install clang
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-19 libc++-19-dev libc++abi-19-dev
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-19 100
+          clang++ --version
+
+      - name: Run C++ tests
+        run: |
+          # Find and run all test executables except those in wip or requiring BDE
+          failed=0
+          passed=0
+          skipped=0
+
+          for dir in tests/*/; do
+            dirname=$(basename "$dir")
+            # Skip wip directory
+            if [ "$dirname" = "wip" ]; then
+              echo "Skipping tests/wip/ (work in progress)"
+              continue
+            fi
+
+            # Find all .t.cpp files in this directory tree
+            for test_src in $(find "$dir" -name "*.t.cpp" 2>/dev/null); do
+              test_dir=$(dirname "$test_src")
+              test_name=$(basename "$test_src" .t.cpp)
+
+              # Skip BDE tests (they end with _bde)
+              if [[ "$test_name" == *_bde ]]; then
+                echo "⊘ SKIPPED: $test_name (requires BDE)"
+                skipped=$((skipped + 1))
+                continue
+              fi
+
+              echo "=== Building and running: $test_dir/$test_name ==="
+
+              # Compile the test
+              if clang++ -std=c++23 -O2 -fbracket-depth=1024 \
+                  -I "$test_dir" -I theories/cpp \
+                  "$test_dir/$test_name.cpp" "$test_src" \
+                  -o "$test_dir/$test_name.t.exe" 2>&1; then
+                # Run the test
+                if "$test_dir/$test_name.t.exe"; then
+                  echo "✓ PASSED: $test_name"
+                  passed=$((passed + 1))
+                else
+                  echo "✗ FAILED: $test_name (runtime error)"
+                  failed=$((failed + 1))
+                fi
+              else
+                echo "✗ FAILED: $test_name (compilation error)"
+                failed=$((failed + 1))
+              fi
+              echo ""
+            done
+          done
+
+          echo "================================"
+          echo "Results: $passed passed, $failed failed, $skipped skipped"
+          echo "================================"
+
+          if [ $failed -gt 0 ]; then
+            echo "Some tests failed!"
+            exit 1
+          fi
+          echo "All tests passed!"
