@@ -100,7 +100,9 @@ struct CHT {
                                                        b = this->bucket_of(k);
         bsl::shared_ptr<List::list<bsl::pair<K, V> > > xs =
              stm::readTVar<bsl::shared_ptr<List::list<bsl::pair<K, V> > > >(b);
-        return CHT::assoc_lookup<K, V>(this->CHT::cht_eqb, k, xs);
+        return CHT<int, int>::template assoc_lookup<K, V>(this->CHT::cht_eqb,
+                                                          k,
+                                                          xs);
     }
     void stm_put(const K k, const V v) const
     {
@@ -110,7 +112,11 @@ struct CHT {
         bsl::shared_ptr<List::list<bsl::pair<K, V> > > xs =
              stm::readTVar<bsl::shared_ptr<List::list<bsl::pair<K, V> > > >(b);
         bsl::shared_ptr<List::list<bsl::pair<K, V> > > xs_ =
-              CHT::assoc_insert_or_replace<K, V>(this->CHT::cht_eqb, k, v, xs);
+                         CHT<int, int>::template assoc_insert_or_replace<K, V>(
+                             this->CHT::cht_eqb,
+                             k,
+                             v,
+                             xs);
         stm::writeTVar<bsl::shared_ptr<List::list<bsl::pair<K, V> > > >(b,
                                                                         xs_);
         return;
@@ -124,7 +130,9 @@ struct CHT {
              stm::readTVar<bsl::shared_ptr<List::list<bsl::pair<K, V> > > >(b);
         bsl::pair<bsl::optional<V>,
                   bsl::shared_ptr<List::list<bsl::pair<K, V> > > >
-            p = CHT::assoc_remove<K, V>(this->CHT::cht_eqb, k, xs);
+            p = CHT<int, int>::template assoc_remove<K, V>(this->CHT::cht_eqb,
+                                                           k,
+                                                           xs);
         if (p.first.has_value()) {
             V _x = *p.first;
             stm::writeTVar<bsl::shared_ptr<List::list<bsl::pair<K, V> > > >(
@@ -144,12 +152,17 @@ struct CHT {
                                                        b = this->bucket_of(k);
         bsl::shared_ptr<List::list<bsl::pair<K, V> > > xs =
              stm::readTVar<bsl::shared_ptr<List::list<bsl::pair<K, V> > > >(b);
-        bsl::optional<V> ov = CHT::assoc_lookup<K, V>(this->CHT::cht_eqb,
-                                                      k,
-                                                      xs);
-        V                v  = f(ov);
+        bsl::optional<V> ov = CHT<int, int>::template assoc_lookup<K, V>(
+                                                            this->CHT::cht_eqb,
+                                                            k,
+                                                            xs);
+        V                                              v = f(ov);
         bsl::shared_ptr<List::list<bsl::pair<K, V> > > xs_ =
-              CHT::assoc_insert_or_replace<K, V>(this->CHT::cht_eqb, k, v, xs);
+                         CHT<int, int>::template assoc_insert_or_replace<K, V>(
+                             this->CHT::cht_eqb,
+                             k,
+                             v,
+                             xs);
         stm::writeTVar<bsl::shared_ptr<List::list<bsl::pair<K, V> > > >(b,
                                                                         xs_);
         return v;
@@ -219,7 +232,10 @@ struct CHT {
                          return bsl::make_optional<T2>(v);
                      }
                      else {
-                         return assoc_lookup<T1, T2>(eqb, k, tl);
+                         return CHT<int, int>::template assoc_lookup<T1, T2>(
+                             eqb,
+                             k,
+                             tl);
                      }
                  }},
              xs->v());
@@ -256,7 +272,9 @@ struct CHT {
                      else {
                          return List::list<bsl::pair<T1, T2> >::ctor::cons_(
                              bsl::make_pair(k_, v_),
-                             assoc_insert_or_replace<T1, T2>(eqb, k, v, tl));
+                             CHT<int, int>::template assoc_insert_or_replace<
+                                 T1,
+                                 T2>(eqb, k, v, tl));
                      }
                  }},
              xs->v());
@@ -293,7 +311,10 @@ struct CHT {
                          bsl::pair<
                              bsl::optional<T2>,
                              bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > >
-                             q = assoc_remove<T1, T2>(eqb, k, tl);
+                             q = CHT<int, int>::template assoc_remove<T1, T2>(
+                                 eqb,
+                                 k,
+                                 tl);
                          return bsl::make_pair(
                              q.first,
                              List::list<bsl::pair<T1, T2> >::ctor::cons_(
@@ -348,7 +369,7 @@ struct CHT {
         int  n    = bsl::max(requested, 1);
         bsl::vector<bsl::shared_ptr<
             stm::TVar<bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > > > >
-             bs   = mk_buckets<T1, T2>(n);
+             bs   = CHT<int, int>::template mk_buckets<T1, T2>(n);
         bool empt = bs.empty();
         if (empt) {
             bsl::shared_ptr<

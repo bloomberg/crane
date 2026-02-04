@@ -3,7 +3,7 @@
 (*
    STM-based Skip List implementation
    Ported from Haskell's tskiplist package:
-   https://hackage.haskell.org/package/tskiplist-1.0.1/docs/Control-Concurrent-STM-TSkipList.html
+   https://hackage.haskell.org/package/tskiplist-1.0.1/docs/Control-Concurrent-STM-SkipList.html
 
    A skip list is a probabilistic data structure with dictionary operations.
    In contrast to a balanced tree, a skip list does not need any expensive
@@ -25,14 +25,14 @@ Import ListNotations.
 Import MonadNotations.
 Set Implicit Arguments.
 
-Module SkipList.
-
 (* ========================================================================= *)
 (*                              Configuration                                *)
 (* ========================================================================= *)
 
 (* Maximum number of levels - supports up to 2^16 elements efficiently *)
 Definition maxLevels : nat := sixteen.
+
+Crane Extract Inlined Constant maxLevels => "16u".
 
 (* ========================================================================= *)
 (*                         Random Level Generation                           *)
@@ -66,6 +66,8 @@ Fixpoint chooseLevel_aux (fuel : nat) (acc : nat) (maxLvl : nat) : IO nat :=
   end.
 
 Definition chooseLevel : IO nat := chooseLevel_aux maxLevels 0 maxLevels.
+
+Module SkipList.
 
 (* ========================================================================= *)
 (*                     Axiomatized Node Type                                 *)
@@ -157,14 +159,16 @@ Crane Extract Inlined Constant writeNext => "stm::writeTVar<std::optional<std::s
 (* In our STM context, NodeRef (shared_ptr) serves as the pair reference *)
 Definition Pair (K V : Type) := NodeRef K V.
 
-Record TSkipList (K V : Type) := mkTSkipList {
+Crane Extract Inlined Constant Pair => "std::shared_ptr<SkipNode<%t0, %t1>>".
+
+Record SkipList (K V : Type) := mkSkipList {
   slHead     : NodeRef K V;      (* Sentinel head node *)
   slMaxLevel : nat;              (* Maximum allowed levels *)
   slLevel    : TVar nat;         (* Current highest level in use *)
   slLength   : TVar nat          (* Number of elements in the list *)
 }.
 
-Arguments mkTSkipList {K V} _ _ _ _.
+Arguments mkSkipList {K V} _ _ _ _.
 Arguments slHead {K V} _.
 Arguments slMaxLevel {K V} _.
 Arguments slLevel {K V} _.
@@ -191,7 +195,7 @@ Fixpoint findPath_aux (curr : NodeRef K V) (target : K) (level : nat)
   | S level' => findPath_aux pred target level' acc'
   end.
 
-Definition findPath (sl : TSkipList K V) (target : K) : STM (list (NodeRef K V)) :=
+Definition findPath (sl : SkipList K V) (target : K) : STM (list (NodeRef K V)) :=
   lvl <- readTVar (slLevel sl) ;;
   findPath_aux (slHead sl) target lvl [].
 
@@ -199,7 +203,7 @@ Definition findPath (sl : TSkipList K V) (target : K) : STM (list (NodeRef K V))
 (*                              lookup                                      *)
 (* ------------------------------------------------------------------------ *)
 
-Definition lookup (k : K) (sl : TSkipList K V) : STM (option V) :=
+Definition lookup (k : K) (sl : SkipList K V) : STM (option V) :=
   path <- findPath sl k ;;
   match path with
   | [] => Ret None
@@ -250,7 +254,7 @@ Definition linkNode (path : list (NodeRef K V)) (newNode : NodeRef K V) : STM vo
   let relevantPath := firstn (S lvl) path in
   linkNode_aux (rev relevantPath) newNode lvl.
 
-Definition insert (k : K) (v : V) (sl : TSkipList K V) (newLevel : nat) : STM void :=
+Definition insert (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : STM void :=
   path <- findPath sl k ;;
   (* Extend path with head for levels above current slLevel *)
   let fullPath := extendPath path (slHead sl) (S newLevel) in
@@ -308,7 +312,7 @@ Definition unlinkNode (path : list (NodeRef K V)) (target : NodeRef K V) : STM v
   let relevantPath := firstn (S lvl) path in
   unlinkNode_aux (rev relevantPath) target lvl.
 
-Definition remove (k : K) (sl : TSkipList K V) : STM void :=
+Definition remove (k : K) (sl : SkipList K V) : STM void :=
   path <- findPath sl k ;;
   match path with
   | [] => Ret ghost
@@ -332,7 +336,7 @@ Definition remove (k : K) (sl : TSkipList K V) : STM void :=
 (*                              minimum                                     *)
 (* ------------------------------------------------------------------------ *)
 
-Definition minimum (sl : TSkipList K V) : STM (option (K * V)) :=
+Definition minimum (sl : SkipList K V) : STM (option (K * V)) :=
   firstOpt <- readNext (slHead sl) 0 ;;
   match firstOpt with
   | None => Ret None
@@ -345,7 +349,7 @@ Definition minimum (sl : TSkipList K V) : STM (option (K * V)) :=
 (*                              member                                      *)
 (* ------------------------------------------------------------------------ *)
 
-Definition member (k : K) (sl : TSkipList K V) : STM bool :=
+Definition member (k : K) (sl : SkipList K V) : STM bool :=
   result <- lookup k sl ;;
   Ret (match result with Some _ => true | None => false end).
 
@@ -357,18 +361,18 @@ Definition member (k : K) (sl : TSkipList K V) : STM bool :=
 (*                         isEmpty / length                                  *)
 (* ------------------------------------------------------------------------ *)
 
-Definition isEmpty (sl : TSkipList K V) : STM bool :=
+Definition isEmpty (sl : SkipList K V) : STM bool :=
   len <- readTVar (slLength sl) ;;
   Ret (Nat.eqb len 0).
 
-Definition length (sl : TSkipList K V) : STM nat :=
+Definition length (sl : SkipList K V) : STM nat :=
   readTVar (slLength sl).
 
 (* ------------------------------------------------------------------------ *)
 (*                    exists (BDE naming for member)                         *)
 (* ------------------------------------------------------------------------ *)
 
-Definition exists_ (k : K) (sl : TSkipList K V) : STM bool :=
+Definition exists_ (k : K) (sl : SkipList K V) : STM bool :=
   member k sl.
 
 (* ------------------------------------------------------------------------ *)
@@ -376,7 +380,7 @@ Definition exists_ (k : K) (sl : TSkipList K V) : STM bool :=
 (* ------------------------------------------------------------------------ *)
 
 (* front - Load reference to first item. Returns None if empty. *)
-Definition front (sl : TSkipList K V) : STM (option (Pair K V)) :=
+Definition front (sl : SkipList K V) : STM (option (Pair K V)) :=
   readNext (slHead sl) 0.
 
 (* back - Load reference to last item. Requires traversing the list. *)
@@ -392,7 +396,7 @@ Fixpoint findLast_aux (fuel : nat) (curr : NodeRef K V) : STM (option (NodeRef K
       end
   end.
 
-Definition back (sl : TSkipList K V) : STM (option (Pair K V)) :=
+Definition back (sl : SkipList K V) : STM (option (Pair K V)) :=
   firstOpt <- readNext (slHead sl) 0 ;;
   match firstOpt with
   | None => Ret None
@@ -424,7 +428,7 @@ Fixpoint unlinkFirstFromHead (head node : NodeRef K V) (nodeLevel : nat) (lvl : 
   end.
 
 (* Remove and return the first item from the list *)
-Definition popFront (sl : TSkipList K V) : STM (option (K * V)) :=
+Definition popFront (sl : SkipList K V) : STM (option (K * V)) :=
   firstOpt <- readNext (slHead sl) 0 ;;
   match firstOpt with
   | None => Ret None
@@ -469,7 +473,7 @@ Fixpoint removeAll_aux (fuel : nat) (head : NodeRef K V) (maxLvl : nat) : STM na
       end
   end.
 
-Definition removeAll (sl : TSkipList K V) : STM nat :=
+Definition removeAll (sl : SkipList K V) : STM nat :=
   count <- removeAll_aux findPredFuel (slHead sl) (maxLevels - 1) ;;
   writeTVar (slLength sl) 0 ;;
   writeTVar (slLevel sl) 0 ;;
@@ -480,7 +484,7 @@ Definition removeAll (sl : TSkipList K V) : STM nat :=
 (* ------------------------------------------------------------------------ *)
 
 (* add - Add key/data pair to the list (allows duplicates) - renamed from insert *)
-Definition add (k : K) (v : V) (sl : TSkipList K V) (newLevel : nat) : STM void :=
+Definition add (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : STM void :=
   path <- findPath sl k ;;
   let fullPath := extendPath path (slHead sl) (S newLevel) in
   match fullPath with
@@ -516,7 +520,7 @@ Definition add (k : K) (v : V) (sl : TSkipList K V) (newLevel : nat) : STM void 
   end.
 
 (* addUnique - Add only if key doesn't already exist. Returns true on success. *)
-Definition addUnique (k : K) (v : V) (sl : TSkipList K V) (newLevel : nat) : STM bool :=
+Definition addUnique (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) : STM bool :=
   path <- findPath sl k ;;
   let fullPath := extendPath path (slHead sl) (S newLevel) in
   match fullPath with
@@ -557,7 +561,7 @@ Definition addUnique (k : K) (v : V) (sl : TSkipList K V) (newLevel : nat) : STM
 (* ------------------------------------------------------------------------ *)
 
 (* find - Find element by key and return reference to the pair *)
-Definition find (k : K) (sl : TSkipList K V) : STM (option (Pair K V)) :=
+Definition find (k : K) (sl : SkipList K V) : STM (option (Pair K V)) :=
   path <- findPath sl k ;;
   match path with
   | [] => Ret None
@@ -598,7 +602,7 @@ Fixpoint findPrev_aux (fuel : nat) (curr prev : NodeRef K V) (target : K) : STM 
       end
   end.
 
-Definition previous (pair : Pair K V) (sl : TSkipList K V) : STM (option (Pair K V)) :=
+Definition previous (pair : Pair K V) (sl : SkipList K V) : STM (option (Pair K V)) :=
   (* Check if pair is the first element *)
   firstOpt <- readNext (slHead sl) 0 ;;
   match firstOpt with
@@ -615,7 +619,7 @@ Definition previous (pair : Pair K V) (sl : TSkipList K V) : STM (option (Pair K
 (* ------------------------------------------------------------------------ *)
 
 (* findLowerBound - Find first element whose key is not less than given key *)
-Definition findLowerBound (k : K) (sl : TSkipList K V) : STM (option (Pair K V)) :=
+Definition findLowerBound (k : K) (sl : SkipList K V) : STM (option (Pair K V)) :=
   path <- findPath sl k ;;
   match path with
   | [] => Ret None
@@ -630,7 +634,7 @@ Definition findLowerBound (k : K) (sl : TSkipList K V) : STM (option (Pair K V))
   end.
 
 (* findUpperBound - Find first element whose key is greater than given key *)
-Definition findUpperBound (k : K) (sl : TSkipList K V) : STM (option (Pair K V)) :=
+Definition findUpperBound (k : K) (sl : SkipList K V) : STM (option (Pair K V)) :=
   path <- findPath sl k ;;
   match path with
   | [] => Ret None
@@ -653,7 +657,7 @@ Definition findUpperBound (k : K) (sl : TSkipList K V) : STM (option (Pair K V))
 (* ------------------------------------------------------------------------ *)
 
 (* removePair - Remove element identified by a Pair reference *)
-Definition removePair (pair : Pair K V) (sl : TSkipList K V) : STM bool :=
+Definition removePair (pair : Pair K V) (sl : SkipList K V) : STM bool :=
   let k := getKey pair in
   path <- findPath sl k ;;
   match path with
@@ -714,7 +718,7 @@ Variable eqK : K -> K -> bool.
 (*  Returns: (result, newFrontFlag)                                         *)
 (* ------------------------------------------------------------------------ *)
 
-Definition bde_add (key : K) (data : V) (sl : TSkipList K V) (level : nat)
+Definition bde_add (key : K) (data : V) (sl : SkipList K V) (level : nat)
   : STM (Pair K V * bool) :=
   path <- findPath ltK sl key ;;
   let fullPath := extendPath path (slHead sl) (S level) in
@@ -768,7 +772,7 @@ Definition bde_add (key : K) (data : V) (sl : TSkipList K V) (level : nat)
 (*  status = e_SUCCESS (0) or e_DUPLICATE (2)                               *)
 (* ------------------------------------------------------------------------ *)
 
-Definition bde_addUnique (key : K) (data : V) (sl : TSkipList K V) (level : nat)
+Definition bde_addUnique (key : K) (data : V) (sl : SkipList K V) (level : nat)
   : STM (nat * option (Pair K V) * bool) :=
   path <- findPath ltK sl key ;;
   let fullPath := extendPath path (slHead sl) (S level) in
@@ -816,7 +820,7 @@ Definition bde_addUnique (key : K) (data : V) (sl : TSkipList K V) (level : nat)
 (*  status = e_SUCCESS (0) or e_NOT_FOUND (1)                               *)
 (* ------------------------------------------------------------------------ *)
 
-Definition bde_find (key : K) (sl : TSkipList K V) : STM (nat * option (Pair K V)) :=
+Definition bde_find (key : K) (sl : SkipList K V) : STM (nat * option (Pair K V)) :=
   path <- findPath ltK sl key ;;
   match path with
   | [] => Ret (e_NOT_FOUND, None)
@@ -837,7 +841,7 @@ Definition bde_find (key : K) (sl : TSkipList K V) : STM (nat * option (Pair K V
 (*  Returns: (status, front_opt)                                            *)
 (* ------------------------------------------------------------------------ *)
 
-Definition bde_front (sl : TSkipList K V) : STM (nat * option (Pair K V)) :=
+Definition bde_front (sl : SkipList K V) : STM (nat * option (Pair K V)) :=
   frontOpt <- readNext (slHead sl) 0 ;;
   match frontOpt with
   | None => Ret (e_NOT_FOUND, None)
@@ -849,7 +853,7 @@ Definition bde_front (sl : TSkipList K V) : STM (nat * option (Pair K V)) :=
 (*  Returns: (status, back_opt)                                             *)
 (* ------------------------------------------------------------------------ *)
 
-Definition bde_back (sl : TSkipList K V) : STM (nat * option (Pair K V)) :=
+Definition bde_back (sl : SkipList K V) : STM (nat * option (Pair K V)) :=
   backOpt <- back sl ;;
   match backOpt with
   | None => Ret (e_NOT_FOUND, None)
@@ -861,7 +865,7 @@ Definition bde_back (sl : TSkipList K V) : STM (nat * option (Pair K V)) :=
 (*  Returns: (status, item_opt)                                             *)
 (* ------------------------------------------------------------------------ *)
 
-Definition bde_popFront (sl : TSkipList K V) : STM (nat * option (Pair K V)) :=
+Definition bde_popFront (sl : SkipList K V) : STM (nat * option (Pair K V)) :=
   firstOpt <- readNext (slHead sl) 0 ;;
   match firstOpt with
   | None => Ret (e_NOT_FOUND, None)
@@ -877,7 +881,7 @@ Definition bde_popFront (sl : TSkipList K V) : STM (nat * option (Pair K V)) :=
 (*  Returns: status                                                         *)
 (* ------------------------------------------------------------------------ *)
 
-Definition bde_remove (pair : Pair K V) (sl : TSkipList K V) : STM nat :=
+Definition bde_remove (pair : Pair K V) (sl : SkipList K V) : STM nat :=
   result <- removePair ltK eqK pair sl ;;
   if result then Ret e_SUCCESS else Ret e_NOT_FOUND.
 
@@ -886,28 +890,28 @@ Definition bde_remove (pair : Pair K V) (sl : TSkipList K V) : STM nat :=
 (*  Returns: count of removed items                                         *)
 (* ------------------------------------------------------------------------ *)
 
-Definition bde_removeAll (sl : TSkipList K V) : STM nat :=
+Definition bde_removeAll (sl : SkipList K V) : STM nat :=
   removeAll sl.
 
 (* ------------------------------------------------------------------------ *)
 (*  bool exists(const KEY& key) const;                                      *)
 (* ------------------------------------------------------------------------ *)
 
-Definition bde_exists (key : K) (sl : TSkipList K V) : STM bool :=
+Definition bde_exists (key : K) (sl : SkipList K V) : STM bool :=
   member ltK eqK key sl.
 
 (* ------------------------------------------------------------------------ *)
 (*  bool isEmpty() const;                                                   *)
 (* ------------------------------------------------------------------------ *)
 
-Definition bde_isEmpty (sl : TSkipList K V) : STM bool :=
+Definition bde_isEmpty (sl : SkipList K V) : STM bool :=
   isEmpty sl.
 
 (* ------------------------------------------------------------------------ *)
 (*  int length() const;                                                     *)
 (* ------------------------------------------------------------------------ *)
 
-Definition bde_length (sl : TSkipList K V) : STM nat :=
+Definition bde_length (sl : SkipList K V) : STM nat :=
   length sl.
 
 (* ------------------------------------------------------------------------ *)
@@ -927,7 +931,7 @@ Definition bde_next (pair : Pair K V) : STM (nat * option (Pair K V)) :=
 (*  Returns: (status, prev_opt)                                             *)
 (* ------------------------------------------------------------------------ *)
 
-Definition bde_previous (pair : Pair K V) (sl : TSkipList K V) : STM (nat * option (Pair K V)) :=
+Definition bde_previous (pair : Pair K V) (sl : SkipList K V) : STM (nat * option (Pair K V)) :=
   prevOpt <- previous eqK pair sl ;;
   match prevOpt with
   | None => Ret (e_NOT_FOUND, None)
@@ -939,7 +943,7 @@ Definition bde_previous (pair : Pair K V) (sl : TSkipList K V) : STM (nat * opti
 (*  Returns: (status, item_opt)                                             *)
 (* ------------------------------------------------------------------------ *)
 
-Definition bde_findLowerBound (key : K) (sl : TSkipList K V) : STM (nat * option (Pair K V)) :=
+Definition bde_findLowerBound (key : K) (sl : SkipList K V) : STM (nat * option (Pair K V)) :=
   result <- findLowerBound ltK key sl ;;
   match result with
   | None => Ret (e_NOT_FOUND, None)
@@ -951,7 +955,7 @@ Definition bde_findLowerBound (key : K) (sl : TSkipList K V) : STM (nat * option
 (*  Returns: (status, item_opt)                                             *)
 (* ------------------------------------------------------------------------ *)
 
-Definition bde_findUpperBound (key : K) (sl : TSkipList K V) : STM (nat * option (Pair K V)) :=
+Definition bde_findUpperBound (key : K) (sl : SkipList K V) : STM (nat * option (Pair K V)) :=
   result <- findUpperBound ltK eqK key sl ;;
   match result with
   | None => Ret (e_NOT_FOUND, None)
@@ -964,13 +968,13 @@ End BDECompatible.
 (*                            Construction                                   *)
 (* ========================================================================= *)
 
-Definition create {K V : Type} (dummyKey : K) (dummyVal : V) : STM (TSkipList K V) :=
+Definition create {K V : Type} (dummyKey : K) (dummyVal : V) : STM (SkipList K V) :=
   headNode <- newNode dummyKey dummyVal (maxLevels - 1) ;;
   lvlTV <- newTVar 0 ;;
   lenTV <- newTVar 0 ;;
-  Ret (mkTSkipList headNode maxLevels lvlTV lenTV).
+  Ret (mkSkipList headNode maxLevels lvlTV lenTV).
 
-Definition createIO {K V : Type} (dummyKey : K) (dummyVal : V) : IO (TSkipList K V) :=
+Definition createIO {K V : Type} (dummyKey : K) (dummyVal : V) : IO (SkipList K V) :=
   atomically (create dummyKey dummyVal).
 
 End SkipList.
@@ -1302,4 +1306,5 @@ Definition run_tests : IO nat :=
 
 End skiplist_test.
 
-Crane Extraction "skiplist" skiplist_test.
+(* Extract both modules - SkipList module contains the TSkipList record, skiplist_test has tests *)
+Crane Extraction "skiplist" SkipList skiplist_test.

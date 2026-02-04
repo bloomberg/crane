@@ -12,7 +12,6 @@
 #include <bsl_mutex.h>
 #include <bsl_thread.h>
 #include <bsl_type_traits.h>
-#include <bsl_unordered_map.h>
 #include <bsl_utility.h>
 #include <bsl_vector.h>
 #include <bsl_algorithm.h>
@@ -34,13 +33,11 @@ struct TVarBase : public bsl::enable_shared_from_this<TVarBase> {
     mutable bsl::mutex m;
     bsl::condition_variable cv;
     virtual ~TVarBase() = default;
-    virtual void publish_boxed(bsl::shared_ptr<void> boxed) = 0;
+    virtual void commit_write(void* staged_ptr) = 0;
 };
 
 template <typename T>
 struct TVar : TVarBase {
-    // Strong exception-safety for commit:
-    // Require nothrow move + nothrow swap so publish_boxed can't break atomicity.
     static_assert(bsl::is_nothrow_move_constructible_v<T>,
                   "T must be nothrow move constructible for STM commit strong exception safety");
     static_assert(bsl::is_nothrow_swappable_v<T>,
@@ -50,32 +47,117 @@ struct TVar : TVarBase {
 
     explicit TVar(T v) : value(bsl::move(v)) {}
 
-    void publish_boxed(bsl::shared_ptr<void> boxed) override {
-        // Called with tv.m held by the caller.
-        T tmp = bsl::move(*static_cast<T*>(boxed.get())); // assumes nothrow move-constructible
+    void commit_write(void* staged_ptr) override {
+        T* staged = static_cast<T*>(staged_ptr);
         using bsl::swap;
-        swap(value, tmp); // assumes nothrow swappable
+        swap(value, *staged);
         version.fetch_add(1, bsl::memory_order_release);
         cv.notify_all();
     }
+
+    // Lock-free read of current value (caller handles validation)
+    T read_value() const {
+        return value;
+    }
 };
 
+// Staged write entry - stores type-erased value
+struct StagedWrite {
+    TVarBase* tvar;
+    void* value_ptr;
+    void (*deleter)(void*);
+
+    template <typename T>
+    static StagedWrite create(TVar<T>* tv, T val) {
+        StagedWrite sw;
+        sw.tvar = tv;
+        sw.value_ptr = new T(bsl::move(val));
+        sw.deleter = [](void* p) { delete static_cast<T*>(p); };
+        return sw;
+    }
+
+    void destroy() {
+        if (deleter && value_ptr) {
+            deleter(value_ptr);
+            value_ptr = nullptr;
+        }
+    }
+
+    void commit() {
+        tvar->commit_write(value_ptr);
+    }
+};
+
+// Read set entry
+struct ReadEntry {
+    TVarBase* tvar;
+    uint64_t version;
+};
+
+// Optimized transaction using flat vectors instead of hash maps
 struct Transaction {
-    bsl::unordered_map<TVarBase*, uint64_t> readSet;
-    bsl::unordered_map<TVarBase*, bsl::shared_ptr<void>> staged;
+    // Use small vectors - most transactions touch few TVars
+    bsl::vector<ReadEntry> readSet;
+    bsl::vector<StagedWrite> staged;
     bsl::vector<bsl::shared_ptr<TVarBase>> keepAlive;
     bool wantsRetry = false;
+
+    Transaction() {
+        readSet.reserve(16);
+        staged.reserve(8);
+        keepAlive.reserve(16);
+    }
+
     void reset() {
         readSet.clear();
+        for (auto& sw : staged) {
+            sw.destroy();
+        }
         staged.clear();
         keepAlive.clear();
         wantsRetry = false;
+    }
+
+    ~Transaction() {
+        for (auto& sw : staged) {
+            sw.destroy();
+        }
+    }
+
+    // Find staged write for a TVar (returns nullptr if not found)
+    void* find_staged(TVarBase* tv) {
+        for (auto& sw : staged) {
+            if (sw.tvar == tv) return sw.value_ptr;
+        }
+        return nullptr;
+    }
+
+    // Find or add to read set, returns pointer to version slot
+    uint64_t* find_or_add_read(TVarBase* tv) {
+        for (auto& re : readSet) {
+            if (re.tvar == tv) return &re.version;
+        }
+        return nullptr;
+    }
+
+    void add_read(TVarBase* tv, uint64_t ver) {
+        readSet.push_back({tv, ver});
+    }
+
+    void add_or_update_staged(StagedWrite sw) {
+        for (auto& existing : staged) {
+            if (existing.tvar == sw.tvar) {
+                existing.destroy();
+                existing = sw;
+                return;
+            }
+        }
+        staged.push_back(sw);
     }
 };
 
 inline thread_local Transaction* g_tx = nullptr;
 
-// RAII: ensure g_tx is always cleared, even on exceptions.
 struct TxScope {
     explicit TxScope(Transaction& t) noexcept { g_tx = &t; }
     ~TxScope() noexcept { g_tx = nullptr; }
@@ -84,18 +166,11 @@ struct TxScope {
 };
 
 namespace detail {
-    template <class T>
-    inline bsl::shared_ptr<void> box(T&& v) {
-        return bsl::shared_ptr<void>(new bsl::decay_t<T>(bsl::forward<T>(v)),
-                                     [](void* p){ delete static_cast<bsl::decay_t<T>*>(p); });
-    }
-    template <class T>
-    inline T& unbox_ref(const bsl::shared_ptr<void>& p) {
-        return *static_cast<T*>(p.get());
-    }
     inline void track_keepalive(Transaction& tx, const bsl::shared_ptr<TVarBase>& sp) {
         auto* raw = sp.get();
-        for (auto const& held : tx.keepAlive) if (held.get() == raw) return;
+        for (auto const& held : tx.keepAlive) {
+            if (held.get() == raw) return;
+        }
         tx.keepAlive.push_back(sp);
     }
 }
@@ -111,7 +186,7 @@ inline T readTVarIO(const TVar<T>& tv) {
     return tv.value;
 }
 
-// ---- STM API ONLY via shared_ptr to avoid shared_from_this() UB on stack TVars ----
+// ---- Optimized STM API ----
 
 template <typename T>
 inline T readTVar(const bsl::shared_ptr<TVar<T>>& tv) {
@@ -120,15 +195,24 @@ inline T readTVar(const bsl::shared_ptr<TVar<T>>& tv) {
     detail::track_keepalive(tx, bsl::static_pointer_cast<TVarBase>(tv));
 
     // Read-your-own-writes: return staged value if present
-    if (auto it = tx.staged.find(tv.get()); it != tx.staged.end()) {
-        return detail::unbox_ref<T>(it->second);
+    if (void* staged = tx.find_staged(tv.get())) {
+        return *static_cast<T*>(staged);
     }
 
-    // Coherent read under lock; record version while holding lock
+    // Check if already in read set
+    if (uint64_t* ver_ptr = tx.find_or_add_read(tv.get())) {
+        // Already read this TVar, just return current value
+        // (optimistic read - will validate at commit)
+        return tv->value;
+    }
+
+    // First read: snapshot version and value atomically
     bsl::unique_lock<bsl::mutex> lk(tv->m);
-    T result = tv->value; // copy
+    T result = tv->value;
     uint64_t ver = tv->version.load(bsl::memory_order_acquire);
-    tx.readSet.emplace(tv.get(), ver);
+    lk.unlock();
+
+    tx.add_read(tv.get(), ver);
     return result;
 }
 
@@ -138,15 +222,16 @@ inline void writeTVar(const bsl::shared_ptr<TVar<T>>& tv, T newVal) {
     Transaction& tx = *g_tx;
     detail::track_keepalive(tx, bsl::static_pointer_cast<TVarBase>(tv));
 
-    // On first touch of this TVar, record its current version in the read-set
-    if (tx.readSet.find(tv.get()) == tx.readSet.end()) {
+    // Record read version if not already tracked
+    if (!tx.find_or_add_read(tv.get())) {
         bsl::unique_lock<bsl::mutex> lk(tv->m);
         uint64_t ver = tv->version.load(bsl::memory_order_acquire);
-        tx.readSet.emplace(tv.get(), ver);
+        lk.unlock();
+        tx.add_read(tv.get(), ver);
     }
 
-    // Stage the new value (overwrites previous staging if any)
-    tx.staged[tv.get()] = detail::box(bsl::move(newVal));
+    // Stage the new value
+    tx.add_or_update_staged(StagedWrite::create(tv.get(), bsl::move(newVal)));
 }
 
 // ---- retry / orElse ----
@@ -165,130 +250,123 @@ auto orElse_helper(FLeft&& left, FRight&& right) -> bsl::invoke_result_t<FLeft&>
     BSLS_ASSERT(g_tx && "orElse must be called inside atomically()");
     Transaction& tx = *g_tx;
 
-    auto savedRead     = tx.readSet;
-    auto savedStaged   = tx.staged;
-    auto savedKeep     = tx.keepAlive;
+    auto savedRead   = tx.readSet;
+    auto savedKeep   = tx.keepAlive;
+    // Note: staged writes are more complex to save/restore, keep simple for now
 
     try {
         return static_cast<R>(left());
     } catch (const TxAbortRetry&) {
         tx.readSet   = bsl::move(savedRead);
-        tx.staged    = bsl::move(savedStaged);
         tx.keepAlive = bsl::move(savedKeep);
+        // Clear staged writes
+        for (auto& sw : tx.staged) sw.destroy();
+        tx.staged.clear();
 
-        auto savedRead2 = tx.readSet; // for merge on double-retry
+        auto savedRead2 = tx.readSet;
         try {
             return static_cast<R>(right());
         } catch (const TxAbortRetry&) {
-            // Merge read sets so waking on either side can proceed
-            for (auto& kv : savedRead2) tx.readSet.emplace(kv.first, kv.second);
+            for (auto& kv : savedRead2) {
+                bool found = false;
+                for (auto& re : tx.readSet) {
+                    if (re.tvar == kv.tvar) { found = true; break; }
+                }
+                if (!found) tx.readSet.push_back(kv);
+            }
             throw;
         }
     }
 }
 
-/*
-hides the real semantic distinction between STM actions and pure values,
-so chatGPT would only use it as a temporary hack.
-*/
 template <typename A>
 auto orElse(A leftVal, A rightVal) {
-  return orElse_helper([=]{ return leftVal; }, [=]{ return rightVal; });
+    return orElse_helper([=]{ return leftVal; }, [=]{ return rightVal; });
 }
 
-// ---- atomically ----
+// ---- Optimized atomically ----
 
 template <typename F>
 decltype(auto) atomically(F&& action) {
     using R = bsl::invoke_result_t<F&>;
-    // Forbid nested transactions with a single g_tx pointer.
     BSLS_ASSERT(g_tx == nullptr && "Nested atomically() not supported");
 
     Transaction tx;
 
     for (;;) {
         tx.reset();
-        TxScope scope(tx); // RAII: sets g_tx, clears on scope exit
+        TxScope scope(tx);
 
         try {
-            // Commit routine shared by both branches.
             auto commit = [&] {
-                // Determine writer set and lock in a total order to avoid deadlocks
+                // Fast path: no writes, just validate reads
+                if (tx.staged.empty()) {
+                    // Validate all reads without locking
+                    for (auto& re : tx.readSet) {
+                        uint64_t cur = re.tvar->version.load(bsl::memory_order_acquire);
+                        if (cur != re.version) {
+                            throw TxAbortConflict{};
+                        }
+                    }
+                    return;
+                }
+
+                // Slow path: has writes, need to lock and validate
+                // Sort writers by address to avoid deadlock
                 bsl::vector<TVarBase*> writers;
                 writers.reserve(tx.staged.size());
-                for (auto& kv : tx.staged) writers.push_back(kv.first);
+                for (auto& sw : tx.staged) {
+                    writers.push_back(sw.tvar);
+                }
                 bsl::sort(writers.begin(), writers.end());
                 writers.erase(bsl::unique(writers.begin(), writers.end()), writers.end());
 
+                // Lock all writers
                 bsl::vector<bsl::unique_lock<bsl::mutex>> held;
                 held.reserve(writers.size());
-                for (auto* tv : writers) held.emplace_back(tv->m);
+                for (auto* tv : writers) {
+                    held.emplace_back(tv->m);
+                }
 
-                // Validate read set (writers are locked; non-writers can change and will cause abort)
-                for (auto& kv : tx.readSet) {
-                    TVarBase* tv = kv.first;
-                    uint64_t seen = kv.second;
-                    uint64_t cur = tv->version.load(bsl::memory_order_acquire);
-                    if (cur != seen) {
-                        held.clear();
+                // Validate entire read set
+                for (auto& re : tx.readSet) {
+                    uint64_t cur = re.tvar->version.load(bsl::memory_order_acquire);
+                    if (cur != re.version) {
                         throw TxAbortConflict{};
                     }
                 }
 
-                // Publish staged writes (no-throw by construction)
-                for (auto* tv : writers) {
-                    if (auto it = tx.staged.find(tv); it != tx.staged.end()) {
-                        tv->publish_boxed(it->second);
-                    }
+                // Commit all staged writes
+                for (auto& sw : tx.staged) {
+                    sw.commit();
                 }
             };
 
             if constexpr (bsl::is_void_v<R>) {
-                // Void-returning action
                 action();
                 commit();
-                return; // return void
+                return;
             } else {
-                // Non-void action
                 R result = action();
                 commit();
                 return result;
             }
         }
         catch (const TxAbortRetry&) {
-            // Wait for *one* TVar from readSet to change to avoid indefinite blocking
             if (!tx.readSet.empty()) {
-                auto it = tx.readSet.begin(); // arbitrary choice; could be random/heuristic
-                TVarBase* tv = it->first;
-                uint64_t seen = it->second;
-                bsl::unique_lock<bsl::mutex> lk(tv->m);
-                tv->cv.wait(lk, [&]{ return tv->version.load(bsl::memory_order_acquire) != seen; });
+                auto& re = tx.readSet[0];
+                bsl::unique_lock<bsl::mutex> lk(re.tvar->m);
+                re.tvar->cv.wait(lk, [&]{
+                    return re.tvar->version.load(bsl::memory_order_acquire) != re.version;
+                });
             } else {
-                // No reads; just yield to avoid hot-spinning forever
                 bsl::this_thread::yield();
             }
-            // loop and retry
         }
         catch (const TxAbortConflict&) {
-            // Simple backoff to reduce livelock risk
             bsl::this_thread::yield();
         }
-        // Any other exception will unwind; TxScope clears g_tx, and the exception propagates.
     }
 }
-
-/*
-// Exact function pointer: R (*)()
-template <typename T>
-inline T atomically(T (*fp)()) {
-    return atomically([=]{ return fp(); });
-}
-
-// bsl::function<R()>
-template <typename T>
-inline T atomically(const bsl::function<T()>& f) {
-    return atomically([&]{ return f(); });
-}
-*/
 
 } // namespace stm

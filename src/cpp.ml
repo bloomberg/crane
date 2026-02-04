@@ -125,6 +125,29 @@ let register_eponymous_record (record_ref : GlobRef.t) =
 let is_eponymous_record_global (r : GlobRef.t) : bool =
   Hashtbl.mem global_eponymous_record_registry r
 
+(* Check if a constant (function) is inside an eponymous template module.
+   Returns Some record_ref if the function is inside a module whose name matches
+   a registered eponymous record. This is used to correctly generate
+   StructName<Args>::funcName() instead of StructName::funcName<Args>(). *)
+let get_containing_eponymous_struct (r : GlobRef.t) : GlobRef.t option =
+  match r with
+  | GlobRef.ConstRef kn ->
+    (* Get the module path containing this constant *)
+    let mp = Names.Constant.modpath kn in
+    (* Check if there's an eponymous record whose module path matches *)
+    let result = ref None in
+    Hashtbl.iter (fun record_ref () ->
+      let record_mp = match record_ref with
+        | GlobRef.IndRef (ind, _) -> Names.MutInd.modpath ind
+        | _ -> mp  (* Won't match *)
+      in
+      (* Check if the constant is in the same module as the record *)
+      if ModPath.equal mp record_mp then
+        result := Some record_ref
+    ) global_eponymous_record_registry;
+    !result
+  | _ -> None
+
 (* Track current structure's declarations for finding methods from sibling modules.
    When processing a module like List inside tree.v, we need to also scan
    sibling declarations (like app) that are from the same Rocq module. *)
@@ -379,8 +402,9 @@ let inductive_name_info r =
   match r with
   | GlobRef.IndRef _ when is_eponymous_record_global r ->
       (* Eponymous record: merged into module struct, no nested namespace.
-         Check this FIRST because local inductives can also be eponymous. *)
-      (str (String.capitalize_ascii (str_global Type r)), false)
+         Check this FIRST because local inductives can also be eponymous.
+         Use pp_global_name to get just the base name, not the qualified path. *)
+      (str (String.capitalize_ascii (Common.pp_global_name Type r)), false)
   | GlobRef.IndRef _ when is_local_inductive r ->
       (* Local inductive: use lowercase name directly, no namespace *)
       (pp_global Type r, false)
@@ -405,8 +429,9 @@ let pp_inductive_type_name r =
   let result = match r with
   | GlobRef.IndRef _ when is_eponymous_record_global r ->
       (* Eponymous record: use capitalized name directly (merged into module struct)
-         Check this FIRST because local inductives can also be eponymous *)
-      str (String.capitalize_ascii (str_global Type r))
+         Check this FIRST because local inductives can also be eponymous.
+         Use pp_global_name to get just the base name, not the qualified path. *)
+      str (String.capitalize_ascii (Common.pp_global_name Type r))
   | GlobRef.IndRef _ when is_record_inductive r ->
       (* Regular records: keep original case (no namespace wrapper) *)
       pp_global Type r
@@ -802,8 +827,9 @@ let rec pp_cpp_type par vl t =
            let type_name_str = str_global Type r' in
            (* Check eponymous record FIRST because they can also be local *)
            if is_eponymous_record_global r' then
-             (* Eponymous record: use capitalized name directly, no namespace nesting *)
-             str (String.capitalize_ascii type_name_str) ++ templates
+             (* Eponymous record: use capitalized name directly, no namespace nesting.
+                Use pp_global_name to get just the base name, not the qualified path. *)
+             str (String.capitalize_ascii (Common.pp_global_name Type r')) ++ templates
            else if is_qualified_name type_name_str then
              (* Already qualified (e.g., C::t from module parameter): add typename if in template *)
              typename_prefix_for type_name_str ++ str type_name_str ++ templates
@@ -853,6 +879,11 @@ and pp_cpp_expr env args t =
     let custom = find_custom x in
     let cmds = parse_numbered_args "t" (fun i -> CCty_arg i) custom in
     pp_custom (Pp.string_of_ppcmds (GlobRef.print x) ^ " := " ^ custom) env None None tys [] [] [] cmds
+  | CPPglob (x, _tys) when lookup_method_this_pos x <> None ->
+    (* A bare reference to a method on the same struct (eta-reduced from \self. method self).
+       Generate this->method() - a call to the method via this, not a function pointer. *)
+    let method_name = Id.of_string (Common.pp_global_name Term x) in
+    str "this->" ++ Id.print method_name ++ str "()"
   | CPPglob (x, tys) ->
     (* Determine the base name for a global reference *)
     let base_name = match x with
@@ -861,8 +892,9 @@ and pp_cpp_expr env args t =
         let type_name_str = str_global Type x in
         (* Check eponymous record FIRST because they can also be local *)
         if is_eponymous_record_global x then
-          (* Eponymous record: use capitalized name (merged into module struct) *)
-          str (String.capitalize_ascii type_name_str)
+          (* Eponymous record: use capitalized name (merged into module struct).
+             Use pp_global_name to get just the base name, not the qualified path. *)
+          str (String.capitalize_ascii (Common.pp_global_name Type x))
         else if is_qualified_name type_name_str then
           (* Already qualified (e.g., C::t from module parameter): use as-is
              Do NOT lowercase - the qualifier (like module param C) should keep case *)
@@ -878,14 +910,53 @@ and pp_cpp_expr env args t =
         (* Local variable reference - no prefix *)
         pp_global Term x
       | _ ->
-        (* Function calls: add :: prefix for external functions to avoid name collision *)
-        if needs_global_qualifier x then
-          str "::" ++ pp_global Term x
-        else
-          pp_global Term x
+        (* Check if this function is inside an eponymous template struct.
+           If so, type args go on the struct name, not the function name. *)
+        (match get_containing_eponymous_struct x, tys with
+         | Some record_ref, _ :: _ ->
+           (* Function inside eponymous template struct with type args:
+              Generate StructName<int, ...>::template funcName<Args> for static methods
+              We use placeholder types for the struct and actual args for the method. *)
+           let struct_name = Common.pp_global_name Type record_ref in
+           let func_name = Common.pp_global_name Term x in
+           (* Get the number of template params for the struct *)
+           let num_struct_params = match record_ref with
+             | GlobRef.IndRef (kn, _) ->
+               (match Table.get_ind_num_param_vars_opt kn with
+                | Some n -> n
+                | None -> 2)
+             | _ -> 2
+           in
+           let placeholder_args = String.concat ", " (List.init num_struct_params (fun _ -> "int")) in
+           let ty_args = pp_list (pp_cpp_type false []) tys in
+           str (String.capitalize_ascii struct_name) ++ str "<" ++ str placeholder_args ++ str ">::template " ++ str func_name ++ str "<" ++ ty_args ++ str ">"
+         | Some record_ref, [] ->
+           (* Constant/function inside eponymous template struct with NO type args:
+              This happens for non-parameterized constants like e_SUCCESS.
+              Generate StructName<int, int>::constName as a workaround.
+              We use 'int' as a placeholder type since the constant doesn't depend on the type params. *)
+           let struct_name = Common.pp_global_name Type record_ref in
+           let func_name = Common.pp_global_name Term x in
+           (* Get the number of template params - use get_ind_num_param_vars_opt or default to 2 *)
+           let num_params = match record_ref with
+             | GlobRef.IndRef (kn, _) ->
+               (match Table.get_ind_num_param_vars_opt kn with
+                | Some n -> n
+                | None -> 2)  (* Default to 2 params if not found *)
+             | _ -> 2
+           in
+           let placeholder_args = String.concat ", " (List.init num_params (fun _ -> "int")) in
+           str (String.capitalize_ascii struct_name) ++ str "<" ++ str placeholder_args ++ str ">::" ++ str func_name
+         | None, _ ->
+           (* Normal case: function not in eponymous struct *)
+           if needs_global_qualifier x then
+             str "::" ++ pp_global Term x
+           else
+             pp_global Term x)
     in
-    (match tys with
-    | [] -> apply base_name
+    (match tys, get_containing_eponymous_struct x with
+    | [], _ -> apply base_name
+    | _, Some _ -> apply base_name  (* Type args already handled in base_name *)
     | _ ->
       let ty_args = pp_list (pp_cpp_type false []) tys in
       apply base_name ++ str "<" ++ ty_args ++ str ">")
@@ -1289,8 +1360,8 @@ function
        Check eponymous FIRST, then records, then default to lowercase. *)
     let struct_name = match id with
       | GlobRef.IndRef _ when is_eponymous_record_global id ->
-          let base = str_global Type id in
-          str (String.capitalize_ascii base)
+          (* Use pp_global_name to get just the base name, not the qualified path. *)
+          str (String.capitalize_ascii (Common.pp_global_name Type id))
       | GlobRef.IndRef _ when is_record_inductive id ->
           (* Records keep original case - no namespace wrapper *)
           pp_global Type id
@@ -2184,8 +2255,15 @@ let rec pp_structure_elem ~is_header f = function
                        not (Table.is_projection r)
                      ) (List.rev this_method_candidates) in
                      let method_fields = Translation.gen_record_methods epon_ref ty_vars non_projection_candidates in
-                     let methods_pp = if method_fields = [] then mt () else
-                       prlist_with_sep fnl (fun (fld, _vis) -> pp_cpp_field (empty_env ()) fld) method_fields ++ fnl ()
+                     (* Temporarily restore method_candidates so that method bodies can
+                        recognize calls to other methods on the same struct *)
+                     let methods_pp = if method_fields = [] then mt () else begin
+                       let saved_methods = !method_candidates in
+                       method_candidates := this_method_candidates;
+                       let result = prlist_with_sep fnl (fun (fld, _vis) -> pp_cpp_field (empty_env ()) fld) method_fields ++ fnl () in
+                       method_candidates := saved_methods;
+                       result
+                     end
                      in
                      (template_str, fields_pp, methods_pp)
                  | None -> (mt (), mt (), mt ())

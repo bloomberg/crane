@@ -302,9 +302,11 @@ levenshtein_chain(const std::shared_ptr<String::string> &s,
                                                                             string::String
                                                                                 _args)
                                                                         -> std::function<
-                                                                            std::shared_ptr<
-                                                                                SigT::sigT<
-                                                                                    std::shared_ptr<Nat::nat>, std::shared_ptr<Chain::chain>>>(dummy_prop, dummy_prop)> {
+                                                                            std::shared_ptr<SigT::
+                                                                                                sigT<std::shared_ptr<Nat::
+                                                                                                                         nat>,
+                                                                                                     std::shared_ptr<Chain::
+                                                                                                                         chain>>>(dummy_prop, dummy_prop)> {
                                                                       std::shared_ptr<
                                                                           Ascii::
                                                                               ascii>
@@ -383,166 +385,161 @@ levenshtein_chain(const std::shared_ptr<String::string> &s,
                                                                                                          },
                                                                                   [&](const typename Sumbool::
                                                                                           sumbool::right
-                                                                                              _args)
-                                                                                      -> std::shared_ptr<SigT::sigT<
-                                                                                          std::shared_ptr<
-                                                                                              Nat::
-                                                                                                  nat>,
-                                                                                          std::shared_ptr<
-                                                                                              Chain::
-                                                                                                  chain>>> {
-                                                                                    return std::visit(
-                                                                                        Overloaded{
-                                                                                            [&](const typename SigT::sigT<
-                                                                                                std::shared_ptr<
-                                                                                                    Nat::
-                                                                                                        nat>,
-                                                                                                std::shared_ptr<
-                                                                                                    Chain::
-                                                                                                        chain>>::
-                                                                                                    existT
-                                                                                                        _args)
-                                                                                                -> std::shared_ptr<SigT::sigT<
-                                                                                                    std::shared_ptr<
-                                                                                                        Nat::
-                                                                                                            nat>,
-                                                                                                    std::shared_ptr<
-                                                                                                        Chain::
-                                                                                                            chain>>> {
-                                                                                              std::shared_ptr<
-                                                                                                  Nat::
-                                                                                                      nat>
-                                                                                                  n1 =
-                                                                                                      _args
-                                                                                                          ._a0;
-                                                                                              std::shared_ptr<
-                                                                                                  Chain::
-                                                                                                      chain>
-                                                                                                  r1 =
-                                                                                                      _args
-                                                                                                          ._a1;
-                                                                                              return std::visit(
-                                                                                                  Overloaded{
-                                                                                                      [&](const typename SigT::sigT<
-                                                                                                          std::shared_ptr<
-                                                                                                              Nat::
-                                                                                                                  nat>,
-                                                                                                          std::shared_ptr<
-                                                                                                              Chain::
-                                                                                                                  chain>>::
-                                                                                                              existT
-                                                                                                                  _args)
-                                                                                                          -> std::shared_ptr<SigT::sigT<
-                                                                                                              std::shared_ptr<
-                                                                                                                  Nat::
-                                                                                                                      nat>,
-                                                                                                              std::shared_ptr<
-                                                                                                                  Chain::
-                                                                                                                      chain>>> {
-                                                                                                        std::shared_ptr<
-                                                                                                            Nat::
-                                                                                                                nat>
-                                                                                                            n2 =
-                                                                                                                _args
-                                                                                                                    ._a0;
-                                                                                                        std::shared_ptr<
-                                                                                                            Chain::
-                                                                                                                chain>
-                                                                                                            r2 =
-                                                                                                                _args
-                                                                                                                    ._a1;
-                                                                                                        return std::visit(
-                                                                                                            Overloaded{
-                                                                                                                [&](const typename SigT::sigT<
-                                                                                                                    std::shared_ptr<
-                                                                                                                        Nat::
-                                                                                                                            nat>,
-                                                                                                                    std::shared_ptr<
-                                                                                                                        Chain::
-                                                                                                                            chain>>::
-                                                                                                                        existT
-                                                                                                                            _args)
-                                                                                                                    -> std::
-                                                                                                                        shared_ptr<SigT::sigT<
-                                                                                                                            std::shared_ptr<
-                                                                                                                                Nat::
-                                                                                                                                    nat>,
-                                                                                                                            std::shared_ptr<
-                                                                                                                                Chain::
-                                                                                                                                    chain>>> {
-                                                                                                                          std::shared_ptr<
-                                                                                                                              Nat::
-                                                                                                                                  nat>
-                                                                                                                              n3 =
-                                                                                                                                  _args
-                                                                                                                                      ._a0;
-                                                                                                                          std::shared_ptr<
-                                                                                                                              Chain::
-                                                                                                                                  chain>
-                                                                                                                              r3 =
-                                                                                                                                  _args
-                                                                                                                                      ._a1;
-                                                                                                                          std::shared_ptr<
-                                                                                                                              Chain::
-                                                                                                                                  chain>
-                                                                                                                              r1_ = aux_insert(
-                                                                                                                                  s,
-                                                                                                                                  t,
-                                                                                                                                  x,
-                                                                                                                                  xs,
-                                                                                                                                  y,
-                                                                                                                                  ys,
-                                                                                                                                  n1,
-                                                                                                                                  r1);
-                                                                                                                          std::shared_ptr<
-                                                                                                                              Chain::
-                                                                                                                                  chain>
-                                                                                                                              r2_ = aux_delete(
-                                                                                                                                  s,
-                                                                                                                                  t,
-                                                                                                                                  x,
-                                                                                                                                  xs,
-                                                                                                                                  y,
-                                                                                                                                  ys,
-                                                                                                                                  n2,
-                                                                                                                                  r2);
-                                                                                                                          std::shared_ptr<
-                                                                                                                              Chain::
-                                                                                                                                  chain>
-                                                                                                                              r3_ = aux_update(
-                                                                                                                                  s,
-                                                                                                                                  t,
-                                                                                                                                  x,
-                                                                                                                                  xs,
-                                                                                                                                  y,
-                                                                                                                                  ys,
-                                                                                                                                  n3,
-                                                                                                                                  r3);
-                                                                                                                          return min3_app<
-                                                                                                                              std::shared_ptr<
-                                                                                                                                  SigT::
-                                                                                                                                      sigT<std::shared_ptr<Nat::nat>, std::
-                                                                                                                                                                          shared_ptr<
-                                                                                                                                                                              Chain::
-                                                                                                                                                                                  chain>>>>(SigT::sigT<std::shared_ptr<Nat::nat>, std::shared_ptr<Chain::chain>>::ctor::existT_(Nat::nat::ctor::S_(n1), r1_), SigT::sigT<std::shared_ptr<Nat::nat>, std::shared_ptr<Chain::chain>>::ctor::existT_(Nat::nat::ctor::S_(n2), r2_), SigT::sigT<std::shared_ptr<Nat::nat>, std::shared_ptr<Chain::chain>>::ctor::existT_(Nat::nat::ctor::S_(n3), r3_), projT1<std::shared_ptr<Nat::nat>>);
-                                                                                                                        }},
-                                                                                                            levenshtein_chain(
-                                                                                                                xs,
-                                                                                                                ys)
-                                                                                                                ->v());
-                                                                                                      }},
-                                                                                                  levenshtein_chain(
-                                                                                                      xs,
-                                                                                                      String::string::
-                                                                                                          ctor::String_(
-                                                                                                              y,
-                                                                                                              ys))
-                                                                                                      ->v());
-                                                                                            }},
-                                                                                        levenshtein_chain1(
-                                                                                            ys)
-                                                                                            ->v());
-                                                                                  }},
+                                                                                              _args) -> std::
+                                                                                                         shared_ptr<
+                                                                                                             SigT::
+                                                                                                                 sigT<std::shared_ptr<Nat::
+                                                                                                                                          nat>,
+                                                                                                                      std::shared_ptr<Chain::chain>>> {
+                                                                                                           return std::visit(
+                                                                                                               Overloaded{
+                                                                                                                   [&](const typename SigT::sigT<
+                                                                                                                       std::shared_ptr<
+                                                                                                                           Nat::
+                                                                                                                               nat>,
+                                                                                                                       std::shared_ptr<
+                                                                                                                           Chain::
+                                                                                                                               chain>>::
+                                                                                                                           existT
+                                                                                                                               _args)
+                                                                                                                       -> std::shared_ptr<SigT::sigT<
+                                                                                                                           std::shared_ptr<
+                                                                                                                               Nat::
+                                                                                                                                   nat>,
+                                                                                                                           std::shared_ptr<
+                                                                                                                               Chain::
+                                                                                                                                   chain>>> {
+                                                                                                                     std::shared_ptr<
+                                                                                                                         Nat::
+                                                                                                                             nat>
+                                                                                                                         n1 =
+                                                                                                                             _args
+                                                                                                                                 ._a0;
+                                                                                                                     std::shared_ptr<
+                                                                                                                         Chain::
+                                                                                                                             chain>
+                                                                                                                         r1 =
+                                                                                                                             _args
+                                                                                                                                 ._a1;
+                                                                                                                     return std::
+                                                                                                                         visit(Overloaded{[&](const typename SigT::sigT<std::shared_ptr<Nat::nat>, std::shared_ptr<Chain::chain>>::existT _args) -> std::shared_ptr<
+                                                                                                                                                                                                                                                     SigT::sigT<std::shared_ptr<Nat::nat>, std::
+                                                                                                                                                                                                                                                                                               shared_ptr<
+                                                                                                                                                                                                                                                                                                   Chain::chain>>> {
+                                                                                                                                 std::shared_ptr<
+                                                                                                                                     Nat::
+                                                                                                                                         nat>
+                                                                                                                                     n2 =
+                                                                                                                                         _args
+                                                                                                                                             ._a0;
+                                                                                                                                 std::shared_ptr<
+                                                                                                                                     Chain::
+                                                                                                                                         chain>
+                                                                                                                                     r2 =
+                                                                                                                                         _args
+                                                                                                                                             ._a1;
+                                                                                                                                 return std::visit(Overloaded{[&](const typename SigT::sigT<std::shared_ptr<Nat::nat>, std::
+                                                                                                                                                                                                                           shared_ptr<
+                                                                                                                                                                                                                               Chain::chain>>::existT _args) -> std::shared_ptr<SigT::
+                                                                                                                                                                                                                                                                                    sigT<
+                                                                                                                                                                                                                                                                                        std::shared_ptr<Nat::nat>, std::shared_ptr<
+                                                                                                                                                                                                                                                                                                                       Chain::
+                                                                                                                                                                                                                                                                                                                           chain>>> {
+                                                                                                                                                     std::shared_ptr<
+                                                                                                                                                         Nat::
+                                                                                                                                                             nat>
+                                                                                                                                                         n3 =
+                                                                                                                                                             _args
+                                                                                                                                                                 ._a0;
+                                                                                                                                                     std::shared_ptr<
+                                                                                                                                                         Chain::
+                                                                                                                                                             chain>
+                                                                                                                                                         r3 =
+                                                                                                                                                             _args
+                                                                                                                                                                 ._a1;
+                                                                                                                                                     std::shared_ptr<
+                                                                                                                                                         Chain::
+                                                                                                                                                             chain>
+                                                                                                                                                         r1_ = aux_insert(
+                                                                                                                                                             s,
+                                                                                                                                                             t,
+                                                                                                                                                             x,
+                                                                                                                                                             xs,
+                                                                                                                                                             y,
+                                                                                                                                                             ys,
+                                                                                                                                                             n1,
+                                                                                                                                                             r1);
+                                                                                                                                                     std::shared_ptr<
+                                                                                                                                                         Chain::
+                                                                                                                                                             chain>
+                                                                                                                                                         r2_ = aux_delete(
+                                                                                                                                                             s,
+                                                                                                                                                             t,
+                                                                                                                                                             x,
+                                                                                                                                                             xs,
+                                                                                                                                                             y,
+                                                                                                                                                             ys,
+                                                                                                                                                             n2,
+                                                                                                                                                             r2);
+                                                                                                                                                     std::shared_ptr<
+                                                                                                                                                         Chain::
+                                                                                                                                                             chain>
+                                                                                                                                                         r3_ = aux_update(
+                                                                                                                                                             s,
+                                                                                                                                                             t,
+                                                                                                                                                             x,
+                                                                                                                                                             xs,
+                                                                                                                                                             y,
+                                                                                                                                                             ys,
+                                                                                                                                                             n3,
+                                                                                                                                                             r3);
+                                                                                                                                                     return min3_app<std::shared_ptr<
+                                                                                                                                                         SigT::sigT<
+                                                                                                                                                             std::shared_ptr<Nat::nat>, std::
+                                                                                                                                                                                            shared_ptr<
+                                                                                                                                                                                                Chain::chain>>>>(SigT::
+                                                                                                                                                                                                                     sigT<
+                                                                                                                                                                                                                         std::shared_ptr<Nat::nat>, std::
+                                                                                                                                                                                                                                                        shared_ptr<Chain::chain>>::ctor::existT_(Nat::
+                                                                                                                                                                                                                                                                                                     nat::ctor::
+                                                                                                                                                                                                                                                                                                         S_(n1),
+                                                                                                                                                                                                                                                                                                 r1_),
+                                                                                                                                                                                                                 SigT::
+                                                                                                                                                                                                                     sigT<
+                                                                                                                                                                                                                         std::shared_ptr<Nat::nat>, std::
+                                                                                                                                                                                                                                                        shared_ptr<
+                                                                                                                                                                                                                                                            Chain::
+                                                                                                                                                                                                                                                                chain>>::ctor::existT_(Nat::
+                                                                                                                                                                                                                                                                                           nat::
+                                                                                                                                                                                                                                                                                               ctor::S_(n2),
+                                                                                                                                                                                                                                                                                       r2_),
+                                                                                                                                                                                                                 SigT::sigT<
+                                                                                                                                                                                                                     std::shared_ptr<Nat::nat>, std::shared_ptr<
+                                                                                                                                                                                                                                                    Chain::
+                                                                                                                                                                                                                                                        chain>>::
+                                                                                                                                                                                                                     ctor::existT_(
+                                                                                                                                                                                                                         Nat::nat::ctor::
+                                                                                                                                                                                                                             S_(n3),
+                                                                                                                                                                                                                         r3_),
+                                                                                                                                                                                                                 this->projT1());
+                                                                                                                                                   }},
+                                                                                                                                                   levenshtein_chain(
+                                                                                                                                                       xs,
+                                                                                                                                                       ys)
+                                                                                                                                                       ->v());
+                                                                                                                               }},
+                                                                                                                               levenshtein_chain(
+                                                                                                                                   xs,
+                                                                                                                                   String::string::
+                                                                                                                                       ctor::String_(
+                                                                                                                                           y,
+                                                                                                                                           ys))
+                                                                                                                                   ->v());
+                                                                                                                   }},
+                                                                                                               levenshtein_chain1(
+                                                                                                                   ys)
+                                                                                                                   ->v());
+                                                                                                         }},
                                                                               x->ascii_dec(
                                                                                    y)
                                                                                   ->v());
