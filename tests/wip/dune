@@ -153,3 +153,80 @@
   (alias runtest)
   (deps vec.t.exe)
   (action (run ./vec.t.exe))))
+
+(subdir anon_fixpoint
+ (rule
+  (targets anon_fixpoint.t.exe)
+  (deps AnonFixpoint.vo anon_fixpoint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} anon_fixpoint.t.exe anon_fixpoint.cpp anon_fixpoint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps anon_fixpoint.t.exe)
+  (action (run ./anon_fixpoint.t.exe))))
+
+(subdir comparison
+ (rule
+  (targets comparison.t.exe)
+  (deps Comparison.vo comparison.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} comparison.t.exe comparison.cpp comparison.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps comparison.t.exe)
+  (action (run ./comparison.t.exe))))
+
+(subdir empty_match
+ (rule
+  (targets empty_match.t.exe)
+  (deps EmptyMatch.vo empty_match.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} empty_match.t.exe empty_match.cpp empty_match.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps empty_match.t.exe)
+  (action (run ./empty_match.t.exe))))
+
+(subdir mutual_recursion
+ (rule
+  (targets mutual_recursion.t.exe)
+  (deps MutualRecursion.vo mutual_recursion.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mutual_recursion.t.exe mutual_recursion.cpp mutual_recursion.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mutual_recursion.t.exe)
+  (action (run ./mutual_recursion.t.exe))))
+
+(subdir sections
+ (rule
+  (targets sections.t.exe)
+  (deps Sections.vo sections.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sections.t.exe sections.cpp sections.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sections.t.exe)
+  (action (run ./sections.t.exe))))
+
+(subdir singleton_record
+ (rule
+  (targets singleton_record.t.exe)
+  (deps SingletonRecord.vo singleton_record.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} singleton_record.t.exe singleton_record.cpp singleton_record.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps singleton_record.t.exe)
+  (action (run ./singleton_record.t.exe))))
+
+(subdir sum
+ (rule
+  (targets sum.t.exe)
+  (deps Sum.vo sum.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sum.t.exe sum.cpp sum.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sum.t.exe)
+  (action (run ./sum.t.exe))))

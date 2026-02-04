@@ -22,28 +22,6 @@
   (deps ack.t.exe)
   (action (run ./ack.t.exe))))
 
-(subdir add_one
- (rule
-  (targets add_one.t.exe)
-  (deps AddOne.vo add_one.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} add_one.t.exe add_one.cpp add_one.t.cpp)))
- (rule
-  (alias runtest)
-  (deps add_one.t.exe)
-  (action (run ./add_one.t.exe))))
-
-(subdir args
- (rule
-  (targets args.t.exe)
-  (deps Args.vo args.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} args.t.exe args.cpp args.t.cpp)))
- (rule
-  (alias runtest)
-  (deps args.t.exe)
-  (action (run ./args.t.exe))))
-
 (subdir binom
  (rule
   (targets binom.t.exe)

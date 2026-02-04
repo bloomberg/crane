@@ -9,4 +9,149 @@
  (theories
    Stdlib
    Crane)
- (flags (:standard -output-directory ../../tests/regression)))
+ (flags (:standard -output-directory %{project_root}/tests/regression)))
+
+; Test rules - compile C++ and run tests
+
+(subdir bool_ops
+ (rule
+  (targets bool_ops.t.exe)
+  (deps BoolOps.vo bool_ops.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bool_ops.t.exe bool_ops.cpp bool_ops.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bool_ops.t.exe)
+  (action (run ./bool_ops.t.exe))))
+
+(subdir currying
+ (rule
+  (targets currying.t.exe)
+  (deps Currying.vo currying.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} currying.t.exe currying.cpp currying.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps currying.t.exe)
+  (action (run ./currying.t.exe))))
+
+(subdir deep_match
+ (rule
+  (targets deep_match.t.exe)
+  (deps DeepMatch.vo deep_match.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deep_match.t.exe deep_match.cpp deep_match.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps deep_match.t.exe)
+  (action (run ./deep_match.t.exe))))
+
+(subdir higher_order
+ (rule
+  (targets higher_order.t.exe)
+  (deps HigherOrder.vo higher_order.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} higher_order.t.exe higher_order.cpp higher_order.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps higher_order.t.exe)
+  (action (run ./higher_order.t.exe))))
+
+(subdir implicit_args
+ (rule
+  (targets implicit_args.t.exe)
+  (deps ImplicitArgs.vo implicit_args.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} implicit_args.t.exe implicit_args.cpp implicit_args.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps implicit_args.t.exe)
+  (action (run ./implicit_args.t.exe))))
+
+(subdir lambda
+ (rule
+  (targets lambda.t.exe)
+  (deps Lambda.vo lambda.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lambda.t.exe lambda.cpp lambda.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lambda.t.exe)
+  (action (run ./lambda.t.exe))))
+
+(subdir let_in
+ (rule
+  (targets let_in.t.exe)
+  (deps LetIn.vo let_in.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_in.t.exe let_in.cpp let_in.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_in.t.exe)
+  (action (run ./let_in.t.exe))))
+
+(subdir nested_inductive
+ (rule
+  (targets nested_inductive.t.exe)
+  (deps NestedInductive.vo nested_inductive.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_inductive.t.exe nested_inductive.cpp nested_inductive.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_inductive.t.exe)
+  (action (run ./nested_inductive.t.exe))))
+
+(subdir option
+ (rule
+  (targets option.t.exe)
+  (deps Option.vo option.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} option.t.exe option.cpp option.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps option.t.exe)
+  (action (run ./option.t.exe))))
+
+(subdir prop_erasure
+ (rule
+  (targets prop_erasure.t.exe)
+  (deps PropErasure.vo prop_erasure.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prop_erasure.t.exe prop_erasure.cpp prop_erasure.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps prop_erasure.t.exe)
+  (action (run ./prop_erasure.t.exe))))
+
+(subdir unit_type
+ (rule
+  (targets unit_type.t.exe)
+  (deps UnitType.vo unit_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unit_type.t.exe unit_type.cpp unit_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps unit_type.t.exe)
+  (action (run ./unit_type.t.exe))))
+
+(subdir add_one
+ (rule
+  (targets add_one.t.exe)
+  (deps AddOne.vo add_one.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} add_one.t.exe add_one.cpp add_one.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps add_one.t.exe)
+  (action (run ./add_one.t.exe))))
+
+(subdir args
+ (rule
+  (targets args.t.exe)
+  (deps Args.vo args.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} args.t.exe args.cpp args.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps args.t.exe)
+  (action (run ./args.t.exe))))
