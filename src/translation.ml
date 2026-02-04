@@ -591,6 +591,42 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   Scustom_case (typ, t, temps, gen_cases (Array.to_list pv), cmatch)
 
 and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
+| MLletin (_, _, MLfix (x, ids, funs), b) ->
+  (* Special case for let-fix: the let binding name is the fix function name *)
+  (* Resolve unresolved metas in fix function types to Tvars using mgu. *)
+  let next_tvar = ref 1 in
+  let rec resolve_metas = function
+    | Miniml.Tmeta ({ contents = None } as m) ->
+        let idx = !next_tvar in next_tvar := idx + 1;
+        try_mgu (Miniml.Tmeta m) (Miniml.Tvar idx)
+    | Miniml.Tmeta { contents = Some t } -> resolve_metas t
+    | Miniml.Tarr (t1, t2) -> resolve_metas t1; resolve_metas t2
+    | Miniml.Tglob (_, args, _) -> List.iter resolve_metas args
+    | _ -> () in
+  Array.iter (fun (_, ty) -> resolve_metas ty) ids;
+  let funs_compiled = Array.to_list (Array.map2 (gen_fix env) ids funs) in
+  let ids_list = Array.to_list ids in
+  let tvars = get_current_type_vars () in
+  (* For std::function declarations, if return type is an unnamed Tvar, use void as placeholder. *)
+  let fix_func_type ty =
+    match ty with
+    | Minicpp.Tfun (params, Minicpp.Tvar (_, None)) ->
+        Minicpp.Tfun (params, Minicpp.Tvoid)
+    | _ -> ty
+  in
+  let decls = List.map (fun (id, ty) ->
+    Sdecl (id, fix_func_type (convert_ml_type_to_cpp_type env [] tvars ty))) ids_list in
+  let ret_ty ty = (match convert_ml_type_to_cpp_type env [] tvars ty with
+    | Tfun (_,t) ->
+        (match t with
+        | Minicpp.Tvar (_, None) -> None
+        | _ -> Some t)
+    | _ -> None) in
+  let defs = List.map2 (fun (id, fty) (args, body) ->
+    Sasgn (id, None, CPPlambda (List.map (fun (id, ty) -> convert_ml_type_to_cpp_type env [] tvars ty, Some id) args, ret_ty fty, body))) ids_list funs_compiled in
+  (* Add the fix function names to the environment for the body *)
+  let _, env' = push_vars' ids_list env in
+  decls @ defs @ gen_stmts env' k b
 | MLletin (x, t, a, b) ->
   let x' = remove_prime_id (id_of_mlid x) in
   let _,env' = push_vars' [x', t] env in
@@ -640,6 +676,40 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
   let defs = List.map2 (fun (id, fty) (args, body) -> Sasgn (id, None, CPPlambda (List.map (fun (id, ty) -> convert_ml_type_to_cpp_type env [] tvars ty, Some id) args, ret_ty fty, body))) ids funs in
   let args = List.rev_map (gen_expr env) args in
   decls @ defs @ [k (CPPfun_call (CPPvar (fst (List.nth ids x)), args))]
+| MLfix (x, ids, funs) ->
+  (* Standalone fixpoint (not immediately applied) - e.g., in let binding *)
+  (* Resolve unresolved metas in fix function types to Tvars using mgu. *)
+  let next_tvar = ref 1 in
+  let rec resolve_metas = function
+    | Miniml.Tmeta ({ contents = None } as m) ->
+        let idx = !next_tvar in next_tvar := idx + 1;
+        try_mgu (Miniml.Tmeta m) (Miniml.Tvar idx)
+    | Miniml.Tmeta { contents = Some t } -> resolve_metas t
+    | Miniml.Tarr (t1, t2) -> resolve_metas t1; resolve_metas t2
+    | Miniml.Tglob (_, args, _) -> List.iter resolve_metas args
+    | _ -> () in
+  Array.iter (fun (_, ty) -> resolve_metas ty) ids;
+  let funs = Array.to_list (Array.map2 (gen_fix env) ids funs) in
+  let ids = Array.to_list ids in
+  let tvars = get_current_type_vars () in
+  (* For std::function declarations, if return type is an unnamed Tvar, use void as placeholder. *)
+  let fix_func_type ty =
+    match ty with
+    | Minicpp.Tfun (params, Minicpp.Tvar (_, None)) ->
+        Minicpp.Tfun (params, Minicpp.Tvoid)
+    | _ -> ty
+  in
+  let decls = List.map (fun (id, ty) ->
+    Sdecl (id, fix_func_type (convert_ml_type_to_cpp_type env [] tvars ty))) ids in
+  let ret_ty ty = (match convert_ml_type_to_cpp_type env [] tvars ty with
+    | Tfun (_,t) ->
+        (match t with
+        | Minicpp.Tvar (_, None) -> None
+        | _ -> Some t)
+    | _ -> None) in
+  let defs = List.map2 (fun (id, fty) (args, body) -> Sasgn (id, None, CPPlambda (List.map (fun (id, ty) -> convert_ml_type_to_cpp_type env [] tvars ty, Some id) args, ret_ty fty, body))) ids funs in
+  (* Return the fix function itself (for use in let bindings etc.) *)
+  decls @ defs @ [k (CPPvar (fst (List.nth ids x)))]
 (* | MLapp (MLglob (h, _), a1 :: a2 :: l) when is_hoist h ->
   gen_stmts env k (MLapp (a1, a2::[])) *)
 | MLapp (MLglob (r, bind_tys), a1 :: a2 :: l) when is_bind r ->
@@ -1408,16 +1478,11 @@ let gen_ind_header_v2 vars name cnames tys method_candidates =
   if Array.length cnames = 0 then
     (* For empty types like `Inductive empty : Type := .`, generate:
        struct empty {
-       public:
-         struct ctor {
-           ctor() = delete;
-         };
+         empty() = delete;
        };
        This type cannot be constructed, matching the semantics of empty types. *)
-    let ctor_struct_fields = [(Fdeleted_ctor, VPublic)] in
-    let ctor_struct = (Fnested_struct (Id.of_string "ctor", ctor_struct_fields), VPublic) in
     let method_fields = List.map (gen_single_method name vars) method_candidates in
-    add_templates (Dstruct (name, [ctor_struct] @ method_fields))
+    add_templates (Dstruct (name, [(Fdeleted_ctor, VPublic)] @ method_fields))
   else
 
   (* The main struct type: std::shared_ptr<Tree> or std::shared_ptr<Tree<A>> *)

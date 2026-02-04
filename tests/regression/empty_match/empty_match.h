@@ -17,9 +17,7 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct EmptyMatch {
   struct empty {
-    struct ctor {
-      ctor() = delete;
-    };
+    empty() = delete;
   };
 
   template <typename T1>

@@ -154,17 +154,6 @@
   (deps vec.t.exe)
   (action (run ./vec.t.exe))))
 
-(subdir anon_fixpoint
- (rule
-  (targets anon_fixpoint.t.exe)
-  (deps AnonFixpoint.vo anon_fixpoint.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} anon_fixpoint.t.exe anon_fixpoint.cpp anon_fixpoint.t.cpp)))
- (rule
-  (alias runtest)
-  (deps anon_fixpoint.t.exe)
-  (action (run ./anon_fixpoint.t.exe))))
-
 (subdir comparison
  (rule
   (targets comparison.t.exe)
