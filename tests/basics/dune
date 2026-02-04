@@ -242,3 +242,14 @@
   (alias runtest)
   (deps zip.t.exe)
   (action (run ./zip.t.exe))))
+
+(subdir eval_expr
+ (rule
+  (targets eval_expr.t.exe)
+  (deps EvalExpr.vo eval_expr.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eval_expr.t.exe eval_expr.cpp eval_expr.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps eval_expr.t.exe)
+  (action (run ./eval_expr.t.exe))))

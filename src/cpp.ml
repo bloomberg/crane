@@ -107,6 +107,21 @@ let register_method (func_ref : GlobRef.t) (epon_ref : GlobRef.t) (this_pos : in
 let is_registered_method (func_ref : GlobRef.t) : (GlobRef.t * int) option =
   Hashtbl.find_opt global_method_registry func_ref
 
+(* Registry of methods that return std::any (from indexed inductives).
+   When a method's return type is erased to std::any due to GADT indexing,
+   we need to wrap calls with any_cast. Regular polymorphic methods (like fst)
+   don't need this - their type variables are template parameters.
+
+   This is separate from the method registry because not all methods of
+   inductive types return std::any - only those with index-dependent returns. *)
+let methods_returning_any : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 100
+
+let register_method_returns_any (func_ref : GlobRef.t) =
+  Hashtbl.replace methods_returning_any func_ref ()
+
+let method_returns_any (func_ref : GlobRef.t) : bool =
+  Hashtbl.mem methods_returning_any func_ref
+
 (* Global registry of eponymous records.
    When a module M contains a record with the same name (e.g., module CHT with record CHT),
    the record fields are merged directly into the module struct. This avoids C++ name
@@ -788,7 +803,7 @@ let rec pp_cpp_type par vl t =
     (fun prev curr -> match curr with
                       | CCstring s -> prev @ (parse_numbered_args "t" (fun i -> CCty_arg i) s)
                       | _ -> prev @ [curr]) [] cmds in
-    pp_custom (Pp.string_of_ppcmds (GlobRef.print r) ^ " := " ^ s) (empty_env ()) None None tys [] args vl cmds
+    pp_custom (Pp.string_of_ppcmds (GlobRef.print r) ^ " := " ^ s) (empty_env ()) None None tys [] args [] vl cmds
     | Tglob (r,[],_) ->
       (* Use pp_inductive_type_name for inductives to get Wrapper::lowercase pattern *)
       let type_name = pp_inductive_type_name r in
@@ -878,7 +893,7 @@ and pp_cpp_expr env args t =
   | CPPglob (x, tys) when is_inline_custom x ->
     let custom = find_custom x in
     let cmds = parse_numbered_args "t" (fun i -> CCty_arg i) custom in
-    pp_custom (Pp.string_of_ppcmds (GlobRef.print x) ^ " := " ^ custom) env None None tys [] [] [] cmds
+    pp_custom (Pp.string_of_ppcmds (GlobRef.print x) ^ " := " ^ custom) env None None tys [] [] [] [] cmds
   | CPPglob (x, _tys) when lookup_method_this_pos x <> None ->
     (* A bare reference to a method on the same struct (eta-reduced from \self. method self).
        Generate this->method() - a call to the method via this, not a function pointer. *)
@@ -971,7 +986,24 @@ and pp_cpp_expr env args t =
     (fun prev curr -> match curr with
                       | CCstring s -> prev @ (parse_numbered_args "t" (fun i -> CCty_arg i) s)
                       | _ -> prev @ [curr]) [] cmds in
-    pp_custom (Pp.string_of_ppcmds (GlobRef.print n) ^ " := " ^ s) env None None tys [] (List.rev ts) [] cmds
+    (* Compute expected argument types from the function's ML type *)
+    let arg_types =
+      try
+        let ml_ty = Table.find_type n in
+        (* Extract argument types from the ML function type *)
+        let rec extract_arg_types = function
+          | Miniml.Tarr (t1, t2) ->
+            (* Don't include dummy types (like type class evidence) *)
+            if Mlutil.isTdummy t1 then extract_arg_types t2
+            else t1 :: extract_arg_types t2
+          | _ -> []
+        in
+        let ml_arg_types = extract_arg_types ml_ty in
+        (* Convert ML types to C++ types *)
+        List.map (Translation.convert_ml_type_to_cpp_type env [] []) ml_arg_types
+      with _ -> []
+    in
+    pp_custom (Pp.string_of_ppcmds (GlobRef.print n) ^ " := " ^ s) env None None tys [] (List.rev ts) arg_types [] cmds
   | CPPfun_call (CPPglob (n, _tys), ts) when lookup_method_this_pos n <> None ->
     (* Transform function call to method call: f(a0, a1, ...) -> a[this_pos]->f(other_args)
        Handles both local method_candidates and cross-module registered methods. *)
@@ -1137,13 +1169,53 @@ and pp_cpp_stmt env args = function
                       | _ -> prev @ [curr]) [] cmds in
   let cmds = helper2 "b" "a" (fun i j -> CCbr_var (i, j)) cmds in
   let cmds = helper2 "b" "t" (fun i j -> CCbr_var_ty (i, j)) cmds in
-  pp_custom ("custom match for " ^ (Pp.string_of_ppcmds (pp_cpp_type false [] typ)) ^ " := " ^ cmatch) env (Some typ) (Some t) tyargs cases [] [] cmds
+  pp_custom ("custom match for " ^ (Pp.string_of_ppcmds (pp_cpp_type false [] typ)) ^ " := " ^ cmatch) env (Some typ) (Some t) tyargs cases [] [] [] cmds
 
-and pp_custom custom env typ t tyargs cases args vl cmds =
+(* Check if a C++ type is concrete (can be used in any_cast).
+   Type variables and unknown types are not concrete - we can't cast to them. *)
+and is_concrete_cpp_type = function
+  | Tvar _ -> false  (* Type variables - can't cast to these *)
+  | Tunknown | Ttodo | Tany -> false
+  | Tmod (_, inner) -> is_concrete_cpp_type inner
+  | _ -> true
+
+(* Check if a C++ expression is a method call that returns std::any.
+   Returns true for methods of indexed inductives (GADTs) whose return type is erased.
+
+   Method calls can appear as either:
+   1. CPPmethod_call - explicit method call syntax (obj->method(args))
+   2. CPPfun_call with a registered method - these are transformed to method call
+      syntax at print time, but in the AST they're still function calls
+
+   IMPORTANT: We only return true for methods registered as returning std::any.
+   These are methods of indexed inductives (GADTs). Regular polymorphic methods
+   (like fst) have type variables that become template parameters, not std::any. *)
+and expr_is_any_returning_method = function
+  | CPPmethod_call (CPPglob (n, _), _, _) -> method_returns_any n
+  | CPPfun_call (CPPglob (n, _), _) when lookup_method_this_pos n <> None -> method_returns_any n
+  | _ -> false
+
+(* Wrap an expression with any_cast if needed.
+   If the expression is a method call on an indexed inductive (GADT) that returns std::any,
+   and the expected type is known and concrete, wrap with any_cast to extract the value.
+   This is needed because indexed inductives have type-erased return types in C++. *)
+and wrap_any_cast_if_needed expr expr_printed expected_ty vl =
+  if expr_is_any_returning_method expr && is_concrete_cpp_type expected_ty then
+    let std_prefix = if Table.std_lib () = "BDE" then "bsl" else "std" in
+    str std_prefix ++ str "::any_cast<" ++ pp_cpp_type false vl expected_ty ++ str ">(" ++ expr_printed ++ str ")"
+  else
+    expr_printed
+
+and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
   let pp cmd = match cmd with
     | CCstring s -> str s
     | CCscrut ->(match t with
-        | Some t -> pp_cpp_expr env [] t
+        | Some t_expr ->
+          let t_printed = pp_cpp_expr env [] t_expr in
+          (* Wrap scrutinee with any_cast if it's a method call returning std::any *)
+          (match typ with
+           | Some expected_ty -> wrap_any_cast_if_needed t_expr t_printed expected_ty vl
+           | None -> t_printed)
         | None -> assert false)
     | CCty ->(match typ with
         | Some typ -> pp_cpp_type false vl typ
@@ -1164,7 +1236,13 @@ and pp_custom custom env typ t tyargs cases args vl cmds =
       let (_,ty) = List.nth ids j in
       pp_cpp_type false vl ty
       with Failure _ -> print_endline "Error: custom inlined syntax referencing an unbound case branch type argument in"; print_endline custom; assert false)
-    | CCarg i -> (try pp_cpp_expr env [] (List.nth args i)
+    | CCarg i -> (try
+        let arg_expr = List.nth args i in
+        let arg = pp_cpp_expr env [] arg_expr in
+        (* Wrap with any_cast if this is a method call returning std::any *)
+        (match List.nth_opt arg_types i with
+         | Some expected_ty -> wrap_any_cast_if_needed arg_expr arg expected_ty vl
+         | None -> arg)
       with Failure _ -> print_endline "Error: custom inlined syntax referencing an unbound term argument in"; print_endline custom; assert false) in
   List.fold_left (fun prev c -> prev ++ pp c) (mt ()) cmds
 
@@ -1582,13 +1660,32 @@ let pp_cpp_ind_header kn ind =
             module_type_aliases := r :: !module_type_aliases
         | _ -> ()
       ) !current_structure_decls;
-      (* Check if a type references any module-level type alias *)
-      let rec refs_module_alias = function
+      (* Collect all inductives that come AFTER ind_ref in declaration order.
+         Methods that reference these would cause forward declaration issues since
+         the method body pattern-matches on variants that aren't defined yet. *)
+      let forward_inductives = ref [] in
+      let seen_current = ref false in
+      List.iter (fun (_l, se) ->
+        match se with
+        | SEdecl (Dind (fwd_kn, fwd_ind)) ->
+          Array.iteri (fun j _p ->
+            let fwd_ref = GlobRef.IndRef (fwd_kn, j) in
+            if Environ.QGlobRef.equal Environ.empty_env fwd_ref ind_ref then
+              seen_current := true
+            else if !seen_current then
+              forward_inductives := fwd_ref :: !forward_inductives
+          ) fwd_ind.ind_packets
+        | _ -> ()
+      ) !current_structure_decls;
+      (* Check if a type references any of the excluded references (type aliases or forward inductives) *)
+      let excluded_refs = !module_type_aliases @ !forward_inductives in
+      let rec refs_excluded ty =
+        match ty with
         | Miniml.Tglob (r, args, _) ->
-            List.exists (Environ.QGlobRef.equal Environ.empty_env r) !module_type_aliases ||
-            List.exists refs_module_alias args
-        | Miniml.Tarr (t1, t2) -> refs_module_alias t1 || refs_module_alias t2
-        | Miniml.Tmeta {contents = Some t} -> refs_module_alias t
+            List.exists (Environ.QGlobRef.equal Environ.empty_env r) excluded_refs ||
+            List.exists refs_excluded args
+        | Miniml.Tarr (t1, t2) -> refs_excluded t1 || refs_excluded t2
+        | Miniml.Tmeta {contents = Some t} -> refs_excluded t
         | _ -> false
       in
       (* Find the position of the first argument matching the inductive type *)
@@ -1604,8 +1701,8 @@ let pp_cpp_ind_header kn ind =
       List.iter (fun (_l, se) ->
         match se with
         | SEdecl (Dterm (r, body, ty)) ->
-          (* Skip if function signature references a module-level type alias *)
-          if same_module r && not (refs_module_alias ty) then
+          (* Skip if function signature references an excluded type (alias or forward inductive) *)
+          if same_module r && not (refs_excluded ty) then
             (match find_ind_arg_pos 0 ty with
             | Some pos ->
               (* Note: We allow functions with extra type variables beyond the inductive's.
@@ -1616,8 +1713,8 @@ let pp_cpp_ind_header kn ind =
         | SEdecl (Dfix (rv, defs, typs)) ->
           Array.iteri (fun i r ->
             let ty = typs.(i) in
-            (* Skip if function signature references a module-level type alias *)
-            if same_module r && not (refs_module_alias ty) then begin
+            (* Skip if function signature references an excluded type (alias or forward inductive) *)
+            if same_module r && not (refs_excluded ty) then begin
               let body = defs.(i) in
               match find_ind_arg_pos 0 ty with
               | Some pos ->
@@ -1692,6 +1789,22 @@ let pp_cpp_ind_header kn ind =
           let param_sign = List.firstn ind.ind_nparams p.ip_sign in
           let num_param_vars = List.length (List.filter (fun x -> x == Miniml.Keep) param_sign) in
           let param_vars = List.firstn num_param_vars p.ip_vars in
+          (* Register methods that return std::any (for indexed inductives).
+             A method returns std::any if its ML return type becomes an unnamed Tvar
+             (indicating type erasure) after C++ conversion. *)
+          List.iter (fun (r, _body, ty, _pos) ->
+            (* Get return type from ML type *)
+            let rec get_return_type = function
+              | Miniml.Tarr (_, t2) -> get_return_type t2
+              | ret -> ret
+            in
+            let ret_ml = get_return_type ty in
+            (* Convert to C++ type with param_vars as template params *)
+            let ret_cpp = Translation.convert_ml_type_to_cpp_type (empty_env ()) [] param_vars ret_ml in
+            (* Check if the return type is erased (Tany or unnamed Tvar) *)
+            if Translation.type_is_erased ret_cpp then
+              register_method_returns_any r
+          ) methods;
           let decl = gen_ind_header_v2 param_vars names.(i) cnames.(i) p.ip_types (List.rev methods) in
           (* DESIGN: Contextual wrapping for inductive definitions
              - If inside a struct/module: generate the inductive directly (no namespace wrapper)
