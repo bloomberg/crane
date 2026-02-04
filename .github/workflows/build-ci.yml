@@ -30,7 +30,7 @@ jobs:
           ocaml_version: ${{ matrix.ocaml_version }}
           custom_script: |
             startGroup "Fix permissions"
-              sudo chown -R coq:coq .
+              sudo chown -R $(id -u):$(id -g) .
             endGroup
             startGroup "Install clang-19 for C++23 support"
               sudo apt-get update
