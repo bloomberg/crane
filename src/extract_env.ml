@@ -723,6 +723,22 @@ let print_structure_to_file (fn,si,mo) dry struc =
        format_file_inplace si;
        info_file si)
     (if dry then None else si);
+  (* When extracting to the response window (no files), also print the
+     signature part so users can see both .h and .cpp outputs. *)
+  if not dry && fn = None && si = None then begin
+    let ft = formatter false None in
+    begin try
+      pp_with ft (fnl2 () ++ str "/* Signature (.h) */" ++ fnl ());
+      set_phase Intf;
+      pp_with ft (spec_header ());
+      pp_with ft (d.sig_preamble mo comment opened unsafe_needs);
+      pp_with ft (d.pp_hstruct struc);
+      Format.pp_print_flush ft ();
+    with reraise ->
+      Format.pp_print_flush ft ();
+      raise reraise
+    end
+  end;
   (* Print the buffer content via Rocq standard formatter (ok with rocqide). *)
   if not (Int.equal (Buffer.length buf) 0) then begin
     let formatted_output = format_buffer_to_string buf in
@@ -818,15 +834,11 @@ let simple_extraction ~opaque_access r =
   | [r],[] ->
       init false false;
       let struc = optimize_struct ([r],[]) (mono_environment ~opaque_access [r] []) in
-      let d = get_decl_in_structure r struc in
       warns ();
-      let flag =
-        if is_any_custom r then str "/* User defined extraction */" ++ fnl()
-        else mt ()
-      in
-      let ans = flag ++ print_one_decl struc (modpath_of_r r) d in
+      if is_any_custom r then
+        Feedback.msg_notice (str "/* User defined extraction */" ++ fnl());
+      print_structure_to_file (mono_filename None) false struc;
       reset ();
-      Feedback.msg_notice ans
   | _ -> assert false
 
 
