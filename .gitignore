@@ -55,3 +55,6 @@ infer-out
 /tests/*/*/corpus
 /tests/*/*/*.dSYM
 CLAUDE.md
+/docs
+/logs
+scripts/update_conversation_history.py

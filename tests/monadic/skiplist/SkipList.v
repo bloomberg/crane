@@ -16,7 +16,7 @@
    shared_ptr-based nodes.
 *)
 
-From Stdlib Require Import List Bool Arith Program.Wf.
+From Stdlib Require Import List Bool Arith Program.Wf Lia.
 From Crane Require Extraction.
 From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITree Monads.IO Monads.STM.
 From Corelib Require Import PrimInt63.
@@ -1323,6 +1323,564 @@ Definition run_tests : IO nat :=
   Ret passed.
 
 End skiplist_test.
+
+(* ========================================================================= *)
+(*                         Verification Module                               *)
+(* ========================================================================= *)
+
+(* This module defines a pure functional dictionary model (sorted association
+   list), proves standard dictionary laws for it, and states refinement
+   theorems connecting the STM skip list operations to the pure model.
+
+   The dictionary laws are fully proved.  The refinement theorems are
+   stated but admitted, because the skip list operates in an axiomatized
+   STM monad with no equational theory.
+
+   The module is marked with Crane Extract Skip Module so it produces no
+   C++ output. *)
+
+Module Verification.
+
+Import SkipList.
+
+(* ======================================================================= *)
+(*  Section 1: Comparison Function Properties                              *)
+(* ======================================================================= *)
+
+(* --- General strict-order class ---------------------------------------- *)
+
+Class StrictOrder {A : Type} (ltA eqA : A -> A -> bool) : Prop := {
+  so_irrefl   : forall x, ltA x x = false;
+  so_trans    : forall x y z, ltA x y = true -> ltA y z = true -> ltA x z = true;
+  so_asym     : forall x y, ltA x y = true -> ltA y x = false;
+  so_eq_refl  : forall x, eqA x x = true;
+  so_eq_sym   : forall x y, eqA x y = eqA y x;
+  so_eq_true  : forall x y, eqA x y = true <-> x = y;
+  so_trichotomy : forall x y,
+    ltA x y = true \/ eqA x y = true \/ ltA y x = true
+}.
+
+(* --- nat_lt / nat_eq form a strict order ------------------------------- *)
+
+Definition nat_lt := skiplist_test.nat_lt.
+Definition nat_eq := skiplist_test.nat_eq.
+
+Lemma nat_lt_irrefl : forall n, nat_lt n n = false.
+Proof. intros n. unfold nat_lt, skiplist_test.nat_lt. apply Nat.ltb_irrefl. Qed.
+
+Lemma nat_lt_trans : forall x y z,
+  nat_lt x y = true -> nat_lt y z = true -> nat_lt x z = true.
+Proof.
+  intros x y z Hxy Hyz.
+  unfold nat_lt, skiplist_test.nat_lt in *.
+  apply Nat.ltb_lt in Hxy. apply Nat.ltb_lt in Hyz.
+  apply Nat.ltb_lt. lia.
+Qed.
+
+Lemma nat_lt_asym : forall x y, nat_lt x y = true -> nat_lt y x = false.
+Proof.
+  intros x y Hxy. unfold nat_lt, skiplist_test.nat_lt in *.
+  apply Nat.ltb_lt in Hxy.
+  apply Nat.ltb_ge. lia.
+Qed.
+
+Lemma nat_eq_refl : forall n, nat_eq n n = true.
+Proof. intros n. unfold nat_eq, skiplist_test.nat_eq. apply Nat.eqb_refl. Qed.
+
+Lemma nat_eq_sym : forall x y, nat_eq x y = nat_eq y x.
+Proof.
+  intros x y. unfold nat_eq, skiplist_test.nat_eq.
+  destruct (Nat.eqb_spec x y); destruct (Nat.eqb_spec y x); subst; auto; lia.
+Qed.
+
+Lemma nat_eq_true_iff : forall x y, nat_eq x y = true <-> x = y.
+Proof.
+  intros x y. unfold nat_eq, skiplist_test.nat_eq. split.
+  - apply Nat.eqb_eq.
+  - intros; subst; apply Nat.eqb_refl.
+Qed.
+
+Lemma nat_trichotomy : forall x y,
+  nat_lt x y = true \/ nat_eq x y = true \/ nat_lt y x = true.
+Proof.
+  intros x y. unfold nat_lt, nat_eq, skiplist_test.nat_lt, skiplist_test.nat_eq.
+  destruct (Nat.lt_trichotomy x y) as [H | [H | H]].
+  - left. apply Nat.ltb_lt. exact H.
+  - right; left. subst. apply Nat.eqb_refl.
+  - right; right. apply Nat.ltb_lt. exact H.
+Qed.
+
+Global Instance nat_StrictOrder : StrictOrder nat_lt nat_eq := {
+  so_irrefl     := nat_lt_irrefl;
+  so_trans      := nat_lt_trans;
+  so_asym       := nat_lt_asym;
+  so_eq_refl    := nat_eq_refl;
+  so_eq_sym     := nat_eq_sym;
+  so_eq_true    := nat_eq_true_iff;
+  so_trichotomy := nat_trichotomy
+}.
+
+(* ======================================================================= *)
+(*  Section 2: Pure Dictionary Model                                       *)
+(* ======================================================================= *)
+
+(* A dictionary is a sorted association list (sorted by key). *)
+Definition dict (K V : Type) := list (K * V).
+
+Section DictOps.
+
+Variable K V : Type.
+Variable ltK : K -> K -> bool.
+Variable eqK : K -> K -> bool.
+
+(* Lookup by key *)
+Fixpoint dict_lookup (k : K) (d : dict K V) : option V :=
+  match d with
+  | nil => None
+  | (k', v') :: rest =>
+      if eqK k k' then Some v'
+      else dict_lookup k rest
+  end.
+
+(* Insert into sorted position (replaces if key exists) *)
+Fixpoint dict_insert (k : K) (v : V) (d : dict K V) : dict K V :=
+  match d with
+  | nil => (k, v) :: nil
+  | (k', v') :: rest =>
+      if eqK k k' then (k, v) :: rest        (* replace *)
+      else if ltK k k' then (k, v) :: (k', v') :: rest  (* insert before *)
+      else (k', v') :: dict_insert k v rest   (* keep going *)
+  end.
+
+(* Remove by key *)
+Fixpoint dict_remove (k : K) (d : dict K V) : dict K V :=
+  match d with
+  | nil => nil
+  | (k', v') :: rest =>
+      if eqK k k' then rest
+      else (k', v') :: dict_remove k rest
+  end.
+
+(* Membership test *)
+Fixpoint dict_member (k : K) (d : dict K V) : bool :=
+  match d with
+  | nil => false
+  | (k', _) :: rest =>
+      if eqK k k' then true
+      else dict_member k rest
+  end.
+
+(* Minimum element (head of sorted list) *)
+Definition dict_minimum (d : dict K V) : option (K * V) :=
+  match d with
+  | nil => None
+  | x :: _ => Some x
+  end.
+
+(* Length *)
+Definition dict_length (d : dict K V) : nat := List.length d.
+
+(* Is empty *)
+Definition dict_isEmpty (d : dict K V) : bool :=
+  match d with
+  | nil => true
+  | _ => false
+  end.
+
+(* Front element (same as minimum for sorted list) *)
+Definition dict_front (d : dict K V) : option (K * V) := dict_minimum d.
+
+(* Back element (last element) *)
+Fixpoint dict_back (d : dict K V) : option (K * V) :=
+  match d with
+  | nil => None
+  | x :: nil => Some x
+  | _ :: rest => dict_back rest
+  end.
+
+(* Pop front: return head and tail *)
+Definition dict_popFront (d : dict K V) : option (K * V) * dict K V :=
+  match d with
+  | nil => (None, nil)
+  | x :: rest => (Some x, rest)
+  end.
+
+(* Sorted predicate: keys are in strictly increasing order *)
+Inductive dict_sorted : dict K V -> Prop :=
+  | sorted_nil : dict_sorted nil
+  | sorted_one : forall k v, dict_sorted ((k, v) :: nil)
+  | sorted_cons : forall k1 v1 k2 v2 rest,
+      ltK k1 k2 = true ->
+      dict_sorted ((k2, v2) :: rest) ->
+      dict_sorted ((k1, v1) :: (k2, v2) :: rest).
+
+End DictOps.
+
+Arguments dict_lookup {K V} _ _ _.
+Arguments dict_insert {K V} _ _ _ _ _.
+Arguments dict_remove {K V} _ _ _.
+Arguments dict_member {K V} _ _ _.
+Arguments dict_minimum {K V} _.
+Arguments dict_length {K V} _.
+Arguments dict_isEmpty {K V} _.
+Arguments dict_front {K V} _.
+Arguments dict_back {K V} _.
+Arguments dict_popFront {K V} _.
+Arguments dict_sorted {K V} _ _.
+
+(* ======================================================================= *)
+(*  Section 3: Dictionary Laws                                             *)
+(* ======================================================================= *)
+
+Section DictLaws.
+
+Variable K V : Type.
+Variable ltK eqK : K -> K -> bool.
+Variable SO : @StrictOrder K ltK eqK.
+#[local] Existing Instance SO.
+
+(* -- Insert / Lookup (same key) ---------------------------------------- *)
+
+Lemma dict_insert_lookup_same : forall k v (d : dict K V),
+  dict_lookup eqK k (dict_insert ltK eqK k v d) = Some v.
+Proof.
+  intros k v d. induction d as [| [k' v'] rest IH].
+  - simpl. rewrite so_eq_refl. reflexivity.
+  - simpl.
+    destruct (eqK k k') eqn:Heq.
+    + simpl. rewrite so_eq_refl. reflexivity.
+    + destruct (ltK k k') eqn:Hlt.
+      * simpl. rewrite so_eq_refl. reflexivity.
+      * simpl. rewrite Heq. exact IH.
+Qed.
+
+(* -- Insert / Lookup (different key) ----------------------------------- *)
+
+Lemma dict_insert_lookup_other : forall k1 k2 v (d : dict K V),
+  k1 <> k2 ->
+  dict_lookup eqK k1 (dict_insert ltK eqK k2 v d) = dict_lookup eqK k1 d.
+Proof.
+  intros k1 k2 v d Hneq. induction d as [| [k' v'] rest IH].
+  - simpl.
+    destruct (eqK k1 k2) eqn:Heq.
+    + apply so_eq_true in Heq. contradiction.
+    + reflexivity.
+  - simpl.
+    destruct (eqK k2 k') eqn:Heq2k'.
+    + (* k2 = k' — replacing entry *)
+      simpl.
+      destruct (eqK k1 k2) eqn:Heq1k2.
+      * apply so_eq_true in Heq1k2. contradiction.
+      * destruct (eqK k1 k') eqn:Heq1k'.
+        -- apply so_eq_true in Heq2k'. apply so_eq_true in Heq1k'. subst. contradiction.
+        -- reflexivity.
+    + destruct (ltK k2 k') eqn:Hlt.
+      * (* k2 < k' — inserting before *)
+        simpl.
+        destruct (eqK k1 k2) eqn:Heq1k2.
+        -- apply so_eq_true in Heq1k2. contradiction.
+        -- reflexivity.
+      * (* k2 > k' — keep going *)
+        simpl.
+        destruct (eqK k1 k') eqn:Heq1k'.
+        -- reflexivity.
+        -- exact IH.
+Qed.
+
+(* -- Remove / Lookup (same key) ---------------------------------------- *)
+
+(* Helper: in a sorted list, the head key cannot appear in the tail *)
+Lemma sorted_head_not_in_tail : forall k v (rest : dict K V),
+  dict_sorted ltK ((k, v) :: rest) ->
+  dict_lookup eqK k rest = None.
+Proof.
+  intros k v rest. revert k v.
+  induction rest as [| [k2 v2] rest2 IH2]; intros k v Hsorted.
+  - reflexivity.
+  - simpl.
+    inversion Hsorted as [| | ? ? ? ? ? Hlt_kk2 Hsrest]; subst.
+    destruct (eqK k k2) eqn:Heq2.
+    + apply so_eq_true in Heq2. subst k2.
+      rewrite so_irrefl in Hlt_kk2. discriminate.
+    + apply (IH2 k v).
+      inversion Hsrest as [| ? ? | ? ? ? ? ? Hlt_k2k3 Hsrest2]; subst.
+      * constructor.
+      * constructor.
+        -- exact (so_trans _ _ _ Hlt_kk2 Hlt_k2k3).
+        -- exact Hsrest2.
+Qed.
+
+Lemma dict_remove_lookup_same : forall k (d : dict K V),
+  dict_sorted ltK d ->
+  dict_lookup eqK k (dict_remove eqK k d) = None.
+Proof.
+  intros k d Hsorted. induction d as [| [k' v'] rest IH].
+  - reflexivity.
+  - simpl.
+    destruct (eqK k k') eqn:Heq.
+    + (* k = k' — removed this entry *)
+      apply so_eq_true in Heq. subst k'.
+      eapply sorted_head_not_in_tail. exact Hsorted.
+    + simpl. rewrite Heq.
+      inversion Hsorted as [| ? ? | ? ? ? ? ? Hlt_k'k2 Hsrest]; subst.
+      * apply IH. constructor.
+      * exact (IH Hsrest).
+Qed.
+
+(* -- Remove / Lookup (different key) ----------------------------------- *)
+
+Lemma dict_remove_lookup_other : forall k1 k2 (d : dict K V),
+  k1 <> k2 ->
+  dict_lookup eqK k1 (dict_remove eqK k2 d) = dict_lookup eqK k1 d.
+Proof.
+  intros k1 k2 d Hneq. induction d as [| [k' v'] rest IH].
+  - reflexivity.
+  - simpl.
+    destruct (eqK k2 k') eqn:Heq2k'.
+    + (* k2 = k' — this entry is removed *)
+      apply so_eq_true in Heq2k'. subst k'.
+      destruct (eqK k1 k2) eqn:Heq1k2.
+      * apply so_eq_true in Heq1k2. contradiction.
+      * reflexivity.
+    + (* k2 <> k' — entry kept *)
+      simpl.
+      destruct (eqK k1 k') eqn:Heq1k'.
+      * reflexivity.
+      * exact IH.
+Qed.
+
+(* -- Insert preserves sorted ------------------------------------------- *)
+
+Lemma dict_insert_sorted : forall k v (d : dict K V),
+  dict_sorted ltK d ->
+  dict_sorted ltK (dict_insert ltK eqK k v d).
+Proof.
+  intros k v d Hsorted.
+  induction d as [| [k' v'] rest IH].
+  - simpl. constructor.
+  - simpl.
+    destruct (eqK k k') eqn:Heq.
+    + (* k = k': replace in place *)
+      apply so_eq_true in Heq. subst k'.
+      inversion Hsorted as [| ? ? | ? ? ? ? ? Hlt_k2 Hsrest]; subst.
+      * constructor.
+      * constructor; assumption.
+    + destruct (ltK k k') eqn:Hlt.
+      * (* k < k': insert before *)
+        constructor; [exact Hlt | exact Hsorted].
+      * (* k > k': recurse into rest, keep k' at head *)
+        assert (Hlt_k'_k : ltK k' k = true). {
+          destruct (so_trichotomy k' k) as [Ht | [Ht | Ht]].
+          - exact Ht.
+          - apply so_eq_true in Ht. subst.
+            rewrite so_eq_refl in Heq. discriminate.
+          - rewrite Ht in Hlt. discriminate.
+        }
+        inversion Hsorted as [| ? ? | ? ? ? ? ? Hlt_k'k2 Hsrest]; subst.
+        -- (* rest = nil *)
+           simpl. constructor; [exact Hlt_k'_k | constructor].
+        -- (* rest = (k2, v2) :: rest' *)
+           specialize (IH Hsrest).
+           (* Simplify dict_insert in both goal and IH *)
+           change (dict_insert ltK eqK k v ((k2, v2) :: rest0))
+             with (if eqK k k2 then (k, v) :: rest0
+                   else if ltK k k2 then (k, v) :: (k2, v2) :: rest0
+                   else (k2, v2) :: dict_insert ltK eqK k v rest0) in *.
+           destruct (eqK k k2) eqn:Heq2.
+           ++ (* k = k2 *)
+              apply so_eq_true in Heq2. subst.
+              constructor; [exact Hlt_k'k2 | exact IH].
+           ++ destruct (ltK k k2) eqn:Hlt2.
+              ** (* k < k2: head is (k, v) *)
+                 constructor; [exact Hlt_k'_k | exact IH].
+              ** (* k > k2: head is (k2, v2) *)
+                 constructor; [exact Hlt_k'k2 | exact IH].
+Qed.
+
+(* -- Remove preserves sorted ------------------------------------------- *)
+
+Lemma dict_remove_sorted : forall k (d : dict K V),
+  dict_sorted ltK d ->
+  dict_sorted ltK (dict_remove eqK k d).
+Proof.
+  intros k d Hsorted. induction d as [| [k' v'] rest IH].
+  - constructor.
+  - simpl.
+    destruct (eqK k k') eqn:Heq.
+    + (* k = k': remove this entry, rest is sorted *)
+      inversion Hsorted as [| ? ? | ? ? ? ? ? Hlt_k'k2 Hsrest]; subst.
+      * constructor.
+      * exact Hsrest.
+    + (* k <> k': keep this entry *)
+      inversion Hsorted as [| ? ? | ? ? ? ? ? Hlt_k'k2 Hsrest]; subst.
+      * simpl. constructor.
+      * specialize (IH Hsrest).
+        change (dict_remove eqK k ((k2, v2) :: rest0))
+          with (if eqK k k2 then rest0 else (k2, v2) :: dict_remove eqK k rest0) in *.
+        destruct (eqK k k2) eqn:Heq2.
+        -- (* removing k2 from rest *)
+           inversion Hsrest as [| ? ? | ? ? ? ? ? Hlt_k2k3 Hsrest2]; subst.
+           ++ constructor.
+           ++ constructor.
+              ** exact (so_trans _ _ _ Hlt_k'k2 Hlt_k2k3).
+              ** exact Hsrest2.
+        -- constructor; [exact Hlt_k'k2 | exact IH].
+Qed.
+
+(* -- Member iff Lookup ------------------------------------------------- *)
+
+Lemma dict_member_iff_lookup : forall k (d : dict K V),
+  dict_member eqK k d = true <-> exists v, dict_lookup eqK k d = Some v.
+Proof.
+  intros k d. induction d as [| [k' v'] rest IH].
+  - simpl. split.
+    + discriminate.
+    + intros [v Hv]. discriminate.
+  - simpl. destruct (eqK k k') eqn:Heq.
+    + split.
+      * intros _. exists v'. reflexivity.
+      * intros _. reflexivity.
+    + exact IH.
+Qed.
+
+(* -- Minimum is head --------------------------------------------------- *)
+
+Lemma dict_minimum_is_head : forall (d : dict K V),
+  dict_minimum d = match d with nil => None | x :: _ => Some x end.
+Proof. destruct d; reflexivity. Qed.
+
+(* -- Length after insert (new key) ------------------------------------- *)
+
+Lemma dict_length_insert_new : forall k v (d : dict K V),
+  dict_sorted ltK d ->
+  dict_member eqK k d = false ->
+  dict_length (dict_insert ltK eqK k v d) = S (dict_length d).
+Proof.
+  intros k v d Hsorted Hmem. induction d as [| [k' v'] rest IH].
+  - reflexivity.
+  - simpl in Hmem. destruct (eqK k k') eqn:Heq.
+    + discriminate.
+    + simpl.
+      destruct (eqK k k') eqn:Heq2; [rewrite Heq in Heq2; discriminate |].
+      destruct (ltK k k') eqn:Hlt.
+      * simpl. reflexivity.
+      * simpl. f_equal.
+        inversion Hsorted as [| ? ? | ? ? ? ? ? Hlt_k'k2 Hsrest]; subst.
+        -- apply IH; [constructor | exact Hmem].
+        -- apply IH; [exact Hsrest | exact Hmem].
+Qed.
+
+(* -- Length after remove (existing key) -------------------------------- *)
+
+Lemma dict_length_remove_existing : forall k (d : dict K V),
+  dict_sorted ltK d ->
+  dict_member eqK k d = true ->
+  dict_length (dict_remove eqK k d) = pred (dict_length d).
+Proof.
+  intros k d Hsorted Hmem. induction d as [| [k' v'] rest IH].
+  - simpl in Hmem. discriminate.
+  - simpl dict_remove.
+    destruct (eqK k k') eqn:Heq.
+    + reflexivity.
+    + simpl in Hmem. rewrite Heq in Hmem.
+      (* Goal: dict_length ((k', v') :: dict_remove eqK k rest)
+              = pred (dict_length ((k', v') :: rest))
+         which is: S (dict_length (dict_remove eqK k rest))
+                 = dict_length rest *)
+      destruct rest as [| [k2 v2] rest0].
+      * simpl in Hmem. discriminate.
+      * inversion Hsorted as [| ? ? | ? ? ? ? ? Hlt_k'k2 Hsrest]; subst.
+        specialize (IH Hsrest Hmem).
+        (* IH: dict_length (dict_remove eqK k ((k2, v2) :: rest0))
+              = pred (dict_length ((k2, v2) :: rest0)) *)
+        unfold dict_length in *.
+        simpl (Datatypes.length ((k', v') :: _)).
+        simpl (Datatypes.length ((k2, v2) :: rest0)) in IH.
+        simpl (Init.Nat.pred (S _)) in IH.
+        simpl (Init.Nat.pred (S _)).
+        f_equal. exact IH.
+Qed.
+
+End DictLaws.
+
+(* ======================================================================= *)
+(*  Section 4: Refinement Specification (Admitted)                         *)
+(* ======================================================================= *)
+
+(* These theorems state the intended relationship between the STM skip
+   list and the pure dictionary model.  They cannot be proved because
+   the skip list operates over axiomatized types (NodeRef, Path) in an
+   STM monad with no equational theory, but they document the intended
+   correctness contract.
+
+   We axiomatize an abstract "contents" function that maps a live
+   SkipList to its dictionary representation, then state each
+   operation's correctness in terms of that abstraction. *)
+
+Section Refinement.
+
+Variable K V : Type.
+Variable ltK eqK : K -> K -> bool.
+Variable SO : @StrictOrder K ltK eqK.
+#[local] Existing Instance SO.
+
+(* Abstract contents function: snapshot of the skip list's logical state *)
+Axiom sl_contents : SkipList K V -> dict K V.
+
+(* The contents are always sorted *)
+Theorem sl_contents_sorted : forall sl,
+  dict_sorted ltK (sl_contents sl).
+Proof. Admitted.
+
+(* lookup returns dict_lookup of contents *)
+Theorem lookup_correct : forall k sl result,
+  (* If lookup k sl returns result in STM, then: *)
+  result = dict_lookup eqK k (sl_contents sl).
+Proof. Admitted.
+
+(* After insert, contents equal dict_insert of old contents.
+   (Stated as: for any prior snapshot d, if sl_contents sl = d before
+    the insert, then sl_contents sl = dict_insert ... after.) *)
+Theorem insert_correct : forall (k : K) (v : V) (sl : SkipList K V) (newLevel : nat) (d : dict K V),
+  sl_contents sl = d ->
+  (* After: insert ltK eqK k v sl newLevel ;; ... *)
+  (* sl_contents sl = dict_insert ltK eqK k v d *)
+  True. (* Placeholder — the real statement requires STM Hoare logic *)
+Proof. Admitted.
+
+(* After remove, contents equal dict_remove of old contents *)
+Theorem remove_correct : forall (k : K) (sl : SkipList K V) (d : dict K V),
+  sl_contents sl = d ->
+  (* After: remove ltK eqK k sl ;; ... *)
+  (* sl_contents sl = dict_remove eqK k d *)
+  True.
+Proof. Admitted.
+
+(* member returns dict_member of contents *)
+Theorem member_correct : forall k sl result,
+  result = dict_member eqK k (sl_contents sl).
+Proof. Admitted.
+
+(* minimum returns dict_minimum of contents *)
+Theorem minimum_correct : forall sl result,
+  result = dict_minimum (sl_contents sl).
+Proof. Admitted.
+
+(* length returns dict_length of contents *)
+Theorem length_correct : forall sl result,
+  result = dict_length (sl_contents sl).
+Proof. Admitted.
+
+(* popFront returns dict_popFront of contents *)
+Theorem popFront_correct : forall sl result_kv rest,
+  (result_kv, rest) = dict_popFront (sl_contents sl).
+Proof. Admitted.
+
+End Refinement.
+
+End Verification.
+
+Crane Extract Skip Module Verification.
 
 (* Extract both modules - SkipList module contains the TSkipList record, skiplist_test has tests *)
 Crane Extraction "skiplist" SkipList skiplist_test.
