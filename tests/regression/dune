@@ -210,3 +210,25 @@
   (alias runtest)
   (deps pstring.t.exe)
   (action (run ./pstring.t.exe))))
+
+(subdir nested_tree
+ (rule
+  (targets nested_tree.t.exe)
+  (deps NestedTree.vo nested_tree.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_tree.t.exe nested_tree.cpp nested_tree.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_tree.t.exe)
+  (action (run ./nested_tree.t.exe))))
+
+(subdir polymorphic_helper
+ (rule
+  (targets polymorphic_helper.t.exe)
+  (deps PolymorphicHelper.vo polymorphic_helper.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} polymorphic_helper.t.exe polymorphic_helper.cpp polymorphic_helper.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps polymorphic_helper.t.exe)
+  (action (run ./polymorphic_helper.t.exe))))

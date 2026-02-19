@@ -47,6 +47,26 @@ let get_param_type_by_index (idx : int) : ml_type option =
   with Not_found -> None
 let clear_current_param_types () = current_param_types := []
 
+(* Track the current outer function name for generating lifted function names.
+   When an inner fixpoint needs lifting, its name becomes _<outer>_<fix>. *)
+let current_outer_function_name : string option ref = ref None
+
+(* Accumulate lifted declarations (inner fixpoints promoted to top-level functions).
+   These are collected during gen_stmts and emitted before the enclosing function. *)
+let pending_lifted_decls : cpp_decl list ref = ref []
+let add_lifted_decl (d : cpp_decl) = pending_lifted_decls := d :: !pending_lifted_decls
+let take_lifted_decls () = let ds = List.rev !pending_lifted_decls in pending_lifted_decls := []; ds
+
+(* Parallel type stack for the de Bruijn environment.
+   Tracks (Id.t * ml_type) for each variable pushed via push_vars',
+   in the same order as the env's db list (innermost first).
+   Used to look up ML types of free variables when lifting polymorphic let helpers. *)
+let env_types : (Id.t * ml_type) list ref = ref []
+let push_env_types (ids : (Id.t * ml_type) list) =
+  env_types := ids @ !env_types
+let get_env_type (i : int) : ml_type = snd (List.nth !env_types (pred i))
+let reset_env_types () = env_types := []
+
 let ml_type_is_void : ml_type -> bool = function
 | Tglob (r, _, _) -> is_void r
 | _ -> false
@@ -63,6 +83,141 @@ let rec collect_tvars acc = function
   | Miniml.Tglob (_, args, _) -> List.fold_left collect_tvars acc args
   | Miniml.Tmeta { contents = Some t } -> collect_tvars acc t
   | _ -> acc
+
+(* Collect all Tvar indices from an ML AST, using collect_tvars on embedded types. *)
+let rec collect_tvars_ast acc = function
+  | MLlam (_, ty, body) -> collect_tvars_ast (collect_tvars acc ty) body
+  | MLletin (_, ty, a, b) -> collect_tvars_ast (collect_tvars_ast (collect_tvars acc ty) a) b
+  | MLglob (_, tys) -> List.fold_left collect_tvars acc tys
+  | MLcons (ty, _, args) -> List.fold_left collect_tvars_ast (collect_tvars acc ty) args
+  | MLcase (ty, e, brs) ->
+      let acc = collect_tvars_ast (collect_tvars acc ty) e in
+      Array.fold_left (fun acc (ids, ty, _, body) ->
+        let acc = List.fold_left (fun acc (_, t) -> collect_tvars acc t) acc ids in
+        collect_tvars_ast (collect_tvars acc ty) body) acc brs
+  | MLfix (_, ids, funs, _) ->
+      let acc = Array.fold_left (fun acc (_, ty) -> collect_tvars acc ty) acc ids in
+      Array.fold_left collect_tvars_ast acc funs
+  | MLapp (f, args) -> List.fold_left collect_tvars_ast (collect_tvars_ast acc f) args
+  | MLmagic a -> collect_tvars_ast acc a
+  | MLparray (arr, def) -> collect_tvars_ast (Array.fold_left collect_tvars_ast acc arr) def
+  | MLtuple args -> List.fold_left collect_tvars_ast acc args
+  | MLrel _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> acc
+
+(* Resolve unresolved metas in an ML AST by walking its sub-types.
+   resolve_metas should be a function that resolves metas in a single ml_type. *)
+let rec resolve_metas_in_ast resolve_metas = function
+  | MLlam (_, ty, body) -> resolve_metas ty; resolve_metas_in_ast resolve_metas body
+  | MLletin (_, ty, a, b) -> resolve_metas ty; resolve_metas_in_ast resolve_metas a; resolve_metas_in_ast resolve_metas b
+  | MLglob (_, tys) -> List.iter resolve_metas tys
+  | MLcons (ty, _, args) -> resolve_metas ty; List.iter (resolve_metas_in_ast resolve_metas) args
+  | MLcase (ty, e, brs) ->
+      resolve_metas ty; resolve_metas_in_ast resolve_metas e;
+      Array.iter (fun (ids, ty, _, body) ->
+        List.iter (fun (_, t) -> resolve_metas t) ids;
+        resolve_metas ty; resolve_metas_in_ast resolve_metas body) brs
+  | MLfix (_, ids, funs, _) ->
+      Array.iter (fun (_, ty) -> resolve_metas ty) ids;
+      Array.iter (resolve_metas_in_ast resolve_metas) funs
+  | MLapp (f, args) -> resolve_metas_in_ast resolve_metas f; List.iter (resolve_metas_in_ast resolve_metas) args
+  | MLmagic a -> resolve_metas_in_ast resolve_metas a
+  | MLparray (arr, def) -> Array.iter (resolve_metas_in_ast resolve_metas) arr; resolve_metas_in_ast resolve_metas def
+  | MLtuple args -> List.iter (resolve_metas_in_ast resolve_metas) args
+  | MLrel _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
+
+(* Substitute a CPPvar with a replacement expression in C++ ASTs.
+   Used when lifting inner functions to top-level to rewrite references. *)
+let rec local_var_subst_expr (target : Id.t) (repl : cpp_expr) (e : cpp_expr) =
+  let sub = local_var_subst_expr target repl in
+  match e with
+  | CPPvar id when Id.equal id target -> repl
+  | CPPfun_call (f, args) -> CPPfun_call (sub f, List.map sub args)
+  | CPPderef e' -> CPPderef (sub e')
+  | CPPmove e' -> CPPmove (sub e')
+  | CPPlambda (args, ty, b, cbv) -> CPPlambda (args, ty, List.map (local_var_subst_stmt target repl) b, cbv)
+  | CPPoverloaded cases -> CPPoverloaded (List.map sub cases)
+  | CPPstructmk (id', tys, args) -> CPPstructmk (id', tys, List.map sub args)
+  | CPPstruct (id', tys, args) -> CPPstruct (id', tys, List.map sub args)
+  | CPPget (e', id') -> CPPget (sub e', id')
+  | CPPget' (e', id') -> CPPget' (sub e', id')
+  | CPPnamespace (id', e') -> CPPnamespace (id', sub e')
+  | CPPparray (args, e') -> CPPparray (Array.map sub args, sub e')
+  | CPPmethod_call (obj, meth, args) -> CPPmethod_call (sub obj, meth, List.map sub args)
+  | CPPmember (e', mid) -> CPPmember (sub e', mid)
+  | CPParrow (e', mid) -> CPParrow (sub e', mid)
+  | CPPforward (ty, e') -> CPPforward (ty, sub e')
+  | CPPnew (ty, args) -> CPPnew (ty, List.map sub args)
+  | CPPshared_ptr_ctor (ty, e') -> CPPshared_ptr_ctor (ty, sub e')
+  | CPPstruct_id (sid, tys, args) -> CPPstruct_id (sid, tys, List.map sub args)
+  | CPPqualified (e', qid) -> CPPqualified (sub e', qid)
+  | _ -> e
+and local_var_subst_stmt (target : Id.t) (repl : cpp_expr) (s : cpp_stmt) =
+  match s with
+  | Sreturn e -> Sreturn (local_var_subst_expr target repl e)
+  | Sasgn (id, ty, e) -> Sasgn (id, ty, local_var_subst_expr target repl e)
+  | Sexpr e -> Sexpr (local_var_subst_expr target repl e)
+  | Scustom_case (ty, e, tys, brs, str) ->
+      Scustom_case (ty, local_var_subst_expr target repl e, tys,
+        List.map (fun (args, ty, stmts) ->
+          (args, ty, List.map (local_var_subst_stmt target repl) stmts)) brs, str)
+  | _ -> s
+
+(* Build extended tvar names covering both signature and body Tvar indices.
+   sig_indices: sorted list of Tvar indices from the function signature
+   sig_names: corresponding Id.t names for those indices
+   body_tvars: sorted-unique list of all Tvar indices found in the body *)
+let build_extended_tvar_names sig_indices sig_names body_tvars =
+  let n_sig = List.length sig_indices in
+  let body_extra_tvars = List.filter (fun i -> not (List.mem i sig_indices)) body_tvars in
+  let max_tvar = List.fold_left max 0 (sig_indices @ body_tvars) in
+  let tvar_name_map = List.map2 (fun i name -> (i, name)) sig_indices sig_names in
+  let tvar_name_map =
+    if body_extra_tvars <> [] then begin
+      let min_sig = List.hd sig_indices in
+      let min_extra = List.fold_left min max_int body_extra_tvars in
+      let offset = min_extra - min_sig in
+      List.fold_left (fun acc i ->
+        let mapped_sig_idx = i - offset in
+        if mapped_sig_idx >= 1 && mapped_sig_idx <= n_sig then
+          let name = List.assoc mapped_sig_idx tvar_name_map in
+          (i, name) :: acc
+        else
+          (i, Id.of_string ("T" ^ string_of_int i)) :: acc
+      ) tvar_name_map body_extra_tvars
+    end else tvar_name_map
+  in
+  if max_tvar > 0 then
+    List.init max_tvar (fun i ->
+      let idx = i + 1 in
+      match List.assoc_opt idx tvar_name_map with
+      | Some name -> name
+      | None -> Id.of_string ("_tvar" ^ string_of_int idx))
+  else sig_names
+
+(* Convert ML params to C++ types with const/ref wrapping, and create forwarding-ref
+   template parameters for function-typed params.
+   convert_fn: function to convert ml_type -> cpp_type (typically convert_ml_type_to_cpp_type env [] tvar_names)
+   Returns (cpp_params, all_temps_with_funs). *)
+let build_lifted_cpp_params convert_fn base_temps params =
+  let cpp_params = List.map (fun (id, ty) ->
+    let cpp_ty = convert_fn ty in
+    match cpp_ty with
+    | Tshared_ptr _ -> (id, Tref (Tmod (TMconst, cpp_ty)))
+    | _ -> (id, Tmod (TMconst, cpp_ty))) params in
+  let fun_tys = List.filter_map (fun (x, ty, j) ->
+      match ty with
+      | Tmod (TMconst, Tfun (dom, cod_f)) ->
+          Some (x, TTfun (dom, cod_f), Id.of_string ("F" ^ (string_of_int j)))
+      | _ -> None) (List.mapi (fun j (x, ty) -> (x, ty, j)) (List.rev cpp_params)) in
+  let n_params = List.length cpp_params in
+  let cpp_params = List.mapi (fun j (x, ty) ->
+      match ty with
+      | Tmod (TMconst, Tfun (_, _)) ->
+        (x, Tref (Tref (Tvar (0, Some (Id.of_string ("F" ^ (string_of_int (n_params - j - 1))))))))
+      | _ -> (x, ty)) cpp_params in
+  let extra_temps = List.map (fun (_, t, n) -> (t, n)) fun_tys in
+  let all_temps_with_funs = base_temps @ extra_temps in
+  (cpp_params, all_temps_with_funs)
 
 (* Extract argument types and return type from a function type. *)
 let rec get_args_and_ret acc = function
@@ -125,6 +280,33 @@ let rec type_is_erased (ty : cpp_type) : bool =
   | Tnamespace (_, inner) -> type_is_erased inner
   | _ -> false
 
+(* Collect de Bruijn indices of free variables in an ML AST.
+   n_bound is the number of locally bound variables (lambda params, let bindings, etc.).
+   Returns indices relative to the outer scope (i.e., i - n_bound for each free MLrel i). *)
+let rec collect_free_rels n_bound acc = function
+  | MLrel i -> if i > n_bound && not (List.mem (i - n_bound) acc)
+               then (i - n_bound) :: acc else acc
+  | MLlam (_, _, body) -> collect_free_rels (n_bound + 1) acc body
+  | MLletin (_, _, a, b) ->
+      collect_free_rels n_bound (collect_free_rels (n_bound + 1) acc b) a
+  | MLapp (f, args) ->
+      List.fold_left (collect_free_rels n_bound) (collect_free_rels n_bound acc f) args
+  | MLcase (_, e, brs) ->
+      let acc = collect_free_rels n_bound acc e in
+      Array.fold_left (fun acc (ids, _, _, body) ->
+        collect_free_rels (n_bound + List.length ids) acc body) acc brs
+  | MLfix (_, ids, funs, _) ->
+      let n_fix = Array.length ids in
+      Array.fold_left (fun acc f ->
+        let params, body = collect_lams f in
+        collect_free_rels (n_bound + List.length params + n_fix) acc body) acc funs
+  | MLcons (_, _, args) -> List.fold_left (collect_free_rels n_bound) acc args
+  | MLmagic a -> collect_free_rels n_bound acc a
+  | MLtuple args -> List.fold_left (collect_free_rels n_bound) acc args
+  | MLparray (arr, def) ->
+      collect_free_rels n_bound (Array.fold_left (collect_free_rels n_bound) acc arr) def
+  | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> acc
+
 let rec convert_ml_type_to_cpp_type env (ns : GlobRef.t list) (tvars : Id.t list) (ml_t : ml_type) : cpp_type =
   match ml_t with
   | Tarr (t1, t2) -> (* FIX *)
@@ -171,10 +353,9 @@ let rec convert_ml_type_to_cpp_type env (ns : GlobRef.t list) (tvars : Id.t list
         else if not (get_record_fields g == []) then Tshared_ptr core
         else Tshared_ptr (Tnamespace (g, core))
       | _ -> core)
-  | Tvar i -> (try Tvar (i, Some (List.nth tvars (pred i)))
-               with Failure _ -> Tvar (i, None))
-  | Tvar' i -> (try Tvar (i, Some (List.nth tvars (pred i)))
-                with Failure _ -> Tvar (i, None))
+  | Tvar i | Tvar' i ->
+      (try Tvar (i, Some (List.nth tvars (pred i)))
+       with Failure _ -> Tvar (i, None))
   | Tstring -> assert false (* TODO: get rid of Tstring in both ASTs *)
   | Tmeta {contents = Some t} -> convert_ml_type_to_cpp_type env ns tvars t
   | Tmeta {id = i} ->
@@ -204,20 +385,28 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     eta_fun env f args
   | MLlam _ as a ->
       let args,a = collect_lams a in
-      let args,env = push_vars' (List.map (fun (x, y) -> (id_of_mlid x, y)) args) env in
+      let lam_params = List.map (fun (x, y) -> (id_of_mlid x, y)) args in
+      let args,env = push_vars' lam_params env in
+      let saved_env_types = !env_types in
+      push_env_types args;
       let args = List.filter (fun (_,ty) -> not (isTdummy ty)) args in (* TODO: this could cause issues. TEST. *)
-      let args = List.map (fun (id, ty) -> (convert_ml_type_to_cpp_type env [] [] ty, Some id)) args in
+      let tvars = get_current_type_vars () in
+      let args = List.map (fun (id, ty) -> (convert_ml_type_to_cpp_type env [] tvars ty, Some id)) args in
       let f = CPPlambda (args, None, gen_stmts env (fun x -> Sreturn x) a, false) in
+      env_types := saved_env_types;
       (match args with
       | [] -> CPPfun_call (f, [])
       | _ -> f)
   | MLglob (x, tys) when is_inline_custom x ->
+      let tvars = get_current_type_vars () in
       let ty = find_type x in
-      let ty = convert_ml_type_to_cpp_type env [] [] ty in
+      let ty = convert_ml_type_to_cpp_type env [] tvars ty in
       (match ty with
       | Tfun (dom, cod) -> eta_fun env (MLglob (x, tys)) [] (* TODO: cound be only if contains '%' *)
-      | _ -> CPPglob (x, List.map (convert_ml_type_to_cpp_type env [] []) tys))
-  | MLglob (x, tys) -> CPPglob (x, List.map (convert_ml_type_to_cpp_type env [] []) tys)
+      | _ -> CPPglob (x, List.map (convert_ml_type_to_cpp_type env [] tvars) tys))
+  | MLglob (x, tys) ->
+      let tvars = get_current_type_vars () in
+      CPPglob (x, List.map (convert_ml_type_to_cpp_type env [] tvars) tys)
   | MLcons (ty, r, ts) when is_custom r ->
     let args = List.rev_map (gen_expr env) ts in
     let app x = (match args with
@@ -399,9 +588,10 @@ and eta_fun env f args =
     let args = List.map (gen_expr env) regular_ml_args in
     let ty = find_type id in
     let ty = try (type_subst_list tys ty) with _ -> ty in (* TODO : make less hacky; do a type_subst that can't fail *)
-    let ty = convert_ml_type_to_cpp_type env [] [] ty in
+    let tvars = get_current_type_vars () in
+    let ty = convert_ml_type_to_cpp_type env [] tvars ty in
     (* Combine: instance types first, then regular type args *)
-    let all_type_args = typeclass_type_args @ (List.map (convert_ml_type_to_cpp_type env [] []) tys) in
+    let all_type_args = typeclass_type_args @ (List.map (convert_ml_type_to_cpp_type env [] tvars) tys) in
     let cglob = CPPglob (id, all_type_args) in
     (match ty with
     | Tfun (dom, cod) ->
@@ -503,8 +693,7 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body =
   CPPlambda(
         [(Tmod (TMconst, constr), Some sname)],
         Some ret,
-        asgns @ gen_stmts env (fun x -> Sreturn x) body,
-        false)
+        asgns @ gen_stmts env (fun x -> Sreturn x) body, false)
 
 and gen_cpp_case (typ : ml_type) t env pv =
   (* When scrutinee is a parameter reference, use parameter's concrete type if available.
@@ -537,11 +726,15 @@ and gen_cpp_case (typ : ml_type) t env pv =
     (match p with
     | Pusual r ->
       let ids',env' = push_vars' (List.rev_map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids) env in
+      let saved_env_types = !env_types in
+      push_env_types ids';
       let dummies = List.map (fun (x,_) ->
         match x with
         | Dummy -> false
         | _ -> true) ids in
-      (gen_cpp_pat_lambda env' typ rty r ids' dummies t) :: (gen_cases cs)
+      let br = gen_cpp_pat_lambda env' typ rty r ids' dummies t in
+      env_types := saved_env_types;
+      br :: (gen_cases cs)
     | _ -> raise TODO) in
   outer (gen_cases (Array.to_list pv)) (gen_expr env t)
 
@@ -553,6 +746,8 @@ and gen_rust_case (typ : ml_type) t env pv =
     (match p with
     | Pusual r ->
       let ids',env' = push_vars' (List.rev_map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids) env in
+      let saved_env_types = !env_types in
+      push_env_types ids';
       let temps = begin match typ with
         | Tglob (r, tys, _) -> List.map (convert_ml_type_to_cpp_type env [] []) tys
         | _ -> []
@@ -561,7 +756,9 @@ and gen_rust_case (typ : ml_type) t env pv =
        | [] -> CPPglob (r, temps)
        | _ -> CPPfun_call(CPPglob (r, temps), List.map (fun (x, _) -> CPPvar x) ids')
        end in
-      (c, gen_expr env' t) :: (gen_cases cs)
+      let br = (c, gen_expr env' t) in
+      env_types := saved_env_types;
+      br :: (gen_cases cs)
     | _ -> raise TODO) in
   outer (gen_cases (Array.to_list pv)) (gen_expr env t)
 
@@ -586,13 +783,18 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     (match p with
     | Pusual r ->
       let ids',env' = push_vars' (List.rev_map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids) env in
-      (gen_cpp_custom_body env' k rty ids' t) :: (gen_cases cs)
+      let saved_env_types = !env_types in
+      push_env_types ids';
+      let br = gen_cpp_custom_body env' k rty ids' t in
+      env_types := saved_env_types;
+      br :: (gen_cases cs)
     | _ -> raise TODO) in
   let cmatch = find_custom_match pv in
   Scustom_case (typ, t, temps, gen_cases (Array.to_list pv), cmatch)
 
-and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
-| MLletin (_, _, MLfix (x, ids, funs, _is_cofix), b) ->
+and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
+  match ast with
+| MLletin (_, _, MLfix (x, ids, funs, _), b) as _whole ->
   (* Special case for let-fix: the let binding name is the fix function name *)
   (* Resolve unresolved metas in fix function types to Tvars using mgu. *)
   let next_tvar = ref 1 in
@@ -605,37 +807,294 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
     | Miniml.Tglob (_, args, _) -> List.iter resolve_metas args
     | _ -> () in
   Array.iter (fun (_, ty) -> resolve_metas ty) ids;
-  (* Call gen_fix with original names - it will handle renaming internally *)
-  let funs_compiled = Array.to_list (Array.map2 (gen_fix env) ids funs) in
-  (* Extract the renamed ids from gen_fix results *)
-  let renamed_ids = List.map (fun (renamed_id, _, _) -> renamed_id) funs_compiled in
-  let funs_with_params = List.map (fun (_, params, body) -> (params, body)) funs_compiled in
-  let tvars = get_current_type_vars () in
-  (* For std::function declarations, if return type is an unnamed Tvar, use void as placeholder. *)
-  let fix_func_type ty =
-    match ty with
-    | Minicpp.Tfun (params, Minicpp.Tvar (_, None)) ->
-        Minicpp.Tfun (params, Minicpp.Tvoid)
-    | _ -> ty
+  (* Collect all Tvar indices from the fixpoint types *)
+  let fix_tvar_indices = Array.fold_left (fun acc (_, ty) -> collect_tvars acc ty) [] ids in
+  let fix_tvar_indices = List.sort Int.compare fix_tvar_indices in
+  let outer_tvars = get_current_type_vars () in
+  let n_outer = List.length outer_tvars in
+  (* Check if fixpoint introduces Tvars beyond the outer scope *)
+  let has_extra_tvars = List.exists (fun i -> i > n_outer) fix_tvar_indices in
+  if has_extra_tvars then begin
+    (* Lift the polymorphic inner fixpoint to a top-level function.
+       Build tvar names for all Tvars used in the fixpoint type:
+       - Tvars 1..n_outer reuse the outer function's template param names
+       - Tvars beyond n_outer get fresh names T<i> *)
+    let all_tvar_names = List.map (fun i ->
+      if i <= n_outer then
+        List.nth outer_tvars (i - 1)
+      else
+        Id.of_string ("T" ^ string_of_int i)
+    ) fix_tvar_indices in
+    let all_temps = List.map (fun id -> (TTtypename, id)) all_tvar_names in
+    (* Generate the lifted function name *)
+    let fix_name = fst (ids.(x)) in
+    let outer_name = match !current_outer_function_name with
+      | Some n -> n | None -> "anon" in
+    let lifted_name_str = "_" ^ outer_name ^ "_" ^ Id.to_string fix_name in
+    let lifted_ref = GlobRef.VarRef (Id.of_string lifted_name_str) in
+    (* Save and set current_type_vars to the full tvar list for the lifted function *)
+    let saved_tvars = get_current_type_vars () in
+    set_current_type_vars all_tvar_names;
+    (* Generate the fixpoint body using gen_fix *)
+    let funs_compiled = Array.to_list (Array.map2 (gen_fix env) ids funs) in
+    (* Restore outer type vars *)
+    set_current_type_vars saved_tvars;
+    (* Build a lifted Dfundef for each fixpoint function (usually just one) *)
+    List.iteri (fun i ((renamed_id, fix_ty), params, body) ->
+      let cpp_ty = convert_ml_type_to_cpp_type env [] all_tvar_names fix_ty in
+      let (_, cod) = match cpp_ty with
+        | Tfun (dom, cod) -> (dom, cod)
+        | _ -> ([], cpp_ty) in
+      let (cpp_params, all_temps_with_funs) =
+        build_lifted_cpp_params (convert_ml_type_to_cpp_type env [] all_tvar_names) all_temps params in
+      (* Replace recursive self-references (CPPvar renamed_n) with calls to the lifted function *)
+      let rec_call = CPPglob (lifted_ref, List.map (fun id -> Tvar (0, Some id)) all_tvar_names) in
+      let body = List.map (local_var_subst_stmt renamed_id rec_call) body in
+      let inner = Dfundef ([lifted_ref, []], cod, cpp_params, body) in
+      let lifted_decl = Dtemplate (all_temps_with_funs, None, inner) in
+      add_lifted_decl lifted_decl
+    ) funs_compiled;
+    (* In the continuation body b, the fixpoint name should resolve to a call
+       to the lifted function with appropriate type arguments.
+       We push the fix name into the env so that MLrel references in b resolve correctly. *)
+    let fix_ids_for_env = Array.to_list (Array.map (fun (n, ty) -> (n, ty)) ids) in
+    let _, env_with_fix = push_vars' fix_ids_for_env env in
+    push_env_types fix_ids_for_env;
+    (* Generate b, then replace references to the fixpoint var with calls to the lifted function. *)
+    let outer_type_args = List.map (fun id -> Tvar (0, Some id)) outer_tvars in
+    let lifted_call = CPPglob (lifted_ref, outer_type_args) in
+    let result = gen_stmts env_with_fix k b in
+    List.map (local_var_subst_stmt fix_name lifted_call) result
+  end else begin
+    (* No extra Tvars - proceed with original local fixpoint approach *)
+    (* Call gen_fix with original names - it will handle renaming internally *)
+    let funs_compiled = Array.to_list (Array.map2 (gen_fix env) ids funs) in
+    (* Extract the renamed ids from gen_fix results *)
+    let renamed_ids = List.map (fun (renamed_id, _, _) -> renamed_id) funs_compiled in
+    let funs_with_params = List.map (fun (_, params, body) -> (params, body)) funs_compiled in
+    let tvars = get_current_type_vars () in
+    (* For std::function declarations, if return type is an unnamed Tvar, use void as placeholder. *)
+    let fix_func_type ty =
+      match ty with
+      | Minicpp.Tfun (params, Minicpp.Tvar (_, None)) ->
+          Minicpp.Tfun (params, Minicpp.Tvoid)
+      | _ -> ty
+    in
+    (* Use renamed ids for declarations *)
+    let decls = List.map (fun (id, ty) ->
+      Sdecl (id, fix_func_type (convert_ml_type_to_cpp_type env [] tvars ty))) renamed_ids in
+    let ret_ty ty = (match convert_ml_type_to_cpp_type env [] tvars ty with
+      | Tfun (_,t) ->
+          (match t with
+          | Minicpp.Tvar (_, None) -> None
+          | _ -> Some t)
+      | _ -> None) in
+    (* Use renamed ids for definitions *)
+    let defs = List.map2 (fun (id, fty) (args, body) ->
+      Sasgn (id, None, CPPlambda (List.map (fun (id, ty) -> convert_ml_type_to_cpp_type env [] tvars ty, Some id) args, ret_ty fty, body, false))) renamed_ids funs_with_params in
+    (* Add renamed ids to environment for processing body *)
+    let _, env_with_fix = push_vars' renamed_ids env in
+    push_env_types renamed_ids;
+    decls @ defs @ gen_stmts env_with_fix k b
+  end
+| MLletin (x, t, (MLlam _ as a), b) ->
+  (* Check if this is a polymorphic lambda that should be lifted to a top-level template function. *)
+  let next_tvar = ref 1 in
+  let rec resolve_metas = function
+    | Miniml.Tmeta ({ contents = None } as m) ->
+        let idx = !next_tvar in next_tvar := idx + 1;
+        try_mgu (Miniml.Tmeta m) (Miniml.Tvar idx)
+    | Miniml.Tmeta { contents = Some t } -> resolve_metas t
+    | Miniml.Tarr (t1, t2) -> resolve_metas t1; resolve_metas t2
+    | Miniml.Tglob (_, args, _) -> List.iter resolve_metas args
+    | _ -> () in
+  resolve_metas t;
+  resolve_metas_in_ast resolve_metas a;
+  (* Collect all Tvar indices from the let-binding type *)
+  let tvar_indices = collect_tvars [] t in
+  (* Also collect Tvars from the lambda body *)
+  let body_tvars = collect_tvars_ast [] a in
+  let all_body_tvars = List.sort_uniq Int.compare body_tvars in
+  let tvar_indices = List.sort Int.compare tvar_indices in
+  let outer_tvars = get_current_type_vars () in
+  let n_outer = List.length outer_tvars in
+  let has_extra = List.exists (fun i -> i > n_outer) tvar_indices in
+  (* Normal MLletin fallback (shared by no-extra-tvars and thunk-with-free-vars cases) *)
+  let gen_normal_letin () =
+    let x' = remove_prime_id (id_of_mlid x) in
+    let _,env' = push_vars' [x', t] env in
+    push_env_types [x', t];
+    if x == Dummy then gen_stmts env' k b else
+    let afun v = Sasgn (x', None, v) in
+    let asgn = gen_stmts env afun a in
+    let tvars = get_current_type_vars () in
+    match asgn with
+    | [ Sasgn (x', None, e) ] -> Sasgn (x', Some (convert_ml_type_to_cpp_type env [] tvars t), e) :: gen_stmts env' k b
+    | _ ->
+      Sdecl (x', convert_ml_type_to_cpp_type env [] tvars t) :: asgn @ gen_stmts env' k b
   in
-  (* Use renamed ids for declarations *)
-  let decls = List.map (fun (id, ty) ->
-    Sdecl (id, fix_func_type (convert_ml_type_to_cpp_type env [] tvars ty))) renamed_ids in
-  let ret_ty ty = (match convert_ml_type_to_cpp_type env [] tvars ty with
-    | Tfun (_,t) ->
-        (match t with
-        | Minicpp.Tvar (_, None) -> None
-        | _ -> Some t)
-    | _ -> None) in
-  (* Use renamed ids for definitions *)
-  let defs = List.map2 (fun (id, fty) (args, body) ->
-    Sasgn (id, None, CPPlambda (List.map (fun (id, ty) -> convert_ml_type_to_cpp_type env [] tvars ty, Some id) args, ret_ty fty, body, false))) renamed_ids funs_with_params in
-  (* Add renamed ids to environment for processing body *)
-  let _, env_with_fix = push_vars' renamed_ids env in
-  decls @ defs @ gen_stmts env_with_fix k b
+  if not has_extra then gen_normal_letin ()
+  else begin
+    (* Lift the polymorphic lambda to a top-level template function. *)
+    let params, body = collect_lams a in
+    let n_params = List.length params in
+    let x' = remove_prime_id (id_of_mlid x) in
+
+    (* 1. Collect free variables in the lambda body *)
+    let free_indices = collect_free_rels n_params [] body in
+    let free_vars = List.map (fun i ->
+      let name = get_db_name i env in
+      let ty = get_env_type i in
+      (name, ty, i)
+    ) (List.sort Int.compare free_indices) in
+
+    (* Check if all parameters are dummy/void - if so, this is likely a thunk for monadic ops *)
+    let all_params_dummy = List.for_all (fun (_, ty) -> isTdummy ty || ml_type_is_void ty) params in
+
+    (* Don't lift thunks (all-dummy params) that capture free variables - these are typically
+       for monadic operations where the lambda is passed to a higher-order function that
+       immediately invokes it, and lifting creates type mismatches. *)
+    if free_vars <> [] && all_params_dummy then gen_normal_letin ()
+    else begin
+
+    (* 2. Build tvar names: outer tvars keep their names, extra tvars get fresh names *)
+    let all_tvar_names = List.map (fun i ->
+      if i <= n_outer then
+        List.nth outer_tvars (i - 1)
+      else
+        Id.of_string ("T" ^ string_of_int i)
+    ) tvar_indices in
+    let all_temps = List.map (fun id -> (TTtypename, id)) all_tvar_names in
+
+    let extended_tvar_names = build_extended_tvar_names tvar_indices all_tvar_names all_body_tvars in
+
+    (* 3. Generate the lifted function name *)
+    let outer_name = match !current_outer_function_name with
+      | Some n -> n | None -> "anon" in
+    let lifted_name_str = "_" ^ outer_name ^ "_" ^ Id.to_string x' in
+    let lifted_ref = GlobRef.VarRef (Id.of_string lifted_name_str) in
+
+    (* 4. Substitution helper for call sites: replace CPPfun_call(CPPvar x', args) with
+       CPPfun_call(CPPglob(lifted_ref, []), free_var_cpps @ args) *)
+    let rec subst_lifted_call_expr (target : Id.t) (lifted : GlobRef.t) (free_args : cpp_expr list) (e : cpp_expr) =
+      let sub = subst_lifted_call_expr target lifted free_args in
+      match e with
+      | CPPfun_call (CPPvar id, args) when Id.equal id target ->
+          CPPfun_call (CPPglob (lifted, []), free_args @ List.map sub args)
+      | CPPvar id when Id.equal id target ->
+          (* Bare reference to lifted function: if there are free args, wrap in a lambda *)
+          if free_args = [] then
+            CPPglob (lifted, [])
+          else
+            (* Generate a lambda that captures and forwards: [&]() { return lifted(free_args...); } *)
+            CPPlambda ([], None, [Sreturn (CPPfun_call (CPPglob (lifted, []), free_args))], false)
+      | CPPfun_call (f, args) -> CPPfun_call (sub f, List.map sub args)
+      | CPPderef e' -> CPPderef (sub e')
+      | CPPmove e' -> CPPmove (sub e')
+      | CPPlambda (args, ty, b, cbv) -> CPPlambda (args, ty, List.map (subst_lifted_call_stmt target lifted free_args) b, cbv)
+      | CPPoverloaded cases -> CPPoverloaded (List.map sub cases)
+      | CPPstructmk (id', tys, args) -> CPPstructmk (id', tys, List.map sub args)
+      | CPPstruct (id', tys, args) -> CPPstruct (id', tys, List.map sub args)
+      | CPPget (e', id') -> CPPget (sub e', id')
+      | CPPget' (e', id') -> CPPget' (sub e', id')
+      | CPPnamespace (id', e') -> CPPnamespace (id', sub e')
+      | CPPparray (args, e') -> CPPparray (Array.map sub args, sub e')
+      | CPPmethod_call (obj, meth, args) -> CPPmethod_call (sub obj, meth, List.map sub args)
+      | CPPmember (e', mid) -> CPPmember (sub e', mid)
+      | CPParrow (e', mid) -> CPParrow (sub e', mid)
+      | CPPforward (ty, e') -> CPPforward (ty, sub e')
+      | CPPnew (ty, args) -> CPPnew (ty, List.map sub args)
+      | CPPshared_ptr_ctor (ty, e') -> CPPshared_ptr_ctor (ty, sub e')
+      | CPPstruct_id (sid, tys, args) -> CPPstruct_id (sid, tys, List.map sub args)
+      | CPPqualified (e', qid) -> CPPqualified (sub e', qid)
+      | _ -> e
+    and subst_lifted_call_stmt (target : Id.t) (lifted : GlobRef.t) (free_args : cpp_expr list) (s : cpp_stmt) =
+      match s with
+      | Sreturn e -> Sreturn (subst_lifted_call_expr target lifted free_args e)
+      | Sasgn (id, ty, e) -> Sasgn (id, ty, subst_lifted_call_expr target lifted free_args e)
+      | Sexpr e -> Sexpr (subst_lifted_call_expr target lifted free_args e)
+      | Scustom_case (ty, e, tys, brs, str) ->
+          Scustom_case (ty, subst_lifted_call_expr target lifted free_args e, tys,
+            List.map (fun (args, ty, stmts) ->
+              (args, ty, List.map (subst_lifted_call_stmt target lifted free_args) stmts)) brs, str)
+      | _ -> s
+    in
+
+    (* 6. Compile the lambda body with extended type variables *)
+    let saved_tvars = get_current_type_vars () in
+    set_current_type_vars extended_tvar_names;
+    (* Push lambda params into env for body compilation *)
+    let param_ids = List.map (fun (ml_id, ty) -> (remove_prime_id (id_of_mlid ml_id), ty)) params in
+    (* For free variables, we need to adjust de Bruijn indices in the body.
+       The body references free vars as MLrel (n_params + i) where i is the outer index.
+       We compile with an env that has: [free_var_params...; lambda_params...]
+       So we push free var names first, then lambda param names. *)
+    let free_var_params = List.map (fun (name, ty, _) -> (name, ty)) free_vars in
+    let body_params_for_env = free_var_params @ param_ids in
+    let body_param_ids, body_env = push_vars' body_params_for_env env in
+    let saved_env_types = !env_types in
+    push_env_types body_param_ids;
+
+    (* Now compile the body. The body's de Bruijn indices:
+       MLrel 1..n_params -> lambda params (at positions n_free+1..n_free+n_params in our env)
+       MLrel n_params+i -> free var i (should map to position n_free-i+1 in our env, but
+         we actually need to adjust: MLrel (n_params + orig_outer_idx) in the body maps to
+         outer env position orig_outer_idx. In our extended env, free vars are at positions
+         n_params+1..n_params+n_free. So we need to remap.
+       Actually, the body already has correct de Bruijn indices:
+       - MLrel 1..n_params are the lambda params
+       - MLrel (n_params + i) references outer scope position i
+       When we push [free_var_params @ param_ids], the env has:
+         positions 1..n_params = param_ids (lambda params)
+         positions n_params+1..n_params+n_free = free_var_params
+       But the body references MLrel(n_params + original_outer_idx), and original_outer_idx
+       may not equal the position in free_var_params.
+       We need the body env to map MLrel(n_params + i) correctly for each free var. *)
+
+    (* Simpler approach: compile body in a modified env where free vars at their original
+       positions are accessible. We push only the lambda params on top of the outer env. *)
+    let lam_param_ids, lam_env = push_vars' param_ids env in
+    env_types := saved_env_types;
+    push_env_types lam_param_ids;
+    let compiled_body = gen_stmts lam_env (fun x -> Sreturn x) body in
+    env_types := saved_env_types;
+    set_current_type_vars saved_tvars;
+
+    (* 7. Now substitute free variable references in compiled body:
+       Free vars in the body were compiled as CPPvar(name_from_outer_env).
+       In the lifted function, they become parameters. The names are the same,
+       so no substitution of the body is needed — the free var params have the same
+       names as the outer scope variables. *)
+
+    (* 8. Build the lifted function parameters: free vars first, then lambda params *)
+    let all_lifted_params = free_var_params @ (List.filter (fun (_, ty) -> not (ml_type_is_void ty) && not (isTdummy ty)) lam_param_ids) in
+    let (cpp_params, all_temps_with_funs) =
+      build_lifted_cpp_params (convert_ml_type_to_cpp_type lam_env [] extended_tvar_names) all_temps all_lifted_params in
+
+    (* Get return type from the let-binding type *)
+    let cpp_ty = convert_ml_type_to_cpp_type lam_env [] extended_tvar_names t in
+    let cod = match cpp_ty with
+      | Tfun (_, cod) -> cod
+      | _ -> cpp_ty in
+
+    (* 9. Build and register the lifted declaration *)
+    let inner = Dfundef ([lifted_ref, []], cod, cpp_params, compiled_body) in
+    let lifted_decl = Dtemplate (all_temps_with_funs, None, inner) in
+    add_lifted_decl lifted_decl;
+
+    (* 10. Compile the continuation body b, substituting calls to x' with calls to the lifted function *)
+    let _, env' = push_vars' [x', t] env in
+    push_env_types [x', t];
+    let cont = gen_stmts env' k b in
+    (* Build the free variable argument expressions *)
+    let free_var_cpps = List.map (fun (name, _, _) -> CPPvar name) free_vars in
+    List.map (subst_lifted_call_stmt x' lifted_ref free_var_cpps) cont
+    end
+  end
 | MLletin (x, t, a, b) ->
   let x' = remove_prime_id (id_of_mlid x) in
   let _,env' = push_vars' [x', t] env in
+  push_env_types [x', t];
   if x == Dummy then gen_stmts env' k b else
   let afun v = Sasgn (x', None, v) in
   (* Sasgn (x', Some (convert_ml_type_to_cpp_type env [] [] t), (gen_expr env a)) :: gen_stmts env' k b *)
@@ -646,7 +1105,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
   | _ ->
     Sdecl (x', convert_ml_type_to_cpp_type env [] tvars t) :: asgn @ gen_stmts env' k b
   end
-| MLapp (MLfix (x, ids, funs, _is_cofix), args) ->
+| MLapp (MLfix (x, ids, funs, _), args) ->
   (* Resolve unresolved metas in fix function types to Tvars using mgu.
      Traverse types and assign Tvar 1, 2, ... to each unresolved meta. *)
   let next_tvar = ref 1 in
@@ -659,34 +1118,82 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
     | Miniml.Tglob (_, args, _) -> List.iter resolve_metas args
     | _ -> () in
   Array.iter (fun (_, ty) -> resolve_metas ty) ids;
-  (* Call gen_fix with original names - it will handle renaming internally *)
-  let funs_compiled = Array.to_list (Array.map2 (gen_fix env) ids funs) in
-  (* Extract the renamed ids from gen_fix results *)
-  let renamed_ids = List.map (fun (renamed_id, _, _) -> renamed_id) funs_compiled in
-  let funs_with_params = List.map (fun (_, params, body) -> (params, body)) funs_compiled in
-  let tvars = get_current_type_vars () in
-  (* For std::function declarations, if return type is an unnamed Tvar, use void as placeholder.
-     The actual type will be deduced when the lambda is assigned. *)
-  let fix_func_type ty =
-    match ty with
-    | Minicpp.Tfun (params, Minicpp.Tvar (_, None)) ->
-        Minicpp.Tfun (params, Minicpp.Tvoid)
-    | _ -> ty
-  in
-  let decls = List.map (fun (id, ty) ->
-    Sdecl (id, fix_func_type (convert_ml_type_to_cpp_type env [] tvars ty))) renamed_ids in
-  let ret_ty ty = (match convert_ml_type_to_cpp_type env [] tvars ty with
-    | Tfun (_,t) ->
-        (* If return type is an unnamed Tvar, use None (auto) instead *)
-        (match t with
-        | Minicpp.Tvar (_, None) -> None
-        | _ -> Some t)
-    | _ -> None) in
-  let defs = List.map2 (fun (id, fty) (params, body) -> Sasgn (id, None, CPPlambda (List.map (fun (id, ty) -> convert_ml_type_to_cpp_type env [] tvars ty, Some id) params, ret_ty fty, body, false))) renamed_ids funs_with_params in
-  (* Args are in the outer scope, so process with original env *)
-  let args = List.rev_map (gen_expr env) args in
-  decls @ defs @ [k (CPPfun_call (CPPvar (fst (List.nth renamed_ids x)), args))]
-| MLfix (x, ids, funs, _is_cofix) ->
+  Array.iter (resolve_metas_in_ast resolve_metas) funs;
+  List.iter (resolve_metas_in_ast resolve_metas) args;
+  (* Collect Tvars from bodies too *)
+  let body_tvars = Array.fold_left collect_tvars_ast [] funs in
+  let all_body_tvars = List.sort_uniq Int.compare body_tvars in
+  (* Collect all Tvar indices from the fixpoint types *)
+  let fix_tvar_indices = Array.fold_left (fun acc (_, ty) -> collect_tvars acc ty) [] ids in
+  let fix_tvar_indices = List.sort Int.compare fix_tvar_indices in
+  let outer_tvars = get_current_type_vars () in
+  let n_outer = List.length outer_tvars in
+  (* Check if fixpoint introduces Tvars beyond the outer scope *)
+  let has_extra_tvars = List.exists (fun i -> i > n_outer) fix_tvar_indices in
+  if has_extra_tvars then begin
+    (* Lift the polymorphic inner fixpoint to a top-level function *)
+    let all_tvar_names = List.map (fun i ->
+      if i <= n_outer then
+        List.nth outer_tvars (i - 1)
+      else
+        Id.of_string ("T" ^ string_of_int i)
+    ) fix_tvar_indices in
+    let all_temps = List.map (fun id -> (TTtypename, id)) all_tvar_names in
+    let extended_tvar_names = build_extended_tvar_names fix_tvar_indices all_tvar_names all_body_tvars in
+    let fix_name = fst (ids.(x)) in
+    let outer_name = match !current_outer_function_name with
+      | Some n -> n | None -> "anon" in
+    let lifted_name_str = "_" ^ outer_name ^ "_" ^ Id.to_string fix_name in
+    let lifted_ref = GlobRef.VarRef (Id.of_string lifted_name_str) in
+    (* Save and set current_type_vars to the extended tvar list for the lifted function.
+       extended_tvar_names covers both signature and body Tvar indices. *)
+    let saved_tvars = get_current_type_vars () in
+    set_current_type_vars extended_tvar_names;
+    let funs_compiled = Array.to_list (Array.map2 (gen_fix env) ids funs) in
+    set_current_type_vars saved_tvars;
+    (* Build lifted declarations *)
+    List.iteri (fun i ((renamed_id, fix_ty), params, body) ->
+      let cpp_ty = convert_ml_type_to_cpp_type env [] extended_tvar_names fix_ty in
+      let (_, cod) = match cpp_ty with
+        | Tfun (dom, cod) -> (dom, cod)
+        | _ -> ([], cpp_ty) in
+      let (cpp_params, all_temps_with_funs) =
+        build_lifted_cpp_params (convert_ml_type_to_cpp_type env [] extended_tvar_names) all_temps params in
+      let rec_call = CPPglob (lifted_ref, List.map (fun id -> Tvar (0, Some id)) all_tvar_names) in
+      let body = List.map (local_var_subst_stmt renamed_id rec_call) body in
+      let inner = Dfundef ([lifted_ref, []], cod, cpp_params, body) in
+      let lifted_decl = Dtemplate (all_temps_with_funs, None, inner) in
+      add_lifted_decl lifted_decl
+    ) funs_compiled;
+    (* Generate args in outer scope and call the lifted function.
+       With template function parameters (F0 &&), C++ can deduce all type args. *)
+    let cpp_args = List.rev_map (gen_expr env) args in
+    [k (CPPfun_call (CPPglob (lifted_ref, []), cpp_args))]
+  end else begin
+    (* No extra Tvars - proceed with original local fixpoint approach *)
+    let funs_compiled = Array.to_list (Array.map2 (gen_fix env) ids funs) in
+    let renamed_ids = List.map (fun (renamed_id, _, _) -> renamed_id) funs_compiled in
+    let funs_with_params = List.map (fun (_, params, body) -> (params, body)) funs_compiled in
+    let tvars = get_current_type_vars () in
+    let fix_func_type ty =
+      match ty with
+      | Minicpp.Tfun (params, Minicpp.Tvar (_, None)) ->
+          Minicpp.Tfun (params, Minicpp.Tvoid)
+      | _ -> ty
+    in
+    let decls = List.map (fun (id, ty) ->
+      Sdecl (id, fix_func_type (convert_ml_type_to_cpp_type env [] tvars ty))) renamed_ids in
+    let ret_ty ty = (match convert_ml_type_to_cpp_type env [] tvars ty with
+      | Tfun (_,t) ->
+          (match t with
+          | Minicpp.Tvar (_, None) -> None
+          | _ -> Some t)
+      | _ -> None) in
+    let defs = List.map2 (fun (id, fty) (params, body) -> Sasgn (id, None, CPPlambda (List.map (fun (id, ty) -> convert_ml_type_to_cpp_type env [] tvars ty, Some id) params, ret_ty fty, body, false))) renamed_ids funs_with_params in
+    let args = List.rev_map (gen_expr env) args in
+    decls @ defs @ [k (CPPfun_call (CPPvar (fst (List.nth renamed_ids x)), args))]
+  end
+| MLfix (x, ids, funs, _) ->
   (* Standalone fixpoint (not immediately applied) - e.g., in let binding *)
   (* Resolve unresolved metas in fix function types to Tvars using mgu. *)
   let next_tvar = ref 1 in
@@ -739,6 +1246,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) = function
     | [] -> ()
   in
   let ids,env = push_vars' (List.map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids') env in
+  push_env_types ids;
   (match ids with
   | (x, ty) :: _ ->
     let tvars = get_current_type_vars () in
@@ -768,9 +1276,13 @@ and gen_fix env (n,ty) f =
   let ids,_ = push_vars' (List.map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids) env in
   (* Push the fix function name, which may be renamed to avoid shadowing *)
   let renamed_fix_ids, env = push_vars' (ids @ [(n,ty)]) env in
+  let saved_env_types = !env_types in
+  push_env_types (ids @ [(n,ty)]);
   let renamed_n = fst (List.hd (List.rev renamed_fix_ids)) in
   let ids = List.filter (fun (_,ty) -> not (ml_type_is_void ty)) ids in
-  (renamed_n, ty), ids, gen_stmts env (fun x -> Sreturn x) f
+  let result = (renamed_n, ty), ids, gen_stmts env (fun x -> Sreturn x) f in
+  env_types := saved_env_types;
+  result
 
 (* TODO: REDO NAMESPACE AS PART OF NAMES!!! *)
 
@@ -1171,6 +1683,8 @@ let gen_dfun n b dom cod ty temps =
      causing mismatches like: void foo(T f, F f0, forest f) { ... f1->v() ... }
      where 'f1' in the body didn't match any parameter name. *)
   let all_ids, env = push_vars' all_params_for_env (empty_env ()) in
+  reset_env_types ();
+  push_env_types all_ids;
   (* For function signature, use renamed ids but exclude typeclass and void params *)
   let ids = List.filter (fun (_, ty) -> not (Table.is_typeclass_type ty) && not (ml_type_is_void ty)) all_ids in
   (* Convert ML types to C++ types and wrap with const. For shared_ptr, use const ref *)
@@ -1212,6 +1726,9 @@ let gen_dfun n b dom cod ty temps =
     match tt with TTtypename -> Some id | _ -> None) temps in
   set_current_type_vars type_var_ids;
   set_current_param_types all_ids;
+  (* Set the outer function name so inner fixpoints can generate lifted names *)
+  let saved_outer_name = !current_outer_function_name in
+  current_outer_function_name := Some (Common.pp_global_name Term n);
   (* Check if the return type is coinductive - if so, wrap body in lazy thunk *)
   let rec get_ml_return_type = function
     | Miniml.Tarr (_, t2) -> get_ml_return_type t2
@@ -1221,8 +1738,7 @@ let gen_dfun n b dom cod ty temps =
   (* For cofixpoints, wrap the return expression in Type::ctor::lazy_([=]() -> ret_ty { ... }) *)
   let cofix_wrap x =
     if is_cofix_return then
-      let ret_cpp = cod in  (* cod is already the C++ return type *)
-      (* Get the coinductive type ref for generating qualified ctor::lazy_ *)
+      let ret_cpp = cod in
       let coind_ref = match ml_ret with
         | Miniml.Tglob (r, _, _) -> r
         | _ -> assert false in
@@ -1230,7 +1746,6 @@ let gen_dfun n b dom cod ty temps =
         | Miniml.Tglob (_, args, _) ->
           List.map (fun t -> convert_ml_type_to_cpp_type env [] type_var_ids t) args
         | _ -> [] in
-      (* Generate: Type::ctor::lazy_([=]() -> ret_type { return <x>; }) *)
       let lazy_factory = CPPqualified (
         CPPqualified (CPPglob (coind_ref, type_args), Id.of_string "ctor"),
         Id.of_string "lazy_") in
@@ -1265,6 +1780,7 @@ let gen_dfun n b dom cod ty temps =
       clear_current_type_vars ();
       clear_current_param_types ();
       Dfundef ([n, []], cod, ids, b) in
+  current_outer_function_name := saved_outer_name;
   (match temps with
     | [] -> inner, env
     | l -> Dtemplate (l, None, inner), env)
@@ -1370,14 +1886,25 @@ let gen_spec_for_sfuns n b ty =
   | _ -> gen_sfun n b [Tvoid] ty temps
 
 let gen_dfuns (ns,bs,tys) =
-  List.mapi (fun i name -> gen_decl_for_dfuns name bs.(i) tys.(i)) (Array.to_list ns)
+  List.concat_map (fun (i, name) ->
+    let result = gen_decl_for_dfuns name bs.(i) tys.(i) in
+    (* Discard lifted declarations here - they are template functions that
+       belong only in the header file (.h), not the source file (.cpp).
+       gen_dfuns_header will collect them for the header. *)
+    ignore (take_lifted_decls ());
+    [result]
+  ) (List.mapi (fun i name -> (i, name)) (Array.to_list ns))
 
 let gen_dfuns_header (ns,bs,tys) =
-  List.mapi (fun i name ->
+  List.concat_map (fun (i, name) ->
     let (ds, env, tvars) = gen_decl_for_dfuns name bs.(i) tys.(i) in
-    match tvars with
-    | [] -> gen_spec_for_sfuns name bs.(i) tys.(i)
-    | _::_ -> ds, env) (Array.to_list ns)
+    let lifted = take_lifted_decls () in
+    let lifted_results = List.map (fun d -> (d, empty_env ())) lifted in
+    let main_result = match tvars with
+      | [] -> gen_spec_for_sfuns name bs.(i) tys.(i)
+      | _::_ -> ds, env in
+    lifted_results @ [main_result]
+  ) (List.mapi (fun i name -> (i, name)) (Array.to_list ns))
 
 let gen_ind_header vars name cnames tys =
   let templates = List.map (fun n -> (TTtypename, n)) vars in
@@ -1444,6 +1971,8 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let ids_with_types, inner_body = Mlutil.collect_lams body in
   let ids_converted = List.map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids_with_types in
   let all_ids, env = push_vars' ids_converted (empty_env ()) in
+  reset_env_types ();
+  push_env_types all_ids;
 
   (* Extract 'this' argument at this_pos - use renamed ids for consistency with body *)
   let ids_normal_order = List.rev all_ids in
@@ -1618,7 +2147,7 @@ let gen_ind_header_v2 vars name cnames tys method_candidates ind_kind =
   let lazy_ctor = if is_coinductive then
     let param_name = Id.of_string "_thunk" in
     let variant_t_ty = Tid (Id.of_string "variant_t", []) in
-    let param_ty = Tfun ([], variant_t_ty) in  (* std::function<variant_t()> *)
+    let param_ty = Tfun ([], variant_t_ty) in
     let init_expr = CPPfun_call (CPPvar (Id.of_string_soft "crane::lazy<variant_t>"),
       [CPPmove (CPPvar param_name)]) in
     let init_list = [(Id.of_string "lazy_v_", init_expr)] in
@@ -1663,15 +2192,9 @@ let gen_ind_header_v2 vars name cnames tys method_candidates ind_kind =
      std::function<variant_t()> for the lazy constructor. *)
   let lazy_factory = if is_coinductive then
     let lazy_name = Id.of_string "lazy_" in
-    let thunk_param_ty = Tfun ([], self_ty) in  (* std::function<shared_ptr<T>()> *)
+    let thunk_param_ty = Tfun ([], self_ty) in
     let params = [(Id.of_string "thunk", thunk_param_ty)] in
     let variant_t_ty = Tid (Id.of_string "variant_t", []) in
-    (* Build the adapter lambda that converts shared_ptr-returning thunk
-       to variant_t-returning thunk:
-       [thunk = std::move(thunk)]() -> variant_t {
-         auto _tmp = thunk();
-         return std::move(const_cast<variant_t&>(_tmp->v()));
-       } *)
     let adapter_lambda = CPPlambda (
       [],
       Some variant_t_ty,
@@ -1680,7 +2203,6 @@ let gen_ind_header_v2 vars name cnames tys method_candidates ind_kind =
          [CPPfun_call (CPPvar (Id.of_string_soft "const_cast<variant_t&>"),
            [CPPmethod_call (CPPvar (Id.of_string "_tmp"), Id.of_string "v", [])])]))]
       , true) in
-    (* new T(std::function<variant_t()>(adapter_lambda)) *)
     let new_expr = CPPnew (Tglob (name, ty_vars, []),
       [CPPfun_call (CPPvar (Id.of_string_soft "std::function<variant_t()>"),
         [adapter_lambda])]) in
@@ -1698,23 +2220,23 @@ let gen_ind_header_v2 vars name cnames tys method_candidates ind_kind =
     (* For coinductive: const variant_t& v() const { return lazy_v_.force(); } *)
     (Fmethod (
       Id.of_string "v",
-      [],  (* no template params *)
+      [],
       Tmod (TMconst, Tref (Tid (Id.of_string "variant_t", []))),
       [],
       [Sreturn (CPPfun_call (CPPmember (CPPvar (Id.of_string "lazy_v_"), Id.of_string "force"), []))],
-      true, (* is_const *)
-      false (* is_static *)
+      true,
+      false
     ), VPublic)
   else
     (* For inductive: const variant_t& v() const { return v_; } *)
     (Fmethod (
       Id.of_string "v",
-      [],  (* no template params *)
+      [],
       Tmod (TMconst, Tref (Tid (Id.of_string "variant_t", []))),
       [],
       [Sreturn (CPPvar (Id.of_string "v_"))],
-      true, (* is_const *)
-      false (* is_static *)
+      true,
+      false
     ), VPublic) in
 
   (* 6. Generate methods from method candidates using shared helper *)

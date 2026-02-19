@@ -77,17 +77,6 @@
   (deps nested_mod.t.exe)
   (action (run ./nested_mod.t.exe))))
 
-(subdir nested_tree
- (rule
-  (targets nested_tree.t.exe)
-  (deps NestedTree.vo nested_tree.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_tree.t.exe nested_tree.cpp nested_tree.t.cpp)))
- (rule
-  (alias runtest)
-  (deps nested_tree.t.exe)
-  (action (run ./nested_tree.t.exe))))
-
 (subdir psort
  (rule
   (targets psort.t.exe)

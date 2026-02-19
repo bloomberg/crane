@@ -38,12 +38,13 @@ install:
 	dune install
 
 # Build and run tests with formatted summary (parallel)
-test:
+# extract first to ensure generated .cpp/.h files exist before compiling tests
+test: extract
 	@./scripts/check-dune-rules.sh
 	@dune exec bin/test_runner/main.exe
 
 # Build and run tests with verbose error output (parallel)
-test-verbose:
+test-verbose: extract
 	@dune exec bin/test_runner/main.exe -- --verbose
 
 # Run tests sequentially (old bash script)
