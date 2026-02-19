@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <any>
 #include <array>
+#include <cassert>
 #include <functional>
 #include <iostream>
 #include <memory>

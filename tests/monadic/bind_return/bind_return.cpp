@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <any>
 #include <bind_return.h>
+#include <cassert>
 #include <fstream>
 #include <functional>
 #include <iostream>

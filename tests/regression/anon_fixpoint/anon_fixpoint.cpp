@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <anon_fixpoint.h>
 #include <any>
+#include <cassert>
 #include <functional>
 #include <iostream>
 #include <memory>

@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <any>
+#include <cassert>
 #include <empty_match.h>
 #include <functional>
 #include <iostream>

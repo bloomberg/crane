@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <any>
 #include <bool_ops.h>
+#include <cassert>
 #include <functional>
 #include <iostream>
 #include <memory>

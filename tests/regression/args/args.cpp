@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <any>
 #include <args.h>
+#include <cassert>
 #include <functional>
 #include <iostream>
 #include <memory>

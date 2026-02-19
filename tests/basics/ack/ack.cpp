@@ -1,6 +1,7 @@
 #include <ack.h>
 #include <algorithm>
 #include <any>
+#include <cassert>
 #include <functional>
 #include <iostream>
 #include <memory>

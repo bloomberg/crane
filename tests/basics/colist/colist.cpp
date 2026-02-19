@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <any>
+#include <cassert>
 #include <colist.h>
 #include <functional>
 #include <iostream>

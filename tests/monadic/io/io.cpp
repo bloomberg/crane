@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <any>
+#include <cassert>
 #include <fstream>
 #include <functional>
 #include <io.h>

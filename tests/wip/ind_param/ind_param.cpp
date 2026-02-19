@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <any>
+#include <cassert>
 #include <functional>
 #include <ind_param.h>
 #include <iostream>
