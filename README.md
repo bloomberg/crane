@@ -121,7 +121,7 @@ Now run:
 rocq compile Foo.v && clang++ -c -std=c++23 Foo.cpp -o Foo.o
 ```
 
-This command creates `Foo.h` and `Foo.cpp` files from the Rocq file, and the compiles the C++ to the object file `Foo.o` with Clang, ready to be linked to your own C++ file containing a `main` function for execution.
+This command creates `Foo.h` and `Foo.cpp` files from the Rocq file, and then compiles the C++ to the object file `Foo.o` with Clang, ready to be linked to your own C++ file containing a `main` function for execution.
 
 ## Maintainers
 
