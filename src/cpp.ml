@@ -453,6 +453,9 @@ let pp_inductive_type_name r =
   | GlobRef.IndRef _ when is_local_inductive r ->
       (* Local inductive: use lowercase name directly *)
       str (String.uncapitalize_ascii (str_global Type r))
+  | GlobRef.IndRef _ when is_enum_inductive r ->
+      (* Enum inductive: use lowercase name directly (no namespace wrapper) *)
+      str (String.uncapitalize_ascii (str_global Type r))
   | GlobRef.IndRef _ ->
       let base = str_global Type r in
       if is_qualified_name base then
@@ -594,7 +597,7 @@ let rec lambda_needs_capture (params : (Minicpp.cpp_type * Names.Id.t option) li
     | CPPqualified (e', _) -> collect_from_expr (refs, decls) e'
     | CPPrequires (_, constraints) ->
         List.fold_left (fun a (e', _) -> collect_from_expr a e') (refs, decls) constraints
-    | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPstring _ | CPPuint _ | CPPconvertible_to _ | CPPabort _ ->
+    | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPstring _ | CPPuint _ | CPPconvertible_to _ | CPPabort _ | CPPenum_val _ ->
         (refs, decls)
 
   and collect_from_stmt (refs, decls) stmt =
@@ -613,6 +616,11 @@ let rec lambda_needs_capture (params : (Minicpp.cpp_type * Names.Id.t option) li
           List.fold_left collect_from_stmt (r, branch_decls) stmts
         ) acc branches
     | Sthrow _ -> (refs, decls)  (* throw doesn't reference or declare any variables *)
+    | Sswitch (scrut, _, branches) ->
+        let acc = collect_from_expr (refs, decls) scrut in
+        List.fold_left (fun a (_, stmts) ->
+          List.fold_left collect_from_stmt a stmts
+        ) acc branches
   in
 
   let (all_refs, local_decls) = List.fold_left collect_from_stmt (IdSet.empty, IdSet.empty) body in
@@ -652,7 +660,7 @@ and expr_contains_capturing_lambda (e : Minicpp.cpp_expr) : bool =
   | CPPmethod_call (obj, _, args) -> expr_contains_capturing_lambda obj || List.exists expr_contains_capturing_lambda args
   | CPPqualified (e', _) -> expr_contains_capturing_lambda e'
   | CPPrequires (_, constraints) -> List.exists (fun (e', _) -> expr_contains_capturing_lambda e') constraints
-  | CPPvar _ | CPPvar' _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPstring _ | CPPuint _ | CPPthis | CPPconvertible_to _ | CPPabort _ -> false
+  | CPPvar _ | CPPvar' _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPstring _ | CPPuint _ | CPPthis | CPPconvertible_to _ | CPPabort _ | CPPenum_val _ -> false
 
 and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
   let open Minicpp in
@@ -666,6 +674,9 @@ and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
       expr_contains_capturing_lambda scrut ||
       List.exists (fun (_, _, stmts) -> List.exists stmt_contains_capturing_lambda stmts) branches
   | Sthrow _ -> false  (* throw statement doesn't contain any lambdas *)
+  | Sswitch (scrut, _, branches) ->
+      expr_contains_capturing_lambda scrut ||
+      List.exists (fun (_, stmts) -> List.exists stmt_contains_capturing_lambda stmts) branches
 
 (* pretty printing c++ syntax *)
 let try_cpp c o =
@@ -847,6 +858,10 @@ let rec pp_cpp_type par vl t =
              (* Eponymous record: use capitalized name directly, no namespace nesting.
                 Use pp_global_name to get just the base name, not the qualified path. *)
              str (String.capitalize_ascii (Common.pp_global_name Type r')) ++ templates
+           else if is_enum_inductive r' then
+             (* Enum inductives have no wrapper struct - just the enum name *)
+             let inner_name = String.uncapitalize_ascii type_name_str in
+             str inner_name ++ templates
            else if is_qualified_name type_name_str then
              (* Already qualified (e.g., C::t from module parameter): add typename if in template *)
              typename_prefix_for type_name_str ++ str type_name_str ++ templates
@@ -1148,6 +1163,12 @@ and pp_cpp_expr env args t =
       if Table.std_lib () = "BDE"
         then str "([&]() -> auto { throw bsl::logic_error(\"" ++ str msg ++ str "\"); })()"
         else str "([&]() -> auto { throw std::logic_error(\"" ++ str msg ++ str "\"); })()"
+  | CPPenum_val (ind, ctor) ->
+      (* Generate EnumType::Constructor for enum class values.
+         Use pp_global_name to get the unqualified base name, since str_global
+         may return a module-qualified name like "Unit::unit" in .cpp context. *)
+      let base = Common.pp_global_name Type ind in
+      str (String.uncapitalize_ascii base) ++ str "::" ++ Id.print ctor
 
 and pp_cpp_stmt env args = function
 | SreturnVoid -> str "return;"
@@ -1165,6 +1186,19 @@ and pp_cpp_stmt env args = function
     if Table.std_lib () = "BDE"
       then str "throw bsl::logic_error(\"" ++ str msg ++ str "\");"
       else str "throw std::logic_error(\"" ++ str msg ++ str "\");"
+| Sswitch (scrut, ind, branches) ->
+    (* Generate switch statement for enum class matching.
+       Use pp_global_name to get the unqualified base name. *)
+    let base = Common.pp_global_name Type ind in
+    let type_name = str (String.uncapitalize_ascii base) in
+    let pp_branch (ctor, stmts) =
+      str "case " ++ type_name ++ str "::" ++ Id.print ctor ++ str ": {" ++ fnl () ++
+      pp_list_stmt (pp_cpp_stmt env args) stmts ++ fnl () ++
+      str "}"
+    in
+    str "switch (" ++ pp_cpp_expr env args scrut ++ str ") {" ++ fnl () ++
+    prlist_with_sep fnl pp_branch branches ++ fnl () ++
+    str "}"
 | Scustom_case (typ,t,tyargs,cases,cmatch) ->
   let cmds = parse_custom_fixed "scrut" CCscrut cmatch in
   let cmds = List.fold_left
@@ -1511,9 +1545,19 @@ function
     in
     h (str "concept " ++ str last_component ++ str " = " ++ pp_cpp_expr env [] cstr ++ str ";")
 | Dstatic_assert (e, so) ->
-    match so with
+    (match so with
     | None -> h (str "static_assert(" ++ pp_cpp_expr env [] e ++ str ");")
-    | Some s -> h (str "static_assert(" ++ pp_cpp_expr env [] e ++ str ", \"" ++ str s ++ str "\");")
+    | Some s -> h (str "static_assert(" ++ pp_cpp_expr env [] e ++ str ", \"" ++ str s ++ str "\");"))
+| Denum (name, ctors) ->
+    let struct_name = match name with
+      | GlobRef.IndRef _ ->
+          let base = Common.pp_global_name Type name in
+          str (String.uncapitalize_ascii base)
+      | _ -> pp_global Type name
+    in
+    let ctors_s = prlist_with_sep (fun () -> str "," ++ fnl () ++ str "  ")
+      (fun id -> Id.print id) ctors in
+    str "enum class " ++ struct_name ++ str " {" ++ fnl () ++ str "  " ++ ctors_s ++ fnl () ++ str "};"
 
 (*s Pretty-printing of types. [par] is a boolean indicating whether parentheses
     are needed or not. *)
@@ -1549,6 +1593,7 @@ let pp_cpp_ind kn ind =
       let ip = (kn,i) in
       let p = ind.ind_packets.(i) in
       if is_custom (GlobRef.IndRef ip) then pp (i+1)
+      else if is_enum_inductive (GlobRef.IndRef ip) then pp (i+1)  (* Enums have no .cpp body *)
       else
         (* Compute parameter-only type vars (same as in pp_cpp_ind_header) *)
         let param_sign = List.firstn ind.ind_nparams p.ip_sign in
@@ -1819,16 +1864,18 @@ let pp_cpp_ind_header kn ind =
             if Translation.type_is_erased ret_cpp then
               register_method_returns_any r
           ) methods;
-          let decl = gen_ind_header_v2 param_vars names.(i) cnames.(i) p.ip_types (List.rev methods) ind.ind_kind in
+          let decl = gen_ind_header_v2 ~is_mutual param_vars names.(i) cnames.(i) p.ip_types (List.rev methods) ind.ind_kind in
           (* DESIGN: Contextual wrapping for inductive definitions
              - If inside a struct/module: generate the inductive directly (no namespace wrapper)
              - If at module scope: wrap in a namespace struct (which becomes a struct via Dnspace)
 
              This allows inductives to nest naturally inside modules while maintaining
              proper scoping at the module level. *)
-          let wrapped_decl =
-            if !in_struct_context then decl
-            else Dnspace (Some names.(i), [decl])
+          let wrapped_decl = match decl with
+            | Denum _ -> decl  (* Enums don't need namespace wrapper *)
+            | _ ->
+              if !in_struct_context then decl
+              else Dnspace (Some names.(i), [decl])
           in
           pp_cpp_decl (empty_env ()) wrapped_decl ++ pp (i+1)
     in
@@ -2507,11 +2554,42 @@ let rec prlist_sep_nonempty sep f = function
      if Pp.ismt e then r
      else e ++ sep () ++ r
 
+(* Pre-scan structure to register all-nullary inductives as enum types.
+   Must be called before any code generation so that both .h and .cpp
+   generation paths see the enum registration. *)
+let rec pre_register_enum_inductives (sel : (Label.t * Miniml.ml_structure_elem) list) : unit =
+  List.iter (fun (_l, se) ->
+    match se with
+    | SEdecl (Dind (kn, ind)) ->
+      (match ind.ind_kind with
+       | Record _ | TypeClass _ -> ()
+       | _ ->
+         let is_mutual = Array.length ind.ind_packets > 1 in
+         Array.iteri (fun i p ->
+           let ind_ref = GlobRef.IndRef (kn, i) in
+           if not (is_custom ind_ref) && not is_mutual then begin
+             let all_nullary = Array.for_all (fun tys_list -> tys_list = []) p.ip_types in
+             let param_sign = List.firstn ind.ind_nparams p.ip_sign in
+             let num_param_vars = List.length (List.filter (fun x -> x == Miniml.Keep) param_sign) in
+             if all_nullary && num_param_vars = 0 && Array.length p.ip_types > 0 then
+               Table.add_enum_inductive ind_ref
+           end
+         ) ind.ind_packets)
+    | SEmodule m ->
+      (match m.ml_mod_expr with
+       | MEstruct (_mp, inner_sel) ->
+         pre_register_enum_inductives inner_sel
+       | _ -> ())
+    | _ -> ()
+  ) sel
+
 let do_struct_with_decl_tracking f s =
   (* Pre-register all methods from the entire structure BEFORE any code generation.
      This ensures cross-module method calls (like List.app from stmtest) are
      recognized correctly when generating code. *)
   List.iter (fun (_mp, sel) -> pre_register_methods_from_structure ~at_top_level:true [] sel) s;
+  (* Pre-register enum inductives so type conversion and code gen see them *)
+  List.iter (fun (_mp, sel) -> pre_register_enum_inductives sel) s;
   let ppl (mp,sel) =
     push_visible mp [];
     (* Track structure declarations for sibling access during inductive generation *)

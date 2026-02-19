@@ -10,23 +10,18 @@
 #include <utility>
 #include <variant>
 
-std::shared_ptr<Unit::unit> UnitType::return_unit(const unsigned int _x) {
-  return Unit::unit::ctor::tt_();
+unit UnitType::return_unit(const unsigned int _x) { return unit::tt; }
+
+unsigned int UnitType::take_unit(const unit _x) { return 5u; }
+
+unsigned int UnitType::match_unit(const unit u) {
+  return [&](void) {
+    switch (u) {
+    case unit::tt: {
+      return 7u;
+    }
+    }
+  }();
 }
 
-unsigned int UnitType::take_unit(const std::shared_ptr<Unit::unit> &_x) {
-  return 5u;
-}
-
-unsigned int UnitType::match_unit(const std::shared_ptr<Unit::unit> &u) {
-  return std::visit(
-      Overloaded{[](const typename Unit::unit::tt _args) -> unsigned int {
-        return 7u;
-      }},
-      u->v());
-}
-
-std::shared_ptr<Unit::unit>
-UnitType::unit_to_unit(const std::shared_ptr<Unit::unit> &u) {
-  return u;
-}
+unit UnitType::unit_to_unit(const unit u) { return u; }

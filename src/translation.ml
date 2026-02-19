@@ -346,6 +346,13 @@ let rec convert_ml_type_to_cpp_type env (ns : GlobRef.t list) (tvars : Id.t list
       let core = Tglob (g, converted_ts, []) in
       (match g with
       | GlobRef.IndRef _ ->
+        (* Enum inductives are value types - no shared_ptr wrapping *)
+        if is_enum_inductive g then
+          let is_local = List.exists (Environ.QGlobRef.equal Environ.empty_env g) ns ||
+                         List.exists (Environ.QGlobRef.equal Environ.empty_env g) !local_inductives in
+          if is_local then core
+          else Tnamespace (g, core)
+        else
         (* Check if this inductive is in the explicit ns list or in local_inductives context *)
         let is_local = List.exists (Environ.QGlobRef.equal Environ.empty_env g) ns ||
                        List.exists (Environ.QGlobRef.equal Environ.empty_env g) !local_inductives in
@@ -425,6 +432,11 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       let temps = List.map (convert_ml_type_to_cpp_type env [] []) tys in
       app (CPPglob (r, temps))
     | _ -> app (CPPglob (r, [])))
+  | MLcons (ty, r, ts) when ts = [] && (match r with GlobRef.ConstructRef ((kn, _), _) -> is_enum_inductive (GlobRef.IndRef (kn, 0)) | _ -> false) ->
+    (* Enum constructor: emit bare EnumType::Constructor value *)
+    let ctor_name = Id.of_string (Common.pp_global_name Type r) in
+    let ind_ref = (match r with GlobRef.ConstructRef ((kn, i), _) -> GlobRef.IndRef (kn, i) | _ -> assert false) in
+    CPPenum_val (ind_ref, ctor_name)
   | MLcons (ty, r, ts) ->
     let fds = record_fields_of_type ty in
     (match fds with
@@ -718,6 +730,32 @@ and gen_cpp_case (typ : ml_type) t env pv =
          | _ -> typ)
     | _ -> typ
   in
+  (* Check if this is an enum inductive type *)
+  let is_enum = match typ with
+    | Miniml.Tglob (GlobRef.IndRef (kn, i), _, _) -> is_enum_inductive (GlobRef.IndRef (kn, i))
+    | _ -> false
+  in
+  if is_enum then
+    (* Generate switch-based matching wrapped in IIFE *)
+    let ind_ref = match typ with
+      | Miniml.Tglob (r, _, _) -> r
+      | _ -> assert false
+    in
+    let scrutinee = gen_expr env t in
+    let rec gen_enum_branches = function
+      | [] -> []
+      | (ids, _rty, p, body) :: cs ->
+        (match p with
+        | Pusual r ->
+          let _ids', env' = push_vars' (List.rev_map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids) env in
+          let ctor_name = Id.of_string (Common.pp_global_name Type r) in
+          let body_stmts = gen_stmts env' (fun x -> Sreturn x) body in
+          (ctor_name, body_stmts) :: gen_enum_branches cs
+        | _ -> raise TODO)
+    in
+    let branches = gen_enum_branches (Array.to_list pv) in
+    CPPfun_call (CPPlambda ([], None, [Sswitch (scrutinee, ind_ref, branches)], false), [])
+  else
   (* Call v() accessor method to get the variant for pattern matching *)
   let outer cases x = (CPPfun_call (CPPvisit, CPPmethod_call (x, Id.of_string "v", []) :: [CPPoverloaded cases])) in
   let rec gen_cases = function
@@ -1510,6 +1548,8 @@ match s with
   | Sexpr e' -> Sexpr (glob_subst_expr id e e')
   | Scustom_case (ty, e', tys, brs, str) -> Scustom_case (ty, glob_subst_expr id e e', tys,
     List.map (fun (args, ty, stmts) -> (args, ty, List.map (glob_subst_stmt id e) stmts)) brs, str)
+  | Sswitch (scrut, ind, brs) -> Sswitch (glob_subst_expr id e scrut, ind,
+    List.map (fun (ctor, stmts) -> (ctor, List.map (glob_subst_stmt id e) stmts)) brs)
   | _ -> s
 
 let rec var_subst_expr (id : Id.t) (e1 : cpp_expr) (e2 : cpp_expr) =
@@ -1543,6 +1583,8 @@ match s with
   | Sexpr e' -> Sexpr (var_subst_expr id e e')
   | Scustom_case (ty, e', tys, brs, str) -> Scustom_case (ty, var_subst_expr id e e', tys,
     List.map (fun (args, ty, stmts) -> (args, ty, List.map (var_subst_stmt id e) stmts)) brs, str)
+  | Sswitch (scrut, ind, brs) -> Sswitch (var_subst_expr id e scrut, ind,
+    List.map (fun (ctor, stmts) -> (ctor, List.map (var_subst_stmt id e) stmts)) brs)
   | _ -> s
 
 (* Substitute unnamed type variables with named ones based on a variable list.
@@ -1612,6 +1654,8 @@ and tvar_subst_stmt (tvars : Id.t list) (s : cpp_stmt) : cpp_stmt =
         str)
   | SreturnVoid -> SreturnVoid
   | Sthrow msg -> Sthrow msg  (* throw statements don't need substitution *)
+  | Sswitch (scrut, ind, brs) -> Sswitch (subst_e scrut, ind,
+    List.map (fun (ctor, stmts) -> (ctor, List.map subst_s stmts)) brs)
 
 (* TODO: CLEANUP: dom and cod are redundant with ty *)
 let gen_dfun n b dom cod ty temps =
@@ -2057,7 +2101,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
      };
    };
 *)
-let gen_ind_header_v2 vars name cnames tys method_candidates ind_kind =
+let gen_ind_header_v2 ?(is_mutual=false) vars name cnames tys method_candidates ind_kind =
   let is_coinductive = ind_kind = Coinductive in
   let templates = List.map (fun n -> (TTtypename, n)) vars in
   let ty_vars = List.mapi (fun i x -> Tvar (i, Some x)) vars in
@@ -2074,6 +2118,20 @@ let gen_ind_header_v2 vars name cnames tys method_candidates ind_kind =
        This type cannot be constructed, matching the semantics of empty types. *)
     let method_fields = List.map (gen_single_method name vars) method_candidates in
     add_templates (Dstruct (name, [(Fdeleted_ctor, VPublic)] @ method_fields))
+  else
+
+  (* Check if all constructors are nullary: eligible for enum class *)
+  let all_nullary = Array.for_all (fun tys_list -> tys_list = []) tys in
+  if all_nullary && vars = [] && not is_mutual && not (is_custom name) then begin
+    (* Register as enum inductive for type/constructor/match generation *)
+    Table.add_enum_inductive name;
+    let ctor_names = Array.to_list (Array.map (fun c ->
+      match c with
+      | GlobRef.ConstructRef _ -> Id.of_string (Common.pp_global_name Type c)
+      | _ -> Id.of_string ("Ctor" ^ string_of_int 0)
+    ) cnames) in
+    Denum (name, ctor_names)
+  end
   else
 
   (* The main struct type: std::shared_ptr<Tree> or std::shared_ptr<Tree<A>> *)

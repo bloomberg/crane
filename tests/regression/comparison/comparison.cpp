@@ -10,107 +10,120 @@
 #include <utility>
 #include <variant>
 
-unsigned int Comparison::cmp_to_nat(const std::shared_ptr<Comparison::cmp> &c) {
-  return std::visit(
-      Overloaded{
-          [](const typename Comparison::cmp::CmpLt _args) -> unsigned int {
-            return 0u;
-          },
-          [](const typename Comparison::cmp::CmpEq _args) -> unsigned int {
-            return 1u;
-          },
-          [](const typename Comparison::cmp::CmpGt _args) -> unsigned int {
-            return 2u;
-          }},
-      c->v());
+unsigned int Comparison::cmp_to_nat(const Comparison::cmp c) {
+  return [&](void) {
+    switch (c) {
+    case cmp::CmpLt: {
+      return 0u;
+    }
+    case cmp::CmpEq: {
+      return 1u;
+    }
+    case cmp::CmpGt: {
+      return 2u;
+    }
+    }
+  }();
 }
 
-std::shared_ptr<Comparison::cmp>
-Comparison::compare_nats(const unsigned int a, const unsigned int b) {
+Comparison::cmp Comparison::compare_nats(const unsigned int a,
+                                         const unsigned int b) {
   if ((a < b)) {
-    return cmp::ctor::CmpLt_();
+    return cmp::CmpLt;
   } else {
     if ((a == b)) {
-      return cmp::ctor::CmpEq_();
+      return cmp::CmpEq;
     } else {
-      return cmp::ctor::CmpGt_();
+      return cmp::CmpGt;
     }
   }
 }
 
 unsigned int Comparison::max_nat(const unsigned int a, const unsigned int b) {
-  return std::visit(
-      Overloaded{
-          [&](const typename Comparison::cmp::CmpLt _args) -> unsigned int {
-            return b;
-          },
-          [&](const typename Comparison::cmp::CmpEq _args) -> unsigned int {
-            return a;
-          },
-          [&](const typename Comparison::cmp::CmpGt _args) -> unsigned int {
-            return a;
-          }},
-      compare_nats(a, b)->v());
+  return [&](void) {
+    switch (compare_nats(a, b)) {
+    case cmp::CmpLt: {
+      return b;
+    }
+    case cmp::CmpEq: {
+      return a;
+    }
+    case cmp::CmpGt: {
+      return a;
+    }
+    }
+  }();
 }
 
 unsigned int Comparison::min_nat(const unsigned int a, const unsigned int b) {
-  return std::visit(
-      Overloaded{
-          [&](const typename Comparison::cmp::CmpLt _args) -> unsigned int {
-            return a;
-          },
-          [&](const typename Comparison::cmp::CmpEq _args) -> unsigned int {
-            return a;
-          },
-          [&](const typename Comparison::cmp::CmpGt _args) -> unsigned int {
-            return b;
-          }},
-      compare_nats(a, b)->v());
+  return [&](void) {
+    switch (compare_nats(a, b)) {
+    case cmp::CmpLt: {
+      return a;
+    }
+    case cmp::CmpEq: {
+      return a;
+    }
+    case cmp::CmpGt: {
+      return b;
+    }
+    }
+  }();
 }
 
 unsigned int Comparison::clamp(const unsigned int val0, const unsigned int lo,
                                const unsigned int hi) {
-  return std::visit(
-      Overloaded{
-          [&](const typename Comparison::cmp::CmpLt _args) -> unsigned int {
-            return lo;
-          },
-          [&](const typename Comparison::cmp::CmpEq _args) -> unsigned int {
-            return std::visit(
-                Overloaded{[&](const typename Comparison::cmp::CmpLt _args)
-                               -> unsigned int { return val0; },
-                           [&](const typename Comparison::cmp::CmpEq _args)
-                               -> unsigned int { return val0; },
-                           [&](const typename Comparison::cmp::CmpGt _args)
-                               -> unsigned int { return hi; }},
-                compare_nats(val0, hi)->v());
-          },
-          [&](const typename Comparison::cmp::CmpGt _args) -> unsigned int {
-            return std::visit(
-                Overloaded{[&](const typename Comparison::cmp::CmpLt _args)
-                               -> unsigned int { return val0; },
-                           [&](const typename Comparison::cmp::CmpEq _args)
-                               -> unsigned int { return val0; },
-                           [&](const typename Comparison::cmp::CmpGt _args)
-                               -> unsigned int { return hi; }},
-                compare_nats(val0, hi)->v());
-          }},
-      compare_nats(val0, lo)->v());
+  return [&](void) {
+    switch (compare_nats(val0, lo)) {
+    case cmp::CmpLt: {
+      return lo;
+    }
+    case cmp::CmpEq: {
+      return [&](void) {
+        switch (compare_nats(val0, hi)) {
+        case cmp::CmpLt: {
+          return val0;
+        }
+        case cmp::CmpEq: {
+          return val0;
+        }
+        case cmp::CmpGt: {
+          return hi;
+        }
+        }
+      }();
+    }
+    case cmp::CmpGt: {
+      return [&](void) {
+        switch (compare_nats(val0, hi)) {
+        case cmp::CmpLt: {
+          return val0;
+        }
+        case cmp::CmpEq: {
+          return val0;
+        }
+        case cmp::CmpGt: {
+          return hi;
+        }
+        }
+      }();
+    }
+    }
+  }();
 }
 
-std::shared_ptr<Comparison::cmp>
-Comparison::flip_cmp(const std::shared_ptr<Comparison::cmp> &c) {
-  return std::visit(Overloaded{[](const typename Comparison::cmp::CmpLt _args)
-                                   -> std::shared_ptr<Comparison::cmp> {
-                                 return cmp::ctor::CmpGt_();
-                               },
-                               [](const typename Comparison::cmp::CmpEq _args)
-                                   -> std::shared_ptr<Comparison::cmp> {
-                                 return cmp::ctor::CmpEq_();
-                               },
-                               [](const typename Comparison::cmp::CmpGt _args)
-                                   -> std::shared_ptr<Comparison::cmp> {
-                                 return cmp::ctor::CmpLt_();
-                               }},
-                    c->v());
+Comparison::cmp Comparison::flip_cmp(const Comparison::cmp c) {
+  return [&](void) {
+    switch (c) {
+    case cmp::CmpLt: {
+      return cmp::CmpGt;
+    }
+    case cmp::CmpEq: {
+      return cmp::CmpEq;
+    }
+    case cmp::CmpGt: {
+      return cmp::CmpLt;
+    }
+    }
+  }();
 }

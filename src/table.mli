@@ -97,6 +97,9 @@ val is_typeclass : GlobRef.t -> bool
 val is_typeclass_type : ml_type -> bool
 val is_typeclass_type_cpp : Minicpp.cpp_type -> bool
 
+val add_enum_inductive : GlobRef.t -> unit
+val is_enum_inductive : GlobRef.t -> bool
+
 val add_recursors : Environ.env -> MutInd.t -> unit
 val is_recursor : GlobRef.t -> bool
 

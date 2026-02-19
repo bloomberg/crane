@@ -17,36 +17,16 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-struct Unit {
-  struct unit {
-  public:
-    struct tt {};
-    using variant_t = std::variant<tt>;
-
-  private:
-    variant_t v_;
-    explicit unit(tt _v) : v_(std::move(_v)) {}
-
-  public:
-    struct ctor {
-      ctor() = delete;
-      static std::shared_ptr<Unit::unit> tt_() {
-        return std::shared_ptr<Unit::unit>(new Unit::unit(tt{}));
-      }
-    };
-    const variant_t &v() const { return v_; }
-  };
-};
+enum class unit { tt };
 
 struct UnitType {
-  static inline const std::shared_ptr<Unit::unit> unit_val =
-      Unit::unit::ctor::tt_();
+  static inline const unit unit_val = unit::tt;
 
-  static std::shared_ptr<Unit::unit> return_unit(const unsigned int _x);
+  static unit return_unit(const unsigned int _x);
 
-  static unsigned int take_unit(const std::shared_ptr<Unit::unit> &_x);
+  static unsigned int take_unit(const unit _x);
 
-  static unsigned int match_unit(const std::shared_ptr<Unit::unit> &u);
+  static unsigned int match_unit(const unit u);
 
   template <typename A, typename B> struct pair {
   public:
@@ -92,36 +72,24 @@ struct UnitType {
         p->v());
   }
 
-  static inline const std::shared_ptr<
-      pair<unsigned int, std::shared_ptr<Unit::unit>>>
-      pair_with_unit =
-          pair<unsigned int, std::shared_ptr<Unit::unit>>::ctor::Pair_(
-              3u, Unit::unit::ctor::tt_());
+  static inline const std::shared_ptr<pair<unsigned int, unit>> pair_with_unit =
+      pair<unsigned int, unit>::ctor::Pair_(3u, unit::tt);
 
-  static inline const std::shared_ptr<
-      pair<std::shared_ptr<Unit::unit>, std::shared_ptr<Unit::unit>>>
-      unit_pair =
-          pair<std::shared_ptr<Unit::unit>, std::shared_ptr<Unit::unit>>::ctor::
-              Pair_(Unit::unit::ctor::tt_(), Unit::unit::ctor::tt_());
+  static inline const std::shared_ptr<pair<unit, unit>> unit_pair =
+      pair<unit, unit>::ctor::Pair_(unit::tt, unit::tt);
 
-  static std::shared_ptr<Unit::unit>
-  unit_to_unit(const std::shared_ptr<Unit::unit> &u);
+  static unit unit_to_unit(const unit u);
 
   template <typename T1, typename T2> static T2 seq(const T1 _x, const T2 b) {
     return b;
   }
 
   static inline const unsigned int sequenced =
-      seq<std::shared_ptr<Unit::unit>, unsigned int>(
-          Unit::unit::ctor::tt_(),
-          seq<std::shared_ptr<Unit::unit>, unsigned int>(
-              Unit::unit::ctor::tt_(), 5u));
+      seq<unit, unsigned int>(unit::tt, seq<unit, unsigned int>(unit::tt, 5u));
 
-  static inline const unsigned int test_take =
-      take_unit(Unit::unit::ctor::tt_());
+  static inline const unsigned int test_take = take_unit(unit::tt);
 
-  static inline const unsigned int test_match =
-      match_unit(Unit::unit::ctor::tt_());
+  static inline const unsigned int test_match = match_unit(unit::tt);
 
   static inline const unsigned int test_seq = sequenced;
 };
