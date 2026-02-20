@@ -589,6 +589,7 @@ let rec lambda_needs_capture (params : (Minicpp.cpp_type * Names.Id.t option) li
         collect_from_expr acc e'
     | CPPnew (_, args) -> List.fold_left collect_from_expr (refs, decls) args
     | CPPshared_ptr_ctor (_, e') -> collect_from_expr (refs, decls) e'
+    | CPPunique_ptr_ctor (_, e') -> collect_from_expr (refs, decls) e'
     | CPPmember (e', _) -> collect_from_expr (refs, decls) e'
     | CPParrow (e', _) -> collect_from_expr (refs, decls) e'
     | CPPmethod_call (obj, _, args) ->
@@ -597,7 +598,7 @@ let rec lambda_needs_capture (params : (Minicpp.cpp_type * Names.Id.t option) li
     | CPPqualified (e', _) -> collect_from_expr (refs, decls) e'
     | CPPrequires (_, constraints) ->
         List.fold_left (fun a (e', _) -> collect_from_expr a e') (refs, decls) constraints
-    | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPstring _ | CPPuint _ | CPPconvertible_to _ | CPPabort _ | CPPenum_val _ ->
+    | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _ | CPPstring _ | CPPuint _ | CPPconvertible_to _ | CPPabort _ | CPPenum_val _ ->
         (refs, decls)
 
   and collect_from_stmt (refs, decls) stmt =
@@ -656,12 +657,13 @@ and expr_contains_capturing_lambda (e : Minicpp.cpp_expr) : bool =
   | CPPparray (args, e') -> Array.exists expr_contains_capturing_lambda args || expr_contains_capturing_lambda e'
   | CPPnew (_, args) -> List.exists expr_contains_capturing_lambda args
   | CPPshared_ptr_ctor (_, e') -> expr_contains_capturing_lambda e'
+  | CPPunique_ptr_ctor (_, e') -> expr_contains_capturing_lambda e'
   | CPPmember (e', _) -> expr_contains_capturing_lambda e'
   | CPParrow (e', _) -> expr_contains_capturing_lambda e'
   | CPPmethod_call (obj, _, args) -> expr_contains_capturing_lambda obj || List.exists expr_contains_capturing_lambda args
   | CPPqualified (e', _) -> expr_contains_capturing_lambda e'
   | CPPrequires (_, constraints) -> List.exists (fun (e', _) -> expr_contains_capturing_lambda e') constraints
-  | CPPvar _ | CPPvar' _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPstring _ | CPPuint _ | CPPthis | CPPconvertible_to _ | CPPabort _ | CPPenum_val _ -> false
+  | CPPvar _ | CPPvar' _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _ | CPPstring _ | CPPuint _ | CPPthis | CPPconvertible_to _ | CPPabort _ | CPPenum_val _ -> false
 
 and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
   let open Minicpp in
@@ -892,6 +894,10 @@ let rec pp_cpp_type par vl t =
         if Table.std_lib () = "BDE"
           then cpp_angle "bsl::shared_ptr" (pp_rec false t)
           else cpp_angle "std::shared_ptr" (pp_rec false t)
+    | Tunique_ptr t ->
+        if Table.std_lib () = "BDE"
+          then cpp_angle "bsl::unique_ptr" (pp_rec false t)
+          else cpp_angle "std::unique_ptr" (pp_rec false t)
     | Tstring ->
         if Table.std_lib () = "BDE"
           then str "bsl::string"
@@ -1077,6 +1083,10 @@ and pp_cpp_expr env args t =
       if Table.std_lib () = "BDE"
         then cpp_angle "bsl::make_shared" (pp_cpp_type false [] t)
         else cpp_angle "std::make_shared" (pp_cpp_type false [] t)
+  | CPPmk_unique t ->
+      if Table.std_lib () = "BDE"
+        then cpp_angle "bsl::make_unique" (pp_cpp_type false [] t)
+        else cpp_angle "std::make_unique" (pp_cpp_type false [] t)
   | CPPoverloaded ls ->
       let ls_s = pp_list_newline (pp_cpp_expr env args) ls in
       let o = if Table.std_lib () = "BDE" then str "bdlf::Overloaded" else str "Overloaded" in
@@ -1146,6 +1156,9 @@ and pp_cpp_expr env args t =
   | CPPshared_ptr_ctor (ty, expr) ->
       let std_shared_ptr = if Table.std_lib () = "BDE" then "bsl::shared_ptr" else "std::shared_ptr" in
       str std_shared_ptr ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ pp_cpp_expr env args expr ++ str ")"
+  | CPPunique_ptr_ctor (ty, expr) ->
+      let std_unique_ptr = if Table.std_lib () = "BDE" then "bsl::unique_ptr" else "std::unique_ptr" in
+      str std_unique_ptr ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ pp_cpp_expr env args expr ++ str ")"
   | CPPthis -> str "this"
   | CPPmember (e, id) ->
       pp_cpp_expr env args e ++ str "." ++ Id.print id
@@ -1171,7 +1184,6 @@ and pp_cpp_expr env args t =
          may return a module-qualified name like "Unit::unit" in .cpp context. *)
       let base = Common.pp_global_name Type ind in
       str (String.uncapitalize_ascii base) ++ str "::" ++ Id.print ctor
-
 and pp_cpp_stmt env args = function
 | SreturnVoid -> str "return;"
 | Sreturn e ->
@@ -2068,6 +2080,8 @@ and pp_spec_as_requirement = function
                 str custom_str
           | Tshared_ptr ty ->
               str "std::shared_ptr<" ++ qualify_type ty ++ str ">"
+          | Tunique_ptr ty ->
+              str "std::unique_ptr<" ++ qualify_type ty ++ str ">"
           | Tvariant tys ->
               str "std::variant<" ++ prlist_with_sep (fun () -> str ", ") qualify_type tys ++ str ">"
           | Tnamespace (r, ty) ->
@@ -2101,6 +2115,8 @@ and pp_spec_as_requirement = function
                 str custom_str
           | Tshared_ptr ty ->
               str "std::shared_ptr<" ++ qualify_type ty ++ str ">"
+          | Tunique_ptr ty ->
+              str "std::unique_ptr<" ++ qualify_type ty ++ str ">"
           | Tvariant tys ->
               str "std::variant<" ++ prlist_with_sep (fun () -> str ", ") qualify_type tys ++ str ">"
           | Tnamespace (r, ty) ->

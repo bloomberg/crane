@@ -25,6 +25,7 @@ type cpp_type =
   | Tref of cpp_type
   | Tvariant of cpp_type list
   | Tshared_ptr of cpp_type
+  | Tunique_ptr of cpp_type
   | Tstring
   | Tvoid
   | Ttodo
@@ -72,6 +73,8 @@ and cpp_expr =
   (* requires (T a, T b) { { eqb(a, b) } -> std::same_as<bool> } *)
   | CPPnew of cpp_type * cpp_expr list  (* new Type(args) or new Type{args} *)
   | CPPshared_ptr_ctor of cpp_type * cpp_expr  (* std::shared_ptr<T>(expr) *)
+  | CPPunique_ptr_ctor of cpp_type * cpp_expr  (* std::unique_ptr<T>(expr) *)
+  | CPPmk_unique of cpp_type                   (* std::make_unique<T> *)
   | CPPthis  (* this pointer in methods *)
   | CPPmember of cpp_expr * Id.t  (* expr.member - for accessing v_ etc *)
   | CPParrow of cpp_expr * Id.t   (* expr->member - for ptr->v_ access *)
@@ -111,6 +114,7 @@ and cpp_field =
 type cpp_schema = int * cpp_type
 
 let ind_ty_ptr id vars = Tshared_ptr (Tglob (id, vars, []))
+let ind_ty_uptr id vars = Tunique_ptr (Tglob (id, vars, []))
 
 type cpp_decl =
   | Dtemplate of (template_type * Id.t) list  * cpp_constraint option * cpp_decl

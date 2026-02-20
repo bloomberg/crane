@@ -236,6 +236,7 @@ let rec is_typeclass_type_cpp = function
   | Minicpp.Tmod (_, t) -> is_typeclass_type_cpp t  (* Unwrap const/static/extern *)
   | Minicpp.Tref t -> is_typeclass_type_cpp t       (* Unwrap references *)
   | Minicpp.Tshared_ptr t -> is_typeclass_type_cpp t (* Unwrap shared_ptr *)
+  | Minicpp.Tunique_ptr t -> is_typeclass_type_cpp t (* Unwrap unique_ptr *)
   | _ -> false
 
 (*s Enum inductives table. *)

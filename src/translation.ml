@@ -72,6 +72,53 @@ let ml_type_is_void : ml_type -> bool = function
 | _ -> false
 
 (* ============================================================================
+   Escape analysis: promotes local shared_ptr bindings to unique_ptr.
+
+   The analysis runs on the MiniML AST before C++ translation. It identifies
+   MLletin bindings that are safe for unique_ptr (used at most once, never
+   escape). The [unique_bindings] list stores the letin depth indices of safe
+   bindings; [current_letin_depth] tracks the current depth during translation.
+   ============================================================================ *)
+
+let unique_bindings : int list ref = ref []
+let current_letin_depth : int ref = ref 0
+
+(* Run escape analysis on [body], saving and restoring the analysis state
+   around the call to [f]. This is needed because escape analysis runs at
+   multiple nesting levels (lambdas, let-in expressions, top-level functions)
+   and each level has its own set of safe bindings. *)
+let with_escape_analysis body f =
+  let saved_ub = !unique_bindings in
+  let saved_depth = !current_letin_depth in
+  unique_bindings := Escape.analyze body;
+  current_letin_depth := 0;
+  let result = f () in
+  unique_bindings := saved_ub;
+  current_letin_depth := saved_depth;
+  result
+
+(* Swap shared_ptr to unique_ptr in a C++ type. *)
+let shared_to_unique = function
+  | Tshared_ptr inner -> Tunique_ptr inner
+  | other -> other
+
+(* Swap shared_ptr construction to unique_ptr construction in a C++ expression.
+   Handles three patterns:
+   1. shared_ptr<T>(expr) -> unique_ptr<T>(expr)
+   2. make_shared<T>(args) -> make_unique<T>(args)
+   3. Type::ctor::Cons_(args) -> Type::ctor::Cons_uptr(args)
+      Redirects to the unique_ptr factory variant generated in the struct. *)
+let shared_expr_to_unique = function
+  | CPPshared_ptr_ctor (ty, e) -> CPPunique_ptr_ctor (ty, e)
+  | CPPfun_call (CPPmk_shared ty, args) -> CPPfun_call (CPPmk_unique ty, args)
+  | CPPfun_call (CPPqualified (CPPqualified (type_expr, ctor_id), factory_id), args)
+    when Names.Id.to_string ctor_id = "ctor" ->
+      let factory_str = Names.Id.to_string factory_id in
+      let uptr_name = String.sub factory_str 0 (String.length factory_str - 1) ^ "_uptr" in
+      CPPfun_call (CPPqualified (CPPqualified (type_expr, ctor_id), Names.Id.of_string uptr_name), args)
+  | e -> e
+
+(* ============================================================================
    Shared helpers for method generation (used by gen_ind_header_v2 and gen_record_methods)
    ============================================================================ *)
 
@@ -345,6 +392,7 @@ let make_subst_extra_tvars num_ind_vars extra_tvar_map =
         Tvar (i, None)
     | Tfun (dom, cod) -> Tfun (List.map subst dom, subst cod)
     | Tshared_ptr t -> Tshared_ptr (subst t)
+    | Tunique_ptr t -> Tunique_ptr (subst t)
     | Tglob (r, args, e) -> Tglob (r, List.map subst args, e)
     | Tref t -> Tref (subst t)
     | Tmod (m, t) -> Tmod (m, subst t)
@@ -370,6 +418,7 @@ let rec tvar_erase_type (ty : cpp_type) : cpp_type =
   | Tref ty -> Tref (tvar_erase_type ty)
   | Tvariant tys -> Tvariant (List.map tvar_erase_type tys)
   | Tshared_ptr ty -> Tshared_ptr (tvar_erase_type ty)
+  | Tunique_ptr ty -> Tunique_ptr (tvar_erase_type ty)
   | Tid (id, tys) -> Tid (id, List.map tvar_erase_type tys)
   | Tqualified (ty, id) -> Tqualified (tvar_erase_type ty, id)
   | _ -> ty  (* Tvoid, Tstring, Ttodo, Tunknown, Taxiom, Tany *)
@@ -503,10 +552,11 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       let args,env = push_vars' lam_params env in
       let saved_env_types = !env_types in
       push_env_types args;
-      let args = List.filter (fun (_,ty) -> not (isTdummy ty)) args in (* TODO: this could cause issues. TEST. *)
-      let tvars = get_current_type_vars () in
-      let args = List.map (fun (id, ty) -> (convert_ml_type_to_cpp_type env [] tvars ty, Some id)) args in
-      let f = CPPlambda (args, None, gen_stmts env (fun x -> Sreturn x) a, false) in
+      let f = with_escape_analysis a (fun () ->
+        let args = List.filter (fun (_,ty) -> not (isTdummy ty)) args in (* TODO: this could cause issues. TEST. *)
+        let tvars = get_current_type_vars () in
+        let args = List.map (fun (id, ty) -> (convert_ml_type_to_cpp_type env [] tvars ty, Some id)) args in
+        CPPlambda (args, None, gen_stmts env (fun x -> Sreturn x) a, false)) in
       env_types := saved_env_types;
       (match args with
       | [] -> CPPfun_call (f, [])
@@ -636,7 +686,9 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       (* TODO: we don't currently support the fancy thing of pattern matching on record fields at the same time *)
   | MLcase (typ, t, pv) when lang () == Cpp -> gen_cpp_case typ t env pv
   (* | MLcase (typ, t, pv) when lang () == Rust -> gen_rust_case typ t env pv *)
-  | MLletin (_, ty, _, _) as a -> CPPfun_call (CPPlambda([], None, gen_stmts env (fun x -> Sreturn x) a, false), [])
+  | MLletin (_, ty, _, _) as a ->
+      with_escape_analysis a (fun () ->
+        CPPfun_call (CPPlambda([], None, gen_stmts env (fun x -> Sreturn x) a, false), []))
   (*| MLfix _ -> CPPvar (Id.of_string "FIX")*)
   | MLstring s -> CPPstring s
   | MLuint x -> CPPuint x
@@ -1236,13 +1288,22 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
   let x_renamed = fst (List.hd ids_renamed) in
   push_env_types [x_renamed, t];
   if x == Dummy then gen_stmts env' k b else
+  let depth = !current_letin_depth in
+  current_letin_depth := depth + 1;
+  let use_unique = List.mem depth !unique_bindings in
   let afun v = Sasgn (x_renamed, None, v) in
   let asgn = gen_stmts env afun a in
   let tvars = get_current_type_vars () in
   begin match asgn with
-  | [ Sasgn (_, None, e) ] -> Sasgn (x_renamed, Some (convert_ml_type_to_cpp_type env [] tvars t), e) :: gen_stmts env' k b
+  | [ Sasgn (_, None, e) ] ->
+    let cpp_ty = convert_ml_type_to_cpp_type env [] tvars t in
+    let cpp_ty = if use_unique then shared_to_unique cpp_ty else cpp_ty in
+    let e = if use_unique then shared_expr_to_unique e else e in
+    Sasgn (x_renamed, Some cpp_ty, e) :: gen_stmts env' k b
   | _ ->
-    Sdecl (x_renamed, convert_ml_type_to_cpp_type env [] tvars t) :: asgn @ gen_stmts env' k b
+    let cpp_ty = convert_ml_type_to_cpp_type env [] tvars t in
+    let cpp_ty = if use_unique then shared_to_unique cpp_ty else cpp_ty in
+    Sdecl (x_renamed, cpp_ty) :: asgn @ gen_stmts env' k b
   end
 | MLapp (MLfix (x, ids, funs, _), args) ->
   (* Resolve unresolved metas in fix function types to Tvars using mgu.
@@ -1621,6 +1682,7 @@ let get_tvars t =
     | Tref ty -> aux l ty
     | Tvariant tys -> List.fold_left aux l tys
     | Tshared_ptr ty -> aux l ty
+    | Tunique_ptr ty -> aux l ty
     | _ -> l in
   let l = List.sort (fun (x,_) (y,_) -> Int.compare x y) (aux [] t) in
   List.map snd l
@@ -1673,6 +1735,7 @@ match e2 with
   | CPPforward (ty, e') -> CPPforward (ty, var_subst_expr id e1 e')
   | CPPnew (ty, args) -> CPPnew (ty, List.map (var_subst_expr id e1) args)
   | CPPshared_ptr_ctor (ty, e') -> CPPshared_ptr_ctor (ty, var_subst_expr id e1 e')
+  | CPPunique_ptr_ctor (ty, e) -> CPPunique_ptr_ctor (ty, var_subst_expr id e1 e)
   | CPPstruct_id (sid, tys, args) -> CPPstruct_id (sid, tys, List.map (var_subst_expr id e1) args)
   | CPPqualified (e', qid) -> CPPqualified (var_subst_expr id e1 e', qid)
   | _ -> e2
@@ -1705,6 +1768,7 @@ let rec tvar_subst_type (tvars : Id.t list) (ty : cpp_type) : cpp_type =
   | Tref ty -> Tref (tvar_subst_type tvars ty)
   | Tvariant tys -> Tvariant (List.map (tvar_subst_type tvars) tys)
   | Tshared_ptr ty -> Tshared_ptr (tvar_subst_type tvars ty)
+  | Tunique_ptr ty -> Tunique_ptr (tvar_subst_type tvars ty)
   | Tid (id, tys) -> Tid (id, List.map (tvar_subst_type tvars) tys)
   | Tqualified (ty, id) -> Tqualified (tvar_subst_type tvars ty, id)
   | _ -> ty  (* Tvoid, Tstring, Ttodo, Tunknown, Taxiom *)
@@ -1734,9 +1798,11 @@ let rec tvar_subst_expr (tvars : Id.t list) (e : cpp_expr) : cpp_expr =
   | CPPforward (ty, e') -> CPPforward (subst_ty ty, subst_e e')
   | CPPnew (ty, args) -> CPPnew (subst_ty ty, List.map subst_e args)
   | CPPshared_ptr_ctor (ty, e') -> CPPshared_ptr_ctor (subst_ty ty, subst_e e')
+  | CPPunique_ptr_ctor (ty, e) -> CPPunique_ptr_ctor (subst_ty ty, subst_e e)
   | CPPstruct_id (sid, tys, args) -> CPPstruct_id (sid, List.map subst_ty tys, List.map subst_e args)
   | CPPqualified (e', qid) -> CPPqualified (subst_e e', qid)
   | CPPmk_shared ty -> CPPmk_shared (subst_ty ty)
+  | CPPmk_unique ty -> CPPmk_unique (subst_ty ty)
   | _ -> e  (* CPPvar, CPPvar', CPPvisit, CPPstring, CPPuint, CPPthis, CPPrequires *)
 
 and tvar_subst_stmt (tvars : Id.t list) (s : cpp_stmt) : cpp_stmt =
@@ -1837,7 +1903,7 @@ let gen_dfun n b dom cod ty temps =
   let ids = List.map (fun (x, ty) ->
     let cpp_ty = convert_ml_type_to_cpp_type env [] [] ty in
     let wrapped = match cpp_ty with
-      | Tshared_ptr _ -> Tref (Tmod (TMconst, cpp_ty))  (* const std::shared_ptr<T>& *)
+      | Tshared_ptr _ | Tunique_ptr _ -> Tref (Tmod (TMconst, cpp_ty))  (* const std::shared_ptr<T>& *)
       | _ -> Tmod (TMconst, cpp_ty)  (* const T *)
     in
     (x, wrapped)) ids in
@@ -1941,6 +2007,8 @@ let gen_dfun n b dom cod ty temps =
             Some (Sassert ("true", Some comment))
       ) assertions
   in
+  unique_bindings := Escape.analyze b;
+  current_letin_depth := 0;
   let inner =
     if missing == [] then
       let b = List.map (glob_subst_stmt n rec_call) (gen_stmts env cofix_wrap b) in
@@ -1981,7 +2049,7 @@ let gen_sfun n b dom cod temps =
   let ids = List.map (fun (x, ty) ->
     let cpp_ty = convert_ml_type_to_cpp_type env [] [] ty in
     let wrapped = match cpp_ty with
-      | Tshared_ptr _ -> Tref (Tmod (TMconst, cpp_ty))  (* const std::shared_ptr<T>& *)
+      | Tshared_ptr _ | Tunique_ptr _ -> Tref (Tmod (TMconst, cpp_ty))  (* const std::shared_ptr<T>& *)
       | _ -> Tmod (TMconst, cpp_ty)  (* const T *)
     in
     (Some x, wrapped)) ids in
@@ -1989,7 +2057,7 @@ let gen_sfun n b dom cod temps =
   (* For already-converted C++ types in dom, wrap shared_ptr with const ref *)
   let args = List.mapi (fun i ty ->
     let wrapped = match ty with
-      | Tshared_ptr _ -> Tref (Tmod (TMconst, ty))  (* const std::shared_ptr<T>& *)
+      | Tshared_ptr _ | Tunique_ptr _ -> Tref (Tmod (TMconst, ty))  (* const std::shared_ptr<T>& *)
       | _ -> Tmod (TMconst, ty)  (* const T *)
     in
     (None, wrapped)) dom in
@@ -2111,7 +2179,7 @@ let gen_ind_header vars name cnames tys =
       (* For function parameters, use const ref for shared_ptr types *)
       let constr_params = List.map (fun (x, ty) ->
         let wrapped = match ty with
-          | Tshared_ptr _ -> Tref (Tmod (TMconst, ty))  (* const std::shared_ptr<T>& *)
+          | Tshared_ptr _ | Tunique_ptr _ -> Tref (Tmod (TMconst, ty))  (* const std::shared_ptr<T>& *)
           | _ -> ty
         in
         (x, wrapped)) constr in
@@ -2194,7 +2262,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let params = List.map (fun (id, cpp_ty, i) ->
     let wrapped = match cpp_ty with
       | Tfun _ -> Tref (Tref (Tvar (0, Some (Id.of_string ("F" ^ string_of_int i)))))
-      | Tshared_ptr _ -> Tref (Tmod (TMconst, cpp_ty))
+      | Tshared_ptr _ | Tunique_ptr _ -> Tref (Tmod (TMconst, cpp_ty))
       | _ -> Tmod (TMconst, cpp_ty)
     in
     (id, wrapped)
@@ -2358,38 +2426,44 @@ let gen_ind_header_v2 ?(is_mutual=false) vars name cnames tys method_candidates 
     [(Fconstructor ([(param_name, param_ty)], init_list, true), VPrivate)]
   else [] in
 
-  (* 5. Public ctor struct with factory methods *)
-  let factory_methods = Array.to_list (Array.mapi
-    (fun i tys_list ->
-      let c = cnames.(i) in
-      let cname = match c with
-        | GlobRef.ConstructRef _ -> Common.pp_global_name Type c
-        | _ -> "Ctor" ^ string_of_int i
+  (* 5. Public ctor struct with factory methods.
+     Each constructor gets two factory variants:
+     - Cons_(...) returning shared_ptr (standard, used by default)
+     - Cons_uptr(...) returning unique_ptr (used when escape analysis proves safety)
+     Both have identical parameters and live inside the ctor struct, which has
+     access to the private constructor. *)
+  let self_uty = ind_ty_uptr name ty_vars in
+  let mk_factory_method suffix ret_ty wrap_expr i tys_list =
+    let c = cnames.(i) in
+    let cname = match c with
+      | GlobRef.ConstructRef _ -> Common.pp_global_name Type c
+      | _ -> "Ctor" ^ string_of_int i
+    in
+    let factory_name = Id.of_string (cname ^ suffix) in
+    let params = List.mapi (fun j ty ->
+      let cpp_ty = convert_ml_type_to_cpp_type (empty_env ()) [name] vars ty in
+      let cpp_ty = if vars = [] then tvar_erase_type cpp_ty else cpp_ty in
+      let wrapped = match cpp_ty with
+        | Tshared_ptr _ | Tunique_ptr _ -> Tref (Tmod (TMconst, cpp_ty))
+        | _ -> cpp_ty
       in
-      let factory_name = Id.of_string (cname ^ "_") in
-      (* Parameters - use const ref for shared_ptr types *)
-      let params = List.mapi (fun j ty ->
-        let cpp_ty = convert_ml_type_to_cpp_type (empty_env ()) [name] vars ty in
-        (* For indexed inductives (no template params), erase unnamed Tvars to std::any *)
-        let cpp_ty = if vars = [] then tvar_erase_type cpp_ty else cpp_ty in
-        let wrapped = match cpp_ty with
-          | Tshared_ptr _ -> Tref (Tmod (TMconst, cpp_ty))  (* const std::shared_ptr<T>& *)
-          | _ -> cpp_ty
-        in
-        (Id.of_string ("a" ^ string_of_int j), wrapped)
-      ) tys_list in
-      (* Constructor arguments: use params to build the alternative struct *)
-      let ctor_args = List.mapi (fun j _ ->
-        CPPvar (Id.of_string ("a" ^ string_of_int j))
-      ) tys_list in
-      (* Body: return std::shared_ptr<Tree>(new Tree(Ctor{args})) *)
-      (* Note: nested struct types don't need template args - they inherit from parent *)
-      let ctor_struct = CPPstruct_id (Id.of_string cname, [], ctor_args) in
-      let new_expr = CPPnew (Tglob (name, ty_vars, []), [ctor_struct]) in
-      let shared_ptr_expr = CPPshared_ptr_ctor (Tglob (name, ty_vars, []), new_expr) in
-      let body = [Sreturn shared_ptr_expr] in
-      (Ffundef (factory_name, Tmod (TMstatic, self_ty), params, body), VPublic)
-    ) tys) in
+      (Id.of_string ("a" ^ string_of_int j), wrapped)
+    ) tys_list in
+    let ctor_args = List.mapi (fun j _ ->
+      CPPvar (Id.of_string ("a" ^ string_of_int j))
+    ) tys_list in
+    let ctor_struct = CPPstruct_id (Id.of_string cname, [], ctor_args) in
+    let new_expr = CPPnew (Tglob (name, ty_vars, []), [ctor_struct]) in
+    let body = [Sreturn (wrap_expr new_expr)] in
+    (Ffundef (factory_name, Tmod (TMstatic, ret_ty), params, body), VPublic)
+  in
+  let inner_ty = Tglob (name, ty_vars, []) in
+  let factory_methods = Array.to_list (Array.mapi
+    (mk_factory_method "_" self_ty (fun e -> CPPshared_ptr_ctor (inner_ty, e)))
+    tys) in
+  let uptr_factory_methods = Array.to_list (Array.mapi
+    (mk_factory_method "_uptr" self_uty (fun e -> CPPunique_ptr_ctor (inner_ty, e)))
+    tys) in
 
   (* For coinductive types, add lazy_ factory method.
      lazy_ accepts std::function<shared_ptr<T>()> and adapts it to
@@ -2416,7 +2490,7 @@ let gen_ind_header_v2 ?(is_mutual=false) vars name cnames tys method_candidates 
   else [] in
 
   (* Add deleted default constructor to ctor struct *)
-  let ctor_struct_fields = (Fdeleted_ctor, VPublic) :: factory_methods @ lazy_factory in
+  let ctor_struct_fields = (Fdeleted_ctor, VPublic) :: factory_methods @ uptr_factory_methods @ lazy_factory in
   let ctor_struct = (Fnested_struct (Id.of_string "ctor", ctor_struct_fields), VPublic) in
 
   (* Add public accessor for v_ to enable pattern matching from outside *)
