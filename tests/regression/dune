@@ -88,7 +88,16 @@
  (rule
   (alias runtest)
   (deps let_in.t.exe)
-  (action (run ./let_in.t.exe))))
+  (action (run ./let_in.t.exe)))
+ (rule
+  (targets bench_let_in.t.exe)
+  (deps BenchLetIn.vo bench_let_in.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bench_let_in.t.exe bench_let_in.cpp bench_let_in.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bench_let_in.t.exe)
+  (action (run ./bench_let_in.t.exe))))
 
 (subdir nested_inductive
  (rule

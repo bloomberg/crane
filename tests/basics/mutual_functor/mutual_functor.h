@@ -53,6 +53,13 @@ template <Elem E> struct MutualTree {
                                          const std::shared_ptr<forest> &a1) {
         return std::shared_ptr<tree>(new tree(Node{a0, a1}));
       }
+      static std::unique_ptr<tree> Leaf_uptr(unsigned int a0) {
+        return std::unique_ptr<tree>(new tree(Leaf{a0}));
+      }
+      static std::unique_ptr<tree>
+      Node_uptr(unsigned int a0, const std::shared_ptr<forest> &a1) {
+        return std::unique_ptr<tree>(new tree(Node{a0, a1}));
+      }
     };
     const variant_t &v() const { return v_; }
   };
@@ -79,6 +86,14 @@ template <Elem E> struct MutualTree {
       static std::shared_ptr<forest> FCons_(const std::shared_ptr<tree> &a0,
                                             const std::shared_ptr<forest> &a1) {
         return std::shared_ptr<forest>(new forest(FCons{a0, a1}));
+      }
+      static std::unique_ptr<forest> FNil_uptr() {
+        return std::unique_ptr<forest>(new forest(FNil{}));
+      }
+      static std::unique_ptr<forest>
+      FCons_uptr(const std::shared_ptr<tree> &a0,
+                 const std::shared_ptr<forest> &a1) {
+        return std::unique_ptr<forest>(new forest(FCons{a0, a1}));
       }
     };
     const variant_t &v() const { return v_; }

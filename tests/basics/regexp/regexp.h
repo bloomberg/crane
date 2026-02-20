@@ -43,6 +43,13 @@ struct List {
       cons_(A a0, const std::shared_ptr<List::list<A>> &a1) {
         return std::shared_ptr<List::list<A>>(new List::list<A>(cons{a0, a1}));
       }
+      static std::unique_ptr<List::list<A>> nil_uptr() {
+        return std::unique_ptr<List::list<A>>(new List::list<A>(nil{}));
+      }
+      static std::unique_ptr<List::list<A>>
+      cons_uptr(A a0, const std::shared_ptr<List::list<A>> &a1) {
+        return std::unique_ptr<List::list<A>>(new List::list<A>(cons{a0, a1}));
+      }
     };
     const variant_t &v() const { return v_; }
   };
@@ -107,6 +114,32 @@ struct Matcher {
       }
       static std::shared_ptr<regexp> Star_(const std::shared_ptr<regexp> &a0) {
         return std::shared_ptr<regexp>(new regexp(Star{a0}));
+      }
+      static std::unique_ptr<regexp> Any_uptr() {
+        return std::unique_ptr<regexp>(new regexp(Any{}));
+      }
+      static std::unique_ptr<regexp> Char_uptr(int a0) {
+        return std::unique_ptr<regexp>(new regexp(Char{a0}));
+      }
+      static std::unique_ptr<regexp> Eps_uptr() {
+        return std::unique_ptr<regexp>(new regexp(Eps{}));
+      }
+      static std::unique_ptr<regexp>
+      Cat_uptr(const std::shared_ptr<regexp> &a0,
+               const std::shared_ptr<regexp> &a1) {
+        return std::unique_ptr<regexp>(new regexp(Cat{a0, a1}));
+      }
+      static std::unique_ptr<regexp>
+      Alt_uptr(const std::shared_ptr<regexp> &a0,
+               const std::shared_ptr<regexp> &a1) {
+        return std::unique_ptr<regexp>(new regexp(Alt{a0, a1}));
+      }
+      static std::unique_ptr<regexp> Zero_uptr() {
+        return std::unique_ptr<regexp>(new regexp(Zero{}));
+      }
+      static std::unique_ptr<regexp>
+      Star_uptr(const std::shared_ptr<regexp> &a0) {
+        return std::unique_ptr<regexp>(new regexp(Star{a0}));
       }
     };
     const variant_t &v() const { return v_; }

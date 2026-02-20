@@ -41,6 +41,13 @@ struct Nat {
       static std::shared_ptr<Nat::nat> S_(const std::shared_ptr<Nat::nat> &a0) {
         return std::shared_ptr<Nat::nat>(new Nat::nat(S{a0}));
       }
+      static std::unique_ptr<Nat::nat> O_uptr() {
+        return std::unique_ptr<Nat::nat>(new Nat::nat(O{}));
+      }
+      static std::unique_ptr<Nat::nat>
+      S_uptr(const std::shared_ptr<Nat::nat> &a0) {
+        return std::unique_ptr<Nat::nat>(new Nat::nat(S{a0}));
+      }
     };
     const variant_t &v() const { return v_; }
   };
@@ -70,6 +77,13 @@ struct List {
       static std::shared_ptr<List::list<A>>
       cons_(A a0, const std::shared_ptr<List::list<A>> &a1) {
         return std::shared_ptr<List::list<A>>(new List::list<A>(cons{a0, a1}));
+      }
+      static std::unique_ptr<List::list<A>> nil_uptr() {
+        return std::unique_ptr<List::list<A>>(new List::list<A>(nil{}));
+      }
+      static std::unique_ptr<List::list<A>>
+      cons_uptr(A a0, const std::shared_ptr<List::list<A>> &a1) {
+        return std::unique_ptr<List::list<A>>(new List::list<A>(cons{a0, a1}));
       }
     };
     const variant_t &v() const { return v_; }
@@ -104,6 +118,13 @@ struct Colist {
       static std::shared_ptr<colist<A>>
       cocons_(A a0, const std::shared_ptr<colist<A>> &a1) {
         return std::shared_ptr<colist<A>>(new colist<A>(cocons{a0, a1}));
+      }
+      static std::unique_ptr<colist<A>> conil_uptr() {
+        return std::unique_ptr<colist<A>>(new colist<A>(conil{}));
+      }
+      static std::unique_ptr<colist<A>>
+      cocons_uptr(A a0, const std::shared_ptr<colist<A>> &a1) {
+        return std::unique_ptr<colist<A>>(new colist<A>(cocons{a0, a1}));
       }
       static std::shared_ptr<colist<A>>
       lazy_(std::function<std::shared_ptr<colist<A>>()> thunk) {

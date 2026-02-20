@@ -40,6 +40,13 @@ struct Nat {
       static std::shared_ptr<Nat::nat> S_(const std::shared_ptr<Nat::nat> &a0) {
         return std::shared_ptr<Nat::nat>(new Nat::nat(S{a0}));
       }
+      static std::unique_ptr<Nat::nat> O_uptr() {
+        return std::unique_ptr<Nat::nat>(new Nat::nat(O{}));
+      }
+      static std::unique_ptr<Nat::nat>
+      S_uptr(const std::shared_ptr<Nat::nat> &a0) {
+        return std::unique_ptr<Nat::nat>(new Nat::nat(S{a0}));
+      }
     };
     const variant_t &v() const { return v_; }
   };

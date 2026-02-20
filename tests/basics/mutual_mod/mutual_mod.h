@@ -45,6 +45,13 @@ struct EvenOdd {
       ECons_(unsigned int a0, const std::shared_ptr<odd_list> &a1) {
         return std::shared_ptr<even_list>(new even_list(ECons{a0, a1}));
       }
+      static std::unique_ptr<even_list> ENil_uptr() {
+        return std::unique_ptr<even_list>(new even_list(ENil{}));
+      }
+      static std::unique_ptr<even_list>
+      ECons_uptr(unsigned int a0, const std::shared_ptr<odd_list> &a1) {
+        return std::unique_ptr<even_list>(new even_list(ECons{a0, a1}));
+      }
     };
     const variant_t &v() const { return v_; }
   };
@@ -66,6 +73,10 @@ struct EvenOdd {
       static std::shared_ptr<odd_list>
       OCons_(unsigned int a0, const std::shared_ptr<even_list> &a1) {
         return std::shared_ptr<odd_list>(new odd_list(OCons{a0, a1}));
+      }
+      static std::unique_ptr<odd_list>
+      OCons_uptr(unsigned int a0, const std::shared_ptr<even_list> &a1) {
+        return std::unique_ptr<odd_list>(new odd_list(OCons{a0, a1}));
       }
     };
     const variant_t &v() const { return v_; }

@@ -49,6 +49,9 @@ struct LetIn {
       static std::shared_ptr<pair<A, B>> Pair_(A a0, B a1) {
         return std::shared_ptr<pair<A, B>>(new pair<A, B>(Pair{a0, a1}));
       }
+      static std::unique_ptr<pair<A, B>> Pair_uptr(A a0, B a1) {
+        return std::unique_ptr<pair<A, B>>(new pair<A, B>(Pair{a0, a1}));
+      }
     };
     const variant_t &v() const { return v_; }
   };
@@ -76,8 +79,8 @@ struct LetIn {
   }
 
   static inline const unsigned int let_destruct = [](void) {
-    std::shared_ptr<pair<unsigned int, unsigned int>> p =
-        pair<unsigned int, unsigned int>::ctor::Pair_(3u, 4u);
+    std::unique_ptr<pair<unsigned int, unsigned int>> p =
+        pair<unsigned int, unsigned int>::ctor::Pair_uptr(3u, 4u);
     return std::visit(
         Overloaded{
             [](const typename pair<unsigned int, unsigned int>::Pair _args)

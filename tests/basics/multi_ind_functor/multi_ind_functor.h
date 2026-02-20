@@ -47,6 +47,12 @@ template <Elem E> struct Container {
       static std::shared_ptr<maybe> Just_(unsigned int a0) {
         return std::shared_ptr<maybe>(new maybe(Just{a0}));
       }
+      static std::unique_ptr<maybe> Nothing_uptr() {
+        return std::unique_ptr<maybe>(new maybe(Nothing{}));
+      }
+      static std::unique_ptr<maybe> Just_uptr(unsigned int a0) {
+        return std::unique_ptr<maybe>(new maybe(Just{a0}));
+      }
     };
     const variant_t &v() const { return v_; }
   };
@@ -96,6 +102,14 @@ template <Elem E> struct Container {
       static std::shared_ptr<mlist> MCons_(const std::shared_ptr<maybe> &a0,
                                            const std::shared_ptr<mlist> &a1) {
         return std::shared_ptr<mlist>(new mlist(MCons{a0, a1}));
+      }
+      static std::unique_ptr<mlist> MNil_uptr() {
+        return std::unique_ptr<mlist>(new mlist(MNil{}));
+      }
+      static std::unique_ptr<mlist>
+      MCons_uptr(const std::shared_ptr<maybe> &a0,
+                 const std::shared_ptr<mlist> &a1) {
+        return std::unique_ptr<mlist>(new mlist(MCons{a0, a1}));
       }
     };
     const variant_t &v() const { return v_; }
@@ -150,6 +164,14 @@ template <Elem E> struct Container {
       }
       static std::shared_ptr<mtree> Node_(const std::shared_ptr<mlist> &a0) {
         return std::shared_ptr<mtree>(new mtree(Node{a0}));
+      }
+      static std::unique_ptr<mtree>
+      Leaf_uptr(const std::shared_ptr<maybe> &a0) {
+        return std::unique_ptr<mtree>(new mtree(Leaf{a0}));
+      }
+      static std::unique_ptr<mtree>
+      Node_uptr(const std::shared_ptr<mlist> &a0) {
+        return std::unique_ptr<mtree>(new mtree(Node{a0}));
       }
     };
     const variant_t &v() const { return v_; }

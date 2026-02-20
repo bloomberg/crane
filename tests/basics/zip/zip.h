@@ -37,6 +37,10 @@ struct Prod {
         return std::shared_ptr<Prod::prod<A, B>>(
             new Prod::prod<A, B>(pair{a0, a1}));
       }
+      static std::unique_ptr<Prod::prod<A, B>> pair_uptr(A a0, B a1) {
+        return std::unique_ptr<Prod::prod<A, B>>(
+            new Prod::prod<A, B>(pair{a0, a1}));
+      }
     };
     const variant_t &v() const { return v_; }
   };
@@ -66,6 +70,13 @@ struct List {
       static std::shared_ptr<List::list<A>>
       cons_(A a0, const std::shared_ptr<List::list<A>> &a1) {
         return std::shared_ptr<List::list<A>>(new List::list<A>(cons{a0, a1}));
+      }
+      static std::unique_ptr<List::list<A>> nil_uptr() {
+        return std::unique_ptr<List::list<A>>(new List::list<A>(nil{}));
+      }
+      static std::unique_ptr<List::list<A>>
+      cons_uptr(A a0, const std::shared_ptr<List::list<A>> &a1) {
+        return std::unique_ptr<List::list<A>>(new List::list<A>(cons{a0, a1}));
       }
     };
     const variant_t &v() const { return v_; }
