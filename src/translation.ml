@@ -789,32 +789,10 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body =
     | GlobRef.ConstructRef _ -> Id.of_string (Common.pp_global_name Type cname)
     | _ -> Id.of_string "unknown_ctor"
   in
-  (* Get type arguments from scrutinee to substitute in branch types *)
-  let type_args = match typ with
-    | Tglob (_, tys, _) -> tys
-    | _ -> []
-  in
-  (* Substitute type variables in return type and argument types *)
-  let rty = if type_args <> [] then
-    (try type_subst_list type_args rty with _ -> rty)
-    else rty
-  in
-  let ids = List.map (fun (id, ty) ->
-    let ty = if type_args <> [] then
-      (try type_subst_list type_args ty with _ -> ty)
-      else ty
-    in
-    (id, ty)) ids
-  in
   (* Build path: typename InductiveType<temps>::ConstructorName *)
   let constr = match typ with
   | Tglob (r, tys, _) ->
-    (* Simplify ML types first, then substitute type variables, then convert to C++ *)
     let tys = List.map type_simpl tys in
-    let tys = if type_args <> [] then
-      List.map (fun ty -> try type_subst_list type_args ty with _ -> ty) tys
-      else tys
-    in
     (* Filter out index type args - only keep parameters *)
     let tys = match r with
       | GlobRef.IndRef (kn, _) ->
