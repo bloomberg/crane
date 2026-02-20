@@ -50,7 +50,7 @@ bool Nat::leb(const unsigned int n, const unsigned int m) {
 }
 
 bool Nat::ltb(const unsigned int n, const unsigned int m) {
-  return leb((n + 1), m);
+  return leb((std::move(n) + 1), m);
 }
 
 bool skiplist_test::nat_lt(const unsigned int _x0, const unsigned int _x1) {
@@ -83,21 +83,21 @@ bool skiplist_test::stm_test_insert_lookup() {
   bool c2;
   if (v3.has_value()) {
     unsigned int n = *v3;
-    c2 = Nat::eqb(n, 30u);
+    c2 = Nat::eqb(std::move(n), 30u);
   } else {
     c2 = false;
   }
   bool c3;
   if (v7.has_value()) {
     unsigned int n = *v7;
-    c3 = Nat::eqb(n, 70u);
+    c3 = Nat::eqb(std::move(n), 70u);
   } else {
     c3 = false;
   }
   bool c4;
   if (v1.has_value()) {
     unsigned int n = *v1;
-    c4 = Nat::eqb(n, 10u);
+    c4 = Nat::eqb(std::move(n), 10u);
   } else {
     c4 = false;
   }
@@ -131,14 +131,14 @@ bool skiplist_test::stm_test_delete() {
   bool c2;
   if (v3.has_value()) {
     unsigned int n = *v3;
-    c2 = Nat::eqb(n, 30u);
+    c2 = Nat::eqb(std::move(n), 30u);
   } else {
     c2 = false;
   }
   bool c3;
   if (v7.has_value()) {
     unsigned int n = *v7;
-    c3 = Nat::eqb(n, 70u);
+    c3 = Nat::eqb(std::move(n), 70u);
   } else {
     c3 = false;
   }
@@ -217,9 +217,9 @@ bool skiplist_test::stm_test_front_back() {
   bool c2;
   if (backOpt.has_value()) {
     std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *backOpt;
-    c2 = Nat::eqb(
-        SkipList<int, int>::template key<unsigned int, unsigned int>(p),
-        (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+    c2 = Nat::eqb(SkipList<int, int>::template key<unsigned int, unsigned int>(
+                      std::move(p)),
+                  (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1));
   } else {
     c2 = false;
   }
@@ -249,7 +249,7 @@ bool skiplist_test::stm_test_popFront() {
     std::pair<unsigned int, unsigned int> p = *pop2;
     unsigned int k = p.first;
     unsigned int v = p.second;
-    c2 = (Nat::eqb(k, 5u) && Nat::eqb(v, 50u));
+    c2 = (Nat::eqb(k, 5u) && Nat::eqb(std::move(v), 50u));
   } else {
     c2 = false;
   }
@@ -269,7 +269,7 @@ bool skiplist_test::stm_test_addUnique() {
   bool c4;
   if (v5.has_value()) {
     unsigned int n = *v5;
-    c4 = Nat::eqb(n, 50u);
+    c4 = Nat::eqb(std::move(n), 50u);
   } else {
     c4 = false;
   }
@@ -291,7 +291,7 @@ bool skiplist_test::stm_test_find() {
     std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *pairOpt;
     unsigned int k =
         SkipList<int, int>::template key<unsigned int, unsigned int>(p);
-    c1 = Nat::eqb(k, 5u);
+    c1 = Nat::eqb(std::move(k), 5u);
   } else {
     c1 = false;
   }
@@ -332,7 +332,8 @@ bool skiplist_test::stm_test_navigation() {
       if (prevOpt.has_value()) {
         std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *prevOpt;
         c3 = Nat::eqb(
-            SkipList<int, int>::template key<unsigned int, unsigned int>(p),
+            SkipList<int, int>::template key<unsigned int, unsigned int>(
+                std::move(p)),
             1u);
       } else {
         c3 = false;
@@ -369,16 +370,18 @@ bool skiplist_test::stm_test_bounds() {
   bool c2;
   if (lb4.has_value()) {
     std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *lb4;
-    c2 = Nat::eqb(
-        SkipList<int, int>::template key<unsigned int, unsigned int>(p), 4u);
+    c2 = Nat::eqb(SkipList<int, int>::template key<unsigned int, unsigned int>(
+                      std::move(p)),
+                  4u);
   } else {
     c2 = false;
   }
   bool c3;
   if (ub4.has_value()) {
     std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *ub4;
-    c3 = Nat::eqb(
-        SkipList<int, int>::template key<unsigned int, unsigned int>(p), 6u);
+    c3 = Nat::eqb(SkipList<int, int>::template key<unsigned int, unsigned int>(
+                      std::move(p)),
+                  6u);
   } else {
     c3 = false;
   }
@@ -430,7 +433,7 @@ bool skiplist_test::stm_test_bde_api() {
   unsigned int status2 = findResult2.first;
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> _x4 =
       findResult2.second;
-  bool c5 = Nat::eqb(status2, SkipList<int, int>::e_NOT_FOUND);
+  bool c5 = Nat::eqb(std::move(status2), SkipList<int, int>::e_NOT_FOUND);
   std::pair<std::pair<unsigned int, std::optional<std::shared_ptr<
                                         SkipNode<unsigned int, unsigned int>>>>,
             bool>
@@ -443,7 +446,7 @@ bool skiplist_test::stm_test_bde_api() {
   unsigned int status3 = p.first;
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> _x6 =
       p.second;
-  bool c6 = Nat::eqb(status3, SkipList<int, int>::e_DUPLICATE);
+  bool c6 = Nat::eqb(std::move(status3), SkipList<int, int>::e_DUPLICATE);
   std::pair<
       unsigned int,
       std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>>
@@ -451,12 +454,14 @@ bool skiplist_test::stm_test_bde_api() {
   unsigned int status4 = frontResult.first;
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
       frontItem = frontResult.second;
-  bool c7 = Nat::eqb(status4, SkipList<int, int>::e_SUCCESS);
+  bool c7 = Nat::eqb(std::move(status4), SkipList<int, int>::e_SUCCESS);
   bool c8;
-  if (frontItem.has_value()) {
-    std::shared_ptr<SkipNode<unsigned int, unsigned int>> p0 = *frontItem;
-    c8 = Nat::eqb(
-        SkipList<int, int>::template key<unsigned int, unsigned int>(p0), 3u);
+  if (std::move(frontItem).has_value()) {
+    std::shared_ptr<SkipNode<unsigned int, unsigned int>> p0 =
+        *std::move(frontItem);
+    c8 = Nat::eqb(SkipList<int, int>::template key<unsigned int, unsigned int>(
+                      std::move(p0)),
+                  3u);
   } else {
     c8 = false;
   }
@@ -467,12 +472,14 @@ bool skiplist_test::stm_test_bde_api() {
   unsigned int status5 = backResult.first;
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
       backItem = backResult.second;
-  bool c9 = Nat::eqb(status5, SkipList<int, int>::e_SUCCESS);
+  bool c9 = Nat::eqb(std::move(status5), SkipList<int, int>::e_SUCCESS);
   bool c10;
-  if (backItem.has_value()) {
-    std::shared_ptr<SkipNode<unsigned int, unsigned int>> p0 = *backItem;
-    c10 = Nat::eqb(
-        SkipList<int, int>::template key<unsigned int, unsigned int>(p0), 7u);
+  if (std::move(backItem).has_value()) {
+    std::shared_ptr<SkipNode<unsigned int, unsigned int>> p0 =
+        *std::move(backItem);
+    c10 = Nat::eqb(SkipList<int, int>::template key<unsigned int, unsigned int>(
+                       std::move(p0)),
+                   7u);
   } else {
     c10 = false;
   }

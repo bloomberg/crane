@@ -52,6 +52,7 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
     template <typename T2, MapsTo<T2, A, std::shared_ptr<list<A>>, T2> F1>
     T2 list_rect(const T2 f, F1 &&f0) const {
       return std::visit(
@@ -84,7 +85,7 @@ struct List {
                                    [](const typename list<A>::cons _args)
                                        -> std::shared_ptr<list<A>> {
                                      std::shared_ptr<list<A>> ls = _args._a1;
-                                     return ls;
+                                     return std::move(ls);
                                    }},
                         this->v());
     }
@@ -105,7 +106,7 @@ struct List {
               [](const typename list<A>::cons _args) -> auto {
                 A y = _args._a0;
                 std::shared_ptr<list<A>> ls = _args._a1;
-                return ls->last(y);
+                return std::move(ls)->last(y);
               }},
           this->v());
     }
@@ -117,7 +118,7 @@ struct List {
                          -> std::shared_ptr<list<A>> {
                        A x = _args._a0;
                        std::shared_ptr<list<A>> l3 = _args._a1;
-                       return list<A>::ctor::cons_(x, l3->app(l2));
+                       return list<A>::ctor::cons_(x, std::move(l3)->app(l2));
                      }},
           this->v());
     }
@@ -131,8 +132,8 @@ struct List {
                                        -> std::shared_ptr<list<T2>> {
                                      A x = _args._a0;
                                      std::shared_ptr<list<A>> l_ = _args._a1;
-                                     return list<T2>::ctor::cons_(f(x),
-                                                                  l_->map(f));
+                                     return list<T2>::ctor::cons_(
+                                         f(x), std::move(l_)->map(f));
                                    }},
                         this->v());
     }

@@ -44,6 +44,15 @@ and cpp_stmt =
   | Sthrow of string  (* throw statement for unreachable/absurd cases *)
   | Sswitch of cpp_expr * GlobRef.t * (Id.t * cpp_stmt list) list  (* switch on enum: scrutinee, enum type, branches *)
   | Sassert of string * string option  (* runtime assert: C++ expression string, optional Rocq predicate comment *)
+  | Sif of cpp_expr * cpp_stmt list * cpp_stmt list
+      (* if-else: condition, then-branch, else-branch.
+         Used for reuse optimization's use_count() check. *)
+  | Sraw of string
+      (* Raw C++ code, printed verbatim.
+         Used for low-level operations in reuse optimization. *)
+  | Sassign_field of cpp_expr * Id.t * cpp_expr
+      (* Field assignment: obj.field = expr.
+         Used for in-place mutation during memory reuse. *)
 
 (* add something for (mutual) fixpoints? *)
 and cpp_expr =
@@ -83,6 +92,12 @@ and cpp_expr =
   | CPPconvertible_to of cpp_type  (* std::convertible_to<T> constraint *)
   | CPPabort of string  (* unreachable code / absurd case - calls std::abort() *)
   | CPPenum_val of GlobRef.t * Id.t  (* enum class value: EnumType::Constructor *)
+  | CPPraw of string
+      (* Raw C++ expression, printed verbatim.
+         Used for low-level operations (e.g., literal "1" for use_count check). *)
+  | CPPbinop of string * cpp_expr * cpp_expr
+      (* Binary operator: operator string, lhs, rhs.
+         Used for conditions in reuse optimization (&&, ==). *)
 
 and cpp_constraint = cpp_expr
 

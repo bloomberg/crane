@@ -50,7 +50,7 @@ void stmtest::stm_enqueue(
         q,
     const unsigned int x) {
   std::shared_ptr<List::list<unsigned int>> xs = q->read();
-  return q->write(xs->app(List::list<unsigned int>::ctor::cons_(
+  return q->write(std::move(xs)->app(List::list<unsigned int>::ctor::cons_(
       x, List::list<unsigned int>::ctor::nil_())));
 }
 

@@ -79,6 +79,7 @@ struct List {
             }
         };
         const variant_t& v() const { return v_; }
+        variant_t&       v_mut() { return v_; }
     };
 };
 
@@ -169,7 +170,7 @@ struct CHT {
                                                             this->CHT::cht_eqb,
                                                             k,
                                                             xs);
-        V                                              v = f(ov);
+        V                                              v = f(bsl::move(ov));
         bsl::shared_ptr<List::list<bsl::pair<K, V> > > xs_ =
                          CHT<int, int>::template assoc_insert_or_replace<K, V>(
                              this->CHT::cht_eqb,
@@ -242,7 +243,7 @@ struct CHT {
                      T1 k_ = p.first;
                      T2 v  = p.second;
                      if (eqb(k, k_)) {
-                         return bsl::make_optional<T2>(v);
+                         return bsl::make_optional<T2>(bsl::move(v));
                      }
                      else {
                          return CHT<int, int>::template assoc_lookup<T1, T2>(
@@ -284,7 +285,7 @@ struct CHT {
                      }
                      else {
                          return List::list<bsl::pair<T1, T2> >::ctor::cons_(
-                             bsl::make_pair(k_, v_),
+                             bsl::make_pair(bsl::move(k_), bsl::move(v_)),
                              CHT<int, int>::template assoc_insert_or_replace<
                                  T1,
                                  T2>(eqb, k, v, tl));
@@ -296,9 +297,9 @@ struct CHT {
     template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
     static bsl::pair<bsl::optional<T2>,
                      bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > >
-    assoc_remove(F0&&                                                    eqb,
-                 const T1                                                k,
-                 const bsl::shared_ptr<List::list<bsl::pair<T1, T2> > >& xs)
+    assoc_remove(F0&&                                             eqb,
+                 const T1                                         k,
+                 bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > xs)
     {
         return bsl::visit(
              bdlf::Overloaded{
@@ -306,7 +307,7 @@ struct CHT {
                      -> bsl::pair<
                          bsl::optional<T2>,
                          bsl::shared_ptr<List::list<bsl::pair<T1, T2> > > > {
-                     return bsl::make_pair(bsl::nullopt, xs);
+                     return bsl::make_pair(bsl::nullopt, bsl::move(xs));
                  },
                  [&](const typename List::list<bsl::pair<T1, T2> >::cons _args)
                      -> bsl::pair<
@@ -318,7 +319,9 @@ struct CHT {
                      T1 k_ = p.first;
                      T2 v_ = p.second;
                      if (eqb(k, k_)) {
-                         return bsl::make_pair(bsl::make_optional<T2>(v_), tl);
+                         return bsl::make_pair(
+                             bsl::make_optional<T2>(bsl::move(v_)),
+                             bsl::move(tl));
                      }
                      else {
                          bsl::pair<
@@ -327,11 +330,11 @@ struct CHT {
                              q = CHT<int, int>::template assoc_remove<T1, T2>(
                                  eqb,
                                  k,
-                                 tl);
+                                 bsl::move(tl));
                          return bsl::make_pair(
                              q.first,
                              List::list<bsl::pair<T1, T2> >::ctor::cons_(
-                                 bsl::make_pair(k_, v_),
+                                 bsl::make_pair(bsl::move(k_), bsl::move(v_)),
                                  q.second));
                      }
                  }},

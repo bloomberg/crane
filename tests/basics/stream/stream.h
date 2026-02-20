@@ -50,6 +50,7 @@ struct Nat {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -87,6 +88,7 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -142,7 +144,8 @@ struct Stream {
                                           -> std::shared_ptr<List::list<A>> {
                              A x = _args._a0;
                              std::shared_ptr<stream<A>> xs = _args._a1;
-                             return List::list<A>::ctor::cons_(x, xs->take(n_));
+                             return List::list<A>::ctor::cons_(
+                                 x, xs->take(std::move(n_)));
                            }},
                            this->v());
                      }},
@@ -170,7 +173,7 @@ struct Stream {
   }
 
   static std::shared_ptr<stream<std::shared_ptr<Nat::nat>>>
-  nats_from(const std::shared_ptr<Nat::nat> &n);
+  nats_from(std::shared_ptr<Nat::nat> n);
 
   static inline const std::shared_ptr<stream<std::shared_ptr<Nat::nat>>> ones =
       repeat<std::shared_ptr<Nat::nat>>(

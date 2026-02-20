@@ -52,6 +52,7 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -94,6 +95,7 @@ struct Priqueue {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, std::shared_ptr<tree>, T1,
@@ -105,7 +107,7 @@ struct Priqueue {
                      unsigned int k = _args._a0;
                      std::shared_ptr<tree> t0 = _args._a1;
                      std::shared_ptr<tree> t1 = _args._a2;
-                     return f(k, t0, tree_rect<T1>(f, f0, t0), t1,
+                     return f(std::move(k), t0, tree_rect<T1>(f, f0, t0), t1,
                               tree_rect<T1>(f, f0, t1));
                    },
                    [&](const typename tree::Leaf _args) -> T1 { return f0; }},
@@ -121,7 +123,7 @@ struct Priqueue {
                      unsigned int k = _args._a0;
                      std::shared_ptr<tree> t0 = _args._a1;
                      std::shared_ptr<tree> t1 = _args._a2;
-                     return f(k, t0, tree_rec<T1>(f, f0, t0), t1,
+                     return f(std::move(k), t0, tree_rec<T1>(f, f0, t0), t1,
                               tree_rec<T1>(f, f0, t1));
                    },
                    [&](const typename tree::Leaf _args) -> T1 { return f0; }},
@@ -138,7 +140,7 @@ struct Priqueue {
 
   static std::shared_ptr<List::list<std::shared_ptr<tree>>>
   carry(const std::shared_ptr<List::list<std::shared_ptr<tree>>> &q,
-        const std::shared_ptr<tree> &t);
+        std::shared_ptr<tree> t);
 
   static priqueue
   insert(const unsigned int x,
@@ -147,7 +149,7 @@ struct Priqueue {
   static priqueue
   join(const std::shared_ptr<List::list<std::shared_ptr<tree>>> &p,
        const std::shared_ptr<List::list<std::shared_ptr<tree>>> &q,
-       const std::shared_ptr<tree> &c);
+       std::shared_ptr<tree> c);
 
   template <MapsTo<std::shared_ptr<List::list<std::shared_ptr<tree>>>,
                    std::shared_ptr<List::list<std::shared_ptr<tree>>>>
@@ -167,7 +169,7 @@ struct Priqueue {
                     return List::list<std::shared_ptr<tree>>::ctor::cons_(
                         tree::ctor::Node_(x, t1, tree::ctor::Leaf_()), cont(q));
                   };
-              return unzip(t2, f);
+              return unzip(std::move(t2), f);
             },
             [&](const typename tree::Leaf _args)
                 -> std::shared_ptr<List::list<std::shared_ptr<tree>>> {
@@ -198,11 +200,10 @@ struct Priqueue {
 
   static priqueue
   insert_list(const std::shared_ptr<List::list<unsigned int>> &l,
-              const std::shared_ptr<List::list<std::shared_ptr<tree>>> &q);
+              std::shared_ptr<List::list<std::shared_ptr<tree>>> q);
 
   static std::shared_ptr<List::list<unsigned int>>
-  make_list(const unsigned int n,
-            const std::shared_ptr<List::list<unsigned int>> &l);
+  make_list(const unsigned int n, std::shared_ptr<List::list<unsigned int>> l);
 
   static key help(const std::shared_ptr<List::list<std::shared_ptr<tree>>> &c);
 

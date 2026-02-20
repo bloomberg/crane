@@ -32,7 +32,7 @@ struct Lambda {
 
   template <MapsTo<unsigned int, unsigned int> F0>
   static unsigned int apply_fn(F0 &&f, const unsigned int _x0) {
-    return f(_x0);
+    return f(std::move(_x0));
   }
 
   static inline const unsigned int use_apply =

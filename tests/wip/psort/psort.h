@@ -52,6 +52,7 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -78,6 +79,7 @@ struct Sig0 {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -116,13 +118,13 @@ T2 div_conq_pair(const T2 x, F1 &&x0, F2 &&x1, F3 &&x2,
                                  a, a0, l1, x1(a, a0),
                                  div_conq_pair<T1, T2>(x, x0, x1, x2, l1));
                            }},
-                       l0->v());
+                       std::move(l0)->v());
                  }},
       l->v());
 }
 
 std::shared_ptr<List::list<unsigned int>>
-merge(const std::shared_ptr<List::list<unsigned int>> &l1,
+merge(std::shared_ptr<List::list<unsigned int>> l1,
       const std::shared_ptr<List::list<unsigned int>> &l2);
 
 std::shared_ptr<Sig0::sig0<std::shared_ptr<List::list<unsigned int>>>>

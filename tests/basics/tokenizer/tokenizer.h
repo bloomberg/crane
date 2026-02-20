@@ -55,6 +55,7 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
     std::shared_ptr<List::list<A>>
     app(const std::shared_ptr<List::list<A>> &m) const {
       return std::visit(
@@ -64,7 +65,8 @@ struct List {
                          -> std::shared_ptr<List::list<A>> {
                        A a = _args._a0;
                        std::shared_ptr<List::list<A>> l1 = _args._a1;
-                       return List::list<A>::ctor::cons_(a, l1->app(m));
+                       return List::list<A>::ctor::cons_(a,
+                                                         std::move(l1)->app(m));
                      }},
           this->v());
     }
@@ -81,8 +83,8 @@ std::shared_ptr<List::list<T1>> rev(const std::shared_ptr<List::list<T1>> &l) {
                                    -> std::shared_ptr<List::list<T1>> {
                                  T1 x = _args._a0;
                                  std::shared_ptr<List::list<T1>> l_ = _args._a1;
-                                 return rev<T1>(l_)->app(
-                                     List::list<T1>::ctor::cons_(
+                                 return rev<T1>(std::move(l_))
+                                     ->app(List::list<T1>::ctor::cons_(
                                          x, List::list<T1>::ctor::nil_()));
                                }},
                     l->v());
@@ -114,7 +116,8 @@ struct ToString {
                                  -> std::string { return sep + p(z); },
                              [&](const typename List::list<T1>::cons _args)
                                  -> std::string {
-                               return sep + p(z) + intersperse<T1>(p, sep, l_);
+                               return sep + p(z) +
+                                      intersperse<T1>(p, sep, std::move(l_));
                              }},
                   l_->v());
             }},
@@ -138,7 +141,8 @@ struct ToString {
                              [&](const typename List::list<T1>::cons _args)
                                  -> std::string {
                                return "[" + p(y) +
-                                      intersperse<T1>(p, "; ", l_) + "]";
+                                      intersperse<T1>(p, "; ", std::move(l_)) +
+                                      "]";
                              }},
                   l_->v());
             }},

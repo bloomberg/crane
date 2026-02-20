@@ -51,13 +51,14 @@ unsigned int ImplicitArgs::sum_with_init(
   return std::visit(
       Overloaded{
           [&](const typename ImplicitArgs::mylist<unsigned int>::mynil _args)
-              -> unsigned int { return init; },
+              -> unsigned int { return std::move(init); },
           [&](const typename ImplicitArgs::mylist<unsigned int>::mycons _args)
               -> unsigned int {
             unsigned int x = _args._a0;
             std::shared_ptr<ImplicitArgs::mylist<unsigned int>> rest =
                 _args._a1;
-            return (x + sum_with_init(init, rest));
+            return (std::move(x) +
+                    sum_with_init(std::move(init), std::move(rest)));
           }},
       l->v());
 }
@@ -71,8 +72,8 @@ unsigned int ImplicitArgs::nested_implicits(const unsigned int a,
 unsigned int ImplicitArgs::choose_branch(const bool flag, const unsigned int t,
                                          const unsigned int f) {
   if (flag) {
-    return t;
+    return std::move(t);
   } else {
-    return f;
+    return std::move(f);
   }
 }

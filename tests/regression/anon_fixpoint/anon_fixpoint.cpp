@@ -15,10 +15,10 @@ unsigned int AnonFixpoint::sum_to(const unsigned int n) {
   std::function<unsigned int(unsigned int, unsigned int)> go;
   go = [&](unsigned int m, unsigned int acc) -> unsigned int {
     if (m <= 0) {
-      return acc;
+      return std::move(acc);
     } else {
       unsigned int p = m - 1;
-      return go(p, (m + acc));
+      return go(std::move(p), (m + acc));
     }
   };
   return go(n, 0u);
@@ -55,14 +55,14 @@ unsigned int AnonFixpoint::gcd(const unsigned int a, const unsigned int b) {
   std::function<unsigned int(unsigned int, unsigned int, unsigned int)> go;
   go = [&](unsigned int fuel, unsigned int x, unsigned int y) -> unsigned int {
     if (fuel <= 0) {
-      return x;
+      return std::move(x);
     } else {
       unsigned int f = fuel - 1;
       if (y <= 0) {
         return x;
       } else {
         unsigned int _x = y - 1;
-        return go(f, y, (x % y));
+        return go(std::move(f), y, (x % y));
       }
     }
   };

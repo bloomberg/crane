@@ -62,6 +62,7 @@ template <Elem E> struct MutualTree {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
   struct forest {
   public:
@@ -97,6 +98,7 @@ template <Elem E> struct MutualTree {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -104,12 +106,12 @@ template <Elem E> struct MutualTree {
   static T1 tree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<tree> &t0) {
     return std::visit(Overloaded{[&](const typename tree::Leaf _args) -> T1 {
                                    unsigned int n = _args._a0;
-                                   return f(n);
+                                   return f(std::move(n));
                                  },
                                  [&](const typename tree::Node _args) -> T1 {
                                    unsigned int n = _args._a0;
                                    std::shared_ptr<forest> f1 = _args._a1;
-                                   return f0(n, f1);
+                                   return f0(std::move(n), std::move(f1));
                                  }},
                       t0->v());
   }
@@ -119,12 +121,12 @@ template <Elem E> struct MutualTree {
   static T1 tree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<tree> &t0) {
     return std::visit(Overloaded{[&](const typename tree::Leaf _args) -> T1 {
                                    unsigned int n = _args._a0;
-                                   return f(n);
+                                   return f(std::move(n));
                                  },
                                  [&](const typename tree::Node _args) -> T1 {
                                    unsigned int n = _args._a0;
                                    std::shared_ptr<forest> f1 = _args._a1;
-                                   return f0(n, f1);
+                                   return f0(std::move(n), std::move(f1));
                                  }},
                       t0->v());
   }
@@ -138,7 +140,7 @@ template <Elem E> struct MutualTree {
                    [&](const typename forest::FCons _args) -> T1 {
                      std::shared_ptr<tree> t0 = _args._a0;
                      std::shared_ptr<forest> f2 = _args._a1;
-                     return f0(t0, f2, forest_rect<T1>(f, f0, f2));
+                     return f0(std::move(t0), f2, forest_rect<T1>(f, f0, f2));
                    }},
         f1->v());
   }
@@ -151,7 +153,7 @@ template <Elem E> struct MutualTree {
                    [&](const typename forest::FCons _args) -> T1 {
                      std::shared_ptr<tree> t0 = _args._a0;
                      std::shared_ptr<forest> f2 = _args._a1;
-                     return f0(t0, f2, forest_rec<T1>(f, f0, f2));
+                     return f0(std::move(t0), f2, forest_rec<T1>(f, f0, f2));
                    }},
         f1->v());
   }
@@ -163,7 +165,7 @@ template <Elem E> struct MutualTree {
                    },
                    [](const typename tree::Node _args) -> unsigned int {
                      std::shared_ptr<forest> f = _args._a1;
-                     return ((0 + 1) + forest_size(f));
+                     return ((0 + 1) + forest_size(std::move(f)));
                    }},
         t0->v());
   }
@@ -174,7 +176,7 @@ template <Elem E> struct MutualTree {
             [](const typename forest::FCons _args) -> unsigned int {
               std::shared_ptr<tree> t0 = _args._a0;
               std::shared_ptr<forest> rest = _args._a1;
-              return (tree_size(t0) + forest_size(rest));
+              return (tree_size(std::move(t0)) + forest_size(std::move(rest)));
             }},
         f->v());
   }
@@ -183,12 +185,12 @@ template <Elem E> struct MutualTree {
     return std::visit(
         Overloaded{[](const typename tree::Leaf _args) -> unsigned int {
                      unsigned int n = _args._a0;
-                     return n;
+                     return std::move(n);
                    },
                    [](const typename tree::Node _args) -> unsigned int {
                      unsigned int n = _args._a0;
                      std::shared_ptr<forest> f = _args._a1;
-                     return (n + forest_sum(f));
+                     return (std::move(n) + forest_sum(std::move(f)));
                    }},
         t0->v());
   }
@@ -199,7 +201,7 @@ template <Elem E> struct MutualTree {
             [](const typename forest::FCons _args) -> unsigned int {
               std::shared_ptr<tree> t0 = _args._a0;
               std::shared_ptr<forest> rest = _args._a1;
-              return (tree_sum(t0) + forest_sum(rest));
+              return (tree_sum(std::move(t0)) + forest_sum(std::move(rest)));
             }},
         f->v());
   }

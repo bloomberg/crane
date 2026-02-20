@@ -11,7 +11,7 @@
 #include <variant>
 
 std::shared_ptr<Stream::stream<std::shared_ptr<Nat::nat>>>
-Stream::nats_from(const std::shared_ptr<Nat::nat> &n) {
+Stream::nats_from(std::shared_ptr<Nat::nat> n) {
   return stream<std::shared_ptr<Nat::nat>>::ctor::lazy_(
       [=](void) -> std::shared_ptr<Stream::stream<std::shared_ptr<Nat::nat>>> {
         return stream<std::shared_ptr<Nat::nat>>::ctor::scons_(

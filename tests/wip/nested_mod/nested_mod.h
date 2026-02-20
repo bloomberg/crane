@@ -75,6 +75,7 @@ struct Outer {
         }
       };
       const variant_t &v() const { return v_; }
+      variant_t &v_mut() { return v_; }
     };
 
     static unsigned int area(const std::shared_ptr<shape> &s);

@@ -52,6 +52,7 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -78,6 +79,7 @@ struct Sig0 {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -92,28 +94,29 @@ std::pair<std::shared_ptr<List::list<T1>>, std::shared_ptr<List::list<T1>>>
 split_pivot(F0 &&le_dec0, const T1 pivot,
             const std::shared_ptr<List::list<T1>> &l) {
   return std::visit(
-      Overloaded{
-          [](const typename List::list<T1>::nil _args)
-              -> std::pair<std::shared_ptr<List::list<T1>>,
-                           std::shared_ptr<List::list<T1>>> {
-            return std::make_pair(List::list<T1>::ctor::nil_(),
-                                  List::list<T1>::ctor::nil_());
-          },
-          [&](const typename List::list<T1>::cons _args)
-              -> std::pair<std::shared_ptr<List::list<T1>>,
-                           std::shared_ptr<List::list<T1>>> {
-            T1 a = _args._a0;
-            std::shared_ptr<List::list<T1>> l_ = _args._a1;
-            std::shared_ptr<List::list<T1>> l1 =
-                split_pivot<T1>(le_dec0, pivot, l_).first;
-            std::shared_ptr<List::list<T1>> l2 =
-                split_pivot<T1>(le_dec0, pivot, l_).second;
-            if (le_dec0(a, pivot)) {
-              return std::make_pair(List::list<T1>::ctor::cons_(a, l1), l2);
-            } else {
-              return std::make_pair(l1, List::list<T1>::ctor::cons_(a, l2));
-            }
-          }},
+      Overloaded{[](const typename List::list<T1>::nil _args)
+                     -> std::pair<std::shared_ptr<List::list<T1>>,
+                                  std::shared_ptr<List::list<T1>>> {
+                   return std::make_pair(List::list<T1>::ctor::nil_(),
+                                         List::list<T1>::ctor::nil_());
+                 },
+                 [&](const typename List::list<T1>::cons _args)
+                     -> std::pair<std::shared_ptr<List::list<T1>>,
+                                  std::shared_ptr<List::list<T1>>> {
+                   T1 a = _args._a0;
+                   std::shared_ptr<List::list<T1>> l_ = _args._a1;
+                   std::shared_ptr<List::list<T1>> l1 =
+                       split_pivot<T1>(le_dec0, pivot, l_).first;
+                   std::shared_ptr<List::list<T1>> l2 =
+                       split_pivot<T1>(le_dec0, pivot, l_).second;
+                   if (le_dec0(a, pivot)) {
+                     return std::make_pair(List::list<T1>::ctor::cons_(a, l1),
+                                           std::move(l2));
+                   } else {
+                     return std::make_pair(
+                         l1, List::list<T1>::ctor::cons_(a, std::move(l2)));
+                   }
+                 }},
       l->v());
 }
 
@@ -144,7 +147,7 @@ T2 div_conq_pivot(F0 &&le_dec0, const T2 x, F2 &&x0,
 }
 
 std::shared_ptr<List::list<unsigned int>>
-merge(const std::shared_ptr<List::list<unsigned int>> &l1,
+merge(std::shared_ptr<List::list<unsigned int>> l1,
       const std::shared_ptr<List::list<unsigned int>> &l2);
 
 std::shared_ptr<Sig0::sig0<std::shared_ptr<List::list<unsigned int>>>>

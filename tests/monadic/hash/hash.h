@@ -55,6 +55,7 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -115,7 +116,7 @@ template <typename K, typename V> struct CHT {
     std::shared_ptr<List::list<std::pair<K, V>>> xs = b->read();
     std::optional<V> ov =
         CHT<int, int>::template assoc_lookup<K, V>(this->CHT::cht_eqb, k, xs);
-    V v = f(ov);
+    V v = f(std::move(ov));
     std::shared_ptr<List::list<std::pair<K, V>>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
             this->CHT::cht_eqb, k, v, xs);
@@ -162,7 +163,7 @@ template <typename K, typename V> struct CHT {
               T1 k_ = p.first;
               T2 v = p.second;
               if (eqb(k, k_)) {
-                return std::make_optional<T2>(v);
+                return std::make_optional<T2>(std::move(v));
               } else {
                 return CHT<int, int>::template assoc_lookup<T1, T2>(eqb, k, tl);
               }
@@ -193,7 +194,7 @@ template <typename K, typename V> struct CHT {
                     std::make_pair(k, v), tl);
               } else {
                 return List::list<std::pair<T1, T2>>::ctor::cons_(
-                    std::make_pair(k_, v_),
+                    std::make_pair(std::move(k_), std::move(v_)),
                     CHT<int, int>::template assoc_insert_or_replace<T1, T2>(
                         eqb, k, v, tl));
               }
@@ -205,13 +206,13 @@ template <typename K, typename V> struct CHT {
   static std::pair<std::optional<T2>,
                    std::shared_ptr<List::list<std::pair<T1, T2>>>>
   assoc_remove(F0 &&eqb, const T1 k,
-               const std::shared_ptr<List::list<std::pair<T1, T2>>> &xs) {
+               std::shared_ptr<List::list<std::pair<T1, T2>>> xs) {
     return std::visit(
         Overloaded{
             [&](const typename List::list<std::pair<T1, T2>>::nil _args)
                 -> std::pair<std::optional<T2>,
                              std::shared_ptr<List::list<std::pair<T1, T2>>>> {
-              return std::make_pair(std::nullopt, xs);
+              return std::make_pair(std::nullopt, std::move(xs));
             },
             [&](const typename List::list<std::pair<T1, T2>>::cons _args)
                 -> std::pair<std::optional<T2>,
@@ -221,15 +222,17 @@ template <typename K, typename V> struct CHT {
               T1 k_ = p.first;
               T2 v_ = p.second;
               if (eqb(k, k_)) {
-                return std::make_pair(std::make_optional<T2>(v_), tl);
+                return std::make_pair(std::make_optional<T2>(std::move(v_)),
+                                      std::move(tl));
               } else {
                 std::pair<std::optional<T2>,
                           std::shared_ptr<List::list<std::pair<T1, T2>>>>
-                    q = CHT<int, int>::template assoc_remove<T1, T2>(eqb, k,
-                                                                     tl);
+                    q = CHT<int, int>::template assoc_remove<T1, T2>(
+                        eqb, k, std::move(tl));
                 return std::make_pair(
                     q.first, List::list<std::pair<T1, T2>>::ctor::cons_(
-                                 std::make_pair(k_, v_), q.second));
+                                 std::make_pair(std::move(k_), std::move(v_)),
+                                 q.second));
               }
             }},
         xs->v());

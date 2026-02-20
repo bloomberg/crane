@@ -35,7 +35,7 @@ unsigned int Currying::pair_add(
                  _args) -> unsigned int {
             unsigned int a = _args._a0;
             unsigned int b = _args._a1;
-            return (a + b);
+            return (std::move(a) + std::move(b));
           }},
       p->v());
 }
@@ -67,9 +67,9 @@ unsigned int Currying::uncurried_add3(
                         -> unsigned int {
                       unsigned int b = _args._a0;
                       unsigned int c = _args._a1;
-                      return add3(a, b, c);
+                      return add3(std::move(a), std::move(b), std::move(c));
                     }},
-                bc->v());
+                std::move(bc)->v());
           }},
       p->v());
 }

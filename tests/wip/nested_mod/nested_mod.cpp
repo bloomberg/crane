@@ -16,21 +16,21 @@ std::pair<unsigned int, unsigned int> divmod(const unsigned int x,
                                              const unsigned int q,
                                              const unsigned int u) {
   if (x <= 0) {
-    return std::make_pair(q, u);
+    return std::make_pair(std::move(q), std::move(u));
   } else {
     unsigned int x_ = x - 1;
     if (u <= 0) {
-      return divmod(x_, y, (q + 1), y);
+      return divmod(std::move(x_), y, (q + 1), y);
     } else {
       unsigned int u_ = u - 1;
-      return divmod(x_, y, q, u_);
+      return divmod(std::move(x_), y, q, std::move(u_));
     }
   }
 }
 
 unsigned int div(const unsigned int x, const unsigned int y) {
   if (y <= 0) {
-    return y;
+    return std::move(y);
   } else {
     unsigned int y_ = y - 1;
     return divmod(x, y_, 0, y_).first;
@@ -50,7 +50,7 @@ unsigned int Outer::Inner::area(const std::shared_ptr<shape> &s) {
                  [](const typename shape::Triangle _args) -> unsigned int {
                    unsigned int a = _args._a0;
                    unsigned int b = _args._a1;
-                   return ::div((a * b), ((0 + 1) + 1));
+                   return ::div((std::move(a) * std::move(b)), ((0 + 1) + 1));
                  }},
       s->v());
 }

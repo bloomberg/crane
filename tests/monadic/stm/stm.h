@@ -55,6 +55,7 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
     std::shared_ptr<List::list<A>>
     app(const std::shared_ptr<List::list<A>> &m) const {
       return std::visit(
@@ -64,7 +65,8 @@ struct List {
                          -> std::shared_ptr<List::list<A>> {
                        A a = _args._a0;
                        std::shared_ptr<List::list<A>> l1 = _args._a1;
-                       return List::list<A>::ctor::cons_(a, l1->app(m));
+                       return List::list<A>::ctor::cons_(a,
+                                                         std::move(l1)->app(m));
                      }},
           this->v());
     }

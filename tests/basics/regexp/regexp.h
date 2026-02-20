@@ -52,6 +52,7 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -143,6 +144,7 @@ struct Matcher {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   template <
@@ -219,11 +221,11 @@ struct Matcher {
   static bool regexp_eq(const std::shared_ptr<regexp> &r,
                         const std::shared_ptr<regexp> &x);
 
-  static std::shared_ptr<regexp> OptCat(const std::shared_ptr<regexp> &r1,
-                                        const std::shared_ptr<regexp> &r2);
+  static std::shared_ptr<regexp> OptCat(std::shared_ptr<regexp> r1,
+                                        std::shared_ptr<regexp> r2);
 
-  static std::shared_ptr<regexp> OptAlt(const std::shared_ptr<regexp> &r1,
-                                        const std::shared_ptr<regexp> &r2);
+  static std::shared_ptr<regexp> OptAlt(std::shared_ptr<regexp> r1,
+                                        std::shared_ptr<regexp> r2);
 
   static std::shared_ptr<regexp> null(const std::shared_ptr<regexp> &r);
 
@@ -233,8 +235,7 @@ struct Matcher {
                                        const int c);
 
   static std::shared_ptr<regexp>
-  derivs(const std::shared_ptr<regexp> &r,
-         const std::shared_ptr<List::list<int>> &cs);
+  derivs(std::shared_ptr<regexp> r, const std::shared_ptr<List::list<int>> &cs);
 
   static bool deriv_parse(const std::shared_ptr<regexp> &r,
                           const std::shared_ptr<List::list<int>> &cs);

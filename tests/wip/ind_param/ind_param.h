@@ -73,6 +73,7 @@ template <Container C> struct Wrapper {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   template <typename T1, MapsTo<T1, std::shared_ptr<typename C::t>> F0,
@@ -81,11 +82,11 @@ template <Container C> struct Wrapper {
     return std::visit(Overloaded{[&](const typename result::Ok _args) -> T1 {
                                    std::shared_ptr<typename C::t> t0 =
                                        _args._a0;
-                                   return f(t0);
+                                   return f(std::move(t0));
                                  },
                                  [&](const typename result::Err _args) -> T1 {
                                    unsigned int n = _args._a0;
-                                   return f0(n);
+                                   return f0(std::move(n));
                                  }},
                       r->v());
   }
@@ -96,11 +97,11 @@ template <Container C> struct Wrapper {
     return std::visit(Overloaded{[&](const typename result::Ok _args) -> T1 {
                                    std::shared_ptr<typename C::t> t0 =
                                        _args._a0;
-                                   return f(t0);
+                                   return f(std::move(t0));
                                  },
                                  [&](const typename result::Err _args) -> T1 {
                                    unsigned int n = _args._a0;
-                                   return f0(n);
+                                   return f0(std::move(n));
                                  }},
                       r->v());
   }
@@ -119,7 +120,7 @@ template <Container C> struct Wrapper {
         Overloaded{
             [](const typename result::Ok _args) -> unsigned int {
               std::shared_ptr<typename C::t> c = _args._a0;
-              return C::size(c);
+              return C::size(std::move(c));
             },
             [](const typename result::Err _args) -> unsigned int { return 0; }},
         r->v());
@@ -175,6 +176,7 @@ struct NatContainer {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1,
@@ -184,12 +186,12 @@ struct NatContainer {
         Overloaded{[&](const typename t::Empty _args) -> T1 { return f; },
                    [&](const typename t::Single _args) -> T1 {
                      unsigned int e = _args._a0;
-                     return f0(e);
+                     return f0(std::move(e));
                    },
                    [&](const typename t::Pair _args) -> T1 {
                      unsigned int e = _args._a0;
                      unsigned int e0 = _args._a1;
-                     return f1(e, e0);
+                     return f1(std::move(e), std::move(e0));
                    }},
         t0->v());
   }
@@ -201,12 +203,12 @@ struct NatContainer {
         Overloaded{[&](const typename t::Empty _args) -> T1 { return f; },
                    [&](const typename t::Single _args) -> T1 {
                      unsigned int e = _args._a0;
-                     return f0(e);
+                     return f0(std::move(e));
                    },
                    [&](const typename t::Pair _args) -> T1 {
                      unsigned int e = _args._a0;
                      unsigned int e0 = _args._a1;
-                     return f1(e, e0);
+                     return f1(std::move(e), std::move(e0));
                    }},
         t0->v());
   }

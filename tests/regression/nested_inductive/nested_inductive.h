@@ -52,6 +52,7 @@ struct NestedInductive {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   template <typename T1, typename T2,
@@ -106,6 +107,7 @@ struct NestedInductive {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   template <typename T1, typename T2,
@@ -115,7 +117,7 @@ struct NestedInductive {
         Overloaded{[&](const typename rose<T1>::Node _args) -> T2 {
           T1 a = _args._a0;
           std::shared_ptr<list<std::shared_ptr<rose<T1>>>> l = _args._a1;
-          return f(a, l);
+          return f(a, std::move(l));
         }},
         r->v());
   }
@@ -127,7 +129,7 @@ struct NestedInductive {
         Overloaded{[&](const typename rose<T1>::Node _args) -> T2 {
           T1 a = _args._a0;
           std::shared_ptr<list<std::shared_ptr<rose<T1>>>> l = _args._a1;
-          return f(a, l);
+          return f(a, std::move(l));
         }},
         r->v());
   }
@@ -148,7 +150,7 @@ struct NestedInductive {
                    },
                    [](const typename list<T1>::cons _args) -> unsigned int {
                      std::shared_ptr<list<T1>> rest = _args._a1;
-                     return (1u + list_length<T1>(rest));
+                     return (1u + list_length<T1>(std::move(rest)));
                    }},
         l->v());
   }
@@ -158,7 +160,7 @@ struct NestedInductive {
     return std::visit(
         Overloaded{[](const typename rose<T1>::Node _args) -> unsigned int {
           std::shared_ptr<list<std::shared_ptr<rose<T1>>>> children = _args._a1;
-          return list_length<std::shared_ptr<rose<T1>>>(children);
+          return list_length<std::shared_ptr<rose<T1>>>(std::move(children));
         }},
         t->v());
   }

@@ -597,32 +597,54 @@ let rec lambda_needs_capture (params : (Minicpp.cpp_type * Names.Id.t option) li
         List.fold_left collect_from_expr acc args
     | CPPqualified (e', _) -> collect_from_expr (refs, decls) e'
     | CPPrequires (_, constraints) ->
-        List.fold_left (fun a (e', _) -> collect_from_expr a e') (refs, decls) constraints
-    | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _ | CPPstring _ | CPPuint _ | CPPconvertible_to _ | CPPabort _ | CPPenum_val _ ->
+        List.fold_left (fun acc (e', _) -> collect_from_expr acc e') (refs, decls) constraints
+    | CPPbinop (_, lhs, rhs) ->
+        collect_from_expr (collect_from_expr (refs, decls) lhs) rhs
+    (* Leaf expressions: no variables to collect *)
+    | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _ | CPPstring _
+    | CPPuint _ | CPPconvertible_to _ | CPPabort _ | CPPenum_val _ | CPPraw _ ->
         (refs, decls)
 
   and collect_from_stmt (refs, decls) stmt =
     match stmt with
+    (* Simple statements *)
     | SreturnVoid -> (refs, decls)
     | Sreturn e -> collect_from_expr (refs, decls) e
+    | Sexpr e -> collect_from_expr (refs, decls) e
+
+    (* Declarations and assignments *)
     | Sdecl (id, _) -> (refs, IdSet.add id decls)
     | Sasgn (id, _, e) ->
         let (refs', decls') = collect_from_expr (refs, decls) e in
         (refs', IdSet.add id decls')
-    | Sexpr e -> collect_from_expr (refs, decls) e
-    | Scustom_case (_, scrut, _, branches, _) ->
-        let acc = collect_from_expr (refs, decls) scrut in
-        List.fold_left (fun (r, d) (branch_vars, _, stmts) ->
-          let branch_decls = List.fold_left (fun acc (id, _) -> IdSet.add id acc) d branch_vars in
-          List.fold_left collect_from_stmt (r, branch_decls) stmts
-        ) acc branches
-    | Sthrow _ -> (refs, decls)  (* throw doesn't reference or declare any variables *)
+
+    (* Control flow *)
+    | Sif (cond, then_stmts, else_stmts) ->
+        List.fold_left collect_from_stmt
+          (List.fold_left collect_from_stmt
+             (collect_from_expr (refs, decls) cond)
+             then_stmts)
+          else_stmts
+
     | Sswitch (scrut, _, branches) ->
-        let acc = collect_from_expr (refs, decls) scrut in
-        List.fold_left (fun a (_, stmts) ->
-          List.fold_left collect_from_stmt a stmts
-        ) acc branches
-    | Sassert _ -> (refs, decls)  (* raw string, no refs to collect *)
+        List.fold_left (fun acc (_, stmts) ->
+          List.fold_left collect_from_stmt acc stmts
+        ) (collect_from_expr (refs, decls) scrut) branches
+
+    | Scustom_case (_, scrut, _, branches, _) ->
+        List.fold_left (fun (r, d) (branch_vars, _, stmts) ->
+          let branch_decls = List.fold_left (fun acc (id, _) ->
+            IdSet.add id acc
+          ) d branch_vars in
+          List.fold_left collect_from_stmt (r, branch_decls) stmts
+        ) (collect_from_expr (refs, decls) scrut) branches
+
+    (* Field mutation (for reuse optimization) *)
+    | Sassign_field (obj, _, e) ->
+        collect_from_expr (collect_from_expr (refs, decls) obj) e
+
+    (* No variables to collect *)
+    | Sthrow _ | Sassert _ | Sraw _ -> (refs, decls)
   in
 
   let (all_refs, local_decls) = List.fold_left collect_from_stmt (IdSet.empty, IdSet.empty) body in
@@ -663,24 +685,27 @@ and expr_contains_capturing_lambda (e : Minicpp.cpp_expr) : bool =
   | CPPmethod_call (obj, _, args) -> expr_contains_capturing_lambda obj || List.exists expr_contains_capturing_lambda args
   | CPPqualified (e', _) -> expr_contains_capturing_lambda e'
   | CPPrequires (_, constraints) -> List.exists (fun (e', _) -> expr_contains_capturing_lambda e') constraints
-  | CPPvar _ | CPPvar' _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _ | CPPstring _ | CPPuint _ | CPPthis | CPPconvertible_to _ | CPPabort _ | CPPenum_val _ -> false
+  | CPPbinop (_, lhs, rhs) -> expr_contains_capturing_lambda lhs || expr_contains_capturing_lambda rhs
+  | CPPvar _ | CPPvar' _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _ | CPPstring _ | CPPuint _ | CPPthis | CPPconvertible_to _ | CPPabort _ | CPPenum_val _ | CPPraw _ -> false
 
 and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
   let open Minicpp in
+  let any = List.exists stmt_contains_capturing_lambda in
+  let expr = expr_contains_capturing_lambda in
   match s with
-  | SreturnVoid -> false
-  | Sreturn e -> expr_contains_capturing_lambda e
-  | Sdecl _ -> false
-  | Sasgn (_, _, e) -> expr_contains_capturing_lambda e
-  | Sexpr e -> expr_contains_capturing_lambda e
-  | Scustom_case (_, scrut, _, branches, _) ->
-      expr_contains_capturing_lambda scrut ||
-      List.exists (fun (_, _, stmts) -> List.exists stmt_contains_capturing_lambda stmts) branches
-  | Sthrow _ -> false  (* throw statement doesn't contain any lambdas *)
+  (* Statements with expressions *)
+  | Sreturn e | Sexpr e | Sasgn (_, _, e) -> expr e
+  | Sassign_field (obj, _, e) -> expr obj || expr e
+
+  (* Control flow *)
+  | Sif (cond, then_s, else_s) -> expr cond || any then_s || any else_s
   | Sswitch (scrut, _, branches) ->
-      expr_contains_capturing_lambda scrut ||
-      List.exists (fun (_, stmts) -> List.exists stmt_contains_capturing_lambda stmts) branches
-  | Sassert _ -> false  (* raw string, no lambdas *)
+      expr scrut || List.exists (fun (_, stmts) -> any stmts) branches
+  | Scustom_case (_, scrut, _, branches, _) ->
+      expr scrut || List.exists (fun (_, _, stmts) -> any stmts) branches
+
+  (* No lambdas possible *)
+  | SreturnVoid | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ -> false
 
 (* pretty printing c++ syntax *)
 let try_cpp c o =
@@ -1184,6 +1209,10 @@ and pp_cpp_expr env args t =
          may return a module-qualified name like "Unit::unit" in .cpp context. *)
       let base = Common.pp_global_name Type ind in
       str (String.uncapitalize_ascii base) ++ str "::" ++ Id.print ctor
+  (* Low-level constructs for reuse optimization *)
+  | CPPraw code -> str code
+  | CPPbinop (op, lhs, rhs) ->
+      pp_cpp_expr env args lhs ++ str " " ++ str op ++ str " " ++ pp_cpp_expr env args rhs
 and pp_cpp_stmt env args = function
 | SreturnVoid -> str "return;"
 | Sreturn e ->
@@ -1218,6 +1247,17 @@ and pp_cpp_stmt env args = function
      | Some c -> str "// Precondition: " ++ str c ++ fnl () ++
                  str "assert(" ++ str expr_str ++ str ");"
      | None -> str "assert(" ++ str expr_str ++ str ");")
+(* Reuse optimization constructs *)
+| Sif (cond, then_stmts, else_stmts) ->
+    str "if (" ++ pp_cpp_expr env args cond ++ str ") {" ++ fnl () ++
+    pp_list_stmt (pp_cpp_stmt env args) then_stmts ++ fnl () ++
+    str "} else {" ++ fnl () ++
+    pp_list_stmt (pp_cpp_stmt env args) else_stmts ++ fnl () ++
+    str "}"
+| Sraw code -> str code
+| Sassign_field (obj, field, e) ->
+    pp_cpp_expr env args obj ++ str "." ++ Id.print field ++
+    str " = " ++ pp_cpp_expr env args e ++ str ";"
 | Scustom_case (typ,t,tyargs,cases,cmatch) ->
   let cmds = parse_custom_fixed "scrut" CCscrut cmatch in
   let cmds = List.fold_left

@@ -43,7 +43,7 @@ bool le_dec(const unsigned int n, const unsigned int m) {
 }
 
 std::shared_ptr<List::list<unsigned int>>
-merge(const std::shared_ptr<List::list<unsigned int>> &l1,
+merge(std::shared_ptr<List::list<unsigned int>> l1,
       const std::shared_ptr<List::list<unsigned int>> &l2) {
   std::function<std::shared_ptr<List::list<unsigned int>>(
       std::shared_ptr<List::list<unsigned int>>)>
@@ -53,7 +53,9 @@ merge(const std::shared_ptr<List::list<unsigned int>> &l1,
     return std::visit(
         Overloaded{
             [&](const typename List::list<unsigned int>::nil _args)
-                -> std::shared_ptr<List::list<unsigned int>> { return l3; },
+                -> std::shared_ptr<List::list<unsigned int>> {
+              return std::move(l3);
+            },
             [&](const typename List::list<unsigned int>::cons _args)
                 -> std::shared_ptr<List::list<unsigned int>> {
               unsigned int a1 = _args._a0;
@@ -71,10 +73,11 @@ merge(const std::shared_ptr<List::list<unsigned int>> &l1,
                             _args._a1;
                         if (le_lt_dec(a1, a2)) {
                           return List::list<unsigned int>::ctor::cons_(
-                              a1, merge(l1_, l3));
+                              std::move(a1),
+                              merge(std::move(l1_), std::move(l3)));
                         } else {
                           return List::list<unsigned int>::ctor::cons_(
-                              a2, merge_aux(l2_));
+                              std::move(a2), merge_aux(std::move(l2_)));
                         }
                       }},
                   l3->v());

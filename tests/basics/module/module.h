@@ -90,6 +90,7 @@ template <OrderedType K, BaseType V> struct MakeMap {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   using t = std::shared_ptr<tree>;
@@ -112,13 +113,15 @@ template <OrderedType K, BaseType V> struct MakeMap {
               return [&](void) {
                 switch (K::compare(k, k_)) {
                 case comparison::Eq: {
-                  return tree::ctor::Node_(l, k, v, r);
+                  return tree::ctor::Node_(std::move(l), k, v, std::move(r));
                 }
                 case comparison::Lt: {
-                  return tree::ctor::Node_(add(k, v, l), k_, v_, r);
+                  return tree::ctor::Node_(add(k, v, std::move(l)), k_, v_,
+                                           std::move(r));
                 }
                 case comparison::Gt: {
-                  return tree::ctor::Node_(l, k_, v_, add(k, v, r));
+                  return tree::ctor::Node_(std::move(l), k_, v_,
+                                           add(k, v, std::move(r)));
                 }
                 }
               }();
@@ -143,10 +146,10 @@ template <OrderedType K, BaseType V> struct MakeMap {
                          return std::make_optional<typename V::t>(v_);
                        }
                        case comparison::Lt: {
-                         return find(k, l);
+                         return find(k, std::move(l));
                        }
                        case comparison::Gt: {
-                         return find(k, r);
+                         return find(k, std::move(r));
                        }
                        }
                      }();

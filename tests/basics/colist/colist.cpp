@@ -11,7 +11,7 @@
 #include <variant>
 
 std::shared_ptr<Colist::colist<std::shared_ptr<Nat::nat>>>
-Colist::nats(const std::shared_ptr<Nat::nat> &n) {
+Colist::nats(std::shared_ptr<Nat::nat> n) {
   return colist<std::shared_ptr<Nat::nat>>::ctor::lazy_(
       [=](void) -> std::shared_ptr<Colist::colist<std::shared_ptr<Nat::nat>>> {
         return colist<std::shared_ptr<Nat::nat>>::ctor::cocons_(

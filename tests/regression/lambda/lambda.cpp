@@ -11,7 +11,9 @@
 #include <utility>
 #include <variant>
 
-unsigned int Lambda::simple_lambda(const unsigned int x) { return x; }
+unsigned int Lambda::simple_lambda(const unsigned int x) {
+  return std::move(x);
+}
 
 unsigned int Lambda::multi_arg(const unsigned int _x0, const unsigned int _x1) {
   return (_x0 + _x1);

@@ -52,6 +52,7 @@ struct HigherOrder {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   template <typename T1, typename T2,
@@ -91,7 +92,7 @@ struct HigherOrder {
                 -> std::shared_ptr<list<T2>> {
               T1 x = _args._a0;
               std::shared_ptr<list<T1>> xs = _args._a1;
-              return list<T2>::ctor::cons_(f(x), map<T1, T2>(f, xs));
+              return list<T2>::ctor::cons_(f(x), map<T1, T2>(f, std::move(xs)));
             }},
         l->v());
   }
@@ -103,7 +104,7 @@ struct HigherOrder {
                    [&](const typename list<T1>::cons _args) -> T2 {
                      T1 x = _args._a0;
                      std::shared_ptr<list<T1>> xs = _args._a1;
-                     return f(x, foldr<T1, T2>(f, z, xs));
+                     return f(x, foldr<T1, T2>(f, z, std::move(xs)));
                    }},
         l->v());
   }
@@ -115,7 +116,7 @@ struct HigherOrder {
                    [&](const typename list<T1>::cons _args) -> T2 {
                      T1 x = _args._a0;
                      std::shared_ptr<list<T1>> xs = _args._a1;
-                     return foldl<T1, T2>(f, f(z, x), xs);
+                     return foldl<T1, T2>(f, f(z, x), std::move(xs));
                    }},
         l->v());
   }

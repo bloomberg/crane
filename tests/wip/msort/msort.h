@@ -52,6 +52,7 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
     unsigned int length() const {
       return std::visit(
           Overloaded{
@@ -60,7 +61,7 @@ struct List {
               },
               [](const typename List::list<A>::cons _args) -> unsigned int {
                 std::shared_ptr<List::list<A>> l_ = _args._a1;
-                return (l_->length() + 1);
+                return (std::move(l_)->length() + 1);
               }},
           this->v());
     }
@@ -90,6 +91,7 @@ struct Sig0 {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -161,9 +163,10 @@ split(const std::shared_ptr<List::list<T1>> &ls) {
                                  split<T1>(ls_).second;
                              return std::make_pair(
                                  List::list<T1>::ctor::cons_(h1, ls1),
-                                 List::list<T1>::ctor::cons_(h2, ls2));
+                                 List::list<T1>::ctor::cons_(h2,
+                                                             std::move(ls2)));
                            }},
-                       l->v());
+                       std::move(l)->v());
                  }},
       ls->v());
 }
@@ -182,7 +185,7 @@ T2 div_conq_split(const T2 x, const std::shared_ptr<List::list<T1>> &_x0,
 }
 
 std::shared_ptr<List::list<unsigned int>>
-merge(const std::shared_ptr<List::list<unsigned int>> &l1,
+merge(std::shared_ptr<List::list<unsigned int>> l1,
       const std::shared_ptr<List::list<unsigned int>> &l2);
 
 std::shared_ptr<Sig0::sig0<std::shared_ptr<List::list<unsigned int>>>>

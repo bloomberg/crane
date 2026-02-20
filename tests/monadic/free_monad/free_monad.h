@@ -75,6 +75,7 @@ struct FreeMonad {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   template <typename T1, MapsTo<T1, std::any> F0,

@@ -54,6 +54,7 @@ struct LetIn {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
@@ -86,9 +87,9 @@ struct LetIn {
             [](const typename pair<unsigned int, unsigned int>::Pair _args)
                 -> unsigned int {
               unsigned int x = _args._a0;
-              return x;
+              return std::move(x);
             }},
-        p->v());
+        std::move(p)->v());
   }();
 
   static inline const unsigned int multi_let = (1u + (2u + 3u));

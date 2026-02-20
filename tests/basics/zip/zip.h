@@ -43,6 +43,7 @@ struct Prod {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -80,6 +81,7 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
     std::shared_ptr<List::list<A>>
     app(const std::shared_ptr<List::list<A>> &m) const {
       return std::visit(
@@ -89,7 +91,8 @@ struct List {
                          -> std::shared_ptr<List::list<A>> {
                        A a = _args._a0;
                        std::shared_ptr<List::list<A>> l1 = _args._a1;
-                       return List::list<A>::ctor::cons_(a, l1->app(m));
+                       return List::list<A>::ctor::cons_(a,
+                                                         std::move(l1)->app(m));
                      }},
           this->v());
     }
@@ -106,8 +109,8 @@ std::shared_ptr<List::list<T1>> rev(const std::shared_ptr<List::list<T1>> &l) {
                                    -> std::shared_ptr<List::list<T1>> {
                                  T1 x = _args._a0;
                                  std::shared_ptr<List::list<T1>> l_ = _args._a1;
-                                 return rev<T1>(l_)->app(
-                                     List::list<T1>::ctor::cons_(
+                                 return rev<T1>(std::move(l_))
+                                     ->app(List::list<T1>::ctor::cons_(
                                          x, List::list<T1>::ctor::nil_()));
                                }},
                     l->v());
@@ -131,7 +134,7 @@ better_zip(const std::shared_ptr<List::list<T1>> &la,
             [&](const typename List::list<T1>::nil _args)
                 -> std::shared_ptr<
                     List::list<std::shared_ptr<Prod::prod<T1, T2>>>> {
-              return rev<std::shared_ptr<Prod::prod<T1, T2>>>(acc);
+              return rev<std::shared_ptr<Prod::prod<T1, T2>>>(std::move(acc));
             },
             [&](const typename List::list<T1>::cons _args)
                 -> std::shared_ptr<
@@ -143,7 +146,8 @@ better_zip(const std::shared_ptr<List::list<T1>> &la,
                       [&](const typename List::list<T2>::nil _args)
                           -> std::shared_ptr<
                               List::list<std::shared_ptr<Prod::prod<T1, T2>>>> {
-                        return rev<std::shared_ptr<Prod::prod<T1, T2>>>(acc);
+                        return rev<std::shared_ptr<Prod::prod<T1, T2>>>(
+                            std::move(acc));
                       },
                       [&](const typename List::list<T2>::cons _args)
                           -> std::shared_ptr<
@@ -151,11 +155,11 @@ better_zip(const std::shared_ptr<List::list<T1>> &la,
                         T2 y = _args._a0;
                         std::shared_ptr<List::list<T2>> ys = _args._a1;
                         return go(
-                            xs, ys,
+                            std::move(xs), std::move(ys),
                             List::list<std::shared_ptr<Prod::prod<T1, T2>>>::
                                 ctor::cons_(
                                     Prod::prod<T1, T2>::ctor::pair_(x, y),
-                                    acc));
+                                    std::move(acc)));
                       }},
                   lb0->v());
             }},

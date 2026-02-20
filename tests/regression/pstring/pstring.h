@@ -50,6 +50,7 @@ struct Nat {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -87,6 +88,7 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -106,7 +108,7 @@ struct PString {
             [&](const typename List::list<T1>::cons _args) -> std::string {
               T1 y = _args._a0;
               std::shared_ptr<List::list<T1>> l_ = _args._a1;
-              return p(y) + "::" + list_to_string<T1>(p, l_);
+              return p(y) + "::" + list_to_string<T1>(p, std::move(l_));
             }},
         l->v());
   }

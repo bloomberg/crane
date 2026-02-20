@@ -15,9 +15,9 @@ unsigned int Option::get_or_default(const std::optional<unsigned int> o,
                                     const unsigned int default0) {
   if (o.has_value()) {
     unsigned int x = *o;
-    return x;
+    return std::move(x);
   } else {
-    return default0;
+    return std::move(default0);
   }
 }
 
@@ -37,6 +37,6 @@ Option::chain_options(const std::optional<unsigned int> o1,
     unsigned int _x = *o1;
     return o1;
   } else {
-    return o2;
+    return std::move(o2);
   }
 }

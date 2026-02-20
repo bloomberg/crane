@@ -50,6 +50,7 @@ struct Nat {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -87,6 +88,7 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
     std::shared_ptr<List::list<A>>
     app(const std::shared_ptr<List::list<A>> &m) const {
       return std::visit(
@@ -96,7 +98,8 @@ struct List {
                          -> std::shared_ptr<List::list<A>> {
                        A a = _args._a0;
                        std::shared_ptr<List::list<A>> l1 = _args._a1;
-                       return List::list<A>::ctor::cons_(a, l1->app(m));
+                       return List::list<A>::ctor::cons_(a,
+                                                         std::move(l1)->app(m));
                      }},
           this->v());
     }
@@ -137,6 +140,7 @@ struct NestedTree {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   template <typename T1, typename T2,
@@ -160,7 +164,7 @@ struct NestedTree {
                             [&](const std::pair<T1, T1> _x0) {
                               return lift<T1, T2>(f, _x0);
                             },
-                            t1));
+                            std::move(t1)));
             }},
         t0->v());
   }

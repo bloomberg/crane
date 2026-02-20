@@ -18,14 +18,14 @@ unsigned int partest::ack(const std::pair<unsigned int, unsigned int> p) {
     std::function<unsigned int(unsigned int)> ack_m;
     ack_m = [&](unsigned int n0) -> unsigned int {
       if (m <= 0) {
-        return (n0 + 1);
+        return (std::move(n0) + 1);
       } else {
         unsigned int pm = m - 1;
         if (n0 <= 0) {
-          return f(pm, 1u);
+          return f(std::move(pm), 1u);
         } else {
           unsigned int pn = n0 - 1;
-          return f(pm, ack_m(pn));
+          return f(pm, ack_m(std::move(pn)));
         }
       }
     };
@@ -49,8 +49,9 @@ std::pair<unsigned int, unsigned int> partest::fast(const unsigned int m,
 
 std::pair<unsigned int, unsigned int> partest::slow(const unsigned int m,
                                                     const unsigned int n) {
-  std::pair<unsigned int, unsigned int> p = std::make_pair(m, n);
-  unsigned int r1 = ack(p);
-  unsigned int r2 = ack(p);
-  return std::make_pair(r1, r2);
+  std::pair<unsigned int, unsigned int> p =
+      std::make_pair(std::move(m), std::move(n));
+  unsigned int r1 = ack(std::move(p));
+  unsigned int r2 = ack(std::move(p));
+  return std::make_pair(std::move(r1), std::move(r2));
 }

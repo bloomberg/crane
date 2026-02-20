@@ -41,17 +41,18 @@ struct SingletonRecord {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
-  static unsigned int value(const std::shared_ptr<wrapper> &w);
+  static unsigned int value(std::shared_ptr<wrapper> w);
 
   static inline const std::shared_ptr<wrapper> wrapped_five = 5u;
 
-  static unsigned int get_value(const std::shared_ptr<wrapper> &w);
+  static unsigned int get_value(std::shared_ptr<wrapper> w);
 
-  static unsigned int get_value2(const std::shared_ptr<wrapper> &w);
+  static unsigned int get_value2(std::shared_ptr<wrapper> w);
 
-  static unsigned int unwrap(const std::shared_ptr<wrapper> &w);
+  static unsigned int unwrap(std::shared_ptr<wrapper> w);
 
   static std::shared_ptr<wrapper>
   double_wrapped(const std::shared_ptr<wrapper> &w);
@@ -78,16 +79,17 @@ struct SingletonRecord {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
-  template <typename T1> static T1 contents(const std::shared_ptr<box<T1>> &b) {
-    return b;
+  template <typename T1> static T1 contents(std::shared_ptr<box<T1>> b) {
+    return std::move(b);
   }
 
   static inline const std::shared_ptr<box<unsigned int>> boxed_three = 3u;
 
-  template <typename T1> static T1 unbox(const std::shared_ptr<box<T1>> &b) {
-    return b;
+  template <typename T1> static T1 unbox(std::shared_ptr<box<T1>> b) {
+    return std::move(b);
   }
 
   static inline const std::shared_ptr<box<std::shared_ptr<box<unsigned int>>>>
@@ -121,6 +123,7 @@ struct SingletonRecord {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   static unsigned int fn(const std::shared_ptr<fn_wrapper> &,

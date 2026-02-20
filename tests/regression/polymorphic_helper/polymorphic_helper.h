@@ -50,6 +50,7 @@ struct Nat {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -87,18 +88,18 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
     std::shared_ptr<Nat::nat> length() const {
-      return std::visit(Overloaded{[](const typename List::list<A>::nil _args)
-                                       -> std::shared_ptr<Nat::nat> {
-                                     return Nat::nat::ctor::O_();
-                                   },
-                                   [](const typename List::list<A>::cons _args)
-                                       -> std::shared_ptr<Nat::nat> {
-                                     std::shared_ptr<List::list<A>> l_ =
-                                         _args._a1;
-                                     return Nat::nat::ctor::S_(l_->length());
-                                   }},
-                        this->v());
+      return std::visit(
+          Overloaded{
+              [](const typename List::list<A>::nil _args)
+                  -> std::shared_ptr<Nat::nat> { return Nat::nat::ctor::O_(); },
+              [](const typename List::list<A>::cons _args)
+                  -> std::shared_ptr<Nat::nat> {
+                std::shared_ptr<List::list<A>> l_ = _args._a1;
+                return Nat::nat::ctor::S_(std::move(l_)->length());
+              }},
+          this->v());
     }
   };
 };
@@ -109,7 +110,7 @@ std::shared_ptr<Nat::nat> _foo_aux(const T1 a,
   return repeat<T1>(a, n)->length();
 }
 std::shared_ptr<Nat::nat> add(const std::shared_ptr<Nat::nat> &n,
-                              const std::shared_ptr<Nat::nat> &m);
+                              std::shared_ptr<Nat::nat> m);
 
 template <typename T1>
 std::shared_ptr<List::list<T1>> repeat(const T1 x,
@@ -122,9 +123,9 @@ std::shared_ptr<List::list<T1>> repeat(const T1 x,
                                    -> std::shared_ptr<List::list<T1>> {
                                  std::shared_ptr<Nat::nat> k = _args._a0;
                                  return List::list<T1>::ctor::cons_(
-                                     x, repeat<T1>(x, k));
+                                     x, repeat<T1>(x, std::move(k)));
                                }},
                     n->v());
 }
 
-std::shared_ptr<Nat::nat> foo(const std::shared_ptr<Nat::nat> &n, const bool b);
+std::shared_ptr<Nat::nat> foo(std::shared_ptr<Nat::nat> n, const bool b);

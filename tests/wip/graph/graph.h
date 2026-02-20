@@ -52,6 +52,7 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -68,9 +69,9 @@ filter(F0 &&f, const std::shared_ptr<List::list<T1>> &l) {
                                  std::shared_ptr<List::list<T1>> l0 = _args._a1;
                                  if (f(x)) {
                                    return List::list<T1>::ctor::cons_(
-                                       x, filter<T1>(f, l0));
+                                       x, filter<T1>(f, std::move(l0)));
                                  } else {
-                                   return filter<T1>(f, l0);
+                                   return filter<T1>(f, std::move(l0));
                                  }
                                }},
                     l->v());

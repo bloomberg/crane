@@ -14,6 +14,6 @@
 std::shared_ptr<NestedInductive::rose<unsigned int>>
 NestedInductive::leaf(const unsigned int n) {
   return rose<unsigned int>::ctor::Node_(
-      n,
+      std::move(n),
       list<std::shared_ptr<NestedInductive::rose<unsigned int>>>::ctor::nil_());
 }

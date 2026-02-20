@@ -37,20 +37,21 @@ sort_cons_prog(const unsigned int a,
       Overloaded{
           [&](const typename List::list<unsigned int>::nil _args) -> auto {
             return List::list<unsigned int>::ctor::cons_(
-                a, List::list<unsigned int>::ctor::nil_());
+                std::move(a), List::list<unsigned int>::ctor::nil_());
           },
           [&](const typename List::list<unsigned int>::cons _args) -> auto {
             T1 y = _args._a0;
             std::shared_ptr<List::list<T1>> l = _args._a1;
             std::shared_ptr<
                 Sig0::sig0<std::shared_ptr<List::list<unsigned int>>>>
-                s = sort_cons_prog(a, l, l);
-            bool s0 = le_lt_dec(a, y);
+                s = sort_cons_prog(std::move(a), l, l);
+            bool s0 = le_lt_dec(std::move(a), y);
             if (s0) {
               return List::list<unsigned int>::ctor::cons_(
-                  a, List::list<unsigned int>::ctor::cons_(y, l));
+                  std::move(a),
+                  List::list<unsigned int>::ctor::cons_(y, std::move(l)));
             } else {
-              return List::list<unsigned int>::ctor::cons_(y, s);
+              return List::list<unsigned int>::ctor::cons_(y, std::move(s));
             }
           }},
       l_->v());
@@ -66,7 +67,7 @@ isort(const std::shared_ptr<List::list<unsigned int>> &l) {
           [](const typename List::list<unsigned int>::cons _args) -> auto {
             unsigned int y = _args._a0;
             std::shared_ptr<List::list<unsigned int>> l0 = _args._a1;
-            return sort_cons_prog(y, l0, isort(l0));
+            return sort_cons_prog(std::move(y), l0, isort(l0));
           }},
       l->v());
 }

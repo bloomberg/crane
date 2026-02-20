@@ -30,9 +30,9 @@ unsigned int DeepMatch::match_pair_list(
                                                       unsigned int>::Pair _args)
                         -> unsigned int {
                       unsigned int x = _args._a0;
-                      return x;
+                      return std::move(x);
                     }},
-                p->v());
+                std::move(p)->v());
           }},
       l->v());
 }
@@ -50,10 +50,10 @@ DeepMatch::match_two(const std::shared_ptr<DeepMatch::list<unsigned int>> &l) {
             return std::visit(
                 Overloaded{
                     [&](const typename DeepMatch::list<unsigned int>::nil _args)
-                        -> unsigned int { return x; },
+                        -> unsigned int { return std::move(x); },
                     [&](const typename DeepMatch::list<unsigned int>::cons
-                            _args) -> unsigned int { return x; }},
-                l0->v());
+                            _args) -> unsigned int { return std::move(x); }},
+                std::move(l0)->v());
           }},
       l->v());
 }
@@ -91,11 +91,11 @@ unsigned int DeepMatch::match_triple(
                               [](const typename DeepMatch::list<
                                   unsigned int>::cons _args) -> unsigned int {
                                 unsigned int n = _args._a0;
-                                return n;
+                                return std::move(n);
                               }},
-                          l2->v());
+                          std::move(l2)->v());
                     }},
-                l0->v());
+                std::move(l0)->v());
           }},
       l->v());
 }
@@ -122,10 +122,10 @@ unsigned int DeepMatch::deep_wildcard(
                   return std::visit(
                       Overloaded{[&](const typename DeepMatch::pair<
                                      unsigned int, unsigned int>::Pair _args)
-                                     -> unsigned int { return a; }},
-                      p1->v());
+                                     -> unsigned int { return std::move(a); }},
+                      std::move(p1)->v());
                 }},
-                p0->v());
+                std::move(p0)->v());
           }},
       p->v());
 }

@@ -13,10 +13,10 @@
 
 unsigned int Nat::pred(const unsigned int n) {
   if (n <= 0) {
-    return n;
+    return std::move(n);
   } else {
     unsigned int u = n - 1;
-    return u;
+    return std::move(u);
   }
 }
 

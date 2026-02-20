@@ -55,6 +55,7 @@ template <Elem E> struct Container {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
@@ -63,7 +64,7 @@ template <Elem E> struct Container {
         Overloaded{[&](const typename maybe::Nothing _args) -> T1 { return f; },
                    [&](const typename maybe::Just _args) -> T1 {
                      unsigned int n = _args._a0;
-                     return f0(n);
+                     return f0(std::move(n));
                    }},
         m->v());
   }
@@ -74,7 +75,7 @@ template <Elem E> struct Container {
         Overloaded{[&](const typename maybe::Nothing _args) -> T1 { return f; },
                    [&](const typename maybe::Just _args) -> T1 {
                      unsigned int n = _args._a0;
-                     return f0(n);
+                     return f0(std::move(n));
                    }},
         m->v());
   }
@@ -113,6 +114,7 @@ template <Elem E> struct Container {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   template <typename T1,
@@ -123,7 +125,7 @@ template <Elem E> struct Container {
                    [&](const typename mlist::MCons _args) -> T1 {
                      std::shared_ptr<maybe> m0 = _args._a0;
                      std::shared_ptr<mlist> m1 = _args._a1;
-                     return f0(m0, m1, mlist_rect<T1>(f, f0, m1));
+                     return f0(std::move(m0), m1, mlist_rect<T1>(f, f0, m1));
                    }},
         m->v());
   }
@@ -136,7 +138,7 @@ template <Elem E> struct Container {
                    [&](const typename mlist::MCons _args) -> T1 {
                      std::shared_ptr<maybe> m0 = _args._a0;
                      std::shared_ptr<mlist> m1 = _args._a1;
-                     return f0(m0, m1, mlist_rec<T1>(f, f0, m1));
+                     return f0(std::move(m0), m1, mlist_rec<T1>(f, f0, m1));
                    }},
         m->v());
   }
@@ -175,6 +177,7 @@ template <Elem E> struct Container {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   template <typename T1, MapsTo<T1, std::shared_ptr<maybe>> F0,
@@ -182,11 +185,11 @@ template <Elem E> struct Container {
   static T1 mtree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<mtree> &m) {
     return std::visit(Overloaded{[&](const typename mtree::Leaf _args) -> T1 {
                                    std::shared_ptr<maybe> m0 = _args._a0;
-                                   return f(m0);
+                                   return f(std::move(m0));
                                  },
                                  [&](const typename mtree::Node _args) -> T1 {
                                    std::shared_ptr<mlist> m0 = _args._a0;
-                                   return f0(m0);
+                                   return f0(std::move(m0));
                                  }},
                       m->v());
   }
@@ -196,11 +199,11 @@ template <Elem E> struct Container {
   static T1 mtree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<mtree> &m) {
     return std::visit(Overloaded{[&](const typename mtree::Leaf _args) -> T1 {
                                    std::shared_ptr<maybe> m0 = _args._a0;
-                                   return f(m0);
+                                   return f(std::move(m0));
                                  },
                                  [&](const typename mtree::Node _args) -> T1 {
                                    std::shared_ptr<mlist> m0 = _args._a0;
-                                   return f0(m0);
+                                   return f0(std::move(m0));
                                  }},
                       m->v());
   }
@@ -219,7 +222,7 @@ template <Elem E> struct Container {
             [](const typename mlist::MNil _args) -> unsigned int { return 0; },
             [](const typename mlist::MCons _args) -> unsigned int {
               std::shared_ptr<mlist> rest = _args._a1;
-              return (mlist_length(rest) + 1);
+              return (mlist_length(std::move(rest)) + 1);
             }},
         l->v());
   }
@@ -236,7 +239,7 @@ template <Elem E> struct Container {
                    },
                    [](const typename mtree::Node _args) -> unsigned int {
                      std::shared_ptr<mlist> children = _args._a0;
-                     return mlist_length(children);
+                     return mlist_length(std::move(children));
                    }},
         t0->v());
   }

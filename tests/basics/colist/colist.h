@@ -50,6 +50,7 @@ struct Nat {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -87,6 +88,7 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -157,7 +159,7 @@ struct Colist {
                                  A x = _args._a0;
                                  std::shared_ptr<colist<A>> xs = _args._a1;
                                  return List::list<A>::ctor::cons_(
-                                     x, xs->list_of_colist(fuel_));
+                                     x, xs->list_of_colist(std::move(fuel_)));
                                }},
                            this->v());
                      }},
@@ -183,7 +185,7 @@ struct Colist {
   };
 
   static std::shared_ptr<colist<std::shared_ptr<Nat::nat>>>
-  nats(const std::shared_ptr<Nat::nat> &n);
+  nats(std::shared_ptr<Nat::nat> n);
 
   static inline const std::shared_ptr<List::list<std::shared_ptr<Nat::nat>>>
       first_three = nats(Nat::nat::ctor::O_())

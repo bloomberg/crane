@@ -48,6 +48,7 @@ struct Nat {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
     template <typename T1, MapsTo<T1, std::shared_ptr<nat>, T1> F1>
     T1 nat_rect(const T1 f, F1 &&f0) const {
       return std::visit(
@@ -75,7 +76,7 @@ struct Nat {
                      },
                      [&](const typename nat::S _args) -> std::shared_ptr<nat> {
                        std::shared_ptr<nat> x = _args._a0;
-                       return nat::ctor::S_(x->add(n));
+                       return nat::ctor::S_(std::move(x)->add(n));
                      }},
           this->v());
     }
@@ -84,7 +85,7 @@ struct Nat {
           Overloaded{[](const typename nat::O _args) -> int { return 0; },
                      [](const typename nat::S _args) -> int {
                        std::shared_ptr<nat> n_ = _args._a0;
-                       return 1 + n_->nat_to_int();
+                       return 1 + std::move(n_)->nat_to_int();
                      }},
           this->v());
     }

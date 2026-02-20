@@ -51,6 +51,7 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 };
 
@@ -64,14 +65,16 @@ better_rev(const std::shared_ptr<List::list<T1>> &l) {
            std::shared_ptr<List::list<T1>> acc)
       -> std::shared_ptr<List::list<T1>> {
     return std::visit(
-        Overloaded{[&](const typename List::list<T1>::nil _args)
-                       -> std::shared_ptr<List::list<T1>> { return acc; },
-                   [&](const typename List::list<T1>::cons _args)
-                       -> std::shared_ptr<List::list<T1>> {
-                     T1 x = _args._a0;
-                     std::shared_ptr<List::list<T1>> xs = _args._a1;
-                     return go(xs, List::list<T1>::ctor::cons_(x, acc));
-                   }},
+        Overloaded{
+            [&](const typename List::list<T1>::nil _args)
+                -> std::shared_ptr<List::list<T1>> { return std::move(acc); },
+            [&](const typename List::list<T1>::cons _args)
+                -> std::shared_ptr<List::list<T1>> {
+              T1 x = _args._a0;
+              std::shared_ptr<List::list<T1>> xs = _args._a1;
+              return go(std::move(xs),
+                        List::list<T1>::ctor::cons_(x, std::move(acc)));
+            }},
         l0->v());
   };
   return go(l, List::list<T1>::ctor::nil_());

@@ -54,6 +54,7 @@ struct EvenOdd {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
   struct odd_list {
   public:
@@ -80,6 +81,7 @@ struct EvenOdd {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   static unsigned int even_length(const std::shared_ptr<even_list> &e);

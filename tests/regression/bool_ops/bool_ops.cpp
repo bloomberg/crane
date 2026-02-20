@@ -21,7 +21,7 @@ bool BoolOps::my_negb(const bool b) {
 
 bool BoolOps::my_andb(const bool a, const bool b) {
   if (a) {
-    return b;
+    return std::move(b);
   } else {
     return false;
   }
@@ -31,7 +31,7 @@ bool BoolOps::my_orb(const bool a, const bool b) {
   if (a) {
     return true;
   } else {
-    return b;
+    return std::move(b);
   }
 }
 
@@ -54,9 +54,9 @@ bool BoolOps::my_xorb(const bool a, const bool b) {
 unsigned int BoolOps::if_nat(const bool b, const unsigned int t,
                              const unsigned int f) {
   if (b) {
-    return t;
+    return std::move(t);
   } else {
-    return f;
+    return std::move(f);
   }
 }
 

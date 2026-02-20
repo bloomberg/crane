@@ -52,6 +52,7 @@ struct List {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
     unsigned int length() const {
       return std::visit(
           Overloaded{
@@ -60,7 +61,7 @@ struct List {
               },
               [](const typename List::list<A>::cons _args) -> unsigned int {
                 std::shared_ptr<List::list<A>> l_ = _args._a1;
-                return (l_->length() + 1);
+                return (std::move(l_)->length() + 1);
               }},
           this->v());
     }
@@ -73,7 +74,8 @@ struct List {
                          -> std::shared_ptr<List::list<A>> {
                        A a = _args._a0;
                        std::shared_ptr<List::list<A>> l1 = _args._a1;
-                       return List::list<A>::ctor::cons_(a, l1->app(m));
+                       return List::list<A>::ctor::cons_(a,
+                                                         std::move(l1)->app(m));
                      }},
           this->v());
     }
@@ -92,7 +94,7 @@ std::shared_ptr<List::list<T2>> map(F0 &&f,
                                  T1 a = _args._a0;
                                  std::shared_ptr<List::list<T1>> l0 = _args._a1;
                                  return List::list<T2>::ctor::cons_(
-                                     f(a), map<T1, T2>(f, l0));
+                                     f(a), map<T1, T2>(f, std::move(l0)));
                                }},
                     l->v());
 }
@@ -114,7 +116,7 @@ concat(const std::shared_ptr<List::list<std::shared_ptr<List::list<T1>>>> &l) {
             std::shared_ptr<List::list<T1>> x = _args._a0;
             std::shared_ptr<List::list<std::shared_ptr<List::list<T1>>>> l0 =
                 _args._a1;
-            return x->app(concat<T1>(l0));
+            return std::move(x)->app(concat<T1>(std::move(l0)));
           }},
       l->v());
 }
@@ -127,7 +129,7 @@ T1 fold_right(F0 &&f, const T1 a0, const std::shared_ptr<List::list<T2>> &l) {
           [&](const typename List::list<T2>::cons _args) -> T1 {
             T2 b = _args._a0;
             std::shared_ptr<List::list<T2>> l0 = _args._a1;
-            return f(b, fold_right<T1, T2>(f, a0, l0));
+            return f(b, fold_right<T1, T2>(f, a0, std::move(l0)));
           }},
       l->v());
 }
@@ -145,9 +147,9 @@ filter(F0 &&f, const std::shared_ptr<List::list<T1>> &l) {
                                  std::shared_ptr<List::list<T1>> l0 = _args._a1;
                                  if (f(x)) {
                                    return List::list<T1>::ctor::cons_(
-                                       x, filter<T1>(f, l0));
+                                       x, filter<T1>(f, std::move(l0)));
                                  } else {
-                                   return filter<T1>(f, l0);
+                                   return filter<T1>(f, std::move(l0));
                                  }
                                }},
                     l->v());
@@ -166,7 +168,7 @@ std::optional<T1> find(F0 &&f, const std::shared_ptr<List::list<T1>> &l) {
             if (f(x)) {
               return std::make_optional<T1>(x);
             } else {
-              return find<T1>(f, tl);
+              return find<T1>(f, std::move(tl));
             }
           }},
       l->v());
@@ -197,7 +199,8 @@ combine(const std::shared_ptr<List::list<T1>> &l,
                       T2 y = _args._a0;
                       std::shared_ptr<List::list<T2>> tl_ = _args._a1;
                       return List::list<std::pair<T1, T2>>::ctor::cons_(
-                          std::make_pair(x, y), combine<T1, T2>(tl, tl_));
+                          std::make_pair(x, y),
+                          combine<T1, T2>(std::move(tl), std::move(tl_)));
                     }},
                 l_->v());
           }},
@@ -230,7 +233,8 @@ struct ToString {
                                  -> std::string { return sep + p(z); },
                              [&](const typename List::list<T1>::cons _args)
                                  -> std::string {
-                               return sep + p(z) + intersperse<T1>(p, sep, l_);
+                               return sep + p(z) +
+                                      intersperse<T1>(p, sep, std::move(l_));
                              }},
                   l_->v());
             }},
@@ -254,7 +258,8 @@ struct ToString {
                              [&](const typename List::list<T1>::cons _args)
                                  -> std::string {
                                return "[" + p(y) +
-                                      intersperse<T1>(p, "; ", l_) + "]";
+                                      intersperse<T1>(p, "; ", std::move(l_)) +
+                                      "]";
                              }},
                   l_->v());
             }},
@@ -286,7 +291,7 @@ struct TopSort {
       return std::visit(
           Overloaded{
               [&](const typename List::list<std::pair<T1, T1>>::nil _args)
-                  -> std::shared_ptr<List::list<T1>> { return h; },
+                  -> std::shared_ptr<List::list<T1>> { return std::move(h); },
               [&](const typename List::list<std::pair<T1, T1>>::cons _args)
                   -> std::shared_ptr<List::list<T1>> {
                 std::pair<T1, T1> p = _args._a0;
@@ -303,22 +308,25 @@ struct TopSort {
                     T1 _x0 = *f2;
                     return get_elems_aux(l_, h);
                   } else {
-                    return get_elems_aux(l_,
-                                         List::list<T1>::ctor::cons_(e2, h));
+                    return get_elems_aux(
+                        l_, List::list<T1>::ctor::cons_(std::move(e2), h));
                   }
                 } else {
                   if (f2.has_value()) {
                     T1 _x = *f2;
-                    return get_elems_aux(l_,
-                                         List::list<T1>::ctor::cons_(e1, h));
+                    return get_elems_aux(
+                        l_, List::list<T1>::ctor::cons_(std::move(e1), h));
                   } else {
                     if (eqb_node(e1, e2)) {
-                      return get_elems_aux(l_,
-                                           List::list<T1>::ctor::cons_(e1, h));
+                      return get_elems_aux(
+                          std::move(l_),
+                          List::list<T1>::ctor::cons_(std::move(e1), h));
                     } else {
                       return get_elems_aux(
-                          l_, List::list<T1>::ctor::cons_(
-                                  e1, List::list<T1>::ctor::cons_(e2, h)));
+                          std::move(l_),
+                          List::list<T1>::ctor::cons_(
+                              std::move(e1),
+                              List::list<T1>::ctor::cons_(std::move(e2), h)));
                     }
                   }
                 }
@@ -329,10 +337,9 @@ struct TopSort {
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  static entry<T1>
-  make_entry(F0 &&eqb_node,
-             const std::shared_ptr<List::list<std::pair<T1, T1>>> &l,
-             const T1 e) {
+  static entry<T1> make_entry(F0 &&eqb_node,
+                              std::shared_ptr<List::list<std::pair<T1, T1>>> l,
+                              const T1 e) {
     return std::make_pair(
         e, fold_right<std::shared_ptr<List::list<T1>>, std::pair<T1, T1>>(
                [&](std::pair<T1, T1> x, std::shared_ptr<List::list<T1>> ret) {
@@ -342,14 +349,14 @@ struct TopSort {
                    return ret;
                  }
                },
-               List::list<T1>::ctor::nil_(), l));
+               List::list<T1>::ctor::nil_(), std::move(l)));
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
   static graph<T1>
-  make_graph(F0 &&eqb_node,
-             const std::shared_ptr<List::list<std::pair<T1, T1>>> &l) {
-    std::shared_ptr<List::list<T1>> elems = get_elems<T1>(eqb_node, l);
+  make_graph(F0 &&eqb_node, std::shared_ptr<List::list<std::pair<T1, T1>>> l) {
+    std::shared_ptr<List::list<T1>> elems =
+        get_elems<T1>(eqb_node, std::move(l));
     return fold_right<std::shared_ptr<List::list<entry<T1>>>, T1>(
         [&](T1 e,
             std::shared_ptr<
@@ -360,7 +367,7 @@ struct TopSort {
         },
         List::list<
             std::pair<T1, std::shared_ptr<List::list<T1>>>>::ctor::nil_(),
-        elems);
+        std::move(elems));
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
@@ -404,7 +411,7 @@ struct TopSort {
       F0 &&eqb_node,
       const std::shared_ptr<
           List::list<std::pair<T1, std::shared_ptr<List::list<T1>>>>> &graph0,
-      const std::shared_ptr<List::list<T1>> &seens, const T1 elem,
+      std::shared_ptr<List::list<T1>> seens, const T1 elem,
       const unsigned int counter) {
     if (contains<T1>(eqb_node, elem, seens)) {
       return elem;
@@ -414,27 +421,29 @@ struct TopSort {
       } else {
         unsigned int c = counter - 1;
         std::shared_ptr<List::list<T1>> l =
-            graph_lookup<T1>(eqb_node, elem, graph0);
+            graph_lookup<T1>(eqb_node, std::move(elem), graph0);
         return std::visit(
             Overloaded{[&](const typename List::list<T1>::nil _args) -> T1 {
-                         return elem;
+                         return std::move(elem);
                        },
                        [&](const typename List::list<T1>::cons _args) -> T1 {
                          T1 e_ = _args._a0;
-                         return cycle_entry_aux<T1>(
-                             eqb_node, graph0,
-                             List::list<T1>::ctor::cons_(elem, seens), e_, c);
+                         return cycle_entry_aux<T1>(eqb_node, graph0,
+                                                    List::list<T1>::ctor::cons_(
+                                                        std::move(elem), seens),
+                                                    e_, c);
                        }},
-            l->v());
+            std::move(l)->v());
       }
     }
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  static std::optional<T1> cycle_entry(
-      F0 &&eqb_node,
-      const std::shared_ptr<
-          List::list<std::pair<T1, std::shared_ptr<List::list<T1>>>>> &graph0) {
+  static std::optional<T1>
+  cycle_entry(F0 &&eqb_node,
+              std::shared_ptr<
+                  List::list<std::pair<T1, std::shared_ptr<List::list<T1>>>>>
+                  graph0) {
     return std::visit(
         Overloaded{
             [](const typename List::list<
@@ -447,7 +456,7 @@ struct TopSort {
               T1 e = e0.first;
               std::shared_ptr<List::list<T1>> _x0 = e0.second;
               return std::make_optional<T1>(cycle_entry_aux<T1>(
-                  eqb_node, graph0, List::list<T1>::ctor::nil_(), e,
+                  eqb_node, graph0, List::list<T1>::ctor::nil_(), std::move(e),
                   graph0->length()));
             }},
         graph0->v());
@@ -459,9 +468,9 @@ struct TopSort {
       const std::shared_ptr<
           List::list<std::pair<T1, std::shared_ptr<List::list<T1>>>>> &graph0,
       const unsigned int counter, const T1 elem,
-      const std::shared_ptr<List::list<T1>> &cycl) {
+      std::shared_ptr<List::list<T1>> cycl) {
     if (counter <= 0) {
-      return cycl;
+      return std::move(cycl);
     } else {
       unsigned int c = counter - 1;
       if (contains<T1>(eqb_node, elem, cycl)) {
@@ -469,7 +478,8 @@ struct TopSort {
       } else {
         return fold_right<std::shared_ptr<List::list<T1>>, T1>(
             [&](const T1 _x0, const std::shared_ptr<List::list<T1>> _x1) {
-              return cycle_extract_aux<T1>(eqb_node, graph0, c, _x0, _x1);
+              return cycle_extract_aux<T1>(eqb_node, graph0, std::move(c), _x0,
+                                           _x1);
             },
             List::list<T1>::ctor::cons_(elem, cycl),
             graph_lookup<T1>(eqb_node, elem, graph0));
@@ -530,7 +540,7 @@ struct TopSort {
         if (null<T1>(mins)) {
           mins_ = cycle_extract<T1>(eqb_node, graph0);
         } else {
-          mins_ = mins;
+          mins_ = std::move(mins);
         }
         std::shared_ptr<
             List::list<std::pair<T1, std::shared_ptr<List::list<T1>>>>>
@@ -552,9 +562,10 @@ struct TopSort {
                           },
                           entry0.second));
                 },
-                rest);
+                std::move(rest));
         return List::list<std::shared_ptr<List::list<T1>>>::ctor::cons_(
-            mins_, topological_sort_aux<T1>(eqb_node, rest_, c));
+            std::move(mins_),
+            topological_sort_aux<T1>(eqb_node, std::move(rest_), c));
       }
     }
   }

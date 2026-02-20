@@ -12,23 +12,23 @@
 #include <variant>
 
 unsigned int
-SingletonRecord::value(const std::shared_ptr<SingletonRecord::wrapper> &w) {
-  return w;
+SingletonRecord::value(std::shared_ptr<SingletonRecord::wrapper> w) {
+  return std::move(w);
 }
 
 unsigned int
-SingletonRecord::get_value(const std::shared_ptr<SingletonRecord::wrapper> &w) {
-  return w;
-}
-
-unsigned int SingletonRecord::get_value2(
-    const std::shared_ptr<SingletonRecord::wrapper> &w) {
-  return w;
+SingletonRecord::get_value(std::shared_ptr<SingletonRecord::wrapper> w) {
+  return std::move(w);
 }
 
 unsigned int
-SingletonRecord::unwrap(const std::shared_ptr<SingletonRecord::wrapper> &w) {
-  return w;
+SingletonRecord::get_value2(std::shared_ptr<SingletonRecord::wrapper> w) {
+  return std::move(w);
+}
+
+unsigned int
+SingletonRecord::unwrap(std::shared_ptr<SingletonRecord::wrapper> w) {
+  return std::move(w);
 }
 
 std::shared_ptr<SingletonRecord::wrapper> SingletonRecord::double_wrapped(
@@ -39,11 +39,11 @@ std::shared_ptr<SingletonRecord::wrapper> SingletonRecord::double_wrapped(
 unsigned int
 SingletonRecord::fn(const std::shared_ptr<SingletonRecord::fn_wrapper> &f,
                     const unsigned int _x0) {
-  return f(_x0);
+  return f(std::move(_x0));
 }
 
 unsigned int SingletonRecord::apply_wrapped(
     const std::shared_ptr<SingletonRecord::fn_wrapper> &w,
     const unsigned int _x0) {
-  return w(_x0);
+  return w(std::move(_x0));
 }

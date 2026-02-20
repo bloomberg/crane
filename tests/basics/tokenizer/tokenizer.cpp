@@ -80,7 +80,7 @@ Tokenizer::list_tokens(const std::basic_string_view<char> input,
       if (t.first.has_value()) {
         std::basic_string_view<char> t_ = *t.first;
         return List::list<std::basic_string_view<char>>::ctor::cons_(
-            t_, aux(fuel_, t.second));
+            std::move(t_), aux(fuel_, t.second));
       } else {
         return List::list<std::basic_string_view<char>>::ctor::nil_();
       }

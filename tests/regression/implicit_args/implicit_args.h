@@ -70,6 +70,7 @@ struct ImplicitArgs {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   template <typename T1, typename T2,
@@ -110,7 +111,7 @@ struct ImplicitArgs {
                    },
                    [](const typename mylist<T1>::mycons _args) -> unsigned int {
                      std::shared_ptr<mylist<T1>> rest = _args._a1;
-                     return (1u + length<T1>(rest));
+                     return (1u + length<T1>(std::move(rest)));
                    }},
         l->v());
   }
@@ -139,7 +140,7 @@ struct ImplicitArgs {
 
   template <MapsTo<unsigned int, unsigned int> F0>
   static unsigned int apply_implicit(F0 &&f, const unsigned int _x0) {
-    return f(_x0);
+    return f(std::move(_x0));
   }
 
   static inline const unsigned int use_apply_implicit =

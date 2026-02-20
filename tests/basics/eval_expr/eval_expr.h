@@ -102,39 +102,43 @@ struct Expr {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
     std::any eval(const ty _x) const {
       return std::visit(
-          Overloaded{[](const typename Expr::expr::ENat _args) -> std::any {
-                       unsigned int n = _args._a0;
-                       return n;
-                     },
-                     [](const typename Expr::expr::EBool _args) -> std::any {
-                       bool b = _args._a0;
-                       return b;
-                     },
-                     [](const typename Expr::expr::EAdd _args) -> std::any {
-                       std::shared_ptr<Expr::expr> a = _args._a0;
-                       std::shared_ptr<Expr::expr> b = _args._a1;
-                       return (std::any_cast<unsigned int>(a->eval(ty::TNat)) +
-                               std::any_cast<unsigned int>(b->eval(ty::TNat)));
-                     },
-                     [](const typename Expr::expr::EEq _args) -> std::any {
-                       std::shared_ptr<Expr::expr> a = _args._a0;
-                       std::shared_ptr<Expr::expr> b = _args._a1;
-                       return (std::any_cast<unsigned int>(a->eval(ty::TNat)) ==
-                               std::any_cast<unsigned int>(b->eval(ty::TNat)));
-                     },
-                     [](const typename Expr::expr::EIf _args) -> std::any {
-                       ty t0 = _args._a0;
-                       std::shared_ptr<Expr::expr> c = _args._a1;
-                       std::shared_ptr<Expr::expr> th = _args._a2;
-                       std::shared_ptr<Expr::expr> el = _args._a3;
-                       if (std::any_cast<bool>(c->eval(ty::TBool))) {
-                         return th->eval(t0);
-                       } else {
-                         return el->eval(t0);
-                       }
-                     }},
+          Overloaded{
+              [](const typename Expr::expr::ENat _args) -> std::any {
+                unsigned int n = _args._a0;
+                return std::move(n);
+              },
+              [](const typename Expr::expr::EBool _args) -> std::any {
+                bool b = _args._a0;
+                return std::move(b);
+              },
+              [](const typename Expr::expr::EAdd _args) -> std::any {
+                std::shared_ptr<Expr::expr> a = _args._a0;
+                std::shared_ptr<Expr::expr> b = _args._a1;
+                return (
+                    std::any_cast<unsigned int>(std::move(a)->eval(ty::TNat)) +
+                    std::any_cast<unsigned int>(std::move(b)->eval(ty::TNat)));
+              },
+              [](const typename Expr::expr::EEq _args) -> std::any {
+                std::shared_ptr<Expr::expr> a = _args._a0;
+                std::shared_ptr<Expr::expr> b = _args._a1;
+                return (
+                    std::any_cast<unsigned int>(std::move(a)->eval(ty::TNat)) ==
+                    std::any_cast<unsigned int>(std::move(b)->eval(ty::TNat)));
+              },
+              [](const typename Expr::expr::EIf _args) -> std::any {
+                ty t0 = _args._a0;
+                std::shared_ptr<Expr::expr> c = _args._a1;
+                std::shared_ptr<Expr::expr> th = _args._a2;
+                std::shared_ptr<Expr::expr> el = _args._a3;
+                if (std::any_cast<bool>(c->eval(ty::TBool))) {
+                  return std::move(th)->eval(t0);
+                } else {
+                  return std::move(el)->eval(t0);
+                }
+              }},
           this->v());
     }
   };

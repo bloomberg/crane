@@ -51,6 +51,7 @@ struct Sum {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1> F0,
@@ -182,6 +183,7 @@ struct Sum {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   template <typename T1, typename T2, typename T3, typename T4,

@@ -70,6 +70,7 @@ struct EmptyMatch {
       }
     };
     const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
   };
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1> F0,
@@ -117,7 +118,7 @@ struct EmptyMatch {
             [](const typename either<T1, std::shared_ptr<empty>>::Right _args)
                 -> T1 {
               std::shared_ptr<empty> v = _args._a0;
-              return absurd<T1>(v);
+              return absurd<T1>(std::move(v));
             }},
         e->v());
   }

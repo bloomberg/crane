@@ -18,12 +18,12 @@ unsigned int Sum::either_to_nat(
           [](const typename Sum::either<unsigned int, unsigned int>::Left _args)
               -> unsigned int {
             unsigned int n = _args._a0;
-            return n;
+            return std::move(n);
           },
           [](const typename Sum::either<unsigned int, unsigned int>::Right
                  _args) -> unsigned int {
             unsigned int m = _args._a0;
-            return m;
+            return std::move(m);
           }},
       e->v());
 }
