@@ -43,6 +43,13 @@ struct NestedInductive {
       cons_(A a0, const std::shared_ptr<list<A>> &a1) {
         return std::shared_ptr<list<A>>(new list<A>(cons{a0, a1}));
       }
+      static std::unique_ptr<list<A>> nil_uptr() {
+        return std::unique_ptr<list<A>>(new list<A>(nil{}));
+      }
+      static std::unique_ptr<list<A>>
+      cons_uptr(A a0, const std::shared_ptr<list<A>> &a1) {
+        return std::unique_ptr<list<A>>(new list<A>(cons{a0, a1}));
+      }
     };
     const variant_t &v() const { return v_; }
   };
@@ -91,6 +98,11 @@ struct NestedInductive {
       static std::shared_ptr<rose<A>>
       Node_(A a0, const std::shared_ptr<list<std::shared_ptr<rose<A>>>> &a1) {
         return std::shared_ptr<rose<A>>(new rose<A>(Node{a0, a1}));
+      }
+      static std::unique_ptr<rose<A>>
+      Node_uptr(A a0,
+                const std::shared_ptr<list<std::shared_ptr<rose<A>>>> &a1) {
+        return std::unique_ptr<rose<A>>(new rose<A>(Node{a0, a1}));
       }
     };
     const variant_t &v() const { return v_; }

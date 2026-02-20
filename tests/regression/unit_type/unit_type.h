@@ -47,6 +47,9 @@ struct UnitType {
       static std::shared_ptr<pair<A, B>> Pair_(A a0, B a1) {
         return std::shared_ptr<pair<A, B>>(new pair<A, B>(Pair{a0, a1}));
       }
+      static std::unique_ptr<pair<A, B>> Pair_uptr(A a0, B a1) {
+        return std::unique_ptr<pair<A, B>>(new pair<A, B>(Pair{a0, a1}));
+      }
     };
     const variant_t &v() const { return v_; }
   };

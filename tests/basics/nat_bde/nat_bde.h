@@ -55,6 +55,14 @@ struct Nat {
             {
                 return bsl::shared_ptr<nat>(new nat(S{a0}));
             }
+            static bsl::unique_ptr<nat> O_uptr()
+            {
+                return bsl::unique_ptr<nat>(new nat(O{}));
+            }
+            static bsl::unique_ptr<nat> S_uptr(const bsl::shared_ptr<nat>& a0)
+            {
+                return bsl::unique_ptr<nat>(new nat(S{a0}));
+            }
         };
         const variant_t& v() const { return v_; }
         template <typename T1, MapsTo<T1, bsl::shared_ptr<nat>, T1> F1>

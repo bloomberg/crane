@@ -43,6 +43,13 @@ struct List {
       cons_(A a0, const std::shared_ptr<list<A>> &a1) {
         return std::shared_ptr<list<A>>(new list<A>(cons{a0, a1}));
       }
+      static std::unique_ptr<list<A>> nil_uptr() {
+        return std::unique_ptr<list<A>>(new list<A>(nil{}));
+      }
+      static std::unique_ptr<list<A>>
+      cons_uptr(A a0, const std::shared_ptr<list<A>> &a1) {
+        return std::unique_ptr<list<A>>(new list<A>(cons{a0, a1}));
+      }
     };
     const variant_t &v() const { return v_; }
     template <typename T2, MapsTo<T2, A, std::shared_ptr<list<A>>, T2> F1>

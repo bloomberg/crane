@@ -61,6 +61,13 @@ struct ImplicitArgs {
       mycons_(A a0, const std::shared_ptr<mylist<A>> &a1) {
         return std::shared_ptr<mylist<A>>(new mylist<A>(mycons{a0, a1}));
       }
+      static std::unique_ptr<mylist<A>> mynil_uptr() {
+        return std::unique_ptr<mylist<A>>(new mylist<A>(mynil{}));
+      }
+      static std::unique_ptr<mylist<A>>
+      mycons_uptr(A a0, const std::shared_ptr<mylist<A>> &a1) {
+        return std::unique_ptr<mylist<A>>(new mylist<A>(mycons{a0, a1}));
+      }
     };
     const variant_t &v() const { return v_; }
   };

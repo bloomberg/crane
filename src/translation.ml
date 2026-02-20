@@ -552,13 +552,13 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       let args,env = push_vars' lam_params env in
       let saved_env_types = !env_types in
       push_env_types args;
+      let filtered_args = List.filter (fun (_,ty) -> not (isTdummy ty)) args in
       let f = with_escape_analysis a (fun () ->
-        let args = List.filter (fun (_,ty) -> not (isTdummy ty)) args in (* TODO: this could cause issues. TEST. *)
         let tvars = get_current_type_vars () in
-        let args = List.map (fun (id, ty) -> (convert_ml_type_to_cpp_type env [] tvars ty, Some id)) args in
-        CPPlambda (args, None, gen_stmts env (fun x -> Sreturn x) a, false)) in
+        let cpp_args = List.map (fun (id, ty) -> (convert_ml_type_to_cpp_type env [] tvars ty, Some id)) filtered_args in
+        CPPlambda (cpp_args, None, gen_stmts env (fun x -> Sreturn x) a, false)) in
       env_types := saved_env_types;
-      (match args with
+      (match filtered_args with
       | [] -> CPPfun_call (f, [])
       | _ -> f)
   | MLglob (x, tys) when is_inline_custom x ->

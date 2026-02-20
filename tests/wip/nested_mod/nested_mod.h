@@ -63,6 +63,16 @@ struct Outer {
         Triangle_(unsigned int a0, unsigned int a1, unsigned int a2) {
           return std::shared_ptr<shape>(new shape(Triangle{a0, a1, a2}));
         }
+        static std::unique_ptr<shape> Circle_uptr(unsigned int a0) {
+          return std::unique_ptr<shape>(new shape(Circle{a0}));
+        }
+        static std::unique_ptr<shape> Square_uptr(unsigned int a0) {
+          return std::unique_ptr<shape>(new shape(Square{a0}));
+        }
+        static std::unique_ptr<shape>
+        Triangle_uptr(unsigned int a0, unsigned int a1, unsigned int a2) {
+          return std::unique_ptr<shape>(new shape(Triangle{a0, a1, a2}));
+        }
       };
       const variant_t &v() const { return v_; }
     };

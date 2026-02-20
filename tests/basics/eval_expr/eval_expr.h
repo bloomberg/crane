@@ -78,6 +78,28 @@ struct Expr {
            const std::shared_ptr<Expr::expr> &a3) {
         return std::shared_ptr<Expr::expr>(new Expr::expr(EIf{a0, a1, a2, a3}));
       }
+      static std::unique_ptr<Expr::expr> ENat_uptr(unsigned int a0) {
+        return std::unique_ptr<Expr::expr>(new Expr::expr(ENat{a0}));
+      }
+      static std::unique_ptr<Expr::expr> EBool_uptr(bool a0) {
+        return std::unique_ptr<Expr::expr>(new Expr::expr(EBool{a0}));
+      }
+      static std::unique_ptr<Expr::expr>
+      EAdd_uptr(const std::shared_ptr<Expr::expr> &a0,
+                const std::shared_ptr<Expr::expr> &a1) {
+        return std::unique_ptr<Expr::expr>(new Expr::expr(EAdd{a0, a1}));
+      }
+      static std::unique_ptr<Expr::expr>
+      EEq_uptr(const std::shared_ptr<Expr::expr> &a0,
+               const std::shared_ptr<Expr::expr> &a1) {
+        return std::unique_ptr<Expr::expr>(new Expr::expr(EEq{a0, a1}));
+      }
+      static std::unique_ptr<Expr::expr>
+      EIf_uptr(ty a0, const std::shared_ptr<Expr::expr> &a1,
+               const std::shared_ptr<Expr::expr> &a2,
+               const std::shared_ptr<Expr::expr> &a3) {
+        return std::unique_ptr<Expr::expr>(new Expr::expr(EIf{a0, a1, a2, a3}));
+      }
     };
     const variant_t &v() const { return v_; }
     std::any eval(const ty _x) const {

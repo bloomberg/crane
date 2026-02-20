@@ -42,6 +42,13 @@ struct Nat {
       static std::shared_ptr<Nat::nat> S_(const std::shared_ptr<Nat::nat> &a0) {
         return std::shared_ptr<Nat::nat>(new Nat::nat(S{a0}));
       }
+      static std::unique_ptr<Nat::nat> O_uptr() {
+        return std::unique_ptr<Nat::nat>(new Nat::nat(O{}));
+      }
+      static std::unique_ptr<Nat::nat>
+      S_uptr(const std::shared_ptr<Nat::nat> &a0) {
+        return std::unique_ptr<Nat::nat>(new Nat::nat(S{a0}));
+      }
     };
     const variant_t &v() const { return v_; }
   };
@@ -71,6 +78,13 @@ struct List {
       static std::shared_ptr<List::list<A>>
       cons_(A a0, const std::shared_ptr<List::list<A>> &a1) {
         return std::shared_ptr<List::list<A>>(new List::list<A>(cons{a0, a1}));
+      }
+      static std::unique_ptr<List::list<A>> nil_uptr() {
+        return std::unique_ptr<List::list<A>>(new List::list<A>(nil{}));
+      }
+      static std::unique_ptr<List::list<A>>
+      cons_uptr(A a0, const std::shared_ptr<List::list<A>> &a1) {
+        return std::unique_ptr<List::list<A>>(new List::list<A>(cons{a0, a1}));
       }
     };
     const variant_t &v() const { return v_; }
@@ -122,6 +136,14 @@ struct Tree {
       node_(const std::shared_ptr<tree<A>> &a0, A a1,
             const std::shared_ptr<tree<A>> &a2) {
         return std::shared_ptr<tree<A>>(new tree<A>(node{a0, a1, a2}));
+      }
+      static std::unique_ptr<tree<A>> leaf_uptr() {
+        return std::unique_ptr<tree<A>>(new tree<A>(leaf{}));
+      }
+      static std::unique_ptr<tree<A>>
+      node_uptr(const std::shared_ptr<tree<A>> &a0, A a1,
+                const std::shared_ptr<tree<A>> &a2) {
+        return std::unique_ptr<tree<A>>(new tree<A>(node{a0, a1, a2}));
       }
     };
     const variant_t &v() const { return v_; }

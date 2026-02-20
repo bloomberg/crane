@@ -65,6 +65,18 @@ struct List {
                 return bsl::shared_ptr<List::list<A> >(
                                               new List::list<A>(cons{a0, a1}));
             }
+            static bsl::unique_ptr<List::list<A> > nil_uptr()
+            {
+                return bsl::unique_ptr<List::list<A> >(
+                                                     new List::list<A>(nil{}));
+            }
+            static bsl::unique_ptr<List::list<A> > cons_uptr(
+                                     A                                      a0,
+                                     const bsl::shared_ptr<List::list<A> >& a1)
+            {
+                return bsl::unique_ptr<List::list<A> >(
+                                              new List::list<A>(cons{a0, a1}));
+            }
         };
         const variant_t& v() const { return v_; }
     };

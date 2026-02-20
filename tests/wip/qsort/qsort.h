@@ -43,6 +43,13 @@ struct List {
       cons_(A a0, const std::shared_ptr<List::list<A>> &a1) {
         return std::shared_ptr<List::list<A>>(new List::list<A>(cons{a0, a1}));
       }
+      static std::unique_ptr<List::list<A>> nil_uptr() {
+        return std::unique_ptr<List::list<A>>(new List::list<A>(nil{}));
+      }
+      static std::unique_ptr<List::list<A>>
+      cons_uptr(A a0, const std::shared_ptr<List::list<A>> &a1) {
+        return std::unique_ptr<List::list<A>>(new List::list<A>(cons{a0, a1}));
+      }
     };
     const variant_t &v() const { return v_; }
   };
@@ -65,6 +72,9 @@ struct Sig0 {
       ctor() = delete;
       static std::shared_ptr<Sig0::sig0<A>> exist_(A a0) {
         return std::shared_ptr<Sig0::sig0<A>>(new Sig0::sig0<A>(exist{a0}));
+      }
+      static std::unique_ptr<Sig0::sig0<A>> exist_uptr(A a0) {
+        return std::unique_ptr<Sig0::sig0<A>>(new Sig0::sig0<A>(exist{a0}));
       }
     };
     const variant_t &v() const { return v_; }
@@ -107,22 +117,20 @@ split_pivot(F0 &&le_dec0, const T1 pivot,
       l->v());
 }
 
-template <
-    typename T1, typename T2, MapsTo<bool, T1, T1> F0,
-    MapsTo<std::any, T1, std::shared_ptr<List::list<T1>>, std::any, std::any>
-        F2>
-T2 div_conq_pivot(F0 &&le_dec0, const std::any x, F2 &&x0,
+template <typename T1, typename T2, MapsTo<bool, T1, T1> F0,
+          MapsTo<T2, T1, std::shared_ptr<List::list<T1>>, T2, T2> F2>
+T2 div_conq_pivot(F0 &&le_dec0, const T2 x, F2 &&x0,
                   const std::shared_ptr<List::list<T1>> &l) {
   return std::visit(
       Overloaded{
           [&](const typename List::list<T1>::nil _args)
-              -> std::function<std::any(
-                  std::function<std::any(std::shared_ptr<List::list<T1>>)>)> {
+              -> std::function<T2(
+                  std::function<T2(std::shared_ptr<List::list<T1>>)>)> {
             return x;
           },
           [&](const typename List::list<T1>::cons _args)
-              -> std::function<std::any(
-                  std::function<std::any(std::shared_ptr<List::list<T1>>)>)> {
+              -> std::function<T2(
+                  std::function<T2(std::shared_ptr<List::list<T1>>)>)> {
             T1 a = _args._a0;
             std::shared_ptr<List::list<T1>> l0 = _args._a1;
             return x0(

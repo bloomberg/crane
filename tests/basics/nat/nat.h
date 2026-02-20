@@ -40,6 +40,12 @@ struct Nat {
       static std::shared_ptr<nat> S_(const std::shared_ptr<nat> &a0) {
         return std::shared_ptr<nat>(new nat(S{a0}));
       }
+      static std::unique_ptr<nat> O_uptr() {
+        return std::unique_ptr<nat>(new nat(O{}));
+      }
+      static std::unique_ptr<nat> S_uptr(const std::shared_ptr<nat> &a0) {
+        return std::unique_ptr<nat>(new nat(S{a0}));
+      }
     };
     const variant_t &v() const { return v_; }
     template <typename T1, MapsTo<T1, std::shared_ptr<nat>, T1> F1>

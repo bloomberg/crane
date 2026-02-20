@@ -43,6 +43,13 @@ struct List {
       cons_(A a0, const std::shared_ptr<List::list<A>> &a1) {
         return std::shared_ptr<List::list<A>>(new List::list<A>(cons{a0, a1}));
       }
+      static std::unique_ptr<List::list<A>> nil_uptr() {
+        return std::unique_ptr<List::list<A>>(new List::list<A>(nil{}));
+      }
+      static std::unique_ptr<List::list<A>>
+      cons_uptr(A a0, const std::shared_ptr<List::list<A>> &a1) {
+        return std::unique_ptr<List::list<A>>(new List::list<A>(cons{a0, a1}));
+      }
     };
     const variant_t &v() const { return v_; }
   };
@@ -65,6 +72,9 @@ struct Sig0 {
       ctor() = delete;
       static std::shared_ptr<Sig0::sig0<A>> exist_(A a0) {
         return std::shared_ptr<Sig0::sig0<A>>(new Sig0::sig0<A>(exist{a0}));
+      }
+      static std::unique_ptr<Sig0::sig0<A>> exist_uptr(A a0) {
+        return std::unique_ptr<Sig0::sig0<A>>(new Sig0::sig0<A>(exist{a0}));
       }
     };
     const variant_t &v() const { return v_; }

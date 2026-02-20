@@ -49,6 +49,13 @@ struct MutualRecursion {
       Node_(const std::shared_ptr<forest<A>> &a0) {
         return std::shared_ptr<tree<A>>(new tree<A>(Node{a0}));
       }
+      static std::unique_ptr<tree<A>> Leaf_uptr(A a0) {
+        return std::unique_ptr<tree<A>>(new tree<A>(Leaf{a0}));
+      }
+      static std::unique_ptr<tree<A>>
+      Node_uptr(const std::shared_ptr<forest<A>> &a0) {
+        return std::unique_ptr<tree<A>>(new tree<A>(Node{a0}));
+      }
     };
     const variant_t &v() const { return v_; }
   };
@@ -76,6 +83,14 @@ struct MutualRecursion {
       Trees_(const std::shared_ptr<tree<A>> &a0,
              const std::shared_ptr<forest<A>> &a1) {
         return std::shared_ptr<forest<A>>(new forest<A>(Trees{a0, a1}));
+      }
+      static std::unique_ptr<forest<A>> Empty_uptr() {
+        return std::unique_ptr<forest<A>>(new forest<A>(Empty{}));
+      }
+      static std::unique_ptr<forest<A>>
+      Trees_uptr(const std::shared_ptr<tree<A>> &a0,
+                 const std::shared_ptr<forest<A>> &a1) {
+        return std::unique_ptr<forest<A>>(new forest<A>(Trees{a0, a1}));
       }
     };
     const variant_t &v() const { return v_; }
@@ -111,39 +126,35 @@ struct MutualRecursion {
         t->v());
   }
 
-  template <typename T1, typename T2,
-            MapsTo<std::any, std::shared_ptr<tree<T1>>,
-                   std::shared_ptr<forest<T1>>, std::any>
-                F1>
-  static T2 forest_rect(const std::any f, F1 &&f0,
+  template <
+      typename T1, typename T2,
+      MapsTo<T2, std::shared_ptr<tree<T1>>, std::shared_ptr<forest<T1>>, T2> F1>
+  static T2 forest_rect(const T2 f, F1 &&f0,
                         const std::shared_ptr<forest<T1>> &f1) {
     return std::visit(
-        Overloaded{[&](const typename forest<T1>::Empty _args) -> std::any {
-                     return f;
-                   },
-                   [&](const typename forest<T1>::Trees _args) -> std::any {
-                     std::shared_ptr<tree<T1>> t = _args._a0;
-                     std::shared_ptr<forest<T1>> f2 = _args._a1;
-                     return f0(t, f2, forest_rect<T1, T2>(f, f0, f2));
-                   }},
+        Overloaded{
+            [&](const typename forest<T1>::Empty _args) -> T2 { return f; },
+            [&](const typename forest<T1>::Trees _args) -> T2 {
+              std::shared_ptr<tree<T1>> t = _args._a0;
+              std::shared_ptr<forest<T1>> f2 = _args._a1;
+              return f0(t, f2, forest_rect<T1, T2>(f, f0, f2));
+            }},
         f1->v());
   }
 
-  template <typename T1, typename T2,
-            MapsTo<std::any, std::shared_ptr<tree<T1>>,
-                   std::shared_ptr<forest<T1>>, std::any>
-                F1>
-  static T2 forest_rec(const std::any f, F1 &&f0,
+  template <
+      typename T1, typename T2,
+      MapsTo<T2, std::shared_ptr<tree<T1>>, std::shared_ptr<forest<T1>>, T2> F1>
+  static T2 forest_rec(const T2 f, F1 &&f0,
                        const std::shared_ptr<forest<T1>> &f1) {
     return std::visit(
-        Overloaded{[&](const typename forest<T1>::Empty _args) -> std::any {
-                     return f;
-                   },
-                   [&](const typename forest<T1>::Trees _args) -> std::any {
-                     std::shared_ptr<tree<T1>> t = _args._a0;
-                     std::shared_ptr<forest<T1>> f2 = _args._a1;
-                     return f0(t, f2, forest_rec<T1, T2>(f, f0, f2));
-                   }},
+        Overloaded{
+            [&](const typename forest<T1>::Empty _args) -> T2 { return f; },
+            [&](const typename forest<T1>::Trees _args) -> T2 {
+              std::shared_ptr<tree<T1>> t = _args._a0;
+              std::shared_ptr<forest<T1>> f2 = _args._a1;
+              return f0(t, f2, forest_rec<T1, T2>(f, f0, f2));
+            }},
         f1->v());
   }
 

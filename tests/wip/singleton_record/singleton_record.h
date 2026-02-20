@@ -36,6 +36,9 @@ struct SingletonRecord {
       static std::shared_ptr<wrapper> Build_wrapper_(unsigned int a0) {
         return std::shared_ptr<wrapper>(new wrapper(Build_wrapper{a0}));
       }
+      static std::unique_ptr<wrapper> Build_wrapper_uptr(unsigned int a0) {
+        return std::unique_ptr<wrapper>(new wrapper(Build_wrapper{a0}));
+      }
     };
     const variant_t &v() const { return v_; }
   };
@@ -69,6 +72,9 @@ struct SingletonRecord {
       ctor() = delete;
       static std::shared_ptr<box<A>> Build_box_(A a0) {
         return std::shared_ptr<box<A>>(new box<A>(Build_box{a0}));
+      }
+      static std::unique_ptr<box<A>> Build_box_uptr(A a0) {
+        return std::unique_ptr<box<A>>(new box<A>(Build_box{a0}));
       }
     };
     const variant_t &v() const { return v_; }
@@ -106,6 +112,11 @@ struct SingletonRecord {
       static std::shared_ptr<fn_wrapper>
       Build_fn_wrapper_(std::function<unsigned int(unsigned int)> a0) {
         return std::shared_ptr<fn_wrapper>(
+            new fn_wrapper(Build_fn_wrapper{a0}));
+      }
+      static std::unique_ptr<fn_wrapper>
+      Build_fn_wrapper_uptr(std::function<unsigned int(unsigned int)> a0) {
+        return std::unique_ptr<fn_wrapper>(
             new fn_wrapper(Build_fn_wrapper{a0}));
       }
     };

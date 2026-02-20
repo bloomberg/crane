@@ -80,6 +80,14 @@ template <OrderedType K, BaseType V> struct MakeMap {
                                          const std::shared_ptr<tree> &a3) {
         return std::shared_ptr<tree>(new tree(Node{a0, a1, a2, a3}));
       }
+      static std::unique_ptr<tree> Empty_uptr() {
+        return std::unique_ptr<tree>(new tree(Empty{}));
+      }
+      static std::unique_ptr<tree> Node_uptr(const std::shared_ptr<tree> &a0,
+                                             key a1, value a2,
+                                             const std::shared_ptr<tree> &a3) {
+        return std::unique_ptr<tree>(new tree(Node{a0, a1, a2, a3}));
+      }
     };
     const variant_t &v() const { return v_; }
   };

@@ -64,6 +64,13 @@ template <Container C> struct Wrapper {
       static std::shared_ptr<result> Err_(unsigned int a0) {
         return std::shared_ptr<result>(new result(Err{a0}));
       }
+      static std::unique_ptr<result>
+      Ok_uptr(const std::shared_ptr<typename C::t> &a0) {
+        return std::unique_ptr<result>(new result(Ok{a0}));
+      }
+      static std::unique_ptr<result> Err_uptr(unsigned int a0) {
+        return std::unique_ptr<result>(new result(Err{a0}));
+      }
     };
     const variant_t &v() const { return v_; }
   };
@@ -156,6 +163,15 @@ struct NatContainer {
       }
       static std::shared_ptr<t> Pair_(elem a0, elem a1) {
         return std::shared_ptr<t>(new t(Pair{a0, a1}));
+      }
+      static std::unique_ptr<t> Empty_uptr() {
+        return std::unique_ptr<t>(new t(Empty{}));
+      }
+      static std::unique_ptr<t> Single_uptr(elem a0) {
+        return std::unique_ptr<t>(new t(Single{a0}));
+      }
+      static std::unique_ptr<t> Pair_uptr(elem a0, elem a1) {
+        return std::unique_ptr<t>(new t(Pair{a0, a1}));
       }
     };
     const variant_t &v() const { return v_; }

@@ -62,6 +62,12 @@ struct EmptyMatch {
       static std::shared_ptr<either<A, B>> Right_(B a0) {
         return std::shared_ptr<either<A, B>>(new either<A, B>(Right{a0}));
       }
+      static std::unique_ptr<either<A, B>> Left_uptr(A a0) {
+        return std::unique_ptr<either<A, B>>(new either<A, B>(Left{a0}));
+      }
+      static std::unique_ptr<either<A, B>> Right_uptr(B a0) {
+        return std::unique_ptr<either<A, B>>(new either<A, B>(Right{a0}));
+      }
     };
     const variant_t &v() const { return v_; }
   };

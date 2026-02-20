@@ -59,6 +59,20 @@ struct FreeMonad {
       static std::shared_ptr<iO> print_(std::string a0) {
         return std::shared_ptr<iO>(new iO(print{a0}));
       }
+      static std::unique_ptr<iO> pure_uptr(std::any a0) {
+        return std::unique_ptr<iO>(new iO(pure{a0}));
+      }
+      static std::unique_ptr<iO>
+      bind_uptr(const std::shared_ptr<iO> &a0,
+                std::function<std::shared_ptr<iO>(std::any)> a1) {
+        return std::unique_ptr<iO>(new iO(bind{a0, a1}));
+      }
+      static std::unique_ptr<iO> get_line_uptr() {
+        return std::unique_ptr<iO>(new iO(get_line{}));
+      }
+      static std::unique_ptr<iO> print_uptr(std::string a0) {
+        return std::unique_ptr<iO>(new iO(print{a0}));
+      }
     };
     const variant_t &v() const { return v_; }
   };
@@ -72,24 +86,25 @@ struct FreeMonad {
   static T1 IO_rect(F0 &&f, F1 &&f0, const T1 f1, F3 &&f2,
                     const std::shared_ptr<iO> &i) {
     return std::visit(
-        Overloaded{
-            [&](const typename iO::pure _args) -> auto {
-              std::any a = _args._a0;
-              return f("dummy", a);
-            },
-            [&](const typename iO::bind _args) -> auto {
-              std::shared_ptr<iO> i0 = _args._a0;
-              std::function<std::shared_ptr<iO>(std::any)> i1 = _args._a1;
-              return f0("dummy", "dummy", i0, IO_rect<T1>(f, f0, f1, f2, i0),
-                        i1, [&](std::any a) {
-                          return IO_rect<T1>(f, f0, f1, f2, i1(a));
-                        });
-            },
-            [&](const typename iO::get_line _args) -> auto { return f1; },
-            [&](const typename iO::print _args) -> auto {
-              std::string s = _args._a0;
-              return f2(s);
-            }},
+        Overloaded{[&](const typename iO::pure _args) -> T1 {
+                     std::any a = _args._a0;
+                     return f("dummy", a);
+                   },
+                   [&](const typename iO::bind _args) -> T1 {
+                     std::shared_ptr<iO> i0 = _args._a0;
+                     std::function<std::shared_ptr<iO>(std::any)> i1 =
+                         _args._a1;
+                     return f0("dummy", "dummy", i0,
+                               IO_rect<T1>(f, f0, f1, f2, i0), i1,
+                               [&](std::any a) {
+                                 return IO_rect<T1>(f, f0, f1, f2, i1(a));
+                               });
+                   },
+                   [&](const typename iO::get_line _args) -> T1 { return f1; },
+                   [&](const typename iO::print _args) -> T1 {
+                     std::string s = _args._a0;
+                     return f2(s);
+                   }},
         i->v());
   }
 
@@ -102,23 +117,25 @@ struct FreeMonad {
   static T1 IO_rec(F0 &&f, F1 &&f0, const T1 f1, F3 &&f2,
                    const std::shared_ptr<iO> &i) {
     return std::visit(
-        Overloaded{
-            [&](const typename iO::pure _args) -> auto {
-              std::any a = _args._a0;
-              return f("dummy", a);
-            },
-            [&](const typename iO::bind _args) -> auto {
-              std::shared_ptr<iO> i0 = _args._a0;
-              std::function<std::shared_ptr<iO>(std::any)> i1 = _args._a1;
-              return f0(
-                  "dummy", "dummy", i0, IO_rec<T1>(f, f0, f1, f2, i0), i1,
-                  [&](std::any a) { return IO_rec<T1>(f, f0, f1, f2, i1(a)); });
-            },
-            [&](const typename iO::get_line _args) -> auto { return f1; },
-            [&](const typename iO::print _args) -> auto {
-              std::string s = _args._a0;
-              return f2(s);
-            }},
+        Overloaded{[&](const typename iO::pure _args) -> T1 {
+                     std::any a = _args._a0;
+                     return f("dummy", a);
+                   },
+                   [&](const typename iO::bind _args) -> T1 {
+                     std::shared_ptr<iO> i0 = _args._a0;
+                     std::function<std::shared_ptr<iO>(std::any)> i1 =
+                         _args._a1;
+                     return f0("dummy", "dummy", i0,
+                               IO_rec<T1>(f, f0, f1, f2, i0), i1,
+                               [&](std::any a) {
+                                 return IO_rec<T1>(f, f0, f1, f2, i1(a));
+                               });
+                   },
+                   [&](const typename iO::get_line _args) -> T1 { return f1; },
+                   [&](const typename iO::print _args) -> T1 {
+                     std::string s = _args._a0;
+                     return f2(s);
+                   }},
         i->v());
   }
 
