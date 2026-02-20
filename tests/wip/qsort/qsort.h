@@ -107,20 +107,22 @@ split_pivot(F0 &&le_dec0, const T1 pivot,
       l->v());
 }
 
-template <typename T1, typename T2, MapsTo<bool, T1, T1> F0,
-          MapsTo<T2, T1, std::shared_ptr<List::list<T1>>, T2, T2> F2>
-T2 div_conq_pivot(F0 &&le_dec0, const T2 x, F2 &&x0,
+template <
+    typename T1, typename T2, MapsTo<bool, T1, T1> F0,
+    MapsTo<std::any, T1, std::shared_ptr<List::list<T1>>, std::any, std::any>
+        F2>
+T2 div_conq_pivot(F0 &&le_dec0, const std::any x, F2 &&x0,
                   const std::shared_ptr<List::list<T1>> &l) {
   return std::visit(
       Overloaded{
           [&](const typename List::list<T1>::nil _args)
-              -> std::function<T2(
-                  std::function<T2(std::shared_ptr<List::list<T1>>)>)> {
+              -> std::function<std::any(
+                  std::function<std::any(std::shared_ptr<List::list<T1>>)>)> {
             return x;
           },
           [&](const typename List::list<T1>::cons _args)
-              -> std::function<T2(
-                  std::function<T2(std::shared_ptr<List::list<T1>>)>)> {
+              -> std::function<std::any(
+                  std::function<std::any(std::shared_ptr<List::list<T1>>)>)> {
             T1 a = _args._a0;
             std::shared_ptr<List::list<T1>> l0 = _args._a1;
             return x0(

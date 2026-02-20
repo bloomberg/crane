@@ -79,4 +79,4 @@ sort_cons_prog(const unsigned int a,
                const std::shared_ptr<List::list<unsigned int>> &l_);
 
 std::shared_ptr<Sig0::sig0<std::shared_ptr<List::list<unsigned int>>>>
-isort(const std::shared_ptr<List::list<T1>> &l);
+isort(const std::shared_ptr<List::list<unsigned int>> &l);

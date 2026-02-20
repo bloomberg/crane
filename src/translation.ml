@@ -104,6 +104,113 @@ let rec collect_tvars_ast acc = function
   | MLtuple args -> List.fold_left collect_tvars_ast acc args
   | MLrel _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> acc
 
+(* Check if an ML type contains any unresolved type variable or placeholder.
+   Returns true for Tvar, Tvar', unresolved Tmeta, and Tunknown.
+   Used to guard Tvar substitution: we only substitute with fully concrete types. *)
+let rec has_tvar = function
+  | Miniml.Tvar _ | Miniml.Tvar' _ -> true
+  | Miniml.Tunknown -> true
+  | Miniml.Tarr (t1, t2) -> has_tvar t1 || has_tvar t2
+  | Miniml.Tglob (_, args, _) -> List.exists has_tvar args
+  | Miniml.Tmeta { contents = Some t } -> has_tvar t
+  | Miniml.Tmeta { contents = None } -> true
+  | _ -> false
+
+(* Apply a type-level transformation to every type annotation in an ML AST. *)
+let rec map_types_in_ast (f : ml_type -> ml_type) = function
+  | MLlam (id, ty, body) ->
+    MLlam (id, f ty, map_types_in_ast f body)
+  | MLletin (id, ty, a, b) ->
+    MLletin (id, f ty, map_types_in_ast f a, map_types_in_ast f b)
+  | MLglob (r, tys) -> MLglob (r, List.map f tys)
+  | MLcons (ty, r, args) ->
+    MLcons (f ty, r, List.map (map_types_in_ast f) args)
+  | MLcase (ty, e, brs) ->
+    MLcase (f ty, map_types_in_ast f e,
+      Array.map (fun (ids, ty, pat, body) ->
+        (List.map (fun (id, t) -> (id, f t)) ids,
+         f ty, pat, map_types_in_ast f body)) brs)
+  | MLfix (i, ids, funs, cf) ->
+    MLfix (i, Array.map (fun (n, ty) -> (n, f ty)) ids,
+           Array.map (map_types_in_ast f) funs, cf)
+  | MLapp (fn, args) ->
+    MLapp (map_types_in_ast f fn, List.map (map_types_in_ast f) args)
+  | MLmagic a -> MLmagic (map_types_in_ast f a)
+  | MLparray (arr, def) ->
+    MLparray (Array.map (map_types_in_ast f) arr, map_types_in_ast f def)
+  | MLtuple args -> MLtuple (List.map (map_types_in_ast f) args)
+  | (MLrel _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _
+    | MLfloat _ | MLstring _) as t -> t
+
+(* Build Tvar i -> concrete_type substitution by unifying two ML types structurally.
+   Walks both types in parallel; when one side has Tvar i and the other has a concrete
+   type, records the mapping. Conflicting mappings are discarded. *)
+let build_tvar_subst_from_unify ty_with_tvars ty_concrete =
+  let seen = Hashtbl.create 8 in
+  let rec unify t1 t2 = match t1, t2 with
+    | (Miniml.Tvar i | Miniml.Tvar' i), _ when not (has_tvar t2) ->
+      (match Hashtbl.find_opt seen i with
+       | None -> Hashtbl.replace seen i (Some t2)
+       | Some (Some _) -> Hashtbl.replace seen i None
+       | Some None -> ())
+    | _, (Miniml.Tvar i | Miniml.Tvar' i) when not (has_tvar t1) ->
+      (match Hashtbl.find_opt seen i with
+       | None -> Hashtbl.replace seen i (Some t1)
+       | Some (Some _) -> Hashtbl.replace seen i None
+       | Some None -> ())
+    | Miniml.Tarr (a1, b1), Miniml.Tarr (a2, b2) -> unify a1 a2; unify b1 b2
+    | Miniml.Tglob (_, args1, _), Miniml.Tglob (_, args2, _)
+      when List.length args1 = List.length args2 ->
+      List.iter2 unify args1 args2
+    | Miniml.Tmeta { contents = Some t }, other
+    | other, Miniml.Tmeta { contents = Some t } -> unify t other
+    | _ -> ()
+  in
+  unify ty_with_tvars ty_concrete;
+  Hashtbl.fold (fun i v acc -> match v with Some ty -> (i, ty) :: acc | None -> acc) seen []
+
+(* Collect all types that should be unified with the top-level function type.
+   Returns a list of types to unify pairwise with the top-level type:
+   - The arrow type reconstructed from MLlam annotations
+   - The type annotation on the MLfix binding (if present)
+   - The arrow type from the MLfix's inner function body *)
+let collect_body_types_for_unify body =
+  let types = ref [] in
+  let rec from_lams = function
+    | MLlam (_, ty, inner) -> Miniml.Tarr (ty, from_lams inner)
+    | MLfix (_, ids, funs, _) ->
+      Array.iter (fun (_, ty) -> types := ty :: !types) ids;
+      Array.iter (fun f -> types := from_lams f :: !types) funs;
+      Miniml.Tunknown
+    | _ -> Miniml.Tunknown
+  in
+  let outer = from_lams body in
+  outer :: !types
+
+(* Apply a Tvar substitution to an ML type. *)
+let rec subst_tvars_type subst = function
+  | Miniml.Tvar i | Miniml.Tvar' i ->
+    (match List.assoc_opt i subst with Some t -> t | None -> Miniml.Tvar i)
+  | Miniml.Tarr (a, b) -> Miniml.Tarr (subst_tvars_type subst a, subst_tvars_type subst b)
+  | Miniml.Tglob (r, args, a) -> Miniml.Tglob (r, List.map (subst_tvars_type subst) args, a)
+  | Miniml.Tmeta {contents = Some t} -> subst_tvars_type subst t
+  | t -> t
+
+(* Resolve Tvars in the body by unifying body type annotations with the top-level type.
+   Only applied when the top-level type is fully concrete (no Tvars, no unresolved metas).
+   Returns the (possibly substituted) body. *)
+let resolve_body_tvars b ty =
+  let ty = type_simpl ty in
+  if has_tvar ty then b  (* top-level type is polymorphic, don't touch the body *)
+  else
+    let body_types = collect_body_types_for_unify b in
+    let tvar_subst = List.concat_map (fun bt -> build_tvar_subst_from_unify bt ty) body_types in
+    let tvar_subst = List.fold_left (fun acc (i, t) ->
+      if List.mem_assoc i acc then acc else (i, t) :: acc) [] tvar_subst in
+    match tvar_subst with
+    | [] -> b
+    | _ -> map_types_in_ast (subst_tvars_type tvar_subst) b
+
 (* Resolve unresolved metas in an ML AST by walking its sub-types.
    resolve_metas should be a function that resolves metas in a single ml_type. *)
 let rec resolve_metas_in_ast resolve_metas = function
@@ -710,13 +817,6 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body =
 and gen_cpp_case (typ : ml_type) t env pv =
   (* When scrutinee is a parameter reference, use parameter's concrete type if available.
      This handles monomorphic functions where MLcase has Tvar but parameter is concrete. *)
-  let rec has_tvar = function
-    | Miniml.Tvar _ | Miniml.Tvar' _ -> true
-    | Miniml.Tarr (t1, t2) -> has_tvar t1 || has_tvar t2
-    | Miniml.Tglob (_, args, _) -> List.exists has_tvar args
-    | Miniml.Tmeta { contents = Some t } -> has_tvar t
-    | _ -> false
-  in
   let typ = match t with
     | MLrel i | MLmagic (MLrel i) ->
         (match get_param_type_by_index i with
@@ -1936,6 +2036,7 @@ let gen_decl_for_pp n b ty =
 let gen_decl_for_dfuns n b ty =
   (* Simplify the ML type to resolve metavariables before converting to C++ *)
   let ty = type_simpl ty in
+  let b = resolve_body_tvars b ty in
   let cty = convert_ml_type_to_cpp_type (empty_env ()) [] [] ty in
   let tvars = get_tvars cty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
@@ -1988,7 +2089,9 @@ let gen_dfuns_header (ns,bs,tys) =
     let lifted = take_lifted_decls () in
     let lifted_results = List.map (fun d -> (d, empty_env ())) lifted in
     let main_result = match tvars with
-      | [] -> gen_spec_for_sfuns name bs.(i) tys.(i)
+      | [] ->
+        let b = resolve_body_tvars bs.(i) tys.(i) in
+        gen_spec_for_sfuns name b tys.(i)
       | _::_ -> ds, env in
     lifted_results @ [main_result]
   ) (List.mapi (fun i name -> (i, name)) (Array.to_list ns))

@@ -85,14 +85,15 @@ struct Sig0 {
 
 bool le_lt_dec(const unsigned int n, const unsigned int m);
 
-template <typename T1, typename T2,
-          MapsTo<std::pair<std::shared_ptr<List::list<T1>>,
-                           std::shared_ptr<List::list<T1>>>,
-                 std::shared_ptr<List::list<T1>>>
-              F0,
-          MapsTo<T2, T1> F2,
-          MapsTo<T2, std::shared_ptr<List::list<T1>>, T2, T2> F3>
-T2 div_conq(F0 &&splitF, const T2 x, F2 &&x0, F3 &&x1,
+template <
+    typename T1, typename T2,
+    MapsTo<std::pair<std::shared_ptr<List::list<T1>>,
+                     std::shared_ptr<List::list<T1>>>,
+           std::shared_ptr<List::list<T1>>>
+        F0,
+    MapsTo<std::any, T1> F2,
+    MapsTo<std::any, std::shared_ptr<List::list<T1>>, std::any, std::any> F3>
+T2 div_conq(F0 &&splitF, const std::any x, F2 &&x0, F3 &&x1,
             const std::shared_ptr<List::list<T1>> &ls) {
   bool s = le_lt_dec(((0 + 1) + 1), ls->length());
   if (s) {
@@ -100,17 +101,18 @@ T2 div_conq(F0 &&splitF, const T2 x, F2 &&x0, F3 &&x1,
               div_conq<T1, T2>(splitF, x, x0, x1, splitF(ls).second));
   } else {
     return std::visit(
-        Overloaded{[&](const typename List::list<T1>::nil _args)
-                       -> std::function<T2(
-                           std::function<T2(std::shared_ptr<List::list<T1>>)>,
-                           dummy_prop)> { return x; },
-                   [&](const typename List::list<T1>::cons _args)
-                       -> std::function<T2(
-                           std::function<T2(std::shared_ptr<List::list<T1>>)>,
-                           dummy_prop)> {
-                     T1 a = _args._a0;
-                     return x0(a);
-                   }},
+        Overloaded{
+            [&](const typename List::list<T1>::nil _args)
+                -> std::function<std::any(
+                    std::function<std::any(std::shared_ptr<List::list<T1>>)>)> {
+              return x;
+            },
+            [&](const typename List::list<T1>::cons _args)
+                -> std::function<std::any(
+                    std::function<std::any(std::shared_ptr<List::list<T1>>)>)> {
+              T1 a = _args._a0;
+              return x0(a);
+            }},
         ls->v());
   }
 }
