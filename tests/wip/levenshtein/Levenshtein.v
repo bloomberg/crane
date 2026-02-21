@@ -1330,5 +1330,5 @@ Qed.
 (* Eval compute in (levenshtein_chain "pascal" "haskell"). *)
 
 (* Extraction requires the external rocq-crane plugin. *)
-(* Require Crane.Extraction. *)
-(* Crane Extraction "levenshtein" levenshtein_chain. *)
+Require Crane.Extraction.
+Crane Extraction "levenshtein" levenshtein_chain.
