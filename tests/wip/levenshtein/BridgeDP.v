@@ -572,7 +572,7 @@ Proof.
   destruct b_tail as [|b1 b_tail'].
   - cbn.
     reflexivity.
-  - 
+  -
     specialize (IH (b0 :: bpre_rev) ltac:(discriminate)).
     replace (S (length bpre_rev)) with (length (b0 :: bpre_rev)) by reflexivity.
     rewrite IH.
