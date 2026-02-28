@@ -36,17 +36,17 @@ void aSsErT(bool condition, const char *message, int line)
 
 // Helper to convert list to vector for testing
 template<typename T>
-std::vector<T> list_to_vector(const std::shared_ptr<List::list<T>>& l) {
+std::vector<T> list_to_vector(const std::shared_ptr<List<T>>& l) {
   std::vector<T> result;
   auto current = l;
   while (true) {
     bool done = false;
     std::visit(
       Overloaded{
-        [&](const typename List::list<T>::nil&) {
+        [&](const typename List<T>::nil&) {
           done = true;
         },
-        [&](const typename List::list<T>::cons& c) {
+        [&](const typename List<T>::cons& c) {
           result.push_back(c._a0);
           current = c._a1;
         }
@@ -60,10 +60,10 @@ std::vector<T> list_to_vector(const std::shared_ptr<List::list<T>>& l) {
 
 // Helper to create a list from a vector
 template<typename T>
-std::shared_ptr<List::list<T>> vector_to_list(const std::vector<T>& vec) {
-  auto result = List::list<T>::ctor::nil_();
+std::shared_ptr<List<T>> vector_to_list(const std::vector<T>& vec) {
+  auto result = List<T>::ctor::nil_();
   for (auto it = vec.rbegin(); it != vec.rend(); ++it) {
-    result = List::list<T>::ctor::cons_(*it, result);
+    result = List<T>::ctor::cons_(*it, result);
   }
   return result;
 }
@@ -71,7 +71,7 @@ std::shared_ptr<List::list<T>> vector_to_list(const std::vector<T>& vec) {
 int main() {
   // Test 1: Map over empty list
   {
-    auto empty = List::list<unsigned int>::ctor::nil_();
+    auto empty = List<unsigned int>::ctor::nil_();
     auto result = better_map<unsigned int, unsigned int>([](unsigned int x) { return x + 1; }, empty);
     auto vec = list_to_vector(result);
     ASSERT(vec.size() == 0);
@@ -80,7 +80,7 @@ int main() {
 
   // Test 2: Map increment over single element
   {
-    auto single = List::list<unsigned int>::ctor::cons_(42, List::list<unsigned int>::ctor::nil_());
+    auto single = List<unsigned int>::ctor::cons_(42, List<unsigned int>::ctor::nil_());
     auto result = better_map<unsigned int, unsigned int>([](unsigned int x) { return x + 1; }, single);
     auto vec = list_to_vector(result);
     ASSERT(vec.size() == 1);

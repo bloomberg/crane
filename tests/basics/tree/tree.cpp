@@ -10,20 +10,6 @@
 #include <tree.h>
 #include <variant>
 
-std::shared_ptr<Nat::nat> Nat::add(const std::shared_ptr<Nat::nat> &n,
-                                   std::shared_ptr<Nat::nat> m) {
-  return std::visit(
-      Overloaded{
-          [&](const typename Nat::nat::O _args) -> std::shared_ptr<Nat::nat> {
-            return std::move(m);
-          },
-          [&](const typename Nat::nat::S _args) -> std::shared_ptr<Nat::nat> {
-            std::shared_ptr<Nat::nat> p = _args._a0;
-            return Nat::nat::ctor::S_(Nat::add(std::move(p), std::move(m)));
-          }},
-      n->v());
-}
-
 std::shared_ptr<Nat::nat> Nat::max(std::shared_ptr<Nat::nat> n,
                                    std::shared_ptr<Nat::nat> m) {
   return std::visit(

@@ -20,41 +20,54 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 enum class bool0 { true0, false0 };
 
 struct Nat {
-  struct nat {
-  public:
-    struct O {};
-    struct S {
-      std::shared_ptr<Nat::nat> _a0;
-    };
-    using variant_t = std::variant<O, S>;
-
-  private:
-    variant_t v_;
-    explicit nat(O _v) : v_(std::move(_v)) {}
-    explicit nat(S _v) : v_(std::move(_v)) {}
-
-  public:
-    struct ctor {
-      ctor() = delete;
-      static std::shared_ptr<Nat::nat> O_() {
-        return std::shared_ptr<Nat::nat>(new Nat::nat(O{}));
-      }
-      static std::shared_ptr<Nat::nat> S_(const std::shared_ptr<Nat::nat> &a0) {
-        return std::shared_ptr<Nat::nat>(new Nat::nat(S{a0}));
-      }
-      static std::unique_ptr<Nat::nat> O_uptr() {
-        return std::unique_ptr<Nat::nat>(new Nat::nat(O{}));
-      }
-      static std::unique_ptr<Nat::nat>
-      S_uptr(const std::shared_ptr<Nat::nat> &a0) {
-        return std::unique_ptr<Nat::nat>(new Nat::nat(S{a0}));
-      }
-    };
-    const variant_t &v() const { return v_; }
-    variant_t &v_mut() { return v_; }
+public:
+  struct O {};
+  struct S {
+    std::shared_ptr<Nat> _a0;
   };
-  static bool0 leb(const std::shared_ptr<Nat::nat> &n,
-                   const std::shared_ptr<Nat::nat> &m);
+  using variant_t = std::variant<O, S>;
+
+private:
+  variant_t v_;
+  explicit Nat(O _v) : v_(std::move(_v)) {}
+  explicit Nat(S _v) : v_(std::move(_v)) {}
+
+public:
+  struct ctor {
+    ctor() = delete;
+    static std::shared_ptr<Nat> O_() {
+      return std::shared_ptr<Nat>(new Nat(O{}));
+    }
+    static std::shared_ptr<Nat> S_(const std::shared_ptr<Nat> &a0) {
+      return std::shared_ptr<Nat>(new Nat(S{a0}));
+    }
+    static std::unique_ptr<Nat> O_uptr() {
+      return std::unique_ptr<Nat>(new Nat(O{}));
+    }
+    static std::unique_ptr<Nat> S_uptr(const std::shared_ptr<Nat> &a0) {
+      return std::unique_ptr<Nat>(new Nat(S{a0}));
+    }
+  };
+  const variant_t &v() const { return v_; }
+  variant_t &v_mut() { return v_; }
+  bool0 leb(const std::shared_ptr<Nat> &m) const {
+    return std::visit(
+        Overloaded{
+            [](const typename Nat::O _args) -> bool0 { return bool0::true0; },
+            [&](const typename Nat::S _args) -> bool0 {
+              std::shared_ptr<Nat> n_ = _args._a0;
+              return std::visit(
+                  Overloaded{[](const typename Nat::O _args) -> bool0 {
+                               return bool0::false0;
+                             },
+                             [&](const typename Nat::S _args) -> bool0 {
+                               std::shared_ptr<Nat> m_ = _args._a0;
+                               return std::move(n_)->leb(std::move(m_));
+                             }},
+                  m->v());
+            }},
+        this->v());
+  }
 };
 
 template <typename A, typename P> struct SigT {
@@ -278,15 +291,14 @@ public:
                                  }},
                       this->v());
   }
-  std::shared_ptr<Nat::nat> length() const {
+  std::shared_ptr<Nat> length() const {
     return std::visit(
         Overloaded{
             [](const typename String::EmptyString _args)
-                -> std::shared_ptr<Nat::nat> { return Nat::nat::ctor::O_(); },
-            [](const typename String::String _args)
-                -> std::shared_ptr<Nat::nat> {
+                -> std::shared_ptr<Nat> { return Nat::ctor::O_(); },
+            [](const typename String::String _args) -> std::shared_ptr<Nat> {
               std::shared_ptr<String> s_ = _args._a1;
-              return Nat::nat::ctor::S_(std::move(s_)->length());
+              return Nat::ctor::S_(std::move(s_)->length());
             }},
         this->v());
   }
@@ -427,14 +439,14 @@ struct Levenshtein {
       std::shared_ptr<Ascii> _a0;
       std::shared_ptr<String> _a1;
       std::shared_ptr<String> _a2;
-      std::shared_ptr<Nat::nat> _a3;
+      std::shared_ptr<Nat> _a3;
       std::shared_ptr<chain> _a4;
     };
     struct change {
       std::shared_ptr<String> _a0;
       std::shared_ptr<String> _a1;
       std::shared_ptr<String> _a2;
-      std::shared_ptr<Nat::nat> _a3;
+      std::shared_ptr<Nat> _a3;
       std::shared_ptr<edit> _a4;
       std::shared_ptr<chain> _a5;
     };
@@ -455,14 +467,14 @@ struct Levenshtein {
       static std::shared_ptr<chain> skip_(const std::shared_ptr<Ascii> &a0,
                                           const std::shared_ptr<String> &a1,
                                           const std::shared_ptr<String> &a2,
-                                          const std::shared_ptr<Nat::nat> &a3,
+                                          const std::shared_ptr<Nat> &a3,
                                           const std::shared_ptr<chain> &a4) {
         return std::shared_ptr<chain>(new chain(skip{a0, a1, a2, a3, a4}));
       }
       static std::shared_ptr<chain> change_(const std::shared_ptr<String> &a0,
                                             const std::shared_ptr<String> &a1,
                                             const std::shared_ptr<String> &a2,
-                                            const std::shared_ptr<Nat::nat> &a3,
+                                            const std::shared_ptr<Nat> &a3,
                                             const std::shared_ptr<edit> &a4,
                                             const std::shared_ptr<chain> &a5) {
         return std::shared_ptr<chain>(
@@ -471,19 +483,16 @@ struct Levenshtein {
       static std::unique_ptr<chain> empty_uptr() {
         return std::unique_ptr<chain>(new chain(empty{}));
       }
-      static std::unique_ptr<chain>
-      skip_uptr(const std::shared_ptr<Ascii> &a0,
-                const std::shared_ptr<String> &a1,
-                const std::shared_ptr<String> &a2,
-                const std::shared_ptr<Nat::nat> &a3,
-                const std::shared_ptr<chain> &a4) {
+      static std::unique_ptr<chain> skip_uptr(
+          const std::shared_ptr<Ascii> &a0, const std::shared_ptr<String> &a1,
+          const std::shared_ptr<String> &a2, const std::shared_ptr<Nat> &a3,
+          const std::shared_ptr<chain> &a4) {
         return std::unique_ptr<chain>(new chain(skip{a0, a1, a2, a3, a4}));
       }
       static std::unique_ptr<chain> change_uptr(
           const std::shared_ptr<String> &a0, const std::shared_ptr<String> &a1,
-          const std::shared_ptr<String> &a2,
-          const std::shared_ptr<Nat::nat> &a3, const std::shared_ptr<edit> &a4,
-          const std::shared_ptr<chain> &a5) {
+          const std::shared_ptr<String> &a2, const std::shared_ptr<Nat> &a3,
+          const std::shared_ptr<edit> &a4, const std::shared_ptr<chain> &a5) {
         return std::unique_ptr<chain>(
             new chain(change{a0, a1, a2, a3, a4, a5}));
       }
@@ -494,25 +503,24 @@ struct Levenshtein {
 
   template <typename T1,
             MapsTo<T1, std::shared_ptr<Ascii>, std::shared_ptr<String>,
-                   std::shared_ptr<String>, std::shared_ptr<Nat::nat>,
+                   std::shared_ptr<String>, std::shared_ptr<Nat>,
                    std::shared_ptr<chain>, T1>
                 F1,
             MapsTo<T1, std::shared_ptr<String>, std::shared_ptr<String>,
-                   std::shared_ptr<String>, std::shared_ptr<Nat::nat>,
+                   std::shared_ptr<String>, std::shared_ptr<Nat>,
                    std::shared_ptr<edit>, std::shared_ptr<chain>, T1>
                 F2>
-  static T1 chain_rect(const T1 f, F1 &&f0, F2 &&f1,
-                       const std::shared_ptr<String> &_x,
-                       const std::shared_ptr<String> &_x0,
-                       const std::shared_ptr<Nat::nat> &_x1,
-                       const std::shared_ptr<chain> &c) {
+  static T1
+  chain_rect(const T1 f, F1 &&f0, F2 &&f1, const std::shared_ptr<String> &_x,
+             const std::shared_ptr<String> &_x0,
+             const std::shared_ptr<Nat> &_x1, const std::shared_ptr<chain> &c) {
     return std::visit(
         Overloaded{[&](const typename chain::empty _args) -> T1 { return f; },
                    [&](const typename chain::skip _args) -> T1 {
                      std::shared_ptr<Ascii> a = _args._a0;
                      std::shared_ptr<String> s = _args._a1;
                      std::shared_ptr<String> t = _args._a2;
-                     std::shared_ptr<Nat::nat> n = _args._a3;
+                     std::shared_ptr<Nat> n = _args._a3;
                      std::shared_ptr<chain> c0 = _args._a4;
                      return f0(std::move(a), s, t, n, c0,
                                chain_rect<T1>(f, f0, f1, s, t, n, c0));
@@ -521,7 +529,7 @@ struct Levenshtein {
                      std::shared_ptr<String> s = _args._a0;
                      std::shared_ptr<String> t = _args._a1;
                      std::shared_ptr<String> u = _args._a2;
-                     std::shared_ptr<Nat::nat> n = _args._a3;
+                     std::shared_ptr<Nat> n = _args._a3;
                      std::shared_ptr<edit> e = _args._a4;
                      std::shared_ptr<chain> c0 = _args._a5;
                      return f1(std::move(s), t, u, n, std::move(e), c0,
@@ -532,25 +540,24 @@ struct Levenshtein {
 
   template <typename T1,
             MapsTo<T1, std::shared_ptr<Ascii>, std::shared_ptr<String>,
-                   std::shared_ptr<String>, std::shared_ptr<Nat::nat>,
+                   std::shared_ptr<String>, std::shared_ptr<Nat>,
                    std::shared_ptr<chain>, T1>
                 F1,
             MapsTo<T1, std::shared_ptr<String>, std::shared_ptr<String>,
-                   std::shared_ptr<String>, std::shared_ptr<Nat::nat>,
+                   std::shared_ptr<String>, std::shared_ptr<Nat>,
                    std::shared_ptr<edit>, std::shared_ptr<chain>, T1>
                 F2>
-  static T1 chain_rec(const T1 f, F1 &&f0, F2 &&f1,
-                      const std::shared_ptr<String> &_x,
-                      const std::shared_ptr<String> &_x0,
-                      const std::shared_ptr<Nat::nat> &_x1,
-                      const std::shared_ptr<chain> &c) {
+  static T1
+  chain_rec(const T1 f, F1 &&f0, F2 &&f1, const std::shared_ptr<String> &_x,
+            const std::shared_ptr<String> &_x0, const std::shared_ptr<Nat> &_x1,
+            const std::shared_ptr<chain> &c) {
     return std::visit(
         Overloaded{[&](const typename chain::empty _args) -> T1 { return f; },
                    [&](const typename chain::skip _args) -> T1 {
                      std::shared_ptr<Ascii> a = _args._a0;
                      std::shared_ptr<String> s = _args._a1;
                      std::shared_ptr<String> t = _args._a2;
-                     std::shared_ptr<Nat::nat> n = _args._a3;
+                     std::shared_ptr<Nat> n = _args._a3;
                      std::shared_ptr<chain> c0 = _args._a4;
                      return f0(std::move(a), s, t, n, c0,
                                chain_rec<T1>(f, f0, f1, s, t, n, c0));
@@ -559,7 +566,7 @@ struct Levenshtein {
                      std::shared_ptr<String> s = _args._a0;
                      std::shared_ptr<String> t = _args._a1;
                      std::shared_ptr<String> u = _args._a2;
-                     std::shared_ptr<Nat::nat> n = _args._a3;
+                     std::shared_ptr<Nat> n = _args._a3;
                      std::shared_ptr<edit> e = _args._a4;
                      std::shared_ptr<chain> c0 = _args._a5;
                      return f1(std::move(s), t, u, n, std::move(e), c0,
@@ -573,7 +580,7 @@ struct Levenshtein {
   static std::shared_ptr<chain> insert_chain(std::shared_ptr<Ascii> c,
                                              std::shared_ptr<String> s1,
                                              std::shared_ptr<String> s2,
-                                             std::shared_ptr<Nat::nat> n,
+                                             std::shared_ptr<Nat> n,
                                              std::shared_ptr<chain> c0);
 
   template <typename T1>
@@ -586,7 +593,7 @@ struct Levenshtein {
                      std::shared_ptr<Ascii> a = _args._a0;
                      std::shared_ptr<String> s0 = _args._a1;
                      return chain::ctor::skip_(std::move(a), s0, s0,
-                                               Nat::nat::ctor::O_(),
+                                               Nat::ctor::O_(),
                                                _inserts_chain_F<T1>(s0));
                    }},
         s->v());
@@ -601,7 +608,7 @@ struct Levenshtein {
   static std::shared_ptr<chain> delete_chain(std::shared_ptr<Ascii> c,
                                              std::shared_ptr<String> s1,
                                              std::shared_ptr<String> s2,
-                                             std::shared_ptr<Nat::nat> n,
+                                             std::shared_ptr<Nat> n,
                                              std::shared_ptr<chain> c0);
 
   static std::shared_ptr<chain>
@@ -614,47 +621,50 @@ struct Levenshtein {
   static std::shared_ptr<chain>
   update_chain(std::shared_ptr<Ascii> c, std::shared_ptr<Ascii> c_,
                std::shared_ptr<String> s1, std::shared_ptr<String> s2,
-               std::shared_ptr<Nat::nat> n, std::shared_ptr<chain> c0);
+               std::shared_ptr<Nat> n, std::shared_ptr<chain> c0);
 
-  static std::shared_ptr<chain> aux_insert(
-      const std::shared_ptr<String> &_x, const std::shared_ptr<String> &_x0,
-      std::shared_ptr<Ascii> x, std::shared_ptr<String> xs,
-      const std::shared_ptr<Ascii> &y, const std::shared_ptr<String> &ys,
-      const std::shared_ptr<Nat::nat> &n, const std::shared_ptr<chain> &r1);
+  static std::shared_ptr<chain>
+  aux_insert(const std::shared_ptr<String> &_x,
+             const std::shared_ptr<String> &_x0, std::shared_ptr<Ascii> x,
+             std::shared_ptr<String> xs, const std::shared_ptr<Ascii> &y,
+             const std::shared_ptr<String> &ys, const std::shared_ptr<Nat> &n,
+             const std::shared_ptr<chain> &r1);
 
-  static std::shared_ptr<chain> aux_delete(
-      const std::shared_ptr<String> &_x, const std::shared_ptr<String> &_x0,
-      const std::shared_ptr<Ascii> &x, const std::shared_ptr<String> &xs,
-      std::shared_ptr<Ascii> y, std::shared_ptr<String> ys,
-      const std::shared_ptr<Nat::nat> &n, const std::shared_ptr<chain> &r2);
+  static std::shared_ptr<chain>
+  aux_delete(const std::shared_ptr<String> &_x,
+             const std::shared_ptr<String> &_x0,
+             const std::shared_ptr<Ascii> &x, const std::shared_ptr<String> &xs,
+             std::shared_ptr<Ascii> y, std::shared_ptr<String> ys,
+             const std::shared_ptr<Nat> &n, const std::shared_ptr<chain> &r2);
 
-  static std::shared_ptr<chain> aux_update(
-      const std::shared_ptr<String> &_x, const std::shared_ptr<String> &_x0,
-      const std::shared_ptr<Ascii> &x, const std::shared_ptr<String> &xs,
-      const std::shared_ptr<Ascii> &y, const std::shared_ptr<String> &ys,
-      const std::shared_ptr<Nat::nat> &n, const std::shared_ptr<chain> &r3);
+  static std::shared_ptr<chain>
+  aux_update(const std::shared_ptr<String> &_x,
+             const std::shared_ptr<String> &_x0,
+             const std::shared_ptr<Ascii> &x, const std::shared_ptr<String> &xs,
+             const std::shared_ptr<Ascii> &y, const std::shared_ptr<String> &ys,
+             const std::shared_ptr<Nat> &n, const std::shared_ptr<chain> &r3);
 
   static std::shared_ptr<chain>
   aux_eq_char(const std::shared_ptr<String> &_x,
               const std::shared_ptr<String> &_x0,
               const std::shared_ptr<Ascii> &_x1, std::shared_ptr<String> xs,
               std::shared_ptr<Ascii> y, std::shared_ptr<String> ys,
-              std::shared_ptr<Nat::nat> n, std::shared_ptr<chain> c);
+              std::shared_ptr<Nat> n, std::shared_ptr<chain> c);
 
   static std::shared_ptr<chain>
   aux_both_empty(const std::shared_ptr<String> &_x,
                  const std::shared_ptr<String> &_x0);
 
-  template <typename T1, MapsTo<std::shared_ptr<Nat::nat>, T1> F3>
+  template <typename T1, MapsTo<std::shared_ptr<Nat>, T1> F3>
   static T1 min3_app(const T1 x, const T1 y, const T1 z, F3 &&f) {
-    std::shared_ptr<Nat::nat> n1 = f(x);
-    std::shared_ptr<Nat::nat> n2 = f(y);
-    std::shared_ptr<Nat::nat> n3 = f(z);
+    std::shared_ptr<Nat> n1 = f(x);
+    std::shared_ptr<Nat> n2 = f(y);
+    std::shared_ptr<Nat> n3 = f(z);
     return [&](void) {
-      switch (Nat::leb(n1, n2)) {
+      switch (n1->leb(n2)) {
       case bool0::true0: {
         return [&](void) {
-          switch (Nat::leb(std::move(n1), std::move(n3))) {
+          switch (std::move(n1)->leb(std::move(n3))) {
           case bool0::true0: {
             return x;
           }
@@ -666,7 +676,7 @@ struct Levenshtein {
       }
       case bool0::false0: {
         return [&](void) {
-          switch (Nat::leb(std::move(n2), std::move(n3))) {
+          switch (std::move(n2)->leb(std::move(n3))) {
           case bool0::true0: {
             return y;
           }
@@ -680,15 +690,14 @@ struct Levenshtein {
     }();
   }
 
-  static std::shared_ptr<
-      SigT<std::shared_ptr<Nat::nat>, std::shared_ptr<chain>>>
+  static std::shared_ptr<SigT<std::shared_ptr<Nat>, std::shared_ptr<chain>>>
   levenshtein_chain(const std::shared_ptr<String> &,
                     const std::shared_ptr<String> &);
 
-  static std::shared_ptr<Nat::nat>
+  static std::shared_ptr<Nat>
   levenshtein_computed(const std::shared_ptr<String> &s,
                        const std::shared_ptr<String> &t);
 
-  static std::shared_ptr<Nat::nat> levenshtein(const std::shared_ptr<String> &,
-                                               const std::shared_ptr<String> &);
+  static std::shared_ptr<Nat> levenshtein(const std::shared_ptr<String> &,
+                                          const std::shared_ptr<String> &);
 };

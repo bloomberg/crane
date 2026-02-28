@@ -120,6 +120,15 @@ let pending_wrapper_decls : (string, Pp.t) Hashtbl.t = Hashtbl.create 16
    and unmerged (List::list<A>) name formats. Not consumed during rendering. *)
 let unmerged_wrappers : (string, unit) Hashtbl.t = Hashtbl.create 16
 
+(* Pending method candidates from dependency modules.
+   Maps an inductive type's GlobRef to a list of (func_ref, body, type, this_position).
+   Populated during PASS 1 (pp_wrapper_module_dual) when a function from a dependency
+   module is a registered method for an inductive type.
+   Consumed during PASS 2 (pp_cpp_ind_header) to inject methods into the inductive struct. *)
+let pending_method_candidates :
+  (GlobRef.t, (GlobRef.t * Miniml.ml_ast * Miniml.ml_type * int) list ref) Hashtbl.t
+  = Hashtbl.create 16
+
 
 (* Check if a GlobRef belongs to a wrapper module and return the qualified name.
    If the reference's module path matches a wrapper module, prepend the struct name.
@@ -220,7 +229,69 @@ let reset_cpp_state () =
   Hashtbl.clear global_eponymous_record_registry;
   Hashtbl.clear wrapper_module_table;
   Hashtbl.clear pending_wrapper_decls;
-  Hashtbl.clear unmerged_wrappers
+  Hashtbl.clear unmerged_wrappers;
+  Hashtbl.clear pending_method_candidates
+
+(* Check if a function body is safe to turn into a method.
+   A method uses 'this' (raw pointer) for the first argument instead of shared_ptr.
+   If the body returns the first argument directly (bare MLrel in result position),
+   that would produce 'return this' which can't convert to shared_ptr.
+   Returns true if safe.
+
+   Note: we only check for DIRECT returns of the first argument. Using the first
+   argument for field access (record projection), match dispatch, or passing to
+   other methods is fine — those translate to this->field, this->v(), and
+   this->method() respectively. *)
+let body_safe_for_method body =
+  (* Strip outer lambdas, counting them *)
+  let rec strip_lams n = function
+    | MLlam (_, _, b) -> strip_lams (n + 1) b
+    | b -> (n, b)
+  in
+  let (num_lams, inner) = strip_lams 0 body in
+  (* The first argument (position 0) has de Bruijn index = num_lams *)
+  let target_db = num_lams in
+  (* Check if MLrel target_db appears as a direct return value in the AST.
+     A "direct return" means the expression IS just MLrel (not wrapped in
+     MLapp, MLcons, etc.). We recurse through match branches, let bodies,
+     and fixpoints to find all result positions. *)
+  let rec returns_target depth = function
+    | MLrel i -> i = target_db + depth
+    | MLcase (_, _scrut, branches) ->
+      Array.exists (fun (ids, _, _, branch_body) ->
+        let n_bindings = List.length ids in
+        returns_target (depth + n_bindings) branch_body
+      ) branches
+    | MLletin (_, _, _, b) -> returns_target (depth + 1) b
+    | MLmagic a -> returns_target depth a
+    (* All other forms (MLapp, MLcons, MLlam, etc.) produce a NEW value,
+       not a bare return of the argument. So they're safe. *)
+    | _ -> false
+  in
+  (* Check the inner body. If it's a match on the first arg, only check branches *)
+  match inner with
+  | MLcase (_, MLrel scrut_idx, branches) when scrut_idx = target_db ->
+    (* Top-level match on first arg: only check branches, not scrutinee *)
+    not (Array.exists (fun (ids, _, _, branch_body) ->
+      let n_bindings = List.length ids in
+      returns_target n_bindings branch_body
+    ) branches)
+  | MLfix (fix_idx, _, funs, _) ->
+    (* Top-level fixpoint: check the fix body *)
+    let n_funs = Array.length funs in
+    let fix_body = funs.(fix_idx) in
+    let (fix_lams, fix_inner) = strip_lams 0 fix_body in
+    let fix_target_db = target_db + n_funs + fix_lams in
+    (match fix_inner with
+     | MLcase (_, MLrel scrut_idx, branches) when scrut_idx = fix_target_db ->
+       not (Array.exists (fun (ids, _, _, branch_body) ->
+         let n_bindings = List.length ids in
+         returns_target (n_funs + fix_lams + n_bindings) branch_body
+       ) branches)
+     | _ -> not (returns_target n_funs fix_body))
+  | _ ->
+    (* Not a simple match on first arg: check if target appears anywhere *)
+    not (returns_target 0 inner)
 
 (* Pre-register all methods from the entire structure before code generation.
    This ensures that cross-module method calls (like List.app from stmtest)
@@ -265,21 +336,49 @@ let rec pre_register_methods_from_structure ~at_top_level (parent_decls : (Label
       true
     | _ -> false
   in
-  (* Helper: register methods for a given eponymous type from a list of declarations *)
-  let register_methods_for_epon epon_ref decls =
+  (* Helper: register methods for a given eponymous type from a list of declarations.
+     ~cross_module:true allows registering methods from different modules (e.g., Nat.add
+     from Corelib.Init.Nat for nat defined in Corelib.Init.Datatypes).
+     ~wrapper_module_name: if set, also allow functions from modules whose last
+     path component matches this name (case-insensitive). This handles the case where
+     functions like Nat.add appear as bare Dfix entries at the top level. *)
+  let register_methods_for_epon ?(cross_module=false) ?(wrapper_module_name : string option = None) epon_ref decls =
+    (* Don't register methods for custom types (e.g., nat mapped to unsigned int).
+       Method calls use -> which doesn't work on primitive types.
+       Also skip enum-only inductives which don't have shared_ptr semantics. *)
+    if is_custom epon_ref then ()
+    else
     let epon_modpath = modpath_of_r epon_ref in
-    let same_module r = ModPath.equal (modpath_of_r r) epon_modpath in
+    let from_wrapper_module r =
+      match wrapper_module_name with
+      | None -> false
+      | Some name ->
+        let func_mp = modpath_of_r r in
+        let lc_name = String.lowercase_ascii name in
+        match func_mp with
+        | MPdot (_, lbl) ->
+          String.lowercase_ascii (Label.to_string lbl) = lc_name
+        | MPfile dp ->
+          (match DirPath.repr dp with
+           | id :: _ -> String.lowercase_ascii (Id.to_string id) = lc_name
+           | [] -> false)
+        | _ -> false
+    in
+    let same_module r = cross_module || from_wrapper_module r || ModPath.equal (modpath_of_r r) epon_modpath in
     List.iter (fun (_l, se) ->
       match se with
-      | SEdecl (Dterm (r, _body, ty)) ->
-        if same_module r && first_arg_matches_epon epon_ref ty then
+      | SEdecl (Dterm (r, body, ty)) ->
+        if same_module r && first_arg_matches_epon epon_ref ty
+           && body_safe_for_method body then
           register_method r epon_ref 0
-      | SEdecl (Dfix (rv, _defs, typs)) ->
+      | SEdecl (Dfix (rv, defs, typs)) ->
         Array.iteri (fun i r ->
-          if same_module r then
+          if same_module r then begin
             let ty = typs.(i) in
-            if first_arg_matches_epon epon_ref ty then
+            if first_arg_matches_epon epon_ref ty
+               && body_safe_for_method defs.(i) then
               register_method r epon_ref 0
+          end
         ) rv
       | _ -> ()
     ) decls
@@ -298,9 +397,16 @@ let rec pre_register_methods_from_structure ~at_top_level (parent_decls : (Label
           (match ind.ind_kind with
            | TypeClass _ -> ()
            | _ ->
-             (* Register methods from sibling declarations *)
+             (* Register methods from sibling declarations (same module) *)
              register_methods_for_epon ind_ref sel;
-             register_methods_for_epon ind_ref parent_decls)
+             (* Also register methods from wrapper modules with matching names.
+                For example, Nat.add is from Corelib.Init.Nat; nat is from
+                Corelib.Init.Datatypes. At the top level, these appear as bare
+                Dfix/Dterm entries in different (mp, sel) entries in the structure.
+                We scan parent_decls (= all_top_level_decls) to find functions
+                from modules whose last path component matches the inductive name. *)
+             let ind_name = Common.pp_global_name Type ind_ref in
+             register_methods_for_epon ~wrapper_module_name:(Some ind_name) ind_ref parent_decls)
         ) ind.ind_packets
       | _ -> ()
     ) sel;
@@ -1949,7 +2055,7 @@ let pp_cpp_ind_header kn ind =
         match se with
         | SEdecl (Dterm (r, body, ty)) ->
           (* Skip if function signature references an excluded type (alias or forward inductive) *)
-          if same_module r && not (refs_excluded ty) then
+          if same_module r && not (refs_excluded ty) && body_safe_for_method body then
             (match find_ind_arg_pos 0 ty with
             | Some pos ->
               (* Note: We allow functions with extra type variables beyond the inductive's.
@@ -1961,7 +2067,7 @@ let pp_cpp_ind_header kn ind =
           Array.iteri (fun i r ->
             let ty = typs.(i) in
             (* Skip if function signature references an excluded type (alias or forward inductive) *)
-            if same_module r && not (refs_excluded ty) then begin
+            if same_module r && not (refs_excluded ty) && body_safe_for_method defs.(i) then begin
               let body = defs.(i) in
               match find_ind_arg_pos 0 ty with
               | Some pos ->
@@ -2026,6 +2132,18 @@ let pp_cpp_ind_header kn ind =
             | _ ->
                 (* Inside a module, non-eponymous inductives don't get methods *)
                 []
+          in
+          (* Also include method candidates collected from dependency modules
+             (e.g., Nat::add from Corelib.Init.Nat for nat defined in Corelib.Init.Datatypes).
+             Deduplicate: skip any that are already in the methods list. *)
+          let methods = match Hashtbl.find_opt pending_method_candidates ind_ref with
+            | Some bucket ->
+              let existing = List.map (fun (r, _, _, _) -> r) methods in
+              let new_methods = List.filter (fun (r, _, _, _) ->
+                not (List.exists (Environ.QGlobRef.equal Environ.empty_env r) existing)
+              ) !bucket in
+              methods @ new_methods
+            | None -> methods
           in
           (* Compute parameter-only type vars.
              Parameters (before the colon) become template params.
@@ -2928,7 +3046,17 @@ let pp_wrapper_module_dual ~is_header wrapper_name func_sels =
     | SEdecl (Dterm (r,_,_)) when is_any_inline_custom r -> ([], [], [])
     | SEdecl (Dterm (r,_,_)) when is_eponymous_record_projection r -> ([], [], [])
     | SEdecl (Dterm (r, _, _)) when is_method_candidate r -> ([], [], [])
-    | SEdecl (Dterm (r, _, _)) when is_registered_method r <> None -> ([], [], [])
+    | SEdecl (Dterm (r, body, ty)) when is_registered_method r <> None ->
+      (* Collect this method candidate for injection into the inductive struct *)
+      (match is_registered_method r with
+       | Some (epon_ref, pos) ->
+         let bucket = match Hashtbl.find_opt pending_method_candidates epon_ref with
+           | Some b -> b
+           | None -> let b = ref [] in Hashtbl.replace pending_method_candidates epon_ref b; b
+         in
+         bucket := (r, body, ty, pos) :: !bucket
+       | None -> ());
+      ([], [], [])
     | SEdecl (Dterm (r, _a, Tglob (ty, _args, _e))) when is_monad ty -> ([], [], [])
     | SEdecl (Dterm (r, a, t)) when Translation.is_typeclass_instance a t -> ([], [], [])
 
@@ -2956,6 +3084,17 @@ let pp_wrapper_module_dual ~is_header wrapper_name func_sels =
        GROUPING: Keep all functions from this Dfix as a list so they can be
        rendered as a single block (no blank lines between them) in Phase 3. *)
     | SEdecl (Dfix (rv, defs, typs)) ->
+      (* Collect registered methods into pending_method_candidates before filtering *)
+      Array.iteri (fun i r ->
+        match is_registered_method r with
+        | Some (epon_ref, pos) ->
+          let bucket = match Hashtbl.find_opt pending_method_candidates epon_ref with
+            | Some b -> b
+            | None -> let b = ref [] in Hashtbl.replace pending_method_candidates epon_ref b; b
+          in
+          bucket := (r, defs.(i), typs.(i), pos) :: !bucket
+        | None -> ()
+      ) rv;
       let filter = Array.to_list (Array.map (fun x ->
         not (is_inline_custom x) && not (is_method_candidate x) &&
         not (is_global_method x) && not (is_eponymous_record_projection x)) rv) in
@@ -3049,10 +3188,15 @@ let do_struct_with_decl_tracking ~is_header f s =
      The extraction framework calls pp_struct/pp_hstruct multiple times
      (dry run, impl, intf) and lifted decls can leak between passes. *)
   ignore (Translation.take_lifted_decls ());
+  (* Clear pending method candidates from previous passes (dry run, impl, intf). *)
+  Hashtbl.clear pending_method_candidates;
   (* Pre-register all methods from the entire structure BEFORE any code generation.
      This ensures cross-module method calls (like List.app from stmtest) are
-     recognized correctly when generating code. *)
-  List.iter (fun (_mp, sel) -> pre_register_methods_from_structure ~at_top_level:true [] sel) s;
+     recognized correctly when generating code.
+     Pass all_top_level_decls so that cross-module method registration can find
+     functions from other modules (e.g., Nat.add for nat defined in Datatypes). *)
+  let all_top_level_decls = List.concat_map snd s in
+  List.iter (fun (_mp, sel) -> pre_register_methods_from_structure ~at_top_level:true all_top_level_decls sel) s;
   (* Pre-register enum inductives so type conversion and code gen see them *)
   List.iter (fun (_mp, sel) -> pre_register_enum_inductives sel) s;
   (* The main module is the last entry in the structure list.
