@@ -120,8 +120,7 @@ struct HigherOrder {
         l->v());
   }
 
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T2> F0,
-            MapsTo<T2, T1> F1>
+  template <typename T1, typename T2, typename T3, typename F0, typename F1>
   static T3 compose(F0 &&g, F1 &&f, const T1 x) {
     return g(f(x));
   }

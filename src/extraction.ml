@@ -820,16 +820,32 @@ and make_mlargs env sg e s args typs =
     | _ -> assert false
   in f (args,typs,s)
 
-and make_tyargs env sg e args typs =
+(* Extract type arguments from a constant application.  Walks the Coq arguments
+   in parallel with both the unified (instantiated) types and the original
+   (pre-unification) schema types.  A slot is a type parameter if either the
+   unified type is Tdummy (the standard case — extraction marks Type-kinded
+   params as Tdummy) or the original schema type was Tdummy (handles cases
+   where unification resolved a Tdummy to a concrete type).
+
+   On successful extraction, the concrete ML type is emitted (e.g., vector<int>).
+   On failure (e.g., HKT type constructors like F : Type -> Type that can't be
+   extracted to an ML type), Tdummy Ktype is emitted to preserve positional
+   consistency — this ensures that call-site type args remain aligned with
+   declaration params.  The downstream translation handles Tdummy entries:
+   filter_erased_type_args drops all explicit type args when any is Tdummy,
+   and the bind handler skips Tdummy entries when resolving continuation metas. *)
+and make_tyargs env sg _mle args typs ~orig_typs =
   let db = List.rev (List.mapi (fun i _ -> i+1) env.env_rel_context.env_rel_ctx) in
   let rec f = function
-    | [], [] -> []
-    | a::la, (Tdummy _)::lt ->
-      (try extract_type env sg db 0 a [] :: (f (la,lt))
-       with _ -> f (la,lt)) (* TODO: cleanup *)
-    | _::la, _::lt -> (f (la,lt))
-    | _ -> assert false
-  in f (args, List.map type_simpl typs)
+    | [], [], [] -> []
+    | a::la, (Tdummy _)::lt, _::lo        (* unified type is Tdummy *)
+    | a::la, _::lt, (Tdummy _)::lo ->     (* original schema type was Tdummy *)
+      (try extract_type env sg db 0 a [] :: (f (la,lt,lo))
+       with _ -> Tdummy Ktype :: (f (la,lt,lo)))
+    | _::la, _::lt, _::lo -> (f (la,lt,lo))  (* value param: skip *)
+    | _ -> []
+  in
+  f (args, List.map type_simpl typs, orig_typs)
 
 (*s Extraction of a constant applied to arguments. *)
 
@@ -859,7 +875,10 @@ and extract_cst_app env sg mle mlt kn args =
   let ls = List.length s in
   let la = List.length args in
   (* The ml arguments, already expunged from known logical ones *)
-  let domain = make_tyargs env sg mle args metas in
+  let orig_schema_params = fst (type_decomp (snd schema)) in
+  let orig_typs = try List.firstn la orig_schema_params
+    with Failure _ -> List.map (fun _ -> Tunknown) args in
+  let domain = make_tyargs env sg mle args metas ~orig_typs in
   let mla = make_mlargs env sg mle s args metas in
   (* let dargs = List.map (fun t -> extract_type env sg [] 1 t []) (List.firstn (max 1 (la - (List.length mla))) args) in *)
   (* let domain = List.firstn (la - (List.length mla)) metas in (* or (fst (type_decomp instantiated)) *) *)

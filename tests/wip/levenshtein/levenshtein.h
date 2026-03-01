@@ -396,8 +396,7 @@ struct Levenshtein {
                      std::shared_ptr<Ascii> a_ = _args._a0;
                      std::shared_ptr<Ascii> a = _args._a1;
                      std::shared_ptr<String> s = _args._a2;
-                     return f1(std::move(a_), std::move(a), "dummy",
-                               std::move(s));
+                     return f1(std::move(a_), std::move(a), std::move(s));
                    }},
         e->v());
   }
@@ -426,8 +425,7 @@ struct Levenshtein {
                      std::shared_ptr<Ascii> a_ = _args._a0;
                      std::shared_ptr<Ascii> a = _args._a1;
                      std::shared_ptr<String> s = _args._a2;
-                     return f1(std::move(a_), std::move(a), "dummy",
-                               std::move(s));
+                     return f1(std::move(a_), std::move(a), std::move(s));
                    }},
         e->v());
   }

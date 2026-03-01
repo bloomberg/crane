@@ -496,3 +496,14 @@
   (alias runtest)
   (deps cps.t.exe)
   (action (run ./cps.t.exe))))
+
+(subdir higher_kinded
+ (rule
+  (targets higher_kinded.t.exe)
+  (deps HigherKinded.vo higher_kinded.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} higher_kinded.t.exe higher_kinded.cpp higher_kinded.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps higher_kinded.t.exe)
+  (action (run ./higher_kinded.t.exe))))

@@ -104,6 +104,7 @@ and cpp_constraint = cpp_expr
 
 and template_type =
   | TTtypename
+  | TTtypename_default of cpp_type  (* typename T = default_type *)
   | TTfun of (cpp_type list * cpp_type)
   | TTconcept of GlobRef.t  (* e.g., 'Eq T' *)
 

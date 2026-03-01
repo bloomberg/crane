@@ -136,37 +136,29 @@ struct NestedTree {
     variant_t &v_mut() { return v_; }
   };
 
-  template <typename T1, typename T2,
-            MapsTo<T1, std::any,
-                   std::shared_ptr<tree<std::pair<std::any, std::any>>>, T1>
-                F1>
+  template <typename T1, typename T2, typename F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree<T2>> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree<T2>::leaf _args) -> T1 {
-                     return f("dummy");
-                   },
-                   [&](const typename tree<T2>::node _args) -> T1 {
-                     T2 y = _args._a0;
-                     std::shared_ptr<tree<std::pair<T2, T2>>> t0 = _args._a1;
-                     return f0("dummy", y, t0, tree_rect<T1, T2>(f, f0, t0));
-                   }},
+        Overloaded{
+            [&](const typename tree<T2>::leaf _args) -> T1 { return f(); },
+            [&](const typename tree<T2>::node _args) -> T1 {
+              T2 y = _args._a0;
+              std::shared_ptr<tree<std::pair<T2, T2>>> t0 = _args._a1;
+              return f0(y, t0, tree_rect<T1, T2>(f, f0, t0));
+            }},
         t->v());
   }
 
-  template <typename T1, typename T2,
-            MapsTo<T1, std::any,
-                   std::shared_ptr<tree<std::pair<std::any, std::any>>>, T1>
-                F1>
+  template <typename T1, typename T2, typename F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree<T2>> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree<T2>::leaf _args) -> T1 {
-                     return f("dummy");
-                   },
-                   [&](const typename tree<T2>::node _args) -> T1 {
-                     T2 y = _args._a0;
-                     std::shared_ptr<tree<std::pair<T2, T2>>> t0 = _args._a1;
-                     return f0("dummy", y, t0, tree_rec<T1, T2>(f, f0, t0));
-                   }},
+        Overloaded{
+            [&](const typename tree<T2>::leaf _args) -> T1 { return f(); },
+            [&](const typename tree<T2>::node _args) -> T1 {
+              T2 y = _args._a0;
+              std::shared_ptr<tree<std::pair<T2, T2>>> t0 = _args._a1;
+              return f0(y, t0, tree_rec<T1, T2>(f, f0, t0));
+            }},
         t->v());
   }
 

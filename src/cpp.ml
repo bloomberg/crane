@@ -1540,8 +1540,16 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
 
 let pp_template_type = function
   | TTtypename -> str "typename"
+  | TTtypename_default _ -> str "typename"
   | TTfun (dom, cod) -> str "MapsTo<" ++ pp_cpp_type false [] cod  ++ str ", " ++ pp_list (pp_cpp_type false []) dom ++ str ">"
   | TTconcept (concept) -> pp_global Type concept
+
+(* Print a complete template parameter including name and optional default *)
+let pp_template_param (tt, id) =
+  match tt with
+  | TTtypename_default default_ty ->
+    str "typename" ++ spc () ++ Id.print id ++ str " = " ++ pp_cpp_type false [] default_ty
+  | _ -> pp_template_type tt ++ spc () ++ Id.print id
 
 (* pp_cpp_field takes optional struct_name for printing constructors *)
 let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
@@ -1572,7 +1580,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     let template_s = match template_params with
       | [] -> mt ()
       | _ ->
-        let args = pp_list (fun (tt, id) -> pp_template_type tt ++ spc () ++ Id.print id) template_params in
+        let args = pp_list pp_template_param template_params in
         str "template <" ++ args ++ str ">" ++ fnl ()
     in
     template_s ++
@@ -1634,7 +1642,7 @@ and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) env fields =
 let rec pp_cpp_decl env =
 function
 | Dtemplate (temps, cstr, decl) ->
-    let args = pp_list (fun (tt, id) -> pp_template_type tt ++ spc () ++ Id.print id) temps in
+    let args = pp_list pp_template_param temps in
     h (str "template <" ++ args ++ str ">")
     ++ (match cstr with
         | None -> fnl ()
@@ -1672,7 +1680,7 @@ function
       in_struct_context := true;
       let f_s = pp_cpp_fields_with_vis ~struct_name env fields in
       in_struct_context := old_context;
-      let args = pp_list (fun (tt, id) -> pp_template_type tt ++ spc () ++ Id.print id) temps in
+      let args = pp_list pp_template_param temps in
       h (str "template <" ++ args ++ str ">")
       ++ (match cstr with
           | None -> fnl ()

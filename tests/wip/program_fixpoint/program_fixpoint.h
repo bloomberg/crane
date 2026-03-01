@@ -164,5 +164,5 @@ T2 Wf::Fix_F_sub(F0 &&f_sub, const T1 x) {
 template <typename T1, typename T2,
           MapsTo<T2, T1, std::function<T2(std::shared_ptr<Sig0<T1>>)>> F1>
 T2 Wf::Fix_sub(const T1 _x0, F1 &&_x1) {
-  return Wf::Fix_F_sub<T1>(_x0, _x1);
+  return Wf::Fix_F_sub(_x0, _x1);
 }

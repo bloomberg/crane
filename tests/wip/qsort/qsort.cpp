@@ -103,15 +103,13 @@ Sort::merge_prog(const std::shared_ptr<List<unsigned int>> &_x,
 
 std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>>
 Sort::msort(const std::shared_ptr<List<unsigned int>> &_x0) {
-  return [](const std::shared_ptr<List<T1>> _x0) {
-    return div_conq_split<unsigned int>(
-        List<unsigned int>::ctor::nil_(),
-        [](unsigned int a) {
-          return List<unsigned int>::ctor::cons_(
-              a, List<unsigned int>::ctor::nil_());
-        },
-        merge_prog, _x0);
-  }(_x0);
+  return div_conq_split(
+      List<unsigned int>::ctor::nil_(),
+      [](unsigned int a) {
+        return List<unsigned int>::ctor::cons_(
+            a, List<unsigned int>::ctor::nil_());
+      },
+      merge_prog)(_x0);
 }
 
 std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>>
@@ -124,47 +122,41 @@ Sort::pair_merge_prog(const unsigned int _x, const unsigned int _x0,
 
 std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>>
 Sort::psort(const std::shared_ptr<List<unsigned int>> &_x0) {
-  return [](const std::shared_ptr<List<T1>> _x0) {
-    return div_conq_pair<unsigned int>(
-        List<unsigned int>::ctor::nil_(),
-        [](unsigned int a) {
+  return div_conq_pair(
+      List<unsigned int>::ctor::nil_(),
+      [](unsigned int a) {
+        return List<unsigned int>::ctor::cons_(
+            a, List<unsigned int>::ctor::nil_());
+      },
+      [](unsigned int a1, unsigned int a2) {
+        bool s = Compare_dec::le_lt_dec(a1, a2);
+        if (s) {
           return List<unsigned int>::ctor::cons_(
-              a, List<unsigned int>::ctor::nil_());
-        },
-        [](unsigned int a1, unsigned int a2) {
-          bool s = Compare_dec::le_lt_dec(a1, a2);
-          if (s) {
-            return List<unsigned int>::ctor::cons_(
-                a1, List<unsigned int>::ctor::cons_(
-                        a2, List<unsigned int>::ctor::nil_()));
-          } else {
-            return List<unsigned int>::ctor::cons_(
-                a2, List<unsigned int>::ctor::cons_(
-                        a1, List<unsigned int>::ctor::nil_()));
-          }
-        },
-        [](unsigned int a1, unsigned int a2,
-           std::shared_ptr<List<unsigned int>> l,
-           std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>> x,
-           std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>> x0) {
-          return pair_merge_prog(a1, a2, l, x0, x);
-        },
-        _x0);
-  }(_x0);
+              a1, List<unsigned int>::ctor::cons_(
+                      a2, List<unsigned int>::ctor::nil_()));
+        } else {
+          return List<unsigned int>::ctor::cons_(
+              a2, List<unsigned int>::ctor::cons_(
+                      a1, List<unsigned int>::ctor::nil_()));
+        }
+      },
+      [](unsigned int a1, unsigned int a2,
+         std::shared_ptr<List<unsigned int>> l,
+         std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>> x,
+         std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>> x0) {
+        return pair_merge_prog(a1, a2, l, x0, x);
+      })(_x0);
 }
 
 std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>>
 Sort::qsort(const std::shared_ptr<List<unsigned int>> &_x0) {
-  return [](const std::shared_ptr<List<T1>> _x0) {
-    return div_conq_pivot<unsigned int>(
-        Compare_dec::le_dec, List<unsigned int>::ctor::nil_(),
-        [](unsigned int a, std::shared_ptr<List<unsigned int>> _x,
-           std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>> x,
-           std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>> x0) {
-          return merge(x, List<unsigned int>::ctor::cons_(a, x0));
-        },
-        _x0);
-  }(_x0);
+  return div_conq_pivot(
+      Compare_dec::le_dec, List<unsigned int>::ctor::nil_(),
+      [](unsigned int a, std::shared_ptr<List<unsigned int>> _x,
+         std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>> x,
+         std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>> x0) {
+        return merge(x, List<unsigned int>::ctor::cons_(a, x0));
+      })(_x0);
 }
 
 bool Compare_dec::le_lt_dec(const unsigned int n, const unsigned int m) {

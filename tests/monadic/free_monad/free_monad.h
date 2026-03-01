@@ -78,25 +78,19 @@ struct FreeMonad {
     variant_t &v_mut() { return v_; }
   };
 
-  template <typename T1, MapsTo<T1, std::any> F0,
-            MapsTo<T1, std::shared_ptr<IO>, T1,
-                   std::function<std::shared_ptr<IO>(std::any)>,
-                   std::function<T1(std::any)>>
-                F1,
-            MapsTo<T1, std::string> F3>
+  template <typename T1, typename F0, typename F1, MapsTo<T1, std::string> F3>
   static T1 IO_rect(F0 &&f, F1 &&f0, const T1 f1, F3 &&f2,
                     const std::shared_ptr<IO> &i) {
     return std::visit(
         Overloaded{[&](const typename IO::pure _args) -> T1 {
-                     std::any a = _args._a0;
-                     return f("dummy", a);
+                     F0 a = _args._a0;
+                     return f(a);
                    },
                    [&](const typename IO::bind _args) -> T1 {
                      std::shared_ptr<IO> i0 = _args._a0;
                      std::function<std::shared_ptr<IO>(std::any)> i1 =
                          _args._a1;
-                     return f0("dummy", "dummy", i0,
-                               IO_rect<T1>(f, f0, f1, f2, i0), i1,
+                     return f0(i0, IO_rect<T1>(f, f0, f1, f2, i0), i1,
                                [&](std::any a) {
                                  return IO_rect<T1>(f, f0, f1, f2, i1(a));
                                });
@@ -109,25 +103,19 @@ struct FreeMonad {
         i->v());
   }
 
-  template <typename T1, MapsTo<T1, std::any> F0,
-            MapsTo<T1, std::shared_ptr<IO>, T1,
-                   std::function<std::shared_ptr<IO>(std::any)>,
-                   std::function<T1(std::any)>>
-                F1,
-            MapsTo<T1, std::string> F3>
+  template <typename T1, typename F0, typename F1, MapsTo<T1, std::string> F3>
   static T1 IO_rec(F0 &&f, F1 &&f0, const T1 f1, F3 &&f2,
                    const std::shared_ptr<IO> &i) {
     return std::visit(
         Overloaded{[&](const typename IO::pure _args) -> T1 {
-                     std::any a = _args._a0;
-                     return f("dummy", a);
+                     F0 a = _args._a0;
+                     return f(a);
                    },
                    [&](const typename IO::bind _args) -> T1 {
                      std::shared_ptr<IO> i0 = _args._a0;
                      std::function<std::shared_ptr<IO>(std::any)> i1 =
                          _args._a1;
-                     return f0("dummy", "dummy", i0,
-                               IO_rec<T1>(f, f0, f1, f2, i0), i1,
+                     return f0(i0, IO_rec<T1>(f, f0, f1, f2, i0), i1,
                                [&](std::any a) {
                                  return IO_rec<T1>(f, f0, f1, f2, i1(a));
                                });

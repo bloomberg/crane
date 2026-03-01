@@ -73,8 +73,7 @@ struct bindreturn {
 
   static int64_t test2();
 
-  template <typename T1, typename T2, typename T3, MapsTo<T2, T1> F1,
-            MapsTo<T3, T2> F2>
+  template <typename T1, typename T2, typename T3, typename F1, typename F2>
   static T3 nested(const T1 a, F1 &&f, F2 &&g) {
     T1 x = a;
     T2 y = f(x);

@@ -42,7 +42,7 @@ FuncVernac::R_div2_correct(const unsigned int n, const unsigned int _res) {
                           y2,
                       unsigned int _x0) {
                      return R_div2::ctor::R_div2_2_(y, y0, div2(y0),
-                                                    y2(div2(y0), "dummy"));
+                                                    y2(div2(y0)));
                    },
                    n, _res, "dummy");
 }
@@ -82,7 +82,7 @@ FuncVernac::R_list_sum_correct(const std::shared_ptr<List<unsigned int>> &l,
              y3,
          unsigned int _x0) {
         return R_list_sum::ctor::R_list_sum_1_(y, y0, y1, list_sum(y1),
-                                               y3(list_sum(y1), "dummy"));
+                                               y3(list_sum(y1)));
       },
       l, _res, "dummy");
 }

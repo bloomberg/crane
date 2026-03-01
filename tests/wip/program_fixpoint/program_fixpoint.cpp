@@ -13,10 +13,10 @@
 std::shared_ptr<List<unsigned int>> ProgFix::interleave_func(
     const std::shared_ptr<SigT<std::shared_ptr<List<unsigned int>>,
                                std::shared_ptr<List<unsigned int>>>> &_x0) {
-  return [&](const T1 _x0) {
-    return Wf::Fix_sub<
-        std::shared_ptr<SigT<std::shared_ptr<List<unsigned int>>,
-                             std::shared_ptr<List<unsigned int>>>>>(
+  return [&](const std::shared_ptr<SigT<std::shared_ptr<List<unsigned int>>,
+                                        std::shared_ptr<List<unsigned int>>>>
+                 _x0) {
+    return Wf::Fix_sub(
         [&](std::shared_ptr<SigT<std::shared_ptr<List<unsigned int>>,
                                  std::shared_ptr<List<unsigned int>>>>
                 recarg,

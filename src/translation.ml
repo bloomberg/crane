@@ -147,6 +147,51 @@ let rec collect_tvars acc = function
   | Miniml.Tmeta { contents = Some t } -> collect_tvars acc t
   | _ -> acc
 
+(* Check if a C++ type is a dummy type glob (e.g., dummy_type, dummy_prop, dummy_implicit).
+   These arise from Tdummy Ktype/Kprop/Kimplicit in the ML AST, which
+   convert_ml_type_to_cpp_type maps to Tglob(VarRef "dummy_type") etc.  These
+   intermediate markers are used by the filtering pipeline (gen_expr, eta_fun,
+   gen_decl_for_pp) to detect erased parameters and drop them before they reach
+   the C++ renderer — they should never appear in the final generated output. *)
+let is_cpp_dummy_type = function
+  | Minicpp.Tglob (GlobRef.VarRef id, [], _) ->
+      let name = Id.to_string id in
+      name = "dummy_type" || name = "dummy_prop" || name = "dummy_implicit"
+  | _ -> false
+
+(* True if a C++ type represents an erased parameter — either Tany (from an
+   unresolved Tmeta in the ML AST) or a dummy_type glob (from Tdummy).  When
+   any type arg in a template argument list is erased, ALL explicit type args
+   must be dropped (see filter_erased_type_args). *)
+let is_erased_type t = t = Minicpp.Tany || is_cpp_dummy_type t
+
+(* If any type arg is erased (Tany or dummy_type), drop ALL explicit type args
+   and let the C++ compiler deduce everything.  We must drop ALL args (not just
+   the erased ones) because C++ template arguments are positional: removing only
+   the erased slots would shift the remaining args into the wrong positions,
+   causing type mismatches.  Dropping all args is safe because C++ can deduce
+   them from the call-site argument types. *)
+let filter_erased_type_args tys =
+  if List.exists is_erased_type tys then [] else tys
+
+(* Recursively check whether a C++ type tree contains erased HKT markers
+   (Tany or dummy_type globs).  These markers arise when a higher-kinded type
+   constructor (e.g., F : Type -> Type) is erased during extraction — the
+   type constructor itself becomes Tany/dummy_type, but it may be nested inside
+   a function type like (A -> B) -> F A -> F B.  Used by gen_dfun and
+   gen_decl_for_pp to detect function params whose type variables cannot be
+   deduced by C++ and should therefore use plain TTtypename instead of a
+   MapsTo constraint. *)
+let rec has_hkt_erasure = function
+  | Minicpp.Tany -> true
+  | t when is_cpp_dummy_type t -> true
+  | Minicpp.Tfun (d, c) -> List.exists has_hkt_erasure d || has_hkt_erasure c
+  | Minicpp.Tmod (_, t) | Minicpp.Tref t | Minicpp.Tshared_ptr t
+  | Minicpp.Tunique_ptr t | Minicpp.Tnamespace (_, t) -> has_hkt_erasure t
+  | Minicpp.Tglob (_, ts, _) | Minicpp.Tstruct (_, ts) | Minicpp.Tvariant ts ->
+      List.exists has_hkt_erasure ts
+  | _ -> false
+
 (* Collect all Tvar indices from an ML AST, using collect_tvars on embedded types. *)
 let rec collect_tvars_ast acc = function
   | MLlam (_, ty, body) -> collect_tvars_ast (collect_tvars acc ty) body
@@ -551,6 +596,12 @@ let rec convert_ml_type_to_cpp_type env (ns : Refset'.t) (tvars : Id.t list) (ml
       (* Unresolved meta - use std::any for type erasure.
          This happens for existential type variables in indexed inductives. *)
       Tany
+  (* Tdummy marks erased type/prop/implicit parameters in the ML AST.
+     We convert them to Tglob(VarRef "dummy_*") as intermediate markers so that
+     downstream filtering (is_cpp_dummy_type / is_erased_type / filter_erased_type_args
+     in gen_expr, eta_fun, and gen_decl_for_pp) can detect and drop them.  These
+     markers should never survive to the C++ output — the filtering pipeline
+     removes them from template argument lists and function signatures. *)
   | Tdummy Ktype -> Tglob (GlobRef.VarRef (Id.of_string ("dummy_type")), [], [])
   | Tdummy Kprop -> Tglob (GlobRef.VarRef (Id.of_string ("dummy_prop")), [], [])
   | Tdummy (Kimplicit _) -> Tglob (GlobRef.VarRef (Id.of_string ("dummy_implicit")), [], [])
@@ -600,7 +651,157 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
         CPPlambda (cpp_args, None, gen_stmts env (fun x -> Sreturn x) a, false)) in
       tctx.env_types <- saved_env_types;
       (match filtered_args with
-      | [] -> CPPfun_call (f, [])
+      | [] ->
+        (* All lambda params are dummy (type abstractions).  Skip the lambda
+           wrapper and generate the body expression directly.  However, when
+           the body is a reference to a template function (detectable by
+           having Tdummy-typed leading params in its ML type), we must wrap
+           it in a generic forwarding lambda — C++ cannot pass overloaded or
+           template function names as first-class values. *)
+        (match a with
+        | MLglob (r, tys_inner) ->
+          let ml_ty = try Table.find_type r with Not_found -> Tunknown in
+          let has_dummy_prefix = function
+            | Tarr (t, _) when isTdummy t -> true
+            | _ -> false in
+          if has_dummy_prefix ml_ty then
+            (* The function is a template that had type-level leading params.
+               We need a forwarding lambda because C++ can't pass template
+               function names as first-class values.
+
+               To handle non-deducible template type params (like T2 that only
+               appears in the return type), we use a C++20 template lambda with
+               explicitly typed value parameters.  This lets the compiler deduce
+               type variables from the argument types, and we compute non-deducible
+               tvars via std::invoke_result_t. *)
+            let rec collect_non_dummy_types = function
+              | Miniml.Tarr (t, rest) when not (isTdummy t) -> t :: collect_non_dummy_types rest
+              | Miniml.Tarr (_, rest) -> collect_non_dummy_types rest
+              | _ -> [] in
+            let non_dummy_param_tys = collect_non_dummy_types ml_ty in
+            let n = List.length non_dummy_param_tys in
+            let arg_names = List.init n (fun i -> "_a" ^ string_of_int i) in
+            let fn_name = Common.pp_global_name Term r in
+            (* Collect all tvars from the ML type *)
+            let rec collect_ml_tvars acc = function
+              | Miniml.Tvar i | Miniml.Tvar' i -> if List.mem i acc then acc else i :: acc
+              | Miniml.Tarr (t1, t2) -> collect_ml_tvars (collect_ml_tvars acc t1) t2
+              | Miniml.Tglob (_, ts, _) -> List.fold_left collect_ml_tvars acc ts
+              | _ -> acc in
+            let all_tvars = List.sort Int.compare (List.fold_left collect_ml_tvars [] (non_dummy_param_tys @ [ml_ty])) in
+            (* Tvars deducible from non-function value params *)
+            let value_param_tys = List.filter (fun t -> match t with Miniml.Tarr _ -> false | _ -> true) non_dummy_param_tys in
+            let deducible_tvars = List.sort Int.compare (List.fold_left collect_ml_tvars [] value_param_tys) in
+            let non_deducible_tvars = List.filter (fun i -> not (List.mem i deducible_tvars)) all_tvars in
+            (* Create tvar names for the template lambda *)
+            let tvar_name i = "_T" ^ string_of_int i in
+            (* Render an ML type as a C++ type string using local tvar names *)
+            let rec render_ml_ty = function
+              | Miniml.Tvar i | Miniml.Tvar' i -> tvar_name i
+              | Miniml.Tarr (t1, t2) -> "std::function<" ^ render_ml_ty t2 ^ "(" ^ render_ml_ty t1 ^ ")>"
+              | Miniml.Tglob (g, ts, _) when is_custom g ->
+                (* Custom types may use %t0, %t1 placeholders for type args *)
+                let custom_str = find_custom g in
+                let rendered_ts = List.map render_ml_ty ts in
+                let len = String.length custom_str in
+                let buf = Buffer.create len in
+                let rec subst i =
+                  if i >= len then ()
+                  else if i <= len - 3 && custom_str.[i] = '%' && custom_str.[i+1] = 't'
+                       && custom_str.[i+2] >= '0' && custom_str.[i+2] <= '9' then begin
+                    let digit_start = i + 2 in
+                    let rec find_end j =
+                      if j < len && custom_str.[j] >= '0' && custom_str.[j] <= '9'
+                      then find_end (j + 1) else j in
+                    let digit_end = find_end digit_start in
+                    let idx = int_of_string (String.sub custom_str digit_start (digit_end - digit_start)) in
+                    if idx < List.length rendered_ts then
+                      Buffer.add_string buf (List.nth rendered_ts idx)
+                    else
+                      Buffer.add_string buf (String.sub custom_str i (digit_end - i));
+                    subst digit_end
+                  end else begin
+                    Buffer.add_char buf custom_str.[i];
+                    subst (i + 1)
+                  end
+                in
+                subst 0;
+                Buffer.contents buf
+              | Miniml.Tglob (g, ts, _) ->
+                let is_ind = match g with GlobRef.IndRef _ -> true | _ -> false in
+                let base = Common.pp_global_name (if is_ind then Type else Term) g in
+                let type_str = if ts = [] then base
+                  else base ^ "<" ^ String.concat ", " (List.map render_ml_ty ts) ^ ">" in
+                if is_ind && not (Table.is_enum_inductive g) then
+                  "std::shared_ptr<" ^ type_str ^ ">"
+                else type_str
+              | Miniml.Tdummy _ -> "std::any"
+              | _ -> "auto" in
+            if non_deducible_tvars <> [] && deducible_tvars <> [] then
+              (* There are non-deducible tvars — use template lambda with typed params.
+                 The first param (function type) uses auto&&, value params get specific types. *)
+              let template_params = String.concat ", " (List.map (fun i ->
+                "typename " ^ tvar_name i) deducible_tvars) in
+              let params = List.mapi (fun i ty ->
+                match ty with
+                | Miniml.Tarr _ ->
+                  (* Function-typed param: use auto&& *)
+                  "auto &&" ^ List.nth arg_names i
+                | _ ->
+                  (* Value param: use specific type for tvar deduction *)
+                  "const " ^ render_ml_ty ty ^ " &" ^ List.nth arg_names i
+              ) non_dummy_param_tys in
+              let params_str = String.concat ", " params in
+              let fwd_args = String.concat ", " (List.mapi (fun i ty ->
+                match ty with
+                | Miniml.Tarr _ -> "std::forward<decltype(" ^ List.nth arg_names i ^ ")>(" ^ List.nth arg_names i ^ ")"
+                | _ -> List.nth arg_names i
+              ) non_dummy_param_tys) in
+              (* Build explicit type args: deducible tvars + non-deducible computed via invoke_result_t *)
+              let deducible_args = List.map tvar_name deducible_tvars in
+              let non_deducible_args = List.map (fun _i ->
+                (* Compute as invoke_result_t<F&, deducible_tvars&...> where F is the first function param *)
+                let f_param = List.nth arg_names 0 in
+                let deducible_refs = String.concat ", " (List.map (fun j ->
+                  tvar_name j ^ " &") deducible_tvars) in
+                "std::invoke_result_t<decltype(" ^ f_param ^ ") &, " ^ deducible_refs ^ ">"
+              ) non_deducible_tvars in
+              let all_type_args = deducible_args @ non_deducible_args in
+              let ty_args_str = "<" ^ String.concat ", " all_type_args ^ ">" in
+              CPPraw ("[]<" ^ template_params ^ ">(" ^ params_str ^ ") -> decltype(auto) { return " ^
+                      fn_name ^ ty_args_str ^ "(" ^ fwd_args ^ "); }")
+            else
+              (* No non-deducible tvars or no deducible tvars — simple forwarding *)
+              let params_str = String.concat ", " (List.map (fun s -> "auto &&" ^ s) arg_names) in
+              let fwd_args = String.concat ", " (List.map (fun s ->
+                "std::forward<decltype(" ^ s ^ ")>(" ^ s ^ ")") arg_names) in
+              (* Convert inner type args to C++ types, filtering out Tany *)
+              let inner_tvars = get_current_type_vars () in
+              let tys_cpp = List.map (convert_ml_type_to_cpp_type env Refset'.empty inner_tvars) tys_inner in
+              let tys_cpp = List.filter (fun t -> t <> Tany) tys_cpp in
+              let ty_args_str = match tys_cpp with
+                | [] -> ""
+                | _ ->
+                  let rec render_ty = function
+                    | Tvar (_, Some n) -> Id.to_string n
+                    | Tvar (i, None) -> "T" ^ string_of_int i
+                    | Tglob (r, [], _) -> Common.pp_global_name Type r
+                    | Tglob (r, tys, _) ->
+                      Common.pp_global_name Type r ^ "<" ^
+                      String.concat ", " (List.map render_ty tys) ^ ">"
+                    | Tshared_ptr ty -> "std::shared_ptr<" ^ render_ty ty ^ ">"
+                    | Tunique_ptr ty -> "std::unique_ptr<" ^ render_ty ty ^ ">"
+                    | _ -> "auto" in
+                  "<" ^ String.concat ", " (List.map render_ty tys_cpp) ^ ">" in
+              CPPraw ("[](" ^ params_str ^ ") -> decltype(auto) { return " ^
+                      fn_name ^ ty_args_str ^ "(" ^ fwd_args ^ "); }")
+          else
+            gen_expr env a
+        | _ ->
+            (* Body is not a template function ref — wrap in void thunk (old behavior).
+               gen_expr env a might produce lambdas with [&] capture which fail at
+               static scope, so we use the pre-built capture-free lambda f. *)
+            CPPfun_call (f, []))
       | _ -> f)
   | MLglob (x, tys) when is_inline_custom x ->
       let tvars = get_current_type_vars () in
@@ -611,7 +812,12 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       | _ -> CPPglob (x, List.map (convert_ml_type_to_cpp_type env Refset'.empty tvars) tys))
   | MLglob (x, tys) ->
       let tvars = get_current_type_vars () in
-      CPPglob (x, List.map (convert_ml_type_to_cpp_type env Refset'.empty tvars) tys)
+      let tys_cpp = List.map (convert_ml_type_to_cpp_type env Refset'.empty tvars) tys in
+      (* If any type arg is Tany or a dummy type glob (from erased type/prop params),
+         drop ALL explicit type args via filter_erased_type_args and let the
+         compiler deduce everything.  See filter_erased_type_args for why we
+         must drop all args rather than just the erased ones. *)
+      CPPglob (x, filter_erased_type_args tys_cpp)
   | MLcons (ty, r, ts) when is_custom r ->
     let args = List.rev_map (gen_expr env) ts in
     let app x = (match args with
@@ -820,8 +1026,13 @@ and eta_fun env f args =
     let ty = try (type_subst_list tys ty) with _ -> ty in (* TODO : make less hacky; do a type_subst that can't fail *)
     let tvars = get_current_type_vars () in
     let ty = convert_ml_type_to_cpp_type env Refset'.empty tvars ty in
-    (* Combine: instance types first, then regular type args *)
-    let all_type_args = typeclass_type_args @ (List.map (convert_ml_type_to_cpp_type env Refset'.empty tvars) tys) in
+    (* Combine: instance types first, then regular type args.
+       If any regular type arg is Tany or a dummy type glob (from erased params),
+       drop ALL regular type args via filter_erased_type_args and let the
+       compiler deduce them.  See filter_erased_type_args for why we must drop
+       all args rather than just the erased ones. *)
+    let regular_type_args = List.map (convert_ml_type_to_cpp_type env Refset'.empty tvars) tys in
+    let all_type_args = typeclass_type_args @ filter_erased_type_args regular_type_args in
     let cglob = CPPglob (id, all_type_args) in
     (match ty with
     | Tfun (dom, cod) ->
@@ -837,6 +1048,11 @@ and eta_fun env f args =
       (* print_endline ("NOT A FUN" ^ Pp.string_of_ppcmds (GlobRef.print id) ^ string_of_int (List.length args)) ; *)
       CPPfun_call (cglob, args))
   | _ ->
+    (* Non-global callee (e.g., a local variable from MLrel).  Filter out
+       MLdummy args — these are erased type/prop parameters that have no
+       runtime representation.  Unlike the MLglob case above, there is no
+       type-arg list to filter here; we only need to drop value-level dummies. *)
+    let args = List.filter (fun x -> match x with MLdummy _ -> false | _ -> true) args in
     let args = List.map (fun x -> (gen_expr env x)) args in
     CPPfun_call (gen_expr env f, List.rev args)
 
@@ -1629,10 +1845,14 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
   let a = gen_expr env a in
   let ids',f = collect_lams f in
   (* Resolve metas in continuation parameter types using bind's type arguments.
-     bind has type forall A B, IO A -> (A -> IO B) -> IO B
+     bind has type forall A B, IO A -> (A -> IO B) -> IO B.
      The first type argument is A, which is the type of the continuation parameter.
-     Use mgu to unify them, which mutably resolves metas. *)
-  let () = match bind_tys with
+     Use mgu to unify them, which mutably resolves metas.
+     Skip Tdummy entries in bind_tys — these come from failed type extractions
+     in make_tyargs (e.g., HKT type constructors that can't be extracted).
+     Unifying a meta with Tdummy would not resolve it usefully. *)
+  let non_dummy_bind_tys = List.filter (fun t -> not (isTdummy t)) bind_tys in
+  let () = match non_dummy_bind_tys with
     | elem_ty :: _ ->
         List.iter (fun (_, ty) -> try_mgu ty elem_ty) ids'
     | [] -> ()
@@ -1902,8 +2122,8 @@ let is_typeclass_instance (body : ml_ast) (ty : ml_type) : bool =
   | Tglob (class_ref, _, _) -> Table.is_typeclass class_ref
   | _ -> false
 
-(* order by index! *)
-let get_tvars t =
+(* Collect (index, name) pairs for all Tvar occurrences, sorted by index *)
+let get_tvars_indexed t =
   let get_name i n =
     match n with
     | None -> Id.of_string ("T" ^ string_of_int i)
@@ -1922,8 +2142,29 @@ let get_tvars t =
     | Tshared_ptr ty -> aux l ty
     | Tunique_ptr ty -> aux l ty
     | _ -> l in
-  let l = List.sort (fun (x,_) (y,_) -> Int.compare x y) (aux [] t) in
-  List.map snd l
+  List.sort (fun (x,_) (y,_) -> Int.compare x y) (aux [] t)
+
+(* Tvar names, sorted by index *)
+let get_tvars t =
+  List.map snd (get_tvars_indexed t)
+
+(* Tvar indices only (unsorted) *)
+let get_tvar_indices t =
+  List.map fst (get_tvars_indexed t)
+
+(* Collect tvar indices that are deducible by the C++ compiler: those appearing
+   in the codomain or in non-function-typed domain params.  Function-typed
+   params are excluded because gen_dfun converts them to auto-deduced Fn&&
+   template parameters, hiding their original Coq-level type variables from
+   C++ template argument deduction.  Used by both gen_dfun (to decide whether
+   a function param should get a MapsTo constraint or plain TTtypename) and
+   gen_decl_for_pp (to filter out phantom tvars from the template param list). *)
+let primary_tvar_indices dom cod =
+  let non_fun_dom = List.filter (fun t -> match t with Tfun _ -> false | _ -> true) dom in
+  List.fold_left (fun acc t ->
+    List.fold_left (fun a i -> if List.mem i a then a else i :: a) acc (get_tvar_indices t)
+  ) [] (cod :: non_fun_dom)
+
 
 let rec glob_subst_expr (id : GlobRef.t) (e1 : cpp_expr) (e2 : cpp_expr) =
 match e2 with
@@ -2334,10 +2575,24 @@ let gen_dfun n b dom cod ty temps =
 
      This loop iterates [List.rev ids] which is in source order,
      so we use [is_cps_param_source] for the CPS guard. *)
+  (* Determine which tvars are "primary" — deducible from non-function domain
+     params or the return type.  Function-typed params that reference tvars
+     outside this set (e.g., erased HKT type variables) get TTtypename (no
+     MapsTo constraint) instead of TTfun, to avoid referencing template type
+     parameters that were filtered out as phantom by gen_decl_for_pp.
+     Similarly, function-typed params containing HKT erasure markers (Tany
+     or dummy_type) also get TTtypename, since their type structure has been
+     partially erased and a MapsTo constraint would be malformed. *)
+  let primary = primary_tvar_indices dom cod in
   let fun_tys = List.filter_map (fun (x, ty, i) ->
       match ty with
-      |  (Tmod (TMconst, Tfun (dom, cod))) when not (is_cps_param_source i) ->
-        Some (x, TTfun (dom, cod), Id.of_string ("F" ^ (string_of_int i)))
+      |  (Tmod (TMconst, Tfun (fdom, fcod))) when not (is_cps_param_source i) ->
+        let fun_idx = get_tvar_indices (Tfun (fdom, fcod)) in
+        let has_undeclared = List.exists (fun idx -> not (List.mem idx primary)) fun_idx in
+        if has_undeclared || has_hkt_erasure (Tfun (fdom, fcod)) then
+          Some (x, TTtypename, Id.of_string ("F" ^ (string_of_int i)))
+        else
+          Some (x, TTfun (fdom, fcod), Id.of_string ("F" ^ (string_of_int i)))
       | _ -> None) (List.mapi (fun i (x, ty) -> (x, ty, i)) (List.rev ids)) in
   (* Replace the parameter type of promoted (non-CPS) function params with
      the template type variable [F&&].  CPS params are left untouched — they
@@ -2356,7 +2611,7 @@ let gen_dfun n b dom cod ty temps =
     | TTfun (dom, cod) -> Tref (Tmod (TMconst, Tfun (dom, cod)))
     | _ -> assert false) fun_tys in
   let rec_call = CPPglob (n, List.map (fun (_, id) -> Tvar (0, Some id)) temps @ rec_fun_tys) in *)
-  let rec_call = CPPglob (n, List.map (fun (_, id) -> Tvar (0, Some id)) temps) in (* TODO: REMOVE. Hack while we figure out missing type arguments for MLGlob terms when they are given as section variables. NOTE: doesn't work if parameters change in recursive call. *)
+  let rec_call = CPPglob (n, List.map (fun (_, id) -> Tvar (0, Some id)) temps) in
   (* Add type class instance template parameters - instance types come first *)
   let typeclass_temps_basic = List.map (fun (tt, id, _, _) -> (tt, id)) typeclass_temps in
   let temps = typeclass_temps_basic @ temps @ (List.map (fun (_,t,n) -> (t,n)) fun_tys) in
@@ -2369,7 +2624,7 @@ let gen_dfun n b dom cod ty temps =
   (* Set current type variables for pattern matching lambda generation.
      These are the template parameters that can be used in type annotations. *)
   let type_var_ids = List.filter_map (fun (tt, id) ->
-    match tt with TTtypename -> Some id | _ -> None) temps in
+    match tt with TTtypename | TTtypename_default _ -> Some id | _ -> None) temps in
   set_current_type_vars type_var_ids;
   set_current_param_types all_ids;
   (* Set the outer function name so inner fixpoints can generate lifted names *)
@@ -2533,6 +2788,41 @@ let gen_decl n b ty =
 let gen_decl_for_pp n b ty =
   let cty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
   let tvars = get_tvars cty in
+  (* Filter out HKT-phantom tvars: tvars that appear ONLY in function-typed
+     domain params that contain erased HKT types (Tany or dummy_type from
+     Tdummy Ktype).  These cannot be deduced by the C++ compiler and must not
+     appear as template parameters.
+
+     Background: gen_dfun converts every function-typed param (e.g., f : A -> B)
+     into an auto-deduced forwarding parameter (e.g., F1 &&f).  This means the
+     original Coq-level type variables that appear ONLY inside such function
+     params (like A and B in hk_map's f : A -> B) are hidden from C++ template
+     argument deduction — they don't appear anywhere in the generated C++
+     signature.  We call these "phantom" tvars.
+
+     primary_tvar_indices collects tvars from the codomain and non-function-typed
+     domain params — positions where C++ CAN deduce the type.  We intentionally
+     do NOT add tvars from clean (non-erased) function params, because those are
+     also rendered as auto-deduced Fn params by gen_dfun.
+
+     The fallback (erased_fun_dom = []) handles functions with no HKT erasure at
+     all (e.g., compose): when there are no erased function params, all tvars
+     are kept unconditionally, ensuring MapsTo constraints can reference them. *)
+  let tvars = match cty with
+    | Tfun (dom, cod) ->
+      let tvars_indexed = get_tvars_indexed cty in
+      let primary = primary_tvar_indices dom cod in
+      let fun_dom = List.filter (fun t -> match t with Tfun _ -> true | _ -> false) dom in
+      let erased_fun_dom = List.filter has_hkt_erasure fun_dom in
+      (* Keep tvars that appear in primary (deducible) positions.
+         If there are no erased function params at all, keep everything — this
+         handles ordinary polymorphic functions that have no HKT erasure. *)
+      List.filter_map (fun (i, id) ->
+        if List.mem i primary then Some id
+        else if erased_fun_dom = [] then Some id
+        else None
+      ) tvars_indexed
+    | _ -> tvars in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
   match cty with
   | Tfun (dom, cod) ->
@@ -2572,7 +2862,8 @@ let gen_decl_for_dfuns n b ty =
 let gen_spec n b ty =
   let ty = type_simpl ty in
   let ty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
-  let temps = List.map (fun id -> (TTtypename, id)) (get_tvars ty) in
+  let tvars = get_tvars ty in
+  let temps = List.map (fun id -> (TTtypename, id)) tvars in
   match ty with
   | Tfun (dom, cod) -> gen_sfun n b dom cod temps
   | _ ->
@@ -2586,7 +2877,8 @@ let gen_spec n b ty =
 let gen_spec_for_sfuns n b ty =
   let ty = type_simpl ty in
   let ty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
-  let temps = List.map (fun id -> (TTtypename, id)) (get_tvars ty) in
+  let tvars = get_tvars ty in
+  let temps = List.map (fun id -> (TTtypename, id)) tvars in
   match ty with
   | Tfun (dom, cod) -> gen_sfun n b dom cod temps
   | _ -> gen_sfun n b [Tvoid] ty temps

@@ -18,11 +18,9 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct HigherKinded {
-  template <typename T1, typename T2, typename T3,
-            MapsTo<T1, std::function<std::any(std::any)>, T1> F0,
-            MapsTo<T3, T2> F1>
+  template <typename T1, typename F0, typename F1>
   static T1 hk_map(F0 &&map_f, F1 &&f, const T1 x) {
-    return map_f("dummy", "dummy", f, x);
+    return map_f(f, x);
   }
 
   template <typename A> struct Tree {
@@ -178,19 +176,24 @@ struct HigherKinded {
       tree_map<unsigned int, unsigned int>(
           [](unsigned int n) { return (n * ((0 + 1) + 1)); }, test_tree);
 
-  static inline const std::optional<unsigned int> test_hk_option =
-      hk_map<unsigned int, unsigned int>(
-          [](void) { return map_option; }(),
-          [](unsigned int n) { return (n + (0 + 1)); },
-          std::make_optional<unsigned int>((((((0 + 1) + 1) + 1) + 1) + 1)));
+  static inline const std::optional<unsigned int> test_hk_option = hk_map(
+      []<typename _T1>(auto &&_a0,
+                       const std::optional<_T1> &_a1) -> decltype(auto) {
+        return map_option<_T1, std::invoke_result_t<decltype(_a0) &, _T1 &>>(
+            std::forward<decltype(_a0)>(_a0), _a1);
+      },
+      [](unsigned int n) { return (n + (0 + 1)); },
+      std::make_optional<unsigned int>((((((0 + 1) + 1) + 1) + 1) + 1)));
 
-  static inline const std::shared_ptr<Tree<unsigned int>> test_hk_tree =
-      hk_map<unsigned int, unsigned int>(
-          [](void) { return tree_map; }(),
-          [](unsigned int n) {
-            return (
-                n +
+  static inline const std::shared_ptr<Tree<unsigned int>> test_hk_tree = hk_map(
+      []<typename _T1>(
+          auto &&_a0, const std::shared_ptr<Tree<_T1>> &_a1) -> decltype(auto) {
+        return tree_map<_T1, std::invoke_result_t<decltype(_a0) &, _T1 &>>(
+            std::forward<decltype(_a0)>(_a0), _a1);
+      },
+      [](unsigned int n) {
+        return (n +
                 ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
-          },
-          test_tree);
+      },
+      test_tree);
 };

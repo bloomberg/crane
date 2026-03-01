@@ -172,10 +172,9 @@ struct Sort {
             MapsTo<T2, std::shared_ptr<List<T1>>, T2, T2> F2, MapsTo<T2, T1> F3>
   static T2 div_conq_split(const T2 x, const std::shared_ptr<List<T1>> &_x0,
                            F2 &&_x1, F3 &&_x2) {
-    return [&](const std::function<T2(T1)> _x0,
-               const std::function<T2(std::shared_ptr<List<T1>>, T2, T2)> _x1,
-               const std::shared_ptr<List<T1>> _x2) {
-      return div_conq<T1>(split<T1>, x, _x0, _x1, _x2);
+    return [&](const std::function<dummy_type(std::shared_ptr<List<T1>>)> _x0,
+               const std::shared_ptr<List<T1>> _x1) {
+      return div_conq(split<T1>, x, _x0, _x1);
     }(_x0, _x1, _x2);
   }
 
@@ -265,9 +264,9 @@ struct Sort {
               return x0(
                   a, l0,
                   div_conq_pivot<T1, T2>(le_dec0, x, x0,
-                                         split_pivot<T1>(le_dec0, a, l0).first),
-                  div_conq_pivot<T1, T2>(
-                      le_dec0, x, x0, split_pivot<T1>(le_dec0, a, l0).second));
+                                         split_pivot(le_dec0, a, l0).first),
+                  div_conq_pivot<T1, T2>(le_dec0, x, x0,
+                                         split_pivot(le_dec0, a, l0).second));
             }},
         l->v());
   }
