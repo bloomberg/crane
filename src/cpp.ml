@@ -2330,6 +2330,7 @@ let pp_hdecl = function
           (* Skip - this is a projection for an eponymous record merged into module struct *)
           mt ()
     | Dind (kn,i) -> pp_cpp_ind_header kn i
+    | Dtype (_, _, Miniml.Tdummy Miniml.Ktype) -> mt ()  (* Skip erased Type aliases *)
     | Dtype (r, l, t) -> (* TODO: Do for real sometime! *)
         let name = pp_global Type r in
         let l = rename_tvars keywords l in
@@ -2414,6 +2415,7 @@ let pp_hdecl_spec_only = function
     | Dterm (r,_,_) when is_any_inline_custom r -> mt ()
     | Dterm (r,_,_) when is_eponymous_record_projection r -> mt ()
     | Dind (kn,i) -> pp_cpp_ind_header kn i
+    | Dtype (_, _, Miniml.Tdummy Miniml.Ktype) -> mt ()  (* Skip erased Type aliases *)
     | Dtype (r, l, t) ->
         let name = pp_global Type r in
         let l = rename_tvars keywords l in
@@ -2465,6 +2467,7 @@ let pp_spec = function
         let (ds, env) = gen_spec r b t in
         (*let _ = print_endline (Pp.string_of_ppcmds (pp_type false [] t)) in*)
         pp_cpp_decl env ds
+  | Stype (_,_,Some (Miniml.Tdummy Miniml.Ktype)) -> mt ()  (* Skip erased Type aliases *)
   | Stype (r,vl,ot) -> (* TODO: maybe do for real? but is is necessary? *)
       let name = pp_global_name Type r in
       let l = rename_tvars keywords vl in

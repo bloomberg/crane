@@ -10,18 +10,6 @@
 #include <string>
 #include <variant>
 
-bool CanonStruct::eqb(const std::shared_ptr<CanonStruct::EqType> &e,
-                      const CanonStruct::carrier _x0,
-                      const CanonStruct::carrier _x1) {
-  return e(_x0, _x1);
-}
-
-bool CanonStruct::same(const std::shared_ptr<CanonStruct::EqType> &e,
-                       const CanonStruct::carrier _x0,
-                       const CanonStruct::carrier _x1) {
-  return e(_x0, _x1);
-}
-
 bool Bool::eqb(const bool b1, const bool b2) {
   if (b1) {
     if (b2) {

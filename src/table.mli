@@ -93,6 +93,7 @@ val get_record_fields :
   GlobRef.t -> GlobRef.t option list
 val record_fields_of_type : ml_type -> GlobRef.t option list
 val record_field_types : GlobRef.t -> ml_type list
+val get_ind_ip_vars : GlobRef.t -> Names.Id.t list
 val is_typeclass : GlobRef.t -> bool
 val is_typeclass_type : ml_type -> bool
 val is_typeclass_type_cpp : Minicpp.cpp_type -> bool
@@ -114,6 +115,10 @@ val add_projection : int -> Constant.t -> inductive -> unit
 val is_projection : GlobRef.t -> bool
 val projection_arity : GlobRef.t -> int
 val projection_info : GlobRef.t -> inductive * int (* arity *)
+
+val add_promoted_type_var : GlobRef.t -> Names.Id.t -> unit
+val is_promoted_type_var : GlobRef.t -> bool
+val promoted_type_var_name : GlobRef.t -> Names.Id.t option
 
 val add_info_axiom : GlobRef.t -> unit
 val remove_info_axiom : GlobRef.t -> unit

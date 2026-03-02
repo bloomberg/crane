@@ -545,6 +545,12 @@ let rec convert_ml_type_to_cpp_type env (ns : Refset'.t) (tvars : Id.t list) (ml
         | Tfun (l, t) -> Tfun (t1c::l, t)
         | _ -> Tfun (t1c::[], t2c))
   | Tglob (g, _, _) when is_void g -> Tvoid
+  (* Erased carrier projections from promoted dependent records:
+     Convert Tglob(m_carrier, []) to Tvar with the promoted var name. *)
+  | Tglob (g, ts, _) when Table.is_promoted_type_var g ->
+      (match Table.promoted_type_var_name g with
+       | Some var_id -> Tvar (1000, Some var_id)
+       | None -> Tany)
   | Tglob (g, ts, args) when is_custom g ->
     Tglob (g, List.map (convert_ml_type_to_cpp_type env ns tvars) ts, List.map (gen_expr env) args)
   | Tglob (g, ts, _) ->
@@ -856,6 +862,52 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     let fds = record_fields_of_type ty in
     (match fds with
       | [] ->
+      (* Propagate resolved types to nested list constructors before code generation.
+         For List<nat> constructors like cons(1, cons(2, nil)), this ensures the
+         nested nil gets List<nat> type instead of List<std::any>. *)
+      let ts_updated = (match ty with
+        | Tglob (n, tys_orig, schema_opt) ->
+          (* Only run type propagation for list constructors *)
+          let is_list = (try String.equal (Common.pp_global_name Type n) "list" with _ -> false) in
+          if not is_list then ts
+          else
+          (* Filter out index type args - only keep parameters *)
+          let tys_filt = match n with
+            | GlobRef.IndRef (kn, _) ->
+                (match Table.get_ind_num_param_vars_opt kn with
+                | Some num_param_vars -> List.firstn num_param_vars tys_orig
+                | None -> tys_orig)
+            | _ -> tys_orig
+          in
+          (* Resolve Tunknown from element types *)
+          let has_unknown = List.exists (fun (t : ml_type) -> match t with Tunknown -> true | _ -> false) tys_filt in
+          if has_unknown && (match ts with [] -> false | _ -> true) then
+            let tys_resolved = List.map (fun (t : ml_type) -> match t with
+              | Tunknown ->
+                let first_elem = List.find_opt (fun a -> match a with MLdummy _ -> false | _ -> true) ts in
+                (match first_elem with
+                 | Some (MLmagic (MLcons (elem_ty, _, _))) -> elem_ty
+                 | Some (MLcons (elem_ty, _, _)) -> elem_ty
+                 | _ -> t)
+              | _ -> t) tys_filt in
+            (* Propagate resolved type to nested constructors *)
+            let resolved_ty = Miniml.Tglob (n, tys_resolved, schema_opt) in
+            let rec update_nested_ty ast =
+              match ast with
+              | MLcons (arg_typ, arg_c, arg_ts) ->
+                (match arg_typ with
+                 | Miniml.Tglob (arg_ref, arg_tys, _) when GlobRef.equal arg_ref n &&
+                                                            List.exists (fun t -> match t with Miniml.Tunknown -> true | _ -> false) arg_tys ->
+                   MLcons (resolved_ty, arg_c, List.map update_nested_ty arg_ts)
+                 | _ ->
+                   MLcons (arg_typ, arg_c, List.map update_nested_ty arg_ts))
+              | MLmagic inner ->
+                MLmagic (update_nested_ty inner)
+              | other -> other
+            in
+            List.map update_nested_ty ts
+          else ts
+        | _ -> ts) in
       (* Generate: Type<temps>::ctor::Constructor_(args) *)
       let gen_ctor_call args = (match ty with
       | Tglob (n, tys, _) ->
@@ -867,7 +919,22 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
               | None -> tys)
           | _ -> tys
         in
-        let temps = List.map (convert_ml_type_to_cpp_type env Refset'.empty []) tys in
+        (* Resolve Tunknown type args from constructor element types.
+           For cons(elem, rest), elem's type provides the list's type param. *)
+        let has_unknown = List.exists (fun (t : ml_type) -> match t with Tunknown -> true | _ -> false) tys in
+        let tys = if has_unknown && (match ts_updated with [] -> false | _ -> true) then
+          List.map (fun (t : ml_type) -> match t with
+            | Tunknown ->
+              (* Infer from first non-MLmagic/MLdummy constructor arg *)
+              let first_elem = List.find_opt (fun a -> match a with MLdummy _ -> false | _ -> true) ts_updated in
+              (match first_elem with
+               | Some (MLmagic (MLcons (elem_ty, _, _))) -> elem_ty
+               | Some (MLcons (elem_ty, _, _)) -> elem_ty
+               | _ -> t)
+            | _ -> t) tys
+        else tys in
+        let tvars = get_current_type_vars () in
+        let temps = List.map (convert_ml_type_to_cpp_type env Refset'.empty tvars) tys in
         (* Get the constructor base name (without module path) and add underscore suffix *)
         let ctor_name = Common.pp_global_name Type r in
         let factory_name = Id.of_string (ctor_name ^ "_") in
@@ -884,7 +951,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
         let factory_expr = CPPqualified (ctor_expr, factory_name) in
         CPPfun_call (factory_expr, args)) in
       (* Note: CPPfun_call reverses args when printing, so we reverse here *)
-      gen_ctor_call (List.rev_map (gen_expr env) ts)
+      gen_ctor_call (List.rev_map (gen_expr env) ts_updated)
     | _ ->
       (* Records - keep using make_shared pattern for now *)
       let nstempmod args = (match ty with
@@ -905,12 +972,22 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     let cexp = gen_custom_cpp_case env (fun x -> Sreturn x) typ t pv in
     CPPfun_call (CPPlambda([], None, [cexp], false), [])
   (* TODO: SLOPPY and incomplete *)
-  | MLcase (typ, t, pv) when not (record_fields_of_type typ == []) && Array.length pv == 1 ->
+  | MLcase (typ, t, pv) when (not (record_fields_of_type typ == []) && Array.length pv == 1) ->
     let (ids,r,pat,body) = pv.(0) in
     let n = List.length ids in
+    let is_typeclass = Table.is_typeclass_type typ in
+    (* Build lists that correctly account for erased fields.
+       record_fields_of_type includes None entries for erased fields;
+       ids only contains non-erased bindings. So MLrel i refers to the i-th
+       non-erased field. We filter out None entries for correct indexing. *)
+    let all_fields = record_fields_of_type typ in
+    let non_erased_fields = List.filter_map Fun.id all_fields in
+    let all_field_types = match typ with
+      | Tglob (r, _, _) -> Table.record_field_types r
+      | _ -> [] in
+    let non_erased_field_types = List.filter (fun t -> not (isTdummy t)) all_field_types in
     (* For type classes, use qualified access (::) instead of arrow (->) since
        type class instances are template type parameters, not runtime values *)
-    let is_typeclass = Table.is_typeclass_type typ in
     let make_field_access base_expr fld =
       if is_typeclass then
         let fld_name = Id.of_string (Common.pp_global_name Term fld) in
@@ -918,17 +995,35 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       else
         CPPget' (base_expr, fld)
     in
-    (match body with
+    (* Strip MLmagic wrappers from the body — promoted dependent records
+       may wrap field references in MLmagic due to Tvar/Tglob mismatches *)
+    let body' = match body with MLmagic b -> b | b -> b in
+    (match body' with
     | MLrel i when i <= n ->
-      let fld = List.nth (record_fields_of_type typ) (n - i) in
+      let fld = try Some (List.nth non_erased_fields (n - i)) with _ -> None in
       (match fld with
-      | Some fld -> make_field_access (gen_expr env t) fld
+      | Some fld ->
+        let access = make_field_access (gen_expr env t) fld in
+        if is_typeclass then
+          (* For typeclasses, non-function value fields (like m_id : carrier)
+             are generated as nullary static methods, so we need () to call them *)
+          let fld_ty = try List.nth non_erased_field_types (n - i) with _ -> Miniml.Tunknown in
+          let is_value_field = match fld_ty with Miniml.Tarr _ -> false | _ -> true in
+          if is_value_field then CPPfun_call (access, [])
+          else access
+        else access
       | _ -> CPPstring (Pstring.unsafe_of_string "TODOrecordProj"))
     | MLapp (MLrel i, args) when i <= n ->
-      let fld = List.nth (record_fields_of_type typ) (n - i) in
+      let fld = try Some (List.nth non_erased_fields (n - i)) with _ -> None in
       let _,env' = push_vars' (List.rev_map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids) env in
       (match fld with
       (* CPPfun_call expects args in reverse order; List.rev_map both converts and reverses *)
+      | Some fld -> CPPfun_call (make_field_access (gen_expr env t) fld, List.rev_map (gen_expr env') args)
+      | _ -> CPPstring (Pstring.unsafe_of_string "TODOrecordProj"))
+    | MLapp (MLmagic (MLrel i), args) when i <= n ->
+      let fld = try Some (List.nth non_erased_fields (n - i)) with _ -> None in
+      let _,env' = push_vars' (List.rev_map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids) env in
+      (match fld with
       | Some fld -> CPPfun_call (make_field_access (gen_expr env t) fld, List.rev_map (gen_expr env') args)
       | _ -> CPPstring (Pstring.unsafe_of_string "TODOrecordProj"))
     | _ ->
@@ -947,7 +1042,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
          Reverse it back so it aligns with ids (constructor / field order). *)
       let renamed_ids_fwd = List.rev renamed_ids in
       let asgns = List.mapi (fun i ((renamed_name, _), (_, ty)) ->
-        let fld = List.nth (record_fields_of_type typ) i in
+        let fld = try Some (List.nth non_erased_fields i) with _ -> None in
         let e = (match fld with
           | Some fld -> make_field_access (gen_expr env t) fld
           | _ -> CPPstring (Pstring.unsafe_of_string "TODOrecordProj")) in
@@ -1996,8 +2091,17 @@ let gen_typeclass_cpp name fields ind =
   (* Type vars become template parameters after the instance parameter *)
   let ty_vars = List.map (fun x -> (TTtypename, x)) ind.ip_vars in
   let all_params = (TTtypename, inst_id) :: ty_vars in
-  (* Generate requires clauses for each method *)
-  let method_list = List.combine fields ind.ip_types.(0) in
+  (* Generate requires clauses for each method.
+     Filter out Tdummy entries from ip_types — these are erased fields
+     (e.g., carrier : Type in a promoted dependent record) that don't
+     appear in the fields list (select_fields already skips them). *)
+  let non_dummy_types = List.filter (fun t ->
+    not (Mlutil.isTdummy t)) ind.ip_types.(0) in
+  if List.length fields <> List.length non_dummy_types then
+    Feedback.msg_debug Pp.(str "gen_typeclass_cpp: fields=" ++ int (List.length fields) ++
+      str " non_dummy_types=" ++ int (List.length non_dummy_types) ++
+      str " ip_types.(0)=" ++ int (List.length ind.ip_types.(0)));
+  let method_list = List.combine fields non_dummy_types in
   (* Convert a type to a list of argument types and a return type *)
   let rec get_args_and_ret acc = function
     | Miniml.Tarr (arg, rest) -> get_args_and_ret (arg :: acc) rest
@@ -2056,24 +2160,48 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type)
   | Tglob (class_ref, type_args, _) when Table.is_typeclass class_ref ->
       (* Get the type class fields (method names) and field types (from ind_packet) *)
       let fields = Table.record_fields_of_type ty in
-      let field_types = Table.record_field_types class_ref in
+      let field_types = List.filter (fun t ->
+        not (Mlutil.isTdummy t)) (Table.record_field_types class_ref) in
+      (* Strip MLmagic wrapper if present — promoted dependent records
+         may have their constructor wrapped in MLmagic due to Tvar/Tglob
+         mismatches during extraction unification. *)
+      let body = match body with MLmagic b -> b | b -> b in
       (match body with
-      | MLcons (_, _ctor_ref, method_bodies) ->
+      | MLcons (cons_ty, _ctor_ref, method_bodies) ->
+          (* For promoted dependent records, the definition type Tglob(Magma,[],[])
+             has no type_args, but the MLcons type Tglob(Magma,[nat],[]) carries
+             the concrete types extracted from the erased constructor args. *)
+          let type_args = match cons_ty with
+            | Tglob (_, ta, _) when ta <> [] -> ta
+            | _ -> type_args
+          in
           (* Generate static methods for each field *)
           let gen_method (field_ref, field_ml_ty) field_body =
             match field_ref with
             | None -> None  (* Anonymous field, skip *)
             | Some method_ref ->
                 let method_name = Id.of_string (Common.pp_global_name Term method_ref) in
+                (* Strip MLmagic wrappers from the field body — promoted dependent
+                   records produce MLmagic due to Tvar/Tglob mismatches. *)
+                let rec strip_magic = function
+                  | MLmagic b -> strip_magic b
+                  | b -> b
+                in
+                let field_body = strip_magic field_body in
                 (* Substitute type class parameter with instance's type arg in the field type.
-                   This gives us the concrete return type (e.g., bool for eqb: A -> A -> bool). *)
+                   This gives us the concrete return type (e.g., bool for eqb: A -> A -> bool).
+                   For promoted dependent records, type_args may be empty, leaving Tvars
+                   unsubstituted — we handle that below by using lambda binder types. *)
                 let subst_ty = Mlutil.type_subst_list type_args field_ml_ty in
                 (* Extract return type by stripping Tarr's *)
                 let rec get_ret = function
                   | Tarr (_, rest) -> get_ret rest
                   | ret -> ret
                 in
-                let method_ret_ty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] (get_ret subst_ty) in
+                let rec get_args_and_ret acc = function
+                  | Tarr (arg, rest) -> get_args_and_ret (arg :: acc) rest
+                  | ret -> (List.rev acc, ret)
+                in
                 (* Extract parameter names and types from the lambda *)
                 let rec extract_params ml_acc cpp_acc body =
                   match body with
@@ -2084,31 +2212,60 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type)
                   | _ -> (List.rev ml_acc, List.rev cpp_acc, body)
                 in
                 let (ml_params, cpp_params, inner_body) = extract_params [] [] field_body in
-                (* If no lambdas found, the body is a function reference (like PrimInt63.eqb).
-                   We need to eta-expand: generate parameters based on the method type,
-                   then call the function with those parameters. *)
+                (* Determine return type: if type_subst resolved everything, use the
+                   substituted type. Otherwise, infer from the lambda binders. *)
+                let method_ret_ty =
+                  let ret = get_ret subst_ty in
+                  match ret with
+                  | Tvar _ | Tvar' _ when ml_params <> [] ->
+                      (* Unsubstituted Tvar — infer from the last lambda binder's type.
+                         For op : A -> A -> A with body MLlam(x, nat, MLlam(y, nat, ...)),
+                         the return type is the same as the parameter type (nat). *)
+                      let last_param_ty = snd (List.hd (List.rev ml_params)) in
+                      convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] last_param_ty
+                  | Tvar _ | Tvar' _ ->
+                      (* No lambda binders to infer from — try to use the field type's
+                         arg types. For a non-function field like m_id : carrier, the
+                         whole type is Tvar, so look at the body's type. *)
+                      Tany
+                  | _ ->
+                      convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ret
+                in
                 let (cpp_params, ret_ty, body_stmts) =
-                  if ml_params = [] then
-                    match inner_body with
-                    | MLglob (_fn_ref, _) ->
-                        (* Eta-expand: generate parameters based on type args *)
-                        let a_ty = List.hd type_args in
-                        let a_cpp = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] a_ty in
-                        let p0 = Id.of_string "x" in
-                        let p1 = Id.of_string "y" in
-                        let call_expr = MLapp (inner_body, [MLrel 2; MLrel 1]) in
-                        let env = snd (push_vars' [(p1, a_ty); (p0, a_ty)] (empty_env ())) in
-                        let stmts = gen_stmts env (fun x -> Sreturn x) call_expr in
-                        ([(p0, a_cpp); (p1, a_cpp)], method_ret_ty, stmts)
-                    | _ ->
-                        let env = snd (push_vars' (List.rev ml_params) (empty_env ())) in
-                        let stmts = gen_stmts env (fun x -> Sreturn x) inner_body in
-                        (cpp_params, method_ret_ty, stmts)
-                  else
-                    (* Normal case: we have lambdas - use looked-up return type *)
+                  if ml_params = [] then begin
+                    (* No lambdas in the body — either a function reference that
+                       needs eta-expansion, or a non-function value field. *)
+                    let (arg_types, _ret_type) = get_args_and_ret [] subst_ty in
+                    (* Filter out type class instance args *)
+                    let arg_types = List.filter (fun t -> not (Table.is_typeclass_type t)) arg_types in
+                    if arg_types = [] then begin
+                      (* Non-function field (like m_id : carrier) — generate as a
+                         static value with a nullary accessor method. *)
+                      let env = empty_env () in
+                      let stmts = gen_stmts env (fun x -> Sreturn x) inner_body in
+                      ([], method_ret_ty, stmts)
+                    end else begin
+                      (* Function reference — eta-expand based on the field type's args *)
+                      let params = List.mapi (fun i arg_ty ->
+                        let name = Id.of_string ("a" ^ string_of_int i) in
+                        let cpp_ty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] arg_ty in
+                        (name, arg_ty, cpp_ty)
+                      ) arg_types in
+                      let nparams = List.length params in
+                      let ml_rels = List.mapi (fun i _ -> MLrel (nparams - i)) params in
+                      let call_expr = MLapp (inner_body, ml_rels) in
+                      let ml_vars = List.rev_map (fun (name, ml_ty, _) -> (name, ml_ty)) params in
+                      let env = snd (push_vars' ml_vars (empty_env ())) in
+                      let stmts = gen_stmts env (fun x -> Sreturn x) call_expr in
+                      let cpp_params = List.map (fun (name, _, cpp_ty) -> (name, cpp_ty)) params in
+                      (cpp_params, method_ret_ty, stmts)
+                    end
+                  end else begin
+                    (* Normal case: we have lambdas *)
                     let env = snd (push_vars' (List.rev ml_params) (empty_env ())) in
                     let stmts = gen_stmts env (fun x -> Sreturn x) inner_body in
                     (cpp_params, method_ret_ty, stmts)
+                  end
                 in
                 Some (Fmethod (method_name, [], ret_ty, cpp_params, body_stmts, false, true), VPublic)
           in
@@ -2120,6 +2277,10 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type)
               (* Fallback: pair fields with Tunknown if lengths don't match *)
               List.map (fun f -> (f, Miniml.Tunknown)) fields
           in
+          if List.length fields_with_types <> List.length method_bodies then
+            Feedback.msg_debug Pp.(str "gen_instance_struct: fields_with_types=" ++
+              int (List.length fields_with_types) ++ str " method_bodies=" ++
+              int (List.length method_bodies));
           let method_pairs = List.combine fields_with_types method_bodies in
           let methods = List.filter_map (fun ((fld, fty), body) -> gen_method (fld, fty) body) method_pairs in
           if methods = [] then (None, Some class_ref, type_args)
@@ -2467,6 +2628,25 @@ let gen_dfun n b dom cod ty temps =
       (id, body_ty) :: unify_param_types rest_params rest_sig
     | _ -> body_params in
   let ids = unify_param_types ids sig_types_for_ids in
+  (* Replace Tunknown in body param types with corresponding sig types.
+     This handles promoted dependent records where the lambda's type annotation
+     has Tunknown for the erased carrier, while the function signature has
+     Tglob(m_carrier, []) which can be resolved by convert_ml_type_to_cpp_type. *)
+  let rec merge_unknown body_ty sig_ty =
+    match body_ty, sig_ty with
+    | Miniml.Tunknown, _ -> sig_ty
+    | Miniml.Tglob (r1, ts1, a1), Miniml.Tglob (r2, ts2, _)
+      when GlobRef.equal r1 r2 && List.length ts1 = List.length ts2 ->
+        Miniml.Tglob (r1, List.map2 merge_unknown ts1 ts2, a1)
+    | Miniml.Tarr (t1a, t1b), Miniml.Tarr (t2a, t2b) ->
+        Miniml.Tarr (merge_unknown t1a t2a, merge_unknown t1b t2b)
+    | _ -> body_ty
+  in
+  let ids = if List.length ids = List.length sig_types_for_ids then
+    List.map2 (fun (id, body_ty) sig_ty ->
+      (id, merge_unknown body_ty sig_ty)
+    ) ids sig_types_for_ids
+  else ids in
   (* Detect which function-typed parameters are CPS parameters (see
      [detect_cps_params] above for the full explanation).  These are
      excluded from template-parameter promotion below — they keep their
@@ -2622,9 +2802,14 @@ let gen_dfun n b dom cod ty temps =
     | TTfun (dom, cod) -> Tref (Tmod (TMconst, Tfun (dom, cod)))
     | _ -> assert false) fun_tys in
   let rec_call = CPPglob (n, List.map (fun (_, id) -> Tvar (0, Some id)) temps @ rec_fun_tys) in *)
-  let rec_call = CPPglob (n, List.map (fun (_, id) -> Tvar (0, Some id)) temps) in
   (* Add type class instance template parameters - instance types come first *)
   let typeclass_temps_basic = List.map (fun (tt, id, _, _) -> (tt, id)) typeclass_temps in
+  (* Build recursive call reference with typeclass and type params only.
+     Function type params (from fun_tys) are excluded because they should be
+     deduced from arguments, not explicitly specified in recursive calls. *)
+  let rec_call_temps = typeclass_temps_basic @ temps in
+  let rec_call = CPPglob (n, List.map (fun (_, id) -> Tvar (0, Some id)) rec_call_temps) in
+  (* Combine all template params for function signature *)
   let temps = typeclass_temps_basic @ temps @ (List.map (fun (_,t,n) -> (t,n)) fun_tys) in
   (* TODO: Build requires clause for type class constraints
      For now, type class constraints are not enforced at compile time.
@@ -2784,6 +2969,142 @@ let gen_sfun n b dom cod temps =
     | [] -> inner, env
     | l -> Dtemplate (l, None, inner), env)
 
+(* Build a map from erased field projection GlobRefs to their Tvar index
+   for a promoted dependent record / typeclass.
+   Returns [(GlobRef.t * int) list] where int is the 1-based Tvar index. *)
+let erased_proj_tvar_map (class_ref : GlobRef.t) : (GlobRef.t * int) list =
+  let open GlobRef in
+  match class_ref with
+  | IndRef (kn, _) | ConstructRef ((kn, _), _) ->
+      let promoted_vars = Table.get_ind_ip_vars class_ref in
+      if promoted_vars = [] then []
+      else
+        let mp = MutInd.modpath kn in
+        let n_promoted = List.length promoted_vars in
+        List.mapi (fun i var_id ->
+          let knp = Constant.make2 mp (Label.of_id var_id) in
+          (ConstRef knp, n_promoted - i)
+        ) promoted_vars
+  | _ -> []
+
+(* Replace Tglob references to erased projections with Tvar' in an ML type. *)
+let rec replace_erased_proj_refs (proj_map : (GlobRef.t * int) list) (t : ml_type) : ml_type =
+  let find_in_map r =
+    List.find_map (fun (ref, idx) ->
+      if GlobRef.equal r ref then Some idx else None
+    ) proj_map in
+  match t with
+  | Miniml.Tglob (r, ts, args) ->
+      (match find_in_map r with
+       | Some idx -> Miniml.Tvar' idx
+       | None ->
+           let ts' = List.map (replace_erased_proj_refs proj_map) ts in
+           if ts == ts' then t else Miniml.Tglob (r, ts', args))
+  | Miniml.Tarr (t1, t2) ->
+      let t1' = replace_erased_proj_refs proj_map t1 in
+      let t2' = replace_erased_proj_refs proj_map t2 in
+      if t1 == t1' && t2 == t2' then t else Miniml.Tarr (t1', t2')
+  | Miniml.Tunknown -> Miniml.Tvar' 1
+  | _ -> t
+
+(* Replace Tunknown in all type annotations within an ML AST body with the
+   GlobRef of the first promoted type var (the carrier). This allows
+   convert_ml_type_to_cpp_type to detect it as a promoted type var.
+   [carrier_refs] is a list of (GlobRef.t * int) from erased_proj_tvar_map. *)
+let rec rewrite_ml_ast_types (carrier_refs : (GlobRef.t * int) list) (ast : ml_ast) : ml_ast =
+  if carrier_refs = [] then ast
+  else
+    let carrier_ref = fst (List.hd carrier_refs) in
+    let rec rty t = match t with
+      | Miniml.Tunknown -> Miniml.Tglob (carrier_ref, [], [])
+      | Miniml.Tmeta ({contents = Some inner} as meta) ->
+          let inner' = rty inner in
+          if inner != inner' then meta.contents <- Some inner';
+          t
+      | Miniml.Tmeta ({contents = None} as meta) ->
+          (* Unresolved meta — resolve to carrier *)
+          meta.contents <- Some (Miniml.Tglob (carrier_ref, [], []));
+          t
+      | Miniml.Tarr (t1, t2) -> Miniml.Tarr (rty t1, rty t2)
+      | Miniml.Tglob (r, ts, a) ->
+          let ts' = List.map rty ts in
+          Miniml.Tglob (r, ts', a)
+      | _ -> t
+    in
+    let rast = rewrite_ml_ast_types carrier_refs in
+    match ast with
+    | MLlam (id, ty, body) ->
+        MLlam (id, rty ty, rast body)
+    | MLletin (id, ty, e1, e2) ->
+        MLletin (id, rty ty, rast e1, rast e2)
+    | MLglob (r, tys) ->
+        MLglob (r, List.map rty tys)
+    | MLcons (ty, r, args) ->
+        MLcons (rty ty, r, List.map rast args)
+    | MLtuple es ->
+        MLtuple (List.map rast es)
+    | MLcase (ty, scrut, branches) ->
+        let branches' = Array.map (fun (binds, bty, pat, body) ->
+          let binds' = List.map (fun (id, t) -> (id, rty t)) binds in
+          (binds', rty bty, pat, rast body)
+        ) branches in
+        MLcase (rty ty, rast scrut, branches')
+    | MLfix (i, name_types, bodies, is_cofix) ->
+        let name_types' = Array.map (fun (id, ty) -> (id, rty ty)) name_types in
+        let bodies' = Array.map rast bodies in
+        MLfix (i, name_types', bodies', is_cofix)
+    | MLapp (f, args) ->
+        MLapp (rast f, List.map rast args)
+    | MLmagic e ->
+        MLmagic (rast e)
+    | MLrel _ | MLdummy _ | MLaxiom _ | MLexn _ | MLuint _ | MLfloat _
+    | MLparray _ | MLstring _ -> ast
+
+(* Rewrite projection types for promoted dependent records.
+   When a function's first parameter is a promoted typeclass (e.g., Magma),
+   and the remaining args/return have erased carrier refs, replace
+   them with Tvar references from the typeclass's field types.
+
+   The function name [n] is used to find which field of the typeclass this
+   projection corresponds to. *)
+let rewrite_typeclass_projection_type (n : GlobRef.t) (ty : ml_type) : ml_type =
+  match ty with
+  | Tarr (Tglob (class_ref, _, _) as tc_arg, rest)
+    when Table.is_typeclass class_ref ->
+      let fields = Table.get_record_fields class_ref in
+      let field_types = Table.record_field_types class_ref in
+      let proj_map = erased_proj_tvar_map class_ref in
+      if proj_map <> [] then
+        (* Check if n is a projection of this typeclass *)
+        let non_dummy_types = List.filter (fun t -> not (Mlutil.isTdummy t)) field_types in
+        let non_dummy_fields_types =
+          if List.length fields = List.length non_dummy_types then
+            List.combine fields non_dummy_types
+          else
+            List.map (fun f -> (f, Miniml.Tunknown)) fields
+        in
+        let proj_name = Common.pp_global_name Term n in
+        let matching_field_type = List.find_map (fun (field_ref_opt, ft) ->
+          match field_ref_opt with
+          | Some fr when Common.pp_global_name Term fr = proj_name -> Some ft
+          | _ -> None
+        ) non_dummy_fields_types in
+        (match matching_field_type with
+         | Some field_ty ->
+             Tarr (tc_arg, field_ty)
+         | None ->
+             Tarr (tc_arg, replace_erased_proj_refs proj_map rest))
+      else ty
+  | _ -> ty
+
+(* Get the erased projection map for a function's type, if it takes a
+   promoted typeclass as first argument. *)
+let get_erased_proj_map_from_type (ty : ml_type) : (GlobRef.t * int) list =
+  match ty with
+  | Tarr (Tglob (class_ref, _, _), _) when Table.is_typeclass class_ref ->
+      erased_proj_tvar_map class_ref
+  | _ -> []
+
 let gen_decl n b ty =
   let cty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
   let tvars = get_tvars cty in
@@ -2797,6 +3118,8 @@ let gen_decl n b ty =
       | l -> Dtemplate (l, None, inner), empty_env () , tvars)
 
 let gen_decl_for_pp n b ty =
+  let carrier_refs = get_erased_proj_map_from_type ty in
+  let b = rewrite_ml_ast_types carrier_refs b in
   let cty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
   let tvars = get_tvars cty in
   (* Filter out HKT-phantom tvars: tvars that appear ONLY in function-typed
@@ -2834,6 +3157,23 @@ let gen_decl_for_pp n b ty =
         else None
       ) tvars_indexed
     | _ -> tvars in
+  (* Count typeclass-typed parameters in the ML domain — these become template
+     params inside gen_dfun but aren't reflected in tvars (which comes from the
+     C++ type). We need tvars to be non-empty when typeclass params exist so
+     callers use the full Dtemplate definition. *)
+  let tc_param_ids = match ty with
+    | Tarr _ ->
+      let rec collect_tc_ids acc i = function
+        | Miniml.Tarr (t1, t2) ->
+          if Table.is_typeclass_type t1 then
+            collect_tc_ids (Id.of_string ("_tcI" ^ string_of_int i) :: acc) (i+1) t2
+          else
+            collect_tc_ids acc i t2
+        | _ -> List.rev acc
+      in
+      collect_tc_ids [] 0 ty
+    | _ -> []
+  in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
   match cty with
   | Tfun (dom, cod) ->
@@ -2842,10 +3182,10 @@ let gen_decl_for_pp n b ty =
       match ty with
       | Tfun (dom, cod) -> Some (Id.of_string ("F" ^ (string_of_int i)))
       | _ -> None) (List.mapi (fun i ty -> (ty, i)) dom) in
-  let tvars = tvars @ fun_tys in
+  let tvars = tc_param_ids @ tvars @ fun_tys in
     Some f, e, tvars
   | _ ->
-    None, empty_env (), tvars (*
+    None, empty_env (), (tc_param_ids @ tvars) (*
     let inner = Dasgn (n, Tmod (TMconst, ty),  gen_expr (empty_env ()) b) in
     (match temps with
       | [] -> inner, empty_env ()
@@ -2855,10 +3195,31 @@ let gen_decl_for_pp n b ty =
 let gen_decl_for_dfuns n b ty =
   (* Simplify the ML type to resolve metavariables before converting to C++ *)
   let ty = type_simpl ty in
+  (* Rewrite Tunknown in body types to promoted carrier refs.
+     This allows convert_ml_type_to_cpp_type to resolve them correctly. *)
+  let carrier_refs = get_erased_proj_map_from_type ty in
+  let b = rewrite_ml_ast_types carrier_refs b in
   let b = resolve_body_tvars b ty in
   let cty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
   let tvars = get_tvars cty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
+  (* Count typeclass-typed parameters in the ML domain — these become template
+     params inside gen_dfun but aren't reflected in tvars (which comes from the
+     C++ type). We need tvars to be non-empty when typeclass params exist so
+     callers (gen_dfuns_header) use the full Dtemplate definition. *)
+  let tc_param_ids = match ty with
+    | Tarr _ ->
+      let rec collect_tc_ids acc i = function
+        | Miniml.Tarr (t1, t2) ->
+          if Table.is_typeclass_type t1 then
+            collect_tc_ids (Id.of_string ("_tcI" ^ string_of_int i) :: acc) (i+1) t2
+          else
+            collect_tc_ids acc i t2
+        | _ -> List.rev acc
+      in
+      collect_tc_ids [] 0 ty
+    | _ -> []
+  in
   match cty with
   | Tfun (dom, cod) ->
     let (f, env) = gen_dfun n b dom cod ty temps in
@@ -2866,9 +3227,9 @@ let gen_decl_for_dfuns n b ty =
       match ty with
       | Tfun (dom, cod) -> Some (Id.of_string ("F" ^ (string_of_int i)))
       | _ -> None) (List.mapi (fun i ty -> (ty, i)) dom) in
-    let tvars = tvars @ fun_tys in
+    let tvars = tc_param_ids @ tvars @ fun_tys in
     f , env , tvars
-  | _ -> let (f, env) = gen_dfun n b [Tvoid] cty ty temps in f , env , tvars
+  | _ -> let (f, env) = gen_dfun n b [Tvoid] cty ty temps in f , env , (tc_param_ids @ tvars)
 
 let gen_spec n b ty =
   let ty = type_simpl ty in

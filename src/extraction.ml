@@ -610,6 +610,77 @@ and extract_really_ind env kn mib =
         (* Check if this is a type class FIRST, before singleton optimization *)
         let is_class = Option.has_some (Typeclasses.class_info r) in
         if is_class then TypeClass field_glob
+        (* Detect dependent records for C++ extraction.
+           A dependent record is a Record with erased Type fields (Tdummy Ktype)
+           where other fields' types depend on those Type fields. For example:
+             Record Magma := mkMagma { carrier : Type; op : carrier -> carrier -> carrier }.
+           Here, `carrier` is erased to Tdummy Ktype, and `op`'s type references
+           `carrier` — but since `carrier` has no type variable index in the dbmap,
+           the reference becomes Tunknown, then Tany (std::any) in C++.
+
+           We fix this by promoting the erased Type fields to type variables
+           (adding them to ip_vars) and re-extracting the constructor types so
+           that references resolve to Tvar instead of Tunknown. The record is
+           then treated as a TypeClass, producing a C++ concept + instance structs. *)
+        else if lang () == Cpp &&
+                List.exists (fun t -> match expand env t with Tdummy Ktype -> true | _ -> false) typ
+        then begin
+          (* Identify which positions (0-indexed in typ) are erased Type fields *)
+          let erased_positions = List.mapi (fun idx t ->
+            if (match expand env t with Tdummy Ktype -> true | _ -> false) then Some idx
+            else None
+          ) typ in
+          let erased_idxs = List.filter_map Fun.id erased_positions in
+          (* Build promoted variable names from field_names *)
+          let promoted_vars = List.filter_map (fun idx ->
+            let fn = List.nth field_names idx in
+            match fn.binder_name with
+            | Name id -> Some id
+            | Anonymous -> Some (Id.of_string ("_tvar" ^ string_of_int idx))
+          ) erased_idxs in
+          (* Build a new dbmap that assigns type variable indices to erased positions.
+             Constructor field positions in extract_type_cons start at ndecls+1.
+             Type variable indices start at 1. *)
+          let next_tvar = ref 1 in
+          let promoted_dbmap = List.fold_left (fun dm idx ->
+            let pos = ndecls + 1 + idx in  (* position in extract_type_cons *)
+            let tv = !next_tvar in
+            incr next_tvar;
+            Int.Map.add pos tv dm
+          ) Int.Map.empty erased_idxs in
+          (* Merge with the original dbmap (which handles inductive type parameters) *)
+          let orig_types = Inductive.arities_of_constructors ((kn,0),u) (mib, mip0) in
+          let orig_t = snd (decompose_prod_n_decls ndecls orig_types.(0)) in
+          let prods,head = Reduction.whd_decompose_prod epar orig_t in
+          let nprods = List.length prods in
+          let orig_args = match Constr.kind head with
+            | App (f,args) -> args
+            | _ -> [||]
+          in
+          let orig_dbmap = parse_ind_args p.ip_sign orig_args (nprods + ndecls) in
+          let merged_dbmap = Int.Map.union (fun _k _a b -> Some b) orig_dbmap promoted_dbmap in
+          let db = db_from_ind merged_dbmap ndecls in
+          (* Re-extract constructor types with promoted type variables *)
+          let new_types = extract_type_cons epar sg db merged_dbmap
+            (EConstr.of_constr orig_t) (ndecls+1) in
+          p.ip_types.(0) <- new_types;
+          (* Update ip_vars with promoted variable names *)
+          p.ip_vars <- promoted_vars;
+          (* Register promoted type vars so convert_ml_type_to_cpp_type
+             can detect Tglob references to erased carrier projections. *)
+          List.iter2 (fun idx var_id ->
+            let fn = List.nth field_names idx in
+            match fn.binder_name with
+            | Name id ->
+                let knp = Constant.make2 mp (Label.of_id id) in
+                add_promoted_type_var (GlobRef.ConstRef knp) var_id
+            | _ -> ()
+          ) erased_idxs promoted_vars;
+          (* Reuse the original field_glob — it already skipped erased fields
+             in select_fields, so it matches the non-Tdummy entries in the
+             new types. *)
+          TypeClass field_glob
+        end
         else if not (keep_singleton ()) && Int.equal (List.length l) 1 && not (type_mem_kn kn (List.hd l))
         then Singleton (* in passing, we registered the (identity) projection *)
         else Record field_glob
@@ -925,7 +996,12 @@ and extract_cons_app env sg mle mlt (((kn,i) as ip,j) as cp) args =
   let mi = extract_ind env kn in
   let params_nb = mi.ind_nparams in
   let oi = mi.ind_packets.(i) in
-  let nb_tvars = List.length oi.ip_vars   (* Getting the number of type vars, as currently doesn't story their names *)
+  (* Use ip_sign to count type vars for constructor result type,
+     not ip_vars. For promoted dependent records, ip_vars includes promoted
+     type variables (from carrier : Type fields) that are NOT parameters
+     of the inductive type itself. Using ip_sign avoids including them
+     in the result type's type arg list, preventing mgu mismatches. *)
+  let nb_tvars = List.length (List.filter (fun x -> x == Keep) oi.ip_sign)
   and types = List.map (expand env) oi.ip_types.(j-1) in
   let list_tvar = List.map (fun i -> Tvar i) (List.interval 1 nb_tvars) in
   let type_cons = type_recomp (types, Tglob (GlobRef.IndRef ip, list_tvar,[])) in
@@ -988,7 +1064,32 @@ and extract_cons_app env sg mle mlt (((kn,i) as ip,j) as cp) args =
         | Tglob (_,l,[]) -> List.map type_simpl l
         | _ -> assert false
       in
-      let typ = Tglob(GlobRef.IndRef ip, typeargs,[]) in
+      (* For promoted dependent records: extract concrete types for the
+         erased Type constructor args and add them to typeargs. This gives
+         instance structs access to the concrete carrier types.
+         Example: mkMagma nat Nat.add → typeargs = [Tglob(nat)] *)
+      let promoted_typeargs =
+        if lang () == Cpp && oi.ip_vars <> [] && typeargs = [] then
+          (* ip_vars non-empty but typeargs empty means promoted dep record.
+             Extract concrete types from the erased constructor args. *)
+          let db = List.rev (List.mapi (fun i _ -> i+1) env.env_rel_context.env_rel_ctx) in
+          let la' = max 0 (la - params_nb) in
+          let args' = List.lastn la' args in
+          let rec extract_promoted s_rem args_rem acc =
+            match s_rem, args_rem with
+            | [], _ | _, [] -> List.rev acc
+            | (Kill Ktype) :: s_rest, a :: a_rest ->
+                let ty = (try extract_type env sg db 0 a []
+                          with _ -> Tdummy Ktype) in
+                extract_promoted s_rest a_rest (ty :: acc)
+            | _ :: s_rest, _ :: a_rest ->
+                extract_promoted s_rest a_rest acc
+          in
+          extract_promoted s args' []
+        else []
+      in
+      let all_typeargs = promoted_typeargs @ typeargs in
+      let typ = Tglob(GlobRef.IndRef ip, all_typeargs,[]) in
       put_magic_if magic1 (MLcons (typ, GlobRef.ConstructRef cp, mla))
   in
   (* Decompose the instantiated+unified constructor type to recover the
@@ -1075,7 +1176,13 @@ and extract_case env sg mle ((kn,i) as ip,c,br) mlt =  (* EDIT HERE: Add type in
     else
       let mi = extract_ind env kn in
       let oi = mi.ind_packets.(i) in
-      let metas = Array.init (List.length oi.ip_vars) new_meta in
+      (* Use ip_sign (not ip_vars) to count type vars for the head type.
+         For promoted dependent records, ip_vars includes promoted type
+         variables from carrier : Type fields, but the inductive type itself
+         has no type parameters. Using ip_sign avoids creating a Tglob with
+         too many type args, preventing mgu mismatches. *)
+      let nb_sign_vars = List.length (List.filter (fun x -> x == Keep) oi.ip_sign) in
+      let metas = Array.init nb_sign_vars new_meta in
       (* The extraction of the head. *)
       let type_head = Tglob (GlobRef.IndRef ip, Array.to_list metas,[]) in
       let a = extract_term env sg mle type_head c [] in

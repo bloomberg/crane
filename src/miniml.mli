@@ -78,7 +78,7 @@ and ml_ind_packet = {
   ip_consnames : Id.t array;
   ip_logical : bool;
   ip_sign : signature;
-  ip_vars : Id.t list;
+  mutable ip_vars : Id.t list;
   ip_types : (ml_type list) array
 }
 

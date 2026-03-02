@@ -37,14 +37,14 @@ concept Show = requires(A a0) {
 };
 
 struct NatEq {
-  static bool eqb(unsigned int x, unsigned int y) { return (x == y); }
+  static bool eqb(unsigned int a0, unsigned int a1) { return (a0 == a1); }
   static bool neqb(unsigned int x, unsigned int y) { return !((x == y)); }
 };
 static_assert(Eq<NatEq, unsigned int>);
 
 struct NatOrd {
-  static bool lt(unsigned int x, unsigned int y) { return (x < y); }
-  static bool le(unsigned int x, unsigned int y) { return (x <= y); }
+  static bool lt(unsigned int a0, unsigned int a1) { return (a0 < a1); }
+  static bool le(unsigned int a0, unsigned int a1) { return (a0 <= a1); }
   static bool gt(unsigned int x, unsigned int y) { return (y < x); }
   static bool ge(unsigned int x, unsigned int y) { return (y <= x); }
 };

@@ -77,9 +77,12 @@ and eq_ml_meta m1 m2 =
 (* Simultaneous substitution of [[Tvar 1; ... ; Tvar n]] by [l] in a ML type. *)
 
 let type_subst_list l t =
+  let n = List.length l in
   let rec subst t = match t with
-    | Tvar j -> List.nth l (j-1)
-    | Tvar' j -> List.nth l (j-1)  (* Tvar' is also a type variable that needs substitution *)
+    | Tvar j when j >= 1 && j <= n -> List.nth l (j-1)
+    | Tvar _ -> t  (* Out-of-range: leave unchanged (promoted dep record vars) *)
+    | Tvar' j when j >= 1 && j <= n -> List.nth l (j-1)
+    | Tvar' _ -> t  (* Out-of-range: leave unchanged *)
     | Tmeta {contents=None} -> t
     | Tmeta {contents=Some u} -> subst u
     | Tarr (a,b) -> Tarr (subst a, subst b)
@@ -146,6 +149,10 @@ let rec mgu = function
   | Tarr(a, b), Tarr(a', b') ->
       mgu (a, a'); mgu (b, b')
   | Tglob (r,l, a), Tglob (r',l', a') when GlobRef.CanOrd.equal r r' ->
+       if List.length l <> List.length l' then
+         Feedback.msg_debug Pp.(str "mgu: Tglob arg length mismatch for " ++
+           Printer.pr_global r ++ str ": " ++ int (List.length l) ++
+           str " vs " ++ int (List.length l'));
        List.iter mgu (List.combine l l')
   | Tdummy _, Tdummy _ -> ()
   | Tvar i, Tvar j when Int.equal i j -> ()

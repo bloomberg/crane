@@ -551,3 +551,25 @@
   (alias runtest)
   (deps ind_param.t.exe)
   (action (run ./ind_param.t.exe))))
+
+(subdir canon_struct
+ (rule
+  (targets canon_struct.t.exe)
+  (deps CanonStruct.vo canon_struct.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} canon_struct.t.exe canon_struct.cpp canon_struct.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps canon_struct.t.exe)
+  (action (run ./canon_struct.t.exe))))
+
+(subdir dep_record
+ (rule
+  (targets dep_record.t.exe)
+  (deps DepRecord.vo dep_record.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dep_record.t.exe dep_record.cpp dep_record.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dep_record.t.exe)
+  (action (run ./dep_record.t.exe))))

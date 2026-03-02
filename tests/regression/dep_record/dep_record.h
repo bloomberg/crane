@@ -53,94 +53,95 @@ public:
   variant_t &v_mut() { return v_; }
 };
 
+template <typename I, typename carrier>
+concept Magma = requires(carrier a0, carrier a1) {
+  { I::op(a1, a0) } -> std::convertible_to<carrier>;
+};
+template <typename I, typename m_carrier>
+concept Monoid = requires(m_carrier a0, m_carrier a1) {
+  { I::m_op(a1, a0) } -> std::convertible_to<m_carrier>;
+  { I::m_id() } -> std::convertible_to<m_carrier>;
+};
+
 struct DepRecord {
-  struct Magma {
-  public:
-    struct mkMagma {
-      std::function<std::any(std::any, std::any)> _a0;
-    };
-    using variant_t = std::variant<mkMagma>;
-
-  private:
-    variant_t v_;
-    explicit Magma(mkMagma _v) : v_(std::move(_v)) {}
-
-  public:
-    struct ctor {
-      ctor() = delete;
-      static std::shared_ptr<Magma>
-      mkMagma_(std::function<std::any(std::any, std::any)> a0) {
-        return std::shared_ptr<Magma>(new Magma(mkMagma{a0}));
-      }
-      static std::unique_ptr<Magma>
-      mkMagma_uptr(std::function<std::any(std::any, std::any)> a0) {
-        return std::unique_ptr<Magma>(new Magma(mkMagma{a0}));
-      }
-    };
-    const variant_t &v() const { return v_; }
-    variant_t &v_mut() { return v_; }
-  };
-
   using carrier = std::any;
 
-  static carrier op(const std::shared_ptr<Magma> &, const carrier,
-                    const carrier);
+  template <typename _tcI0, typename carrier>
+  static carrier op(const carrier _x0, const carrier _x1) {
+    return _tcI0::op(_x0, _x1);
+  }
 
-  static inline const std::shared_ptr<Magma> nat_magma =
-      [](const unsigned int _x0, const unsigned int _x1) {
-        return (_x0 + _x1);
-      };
-
-  static inline const std::shared_ptr<Magma> bool_magma =
-      [](const bool _x0, const bool _x1) { return (_x0 && _x1); };
-
-  struct Monoid {
-    std::function<std::any(std::any, std::any)> m_op;
-    std::any m_id;
+  struct nat_magma {
+    static unsigned int op(unsigned int a0, unsigned int a1) {
+      return (a0 + a1);
+    }
   };
+  static_assert(Magma<nat_magma, unsigned int>);
+
+  struct bool_magma {
+    static bool op(bool a0, bool a1) { return (a0 && a1); }
+  };
+  static_assert(Magma<bool_magma, bool>);
 
   using m_carrier = std::any;
 
-  static m_carrier m_op(const std::shared_ptr<Monoid> &, const m_carrier,
-                        const m_carrier);
+  template <typename _tcI0, typename m_carrier>
+  static m_carrier m_op(const m_carrier _x0, const m_carrier _x1) {
+    return _tcI0::m_op(_x0, _x1);
+  }
 
-  static m_carrier m_id(const std::shared_ptr<Monoid> &m);
+  template <typename _tcI0, typename m_carrier> static m_carrier m_id() {
+    return _tcI0::m_id();
+  }
 
-  static inline const std::shared_ptr<Monoid> nat_monoid =
-      std::make_shared<Monoid>(
-          Monoid{[](const unsigned int _x0, const unsigned int _x1) {
-                   return (_x0 + _x1);
-                 },
-                 0});
+  struct nat_monoid {
+    static unsigned int m_op(unsigned int a0, unsigned int a1) {
+      return (a0 + a1);
+    }
+    static unsigned int m_id() { return 0; }
+  };
+  static_assert(Monoid<nat_monoid, unsigned int>);
 
-  static inline const std::shared_ptr<Monoid> nat_mul_monoid =
-      std::make_shared<Monoid>(
-          Monoid{[](const unsigned int _x0, const unsigned int _x1) {
-                   return (_x0 * _x1);
-                 },
-                 (0 + 1)});
+  struct nat_mul_monoid {
+    static unsigned int m_op(unsigned int a0, unsigned int a1) {
+      return (a0 * a1);
+    }
+    static unsigned int m_id() { return (0 + 1); }
+  };
+  static_assert(Monoid<nat_mul_monoid, unsigned int>);
 
-  static m_carrier mfold(const std::shared_ptr<Monoid> &m,
-                         const std::shared_ptr<List<std::any>> &l);
+  template <typename _tcI0, typename m_carrier>
+  static m_carrier mfold(const std::shared_ptr<List<m_carrier>> &l) {
+    return std::visit(
+        Overloaded{
+            [&](const typename List<m_carrier>::nil _args) -> m_carrier {
+              return _tcI0::m_id();
+            },
+            [&](const typename List<m_carrier>::cons _args) -> m_carrier {
+              m_carrier x = _args._a0;
+              std::shared_ptr<List<m_carrier>> rest = _args._a1;
+              return _tcI0::m_op(x, mfold<_tcI0, m_carrier>(rest));
+            }},
+        l->v());
+  }
 
-  static inline const unsigned int test_fold_add = mfold(
-      nat_monoid,
-      List<std::any>::ctor::cons_(
-          (0 + 1), List<std::any>::ctor::cons_(
-                       ((0 + 1) + 1), List<std::any>::ctor::cons_(
-                                          (((0 + 1) + 1) + 1),
-                                          List<std::any>::ctor::cons_(
-                                              ((((0 + 1) + 1) + 1) + 1),
-                                              List<std::any>::ctor::nil_())))));
+  static inline const unsigned int test_fold_add =
+      mfold<nat_monoid>(List<unsigned int>::ctor::cons_(
+          (0 + 1),
+          List<unsigned int>::ctor::cons_(
+              ((0 + 1) + 1), List<unsigned int>::ctor::cons_(
+                                 (((0 + 1) + 1) + 1),
+                                 List<unsigned int>::ctor::cons_(
+                                     ((((0 + 1) + 1) + 1) + 1),
+                                     List<unsigned int>::ctor::nil_())))));
 
-  static inline const unsigned int test_fold_mul = mfold(
-      nat_mul_monoid,
-      List<std::any>::ctor::cons_(
+  static inline const unsigned int test_fold_mul =
+      mfold<nat_mul_monoid>(List<unsigned int>::ctor::cons_(
           ((0 + 1) + 1),
-          List<std::any>::ctor::cons_(
-              (((0 + 1) + 1) + 1),
-              List<std::any>::ctor::cons_(((((0 + 1) + 1) + 1) + 1),
-                                          List<std::any>::ctor::nil_()))));
+          List<unsigned int>::ctor::cons_(
+              (((0 + 1) + 1) + 1), List<unsigned int>::ctor::cons_(
+                                       ((((0 + 1) + 1) + 1) + 1),
+                                       List<unsigned int>::ctor::nil_()))));
 
   enum class tag { TNat, TBool };
 

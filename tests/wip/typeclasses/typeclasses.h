@@ -144,12 +144,12 @@ struct Typeclasses {
   }
 
   struct eqNat {
-    static bool eqb(unsigned int x, unsigned int y) { return (x == y); }
+    static bool eqb(unsigned int a0, unsigned int a1) { return (a0 == a1); }
   };
   static_assert(Eq<eqNat, unsigned int>);
 
   struct ordNat {
-    static bool leb(unsigned int x, unsigned int y) { return (x <= y); }
+    static bool leb(unsigned int a0, unsigned int a1) { return (a0 <= a1); }
   };
   static_assert(Ord<ordNat, unsigned int>);
 

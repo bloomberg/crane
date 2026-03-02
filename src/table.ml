@@ -217,6 +217,17 @@ let record_field_types r =
       with Not_found | Invalid_argument _ -> [])
   | _ -> []
 
+(* Get the ip_vars (type variable names) for an inductive type.
+   For promoted dependent records, this includes the promoted carrier names. *)
+let get_ind_ip_vars r =
+  let open GlobRef in match r with
+  | IndRef (kn, i) | ConstructRef ((kn, i), _) ->
+      (try
+        let ind = unsafe_lookup_ind kn in
+        ind.ind_packets.(i).ip_vars
+      with Not_found | Invalid_argument _ -> [])
+  | _ -> []
+
 let is_typeclass r =
   let open GlobRef in match r with
   | ConstructRef ((kn,_),_) | IndRef (kn,_) ->
@@ -297,6 +308,14 @@ let add_projection n kn ip = projs := GlobRef.Map.add (GlobRef.ConstRef kn) (ip,
 let is_projection r = GlobRef.Map.mem r !projs
 let projection_arity r = snd (GlobRef.Map.find r !projs)
 let projection_info r = GlobRef.Map.find r !projs
+
+(* Table of promoted type variables from dependent records.
+   Maps a ConstRef (erased carrier projection) to its variable name (Id.t). *)
+let promoted_type_vars = ref (GlobRef.Map.empty : Names.Id.t GlobRef.Map.t)
+let init_promoted_type_vars () = promoted_type_vars := GlobRef.Map.empty
+let add_promoted_type_var r name = promoted_type_vars := GlobRef.Map.add r name !promoted_type_vars
+let is_promoted_type_var r = GlobRef.Map.mem r !promoted_type_vars
+let promoted_type_var_name r = GlobRef.Map.find_opt r !promoted_type_vars
 
 (*s Table of used axioms *)
 
@@ -1385,5 +1404,5 @@ let extract_skip_or_module q =
 let reset_tables () =
   init_typedefs (); init_cst_types (); init_inductives ();
   init_inductive_kinds (); init_enum_inductives (); init_sigma_assertions (); init_recursors ();
-  init_projs (); init_axioms (); init_opaques (); reset_modfile ();
+  init_projs (); init_promoted_type_vars (); init_axioms (); init_opaques (); reset_modfile ();
   init_glob_tys (); reset_used_custom_imports ()
