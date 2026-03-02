@@ -902,8 +902,12 @@ and extract_cst_app env sg mle mlt kn args =
        We complete via eta and expunge logical args. *)
     let ls' = ls-la in
     let s' = List.skipn la s in
+    (* Recover resolved argument types from the instantiated+unified constant
+       type so that eta-expansion lambdas get proper types instead of Taxiom. *)
+    let all_arg_types = List.map type_simpl (fst (type_decomp instantiated)) in
+    let missing_types = List.lastn ls' all_arg_types in
     let mla = (List.map (ast_lift ls') mla) @ (eta_args_sign ls' s') in
-    let e = anonym_or_dummy_lams (mlapp head mla) s' in
+    let e = anonym_or_dummy_lams_typed (mlapp head mla) missing_types s' in
     put_magic_if magic2 (remove_n_lams (List.length optdummy) e)
 
 (*s Extraction of an inductive constructor applied to arguments. *)
@@ -938,6 +942,42 @@ and extract_cons_app env sg mle mlt (((kn,i) as ip,j) as cp) args =
   let metas = List.map new_meta args' in
   (* If stored and expected types differ, then magic! *)
   let a = new_meta () in
+  (* For the C++ backend, capture the calling context's arrow-arity BEFORE
+     unification mutates the metas in [mlt].  After [needs_magic], [mlt]'s
+     metas will be resolved to the constructor's full type, losing the
+     distinction between "A -> B" (context sees 1-arg function returning B)
+     and "A -> B -> C" (context sees 2-arg function).  We need this to
+     detect when to generate curried (nested) lambdas for partial application. *)
+  let context_arity_before_unify =
+    if lang () == Cpp then
+      (* Count only the "structural" arrows in [mlt] — the arrows that
+         the calling context explicitly placed.  We follow the outermost
+         meta chain to find the root type, but then count only arrows
+         whose codomains are DIRECTLY Tarr nodes (not metas resolving
+         to Tarr).  This prevents counting arrows inside resolved type
+         variables.
+         Example: map's function slot is Tarr(v1, v2) where v2 is a
+         fresh meta variable that was later resolved to Tarr(list, list).
+         We should report 1 (1 structural arrow), not 2, because the
+         caller sees this as a 1-arg function returning an opaque type B. *)
+      let rec deref_meta = function
+        | Tmeta {contents = Some t} -> deref_meta t
+        | t -> t
+      in
+      let rec count = function
+        | Tarr (_, b) ->
+          (* Only count deeper arrows if [b] is directly a Tarr, not
+             a meta that resolves to Tarr.  A meta in codomain position
+             indicates a type variable (like B in A -> B) that should
+             be treated as opaque even if it was later resolved to a
+             function type. *)
+          (match b with
+           | Tarr _ -> 1 + count b
+           | _ -> 1)
+        | _ -> 0
+      in count (deref_meta mlt)
+    else 0
+  in
   let magic1 = needs_magic (type_cons, type_recomp (metas, a)) in
   let magic2 = needs_magic (a, mlt) in
   let head mla =
@@ -951,11 +991,19 @@ and extract_cons_app env sg mle mlt (((kn,i) as ip,j) as cp) args =
       let typ = Tglob(GlobRef.IndRef ip, typeargs,[]) in
       put_magic_if magic1 (MLcons (typ, GlobRef.ConstructRef cp, mla))
   in
+  (* Decompose the instantiated+unified constructor type to recover the
+     resolved argument types.  After [instantiation] replaced Tvars with
+     metas, and [needs_magic] unified those metas with the expected types,
+     [type_simpl] chases the meta chains to get concrete types.  These are
+     used by [anonym_or_dummy_lams_typed] so that partially applied
+     constructors get proper types in their eta-expansion lambdas instead
+     of [Taxiom]. *)
+  let resolved_arg_types = List.map type_simpl (fst (type_decomp type_cons)) in
   (* Different situations depending of the number of arguments: *)
   if la < params_nb then
     let head' = head (eta_args_sign ls s) in
     put_magic_if magic2
-      (dummy_lams (anonym_or_dummy_lams head' s) (params_nb - la))
+      (dummy_lams (anonym_or_dummy_lams_typed head' resolved_arg_types s) (params_nb - la))
   else
     let mla = make_mlargs env sg mle s args' metas in
     if Int.equal la (ls + params_nb)
@@ -963,8 +1011,40 @@ and extract_cons_app env sg mle mlt (((kn,i) as ip,j) as cp) args =
     else (* [ params_nb <= la <= ls + params_nb ] *)
       let ls' = params_nb + ls - la in
       let s' = List.lastn ls' s in
+      (* Get the types for the missing (eta-expanded) args: the last ls'
+         entries of the resolved constructor argument types. *)
+      let missing_types = List.lastn ls' resolved_arg_types in
       let mla = (List.map (ast_lift ls') mla) @ (eta_args_sign ls' s') in
-      put_magic_if magic2 (anonym_or_dummy_lams (head mla) s')
+      (* For the C++ backend, check if the calling context expects fewer
+         arguments than the full eta-expansion provides.  This happens when
+         a constructor like [cons : A -> list A -> list A] is used in a
+         context that expects [A -> (list A -> list A)] — i.e., a 1-arg
+         function returning a function.  In ML, these are identical (curried),
+         but in C++ they are different: a 2-arg lambda vs a 1-arg lambda
+         returning a lambda.  We detect this by comparing the arrow-arity
+         of the context type [mlt] with the number of eta-expanded args [ls'],
+         and split the lambda wrapping accordingly so that the C++ translation
+         produces properly nested lambdas. *)
+      if lang () == Cpp && context_arity_before_unify > 0 && context_arity_before_unify < ls' then
+          (* Split: outer lambda has [context_arity_before_unify] params,
+             inner lambda has the rest.  The inner lambda captures the outer
+             params and applies the constructor with all args.
+             We wrap the inner lambda in [MLmagic] so that the C++ translation
+             layer's [collect_lams] stops at the outer lambda boundary —
+             [collect_lams] only collects consecutive [MLlam] nodes, so
+             [MLmagic] acts as a transparent barrier.  The C++ translation
+             renders [MLmagic t] as just [t], so the inner lambda becomes
+             the return value of the outer lambda. *)
+          let ca = context_arity_before_unify in
+          let outer_s = List.firstn ca s' in
+          let inner_s = List.skipn ca s' in
+          let outer_types = List.firstn ca missing_types in
+          let inner_types = List.skipn ca missing_types in
+          let inner = anonym_or_dummy_lams_typed (head mla) inner_types inner_s in
+          let inner_barrier = MLmagic inner in
+          put_magic_if magic2 (anonym_or_dummy_lams_typed inner_barrier outer_types outer_s)
+        else
+          put_magic_if magic2 (anonym_or_dummy_lams_typed (head mla) missing_types s')
 
 (*S Extraction of a case. *)
 

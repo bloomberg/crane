@@ -158,21 +158,22 @@ struct Colist {
               }},
           fuel->v());
     }
-    template <typename T2, MapsTo<T2, A> F0>
-    std::shared_ptr<colist<T2>> comap(F0 &&f) const {
-      return colist<T2>::ctor::lazy_([=](void) -> std::shared_ptr<colist<T2>> {
-        return std::visit(
-            Overloaded{[](const typename colist<A>::conil _args)
-                           -> std::shared_ptr<colist<T2>> {
-                         return colist<T2>::ctor::conil_();
-                       },
-                       [&](const typename colist<A>::cocons _args)
-                           -> std::shared_ptr<colist<T2>> {
-                         A x = _args._a0;
-                         std::shared_ptr<colist<A>> xs = _args._a1;
-                         return colist<T2>::ctor::cocons_(f(x), xs->comap(f));
-                       }},
-            this->v());
+    template <typename T1, MapsTo<T1, A> F0>
+    std::shared_ptr<colist<T1>> comap(F0 &&f) const {
+      return colist<T1>::ctor::lazy_([=](void) -> std::shared_ptr<colist<T1>> {
+        return std::visit(Overloaded{[](const typename colist<A>::conil _args)
+                                         -> std::shared_ptr<colist<T1>> {
+                                       return colist<T1>::ctor::conil_();
+                                     },
+                                     [&](const typename colist<A>::cocons _args)
+                                         -> std::shared_ptr<colist<T1>> {
+                                       A x = _args._a0;
+                                       std::shared_ptr<colist<A>> xs =
+                                           _args._a1;
+                                       return colist<T1>::ctor::cocons_(
+                                           f(x), xs->template comap<T1>(f));
+                                     }},
+                          this->v());
       });
     }
   };

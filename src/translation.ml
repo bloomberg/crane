@@ -474,6 +474,7 @@ let make_subst_extra_tvars num_ind_vars extra_tvar_map =
   in
   subst
 
+
 (* Replace all unnamed Tvars with Tany (for type erasure in indexed inductives).
    Used when a type has Tvars that don't correspond to any template parameters.
    This is defined early so it can be used in gen_cpp_pat_lambda and gen_ind_header_v2. *)
@@ -648,7 +649,17 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       let f = with_escape_analysis a (fun () ->
         let tvars = get_current_type_vars () in
         let cpp_args = List.map (fun (id, ty) -> (convert_ml_type_to_cpp_type env Refset'.empty tvars ty, Some id)) filtered_args in
-        CPPlambda (cpp_args, None, gen_stmts env (fun x -> Sreturn x) a, false)) in
+        (* Generate the body, then check if the body returns a lambda
+           (this happens when extract_cons_app generates curried partial
+           constructor applications with an MLmagic barrier).  If so,
+           convert the returned lambda to capture by value to avoid
+           dangling references to the outer lambda's parameters. *)
+        let body_stmts = gen_stmts env (fun x -> Sreturn x) a in
+        let body_stmts = List.map (fun s -> match s with
+          | Sreturn (CPPlambda (args, ret, body, false)) ->
+              Sreturn (CPPlambda (args, ret, body, true))
+          | s -> s) body_stmts in
+        CPPlambda (cpp_args, None, body_stmts, false)) in
       tctx.env_types <- saved_env_types;
       (match filtered_args with
       | [] ->
@@ -3007,12 +3018,69 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let func_name = Id.of_string (Common.pp_global_name Term func_ref) in
 
   (* Get return type *)
-  let (_all_args, ret_ty) = get_args_and_ret [] ty in
+  let (all_args, ret_ty) = get_args_and_ret [] ty in
 
-  (* Find extra type variables (beyond the containing type's) *)
+  (* Determine the mapping from function type variables to inductive type variables.
+     For same-module methods, the function uses Tvars 1..num_ind_vars for the inductive.
+     For cross-module methods, the function may use different Tvar positions.
+     We extract the actual mapping from the Tglob at this_pos.
+
+     Example: fold_left has type (A → B → A) → list B → A → A
+     where A=Tvar1 (accumulator), B=Tvar2 (list element).
+     list<B> uses Tvar2, so ind_tvar_map = [(2, 1)] meaning "Tvar2 → ind var position 1".
+     Then Tvar1 is "extra" and becomes template param T1. *)
+  let ind_tvar_map =
+    match List.nth_opt all_args this_pos with
+    | Some (Miniml.Tglob (_, tvar_args, _)) ->
+      (* Extract Tvar indices from the Tglob args, paired with their position *)
+      List.concat (List.mapi (fun pos t ->
+        match t with
+        | Miniml.Tvar i | Miniml.Tvar' i -> [(i, pos + 1)]
+        | _ -> []
+      ) tvar_args)
+    | _ ->
+      (* Fallback for non-template types: assume positions 1..num_ind_vars *)
+      List.init num_ind_vars (fun i -> (i + 1, i + 1))
+  in
+  let ind_tvar_set = List.map fst ind_tvar_map in
+  (* Remap ML type variables: assign canonical positions so convert_ml_type_to_cpp_type
+     maps them correctly.
+     - Inductive tvars → positions 1..num_ind_vars
+     - Extra tvars → positions num_ind_vars+1, num_ind_vars+2, ...
+     This avoids collisions when the function uses different numbering than the inductive.
+
+     Example: fold_left has Tvar1 (accum), Tvar2 (list elem)
+       ind_tvar_map = [(2, 1)] — Tvar2 is the list element → position 1
+       extra tvars: [1] — Tvar1 is extra → position 2 (= num_ind_vars + 1)
+       Full remap: Tvar1 → 2, Tvar2 → 1 *)
   let all_tvars = List.sort compare (collect_tvars [] ty) in
-  let extra_tvars = List.filter (fun i -> i < 1 || i > num_ind_vars) all_tvars in
-  let extra_tvar_names = List.map (fun i -> Id.of_string ("T" ^ string_of_int i)) extra_tvars in
+  let extra_tvars_orig = List.filter (fun i -> not (List.mem i ind_tvar_set)) all_tvars in
+  let needs_remap = not (List.for_all (fun (src, dst) -> src = dst) ind_tvar_map)
+                    || extra_tvars_orig <> [] in
+  (* Build complete remap table: (original_idx → canonical_idx) *)
+  let extra_remap = List.mapi (fun i orig -> (orig, num_ind_vars + 1 + i)) extra_tvars_orig in
+  let full_remap = ind_tvar_map @ extra_remap in
+  let remap_ml_tvar i =
+    match List.assoc_opt i full_remap with
+    | Some canonical -> canonical
+    | None -> i
+  in
+  let rec remap_ml_type = function
+    | Miniml.Tvar i -> Miniml.Tvar (remap_ml_tvar i)
+    | Miniml.Tvar' i -> Miniml.Tvar' (remap_ml_tvar i)
+    | Miniml.Tarr (t1, t2) -> Miniml.Tarr (remap_ml_type t1, remap_ml_type t2)
+    | Miniml.Tglob (r, args, e) -> Miniml.Tglob (r, List.map remap_ml_type args, e)
+    | Miniml.Tmeta { contents = Some t } -> remap_ml_type t
+    | t -> t
+  in
+  let _ty = if needs_remap then remap_ml_type ty else ty in
+  let ret_ty = if needs_remap then remap_ml_type ret_ty else ret_ty in
+  let body = if needs_remap then Mlutil.remap_tvars remap_ml_tvar body else body in
+  (* After remapping, extra tvars are at positions num_ind_vars+1, num_ind_vars+2, ... *)
+  let extra_tvars = List.map snd extra_remap in
+  let extra_tvar_names = List.mapi (fun i _ ->
+    Id.of_string ("T" ^ string_of_int (i + 1))
+  ) extra_tvars in
   let extra_tvar_map = List.combine extra_tvars extra_tvar_names in
   let subst_extra_tvars = make_subst_extra_tvars num_ind_vars extra_tvar_map in
 
@@ -3113,20 +3181,52 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let saved_dead = tctx.move_dead_after in
   let saved_owned = tctx.move_owned_vars in
   let saved_nparams = tctx.move_n_params in
+  let saved_type_vars = get_current_type_vars () in
   tctx.move_dead_after <- Escape.IntSet.empty;
   tctx.move_owned_vars <- Escape.IntSet.empty;
   tctx.move_n_params <- 0;
   tctx.unique_bindings <- Escape.analyze inner_body;
   tctx.current_letin_depth <- 0;
+  (* Set current type vars to include both the inductive's type vars and extra tvars.
+     This ensures gen_expr/eta_fun correctly convert Tvars to named C++ types
+     when processing the method body (e.g., recursive calls carry type args). *)
+  set_current_type_vars (vars @ extra_tvar_names);
   let stmts = gen_stmts env method_k inner_body in
+  set_current_type_vars saved_type_vars;
   tctx.move_dead_after <- saved_dead;
   tctx.move_owned_vars <- saved_owned;
   tctx.move_n_params <- saved_nparams;
+  (* Add type args to recursive self-calls.
+     Inside fixpoint bodies, the extraction produces MLglob(func_ref, []) with
+     empty type args for recursive references. When the function is a method,
+     the recursive call needs explicit template args for non-deducible params.
+     Replace CPPglob(func_ref, []) with CPPglob(func_ref, all_type_args).
+
+     The type args must be in the ORIGINAL tys order (matching ind_tvar_positions
+     used by pp_cpp_expr for filtering). Position i in tys corresponds to Tvar (i+1)
+     in the original ML type. After remapping, Tvar (i+1) → remap_ml_tvar(i+1).
+     We construct the C++ type arg from extended_vars at that remapped position. *)
+  let extended_vars = vars @ extra_tvar_names in
+  let all_method_type_args =
+    List.map (fun orig_tvar_idx ->
+      let remapped = remap_ml_tvar orig_tvar_idx in
+      let name = List.nth extended_vars (remapped - 1) in
+      Tvar (remapped - 1, Some name)
+    ) all_tvars
+  in
+  let stmts = if all_method_type_args <> [] then
+    let self_call_with_tys = CPPglob (func_ref, all_method_type_args) in
+    List.map (glob_subst_stmt func_ref self_call_with_tys) stmts
+  else stmts in
   let stmts = match this_arg_id with
     | Some id -> List.map (var_subst_stmt id CPPthis) stmts
     | None -> stmts
   in
-  let stmts = List.map (tvar_subst_stmt vars) stmts in
+  (* Apply tvar_subst_stmt with the extended vars list (defined above).
+     extended_vars covers positions 1..num_ind_vars (inductive vars) and
+     num_ind_vars+1, num_ind_vars+2, etc. (extra vars) so tvar_subst_stmt
+     can name them all correctly. *)
+  let stmts = List.map (tvar_subst_stmt extended_vars) stmts in
 
   (Fmethod (func_name, template_params, ret_cpp, params, stmts, true, false), VPublic)
 

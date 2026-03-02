@@ -104,7 +104,7 @@ public:
   variant_t &v_mut() { return v_; }
   A projT1() const {
     return std::visit(
-        Overloaded{[](const typename SigT<A, P>::existT _args) -> auto {
+        Overloaded{[](const typename SigT<A, P>::existT _args) -> A {
           A a = _args._a0;
           return a;
         }},

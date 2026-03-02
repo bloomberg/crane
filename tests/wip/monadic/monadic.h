@@ -20,45 +20,51 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 enum class unit { tt };
 
-struct List {
-  template <typename A> struct list {
-  public:
-    struct nil {};
-    struct cons {
-      A _a0;
-      std::shared_ptr<List::list<A>> _a1;
-    };
-    using variant_t = std::variant<nil, cons>;
-
-  private:
-    variant_t v_;
-    explicit list(nil _v) : v_(std::move(_v)) {}
-    explicit list(cons _v) : v_(std::move(_v)) {}
-
-  public:
-    struct ctor {
-      ctor() = delete;
-      static std::shared_ptr<List::list<A>> nil_() {
-        return std::shared_ptr<List::list<A>>(new List::list<A>(nil{}));
-      }
-      static std::shared_ptr<List::list<A>>
-      cons_(A a0, const std::shared_ptr<List::list<A>> &a1) {
-        return std::shared_ptr<List::list<A>>(new List::list<A>(cons{a0, a1}));
-      }
-      static std::unique_ptr<List::list<A>> nil_uptr() {
-        return std::unique_ptr<List::list<A>>(new List::list<A>(nil{}));
-      }
-      static std::unique_ptr<List::list<A>>
-      cons_uptr(A a0, const std::shared_ptr<List::list<A>> &a1) {
-        return std::unique_ptr<List::list<A>>(new List::list<A>(cons{a0, a1}));
-      }
-    };
-    const variant_t &v() const { return v_; }
-    variant_t &v_mut() { return v_; }
+template <typename A> struct List {
+public:
+  struct nil {};
+  struct cons {
+    A _a0;
+    std::shared_ptr<List<A>> _a1;
   };
-  template <typename T1, typename T2, MapsTo<T1, T1, T2> F0>
-  static T1 fold_left(F0 &&f, const std::shared_ptr<List::list<T2>> &l,
-                      const T1 a0);
+  using variant_t = std::variant<nil, cons>;
+
+private:
+  variant_t v_;
+  explicit List(nil _v) : v_(std::move(_v)) {}
+  explicit List(cons _v) : v_(std::move(_v)) {}
+
+public:
+  struct ctor {
+    ctor() = delete;
+    static std::shared_ptr<List<A>> nil_() {
+      return std::shared_ptr<List<A>>(new List<A>(nil{}));
+    }
+    static std::shared_ptr<List<A>> cons_(A a0,
+                                          const std::shared_ptr<List<A>> &a1) {
+      return std::shared_ptr<List<A>>(new List<A>(cons{a0, a1}));
+    }
+    static std::unique_ptr<List<A>> nil_uptr() {
+      return std::unique_ptr<List<A>>(new List<A>(nil{}));
+    }
+    static std::unique_ptr<List<A>>
+    cons_uptr(A a0, const std::shared_ptr<List<A>> &a1) {
+      return std::unique_ptr<List<A>>(new List<A>(cons{a0, a1}));
+    }
+  };
+  const variant_t &v() const { return v_; }
+  variant_t &v_mut() { return v_; }
+  template <typename T1, MapsTo<T1, T1, A> F0>
+  T1 fold_left(F0 &&f, const T1 a0) const {
+    return std::visit(
+        Overloaded{[&](const typename List<A>::nil _args) -> T1 { return a0; },
+                   [&](const typename List<A>::cons _args) -> T1 {
+                     A b = _args._a0;
+                     std::shared_ptr<List<A>> l0 = _args._a1;
+                     return std::move(l0)->template fold_left<T1>(f, f(a0, b));
+                   }},
+        this->v());
+  }
 };
 
 struct Nat {
@@ -123,8 +129,8 @@ struct Monadic {
 
   template <typename T1>
   static State<unsigned int, unsigned int>
-  count_elements(const std::shared_ptr<List::list<T1>> &l) {
-    return List::fold_left<State<unsigned int, unsigned int>, T1>(
+  count_elements(const std::shared_ptr<List<T1>> &l) {
+    return l->template fold_left<State<unsigned int, unsigned int>>(
         [](std::function<std::pair<unsigned int, unsigned int>(unsigned int)>
                acc,
            T1 _x) {
@@ -139,7 +145,7 @@ struct Monadic {
                     });
               });
         },
-        l, state_return<unsigned int, unsigned int>(0));
+        state_return<unsigned int, unsigned int>(0));
   }
 
   static inline const std::optional<unsigned int> test_return = option_return<
@@ -234,30 +240,15 @@ struct Monadic {
 
   static inline const std::pair<unsigned int, unsigned int> test_state =
       count_elements<unsigned int>(
-          List::list<unsigned int>::ctor::cons_(
-              (0 + 1),
-              List::list<unsigned int>::ctor::cons_(
-                  ((0 + 1) + 1),
-                  List::list<unsigned int>::ctor::cons_(
-                      (((0 + 1) + 1) + 1),
-                      List::list<unsigned int>::ctor::cons_(
-                          ((((0 + 1) + 1) + 1) + 1),
-                          List::list<unsigned int>::ctor::cons_(
-                              (((((0 + 1) + 1) + 1) + 1) + 1),
-                              List::list<unsigned int>::ctor::nil_()))))),
+          List<unsigned int>::ctor::cons_(
+              (0 + 1), List<unsigned int>::ctor::cons_(
+                           ((0 + 1) + 1),
+                           List<unsigned int>::ctor::cons_(
+                               (((0 + 1) + 1) + 1),
+                               List<unsigned int>::ctor::cons_(
+                                   ((((0 + 1) + 1) + 1) + 1),
+                                   List<unsigned int>::ctor::cons_(
+                                       (((((0 + 1) + 1) + 1) + 1) + 1),
+                                       List<unsigned int>::ctor::nil_()))))),
           0);
 };
-
-template <typename T1, typename T2, MapsTo<T1, T1, T2> F0>
-T1 List::fold_left(F0 &&f, const std::shared_ptr<List::list<T2>> &l,
-                   const T1 a0) {
-  return std::visit(
-      Overloaded{
-          [&](const typename List::list<T2>::nil _args) -> T1 { return a0; },
-          [&](const typename List::list<T2>::cons _args) -> T1 {
-            T2 b = _args._a0;
-            std::shared_ptr<List::list<T2>> l0 = _args._a1;
-            return List::fold_left<T1, T2>(f, std::move(l0), f(a0, b));
-          }},
-      l->v());
-}

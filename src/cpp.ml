@@ -99,7 +99,7 @@ let eponymous_record : (GlobRef.t * GlobRef.t option list * Miniml.ml_ind_packet
 (* Global registry of methods across all modules.
    Maps function GlobRef to (eponymous_type_ref, this_position).
    This allows cross-module method call transformation. *)
-let global_method_registry : (GlobRef.t, GlobRef.t * int) Hashtbl.t = Hashtbl.create 100
+let global_method_registry : (GlobRef.t, GlobRef.t * int * int list) Hashtbl.t = Hashtbl.create 100
 
 (* Wrapper module table: maps ModPath.t of imported modules to their
    wrapper struct name. When a module like Stdlib.Init.Nat is wrapped
@@ -146,11 +146,23 @@ let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
       struct_name ^ "::" ^ name
     | _ -> name
 
-let register_method (func_ref : GlobRef.t) (epon_ref : GlobRef.t) (this_pos : int) =
-  Hashtbl.replace global_method_registry func_ref (epon_ref, this_pos)
+let register_method (func_ref : GlobRef.t) (epon_ref : GlobRef.t) (this_pos : int) ?(ind_tvar_positions : int list = []) () =
+  Hashtbl.replace global_method_registry func_ref (epon_ref, this_pos, ind_tvar_positions)
 
 let is_registered_method (func_ref : GlobRef.t) : (GlobRef.t * int) option =
-  Hashtbl.find_opt global_method_registry func_ref
+  match Hashtbl.find_opt global_method_registry func_ref with
+  | Some (epon_ref, this_pos, _) -> Some (epon_ref, this_pos)
+  | None -> None
+
+(* Look up the inductive's type variable positions (0-based indices into
+   the function's tys list) for a registered method.
+   These positions correspond to the inductive's template params which
+   are already deducible from the receiver object and should be omitted
+   from explicit template arguments in method calls. *)
+let lookup_method_ind_tvar_positions (func_ref : GlobRef.t) : int list =
+  match Hashtbl.find_opt global_method_registry func_ref with
+  | Some (_, _, positions) -> positions
+  | None -> []
 
 (* Registry of methods that return std::any (from indexed inductives).
    When a method's return type is erased to std::any due to GADT indexing,
@@ -328,13 +340,29 @@ let rec pre_register_methods_from_structure ~at_top_level (parent_decls : (Label
       | _ -> None
     ) decls
   in
-  (* Helper: check if first argument matches eponymous type.
-     For methods, the "this" object must be the first argument (position 0).
-     We only register as a method if position 0 matches. *)
-  let first_arg_matches_epon epon_ref = function
-    | Miniml.Tarr (Miniml.Tglob (arg_ref, _, _), _rest) when Environ.QGlobRef.equal Environ.empty_env arg_ref epon_ref ->
-      true
-    | _ -> false
+  (* Helper: find the position of the first argument matching the eponymous type.
+     Returns Some (pos, ind_tvar_positions) if found, None otherwise.
+     pos: which argument position becomes 'this'
+     ind_tvar_positions: 0-based indices into the function's tys list that
+       correspond to the inductive's type params (already deducible from receiver).
+     For methods, this argument becomes 'this'. *)
+  let find_epon_arg_pos epon_ref ty =
+    let rec aux pos = function
+      | Miniml.Tarr (Miniml.Tglob (arg_ref, tvar_args, _), rest)
+        when Environ.QGlobRef.equal Environ.empty_env arg_ref epon_ref ->
+        (* Extract 0-based Tvar indices from the Tglob's type arguments.
+           For list A, tvar_args = [Tvar 1], so ind_tvar_positions = [0]
+           (Tvar i maps to position i-1 in the 0-based tys list). *)
+        let ind_tvar_positions = List.filter_map (fun t ->
+          match t with
+          | Miniml.Tvar i | Miniml.Tvar' i -> Some (i - 1)
+          | _ -> None
+        ) tvar_args in
+        Some (pos, ind_tvar_positions)
+      | Miniml.Tarr (_, rest) -> aux (pos + 1) rest
+      | _ -> None
+    in
+    aux 0 ty
   in
   (* Helper: register methods for a given eponymous type from a list of declarations.
      ~cross_module:true allows registering methods from different modules (e.g., Nat.add
@@ -355,12 +383,21 @@ let rec pre_register_methods_from_structure ~at_top_level (parent_decls : (Label
       | Some name ->
         let func_mp = modpath_of_r r in
         let lc_name = String.lowercase_ascii name in
+        (* Check if module name matches or starts with the inductive name.
+           The Rocq extraction framework may deduplicate module names by appending
+           suffixes (e.g., "ListDef" for a second module named "List"), so we
+           use a prefix match to catch these cases. *)
+        let name_matches mp_name =
+          mp_name = lc_name ||
+          (String.length mp_name > String.length lc_name &&
+           String.sub mp_name 0 (String.length lc_name) = lc_name)
+        in
         match func_mp with
         | MPdot (_, lbl) ->
-          String.lowercase_ascii (Label.to_string lbl) = lc_name
+          name_matches (String.lowercase_ascii (Label.to_string lbl))
         | MPfile dp ->
           (match DirPath.repr dp with
-           | id :: _ -> String.lowercase_ascii (Id.to_string id) = lc_name
+           | id :: _ -> name_matches (String.lowercase_ascii (Id.to_string id))
            | [] -> false)
         | _ -> false
     in
@@ -368,17 +405,18 @@ let rec pre_register_methods_from_structure ~at_top_level (parent_decls : (Label
     List.iter (fun (_l, se) ->
       match se with
       | SEdecl (Dterm (r, body, ty)) ->
-        if same_module r && first_arg_matches_epon epon_ref ty
-           && body_safe_for_method body then
-          register_method r epon_ref 0
+        if same_module r && body_safe_for_method body then
+          (match find_epon_arg_pos epon_ref ty with
+           | Some (pos, ind_tvar_positions) ->
+             register_method r epon_ref pos ~ind_tvar_positions ()
+           | None -> ())
       | SEdecl (Dfix (rv, defs, typs)) ->
         Array.iteri (fun i r ->
-          if same_module r then begin
-            let ty = typs.(i) in
-            if first_arg_matches_epon epon_ref ty
-               && body_safe_for_method defs.(i) then
-              register_method r epon_ref 0
-          end
+          if same_module r && body_safe_for_method defs.(i) then
+            match find_epon_arg_pos epon_ref typs.(i) with
+            | Some (pos, ind_tvar_positions) ->
+              register_method r epon_ref pos ~ind_tvar_positions ()
+            | None -> ()
         ) rv
       | _ -> ()
     ) decls
@@ -421,9 +459,14 @@ let rec pre_register_methods_from_structure ~at_top_level (parent_decls : (Label
          (* Find eponymous type in this module *)
          (match find_eponymous_inductive module_name_str inner_sel with
           | Some epon_ref ->
-            (* Register methods from both the module itself and parent declarations *)
+            (* Register methods from the module itself (same-module only) *)
             register_methods_for_epon epon_ref inner_sel;
-            register_methods_for_epon epon_ref parent_decls
+            (* Register methods from parent declarations with cross-module enabled.
+               This allows functions from OTHER modules (e.g., map from Stdlib.Lists.List)
+               to become methods on eponymous types (e.g., list from Corelib.Init.Datatypes).
+               Also match wrapper modules by name (e.g., Nat.add for nat). *)
+            register_methods_for_epon ~cross_module:true
+              ~wrapper_module_name:(Some module_name_str) epon_ref parent_decls
           | None -> ());
          (* Recursively process nested modules - not at top level anymore *)
          pre_register_methods_from_structure ~at_top_level:false (parent_decls @ sel) inner_sel
@@ -1223,9 +1266,12 @@ and pp_cpp_expr env args t =
       with _ -> []
     in
     pp_custom (Pp.string_of_ppcmds (GlobRef.print n) ^ " := " ^ s) env None None tys [] (List.rev ts) arg_types [] cmds
-  | CPPfun_call (CPPglob (n, _tys), ts) when lookup_method_this_pos n <> None ->
+  | CPPfun_call (CPPglob (n, tys), ts) when lookup_method_this_pos n <> None ->
     (* Transform function call to method call: f(a0, a1, ...) -> a[this_pos]->f(other_args)
-       Handles both local method_candidates and cross-module registered methods. *)
+       Handles both local method_candidates and cross-module registered methods.
+       For methods with non-deducible template params (e.g., map's output element type),
+       we include explicit type arguments, filtering out the inductive's own type vars
+       since those are already known from the struct template. *)
     let method_name = Id.of_string (Common.pp_global_name Term n) in
     let this_pos = match lookup_method_this_pos n with Some p -> p | None -> 0 in
     let args_normal = List.rev ts in  (* Convert to normal order *)
@@ -1234,10 +1280,29 @@ and pp_cpp_expr env args t =
      | Some this_arg ->
        let obj_s = pp_cpp_expr env args this_arg in
        let args_s = pp_list (pp_cpp_expr env args) other_args in
-       obj_s ++ str "->" ++ Id.print method_name ++ str "(" ++ args_s ++ str ")"
+       (* Filter type args: remove the inductive's type params using positional
+          information from the method registry. ind_tvar_positions contains the
+          0-based indices into tys that correspond to the inductive's template
+          params, which are already deducible from the receiver object. *)
+       let ind_tvar_positions = lookup_method_ind_tvar_positions n in
+       let filtered_tys = match tys with
+         | [] -> []
+         | _ ->
+           List.filteri (fun i _ty -> not (List.mem i ind_tvar_positions)) tys
+       in
+       let (template_kw, ty_args_s) = match filtered_tys with
+         | [] -> (mt (), mt ())
+         | _ ->
+           (* Use 'template' keyword for dependent template member calls.
+              When the receiver type depends on an outer template parameter
+              (e.g., shared_ptr<List<A>> where A is a template param),
+              C++ requires: obj->template method<T>(...) *)
+           (str "template ", str "<" ++ pp_list (pp_cpp_type false []) filtered_tys ++ str ">")
+       in
+       obj_s ++ str "->" ++ template_kw ++ Id.print method_name ++ ty_args_s ++ str "(" ++ args_s ++ str ")"
      | None ->
        (* Fallback - shouldn't happen for registered methods *)
-       pp_cpp_expr env args (CPPglob (n, _tys)) ++ str "()")
+       pp_cpp_expr env args (CPPglob (n, tys)) ++ str "()")
   | CPPfun_call (f, ts) ->
     let args_s = pp_list (pp_cpp_expr env args) (List.rev ts) in
     pp_cpp_expr env args f ++ str "(" ++ args_s ++ str ")"
@@ -2051,8 +2116,14 @@ let pp_cpp_ind_header kn ind =
       in
       (* Find the position of the first argument matching the inductive type *)
       let rec find_ind_arg_pos pos = function
-        | Miniml.Tarr (Miniml.Tglob (arg_ref, _, _), rest) when Environ.QGlobRef.equal Environ.empty_env arg_ref ind_ref ->
-          Some pos
+        | Miniml.Tarr (Miniml.Tglob (arg_ref, tvar_args, _), rest)
+          when Environ.QGlobRef.equal Environ.empty_env arg_ref ind_ref ->
+          let ind_tvar_positions = List.filter_map (fun t ->
+            match t with
+            | Miniml.Tvar i | Miniml.Tvar' i -> Some (i - 1)
+            | _ -> None
+          ) tvar_args in
+          Some (pos, ind_tvar_positions)
         | Miniml.Tarr (_, rest) -> find_ind_arg_pos (pos + 1) rest
         | _ -> None
       in
@@ -2065,11 +2136,11 @@ let pp_cpp_ind_header kn ind =
           (* Skip if function signature references an excluded type (alias or forward inductive) *)
           if same_module r && not (refs_excluded ty) && body_safe_for_method body then
             (match find_ind_arg_pos 0 ty with
-            | Some pos ->
+            | Some (pos, ind_tvar_positions) ->
               (* Note: We allow functions with extra type variables beyond the inductive's.
                  These extra type vars become template parameters on the method. *)
               methods := (r, body, ty, pos) :: !methods;
-              register_method r ind_ref pos
+              register_method r ind_ref pos ~ind_tvar_positions ()
             | None -> ())
         | SEdecl (Dfix (rv, defs, typs)) ->
           Array.iteri (fun i r ->
@@ -2078,11 +2149,11 @@ let pp_cpp_ind_header kn ind =
             if same_module r && not (refs_excluded ty) && body_safe_for_method defs.(i) then begin
               let body = defs.(i) in
               match find_ind_arg_pos 0 ty with
-              | Some pos ->
+              | Some (pos, ind_tvar_positions) ->
                 (* Note: We allow functions with extra type variables beyond the inductive's.
                    These extra type vars become template parameters on the method. *)
                 methods := (r, body, ty, pos) :: !methods;
-                register_method r ind_ref pos
+                register_method r ind_ref pos ~ind_tvar_positions ()
               | None -> ()
             end
           ) rv
@@ -2726,10 +2797,16 @@ let rec pp_structure_elem ~is_header f = function
                (* Get the module path of the eponymous type/record *)
                let epon_modpath = modpath_of_r epon_ref in
                (* Find the position of the first argument matching the eponymous type/record *)
-               let rec find_epon_arg_pos pos = function
-                 | Miniml.Tarr (Miniml.Tglob (arg_ref, _, _), rest) when Environ.QGlobRef.equal Environ.empty_env arg_ref epon_ref ->
-                   Some pos
-                 | Miniml.Tarr (_, rest) -> find_epon_arg_pos (pos + 1) rest
+               let rec find_epon_arg_pos_local pos = function
+                 | Miniml.Tarr (Miniml.Tglob (arg_ref, tvar_args, _), rest)
+                   when Environ.QGlobRef.equal Environ.empty_env arg_ref epon_ref ->
+                   let ind_tvar_positions = List.filter_map (fun t ->
+                     match t with
+                     | Miniml.Tvar i | Miniml.Tvar' i -> Some (i - 1)
+                     | _ -> None
+                   ) tvar_args in
+                   Some (pos, ind_tvar_positions)
+                 | Miniml.Tarr (_, rest) -> find_epon_arg_pos_local (pos + 1) rest
                  | _ -> None
                in
                (* Check if function comes from the same Rocq module as eponymous type/record *)
@@ -2740,12 +2817,12 @@ let rec pp_structure_elem ~is_header f = function
                  | SEdecl (Dterm (r, body, ty)) ->
                    (* Only consider functions from the same Rocq module as the eponymous type/record *)
                    if same_module r then
-                     (match find_epon_arg_pos 0 ty with
-                     | Some pos ->
+                     (match find_epon_arg_pos_local 0 ty with
+                     | Some (pos, ind_tvar_positions) ->
                        (* Note: We allow functions with extra type variables beyond the eponymous type's.
                           These extra type vars become template parameters on the method. *)
                        method_candidates := (r, body, ty, pos) :: !method_candidates;
-                       register_method r epon_ref pos  (* Register globally for cross-module calls *)
+                       register_method r epon_ref pos ~ind_tvar_positions ()
                      | None -> ())
                  | SEdecl (Dfix (rv, defs, typs)) ->
                    (* Handle fixpoints similarly - only from same module *)
@@ -2753,12 +2830,12 @@ let rec pp_structure_elem ~is_header f = function
                      if same_module r then begin
                        let ty = typs.(i) in
                        let body = defs.(i) in
-                       match find_epon_arg_pos 0 ty with
-                       | Some pos ->
+                       match find_epon_arg_pos_local 0 ty with
+                       | Some (pos, ind_tvar_positions) ->
                          (* Note: We allow functions with extra type variables beyond the eponymous type's.
                             These extra type vars become template parameters on the method. *)
                          method_candidates := (r, body, ty, pos) :: !method_candidates;
-                         register_method r epon_ref pos  (* Register globally for cross-module calls *)
+                         register_method r epon_ref pos ~ind_tvar_positions ()
                        | None -> ()
                      end
                    ) rv

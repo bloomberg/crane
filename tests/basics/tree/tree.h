@@ -154,34 +154,35 @@ struct Tree {
     };
     const variant_t &v() const { return v_; }
     variant_t &v_mut() { return v_; }
-    template <typename T2, MapsTo<T2, std::shared_ptr<tree<A>>, T2, A,
-                                  std::shared_ptr<tree<A>>, T2>
+    template <typename T1, MapsTo<T1, std::shared_ptr<tree<A>>, T1, A,
+                                  std::shared_ptr<tree<A>>, T1>
                                F1>
-    T2 tree_rect(const T2 f, F1 &&f0) const {
+    T1 tree_rect(const T1 f, F1 &&f0) const {
       return std::visit(
           Overloaded{
-              [&](const typename tree<A>::leaf _args) -> auto { return f; },
-              [&](const typename tree<A>::node _args) -> auto {
+              [&](const typename tree<A>::leaf _args) -> T1 { return f; },
+              [&](const typename tree<A>::node _args) -> T1 {
                 std::shared_ptr<tree<A>> t0 = _args._a0;
                 A y = _args._a1;
                 std::shared_ptr<tree<A>> t1 = _args._a2;
-                return f0(t0, t0->tree_rect(f, f0), y, t1,
-                          t1->tree_rect(f, f0));
+                return f0(t0, t0->template tree_rect<T1>(f, f0), y, t1,
+                          t1->template tree_rect<T1>(f, f0));
               }},
           this->v());
     }
-    template <typename T2, MapsTo<T2, std::shared_ptr<tree<A>>, T2, A,
-                                  std::shared_ptr<tree<A>>, T2>
+    template <typename T1, MapsTo<T1, std::shared_ptr<tree<A>>, T1, A,
+                                  std::shared_ptr<tree<A>>, T1>
                                F1>
-    T2 tree_rec(const T2 f, F1 &&f0) const {
+    T1 tree_rec(const T1 f, F1 &&f0) const {
       return std::visit(
           Overloaded{
-              [&](const typename tree<A>::leaf _args) -> auto { return f; },
-              [&](const typename tree<A>::node _args) -> auto {
+              [&](const typename tree<A>::leaf _args) -> T1 { return f; },
+              [&](const typename tree<A>::node _args) -> T1 {
                 std::shared_ptr<tree<A>> t0 = _args._a0;
                 A y = _args._a1;
                 std::shared_ptr<tree<A>> t1 = _args._a2;
-                return f0(t0, t0->tree_rec(f, f0), y, t1, t1->tree_rec(f, f0));
+                return f0(t0, t0->template tree_rec<T1>(f, f0), y, t1,
+                          t1->template tree_rec<T1>(f, f0));
               }},
           this->v());
     }

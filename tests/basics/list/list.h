@@ -52,28 +52,26 @@ struct List {
     };
     const variant_t &v() const { return v_; }
     variant_t &v_mut() { return v_; }
-    template <typename T2, MapsTo<T2, A, std::shared_ptr<list<A>>, T2> F1>
-    T2 list_rect(const T2 f, F1 &&f0) const {
+    template <typename T1, MapsTo<T1, A, std::shared_ptr<list<A>>, T1> F1>
+    T1 list_rect(const T1 f, F1 &&f0) const {
       return std::visit(
-          Overloaded{
-              [&](const typename list<A>::nil _args) -> auto { return f; },
-              [&](const typename list<A>::cons _args) -> auto {
-                A y = _args._a0;
-                std::shared_ptr<list<A>> l0 = _args._a1;
-                return f0(y, l0, l0->list_rect(f, f0));
-              }},
+          Overloaded{[&](const typename list<A>::nil _args) -> T1 { return f; },
+                     [&](const typename list<A>::cons _args) -> T1 {
+                       A y = _args._a0;
+                       std::shared_ptr<list<A>> l0 = _args._a1;
+                       return f0(y, l0, l0->template list_rect<T1>(f, f0));
+                     }},
           this->v());
     }
-    template <typename T2, MapsTo<T2, A, std::shared_ptr<list<A>>, T2> F1>
-    T2 list_rec(const T2 f, F1 &&f0) const {
+    template <typename T1, MapsTo<T1, A, std::shared_ptr<list<A>>, T1> F1>
+    T1 list_rec(const T1 f, F1 &&f0) const {
       return std::visit(
-          Overloaded{
-              [&](const typename list<A>::nil _args) -> auto { return f; },
-              [&](const typename list<A>::cons _args) -> auto {
-                A y = _args._a0;
-                std::shared_ptr<list<A>> l0 = _args._a1;
-                return f0(y, l0, l0->list_rec(f, f0));
-              }},
+          Overloaded{[&](const typename list<A>::nil _args) -> T1 { return f; },
+                     [&](const typename list<A>::cons _args) -> T1 {
+                       A y = _args._a0;
+                       std::shared_ptr<list<A>> l0 = _args._a1;
+                       return f0(y, l0, l0->template list_rec<T1>(f, f0));
+                     }},
           this->v());
     }
     std::shared_ptr<list<A>> tl() const {
@@ -90,23 +88,21 @@ struct List {
     }
     A hd(const A x) const {
       return std::visit(
-          Overloaded{
-              [&](const typename list<A>::nil _args) -> auto { return x; },
-              [](const typename list<A>::cons _args) -> auto {
-                A y = _args._a0;
-                return y;
-              }},
+          Overloaded{[&](const typename list<A>::nil _args) -> A { return x; },
+                     [](const typename list<A>::cons _args) -> A {
+                       A y = _args._a0;
+                       return y;
+                     }},
           this->v());
     }
     A last(const A x) const {
       return std::visit(
-          Overloaded{
-              [&](const typename list<A>::nil _args) -> auto { return x; },
-              [](const typename list<A>::cons _args) -> auto {
-                A y = _args._a0;
-                std::shared_ptr<list<A>> ls = _args._a1;
-                return std::move(ls)->last(y);
-              }},
+          Overloaded{[&](const typename list<A>::nil _args) -> A { return x; },
+                     [](const typename list<A>::cons _args) -> A {
+                       A y = _args._a0;
+                       std::shared_ptr<list<A>> ls = _args._a1;
+                       return std::move(ls)->last(y);
+                     }},
           this->v());
     }
     std::shared_ptr<list<A>> app(const std::shared_ptr<list<A>> &l2) const {
@@ -121,18 +117,19 @@ struct List {
                      }},
           this->v());
     }
-    template <typename T2, MapsTo<T2, A> F0>
-    std::shared_ptr<list<T2>> map(F0 &&f) const {
+    template <typename T1, MapsTo<T1, A> F0>
+    std::shared_ptr<list<T1>> map(F0 &&f) const {
       return std::visit(Overloaded{[](const typename list<A>::nil _args)
-                                       -> std::shared_ptr<list<T2>> {
-                                     return list<T2>::ctor::nil_();
+                                       -> std::shared_ptr<list<T1>> {
+                                     return list<T1>::ctor::nil_();
                                    },
                                    [&](const typename list<A>::cons _args)
-                                       -> std::shared_ptr<list<T2>> {
+                                       -> std::shared_ptr<list<T1>> {
                                      A x = _args._a0;
                                      std::shared_ptr<list<A>> l_ = _args._a1;
-                                     return list<T2>::ctor::cons_(
-                                         f(x), std::move(l_)->map(f));
+                                     return list<T1>::ctor::cons_(
+                                         f(x),
+                                         std::move(l_)->template map<T1>(f));
                                    }},
                         this->v());
     }

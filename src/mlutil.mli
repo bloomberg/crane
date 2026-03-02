@@ -99,6 +99,7 @@ val nb_lams : ml_ast -> int
 val named_lams : (ml_ident * ml_type) list -> ml_ast -> ml_ast
 val dummy_lams : ml_ast -> int -> ml_ast
 val anonym_or_dummy_lams : ml_ast -> signature -> ml_ast
+val anonym_or_dummy_lams_typed : ml_ast -> ml_type list -> signature -> ml_ast
 
 val eta_args_sign : int -> signature -> ml_ast list
 
@@ -139,3 +140,5 @@ type sign_kind =
 val sign_kind : signature -> sign_kind
 
 val sign_no_final_keeps : signature -> signature
+
+val remap_tvars : (int -> int) -> ml_ast -> ml_ast

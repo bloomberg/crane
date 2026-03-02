@@ -11,12 +11,11 @@
 #include <utility>
 #include <variant>
 
-std::shared_ptr<List::list<unsigned int>> ClosuresInData::apply_all(
-    const std::shared_ptr<List::list<std::function<unsigned int(unsigned int)>>>
-        &fns,
+std::shared_ptr<List<unsigned int>> ClosuresInData::apply_all(
+    const std::shared_ptr<List<std::function<unsigned int(unsigned int)>>> &fns,
     const unsigned int x) {
-  return ListDef::map<std::function<unsigned int(unsigned int)>, unsigned int>(
-      [&](std::function<unsigned int(unsigned int)> f) { return f(x); }, fns);
+  return fns->template map<unsigned int>(
+      [&](std::function<unsigned int(unsigned int)> f) { return f(x); });
 }
 
 unsigned int
@@ -42,15 +41,13 @@ unsigned int ClosuresInData::apply_backward(
 }
 
 unsigned int ClosuresInData::compose_all(
-    const std::shared_ptr<List::list<std::function<unsigned int(unsigned int)>>>
-        &fns,
+    const std::shared_ptr<List<std::function<unsigned int(unsigned int)>>> &fns,
     const unsigned int x) {
-  return List::fold_left<unsigned int,
-                         std::function<unsigned int(unsigned int)>>(
+  return fns->template fold_left<unsigned int>(
       [](unsigned int acc, std::function<unsigned int(unsigned int)> f) {
         return f(acc);
       },
-      fns, x);
+      x);
 }
 
 unsigned int ClosuresInData::maybe_apply(

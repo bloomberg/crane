@@ -507,3 +507,25 @@
   (alias runtest)
   (deps higher_kinded.t.exe)
   (action (run ./higher_kinded.t.exe))))
+
+(subdir closures_in_data
+ (rule
+  (targets closures_in_data.t.exe)
+  (deps ClosuresInData.vo closures_in_data.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} closures_in_data.t.exe closures_in_data.cpp closures_in_data.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps closures_in_data.t.exe)
+  (action (run ./closures_in_data.t.exe))))
+
+(subdir partial_apply
+ (rule
+  (targets partial_apply.t.exe)
+  (deps PartialApply.vo partial_apply.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} partial_apply.t.exe partial_apply.cpp partial_apply.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps partial_apply.t.exe)
+  (action (run ./partial_apply.t.exe))))

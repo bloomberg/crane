@@ -52,12 +52,22 @@ public:
   };
   const variant_t &v() const { return v_; }
   variant_t &v_mut() { return v_; }
-};
-
-struct ListDef {
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  static std::shared_ptr<List<T2>> map(F0 &&f,
-                                       const std::shared_ptr<List<T1>> &l);
+  template <typename T1, MapsTo<T1, A> F0>
+  std::shared_ptr<List<T1>> map(F0 &&f) const {
+    return std::visit(
+        Overloaded{
+            [](const typename List<A>::nil _args) -> std::shared_ptr<List<T1>> {
+              return List<T1>::ctor::nil_();
+            },
+            [&](const typename List<A>::cons _args)
+                -> std::shared_ptr<List<T1>> {
+              A a = _args._a0;
+              std::shared_ptr<List<A>> l0 = _args._a1;
+              return List<T1>::ctor::cons_(f(a),
+                                           std::move(l0)->template map<T1>(f));
+            }},
+        this->v());
+  }
 };
 
 struct Cotree {
@@ -147,7 +157,7 @@ struct Cotree {
     const variant_t &v() const { return lazy_v_.force(); }
     A root() const {
       return std::visit(
-          Overloaded{[](const typename cotree<A>::conode _args) -> auto {
+          Overloaded{[](const typename cotree<A>::conode _args) -> A {
             A a = _args._a0;
             return a;
           }},
@@ -167,19 +177,19 @@ struct Cotree {
                 this->v());
           });
     }
-    template <typename T2, MapsTo<T2, A> F0>
-    std::shared_ptr<cotree<T2>> comap_cotree(F0 &&g) const {
-      return cotree<T2>::ctor::lazy_([=](void) -> std::shared_ptr<cotree<T2>> {
+    template <typename T1, MapsTo<T1, A> F0>
+    std::shared_ptr<cotree<T1>> comap_cotree(F0 &&g) const {
+      return cotree<T1>::ctor::lazy_([=](void) -> std::shared_ptr<cotree<T1>> {
         return std::visit(
             Overloaded{[&](const typename cotree<A>::conode _args)
-                           -> std::shared_ptr<cotree<T2>> {
+                           -> std::shared_ptr<cotree<T1>> {
               A a = _args._a0;
               std::shared_ptr<colist<std::shared_ptr<cotree<A>>>> f = _args._a1;
-              return cotree<T2>::ctor::conode_(
+              return cotree<T1>::ctor::conode_(
                   g(a), comap<std::shared_ptr<cotree<A>>,
-                              std::shared_ptr<cotree<T2>>>(
+                              std::shared_ptr<cotree<T1>>>(
                             [&](const std::shared_ptr<cotree<A>> _x0) {
-                              return _x0->comap_cotree(g);
+                              return _x0->template comap_cotree<T1>(g);
                             },
                             f));
             }},
@@ -198,12 +208,11 @@ struct Cotree {
             } else {
               unsigned int fuel_ = fuel - 1;
               return tree<A>::ctor::node_(
-                  a, ListDef::map<std::shared_ptr<cotree<A>>,
-                                  std::shared_ptr<tree<A>>>(
-                         [&](const std::shared_ptr<cotree<A>> _x0) {
-                           return _x0->tree_of_cotree(fuel_);
-                         },
-                         list_of_colist<std::shared_ptr<cotree<A>>>(fuel, f)));
+                  a, list_of_colist<std::shared_ptr<cotree<A>>>(fuel, f)
+                         ->template map<std::shared_ptr<tree<A>>>(
+                             [&](const std::shared_ptr<cotree<A>> _x0) {
+                               return _x0->tree_of_cotree(fuel_);
+                             }));
             }
           }},
           this->v());
@@ -377,7 +386,8 @@ struct Cotree {
 
   static inline const unsigned int test_doubled_root =
       sample_cotree
-          ->comap_cotree([](unsigned int n) { return (n * ((0 + 1) + 1)); })
+          ->template comap_cotree<unsigned int>(
+              [](unsigned int n) { return (n * ((0 + 1) + 1)); })
           ->root();
 
   static std::shared_ptr<colist<unsigned int>> nats(const unsigned int n);
@@ -402,21 +412,3 @@ struct Cotree {
   static inline const unsigned int test_approx_size =
       tree_size<unsigned int>(test_approx);
 };
-
-template <typename T1, typename T2, MapsTo<T2, T1> F0>
-std::shared_ptr<List<T2>> ListDef::map(F0 &&f,
-                                       const std::shared_ptr<List<T1>> &l) {
-  return std::visit(
-      Overloaded{
-          [](const typename List<T1>::nil _args) -> std::shared_ptr<List<T2>> {
-            return List<T2>::ctor::nil_();
-          },
-          [&](const typename List<T1>::cons _args)
-              -> std::shared_ptr<List<T2>> {
-            T1 a = _args._a0;
-            std::shared_ptr<List<T1>> l0 = _args._a1;
-            return List<T2>::ctor::cons_(
-                f(a), ListDef::map<T1, T2>(f, std::move(l0)));
-          }},
-      l->v());
-}

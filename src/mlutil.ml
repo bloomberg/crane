@@ -787,6 +787,19 @@ let rec anonym_or_dummy_lams a = function
   | Keep :: s -> MLlam(anonymous, Taxiom, anonym_or_dummy_lams a s) (* TODO: Taxiom probs bad *)
   | Kill k :: s -> MLlam(Dummy, Tdummy k, anonym_or_dummy_lams a s)
 
+(* Like [anonym_or_dummy_lams], but uses actual resolved types for [Keep]
+   entries instead of [Taxiom].  The [types] list provides one type per
+   signature element; if the lists go out of sync (e.g. the types list is
+   shorter), we fall back to [Taxiom] to avoid crashing. *)
+let rec anonym_or_dummy_lams_typed a types = function
+  | [] -> a
+  | Keep :: s ->
+    let ty, rest = match types with t :: ts -> (t, ts) | [] -> (Taxiom, []) in
+    MLlam(anonymous, ty, anonym_or_dummy_lams_typed a rest s)
+  | Kill k :: s ->
+    let rest = match types with _ :: ts -> ts | [] -> [] in
+    MLlam(Dummy, Tdummy k, anonym_or_dummy_lams_typed a rest s)
+
 (*S Operations concerning eta. *)
 
 (*s The following function creates [MLrel n;...;MLrel 1] *)
@@ -1622,6 +1635,38 @@ let manual_inline = function
    \item [expansion_test] answers that the inlining is a good idea, and
    we are free to act (AutoInline is set)
    \end{itemize} *)
+
+(* Remap type variable indices in an ML AST.
+   f maps original Tvar index to new index. This is used when cross-module
+   methods have different type variable numbering than the containing inductive. *)
+let remap_tvars f =
+  let rec remap_type = function
+    | Tvar i -> Tvar (f i)
+    | Tvar' i -> Tvar' (f i)
+    | Tarr (t1, t2) -> Tarr (remap_type t1, remap_type t2)
+    | Tglob (r, args, e) -> Tglob (r, List.map remap_type args, List.map remap_ast e)
+    | Tmeta ({ contents = Some t } as m) -> Tmeta { m with contents = Some (remap_type t) }
+    | t -> t
+  and remap_ast = function
+    | MLlam (id, ty, body) -> MLlam (id, remap_type ty, remap_ast body)
+    | MLletin (id, ty, def, body) -> MLletin (id, remap_type ty, remap_ast def, remap_ast body)
+    | MLapp (f', args) -> MLapp (remap_ast f', List.map remap_ast args)
+    | MLglob (r, tys) -> MLglob (r, List.map remap_type tys)
+    | MLcons (ty, r, args) -> MLcons (remap_type ty, r, List.map remap_ast args)
+    | MLtuple args -> MLtuple (List.map remap_ast args)
+    | MLcase (ty, scrut, branches) ->
+      MLcase (remap_type ty, remap_ast scrut,
+              Array.map (fun (ids, ty, pat, body) ->
+                (List.map (fun (id, t) -> (id, remap_type t)) ids,
+                 remap_type ty, pat, remap_ast body)) branches)
+    | MLfix (idx, ids_tys, bodies, is_cofix) ->
+      MLfix (idx, Array.map (fun (id, ty) -> (id, remap_type ty)) ids_tys,
+             Array.map remap_ast bodies, is_cofix)
+    | MLmagic a -> MLmagic (remap_ast a)
+    | MLparray (arr, def) -> MLparray (Array.map remap_ast arr, remap_ast def)
+    | a -> a  (* MLrel, MLexn, MLdummy, MLaxiom, MLuint, MLfloat, MLstring *)
+  in
+  remap_ast
 
 let inline r t =
   not (to_keep r) (* The user DOES want to keep it *)

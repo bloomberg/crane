@@ -162,7 +162,7 @@ struct CoindGuard {
   }
 
   static inline const std::shared_ptr<Stream<unsigned int>> nats =
-      iterate<unsigned int>([](axiom x) { return (x + 1); }, 0);
+      iterate<unsigned int>([](unsigned int x) { return (x + 1); }, 0);
 
   static inline const std::shared_ptr<Stream<unsigned int>> evens =
       smap<unsigned int, unsigned int>(
