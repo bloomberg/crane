@@ -101,21 +101,26 @@ public:
   }
 };
 
-struct FunctorComp {
-  template <typename M>
-  concept CONTAINER = requires {
-    typename M::t;
-    requires std::same_as<std::remove_cvref_t<decltype(M::empty)>,
-                          typename M::t>;
-    {
-      M::push(std::declval<unsigned int>(), std::declval<typename M::t>())
-    } -> std::same_as<typename M::t>;
-    {
-      M::pop(std::declval<typename M::t>())
-    } -> std::same_as<std::optional<std::pair<unsigned int, typename M::t>>>;
-    { M::size(std::declval<typename M::t>()) } -> std::same_as<unsigned int>;
-  };
+template <typename M>
+concept CONTAINER = requires {
+  typename M::t;
+  requires(
+      requires {
+        { M::empty } -> std::convertible_to<typename M::t>;
+      } ||
+      requires {
+        { M::empty() } -> std::convertible_to<typename M::t>;
+      });
+  {
+    M::push(std::declval<unsigned int>(), std::declval<typename M::t>())
+  } -> std::same_as<typename M::t>;
+  {
+    M::pop(std::declval<typename M::t>())
+  } -> std::same_as<std::optional<std::pair<unsigned int, typename M::t>>>;
+  { M::size(std::declval<typename M::t>()) } -> std::same_as<unsigned int>;
+};
 
+struct FunctorComp {
   struct Stack {
     using t = std::shared_ptr<List<unsigned int>>;
 

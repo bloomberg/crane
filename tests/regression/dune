@@ -540,3 +540,14 @@
   (alias runtest)
   (deps dep_elim.t.exe)
   (action (run ./dep_elim.t.exe))))
+
+(subdir ind_param
+ (rule
+  (targets ind_param.t.exe)
+  (deps IndParam.vo ind_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ind_param.t.exe ind_param.cpp ind_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ind_param.t.exe)
+  (action (run ./ind_param.t.exe))))

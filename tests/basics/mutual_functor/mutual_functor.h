@@ -20,7 +20,13 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 template <typename M>
 concept Elem = requires {
   typename M::t;
-  requires std::same_as<std::remove_cvref_t<decltype(M::dflt)>, typename M::t>;
+  requires(
+      requires {
+        { M::dflt } -> std::convertible_to<typename M::t>;
+      } ||
+      requires {
+        { M::dflt() } -> std::convertible_to<typename M::t>;
+      });
 };
 
 template <Elem E> struct MutualTree {
@@ -205,15 +211,26 @@ template <Elem E> struct MutualTree {
         f->v());
   }
 
-  static inline std::shared_ptr<tree> leaf1 = tree::ctor::Leaf_((0 + 1));
+  static const std::shared_ptr<tree> &leaf1() {
+    static const std::shared_ptr<tree> v = tree::ctor::Leaf_((0 + 1));
+    return v;
+  }
 
-  static inline std::shared_ptr<tree> leaf2 = tree::ctor::Leaf_(((0 + 1) + 1));
+  static const std::shared_ptr<tree> &leaf2() {
+    static const std::shared_ptr<tree> v = tree::ctor::Leaf_(((0 + 1) + 1));
+    return v;
+  }
 
-  static inline std::shared_ptr<forest> small_forest = forest::ctor::FCons_(
-      leaf1, forest::ctor::FCons_(leaf2, forest::ctor::FNil_()));
+  static const std::shared_ptr<forest> &small_forest() {
+    static const std::shared_ptr<forest> v = forest::ctor::FCons_(
+        leaf1(), forest::ctor::FCons_(leaf2(), forest::ctor::FNil_()));
+    return v;
+  }
 
-  static inline std::shared_ptr<tree> sample_tree =
-      tree::ctor::Node_(0, small_forest);
+  static const std::shared_ptr<tree> &sample_tree() {
+    static const std::shared_ptr<tree> v = tree::ctor::Node_(0, small_forest());
+    return v;
+  }
 };
 
 struct NatElem {
@@ -225,9 +242,9 @@ static_assert(Elem<NatElem>);
 
 using NatTree = MutualTree<NatElem>;
 
-const unsigned int test_tree_size = NatTree::tree_size(NatTree::sample_tree);
+const unsigned int test_tree_size = NatTree::tree_size(NatTree::sample_tree());
 
 const unsigned int test_forest_size =
-    NatTree::forest_size(NatTree::small_forest);
+    NatTree::forest_size(NatTree::small_forest());
 
-const unsigned int test_tree_sum = NatTree::tree_sum(NatTree::sample_tree);
+const unsigned int test_tree_sum = NatTree::tree_sum(NatTree::sample_tree());

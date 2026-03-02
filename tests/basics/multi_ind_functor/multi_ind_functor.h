@@ -20,7 +20,13 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 template <typename M>
 concept Elem = requires {
   typename M::t;
-  requires std::same_as<std::remove_cvref_t<decltype(M::dflt)>, typename M::t>;
+  requires(
+      requires {
+        { M::dflt } -> std::convertible_to<typename M::t>;
+      } ||
+      requires {
+        { M::dflt() } -> std::convertible_to<typename M::t>;
+      });
 };
 
 template <Elem E> struct Container {
@@ -243,52 +249,14 @@ template <Elem E> struct Container {
         t0->v());
   }
 
-  static inline std::shared_ptr<maybe> empty_maybe = maybe::ctor::Nothing_();
+  static const std::shared_ptr<maybe> &empty_maybe() {
+    static const std::shared_ptr<maybe> v = maybe::ctor::Nothing_();
+    return v;
+  }
 
-  static inline std::shared_ptr<maybe> some_val = maybe::ctor::Just_((
-      (((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1) +
-      1));
-
-  static inline std::shared_ptr<mlist> sample_list = mlist::ctor::MCons_(
-      maybe::ctor::Just_(
-          ((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) +
-                                               1) +
-                                              1) +
+  static const std::shared_ptr<maybe> &some_val() {
+    static const std::shared_ptr<maybe> v = maybe::ctor::Just_(
+        ((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) +
                                              1) +
                                             1) +
                                            1) +
@@ -323,11 +291,62 @@ template <Elem E> struct Container {
               1) +
              1) +
             1) +
-           1)),
-      mlist::ctor::MCons_(maybe::ctor::Nothing_(), mlist::ctor::MNil_()));
+           1) +
+          1) +
+         1));
+    return v;
+  }
 
-  static inline std::shared_ptr<mtree> sample_tree =
-      mtree::ctor::Node_(sample_list);
+  static const std::shared_ptr<mlist> &sample_list() {
+    static const std::shared_ptr<mlist> v = mlist::ctor::MCons_(
+        maybe::ctor::Just_(
+            ((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) +
+                                                  1) +
+                                                 1) +
+                                                1) +
+                                               1) +
+                                              1) +
+                                             1) +
+                                            1) +
+                                           1) +
+                                          1) +
+                                         1) +
+                                        1) +
+                                       1) +
+                                      1) +
+                                     1) +
+                                    1) +
+                                   1) +
+                                  1) +
+                                 1) +
+                                1) +
+                               1) +
+                              1) +
+                             1) +
+                            1) +
+                           1) +
+                          1) +
+                         1) +
+                        1) +
+                       1) +
+                      1) +
+                     1) +
+                    1) +
+                   1) +
+                  1) +
+                 1) +
+                1) +
+               1) +
+              1) +
+             1)),
+        mlist::ctor::MCons_(maybe::ctor::Nothing_(), mlist::ctor::MNil_()));
+    return v;
+  }
+
+  static const std::shared_ptr<mtree> &sample_tree() {
+    static const std::shared_ptr<mtree> v = mtree::ctor::Node_(sample_list());
+    return v;
+  }
 };
 
 struct NatElem {
@@ -378,10 +397,10 @@ static_assert(Elem<NatElem>);
 using NatContainer = Container<NatElem>;
 
 const bool test_is_nothing =
-    NatContainer::is_nothing(NatContainer::empty_maybe);
+    NatContainer::is_nothing(NatContainer::empty_maybe());
 
 const unsigned int test_list_len =
-    NatContainer::mlist_length(NatContainer::sample_list);
+    NatContainer::mlist_length(NatContainer::sample_list());
 
 const unsigned int test_tree_size =
-    NatContainer::tree_size(NatContainer::sample_tree);
+    NatContainer::tree_size(NatContainer::sample_tree());

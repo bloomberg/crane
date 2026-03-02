@@ -83,6 +83,17 @@ let in_nonlocal_context = ref false
 let current_struct_name : Pp.t option ref = ref None
 (* Track whether we're inside a template struct (functor) *)
 let in_template_struct = ref false
+(* Track definitions rendered as function accessors (Meyers singletons)
+   instead of static inline variables, due to template static init ordering.
+   Stores (functor_modpath, label) pairs. At call sites, we match by label
+   and check if the caller's modpath corresponds to an application of the
+   functor. This is needed because functor application creates new constants
+   with distinct canonical names that can't be matched by GlobRef equality. *)
+let template_static_accessors : (ModPath.t * Label.t) list ref = ref []
+(* Maps applied module paths to their functor source modpaths.
+   E.g., NatWrapper's modpath → Wrapper's modpath.
+   Populated when processing MEapply. *)
+let functor_app_sources : (ModPath.t, ModPath.t) Hashtbl.t = Hashtbl.create 16
 (* Track eponymous type info for method generation.
    When a module M contains an inductive type m (lowercase of M),
    functions taking shared_ptr<m> as first arg become methods on m. *)
@@ -242,7 +253,9 @@ let reset_cpp_state () =
   Hashtbl.clear wrapper_module_table;
   Hashtbl.clear pending_wrapper_decls;
   Hashtbl.clear unmerged_wrappers;
-  Hashtbl.clear pending_method_candidates
+  Hashtbl.clear pending_method_candidates;
+  template_static_accessors := [];
+  Hashtbl.clear functor_app_sources
 
 (* Check if a function body is safe to turn into a method.
    A method uses 'this' (raw pointer) for the first argument instead of shared_ptr.
@@ -1231,6 +1244,27 @@ and pp_cpp_expr env args t =
            else
              pp_global Term x)
     in
+    (* If this globref was rendered as a function accessor (Meyers singleton
+       for template static data members), append () to call the accessor. *)
+    (* If this globref was rendered as a function accessor (Meyers singleton
+       for template static data members), append () to call the accessor.
+       Uses modpath+label matching because functor application creates new
+       constants with distinct canonical names. *)
+    let is_accessor =
+      let x_mp = modpath_of_r x in
+      let x_lbl = label_of_r x in
+      List.exists (fun (reg_mp, reg_lbl) ->
+        Label.equal x_lbl reg_lbl &&
+        (ModPath.equal x_mp reg_mp ||
+         match Hashtbl.find_opt functor_app_sources x_mp with
+         | Some source_mp -> ModPath.equal source_mp reg_mp
+         | None -> false)
+      ) !template_static_accessors
+    in
+    let base_name = if is_accessor
+      then base_name ++ str "()"
+      else base_name
+    in
     (match tys, get_containing_eponymous_struct x with
     | [], _ -> apply base_name
     | _, Some _ -> apply base_name  (* Type args already handled in base_name *)
@@ -1866,18 +1900,34 @@ function
        - C++ forbids capture-default in "non-local" lambdas
        - ALL lambdas directly in a static inline initializer are "non-local"
        - But by wrapping in []() { return expr; }(), inner lambdas are now "local" *)
-    let static_kw = if !in_struct_context then str "static inline " else mt () in
     let expr_pp = pp_cpp_expr env [] e in
-    (* Wrap in IIFE only when in struct context AND the expression contains lambdas.
-       This is needed because C++ forbids capture-default [&] in non-local lambdas.
-       If there are no lambdas, no wrapping is needed. *)
-    let needs_iife = !in_struct_context && expr_contains_capturing_lambda e in
-    let wrapped_expr = if needs_iife then
-      str "[]() {" ++ fnl () ++ str "return " ++ expr_pp ++ str ";" ++ fnl () ++ str "}()"
-    else
-      expr_pp
-    in
-    h (static_kw ++ (pp_cpp_type false [] ty) ++ str " " ++ pp_global Type id ++ str " = " ++ wrapped_expr ++ str ";")
+    if !in_template_struct then begin
+      (* DESIGN: Static data members in template structs use lazy initialization.
+         Template static inline members have unordered dynamic initialization relative
+         to other inline variables, causing static init order issues when accessed from
+         outside the template. Use a function with a local static (Meyers' singleton)
+         to guarantee initialization on first use. *)
+      (let mp = modpath_of_r id in
+       let lbl = label_of_r id in
+       template_static_accessors := (mp, lbl) :: !template_static_accessors);
+      h (str "static const " ++ (pp_cpp_type false [] ty) ++ str "& " ++ pp_global Type id ++ str "() {") ++ fnl () ++
+      str "  static const " ++ (pp_cpp_type false [] ty) ++ str " v = " ++ expr_pp ++ str ";" ++ fnl () ++
+      str "  return v;" ++ fnl () ++
+      str "}"
+    end
+    else begin
+      let static_kw = if !in_struct_context then str "static inline " else mt () in
+      (* Wrap in IIFE only when in struct context AND the expression contains lambdas.
+         This is needed because C++ forbids capture-default [&] in non-local lambdas.
+         If there are no lambdas, no wrapping is needed. *)
+      let needs_iife = !in_struct_context && expr_contains_capturing_lambda e in
+      let wrapped_expr = if needs_iife then
+        str "[]() {" ++ fnl () ++ str "return " ++ expr_pp ++ str ";" ++ fnl () ++ str "}()"
+      else
+        expr_pp
+      in
+      h (static_kw ++ (pp_cpp_type false [] ty) ++ str " " ++ pp_global Type id ++ str " = " ++ wrapped_expr ++ str ";")
+    end
 | Ddecl (id, ty) ->
     h ((pp_cpp_type false [] ty) ++ str " " ++ pp_global Type id ++ str ";")
 | Dconcept (id, cstr) ->
@@ -2511,10 +2561,26 @@ let rec pp_specif = function
    - Stype (Key) becomes: requires { typename M::Key; };
 
    This enables compile-time checking that modules satisfy their type signatures. *)
-and pp_spec_as_requirement = function
+and ml_type_has_tvar = function
+  | Miniml.Tvar _ | Miniml.Tvar' _ -> true
+  | Miniml.Tunknown -> true
+  | Miniml.Tarr (t1, t2) -> ml_type_has_tvar t1 || ml_type_has_tvar t2
+  | Miniml.Tglob (_, args, _) -> List.exists ml_type_has_tvar args
+  | Miniml.Tmeta { contents = Some t } -> ml_type_has_tvar t
+  | Miniml.Tmeta { contents = None } -> true
+  | _ -> false
+
+and pp_spec_as_requirement modtype_refs = function
   | Sval (r,_,_) when is_inline_custom r -> mt ()
   | Stype (r,_,_) when is_inline_custom r -> mt ()
-  | Sind (kn,i) -> mt () (* TODO: handle inductive requirements *)
+  | Sind (kn,i) ->
+      (* Generate typename requirement for the inductive type *)
+      let name = pp_global_name Type (GlobRef.IndRef (kn, 0)) in
+      str "typename M::" ++ name ++ str ";" ++ fnl ()
+  | Sval (r,_,t) when ml_type_has_tvar t ->
+      (* Skip polymorphic specs (auto-generated eliminators like t_rect/t_rec)
+         since their type variables can't be expressed in a simple requires clause *)
+      mt ()
   | Sval (r,b,t) ->
       (* Generate requires clause for a function/value *)
       let name = pp_global_name Term r in
@@ -2526,80 +2592,77 @@ and pp_spec_as_requirement = function
         | ret_ty -> ([], ret_ty)
       in
       let (args, ret_ty) = get_function_parts t in
+      let cpp_ret = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ret_ty in
+      (* Determine stdlib namespace prefix based on configuration *)
+      let (stdlib_ns, same_as, declval, convertible_to) =
+        if Table.std_lib () = "BDE"
+        then ("bsl::", "same_as", "bsl::declval", "convertible_to")
+        else ("std::", "std::same_as", "std::declval", "std::convertible_to")
+      in
+      (* Helper to qualify type names with M:: *)
+      let rec qualify_type = function
+        | Tglob (r, [], _) when not (is_custom r) ->
+            str "typename M::" ++ pp_global Type r
+        | Tglob (r, args, _) when not (is_custom r) ->
+            pp_global Type r ++ str "<" ++ prlist_with_sep (fun () -> str ", ") qualify_type args ++ str ">"
+        | Tglob (r, args, _) ->
+            (match find_custom_opt r with
+            | Some custom_str ->
+                if String.contains custom_str '%' then
+                  (* Parametric custom type - recursively qualify type arguments *)
+                  qualify_custom_template custom_str args qualify_type
+                else
+                  str custom_str
+            | None ->
+                (* This shouldn't happen due to earlier guards, but handle gracefully *)
+                pp_cpp_type false [] (Tglob (r, args, [])))
+        | Tshared_ptr ty ->
+            str stdlib_ns ++ str "shared_ptr<" ++ qualify_type ty ++ str ">"
+        | Tunique_ptr ty ->
+            str stdlib_ns ++ str "unique_ptr<" ++ qualify_type ty ++ str ">"
+        | Tvariant tys ->
+            str stdlib_ns ++ str "variant<" ++ prlist_with_sep (fun () -> str ", ") qualify_type tys ++ str ">"
+        | Tnamespace (r, ty) ->
+            (* Tnamespace wraps types from other modules.
+               If the type is defined in THIS module type, recurse to get M:: qualification.
+               Otherwise (external type like 'comparison'), render as-is. *)
+            if List.exists (Environ.QGlobRef.equal Environ.empty_env r) modtype_refs
+            then qualify_type ty
+            else pp_cpp_type false [] ty
+        | ty -> pp_cpp_type false [] ty
+      in
       if args = [] then
-        (* For non-function values, generate a requires expression to check the value exists *)
-        let cpp_ret = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ret_ty in
-        (* Determine stdlib namespace prefix based on configuration *)
-        let (stdlib_ns, same_as, remove_cvref) =
-          if Table.std_lib () = "BDE"
-          then ("bsl::", "same_as", "bsl::remove_cvref_t")
-          else ("std::", "std::same_as", "std::remove_cvref_t")
-        in
-        (* Helper to qualify type names with M:: *)
-        let rec qualify_type = function
-          | Tglob (r, [], _) when not (is_custom r) ->
-              str "typename M::" ++ pp_global Type r
-          | Tglob (r, args, _) when not (is_custom r) ->
-              pp_global Type r ++ str "<" ++ prlist_with_sep (fun () -> str ", ") qualify_type args ++ str ">"
-          | Tglob (r, args, _) ->
-              (match find_custom_opt r with
-              | Some custom_str ->
-                  if String.contains custom_str '%' then
-                    (* Parametric custom type - recursively qualify type arguments *)
-                    qualify_custom_template custom_str args qualify_type
-                  else
-                    str custom_str
-              | None ->
-                  (* This shouldn't happen due to earlier guards, but handle gracefully *)
-                  pp_cpp_type false [] (Tglob (r, args, [])))
-          | Tshared_ptr ty ->
-              str stdlib_ns ++ str "shared_ptr<" ++ qualify_type ty ++ str ">"
-          | Tunique_ptr ty ->
-              str stdlib_ns ++ str "unique_ptr<" ++ qualify_type ty ++ str ">"
-          | Tvariant tys ->
-              str stdlib_ns ++ str "variant<" ++ prlist_with_sep (fun () -> str ", ") qualify_type tys ++ str ">"
-          | Tnamespace (r, ty) ->
-              pp_cpp_type false [] (Tnamespace (r, ty))
-          | ty -> pp_cpp_type false [] ty
-        in
-        str "requires " ++ str same_as ++ str "<" ++ str remove_cvref ++ str "<decltype(M::" ++ name ++ str ")>, " ++ qualify_type cpp_ret ++ str ">;" ++ fnl ()
+        (* Non-function values need a disjunctive concept check because the
+           C++ representation differs depending on whether the implementing
+           module is a template struct or not:
+
+           - Non-template structs use plain static data members:
+               static inline const T empty = ...;
+             Here M::empty is a value expression, and M::empty() won't compile.
+
+           - Template structs use Meyers singleton accessors:
+               static const T& empty() { static const T v = ...; return v; }
+             This is needed because C++17 template static inline data members
+             have "unordered" dynamic initialization, which can cause segfaults
+             when one static member references another during init.
+             Here M::empty() returns the value, but M::empty without parens
+             refers to the function itself (a function pointer, not convertible
+             to T).
+
+           The concept is generated from the module type signature, which just
+           says "val empty : t" — it doesn't know which form the implementation
+           will use, since that depends on whether the implementing module
+           becomes a template struct (functor with parameters) or a plain struct.
+           Both can satisfy the same module type, so the concept must accept
+           both forms via a disjunction. *)
+        let qualified_ret = qualify_type cpp_ret in
+        str "requires (" ++ fnl () ++
+        str "  requires { { M::" ++ name ++ str " } -> " ++ str convertible_to ++ str "<" ++ qualified_ret ++ str ">; } ||" ++ fnl () ++
+        str "  requires { { M::" ++ name ++ str "() } -> " ++ str convertible_to ++ str "<" ++ qualified_ret ++ str ">; }" ++ fnl () ++
+        str ");" ++ fnl ()
       else
         (* For functions, generate requires expression with parameters and return type *)
         let cpp_args = List.map (convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty []) args in
-        let cpp_ret = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ret_ty in
-        (* Determine stdlib namespace prefix based on configuration *)
-        let (stdlib_ns, same_as, declval) =
-          if Table.std_lib () = "BDE"
-          then ("bsl::", "same_as", "bsl::declval")
-          else ("std::", "std::same_as", "std::declval")
-        in
-        (* Helper to qualify type names with M:: *)
-        let rec qualify_type = function
-          | Tglob (r, [], _) when not (is_custom r) ->
-              str "typename M::" ++ pp_global Type r
-          | Tglob (r, args, _) when not (is_custom r) ->
-              pp_global Type r ++ str "<" ++ prlist_with_sep (fun () -> str ", ") qualify_type args ++ str ">"
-          | Tglob (r, args, _) ->
-              (match find_custom_opt r with
-              | Some custom_str ->
-                  if String.contains custom_str '%' then
-                    (* Parametric custom type - recursively qualify type arguments *)
-                    qualify_custom_template custom_str args qualify_type
-                  else
-                    str custom_str
-              | None ->
-                  (* This shouldn't happen due to earlier guards, but handle gracefully *)
-                  pp_cpp_type false [] (Tglob (r, args, [])))
-          | Tshared_ptr ty ->
-              str stdlib_ns ++ str "shared_ptr<" ++ qualify_type ty ++ str ">"
-          | Tunique_ptr ty ->
-              str stdlib_ns ++ str "unique_ptr<" ++ qualify_type ty ++ str ">"
-          | Tvariant tys ->
-              str stdlib_ns ++ str "variant<" ++ prlist_with_sep (fun () -> str ", ") qualify_type tys ++ str ">"
-          | Tnamespace (r, ty) ->
-              pp_cpp_type false [] (Tnamespace (r, ty))
-          | ty -> pp_cpp_type false [] ty
-        in
         (* Generate: { M::name(std::declval<arg1>(), ...) } -> std::same_as<ret_ty>; *)
         let declvals = List.map (fun arg_ty ->
           str declval ++ str "<" ++ qualify_type arg_ty ++ str ">()"
@@ -2636,8 +2699,18 @@ and pp_module_type params = function
            M::find(std::declval<M::Key>()) -> std::same_as<...>;
          }; *)
       push_visible mp params;
+      (* Collect GlobRefs of types/inductives defined in this module type.
+         These are the types that should be qualified with M:: in the concept body.
+         Types from other modules (e.g., comparison from Datatypes) should NOT
+         be qualified with M::. *)
+      let modtype_refs = List.fold_left (fun acc (_label, specif) ->
+        match specif with
+        | Spec (Stype (r, _, _)) -> r :: acc
+        | Spec (Sind (kn, _)) -> GlobRef.IndRef (kn, 0) :: acc
+        | _ -> acc
+      ) [] sign in
       let pp_req (_label, specif) = match specif with
-        | Spec s -> pp_spec_as_requirement s
+        | Spec s -> pp_spec_as_requirement modtype_refs s
         | Smodule _ -> mt () (* TODO: nested modules *)
         | Smodtype _ -> mt () (* TODO: nested module types *)
       in
@@ -2725,6 +2798,17 @@ let rec pp_structure_elem ~is_header f = function
              (* Module application: generate using declaration *)
              (* Only in header - it's a type alias *)
              if not is_header then mt () else
+             (* Record the functor source for this applied module.
+                This allows template_static_accessors to match across
+                functor boundaries (e.g., NatWrapper → Wrapper). *)
+             let rec get_base_functor_mp = function
+               | MEapply (f, _) -> get_base_functor_mp f
+               | MEident fmp -> Some fmp
+               | _ -> None
+             in
+             (match get_base_functor_mp m.ml_mod_expr with
+              | Some fmp -> Hashtbl.replace functor_app_sources mp fmp
+              | None -> ());
              let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
              let using_decl = str "using " ++ name ++ str " = " ++ body ++ str ";" in
              (* Add static_assert for functor applications with known return types *)
@@ -2884,6 +2968,27 @@ let rec pp_structure_elem ~is_header f = function
              let typeclasses_pp = prlist_with_sep fnl (fun x -> x) typeclass_concepts in
              let typeclasses_pp = if typeclass_concepts = [] then mt () else typeclasses_pp ++ fnl () ++ fnl () in
 
+             (* DESIGN: Module type concept hoisting
+                Module types (SEmodtype) inside modules become C++ concepts, which can
+                only be declared at namespace or global scope, not inside structs.
+                Hoist them before the struct, similar to type class concepts. *)
+             let modtype_concepts = if is_header then
+               List.filter_map (fun (l, se) ->
+                 match se with
+                 | SEmodtype m ->
+                     let def = pp_module_type [] m in
+                     let modtype_name = str (Label.to_string l) in
+                     let concept_pp =
+                       str "template<typename M>" ++ fnl () ++
+                       hov 1 (str "concept " ++ modtype_name ++ str " = requires {" ++ fnl () ++ def ++ str "};")
+                     in
+                     Some concept_pp
+                 | _ -> None
+               ) sel
+             else [] in
+             let modtypes_pp = prlist_with_sep fnl (fun x -> x) modtype_concepts in
+             let modtypes_pp = if modtype_concepts = [] then mt () else modtypes_pp ++ fnl () ++ fnl () in
+
              (* Only set struct context for header; implementation needs out-of-struct definitions *)
              if is_header then
                in_struct_context := true
@@ -2961,7 +3066,7 @@ let rec pp_structure_elem ~is_header f = function
                    fnl () ++ str "static_assert(" ++ concept_name ++ str "<" ++ name ++ str ">);"
                | None -> mt ()
                in
-               typeclasses_pp ++ struct_def ++ static_assert
+               typeclasses_pp ++ modtypes_pp ++ struct_def ++ static_assert
              else
                (* Implementation: just the member definitions (body is already processed) *)
                body
@@ -2985,12 +3090,13 @@ let rec pp_structure_elem ~is_header f = function
                body
         )
   | (l,SEmodtype m) ->
-      (* Module types become concepts - only in header *)
-      if not is_header then mt () else
+      (* Module types become concepts - only in header.
+         When inside a struct context, concepts have been hoisted to namespace scope
+         (see module type concept hoisting), so skip them here. *)
+      if not is_header || !in_struct_context then mt () else
       let def = pp_module_type [] m in
       let name = pp_modname (MPdot (top_visible_mp (), l)) in
       (* Generate a C++ concept with template parameter *)
-      (* TODO: Don't love the hard-coded 'M' for the typename *)
       str "template<typename M>" ++ fnl () ++
       hov 1 (str "concept " ++ name ++ str " = requires {" ++ fnl () ++ def ++ str "};") ++
       (match Common.get_duplicate (top_visible_mp ()) l with

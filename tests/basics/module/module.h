@@ -39,7 +39,13 @@ concept Map = requires {
   typename M::key;
   typename M::value;
   typename M::t;
-  requires std::same_as<std::remove_cvref_t<decltype(M::empty)>, typename M::t>;
+  requires(
+      requires {
+        { M::empty } -> std::convertible_to<typename M::t>;
+      } ||
+      requires {
+        { M::empty() } -> std::convertible_to<typename M::t>;
+      });
   {
     M::add(std::declval<typename M::key>(), std::declval<typename M::value>(),
            std::declval<typename M::t>())
@@ -96,7 +102,10 @@ template <OrderedType K, BaseType V> struct MakeMap {
 
   using t = std::shared_ptr<tree>;
 
-  static inline std::shared_ptr<tree> empty = tree::ctor::Empty_();
+  static const std::shared_ptr<tree> &empty() {
+    static const std::shared_ptr<tree> v = tree::ctor::Empty_();
+    return v;
+  }
 
   static t add(const typename K::t k, const typename V::t v,
                const std::shared_ptr<tree> &m) {
@@ -216,4 +225,4 @@ const NatMap::t mymap = NatMap::add(
                1) +
               1) +
              1),
-            NatMap::empty)));
+            NatMap::empty())));
