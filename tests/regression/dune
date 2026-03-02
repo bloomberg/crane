@@ -529,3 +529,14 @@
   (alias runtest)
   (deps partial_apply.t.exe)
   (action (run ./partial_apply.t.exe))))
+
+(subdir dep_elim
+ (rule
+  (targets dep_elim.t.exe)
+  (deps DepElim.vo dep_elim.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dep_elim.t.exe dep_elim.cpp dep_elim.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dep_elim.t.exe)
+  (action (run ./dep_elim.t.exe))))

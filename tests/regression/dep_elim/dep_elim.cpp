@@ -32,7 +32,7 @@ unsigned int DepElim::get_present(const std::shared_ptr<DepElim::avail> &a) {
             return std::move(n);
           },
           [](const typename DepElim::avail::absent _args) -> unsigned int {
-            return "dummy";
+            throw std::logic_error("unreachable");
           }},
       a->v());
 }

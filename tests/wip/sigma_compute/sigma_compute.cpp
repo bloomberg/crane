@@ -12,7 +12,8 @@
 
 std::shared_ptr<SigT<unsigned int, dummy_prop>>
 SigmaCompute::nat_with_double(const unsigned int n) {
-  return SigT<unsigned int, dummy_prop>::ctor::existT_((n + n), "dummy");
+  return SigT<unsigned int, dummy_prop>::ctor::existT_(
+      (n + n), ([&]() -> auto { throw std::logic_error("unreachable"); })());
 }
 
 std::shared_ptr<Sig0<unsigned int>>

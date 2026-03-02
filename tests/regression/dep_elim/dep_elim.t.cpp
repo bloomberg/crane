@@ -36,16 +36,16 @@ int main() {
 
     // Test 2: vec_to_list
     {
-        auto l = test_vec_list;
+        auto l = DepElim::test_vec_list;
         unsigned int expected[] = {10, 20, 30};
         for (int i = 0; i < 3; i++) {
             auto &v = l->v();
-            ASSERT(DepElim::std::holds_alternative<List<unsigned int>::cons>(v));
+            ASSERT(std::holds_alternative<List<unsigned int>::cons>(v));
             auto &c = std::get<List<unsigned int>::cons>(v);
-            ASSERT(DepElim::c._a0 == expected[i]);
+            ASSERT(c._a0 == expected[i]);
             l = c._a1;
         }
-        ASSERT(DepElim::std::holds_alternative<List<unsigned int>::nil>(l->v()));
+        ASSERT(std::holds_alternative<List<unsigned int>::nil>(l->v()));
         std::cout << "Test 2 (vec_to_list): PASSED" << std::endl;
     }
 

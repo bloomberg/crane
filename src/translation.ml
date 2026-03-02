@@ -972,7 +972,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     CPPparray (elems, def)
   | MLmagic t -> gen_expr env t
   | MLdummy _ ->
-    CPPstring (Pstring.unsafe_of_string "dummy")
+    CPPabort "unreachable"
   | MLexn msg ->
     (* Unreachable/absurd case - e.g., match on empty type *)
     CPPabort msg

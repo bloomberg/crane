@@ -234,7 +234,7 @@ struct DepElim {
   template <typename T1>
   static T1 vec_head(const unsigned int _x, const std::shared_ptr<vec<T1>> &v) {
     return std::visit(Overloaded{[](const typename vec<T1>::vnil _args) -> T1 {
-                                   return "dummy";
+                                   throw std::logic_error("unreachable");
                                  },
                                  [](const typename vec<T1>::vcons _args) -> T1 {
                                    T1 x = _args._a1;
@@ -247,13 +247,15 @@ struct DepElim {
   static std::shared_ptr<vec<T1>> vec_tail(const unsigned int _x,
                                            const std::shared_ptr<vec<T1>> &v) {
     return std::visit(
-        Overloaded{[](const typename vec<T1>::vnil _args)
-                       -> std::shared_ptr<vec<T1>> { return "dummy"; },
-                   [](const typename vec<T1>::vcons _args)
-                       -> std::shared_ptr<vec<T1>> {
-                     std::shared_ptr<vec<T1>> xs = _args._a2;
-                     return std::move(xs);
-                   }},
+        Overloaded{
+            [](const typename vec<T1>::vnil _args) -> std::shared_ptr<vec<T1>> {
+              throw std::logic_error("unreachable");
+            },
+            [](const typename vec<T1>::vcons _args)
+                -> std::shared_ptr<vec<T1>> {
+              std::shared_ptr<vec<T1>> xs = _args._a2;
+              return std::move(xs);
+            }},
         v->v());
   }
 

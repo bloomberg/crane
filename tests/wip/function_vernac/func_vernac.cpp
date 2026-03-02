@@ -31,20 +31,21 @@ unsigned int FuncVernac::div2(const unsigned int _x0) {
 
 std::shared_ptr<FuncVernac::R_div2>
 FuncVernac::R_div2_correct(const unsigned int n, const unsigned int _res) {
-  return div2_rect([](unsigned int y,
-                      unsigned int _x0) { return R_div2::ctor::R_div2_0_(y); },
-                   [](unsigned int y, unsigned int _x0) {
-                     return R_div2::ctor::R_div2_1_(y);
-                   },
-                   [](unsigned int y, unsigned int y0,
-                      std::function<std::shared_ptr<FuncVernac::R_div2>(
-                          unsigned int, dummy_prop)>
-                          y2,
-                      unsigned int _x0) {
-                     return R_div2::ctor::R_div2_2_(y, y0, div2(y0),
-                                                    y2(div2(y0)));
-                   },
-                   n, _res, "dummy");
+  return div2_rect(
+      [](unsigned int y, unsigned int _x0) {
+        return R_div2::ctor::R_div2_0_(y);
+      },
+      [](unsigned int y, unsigned int _x0) {
+        return R_div2::ctor::R_div2_1_(y);
+      },
+      [](unsigned int y, unsigned int y0,
+         std::function<std::shared_ptr<FuncVernac::R_div2>(unsigned int,
+                                                           dummy_prop)>
+             y2,
+         unsigned int _x0) {
+        return R_div2::ctor::R_div2_2_(y, y0, div2(y0), y2(div2(y0)));
+      },
+      n, _res, ([&]() -> auto { throw std::logic_error("unreachable"); })());
 }
 
 std::shared_ptr<Sig0<unsigned int>>
@@ -84,5 +85,5 @@ FuncVernac::R_list_sum_correct(const std::shared_ptr<List<unsigned int>> &l,
         return R_list_sum::ctor::R_list_sum_1_(y, y0, y1, list_sum(y1),
                                                y3(list_sum(y1)));
       },
-      l, _res, "dummy");
+      l, _res, ([&]() -> auto { throw std::logic_error("unreachable"); })());
 }

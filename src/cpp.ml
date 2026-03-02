@@ -1465,6 +1465,13 @@ and pp_cpp_expr env args t =
       pp_cpp_expr env args lhs ++ str " " ++ str op ++ str " " ++ pp_cpp_expr env args rhs
 and pp_cpp_stmt env args = function
 | SreturnVoid -> str "return;"
+| Sreturn (CPPabort msg) ->
+    (* When returning an abort expression, emit a bare throw instead of
+       return throw_iife; — the IIFE has void return type which can't be
+       returned from non-void functions. *)
+    if Table.std_lib () = "BDE"
+      then str "throw bsl::logic_error(\"" ++ str msg ++ str "\");"
+      else str "throw std::logic_error(\"" ++ str msg ++ str "\");"
 | Sreturn e ->
     str "return " ++ pp_cpp_expr env args e ++ str ";"
 | Sdecl (id, ty) -> (pp_cpp_type false [] ty) ++ str " " ++ Id.print id ++ str ";"
