@@ -2327,7 +2327,7 @@ let get_tvar_indices t =
 (* Collect tvar indices that are deducible by the C++ compiler: those appearing
    in the codomain or in non-function-typed domain params.  Function-typed
    params are excluded because gen_dfun converts them to auto-deduced Fn&&
-   template parameters, hiding their original Coq-level type variables from
+   template parameters, hiding their original Rocq-level type variables from
    C++ template argument deduction.  Used by both gen_dfun (to decide whether
    a function param should get a MapsTo constraint or plain TTtypename) and
    gen_decl_for_pp (to filter out phantom tvars from the template param list). *)
@@ -3129,7 +3129,7 @@ let gen_decl_for_pp n b ty =
 
      Background: gen_dfun converts every function-typed param (e.g., f : A -> B)
      into an auto-deduced forwarding parameter (e.g., F1 &&f).  This means the
-     original Coq-level type variables that appear ONLY inside such function
+     original Rocq-level type variables that appear ONLY inside such function
      params (like A and B in hk_map's f : A -> B) are hidden from C++ template
      argument deduction — they don't appear anywhere in the generated C++
      signature.  We call these "phantom" tvars.

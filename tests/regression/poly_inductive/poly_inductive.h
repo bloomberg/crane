@@ -44,17 +44,31 @@ struct PolyInductive {
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  static T2 pbox_rect(F0 &&f, std::shared_ptr<pbox<T1>> _x0) {
-    return f(std::move(_x0));
+  static T2 pbox_rect(F0 &&f, const std::shared_ptr<pbox<T1>> &p) {
+    return std::visit(
+        Overloaded{[&](const typename pbox<T1>::PBox _args) -> T2 {
+          T1 a = _args._a0;
+          return f(a);
+        }},
+        p->v());
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  static T2 pbox_rec(F0 &&f, std::shared_ptr<pbox<T1>> _x0) {
-    return f(std::move(_x0));
+  static T2 pbox_rec(F0 &&f, const std::shared_ptr<pbox<T1>> &p) {
+    return std::visit(
+        Overloaded{[&](const typename pbox<T1>::PBox _args) -> T2 {
+          T1 a = _args._a0;
+          return f(a);
+        }},
+        p->v());
   }
 
-  template <typename T1> static T1 punbox(std::shared_ptr<pbox<T1>> b) {
-    return std::move(b);
+  template <typename T1> static T1 punbox(const std::shared_ptr<pbox<T1>> &b) {
+    return std::visit(Overloaded{[](const typename pbox<T1>::PBox _args) -> T1 {
+                        T1 x = _args._a0;
+                        return x;
+                      }},
+                      b->v());
   }
 
   template <typename A, typename B> struct ppair {
@@ -305,7 +319,8 @@ struct PolyInductive {
         t->v());
   }
 
-  static inline const unsigned int test_pbox = punbox<unsigned int>((
+  static inline const unsigned int test_pbox = punbox<
+      unsigned int>(pbox<unsigned int>::ctor::PBox_((
       (((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) +
                                          1) +
                                         1) +
@@ -342,7 +357,7 @@ struct PolyInductive {
          1) +
         1) +
        1) +
-      1));
+      1)));
 
   static inline const unsigned int test_ppair_fst =
       pfst<unsigned int, bool>(ppair<unsigned int, bool>::ctor::PPair_(

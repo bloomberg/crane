@@ -573,3 +573,36 @@
   (alias runtest)
   (deps dep_record.t.exe)
   (action (run ./dep_record.t.exe))))
+
+(subdir singleton_record
+ (rule
+  (targets singleton_record.t.exe)
+  (deps SingletonRecord.vo singleton_record.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} singleton_record.t.exe singleton_record.cpp singleton_record.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps singleton_record.t.exe)
+  (action (run ./singleton_record.t.exe))))
+
+(subdir coercions
+ (rule
+  (targets coercions.t.exe)
+  (deps Coercions.vo coercions.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} coercions.t.exe coercions.cpp coercions.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps coercions.t.exe)
+  (action (run ./coercions.t.exe))))
+
+(subdir poly_inductive
+ (rule
+  (targets poly_inductive.t.exe)
+  (deps PolyInductive.vo poly_inductive.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_inductive.t.exe poly_inductive.cpp poly_inductive.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps poly_inductive.t.exe)
+  (action (run ./poly_inductive.t.exe))))

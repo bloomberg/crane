@@ -13,20 +13,31 @@
 std::shared_ptr<Sig0<unsigned int>>
 FuncVernac::div2_terminate(const unsigned int n) {
   if (n <= 0) {
-    return 0;
+    return Sig0<unsigned int>::ctor::exist_(0);
   } else {
     unsigned int n0 = n - 1;
     if (n0 <= 0) {
-      return 0;
+      return Sig0<unsigned int>::ctor::exist_(0);
     } else {
       unsigned int n1 = n0 - 1;
-      return (div2_terminate(n1) + 1);
+      return std::visit(
+          Overloaded{[](const typename Sig0<T1>::exist _args) -> auto {
+            T1 x = _args._a0;
+            return Sig0<unsigned int>::ctor::exist_((x + 1));
+          }},
+          div2_terminate(n1)->v());
     }
   }
 }
 
-unsigned int FuncVernac::div2(const unsigned int _x0) {
-  return div2_terminate(_x0);
+unsigned int FuncVernac::div2(const unsigned int n) {
+  return std::visit(
+      Overloaded{
+          [](const typename Sig0<unsigned int>::exist _args) -> unsigned int {
+            unsigned int a = _args._a0;
+            return std::move(a);
+          }},
+      div2_terminate(n)->v());
 }
 
 std::shared_ptr<FuncVernac::R_div2>
@@ -51,22 +62,34 @@ FuncVernac::R_div2_correct(const unsigned int n, const unsigned int _res) {
 std::shared_ptr<Sig0<unsigned int>>
 FuncVernac::list_sum_terminate(const std::shared_ptr<List<unsigned int>> &l) {
   return std::visit(
-      Overloaded{[](const typename List<unsigned int>::nil _args)
-                     -> std::function<std::shared_ptr<Sig0<unsigned int>>(
-                         dummy_prop)> { return 0; },
-                 [](const typename List<unsigned int>::cons _args)
-                     -> std::function<std::shared_ptr<Sig0<unsigned int>>(
-                         dummy_prop)> {
-                   unsigned int n = _args._a0;
-                   std::shared_ptr<List<unsigned int>> l0 = _args._a1;
-                   return (std::move(n) + list_sum_terminate(std::move(l0)));
-                 }},
+      Overloaded{
+          [](const typename List<unsigned int>::nil _args)
+              -> std::function<std::shared_ptr<Sig0<unsigned int>>(
+                  dummy_prop)> { return Sig0<unsigned int>::ctor::exist_(0); },
+          [](const typename List<unsigned int>::cons _args)
+              -> std::function<std::shared_ptr<Sig0<unsigned int>>(
+                  dummy_prop)> {
+            unsigned int n = _args._a0;
+            std::shared_ptr<List<unsigned int>> l0 = _args._a1;
+            return std::visit(
+                Overloaded{[&](const typename Sig0<T1>::exist _args) -> auto {
+                  T1 x = _args._a0;
+                  return Sig0<unsigned int>::ctor::exist_((std::move(n) + x));
+                }},
+                list_sum_terminate(std::move(l0))->v());
+          }},
       l->v());
 }
 
 unsigned int
-FuncVernac::list_sum(const std::shared_ptr<List<unsigned int>> &_x0) {
-  return list_sum_terminate(_x0);
+FuncVernac::list_sum(const std::shared_ptr<List<unsigned int>> &l) {
+  return std::visit(
+      Overloaded{
+          [](const typename Sig0<unsigned int>::exist _args) -> unsigned int {
+            unsigned int a = _args._a0;
+            return std::move(a);
+          }},
+      list_sum_terminate(l)->v());
 }
 
 std::shared_ptr<FuncVernac::R_list_sum>

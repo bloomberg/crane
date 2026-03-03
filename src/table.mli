@@ -153,10 +153,6 @@ val auto_inline : unit -> bool
 
 val type_expand : unit -> bool
 
-(*s KeepSingleton parameter *)
-
-val keep_singleton : unit -> bool
-
 (*s Optimize parameter *)
 
 type opt_flag =

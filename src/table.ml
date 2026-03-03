@@ -107,7 +107,7 @@ let labels_of_ref r =
 
 (*S The main tables: constants, inductives, records, ... *)
 
-(* These tables are not registered within coq save/undo mechanism
+(* These tables are not registered within Rocq save/undo mechanism
    since we reset their contents at each run of Extraction *)
 
 (* We use [constant_body] (resp. [mutual_inductive_body]) as checksum
@@ -603,7 +603,7 @@ let info_file f =
 (*S The Extraction auxiliary commands *)
 
 (* The objects defined below should survive an arbitrary time,
-   so we register them to coq save/undo mechanism. *)
+   so we register them to Rocq save/undo mechanism. *)
 
 let my_bool_option name value =
   let { Goptions.get } =
@@ -681,10 +681,6 @@ let auto_inline = my_bool_option "AutoInline" false
 (*s Crane Extraction TypeExpand *)
 
 let type_expand = my_bool_option "TypeExpand" true
-
-(*s Crane Extraction KeepSingleton *)
-
-let keep_singleton = my_bool_option "KeepSingleton" false
 
 (*s Crane Extraction Optimize *)
 

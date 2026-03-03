@@ -143,7 +143,7 @@ let pending_method_candidates :
 
 (* Check if a GlobRef belongs to a wrapper module and return the qualified name.
    If the reference's module path matches a wrapper module, prepend the struct name.
-   Only qualify ConstRef globals (actual Coq constants from modules).
+   Only qualify ConstRef globals (actual Rocq constants from modules).
    VarRef globals are lifted declarations (like _foo_aux) that should not be
    qualified with a wrapper struct name — their modpath comes from Lib.make_kn
    which reflects the current library, not the wrapper module. *)

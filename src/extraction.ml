@@ -572,11 +572,7 @@ and extract_really_ind env kn mib =
         let typ = p.ip_types.(0) in
         let l = if conservative_types () then [] else List.filter (fun t -> not (isTdummy (expand env t))) typ in
         if List.is_empty l then raise (I Standard);
-        if mib.mind_record == Declarations.NotRecord then begin
-          if not (keep_singleton ()) && Int.equal (List.length l) 1 && not (type_mem_kn kn (List.hd l))
-          then raise (I Singleton)
-          else raise (I Standard)
-        end;
+        if mib.mind_record == Declarations.NotRecord then raise (I Standard);
         (* Now we're sure it's a record. *)
         (* First, we find its field names. *)
         let rec names_prod t = match Constr.kind t with
@@ -607,7 +603,7 @@ and extract_really_ind env kn mib =
           | _ -> assert false
         in
         let field_glob = select_fields (1+npar) field_names typ in
-        (* Check if this is a type class FIRST, before singleton optimization *)
+        (* Check if this is a type class registered in the Rocq typeclasses database *)
         let is_class = Option.has_some (Typeclasses.class_info r) in
         if is_class then TypeClass field_glob
         (* Detect dependent records for C++ extraction.
@@ -681,8 +677,6 @@ and extract_really_ind env kn mib =
              new types. *)
           TypeClass field_glob
         end
-        else if not (keep_singleton ()) && Int.equal (List.length l) 1 && not (type_mem_kn kn (List.hd l))
-        then Singleton (* in passing, we registered the (identity) projection *)
         else Record field_glob
       with (I info) -> info
     in
@@ -891,7 +885,7 @@ and make_mlargs env sg e s args typs =
     | _ -> assert false
   in f (args,typs,s)
 
-(* Extract type arguments from a constant application.  Walks the Coq arguments
+(* Extract type arguments from a constant application.  Walks the Rocq arguments
    in parallel with both the unified (instantiated) types and the original
    (pre-unification) schema types.  A slot is a type parameter if either the
    unified type is Tdummy (the standard case — extraction marks Type-kinded
@@ -1057,13 +1051,10 @@ and extract_cons_app env sg mle mlt (((kn,i) as ip,j) as cp) args =
   let magic1 = needs_magic (type_cons, type_recomp (metas, a)) in
   let magic2 = needs_magic (a, mlt) in
   let head mla =
-    if mi.ind_kind == Singleton then
-      put_magic_if magic1 (List.hd mla) (* assert (List.length mla = 1) *)
-    else
-      let typeargs = match snd (type_decomp type_cons) with
-        | Tglob (_,l,[]) -> List.map type_simpl l
-        | _ -> assert false
-      in
+    let typeargs = match snd (type_decomp type_cons) with
+      | Tglob (_,l,[]) -> List.map type_simpl l
+      | _ -> assert false
+    in
       (* For promoted dependent records: extract concrete types for the
          erased Type constructor args and add them to typeargs. This gives
          instance structs access to the concrete carrier types.
@@ -1201,20 +1192,10 @@ and extract_case env sg mle ((kn,i) as ip,c,br) mlt =  (* EDIT HERE: Add type in
         let ids,e = case_expunge s e in         (* HERE! May need to figure out how this is effecting the types *)
         (List.rev ids, mlt, Pusual r, e)
       in
-      if mi.ind_kind == Singleton then
-        begin
-          (* Informative singleton case: *)
-          (* [match c with C i -> t] becomes [let i = c' in t'] *)
-          assert (Int.equal br_size 1);
-          let (ids,_,_,e') = extract_branch 0 in
-          assert (Int.equal (List.length ids) 1);
-          MLletin (tmp_id (fst (List.hd ids)),snd (List.hd ids),a,e')
-        end
-      else
-        (* Standard case: we apply [extract_branch]. *)
-        let typs = List.map type_simpl (Array.to_list metas) in
-        let typ = Tglob (GlobRef.IndRef ip,typs,[]) in
-        MLcase (typ, a, Array.init br_size extract_branch)
+      (* Apply standard case extraction for all inductives. *)
+      let typs = List.map type_simpl (Array.to_list metas) in
+      let typ = Tglob (GlobRef.IndRef ip,typs,[]) in
+      MLcase (typ, a, Array.init br_size extract_branch)
 
 (*s Extraction of a (co)-fixpoint. *)
 

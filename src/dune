@@ -1,6 +1,6 @@
 (library
  (name crane_plugin)                ; This is the name you will use in
-                                    ; Coq's `Declare ML Module`, and
+                                    ; Rocq's `Declare ML Module`, and
                                     ; the name of the main OCaml
                                     ; module of your plugin.
 

@@ -119,7 +119,7 @@ struct SigmaCompute {
   static std::shared_ptr<Sig0<unsigned int>>
   positive_succ(const unsigned int n);
 
-  static unsigned int get_positive(const unsigned int);
+  static unsigned int get_positive(const unsigned int n);
 
   static std::shared_ptr<Sig0<unsigned int>>
   double_positive(const unsigned int n);
@@ -136,7 +136,11 @@ struct SigmaCompute {
       get_positive((((0 + 1) + 1) + 1));
 
   static inline const unsigned int test_double_pos =
-      double_positive((((0 + 1) + 1) + 1));
+      std::visit(Overloaded{[](const typename Sig0<T1>::exist _args) -> auto {
+                   T1 a = _args._a0;
+                   return a;
+                 }},
+                 double_positive((((0 + 1) + 1) + 1))->v());
 
   static inline const std::shared_ptr<List<unsigned int>> test_positives =
       positives_up_to((((((0 + 1) + 1) + 1) + 1) + 1));

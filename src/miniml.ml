@@ -59,7 +59,6 @@ and ml_meta = { id : int; mutable contents : ml_type option }
 (*s ML inductive types. *)
 
 and inductive_kind =
-  | Singleton
   | Coinductive
   | Standard
   | Record of GlobRef.t option list (* None for anonymous field *)

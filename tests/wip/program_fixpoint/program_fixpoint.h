@@ -158,7 +158,15 @@ struct ProgFix {
 template <typename T1, typename T2,
           MapsTo<T2, T1, std::function<T2(std::shared_ptr<Sig0<T1>>)>> F0>
 T2 Wf::Fix_F_sub(F0 &&f_sub, const T1 x) {
-  return f_sub(x, [&](axiom x0) { return Wf::Fix_F_sub<T1, T2>(f_sub, x0); });
+  return f_sub(x, [&](std::shared_ptr<Sig0<T1>> y) {
+    return Wf::Fix_F_sub<T1, T2>(
+        f_sub,
+        std::visit(Overloaded{[](const typename Sig0<T1>::exist _args) -> T1 {
+                     T1 a = _args._a0;
+                     return a;
+                   }},
+                   y->v()));
+  });
 }
 
 template <typename T1, typename T2,

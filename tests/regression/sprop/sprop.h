@@ -37,32 +37,12 @@ struct SPropTest {
       [](void) { throw std::logic_error("absurd case"); }();
 
   template <typename A> struct Box {
-  public:
-    struct mkBox {
-      A _a0;
-    };
-    using variant_t = std::variant<mkBox>;
-
-  private:
-    variant_t v_;
-    explicit Box(mkBox _v) : v_(std::move(_v)) {}
-
-  public:
-    struct ctor {
-      ctor() = delete;
-      static std::shared_ptr<Box<A>> mkBox_(A a0) {
-        return std::shared_ptr<Box<A>>(new Box<A>(mkBox{a0}));
-      }
-      static std::unique_ptr<Box<A>> mkBox_uptr(A a0) {
-        return std::unique_ptr<Box<A>>(new Box<A>(mkBox{a0}));
-      }
-    };
-    const variant_t &v() const { return v_; }
-    variant_t &v_mut() { return v_; }
+    A box_value;
   };
 
-  template <typename T1> static T1 box_value(std::shared_ptr<Box<T1>> b) {
-    return std::move(b);
+  template <typename T1>
+  static T1 box_value(const std::shared_ptr<Box<T1>> &b) {
+    return b->box_value;
   }
 
   static unsigned int guarded_pred(const unsigned int n);

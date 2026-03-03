@@ -32,9 +32,13 @@ std::shared_ptr<List<unsigned int>> ProgFix::interleave_func(
               std::shared_ptr<List<unsigned int>>)>
               interleave = [&](std::shared_ptr<List<unsigned int>> l3,
                                std::shared_ptr<List<unsigned int>> l4) {
-                return interleave_(SigT<std::shared_ptr<List<unsigned int>>,
-                                        std::shared_ptr<List<unsigned int>>>::
-                                       ctor::existT_(l3, l4));
+                return interleave_(
+                    Sig0<std::shared_ptr<
+                        SigT<std::shared_ptr<List<unsigned int>>,
+                             std::shared_ptr<List<unsigned int>>>>>::ctor::
+                        exist_(SigT<std::shared_ptr<List<unsigned int>>,
+                                    std::shared_ptr<List<unsigned int>>>::ctor::
+                                   existT_(l3, l4)));
               };
           return [&](void) {
             if (std::move(l1).use_count() == 1 &&

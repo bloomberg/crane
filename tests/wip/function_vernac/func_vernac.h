@@ -97,7 +97,7 @@ struct FuncVernac {
   static std::shared_ptr<Sig0<unsigned int>>
   div2_terminate(const unsigned int n);
 
-  static unsigned int div2(const unsigned int);
+  static unsigned int div2(const unsigned int n);
 
   struct R_div2 {
   public:
@@ -257,7 +257,7 @@ struct FuncVernac {
   static std::shared_ptr<Sig0<unsigned int>>
   list_sum_terminate(const std::shared_ptr<List<unsigned int>> &l);
 
-  static unsigned int list_sum(const std::shared_ptr<List<unsigned int>> &);
+  static unsigned int list_sum(const std::shared_ptr<List<unsigned int>> &l);
 
   struct R_list_sum {
   public:
