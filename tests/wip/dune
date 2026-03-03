@@ -171,3 +171,47 @@
   (deps sigma_compute.t.exe)
   (action (run ./sigma_compute.t.exe))))
 
+(subdir qualified_shadow_ascii
+ (rule
+  (targets qualified_shadow_ascii.t.exe)
+  (deps QualifiedShadowAscii.vo qualified_shadow_ascii.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} qualified_shadow_ascii.t.exe qualified_shadow_ascii.cpp qualified_shadow_ascii.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps qualified_shadow_ascii.t.exe)
+  (action (run ./qualified_shadow_ascii.t.exe))))
+
+(subdir enum_switch_qualified
+ (rule
+  (targets enum_switch_qualified.t.exe)
+  (deps EnumSwitchQualified.vo enum_switch_qualified.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} enum_switch_qualified.t.exe enum_switch_qualified.cpp enum_switch_qualified.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps enum_switch_qualified.t.exe)
+  (action (run ./enum_switch_qualified.t.exe))))
+
+(subdir identifier_escape_param
+ (rule
+  (targets identifier_escape_param.t.exe)
+  (deps IdentifierEscapeParam.vo identifier_escape_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} identifier_escape_param.t.exe identifier_escape_param.cpp identifier_escape_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps identifier_escape_param.t.exe)
+  (action (run ./identifier_escape_param.t.exe))))
+
+(subdir keyword_double_global
+ (rule
+  (targets keyword_double_global.t.exe)
+  (deps KeywordDoubleGlobal.vo keyword_double_global.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} keyword_double_global.t.exe keyword_double_global.cpp keyword_double_global.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps keyword_double_global.t.exe)
+  (action (run ./keyword_double_global.t.exe))))
+

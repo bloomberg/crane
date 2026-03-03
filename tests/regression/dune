@@ -673,3 +673,90 @@
   (alias runtest)
   (deps equations.t.exe)
   (action (run ./equations.t.exe))))
+(subdir wrapper_collision_pos
+ (rule
+  (targets wrapper_collision_pos.t.exe)
+  (deps WrapperCollisionPos.vo wrapper_collision_pos.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} wrapper_collision_pos.t.exe wrapper_collision_pos.cpp wrapper_collision_pos.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps wrapper_collision_pos.t.exe)
+  (action (run ./wrapper_collision_pos.t.exe))))
+
+(subdir wrapper_decl_merge
+ (rule
+  (targets wrapper_decl_merge.t.exe)
+  (deps WrapperDeclMerge.vo wrapper_decl_merge.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} wrapper_decl_merge.t.exe wrapper_decl_merge.cpp wrapper_decl_merge.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps wrapper_decl_merge.t.exe)
+  (action (run ./wrapper_decl_merge.t.exe))))
+
+(subdir func_only_submodule
+ (rule
+  (targets func_only_submodule.t.exe)
+  (deps FuncOnlySubmodule.vo func_only_submodule.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} func_only_submodule.t.exe func_only_submodule.cpp func_only_submodule.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps func_only_submodule.t.exe)
+  (action (run ./func_only_submodule.t.exe))))
+
+(subdir forward_spec_ascii
+ (rule
+  (targets forward_spec_ascii.t.exe)
+  (deps ForwardSpecAscii.vo forward_spec_ascii.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} forward_spec_ascii.t.exe forward_spec_ascii.cpp forward_spec_ascii.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps forward_spec_ascii.t.exe)
+  (action (run ./forward_spec_ascii.t.exe))))
+
+(subdir signature_parity_fix
+ (rule
+  (targets signature_parity_fix.t.exe)
+  (deps SignatureParityFix.vo signature_parity_fix.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} signature_parity_fix.t.exe signature_parity_fix.cpp signature_parity_fix.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps signature_parity_fix.t.exe)
+  (action (run ./signature_parity_fix.t.exe))))
+
+(subdir bool_dec_std
+ (rule
+  (targets bool_dec_std.t.exe)
+  (deps BoolDecStd.vo bool_dec_std.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bool_dec_std.t.exe bool_dec_std.cpp bool_dec_std.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bool_dec_std.t.exe)
+  (action (run ./bool_dec_std.t.exe))))
+
+(subdir bool_dec_bde
+ (rule
+  (targets bool_dec_bde.t.exe)
+  (deps BoolDecBde.vo bool_dec_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bool_dec_bde.t.exe bool_dec_bde.cpp bool_dec_bde.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bool_dec_bde.t.exe)
+  (action (run ./bool_dec_bde.t.exe))))
+
+(subdir move_capture_reuse
+ (rule
+  (targets move_capture_reuse.t.exe)
+  (deps MoveCaptureReuse.vo move_capture_reuse.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} move_capture_reuse.t.exe move_capture_reuse.cpp move_capture_reuse.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps move_capture_reuse.t.exe)
+  (action (run ./move_capture_reuse.t.exe))))
