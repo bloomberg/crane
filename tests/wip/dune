@@ -89,17 +89,6 @@
   (deps cotree.t.exe)
   (action (run ./cotree.t.exe))))
 
-(subdir typeclasses
- (rule
-  (targets typeclasses.t.exe)
-  (deps Typeclasses.vo typeclasses.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} typeclasses.t.exe typeclasses.cpp typeclasses.t.cpp)))
- (rule
-  (alias runtest)
-  (deps typeclasses.t.exe)
-  (action (run ./typeclasses.t.exe))))
-
 (subdir binary_nums
  (rule
   (targets binary_nums.t.exe)

@@ -89,43 +89,40 @@ struct Typeclasses {
   };
   static_assert(Numeric<numBool, bool>);
 
-  template <typename _tcI0, typename T1>
-  static std::shared_ptr<Numeric<std::optional<T1>>> numOption() {
-    return std::make_shared<Numeric<std::optional<T1>>>(
-        Numeric<std::optional<T1>>{[&](std::optional<_tcI0> o) {
-          if (o.has_value()) {
-            _tcI0 x = *o;
-            return (_tcI0::to_nat(x) + 1);
-          } else {
-            return 0;
-          }
-        }});
-  }
+  template <typename _tcI0, typename T1> struct numOption {
+    static unsigned int to_nat(std::optional<T1> o) {
+      if (o.has_value()) {
+        T1 x = *o;
+        return (_tcI0::to_nat(x) + 1);
+      } else {
+        return 0;
+      }
+    }
+  };
 
-  template <typename _tcI0, typename T1>
-  static std::shared_ptr<Numeric<std::shared_ptr<List<T1>>>> numList() {
-    return std::make_shared<Numeric<std::shared_ptr<List<T1>>>>(
-        Numeric<std::shared_ptr<List<T1>>>{[&](void) {
-          std::function<unsigned int(std::shared_ptr<List<_tcI0>>)> sum;
-          sum = [&](std::shared_ptr<List<_tcI0>> l) -> unsigned int {
-            return std::visit(
-                Overloaded{[](const typename List<_tcI0>::nil _args)
-                               -> unsigned int { return 0; },
-                           [&](const typename List<_tcI0>::cons _args)
-                               -> unsigned int {
-                             _tcI0 x = _args._a0;
-                             std::shared_ptr<List<_tcI0>> rest = _args._a1;
-                             return (_tcI0::to_nat(x) + sum(std::move(rest)));
-                           }},
-                l->v());
-          };
-          return sum;
-        }()});
-  }
+  template <typename _tcI0, typename T1> struct numList {
+    static unsigned int to_nat(std::shared_ptr<List<T1>> a0) {
+      std::function<unsigned int(std::shared_ptr<List<T1>>)> sum;
+      sum = [&](std::shared_ptr<List<T1>> l) -> unsigned int {
+        return std::visit(
+            Overloaded{
+                [](const typename List<T1>::nil _args) -> unsigned int {
+                  return 0;
+                },
+                [&](const typename List<T1>::cons _args) -> unsigned int {
+                  T1 x = _args._a0;
+                  std::shared_ptr<List<T1>> rest = _args._a1;
+                  return (_tcI0::to_nat(x) + sum(std::move(rest)));
+                }},
+            l->v());
+      };
+      return sum(a0);
+    }
+  };
 
   template <typename _tcI0, typename T1>
   static unsigned int numeric_sum(const std::shared_ptr<List<T1>> &l) {
-    return numList<_tcI0, _tcI0>()::to_nat(l);
+    return numList<_tcI0, T1>::to_nat(l);
   }
 
   template <typename _tcI0, typename T1>
@@ -233,14 +230,14 @@ struct Typeclasses {
   static inline const unsigned int test_bool_false = numBool::to_nat(false);
 
   static inline const unsigned int test_option_some =
-      numOption<numNat, unsigned int>()::to_nat(
+      numOption<numNat, unsigned int>::to_nat(
           std::make_optional<unsigned int>((((((0 + 1) + 1) + 1) + 1) + 1)));
 
   static inline const unsigned int test_option_none =
-      numOption<numNat, unsigned int>()::to_nat(std::nullopt);
+      numOption<numNat, unsigned int>::to_nat(std::nullopt);
 
   static inline const unsigned int test_list =
-      numList<numNat, unsigned int>()::to_nat(List<unsigned int>::ctor::cons_(
+      numList<numNat, unsigned int>::to_nat(List<unsigned int>::ctor::cons_(
           (0 + 1),
           List<unsigned int>::ctor::cons_(
               ((0 + 1) + 1), List<unsigned int>::ctor::cons_(

@@ -2389,9 +2389,15 @@ let pp_hdecl = function
             | Some ds -> pp_cpp_decl (empty_env ()) ds
             | None -> mt ()
           in
-          (* Generate static_assert to verify the instance satisfies the concept *)
+          (* Generate static_assert to verify the instance satisfies the concept.
+             Skip for template instances (Dtemplate) — we can't instantiate a concept
+             check without concrete types. *)
+          let is_template = match ds_opt with
+            | Some (Dtemplate _) -> true
+            | _ -> false
+          in
           let static_assert_pp = match class_ref_opt with
-            | Some class_ref ->
+            | Some class_ref when not is_template ->
                 let instance_name = pp_global Type r in
                 let class_name = pp_global Type class_ref in
                 let type_args_pp = match type_args with
@@ -2401,7 +2407,7 @@ let pp_hdecl = function
                         (fun ty -> pp_cpp_type false [] (convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty)) args
                 in
                 fnl () ++ str "static_assert(" ++ class_name ++ str "<" ++ instance_name ++ type_args_pp ++ str ">);"
-            | None -> mt ()
+            | _ -> mt ()
           in
           struct_pp ++ static_assert_pp
     | Dterm (r, a, t) -> (* ADD CUSTOM for non-inlined *)
