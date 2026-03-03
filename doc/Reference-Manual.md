@@ -1,3 +1,5 @@
+# Reference Manual
+
 This reference manual documents all Crane commands, configuration settings, extraction rules, and supported syntactic forms.
 It is intended to be exhaustive, precise, and implementation-accurate.
 

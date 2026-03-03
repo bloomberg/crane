@@ -1,3 +1,5 @@
+# Design Principles
+
 ## Goals and Constraints
 
 ### What Crane aims to achieve

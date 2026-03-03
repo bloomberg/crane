@@ -1,3 +1,5 @@
+# Getting Started
+
 ## Installation
 
 Once you clone the repo, if you have [opam](https://opam.ocaml.org/) and [dune](https://dune.build/), you can run
