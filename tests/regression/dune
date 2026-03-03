@@ -816,3 +816,47 @@
   (alias runtest)
   (deps functor_comp.t.exe)
   (action (run ./functor_comp.t.exe))))
+
+(subdir keyword_class_global
+ (rule
+  (targets keyword_class_global.t.exe)
+  (deps KeywordClassGlobal.vo keyword_class_global.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} keyword_class_global.t.exe keyword_class_global.cpp keyword_class_global.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps keyword_class_global.t.exe)
+  (action (run ./keyword_class_global.t.exe))))
+
+(subdir identifier_escape_switch
+ (rule
+  (targets identifier_escape_switch.t.exe)
+  (deps IdentifierEscapeSwitch.vo identifier_escape_switch.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} identifier_escape_switch.t.exe identifier_escape_switch.cpp identifier_escape_switch.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps identifier_escape_switch.t.exe)
+  (action (run ./identifier_escape_switch.t.exe))))
+
+(subdir wrapper_collision_token
+ (rule
+  (targets wrapper_collision_token.t.exe)
+  (deps WrapperCollisionToken.vo wrapper_collision_token.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} wrapper_collision_token.t.exe wrapper_collision_token.cpp wrapper_collision_token.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps wrapper_collision_token.t.exe)
+  (action (run ./wrapper_collision_token.t.exe))))
+
+(subdir func_only_submodule_pair
+ (rule
+  (targets func_only_submodule_pair.t.exe)
+  (deps FuncOnlySubmodulePair.vo func_only_submodule_pair.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} func_only_submodule_pair.t.exe func_only_submodule_pair.cpp func_only_submodule_pair.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps func_only_submodule_pair.t.exe)
+  (action (run ./func_only_submodule_pair.t.exe))))
