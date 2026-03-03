@@ -1,0 +1,24 @@
+#include <algorithm>
+#include <any>
+#include <cassert>
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <signature_parity_fix.h>
+#include <stdexcept>
+#include <string>
+#include <variant>
+
+unsigned int SignatureParityFix::f(const unsigned int seed) {
+  std::function<unsigned int(unsigned int)> aux;
+  aux = [&](unsigned int n) -> unsigned int {
+    if (n <= 0) {
+      return seed;
+    } else {
+      unsigned int n_ = n - 1;
+      return aux(n_);
+    }
+  };
+  return aux((seed + 1));
+}
