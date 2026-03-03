@@ -9,6 +9,7 @@
 #include <string>
 #include <variant>
 
+using namespace std::string_literals;
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
@@ -101,7 +102,7 @@ struct PString {
                    [&](const typename List<T1>::cons _args) -> std::string {
                      T1 y = _args._a0;
                      std::shared_ptr<List<T1>> l_ = _args._a1;
-                     return p(y) + "::" + list_to_string<T1>(p, std::move(l_));
+                     return p(y) + "::"s + list_to_string<T1>(p, std::move(l_));
                    }},
         l->v());
   }

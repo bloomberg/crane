@@ -181,17 +181,6 @@
 
 
 
-(subdir string_match
- (rule
-  (targets string_match.t.exe)
-  (deps StringMatch.vo string_match.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} string_match.t.exe string_match.cpp string_match.t.cpp)))
- (rule
-  (alias runtest)
-  (deps string_match.t.exe)
-  (action (run ./string_match.t.exe))))
-
 (subdir coind_guard
  (rule
   (targets coind_guard.t.exe)

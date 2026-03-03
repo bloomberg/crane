@@ -10,6 +10,7 @@
 #include <utility>
 #include <variant>
 
+using namespace std::string_literals;
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
@@ -193,7 +194,7 @@ struct ToString {
                                     const std::pair<T1, T2> x) {
     T1 a = x.first;
     T2 b = x.second;
-    return "(" + p1(a) + ", " + p2(b) + ")";
+    return "("s + p1(a) + ", "s + p2(b) + ")"s;
   }
 
   template <typename T1, MapsTo<std::string, T1> F0>
@@ -235,11 +236,11 @@ struct ToString {
               return std::visit(
                   Overloaded{
                       [&](const typename List<T1>::nil _args) -> std::string {
-                        return "[" + p(y) + "]";
+                        return "["s + p(y) + "]"s;
                       },
                       [&](const typename List<T1>::cons _args) -> std::string {
-                        return "[" + p(y) +
-                               intersperse<T1>(p, "; ", std::move(l_)) + "]";
+                        return "["s + p(y) +
+                               intersperse<T1>(p, "; ", std::move(l_)) + "]"s;
                       }},
                   l_->v());
             }},

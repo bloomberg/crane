@@ -1610,6 +1610,14 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
     | CCscrut ->(match t with
         | Some t_expr ->
           let t_printed = pp_cpp_expr env [] t_expr in
+          (* Append string literal suffix for custom inlined operations.
+             Using C++ string literal operators: "hello"s (std) or "hello"_s (BDE). *)
+          let t_printed = match t_expr with
+            | CPPstring _ ->
+                let suffix = if Table.std_lib () = "BDE" then "_s" else "s" in
+                t_printed ++ str suffix
+            | _ -> t_printed
+          in
           (* Wrap scrutinee with any_cast if it's a method call returning std::any *)
           (match typ with
            | Some expected_ty -> wrap_any_cast_if_needed t_expr t_printed expected_ty vl
@@ -1637,6 +1645,16 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
     | CCarg i -> (try
         let arg_expr = List.nth args i in
         let arg = pp_cpp_expr env [] arg_expr in
+        (* Append string literal suffix for custom inlined operations.
+           Using C++ string literal operators: "hello"s (std) or "hello"_s (BDE).
+           This allows string literals to support operations like + (concatenation)
+           or .length() without explicit std::string() wrapping. *)
+        let arg = match arg_expr with
+          | CPPstring _ ->
+              let suffix = if Table.std_lib () = "BDE" then "_s" else "s" in
+              arg ++ str suffix
+          | _ -> arg
+        in
         (* Wrap with any_cast if this is a method call returning std::any *)
         (match List.nth_opt arg_types i with
          | Some expected_ty -> wrap_any_cast_if_needed arg_expr arg expected_ty vl

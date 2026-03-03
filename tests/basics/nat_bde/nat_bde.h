@@ -9,7 +9,6 @@
 #include <bsl_variant.h>
 
 using namespace BloombergLP;
-
 template <class From, class To>
 concept convertible_to = bsl::is_convertible<From, To>::value;
 

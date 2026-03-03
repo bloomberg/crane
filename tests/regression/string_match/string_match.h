@@ -10,6 +10,7 @@
 #include <string>
 #include <variant>
 
+using namespace std::string_literals;
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
@@ -25,11 +26,11 @@ struct StringMatch {
 
   static inline const std::string str_world = "world";
 
-  static inline const std::string str_cat = "hello " + "world";
+  static inline const std::string str_cat = "hello "s + "world"s;
 
-  static inline const int64_t str_len_empty = "".length();
+  static inline const int64_t str_len_empty = ""s.length();
 
-  static inline const int64_t str_len_hello = "hello".length();
+  static inline const int64_t str_len_hello = "hello"s.length();
 
   static bool is_empty(const std::string s);
 
@@ -37,5 +38,5 @@ struct StringMatch {
 
   static inline const bool test_empty_false = is_empty("x");
 
-  static inline const std::string test_cat = "foo" + "bar";
+  static inline const std::string test_cat = "foo"s + "bar"s;
 };

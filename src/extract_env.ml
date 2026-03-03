@@ -521,8 +521,14 @@ let spec_header () =
   let fun_concept = if Table.std_lib () = "BDE"
  then "template <class From, class To>\nconcept convertible_to = bsl::is_convertible<From, To>::value;\n\ntemplate <class T, class U>\nconcept same_as = bsl::is_same<T, U>::value && bsl::is_same<U, T>::value;\n\ntemplate <class F, class R, class... Args>\nconcept MapsTo =\n requires (F& f, Args&... a) {\n { bsl::invoke(static_cast<F&>(f), static_cast<Args&>(a)...) }\n -> convertible_to<R>;\n };"
     else  "template <typename F, typename R, typename... Args>\nconcept MapsTo = std::is_invocable_r_v<R, F&, Args&...>;" in
-  if Table.std_lib () = "BDE" then h ++ fnl2() ++ str "using namespace BloombergLP;" ++ fnl2 () ++ str fun_concept ++ fnl2()
-  else h ++ fnl2 () ++ str fun_concept ++ fnl2() ++ str "template<class... Ts> struct Overloaded : Ts... { using Ts::operator()...; };\ntemplate<class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;" ++ fnl2()
+  let string_lit_directive =
+    if Table.needs_string_literals () then
+      if Table.std_lib () = "BDE" then fnl () ++ str "using namespace bsl::string_literals;" ++ fnl ()
+      else fnl () ++ str "using namespace std::string_literals;" ++ fnl ()
+    else mt ()
+  in
+  if Table.std_lib () = "BDE" then h ++ fnl2() ++ str "using namespace BloombergLP;" ++ string_lit_directive ++ fnl () ++ str fun_concept ++ fnl2()
+  else h ++ fnl2 () ++ string_lit_directive ++ str fun_concept ++ fnl2() ++ str "template<class... Ts> struct Overloaded : Ts... { using Ts::operator()...; };\ntemplate<class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;" ++ fnl2()
 
 let mono_filename f =
   let d = descr () in
@@ -696,6 +702,16 @@ let print_structure_to_file (fn,si,mo) dry struc =
   (* Scan the structure to find which custom constants are actually used,
      so that only their associated imports appear in the generated header. *)
   mark_used_customs struc;
+  (* Detect whether any custom inline function is applied to a string literal.
+     This determines whether we need 'using namespace std::string_literals;'. *)
+  let has_custom_string_arg = Modutil.struct_ast_search (function
+    | MLapp (MLglob (r, _), args) ->
+        Table.is_custom r && Table.to_inline r &&
+        List.exists (function MLstring _ -> true | _ -> false) args
+    | _ -> false
+  ) struc in
+  if has_custom_string_arg then Table.mark_needs_string_literals ()
+  else Table.reset_needs_string_literals ();
   (* First, a dry run, for computing objects to rename or duplicate *)
   set_phase Pre;
   ignore (d.pp_struct struc);

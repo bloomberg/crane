@@ -88,6 +88,11 @@ val add_inductive_kind : MutInd.t -> inductive_kind -> unit
 val is_coinductive : GlobRef.t -> bool
 val has_any_coinductive : unit -> bool
 val is_coinductive_type : ml_type -> bool
+
+val mark_needs_string_literals : unit -> unit
+val needs_string_literals : unit -> bool
+val reset_needs_string_literals : unit -> unit
+
 (* What are the fields of a record (empty for a non-record) *)
 val get_record_fields :
   GlobRef.t -> GlobRef.t option list

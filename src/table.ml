@@ -182,6 +182,12 @@ let is_coinductive r =
 let has_any_coinductive () =
   Mindmap_env.exists (fun _ kind -> kind == Coinductive) !inductive_kinds
 
+(* Flag for tracking whether the current file needs string literal operators *)
+let needs_string_literals_flag = ref false
+let mark_needs_string_literals () = needs_string_literals_flag := true
+let needs_string_literals () = !needs_string_literals_flag
+let reset_needs_string_literals () = needs_string_literals_flag := false
+
 let is_coinductive_type = function
   | Tglob (r,_,_) -> is_coinductive r
   | _ -> false

@@ -9,6 +9,7 @@
 #include <string>
 #include <variant>
 
+using namespace std::string_literals;
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
@@ -105,12 +106,12 @@ std::string show_if_equal(const T1 x, const T1 y) {
 template <typename _tcI0, typename _tcI1, typename _tcI2, typename T1>
 std::string show_comparison(const T1 x, const T1 y) {
   if (_tcI1::lt(x, y)) {
-    return _tcI0::show(x) + " < " + _tcI0::show(y);
+    return _tcI0::show(x) + " < "s + _tcI0::show(y);
   } else {
     if (_tcI2::eqb(x, y)) {
-      return _tcI0::show(x) + " = " + _tcI0::show(y);
+      return _tcI0::show(x) + " = "s + _tcI0::show(y);
     } else {
-      return _tcI0::show(x) + " > " + _tcI0::show(y);
+      return _tcI0::show(x) + " > "s + _tcI0::show(y);
     }
   }
 }

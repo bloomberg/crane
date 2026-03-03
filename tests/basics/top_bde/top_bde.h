@@ -11,6 +11,7 @@
 #include <bsl_variant.h>
 
 using namespace BloombergLP;
+using namespace bsl::string_literals;
 
 template <class From, class To>
 concept convertible_to = bsl::is_convertible<From, To>::value;
@@ -245,7 +246,7 @@ struct ToString {
     {
         T1 a = x.first;
         T2 b = x.second;
-        return "(" + p1(a) + ", " + p2(b) + ")";
+        return "("_s + p1(a) + ", "_s + p2(b) + ")"_s;
     }
 
     template <typename T1, MapsTo<std::string, T1> F0>
@@ -293,15 +294,15 @@ struct ToString {
                               bdlf::Overloaded{
                                   [&](const typename List<T1>::nil _args)
                                       -> std::string {
-                                      return "[" + p(y) + "]";
+                                      return "["_s + p(y) + "]"_s;
                                   },
                                   [&](const typename List<T1>::cons _args)
                                       -> std::string {
-                                      return "[" + p(y) +
+                                      return "["_s + p(y) +
                                              intersperse<T1>(p,
                                                              "; ",
                                                              bsl::move(l_)) +
-                                             "]";
+                                             "]"_s;
                                   }},
                               l_->v());
                       }},
