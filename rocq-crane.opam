@@ -10,6 +10,7 @@ depends: [
   "rocq-runtime"
   "conf-clang"
   "conf-clang-format"
+  "coq-equations" {with-test}
 ]
 build: ["dune" "build"]
 install: ["dune" "install"]
