@@ -2921,11 +2921,19 @@ let gen_dfun n b dom cod ty temps =
            - After adding 2 eta-params (_x0, _x1), environment is [_x1; _x0; r]
            - r is now at index 3, so we lift b by 2: MLrel 1 -> MLrel 3
 
-         Then we apply the lifted body to the eta-expansion arguments. *)
-      let k = List.length missing in
-      let lifted_b = ast_lift k b in
-      let args = List.rev (List.mapi (fun i _ -> MLrel (i + 1)) missing) in
-      let b = List.map (glob_subst_stmt n rec_call) (gen_stmts env cofix_wrap (MLapp (lifted_b, args))) in
+         Then we apply the lifted body to the eta-expansion arguments.
+
+         Exception: axiom/exn bodies always throw — applying them to arguments
+         produces invalid C++ (calling a void result). Generate the body directly. *)
+      let b = match b with
+        | MLaxiom _ | MLexn _ ->
+          List.map (glob_subst_stmt n rec_call) (gen_stmts env cofix_wrap b)
+        | _ ->
+          let k = List.length missing in
+          let lifted_b = ast_lift k b in
+          let args = List.rev (List.mapi (fun i _ -> MLrel (i + 1)) missing) in
+          List.map (glob_subst_stmt n rec_call) (gen_stmts env cofix_wrap (MLapp (lifted_b, args)))
+      in
       (* let b = List.map forward_fun_args b in *)
       clear_current_type_vars ();
       clear_current_param_types ();

@@ -146,17 +146,6 @@
   (action (run ./mutual_coind.t.exe))))
 
 
-(subdir opaque
- (rule
-  (targets opaque.t.exe)
-  (deps Opaque.vo opaque.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} opaque.t.exe opaque.cpp opaque.t.cpp)))
- (rule
-  (alias runtest)
-  (deps opaque.t.exe)
-  (action (run ./opaque.t.exe))))
-
 
 
 (subdir coind_guard
