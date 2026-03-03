@@ -896,7 +896,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
               match ast with
               | MLcons (arg_typ, arg_c, arg_ts) ->
                 (match arg_typ with
-                 | Miniml.Tglob (arg_ref, arg_tys, _) when GlobRef.equal arg_ref n &&
+                 | Miniml.Tglob (arg_ref, arg_tys, _) when GlobRef.CanOrd.equal arg_ref n &&
                                                             List.exists (fun t -> match t with Miniml.Tunknown -> true | _ -> false) arg_tys ->
                    MLcons (resolved_ty, arg_c, List.map update_nested_ty arg_ts)
                  | _ ->
@@ -2636,7 +2636,7 @@ let gen_dfun n b dom cod ty temps =
     match body_ty, sig_ty with
     | Miniml.Tunknown, _ -> sig_ty
     | Miniml.Tglob (r1, ts1, a1), Miniml.Tglob (r2, ts2, _)
-      when GlobRef.equal r1 r2 && List.length ts1 = List.length ts2 ->
+      when GlobRef.CanOrd.equal r1 r2 && List.length ts1 = List.length ts2 ->
         Miniml.Tglob (r1, List.map2 merge_unknown ts1 ts2, a1)
     | Miniml.Tarr (t1a, t1b), Miniml.Tarr (t2a, t2b) ->
         Miniml.Tarr (merge_unknown t1a t2a, merge_unknown t1b t2b)
@@ -2991,7 +2991,7 @@ let erased_proj_tvar_map (class_ref : GlobRef.t) : (GlobRef.t * int) list =
 let rec replace_erased_proj_refs (proj_map : (GlobRef.t * int) list) (t : ml_type) : ml_type =
   let find_in_map r =
     List.find_map (fun (ref, idx) ->
-      if GlobRef.equal r ref then Some idx else None
+      if GlobRef.CanOrd.equal r ref then Some idx else None
     ) proj_map in
   match t with
   | Miniml.Tglob (r, ts, args) ->
