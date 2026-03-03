@@ -628,3 +628,14 @@
   (alias runtest)
   (deps sections.t.exe)
   (action (run ./sections.t.exe))))
+
+(subdir vec
+ (rule
+  (targets vec.t.exe)
+  (deps Vec.vo vec.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} vec.t.exe vec.cpp vec.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps vec.t.exe)
+  (action (run ./vec.t.exe))))

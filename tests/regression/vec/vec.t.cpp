@@ -32,7 +32,7 @@ void aSsErT(bool condition, const char *message, int line)
     aSsErT(!(X), #X, __LINE__);
 
 int main() {
-  std::cout << *test3 << '\n';
+  std::cout << Vec::test3 << '\n';
   return 0;
 }
 

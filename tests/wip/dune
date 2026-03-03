@@ -101,17 +101,6 @@
   (deps qsort.t.exe)
   (action (run ./qsort.t.exe))))
 
-(subdir vec
- (rule
-  (targets vec.t.exe)
-  (deps Vec.vo vec.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} vec.t.exe vec.cpp vec.t.cpp)))
- (rule
-  (alias runtest)
-  (deps vec.t.exe)
-  (action (run ./vec.t.exe))))
-
 (subdir cotree
  (rule
   (targets cotree.t.exe)
