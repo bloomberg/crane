@@ -120,20 +120,10 @@ public:
   }
 };
 
-struct Wf {
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::function<T2(std::shared_ptr<Sig<T1>>)>> F0>
-  static T2 Fix_F_sub(F0 &&f_sub, const T1 x);
-
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::function<T2(std::shared_ptr<Sig<T1>>)>> F1>
-  static T2 Fix_sub(const T1 _x0, F1 &&_x1);
-};
-
 struct ProgFix {
   static std::shared_ptr<List<unsigned int>> interleave_func(
       const std::shared_ptr<SigT<std::shared_ptr<List<unsigned int>>,
-                                 std::shared_ptr<List<unsigned int>>>> &);
+                                 std::shared_ptr<List<unsigned int>>>> &x);
 
   static std::shared_ptr<List<unsigned int>>
   interleave(std::shared_ptr<List<unsigned int>> l1,
@@ -154,23 +144,3 @@ struct ProgFix {
                                      ((((((0 + 1) + 1) + 1) + 1) + 1) + 1),
                                      List<unsigned int>::ctor::nil_()))));
 };
-
-template <typename T1, typename T2,
-          MapsTo<T2, T1, std::function<T2(std::shared_ptr<Sig<T1>>)>> F0>
-T2 Wf::Fix_F_sub(F0 &&f_sub, const T1 x) {
-  return f_sub(x, [&](std::shared_ptr<Sig<T1>> y) {
-    return Wf::Fix_F_sub<T1, T2>(
-        f_sub,
-        std::visit(Overloaded{[](const typename Sig<T1>::exist _args) -> T1 {
-                     T1 a = _args._a0;
-                     return a;
-                   }},
-                   y->v()));
-  });
-}
-
-template <typename T1, typename T2,
-          MapsTo<T2, T1, std::function<T2(std::shared_ptr<Sig<T1>>)>> F1>
-T2 Wf::Fix_sub(const T1 _x0, F1 &&_x1) {
-  return Wf::Fix_F_sub(_x0, _x1);
-}

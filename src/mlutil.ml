@@ -1624,6 +1624,8 @@ let manual_inline_set =
       "Corelib.Init.Wf.Acc_iter";
       "Corelib.Init.Wf.Fix_F";
       "Corelib.Init.Wf.Fix";
+      "Corelib.Program.Wf.Fix_F_sub";
+      "Corelib.Program.Wf.Fix_sub";
       "Corelib.Init.Datatypes.andb";
       "Corelib.Init.Datatypes.orb";
       "Corelib.Init.Logic.eq_rec_r";

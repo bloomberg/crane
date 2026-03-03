@@ -67,17 +67,6 @@
   (deps equations.t.exe)
   (action (run ./equations.t.exe))))
 
-(subdir program_fixpoint
- (rule
-  (targets program_fixpoint.t.exe)
-  (deps ProgFix.vo program_fixpoint.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} program_fixpoint.t.exe program_fixpoint.cpp program_fixpoint.t.cpp)))
- (rule
-  (alias runtest)
-  (deps program_fixpoint.t.exe)
-  (action (run ./program_fixpoint.t.exe))))
-
 
 (subdir psort
  (rule

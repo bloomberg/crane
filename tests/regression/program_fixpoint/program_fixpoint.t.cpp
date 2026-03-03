@@ -91,7 +91,7 @@ int main() {
 
   // Test 3: test_interleave constant
   {
-    auto vec = list_to_vector(test_interleave);
+    auto vec = list_to_vector(ProgFix::test_interleave);
     ASSERT(vec.size() == 6);
     ASSERT(vec[0] == 1);
     ASSERT(vec[1] == 2);

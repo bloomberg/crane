@@ -1354,17 +1354,19 @@ and gen_cpp_case (typ : ml_type) t env pv =
     let saved_env_types = tctx.env_types in
     push_env_types ids';
     (* 3. Extract fields into local variables:
-          auto var_name = std::move(_rf._aN); *)
-    let rev_ids = List.rev ids in
-    let extract_stmts = List.mapi (fun i (ml_id, ml_ty) ->
-      let var_name = remove_prime_id (id_of_mlid ml_id) in
+          auto var_name = std::move(_rf._aN);
+       Use ids' (renamed, same order as gen_cpp_pat_lambda) so that:
+       - Variable names match what gen_expr/body_env expects (renamed names)
+       - Field indices match constructor field order after List.rev *)
+    let dummies = List.rev_map (fun (x, _) -> match x with Dummy -> false | _ -> true) ids in
+    let rev_ids' = List.rev ids' in
+    let extract_stmts = List.mapi (fun i (var_name, ml_ty) ->
       let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty in
-      match ml_id with
-      | Dummy -> None
-      | _ ->
+      if List.nth dummies i then
         Some (Sasgn (var_name, Some cpp_ty,
           CPPmove (CPPmember (CPPvar (Id.of_string "_rf"), Id.of_string ("_a" ^ string_of_int i)))))
-    ) rev_ids in
+      else None
+    ) rev_ids' in
     let extract_stmts = List.filter_map Fun.id extract_stmts in
     (* 4. Generate intermediate let bindings from the body, if any.
        Walk through MLletin/MLmagic to reach the tail MLcons, generating
@@ -1585,10 +1587,11 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
   (* Normal MLletin fallback (shared by no-extra-tvars and thunk-with-free-vars cases) *)
   let gen_normal_letin () =
     let x' = remove_prime_id (id_of_mlid x) in
-    let _,env' = push_vars' [x', t] env in
-    push_env_types [x', t];
+    let renamed_ids,env' = push_vars' [x', t] env in
+    let x_renamed = fst (List.hd renamed_ids) in
+    push_env_types [x_renamed, t];
     if x == Dummy then gen_stmts env' k b else
-    let afun v = Sasgn (x', None, v) in
+    let afun v = Sasgn (x_renamed, None, v) in
     let asgn = gen_stmts env afun a in
     let tvars = get_current_type_vars () in
     (* Phase 2: shift owned vars for lambda let binding *)
@@ -1600,9 +1603,9 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       cont
     in
     match asgn with
-    | [ Sasgn (x', None, e) ] -> Sasgn (x', Some (convert_ml_type_to_cpp_type env Refset'.empty tvars t), e) :: gen_cont ()
+    | [ Sasgn (_, None, e) ] -> Sasgn (x_renamed, Some (convert_ml_type_to_cpp_type env Refset'.empty tvars t), e) :: gen_cont ()
     | _ ->
-      Sdecl (x', convert_ml_type_to_cpp_type env Refset'.empty tvars t) :: asgn @ gen_cont ()
+      Sdecl (x_renamed, convert_ml_type_to_cpp_type env Refset'.empty tvars t) :: asgn @ gen_cont ()
   in
   if not has_extra then gen_normal_letin ()
   else begin
