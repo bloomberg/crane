@@ -112,17 +112,6 @@
   (deps vec.t.exe)
   (action (run ./vec.t.exe))))
 
-(subdir sections
- (rule
-  (targets sections.t.exe)
-  (deps Sections.vo sections.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sections.t.exe sections.cpp sections.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sections.t.exe)
-  (action (run ./sections.t.exe))))
-
 (subdir cotree
  (rule
   (targets cotree.t.exe)

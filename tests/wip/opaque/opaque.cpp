@@ -54,9 +54,9 @@ bool Opaque::are_equal(const unsigned int n, const unsigned int m) {
   }
 }
 
-std::shared_ptr<Sig0<unsigned int>>
-Opaque::bounded_add(const unsigned int _x0, const unsigned int _x1,
-                    const unsigned int _x2) {
+std::shared_ptr<Sig<unsigned int>> Opaque::bounded_add(const unsigned int _x0,
+                                                       const unsigned int _x1,
+                                                       const unsigned int _x2) {
   return ([&]() -> auto {
     throw std::logic_error(
         "unrealized axiom: CraneTestsWIP.opaque.Opaque.Opaque.bounded_add");

@@ -11,37 +11,37 @@
 #include <utility>
 #include <variant>
 
-std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>>
+std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
 Sort::sort_cons_prog(const unsigned int a,
                      const std::shared_ptr<List<unsigned int>> &_x,
                      const std::shared_ptr<List<unsigned int>> &l_) {
   return std::visit(
       Overloaded{
           [&](const typename List<unsigned int>::nil _args) -> auto {
-            return Sig0<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
+            return Sig<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
                 List<unsigned int>::ctor::cons_(
                     std::move(a), List<unsigned int>::ctor::nil_()));
           },
           [&](const typename List<unsigned int>::cons _args) -> auto {
             T1 y = _args._a0;
             std::shared_ptr<List<T1>> l = _args._a1;
-            std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>> s =
+            std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>> s =
                 sort_cons_prog(std::move(a), l, l);
             return std::visit(
                 Overloaded{
-                    [&](const typename Sig0<
+                    [&](const typename Sig<
                         std::shared_ptr<List<unsigned int>>>::exist _args)
                         -> std::shared_ptr<
-                            Sig0<std::shared_ptr<List<unsigned int>>>> {
+                            Sig<std::shared_ptr<List<unsigned int>>>> {
                       std::shared_ptr<List<unsigned int>> x = _args._a0;
                       bool s0 = Compare_dec::le_lt_dec(std::move(a), y);
                       if (s0) {
-                        return Sig0<std::shared_ptr<List<unsigned int>>>::ctor::
+                        return Sig<std::shared_ptr<List<unsigned int>>>::ctor::
                             exist_(List<unsigned int>::ctor::cons_(
                                 std::move(a), List<unsigned int>::ctor::cons_(
                                                   y, std::move(l))));
                       } else {
-                        return Sig0<std::shared_ptr<List<unsigned int>>>::ctor::
+                        return Sig<std::shared_ptr<List<unsigned int>>>::ctor::
                             exist_(List<unsigned int>::ctor::cons_(
                                 y, std::move(x)));
                       }
@@ -51,12 +51,12 @@ Sort::sort_cons_prog(const unsigned int a,
       l_->v());
 }
 
-std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>>
+std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
 Sort::isort(const std::shared_ptr<List<unsigned int>> &l) {
   return std::visit(
       Overloaded{
           [](const typename List<unsigned int>::nil _args) -> auto {
-            return Sig0<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
+            return Sig<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
                 List<unsigned int>::ctor::nil_());
           },
           [](const typename List<unsigned int>::cons _args) -> auto {
@@ -64,10 +64,10 @@ Sort::isort(const std::shared_ptr<List<unsigned int>> &l) {
             std::shared_ptr<List<unsigned int>> l0 = _args._a1;
             return std::visit(
                 Overloaded{
-                    [&](const typename Sig0<
+                    [&](const typename Sig<
                         std::shared_ptr<List<unsigned int>>>::exist _args)
                         -> std::shared_ptr<
-                            Sig0<std::shared_ptr<List<unsigned int>>>> {
+                            Sig<std::shared_ptr<List<unsigned int>>>> {
                       std::shared_ptr<List<unsigned int>> x = _args._a0;
                       return sort_cons_prog(std::move(y), std::move(l0),
                                             std::move(x));
@@ -119,39 +119,39 @@ Sort::merge(std::shared_ptr<List<unsigned int>> l1,
   return merge_aux(l2);
 }
 
-std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>>
+std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
 Sort::merge_prog(const std::shared_ptr<List<unsigned int>> &_x,
                  std::shared_ptr<List<unsigned int>> l1,
                  std::shared_ptr<List<unsigned int>> l2) {
-  return Sig0<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
+  return Sig<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
       merge(std::move(l1), std::move(l2)));
 }
 
-std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>>
+std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
 Sort::msort(const std::shared_ptr<List<unsigned int>> &_x0) {
   return div_conq_split(
-      Sig0<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
+      Sig<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
           List<unsigned int>::ctor::nil_()),
       [](unsigned int a) {
-        return Sig0<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
+        return Sig<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
             List<unsigned int>::ctor::cons_(a,
                                             List<unsigned int>::ctor::nil_()));
       },
       [](std::shared_ptr<List<unsigned int>> ls,
-         std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>> x,
-         std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>> x0) {
+         std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>> x,
+         std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>> x0) {
         return std::visit(
-            Overloaded{[&](const typename Sig0<
+            Overloaded{[&](const typename Sig<
                            std::shared_ptr<List<unsigned int>>>::exist _args)
                            -> std::shared_ptr<
-                               Sig0<std::shared_ptr<List<unsigned int>>>> {
+                               Sig<std::shared_ptr<List<unsigned int>>>> {
               std::shared_ptr<List<unsigned int>> x1 = _args._a0;
               return std::visit(
                   Overloaded{
-                      [&](const typename Sig0<
+                      [&](const typename Sig<
                           std::shared_ptr<List<unsigned int>>>::exist _args)
                           -> std::shared_ptr<
-                              Sig0<std::shared_ptr<List<unsigned int>>>> {
+                              Sig<std::shared_ptr<List<unsigned int>>>> {
                         std::shared_ptr<List<unsigned int>> x2 = _args._a0;
                         return merge_prog(ls, std::move(x1), std::move(x2));
                       }},
@@ -161,34 +161,34 @@ Sort::msort(const std::shared_ptr<List<unsigned int>> &_x0) {
       })(_x0);
 }
 
-std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>>
+std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
 Sort::pair_merge_prog(const unsigned int _x, const unsigned int _x0,
                       const std::shared_ptr<List<unsigned int>> &_x1,
                       std::shared_ptr<List<unsigned int>> l_,
                       std::shared_ptr<List<unsigned int>> l_0) {
-  return Sig0<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
+  return Sig<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
       merge(std::move(l_0), std::move(l_)));
 }
 
-std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>>
+std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
 Sort::psort(const std::shared_ptr<List<unsigned int>> &_x0) {
   return div_conq_pair(
-      Sig0<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
+      Sig<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
           List<unsigned int>::ctor::nil_()),
       [](unsigned int a) {
-        return Sig0<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
+        return Sig<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
             List<unsigned int>::ctor::cons_(a,
                                             List<unsigned int>::ctor::nil_()));
       },
       [](unsigned int a1, unsigned int a2) {
         bool s = Compare_dec::le_lt_dec(a1, a2);
         if (s) {
-          return Sig0<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
+          return Sig<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
               List<unsigned int>::ctor::cons_(
                   a1, List<unsigned int>::ctor::cons_(
                           a2, List<unsigned int>::ctor::nil_())));
         } else {
-          return Sig0<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
+          return Sig<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
               List<unsigned int>::ctor::cons_(
                   a2, List<unsigned int>::ctor::cons_(
                           a1, List<unsigned int>::ctor::nil_())));
@@ -196,20 +196,20 @@ Sort::psort(const std::shared_ptr<List<unsigned int>> &_x0) {
       },
       [](unsigned int a1, unsigned int a2,
          std::shared_ptr<List<unsigned int>> l,
-         std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>> x,
-         std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>> x0) {
+         std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>> x,
+         std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>> x0) {
         return std::visit(
-            Overloaded{[&](const typename Sig0<
+            Overloaded{[&](const typename Sig<
                            std::shared_ptr<List<unsigned int>>>::exist _args)
                            -> std::shared_ptr<
-                               Sig0<std::shared_ptr<List<unsigned int>>>> {
+                               Sig<std::shared_ptr<List<unsigned int>>>> {
               std::shared_ptr<List<unsigned int>> x1 = _args._a0;
               return std::visit(
                   Overloaded{
-                      [&](const typename Sig0<
+                      [&](const typename Sig<
                           std::shared_ptr<List<unsigned int>>>::exist _args)
                           -> std::shared_ptr<
-                              Sig0<std::shared_ptr<List<unsigned int>>>> {
+                              Sig<std::shared_ptr<List<unsigned int>>>> {
                         std::shared_ptr<List<unsigned int>> x2 = _args._a0;
                         return pair_merge_prog(a1, a2, l, std::move(x2),
                                                std::move(x1));
@@ -220,29 +220,29 @@ Sort::psort(const std::shared_ptr<List<unsigned int>> &_x0) {
       })(_x0);
 }
 
-std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>>
+std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
 Sort::qsort(const std::shared_ptr<List<unsigned int>> &_x0) {
   return div_conq_pivot(
       Compare_dec::le_dec,
-      Sig0<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
+      Sig<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
           List<unsigned int>::ctor::nil_()),
       [](unsigned int a, std::shared_ptr<List<unsigned int>> _x,
-         std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>> x,
-         std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>> x0) {
+         std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>> x,
+         std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>> x0) {
         return std::visit(
-            Overloaded{[&](const typename Sig0<
+            Overloaded{[&](const typename Sig<
                            std::shared_ptr<List<unsigned int>>>::exist _args)
                            -> std::shared_ptr<
-                               Sig0<std::shared_ptr<List<unsigned int>>>> {
+                               Sig<std::shared_ptr<List<unsigned int>>>> {
               std::shared_ptr<List<unsigned int>> x1 = _args._a0;
               return std::visit(
                   Overloaded{
-                      [&](const typename Sig0<
+                      [&](const typename Sig<
                           std::shared_ptr<List<unsigned int>>>::exist _args)
                           -> std::shared_ptr<
-                              Sig0<std::shared_ptr<List<unsigned int>>>> {
+                              Sig<std::shared_ptr<List<unsigned int>>>> {
                         std::shared_ptr<List<unsigned int>> x2 = _args._a0;
-                        return Sig0<std::shared_ptr<List<unsigned int>>>::ctor::
+                        return Sig<std::shared_ptr<List<unsigned int>>>::ctor::
                             exist_(merge(std::move(x1),
                                          List<unsigned int>::ctor::cons_(
                                              a, std::move(x2))));

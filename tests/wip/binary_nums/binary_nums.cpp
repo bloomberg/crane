@@ -785,7 +785,7 @@ unsigned int N::to_nat(const std::shared_ptr<N> &a) {
       a->v());
 }
 
-std::shared_ptr<Z> Z::double(const std::shared_ptr<Z> &x) {
+std::shared_ptr<Z> Z::double_(const std::shared_ptr<Z> &x) {
   return std::visit(
       Overloaded{[](const typename Z::Z0 _args) -> std::shared_ptr<Z> {
                    return Z::ctor::Z0_();
@@ -844,7 +844,7 @@ std::shared_ptr<Z> Z::pos_sub(const std::shared_ptr<Positive> &x,
                     [&](const typename Positive::xI _args)
                         -> std::shared_ptr<Z> {
                       std::shared_ptr<Positive> q = _args._a0;
-                      return double(pos_sub(std::move(p), std::move(q)));
+                      return double_(pos_sub(std::move(p), std::move(q)));
                     },
                     [&](const typename Positive::xO _args)
                         -> std::shared_ptr<Z> {
@@ -869,7 +869,7 @@ std::shared_ptr<Z> Z::pos_sub(const std::shared_ptr<Positive> &x,
                     [&](const typename Positive::xO _args)
                         -> std::shared_ptr<Z> {
                       std::shared_ptr<Positive> q = _args._a0;
-                      return double(pos_sub(std::move(p), std::move(q)));
+                      return double_(pos_sub(std::move(p), std::move(q)));
                     },
                     [&](const typename Positive::xH _args)
                         -> std::shared_ptr<Z> {

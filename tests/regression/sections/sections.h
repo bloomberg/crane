@@ -36,7 +36,7 @@ struct Sections {
 
   template <typename T1> static T1 identity(const T1 x) { return x; }
 
-  template <typename T1> static T1 const(const T1 x, const T1 _x) { return x; }
+  template <typename T1> static T1 const_(const T1 x, const T1 _x) { return x; }
 
   static inline const unsigned int test_add = add_five(2u);
 
@@ -46,5 +46,5 @@ struct Sections {
 
   static inline const unsigned int test_id = identity<unsigned int>(7u);
 
-  static inline const unsigned int test_const = const<unsigned int>(3u, 9u);
+  static inline const unsigned int test_const = const_<unsigned int>(3u, 9u);
 };

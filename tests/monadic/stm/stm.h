@@ -72,8 +72,8 @@ struct TVar {};
 
 template <typename T1, MapsTo<T1, T1> F1>
 void modifyTVar(const std::shared_ptr<stm::TVar<T1>> a, F1 &&f) {
-  T1 val0 = a->read();
-  a->write(f(val0));
+  T1 val = a->read();
+  a->write(f(val));
   return;
 }
 

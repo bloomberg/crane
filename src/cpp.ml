@@ -40,14 +40,25 @@ let pp_string_parameters l =
 
 let keywords =
   List.fold_right (fun s -> Id.Set.add (Id.of_string s))
-  [ "and"; "as"; "assert"; "begin"; "bool"; "class"; "const"; "constraint"; "do";
-    "done"; "default"; "downto"; "else"; "end"; "exception"; "external"; "false";
-    "for"; "fun"; "function"; "functor"; "if"; "in"; "include";
-    "inherit"; "initializer"; "lazy"; "let"; "match"; "method";
-    "module"; "mutable"; "new"; "nonrec"; "object"; "of"; "open"; "or";
-    "parser"; "private"; "rec"; "sig"; "struct"; "then"; "to"; "true";
-    "try"; "type"; "val"; "virtual"; "when"; "while"; "with"; "mod";
-    "land"; "lor"; "lxor"; "lsl"; "lsr"; "asr" ; "_" ; "__" ]
+  [ (* C++ keywords *)
+    "alignas"; "alignof"; "and"; "and_eq"; "asm"; "auto"; "bitand";
+    "bitor"; "bool"; "break"; "case"; "catch"; "char"; "char8_t";
+    "char16_t"; "char32_t"; "class"; "compl"; "concept"; "const";
+    "consteval"; "constexpr"; "constinit"; "const_cast"; "continue";
+    "co_await"; "co_return"; "co_yield"; "decltype"; "default";
+    "delete"; "do"; "double"; "dynamic_cast"; "else"; "enum";
+    "explicit"; "export"; "extern"; "false"; "float"; "for"; "friend";
+    "goto"; "if"; "inline"; "int"; "long"; "mutable"; "namespace";
+    "new"; "noexcept"; "not"; "not_eq"; "nullptr"; "operator"; "or";
+    "or_eq"; "private"; "protected"; "public"; "register";
+    "reinterpret_cast"; "requires"; "return"; "short"; "signed";
+    "sizeof"; "static"; "static_assert"; "static_cast"; "struct";
+    "switch"; "template"; "this"; "thread_local"; "throw"; "true";
+    "try"; "typedef"; "typeid"; "typename"; "union"; "unsigned";
+    "using"; "virtual"; "void"; "volatile"; "wchar_t"; "while";
+    "xor"; "xor_eq";
+    (* Reserved identifiers *)
+    "_" ; "__" ]
   Id.Set.empty
 
 (* Note: do not shorten [str "foo" ++ fnl ()] into [str "foo\n"],

@@ -428,14 +428,9 @@ let reset_renaming_tables flag =
    with previous [Coq_id] variable, these prefixes are duplicated if already
    existing. *)
 
-(* TODO: NOTE, I removed Coq_ *)
-let modular_rename k id =
+let modular_rename _k id =
   let s = ascii_of_id id in
-  (* let prefix,is_ok = if upperkind k then "Coq_",is_upper else "coq_",is_lower *)
-  let prefix,is_ok = if upperkind k then "",is_upper else "",is_lower
-  in
-  if not (is_ok s) || Id.Set.mem id (get_keywords ()) || begins_with s prefix
-  then prefix ^ s
+  if Id.Set.mem id (get_keywords ()) then s ^ "_"
   else s
 
 (*s For monolithic extraction, first-level modules might have to be renamed

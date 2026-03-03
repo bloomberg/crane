@@ -62,7 +62,7 @@ struct Comparison {
 
   static unsigned int min_nat(const unsigned int a, const unsigned int b);
 
-  static unsigned int clamp(const unsigned int val0, const unsigned int lo,
+  static unsigned int clamp(const unsigned int val, const unsigned int lo,
                             const unsigned int hi);
 
   static cmp flip_cmp(const cmp c);

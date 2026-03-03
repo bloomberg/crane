@@ -281,7 +281,7 @@ struct N {
 };
 
 struct Z {
-  static std::shared_ptr<Z> double(const std::shared_ptr<Z> &x);
+  static std::shared_ptr<Z> double_(const std::shared_ptr<Z> &x);
 
   static std::shared_ptr<Z> succ_double(const std::shared_ptr<Z> &x);
 

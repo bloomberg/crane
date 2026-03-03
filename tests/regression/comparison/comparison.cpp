@@ -71,21 +71,21 @@ unsigned int Comparison::min_nat(const unsigned int a, const unsigned int b) {
   }();
 }
 
-unsigned int Comparison::clamp(const unsigned int val0, const unsigned int lo,
+unsigned int Comparison::clamp(const unsigned int val, const unsigned int lo,
                                const unsigned int hi) {
   return [&](void) {
-    switch (compare_nats(val0, lo)) {
+    switch (compare_nats(val, lo)) {
     case cmp::CmpLt: {
       return std::move(lo);
     }
     case cmp::CmpEq: {
       return [&](void) {
-        switch (compare_nats(val0, hi)) {
+        switch (compare_nats(val, hi)) {
         case cmp::CmpLt: {
-          return std::move(val0);
+          return std::move(val);
         }
         case cmp::CmpEq: {
-          return std::move(val0);
+          return std::move(val);
         }
         case cmp::CmpGt: {
           return std::move(hi);
@@ -95,12 +95,12 @@ unsigned int Comparison::clamp(const unsigned int val0, const unsigned int lo,
     }
     case cmp::CmpGt: {
       return [&](void) {
-        switch (compare_nats(val0, hi)) {
+        switch (compare_nats(val, hi)) {
         case cmp::CmpLt: {
-          return std::move(val0);
+          return std::move(val);
         }
         case cmp::CmpEq: {
-          return std::move(val0);
+          return std::move(val);
         }
         case cmp::CmpGt: {
           return std::move(hi);

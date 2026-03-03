@@ -17,7 +17,7 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-template <typename A> struct Sig0 {
+template <typename A> struct Sig {
 public:
   struct exist {
     A _a0;
@@ -26,16 +26,16 @@ public:
 
 private:
   variant_t v_;
-  explicit Sig0(exist _v) : v_(std::move(_v)) {}
+  explicit Sig(exist _v) : v_(std::move(_v)) {}
 
 public:
   struct ctor {
     ctor() = delete;
-    static std::shared_ptr<Sig0<A>> exist_(A a0) {
-      return std::shared_ptr<Sig0<A>>(new Sig0<A>(exist{a0}));
+    static std::shared_ptr<Sig<A>> exist_(A a0) {
+      return std::shared_ptr<Sig<A>>(new Sig<A>(exist{a0}));
     }
-    static std::unique_ptr<Sig0<A>> exist_uptr(A a0) {
-      return std::unique_ptr<Sig0<A>>(new Sig0<A>(exist{a0}));
+    static std::unique_ptr<Sig<A>> exist_uptr(A a0) {
+      return std::unique_ptr<Sig<A>>(new Sig<A>(exist{a0}));
     }
   };
   const variant_t &v() const { return v_; }
@@ -51,7 +51,7 @@ struct Opaque {
 
   static bool are_equal(const unsigned int n, const unsigned int m);
 
-  static std::shared_ptr<Sig0<unsigned int>>
+  static std::shared_ptr<Sig<unsigned int>>
   bounded_add(const unsigned int, const unsigned int, const unsigned int);
 
   static inline const unsigned int test_safe_pred =

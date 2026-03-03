@@ -64,7 +64,7 @@ public:
   }
 };
 
-template <typename A> struct Sig0 {
+template <typename A> struct Sig {
 public:
   struct exist {
     A _a0;
@@ -73,16 +73,16 @@ public:
 
 private:
   variant_t v_;
-  explicit Sig0(exist _v) : v_(std::move(_v)) {}
+  explicit Sig(exist _v) : v_(std::move(_v)) {}
 
 public:
   struct ctor {
     ctor() = delete;
-    static std::shared_ptr<Sig0<A>> exist_(A a0) {
-      return std::shared_ptr<Sig0<A>>(new Sig0<A>(exist{a0}));
+    static std::shared_ptr<Sig<A>> exist_(A a0) {
+      return std::shared_ptr<Sig<A>>(new Sig<A>(exist{a0}));
     }
-    static std::unique_ptr<Sig0<A>> exist_uptr(A a0) {
-      return std::unique_ptr<Sig0<A>>(new Sig0<A>(exist{a0}));
+    static std::unique_ptr<Sig<A>> exist_uptr(A a0) {
+      return std::unique_ptr<Sig<A>>(new Sig<A>(exist{a0}));
     }
   };
   const variant_t &v() const { return v_; }
@@ -271,35 +271,35 @@ struct Sort {
         l->v());
   }
 
-  static std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>>
+  static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
   sort_cons_prog(const unsigned int a,
                  const std::shared_ptr<List<unsigned int>> &_x,
                  const std::shared_ptr<List<unsigned int>> &l_);
 
-  static std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>>
+  static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
   isort(const std::shared_ptr<List<unsigned int>> &l);
 
   static std::shared_ptr<List<unsigned int>>
   merge(std::shared_ptr<List<unsigned int>> l1,
         const std::shared_ptr<List<unsigned int>> &l2);
 
-  static std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>>
+  static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
   merge_prog(const std::shared_ptr<List<unsigned int>> &_x,
              std::shared_ptr<List<unsigned int>> l1,
              std::shared_ptr<List<unsigned int>> l2);
 
-  static std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>>
+  static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
   msort(const std::shared_ptr<List<unsigned int>> &);
 
-  static std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>>
+  static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
   pair_merge_prog(const unsigned int _x, const unsigned int _x0,
                   const std::shared_ptr<List<unsigned int>> &_x1,
                   std::shared_ptr<List<unsigned int>> l_,
                   std::shared_ptr<List<unsigned int>> l_0);
 
-  static std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>>
+  static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
   psort(const std::shared_ptr<List<unsigned int>> &);
 
-  static std::shared_ptr<Sig0<std::shared_ptr<List<unsigned int>>>>
+  static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
   qsort(const std::shared_ptr<List<unsigned int>> &);
 };

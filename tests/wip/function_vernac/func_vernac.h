@@ -53,7 +53,7 @@ public:
   variant_t &v_mut() { return v_; }
 };
 
-template <typename A> struct Sig0 {
+template <typename A> struct Sig {
 public:
   struct exist {
     A _a0;
@@ -62,16 +62,16 @@ public:
 
 private:
   variant_t v_;
-  explicit Sig0(exist _v) : v_(std::move(_v)) {}
+  explicit Sig(exist _v) : v_(std::move(_v)) {}
 
 public:
   struct ctor {
     ctor() = delete;
-    static std::shared_ptr<Sig0<A>> exist_(A a0) {
-      return std::shared_ptr<Sig0<A>>(new Sig0<A>(exist{a0}));
+    static std::shared_ptr<Sig<A>> exist_(A a0) {
+      return std::shared_ptr<Sig<A>>(new Sig<A>(exist{a0}));
     }
-    static std::unique_ptr<Sig0<A>> exist_uptr(A a0) {
-      return std::unique_ptr<Sig0<A>>(new Sig0<A>(exist{a0}));
+    static std::unique_ptr<Sig<A>> exist_uptr(A a0) {
+      return std::unique_ptr<Sig<A>>(new Sig<A>(exist{a0}));
     }
   };
   const variant_t &v() const { return v_; }
@@ -94,7 +94,7 @@ struct FuncVernac {
     }
   }
 
-  static std::shared_ptr<Sig0<unsigned int>>
+  static std::shared_ptr<Sig<unsigned int>>
   div2_terminate(const unsigned int n);
 
   static unsigned int div2(const unsigned int n);
@@ -254,7 +254,7 @@ struct FuncVernac {
         l->v());
   }
 
-  static std::shared_ptr<Sig0<unsigned int>>
+  static std::shared_ptr<Sig<unsigned int>>
   list_sum_terminate(const std::shared_ptr<List<unsigned int>> &l);
 
   static unsigned int list_sum(const std::shared_ptr<List<unsigned int>> &l);

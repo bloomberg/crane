@@ -53,7 +53,7 @@ public:
   variant_t &v_mut() { return v_; }
 };
 
-template <typename A> struct Sig0 {
+template <typename A> struct Sig {
 public:
   struct exist {
     A _a0;
@@ -62,16 +62,16 @@ public:
 
 private:
   variant_t v_;
-  explicit Sig0(exist _v) : v_(std::move(_v)) {}
+  explicit Sig(exist _v) : v_(std::move(_v)) {}
 
 public:
   struct ctor {
     ctor() = delete;
-    static std::shared_ptr<Sig0<A>> exist_(A a0) {
-      return std::shared_ptr<Sig0<A>>(new Sig0<A>(exist{a0}));
+    static std::shared_ptr<Sig<A>> exist_(A a0) {
+      return std::shared_ptr<Sig<A>>(new Sig<A>(exist{a0}));
     }
-    static std::unique_ptr<Sig0<A>> exist_uptr(A a0) {
-      return std::unique_ptr<Sig0<A>>(new Sig0<A>(exist{a0}));
+    static std::unique_ptr<Sig<A>> exist_uptr(A a0) {
+      return std::unique_ptr<Sig<A>>(new Sig<A>(exist{a0}));
     }
   };
   const variant_t &v() const { return v_; }
@@ -122,11 +122,11 @@ public:
 
 struct Wf {
   template <typename T1, typename T2,
-            MapsTo<T2, T1, std::function<T2(std::shared_ptr<Sig0<T1>>)>> F0>
+            MapsTo<T2, T1, std::function<T2(std::shared_ptr<Sig<T1>>)>> F0>
   static T2 Fix_F_sub(F0 &&f_sub, const T1 x);
 
   template <typename T1, typename T2,
-            MapsTo<T2, T1, std::function<T2(std::shared_ptr<Sig0<T1>>)>> F1>
+            MapsTo<T2, T1, std::function<T2(std::shared_ptr<Sig<T1>>)>> F1>
   static T2 Fix_sub(const T1 _x0, F1 &&_x1);
 };
 
@@ -156,12 +156,12 @@ struct ProgFix {
 };
 
 template <typename T1, typename T2,
-          MapsTo<T2, T1, std::function<T2(std::shared_ptr<Sig0<T1>>)>> F0>
+          MapsTo<T2, T1, std::function<T2(std::shared_ptr<Sig<T1>>)>> F0>
 T2 Wf::Fix_F_sub(F0 &&f_sub, const T1 x) {
-  return f_sub(x, [&](std::shared_ptr<Sig0<T1>> y) {
+  return f_sub(x, [&](std::shared_ptr<Sig<T1>> y) {
     return Wf::Fix_F_sub<T1, T2>(
         f_sub,
-        std::visit(Overloaded{[](const typename Sig0<T1>::exist _args) -> T1 {
+        std::visit(Overloaded{[](const typename Sig<T1>::exist _args) -> T1 {
                      T1 a = _args._a0;
                      return a;
                    }},
@@ -170,7 +170,7 @@ T2 Wf::Fix_F_sub(F0 &&f_sub, const T1 x) {
 }
 
 template <typename T1, typename T2,
-          MapsTo<T2, T1, std::function<T2(std::shared_ptr<Sig0<T1>>)>> F1>
+          MapsTo<T2, T1, std::function<T2(std::shared_ptr<Sig<T1>>)>> F1>
 T2 Wf::Fix_sub(const T1 _x0, F1 &&_x1) {
   return Wf::Fix_F_sub(_x0, _x1);
 }
