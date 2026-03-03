@@ -1631,6 +1631,7 @@ let manual_inline_set =
       "Corelib.Init.Logic.eq_rec_r";
       "Corelib.Init.Logic.eq_rect_r";
       "Corelib.Init.Specif.proj1_sig";
+      "Equations.Prop.Subterm.FixWf";
     ]
     Cset_env.empty
 

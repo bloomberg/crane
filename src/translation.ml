@@ -1489,8 +1489,10 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     (* Save and set current_type_vars to the full tvar list for the lifted function *)
     let saved_tvars = get_current_type_vars () in
     set_current_type_vars all_tvar_names;
-    (* Generate the fixpoint body using gen_fix *)
-    let funs_compiled = Array.to_list (Array.map2 (gen_fix env) ids funs) in
+    (* Generate the fixpoint body using gen_fix, passing all mutual fixpoint names *)
+    let all_fix_ids_list = Array.to_list ids in
+    let funs_compiled = Array.to_list (Array.mapi (fun i f ->
+      gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f) funs) in
     (* Restore outer type vars *)
     set_current_type_vars saved_tvars;
     (* Build a lifted Dfundef for each fixpoint function (usually just one) *)
@@ -1526,8 +1528,10 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     List.map (local_var_subst_stmt fix_name lifted_call) result
   end else begin
     (* No extra Tvars - proceed with original local fixpoint approach *)
-    (* Call gen_fix with original names - it will handle renaming internally *)
-    let funs_compiled = Array.to_list (Array.map2 (gen_fix env) ids funs) in
+    (* Call gen_fix with all mutual fixpoint names so each body can reference the others *)
+    let all_fix_ids_list = Array.to_list ids in
+    let funs_compiled = Array.to_list (Array.mapi (fun i f ->
+      gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f) funs) in
     (* Extract the renamed ids from gen_fix results *)
     let renamed_ids = List.map (fun (renamed_id, _, _) -> renamed_id) funs_compiled in
     let funs_with_params = List.map (fun (_, params, body) -> (params, body)) funs_compiled in
@@ -1866,7 +1870,9 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
        extended_tvar_names covers both signature and body Tvar indices. *)
     let saved_tvars = get_current_type_vars () in
     set_current_type_vars extended_tvar_names;
-    let funs_compiled = Array.to_list (Array.map2 (gen_fix env) ids funs) in
+    let all_fix_ids_list = Array.to_list ids in
+    let funs_compiled = Array.to_list (Array.mapi (fun i f ->
+      gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f) funs) in
     set_current_type_vars saved_tvars;
     (* Build lifted declarations *)
     List.iteri (fun i ((renamed_id, fix_ty), params, body) ->
@@ -1888,7 +1894,9 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     [k (CPPfun_call (CPPglob (lifted_ref, []), cpp_args))]
   end else begin
     (* No extra Tvars - proceed with original local fixpoint approach *)
-    let funs_compiled = Array.to_list (Array.map2 (gen_fix env) ids funs) in
+    let all_fix_ids_list = Array.to_list ids in
+    let funs_compiled = Array.to_list (Array.mapi (fun i f ->
+      gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f) funs) in
     let renamed_ids = List.map (fun (renamed_id, _, _) -> renamed_id) funs_compiled in
     let funs_with_params = List.map (fun (_, params, body) -> (params, body)) funs_compiled in
     let tvars = get_current_type_vars () in
@@ -1923,8 +1931,10 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     | Miniml.Tglob (_, args, _) -> List.iter resolve_metas args
     | _ -> () in
   Array.iter (fun (_, ty) -> resolve_metas ty) ids;
-  (* Call gen_fix with original names - it will handle renaming internally *)
-  let funs_compiled = Array.to_list (Array.map2 (gen_fix env) ids funs) in
+  (* Call gen_fix with all mutual fixpoint names so each body can reference the others *)
+  let all_fix_ids_list = Array.to_list ids in
+  let funs_compiled = Array.to_list (Array.mapi (fun i f ->
+    gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f) funs) in
   (* Extract the renamed ids from gen_fix results *)
   let renamed_ids = List.map (fun (renamed_id, _, _) -> renamed_id) funs_compiled in
   let funs_with_params = List.map (fun (_, params, body) -> (params, body)) funs_compiled in
@@ -2002,36 +2012,34 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
   tctx.move_dead_after <- saved_dead;
   result
 
-and gen_fix env (n,ty) f =
+and gen_fix env ?(all_fix_ids=[]) ~fix_idx (n,ty) f =
   let ids, f = collect_lams f in
   let ids,_ = push_vars' (List.map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids) env in
-  (* Push the fix function name, which may be renamed to avoid shadowing *)
-  let renamed_fix_ids, env = push_vars' (ids @ [(n,ty)]) env in
+  (* Push all mutual fixpoint names (or just (n,ty) for single fixpoints).
+     For mutual fixpoints, all_fix_ids contains all fixpoint names in array order.
+     For single fixpoints, all_fix_ids is empty and we use [(n,ty)]. *)
+  let fix_names = if all_fix_ids = [] then [(n,ty)] else all_fix_ids in
+  let n_fix_funs = List.length fix_names in
+  let renamed_fix_ids, env = push_vars' (ids @ fix_names) env in
   let saved_env_types = tctx.env_types in
-  push_env_types (ids @ [(n,ty)]);
-  let renamed_n = fst (List.hd (List.rev renamed_fix_ids)) in
+  push_env_types (ids @ fix_names);
+  (* Extract the renamed name for THIS fixpoint function.
+     fix_names are at the end of renamed_fix_ids, starting at position (List.length ids).
+     For mutual fixpoints, fix_idx identifies which one is ours. *)
+  let n_lam_params = List.length ids in
+  let renamed_n = fst (List.nth renamed_fix_ids (n_lam_params + fix_idx)) in
   let ids = List.filter (fun (_,ty) -> not (ml_type_is_void ty)) ids in
   (* Phase 2: set up move state for fixpoint body.
      Fix params are owned (passed by value in the generated std::function lambda).
-     ids has the params in de Bruijn order (element 0 = db index 1 + fix_name offset).
-     After push_vars' with ids @ [(n,ty)], de Bruijn indices in f are:
-       1 = fix function name (n)
-       2..n_params+1 = lambda params
-     So param at position i in ids (0-based) is at de Bruijn index i+2.
-     But wait: push_vars' pushes ids first, then (n,ty). In the env, n is at
-     position len(ids)+1. Actually, the fix function body f is under the
-     combined binders of [ids @ [(n,ty)]]. The fix self-ref n is at db index 1
-     (last pushed), and the lambda params are at 2..n_params+1.
-     We want to mark the lambda params as owned. *)
+     After push_vars'(ids @ fix_names), de Bruijn indices in f are:
+       ids[0] → db 1, ..., ids[k-1] → db k,
+       fix_names[0] → db k+1, ..., fix_names[m-1] → db k+m.
+     We only mark lambda params as owned (not the fix self-references). *)
   let saved_dead = tctx.move_dead_after in
   let saved_owned = tctx.move_owned_vars in
   let saved_nparams = tctx.move_n_params in
   let n_fix_params = List.length ids in
-  let fix_owned = Escape.infer_owned_params (n_fix_params + 1) f in
-  (* After push_vars'(ids @ [(n,ty)]):
-     ids[0] → db 1, ids[1] → db 2, ..., (n,ty) → db n_fix_params+1.
-     fix_owned[i] = ownership flag for db i+1.
-     We only mark lambda params as owned (not the fix self-reference). *)
+  let fix_owned = Escape.infer_owned_params (n_fix_params + n_fix_funs) f in
   tctx.move_owned_vars <- List.fold_left (fun acc i ->
     let db = i + 1 in  (* ids[i] has db index i+1 *)
     let owned = match List.nth_opt fix_owned i with Some b -> b | None -> false in
@@ -2041,7 +2049,7 @@ and gen_fix env (n,ty) f =
     else acc
   ) Escape.IntSet.empty (List.init n_fix_params (fun i -> i));
   tctx.move_dead_after <- Escape.IntSet.empty;
-  tctx.move_n_params <- n_fix_params + 1;
+  tctx.move_n_params <- n_fix_params + n_fix_funs;
   let result = (renamed_n, ty), ids, gen_stmts env (fun x -> Sreturn x) f in
   tctx.env_types <- saved_env_types;
   tctx.move_dead_after <- saved_dead;

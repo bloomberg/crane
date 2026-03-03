@@ -8,8 +8,7 @@
  (modules :standard) ; automatically includes all .v files in this directory
  (theories
    Stdlib
-   Crane
-   Equations)
+   Crane)
  (flags (:standard -output-directory ../../tests/wip)))
 
 (subdir graph
@@ -55,17 +54,6 @@
   (alias runtest)
   (deps msort.t.exe)
   (action (run ./msort.t.exe))))
-
-(subdir equations
- (rule
-  (targets equations.t.exe)
-  (deps Equations.vo equations.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} equations.t.exe equations.cpp equations.t.cpp)))
- (rule
-  (alias runtest)
-  (deps equations.t.exe)
-  (action (run ./equations.t.exe))))
 
 
 (subdir psort

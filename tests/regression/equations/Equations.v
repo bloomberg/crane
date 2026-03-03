@@ -9,12 +9,13 @@ Import ListNotations.
 Module Equations.
 
 Equations gcd (p : nat * nat) : nat by wf p (lexprod _ _ lt lt) :=
-  gcd (0, _) := 0;
-  gcd (_, 0) := 0;
+  gcd (0, y) := y;
+  gcd (x, 0) := x;
   gcd (x, y) with Nat.ltb x y := {
     | true => gcd (x, y - x);
     | false => gcd (x - y, y)
   }.
+Solve All Obligations with intros; try (left; lia) || (right; lia).
 
 Equations collatz_steps (n : nat) : nat by wf n lt :=
   collatz_steps 0 := 0;
