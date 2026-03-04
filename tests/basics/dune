@@ -265,17 +265,6 @@
   (deps stream.t.exe)
   (action (run ./stream.t.exe))))
 
-(subdir int63_arith
- (rule
-  (targets int63_arith.t.exe)
-  (deps Int63Arith.vo int63_arith.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} int63_arith.t.exe int63_arith.cpp int63_arith.t.cpp)))
- (rule
-  (alias runtest)
-  (deps int63_arith.t.exe)
-  (action (run ./int63_arith.t.exe))))
-
 
 (subdir prim_array
  (rule
