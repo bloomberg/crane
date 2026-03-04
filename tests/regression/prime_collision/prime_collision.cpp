@@ -12,6 +12,6 @@
 
 unsigned int PrimeCollision::foo_(const unsigned int n) { return std::move(n); }
 
-unsigned int PrimeCollision::foo_(const unsigned int n) {
+unsigned int PrimeCollision::foo_0(const unsigned int n) {
   return (std::move(n) + 1);
 }

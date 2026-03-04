@@ -17,11 +17,10 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-struct EscapeCollision {
-  static unsigned int double_(const unsigned int n);
+struct PrimeCollisionValue {
+  static unsigned int value_(const unsigned int n);
 
-  static unsigned int double_(const unsigned int n);
+  static unsigned int value_0(const unsigned int n);
 
-  static inline const unsigned int t =
-      (double_((0 + 1)) + double_(((0 + 1) + 1)));
+  static inline const unsigned int t = (value_(0) + value_0(0));
 };

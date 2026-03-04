@@ -160,28 +160,6 @@
   (deps qualified_shadow_ascii.t.exe)
   (action (run ./qualified_shadow_ascii.t.exe))))
 
-(subdir escape_collision
- (rule
-  (targets escape_collision.t.exe)
-  (deps EscapeCollision.vo escape_collision.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} escape_collision.t.exe escape_collision.cpp escape_collision.t.cpp)))
- (rule
-  (alias runtest)
-  (deps escape_collision.t.exe)
-  (action (run ./escape_collision.t.exe))))
-
-(subdir prime_collision
- (rule
-  (targets prime_collision.t.exe)
-  (deps PrimeCollision.vo prime_collision.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} prime_collision.t.exe prime_collision.cpp prime_collision.t.cpp)))
- (rule
-  (alias runtest)
-  (deps prime_collision.t.exe)
-  (action (run ./prime_collision.t.exe))))
-
 (subdir shadow_qual_node
  (rule
   (targets shadow_qual_node.t.exe)
@@ -192,25 +170,3 @@
   (alias runtest)
   (deps shadow_qual_node.t.exe)
   (action (run ./shadow_qual_node.t.exe))))
-
-(subdir escape_collision_class
- (rule
-  (targets escape_collision_class.t.exe)
-  (deps EscapeCollisionClass.vo escape_collision_class.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} escape_collision_class.t.exe escape_collision_class.cpp escape_collision_class.t.cpp)))
- (rule
-  (alias runtest)
-  (deps escape_collision_class.t.exe)
-  (action (run ./escape_collision_class.t.exe))))
-
-(subdir prime_collision_value
- (rule
-  (targets prime_collision_value.t.exe)
-  (deps PrimeCollisionValue.vo prime_collision_value.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} prime_collision_value.t.exe prime_collision_value.cpp prime_collision_value.t.cpp)))
- (rule
-  (alias runtest)
-  (deps prime_collision_value.t.exe)
-  (action (run ./prime_collision_value.t.exe))))

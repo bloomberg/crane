@@ -313,6 +313,19 @@ let add_ctor_sibling, get_ctor_siblings =
     try IndMap.find ind !tbl with Not_found -> Id.Set.empty
   in (add, get)
 
+(* Per-module-path sibling name tracking for non-constructor globals.
+   Used to detect collisions caused by keyword/prime escaping
+   (e.g. double → double_ colliding with an existing double_). *)
+let add_mp_sibling, get_mp_siblings =
+  let tbl = ref MPmap.empty in
+  register_cleanup (fun () -> tbl := MPmap.empty);
+  let add mp id =
+    let cur = try MPmap.find mp !tbl with Not_found -> Id.Set.empty in
+    tbl := MPmap.add mp (Id.Set.add id cur) !tbl
+  and get mp =
+    try MPmap.find mp !tbl with Not_found -> Id.Set.empty
+  in (add, get)
+
 let empty_env () = [], get_global_ids ()
 
 (* We might have built [global_reference] whose canonical part is
@@ -448,11 +461,17 @@ let reset_renaming_tables flag =
    with previous [Coq_id] variable, these prefixes are duplicated if already
    existing. *)
 
-let modular_rename _k id =
+(* Returns (escaped_name, was_changed) where was_changed indicates whether
+   keyword escaping or prime replacement modified the identifier. *)
+let modular_rename_ex _k id =
   let s = ascii_of_id id in
-  let s = if Id.Set.mem id (get_keywords ()) then s ^ "_" else s in
-  (* Replace primes (') with underscores — primes are not valid in C++ identifiers *)
-  String.map (fun c -> if c = '\'' then '_' else c) s
+  let is_kw = Id.Set.mem id (get_keywords ()) in
+  let s = if is_kw then s ^ "_" else s in
+  let has_prime = String.contains s '\'' in
+  let s = String.map (fun c -> if c = '\'' then '_' else c) s in
+  (s, is_kw || has_prime)
+
+let modular_rename k id = fst (modular_rename_ex k id)
 
 (*s For monolithic extraction, first-level modules might have to be renamed
     with unique numbers *)
@@ -518,21 +537,27 @@ let ref_renaming_fun (k,r) =
       let id = next_ident_away (kindcase_id k idg) globs in
       Id.to_string id
     | _ ->
-      let s = modular_rename k idg in
-      (* For constructors, avoid collisions among siblings of the same
-         inductive type (e.g. D' and D_ both mapping to D_ after prime
-         escaping).  Non-constructor globals don't need this check. *)
+      let (s, changed) = modular_rename_ex k idg in
+      let is_bound = is_mp_bound (base_mp mp) in
+      (* Avoid collisions caused by keyword/prime escaping.
+         For constructors, track per inductive type.
+         For other globals, track per module path.
+         Only resolve collisions when escaping changed the name;
+         always register so later escaped names detect conflicts.
+         Skip MPbound refs (functor parameters) since those bypass
+         the ref_renaming cache and would accumulate stale entries. *)
       match r with
-      | GlobRef.ConstructRef (ind, _)
-        when not (is_mp_bound (base_mp mp)) ->
-        (* Track constructor names per inductive type so that prime-to-underscore
-           escaping can't create duplicates (e.g. D' and D_ both → D_).
-           Skip for MPbound refs (functor parameters) since those bypass
-           the ref_renaming cache and would accumulate stale entries. *)
+      | GlobRef.ConstructRef (ind, _) when not is_bound ->
         let siblings = get_ctor_siblings ind in
         let id = next_ident_away (Id.of_string s) siblings in
         let s = Id.to_string id in
         add_ctor_sibling ind (Id.of_string s);
+        s
+      | _ when not is_bound ->
+        let siblings = get_mp_siblings mp in
+        let id = next_ident_away (Id.of_string s) siblings in
+        let s = Id.to_string id in
+        add_mp_sibling mp (Id.of_string s);
         s
       | _ -> s
   in
