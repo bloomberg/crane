@@ -114,8 +114,6 @@
   (deps coind_guard.t.exe)
   (action (run ./coind_guard.t.exe))))
 
-
-
 (subdir monadic
  (rule
   (targets monadic.t.exe)
@@ -159,3 +157,157 @@
   (alias runtest)
   (deps shadow_qual_node.t.exe)
   (action (run ./shadow_qual_node.t.exe))))
+
+(subdir escape_collision_class
+ (rule
+  (targets escape_collision_class.t.exe)
+  (deps EscapeCollisionClass.vo escape_collision_class.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} escape_collision_class.t.exe escape_collision_class.cpp escape_collision_class.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps escape_collision_class.t.exe)
+  (action (run ./escape_collision_class.t.exe))))
+
+(subdir prime_collision_value
+ (rule
+  (targets prime_collision_value.t.exe)
+  (deps PrimeCollisionValue.vo prime_collision_value.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prime_collision_value.t.exe prime_collision_value.cpp prime_collision_value.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps prime_collision_value.t.exe)
+  (action (run ./prime_collision_value.t.exe))))
+
+(subdir ctor_escape_prime
+ (rule
+  (targets ctor_escape_prime.t.exe)
+  (deps CtorEscapePrime.vo ctor_escape_prime.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ctor_escape_prime.t.exe ctor_escape_prime.cpp ctor_escape_prime.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ctor_escape_prime.t.exe)
+  (action (run ./ctor_escape_prime.t.exe))))
+
+(subdir modpath_escape_value
+ (rule
+  (targets modpath_escape_value.t.exe)
+  (deps ModpathEscapeValue.vo modpath_escape_value.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} modpath_escape_value.t.exe modpath_escape_value.cpp modpath_escape_value.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps modpath_escape_value.t.exe)
+  (action (run ./modpath_escape_value.t.exe))))
+
+(subdir nat_sub_underflow
+ (rule
+  (targets nat_sub_underflow.t.exe)
+  (deps NatSubUnderflow.vo nat_sub_underflow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nat_sub_underflow.t.exe nat_sub_underflow.cpp nat_sub_underflow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nat_sub_underflow.t.exe)
+  (action (run ./nat_sub_underflow.t.exe))))
+
+(subdir bool_nat_ternary_precedence
+ (rule
+  (targets bool_nat_ternary_precedence.t.exe)
+  (deps BoolNatTernaryPrecedence.vo bool_nat_ternary_precedence.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bool_nat_ternary_precedence.t.exe bool_nat_ternary_precedence.cpp bool_nat_ternary_precedence.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bool_nat_ternary_precedence.t.exe)
+  (action (run ./bool_nat_ternary_precedence.t.exe))))
+
+(subdir comparator_lowering_parity
+ (rule
+  (targets comparator_lowering_parity.t.exe)
+  (deps ComparatorLoweringParity.vo comparator_lowering_parity.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} comparator_lowering_parity.t.exe comparator_lowering_parity.cpp comparator_lowering_parity.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps comparator_lowering_parity.t.exe)
+  (action (run ./comparator_lowering_parity.t.exe))))
+
+(subdir option_tuple_wrapper
+ (rule
+  (targets option_tuple_wrapper.t.exe)
+  (deps OptionTupleWrapper.vo option_tuple_wrapper.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} option_tuple_wrapper.t.exe option_tuple_wrapper.cpp option_tuple_wrapper.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps option_tuple_wrapper.t.exe)
+  (action (run ./option_tuple_wrapper.t.exe))))
+
+(subdir nested_record_update_qual
+ (rule
+  (targets nested_record_update_qual.t.exe)
+  (deps NestedRecordUpdateQual.vo nested_record_update_qual.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_record_update_qual.t.exe nested_record_update_qual.cpp nested_record_update_qual.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_record_update_qual.t.exe)
+  (action (run ./nested_record_update_qual.t.exe))))
+
+(subdir mkstate_signature_drift
+ (rule
+  (targets mkstate_signature_drift.t.exe)
+  (deps MkstateSignatureDrift.vo mkstate_signature_drift.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mkstate_signature_drift.t.exe mkstate_signature_drift.cpp mkstate_signature_drift.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mkstate_signature_drift.t.exe)
+  (action (run ./mkstate_signature_drift.t.exe))))
+
+(subdir helper_name_odr
+ (rule
+  (targets helper_name_odr.t.exe)
+  (deps HelperNameOdr.vo helper_name_odr.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} helper_name_odr.t.exe helper_name_odr.cpp helper_name_odr.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps helper_name_odr.t.exe)
+  (action (run ./helper_name_odr.t.exe))))
+
+(subdir nth_default_struct
+ (rule
+  (targets nth_default_struct.t.exe)
+  (deps NthDefaultStruct.vo nth_default_struct.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nth_default_struct.t.exe nth_default_struct.cpp nth_default_struct.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nth_default_struct.t.exe)
+  (action (run ./nth_default_struct.t.exe))))
+
+(subdir match_forward_order
+ (rule
+  (targets match_forward_order.t.exe)
+  (deps MatchForwardOrder.vo match_forward_order.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} match_forward_order.t.exe match_forward_order.cpp match_forward_order.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps match_forward_order.t.exe)
+  (action (run ./match_forward_order.t.exe))))
+
+(subdir ram_accessor_namespace
+ (rule
+  (targets ram_accessor_namespace.t.exe)
+  (deps RamAccessorNamespace.vo ram_accessor_namespace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_accessor_namespace.t.exe ram_accessor_namespace.cpp ram_accessor_namespace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_accessor_namespace.t.exe)
+  (action (run ./ram_accessor_namespace.t.exe))))
