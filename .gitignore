@@ -58,3 +58,6 @@ CLAUDE.md
 /docs
 /logs
 scripts/update_conversation_history.py
+tests/monadic/skiplist/BDE_TEST_ADAPTATION.md
+tests/monadic/skiplist_bde/TEST_RESULTS.md
+tests/monadic/skiplist_bde/BDE_TEST_ADAPTATION.md

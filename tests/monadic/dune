@@ -121,3 +121,14 @@
   (alias runtest)
   (deps skiplist.t.exe)
   (action (run ./skiplist.t.exe))))
+
+(subdir skiplist_bde
+ (rule
+  (targets skiplist_bde.t.exe)
+  (deps SkipList.vo skiplist_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} skiplist_bde.t.exe skiplist_bde.cpp skiplist_bde.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps skiplist_bde.t.exe)
+  (action (run ./skiplist_bde.t.exe))))
