@@ -871,3 +871,104 @@
   (alias runtest)
   (deps enum_switch_color_flip.t.exe)
   (action (run ./enum_switch_color_flip.t.exe))))
+
+(subdir nat_sub_underflow_safe
+ (rule
+  (targets nat_sub_underflow_safe.t.exe)
+  (deps NatSubUnderflowSafe.vo nat_sub_underflow_safe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nat_sub_underflow_safe.t.exe nat_sub_underflow_safe.cpp nat_sub_underflow_safe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nat_sub_underflow_safe.t.exe)
+  (action (run ./nat_sub_underflow_safe.t.exe))))
+(subdir bool_nat_ternary_precedence_safe
+ (rule
+  (targets bool_nat_ternary_precedence_safe.t.exe)
+  (deps BoolNatTernaryPrecedenceSafe.vo bool_nat_ternary_precedence_safe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bool_nat_ternary_precedence_safe.t.exe bool_nat_ternary_precedence_safe.cpp bool_nat_ternary_precedence_safe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bool_nat_ternary_precedence_safe.t.exe)
+  (action (run ./bool_nat_ternary_precedence_safe.t.exe))))
+(subdir comparator_lowering_parity_safe
+ (rule
+  (targets comparator_lowering_parity_safe.t.exe)
+  (deps ComparatorLoweringParitySafe.vo comparator_lowering_parity_safe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} comparator_lowering_parity_safe.t.exe comparator_lowering_parity_safe.cpp comparator_lowering_parity_safe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps comparator_lowering_parity_safe.t.exe)
+  (action (run ./comparator_lowering_parity_safe.t.exe))))
+(subdir option_tuple_wrapper_safe
+ (rule
+  (targets option_tuple_wrapper_safe.t.exe)
+  (deps OptionTupleWrapperSafe.vo option_tuple_wrapper_safe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} option_tuple_wrapper_safe.t.exe option_tuple_wrapper_safe.cpp option_tuple_wrapper_safe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps option_tuple_wrapper_safe.t.exe)
+  (action (run ./option_tuple_wrapper_safe.t.exe))))
+(subdir nested_record_update_qual_safe
+ (rule
+  (targets nested_record_update_qual_safe.t.exe)
+  (deps NestedRecordUpdateQualSafe.vo nested_record_update_qual_safe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_record_update_qual_safe.t.exe nested_record_update_qual_safe.cpp nested_record_update_qual_safe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_record_update_qual_safe.t.exe)
+  (action (run ./nested_record_update_qual_safe.t.exe))))
+(subdir mkstate_signature_drift_safe
+ (rule
+  (targets mkstate_signature_drift_safe.t.exe)
+  (deps MkstateSignatureDriftSafe.vo mkstate_signature_drift_safe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mkstate_signature_drift_safe.t.exe mkstate_signature_drift_safe.cpp mkstate_signature_drift_safe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mkstate_signature_drift_safe.t.exe)
+  (action (run ./mkstate_signature_drift_safe.t.exe))))
+(subdir helper_name_odr_safe
+ (rule
+  (targets helper_name_odr_safe.t.exe)
+  (deps HelperNameOdrSafe.vo helper_name_odr_safe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} helper_name_odr_safe.t.exe helper_name_odr_safe.cpp helper_name_odr_safe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps helper_name_odr_safe.t.exe)
+  (action (run ./helper_name_odr_safe.t.exe))))
+(subdir nth_default_struct_safe
+ (rule
+  (targets nth_default_struct_safe.t.exe)
+  (deps NthDefaultStructSafe.vo nth_default_struct_safe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nth_default_struct_safe.t.exe nth_default_struct_safe.cpp nth_default_struct_safe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nth_default_struct_safe.t.exe)
+  (action (run ./nth_default_struct_safe.t.exe))))
+(subdir match_forward_order_safe
+ (rule
+  (targets match_forward_order_safe.t.exe)
+  (deps MatchForwardOrderSafe.vo match_forward_order_safe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} match_forward_order_safe.t.exe match_forward_order_safe.cpp match_forward_order_safe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps match_forward_order_safe.t.exe)
+  (action (run ./match_forward_order_safe.t.exe))))
+(subdir ram_accessor_namespace_safe
+ (rule
+  (targets ram_accessor_namespace_safe.t.exe)
+  (deps RamAccessorNamespaceSafe.vo ram_accessor_namespace_safe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_accessor_namespace_safe.t.exe ram_accessor_namespace_safe.cpp ram_accessor_namespace_safe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_accessor_namespace_safe.t.exe)
+  (action (run ./ram_accessor_namespace_safe.t.exe))))
