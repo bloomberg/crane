@@ -28,15 +28,6 @@ struct PrimRecTc {
     unsigned int py;
   };
 
-  static unsigned int px(const std::shared_ptr<point> &p);
-
-  static unsigned int py(const std::shared_ptr<point> &p);
-
-  template <typename _tcI0, typename T1>
-  static unsigned int norm(const T1 _x0) {
-    return _tcI0::norm(_x0);
-  }
-
   struct pointNorm {
     static unsigned int norm(std::shared_ptr<point> p) {
       return (p->px + p->py);
@@ -49,12 +40,6 @@ struct PrimRecTc {
     unsigned int vy;
     unsigned int vz;
   };
-
-  static unsigned int vx(const std::shared_ptr<vec3> &v);
-
-  static unsigned int vy(const std::shared_ptr<vec3> &v);
-
-  static unsigned int vz(const std::shared_ptr<vec3> &v);
 
   struct vec3Norm {
     static unsigned int norm(std::shared_ptr<vec3> v) {
@@ -72,10 +57,6 @@ struct PrimRecTc {
     std::shared_ptr<point> top_left;
     std::shared_ptr<point> bot_right;
   };
-
-  static std::shared_ptr<point> top_left(const std::shared_ptr<rect> &r);
-
-  static std::shared_ptr<point> bot_right(const std::shared_ptr<rect> &r);
 
   static unsigned int rect_width(const std::shared_ptr<rect> &r);
 

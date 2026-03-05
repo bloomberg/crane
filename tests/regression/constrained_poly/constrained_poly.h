@@ -26,16 +26,6 @@ struct ConstrainedPoly {
   };
 
   template <typename T1, typename T2>
-  static T1 ufst(const std::shared_ptr<UPair<T1, T2>> &u) {
-    return u->ufst;
-  }
-
-  template <typename T1, typename T2>
-  static T2 usnd(const std::shared_ptr<UPair<T1, T2>> &u) {
-    return u->usnd;
-  }
-
-  template <typename T1, typename T2>
   static std::shared_ptr<UPair<T2, T1>> swap(std::shared_ptr<UPair<T1, T2>> p) {
     return std::make_shared<UPair<T2, T1>>(UPair<T2, T1>{p->usnd, p->ufst});
   }

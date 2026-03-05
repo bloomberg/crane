@@ -22,8 +22,6 @@ struct SingletonRecord {
     unsigned int value;
   };
 
-  static unsigned int value(const std::shared_ptr<wrapper> &w);
-
   static inline const std::shared_ptr<wrapper> wrapped_five =
       std::make_shared<wrapper>(wrapper{5u});
 
@@ -38,10 +36,6 @@ struct SingletonRecord {
   template <typename A> struct box {
     A contents;
   };
-
-  template <typename T1> static T1 contents(const std::shared_ptr<box<T1>> &b) {
-    return b->contents;
-  }
 
   static inline const std::shared_ptr<box<unsigned int>> boxed_three =
       std::make_shared<box<unsigned int>>(box<unsigned int>{3u});
@@ -60,9 +54,6 @@ struct SingletonRecord {
   struct fn_wrapper {
     std::function<unsigned int(unsigned int)> fn;
   };
-
-  static unsigned int fn(const std::shared_ptr<fn_wrapper> &,
-                         const unsigned int);
 
   static inline const std::shared_ptr<fn_wrapper> my_fn_wrapper =
       std::make_shared<fn_wrapper>(

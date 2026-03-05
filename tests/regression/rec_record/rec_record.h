@@ -109,32 +109,16 @@ struct RecRecord {
     }();
   }
 
-  static unsigned int rn_value(const std::shared_ptr<RNode> &r);
-
-  static std::optional<std::shared_ptr<RNode>>
-  rn_next(const std::shared_ptr<RNode> &r);
-
   struct Employee {
     unsigned int emp_name;
     unsigned int emp_dept;
   };
-
-  static unsigned int emp_name(const std::shared_ptr<Employee> &e);
-
-  static unsigned int emp_dept(const std::shared_ptr<Employee> &e);
 
   struct Department {
     unsigned int dept_id;
     std::shared_ptr<Employee> dept_head;
     unsigned int dept_size;
   };
-
-  static unsigned int dept_id(const std::shared_ptr<Department> &d);
-
-  static std::shared_ptr<Employee>
-  dept_head(const std::shared_ptr<Department> &d);
-
-  static unsigned int dept_size(const std::shared_ptr<Department> &d);
 
   template <typename T1>
   static unsigned int rlist_length(const std::shared_ptr<rlist<T1>> &l) {

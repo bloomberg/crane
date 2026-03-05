@@ -58,12 +58,6 @@ struct RApply {
     std::shared_ptr<Nat> _tag;
   };
 
-  static std::shared_ptr<Nat> f(const std::shared_ptr<R> &,
-                                const std::shared_ptr<Nat> &,
-                                const std::shared_ptr<Nat> &);
-
-  static std::shared_ptr<Nat> _tag(const std::shared_ptr<R> &r);
-
   static std::shared_ptr<Nat> apply_record(const std::shared_ptr<R> &r,
                                            const std::shared_ptr<Nat> &a,
                                            const std::shared_ptr<Nat> &b);

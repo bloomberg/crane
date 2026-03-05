@@ -23,10 +23,6 @@ struct PrimProj {
     unsigned int py;
   };
 
-  static unsigned int px(const std::shared_ptr<point> &p);
-
-  static unsigned int py(const std::shared_ptr<point> &p);
-
   static std::shared_ptr<point> add_points(std::shared_ptr<point> p1,
                                            std::shared_ptr<point> p2);
 

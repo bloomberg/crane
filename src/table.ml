@@ -323,6 +323,14 @@ let add_promoted_type_var r name = promoted_type_vars := GlobRef.Map.add r name 
 let is_promoted_type_var r = GlobRef.Map.mem r !promoted_type_vars
 let promoted_type_var_name r = GlobRef.Map.find_opt r !promoted_type_vars
 
+(* Table of projections used in higher-order positions (as function values).
+   Projections not in this set are only accessed via record->field syntax
+   and don't need standalone C++ function definitions. *)
+let higher_order_projections = ref Refset'.empty
+let init_higher_order_projections () = higher_order_projections := Refset'.empty
+let mark_higher_order_projection r = higher_order_projections := Refset'.add r !higher_order_projections
+let is_higher_order_projection r = Refset'.mem r !higher_order_projections
+
 (*s Table of used axioms *)
 
 let info_axioms = ref Refset'.empty
@@ -1406,5 +1414,6 @@ let extract_skip_or_module q =
 let reset_tables () =
   init_typedefs (); init_cst_types (); init_inductives ();
   init_inductive_kinds (); init_enum_inductives (); init_sigma_assertions (); init_recursors ();
-  init_projs (); init_promoted_type_vars (); init_axioms (); init_opaques (); reset_modfile ();
+  init_projs (); init_promoted_type_vars (); init_higher_order_projections ();
+  init_axioms (); init_opaques (); reset_modfile ();
   init_glob_tys (); reset_used_custom_imports ()

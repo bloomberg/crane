@@ -102,16 +102,6 @@ struct UniversePoly {
     B psnd;
   };
 
-  template <typename T1, typename T2>
-  static T1 pfst(const std::shared_ptr<ppair<T1, T2>> &p) {
-    return p->pfst;
-  }
-
-  template <typename T1, typename T2>
-  static T2 psnd(const std::shared_ptr<ppair<T1, T2>> &p) {
-    return p->psnd;
-  }
-
   static inline const std::shared_ptr<ppair<unsigned int, bool>> test_pair =
       std::make_shared<ppair<unsigned int, bool>>(
           ppair<unsigned int, bool>{(((((0 + 1) + 1) + 1) + 1) + 1), true});

@@ -10,16 +10,6 @@
 #include <string>
 #include <variant>
 
-std::shared_ptr<Nat> RApply::f(const std::shared_ptr<RApply::R> &r,
-                               const std::shared_ptr<Nat> &_x0,
-                               const std::shared_ptr<Nat> &_x1) {
-  return r->f(_x0, _x1);
-}
-
-std::shared_ptr<Nat> RApply::_tag(const std::shared_ptr<RApply::R> &r) {
-  return r->_tag;
-}
-
 std::shared_ptr<Nat> RApply::apply_record(const std::shared_ptr<RApply::R> &r,
                                           const std::shared_ptr<Nat> &a,
                                           const std::shared_ptr<Nat> &b) {

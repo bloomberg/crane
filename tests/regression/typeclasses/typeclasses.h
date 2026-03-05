@@ -68,11 +68,6 @@ concept Ord = requires(A a0, A a1) {
 };
 
 struct Typeclasses {
-  template <typename _tcI0, typename T1>
-  static unsigned int to_nat(const T1 _x0) {
-    return _tcI0::to_nat(_x0);
-  }
-
   struct numNat {
     static unsigned int to_nat(unsigned int n) { return n; }
   };
@@ -128,16 +123,6 @@ struct Typeclasses {
   template <typename _tcI0, typename T1>
   static unsigned int numeric_double(const T1 x) {
     return (_tcI0::to_nat(x) + _tcI0::to_nat(x));
-  }
-
-  template <typename _tcI0, typename T1>
-  static bool eqb(const T1 _x0, const T1 _x1) {
-    return _tcI0::eqb(_x0, _x1);
-  }
-
-  template <typename _tcI0, typename _tcI1, typename T1>
-  static bool leb(const T1 _x0, const T1 _x1) {
-    return _tcI0::leb(_x0, _x1);
   }
 
   struct eqNat {

@@ -10,14 +10,6 @@
 #include <string>
 #include <variant>
 
-unsigned int PrimProj::px(const std::shared_ptr<PrimProj::point> &p) {
-  return p->px;
-}
-
-unsigned int PrimProj::py(const std::shared_ptr<PrimProj::point> &p) {
-  return p->py;
-}
-
 std::shared_ptr<PrimProj::point>
 PrimProj::add_points(std::shared_ptr<PrimProj::point> p1,
                      std::shared_ptr<PrimProj::point> p2) {

@@ -25,14 +25,6 @@ struct RecordDefaults {
     bool cfg_debug;
   };
 
-  static unsigned int cfg_width(const std::shared_ptr<Config> &c);
-
-  static unsigned int cfg_height(const std::shared_ptr<Config> &c);
-
-  static unsigned int cfg_depth(const std::shared_ptr<Config> &c);
-
-  static bool cfg_debug(const std::shared_ptr<Config> &c);
-
  static inline const std::shared_ptr<Config> default_config = std::make_shared<Config>(Config{((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), ((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), (0 + 1), false});
 
  static std::shared_ptr<Config> set_width(const unsigned int w,
@@ -46,18 +38,10 @@ struct RecordDefaults {
    unsigned int py;
  };
 
- static unsigned int px(const std::shared_ptr<Point> &p);
-
- static unsigned int py(const std::shared_ptr<Point> &p);
-
  struct Rect {
    std::shared_ptr<Point> origin;
    std::shared_ptr<Point> extent;
  };
-
- static std::shared_ptr<Point> origin(const std::shared_ptr<Rect> &r);
-
- static std::shared_ptr<Point> extent(const std::shared_ptr<Rect> &r);
 
  static unsigned int rect_area(const std::shared_ptr<Rect> &r);
 

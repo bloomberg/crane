@@ -22,27 +22,13 @@ unsigned int Coercions::add_bool(const unsigned int n, const bool b) {
   return (n + bool_to_nat(b));
 }
 
-unsigned int Coercions::unwrap(const std::shared_ptr<Coercions::Wrapper> &w) {
-  return w->unwrap;
-}
-
 unsigned int
 Coercions::double_wrapped(const std::shared_ptr<Coercions::Wrapper> &w) {
   return (w->unwrap + w->unwrap);
-}
-
-bool Coercions::unbox(const std::shared_ptr<Coercions::BoolBox> &b) {
-  return b->unbox;
 }
 
 unsigned int
 Coercions::add_boolbox(const unsigned int n,
                        const std::shared_ptr<Coercions::BoolBox> &bb) {
   return (n + bool_to_nat(bb->unbox));
-}
-
-unsigned int
-Coercions::apply_transform(const std::shared_ptr<Coercions::Transform> &t,
-                           const unsigned int _x0) {
-  return t->apply_transform(_x0);
 }

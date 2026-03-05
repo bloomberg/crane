@@ -18,18 +18,6 @@ std::shared_ptr<List<unsigned int>> ClosuresInData::apply_all(
       [&](std::function<unsigned int(unsigned int)> f) { return f(x); });
 }
 
-unsigned int
-ClosuresInData::forward(const std::shared_ptr<ClosuresInData::transform> &t,
-                        const unsigned int _x0) {
-  return t->forward(_x0);
-}
-
-unsigned int
-ClosuresInData::backward(const std::shared_ptr<ClosuresInData::transform> &t,
-                         const unsigned int _x0) {
-  return t->backward(_x0);
-}
-
 unsigned int ClosuresInData::apply_forward(
     const std::shared_ptr<ClosuresInData::transform> &t, const unsigned int x) {
   return t->forward(x);

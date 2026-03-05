@@ -40,11 +40,6 @@ struct SPropTest {
     A box_value;
   };
 
-  template <typename T1>
-  static T1 box_value(const std::shared_ptr<Box<T1>> &b) {
-    return b->box_value;
-  }
-
   static unsigned int guarded_pred(const unsigned int n);
 
   static unsigned int safe_div(const unsigned int, const unsigned int);

@@ -23,11 +23,6 @@ struct Args {
     unsigned int _tag;
   };
 
-  static unsigned int f(const std::shared_ptr<R> &, const unsigned int,
-                        const unsigned int);
-
-  static unsigned int _tag(const std::shared_ptr<R> &r);
-
   static unsigned int apply_record(const std::shared_ptr<R> &r,
                                    const unsigned int a, const unsigned int b);
 

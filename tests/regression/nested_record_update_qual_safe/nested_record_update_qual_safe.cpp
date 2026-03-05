@@ -10,11 +10,6 @@
 #include <string>
 #include <variant>
 
-unsigned int NestedRecordUpdateQualSafe::value(
-    const std::shared_ptr<NestedRecordUpdateQualSafe::cell> &c) {
-  return c->value;
-}
-
 std::shared_ptr<NestedRecordUpdateQualSafe::cell>
 NestedRecordUpdateQualSafe::bump(
     const std::shared_ptr<NestedRecordUpdateQualSafe::cell> &x) {

@@ -24,11 +24,5 @@ struct RMatch {
     unsigned int f3;
   };
 
-  static unsigned int f1(const std::shared_ptr<MyRec> &m);
-
-  static unsigned int f2(const std::shared_ptr<MyRec> &m);
-
-  static unsigned int f3(const std::shared_ptr<MyRec> &m);
-
   static unsigned int sum(const std::shared_ptr<MyRec> &r);
 };

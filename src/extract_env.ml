@@ -689,6 +689,20 @@ let mark_used_customs struc =
     (fun _ -> ())
     struc
 
+let mark_higher_order_projections struc =
+  Table.init_higher_order_projections ();
+  let rec scan_ast = function
+    | MLglob (r, _) when Table.is_projection r ->
+        Table.mark_higher_order_projection r
+    | a -> Mlutil.ast_iter scan_ast a
+  in
+  let scan_decl = function
+    | Dterm (_, a, _) -> scan_ast a
+    | Dfix (_, bodies, _) -> Array.iter scan_ast bodies
+    | _ -> ()
+  in
+  Modutil.struct_iter scan_decl (fun _ -> ()) (fun _ -> ()) struc
+
 let print_structure_to_file (fn,si,mo) dry struc =
   Buffer.clear buf;
   let d = descr () in
@@ -702,6 +716,7 @@ let print_structure_to_file (fn,si,mo) dry struc =
   (* Scan the structure to find which custom constants are actually used,
      so that only their associated imports appear in the generated header. *)
   mark_used_customs struc;
+  mark_higher_order_projections struc;
   (* Detect whether any custom inline function is applied to a string literal.
      This determines whether we need 'using namespace std::string_literals;'. *)
   let has_custom_string_arg = Modutil.struct_ast_search (function

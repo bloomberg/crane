@@ -112,12 +112,6 @@ struct ClosuresInData {
     std::function<unsigned int(unsigned int)> backward;
   };
 
-  static unsigned int forward(const std::shared_ptr<transform> &,
-                              const unsigned int);
-
-  static unsigned int backward(const std::shared_ptr<transform> &,
-                               const unsigned int);
-
   static inline const std::shared_ptr<transform> double_transform =
       std::make_shared<transform>(
           transform{[](unsigned int x) { return (x + x); },

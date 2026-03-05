@@ -525,6 +525,9 @@ let is_eponymous_record_projection r =
       else
         false
 
+let is_suppressed_projection r =
+  Table.is_projection r && not (Table.is_higher_order_projection r)
+
 (* Beware of the side-effects of [pp_global] and [pp_modname].
    They are used to update table of content for modules. Many [let]
    below should not be altered since they force evaluation order.
@@ -2110,6 +2113,7 @@ let pp_decl = function
     | Dterm (r,_,_) when is_eponymous_record_projection r ->
           (* Skip - this is a projection for an eponymous record merged into module struct *)
           mt ()
+    | Dterm (r,_,_) when is_suppressed_projection r -> mt ()
     | Dind (kn,i) -> mt ()  (* Inductives are fully defined in headers *)
     | Dtype (r, l, t) -> mt ()
     | Dterm (r, a, Tglob (ty, args,e)) when is_monad ty ->
@@ -2134,7 +2138,7 @@ let pp_decl = function
           (* Filter out inline custom, method candidates, globally registered methods, and eponymous record projections *)
           let is_method_candidate x = List.exists (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env x r') !method_candidates in
           let is_global_method x = is_registered_method x <> None in
-          let filter = Array.to_list (Array.map (fun x -> not (is_inline_custom x) && not (is_method_candidate x) && not (is_global_method x) && not (is_eponymous_record_projection x)) rv) in
+          let filter = Array.to_list (Array.map (fun x -> not (is_inline_custom x) && not (is_method_candidate x) && not (is_global_method x) && not (is_eponymous_record_projection x) && not (is_suppressed_projection x)) rv) in
           let rv = Array.filter_with filter rv in
           let defs = Array.filter_with filter defs in
           let typs = Array.filter_with filter typs in
@@ -2425,6 +2429,7 @@ let pp_hdecl = function
     | Dterm (r,_,_) when is_eponymous_record_projection r ->
           (* Skip - this is a projection for an eponymous record merged into module struct *)
           mt ()
+    | Dterm (r,_,_) when is_suppressed_projection r -> mt ()
     | Dind (kn,i) -> pp_cpp_ind_header kn i
     | Dtype (_, _, Miniml.Tdummy Miniml.Ktype) -> mt ()  (* Skip erased Type aliases *)
     | Dtype (r, l, t) -> (* TODO: Do for real sometime! *)
@@ -2497,7 +2502,7 @@ let pp_hdecl = function
           (* Filter out inline custom, method candidates, and globally registered methods *)
           let is_method_candidate x = List.exists (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env x r') !method_candidates in
           let is_global_method x = is_registered_method x <> None in
-          let filter = Array.to_list (Array.map (fun x -> not (is_inline_custom x) && not (is_method_candidate x) && not (is_global_method x) && not (is_eponymous_record_projection x)) rv) in
+          let filter = Array.to_list (Array.map (fun x -> not (is_inline_custom x) && not (is_method_candidate x) && not (is_global_method x) && not (is_eponymous_record_projection x) && not (is_suppressed_projection x)) rv) in
           let rv = Array.filter_with filter rv in
           let defs = Array.filter_with filter defs in
           let typs = Array.filter_with filter typs in
@@ -2516,6 +2521,7 @@ let pp_hdecl_spec_only = function
     | Dtype (r,_,_) when is_any_inline_custom r -> mt ()
     | Dterm (r,_,_) when is_any_inline_custom r -> mt ()
     | Dterm (r,_,_) when is_eponymous_record_projection r -> mt ()
+    | Dterm (r,_,_) when is_suppressed_projection r -> mt ()
     | Dind (kn,i) -> pp_cpp_ind_header kn i
     | Dtype (_, _, Miniml.Tdummy Miniml.Ktype) -> mt ()  (* Skip erased Type aliases *)
     | Dtype (r, l, t) ->
@@ -2549,7 +2555,7 @@ let pp_hdecl_spec_only = function
     | Dfix (rv,defs,typs) ->
           let is_method_candidate x = List.exists (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env x r') !method_candidates in
           let is_global_method x = is_registered_method x <> None in
-          let filter = Array.to_list (Array.map (fun x -> not (is_inline_custom x) && not (is_method_candidate x) && not (is_global_method x) && not (is_eponymous_record_projection x)) rv) in
+          let filter = Array.to_list (Array.map (fun x -> not (is_inline_custom x) && not (is_method_candidate x) && not (is_global_method x) && not (is_eponymous_record_projection x) && not (is_suppressed_projection x)) rv) in
           let rv = Array.filter_with filter rv in
           let defs = Array.filter_with filter defs in
           let typs = Array.filter_with filter typs in
@@ -3399,6 +3405,7 @@ let pp_wrapper_module_dual ~is_header wrapper_name func_sels =
     (* Skip cases: These function types are handled elsewhere or aren't rendered *)
     | SEdecl (Dterm (r,_,_)) when is_any_inline_custom r -> ([], [], [])
     | SEdecl (Dterm (r,_,_)) when is_eponymous_record_projection r -> ([], [], [])
+    | SEdecl (Dterm (r,_,_)) when is_suppressed_projection r -> ([], [], [])
     | SEdecl (Dterm (r, _, _)) when is_method_candidate r -> ([], [], [])
     | SEdecl (Dterm (r, body, ty)) when is_registered_method r <> None ->
       (* Collect this method candidate for injection into the inductive struct *)
@@ -3451,7 +3458,8 @@ let pp_wrapper_module_dual ~is_header wrapper_name func_sels =
       ) rv;
       let filter = Array.to_list (Array.map (fun x ->
         not (is_inline_custom x) && not (is_method_candidate x) &&
-        not (is_global_method x) && not (is_eponymous_record_projection x)) rv) in
+        not (is_global_method x) && not (is_eponymous_record_projection x) &&
+        not (is_suppressed_projection x)) rv) in
       let rv = Array.filter_with filter rv in
       let defs = Array.filter_with filter defs in
       let typs = Array.filter_with filter typs in

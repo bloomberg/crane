@@ -10,40 +10,6 @@
 #include <string>
 #include <variant>
 
-unsigned int RecRecord::rn_value(const std::shared_ptr<RecRecord::RNode> &r) {
-  return r->rn_value;
-}
-
-std::optional<std::shared_ptr<RecRecord::RNode>>
-RecRecord::rn_next(const std::shared_ptr<RecRecord::RNode> &r) {
-  return r->rn_next;
-}
-
-unsigned int
-RecRecord::emp_name(const std::shared_ptr<RecRecord::Employee> &e) {
-  return e->emp_name;
-}
-
-unsigned int
-RecRecord::emp_dept(const std::shared_ptr<RecRecord::Employee> &e) {
-  return e->emp_dept;
-}
-
-unsigned int
-RecRecord::dept_id(const std::shared_ptr<RecRecord::Department> &d) {
-  return d->dept_id;
-}
-
-std::shared_ptr<RecRecord::Employee>
-RecRecord::dept_head(const std::shared_ptr<RecRecord::Department> &d) {
-  return d->dept_head;
-}
-
-unsigned int
-RecRecord::dept_size(const std::shared_ptr<RecRecord::Department> &d) {
-  return d->dept_size;
-}
-
 unsigned int
 RecRecord::rlist_sum(const std::shared_ptr<RecRecord::rlist<unsigned int>> &l) {
   return std::visit(

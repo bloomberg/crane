@@ -29,11 +29,6 @@ concept EqType = requires(carrier a0, carrier a1) {
 struct CanonStruct {
   using carrier = std::any;
 
-  template <typename _tcI0, typename carrier>
-  static bool eqb(const carrier _x0, const carrier _x1) {
-    return _tcI0::eqb(_x0, _x1);
-  }
-
   struct nat_eqType {
     static bool eqb(unsigned int a0, unsigned int a1) { return (a0 == a1); }
   };

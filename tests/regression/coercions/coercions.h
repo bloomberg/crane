@@ -32,8 +32,6 @@ struct Coercions {
     unsigned int unwrap;
   };
 
-  static unsigned int unwrap(const std::shared_ptr<Wrapper> &w);
-
   static unsigned int double_wrapped(const std::shared_ptr<Wrapper> &w);
 
   static inline const unsigned int test_double_wrapped =
@@ -43,8 +41,6 @@ struct Coercions {
   struct BoolBox {
     bool unbox;
   };
-
-  static bool unbox(const std::shared_ptr<BoolBox> &b);
 
   static unsigned int add_boolbox(const unsigned int n,
                                   const std::shared_ptr<BoolBox> &bb);
@@ -56,9 +52,6 @@ struct Coercions {
   struct Transform {
     std::function<unsigned int(unsigned int)> apply_transform;
   };
-
-  static unsigned int apply_transform(const std::shared_ptr<Transform> &,
-                                      const unsigned int);
 
   static inline const std::shared_ptr<Transform> double_transform =
       std::make_shared<Transform>(

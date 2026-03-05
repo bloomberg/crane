@@ -22,8 +22,6 @@ struct NestedRecordUpdateQualSafe {
     unsigned int value;
   };
 
-  static unsigned int value(const std::shared_ptr<cell> &c);
-
   static std::shared_ptr<cell> bump(const std::shared_ptr<cell> &x);
 
   static unsigned int project(const std::shared_ptr<cell> &x);

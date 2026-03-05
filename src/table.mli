@@ -121,6 +121,10 @@ val is_projection : GlobRef.t -> bool
 val projection_arity : GlobRef.t -> int
 val projection_info : GlobRef.t -> inductive * int (* arity *)
 
+val init_higher_order_projections : unit -> unit
+val mark_higher_order_projection : GlobRef.t -> unit
+val is_higher_order_projection : GlobRef.t -> bool
+
 val add_promoted_type_var : GlobRef.t -> Names.Id.t -> unit
 val is_promoted_type_var : GlobRef.t -> bool
 val promoted_type_var_name : GlobRef.t -> Names.Id.t option

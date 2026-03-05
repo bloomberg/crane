@@ -66,11 +66,6 @@ concept Monoid = requires(m_carrier a0, m_carrier a1) {
 struct DepRecord {
   using carrier = std::any;
 
-  template <typename _tcI0, typename carrier>
-  static carrier op(const carrier _x0, const carrier _x1) {
-    return _tcI0::op(_x0, _x1);
-  }
-
   struct nat_magma {
     static unsigned int op(unsigned int a0, unsigned int a1) {
       return (a0 + a1);
@@ -84,15 +79,6 @@ struct DepRecord {
   static_assert(Magma<bool_magma, bool>);
 
   using m_carrier = std::any;
-
-  template <typename _tcI0, typename m_carrier>
-  static m_carrier m_op(const m_carrier _x0, const m_carrier _x1) {
-    return _tcI0::m_op(_x0, _x1);
-  }
-
-  template <typename _tcI0, typename m_carrier> static m_carrier m_id() {
-    return _tcI0::m_id();
-  }
 
   struct nat_monoid {
     static unsigned int m_op(unsigned int a0, unsigned int a1) {
@@ -179,10 +165,6 @@ struct DepRecord {
     tag the_tag;
     tag_type the_value;
   };
-
-  static tag the_tag(const std::shared_ptr<Tagged> &t);
-
-  static tag_type the_value(const std::shared_ptr<Tagged> &t);
 
   static inline const std::shared_ptr<Tagged> tagged_nat =
       std::make_shared<Tagged>(Tagged{
