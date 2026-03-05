@@ -1291,3 +1291,762 @@
   (alias runtest)
   (deps shadow_qual_node.t.exe)
   (action (run ./shadow_qual_node.t.exe))))
+
+(subdir jump_target_region_check
+ (rule
+  (targets jump_target_region_check.t.exe)
+  (deps JumpTargetRegionCheck.vo jump_target_region_check.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} jump_target_region_check.t.exe jump_target_region_check.cpp jump_target_region_check.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps jump_target_region_check.t.exe)
+  (action (run ./jump_target_region_check.t.exe))))
+
+(subdir region_patch_write
+ (rule
+  (targets region_patch_write.t.exe)
+  (deps RegionPatchWrite.vo region_patch_write.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} region_patch_write.t.exe region_patch_write.cpp region_patch_write.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps region_patch_write.t.exe)
+  (action (run ./region_patch_write.t.exe))))
+
+(subdir sequential_program_load
+ (rule
+  (targets sequential_program_load.t.exe)
+  (deps SequentialProgramLoad.vo sequential_program_load.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sequential_program_load.t.exe sequential_program_load.cpp sequential_program_load.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sequential_program_load.t.exe)
+  (action (run ./sequential_program_load.t.exe))))
+
+(subdir instruction_cycle_sum
+ (rule
+  (targets instruction_cycle_sum.t.exe)
+  (deps InstructionCycleSum.vo instruction_cycle_sum.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instruction_cycle_sum.t.exe instruction_cycle_sum.cpp instruction_cycle_sum.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instruction_cycle_sum.t.exe)
+  (action (run ./instruction_cycle_sum.t.exe))))
+
+(subdir loop_body_iteration
+ (rule
+  (targets loop_body_iteration.t.exe)
+  (deps LoopBodyIteration.vo loop_body_iteration.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loop_body_iteration.t.exe loop_body_iteration.cpp loop_body_iteration.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loop_body_iteration.t.exe)
+  (action (run ./loop_body_iteration.t.exe))))
+
+(subdir instruction_sequence_exec
+ (rule
+  (targets instruction_sequence_exec.t.exe)
+  (deps InstructionSequenceExec.vo instruction_sequence_exec.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instruction_sequence_exec.t.exe instruction_sequence_exec.cpp instruction_sequence_exec.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instruction_sequence_exec.t.exe)
+  (action (run ./instruction_sequence_exec.t.exe))))
+
+(subdir nested_bank_status_write
+ (rule
+  (targets nested_bank_status_write.t.exe)
+  (deps NestedBankStatusWrite.vo nested_bank_status_write.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_bank_status_write.t.exe nested_bank_status_write.cpp nested_bank_status_write.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_bank_status_write.t.exe)
+  (action (run ./nested_bank_status_write.t.exe))))
+
+(subdir opcode_operand_decode
+ (rule
+  (targets opcode_operand_decode.t.exe)
+  (deps OpcodeOperandDecode.vo opcode_operand_decode.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} opcode_operand_decode.t.exe opcode_operand_decode.cpp opcode_operand_decode.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps opcode_operand_decode.t.exe)
+  (action (run ./opcode_operand_decode.t.exe))))
+
+(subdir register_pair_even_rounding
+ (rule
+  (targets register_pair_even_rounding.t.exe)
+  (deps RegisterPairEvenRounding.vo register_pair_even_rounding.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} register_pair_even_rounding.t.exe register_pair_even_rounding.cpp register_pair_even_rounding.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps register_pair_even_rounding.t.exe)
+  (action (run ./register_pair_even_rounding.t.exe))))
+
+(subdir even_length_byte_validation
+ (rule
+  (targets even_length_byte_validation.t.exe)
+  (deps EvenLengthByteValidation.vo even_length_byte_validation.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} even_length_byte_validation.t.exe even_length_byte_validation.cpp even_length_byte_validation.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps even_length_byte_validation.t.exe)
+  (action (run ./even_length_byte_validation.t.exe))))
+
+(subdir jump_target_collection
+ (rule
+  (targets jump_target_collection.t.exe)
+  (deps JumpTargetCollection.vo jump_target_collection.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} jump_target_collection.t.exe jump_target_collection.cpp jump_target_collection.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps jump_target_collection.t.exe)
+  (action (run ./jump_target_collection.t.exe))))
+
+(subdir instruction_byte_stream_encode
+ (rule
+  (targets instruction_byte_stream_encode.t.exe)
+  (deps InstructionByteStreamEncode.vo instruction_byte_stream_encode.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instruction_byte_stream_encode.t.exe instruction_byte_stream_encode.cpp instruction_byte_stream_encode.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instruction_byte_stream_encode.t.exe)
+  (action (run ./instruction_byte_stream_encode.t.exe))))
+
+(subdir guarded_prom_write
+ (rule
+  (targets guarded_prom_write.t.exe)
+  (deps GuardedPromWrite.vo guarded_prom_write.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} guarded_prom_write.t.exe guarded_prom_write.cpp guarded_prom_write.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps guarded_prom_write.t.exe)
+  (action (run ./guarded_prom_write.t.exe))))
+
+(subdir stack_push_top3
+ (rule
+  (targets stack_push_top3.t.exe)
+  (deps StackPushTop3.vo stack_push_top3.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} stack_push_top3.t.exe stack_push_top3.cpp stack_push_top3.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps stack_push_top3.t.exe)
+  (action (run ./stack_push_top3.t.exe))))
+
+(subdir stack_pop_option_pair
+ (rule
+  (targets stack_pop_option_pair.t.exe)
+  (deps StackPopOptionPair.vo stack_pop_option_pair.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} stack_pop_option_pair.t.exe stack_pop_option_pair.cpp stack_pop_option_pair.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps stack_pop_option_pair.t.exe)
+  (action (run ./stack_pop_option_pair.t.exe))))
+
+(subdir ram_port_write_chain
+ (rule
+  (targets ram_port_write_chain.t.exe)
+  (deps RamPortWriteChain.vo ram_port_write_chain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_port_write_chain.t.exe ram_port_write_chain.cpp ram_port_write_chain.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_port_write_chain.t.exe)
+  (action (run ./ram_port_write_chain.t.exe))))
+
+(subdir jcn_condition_eval
+ (rule
+  (targets jcn_condition_eval.t.exe)
+  (deps JcnConditionEval.vo jcn_condition_eval.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} jcn_condition_eval.t.exe jcn_condition_eval.cpp jcn_condition_eval.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps jcn_condition_eval.t.exe)
+  (action (run ./jcn_condition_eval.t.exe))))
+
+(subdir step_fetch_decode_exec
+ (rule
+  (targets step_fetch_decode_exec.t.exe)
+  (deps StepFetchDecodeExec.vo step_fetch_decode_exec.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} step_fetch_decode_exec.t.exe step_fetch_decode_exec.cpp step_fetch_decode_exec.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps step_fetch_decode_exec.t.exe)
+  (action (run ./step_fetch_decode_exec.t.exe))))
+
+(subdir jump_classifier_flags
+ (rule
+  (targets jump_classifier_flags.t.exe)
+  (deps JumpClassifierFlags.vo jump_classifier_flags.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} jump_classifier_flags.t.exe jump_classifier_flags.cpp jump_classifier_flags.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps jump_classifier_flags.t.exe)
+  (action (run ./jump_classifier_flags.t.exe))))
+
+(subdir drop_head_default
+ (rule
+  (targets drop_head_default.t.exe)
+  (deps DropHeadDefault.vo drop_head_default.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} drop_head_default.t.exe drop_head_default.cpp drop_head_default.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps drop_head_default.t.exe)
+  (action (run ./drop_head_default.t.exe))))
+
+(subdir fetch_pair_window
+ (rule
+  (targets fetch_pair_window.t.exe)
+  (deps FetchPairWindow.vo fetch_pair_window.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fetch_pair_window.t.exe fetch_pair_window.cpp fetch_pair_window.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fetch_pair_window.t.exe)
+  (action (run ./fetch_pair_window.t.exe))))
+
+(subdir set_cur_bank_modulo
+ (rule
+  (targets set_cur_bank_modulo.t.exe)
+  (deps SetCurBankModulo.vo set_cur_bank_modulo.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} set_cur_bank_modulo.t.exe set_cur_bank_modulo.cpp set_cur_bank_modulo.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps set_cur_bank_modulo.t.exe)
+  (action (run ./set_cur_bank_modulo.t.exe))))
+
+(subdir writes_regs_classifier
+ (rule
+  (targets writes_regs_classifier.t.exe)
+  (deps WritesRegsClassifier.vo writes_regs_classifier.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} writes_regs_classifier.t.exe writes_regs_classifier.cpp writes_regs_classifier.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps writes_regs_classifier.t.exe)
+  (action (run ./writes_regs_classifier.t.exe))))
+
+(subdir writes_ram_classifier
+ (rule
+  (targets writes_ram_classifier.t.exe)
+  (deps WritesRamClassifier.vo writes_ram_classifier.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} writes_ram_classifier.t.exe writes_ram_classifier.cpp writes_ram_classifier.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps writes_ram_classifier.t.exe)
+  (action (run ./writes_ram_classifier.t.exe))))
+
+(subdir writes_acc_classifier
+ (rule
+  (targets writes_acc_classifier.t.exe)
+  (deps WritesAccClassifier.vo writes_acc_classifier.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} writes_acc_classifier.t.exe writes_acc_classifier.cpp writes_acc_classifier.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps writes_acc_classifier.t.exe)
+  (action (run ./writes_acc_classifier.t.exe))))
+
+(subdir ram_main_write_chain
+ (rule
+  (targets ram_main_write_chain.t.exe)
+  (deps RamMainWriteChain.vo ram_main_write_chain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_main_write_chain.t.exe ram_main_write_chain.cpp ram_main_write_chain.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_main_write_chain.t.exe)
+  (action (run ./ram_main_write_chain.t.exe))))
+
+(subdir prom_data_fallback
+ (rule
+  (targets prom_data_fallback.t.exe)
+  (deps PromDataFallback.vo prom_data_fallback.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prom_data_fallback.t.exe prom_data_fallback.cpp prom_data_fallback.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps prom_data_fallback.t.exe)
+  (action (run ./prom_data_fallback.t.exe))))
+
+(subdir isz_loop_flags
+ (rule
+  (targets isz_loop_flags.t.exe)
+  (deps IszLoopFlags.vo isz_loop_flags.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} isz_loop_flags.t.exe isz_loop_flags.cpp isz_loop_flags.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps isz_loop_flags.t.exe)
+  (action (run ./isz_loop_flags.t.exe))))
+
+(subdir isz_iterations_remaining
+ (rule
+  (targets isz_iterations_remaining.t.exe)
+  (deps IszIterationsRemaining.vo isz_iterations_remaining.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} isz_iterations_remaining.t.exe isz_iterations_remaining.cpp isz_iterations_remaining.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps isz_iterations_remaining.t.exe)
+  (action (run ./isz_iterations_remaining.t.exe))))
+
+(subdir reset_state_memory_preserve
+ (rule
+  (targets reset_state_memory_preserve.t.exe)
+  (deps ResetStateMemoryPreserve.vo reset_state_memory_preserve.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reset_state_memory_preserve.t.exe reset_state_memory_preserve.cpp reset_state_memory_preserve.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reset_state_memory_preserve.t.exe)
+  (action (run ./reset_state_memory_preserve.t.exe))))
+
+(subdir set_test_pin_update
+ (rule
+  (targets set_test_pin_update.t.exe)
+  (deps SetTestPinUpdate.vo set_test_pin_update.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} set_test_pin_update.t.exe set_test_pin_update.cpp set_test_pin_update.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps set_test_pin_update.t.exe)
+  (action (run ./set_test_pin_update.t.exe))))
+
+(subdir valid_program_checks
+ (rule
+  (targets valid_program_checks.t.exe)
+  (deps ValidProgramChecks.vo valid_program_checks.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} valid_program_checks.t.exe valid_program_checks.cpp valid_program_checks.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps valid_program_checks.t.exe)
+  (action (run ./valid_program_checks.t.exe))))
+
+(subdir ram_addr_disjoint_bool
+ (rule
+  (targets ram_addr_disjoint_bool.t.exe)
+  (deps RamAddrDisjointBool.vo ram_addr_disjoint_bool.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_addr_disjoint_bool.t.exe ram_addr_disjoint_bool.cpp ram_addr_disjoint_bool.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_addr_disjoint_bool.t.exe)
+  (action (run ./ram_addr_disjoint_bool.t.exe))))
+
+(subdir match_fallback_nat
+ (rule
+  (targets match_fallback_nat.t.exe)
+  (deps MatchFallbackNat.vo match_fallback_nat.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} match_fallback_nat.t.exe match_fallback_nat.cpp match_fallback_nat.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps match_fallback_nat.t.exe)
+  (action (run ./match_fallback_nat.t.exe))))
+
+(subdir bcd_digit_upper_bound
+ (rule
+  (targets bcd_digit_upper_bound.t.exe)
+  (deps BcdDigitUpperBound.vo bcd_digit_upper_bound.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bcd_digit_upper_bound.t.exe bcd_digit_upper_bound.cpp bcd_digit_upper_bound.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bcd_digit_upper_bound.t.exe)
+  (action (run ./bcd_digit_upper_bound.t.exe))))
+
+(subdir jcn_constants_eval
+ (rule
+  (targets jcn_constants_eval.t.exe)
+  (deps JcnConstantsEval.vo jcn_constants_eval.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} jcn_constants_eval.t.exe jcn_constants_eval.cpp jcn_constants_eval.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps jcn_constants_eval.t.exe)
+  (action (run ./jcn_constants_eval.t.exe))))
+
+(subdir region_membership_bounds
+ (rule
+  (targets region_membership_bounds.t.exe)
+  (deps RegionMembershipBounds.vo region_membership_bounds.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} region_membership_bounds.t.exe region_membership_bounds.cpp region_membership_bounds.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps region_membership_bounds.t.exe)
+  (action (run ./region_membership_bounds.t.exe))))
+
+(subdir wpm_update_gate
+ (rule
+  (targets wpm_update_gate.t.exe)
+  (deps WpmUpdateGate.vo wpm_update_gate.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} wpm_update_gate.t.exe wpm_update_gate.cpp wpm_update_gate.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps wpm_update_gate.t.exe)
+  (action (run ./wpm_update_gate.t.exe))))
+
+(subdir ram_status_write_chain
+ (rule
+  (targets ram_status_write_chain.t.exe)
+  (deps RamStatusWriteChain.vo ram_status_write_chain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_status_write_chain.t.exe ram_status_write_chain.cpp ram_status_write_chain.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_status_write_chain.t.exe)
+  (action (run ./ram_status_write_chain.t.exe))))
+
+(subdir ram_read_main_selector
+ (rule
+  (targets ram_read_main_selector.t.exe)
+  (deps RamReadMainSelector.vo ram_read_main_selector.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_read_main_selector.t.exe ram_read_main_selector.cpp ram_read_main_selector.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_read_main_selector.t.exe)
+  (action (run ./ram_read_main_selector.t.exe))))
+
+(subdir count_loop_test_target
+ (rule
+  (targets count_loop_test_target.t.exe)
+  (deps CountLoopTestTarget.vo count_loop_test_target.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} count_loop_test_target.t.exe count_loop_test_target.cpp count_loop_test_target.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps count_loop_test_target.t.exe)
+  (action (run ./count_loop_test_target.t.exe))))
+
+(subdir empty_system_bank_count
+ (rule
+  (targets empty_system_bank_count.t.exe)
+  (deps EmptySystemBankCount.vo empty_system_bank_count.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} empty_system_bank_count.t.exe empty_system_bank_count.cpp empty_system_bank_count.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps empty_system_bank_count.t.exe)
+  (action (run ./empty_system_bank_count.t.exe))))
+
+(subdir reset_state_pc_clear
+ (rule
+  (targets reset_state_pc_clear.t.exe)
+  (deps ResetStatePcClear.vo reset_state_pc_clear.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reset_state_pc_clear.t.exe reset_state_pc_clear.cpp reset_state_pc_clear.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reset_state_pc_clear.t.exe)
+  (action (run ./reset_state_pc_clear.t.exe))))
+
+(subdir empty_chip_register_count
+ (rule
+  (targets empty_chip_register_count.t.exe)
+  (deps EmptyChipRegisterCount.vo empty_chip_register_count.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} empty_chip_register_count.t.exe empty_chip_register_count.cpp empty_chip_register_count.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps empty_chip_register_count.t.exe)
+  (action (run ./empty_chip_register_count.t.exe))))
+
+(subdir empty_bank_chip_count
+ (rule
+  (targets empty_bank_chip_count.t.exe)
+  (deps EmptyBankChipCount.vo empty_bank_chip_count.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} empty_bank_chip_count.t.exe empty_bank_chip_count.cpp empty_bank_chip_count.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps empty_bank_chip_count.t.exe)
+  (action (run ./empty_bank_chip_count.t.exe))))
+
+(subdir reset_state_carry_clear
+ (rule
+  (targets reset_state_carry_clear.t.exe)
+  (deps ResetStateCarryClear.vo reset_state_carry_clear.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reset_state_carry_clear.t.exe reset_state_carry_clear.cpp reset_state_carry_clear.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reset_state_carry_clear.t.exe)
+  (action (run ./reset_state_carry_clear.t.exe))))
+
+(subdir program_cycles_empty
+ (rule
+  (targets program_cycles_empty.t.exe)
+  (deps ProgramCyclesEmpty.vo program_cycles_empty.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} program_cycles_empty.t.exe program_cycles_empty.cpp program_cycles_empty.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps program_cycles_empty.t.exe)
+  (action (run ./program_cycles_empty.t.exe))))
+
+(subdir disassemble_short_rom_none
+ (rule
+  (targets disassemble_short_rom_none.t.exe)
+  (deps DisassembleShortRomNone.vo disassemble_short_rom_none.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} disassemble_short_rom_none.t.exe disassemble_short_rom_none.cpp disassemble_short_rom_none.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps disassemble_short_rom_none.t.exe)
+  (action (run ./disassemble_short_rom_none.t.exe))))
+
+(subdir encode_list_byte_count
+ (rule
+  (targets encode_list_byte_count.t.exe)
+  (deps EncodeListByteCount.vo encode_list_byte_count.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} encode_list_byte_count.t.exe encode_list_byte_count.cpp encode_list_byte_count.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps encode_list_byte_count.t.exe)
+  (action (run ./encode_list_byte_count.t.exe))))
+
+(subdir jump_target_none_default
+ (rule
+  (targets jump_target_none_default.t.exe)
+  (deps JumpTargetNoneDefault.vo jump_target_none_default.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} jump_target_none_default.t.exe jump_target_none_default.cpp jump_target_none_default.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps jump_target_none_default.t.exe)
+  (action (run ./jump_target_none_default.t.exe))))
+
+(subdir page_base_alignment
+ (rule
+  (targets page_base_alignment.t.exe)
+  (deps PageBaseAlignment.vo page_base_alignment.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} page_base_alignment.t.exe page_base_alignment.cpp page_base_alignment.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps page_base_alignment.t.exe)
+  (action (run ./page_base_alignment.t.exe))))
+
+(subdir bank_lookup_default
+ (rule
+  (targets bank_lookup_default.t.exe)
+  (deps BankLookupDefault.vo bank_lookup_default.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bank_lookup_default.t.exe bank_lookup_default.cpp bank_lookup_default.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bank_lookup_default.t.exe)
+  (action (run ./bank_lookup_default.t.exe))))
+
+(subdir port_write_nibble_mask
+ (rule
+  (targets port_write_nibble_mask.t.exe)
+  (deps PortWriteNibbleMask.vo port_write_nibble_mask.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} port_write_nibble_mask.t.exe port_write_nibble_mask.cpp port_write_nibble_mask.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps port_write_nibble_mask.t.exe)
+  (action (run ./port_write_nibble_mask.t.exe))))
+
+(subdir isz_cycle_branch
+ (rule
+  (targets isz_cycle_branch.t.exe)
+  (deps IszCycleBranch.vo isz_cycle_branch.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} isz_cycle_branch.t.exe isz_cycle_branch.cpp isz_cycle_branch.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps isz_cycle_branch.t.exe)
+  (action (run ./isz_cycle_branch.t.exe))))
+
+(subdir fetch_byte_default_zero
+ (rule
+  (targets fetch_byte_default_zero.t.exe)
+  (deps FetchByteDefaultZero.vo fetch_byte_default_zero.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fetch_byte_default_zero.t.exe fetch_byte_default_zero.cpp fetch_byte_default_zero.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fetch_byte_default_zero.t.exe)
+  (action (run ./fetch_byte_default_zero.t.exe))))
+
+(subdir ram_read_main_default_zero
+ (rule
+  (targets ram_read_main_default_zero.t.exe)
+  (deps RamReadMainDefaultZero.vo ram_read_main_default_zero.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_read_main_default_zero.t.exe ram_read_main_default_zero.cpp ram_read_main_default_zero.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_read_main_default_zero.t.exe)
+  (action (run ./ram_read_main_default_zero.t.exe))))
+
+(subdir program_cycles_singleton
+ (rule
+  (targets program_cycles_singleton.t.exe)
+  (deps ProgramCyclesSingleton.vo program_cycles_singleton.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} program_cycles_singleton.t.exe program_cycles_singleton.cpp program_cycles_singleton.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps program_cycles_singleton.t.exe)
+  (action (run ./program_cycles_singleton.t.exe))))
+
+(subdir jump_target_some_jun
+ (rule
+  (targets jump_target_some_jun.t.exe)
+  (deps JumpTargetSomeJun.vo jump_target_some_jun.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} jump_target_some_jun.t.exe jump_target_some_jun.cpp jump_target_some_jun.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps jump_target_some_jun.t.exe)
+  (action (run ./jump_target_some_jun.t.exe))))
+
+(subdir isz_terminates_at_max
+ (rule
+  (targets isz_terminates_at_max.t.exe)
+  (deps IszTerminatesAtMax.vo isz_terminates_at_max.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} isz_terminates_at_max.t.exe isz_terminates_at_max.cpp isz_terminates_at_max.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps isz_terminates_at_max.t.exe)
+  (action (run ./isz_terminates_at_max.t.exe))))
+
+(subdir isz_loops_before_wrap
+ (rule
+  (targets isz_loops_before_wrap.t.exe)
+  (deps IszLoopsBeforeWrap.vo isz_loops_before_wrap.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} isz_loops_before_wrap.t.exe isz_loops_before_wrap.cpp isz_loops_before_wrap.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps isz_loops_before_wrap.t.exe)
+  (action (run ./isz_loops_before_wrap.t.exe))))
+
+(subdir isz_iterations_zero_case
+ (rule
+  (targets isz_iterations_zero_case.t.exe)
+  (deps IszIterationsZeroCase.vo isz_iterations_zero_case.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} isz_iterations_zero_case.t.exe isz_iterations_zero_case.cpp isz_iterations_zero_case.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps isz_iterations_zero_case.t.exe)
+  (action (run ./isz_iterations_zero_case.t.exe))))
+
+(subdir jcn_condition_carry_gate
+ (rule
+  (targets jcn_condition_carry_gate.t.exe)
+  (deps JcnConditionCarryGate.vo jcn_condition_carry_gate.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} jcn_condition_carry_gate.t.exe jcn_condition_carry_gate.cpp jcn_condition_carry_gate.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps jcn_condition_carry_gate.t.exe)
+  (action (run ./jcn_condition_carry_gate.t.exe))))
+
+(subdir cycles_jms_constant
+ (rule
+  (targets cycles_jms_constant.t.exe)
+  (deps CyclesJmsConstant.vo cycles_jms_constant.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cycles_jms_constant.t.exe cycles_jms_constant.cpp cycles_jms_constant.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps cycles_jms_constant.t.exe)
+  (action (run ./cycles_jms_constant.t.exe))))
+
+(subdir valid_program_even_bytes
+ (rule
+  (targets valid_program_even_bytes.t.exe)
+  (deps ValidProgramEvenBytes.vo valid_program_even_bytes.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} valid_program_even_bytes.t.exe valid_program_even_bytes.cpp valid_program_even_bytes.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps valid_program_even_bytes.t.exe)
+  (action (run ./valid_program_even_bytes.t.exe))))
+
+(subdir valid_program_odd_reject
+ (rule
+  (targets valid_program_odd_reject.t.exe)
+  (deps ValidProgramOddReject.vo valid_program_odd_reject.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} valid_program_odd_reject.t.exe valid_program_odd_reject.cpp valid_program_odd_reject.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps valid_program_odd_reject.t.exe)
+  (action (run ./valid_program_odd_reject.t.exe))))
+
+(subdir jcn_condition_inverted_test
+ (rule
+  (targets jcn_condition_inverted_test.t.exe)
+  (deps JcnConditionInvertedTest.vo jcn_condition_inverted_test.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} jcn_condition_inverted_test.t.exe jcn_condition_inverted_test.cpp jcn_condition_inverted_test.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps jcn_condition_inverted_test.t.exe)
+  (action (run ./jcn_condition_inverted_test.t.exe))))
+
+(subdir cycles_jcn_taken
+ (rule
+  (targets cycles_jcn_taken.t.exe)
+  (deps CyclesJcnTaken.vo cycles_jcn_taken.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cycles_jcn_taken.t.exe cycles_jcn_taken.cpp cycles_jcn_taken.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps cycles_jcn_taken.t.exe)
+  (action (run ./cycles_jcn_taken.t.exe))))
+
+(subdir cycles_jcn_not_taken
+ (rule
+  (targets cycles_jcn_not_taken.t.exe)
+  (deps CyclesJcnNotTaken.vo cycles_jcn_not_taken.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cycles_jcn_not_taken.t.exe cycles_jcn_not_taken.cpp cycles_jcn_not_taken.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps cycles_jcn_not_taken.t.exe)
+  (action (run ./cycles_jcn_not_taken.t.exe))))
+
+(subdir program_cycles_two_nop
+ (rule
+  (targets program_cycles_two_nop.t.exe)
+  (deps ProgramCyclesTwoNop.vo program_cycles_two_nop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} program_cycles_two_nop.t.exe program_cycles_two_nop.cpp program_cycles_two_nop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps program_cycles_two_nop.t.exe)
+  (action (run ./program_cycles_two_nop.t.exe))))
