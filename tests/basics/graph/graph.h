@@ -108,13 +108,13 @@ template <typename I, typename A>
 concept Eq = requires(A a0, A a1) {
   { I::eqb(a1, a0) } -> std::convertible_to<bool>;
 };
-template <typename I, typename G, typename A>
+template <typename I, typename G, typename A, typename edge>
 concept Graph = requires(G a0, A a1) {
   { I::empty() } -> std::convertible_to<G>;
   { I::add_node(a1, a0) } -> std::convertible_to<G>;
   { I::add_edge(a1, a0) } -> std::convertible_to<G>;
   { I::nodes(a0) } -> std::convertible_to<std::shared_ptr<List<A>>>;
-  { I::edges(a1, a0) } -> std::convertible_to<std::shared_ptr<List<std::any>>>;
+  { I::edges(a1, a0) } -> std::convertible_to<std::shared_ptr<List<edge>>>;
 };
 
 template <typename g, typename a> using edge = std::any;
@@ -147,7 +147,8 @@ template <typename _tcI0, typename T1> struct DirectedGraph {
         List<std::any>::ctor::cons_(n, g->directed_nodes), g->directed_edges});
   }
   static std::shared_ptr<Directed<std::any>>
-  add_edge(std::shared_ptr<Directed<std::any>> g, std::any e) {
+  add_edge(std::shared_ptr<Directed<std::any>> g,
+           std::shared_ptr<DirectedEdge<T1>> e) {
     return std::make_shared<Directed<std::any>>(Directed<std::any>{
         g->directed_nodes,
         List<std::shared_ptr<DirectedEdge<std::any>>>::ctor::cons_(
@@ -157,7 +158,7 @@ template <typename _tcI0, typename T1> struct DirectedGraph {
   nodes(std::shared_ptr<Directed<std::any>> g) {
     return g->directed_nodes;
   }
-  static std::shared_ptr<List<std::any>>
+  static std::shared_ptr<List<std::shared_ptr<DirectedEdge<T1>>>>
   edges(std::shared_ptr<Directed<std::any>> g, T1 n) {
     return g->directed_edges->filter(
         [&](const std::shared_ptr<DirectedEdge<T1>> _x0) {
@@ -195,7 +196,8 @@ template <typename _tcI0, typename T1> struct UndirectedGraph {
         g->undirected_edges});
   }
   static std::shared_ptr<Undirected<std::any>>
-  add_edge(std::shared_ptr<Undirected<std::any>> g, std::any e) {
+  add_edge(std::shared_ptr<Undirected<std::any>> g,
+           std::shared_ptr<UndirectedEdge<T1>> e) {
     return std::make_shared<Undirected<std::any>>(Undirected<std::any>{
         g->undirected_nodes,
         List<std::shared_ptr<UndirectedEdge<std::any>>>::ctor::cons_(
@@ -205,7 +207,7 @@ template <typename _tcI0, typename T1> struct UndirectedGraph {
   nodes(std::shared_ptr<Undirected<std::any>> g) {
     return g->undirected_nodes;
   }
-  static std::shared_ptr<List<std::any>>
+  static std::shared_ptr<List<std::shared_ptr<UndirectedEdge<T1>>>>
   edges(std::shared_ptr<Undirected<std::any>> g, T1 n) {
     return g->undirected_edges->filter(
         [&](const std::shared_ptr<UndirectedEdge<T1>> _x0) {

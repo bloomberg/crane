@@ -28,9 +28,9 @@ struct Nat {
   static unsigned int div2(const unsigned int n);
 };
 
-template <typename I, typename A>
+template <typename I, typename A, typename fun_ind_prf_ty>
 concept FunctionalInduction = requires {
-  { I::fun_ind_prf() } -> std::convertible_to<std::any>;
+  { I::fun_ind_prf() } -> std::convertible_to<fun_ind_prf_ty>;
 };
 
 struct Equations {
@@ -396,12 +396,17 @@ struct Equations {
   }
 
   struct FunctionalInduction_gcd {
-    static std::any fun_ind_prf() { return gcd_graph_correct; }
+    static std::shared_ptr<gcd_graph>
+    fun_ind_prf(std::pair<unsigned int, unsigned int> a0) {
+      return gcd_graph_correct(a0);
+    }
   };
   static_assert(
       FunctionalInduction<
           FunctionalInduction_gcd,
-          std::function<unsigned int(std::pair<unsigned int, unsigned int>)>>);
+          std::function<unsigned int(std::pair<unsigned int, unsigned int>)>,
+          std::function<std::shared_ptr<gcd_graph>(
+              std::pair<unsigned int, unsigned int>)>>);
 
   template <MapsTo<unsigned int, unsigned int> F2>
   static unsigned int collatz_steps_clause_3(const unsigned int n,
@@ -723,10 +728,15 @@ struct Equations {
   }
 
   struct FunctionalInduction_collatz_steps {
-    static std::any fun_ind_prf() { return collatz_steps_graph_correct; }
+    static std::shared_ptr<collatz_steps_graph> fun_ind_prf(unsigned int a0) {
+      return collatz_steps_graph_correct(a0);
+    }
   };
-  static_assert(FunctionalInduction<FunctionalInduction_collatz_steps,
-                                    std::function<unsigned int(unsigned int)>>);
+  static_assert(
+      FunctionalInduction<
+          FunctionalInduction_collatz_steps,
+          std::function<unsigned int(unsigned int)>,
+          std::function<std::shared_ptr<collatz_steps_graph>(unsigned int)>>);
 
   static inline const unsigned int test_gcd = gcd(std::make_pair(
       ((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),

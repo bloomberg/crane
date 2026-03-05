@@ -2584,13 +2584,33 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type)
                    For promoted dependent records, type_args may be empty, leaving Tvars
                    unsubstituted — we handle that below by using lambda binder types. *)
                 let subst_ty = Mlutil.type_subst_list type_args field_ml_ty in
-                (* Extract parameter names and types from the lambda *)
+                (* Extract parameter names and types from the lambda.
+                   For promoted type vars (e.g., Tvar 3 for edge in Graph),
+                   substitute them with their concrete types from type_args.
+                   Only substitute Tvars beyond the ip_sign Keep count to
+                   avoid disturbing regular type variable references. *)
+                let nb_sign_keeps = List.length tv_temps in
+                let subst_promoted_tvars ty =
+                  if List.length type_args > nb_sign_keeps then
+                    let rec subst = function
+                      | Miniml.Tvar j when j > nb_sign_keeps && j <= List.length type_args ->
+                          List.nth type_args (j - 1)
+                      | Miniml.Tarr (a, b) -> Miniml.Tarr (subst a, subst b)
+                      | Miniml.Tglob (r, l, a) -> Miniml.Tglob (r, List.map subst l, a)
+                      | Miniml.Tmeta {contents = Some t} -> subst t
+                      | Miniml.Tmeta _ as t -> t
+                      | t -> t
+                    in
+                    subst ty
+                  else ty
+                in
                 let rec extract_params ml_acc cpp_acc body =
                   match body with
                   | MLlam (id, ty, rest) ->
                       let param_name = id_of_mlid id in
-                      let param_cpp_ty = convert_ml_type_to_cpp_type base_env Refset'.empty type_var_names ty in
-                      extract_params ((param_name, ty) :: ml_acc) ((param_name, param_cpp_ty) :: cpp_acc) rest
+                      let resolved_ty = subst_promoted_tvars ty in
+                      let param_cpp_ty = convert_ml_type_to_cpp_type base_env Refset'.empty type_var_names resolved_ty in
+                      extract_params ((param_name, resolved_ty) :: ml_acc) ((param_name, param_cpp_ty) :: cpp_acc) rest
                   | _ -> (List.rev ml_acc, List.rev cpp_acc, body)
                 in
                 let (ml_params, cpp_params, inner_body) = extract_params [] [] field_body in

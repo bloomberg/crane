@@ -605,25 +605,90 @@ and extract_really_ind env kn mib =
         let field_glob = select_fields (1+npar) field_names typ in
         (* Check if this is a type class registered in the Rocq typeclasses database *)
         let is_class = Option.has_some (Typeclasses.class_info r) in
-        if is_class then TypeClass field_glob
-        (* Detect dependent records for C++ extraction.
-           A dependent record is a Record with erased Type fields (Tdummy Ktype)
-           where other fields' types depend on those Type fields. For example:
+        (* Detect records/type classes with erased Type fields for C++ extraction.
+           A dependent record is a Record (or type class) with erased Type fields
+           (Tdummy Ktype) where other fields' types depend on those Type fields.
+           For example:
              Record Magma := mkMagma { carrier : Type; op : carrier -> carrier -> carrier }.
-           Here, `carrier` is erased to Tdummy Ktype, and `op`'s type references
-           `carrier` — but since `carrier` has no type variable index in the dbmap,
-           the reference becomes Tunknown, then Tany (std::any) in C++.
+           or:
+             Class Graph (G : Type -> Type) (A : Type) :=
+               { edge : Type; add_edge : G A -> edge -> G A; ... }.
+           The erased Type field (`carrier` or `edge`) becomes Tdummy Ktype, and
+           references to it in other fields become Tunknown, then Tany (std::any).
 
            We fix this by promoting the erased Type fields to type variables
            (adding them to ip_vars) and re-extracting the constructor types so
-           that references resolve to Tvar instead of Tunknown. The record is
-           then treated as a TypeClass, producing a C++ concept + instance structs. *)
-        else if lang () == Cpp &&
-                List.exists (fun t -> match expand env t with Tdummy Ktype -> true | _ -> false) typ
+           that references resolve to Tvar instead of Tunknown. The result is
+           treated as a TypeClass, producing a C++ concept + instance structs. *)
+        (* Get the original Rocq constructor type for identifying true
+           associated type fields (Sort-typed) vs proof fields that merely
+           extract to Tdummy Ktype. *)
+        let orig_types = Inductive.arities_of_constructors ((kn,0),u) (mib, mip0) in
+        let orig_t = snd (decompose_prod_n_decls ndecls orig_types.(0)) in
+        let orig_prods,orig_head = Reduction.whd_decompose_prod epar orig_t in
+        (* Check if a field at position idx (0-indexed in typ/field_names) is
+           a true associated type field: its extracted type is Tdummy Ktype AND
+           its original Rocq type is a Sort (Type/Set/Prop). This distinguishes
+           associated types like `edge : Type` from proof fields whose complex
+           types happen to extract to Tdummy Ktype.
+
+           Additionally, we only promote Sort fields if there are other non-Sort
+           fields in the type class/record. A single-field type class with a
+           Sort field is likely a proof-related abstraction (like FunctionalInduction
+           from Equations), not a true dependent record with associated types. *)
+        let nfields = List.length typ in
+        let is_assoc_type_field idx t =
+          match expand env t with
+          | Tdummy Ktype ->
+              (* orig_prods lists fields in reverse order of the prods *)
+              let prod_idx = nfields - 1 - idx in
+              if prod_idx >= 0 && prod_idx < List.length orig_prods then
+                let prod_decl = List.nth orig_prods prod_idx in
+                let prod_ty = Context.Rel.Declaration.get_type prod_decl in
+                (* Check if the field type is directly a Sort (Type/Set), NOT a
+                   function/Prod type. This distinguishes:
+                   - Associated types like `edge : Type` (promote these)
+                   - Function fields like `fun_ind_prf : forall x, some_type x` (don't promote)
+                   We check the type WITHOUT deep reduction to catch direct Sorts. *)
+                match Constr.kind prod_ty with
+                | Sort s ->
+                    (* Field type is directly a Sort — this is an associated type.
+                       Only promote if it's Type/Set, not Prop. *)
+                    not (Sorts.is_prop s)
+                | Prod _ ->
+                    (* Field is a function/forall — not an associated type, even
+                       if its codomain is Type. Don't promote. *)
+                    false
+                | _ ->
+                    (* Field type is some other term. Check if it reduces to Sort. *)
+                    let prod_ty_whnf = Reduction.whd_all epar prod_ty in
+                    match Constr.kind prod_ty_whnf with
+                    | Sort s when not (Sorts.is_prop s) ->
+                        (* Reduces to Type/Set but isn't a Prod — likely a type
+                           synonym or definition. Only promote if it's a simple
+                           reference, not a complex term. *)
+                        (match Constr.kind prod_ty with
+                         | Const _ | Rel _ | Var _ -> true
+                         | _ -> false)
+                    | _ -> false
+              else false
+          | _ -> false
+        in
+        (* Only promote Sort fields if there are other non-Tdummy fields that can
+           reference them. A type class/record with ONLY Tdummy fields (all erased)
+           is likely a proof-related abstraction, not a dependent record.
+           Example: Magma has carrier:Type (Tdummy Ktype) + op:carrier→carrier (non-Tdummy) → promote
+           Example: FunctionalInduction has only fun_ind_prf:Type (Tdummy Ktype) → don't promote *)
+        let non_dummy_field_count = List.length (List.filter (fun t ->
+          not (isTdummy (expand env t))) typ) in
+        let should_promote = non_dummy_field_count > 0 in
+        if lang () == Cpp &&
+           should_promote &&
+           List.exists Fun.id (List.mapi (fun idx t -> is_assoc_type_field idx t) typ)
         then begin
-          (* Identify which positions (0-indexed in typ) are erased Type fields *)
+          (* Identify which positions (0-indexed in typ) are true associated type fields *)
           let erased_positions = List.mapi (fun idx t ->
-            if (match expand env t with Tdummy Ktype -> true | _ -> false) then Some idx
+            if is_assoc_type_field idx t then Some idx
             else None
           ) typ in
           let erased_idxs = List.filter_map Fun.id erased_positions in
@@ -636,18 +701,18 @@ and extract_really_ind env kn mib =
           ) erased_idxs in
           (* Build a new dbmap that assigns type variable indices to erased positions.
              Constructor field positions in extract_type_cons start at ndecls+1.
-             Type variable indices start at 1. *)
-          let next_tvar = ref 1 in
+             Type variable indices start AFTER existing type vars from ip_sign
+             to avoid index conflicts with real type parameters. *)
+          let nb_existing_tvars = List.length (List.filter (fun x -> x == Keep) p.ip_sign) in
+          let next_tvar = ref (nb_existing_tvars + 1) in
           let promoted_dbmap = List.fold_left (fun dm idx ->
             let pos = ndecls + 1 + idx in  (* position in extract_type_cons *)
             let tv = !next_tvar in
             incr next_tvar;
             Int.Map.add pos tv dm
           ) Int.Map.empty erased_idxs in
-          (* Merge with the original dbmap (which handles inductive type parameters) *)
-          let orig_types = Inductive.arities_of_constructors ((kn,0),u) (mib, mip0) in
-          let orig_t = snd (decompose_prod_n_decls ndecls orig_types.(0)) in
-          let prods,head = Reduction.whd_decompose_prod epar orig_t in
+          let prods = orig_prods in
+          let head = orig_head in
           let nprods = List.length prods in
           let orig_args = match Constr.kind head with
             | App (f,args) -> args
@@ -660,8 +725,12 @@ and extract_really_ind env kn mib =
           let new_types = extract_type_cons epar sg db merged_dbmap
             (EConstr.of_constr orig_t) (ndecls+1) in
           p.ip_types.(0) <- new_types;
-          (* Update ip_vars with promoted variable names *)
-          p.ip_vars <- promoted_vars;
+          (* Append promoted variable names to existing ip_vars.
+             For type classes with parameters (e.g., Graph G A with edge : Type),
+             ip_vars already has [G; A] from the parameters; we append [edge].
+             For non-class records with no parameters, ip_vars is empty and
+             we just set it to the promoted vars. *)
+          p.ip_vars <- p.ip_vars @ promoted_vars;
           (* Register promoted type vars so convert_ml_type_to_cpp_type
              can detect Tglob references to erased carrier projections. *)
           List.iter2 (fun idx var_id ->
@@ -677,6 +746,7 @@ and extract_really_ind env kn mib =
              new types. *)
           TypeClass field_glob
         end
+        else if is_class then TypeClass field_glob
         else Record field_glob
       with (I info) -> info
     in
@@ -1055,14 +1125,19 @@ and extract_cons_app env sg mle mlt (((kn,i) as ip,j) as cp) args =
       | Tglob (_,l,[]) -> List.map type_simpl l
       | _ -> assert false
     in
-      (* For promoted dependent records: extract concrete types for the
-         erased Type constructor args and add them to typeargs. This gives
-         instance structs access to the concrete carrier types.
-         Example: mkMagma nat Nat.add → typeargs = [Tglob(nat)] *)
+      (* For promoted dependent records/type classes: extract concrete types
+         for the erased Type constructor args and add them to typeargs.
+         This gives instance structs access to the concrete carrier types.
+         Example: mkMagma nat Nat.add → typeargs = [Tglob(nat)]
+         Example: Build_DirectedGraph Directed A (DirectedEdge A) ...
+                  → typeargs = [Directed A, A, DirectedEdge A] *)
       let promoted_typeargs =
-        if lang () == Cpp && oi.ip_vars <> [] && typeargs = [] then
-          (* ip_vars non-empty but typeargs empty means promoted dep record.
-             Extract concrete types from the erased constructor args. *)
+        let nb_sign_keeps = List.length (List.filter (fun x -> x == Keep) oi.ip_sign) in
+        let has_promoted = List.length oi.ip_vars > nb_sign_keeps in
+        if lang () == Cpp && has_promoted then
+          (* ip_vars has more entries than ip_sign Keep count means there are
+             promoted type variables from erased Type fields. Extract concrete
+             types from the erased constructor args. *)
           let db = List.rev (List.mapi (fun i _ -> i+1) env.env_rel_context.env_rel_ctx) in
           let la' = max 0 (la - params_nb) in
           let args' = List.lastn la' args in
@@ -1079,7 +1154,10 @@ and extract_cons_app env sg mle mlt (((kn,i) as ip,j) as cp) args =
           extract_promoted s args' []
         else []
       in
-      let all_typeargs = promoted_typeargs @ typeargs in
+      (* Append promoted typeargs AFTER existing typeargs so that Tvar indices
+         match: e.g., Tvar 1 = G, Tvar 2 = A (from ip_sign), Tvar 3 = edge
+         (promoted), and type_args = [Directed A, A, DirectedEdge A]. *)
+      let all_typeargs = typeargs @ promoted_typeargs in
       let typ = Tglob(GlobRef.IndRef ip, all_typeargs,[]) in
       put_magic_if magic1 (MLcons (typ, GlobRef.ConstructRef cp, mla))
   in

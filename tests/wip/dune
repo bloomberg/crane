@@ -11,17 +11,6 @@
    Crane)
  (flags (:standard -output-directory ../../tests/wip)))
 
-(subdir graph
- (rule
-  (targets graph.t.exe)
-  (deps Graph.vo graph.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} graph.t.exe graph.cpp graph.t.cpp)))
- (rule
-  (alias runtest)
-  (deps graph.t.exe)
-  (action (run ./graph.t.exe))))
-
 
 (subdir cotree
  (rule
