@@ -31,6 +31,7 @@ struct Nat {
             bsl::shared_ptr<nat> _a0;
         };
         using variant_t = bsl::variant<O, S>;
+
       private:
         variant_t v_;
         explicit nat(O _v)
@@ -41,6 +42,7 @@ struct Nat {
         : v_(bsl::move(_v))
         {
         }
+
       public:
         struct ctor {
             ctor() = delete;

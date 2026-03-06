@@ -143,14 +143,19 @@ let shared_expr_to_unique = function
    Shared helpers for method generation (used by gen_ind_header_v2 and gen_record_methods)
    ============================================================================ *)
 
+module IntSet = Escape.IntSet
+
 (* Collect all Tvar indices from an ml_type.
    Used to find type variables beyond those of the containing inductive/record. *)
-let rec collect_tvars acc = function
-  | Miniml.Tvar i | Miniml.Tvar' i -> if List.mem i acc then acc else i :: acc
-  | Miniml.Tarr (t1, t2) -> collect_tvars (collect_tvars acc t1) t2
-  | Miniml.Tglob (_, args, _) -> List.fold_left collect_tvars acc args
-  | Miniml.Tmeta { contents = Some t } -> collect_tvars acc t
+let rec collect_tvars_set acc = function
+  | Miniml.Tvar i | Miniml.Tvar' i -> IntSet.add i acc
+  | Miniml.Tarr (t1, t2) -> collect_tvars_set (collect_tvars_set acc t1) t2
+  | Miniml.Tglob (_, args, _) -> List.fold_left collect_tvars_set acc args
+  | Miniml.Tmeta { contents = Some t } -> collect_tvars_set acc t
   | _ -> acc
+
+let collect_tvars acc ty =
+  IntSet.elements (collect_tvars_set (IntSet.of_list acc) ty)
 
 (* Check if a C++ type is a dummy type glob (e.g., dummy_type, dummy_prop, dummy_implicit).
    These arise from Tdummy Ktype/Kprop/Kimplicit in the ML AST, which
@@ -398,7 +403,8 @@ and local_var_subst_stmt (target : Id.t) (repl : cpp_expr) (s : cpp_stmt) =
    body_tvars: sorted-unique list of all Tvar indices found in the body *)
 let build_extended_tvar_names sig_indices sig_names body_tvars =
   let n_sig = List.length sig_indices in
-  let body_extra_tvars = List.filter (fun i -> not (List.mem i sig_indices)) body_tvars in
+  let sig_set = IntSet.of_list sig_indices in
+  let body_extra_tvars = List.filter (fun i -> not (IntSet.mem i sig_set)) body_tvars in
   let max_tvar = List.fold_left max 0 (sig_indices @ body_tvars) in
   let tvar_name_map = List.map2 (fun i name -> (i, name)) sig_indices sig_names in
   let tvar_name_map =
@@ -546,29 +552,31 @@ let rec type_is_erased (ty : cpp_type) : bool =
 (* Collect de Bruijn indices of free variables in an ML AST.
    n_bound is the number of locally bound variables (lambda params, let bindings, etc.).
    Returns indices relative to the outer scope (i.e., i - n_bound for each free MLrel i). *)
-let rec collect_free_rels n_bound acc = function
-  | MLrel i -> if i > n_bound && not (List.mem (i - n_bound) acc)
-               then (i - n_bound) :: acc else acc
-  | MLlam (_, _, body) -> collect_free_rels (n_bound + 1) acc body
+let rec collect_free_rels_set n_bound acc = function
+  | MLrel i -> if i > n_bound then IntSet.add (i - n_bound) acc else acc
+  | MLlam (_, _, body) -> collect_free_rels_set (n_bound + 1) acc body
   | MLletin (_, _, a, b) ->
-      collect_free_rels n_bound (collect_free_rels (n_bound + 1) acc b) a
+      collect_free_rels_set n_bound (collect_free_rels_set (n_bound + 1) acc b) a
   | MLapp (f, args) ->
-      List.fold_left (collect_free_rels n_bound) (collect_free_rels n_bound acc f) args
+      List.fold_left (collect_free_rels_set n_bound) (collect_free_rels_set n_bound acc f) args
   | MLcase (_, e, brs) ->
-      let acc = collect_free_rels n_bound acc e in
+      let acc = collect_free_rels_set n_bound acc e in
       Array.fold_left (fun acc (ids, _, _, body) ->
-        collect_free_rels (n_bound + List.length ids) acc body) acc brs
+        collect_free_rels_set (n_bound + List.length ids) acc body) acc brs
   | MLfix (_, ids, funs, _) ->
       let n_fix = Array.length ids in
       Array.fold_left (fun acc f ->
         let params, body = collect_lams f in
-        collect_free_rels (n_bound + List.length params + n_fix) acc body) acc funs
-  | MLcons (_, _, args) -> List.fold_left (collect_free_rels n_bound) acc args
-  | MLmagic a -> collect_free_rels n_bound acc a
-  | MLtuple args -> List.fold_left (collect_free_rels n_bound) acc args
+        collect_free_rels_set (n_bound + List.length params + n_fix) acc body) acc funs
+  | MLcons (_, _, args) -> List.fold_left (collect_free_rels_set n_bound) acc args
+  | MLmagic a -> collect_free_rels_set n_bound acc a
+  | MLtuple args -> List.fold_left (collect_free_rels_set n_bound) acc args
   | MLparray (arr, def) ->
-      collect_free_rels n_bound (Array.fold_left (collect_free_rels n_bound) acc arr) def
+      collect_free_rels_set n_bound (Array.fold_left (collect_free_rels_set n_bound) acc arr) def
   | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> acc
+
+let collect_free_rels n_bound body =
+  IntSet.elements (collect_free_rels_set n_bound IntSet.empty body)
 
 let rec convert_ml_type_to_cpp_type env (ns : Refset'.t) (tvars : Id.t list) (ml_t : ml_type) : cpp_type =
   match ml_t with
@@ -749,16 +757,13 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
             let arg_names = List.init n (fun i -> "_a" ^ string_of_int i) in
             let fn_name = Common.pp_global_name Term r in
             (* Collect all tvars from the ML type *)
-            let rec collect_ml_tvars acc = function
-              | Miniml.Tvar i | Miniml.Tvar' i -> if List.mem i acc then acc else i :: acc
-              | Miniml.Tarr (t1, t2) -> collect_ml_tvars (collect_ml_tvars acc t1) t2
-              | Miniml.Tglob (_, ts, _) -> List.fold_left collect_ml_tvars acc ts
-              | _ -> acc in
-            let all_tvars = List.sort Int.compare (List.fold_left collect_ml_tvars [] (non_dummy_param_tys @ [ml_ty])) in
+            let all_tvars_set = List.fold_left collect_tvars_set IntSet.empty (non_dummy_param_tys @ [ml_ty]) in
+            let all_tvars = IntSet.elements all_tvars_set in
             (* Tvars deducible from non-function value params *)
             let value_param_tys = List.filter (fun t -> match t with Miniml.Tarr _ -> false | _ -> true) non_dummy_param_tys in
-            let deducible_tvars = List.sort Int.compare (List.fold_left collect_ml_tvars [] value_param_tys) in
-            let non_deducible_tvars = List.filter (fun i -> not (List.mem i deducible_tvars)) all_tvars in
+            let deducible_set = List.fold_left collect_tvars_set IntSet.empty value_param_tys in
+            let deducible_tvars = IntSet.elements deducible_set in
+            let non_deducible_tvars = List.filter (fun i -> not (IntSet.mem i deducible_set)) all_tvars in
             (* Create tvar names for the template lambda *)
             let tvar_name i = "_T" ^ string_of_int i in
             (* Render an ML type as a C++ type string using local tvar names *)
@@ -803,7 +808,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
                 else type_str
               | Miniml.Tdummy _ -> "std::any"
               | _ -> "auto" in
-            if non_deducible_tvars <> [] && deducible_tvars <> [] then
+            if non_deducible_tvars <> [] && not (IntSet.is_empty deducible_set) then
               (* There are non-deducible tvars — use template lambda with typed params.
                  The first param (function type) uses auto&&, value params get specific types. *)
               let template_params = String.concat ", " (List.map (fun i ->
@@ -1908,7 +1913,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     let x' = remove_prime_id (id_of_mlid x) in
 
     (* 1. Collect free variables in the lambda body *)
-    let free_indices = collect_free_rels n_params [] body in
+    let free_indices = collect_free_rels n_params body in
     let free_vars = List.map (fun i ->
       let name = get_db_name i env in
       let ty = get_env_type i in
@@ -2861,8 +2866,8 @@ let get_tvar_indices t =
 let primary_tvar_indices dom cod =
   let non_fun_dom = List.filter (fun t -> match t with Tfun _ -> false | _ -> true) dom in
   List.fold_left (fun acc t ->
-    List.fold_left (fun a i -> if List.mem i a then a else i :: a) acc (get_tvar_indices t)
-  ) [] (cod :: non_fun_dom)
+    List.fold_left (fun a i -> IntSet.add i a) acc (get_tvar_indices t)
+  ) IntSet.empty (cod :: non_fun_dom)
 
 
 let rec glob_subst_expr (id : GlobRef.t) (e1 : cpp_expr) (e2 : cpp_expr) =
@@ -3197,9 +3202,10 @@ let gen_dfun n b dom cod ty temps =
 
      So CPS source index [i] maps to de Bruijn index [n_ids - 1 - i]. *)
   let cps_param_indices = detect_cps_params n (List.length ids) b in
-  let is_cps_param_source i = List.mem i cps_param_indices in
+  let cps_set = IntSet.of_list cps_param_indices in
+  let is_cps_param_source i = IntSet.mem i cps_set in
   let n_ids = List.length ids in
-  let is_cps_param_db i = List.mem (n_ids - 1 - i) cps_param_indices in
+  let is_cps_param_db i = IntSet.mem (n_ids - 1 - i) cps_set in
   let all_params = missing @ ids in
   (* Type class instance parameters become C++ template type parameters.
      We assign unique names (_tcI0, _tcI1, ...) to avoid collision with:
@@ -3313,7 +3319,7 @@ let gen_dfun n b dom cod ty temps =
       match ty with
       |  (Tmod (TMconst, Tfun (fdom, fcod))) when not (is_cps_param_source i) ->
         let fun_idx = get_tvar_indices (Tfun (fdom, fcod)) in
-        let has_undeclared = List.exists (fun idx -> not (List.mem idx primary)) fun_idx in
+        let has_undeclared = List.exists (fun idx -> not (IntSet.mem idx primary)) fun_idx in
         if has_undeclared || has_hkt_erasure (Tfun (fdom, fcod)) then
           Some (x, TTtypename, Id.of_string ("F" ^ (string_of_int i)))
         else
@@ -3701,7 +3707,7 @@ let gen_decl_for_pp n b ty =
          If there are no erased function params at all, keep everything — this
          handles ordinary polymorphic functions that have no HKT erasure. *)
       List.filter_map (fun (i, id) ->
-        if List.mem i primary then Some id
+        if IntSet.mem i primary then Some id
         else if erased_fun_dom = [] then Some id
         else None
       ) tvars_indexed
@@ -3957,7 +3963,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
       (* Fallback for non-template types: assume positions 1..num_ind_vars *)
       List.init num_ind_vars (fun i -> (i + 1, i + 1))
   in
-  let ind_tvar_set = List.map fst ind_tvar_map in
+  let ind_tvar_set = IntSet.of_list (List.map fst ind_tvar_map) in
   (* Remap ML type variables: assign canonical positions so convert_ml_type_to_cpp_type
      maps them correctly.
      - Inductive tvars → positions 1..num_ind_vars
@@ -3969,7 +3975,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
        extra tvars: [1] — Tvar1 is extra → position 2 (= num_ind_vars + 1)
        Full remap: Tvar1 → 2, Tvar2 → 1 *)
   let all_tvars = List.sort compare (collect_tvars [] ty) in
-  let extra_tvars_orig = List.filter (fun i -> not (List.mem i ind_tvar_set)) all_tvars in
+  let extra_tvars_orig = List.filter (fun i -> not (IntSet.mem i ind_tvar_set)) all_tvars in
   let needs_remap = not (List.for_all (fun (src, dst) -> src = dst) ind_tvar_map)
                     || extra_tvars_orig <> [] in
   (* Build complete remap table: (original_idx → canonical_idx) *)

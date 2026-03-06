@@ -37,6 +37,7 @@ struct List {
         bsl::shared_ptr<List<A> > _a1;
     };
     using variant_t = bsl::variant<nil, cons>;
+
   private:
     variant_t v_;
     explicit List(nil _v)
@@ -47,6 +48,7 @@ struct List {
     : v_(bsl::move(_v))
     {
     }
+
   public:
     struct ctor {
         ctor() = delete;

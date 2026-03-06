@@ -142,10 +142,14 @@ test-list:
 		fi; \
 	done | sort
 
-# Format all generated test .h and .cpp files with clang-format (LLVM style)
+# Format all generated test .h and .cpp files
+# Uses clang-format (LLVM style) for standard tests, bde-format for *_bde tests
 format-test:
 	@echo "Formatting test files..."
-	@find tests -name '*.h' -o -name '*.cpp' | grep -v '\.t\.cpp$$' | xargs clang-format -i -style=LLVM
+	@find tests -name '*.h' -o -name '*.cpp' | grep -v '\.t\.cpp$$' | grep -v '_bde/' | xargs -P $$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4) clang-format -i -style=LLVM
+	@if command -v bde-format >/dev/null 2>&1; then \
+		find tests -path '*_bde/*.h' -o -path '*_bde/*.cpp' | grep -v '\.t\.cpp$$' | xargs -P $$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4) bde-format -i; \
+	fi
 	@echo "Done."
 
 # Clean build artifacts and generated test files

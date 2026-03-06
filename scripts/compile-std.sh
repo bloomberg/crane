@@ -19,28 +19,59 @@ OUTPUT="$1"
 shift
 SOURCES="$@"
 
+# Optimization level: O0 (default, fast compile), O1, O2, or O3
+OPT_LEVEL="${CRANE_CPP_OPTIMIZATION:-O0}"
+
+# Precompiled header support
+PCH_SRC="$THEORIES_CPP/crane_pch.h"
+PCH_DIR="$PROJECT_ROOT/_build/pch"
+PCH_FILE="$PCH_DIR/crane_pch_${OPT_LEVEL}.h.pch"
+
 # Detect Homebrew LLVM
 HB_LLVM="${HB_LLVM:-/opt/homebrew/opt/llvm}"
 
+# Build the compiler command
 if [ -d "$HB_LLVM" ]; then
-    # Use Homebrew LLVM with explicit libc++ linking
-    exec "$HB_LLVM/bin/clang++" \
-        -std=c++23 \
-        -O2 \
-        -fbracket-depth=1024 \
-        -I . \
-        -I "$THEORIES_CPP" \
-        -nostdlib++ \
-        -stdlib=libc++ \
-        -I"$HB_LLVM/include/c++/v1" \
-        -L"$HB_LLVM/lib" \
-        -L"$HB_LLVM/lib/c++" \
-        -Wl,-rpath,"$HB_LLVM/lib" \
-        -Wl,-rpath,"$HB_LLVM/lib/c++" \
-        $SOURCES \
-        -lc++ -lc++abi \
-        -o "$OUTPUT"
+    CXX="$HB_LLVM/bin/clang++"
+    CXX_FLAGS=(
+        -std=c++23
+        -"$OPT_LEVEL"
+        -fbracket-depth=1024
+        -I .
+        -I "$THEORIES_CPP"
+        -nostdlib++
+        -stdlib=libc++
+        -I"$HB_LLVM/include/c++/v1"
+    )
+    LINK_FLAGS=(
+        -L"$HB_LLVM/lib"
+        -L"$HB_LLVM/lib/c++"
+        -Wl,-rpath,"$HB_LLVM/lib"
+        -Wl,-rpath,"$HB_LLVM/lib/c++"
+        -lc++ -lc++abi
+    )
 else
-    # Fallback to system clang++
-    exec clang++ -std=c++23 -O2 -fbracket-depth=1024 -I . -I "$THEORIES_CPP" $SOURCES -o "$OUTPUT"
+    CXX="clang++"
+    CXX_FLAGS=(
+        -std=c++23
+        -"$OPT_LEVEL"
+        -fbracket-depth=1024
+        -I .
+        -I "$THEORIES_CPP"
+    )
+    LINK_FLAGS=()
 fi
+
+# Build PCH if it doesn't exist or is older than the source
+if [ -f "$PCH_SRC" ] && { [ ! -f "$PCH_FILE" ] || [ "$PCH_SRC" -nt "$PCH_FILE" ]; }; then
+    mkdir -p "$PCH_DIR"
+    "$CXX" -x c++-header "${CXX_FLAGS[@]}" "$PCH_SRC" -o "$PCH_FILE" 2>/dev/null || true
+fi
+
+# Use PCH if available
+PCH_FLAGS=()
+if [ -f "$PCH_FILE" ]; then
+    PCH_FLAGS=(-include-pch "$PCH_FILE")
+fi
+
+exec "$CXX" "${CXX_FLAGS[@]}" "${PCH_FLAGS[@]}" $SOURCES "${LINK_FLAGS[@]}" -o "$OUTPUT"

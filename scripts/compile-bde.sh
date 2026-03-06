@@ -19,6 +19,9 @@ OUTPUT="$1"
 shift
 SOURCES="$@"
 
+# Optimization level: O0 (default, fast compile), O1, O2, or O3
+OPT_LEVEL="${CRANE_CPP_OPTIMIZATION:-O0}"
+
 # Find BDE installation via pkg-config
 # Users should set PKG_CONFIG_PATH to include BDE's pkgconfig directory
 # e.g., export PKG_CONFIG_PATH=/path/to/bde_install/lib/pkgconfig
@@ -72,7 +75,7 @@ exec clang++ \
     -std=c++20 \
     -DBSLS_LIBRARYFEATURES_FORCE_ABI_CPP17 \
     -Wno-deprecated-literal-operator \
-    -O2 \
+    -$OPT_LEVEL \
     -I . \
     -I "$THEORIES_CPP_BDE" \
     $BDE_CFLAGS \

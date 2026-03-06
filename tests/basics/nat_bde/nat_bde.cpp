@@ -10,5 +10,4 @@
 #include <nat_bde.h>
 
 namespace BloombergLP {
-
 }

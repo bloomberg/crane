@@ -15,5 +15,4 @@
 #include <mini_stm.h>
 
 namespace BloombergLP {
-
 }

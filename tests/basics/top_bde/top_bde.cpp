@@ -12,7 +12,6 @@
 #include <top_bde.h>
 
 namespace BloombergLP {
-
 }
 
 bsl::shared_ptr<List<unsigned int> > ListDef::seq(const unsigned int start,
