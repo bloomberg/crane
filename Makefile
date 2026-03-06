@@ -39,7 +39,7 @@ install:
 # Build and run tests with formatted summary (parallel)
 # extract first to ensure generated .cpp/.h files exist before compiling tests
 test: extract
-	@./scripts/check-dune-rules.sh
+	@./scripts/check-dune-rules.sh --fix
 	@dune build bin/test_runner/main.exe
 	@./_build/default/bin/test_runner/main.exe
 

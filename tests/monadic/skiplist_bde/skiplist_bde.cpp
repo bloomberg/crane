@@ -14,6 +14,7 @@
 #include <skipnode.h>
 
 namespace BloombergLP {
+
 }
 bool Nat::eqb(const unsigned int n, const unsigned int m)
 {
