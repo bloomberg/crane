@@ -21,8 +21,9 @@ struct Bool {
   static bool eqb(const bool b1, const bool b2);
 };
 
-template <typename I, typename carrier>
-concept EqType = requires(carrier a0, carrier a1) {
+template <typename I>
+concept EqType = requires(typename I::carrier a0, typename I::carrier a1) {
+  typename I::carrier;
   { I::eqb(a1, a0) } -> std::convertible_to<bool>;
 };
 
@@ -30,14 +31,16 @@ struct CanonStruct {
   using carrier = std::any;
 
   struct nat_eqType {
+    using carrier = unsigned int;
     static bool eqb(unsigned int a0, unsigned int a1) { return (a0 == a1); }
   };
-  static_assert(EqType<nat_eqType, unsigned int>);
+  static_assert(EqType<nat_eqType>);
 
   struct bool_eqType {
+    using carrier = bool;
     static bool eqb(bool a0, bool a1) { return Bool::eqb(a0, a1); }
   };
-  static_assert(EqType<bool_eqType, bool>);
+  static_assert(EqType<bool_eqType>);
 
   template <typename _tcI0, typename carrier>
   static bool same(const carrier x, const carrier y) {

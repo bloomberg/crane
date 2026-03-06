@@ -2422,9 +2422,42 @@ let gen_record_cpp name fields ind =
 *)
 let gen_typeclass_cpp name fields ind =
   let inst_id = Id.of_string "I" in
-  (* Type vars become template parameters after the instance parameter *)
-  let ty_vars = List.map (fun x -> (TTtypename, x)) ind.ip_vars in
+  (* Determine the number of non-promoted type variables (from ip_sign Keep entries).
+     Promoted type variables (from erased Type fields) have Tvar indices beyond this. *)
+  let nb_sign_keeps = List.length (List.filter (fun x -> x == Keep) ind.ip_sign) in
+  (* Split ip_vars into param vars (real type params) and promoted vars (associated types) *)
+  let param_vars = List.filteri (fun i _ -> i < nb_sign_keeps) ind.ip_vars in
+  let promoted_vars = List.filteri (fun i _ -> i >= nb_sign_keeps) ind.ip_vars in
+  (* Only param vars become concept template parameters; promoted vars become
+     typename requirements inside the requires block *)
+  let ty_vars = List.map (fun x -> (TTtypename, x)) param_vars in
   let all_params = (TTtypename, inst_id) :: ty_vars in
+  (* Build typename requirements for promoted vars: typename I::field; *)
+  let type_reqs = List.map (fun var_id ->
+    Tqualified (Tvar (0, Some inst_id), var_id)
+  ) promoted_vars in
+  (* Substitute promoted Tvars with Tqualified(I, name) in cpp_type trees.
+     After conversion, promoted vars appear as Tvar(_, Some name) where name
+     is in promoted_vars. Replace them with typename I::name. *)
+  let rec subst_promoted_in_cpp_type = function
+    | Tvar (_, Some vname) when List.exists (Id.equal vname) promoted_vars ->
+        Tqualified (Tvar (0, Some inst_id), vname)
+    | Tfun (args, ret) ->
+        Tfun (List.map subst_promoted_in_cpp_type args,
+              subst_promoted_in_cpp_type ret)
+    | Tglob (r, ts, es) ->
+        Tglob (r, List.map subst_promoted_in_cpp_type ts, es)
+    | Tshared_ptr t -> Tshared_ptr (subst_promoted_in_cpp_type t)
+    | Tunique_ptr t -> Tunique_ptr (subst_promoted_in_cpp_type t)
+    | Tnamespace (r, t) -> Tnamespace (r, subst_promoted_in_cpp_type t)
+    | Tqualified (b, id) -> Tqualified (subst_promoted_in_cpp_type b, id)
+    | Tref t -> Tref (subst_promoted_in_cpp_type t)
+    | Tvariant ts -> Tvariant (List.map subst_promoted_in_cpp_type ts)
+    | Tid (id, ts) -> Tid (id, List.map subst_promoted_in_cpp_type ts)
+    | Tstruct (r, ts) -> Tstruct (r, List.map subst_promoted_in_cpp_type ts)
+    | Tmod (m, t) -> Tmod (m, subst_promoted_in_cpp_type t)
+    | t -> t
+  in
   (* Generate requires clauses for each method.
      Filter out Tdummy entries from ip_types — these are erased fields
      (e.g., carrier : Type in a promoted dependent record) that don't
@@ -2436,47 +2469,103 @@ let gen_typeclass_cpp name fields ind =
       str " non_dummy_types=" ++ int (List.length non_dummy_types) ++
       str " ip_types.(0)=" ++ int (List.length ind.ip_types.(0)));
   let method_list = List.combine fields non_dummy_types in
-  (* Generate a single method requirement *)
-  let gen_method_req i (field_opt, field_ty) =
+  (* Check if a type is a bare promoted Tvar — a Tvar whose index is beyond
+     the real type parameters. This indicates the field's type is entirely
+     determined by a promoted associated type, so we can't decompose it into
+     args and return type at concept time (the concrete type might be a function). *)
+  let is_bare_promoted_tvar ty =
+    match ty with
+    | Miniml.Tvar n -> n > nb_sign_keeps
+    | _ -> false
+  in
+  (* Generate a single method requirement.
+     Returns either:
+     - `Normal (params, (call, constraint))` for regular methods
+     - `Disjunctive expr` for fields whose type is a bare promoted Tvar *)
+  let gen_method_req (field_opt, field_ty) =
     match field_opt with
     | None -> None  (* Anonymous field, skip *)
     | Some field_ref ->
-        let (args, ret) = get_args_and_ret [] field_ty in
-        (* Filter out type class instance arguments (they're passed via template) *)
-        let args = List.filter (fun t -> not (Table.is_typeclass_type t)) args in
-        let ret_cpp = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty ind.ip_vars ret in
-        (* Create parameter names: a0, a1, a2, ... *)
-        let params = List.mapi (fun j arg_ty ->
-          let arg_cpp = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty ind.ip_vars arg_ty in
-          (arg_cpp, Id.of_string ("a" ^ string_of_int j))
-        ) args in
-        (* Method call: I::method_name(a0, a1, ...) *)
         let method_name = Common.pp_global_name Term field_ref in
-        let call_args = List.map (fun (_, id) -> CPPvar id) params in
-        let call = CPPfun_call (
-          CPPqualified (CPPvar inst_id, Id.of_string method_name),
-          call_args
-        ) in
-        (* Constraint: use the cpp_type directly - cpp.ml will render it *)
-        let constraint_expr = CPPconvertible_to ret_cpp in
-        Some (params, (call, constraint_expr))
+        if is_bare_promoted_tvar field_ty then begin
+          (* Field type is a bare promoted Tvar (e.g., fun_ind_prf : fun_ind_prf_ty).
+             The concrete type could be a plain value or a function with any arity.
+             Generate a disjunctive concept requirement:
+               requires { { I::method() } -> std::convertible_to<T>; } ||
+               requires { { I::method } -> std::convertible_to<T>; }
+             The first clause handles nullary accessors (Meyers singleton pattern).
+             The second handles functions (pointer converts to std::function) and
+             static data members (direct value). *)
+          let ret_cpp = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty ind.ip_vars field_ty in
+          let ret_cpp = subst_promoted_in_cpp_type ret_cpp in
+          let constraint_expr = CPPconvertible_to ret_cpp in
+          let qualified = CPPqualified (CPPvar inst_id, Id.of_string method_name) in
+          let call_form = CPPrequires ([], [(CPPfun_call (qualified, []), constraint_expr)], []) in
+          let value_form = CPPrequires ([], [(qualified, constraint_expr)], []) in
+          Some (`Disjunctive (CPPbinop ("||", call_form, value_form)))
+        end else begin
+          let (args, ret) = get_args_and_ret [] field_ty in
+          (* Filter out type class instance arguments (they're passed via template) *)
+          let args = List.filter (fun t -> not (Table.is_typeclass_type t)) args in
+          let ret_cpp = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty ind.ip_vars ret in
+          let ret_cpp = subst_promoted_in_cpp_type ret_cpp in
+          (* Create parameter names: a0, a1, a2, ... *)
+          let params = List.mapi (fun j arg_ty ->
+            let arg_cpp = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty ind.ip_vars arg_ty in
+            let arg_cpp = subst_promoted_in_cpp_type arg_cpp in
+            (arg_cpp, Id.of_string ("a" ^ string_of_int j))
+          ) args in
+          (* Method call: I::method_name(a0, a1, ...) *)
+          let call_args = List.map (fun (_, id) -> CPPvar id) params in
+          let call = CPPfun_call (
+            CPPqualified (CPPvar inst_id, Id.of_string method_name),
+            call_args
+          ) in
+          (* Constraint: use the cpp_type directly - cpp.ml will render it *)
+          let constraint_expr = CPPconvertible_to ret_cpp in
+          Some (`Normal (params, (call, constraint_expr)))
+        end
   in
-  let method_reqs = List.filter_map (fun pair -> gen_method_req 0 pair) method_list in
-  (* Collect all unique parameter types for the requires clause *)
-  let all_params_flat = List.concat_map fst method_reqs in
-  (* Deduplicate parameters by name only — when an associated type is erased to
-     std::any the (type, name) pair changes but the name stays the same, so
-     deduplicating by name keeps the first occurrence and avoids duplicate
-     parameter names in the requires clause. *)
-  let seen = ref [] in
-  let dedup_params = List.filter (fun (_ty, id) ->
-    let key = Id.to_string id in
-    if List.mem key !seen then false
-    else (seen := key :: !seen; true)
-  ) all_params_flat in
-  let constraints = List.map snd method_reqs in
-  let requires_expr = CPPrequires (dedup_params, constraints) in
-  Dtemplate (all_params, None, Dconcept (name, requires_expr))
+  let all_reqs = List.filter_map (fun pair -> gen_method_req pair) method_list in
+  (* Separate normal requirements from disjunctive ones *)
+  let normal_reqs = List.filter_map (function `Normal r -> Some r | _ -> None) all_reqs in
+  let disjunctive_exprs = List.filter_map (function `Disjunctive e -> Some e | _ -> None) all_reqs in
+  (* Build the concept body.
+     Normal requirements go in a single requires{} block.
+     Disjunctive requirements (for bare-Tvar fields) are &&-ed separately,
+     each wrapped in parentheses via the || rendering. *)
+  let concept_body =
+    let normal_part =
+      if normal_reqs = [] then None
+      else begin
+        let all_params_flat = List.concat_map fst normal_reqs in
+        let seen = ref [] in
+        let dedup_params = List.filter (fun (_ty, id) ->
+          let key = Id.to_string id in
+          if List.mem key !seen then false
+          else (seen := key :: !seen; true)
+        ) all_params_flat in
+        let constraints = List.map snd normal_reqs in
+        Some (CPPrequires (dedup_params, constraints, type_reqs))
+      end
+    in
+    match normal_part, disjunctive_exprs with
+    | Some np, [] -> np
+    | None, [d] ->
+        if type_reqs <> [] then
+          CPPbinop ("&&", CPPrequires ([], [], type_reqs), d)
+        else d
+    | None, d :: rest ->
+        let base = if type_reqs <> [] then
+          CPPbinop ("&&", CPPrequires ([], [], type_reqs), d)
+        else d in
+        List.fold_left (fun acc e -> CPPbinop ("&&", acc, e)) base rest
+    | Some np, ds -> List.fold_left (fun acc e -> CPPbinop ("&&", acc, e)) np ds
+    | None, [] ->
+        if type_reqs <> [] then CPPrequires ([], [], type_reqs)
+        else CPPrequires ([], [], [])  (* degenerate: no requirements *)
+  in
+  Dtemplate (all_params, None, Dconcept (name, concept_body))
 
 (* Generate a C++ struct for a type class instance.
    Type class instances become structs with static methods.
@@ -2689,14 +2778,39 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type)
           (* Restore type variable context *)
           tctx.current_outer_function_name <- saved_outer_name;
           clear_current_type_vars ();
-          if methods = [] then (None, Some class_ref, type_args)
+          (* Compute promoted vars and generate using fields.
+             Promoted vars are ip_vars entries beyond the real type parameter count
+             (as determined by ip_sign Keep count, not tv_temps which reflects the
+             instance's own type variables).
+             They become `using field = ConcreteType;` in the struct. *)
+          let ip_vars = Table.get_ind_ip_vars class_ref in
+          let nb_sign_keeps_for_promoted = Table.get_ind_nb_sign_keeps class_ref in
+          let promoted_vars = List.filteri (fun i _ -> i >= nb_sign_keeps_for_promoted) ip_vars in
+          let promoted_concrete_types =
+            if List.length type_args > nb_sign_keeps_for_promoted then
+              List.filteri (fun i _ -> i >= nb_sign_keeps_for_promoted) type_args
+            else []
+          in
+          let using_fields =
+            if List.length promoted_vars = List.length promoted_concrete_types then
+              List.map2 (fun var_name concrete_ml_ty ->
+                let concrete_cpp_ty = convert_ml_type_to_cpp_type base_env Refset'.empty type_var_names concrete_ml_ty in
+                (Fnested_using (var_name, concrete_cpp_ty), VPublic)
+              ) promoted_vars promoted_concrete_types
+            else []
+          in
+          (* Exclude promoted type args from the returned list (used for static_assert) *)
+          let non_promoted_type_args =
+            List.filteri (fun i _ -> i < nb_sign_keeps_for_promoted) type_args
+          in
+          if methods = [] && using_fields = [] then (None, Some class_ref, non_promoted_type_args)
           else begin
-            let struct_decl = Dstruct (name, methods) in
+            let struct_decl = Dstruct (name, using_fields @ methods) in
             let decl = match template_params with
               | [] -> struct_decl
               | _ -> Dtemplate (template_params, None, struct_decl)
             in
-            (Some decl, Some class_ref, type_args)
+            (Some decl, Some class_ref, non_promoted_type_args)
           end
       | _ -> (None, Some class_ref, type_args))
   | _ -> (None, None, [])

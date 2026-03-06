@@ -234,6 +234,17 @@ let get_ind_ip_vars r =
       with Not_found | Invalid_argument _ -> [])
   | _ -> []
 
+(* Get the number of Keep entries in ip_sign for an inductive type.
+   This is the number of real (non-promoted) type parameters. *)
+let get_ind_nb_sign_keeps r =
+  let open GlobRef in match r with
+  | IndRef (kn, i) | ConstructRef ((kn, i), _) ->
+      (try
+        let ind = unsafe_lookup_ind kn in
+        List.length (List.filter (fun x -> x == Miniml.Keep) ind.ind_packets.(i).ip_sign)
+      with Not_found | Invalid_argument _ -> 0)
+  | _ -> 0
+
 let is_typeclass r =
   let open GlobRef in match r with
   | ConstructRef ((kn,_),_) | IndRef (kn,_) ->

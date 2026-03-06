@@ -99,6 +99,7 @@ val get_record_fields :
 val record_fields_of_type : ml_type -> GlobRef.t option list
 val record_field_types : GlobRef.t -> ml_type list
 val get_ind_ip_vars : GlobRef.t -> Names.Id.t list
+val get_ind_nb_sign_keeps : GlobRef.t -> int
 val is_typeclass : GlobRef.t -> bool
 val is_typeclass_type : ml_type -> bool
 val is_typeclass_type_cpp : Minicpp.cpp_type -> bool

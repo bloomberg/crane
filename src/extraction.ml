@@ -539,7 +539,20 @@ and extract_really_ind env kn mib =
        ind_packets = Array.map fst packets;
        ind_equiv = equiv
       };
-    (* Second pass: we extract constructors *)
+    (* Helper: extract product binder names from a constructor type *)
+    let rec names_prod t = match Constr.kind t with
+      | Prod(n,_,t) -> n::(names_prod t)
+      | LetIn(_,_,_,t) -> names_prod t
+      | Cast(t,_,_) -> names_prod t
+      | _ -> []
+    in
+    (* Second pass: we extract constructors.
+       For C++ records/classes, we also detect Sort-typed fields and promote
+       them to type variables during initial extraction, rather than
+       re-extracting afterward. *)
+    (* Check if this inductive is a record with a single constructor *)
+    let is_record_mib = mib.mind_record != Declarations.NotRecord
+                        && Int.equal mib.mind_ntypes 1 in
     for i = 0 to mib.mind_ntypes - 1 do
       let p,u = packets.(i) in
       if not p.ip_logical then
@@ -552,7 +565,69 @@ and extract_really_ind env kn mib =
             | App (f,args) -> args (* [Constr.kind f = Ind ip] *)
             | _ -> [||]
           in
-          let dbmap = parse_ind_args p.ip_sign args (nprods + ndecls) in
+          let orig_dbmap = parse_ind_args p.ip_sign args (nprods + ndecls) in
+          (* For C++ records: detect Sort-typed fields and promote to type vars
+             during initial extraction (instead of re-extracting later). *)
+          let dbmap, _promoted_vars =
+            if lang () == Cpp && is_record_mib && Int.equal j 0 then
+              let nfields = List.length prods in
+              let nb_existing_tvars = List.length (List.filter (fun x -> x == Keep) p.ip_sign) in
+              let next_tvar = ref (nb_existing_tvars + 1) in
+              (* Get field names for promoted variable names *)
+              let mip_i = mib.mind_packets.(i) in
+              let field_names =
+                List.skipn mib.mind_nparams (names_prod mip_i.mind_user_lc.(0)) in
+              (* Identify which fields have Sort Type/Set as their Rocq type *)
+              let promoted_info = List.mapi (fun idx prod_decl ->
+                let prod_ty = Context.Rel.Declaration.get_type prod_decl in
+                match Constr.kind prod_ty with
+                | Sort s when not (Sorts.is_prop s) ->
+                    (* This field is a Sort Type/Set — promote it.
+                       prod_decl is at position (nfields-1-idx) because prods
+                       lists fields in reverse order. *)
+                    let field_idx = nfields - 1 - idx in
+                    let pos = ndecls + 1 + field_idx in
+                    let tv = !next_tvar in
+                    incr next_tvar;
+                    let var_name = if field_idx < List.length field_names then
+                      let fn = List.nth field_names field_idx in
+                      match fn.binder_name with
+                      | Name id -> id
+                      | Anonymous -> Id.of_string ("_tvar" ^ string_of_int field_idx)
+                    else Id.of_string ("_tvar" ^ string_of_int field_idx) in
+                    Some (pos, tv, field_idx, var_name)
+                | _ -> None
+              ) prods in
+              let promoted_entries = List.filter_map Fun.id promoted_info in
+              (* Only promote if there are Sort fields AND also non-Sort fields
+                 (i.e., the record has actual methods/data, not just types).
+                 This prevents promotion for degenerate cases. *)
+              let n_non_sort = nfields - List.length promoted_entries in
+              if promoted_entries = [] || n_non_sort <= 0 then
+                orig_dbmap, []
+              else
+                let promoted_dbmap = List.fold_left (fun dm (pos, tv, _, _) ->
+                  Int.Map.add pos tv dm
+                ) Int.Map.empty promoted_entries in
+                let merged = Int.Map.union (fun _k _a b -> Some b) orig_dbmap promoted_dbmap in
+                let promoted_var_names = List.map (fun (_, _, _, name) -> name) promoted_entries in
+                (* Also register promoted type vars in the table and extend ip_vars *)
+                let mp = MutInd.modpath kn in
+                List.iter (fun (_, _, field_idx, var_name) ->
+                  if field_idx < List.length field_names then begin
+                    let fn = List.nth field_names field_idx in
+                    match fn.binder_name with
+                    | Name id ->
+                        let knp = Constant.make2 mp (Label.of_id id) in
+                        add_promoted_type_var (GlobRef.ConstRef knp) var_name
+                    | _ -> ()
+                  end
+                ) promoted_entries;
+                p.ip_vars <- p.ip_vars @ promoted_var_names;
+                merged, promoted_var_names
+            else
+              orig_dbmap, []
+          in
           let db = db_from_ind dbmap ndecls in
           p.ip_types.(j) <-
             extract_type_cons epar sg db dbmap (EConstr.of_constr t) (ndecls+1)
@@ -575,12 +650,6 @@ and extract_really_ind env kn mib =
         if mib.mind_record == Declarations.NotRecord then raise (I Standard);
         (* Now we're sure it's a record. *)
         (* First, we find its field names. *)
-        let rec names_prod t = match Constr.kind t with
-          | Prod(n,_,t) -> n::(names_prod t)
-          | LetIn(_,_,_,t) -> names_prod t
-          | Cast(t,_,_) -> names_prod t
-          | _ -> []
-        in
         let field_names =
           List.skipn mib.mind_nparams (names_prod mip0.mind_user_lc.(0)) in
         assert (Int.equal (List.length field_names) (List.length typ));
@@ -605,148 +674,13 @@ and extract_really_ind env kn mib =
         let field_glob = select_fields (1+npar) field_names typ in
         (* Check if this is a type class registered in the Rocq typeclasses database *)
         let is_class = Option.has_some (Typeclasses.class_info r) in
-        (* Detect records/type classes with erased Type fields for C++ extraction.
-           A dependent record is a Record (or type class) with erased Type fields
-           (Tdummy Ktype) where other fields' types depend on those Type fields.
-           For example:
-             Record Magma := mkMagma { carrier : Type; op : carrier -> carrier -> carrier }.
-           or:
-             Class Graph (G : Type -> Type) (A : Type) :=
-               { edge : Type; add_edge : G A -> edge -> G A; ... }.
-           The erased Type field (`carrier` or `edge`) becomes Tdummy Ktype, and
-           references to it in other fields become Tunknown, then Tany (std::any).
-
-           We fix this by promoting the erased Type fields to type variables
-           (adding them to ip_vars) and re-extracting the constructor types so
-           that references resolve to Tvar instead of Tunknown. The result is
-           treated as a TypeClass, producing a C++ concept + instance structs. *)
-        (* Get the original Rocq constructor type for identifying true
-           associated type fields (Sort-typed) vs proof fields that merely
-           extract to Tdummy Ktype. *)
-        let orig_types = Inductive.arities_of_constructors ((kn,0),u) (mib, mip0) in
-        let orig_t = snd (decompose_prod_n_decls ndecls orig_types.(0)) in
-        let orig_prods,orig_head = Reduction.whd_decompose_prod epar orig_t in
-        (* Check if a field at position idx (0-indexed in typ/field_names) is
-           a true associated type field: its extracted type is Tdummy Ktype AND
-           its original Rocq type is a Sort (Type/Set/Prop). This distinguishes
-           associated types like `edge : Type` from proof fields whose complex
-           types happen to extract to Tdummy Ktype.
-
-           Additionally, we only promote Sort fields if there are other non-Sort
-           fields in the type class/record. A single-field type class with a
-           Sort field is likely a proof-related abstraction (like FunctionalInduction
-           from Equations), not a true dependent record with associated types. *)
-        let nfields = List.length typ in
-        let is_assoc_type_field idx t =
-          match expand env t with
-          | Tdummy Ktype ->
-              (* orig_prods lists fields in reverse order of the prods *)
-              let prod_idx = nfields - 1 - idx in
-              if prod_idx >= 0 && prod_idx < List.length orig_prods then
-                let prod_decl = List.nth orig_prods prod_idx in
-                let prod_ty = Context.Rel.Declaration.get_type prod_decl in
-                (* Check if the field type is directly a Sort (Type/Set), NOT a
-                   function/Prod type. This distinguishes:
-                   - Associated types like `edge : Type` (promote these)
-                   - Function fields like `fun_ind_prf : forall x, some_type x` (don't promote)
-                   Only promote fields whose type is DIRECTLY a Sort, without reduction. *)
-                match Constr.kind prod_ty with
-                | Sort s ->
-                    (* Field type is directly a Sort — this is an associated type.
-                       Only promote if it's Type/Set, not Prop. *)
-                    not (Sorts.is_prop s)
-                | _ ->
-                    (* Field type is not directly a Sort (could be Prod, App, Const, etc).
-                       Don't promote these to avoid promoting proof fields or complex types. *)
-                    false
-              else false
-          | _ -> false
-        in
-        (* Only promote Sort fields if there are non-Tdummy fields that are actual
-           methods/functions (Prod/App), not just simple type references (Rel).
-           This distinguishes:
-           - Magma: carrier:Type + op:carrier→carrier (op is Prod) → PROMOTE
-           - Graph: edge:Type + methods (Prod/App) → PROMOTE
-           - FunctionalInduction: fun_ind_prf_ty:Type + fun_ind_prf:ty (fun_ind_prf is Rel) → DON'T PROMOTE
-
-           A field with Rocq type Rel is just a variable reference, not a method that uses the type. *)
-        let has_method_field = List.exists Fun.id (List.mapi (fun idx t ->
-          if isTdummy (expand env t) then false
-          else
-            let prod_idx = nfields - 1 - idx in
-            if prod_idx >= 0 && prod_idx < List.length orig_prods then
-              let prod_decl = List.nth orig_prods prod_idx in
-              let prod_ty = Context.Rel.Declaration.get_type prod_decl in
-              match Constr.kind prod_ty with
-              | Prod _ | App _ -> true  (* Function or application - a real method *)
-              | _ -> false               (* Rel, Const, etc. - not a method *)
-            else false
-        ) typ) in
-        let should_promote = has_method_field in
-        if lang () == Cpp &&
-           should_promote &&
-           List.exists Fun.id (List.mapi (fun idx t -> is_assoc_type_field idx t) typ)
-        then begin
-          (* Identify which positions (0-indexed in typ) are true associated type fields *)
-          let erased_positions = List.mapi (fun idx t ->
-            if is_assoc_type_field idx t then Some idx
-            else None
-          ) typ in
-          let erased_idxs = List.filter_map Fun.id erased_positions in
-          (* Build promoted variable names from field_names *)
-          let promoted_vars = List.filter_map (fun idx ->
-            let fn = List.nth field_names idx in
-            match fn.binder_name with
-            | Name id -> Some id
-            | Anonymous -> Some (Id.of_string ("_tvar" ^ string_of_int idx))
-          ) erased_idxs in
-          (* Build a new dbmap that assigns type variable indices to erased positions.
-             Constructor field positions in extract_type_cons start at ndecls+1.
-             Type variable indices start AFTER existing type vars from ip_sign
-             to avoid index conflicts with real type parameters. *)
-          let nb_existing_tvars = List.length (List.filter (fun x -> x == Keep) p.ip_sign) in
-          let next_tvar = ref (nb_existing_tvars + 1) in
-          let promoted_dbmap = List.fold_left (fun dm idx ->
-            let pos = ndecls + 1 + idx in  (* position in extract_type_cons *)
-            let tv = !next_tvar in
-            incr next_tvar;
-            Int.Map.add pos tv dm
-          ) Int.Map.empty erased_idxs in
-          let prods = orig_prods in
-          let head = orig_head in
-          let nprods = List.length prods in
-          let orig_args = match Constr.kind head with
-            | App (f,args) -> args
-            | _ -> [||]
-          in
-          let orig_dbmap = parse_ind_args p.ip_sign orig_args (nprods + ndecls) in
-          let merged_dbmap = Int.Map.union (fun _k _a b -> Some b) orig_dbmap promoted_dbmap in
-          let db = db_from_ind merged_dbmap ndecls in
-          (* Re-extract constructor types with promoted type variables *)
-          let new_types = extract_type_cons epar sg db merged_dbmap
-            (EConstr.of_constr orig_t) (ndecls+1) in
-          p.ip_types.(0) <- new_types;
-          (* Append promoted variable names to existing ip_vars.
-             For type classes with parameters (e.g., Graph G A with edge : Type),
-             ip_vars already has [G; A] from the parameters; we append [edge].
-             For non-class records with no parameters, ip_vars is empty and
-             we just set it to the promoted vars. *)
-          p.ip_vars <- p.ip_vars @ promoted_vars;
-          (* Register promoted type vars so convert_ml_type_to_cpp_type
-             can detect Tglob references to erased carrier projections. *)
-          List.iter2 (fun idx var_id ->
-            let fn = List.nth field_names idx in
-            match fn.binder_name with
-            | Name id ->
-                let knp = Constant.make2 mp (Label.of_id id) in
-                add_promoted_type_var (GlobRef.ConstRef knp) var_id
-            | _ -> ()
-          ) erased_idxs promoted_vars;
-          (* Reuse the original field_glob — it already skipped erased fields
-             in select_fields, so it matches the non-Tdummy entries in the
-             new types. *)
-          TypeClass field_glob
-        end
+        (* Check if promotion already happened during the second pass.
+           If ip_vars has more entries than ip_sign Keep count, then Sort-typed
+           fields were promoted to type variables during initial extraction.
+           In that case, classify as TypeClass (for C++ concept generation). *)
+        let nb_sign_keeps = List.length (List.filter (fun x -> x == Keep) p.ip_sign) in
+        let has_promoted = lang () == Cpp && List.length p.ip_vars > nb_sign_keeps in
+        if has_promoted then TypeClass field_glob
         else if is_class then TypeClass field_glob
         else Record field_glob
       with (I info) -> info

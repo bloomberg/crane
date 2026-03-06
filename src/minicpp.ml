@@ -79,8 +79,8 @@ and cpp_expr =
   | CPPfloat  of Float64.t
   | CPPparray of cpp_expr array * cpp_expr
 (*| CPPnamespace of Id.t * cpp_expr    should we do this for namespace access (in general, as is not just cpp_expressions)? *)
-  | CPPrequires of (cpp_type * Id.t) list * (cpp_expr * cpp_constraint) list
-  (* requires (T a, T b) { { eqb(a, b) } -> std::same_as<bool> } *)
+  | CPPrequires of (cpp_type * Id.t) list * (cpp_expr * cpp_constraint) list * cpp_type list
+  (* requires (params) { typename type_reqs; { expr } -> constraint; } *)
   | CPPnew of cpp_type * cpp_expr list  (* new Type(args) or new Type{args} *)
   | CPPshared_ptr_ctor of cpp_type * cpp_expr  (* std::shared_ptr<T>(expr) *)
   | CPPunique_ptr_ctor of cpp_type * cpp_expr  (* std::unique_ptr<T>(expr) *)

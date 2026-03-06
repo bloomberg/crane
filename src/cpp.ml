@@ -828,7 +828,7 @@ let rec lambda_needs_capture (params : (Minicpp.cpp_type * Names.Id.t option) li
         let acc = collect_from_expr (refs, decls) obj in
         List.fold_left collect_from_expr acc args
     | CPPqualified (e', _) -> collect_from_expr (refs, decls) e'
-    | CPPrequires (_, constraints) ->
+    | CPPrequires (_, constraints, _) ->
         List.fold_left (fun acc (e', _) -> collect_from_expr acc e') (refs, decls) constraints
     | CPPbinop (_, lhs, rhs) ->
         collect_from_expr (collect_from_expr (refs, decls) lhs) rhs
@@ -916,7 +916,7 @@ and expr_contains_capturing_lambda (e : Minicpp.cpp_expr) : bool =
   | CPParrow (e', _) -> expr_contains_capturing_lambda e'
   | CPPmethod_call (obj, _, args) -> expr_contains_capturing_lambda obj || List.exists expr_contains_capturing_lambda args
   | CPPqualified (e', _) -> expr_contains_capturing_lambda e'
-  | CPPrequires (_, constraints) -> List.exists (fun (e', _) -> expr_contains_capturing_lambda e') constraints
+  | CPPrequires (_, constraints, _) -> List.exists (fun (e', _) -> expr_contains_capturing_lambda e') constraints
   | CPPbinop (_, lhs, rhs) -> expr_contains_capturing_lambda lhs || expr_contains_capturing_lambda rhs
   | CPPvar _ | CPPvar' _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _ | CPPstring _ | CPPuint _ | CPPfloat _ | CPPthis | CPPconvertible_to _ | CPPabort _ | CPPenum_val _ | CPPraw _ -> false
 
@@ -1533,13 +1533,18 @@ and pp_cpp_expr env args t =
         else str s
       with Not_found -> str s)
   | CPPfloat f -> str (Printf.sprintf "%h" (Float64.to_float f))
-  | CPPrequires (ty_vars, exprs) ->
+  | CPPrequires (ty_vars, exprs, type_reqs) ->
       let ty_vars_s = match ty_vars with [] -> mt () | _ ->
         str "(" ++ pp_list (fun (ty, id) -> (pp_cpp_type false [] ty) ++ spc () ++ Id.print id) ty_vars ++ str ") " in
+      let type_reqs_s = prlist_with_sep fnl (fun ty ->
+        str "  " ++ pp_cpp_type false [] ty ++ str ";") type_reqs in
       (* Use newlines without commas for requires clauses *)
       let exprs_s = prlist_with_sep fnl (fun (e1, e2) ->
         str "  { " ++ pp_cpp_expr env args e1 ++ str " } -> " ++ pp_cpp_expr env args e2 ++ str ";") exprs in
-      str "requires " ++ ty_vars_s ++ str "{" ++ fnl () ++ exprs_s ++ fnl () ++ str "}"
+      str "requires " ++ ty_vars_s ++ str "{" ++ fnl () ++
+        type_reqs_s ++
+        (if type_reqs <> [] && exprs <> [] then fnl () else mt ()) ++
+        exprs_s ++ fnl () ++ str "}"
   | CPPnew (ty, exprs) ->
       str "new " ++ pp_cpp_type false [] ty ++ str "(" ++ pp_list (pp_cpp_expr env args) exprs ++ str ")"
   | CPPshared_ptr_ctor (ty, expr) ->
@@ -1575,7 +1580,7 @@ and pp_cpp_expr env args t =
   (* Low-level constructs for reuse optimization *)
   | CPPraw code -> str code
   | CPPbinop (op, lhs, rhs) ->
-      pp_cpp_expr env args lhs ++ str " " ++ str op ++ str " " ++ pp_cpp_expr env args rhs
+      str "(" ++ pp_cpp_expr env args lhs ++ str " " ++ str op ++ str " " ++ pp_cpp_expr env args rhs ++ str ")"
 and pp_cpp_stmt env args = function
 | SreturnVoid -> str "return;"
 | Sreturn (CPPabort msg) ->

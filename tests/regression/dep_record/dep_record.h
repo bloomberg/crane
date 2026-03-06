@@ -53,48 +53,57 @@ public:
   variant_t &v_mut() { return v_; }
 };
 
-template <typename I, typename carrier>
-concept Magma = requires(carrier a0, carrier a1) {
-  { I::op(a1, a0) } -> std::convertible_to<carrier>;
+template <typename I>
+concept Magma = requires(typename I::carrier a0, typename I::carrier a1) {
+  typename I::carrier;
+  { I::op(a1, a0) } -> std::convertible_to<typename I::carrier>;
 };
-template <typename I, typename m_carrier>
-concept Monoid = requires(m_carrier a0, m_carrier a1) {
-  { I::m_op(a1, a0) } -> std::convertible_to<m_carrier>;
-  { I::m_id() } -> std::convertible_to<m_carrier>;
-};
+template <typename I>
+concept Monoid = (requires (typename I::m_carrier a0, typename I::m_carrier a1) {
+  typename I::m_carrier;
+  { I::m_op(a1, a0) } -> std::convertible_to<typename I::m_carrier>;
+} && (requires {
+  { I::m_id() } -> std::convertible_to<typename I::m_carrier>;
+} || requires {
+  { I::m_id } -> std::convertible_to<typename I::m_carrier>;
+}));
 
 struct DepRecord {
   using carrier = std::any;
 
   struct nat_magma {
+    using carrier = unsigned int;
     static unsigned int op(unsigned int a0, unsigned int a1) {
       return (a0 + a1);
     }
   };
-  static_assert(Magma<nat_magma, unsigned int>);
+  static_assert(Magma<nat_magma>);
 
   struct bool_magma {
+    using carrier = bool;
     static bool op(bool a0, bool a1) { return (a0 && a1); }
   };
-  static_assert(Magma<bool_magma, bool>);
+  static_assert(Magma<bool_magma>);
 
   using m_carrier = std::any;
 
   struct nat_monoid {
+    using m_carrier = unsigned int;
     static unsigned int m_op(unsigned int a0, unsigned int a1) {
       return (a0 + a1);
     }
     static unsigned int m_id() { return 0; }
   };
-  static_assert(Monoid<nat_monoid, unsigned int>);
+  static_assert(Monoid<nat_monoid>);
 
   struct nat_mul_monoid {
+    using m_carrier = unsigned int;
     static unsigned int m_op(unsigned int a0, unsigned int a1) {
       return (a0 * a1);
     }
     static unsigned int m_id() { return (0 + 1); }
   };
-  static_assert(Monoid<nat_mul_monoid, unsigned int>);
+  static_assert(Monoid<nat_mul_monoid>);
 
   template <typename _tcI0, typename m_carrier>
   static m_carrier mfold(const std::shared_ptr<List<m_carrier>> &l) {

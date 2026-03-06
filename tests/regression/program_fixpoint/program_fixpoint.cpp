@@ -44,7 +44,8 @@ std::shared_ptr<List<unsigned int>> ProgFix::interleave_func(
             std::move(y)->v()));
       };
   return [&](void) {
-    if (std::move(l1).use_count() == 1 && std::move(l1)->v().index() == 1) {
+    if (((std::move(l1).use_count() == 1) &&
+         (std::move(l1)->v().index() == 1))) {
       auto &_rf = std::get<1>(std::move(l1)->v_mut());
       unsigned int x0 = std::move(_rf._a0);
       std::shared_ptr<List<unsigned int>> xs = std::move(_rf._a1);
