@@ -612,6 +612,13 @@ let get_comment () =
 let executable_available exe =
   Sys.command ("which " ^ exe ^ " > /dev/null 2>&1") = 0
 
+(* Check if formatting is disabled via environment variable.
+   Set CRANE_NO_FORMAT=1 for faster extraction during development. *)
+let format_disabled_by_env () =
+  match Sys.getenv_opt "CRANE_NO_FORMAT" with
+  | Some "1" | Some "true" | Some "yes" -> true
+  | _ -> false
+
 let bde_format_available () = executable_available "bde-format"
 let clang_format_available () = executable_available "clang-format"
 let clang_available () = executable_available "clang"
@@ -624,6 +631,9 @@ let hyperfine_available () = executable_available "hyperfine"
   If {bde,clang}-format is not available or fails, it returns the original buffer contents.
 *)
 let format_buffer_to_string (buf : Buffer.t) : string =
+  if format_disabled_by_env () || Table.format_style () = "None" then
+    Buffer.contents buf
+  else
   let use_bde = Table.format_style () = "BDE" in
   let formatter_cmd, available =
     if use_bde then "bde-format", bde_format_available ()
@@ -658,7 +668,7 @@ let format_buffer_to_string (buf : Buffer.t) : string =
   formatting it in place. If {bde,clang}-format is not available, this is a no-op.
 *)
 let format_file_inplace (filename : string) : unit =
-  let skip_format = Table.format_style () = "None" in
+  let skip_format = Table.format_style () = "None" || format_disabled_by_env () in
   let use_bde = Table.format_style () = "BDE" || Table.std_lib () = "BDE" in
   let available =
     if use_bde then bde_format_available ()
