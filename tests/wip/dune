@@ -355,3 +355,607 @@
   (alias runtest)
   (deps decode_list_pair_count.t.exe)
   (action (run ./decode_list_pair_count.t.exe))))
+(subdir addr_page_decomp_edge_0007
+ (rule
+  (targets addr_page_decomp_edge_0007.t.exe)
+  (deps AddrPageDecompEdge0007.vo addr_page_decomp_edge_0007.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} addr_page_decomp_edge_0007.t.exe addr_page_decomp_edge_0007.cpp addr_page_decomp_edge_0007.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps addr_page_decomp_edge_0007.t.exe)
+  (action (run ./addr_page_decomp_edge_0007.t.exe))))
+
+(subdir addr12_of_nat_add_edge_0025
+ (rule
+  (targets addr12_of_nat_add_edge_0025.t.exe)
+  (deps Addr12OfNatAddEdge0025.vo addr12_of_nat_add_edge_0025.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} addr12_of_nat_add_edge_0025.t.exe addr12_of_nat_add_edge_0025.cpp addr12_of_nat_add_edge_0025.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps addr12_of_nat_add_edge_0025.t.exe)
+  (action (run ./addr12_of_nat_add_edge_0025.t.exe))))
+
+(subdir addr12_of_nat_edge_0001
+ (rule
+  (targets addr12_of_nat_edge_0001.t.exe)
+  (deps Addr12OfNatEdge0001.vo addr12_of_nat_edge_0001.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} addr12_of_nat_edge_0001.t.exe addr12_of_nat_edge_0001.cpp addr12_of_nat_edge_0001.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps addr12_of_nat_edge_0001.t.exe)
+  (action (run ./addr12_of_nat_edge_0001.t.exe))))
+
+(subdir addr12_reconstruction_edge_0023
+ (rule
+  (targets addr12_reconstruction_edge_0023.t.exe)
+  (deps Addr12ReconstructionEdge0023.vo addr12_reconstruction_edge_0023.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} addr12_reconstruction_edge_0023.t.exe addr12_reconstruction_edge_0023.cpp addr12_reconstruction_edge_0023.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps addr12_reconstruction_edge_0023.t.exe)
+  (action (run ./addr12_reconstruction_edge_0023.t.exe))))
+
+(subdir decode_2_concrete_even_edge_0021
+ (rule
+  (targets decode_2_concrete_even_edge_0021.t.exe)
+  (deps Decode2ConcreteEvenEdge0021.vo decode_2_concrete_even_edge_0021.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_2_concrete_even_edge_0021.t.exe decode_2_concrete_even_edge_0021.cpp decode_2_concrete_even_edge_0021.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_2_concrete_even_edge_0021.t.exe)
+  (action (run ./decode_2_concrete_even_edge_0021.t.exe))))
+
+(subdir decode_add_wf_edge_0063
+ (rule
+  (targets decode_add_wf_edge_0063.t.exe)
+  (deps DecodeAddWfEdge0063.vo decode_add_wf_edge_0063.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_add_wf_edge_0063.t.exe decode_add_wf_edge_0063.cpp decode_add_wf_edge_0063.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_add_wf_edge_0063.t.exe)
+  (action (run ./decode_add_wf_edge_0063.t.exe))))
+
+(subdir decode_addr12_helper_edge_0027
+ (rule
+  (targets decode_addr12_helper_edge_0027.t.exe)
+  (deps DecodeAddr12HelperEdge0027.vo decode_addr12_helper_edge_0027.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_addr12_helper_edge_0027.t.exe decode_addr12_helper_edge_0027.cpp decode_addr12_helper_edge_0027.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_addr12_helper_edge_0027.t.exe)
+  (action (run ./decode_addr12_helper_edge_0027.t.exe))))
+
+(subdir decode_bbl_wf_edge_0067
+ (rule
+  (targets decode_bbl_wf_edge_0067.t.exe)
+  (deps DecodeBblWfEdge0067.vo decode_bbl_wf_edge_0067.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_bbl_wf_edge_0067.t.exe decode_bbl_wf_edge_0067.cpp decode_bbl_wf_edge_0067.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_bbl_wf_edge_0067.t.exe)
+  (action (run ./decode_bbl_wf_edge_0067.t.exe))))
+
+(subdir decode_edge_0019
+ (rule
+  (targets decode_edge_0019.t.exe)
+  (deps DecodeEdge0019.vo decode_edge_0019.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_edge_0019.t.exe decode_edge_0019.cpp decode_edge_0019.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_edge_0019.t.exe)
+  (action (run ./decode_edge_0019.t.exe))))
+
+(subdir decode_fim_wf_edge_0055
+ (rule
+  (targets decode_fim_wf_edge_0055.t.exe)
+  (deps DecodeFimWfEdge0055.vo decode_fim_wf_edge_0055.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_fim_wf_edge_0055.t.exe decode_fim_wf_edge_0055.cpp decode_fim_wf_edge_0055.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_fim_wf_edge_0055.t.exe)
+  (action (run ./decode_fim_wf_edge_0055.t.exe))))
+
+(subdir decode_fin_wf_edge_0057
+ (rule
+  (targets decode_fin_wf_edge_0057.t.exe)
+  (deps DecodeFinWfEdge0057.vo decode_fin_wf_edge_0057.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_fin_wf_edge_0057.t.exe decode_fin_wf_edge_0057.cpp decode_fin_wf_edge_0057.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_fin_wf_edge_0057.t.exe)
+  (action (run ./decode_fin_wf_edge_0057.t.exe))))
+
+(subdir decode_inc_wf_edge_0061
+ (rule
+  (targets decode_inc_wf_edge_0061.t.exe)
+  (deps DecodeIncWfEdge0061.vo decode_inc_wf_edge_0061.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_inc_wf_edge_0061.t.exe decode_inc_wf_edge_0061.cpp decode_inc_wf_edge_0061.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_inc_wf_edge_0061.t.exe)
+  (action (run ./decode_inc_wf_edge_0061.t.exe))))
+
+(subdir decode_instr_wf_edge_0087
+ (rule
+  (targets decode_instr_wf_edge_0087.t.exe)
+  (deps DecodeInstrWfEdge0087.vo decode_instr_wf_edge_0087.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_instr_wf_edge_0087.t.exe decode_instr_wf_edge_0087.cpp decode_instr_wf_edge_0087.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_instr_wf_edge_0087.t.exe)
+  (action (run ./decode_instr_wf_edge_0087.t.exe))))
+
+(subdir decode_jun_wf_edge_0059
+ (rule
+  (targets decode_jun_wf_edge_0059.t.exe)
+  (deps DecodeJunWfEdge0059.vo decode_jun_wf_edge_0059.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_jun_wf_edge_0059.t.exe decode_jun_wf_edge_0059.cpp decode_jun_wf_edge_0059.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_jun_wf_edge_0059.t.exe)
+  (action (run ./decode_jun_wf_edge_0059.t.exe))))
+
+(subdir decode_ld_wf_edge_0065
+ (rule
+  (targets decode_ld_wf_edge_0065.t.exe)
+  (deps DecodeLdWfEdge0065.vo decode_ld_wf_edge_0065.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_ld_wf_edge_0065.t.exe decode_ld_wf_edge_0065.cpp decode_ld_wf_edge_0065.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_ld_wf_edge_0065.t.exe)
+  (action (run ./decode_ld_wf_edge_0065.t.exe))))
+
+(subdir decode_nop_wf_edge_0053
+ (rule
+  (targets decode_nop_wf_edge_0053.t.exe)
+  (deps DecodeNopWfEdge0053.vo decode_nop_wf_edge_0053.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_nop_wf_edge_0053.t.exe decode_nop_wf_edge_0053.cpp decode_nop_wf_edge_0053.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_nop_wf_edge_0053.t.exe)
+  (action (run ./decode_nop_wf_edge_0053.t.exe))))
+
+(subdir decode_opcode_0_wf_edge_0043
+ (rule
+  (targets decode_opcode_0_wf_edge_0043.t.exe)
+  (deps DecodeOpcode0WfEdge0043.vo decode_opcode_0_wf_edge_0043.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_opcode_0_wf_edge_0043.t.exe decode_opcode_0_wf_edge_0043.cpp decode_opcode_0_wf_edge_0043.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_opcode_0_wf_edge_0043.t.exe)
+  (action (run ./decode_opcode_0_wf_edge_0043.t.exe))))
+
+(subdir decode_opcode_16_plus_not_jun_jms_edge_0051
+ (rule
+  (targets decode_opcode_16_plus_not_jun_jms_edge_0051.t.exe)
+  (deps DecodeOpcode16PlusNotJunJmsEdge0051.vo decode_opcode_16_plus_not_jun_jms_edge_0051.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_opcode_16_plus_not_jun_jms_edge_0051.t.exe decode_opcode_16_plus_not_jun_jms_edge_0051.cpp decode_opcode_16_plus_not_jun_jms_edge_0051.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_opcode_16_plus_not_jun_jms_edge_0051.t.exe)
+  (action (run ./decode_opcode_16_plus_not_jun_jms_edge_0051.t.exe))))
+
+(subdir decode_opcode_2_wf_edge_0045
+ (rule
+  (targets decode_opcode_2_wf_edge_0045.t.exe)
+  (deps DecodeOpcode2WfEdge0045.vo decode_opcode_2_wf_edge_0045.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_opcode_2_wf_edge_0045.t.exe decode_opcode_2_wf_edge_0045.cpp decode_opcode_2_wf_edge_0045.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_opcode_2_wf_edge_0045.t.exe)
+  (action (run ./decode_opcode_2_wf_edge_0045.t.exe))))
+
+(subdir decode_opcode_4_wf_edge_0047
+ (rule
+  (targets decode_opcode_4_wf_edge_0047.t.exe)
+  (deps DecodeOpcode4WfEdge0047.vo decode_opcode_4_wf_edge_0047.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_opcode_4_wf_edge_0047.t.exe decode_opcode_4_wf_edge_0047.cpp decode_opcode_4_wf_edge_0047.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_opcode_4_wf_edge_0047.t.exe)
+  (action (run ./decode_opcode_4_wf_edge_0047.t.exe))))
+
+(subdir decode_opcode_6_to_13_wf_edge_0049
+ (rule
+  (targets decode_opcode_6_to_13_wf_edge_0049.t.exe)
+  (deps DecodeOpcode6To13WfEdge0049.vo decode_opcode_6_to_13_wf_edge_0049.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_opcode_6_to_13_wf_edge_0049.t.exe decode_opcode_6_to_13_wf_edge_0049.cpp decode_opcode_6_to_13_wf_edge_0049.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_opcode_6_to_13_wf_edge_0049.t.exe)
+  (action (run ./decode_opcode_6_to_13_wf_edge_0049.t.exe))))
+
+(subdir decode_other_wf_edge_0069
+ (rule
+  (targets decode_other_wf_edge_0069.t.exe)
+  (deps DecodeOtherWfEdge0069.vo decode_other_wf_edge_0069.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_other_wf_edge_0069.t.exe decode_other_wf_edge_0069.cpp decode_other_wf_edge_0069.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_other_wf_edge_0069.t.exe)
+  (action (run ./decode_other_wf_edge_0069.t.exe))))
+
+(subdir decode_wf_opcode_1_edge_0071
+ (rule
+  (targets decode_wf_opcode_1_edge_0071.t.exe)
+  (deps DecodeWfOpcode1Edge0071.vo decode_wf_opcode_1_edge_0071.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_1_edge_0071.t.exe decode_wf_opcode_1_edge_0071.cpp decode_wf_opcode_1_edge_0071.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_1_edge_0071.t.exe)
+  (action (run ./decode_wf_opcode_1_edge_0071.t.exe))))
+
+(subdir decode_wf_opcode_11_edge_0081
+ (rule
+  (targets decode_wf_opcode_11_edge_0081.t.exe)
+  (deps DecodeWfOpcode11Edge0081.vo decode_wf_opcode_11_edge_0081.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_11_edge_0081.t.exe decode_wf_opcode_11_edge_0081.cpp decode_wf_opcode_11_edge_0081.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_11_edge_0081.t.exe)
+  (action (run ./decode_wf_opcode_11_edge_0081.t.exe))))
+
+(subdir decode_wf_opcode_13_edge_0083
+ (rule
+  (targets decode_wf_opcode_13_edge_0083.t.exe)
+  (deps DecodeWfOpcode13Edge0083.vo decode_wf_opcode_13_edge_0083.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_13_edge_0083.t.exe decode_wf_opcode_13_edge_0083.cpp decode_wf_opcode_13_edge_0083.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_13_edge_0083.t.exe)
+  (action (run ./decode_wf_opcode_13_edge_0083.t.exe))))
+
+(subdir decode_wf_opcode_15_edge_0085
+ (rule
+  (targets decode_wf_opcode_15_edge_0085.t.exe)
+  (deps DecodeWfOpcode15Edge0085.vo decode_wf_opcode_15_edge_0085.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_15_edge_0085.t.exe decode_wf_opcode_15_edge_0085.cpp decode_wf_opcode_15_edge_0085.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_15_edge_0085.t.exe)
+  (action (run ./decode_wf_opcode_15_edge_0085.t.exe))))
+
+(subdir decode_wf_opcode_3_edge_0073
+ (rule
+  (targets decode_wf_opcode_3_edge_0073.t.exe)
+  (deps DecodeWfOpcode3Edge0073.vo decode_wf_opcode_3_edge_0073.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_3_edge_0073.t.exe decode_wf_opcode_3_edge_0073.cpp decode_wf_opcode_3_edge_0073.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_3_edge_0073.t.exe)
+  (action (run ./decode_wf_opcode_3_edge_0073.t.exe))))
+
+(subdir decode_wf_opcode_5_edge_0075
+ (rule
+  (targets decode_wf_opcode_5_edge_0075.t.exe)
+  (deps DecodeWfOpcode5Edge0075.vo decode_wf_opcode_5_edge_0075.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_5_edge_0075.t.exe decode_wf_opcode_5_edge_0075.cpp decode_wf_opcode_5_edge_0075.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_5_edge_0075.t.exe)
+  (action (run ./decode_wf_opcode_5_edge_0075.t.exe))))
+
+(subdir decode_wf_opcode_7_edge_0077
+ (rule
+  (targets decode_wf_opcode_7_edge_0077.t.exe)
+  (deps DecodeWfOpcode7Edge0077.vo decode_wf_opcode_7_edge_0077.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_7_edge_0077.t.exe decode_wf_opcode_7_edge_0077.cpp decode_wf_opcode_7_edge_0077.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_7_edge_0077.t.exe)
+  (action (run ./decode_wf_opcode_7_edge_0077.t.exe))))
+
+(subdir decode_wf_opcode_9_edge_0079
+ (rule
+  (targets decode_wf_opcode_9_edge_0079.t.exe)
+  (deps DecodeWfOpcode9Edge0079.vo decode_wf_opcode_9_edge_0079.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_9_edge_0079.t.exe decode_wf_opcode_9_edge_0079.cpp decode_wf_opcode_9_edge_0079.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_9_edge_0079.t.exe)
+  (action (run ./decode_wf_opcode_9_edge_0079.t.exe))))
+
+(subdir encode_decode_canonical_edge_0029
+ (rule
+  (targets encode_decode_canonical_edge_0029.t.exe)
+  (deps EncodeDecodeCanonicalEdge0029.vo encode_decode_canonical_edge_0029.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} encode_decode_canonical_edge_0029.t.exe encode_decode_canonical_edge_0029.cpp encode_decode_canonical_edge_0029.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps encode_decode_canonical_edge_0029.t.exe)
+  (action (run ./encode_decode_canonical_edge_0029.t.exe))))
+
+(subdir execute_cma_wf_edge_0101
+ (rule
+  (targets execute_cma_wf_edge_0101.t.exe)
+  (deps ExecuteCmaWfEdge0101.vo execute_cma_wf_edge_0101.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_cma_wf_edge_0101.t.exe execute_cma_wf_edge_0101.cpp execute_cma_wf_edge_0101.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_cma_wf_edge_0101.t.exe)
+  (action (run ./execute_cma_wf_edge_0101.t.exe))))
+
+(subdir execute_daa_wf_edge_0107
+ (rule
+  (targets execute_daa_wf_edge_0107.t.exe)
+  (deps ExecuteDaaWfEdge0107.vo execute_daa_wf_edge_0107.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_daa_wf_edge_0107.t.exe execute_daa_wf_edge_0107.cpp execute_daa_wf_edge_0107.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_daa_wf_edge_0107.t.exe)
+  (action (run ./execute_daa_wf_edge_0107.t.exe))))
+
+(subdir execute_dac_wf_edge_0097
+ (rule
+  (targets execute_dac_wf_edge_0097.t.exe)
+  (deps ExecuteDacWfEdge0097.vo execute_dac_wf_edge_0097.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_dac_wf_edge_0097.t.exe execute_dac_wf_edge_0097.cpp execute_dac_wf_edge_0097.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_dac_wf_edge_0097.t.exe)
+  (action (run ./execute_dac_wf_edge_0097.t.exe))))
+
+(subdir execute_inc_wf_edge_0093
+ (rule
+  (targets execute_inc_wf_edge_0093.t.exe)
+  (deps ExecuteIncWfEdge0093.vo execute_inc_wf_edge_0093.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_inc_wf_edge_0093.t.exe execute_inc_wf_edge_0093.cpp execute_inc_wf_edge_0093.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_inc_wf_edge_0093.t.exe)
+  (action (run ./execute_inc_wf_edge_0093.t.exe))))
+
+(subdir execute_jun_wf_edge_0109
+ (rule
+  (targets execute_jun_wf_edge_0109.t.exe)
+  (deps ExecuteJunWfEdge0109.vo execute_jun_wf_edge_0109.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_jun_wf_edge_0109.t.exe execute_jun_wf_edge_0109.cpp execute_jun_wf_edge_0109.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_jun_wf_edge_0109.t.exe)
+  (action (run ./execute_jun_wf_edge_0109.t.exe))))
+
+(subdir execute_ld_wf_edge_0091
+ (rule
+  (targets execute_ld_wf_edge_0091.t.exe)
+  (deps ExecuteLdWfEdge0091.vo execute_ld_wf_edge_0091.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_ld_wf_edge_0091.t.exe execute_ld_wf_edge_0091.cpp execute_ld_wf_edge_0091.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_ld_wf_edge_0091.t.exe)
+  (action (run ./execute_ld_wf_edge_0091.t.exe))))
+
+(subdir execute_nop_wf_edge_0089
+ (rule
+  (targets execute_nop_wf_edge_0089.t.exe)
+  (deps ExecuteNopWfEdge0089.vo execute_nop_wf_edge_0089.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_nop_wf_edge_0089.t.exe execute_nop_wf_edge_0089.cpp execute_nop_wf_edge_0089.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_nop_wf_edge_0089.t.exe)
+  (action (run ./execute_nop_wf_edge_0089.t.exe))))
+
+(subdir execute_ral_wf_edge_0103
+ (rule
+  (targets execute_ral_wf_edge_0103.t.exe)
+  (deps ExecuteRalWfEdge0103.vo execute_ral_wf_edge_0103.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_ral_wf_edge_0103.t.exe execute_ral_wf_edge_0103.cpp execute_ral_wf_edge_0103.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_ral_wf_edge_0103.t.exe)
+  (action (run ./execute_ral_wf_edge_0103.t.exe))))
+
+(subdir execute_stc_wf_edge_0099
+ (rule
+  (targets execute_stc_wf_edge_0099.t.exe)
+  (deps ExecuteStcWfEdge0099.vo execute_stc_wf_edge_0099.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_stc_wf_edge_0099.t.exe execute_stc_wf_edge_0099.cpp execute_stc_wf_edge_0099.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_stc_wf_edge_0099.t.exe)
+  (action (run ./execute_stc_wf_edge_0099.t.exe))))
+
+(subdir execute_sub_wf_edge_0095
+ (rule
+  (targets execute_sub_wf_edge_0095.t.exe)
+  (deps ExecuteSubWfEdge0095.vo execute_sub_wf_edge_0095.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_sub_wf_edge_0095.t.exe execute_sub_wf_edge_0095.cpp execute_sub_wf_edge_0095.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_sub_wf_edge_0095.t.exe)
+  (action (run ./execute_sub_wf_edge_0095.t.exe))))
+
+(subdir execute_tcc_wf_edge_0105
+ (rule
+  (targets execute_tcc_wf_edge_0105.t.exe)
+  (deps ExecuteTccWfEdge0105.vo execute_tcc_wf_edge_0105.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_tcc_wf_edge_0105.t.exe execute_tcc_wf_edge_0105.cpp execute_tcc_wf_edge_0105.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_tcc_wf_edge_0105.t.exe)
+  (action (run ./execute_tcc_wf_edge_0105.t.exe))))
+
+(subdir init_is_reset_with_cleared_memory_edge_0039
+ (rule
+  (targets init_is_reset_with_cleared_memory_edge_0039.t.exe)
+  (deps InitIsResetWithClearedMemoryEdge0039.vo init_is_reset_with_cleared_memory_edge_0039.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} init_is_reset_with_cleared_memory_edge_0039.t.exe init_is_reset_with_cleared_memory_edge_0039.cpp init_is_reset_with_cleared_memory_edge_0039.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps init_is_reset_with_cleared_memory_edge_0039.t.exe)
+  (action (run ./init_is_reset_with_cleared_memory_edge_0039.t.exe))))
+
+(subdir init_state_edge_0033
+ (rule
+  (targets init_state_edge_0033.t.exe)
+  (deps InitStateEdge0033.vo init_state_edge_0033.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} init_state_edge_0033.t.exe init_state_edge_0033.cpp init_state_edge_0033.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps init_state_edge_0033.t.exe)
+  (action (run ./init_state_edge_0033.t.exe))))
+
+(subdir init_state_wf_edge_0035
+ (rule
+  (targets init_state_wf_edge_0035.t.exe)
+  (deps InitStateWfEdge0035.vo init_state_wf_edge_0035.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} init_state_wf_edge_0035.t.exe init_state_wf_edge_0035.cpp init_state_wf_edge_0035.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps init_state_wf_edge_0035.t.exe)
+  (action (run ./init_state_wf_edge_0035.t.exe))))
+
+(subdir page_of_edge_0013
+ (rule
+  (targets page_of_edge_0013.t.exe)
+  (deps PageOfEdge0013.vo page_of_edge_0013.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} page_of_edge_0013.t.exe page_of_edge_0013.cpp page_of_edge_0013.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps page_of_edge_0013.t.exe)
+  (action (run ./page_of_edge_0013.t.exe))))
+
+(subdir pc_inc1_edge_0011
+ (rule
+  (targets pc_inc1_edge_0011.t.exe)
+  (deps PcInc1Edge0011.vo pc_inc1_edge_0011.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pc_inc1_edge_0011.t.exe pc_inc1_edge_0011.cpp pc_inc1_edge_0011.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pc_inc1_edge_0011.t.exe)
+  (action (run ./pc_inc1_edge_0011.t.exe))))
+
+(subdir ram_read_main_bound_edge_0041
+ (rule
+  (targets ram_read_main_bound_edge_0041.t.exe)
+  (deps RamReadMainBoundEdge0041.vo ram_read_main_bound_edge_0041.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_read_main_bound_edge_0041.t.exe ram_read_main_bound_edge_0041.cpp ram_read_main_bound_edge_0041.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_read_main_bound_edge_0041.t.exe)
+  (action (run ./ram_read_main_bound_edge_0041.t.exe))))
+
+(subdir ram_read_main_edge_0015
+ (rule
+  (targets ram_read_main_edge_0015.t.exe)
+  (deps RamReadMainEdge0015.vo ram_read_main_edge_0015.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_read_main_edge_0015.t.exe ram_read_main_edge_0015.cpp ram_read_main_edge_0015.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_read_main_edge_0015.t.exe)
+  (action (run ./ram_read_main_edge_0015.t.exe))))
+
+(subdir ram_write_status_sys_edge_0017
+ (rule
+  (targets ram_write_status_sys_edge_0017.t.exe)
+  (deps RamWriteStatusSysEdge0017.vo ram_write_status_sys_edge_0017.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_write_status_sys_edge_0017.t.exe ram_write_status_sys_edge_0017.cpp ram_write_status_sys_edge_0017.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_write_status_sys_edge_0017.t.exe)
+  (action (run ./ram_write_status_sys_edge_0017.t.exe))))
+
+(subdir reg_index_bound_edge_0003
+ (rule
+  (targets reg_index_bound_edge_0003.t.exe)
+  (deps RegIndexBoundEdge0003.vo reg_index_bound_edge_0003.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reg_index_bound_edge_0003.t.exe reg_index_bound_edge_0003.cpp reg_index_bound_edge_0003.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reg_index_bound_edge_0003.t.exe)
+  (action (run ./reg_index_bound_edge_0003.t.exe))))
+
+(subdir reg_pair_odd_edge_0005
+ (rule
+  (targets reg_pair_odd_edge_0005.t.exe)
+  (deps RegPairOddEdge0005.vo reg_pair_odd_edge_0005.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reg_pair_odd_edge_0005.t.exe reg_pair_odd_edge_0005.cpp reg_pair_odd_edge_0005.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reg_pair_odd_edge_0005.t.exe)
+  (action (run ./reg_pair_odd_edge_0005.t.exe))))
+
+(subdir reset_state_clears_volatile_edge_0037
+ (rule
+  (targets reset_state_clears_volatile_edge_0037.t.exe)
+  (deps ResetStateClearsVolatileEdge0037.vo reset_state_clears_volatile_edge_0037.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reset_state_clears_volatile_edge_0037.t.exe reset_state_clears_volatile_edge_0037.cpp reset_state_clears_volatile_edge_0037.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reset_state_clears_volatile_edge_0037.t.exe)
+  (action (run ./reset_state_clears_volatile_edge_0037.t.exe))))
+
+(subdir step_edge_0031
+ (rule
+  (targets step_edge_0031.t.exe)
+  (deps StepEdge0031.vo step_edge_0031.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} step_edge_0031.t.exe step_edge_0031.cpp step_edge_0031.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps step_edge_0031.t.exe)
+  (action (run ./step_edge_0031.t.exe))))
+
+(subdir update_nth_length_edge_0009
+ (rule
+  (targets update_nth_length_edge_0009.t.exe)
+  (deps UpdateNthLengthEdge0009.vo update_nth_length_edge_0009.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} update_nth_length_edge_0009.t.exe update_nth_length_edge_0009.cpp update_nth_length_edge_0009.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps update_nth_length_edge_0009.t.exe)
+  (action (run ./update_nth_length_edge_0009.t.exe))))

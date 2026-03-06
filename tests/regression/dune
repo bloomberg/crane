@@ -2060,3 +2060,607 @@
   (alias runtest)
   (deps program_cycles_two_nop.t.exe)
   (action (run ./program_cycles_two_nop.t.exe))))
+(subdir addr12_behavior_0000
+ (rule
+  (targets addr12_behavior_0000.t.exe)
+  (deps Addr12Behavior0000.vo addr12_behavior_0000.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} addr12_behavior_0000.t.exe addr12_behavior_0000.cpp addr12_behavior_0000.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps addr12_behavior_0000.t.exe)
+  (action (run ./addr12_behavior_0000.t.exe))))
+
+(subdir addr12_bound_behavior_0002
+ (rule
+  (targets addr12_bound_behavior_0002.t.exe)
+  (deps Addr12BoundBehavior0002.vo addr12_bound_behavior_0002.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} addr12_bound_behavior_0002.t.exe addr12_bound_behavior_0002.cpp addr12_bound_behavior_0002.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps addr12_bound_behavior_0002.t.exe)
+  (action (run ./addr12_bound_behavior_0002.t.exe))))
+
+(subdir addr12_div_mod_identity_behavior_0024
+ (rule
+  (targets addr12_div_mod_identity_behavior_0024.t.exe)
+  (deps Addr12DivModIdentityBehavior0024.vo addr12_div_mod_identity_behavior_0024.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} addr12_div_mod_identity_behavior_0024.t.exe addr12_div_mod_identity_behavior_0024.cpp addr12_div_mod_identity_behavior_0024.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps addr12_div_mod_identity_behavior_0024.t.exe)
+  (action (run ./addr12_div_mod_identity_behavior_0024.t.exe))))
+
+(subdir addr12_of_nat_mod_small_behavior_0022
+ (rule
+  (targets addr12_of_nat_mod_small_behavior_0022.t.exe)
+  (deps Addr12OfNatModSmallBehavior0022.vo addr12_of_nat_mod_small_behavior_0022.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} addr12_of_nat_mod_small_behavior_0022.t.exe addr12_of_nat_mod_small_behavior_0022.cpp addr12_of_nat_mod_small_behavior_0022.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps addr12_of_nat_mod_small_behavior_0022.t.exe)
+  (action (run ./addr12_of_nat_mod_small_behavior_0022.t.exe))))
+
+(subdir decode_encode_id_behavior_0028
+ (rule
+  (targets decode_encode_id_behavior_0028.t.exe)
+  (deps DecodeEncodeIdBehavior0028.vo decode_encode_id_behavior_0028.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_encode_id_behavior_0028.t.exe decode_encode_id_behavior_0028.cpp decode_encode_id_behavior_0028.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_encode_id_behavior_0028.t.exe)
+  (action (run ./decode_encode_id_behavior_0028.t.exe))))
+
+(subdir decode_instr_wf_jun_jms_behavior_0052
+ (rule
+  (targets decode_instr_wf_jun_jms_behavior_0052.t.exe)
+  (deps DecodeInstrWfJunJmsBehavior0052.vo decode_instr_wf_jun_jms_behavior_0052.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_instr_wf_jun_jms_behavior_0052.t.exe decode_instr_wf_jun_jms_behavior_0052.cpp decode_instr_wf_jun_jms_behavior_0052.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_instr_wf_jun_jms_behavior_0052.t.exe)
+  (action (run ./decode_instr_wf_jun_jms_behavior_0052.t.exe))))
+
+(subdir decode_isz_wf_behavior_0062
+ (rule
+  (targets decode_isz_wf_behavior_0062.t.exe)
+  (deps DecodeIszWfBehavior0062.vo decode_isz_wf_behavior_0062.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_isz_wf_behavior_0062.t.exe decode_isz_wf_behavior_0062.cpp decode_isz_wf_behavior_0062.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_isz_wf_behavior_0062.t.exe)
+  (action (run ./decode_isz_wf_behavior_0062.t.exe))))
+
+(subdir decode_jcn_wf_behavior_0054
+ (rule
+  (targets decode_jcn_wf_behavior_0054.t.exe)
+  (deps DecodeJcnWfBehavior0054.vo decode_jcn_wf_behavior_0054.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_jcn_wf_behavior_0054.t.exe decode_jcn_wf_behavior_0054.cpp decode_jcn_wf_behavior_0054.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_jcn_wf_behavior_0054.t.exe)
+  (action (run ./decode_jcn_wf_behavior_0054.t.exe))))
+
+(subdir decode_jin_wf_behavior_0058
+ (rule
+  (targets decode_jin_wf_behavior_0058.t.exe)
+  (deps DecodeJinWfBehavior0058.vo decode_jin_wf_behavior_0058.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_jin_wf_behavior_0058.t.exe decode_jin_wf_behavior_0058.cpp decode_jin_wf_behavior_0058.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_jin_wf_behavior_0058.t.exe)
+  (action (run ./decode_jin_wf_behavior_0058.t.exe))))
+
+(subdir decode_jms_wf_behavior_0060
+ (rule
+  (targets decode_jms_wf_behavior_0060.t.exe)
+  (deps DecodeJmsWfBehavior0060.vo decode_jms_wf_behavior_0060.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_jms_wf_behavior_0060.t.exe decode_jms_wf_behavior_0060.cpp decode_jms_wf_behavior_0060.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_jms_wf_behavior_0060.t.exe)
+  (action (run ./decode_jms_wf_behavior_0060.t.exe))))
+
+(subdir decode_ldm_wf_behavior_0068
+ (rule
+  (targets decode_ldm_wf_behavior_0068.t.exe)
+  (deps DecodeLdmWfBehavior0068.vo decode_ldm_wf_behavior_0068.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_ldm_wf_behavior_0068.t.exe decode_ldm_wf_behavior_0068.cpp decode_ldm_wf_behavior_0068.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_ldm_wf_behavior_0068.t.exe)
+  (action (run ./decode_ldm_wf_behavior_0068.t.exe))))
+
+(subdir decode_nibble_helper_behavior_0026
+ (rule
+  (targets decode_nibble_helper_behavior_0026.t.exe)
+  (deps DecodeNibbleHelperBehavior0026.vo decode_nibble_helper_behavior_0026.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_nibble_helper_behavior_0026.t.exe decode_nibble_helper_behavior_0026.cpp decode_nibble_helper_behavior_0026.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_nibble_helper_behavior_0026.t.exe)
+  (action (run ./decode_nibble_helper_behavior_0026.t.exe))))
+
+(subdir decode_opcode_1_wf_behavior_0044
+ (rule
+  (targets decode_opcode_1_wf_behavior_0044.t.exe)
+  (deps DecodeOpcode1WfBehavior0044.vo decode_opcode_1_wf_behavior_0044.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_opcode_1_wf_behavior_0044.t.exe decode_opcode_1_wf_behavior_0044.cpp decode_opcode_1_wf_behavior_0044.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_opcode_1_wf_behavior_0044.t.exe)
+  (action (run ./decode_opcode_1_wf_behavior_0044.t.exe))))
+
+(subdir decode_opcode_3_wf_behavior_0046
+ (rule
+  (targets decode_opcode_3_wf_behavior_0046.t.exe)
+  (deps DecodeOpcode3WfBehavior0046.vo decode_opcode_3_wf_behavior_0046.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_opcode_3_wf_behavior_0046.t.exe decode_opcode_3_wf_behavior_0046.cpp decode_opcode_3_wf_behavior_0046.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_opcode_3_wf_behavior_0046.t.exe)
+  (action (run ./decode_opcode_3_wf_behavior_0046.t.exe))))
+
+(subdir decode_opcode_5_wf_behavior_0048
+ (rule
+  (targets decode_opcode_5_wf_behavior_0048.t.exe)
+  (deps DecodeOpcode5WfBehavior0048.vo decode_opcode_5_wf_behavior_0048.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_opcode_5_wf_behavior_0048.t.exe decode_opcode_5_wf_behavior_0048.cpp decode_opcode_5_wf_behavior_0048.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_opcode_5_wf_behavior_0048.t.exe)
+  (action (run ./decode_opcode_5_wf_behavior_0048.t.exe))))
+
+(subdir decode_opcodes_6_to_13_not_jun_jms_behavior_0050
+ (rule
+  (targets decode_opcodes_6_to_13_not_jun_jms_behavior_0050.t.exe)
+  (deps DecodeOpcodes6To13NotJunJmsBehavior0050.vo decode_opcodes_6_to_13_not_jun_jms_behavior_0050.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_opcodes_6_to_13_not_jun_jms_behavior_0050.t.exe decode_opcodes_6_to_13_not_jun_jms_behavior_0050.cpp decode_opcodes_6_to_13_not_jun_jms_behavior_0050.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_opcodes_6_to_13_not_jun_jms_behavior_0050.t.exe)
+  (action (run ./decode_opcodes_6_to_13_not_jun_jms_behavior_0050.t.exe))))
+
+(subdir decode_src_wf_behavior_0056
+ (rule
+  (targets decode_src_wf_behavior_0056.t.exe)
+  (deps DecodeSrcWfBehavior0056.vo decode_src_wf_behavior_0056.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_src_wf_behavior_0056.t.exe decode_src_wf_behavior_0056.cpp decode_src_wf_behavior_0056.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_src_wf_behavior_0056.t.exe)
+  (action (run ./decode_src_wf_behavior_0056.t.exe))))
+
+(subdir decode_sub_wf_behavior_0064
+ (rule
+  (targets decode_sub_wf_behavior_0064.t.exe)
+  (deps DecodeSubWfBehavior0064.vo decode_sub_wf_behavior_0064.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_sub_wf_behavior_0064.t.exe decode_sub_wf_behavior_0064.cpp decode_sub_wf_behavior_0064.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_sub_wf_behavior_0064.t.exe)
+  (action (run ./decode_sub_wf_behavior_0064.t.exe))))
+
+(subdir decode_wf_opcode_0_behavior_0070
+ (rule
+  (targets decode_wf_opcode_0_behavior_0070.t.exe)
+  (deps DecodeWfOpcode0Behavior0070.vo decode_wf_opcode_0_behavior_0070.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_0_behavior_0070.t.exe decode_wf_opcode_0_behavior_0070.cpp decode_wf_opcode_0_behavior_0070.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_0_behavior_0070.t.exe)
+  (action (run ./decode_wf_opcode_0_behavior_0070.t.exe))))
+
+(subdir decode_wf_opcode_10_behavior_0080
+ (rule
+  (targets decode_wf_opcode_10_behavior_0080.t.exe)
+  (deps DecodeWfOpcode10Behavior0080.vo decode_wf_opcode_10_behavior_0080.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_10_behavior_0080.t.exe decode_wf_opcode_10_behavior_0080.cpp decode_wf_opcode_10_behavior_0080.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_10_behavior_0080.t.exe)
+  (action (run ./decode_wf_opcode_10_behavior_0080.t.exe))))
+
+(subdir decode_wf_opcode_12_behavior_0082
+ (rule
+  (targets decode_wf_opcode_12_behavior_0082.t.exe)
+  (deps DecodeWfOpcode12Behavior0082.vo decode_wf_opcode_12_behavior_0082.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_12_behavior_0082.t.exe decode_wf_opcode_12_behavior_0082.cpp decode_wf_opcode_12_behavior_0082.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_12_behavior_0082.t.exe)
+  (action (run ./decode_wf_opcode_12_behavior_0082.t.exe))))
+
+(subdir decode_wf_opcode_14_behavior_0084
+ (rule
+  (targets decode_wf_opcode_14_behavior_0084.t.exe)
+  (deps DecodeWfOpcode14Behavior0084.vo decode_wf_opcode_14_behavior_0084.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_14_behavior_0084.t.exe decode_wf_opcode_14_behavior_0084.cpp decode_wf_opcode_14_behavior_0084.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_14_behavior_0084.t.exe)
+  (action (run ./decode_wf_opcode_14_behavior_0084.t.exe))))
+
+(subdir decode_wf_opcode_2_behavior_0072
+ (rule
+  (targets decode_wf_opcode_2_behavior_0072.t.exe)
+  (deps DecodeWfOpcode2Behavior0072.vo decode_wf_opcode_2_behavior_0072.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_2_behavior_0072.t.exe decode_wf_opcode_2_behavior_0072.cpp decode_wf_opcode_2_behavior_0072.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_2_behavior_0072.t.exe)
+  (action (run ./decode_wf_opcode_2_behavior_0072.t.exe))))
+
+(subdir decode_wf_opcode_4_behavior_0074
+ (rule
+  (targets decode_wf_opcode_4_behavior_0074.t.exe)
+  (deps DecodeWfOpcode4Behavior0074.vo decode_wf_opcode_4_behavior_0074.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_4_behavior_0074.t.exe decode_wf_opcode_4_behavior_0074.cpp decode_wf_opcode_4_behavior_0074.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_4_behavior_0074.t.exe)
+  (action (run ./decode_wf_opcode_4_behavior_0074.t.exe))))
+
+(subdir decode_wf_opcode_6_behavior_0076
+ (rule
+  (targets decode_wf_opcode_6_behavior_0076.t.exe)
+  (deps DecodeWfOpcode6Behavior0076.vo decode_wf_opcode_6_behavior_0076.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_6_behavior_0076.t.exe decode_wf_opcode_6_behavior_0076.cpp decode_wf_opcode_6_behavior_0076.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_6_behavior_0076.t.exe)
+  (action (run ./decode_wf_opcode_6_behavior_0076.t.exe))))
+
+(subdir decode_wf_opcode_8_behavior_0078
+ (rule
+  (targets decode_wf_opcode_8_behavior_0078.t.exe)
+  (deps DecodeWfOpcode8Behavior0078.vo decode_wf_opcode_8_behavior_0078.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_8_behavior_0078.t.exe decode_wf_opcode_8_behavior_0078.cpp decode_wf_opcode_8_behavior_0078.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_8_behavior_0078.t.exe)
+  (action (run ./decode_wf_opcode_8_behavior_0078.t.exe))))
+
+(subdir decode_wf_opcode_ge_16_behavior_0086
+ (rule
+  (targets decode_wf_opcode_ge_16_behavior_0086.t.exe)
+  (deps DecodeWfOpcodeGe16Behavior0086.vo decode_wf_opcode_ge_16_behavior_0086.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_ge_16_behavior_0086.t.exe decode_wf_opcode_ge_16_behavior_0086.cpp decode_wf_opcode_ge_16_behavior_0086.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_ge_16_behavior_0086.t.exe)
+  (action (run ./decode_wf_opcode_ge_16_behavior_0086.t.exe))))
+
+(subdir decode_xch_wf_behavior_0066
+ (rule
+  (targets decode_xch_wf_behavior_0066.t.exe)
+  (deps DecodeXchWfBehavior0066.vo decode_xch_wf_behavior_0066.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_xch_wf_behavior_0066.t.exe decode_xch_wf_behavior_0066.cpp decode_xch_wf_behavior_0066.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_xch_wf_behavior_0066.t.exe)
+  (action (run ./decode_xch_wf_behavior_0066.t.exe))))
+
+(subdir encode_behavior_0020
+ (rule
+  (targets encode_behavior_0020.t.exe)
+  (deps EncodeBehavior0020.vo encode_behavior_0020.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} encode_behavior_0020.t.exe encode_behavior_0020.cpp encode_behavior_0020.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps encode_behavior_0020.t.exe)
+  (action (run ./encode_behavior_0020.t.exe))))
+
+(subdir execute_add_wf_behavior_0094
+ (rule
+  (targets execute_add_wf_behavior_0094.t.exe)
+  (deps ExecuteAddWfBehavior0094.vo execute_add_wf_behavior_0094.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_add_wf_behavior_0094.t.exe execute_add_wf_behavior_0094.cpp execute_add_wf_behavior_0094.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_add_wf_behavior_0094.t.exe)
+  (action (run ./execute_add_wf_behavior_0094.t.exe))))
+
+(subdir execute_behavior_0030
+ (rule
+  (targets execute_behavior_0030.t.exe)
+  (deps ExecuteBehavior0030.vo execute_behavior_0030.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_behavior_0030.t.exe execute_behavior_0030.cpp execute_behavior_0030.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_behavior_0030.t.exe)
+  (action (run ./execute_behavior_0030.t.exe))))
+
+(subdir execute_clb_wf_behavior_0102
+ (rule
+  (targets execute_clb_wf_behavior_0102.t.exe)
+  (deps ExecuteClbWfBehavior0102.vo execute_clb_wf_behavior_0102.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_clb_wf_behavior_0102.t.exe execute_clb_wf_behavior_0102.cpp execute_clb_wf_behavior_0102.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_clb_wf_behavior_0102.t.exe)
+  (action (run ./execute_clb_wf_behavior_0102.t.exe))))
+
+(subdir execute_clc_wf_behavior_0098
+ (rule
+  (targets execute_clc_wf_behavior_0098.t.exe)
+  (deps ExecuteClcWfBehavior0098.vo execute_clc_wf_behavior_0098.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_clc_wf_behavior_0098.t.exe execute_clc_wf_behavior_0098.cpp execute_clc_wf_behavior_0098.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_clc_wf_behavior_0098.t.exe)
+  (action (run ./execute_clc_wf_behavior_0098.t.exe))))
+
+(subdir execute_cmc_wf_behavior_0100
+ (rule
+  (targets execute_cmc_wf_behavior_0100.t.exe)
+  (deps ExecuteCmcWfBehavior0100.vo execute_cmc_wf_behavior_0100.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_cmc_wf_behavior_0100.t.exe execute_cmc_wf_behavior_0100.cpp execute_cmc_wf_behavior_0100.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_cmc_wf_behavior_0100.t.exe)
+  (action (run ./execute_cmc_wf_behavior_0100.t.exe))))
+
+(subdir execute_iac_wf_behavior_0096
+ (rule
+  (targets execute_iac_wf_behavior_0096.t.exe)
+  (deps ExecuteIacWfBehavior0096.vo execute_iac_wf_behavior_0096.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_iac_wf_behavior_0096.t.exe execute_iac_wf_behavior_0096.cpp execute_iac_wf_behavior_0096.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_iac_wf_behavior_0096.t.exe)
+  (action (run ./execute_iac_wf_behavior_0096.t.exe))))
+
+(subdir execute_kbp_wf_behavior_0108
+ (rule
+  (targets execute_kbp_wf_behavior_0108.t.exe)
+  (deps ExecuteKbpWfBehavior0108.vo execute_kbp_wf_behavior_0108.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_kbp_wf_behavior_0108.t.exe execute_kbp_wf_behavior_0108.cpp execute_kbp_wf_behavior_0108.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_kbp_wf_behavior_0108.t.exe)
+  (action (run ./execute_kbp_wf_behavior_0108.t.exe))))
+
+(subdir execute_ldm_wf_behavior_0090
+ (rule
+  (targets execute_ldm_wf_behavior_0090.t.exe)
+  (deps ExecuteLdmWfBehavior0090.vo execute_ldm_wf_behavior_0090.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_ldm_wf_behavior_0090.t.exe execute_ldm_wf_behavior_0090.cpp execute_ldm_wf_behavior_0090.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_ldm_wf_behavior_0090.t.exe)
+  (action (run ./execute_ldm_wf_behavior_0090.t.exe))))
+
+(subdir execute_nop_preserves_wf_behavior_0088
+ (rule
+  (targets execute_nop_preserves_wf_behavior_0088.t.exe)
+  (deps ExecuteNopPreservesWfBehavior0088.vo execute_nop_preserves_wf_behavior_0088.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_nop_preserves_wf_behavior_0088.t.exe execute_nop_preserves_wf_behavior_0088.cpp execute_nop_preserves_wf_behavior_0088.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_nop_preserves_wf_behavior_0088.t.exe)
+  (action (run ./execute_nop_preserves_wf_behavior_0088.t.exe))))
+
+(subdir execute_rar_wf_behavior_0104
+ (rule
+  (targets execute_rar_wf_behavior_0104.t.exe)
+  (deps ExecuteRarWfBehavior0104.vo execute_rar_wf_behavior_0104.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_rar_wf_behavior_0104.t.exe execute_rar_wf_behavior_0104.cpp execute_rar_wf_behavior_0104.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_rar_wf_behavior_0104.t.exe)
+  (action (run ./execute_rar_wf_behavior_0104.t.exe))))
+
+(subdir execute_tcs_wf_behavior_0106
+ (rule
+  (targets execute_tcs_wf_behavior_0106.t.exe)
+  (deps ExecuteTcsWfBehavior0106.vo execute_tcs_wf_behavior_0106.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_tcs_wf_behavior_0106.t.exe execute_tcs_wf_behavior_0106.cpp execute_tcs_wf_behavior_0106.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_tcs_wf_behavior_0106.t.exe)
+  (action (run ./execute_tcs_wf_behavior_0106.t.exe))))
+
+(subdir execute_xch_wf_behavior_0092
+ (rule
+  (targets execute_xch_wf_behavior_0092.t.exe)
+  (deps ExecuteXchWfBehavior0092.vo execute_xch_wf_behavior_0092.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_xch_wf_behavior_0092.t.exe execute_xch_wf_behavior_0092.cpp execute_xch_wf_behavior_0092.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_xch_wf_behavior_0092.t.exe)
+  (action (run ./execute_xch_wf_behavior_0092.t.exe))))
+
+(subdir fetch_byte_behavior_0010
+ (rule
+  (targets fetch_byte_behavior_0010.t.exe)
+  (deps FetchByteBehavior0010.vo fetch_byte_behavior_0010.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fetch_byte_behavior_0010.t.exe fetch_byte_behavior_0010.cpp fetch_byte_behavior_0010.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fetch_byte_behavior_0010.t.exe)
+  (action (run ./fetch_byte_behavior_0010.t.exe))))
+
+(subdir page_base_behavior_0014
+ (rule
+  (targets page_base_behavior_0014.t.exe)
+  (deps PageBaseBehavior0014.vo page_base_behavior_0014.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} page_base_behavior_0014.t.exe page_base_behavior_0014.cpp page_base_behavior_0014.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps page_base_behavior_0014.t.exe)
+  (action (run ./page_base_behavior_0014.t.exe))))
+
+(subdir page_offset_bound_behavior_0006
+ (rule
+  (targets page_offset_bound_behavior_0006.t.exe)
+  (deps PageOffsetBoundBehavior0006.vo page_offset_bound_behavior_0006.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} page_offset_bound_behavior_0006.t.exe page_offset_bound_behavior_0006.cpp page_offset_bound_behavior_0006.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps page_offset_bound_behavior_0006.t.exe)
+  (action (run ./page_offset_bound_behavior_0006.t.exe))))
+
+(subdir pc_inc2_behavior_0012
+ (rule
+  (targets pc_inc2_behavior_0012.t.exe)
+  (deps PcInc2Behavior0012.vo pc_inc2_behavior_0012.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pc_inc2_behavior_0012.t.exe pc_inc2_behavior_0012.cpp pc_inc2_behavior_0012.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pc_inc2_behavior_0012.t.exe)
+  (action (run ./pc_inc2_behavior_0012.t.exe))))
+
+(subdir ram_write_main_sys_behavior_0016
+ (rule
+  (targets ram_write_main_sys_behavior_0016.t.exe)
+  (deps RamWriteMainSysBehavior0016.vo ram_write_main_sys_behavior_0016.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_write_main_sys_behavior_0016.t.exe ram_write_main_sys_behavior_0016.cpp ram_write_main_sys_behavior_0016.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_write_main_sys_behavior_0016.t.exe)
+  (action (run ./ram_write_main_sys_behavior_0016.t.exe))))
+
+(subdir ram_write_port_sys_behavior_0018
+ (rule
+  (targets ram_write_port_sys_behavior_0018.t.exe)
+  (deps RamWritePortSysBehavior0018.vo ram_write_port_sys_behavior_0018.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_write_port_sys_behavior_0018.t.exe ram_write_port_sys_behavior_0018.cpp ram_write_port_sys_behavior_0018.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_write_port_sys_behavior_0018.t.exe)
+  (action (run ./ram_write_port_sys_behavior_0018.t.exe))))
+
+(subdir ram_write_then_read_main_behavior_0042
+ (rule
+  (targets ram_write_then_read_main_behavior_0042.t.exe)
+  (deps RamWriteThenReadMainBehavior0042.vo ram_write_then_read_main_behavior_0042.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_write_then_read_main_behavior_0042.t.exe ram_write_then_read_main_behavior_0042.cpp ram_write_then_read_main_behavior_0042.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_write_then_read_main_behavior_0042.t.exe)
+  (action (run ./ram_write_then_read_main_behavior_0042.t.exe))))
+
+(subdir reg_pair_even_behavior_0004
+ (rule
+  (targets reg_pair_even_behavior_0004.t.exe)
+  (deps RegPairEvenBehavior0004.vo reg_pair_even_behavior_0004.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reg_pair_even_behavior_0004.t.exe reg_pair_even_behavior_0004.cpp reg_pair_even_behavior_0004.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reg_pair_even_behavior_0004.t.exe)
+  (action (run ./reg_pair_even_behavior_0004.t.exe))))
+
+(subdir reset_specification_behavior_0040
+ (rule
+  (targets reset_specification_behavior_0040.t.exe)
+  (deps ResetSpecificationBehavior0040.vo reset_specification_behavior_0040.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reset_specification_behavior_0040.t.exe reset_specification_behavior_0040.cpp reset_specification_behavior_0040.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reset_specification_behavior_0040.t.exe)
+  (action (run ./reset_specification_behavior_0040.t.exe))))
+
+(subdir reset_state_behavior_0034
+ (rule
+  (targets reset_state_behavior_0034.t.exe)
+  (deps ResetStateBehavior0034.vo reset_state_behavior_0034.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reset_state_behavior_0034.t.exe reset_state_behavior_0034.cpp reset_state_behavior_0034.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reset_state_behavior_0034.t.exe)
+  (action (run ./reset_state_behavior_0034.t.exe))))
+
+(subdir reset_state_preserves_memory_behavior_0038
+ (rule
+  (targets reset_state_preserves_memory_behavior_0038.t.exe)
+  (deps ResetStatePreservesMemoryBehavior0038.vo reset_state_preserves_memory_behavior_0038.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reset_state_preserves_memory_behavior_0038.t.exe reset_state_preserves_memory_behavior_0038.cpp reset_state_preserves_memory_behavior_0038.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reset_state_preserves_memory_behavior_0038.t.exe)
+  (action (run ./reset_state_preserves_memory_behavior_0038.t.exe))))
+
+(subdir reset_state_wf_behavior_0036
+ (rule
+  (targets reset_state_wf_behavior_0036.t.exe)
+  (deps ResetStateWfBehavior0036.vo reset_state_wf_behavior_0036.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reset_state_wf_behavior_0036.t.exe reset_state_wf_behavior_0036.cpp reset_state_wf_behavior_0036.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reset_state_wf_behavior_0036.t.exe)
+  (action (run ./reset_state_wf_behavior_0036.t.exe))))
+
+(subdir steps_behavior_0032
+ (rule
+  (targets steps_behavior_0032.t.exe)
+  (deps StepsBehavior0032.vo steps_behavior_0032.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} steps_behavior_0032.t.exe steps_behavior_0032.cpp steps_behavior_0032.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps steps_behavior_0032.t.exe)
+  (action (run ./steps_behavior_0032.t.exe))))
+
+(subdir update_nth_behavior_0008
+ (rule
+  (targets update_nth_behavior_0008.t.exe)
+  (deps UpdateNthBehavior0008.vo update_nth_behavior_0008.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} update_nth_behavior_0008.t.exe update_nth_behavior_0008.cpp update_nth_behavior_0008.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps update_nth_behavior_0008.t.exe)
+  (action (run ./update_nth_behavior_0008.t.exe))))
