@@ -20,7 +20,12 @@
  (rule
   (alias runtest)
   (deps ack.t.exe)
-  (action (run ./ack.t.exe))))
+  (action (run ./ack.t.exe)))
+ (rule
+  (targets ack.d.exe)
+  (deps Ack.vo ack.d.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ack.d.exe ack.cpp ack.d.cpp))))
 
 (subdir binom
  (rule
@@ -86,7 +91,12 @@
  (rule
   (alias runtest)
   (deps module.t.exe)
-  (action (run ./module.t.exe))))
+  (action (run ./module.t.exe)))
+ (rule
+  (targets module.d.exe)
+  (deps Module.vo module.d.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module.d.exe module.cpp module.d.cpp))))
 
 (subdir multi_ind_functor
  (rule
@@ -119,7 +129,12 @@
  (rule
   (alias runtest)
   (deps mutual_mod.t.exe)
-  (action (run ./mutual_mod.t.exe))))
+  (action (run ./mutual_mod.t.exe)))
+ (rule
+  (targets mutual_mod.d.exe)
+  (deps MutualMod.vo mutual_mod.d.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mutual_mod.d.exe mutual_mod.cpp mutual_mod.d.cpp))))
 
 (subdir nat
  (rule

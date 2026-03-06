@@ -90,3 +90,7 @@ Require Crane.Mapping.Std.
 Require Crane.Mapping.NatIntStd.
 
 Crane Extraction "module" mymap.
+
+(* OCaml extraction for differential testing *)
+From Stdlib Require Extraction ExtrOcamlBasic ExtrOcamlNatInt.
+Extraction "module_ocaml.ml" mymap NatMap.find.
