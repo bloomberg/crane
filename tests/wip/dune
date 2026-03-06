@@ -69,3 +69,124 @@
   (alias runtest)
   (deps monadic.t.exe)
   (action (run ./monadic.t.exe))))
+
+(subdir sigma_compute
+ (rule
+  (targets sigma_compute.t.exe)
+  (deps SigmaCompute.vo sigma_compute.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigma_compute.t.exe sigma_compute.cpp sigma_compute.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigma_compute.t.exe)
+  (action (run ./sigma_compute.t.exe))))
+
+(subdir nested_record_update_qual
+ (rule
+  (targets nested_record_update_qual.t.exe)
+  (deps NestedRecordUpdateQual.vo nested_record_update_qual.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_record_update_qual.t.exe nested_record_update_qual.cpp nested_record_update_qual.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_record_update_qual.t.exe)
+  (action (run ./nested_record_update_qual.t.exe))))
+
+(subdir disassemble_drop_window
+ (rule
+  (targets disassemble_drop_window.t.exe)
+  (deps DisassembleDropWindow.vo disassemble_drop_window.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} disassemble_drop_window.t.exe disassemble_drop_window.cpp disassemble_drop_window.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps disassemble_drop_window.t.exe)
+  (action (run ./disassemble_drop_window.t.exe))))
+
+(subdir fetch_window_next_ptr
+ (rule
+  (targets fetch_window_next_ptr.t.exe)
+  (deps FetchWindowNextPtr.vo fetch_window_next_ptr.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fetch_window_next_ptr.t.exe fetch_window_next_ptr.cpp fetch_window_next_ptr.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fetch_window_next_ptr.t.exe)
+  (action (run ./fetch_window_next_ptr.t.exe))))
+
+(subdir prom_params_update
+ (rule
+  (targets prom_params_update.t.exe)
+  (deps PromParamsUpdate.vo prom_params_update.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prom_params_update.t.exe prom_params_update.cpp prom_params_update.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps prom_params_update.t.exe)
+  (action (run ./prom_params_update.t.exe))))
+
+(subdir page_base_next_pc
+ (rule
+  (targets page_base_next_pc.t.exe)
+  (deps PageBaseNextPc.vo page_base_next_pc.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} page_base_next_pc.t.exe page_base_next_pc.cpp page_base_next_pc.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps page_base_next_pc.t.exe)
+  (action (run ./page_base_next_pc.t.exe))))
+
+(subdir steps_counter_unroll
+ (rule
+  (targets steps_counter_unroll.t.exe)
+  (deps StepsCounterUnroll.vo steps_counter_unroll.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} steps_counter_unroll.t.exe steps_counter_unroll.cpp steps_counter_unroll.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps steps_counter_unroll.t.exe)
+  (action (run ./steps_counter_unroll.t.exe))))
+
+(subdir valid_layout_window
+ (rule
+  (targets valid_layout_window.t.exe)
+  (deps ValidLayoutWindow.vo valid_layout_window.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} valid_layout_window.t.exe valid_layout_window.cpp valid_layout_window.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps valid_layout_window.t.exe)
+  (action (run ./valid_layout_window.t.exe))))
+
+(subdir program_targets_region_scan
+ (rule
+  (targets program_targets_region_scan.t.exe)
+  (deps ProgramTargetsRegionScan.vo program_targets_region_scan.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} program_targets_region_scan.t.exe program_targets_region_scan.cpp program_targets_region_scan.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps program_targets_region_scan.t.exe)
+  (action (run ./program_targets_region_scan.t.exe))))
+
+(subdir jcn_branch_target_choice
+ (rule
+  (targets jcn_branch_target_choice.t.exe)
+  (deps JcnBranchTargetChoice.vo jcn_branch_target_choice.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} jcn_branch_target_choice.t.exe jcn_branch_target_choice.cpp jcn_branch_target_choice.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps jcn_branch_target_choice.t.exe)
+  (action (run ./jcn_branch_target_choice.t.exe))))
+
+(subdir prom_flagged_sum
+ (rule
+  (targets prom_flagged_sum.t.exe)
+  (deps PromFlaggedSum.vo prom_flagged_sum.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prom_flagged_sum.t.exe prom_flagged_sum.cpp prom_flagged_sum.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps prom_flagged_sum.t.exe)
+  (action (run ./prom_flagged_sum.t.exe))))
