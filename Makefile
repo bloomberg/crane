@@ -1,4 +1,4 @@
-.PHONY: build install clean test test-verbose test-sequential test-raw test-one test-list theories plugin all extract quick-test quick-test-one format-test
+.PHONY: build install clean test test-verbose test-sequential test-raw test-one test-list theories plugin all extract
 
 # Default target: build plugin and theories only (not tests)
 build: plugin theories
@@ -87,43 +87,6 @@ test-one:
 		      fi ;; \
 	esac
 
-# Fast tests without clang-format (for development iteration)
-# Set CRANE_NO_FORMAT=1 to skip formatting during extraction
-quick-test: build
-	@echo "Extracting all tests (no formatting)..."
-	@vo_targets=""; \
-	for vfile in tests/*/*/*.v; do \
-		if [ -f "$$vfile" ]; then \
-			vo_target=$$(echo "$$vfile" | sed 's/\.v$$/.vo/'); \
-			vo_targets="$$vo_targets $$vo_target"; \
-		fi; \
-	done; \
-	if [ -n "$$vo_targets" ]; then \
-		CRANE_NO_FORMAT=1 dune build $$vo_targets 2>/dev/null || true; \
-	fi
-	@dune build bin/test_runner/main.exe
-	@./_build/default/bin/test_runner/main.exe
-
-# Run a single test without formatting: make quick-test-one TEST=list
-quick-test-one:
-	@if [ -z "$(TEST)" ]; then \
-		echo "Usage: make quick-test-one TEST=<test_name>"; \
-		exit 1; \
-	fi
-	@case "$(TEST)" in \
-		*/*)  CRANE_NO_FORMAT=1 dune build @tests/$(TEST)/runtest ;; \
-		*)    if [ -d "tests/basics/$(TEST)" ]; then \
-		        CRANE_NO_FORMAT=1 dune build @tests/basics/$(TEST)/runtest; \
-		      elif [ -d "tests/monadic/$(TEST)" ]; then \
-		        CRANE_NO_FORMAT=1 dune build @tests/monadic/$(TEST)/runtest; \
-		      elif [ -d "tests/regression/$(TEST)" ]; then \
-		        CRANE_NO_FORMAT=1 dune build @tests/regression/$(TEST)/runtest; \
-		      else \
-		        echo "Test '$(TEST)' not found"; \
-		        exit 1; \
-		      fi ;; \
-	esac
-
 # List all available tests
 test-list:
 	@echo "Available tests:"
@@ -141,16 +104,6 @@ test-list:
 			echo "  $$(basename $$d)"; \
 		fi; \
 	done | sort
-
-# Format all generated test .h and .cpp files
-# Uses clang-format (LLVM style) for standard tests, bde-format for *_bde tests
-format-test:
-	@echo "Formatting test files..."
-	@find tests -name '*.h' -o -name '*.cpp' | grep -v '\.t\.cpp$$' | grep -v '_bde/' | xargs -P $$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4) clang-format -i -style=LLVM
-	@if command -v bde-format >/dev/null 2>&1; then \
-		find tests -path '*_bde/*.h' -o -path '*_bde/*.cpp' | grep -v '\.t\.cpp$$' | xargs -P $$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4) bde-format -i; \
-	fi
-	@echo "Done."
 
 # Clean build artifacts and generated test files
 clean:
@@ -175,9 +128,6 @@ help:
 	@echo "  make                    - Build plugin and theories (default)"
 	@echo "  make extract            - Build + generate all test C++ files"
 	@echo "  make test               - Compile and run all tests (parallel)"
-	@echo "  make quick-test         - Run all tests without clang-format (fast)"
-	@echo "  make quick-test-one TEST=name - Run single test without formatting"
-	@echo "  make format-test        - Format all test .h/.cpp files (LLVM style)"
 	@echo "  make test-verbose       - Run tests with error details (parallel)"
 	@echo "  make test-sequential    - Run tests sequentially (old bash script)"
 	@echo "  make test-raw           - Run tests with raw dune output"
