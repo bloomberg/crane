@@ -904,3 +904,113 @@
   (alias runtest)
   (deps update_nth_length_edge_0009.t.exe)
   (action (run ./update_nth_length_edge_0009.t.exe))))
+
+(subdir base_for_next2_page_cross
+ (rule
+  (targets base_for_next2_page_cross.t.exe)
+  (deps BaseForNext2PageCross.vo base_for_next2_page_cross.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} base_for_next2_page_cross.t.exe base_for_next2_page_cross.cpp base_for_next2_page_cross.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps base_for_next2_page_cross.t.exe)
+  (action (run ./base_for_next2_page_cross.t.exe))))
+
+(subdir decode_list_single_pair
+ (rule
+  (targets decode_list_single_pair.t.exe)
+  (deps DecodeListSinglePair.vo decode_list_single_pair.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_list_single_pair.t.exe decode_list_single_pair.cpp decode_list_single_pair.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_list_single_pair.t.exe)
+  (action (run ./decode_list_single_pair.t.exe))))
+
+(subdir valid_layout_small_prop
+ (rule
+  (targets valid_layout_small_prop.t.exe)
+  (deps ValidLayoutSmallProp.vo valid_layout_small_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} valid_layout_small_prop.t.exe valid_layout_small_prop.cpp valid_layout_small_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps valid_layout_small_prop.t.exe)
+  (action (run ./valid_layout_small_prop.t.exe))))
+
+(subdir program_wf_targets_outside_prop
+ (rule
+  (targets program_wf_targets_outside_prop.t.exe)
+  (deps ProgramWfTargetsOutsideProp.vo program_wf_targets_outside_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} program_wf_targets_outside_prop.t.exe program_wf_targets_outside_prop.cpp program_wf_targets_outside_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps program_wf_targets_outside_prop.t.exe)
+  (action (run ./program_wf_targets_outside_prop.t.exe))))
+
+(subdir update_nth_out_of_bounds_length
+ (rule
+  (targets update_nth_out_of_bounds_length.t.exe)
+  (deps UpdateNthOutOfBoundsLength.vo update_nth_out_of_bounds_length.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} update_nth_out_of_bounds_length.t.exe update_nth_out_of_bounds_length.cpp update_nth_out_of_bounds_length.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps update_nth_out_of_bounds_length.t.exe)
+  (action (run ./update_nth_out_of_bounds_length.t.exe))))
+
+(subdir addr_page_decomp_1027
+ (rule
+  (targets addr_page_decomp_1027.t.exe)
+  (deps AddrPageDecomp1027.vo addr_page_decomp_1027.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} addr_page_decomp_1027.t.exe addr_page_decomp_1027.cpp addr_page_decomp_1027.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps addr_page_decomp_1027.t.exe)
+  (action (run ./addr_page_decomp_1027.t.exe))))
+
+(subdir set_reg_pair_roundtrip_value
+ (rule
+  (targets set_reg_pair_roundtrip_value.t.exe)
+  (deps SetRegPairRoundtripValue.vo set_reg_pair_roundtrip_value.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} set_reg_pair_roundtrip_value.t.exe set_reg_pair_roundtrip_value.cpp set_reg_pair_roundtrip_value.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps set_reg_pair_roundtrip_value.t.exe)
+  (action (run ./set_reg_pair_roundtrip_value.t.exe))))
+
+(subdir set_reg_pair_high_nibble
+ (rule
+  (targets set_reg_pair_high_nibble.t.exe)
+  (deps SetRegPairHighNibble.vo set_reg_pair_high_nibble.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} set_reg_pair_high_nibble.t.exe set_reg_pair_high_nibble.cpp set_reg_pair_high_nibble.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps set_reg_pair_high_nibble.t.exe)
+  (action (run ./set_reg_pair_high_nibble.t.exe))))
+
+(subdir set_reg_pair_low_nibble
+ (rule
+  (targets set_reg_pair_low_nibble.t.exe)
+  (deps SetRegPairLowNibble.vo set_reg_pair_low_nibble.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} set_reg_pair_low_nibble.t.exe set_reg_pair_low_nibble.cpp set_reg_pair_low_nibble.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps set_reg_pair_low_nibble.t.exe)
+  (action (run ./set_reg_pair_low_nibble.t.exe))))
+
+(subdir encode_jun_bytes_in_range
+ (rule
+  (targets encode_jun_bytes_in_range.t.exe)
+  (deps EncodeJunBytesInRange.vo encode_jun_bytes_in_range.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} encode_jun_bytes_in_range.t.exe encode_jun_bytes_in_range.cpp encode_jun_bytes_in_range.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps encode_jun_bytes_in_range.t.exe)
+  (action (run ./encode_jun_bytes_in_range.t.exe))))
