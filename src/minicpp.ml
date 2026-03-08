@@ -1,6 +1,43 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(*s Target language for extraction: a core C++ called MiniCpp. *)
+
+(* Target language for extraction: a core C++ called MiniCpp.
+
+   Crane's extraction pipeline has two intermediate representations:
+
+     Rocq CIC  --[extraction.ml]-->  MiniML  --[translation.ml]-->  MiniCpp  --[cpp.ml]-->  C++
+
+   MiniML and MiniCpp serve different purposes and cannot be merged:
+
+   MiniML (defined in miniml.ml) is the result of extracting Rocq's
+   Calculus of Inductive Constructions into a simply-typed functional
+   language.  This step performs type erasure (removing propositions,
+   universe levels, implicit arguments), computes signatures that track
+   which arguments survive extraction (Keep/Kill), and produces a clean
+   ML-like AST with ~15 constructors.  MiniML enables 1,700 lines of
+   optimizations in mlutil.ml (beta-iota reduction, dead code elimination,
+   inlining, match simplification) that operate on type-erased terms —
+   much simpler than working on raw CIC terms with their 30+ constructors
+   and dependent types.  MiniML also provides type reconstruction
+   infrastructure (Tmeta with mutable unification) and buffers Crane
+   from changes to Rocq's internal term representation across versions.
+
+   MiniCpp (defined here) is a C++-oriented AST that translation.ml
+   produces from MiniML.  Where MiniML is language-agnostic (it could
+   target OCaml, Haskell, or Scheme), MiniCpp captures C++-specific
+   concepts: shared_ptr/unique_ptr memory management, std::variant for
+   inductives, templates, concepts, namespaces, structs with visibility,
+   move semantics, const/static/extern modifiers, constructors, methods,
+   enum classes, and raw C++ escape hatches.  The MiniML-to-MiniCpp
+   translation resolves how each functional programming pattern maps
+   to C++ idioms (e.g. MLcase becomes std::visit with an overloaded
+   visitor, MLcons becomes a factory function returning shared_ptr,
+   modules become structs, module types become concepts).
+
+   Attempting to go directly from Rocq CIC to MiniCpp would require
+   combining type erasure, optimization, and C++ idiom selection into
+   a single pass — losing the optimization opportunities that MiniML
+   provides and coupling Rocq internals directly to C++ generation. *)
 
 open Names
 
