@@ -18,6 +18,29 @@
 
 open Names
 
+(*s Pre-resolved C++ name.
+   Computed during translation so the pretty-printer doesn't need
+   name-resolution logic. *)
+type cpp_name = {
+  cn_base : string;               (* e.g., "add", "list", "Nat" *)
+  cn_qualified : string option;    (* Some "Nat::" for wrapper-qualified names *)
+  cn_needs_typename : bool;        (* true if dependent type in template context *)
+}
+
+(*s Inductive classification — determined once during translation. *)
+type cpp_ind_kind =
+  | IK_Standard                             (* std::variant sum type *)
+  | IK_Enum                                 (* enum class *)
+  | IK_Record of GlobRef.t option list      (* struct with named fields *)
+  | IK_Eponymous of GlobRef.t option list   (* record merged into module *)
+  | IK_TypeClass of GlobRef.t option list   (* C++ concept *)
+
+(*s Custom extraction info — resolved once during translation. *)
+type custom_info = {
+  ci_inline : string option;   (* Some code if to_inline, None otherwise *)
+  ci_is_custom : bool;
+}
+
 (*s Visibility for struct members. *)
 type cpp_visibility = VPublic | VPrivate
 
