@@ -195,12 +195,20 @@ type cpp_decl =
   | Dnspace of GlobRef.t option * cpp_decl list
   | Dfundef of (GlobRef.t * cpp_type list) list * cpp_type * (Id.t * cpp_type) list * cpp_stmt list
   | Dfundecl of (GlobRef.t * cpp_type list) list * cpp_type * (Id.t option * cpp_type) list
-  | Dstruct of GlobRef.t * (cpp_field * cpp_visibility) list
-(*| Dclass of GlobRef.t * cpp_type * (cpp_field * bool) list (* bool indicates if cpp_field is public *)*)
+  | Dstruct of {
+      ds_ref : GlobRef.t;
+      ds_fields : (cpp_field * cpp_visibility) list;
+      ds_tparams : (template_type * Id.t) list;      (* [] for non-template structs *)
+      ds_constraint : cpp_constraint option;          (* template constraint, if any *)
+    }
   | Dstruct_decl of GlobRef.t
   | Dusing of GlobRef.t * cpp_type
   | Dasgn of GlobRef.t * cpp_type * cpp_expr
   | Ddecl of GlobRef.t * cpp_type
   | Dconcept of GlobRef.t * cpp_expr (* template params are provided by an outer Dtemplate *)
   | Dstatic_assert of cpp_expr * string option
-  | Denum of GlobRef.t * Id.t list  (* enum class declaration: name, constructors *)
+  | Denum of {
+      de_ref : GlobRef.t;
+      de_ctors : Id.t list;
+      de_tparams : (template_type * Id.t) list;
+    }

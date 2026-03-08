@@ -1806,14 +1806,14 @@ function
       | _ -> string_of_ppcmds (pp_global Type id)
     in
     let has_pending = Hashtbl.mem pending_wrapper_decls struct_name_str in
-    (* MERGE: When a Dnspace has a single Dstruct (or Dtemplate wrapping a Dstruct)
-       and no pending wrapper declarations, merge the inner struct into the wrapper.
+    (* MERGE: When a Dnspace has a single Dstruct and no pending wrapper declarations,
+       merge the inner struct into the wrapper.
        This eliminates the redundant nesting: struct Nat { struct nat { ... }; }
        becomes just struct Nat { ... }.
        When there ARE pending wrapper declarations (e.g., module functions like rev),
        keep the two-level structure so wrapper functions can reference the template class. *)
     (match decls, has_pending with
-    | [Dstruct (_inner_id, fields)], false ->
+    | [Dstruct { ds_fields = fields; ds_tparams = []; _ }], false ->
       (* MERGE non-template: struct Nat { ... } *)
       let struct_name = str struct_name_str in
       let f_s = with_render_ctx
@@ -1821,7 +1821,7 @@ function
         (fun () -> pp_cpp_fields_with_vis ~struct_name env fields) in
       str "struct " ++ struct_name ++ str " {" ++ fnl ()
         ++ f_s ++ fnl () ++ str "};"
-    | [Dtemplate (temps, cstr, Dstruct (_inner_id, fields))], false ->
+    | [Dstruct { ds_fields = fields; ds_tparams = temps; ds_constraint = cstr; _ }], false ->
       (* MERGE template: template<typename A> struct List { ... } *)
       let struct_name = str struct_name_str in
       let f_s = with_render_ctx
@@ -1899,7 +1899,7 @@ function
     let is_struct_member = is_qualified || !in_struct_context in
     let static_kw = if is_struct_member then str "static " else mt () in
     h (static_kw ++ (pp_cpp_type false [] ret_ty) ++ str " " ++ name ++ pp_par true params_s) ++ str ";"
-| Dstruct (id, fields) ->
+| Dstruct { ds_ref = id; ds_fields = fields; ds_tparams = tparams; ds_constraint = cstr } ->
     (* Struct name for inductive types.
        Regular inductives use their original Rocq name.
        EXCEPTION 1: Records keep their original case.
@@ -1916,8 +1916,22 @@ function
           pp_global Type id
       | _ -> pp_global Type id
     in
-    let f_s = pp_cpp_fields_with_vis ~struct_name env fields in
-    str "struct " ++ struct_name ++ str " {" ++ fnl () ++ f_s ++ fnl () ++ str "};"
+    let f_s = match tparams with
+      | [] -> pp_cpp_fields_with_vis ~struct_name env fields
+      | _ -> with_render_ctx
+        ~setup:(fun () -> in_template_struct := true)
+        (fun () -> pp_cpp_fields_with_vis ~struct_name env fields)
+    in
+    let tmpl = match tparams with
+      | [] -> mt ()
+      | _ ->
+        let args = pp_list pp_template_param tparams in
+        h (str "template <" ++ args ++ str ">")
+        ++ (match cstr with
+            | None -> fnl ()
+            | Some c -> pp_cpp_expr env [] c ++ fnl ())
+    in
+    tmpl ++ str "struct " ++ struct_name ++ str " {" ++ fnl () ++ f_s ++ fnl () ++ str "};"
 | Dstruct_decl id ->
     str "struct " ++ pp_global Type id ++ str ";"
 | Dusing (id, ty) ->
@@ -1984,7 +1998,7 @@ function
     (match so with
     | None -> h (str "static_assert(" ++ pp_cpp_expr env [] e ++ str ");")
     | Some s -> h (str "static_assert(" ++ pp_cpp_expr env [] e ++ str ", \"" ++ str s ++ str "\");"))
-| Denum (name, ctors) ->
+| Denum { de_ref = name; de_ctors = ctors; _ } ->
     let struct_name = match name with
       | GlobRef.IndRef _ ->
           str (Common.pp_global_name Type name)
@@ -2385,10 +2399,11 @@ let pp_hdecl = function
             | None -> mt ()
           in
           (* Generate static_assert to verify the instance satisfies the concept.
-             Skip for template instances (Dtemplate) — we can't instantiate a concept
-             check without concrete types. *)
+             Skip for template instances (Dtemplate or Dstruct with tparams) —
+             we can't instantiate a concept check without concrete types. *)
           let is_template = match ds_opt with
             | Some (Dtemplate _) -> true
+            | Some (Dstruct { ds_tparams = _ :: _; _ }) -> true
             | _ -> false
           in
           let static_assert_pp = match class_ref_opt with

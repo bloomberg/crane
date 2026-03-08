@@ -2449,9 +2449,7 @@ let gen_record_cpp name fields ind =
     | None -> GlobRef.VarRef (Id.of_string ("_field" ^ (string_of_int i))) in
     (Fvar' (n, convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty ind.ip_vars t), VPublic)) l in
   let ty_vars = List.map (fun x -> (TTtypename, x)) ind.ip_vars in
-  match ty_vars with
-  | [] -> Dstruct (name, l)
-  | _ -> Dtemplate (ty_vars, None, Dstruct (name, l))
+  Dstruct { ds_ref = name; ds_fields = l; ds_tparams = ty_vars; ds_constraint = None }
 
 (* Generate a C++ concept from a type class.
    Type class Eq(A) with method eqb : A -> A -> bool becomes:
@@ -2847,11 +2845,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type)
           in
           if methods = [] && using_fields = [] then (None, Some class_ref, non_promoted_type_args)
           else begin
-            let struct_decl = Dstruct (name, using_fields @ methods) in
-            let decl = match template_params with
-              | [] -> struct_decl
-              | _ -> Dtemplate (template_params, None, struct_decl)
-            in
+            let decl = Dstruct { ds_ref = name; ds_fields = using_fields @ methods;
+                                 ds_tparams = template_params; ds_constraint = None } in
             (Some decl, Some class_ref, non_promoted_type_args)
           end
       | _ -> (None, Some class_ref, type_args))
@@ -3961,9 +3956,10 @@ let gen_ind_header vars name cnames tys =
       let make_decl = Ffundecl (Id.of_string "make", Tmod (TMstatic, (ind_ty_ptr name ty_vars)), List.rev constr_params) in
       let make_def = Ffundef (Id.of_string "make", Tmod (TMstatic, Tshared_ptr (Tglob (name, ty_vars, []))), constr_params,
         [Sreturn (Some (CPPfun_call (CPPmk_shared (Tglob (name, ty_vars, [])), [CPPstruct (c, ty_vars, make_args)])))]) in
-      if ty_vars == []
-        then add_templates (Dstruct (c, List.append (List.map (fun (x, y) -> (Fvar (x,y), VPublic)) constr) [make_decl,VPublic]))
-        else add_templates (Dstruct (c, List.append (List.map (fun (x, y) -> (Fvar (x,y), VPublic)) constr) [make_def,VPublic])))
+      let fields = if ty_vars == []
+        then List.append (List.map (fun (x, y) -> (Fvar (x,y), VPublic)) constr) [make_decl,VPublic]
+        else List.append (List.map (fun (x, y) -> (Fvar (x,y), VPublic)) constr) [make_def,VPublic] in
+      Dstruct { ds_ref = c; ds_fields = fields; ds_tparams = templates; ds_constraint = None })
     tys) in
   Dnspace (Some name, List.append (List.append header [vartydecl]) constrdecl)
 
@@ -4214,9 +4210,6 @@ let gen_ind_header_v2 ?(is_mutual=false) vars name cnames tys method_candidates 
   let is_coinductive = ind_kind = Coinductive in
   let templates = List.map (fun n -> (TTtypename, n)) vars in
   let ty_vars = List.mapi (fun i x -> Tvar (i, Some x)) vars in
-  let add_templates d = match templates with
-    | [] -> d
-    | _ -> Dtemplate (templates, None, d) in
 
   (* Handle empty inductives (no constructors) - generate uninhabitable struct *)
   if Array.length cnames = 0 then
@@ -4226,7 +4219,8 @@ let gen_ind_header_v2 ?(is_mutual=false) vars name cnames tys method_candidates 
        };
        This type cannot be constructed, matching the semantics of empty types. *)
     let method_fields = List.map (gen_single_method name vars) method_candidates in
-    add_templates (Dstruct (name, [(Fdeleted_ctor, VPublic)] @ method_fields))
+    Dstruct { ds_ref = name; ds_fields = [(Fdeleted_ctor, VPublic)] @ method_fields;
+              ds_tparams = templates; ds_constraint = None }
   else
 
   (* Check if all constructors are nullary: eligible for enum class *)
@@ -4239,7 +4233,7 @@ let gen_ind_header_v2 ?(is_mutual=false) vars name cnames tys method_candidates 
       | GlobRef.ConstructRef _ -> Id.of_string (Common.pp_global_name Type c)
       | _ -> Id.of_string ("Ctor" ^ string_of_int 0)
     ) cnames) in
-    Denum (name, ctor_names)
+    Denum { de_ref = name; de_ctors = ctor_names; de_tparams = [] }
   end
   else
 
@@ -4453,7 +4447,7 @@ let gen_ind_header_v2 ?(is_mutual=false) vars name cnames tys method_candidates 
   in
 
   (* Just the struct itself - no extra namespace wrapper *)
-  add_templates (Dstruct (name, all_fields))
+  Dstruct { ds_ref = name; ds_fields = all_fields; ds_tparams = templates; ds_constraint = None }
 
 (* Generate methods for eponymous records.
    Uses the shared gen_single_method helper for records where methods are
