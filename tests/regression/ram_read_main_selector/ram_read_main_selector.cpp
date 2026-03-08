@@ -31,7 +31,7 @@ std::shared_ptr<RamReadMainSelector::ram_reg> RamReadMainSelector::get_regRAM(
 unsigned int RamReadMainSelector::get_main(
     const std::shared_ptr<RamReadMainSelector::ram_reg> &rg,
     const unsigned int i) {
-  return rg->reg_main->nth(i, 0);
+  return rg->reg_main->nth(i, 0u);
 }
 
 unsigned int RamReadMainSelector::ram_read_main(

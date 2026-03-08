@@ -12,9 +12,9 @@
 
 unsigned int Coercions::bool_to_nat(const bool b) {
   if (b) {
-    return (0 + 1);
+    return 1u;
   } else {
-    return 0;
+    return 0u;
   }
 }
 

@@ -100,20 +100,18 @@ struct DecodeOpcode6To13WfEdge0049 {
                const std::shared_ptr<List<unsigned int>> &bytes);
 
   static inline const unsigned int t = [](void) {
-    std::unique_ptr<state> s0 = std::make_unique<state>(
-        state{List<unsigned int>::ctor::cons_(
-                  0, List<unsigned int>::ctor::cons_(
-                         0, List<unsigned int>::ctor::cons_(
-                                0, List<unsigned int>::ctor::cons_(
-                                       0, List<unsigned int>::ctor::nil_())))),
-              0, 0, false});
+    std::unique_ptr<state> s0 = std::make_unique<state>(state{
+        List<unsigned int>::ctor::cons_(
+            0u, List<unsigned int>::ctor::cons_(
+                    0u, List<unsigned int>::ctor::cons_(
+                            0u, List<unsigned int>::ctor::cons_(
+                                    0u, List<unsigned int>::ctor::nil_())))),
+        0u, 0u, false});
     std::shared_ptr<state> s1 =
-        load_program(std::move(s0), (0 + 1),
+        load_program(std::move(s0), 1u,
                      List<unsigned int>::ctor::cons_(
-                         (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                         List<unsigned int>::ctor::cons_(
-                             ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                             List<unsigned int>::ctor::nil_())));
-    return std::move(s1)->rom->nth((0 + 1), 0);
+                         7u, List<unsigned int>::ctor::cons_(
+                                 8u, List<unsigned int>::ctor::nil_())));
+    return std::move(s1)->rom->nth(1u, 0u);
   }();
 };

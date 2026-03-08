@@ -81,11 +81,8 @@ struct DropHeadDefault {
 
   static inline const unsigned int t = head_after_drop(
       List<unsigned int>::ctor::cons_(
-          (((((0 + 1) + 1) + 1) + 1) + 1),
-          List<unsigned int>::ctor::cons_(
-              (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-              List<unsigned int>::ctor::cons_(
-                  (((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                  List<unsigned int>::ctor::nil_()))),
-      (0 + 1));
+          5u, List<unsigned int>::ctor::cons_(
+                  7u, List<unsigned int>::ctor::cons_(
+                          9u, List<unsigned int>::ctor::nil_()))),
+      1u);
 };

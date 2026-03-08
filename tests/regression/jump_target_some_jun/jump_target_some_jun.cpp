@@ -34,6 +34,6 @@ JumpTargetSomeJun::target_default(const std::optional<unsigned int> o) {
     unsigned int a = *o;
     return a;
   } else {
-    return 0;
+    return 0u;
   }
 }

@@ -37,43 +37,41 @@ struct JcnConstantsEval {
   static bool jcn_condition(const std::shared_ptr<state> &s,
                             const unsigned int cond);
 
-  static inline const unsigned int JCN_JNT = (0 + 1);
+  static inline const unsigned int JCN_JNT = 1u;
 
-  static inline const unsigned int JCN_JC = ((0 + 1) + 1);
+  static inline const unsigned int JCN_JC = 2u;
 
-  static inline const unsigned int JCN_JZ = ((((0 + 1) + 1) + 1) + 1);
+  static inline const unsigned int JCN_JZ = 4u;
 
-  static inline const unsigned int JCN_JT =
-      (((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1);
+  static inline const unsigned int JCN_JT = 9u;
 
-  static inline const unsigned int JCN_JNC =
-      ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1);
+  static inline const unsigned int JCN_JNC = 10u;
 
-  static inline const unsigned int JCN_JNZ =
-      ((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1);
+  static inline const unsigned int JCN_JNZ = 12u;
 
   static inline const unsigned int t = []() {
     return [](void) {
-      std::shared_ptr<state> s = std::make_shared<state>(state{0, true, false});
+      std::shared_ptr<state> s =
+          std::make_shared<state>(state{0u, true, false});
       return (([&](void) {
                 if (jcn_condition(s, JCN_JC)) {
-                  return (0 + 1);
+                  return 1u;
                 } else {
-                  return 0;
+                  return 0u;
                 }
               }() +
                [&](void) {
                  if (jcn_condition(s, JCN_JZ)) {
-                   return (0 + 1);
+                   return 1u;
                  } else {
-                   return 0;
+                   return 0u;
                  }
                }()) +
               [&](void) {
                 if (jcn_condition(s, JCN_JNT)) {
-                  return (0 + 1);
+                  return 1u;
                 } else {
-                  return 0;
+                  return 0u;
                 }
               }());
     }();

@@ -20,5 +20,5 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 struct KeywordClassGlobal {
   static unsigned int class_(const unsigned int n);
 
-  static inline const unsigned int t = class_(((((0 + 1) + 1) + 1) + 1));
+  static inline const unsigned int t = class_(4u);
 };

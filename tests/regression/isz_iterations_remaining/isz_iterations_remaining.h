@@ -21,8 +21,5 @@ struct IszIterationsRemaining {
   static unsigned int isz_iterations(const unsigned int v);
 
   static inline const unsigned int t =
-      (isz_iterations(0) +
-       isz_iterations((
-           (((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-           1)));
+      (isz_iterations(0u) + isz_iterations(12u));
 };

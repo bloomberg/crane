@@ -67,7 +67,7 @@ unsigned int BenchLetIn::nested_swap(const unsigned int a, const unsigned int b,
 
 unsigned int BenchLetIn::sum_via_pairs(const unsigned int n) {
   if (n <= 0) {
-    return 0;
+    return 0u;
   } else {
     unsigned int m = n - 1;
     std::unique_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p =

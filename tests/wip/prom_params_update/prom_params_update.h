@@ -70,27 +70,24 @@ struct PromParamsUpdate {
 
   static inline const unsigned int t = []() {
     return [](void) {
-      std::unique_ptr<state> s = std::make_unique<state>(state{
-          (((0 + 1) + 1) + 1),
-          List<unsigned int>::ctor::cons_(
-              (0 + 1), List<unsigned int>::ctor::cons_(
-                           ((0 + 1) + 1), List<unsigned int>::ctor::nil_())),
-          List<unsigned int>::ctor::cons_(
-              (((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-              List<unsigned int>::ctor::cons_(
-                  ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                  List<unsigned int>::ctor::cons_(
-                      (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                      List<unsigned int>::ctor::nil_()))),
-          0, 0, false});
- std::shared_ptr<state> s_ = set_prom_params(std::move(s), (((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), (((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), true);
- return ((s_->acc + s_->prom_addr) + [&](void) {
-   if (s_->prom_enable) {
-     return std::move(s_)->prom_data;
-   } else {
-     return 0;
-   }
- }());
+      std::unique_ptr<state> s = std::make_unique<state>(
+          state{3u,
+                List<unsigned int>::ctor::cons_(
+                    1u, List<unsigned int>::ctor::cons_(
+                            2u, List<unsigned int>::ctor::nil_())),
+                List<unsigned int>::ctor::cons_(
+                    9u, List<unsigned int>::ctor::cons_(
+                            8u, List<unsigned int>::ctor::cons_(
+                                    7u, List<unsigned int>::ctor::nil_()))),
+                0u, 0u, false});
+      std::shared_ptr<state> s_ = set_prom_params(std::move(s), 23u, 77u, true);
+      return ((s_->acc + s_->prom_addr) + [&](void) {
+        if (s_->prom_enable) {
+          return std::move(s_)->prom_data;
+        } else {
+          return 0u;
+        }
+      }());
     }();
   }();
 };

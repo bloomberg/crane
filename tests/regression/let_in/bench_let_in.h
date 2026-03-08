@@ -139,24 +139,17 @@ struct BenchLetIn {
   static unsigned int chain_pairs(const unsigned int a, const unsigned int b,
                                   const unsigned int c);
 
-  static inline const unsigned int test_swap =
-      swap_snd((((0 + 1) + 1) + 1), ((((0 + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_swap = swap_snd(3u, 4u);
 
-  static inline const unsigned int test_add =
-      add_via_pair((((0 + 1) + 1) + 1), ((((0 + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_add = add_via_pair(3u, 4u);
 
-  static inline const unsigned int test_nested = nested_swap(
-      (0 + 1), ((0 + 1) + 1), (((0 + 1) + 1) + 1), ((((0 + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_nested = nested_swap(1u, 2u, 3u, 4u);
 
-  static inline const unsigned int test_sum_pairs =
-      sum_via_pairs((((((0 + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_sum_pairs = sum_via_pairs(5u);
 
-  static inline const unsigned int test_mid3 =
-      mid3((0 + 1), ((0 + 1) + 1), (((0 + 1) + 1) + 1));
+  static inline const unsigned int test_mid3 = mid3(1u, 2u, 3u);
 
-  static inline const unsigned int test_sum3 =
-      sum3((0 + 1), ((0 + 1) + 1), (((0 + 1) + 1) + 1));
+  static inline const unsigned int test_sum3 = sum3(1u, 2u, 3u);
 
-  static inline const unsigned int test_chain =
-      chain_pairs((0 + 1), ((0 + 1) + 1), (((0 + 1) + 1) + 1));
+  static inline const unsigned int test_chain = chain_pairs(1u, 2u, 3u);
 };

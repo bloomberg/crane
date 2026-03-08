@@ -11,35 +11,26 @@ for dir in tests/$category/*/; do
     vofile="${vfile%.v}.vo"
 
     if [ -f "$dir$name.t.cpp" ] && [ -n "$vfile" ]; then
-        # Check if this is a BDE test (name ends with _bde)
+        # Check if this is a BDE test (name ends with _bde) or GMP test (name ends with _gmp)
         if [[ "$name" == *_bde ]]; then
-            cat << EOF
-(subdir $name
- (rule
-  (targets $name.t.exe)
-  (deps $vofile $name.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-bde.sh %{project_root} $name.t.exe $name.cpp $name.t.cpp)))
- (rule
-  (alias runtest)
-  (deps $name.t.exe)
-  (action (run ./$name.t.exe))))
-
-EOF
+            compile_script="compile-bde.sh"
+        elif [[ "$name" == *_gmp ]]; then
+            compile_script="compile-gmp.sh"
         else
+            compile_script="compile-std.sh"
+        fi
             cat << EOF
 (subdir $name
  (rule
   (targets $name.t.exe)
   (deps $vofile $name.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} $name.t.exe $name.cpp $name.t.cpp)))
+   (run %{project_root}/scripts/$compile_script %{project_root} $name.t.exe $name.cpp $name.t.cpp)))
  (rule
   (alias runtest)
   (deps $name.t.exe)
   (action (run ./$name.t.exe))))
 
 EOF
-        fi
     fi
 done

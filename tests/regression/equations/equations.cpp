@@ -45,11 +45,11 @@ bool PeanoNat::even(const unsigned int n) {
 
 unsigned int PeanoNat::div2(const unsigned int n) {
   if (n <= 0) {
-    return 0;
+    return 0u;
   } else {
     unsigned int n0 = n - 1;
     if (n0 <= 0) {
-      return 0;
+      return 0u;
     } else {
       unsigned int n_ = n0 - 1;
       return (PeanoNat::div2(n_) + 1);
@@ -145,18 +145,17 @@ unsigned int Equations::collatz_steps_unfold_clause_3(const unsigned int n,
   if (refine) {
     return (collatz_steps(PeanoNat::div2(std::move(n))) + 1);
   } else {
-    return (collatz_steps((((((0 + 1) + 1) + 1) * std::move(n)) + (0 + 1))) +
-            1);
+    return (collatz_steps(((3u * std::move(n)) + 1u)) + 1);
   }
 }
 
 unsigned int Equations::collatz_steps_unfold(const unsigned int n) {
   if (n <= 0) {
-    return 0;
+    return 0u;
   } else {
     unsigned int n0 = n - 1;
     if (n0 <= 0) {
-      return 0;
+      return 0u;
     } else {
       unsigned int n1 = n0 - 1;
       return collatz_steps_unfold_clause_3(n1, PeanoNat::even(((n1 + 1) + 1)));
@@ -186,7 +185,7 @@ Equations::collatz_steps_graph_correct(const unsigned int x) {
             } else {
               return collatz_steps_clause_3_graph::ctor::
                   collatz_steps_clause_3_graph_equation_2_(n0, [&](void) {
-                    unsigned int y = (((((0 + 1) + 1) + 1) * n0) + (0 + 1));
+                    unsigned int y = ((3u * n0) + 1u);
                     return collatz_steps_graph_correct(std::move(y));
                   }());
             }

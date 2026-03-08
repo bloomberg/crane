@@ -182,18 +182,29 @@ struct MutualRecord {
   static unsigned int
   emp_list_count(const std::shared_ptr<List<std::shared_ptr<employee>>> &l);
 
- static inline const std::shared_ptr<employee> emp1 = employee::ctor::mk_employee_((0 + 1), ((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+  static inline const std::shared_ptr<employee> emp1 =
+      employee::ctor::mk_employee_(1u, 50u);
 
- static inline const std::shared_ptr<employee> emp2 = employee::ctor::mk_employee_(((0 + 1) + 1), ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+  static inline const std::shared_ptr<employee> emp2 =
+      employee::ctor::mk_employee_(2u, 60u);
 
- static inline const std::shared_ptr<employee> emp3 = employee::ctor::mk_employee_((((0 + 1) + 1) + 1), ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+  static inline const std::shared_ptr<employee> emp3 =
+      employee::ctor::mk_employee_(3u, 70u);
 
- static inline const std::shared_ptr<department> test_dept = department::ctor::mk_department_(((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), List<std::shared_ptr<employee>>::ctor::cons_(emp1, List<std::shared_ptr<employee>>::ctor::cons_(emp2, List<std::shared_ptr<employee>>::ctor::cons_(emp3, List<std::shared_ptr<employee>>::ctor::nil_()))));
+  static inline const std::shared_ptr<department> test_dept =
+      department::ctor::mk_department_(
+          100u,
+          List<std::shared_ptr<employee>>::ctor::cons_(
+              emp1,
+              List<std::shared_ptr<employee>>::ctor::cons_(
+                  emp2,
+                  List<std::shared_ptr<employee>>::ctor::cons_(
+                      emp3, List<std::shared_ptr<employee>>::ctor::nil_()))));
 
- static inline const unsigned int test_total_salary =
-     dept_total_salary(test_dept);
+  static inline const unsigned int test_total_salary =
+      dept_total_salary(test_dept);
 
- static inline const unsigned int test_dept_count = dept_count(test_dept);
+  static inline const unsigned int test_dept_count = dept_count(test_dept);
 
- static inline const unsigned int test_dept_id = dept_id(test_dept);
+  static inline const unsigned int test_dept_id = dept_id(test_dept);
 };

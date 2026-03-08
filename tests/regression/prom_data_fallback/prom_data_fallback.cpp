@@ -15,6 +15,6 @@ unsigned int PromDataFallback::prom_data_or_zero(
   if (s->prom_enable) {
     return s->prom_data;
   } else {
-    return 0;
+    return 0u;
   }
 }

@@ -13,5 +13,5 @@
 unsigned int FetchByteDefaultZero::fetch_byte(
     const std::shared_ptr<FetchByteDefaultZero::state> &s,
     const unsigned int addr) {
-  return s->rom->nth(addr, 0);
+  return s->rom->nth(addr, 0u);
 }

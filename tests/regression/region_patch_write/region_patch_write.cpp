@@ -34,7 +34,7 @@ RegionPatchWrite::update_region(const std::shared_ptr<List<unsigned int>> &rom,
                       std::move(_rf._a1);
                   _rf._a0 = std::move(b);
                   _rf._a1 =
-                      update_region(std::move(rom_), 0, std::move(bytes_));
+                      update_region(std::move(rom_), 0u, std::move(bytes_));
                   return std::move(bytes);
                 } else {
                   return std::visit(
@@ -50,7 +50,7 @@ RegionPatchWrite::update_region(const std::shared_ptr<List<unsigned int>> &rom,
                             std::shared_ptr<List<unsigned int>> bytes_ =
                                 _args._a1;
                             return List<unsigned int>::ctor::cons_(
-                                std::move(b), update_region(std::move(rom_), 0,
+                                std::move(b), update_region(std::move(rom_), 0u,
                                                             std::move(bytes_)));
                           }},
                       std::move(bytes)->v());

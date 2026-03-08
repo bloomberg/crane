@@ -12,14 +12,7 @@
 #include <variant>
 
 unsigned int PortWriteNibbleMask::nibble_of_nat(const unsigned int n) {
-  return (
-      n %
-      ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1));
+  return (n % 16u);
 }
 
 std::shared_ptr<PortWriteNibbleMask::ram_chip>

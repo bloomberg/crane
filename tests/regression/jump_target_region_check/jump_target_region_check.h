@@ -111,76 +111,7 @@ struct JumpTargetRegionCheck {
   static bool in_layout(const std::shared_ptr<layout> &l,
                         const std::shared_ptr<instruction> &i);
 
-  static inline const bool t = in_layout(
-      std::make_shared<layout>(layout{
-          ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1),
-          ((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1)}),
-      instruction::ctor::JUN__(
-          ((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) +
-                                             1) +
-                                            1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1)));
+  static inline const bool t =
+      in_layout(std::make_shared<layout>(layout{16u, 32u}),
+                instruction::ctor::JUN__(40u));
 };

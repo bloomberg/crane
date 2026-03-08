@@ -87,36 +87,5 @@ struct CountLoopTestTarget {
 
   static unsigned int target_of(const std::shared_ptr<instruction> &i);
 
-  static inline const unsigned int t = target_of(count_loop_test((
-      ((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1) +
-      1)));
+  static inline const unsigned int t = target_of(count_loop_test(37u));
 };

@@ -25,10 +25,5 @@ struct Nat {
 struct Addr12OfNatEdge0001 {
   static unsigned int addr12_of_nat(const unsigned int n);
 
-  static inline const unsigned int t = addr12_of_nat((
-      Nat::pow(
-          ((0 + 1) + 1),
-          ((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-           1)) +
-      (((((0 + 1) + 1) + 1) + 1) + 1)));
+  static inline const unsigned int t = addr12_of_nat((Nat::pow(2u, 12u) + 5u));
 };

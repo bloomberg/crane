@@ -419,8 +419,7 @@ struct Equations {
     if (refine) {
       return (collatz_steps0(PeanoNat::div2(std::move(n))) + 1);
     } else {
-      return (collatz_steps0((((((0 + 1) + 1) + 1) * std::move(n)) + (0 + 1))) +
-              1);
+      return (collatz_steps0(((3u * std::move(n)) + 1u)) + 1);
     }
   }
 
@@ -428,11 +427,11 @@ struct Equations {
   static unsigned int collatz_steps_functional(const unsigned int n,
                                                F1 &&collatz_steps0) {
     if (n <= 0) {
-      return 0;
+      return 0u;
     } else {
       unsigned int n0 = n - 1;
       if (n0 <= 0) {
-        return 0;
+        return 0u;
       } else {
         unsigned int n1 = n0 - 1;
         return collatz_steps_clause_3(n1, PeanoNat::even(((n1 + 1) + 1)),
@@ -621,9 +620,7 @@ struct Equations {
                 std::shared_ptr<collatz_steps_graph> hind = _args._a1;
                 return f3(
                     n, hind,
-                    f4((((((0 + 1) + 1) + 1) * n) + (0 + 1)),
-                       collatz_steps((((((0 + 1) + 1) + 1) * n) + (0 + 1))),
-                       hind));
+                    f4(((3u * n) + 1u), collatz_steps(((3u * n) + 1u)), hind));
               }},
           c->v());
     };
@@ -687,9 +684,7 @@ struct Equations {
                 std::shared_ptr<collatz_steps_graph> hind = _args._a1;
                 return f3(
                     n, hind,
-                    f4((((((0 + 1) + 1) + 1) * n) + (0 + 1)),
-                       collatz_steps((((((0 + 1) + 1) + 1) * n) + (0 + 1))),
-                       hind));
+                    f4(((3u * n) + 1u), collatz_steps(((3u * n) + 1u)), hind));
               }},
           c->v());
     };
@@ -743,10 +738,7 @@ struct Equations {
   static_assert(FunctionalInduction<FunctionalInduction_collatz_steps,
                                     std::function<unsigned int(unsigned int)>>);
 
-  static inline const unsigned int test_gcd = gcd(std::make_pair(
-      ((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-      ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1)));
+  static inline const unsigned int test_gcd = gcd(std::make_pair(12u, 8u));
 
-  static inline const unsigned int test_collatz =
-      collatz_steps(((((((0 + 1) + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_collatz = collatz_steps(6u);
 };

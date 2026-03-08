@@ -1403,6 +1403,58 @@ let extract_skip_module m =
            with Not_found -> error_unknown_module ?loc:m.CAst.loc m in
   Lib.add_leaf (in_skip_module mp)
 
+(* Numeral inductive tracking.
+   Stores (zero_ctor_index, succ_ctor_index) for Peano-style numerals.
+   Constructor indices are 1-based (Rocq convention). *)
+type numeral_info = {
+  num_zero_ctor : int;   (* constructor index of zero, 1-based *)
+  num_succ_ctor : int;   (* constructor index of successor, 1-based *)
+  num_fmt : string;      (* format string with %n placeholder for the integer *)
+}
+
+let numeral_table = Summary.ref Refmap'.empty ~name:"CraneExtrNumeral"
+
+let add_numeral_inductive r info =
+  numeral_table := Refmap'.add r info !numeral_table
+
+let is_numeral_inductive r = Refmap'.mem r !numeral_table
+
+let get_numeral_info r = Refmap'.find_opt r !numeral_table
+
+let in_numeral : GlobRef.t * numeral_info -> obj =
+  declare_object @@ superglobal_object "Crane Numeral extraction"
+    ~cache:(fun (r, info) -> add_numeral_inductive r info)
+    ~subst:(Some (fun (s, (r, info)) -> (fst (subst_global s r), info)))
+    ~discharge:(fun x -> Some x)
+
+let extract_numeral r fmt =
+  check_inside_section ();
+  let g = Smartlocate.global_with_alias r in
+  Dumpglob.add_glob ?loc:r.CAst.loc g;
+  match g with
+  | GlobRef.IndRef (kn, i) ->
+    let mib = Global.lookup_mind kn in
+    let mip = mib.mind_packets.(i) in
+    let n = Array.length mip.mind_consnames in
+    (* Must have exactly 2 constructors for Peano numerals *)
+    if n <> 2 then
+      CErrors.user_err (Pp.str "Crane Extract Numeral requires an inductive with exactly 2 constructors (zero and successor)");
+    (* Detect which is zero (0 args) and which is successor (1 arg).
+       Use mind_consnrealdecls to get non-parameter argument counts. *)
+    let ctor_arities = mip.mind_consnrealdecls in
+    let zero_idx = ref (-1) in
+    let succ_idx = ref (-1) in
+    Array.iteri (fun j arity ->
+      if arity = 0 then zero_idx := j + 1  (* 1-based *)
+      else if arity = 1 then succ_idx := j + 1
+    ) ctor_arities;
+    if !zero_idx < 0 || !succ_idx < 0 then
+      CErrors.user_err (Pp.str "Crane Extract Numeral: could not identify a zero constructor (0 args) and a successor constructor (1 arg)");
+    let info = { num_zero_ctor = !zero_idx; num_succ_ctor = !succ_idx; num_fmt = fmt } in
+    Lib.add_leaf (in_numeral (g, info))
+  | _ ->
+    CErrors.user_err (Pp.str "Crane Extract Numeral: argument must be an inductive type")
+
 (* Try to skip as either a module or a global reference *)
 let extract_skip_or_module q =
   check_inside_section ();

@@ -324,55 +324,19 @@ struct LargeEnum {
 
   static inline const bool test_neutral_red = is_neutral(color::Red);
 
-  static inline const unsigned int test_tok_num = tok_to_nat(tok::ctor::TNum_((
-      (((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1) +
-      1)));
+  static inline const unsigned int test_tok_num =
+      tok_to_nat(tok::ctor::TNum_(42u));
 
   static inline const unsigned int test_tok_plus =
       tok_to_nat(tok::ctor::TPlus_());
 
   static inline const unsigned int test_tok_ident =
-      tok_to_nat(tok::ctor::TIdent_((((0 + 1) + 1) + 1)));
+      tok_to_nat(tok::ctor::TIdent_(3u));
 
   static inline const unsigned int test_tok_eof =
       tok_to_nat(tok::ctor::TEOF_());
 
   static inline const bool test_is_op_plus = is_operator(tok::ctor::TPlus_());
 
-  static inline const bool test_is_op_num = is_operator(tok::ctor::TNum_(0));
+  static inline const bool test_is_op_num = is_operator(tok::ctor::TNum_(0u));
 };

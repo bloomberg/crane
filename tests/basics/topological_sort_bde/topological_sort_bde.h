@@ -205,7 +205,7 @@ struct List {
         return bsl::visit(
                    bdlf::Overloaded{
                        [](const typename List<A>::nil _args) -> unsigned int {
-                           return 0;
+                           return 0u;
                        },
                        [](const typename List<A>::cons _args) -> unsigned int {
                            bsl::shared_ptr<List<A> > l_ = _args._a1;
@@ -705,7 +705,8 @@ struct TopologicalSort {
         bsl::shared_ptr<List<bsl::shared_ptr<List<T1> > > > lorder =
                                   topological_sort_graph<T1>(eqb_node, graph0);
         return lorder
-            ->template combine<unsigned int>(ListDef::seq(0, lorder->length()))
+            ->template combine<unsigned int>(ListDef::seq(0u,
+                                                          lorder->length()))
             ->template map<
                 bsl::shared_ptr<List<bsl::pair<T1, unsigned int> > > >(
                     [](bsl::pair<bsl::shared_ptr<List<T1> >, unsigned int> x) {

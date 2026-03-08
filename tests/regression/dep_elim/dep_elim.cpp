@@ -14,7 +14,7 @@ unsigned int DepElim::fin_to_nat(const unsigned int _x,
                                  const std::shared_ptr<DepElim::fin> &f) {
   return std::visit(
       Overloaded{[](const typename DepElim::fin::FZ _args) -> unsigned int {
-                   return 0;
+                   return 0u;
                  },
                  [](const typename DepElim::fin::FS _args) -> unsigned int {
                    unsigned int n0 = _args._a0;

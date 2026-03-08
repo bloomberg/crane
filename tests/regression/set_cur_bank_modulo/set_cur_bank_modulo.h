@@ -19,7 +19,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct SetCurBankModulo {
-  static inline const unsigned int NBANKS = ((((0 + 1) + 1) + 1) + 1);
+  static inline const unsigned int NBANKS = 4u;
 
   struct state {
     unsigned int cur_bank;
@@ -30,9 +30,5 @@ struct SetCurBankModulo {
                                              const unsigned int b);
 
   static inline const unsigned int t =
-      set_cur_bank(
-          std::make_shared<state>(state{
-              0, (((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1)}),
-          (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1))
-          ->cur_bank;
+      set_cur_bank(std::make_shared<state>(state{0u, 9u}), 7u)->cur_bank;
 };

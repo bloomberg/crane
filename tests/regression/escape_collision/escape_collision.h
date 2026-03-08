@@ -22,6 +22,5 @@ struct EscapeCollision {
 
   static unsigned int double_0(const unsigned int n);
 
-  static inline const unsigned int t =
-      (double_((0 + 1)) + double_0(((0 + 1) + 1)));
+  static inline const unsigned int t = (double_(1u) + double_0(2u));
 };

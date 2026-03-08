@@ -54,15 +54,11 @@ struct Opaque {
   static std::shared_ptr<Sig<unsigned int>>
   bounded_add(const unsigned int, const unsigned int, const unsigned int);
 
-  static inline const unsigned int test_safe_pred =
-      safe_pred((((((0 + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_safe_pred = safe_pred(5u);
 
-  static inline const unsigned int test_pred_succ =
-      pred_of_succ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_pred_succ = pred_of_succ(7u);
 
-  static inline const bool test_eq_true = are_equal(
-      (((((0 + 1) + 1) + 1) + 1) + 1), (((((0 + 1) + 1) + 1) + 1) + 1));
+  static inline const bool test_eq_true = are_equal(5u, 5u);
 
-  static inline const bool test_eq_false = are_equal(
-      (((0 + 1) + 1) + 1), (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+  static inline const bool test_eq_false = are_equal(3u, 7u);
 };

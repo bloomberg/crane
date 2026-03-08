@@ -19,7 +19,7 @@ PartialApply::inc_all(const std::shared_ptr<List<unsigned int>> &l) {
 std::shared_ptr<List<std::pair<unsigned int, unsigned int>>>
 PartialApply::tag_all(const std::shared_ptr<List<unsigned int>> &l) {
   return l->template map<std::pair<unsigned int, unsigned int>>(
-      [](unsigned int x) { return std::make_pair((0 + 1), x); });
+      [](unsigned int x) { return std::make_pair(1u, x); });
 }
 
 std::shared_ptr<List<std::optional<unsigned int>>>

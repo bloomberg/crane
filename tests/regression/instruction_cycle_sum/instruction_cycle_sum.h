@@ -160,12 +160,11 @@ struct InstructionCycleSum {
       const std::shared_ptr<List<std::shared_ptr<instruction>>> &prog);
 
   static inline const unsigned int t = program_cycles(
-      std::make_shared<state>(state{0, false, true}),
+      std::make_shared<state>(state{0u, false, true}),
       List<std::shared_ptr<instruction>>::ctor::cons_(
-          instruction::ctor::JCN__(
-              ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1)),
+          instruction::ctor::JCN__(8u),
           List<std::shared_ptr<instruction>>::ctor::cons_(
-              instruction::ctor::INC__(0),
+              instruction::ctor::INC__(0u),
               List<std::shared_ptr<instruction>>::ctor::cons_(
                   instruction::ctor::NOP__(),
                   List<std::shared_ptr<instruction>>::ctor::nil_()))));

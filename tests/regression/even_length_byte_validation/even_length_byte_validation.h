@@ -65,12 +65,13 @@ public:
   }
   unsigned int length() const {
     return std::visit(
-        Overloaded{
-            [](const typename List<A>::nil _args) -> unsigned int { return 0; },
-            [](const typename List<A>::cons _args) -> unsigned int {
-              std::shared_ptr<List<A>> l_ = _args._a1;
-              return (std::move(l_)->length() + 1);
-            }},
+        Overloaded{[](const typename List<A>::nil _args) -> unsigned int {
+                     return 0u;
+                   },
+                   [](const typename List<A>::cons _args) -> unsigned int {
+                     std::shared_ptr<List<A>> l_ = _args._a1;
+                     return (std::move(l_)->length() + 1);
+                   }},
         this->v());
   }
 };
@@ -80,16 +81,13 @@ struct EvenLengthByteValidation {
 
   static inline const unsigned int t = [](void) {
     if (valid_program(List<unsigned int>::ctor::cons_(
-            (0 + 1),
-            List<unsigned int>::ctor::cons_(
-                ((0 + 1) + 1), List<unsigned int>::ctor::cons_(
-                                   (((0 + 1) + 1) + 1),
-                                   List<unsigned int>::ctor::cons_(
-                                       ((((0 + 1) + 1) + 1) + 1),
-                                       List<unsigned int>::ctor::nil_())))))) {
-      return (0 + 1);
+            1u, List<unsigned int>::ctor::cons_(
+                    2u, List<unsigned int>::ctor::cons_(
+                            3u, List<unsigned int>::ctor::cons_(
+                                    4u, List<unsigned int>::ctor::nil_())))))) {
+      return 1u;
     } else {
-      return 0;
+      return 0u;
     }
   }();
 };

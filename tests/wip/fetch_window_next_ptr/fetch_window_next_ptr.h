@@ -65,28 +65,22 @@ struct FetchWindowNextPtr {
   static inline const unsigned int t = [](void) {
     if (fetch_window(
             List<unsigned int>::ctor::cons_(
-                (((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                List<unsigned int>::ctor::cons_(
-                    ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                    List<unsigned int>::ctor::cons_(
-                        (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                        List<unsigned int>::ctor::nil_()))),
-            0)
+                9u, List<unsigned int>::ctor::cons_(
+                        8u, List<unsigned int>::ctor::cons_(
+                                7u, List<unsigned int>::ctor::nil_()))),
+            0u)
             .has_value()) {
       std::pair<unsigned int, unsigned int> p = *fetch_window(
           List<unsigned int>::ctor::cons_(
-              (((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-              List<unsigned int>::ctor::cons_(
-                  ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                  List<unsigned int>::ctor::cons_(
-                      (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                      List<unsigned int>::ctor::nil_()))),
-          0);
+              9u, List<unsigned int>::ctor::cons_(
+                      8u, List<unsigned int>::ctor::cons_(
+                              7u, List<unsigned int>::ctor::nil_()))),
+          0u);
       unsigned int _x = p.first;
       unsigned int next = p.second;
       return std::move(next);
     } else {
-      return 0;
+      return 0u;
     }
   }();
 };

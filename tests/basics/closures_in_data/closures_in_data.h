@@ -115,7 +115,7 @@ struct ClosuresInData {
   static inline const std::shared_ptr<transform> double_transform =
       std::make_shared<transform>(
           transform{[](unsigned int x) { return (x + x); },
-                    [](unsigned int x) { return Nat::div(x, ((0 + 1) + 1)); }});
+                    [](unsigned int x) { return Nat::div(x, 2u); }});
 
   static unsigned int apply_forward(const std::shared_ptr<transform> &t,
                                     const unsigned int x);
@@ -131,16 +131,11 @@ struct ClosuresInData {
   static inline const std::shared_ptr<
       List<std::function<unsigned int(unsigned int)>>>
       pipeline = List<std::function<unsigned int(unsigned int)>>::ctor::cons_(
-          [](unsigned int x) { return (x + (0 + 1)); },
+          [](unsigned int x) { return (x + 1u); },
           List<std::function<unsigned int(unsigned int)>>::ctor::cons_(
-              [](unsigned int x) { return (x * ((0 + 1) + 1)); },
+              [](unsigned int x) { return (x * 2u); },
               List<std::function<unsigned int(unsigned int)>>::ctor::cons_(
-                  [](unsigned int x) {
-                    return (x + ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                                   1) +
-                                  1) +
-                                 1));
-                  },
+                  [](unsigned int x) { return (x + 10u); },
                   List<std::function<unsigned int(unsigned int)>>::ctor::
                       nil_())));
 
@@ -149,99 +144,21 @@ struct ClosuresInData {
               const unsigned int x);
 
   static inline const std::shared_ptr<List<unsigned int>> test_apply_all =
-      apply_all(fn_list, (((((0 + 1) + 1) + 1) + 1) + 1));
+      apply_all(fn_list, 5u);
 
-  static inline const unsigned int test_forward = apply_forward(
-      double_transform, (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_forward =
+      apply_forward(double_transform, 7u);
 
-  static inline const unsigned int test_backward = apply_backward(
-      double_transform,
-      ((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-         1) +
-        1) +
-       1));
+  static inline const unsigned int test_backward =
+      apply_backward(double_transform, 14u);
 
-  static inline const unsigned int test_compose =
-      compose_all(pipeline, (((0 + 1) + 1) + 1));
+  static inline const unsigned int test_compose = compose_all(pipeline, 3u);
 
-  static inline const unsigned int test_maybe_some = maybe_apply(
-      std::make_optional<std::function<unsigned int(unsigned int)>>(
-          [](unsigned int x) { return (x + 1); }),
-      (((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1));
+  static inline const unsigned int test_maybe_some =
+      maybe_apply(std::make_optional<std::function<unsigned int(unsigned int)>>(
+                      [](unsigned int x) { return (x + 1); }),
+                  41u);
 
-  static inline const unsigned int test_maybe_none = maybe_apply(
-      std::nullopt,
-      ((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1));
+  static inline const unsigned int test_maybe_none =
+      maybe_apply(std::nullopt, 42u);
 };

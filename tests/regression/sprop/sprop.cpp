@@ -13,7 +13,7 @@
 
 unsigned int SPropTest::guarded_pred(const unsigned int n) {
   if (n <= 0) {
-    return 0;
+    return 0u;
   } else {
     unsigned int m = n - 1;
     return m;
@@ -47,6 +47,6 @@ unsigned int Nat::div(const unsigned int x, const unsigned int y) {
     return std::move(y);
   } else {
     unsigned int y_ = y - 1;
-    return Nat::divmod(x, y_, 0, y_).first;
+    return Nat::divmod(x, y_, 0u, y_).first;
   }
 }

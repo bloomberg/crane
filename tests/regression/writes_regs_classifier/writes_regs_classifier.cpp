@@ -37,7 +37,7 @@ unsigned int WritesRegsClassifier::count_writes_regs(
       Overloaded{
           [](const typename List<
               std::shared_ptr<WritesRegsClassifier::instruction>>::nil _args)
-              -> unsigned int { return 0; },
+              -> unsigned int { return 0u; },
           [](const typename List<
               std::shared_ptr<WritesRegsClassifier::instruction>>::cons _args)
               -> unsigned int {
@@ -47,9 +47,9 @@ unsigned int WritesRegsClassifier::count_writes_regs(
                 rest = _args._a1;
             return ([&](void) {
               if (writes_regs(std::move(i))) {
-                return (0 + 1);
+                return 1u;
               } else {
-                return 0;
+                return 0u;
               }
             }() + count_writes_regs(std::move(rest)));
           }},

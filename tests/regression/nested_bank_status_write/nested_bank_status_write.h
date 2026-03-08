@@ -137,18 +137,17 @@ struct NestedBankStatusWrite {
 
   static unsigned int read_status0(const std::shared_ptr<state> &s);
 
-  static inline const std::shared_ptr<state> sample = std::make_shared<
-      state>(state{List<std::shared_ptr<bank>>::ctor::cons_(
-      std::make_shared<bank>(bank{List<std::shared_ptr<chip>>::ctor::cons_(
-          std::make_shared<chip>(chip{List<std::shared_ptr<reg>>::ctor::cons_(
-              std::make_shared<reg>(reg{List<unsigned int>::ctor::cons_(
-                  (((0 + 1) + 1) + 1), List<unsigned int>::ctor::cons_(
-                                           ((((0 + 1) + 1) + 1) + 1),
-                                           List<unsigned int>::ctor::nil_()))}),
-              List<std::shared_ptr<reg>>::ctor::nil_())}),
-          List<std::shared_ptr<chip>>::ctor::nil_())}),
-      List<std::shared_ptr<bank>>::ctor::nil_())});
+  static inline const std::shared_ptr<state> sample =
+      std::make_shared<state>(state{List<std::shared_ptr<bank>>::ctor::cons_(
+          std::make_shared<bank>(bank{List<std::shared_ptr<chip>>::ctor::cons_(
+              std::make_shared<chip>(
+                  chip{List<std::shared_ptr<reg>>::ctor::cons_(
+                      std::make_shared<reg>(reg{List<unsigned int>::ctor::cons_(
+                          3u, List<unsigned int>::ctor::cons_(
+                                  4u, List<unsigned int>::ctor::nil_()))}),
+                      List<std::shared_ptr<reg>>::ctor::nil_())}),
+              List<std::shared_ptr<chip>>::ctor::nil_())}),
+          List<std::shared_ptr<bank>>::ctor::nil_())});
 
-  static inline const unsigned int t = read_status0(
-      write_status0(sample, (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1)));
+  static inline const unsigned int t = read_status0(write_status0(sample, 7u));
 };

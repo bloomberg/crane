@@ -16,7 +16,7 @@ DropHeadDefault::head_after_drop(const std::shared_ptr<List<unsigned int>> &rom,
   return std::visit(
       Overloaded{
           [](const typename List<unsigned int>::nil _args) -> unsigned int {
-            return 0;
+            return 0u;
           },
           [](const typename List<unsigned int>::cons _args) -> unsigned int {
             unsigned int b1 = _args._a0;

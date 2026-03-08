@@ -53,12 +53,13 @@ public:
   variant_t &v_mut() { return v_; }
   unsigned int length() const {
     return std::visit(
-        Overloaded{
-            [](const typename List<A>::nil _args) -> unsigned int { return 0; },
-            [](const typename List<A>::cons _args) -> unsigned int {
-              std::shared_ptr<List<A>> l_ = _args._a1;
-              return (std::move(l_)->length() + 1);
-            }},
+        Overloaded{[](const typename List<A>::nil _args) -> unsigned int {
+                     return 0u;
+                   },
+                   [](const typename List<A>::cons _args) -> unsigned int {
+                     std::shared_ptr<List<A>> l_ = _args._a1;
+                     return (std::move(l_)->length() + 1);
+                   }},
         this->v());
   }
 };
@@ -83,30 +84,24 @@ struct EmptySystemBankCount {
     std::shared_ptr<List<std::shared_ptr<ram_chip>>> bank_chips;
   };
 
-  static inline const unsigned int NBANKS = ((((0 + 1) + 1) + 1) + 1);
+  static inline const unsigned int NBANKS = 4u;
 
-  static inline const unsigned int NCHIPS = ((((0 + 1) + 1) + 1) + 1);
+  static inline const unsigned int NCHIPS = 4u;
 
-  static inline const unsigned int NREGS = ((((0 + 1) + 1) + 1) + 1);
+  static inline const unsigned int NREGS = 4u;
 
-  static inline const unsigned int NMAIN =
-      ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1);
+  static inline const unsigned int NMAIN = 16u;
 
-  static inline const unsigned int NSTAT = ((((0 + 1) + 1) + 1) + 1);
+  static inline const unsigned int NSTAT = 4u;
 
   static inline const std::shared_ptr<ram_reg> empty_reg =
       std::make_shared<ram_reg>(
-          ram_reg{ListDef::repeat<unsigned int>(0, NMAIN),
-                  ListDef::repeat<unsigned int>(0, NSTAT)});
+          ram_reg{ListDef::repeat<unsigned int>(0u, NMAIN),
+                  ListDef::repeat<unsigned int>(0u, NSTAT)});
 
   static inline const std::shared_ptr<ram_chip> empty_chip =
       std::make_shared<ram_chip>(ram_chip{
-          ListDef::repeat<std::shared_ptr<ram_reg>>(empty_reg, NREGS), 0});
+          ListDef::repeat<std::shared_ptr<ram_reg>>(empty_reg, NREGS), 0u});
 
   static inline const std::shared_ptr<ram_bank> empty_bank =
       std::make_shared<ram_bank>(ram_bank{

@@ -64,5 +64,16 @@ struct ResetStatePcClear {
 
   static std::shared_ptr<state> reset_state(std::shared_ptr<state> s);
 
- static inline const unsigned int t = reset_state(std::make_shared<state>(state{List<unsigned int>::ctor::cons_((0 + 1), List<unsigned int>::ctor::cons_(((0 + 1) + 1), List<unsigned int>::ctor::nil_())), true, (((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), List<unsigned int>::ctor::cons_((((0 + 1) + 1) + 1), List<unsigned int>::ctor::nil_()), List<unsigned int>::ctor::cons_(((((0 + 1) + 1) + 1) + 1), List<unsigned int>::ctor::cons_((((((0 + 1) + 1) + 1) + 1) + 1), List<unsigned int>::ctor::nil_()))}))->pc;
+  static inline const unsigned int t =
+      reset_state(std::make_shared<state>(state{
+                      List<unsigned int>::ctor::cons_(
+                          1u, List<unsigned int>::ctor::cons_(
+                                  2u, List<unsigned int>::ctor::nil_())),
+                      true, 99u,
+                      List<unsigned int>::ctor::cons_(
+                          3u, List<unsigned int>::ctor::nil_()),
+                      List<unsigned int>::ctor::cons_(
+                          4u, List<unsigned int>::ctor::cons_(
+                                  5u, List<unsigned int>::ctor::nil_()))}))
+          ->pc;
 };

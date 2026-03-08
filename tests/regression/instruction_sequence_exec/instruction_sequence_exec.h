@@ -136,14 +136,14 @@ struct InstructionSequenceExec {
                std::shared_ptr<state> s);
 
   static inline const std::shared_ptr<state> sample =
-      std::make_shared<state>(state{0, (0 + 1)});
+      std::make_shared<state>(state{0u, 1u});
 
   static inline const unsigned int t = [](void) {
     std::shared_ptr<state> s_ = exec_program(
         List<std::shared_ptr<instruction>>::ctor::cons_(
             instruction::ctor::INC_PC_(),
             List<std::shared_ptr<instruction>>::ctor::cons_(
-                instruction::ctor::ADD_ACC_(((0 + 1) + 1)),
+                instruction::ctor::ADD_ACC_(2u),
                 List<std::shared_ptr<instruction>>::ctor::cons_(
                     instruction::ctor::INC_PC_(),
                     List<std::shared_ptr<instruction>>::ctor::nil_()))),

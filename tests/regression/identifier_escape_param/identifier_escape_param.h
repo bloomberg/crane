@@ -22,6 +22,5 @@ struct IdentifierEscapeParam {
 
   static unsigned int add_one_from_param(const unsigned int double0);
 
-  static inline const unsigned int t =
-      add_one_from_param(((((((0 + 1) + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int t = add_one_from_param(6u);
 };

@@ -145,98 +145,34 @@ struct Monadic {
                     });
               });
         },
-        state_return<unsigned int, unsigned int>(0));
+        state_return<unsigned int, unsigned int>(0u));
   }
 
-  static inline const std::optional<unsigned int> test_return = option_return<
-      unsigned int>((
-      (((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1) +
-      1));
+  static inline const std::optional<unsigned int> test_return =
+      option_return<unsigned int>(42u);
 
   static inline const std::optional<unsigned int> test_bind_some =
       option_bind<unsigned int, unsigned int>(
-          std::make_optional<unsigned int>(
-              ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1)),
-          [](unsigned int x) {
-            return std::make_optional<unsigned int>((x + (0 + 1)));
+          std::make_optional<unsigned int>(10u), [](unsigned int x) {
+            return std::make_optional<unsigned int>((x + 1u));
           });
 
   static inline const std::optional<unsigned int> test_bind_none =
       option_bind<unsigned int, unsigned int>(std::nullopt, [](unsigned int x) {
-        return std::make_optional<unsigned int>((x + (0 + 1)));
+        return std::make_optional<unsigned int>((x + 1u));
       });
 
   static inline const std::optional<unsigned int> test_safe_div_ok =
-      safe_div(((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-               (((0 + 1) + 1) + 1));
+      safe_div(10u, 3u);
 
-  static inline const std::optional<unsigned int> test_safe_div_zero = safe_div(
-      ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), 0);
+  static inline const std::optional<unsigned int> test_safe_div_zero =
+      safe_div(10u, 0u);
 
-  static inline const std::optional<unsigned int> test_chain_ok = div_then_sub(
-      ((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1),
-      ((((0 + 1) + 1) + 1) + 1), ((0 + 1) + 1));
+  static inline const std::optional<unsigned int> test_chain_ok =
+      div_then_sub(20u, 4u, 2u);
 
   static inline const std::optional<unsigned int> test_chain_fail =
-      div_then_sub(
-          ((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1),
-          0, ((0 + 1) + 1));
+      div_then_sub(20u, 0u, 2u);
 
   static inline const std::pair<unsigned int, unsigned int> test_state =
       ([&]() -> auto {

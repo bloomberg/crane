@@ -74,7 +74,7 @@ unsigned int AnonFixpoint::test_shadow(const unsigned int n) {
   std::function<unsigned int(unsigned int)> foo0;
   foo0 = [&](unsigned int n0) -> unsigned int {
     if (n0 <= 0) {
-      return 0;
+      return 0u;
     } else {
       unsigned int n_ = n0 - 1;
       return (foo0(n_) + 1);

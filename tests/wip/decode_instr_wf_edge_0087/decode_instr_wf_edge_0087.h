@@ -31,27 +31,9 @@ struct DecodeInstrWfEdge0087 {
 
   static unsigned int pc_inc1(const std::shared_ptr<state> &s);
 
-  static inline const unsigned int max_addr =
-      (((Nat::pow(
-             ((0 + 1) + 1),
-             ((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-               1) +
-              1)) -
-         (0 + 1)) >
-                Nat::pow(
-                    ((0 + 1) + 1),
-                    ((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                       1) +
-                      1) +
-                     1))
-            ? 0
-            : (Nat::pow(
-                   ((0 + 1) + 1),
-                   ((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                      1) +
-                     1) +
-                    1)) -
-               (0 + 1))));
+  static inline const unsigned int max_addr = ((
+      (Nat::pow(2u, 12u) - 1u) > Nat::pow(2u, 12u) ? 0
+                                                   : (Nat::pow(2u, 12u) - 1u)));
 
   static inline const unsigned int t =
       pc_inc1(std::make_shared<state>(state{max_addr}));

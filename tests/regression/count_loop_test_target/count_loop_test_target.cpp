@@ -12,7 +12,7 @@
 
 std::shared_ptr<CountLoopTestTarget::instruction>
 CountLoopTestTarget::count_loop_test(const unsigned int loop_addr) {
-  return instruction::ctor::ISZ_(0, std::move(loop_addr));
+  return instruction::ctor::ISZ_(0u, std::move(loop_addr));
 }
 
 unsigned int CountLoopTestTarget::target_of(
@@ -24,6 +24,6 @@ unsigned int CountLoopTestTarget::target_of(
                    return std::move(a);
                  },
                  [](const typename CountLoopTestTarget::instruction::NOP _args)
-                     -> unsigned int { return 0; }},
+                     -> unsigned int { return 0u; }},
       i->v());
 }

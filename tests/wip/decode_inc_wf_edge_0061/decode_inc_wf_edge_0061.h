@@ -53,12 +53,13 @@ public:
   variant_t &v_mut() { return v_; }
   unsigned int length() const {
     return std::visit(
-        Overloaded{
-            [](const typename List<A>::nil _args) -> unsigned int { return 0; },
-            [](const typename List<A>::cons _args) -> unsigned int {
-              std::shared_ptr<List<A>> l_ = _args._a1;
-              return (std::move(l_)->length() + 1);
-            }},
+        Overloaded{[](const typename List<A>::nil _args) -> unsigned int {
+                     return 0u;
+                   },
+                   [](const typename List<A>::cons _args) -> unsigned int {
+                     std::shared_ptr<List<A>> l_ = _args._a1;
+                     return (std::move(l_)->length() + 1);
+                   }},
         this->v());
   }
 };
@@ -90,37 +91,31 @@ struct DecodeIncWfEdge0061 {
   static inline const unsigned int t = []() {
     return [](void) {
       std::unique_ptr<state> s = std::make_unique<state>(state{
-          (0 + 1),
+          1u,
           List<unsigned int>::ctor::cons_(
-              ((0 + 1) + 1),
-              List<unsigned int>::ctor::cons_(
-                  (((0 + 1) + 1) + 1), List<unsigned int>::ctor::nil_())),
-          false, ((((0 + 1) + 1) + 1) + 1),
-          List<unsigned int>::ctor::cons_((((((0 + 1) + 1) + 1) + 1) + 1),
-                                          List<unsigned int>::ctor::nil_()),
-          List<unsigned int>::ctor::cons_(((((((0 + 1) + 1) + 1) + 1) + 1) + 1),
-                                          List<unsigned int>::ctor::nil_()),
-          0, 0,
+              2u, List<unsigned int>::ctor::cons_(
+                      3u, List<unsigned int>::ctor::nil_())),
+          false, 4u,
+          List<unsigned int>::ctor::cons_(5u, List<unsigned int>::ctor::nil_()),
+          List<unsigned int>::ctor::cons_(6u, List<unsigned int>::ctor::nil_()),
+          0u, 0u,
+          List<unsigned int>::ctor::cons_(7u, List<unsigned int>::ctor::nil_()),
+          0u,
           List<unsigned int>::ctor::cons_(
-              (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-              List<unsigned int>::ctor::nil_()),
-          0,
-          List<unsigned int>::ctor::cons_(
-              ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-              List<unsigned int>::ctor::cons_(
-                  (((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                  List<unsigned int>::ctor::nil_())),
-          true, 0, 0, false});
- std::shared_ptr<state> s_ = set_prom_params(std::move(s), (((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), true);
- return ((s_->prom_addr +
-          [&](void) {
-            if (s_->prom_enable) {
-              return std::move(s_)->prom_data;
-            } else {
-              return 0;
-            }
-          }()) +
-         s_->regs->length());
+              8u, List<unsigned int>::ctor::cons_(
+                      9u, List<unsigned int>::ctor::nil_())),
+          true, 0u, 0u, false});
+      std::shared_ptr<state> s_ =
+          set_prom_params(std::move(s), 21u, 144u, true);
+      return ((s_->prom_addr +
+               [&](void) {
+                 if (s_->prom_enable) {
+                   return std::move(s_)->prom_data;
+                 } else {
+                   return 0u;
+                 }
+               }()) +
+              s_->regs->length());
     }();
   }();
 };

@@ -101,8 +101,7 @@ struct CyclesJcnNotTaken {
   static unsigned int cycles(const std::shared_ptr<state> &s,
                              const std::shared_ptr<instruction> &i);
 
-  static inline const unsigned int t = cycles(
-      std::make_shared<state>(state{(0 + 1), false, true}),
-      instruction::ctor::JCN_(((((0 + 1) + 1) + 1) + 1),
-                              (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1)));
+  static inline const unsigned int t =
+      cycles(std::make_shared<state>(state{1u, false, true}),
+             instruction::ctor::JCN_(4u, 7u));
 };

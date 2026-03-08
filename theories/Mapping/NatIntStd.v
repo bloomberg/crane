@@ -30,6 +30,8 @@ Crane Extract Inductive nat =>
   [ "0" "(%a0 + 1)" ]
   "if (%scrut <= 0) { %br0 } else { unsigned int %b1a0 = %scrut - 1; %br1 }".
 
+Crane Extract Numeral nat => "%nu".
+
 Definition zero : nat := 0.
 Definition one : nat := 1.
 Definition two : nat := 2.

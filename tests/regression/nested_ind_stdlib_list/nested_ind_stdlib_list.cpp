@@ -34,7 +34,7 @@ NestedIndStdlibList::eval(const std::shared_ptr<NestedIndStdlibList::expr> &e) {
                   Overloaded{
                       [](const typename List<
                           std::shared_ptr<NestedIndStdlibList::expr>>::nil
-                             _args) -> unsigned int { return 0; },
+                             _args) -> unsigned int { return 0u; },
                       [&](const typename List<
                           std::shared_ptr<NestedIndStdlibList::expr>>::cons
                               _args) -> unsigned int {
@@ -64,7 +64,7 @@ NestedIndStdlibList::eval(const std::shared_ptr<NestedIndStdlibList::expr> &e) {
                   Overloaded{
                       [](const typename List<
                           std::shared_ptr<NestedIndStdlibList::expr>>::nil
-                             _args) -> unsigned int { return (0 + 1); },
+                             _args) -> unsigned int { return 1u; },
                       [&](const typename List<
                           std::shared_ptr<NestedIndStdlibList::expr>>::cons
                               _args) -> unsigned int {
@@ -88,7 +88,7 @@ unsigned int NestedIndStdlibList::expr_size(
   return std::visit(
       Overloaded{
           [](const typename NestedIndStdlibList::expr::Lit _args)
-              -> unsigned int { return (0 + 1); },
+              -> unsigned int { return 1u; },
           [](const typename NestedIndStdlibList::expr::Add _args)
               -> unsigned int {
             std::shared_ptr<List<std::shared_ptr<NestedIndStdlibList::expr>>>
@@ -105,7 +105,7 @@ unsigned int NestedIndStdlibList::expr_size(
                     Overloaded{
                         [](const typename List<
                             std::shared_ptr<NestedIndStdlibList::expr>>::nil
-                               _args) -> unsigned int { return 0; },
+                               _args) -> unsigned int { return 0u; },
                         [&](const typename List<
                             std::shared_ptr<NestedIndStdlibList::expr>>::cons
                                 _args) -> unsigned int {
@@ -138,7 +138,7 @@ unsigned int NestedIndStdlibList::expr_size(
                     Overloaded{
                         [](const typename List<
                             std::shared_ptr<NestedIndStdlibList::expr>>::nil
-                               _args) -> unsigned int { return 0; },
+                               _args) -> unsigned int { return 0u; },
                         [&](const typename List<
                             std::shared_ptr<NestedIndStdlibList::expr>>::cons
                                 _args) -> unsigned int {
@@ -163,7 +163,7 @@ unsigned int NestedIndStdlibList::expr_depth(
   return std::visit(
       Overloaded{
           [](const typename NestedIndStdlibList::expr::Lit _args)
-              -> unsigned int { return 0; },
+              -> unsigned int { return 0u; },
           [](const typename NestedIndStdlibList::expr::Add _args)
               -> unsigned int {
             std::shared_ptr<List<std::shared_ptr<NestedIndStdlibList::expr>>>
@@ -180,7 +180,7 @@ unsigned int NestedIndStdlibList::expr_depth(
                     Overloaded{
                         [](const typename List<
                             std::shared_ptr<NestedIndStdlibList::expr>>::nil
-                               _args) -> unsigned int { return 0; },
+                               _args) -> unsigned int { return 0u; },
                         [&](const typename List<
                             std::shared_ptr<NestedIndStdlibList::expr>>::cons
                                 _args) -> unsigned int {
@@ -213,7 +213,7 @@ unsigned int NestedIndStdlibList::expr_depth(
                     Overloaded{
                         [](const typename List<
                             std::shared_ptr<NestedIndStdlibList::expr>>::nil
-                               _args) -> unsigned int { return 0; },
+                               _args) -> unsigned int { return 0u; },
                         [&](const typename List<
                             std::shared_ptr<NestedIndStdlibList::expr>>::cons
                                 _args) -> unsigned int {

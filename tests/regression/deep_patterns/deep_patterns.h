@@ -54,12 +54,13 @@ public:
   variant_t &v_mut() { return v_; }
   unsigned int length() const {
     return std::visit(
-        Overloaded{
-            [](const typename List<A>::nil _args) -> unsigned int { return 0; },
-            [](const typename List<A>::cons _args) -> unsigned int {
-              std::shared_ptr<List<A>> l_ = _args._a1;
-              return (std::move(l_)->length() + 1);
-            }},
+        Overloaded{[](const typename List<A>::nil _args) -> unsigned int {
+                     return 0u;
+                   },
+                   [](const typename List<A>::cons _args) -> unsigned int {
+                     std::shared_ptr<List<A>> l_ = _args._a1;
+                     return (std::move(l_)->length() + 1);
+                   }},
         this->v());
   }
 };
@@ -213,170 +214,48 @@ struct DeepPatterns {
 
   static inline const unsigned int test_deep_some = deep_option(
       std::make_optional<std::optional<std::optional<unsigned int>>>(
-          std::make_optional<
-              std::optional<unsigned int>>(std::make_optional<unsigned int>(
-              ((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) +
-                                                    1) +
-                                                   1) +
-                                                  1) +
-                                                 1) +
-                                                1) +
-                                               1) +
-                                              1) +
-                                             1) +
-                                            1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1)))));
+          std::make_optional<std::optional<unsigned int>>(
+              std::make_optional<unsigned int>(42u))));
 
   static inline const unsigned int test_deep_none = deep_option(
       std::make_optional<std::optional<std::optional<unsigned int>>>(
           std::make_optional<std::optional<unsigned int>>(std::nullopt)));
 
-  static inline const unsigned int test_deep_pair = deep_pair(std::make_pair(
-      std::make_pair((0 + 1), ((0 + 1) + 1)),
-      std::make_pair((((0 + 1) + 1) + 1), ((((0 + 1) + 1) + 1) + 1))));
+  static inline const unsigned int test_deep_pair =
+      deep_pair(std::make_pair(std::make_pair(1u, 2u), std::make_pair(3u, 4u)));
 
   static inline const unsigned int test_shape_3 =
       list_shape(List<unsigned int>::ctor::cons_(
-          ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-          List<unsigned int>::ctor::cons_(
-              ((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1),
-              List<unsigned int>::ctor::cons_(
-                  ((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1),
-                  List<unsigned int>::ctor::nil_()))));
+          10u, List<unsigned int>::ctor::cons_(
+                   20u, List<unsigned int>::ctor::cons_(
+                            30u, List<unsigned int>::ctor::nil_()))));
 
   static inline const unsigned int test_shape_long =
       list_shape(List<unsigned int>::ctor::cons_(
-          (0 + 1), List<unsigned int>::ctor::cons_(
-                       ((0 + 1) + 1),
-                       List<unsigned int>::ctor::cons_(
-                           (((0 + 1) + 1) + 1),
-                           List<unsigned int>::ctor::cons_(
-                               ((((0 + 1) + 1) + 1) + 1),
-                               List<unsigned int>::ctor::cons_(
-                                   (((((0 + 1) + 1) + 1) + 1) + 1),
-                                   List<unsigned int>::ctor::cons_(
-                                       ((((((0 + 1) + 1) + 1) + 1) + 1) + 1),
-                                       List<unsigned int>::ctor::nil_())))))));
+          1u,
+          List<unsigned int>::ctor::cons_(
+              2u,
+              List<unsigned int>::ctor::cons_(
+                  3u,
+                  List<unsigned int>::ctor::cons_(
+                      4u,
+                      List<unsigned int>::ctor::cons_(
+                          5u, List<unsigned int>::ctor::cons_(
+                                  6u, List<unsigned int>::ctor::nil_())))))));
 
- static inline const unsigned int test_deep_sum = deep_sum(outer::ctor::OLeft_(inner::ctor::ILeft_((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1))));
+  static inline const unsigned int test_deep_sum =
+      deep_sum(outer::ctor::OLeft_(inner::ctor::ILeft_(77u)));
 
- static inline const unsigned int test_complex = complex_match(
-     std::make_optional<
-         std::pair<unsigned int, std::shared_ptr<List<unsigned int>>>>(
-         std::make_pair(
-             (((((0 + 1) + 1) + 1) + 1) + 1),
-             List<unsigned int>::ctor::cons_(
-                 ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                 List<unsigned int>::ctor::cons_(
-                     ((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1),
-                     List<unsigned int>::ctor::cons_(
-                         ((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) +
-                                                   1) +
-                                                  1) +
-                                                 1) +
-                                                1) +
-                                               1) +
-                                              1) +
-                                             1) +
-                                            1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1),
-                         List<unsigned int>::ctor::nil_()))))));
+  static inline const unsigned int test_complex = complex_match(
+      std::make_optional<
+          std::pair<unsigned int, std::shared_ptr<List<unsigned int>>>>(
+          std::make_pair(
+              5u,
+              List<unsigned int>::ctor::cons_(
+                  10u, List<unsigned int>::ctor::cons_(
+                           20u, List<unsigned int>::ctor::cons_(
+                                    30u, List<unsigned int>::ctor::nil_()))))));
 
- static inline const unsigned int test_guarded = guarded_match(std::make_pair(
-     (((0 + 1) + 1) + 1), (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1)));
+  static inline const unsigned int test_guarded =
+      guarded_match(std::make_pair(3u, 7u));
 };

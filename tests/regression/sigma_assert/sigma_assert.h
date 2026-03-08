@@ -28,9 +28,7 @@ struct SigmaAssert {
 
   static unsigned int safe_div2(const unsigned int n);
 
-  static inline const unsigned int test_pred =
-      safe_pred((((((0 + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_pred = safe_pred(5u);
 
-  static inline const unsigned int test_div2 =
-      safe_div2(((((0 + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_div2 = safe_div2(4u);
 };

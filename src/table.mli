@@ -287,6 +287,16 @@ val extract_skip_module :
   qualid -> unit
 val extract_skip_or_module :
   qualid -> unit
+
+type numeral_info = {
+  num_zero_ctor : int;
+  num_succ_ctor : int;
+  num_fmt : string;
+}
+val is_numeral_inductive : GlobRef.t -> bool
+val get_numeral_info : GlobRef.t -> numeral_info option
+val extract_numeral : qualid -> string -> unit
+
 val register_glob_def : GlobRef.t -> ml_type -> unit
 
 

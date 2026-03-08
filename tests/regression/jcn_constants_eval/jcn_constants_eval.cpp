@@ -14,15 +14,14 @@
 bool JcnConstantsEval::jcn_condition(
     const std::shared_ptr<JcnConstantsEval::state> &s,
     const unsigned int cond) {
-  unsigned int c1 =
-      Nat::div(cond, ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
-  unsigned int c2 = (Nat::div(cond, ((((0 + 1) + 1) + 1) + 1)) % ((0 + 1) + 1));
-  unsigned int c3 = (Nat::div(cond, ((0 + 1) + 1)) % ((0 + 1) + 1));
-  unsigned int c4 = (cond % ((0 + 1) + 1));
-  bool base = (((s->acc == 0) && (std::move(c2) == (0 + 1))) ||
-               ((s->carry && (std::move(c3) == (0 + 1))) ||
-                (!(s->test_pin) && (std::move(c4) == (0 + 1)))));
-  if ((c1 == (0 + 1))) {
+  unsigned int c1 = Nat::div(cond, 8u);
+  unsigned int c2 = (Nat::div(cond, 4u) % 2u);
+  unsigned int c3 = (Nat::div(cond, 2u) % 2u);
+  unsigned int c4 = (cond % 2u);
+  bool base = (((s->acc == 0u) && (std::move(c2) == 1u)) ||
+               ((s->carry && (std::move(c3) == 1u)) ||
+                (!(s->test_pin) && (std::move(c4) == 1u))));
+  if ((c1 == 1u)) {
     return !(std::move(base));
   } else {
     return std::move(base);
@@ -51,6 +50,6 @@ unsigned int Nat::div(const unsigned int x, const unsigned int y) {
     return std::move(y);
   } else {
     unsigned int y_ = y - 1;
-    return Nat::divmod(x, y_, 0, y_).first;
+    return Nat::divmod(x, y_, 0u, y_).first;
   }
 }

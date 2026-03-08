@@ -75,7 +75,7 @@ unsigned int MutualRecord::emp_list_salary(
   return std::visit(
       Overloaded{
           [](const typename List<std::shared_ptr<MutualRecord::employee>>::nil
-                 _args) -> unsigned int { return 0; },
+                 _args) -> unsigned int { return 0u; },
           [](const typename List<std::shared_ptr<MutualRecord::employee>>::cons
                  _args) -> unsigned int {
             std::shared_ptr<MutualRecord::employee> e = _args._a0;
@@ -103,12 +103,12 @@ unsigned int MutualRecord::emp_list_count(
   return std::visit(
       Overloaded{
           [](const typename List<std::shared_ptr<MutualRecord::employee>>::nil
-                 _args) -> unsigned int { return 0; },
+                 _args) -> unsigned int { return 0u; },
           [](const typename List<std::shared_ptr<MutualRecord::employee>>::cons
                  _args) -> unsigned int {
             std::shared_ptr<List<std::shared_ptr<MutualRecord::employee>>>
                 rest = _args._a1;
-            return ((0 + 1) + emp_list_count(std::move(rest)));
+            return (1u + emp_list_count(std::move(rest)));
           }},
       l->v());
 }

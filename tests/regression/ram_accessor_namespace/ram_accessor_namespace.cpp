@@ -14,10 +14,10 @@ unsigned int RamAccessorNamespace::score(const RamAccessorNamespace::item x) {
   return [&](void) {
     switch (x) {
     case item::S_: {
-      return (0 + 1);
+      return 1u;
     }
     case item::S_0: {
-      return ((0 + 1) + 1);
+      return 2u;
     }
     }
   }();

@@ -17,37 +17,12 @@ std::pair<unsigned int, unsigned int> InstructionByteStreamEncode::encode(
       Overloaded{
           [](const typename InstructionByteStreamEncode::instruction::NOP _args)
               -> std::pair<unsigned int, unsigned int> {
-            return std::make_pair(0, 0);
+            return std::make_pair(0u, 0u);
           },
           [](const typename InstructionByteStreamEncode::instruction::LDM _args)
               -> std::pair<unsigned int, unsigned int> {
             unsigned int n = _args._a0;
-            return std::make_pair(
-                (((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) *
-                  ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1)) +
-                 (std::move(n) %
-                  ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1))),
-                0);
+            return std::make_pair(((13u * 16u) + (std::move(n) % 16u)), 0u);
           }},
       i->v());
 }

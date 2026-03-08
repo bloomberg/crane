@@ -160,12 +160,13 @@ public:
   }
   unsigned int length() const {
     return std::visit(
-        Overloaded{
-            [](const typename List<A>::nil _args) -> unsigned int { return 0; },
-            [](const typename List<A>::cons _args) -> unsigned int {
-              std::shared_ptr<List<A>> l_ = _args._a1;
-              return (std::move(l_)->length() + 1);
-            }},
+        Overloaded{[](const typename List<A>::nil _args) -> unsigned int {
+                     return 0u;
+                   },
+                   [](const typename List<A>::cons _args) -> unsigned int {
+                     std::shared_ptr<List<A>> l_ = _args._a1;
+                     return (std::move(l_)->length() + 1);
+                   }},
         this->v());
   }
   std::shared_ptr<List<A>> app(std::shared_ptr<List<A>> m) const {
@@ -552,7 +553,7 @@ struct TopologicalSort {
     std::shared_ptr<List<std::shared_ptr<List<T1>>>> lorder =
         topological_sort_graph<T1>(eqb_node, graph0);
     return lorder
-        ->template combine<unsigned int>(ListDef::seq(0, lorder->length()))
+        ->template combine<unsigned int>(ListDef::seq(0u, lorder->length()))
         ->template map<std::shared_ptr<List<std::pair<T1, unsigned int>>>>(
             [](std::pair<std::shared_ptr<List<T1>>, unsigned int> x) {
               std::shared_ptr<List<T1>> fs = x.first;

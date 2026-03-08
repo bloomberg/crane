@@ -109,49 +109,12 @@ struct ConstrainedPoly {
                       o->v());
   }
 
-  static inline const unsigned int test_id_nat = poly_id<unsigned int>((
-      (((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1) +
-      1));
+  static inline const unsigned int test_id_nat = poly_id<unsigned int>(42u);
 
   static inline const bool test_id_bool = poly_id<bool>(true);
 
   static inline const std::shared_ptr<UPair<unsigned int, bool>> test_pair =
-      wrap_pair<unsigned int, bool>((((((0 + 1) + 1) + 1) + 1) + 1), false);
+      wrap_pair<unsigned int, bool>(5u, false);
 
   static inline const std::shared_ptr<UPair<bool, unsigned int>> test_swap =
       swap<unsigned int, bool>(test_pair);
@@ -162,7 +125,6 @@ struct ConstrainedPoly {
 
   static inline const std::shared_ptr<UOption<unsigned int>> test_umap =
       uoption_map<unsigned int, unsigned int>(
-          [](unsigned int n) { return (n + (0 + 1)); },
-          UOption<unsigned int>::ctor::USome_(
-              (((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1)));
+          [](unsigned int n) { return (n + 1u); },
+          UOption<unsigned int>::ctor::USome_(9u));
 };

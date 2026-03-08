@@ -27,7 +27,7 @@ unsigned int LetFix::local_sum(const std::shared_ptr<List<unsigned int>> &l) {
             }},
         xs->v());
   };
-  return go(0, l);
+  return go(0u, l);
 }
 
 std::shared_ptr<List<unsigned int>> LetFix::local_flatten(

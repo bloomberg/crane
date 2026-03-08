@@ -56,44 +56,7 @@ public:
 struct UniversePoly {
   template <typename T1> static T1 poly_id(const T1 x) { return x; }
 
-  static inline const unsigned int test_id_nat = poly_id<unsigned int>((
-      (((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1) +
-      1));
+  static inline const unsigned int test_id_nat = poly_id<unsigned int>(42u);
 
   static inline const bool test_id_bool = poly_id<bool>(true);
 
@@ -104,7 +67,7 @@ struct UniversePoly {
 
   static inline const std::shared_ptr<ppair<unsigned int, bool>> test_pair =
       std::make_shared<ppair<unsigned int, bool>>(
-          ppair<unsigned int, bool>{(((((0 + 1) + 1) + 1) + 1) + 1), true});
+          ppair<unsigned int, bool>{5u, true});
 
   static inline const unsigned int test_pfst = test_pair->pfst;
 
@@ -202,18 +165,17 @@ struct UniversePoly {
 
   static inline const std::shared_ptr<poption<unsigned int>> test_map_some =
       poption_map<unsigned int, unsigned int>(
-          [](unsigned int n) { return (n + (0 + 1)); },
-          poption<unsigned int>::ctor::psome_((((((0 + 1) + 1) + 1) + 1) + 1)));
+          [](unsigned int n) { return (n + 1u); },
+          poption<unsigned int>::ctor::psome_(5u));
 
   static inline const std::shared_ptr<poption<unsigned int>> test_map_none =
       poption_map<unsigned int, unsigned int>(
-          [](unsigned int n) { return (n + (0 + 1)); },
+          [](unsigned int n) { return (n + 1u); },
           poption<unsigned int>::ctor::pnone_());
 
   static inline const std::shared_ptr<poption<unsigned int>> test_bind =
       poption_bind<unsigned int, unsigned int>(
-          poption<unsigned int>::ctor::psome_((((0 + 1) + 1) + 1)),
-          [](unsigned int n) {
+          poption<unsigned int>::ctor::psome_(3u), [](unsigned int n) {
             return poption<unsigned int>::ctor::psome_((n + n));
           });
 
@@ -221,7 +183,7 @@ struct UniversePoly {
   static unsigned int poly_length(const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{[](const typename List<T1>::nil _args) -> unsigned int {
-                     return 0;
+                     return 0u;
                    },
                    [](const typename List<T1>::cons _args) -> unsigned int {
                      std::shared_ptr<List<T1>> rest = _args._a1;
@@ -232,8 +194,7 @@ struct UniversePoly {
 
   static inline const unsigned int test_length =
       poly_length<unsigned int>(List<unsigned int>::ctor::cons_(
-          (0 + 1), List<unsigned int>::ctor::cons_(
-                       ((0 + 1) + 1), List<unsigned int>::ctor::cons_(
-                                          (((0 + 1) + 1) + 1),
-                                          List<unsigned int>::ctor::nil_()))));
+          1u, List<unsigned int>::ctor::cons_(
+                  2u, List<unsigned int>::ctor::cons_(
+                          3u, List<unsigned int>::ctor::nil_()))));
 };

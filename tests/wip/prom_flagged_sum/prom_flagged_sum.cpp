@@ -16,7 +16,7 @@ PromFlaggedSum::flagged_sum(const std::shared_ptr<PromFlaggedSum::state> &s) {
     if (s->prom_enable) {
       return s->prom_data;
     } else {
-      return 0;
+      return 0u;
     }
   }());
 }

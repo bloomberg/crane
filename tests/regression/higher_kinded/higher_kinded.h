@@ -143,7 +143,7 @@ struct HigherKinded {
   template <typename T1>
   static unsigned int tree_size(const std::shared_ptr<Tree<T1>> &t) {
     return tree_fold<T1, unsigned int>(
-        [](T1 _x) { return (0 + 1); },
+        [](T1 _x) { return 1u; },
         [](const unsigned int _x0, const unsigned int _x1) {
           return (_x0 + _x1);
         },
@@ -162,10 +162,10 @@ struct HigherKinded {
 
   static inline const std::shared_ptr<Tree<unsigned int>> test_tree =
       Tree<unsigned int>::ctor::Branch_(
-          Tree<unsigned int>::ctor::Leaf_((0 + 1)),
+          Tree<unsigned int>::ctor::Leaf_(1u),
           Tree<unsigned int>::ctor::Branch_(
-              Tree<unsigned int>::ctor::Leaf_(((0 + 1) + 1)),
-              Tree<unsigned int>::ctor::Leaf_((((0 + 1) + 1) + 1))));
+              Tree<unsigned int>::ctor::Leaf_(2u),
+              Tree<unsigned int>::ctor::Leaf_(3u)));
 
   static inline const unsigned int test_tree_sum = tree_sum(test_tree);
 
@@ -174,7 +174,7 @@ struct HigherKinded {
 
   static inline const std::shared_ptr<Tree<unsigned int>> test_tree_map =
       tree_map<unsigned int, unsigned int>(
-          [](unsigned int n) { return (n * ((0 + 1) + 1)); }, test_tree);
+          [](unsigned int n) { return (n * 2u); }, test_tree);
 
   static inline const std::optional<unsigned int> test_hk_option = hk_map(
       []<typename _T1>(auto &&_a0,
@@ -182,8 +182,8 @@ struct HigherKinded {
         return map_option<_T1, std::invoke_result_t<decltype(_a0) &, _T1 &>>(
             std::forward<decltype(_a0)>(_a0), _a1);
       },
-      [](unsigned int n) { return (n + (0 + 1)); },
-      std::make_optional<unsigned int>((((((0 + 1) + 1) + 1) + 1) + 1)));
+      [](unsigned int n) { return (n + 1u); },
+      std::make_optional<unsigned int>(5u));
 
   static inline const std::shared_ptr<Tree<unsigned int>> test_hk_tree = hk_map(
       []<typename _T1>(
@@ -191,9 +191,5 @@ struct HigherKinded {
         return tree_map<_T1, std::invoke_result_t<decltype(_a0) &, _T1 &>>(
             std::forward<decltype(_a0)>(_a0), _a1);
       },
-      [](unsigned int n) {
-        return (n +
-                ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
-      },
-      test_tree);
+      [](unsigned int n) { return (n + 10u); }, test_tree);
 };

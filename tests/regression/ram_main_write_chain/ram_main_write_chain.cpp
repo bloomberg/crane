@@ -39,17 +39,8 @@ std::shared_ptr<RamMainWriteChain::ram_reg> RamMainWriteChain::upd_main_in_reg(
     std::shared_ptr<RamMainWriteChain::ram_reg> rg, const unsigned int i,
     const unsigned int v) {
   return std::make_shared<RamMainWriteChain::ram_reg>(
-      ram_reg{update_nth<unsigned int>(
-          std::move(i),
-          (std::move(v) %
-           ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1)),
-          std::move(rg)->reg_main)});
+      ram_reg{update_nth<unsigned int>(std::move(i), (std::move(v) % 16u),
+                                       std::move(rg)->reg_main)});
 }
 
 std::shared_ptr<RamMainWriteChain::ram_chip> RamMainWriteChain::upd_reg_in_chip(

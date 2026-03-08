@@ -75,12 +75,13 @@ public:
   }
   unsigned int length() const {
     return std::visit(
-        Overloaded{
-            [](const typename List<A>::nil _args) -> unsigned int { return 0; },
-            [](const typename List<A>::cons _args) -> unsigned int {
-              std::shared_ptr<List<A>> l_ = _args._a1;
-              return (std::move(l_)->length() + 1);
-            }},
+        Overloaded{[](const typename List<A>::nil _args) -> unsigned int {
+                     return 0u;
+                   },
+                   [](const typename List<A>::cons _args) -> unsigned int {
+                     std::shared_ptr<List<A>> l_ = _args._a1;
+                     return (std::move(l_)->length() + 1);
+                   }},
         this->v());
   }
 };
@@ -99,9 +100,24 @@ struct ResetStateMemoryPreserve {
   static std::shared_ptr<state> reset_state(std::shared_ptr<state> s);
 
   static inline const unsigned int t = [](void) {
- std::unique_ptr<state> s = std::make_unique<state>(state{(((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), List<unsigned int>::ctor::cons_((0 + 1), List<unsigned int>::ctor::cons_(((0 + 1) + 1), List<unsigned int>::ctor::nil_())), true, (((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), List<unsigned int>::ctor::cons_(((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), List<unsigned int>::ctor::cons_((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1), List<unsigned int>::ctor::nil_())), List<unsigned int>::ctor::cons_((((0 + 1) + 1) + 1), List<unsigned int>::ctor::cons_(((((0 + 1) + 1) + 1) + 1), List<unsigned int>::ctor::cons_((((((0 + 1) + 1) + 1) + 1) + 1), List<unsigned int>::ctor::nil_()))), List<unsigned int>::ctor::cons_(((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), List<unsigned int>::ctor::cons_((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), List<unsigned int>::ctor::nil_()))});
- std::shared_ptr<state> s_ = reset_state(std::move(s));
- return (((s_->acc + s_->ram_sys->nth((0 + 1), 0)) + s_->rom->nth(0, 0)) +
-         s_->stack->length());
+    std::unique_ptr<state> s = std::make_unique<state>(
+        state{9u,
+              List<unsigned int>::ctor::cons_(
+                  1u, List<unsigned int>::ctor::cons_(
+                          2u, List<unsigned int>::ctor::nil_())),
+              true, 55u,
+              List<unsigned int>::ctor::cons_(
+                  8u, List<unsigned int>::ctor::cons_(
+                          7u, List<unsigned int>::ctor::nil_())),
+              List<unsigned int>::ctor::cons_(
+                  3u, List<unsigned int>::ctor::cons_(
+                          4u, List<unsigned int>::ctor::cons_(
+                                  5u, List<unsigned int>::ctor::nil_()))),
+              List<unsigned int>::ctor::cons_(
+                  10u, List<unsigned int>::ctor::cons_(
+                           11u, List<unsigned int>::ctor::nil_()))});
+    std::shared_ptr<state> s_ = reset_state(std::move(s));
+    return (((s_->acc + s_->ram_sys->nth(1u, 0u)) + s_->rom->nth(0u, 0u)) +
+            s_->stack->length());
   }();
 };

@@ -54,12 +54,13 @@ public:
   variant_t &v_mut() { return v_; }
   unsigned int length() const {
     return std::visit(
-        Overloaded{
-            [](const typename List<A>::nil _args) -> unsigned int { return 0; },
-            [](const typename List<A>::cons _args) -> unsigned int {
-              std::shared_ptr<List<A>> l_ = _args._a1;
-              return (std::move(l_)->length() + 1);
-            }},
+        Overloaded{[](const typename List<A>::nil _args) -> unsigned int {
+                     return 0u;
+                   },
+                   [](const typename List<A>::cons _args) -> unsigned int {
+                     std::shared_ptr<List<A>> l_ = _args._a1;
+                     return (std::move(l_)->length() + 1);
+                   }},
         this->v());
   }
 };
@@ -106,7 +107,7 @@ struct Sort {
       MapsTo<T2, T1> F2, MapsTo<T2, std::shared_ptr<List<T1>>, T2, T2> F3>
   static T2 div_conq(F0 &&splitF, const T2 x, F2 &&x0, F3 &&x1,
                      const std::shared_ptr<List<T1>> &ls) {
-    bool s = Compare_dec::le_lt_dec(((0 + 1) + 1), ls->length());
+    bool s = Compare_dec::le_lt_dec(2u, ls->length());
     if (s) {
       return x1(ls, div_conq<T1, T2>(splitF, x, x0, x1, splitF(ls).first),
                 div_conq<T1, T2>(splitF, x, x0, x1, splitF(ls).second));

@@ -75,58 +75,20 @@ struct WellFoundedRec {
 
   static unsigned int gcd_wf(const unsigned int x, const unsigned int b);
 
-  static inline const unsigned int test_div2_0 = div2_wf(0);
+  static inline const unsigned int test_div2_0 = div2_wf(0u);
 
-  static inline const unsigned int test_div2_1 = div2_wf((0 + 1));
+  static inline const unsigned int test_div2_1 = div2_wf(1u);
 
-  static inline const unsigned int test_div2_7 =
-      div2_wf((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_div2_7 = div2_wf(7u);
 
-  static inline const unsigned int test_div2_10 =
-      div2_wf(((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_div2_10 = div2_wf(10u);
 
   static inline const std::shared_ptr<List<unsigned int>> test_countdown =
-      countdown((((((0 + 1) + 1) + 1) + 1) + 1));
+      countdown(5u);
 
-  static inline const unsigned int test_gcd_1 = gcd_wf(
-      ((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-      ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_gcd_1 = gcd_wf(12u, 8u);
 
-  static inline const unsigned int test_gcd_2 = gcd_wf(
-      (((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1),
-      ((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-         1) +
-        1) +
-       1));
+  static inline const unsigned int test_gcd_2 = gcd_wf(35u, 14u);
 
-  static inline const unsigned int test_gcd_3 =
-      gcd_wf(0, (((((0 + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_gcd_3 = gcd_wf(0u, 5u);
 };

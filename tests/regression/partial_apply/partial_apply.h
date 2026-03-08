@@ -156,68 +156,33 @@ struct PartialApply {
 
   static inline const std::shared_ptr<List<unsigned int>> test_inc =
       inc_all(List<unsigned int>::ctor::cons_(
-          (0 + 1), List<unsigned int>::ctor::cons_(
-                       ((0 + 1) + 1), List<unsigned int>::ctor::cons_(
-                                          (((0 + 1) + 1) + 1),
-                                          List<unsigned int>::ctor::nil_()))));
+          1u, List<unsigned int>::ctor::cons_(
+                  2u, List<unsigned int>::ctor::cons_(
+                          3u, List<unsigned int>::ctor::nil_()))));
 
   static inline const std::shared_ptr<
       List<std::pair<unsigned int, unsigned int>>>
       test_tag = tag_all(List<unsigned int>::ctor::cons_(
-          ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-          List<unsigned int>::ctor::cons_(
-              ((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1),
-              List<unsigned int>::ctor::cons_(
-                  ((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1),
-                  List<unsigned int>::ctor::nil_()))));
+          10u, List<unsigned int>::ctor::cons_(
+                   20u, List<unsigned int>::ctor::cons_(
+                            30u, List<unsigned int>::ctor::nil_()))));
 
   static inline const std::shared_ptr<List<std::optional<unsigned int>>>
       test_wrap = wrap_all(List<unsigned int>::ctor::cons_(
-          (((((0 + 1) + 1) + 1) + 1) + 1),
-          List<unsigned int>::ctor::cons_(
-              ((((((0 + 1) + 1) + 1) + 1) + 1) + 1),
-              List<unsigned int>::ctor::cons_(
-                  (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                  List<unsigned int>::ctor::nil_()))));
+          5u, List<unsigned int>::ctor::cons_(
+                  6u, List<unsigned int>::ctor::cons_(
+                          7u, List<unsigned int>::ctor::nil_()))));
 
- static inline const std::shared_ptr<List<std::shared_ptr<tagged<bool>>>> test_tag_with = tag_with((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), List<bool>::ctor::cons_(true, List<bool>::ctor::cons_(false, List<bool>::ctor::cons_(true, List<bool>::ctor::nil_()))));
+  static inline const std::shared_ptr<List<std::shared_ptr<tagged<bool>>>>
+      test_tag_with = tag_with(
+          99u, List<bool>::ctor::cons_(
+                   true, List<bool>::ctor::cons_(
+                             false, List<bool>::ctor::cons_(
+                                        true, List<bool>::ctor::nil_()))));
 
- static inline const unsigned int test_sum = sum_with_init(((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), List<unsigned int>::ctor::cons_((0 + 1), List<unsigned int>::ctor::cons_(((0 + 1) + 1), List<unsigned int>::ctor::cons_((((0 + 1) + 1) + 1), List<unsigned int>::ctor::nil_()))));
+  static inline const unsigned int test_sum = sum_with_init(
+      100u, List<unsigned int>::ctor::cons_(
+                1u, List<unsigned int>::ctor::cons_(
+                        2u, List<unsigned int>::ctor::cons_(
+                                3u, List<unsigned int>::ctor::nil_()))));
 };

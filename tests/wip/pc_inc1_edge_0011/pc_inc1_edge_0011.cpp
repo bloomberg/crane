@@ -13,18 +13,10 @@
 
 std::shared_ptr<PcInc1Edge0011::instruction>
 PcInc1Edge0011::decode(const unsigned int b1, const unsigned int b2) {
-  if ((b1 == 0)) {
+  if ((b1 == 0u)) {
     return instruction::ctor::NOP_();
   } else {
-    return instruction::ctor::LDM_(
-        (std::move(b2) %
-         ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1)));
+    return instruction::ctor::LDM_((std::move(b2) % 16u));
   }
 }
 
@@ -59,7 +51,7 @@ PcInc1Edge0011::disassemble(const std::shared_ptr<List<unsigned int>> &rom,
                                  unsigned int>>(
                                  std::make_pair(
                                      decode(std::move(b1), std::move(b2)),
-                                     (std::move(addr) + ((0 + 1) + 1))));
+                                     (std::move(addr) + 2u)));
                            }},
                 std::move(l)->v());
           }},

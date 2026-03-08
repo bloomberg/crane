@@ -365,41 +365,23 @@ struct WhereClause {
   static unsigned int aeval(const std::shared_ptr<AExpr> &e);
 
   static inline const unsigned int test_eval_plus =
-      eval(Expr::ctor::Plus_(Expr::ctor::Num_((((0 + 1) + 1) + 1)),
-                             Expr::ctor::Num_(((((0 + 1) + 1) + 1) + 1))));
+      eval(Expr::ctor::Plus_(Expr::ctor::Num_(3u), Expr::ctor::Num_(4u)));
 
-  static inline const unsigned int test_eval_times = eval(Expr::ctor::Times_(
-      Expr::ctor::Num_((((((0 + 1) + 1) + 1) + 1) + 1)),
-      Expr::ctor::Num_(((((((0 + 1) + 1) + 1) + 1) + 1) + 1))));
+  static inline const unsigned int test_eval_times =
+      eval(Expr::ctor::Times_(Expr::ctor::Num_(5u), Expr::ctor::Num_(6u)));
 
   static inline const unsigned int test_eval_nested = eval(Expr::ctor::Plus_(
-      Expr::ctor::Times_(Expr::ctor::Num_(((0 + 1) + 1)),
-                         Expr::ctor::Num_((((0 + 1) + 1) + 1))),
-      Expr::ctor::Num_((0 + 1))));
+      Expr::ctor::Times_(Expr::ctor::Num_(2u), Expr::ctor::Num_(3u)),
+      Expr::ctor::Num_(1u)));
 
   static inline const unsigned int test_size = expr_size(Expr::ctor::Plus_(
-      Expr::ctor::Times_(Expr::ctor::Num_(((0 + 1) + 1)),
-                         Expr::ctor::Num_((((0 + 1) + 1) + 1))),
-      Expr::ctor::Num_((0 + 1))));
+      Expr::ctor::Times_(Expr::ctor::Num_(2u), Expr::ctor::Num_(3u)),
+      Expr::ctor::Num_(1u)));
 
   static inline const bool test_beval = beval(BExpr::ctor::BAnd_(
       BExpr::ctor::BTrue_(), BExpr::ctor::BNot_(BExpr::ctor::BFalse_())));
 
   static inline const unsigned int test_aeval = aeval(AExpr::ctor::AIf_(
       BExpr::ctor::BAnd_(BExpr::ctor::BTrue_(), BExpr::ctor::BTrue_()),
-      AExpr::ctor::ANum_(
-          ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1)),
-      AExpr::ctor::ANum_(
-          ((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1))));
+      AExpr::ctor::ANum_(10u), AExpr::ctor::ANum_(20u)));
 };

@@ -13,7 +13,7 @@
 unsigned int UpdateNthBehavior0008::cycles(
     const std::shared_ptr<UpdateNthBehavior0008::state> &_x,
     const UpdateNthBehavior0008::instruction _x0) {
-  return ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1);
+  return 8u;
 }
 
 unsigned int UpdateNthBehavior0008::program_cycles(
@@ -22,7 +22,7 @@ unsigned int UpdateNthBehavior0008::program_cycles(
   return std::visit(
       Overloaded{
           [](const typename List<UpdateNthBehavior0008::instruction>::nil _args)
-              -> unsigned int { return 0; },
+              -> unsigned int { return 0u; },
           [&](const typename List<UpdateNthBehavior0008::instruction>::cons
                   _args) -> unsigned int {
             UpdateNthBehavior0008::instruction i = _args._a0;

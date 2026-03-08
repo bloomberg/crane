@@ -21,100 +21,21 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct PrimArray {
   static inline const persistent_array<unsigned int> arr5 =
-      persistent_array<unsigned int>(int64_t(5), 0);
+      persistent_array<unsigned int>(int64_t(5), 0u);
 
   static inline const unsigned int get_default = arr5.get(int64_t(0));
 
   static inline const int64_t arr5_len = arr5.length();
 
-  static inline const persistent_array<unsigned int> arr5_modified = arr5.set(
-      int64_t(2),
-      ((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1));
+  static inline const persistent_array<unsigned int> arr5_modified =
+      arr5.set(int64_t(2), 42u);
 
   static inline const unsigned int get_modified = arr5_modified.get(int64_t(2));
 
   static inline const unsigned int get_original = arr5.get(int64_t(2));
 
   static inline const persistent_array<unsigned int> arr_chain =
-      arr5.set(int64_t(0),
-               ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1))
-          .set(int64_t(1),
-               ((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1))
-          .set(int64_t(2),
-               ((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1));
+      arr5.set(int64_t(0), 10u).set(int64_t(1), 20u).set(int64_t(2), 30u);
 
   static inline const unsigned int chain_0 = arr_chain.get(int64_t(0));
 

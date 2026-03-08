@@ -514,106 +514,19 @@ struct LargeMutual {
   static unsigned int stmt_size(const std::shared_ptr<stmt> &s);
 
   static inline const std::shared_ptr<expr> test_expr = expr::ctor::EAdd_(
-      expr::ctor::ENum_((0 + 1)),
-      expr::ctor::EMul_(expr::ctor::ENum_(((0 + 1) + 1)),
-                        expr::ctor::ENum_((((0 + 1) + 1) + 1))));
+      expr::ctor::ENum_(1u),
+      expr::ctor::EMul_(expr::ctor::ENum_(2u), expr::ctor::ENum_(3u)));
 
   static inline const std::shared_ptr<bexpr> test_bexpr = bexpr::ctor::BAnd_(
-      bexpr::ctor::BEq_(expr::ctor::EVar_(0),
-                        expr::ctor::ENum_((((((0 + 1) + 1) + 1) + 1) + 1))),
-      bexpr::ctor::BLt_(
-          expr::ctor::EVar_((0 + 1)),
-          expr::ctor::ENum_(
-              ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1))));
+      bexpr::ctor::BEq_(expr::ctor::EVar_(0u), expr::ctor::ENum_(5u)),
+      bexpr::ctor::BLt_(expr::ctor::EVar_(1u), expr::ctor::ENum_(10u)));
 
   static inline const std::shared_ptr<stmt> test_stmt = stmt::ctor::SSeq_(
-      stmt::ctor::SAssign_(
-          0,
-          expr::ctor::ENum_(
-              ((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) +
-                                                    1) +
-                                                   1) +
-                                                  1) +
-                                                 1) +
-                                                1) +
-                                               1) +
-                                              1) +
-                                             1) +
-                                            1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1))),
+      stmt::ctor::SAssign_(0u, expr::ctor::ENum_(42u)),
       stmt::ctor::SIf_(
-          bexpr::ctor::BEq_(
-              expr::ctor::EVar_(0),
-              expr::ctor::ENum_(
-                  ((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) +
-                                                         1) +
-                                                        1) +
-                                                       1) +
-                                                      1) +
-                                                     1) +
-                                                    1) +
-                                                   1) +
-                                                  1) +
-                                                 1) +
-                                                1) +
-                                               1) +
-                                              1) +
-                                             1) +
-                                            1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1))),
-          stmt::ctor::SSkip_(), stmt::ctor::SAssign_(0, expr::ctor::ENum_(0))));
+          bexpr::ctor::BEq_(expr::ctor::EVar_(0u), expr::ctor::ENum_(42u)),
+          stmt::ctor::SSkip_(),
+          stmt::ctor::SAssign_(0u, expr::ctor::ENum_(0u))));
 
   static inline const unsigned int test_expr_size = expr_size(test_expr);
 

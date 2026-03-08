@@ -162,11 +162,11 @@ struct CoindGuard {
   }
 
   static inline const std::shared_ptr<Stream<unsigned int>> nats =
-      iterate<unsigned int>([](unsigned int x) { return (x + 1); }, 0);
+      iterate<unsigned int>([](unsigned int x) { return (x + 1); }, 0u);
 
   static inline const std::shared_ptr<Stream<unsigned int>> evens =
-      smap<unsigned int, unsigned int>(
-          [](unsigned int n) { return (n * ((0 + 1) + 1)); }, nats);
+      smap<unsigned int, unsigned int>([](unsigned int n) { return (n * 2u); },
+                                       nats);
 
   static inline const std::shared_ptr<Stream<unsigned int>> fibs =
       unfold<unsigned int, std::pair<unsigned int, unsigned int>>(
@@ -175,7 +175,7 @@ struct CoindGuard {
             unsigned int b = pat.second;
             return std::make_pair(a, std::make_pair(b, (a + b)));
           },
-          std::make_pair(0, (0 + 1)));
+          std::make_pair(0u, 1u));
 
   static inline const std::shared_ptr<Stream<unsigned int>> sum_stream =
       zipWith<unsigned int, unsigned int, unsigned int>(
@@ -185,17 +185,16 @@ struct CoindGuard {
           nats, evens);
 
   static inline const std::shared_ptr<List<unsigned int>> test_nats_5 =
-      take<unsigned int>((((((0 + 1) + 1) + 1) + 1) + 1), nats);
+      take<unsigned int>(5u, nats);
 
   static inline const std::shared_ptr<List<unsigned int>> test_evens_5 =
-      take<unsigned int>((((((0 + 1) + 1) + 1) + 1) + 1), evens);
+      take<unsigned int>(5u, evens);
 
   static inline const std::shared_ptr<List<unsigned int>> test_fibs_8 =
-      take<unsigned int>(((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                         fibs);
+      take<unsigned int>(8u, fibs);
 
   static inline const std::shared_ptr<List<unsigned int>> test_sum_5 =
-      take<unsigned int>((((((0 + 1) + 1) + 1) + 1) + 1), sum_stream);
+      take<unsigned int>(5u, sum_stream);
 
   static inline const unsigned int test_iterate_hd = hd<unsigned int>(nats);
 };

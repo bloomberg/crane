@@ -53,12 +53,13 @@ public:
   variant_t &v_mut() { return v_; }
   unsigned int length() const {
     return std::visit(
-        Overloaded{
-            [](const typename List<A>::nil _args) -> unsigned int { return 0; },
-            [](const typename List<A>::cons _args) -> unsigned int {
-              std::shared_ptr<List<A>> l_ = _args._a1;
-              return (std::move(l_)->length() + 1);
-            }},
+        Overloaded{[](const typename List<A>::nil _args) -> unsigned int {
+                     return 0u;
+                   },
+                   [](const typename List<A>::cons _args) -> unsigned int {
+                     std::shared_ptr<List<A>> l_ = _args._a1;
+                     return (std::move(l_)->length() + 1);
+                   }},
         this->v());
   }
 };
@@ -74,90 +75,11 @@ struct StackPushTop3 {
   static inline const unsigned int t =
       push_stack(
           std::make_shared<state>(state{List<unsigned int>::ctor::cons_(
-              ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
+              10u,
               List<unsigned int>::ctor::cons_(
-                  ((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1),
-                  List<unsigned int>::ctor::cons_(
-                      ((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) +
-                                               1) +
-                                              1) +
-                                             1) +
-                                            1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1),
-                      List<unsigned int>::ctor::cons_(
-                          ((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) +
-                                                                1) +
-                                                               1) +
-                                                              1) +
-                                                             1) +
-                                                            1) +
-                                                           1) +
-                                                          1) +
-                                                         1) +
-                                                        1) +
-                                                       1) +
-                                                      1) +
-                                                     1) +
-                                                    1) +
-                                                   1) +
-                                                  1) +
-                                                 1) +
-                                                1) +
-                                               1) +
-                                              1) +
-                                             1) +
-                                            1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1),
-                          List<unsigned int>::ctor::nil_()))))}),
-          (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1))
+                  20u, List<unsigned int>::ctor::cons_(
+                           30u, List<unsigned int>::ctor::cons_(
+                                    40u, List<unsigned int>::ctor::nil_()))))}),
+          7u)
           ->stack->length();
 };

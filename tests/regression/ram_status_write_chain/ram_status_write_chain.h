@@ -162,10 +162,10 @@ struct RamStatusWriteChain {
   static inline const unsigned int t = [](void) {
     std::shared_ptr<ram_reg> rg0 =
         std::make_shared<ram_reg>(ram_reg{List<unsigned int>::ctor::cons_(
-            0, List<unsigned int>::ctor::cons_(
-                   0, List<unsigned int>::ctor::cons_(
-                          0, List<unsigned int>::ctor::cons_(
-                                 0, List<unsigned int>::ctor::nil_()))))});
+            0u, List<unsigned int>::ctor::cons_(
+                    0u, List<unsigned int>::ctor::cons_(
+                            0u, List<unsigned int>::ctor::cons_(
+                                    0u, List<unsigned int>::ctor::nil_()))))});
     std::shared_ptr<ram_chip> ch0 = std::make_shared<ram_chip>(
         ram_chip{List<std::shared_ptr<ram_reg>>::ctor::cons_(
             std::move(rg0), List<std::shared_ptr<ram_reg>>::ctor::nil_())});
@@ -175,37 +175,18 @@ struct RamStatusWriteChain {
     std::unique_ptr<state> s = std::make_unique<state>(state{
         List<std::shared_ptr<ram_bank>>::ctor::cons_(
             std::move(bk0), List<std::shared_ptr<ram_bank>>::ctor::nil_()),
-        0, 0, 0});
+        0u, 0u, 0u});
     std::shared_ptr<List<std::shared_ptr<ram_bank>>> sys_ =
-        ram_write_status_sys(
-            std::move(s), ((0 + 1) + 1),
-            (((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1));
+        ram_write_status_sys(std::move(s), 2u, 25u);
     std::shared_ptr<ram_bank> bk_ = std::move(sys_)->nth(
-        0, std::make_shared<ram_bank>(
-               ram_bank{List<std::shared_ptr<ram_chip>>::ctor::nil_()}));
+        0u, std::make_shared<ram_bank>(
+                ram_bank{List<std::shared_ptr<ram_chip>>::ctor::nil_()}));
     std::shared_ptr<ram_chip> ch_ = std::move(bk_)->bank_chips->nth(
-        0, std::make_shared<ram_chip>(
-               ram_chip{List<std::shared_ptr<ram_reg>>::ctor::nil_()}));
+        0u, std::make_shared<ram_chip>(
+                ram_chip{List<std::shared_ptr<ram_reg>>::ctor::nil_()}));
     std::shared_ptr<ram_reg> rg_ = std::move(ch_)->chip_regs->nth(
-        0,
+        0u,
         std::make_shared<ram_reg>(ram_reg{List<unsigned int>::ctor::nil_()}));
-    return std::move(rg_)->reg_status->nth(((0 + 1) + 1), 0);
+    return std::move(rg_)->reg_status->nth(2u, 0u);
   }();
 };

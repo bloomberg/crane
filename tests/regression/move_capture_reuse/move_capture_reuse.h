@@ -69,12 +69,13 @@ public:
   }
   unsigned int length() const {
     return std::visit(
-        Overloaded{
-            [](const typename List<A>::nil _args) -> unsigned int { return 0; },
-            [](const typename List<A>::cons _args) -> unsigned int {
-              std::shared_ptr<List<A>> l_ = _args._a1;
-              return (std::move(l_)->length() + 1);
-            }},
+        Overloaded{[](const typename List<A>::nil _args) -> unsigned int {
+                     return 0u;
+                   },
+                   [](const typename List<A>::cons _args) -> unsigned int {
+                     std::shared_ptr<List<A>> l_ = _args._a1;
+                     return (std::move(l_)->length() + 1);
+                   }},
         this->v());
   }
   std::shared_ptr<List<A>> app(std::shared_ptr<List<A>> m) const {
@@ -98,36 +99,20 @@ struct MoveCaptureReuse {
 
   static inline const std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
       sample = prefix_each(
-          List<unsigned int>::ctor::cons_((0 + 1),
-                                          List<unsigned int>::ctor::nil_()),
+          List<unsigned int>::ctor::cons_(1u, List<unsigned int>::ctor::nil_()),
           List<std::shared_ptr<List<unsigned int>>>::ctor::cons_(
-              List<unsigned int>::ctor::cons_(
-                  ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                  List<unsigned int>::ctor::nil_()),
+              List<unsigned int>::ctor::cons_(10u,
+                                              List<unsigned int>::ctor::nil_()),
               List<std::shared_ptr<List<unsigned int>>>::ctor::cons_(
                   List<unsigned int>::ctor::cons_(
-                      ((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1),
-                      List<unsigned int>::ctor::nil_()),
+                      20u, List<unsigned int>::ctor::nil_()),
                   List<std::shared_ptr<List<unsigned int>>>::ctor::nil_())));
 
   static inline const unsigned int len_sum = []() {
     return std::visit(
         Overloaded{
             [](const typename List<std::shared_ptr<List<unsigned int>>>::nil
-                   _args) -> unsigned int { return 0; },
+                   _args) -> unsigned int { return 0u; },
             [](const typename List<std::shared_ptr<List<unsigned int>>>::cons
                    _args) -> unsigned int {
               std::shared_ptr<List<unsigned int>> a = _args._a0;
@@ -137,7 +122,7 @@ struct MoveCaptureReuse {
                   Overloaded{
                       [](const typename List<
                           std::shared_ptr<List<unsigned int>>>::nil _args)
-                          -> unsigned int { return 0; },
+                          -> unsigned int { return 0u; },
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::cons _args)
                           -> unsigned int {

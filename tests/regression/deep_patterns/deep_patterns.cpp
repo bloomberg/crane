@@ -21,13 +21,13 @@ unsigned int DeepPatterns::deep_option(
         unsigned int n = *o0;
         return n;
       } else {
-        return (0 + 1);
+        return 1u;
       }
     } else {
-      return ((0 + 1) + 1);
+      return 2u;
     }
   } else {
-    return (((0 + 1) + 1) + 1);
+    return 3u;
   }
 }
 
@@ -49,7 +49,7 @@ DeepPatterns::list_shape(const std::shared_ptr<List<unsigned int>> &l) {
   return std::visit(
       Overloaded{
           [](const typename List<unsigned int>::nil _args) -> unsigned int {
-            return 0;
+            return 0u;
           },
           [](const typename List<unsigned int>::cons _args) -> unsigned int {
             unsigned int x = _args._a0;
@@ -115,16 +115,16 @@ DeepPatterns::deep_sum(const std::shared_ptr<DeepPatterns::outer> &o) {
                                -> unsigned int {
                              bool b = _args._a0;
                              if (b) {
-                               return (0 + 1);
+                               return 1u;
                              } else {
-                               return 0;
+                               return 0u;
                              }
                            }},
                 std::move(i)->v());
           },
           [](const typename DeepPatterns::outer::ORight _args) -> unsigned int {
             unsigned int n = _args._a0;
- return (std::move(n) + ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+            return (std::move(n) + 100u);
           }},
       o->v());
 }
@@ -158,7 +158,7 @@ unsigned int DeepPatterns::complex_match(
             }},
         l->v());
   } else {
-    return 0;
+    return 0u;
   }
 }
 

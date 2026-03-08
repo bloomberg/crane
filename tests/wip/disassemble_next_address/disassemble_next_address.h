@@ -145,39 +145,25 @@ struct DisassembleNextAddress {
   static inline const unsigned int t = [](void) {
     if (disassemble(
             List<unsigned int>::ctor::cons_(
-                0,
+                0u,
                 List<unsigned int>::ctor::cons_(
-                    (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                    List<unsigned int>::ctor::cons_(
-                        (((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                        List<unsigned int>::ctor::cons_(
-                            (((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1),
-                            List<unsigned int>::ctor::nil_())))),
-            0)
+                    7u, List<unsigned int>::ctor::cons_(
+                            9u, List<unsigned int>::ctor::cons_(
+                                    11u, List<unsigned int>::ctor::nil_())))),
+            0u)
             .has_value()) {
       std::pair<std::shared_ptr<instruction>, unsigned int> p = *disassemble(
           List<unsigned int>::ctor::cons_(
-              0,
-              List<unsigned int>::ctor::cons_(
-                  (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                  List<unsigned int>::ctor::cons_(
-                      (((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                      List<unsigned int>::ctor::cons_(
-                          (((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                             1) +
-                            1) +
-                           1),
-                          List<unsigned int>::ctor::nil_())))),
-          0);
+              0u, List<unsigned int>::ctor::cons_(
+                      7u, List<unsigned int>::ctor::cons_(
+                              9u, List<unsigned int>::ctor::cons_(
+                                      11u, List<unsigned int>::ctor::nil_())))),
+          0u);
       std::shared_ptr<instruction> _x = p.first;
       unsigned int next = p.second;
       return std::move(next);
     } else {
-      return 0;
+      return 0u;
     }
   }();
 };

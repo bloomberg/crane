@@ -29,32 +29,6 @@ struct PortWriteNibbleMask {
   upd_port_in_chip(const std::shared_ptr<ram_chip> &_x, const unsigned int v);
 
   static inline const unsigned int t =
-      upd_port_in_chip(
-          std::make_shared<ram_chip>(ram_chip{0}),
-          (((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1))
+      upd_port_in_chip(std::make_shared<ram_chip>(ram_chip{0u}), 31u)
           ->chip_port;
 };

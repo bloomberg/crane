@@ -14,33 +14,20 @@
 unsigned int
 IszCycleBranch::get_reg(const std::shared_ptr<IszCycleBranch::state> &s,
                         const unsigned int r) {
-  return s->regs->nth(r, 0);
+  return s->regs->nth(r, 0u);
 }
 
 unsigned int IszCycleBranch::nibble_of_nat(const unsigned int n) {
-  return (
-      n %
-      ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1));
+  return (n % 16u);
 }
 
 unsigned int
 IszCycleBranch::cycles_isz(const std::shared_ptr<IszCycleBranch::state> &s,
                            const unsigned int r) {
-  unsigned int new_val = nibble_of_nat((get_reg(s, r) + (0 + 1)));
-  if ((new_val == 0)) {
-    return ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1);
+  unsigned int new_val = nibble_of_nat((get_reg(s, r) + 1u));
+  if ((new_val == 0u)) {
+    return 8u;
   } else {
-    return ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1);
+    return 16u;
   }
 }

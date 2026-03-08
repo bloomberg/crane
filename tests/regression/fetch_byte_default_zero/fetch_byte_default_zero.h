@@ -83,9 +83,9 @@ struct FetchByteDefaultZero {
   static unsigned int fetch_byte(const std::shared_ptr<state> &s,
                                  const unsigned int addr);
 
-  static inline const unsigned int t = fetch_byte(
-      std::make_shared<state>(state{List<unsigned int>::ctor::cons_(
-          (0 + 1), List<unsigned int>::ctor::cons_(
-                       ((0 + 1) + 1), List<unsigned int>::ctor::nil_()))}),
-      (((((0 + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int t =
+      fetch_byte(std::make_shared<state>(state{List<unsigned int>::ctor::cons_(
+                     1u, List<unsigned int>::ctor::cons_(
+                             2u, List<unsigned int>::ctor::nil_()))}),
+                 5u);
 };

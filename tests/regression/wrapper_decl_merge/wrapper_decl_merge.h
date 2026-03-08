@@ -30,7 +30,7 @@ struct WrapperDeclMerge {
     };
   };
 
-  static inline const unsigned int x = A::Nat::fa(((((0 + 1) + 1) + 1) + 1));
+  static inline const unsigned int x = A::Nat::fa(4u);
 
-  static inline const unsigned int y = B::Nat::fb(((((0 + 1) + 1) + 1) + 1));
+  static inline const unsigned int y = B::Nat::fb(4u);
 };

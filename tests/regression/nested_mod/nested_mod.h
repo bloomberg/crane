@@ -171,7 +171,7 @@ struct NestedMod {
   };
 
   static inline const std::shared_ptr<Outer::Inner::shape> my_circle =
-      Outer::Inner::shape::ctor::Circle_((((((0 + 1) + 1) + 1) + 1) + 1));
+      Outer::Inner::shape::ctor::Circle_(5u);
 
   static inline const Outer::color my_color = Outer::color::Red;
 

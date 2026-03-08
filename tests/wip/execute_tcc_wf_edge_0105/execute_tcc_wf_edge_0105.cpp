@@ -13,18 +13,10 @@
 
 std::shared_ptr<ExecuteTccWfEdge0105::instruction>
 ExecuteTccWfEdge0105::decode(const unsigned int b1, const unsigned int b2) {
-  if ((b1 == 0)) {
+  if ((b1 == 0u)) {
     return instruction::ctor::NOP_();
   } else {
-    return instruction::ctor::LDM_(
-        (std::move(b2) %
-         ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1)));
+    return instruction::ctor::LDM_((std::move(b2) % 16u));
   }
 }
 

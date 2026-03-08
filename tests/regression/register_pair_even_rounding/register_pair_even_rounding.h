@@ -139,62 +139,17 @@ struct RegisterPairEvenRounding {
 
   static inline const std::shared_ptr<state> sample =
       std::make_shared<state>(state{List<unsigned int>::ctor::cons_(
-          0,
+          0u,
           List<unsigned int>::ctor::cons_(
-              (0 + 1), List<unsigned int>::ctor::cons_(
-                           ((0 + 1) + 1),
-                           List<unsigned int>::ctor::cons_(
-                               (((0 + 1) + 1) + 1),
-                               List<unsigned int>::ctor::cons_(
-                                   ((((0 + 1) + 1) + 1) + 1),
-                                   List<unsigned int>::ctor::cons_(
-                                       (((((0 + 1) + 1) + 1) + 1) + 1),
-                                       List<unsigned int>::ctor::nil_()))))))});
+              1u,
+              List<unsigned int>::ctor::cons_(
+                  2u,
+                  List<unsigned int>::ctor::cons_(
+                      3u,
+                      List<unsigned int>::ctor::cons_(
+                          4u, List<unsigned int>::ctor::cons_(
+                                  5u, List<unsigned int>::ctor::nil_()))))))});
 
-  static inline const unsigned int t = get_reg_pair(
-      set_reg_pair(
-          sample, (((0 + 1) + 1) + 1),
-          (((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) +
-                                                   1) +
-                                                  1) +
-                                                 1) +
-                                                1) +
-                                               1) +
-                                              1) +
-                                             1) +
-                                            1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1)),
-      (((0 + 1) + 1) + 1));
+  static inline const unsigned int t =
+      get_reg_pair(set_reg_pair(sample, 3u, 45u), 3u);
 };

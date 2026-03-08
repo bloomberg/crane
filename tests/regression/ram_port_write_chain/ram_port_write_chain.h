@@ -146,29 +146,21 @@ struct RamPortWriteChain {
   ram_write_port_sys(const std::shared_ptr<state> &s, const unsigned int v);
 
   static inline const unsigned int t = [](void) {
-    std::shared_ptr<chip> ch0 = std::make_shared<chip>(chip{0});
+    std::shared_ptr<chip> ch0 = std::make_shared<chip>(chip{0u});
     std::shared_ptr<bank> bk0 =
         std::make_shared<bank>(bank{List<std::shared_ptr<chip>>::ctor::cons_(
             std::move(ch0), List<std::shared_ptr<chip>>::ctor::nil_())});
     std::unique_ptr<state> s = std::make_unique<state>(
         state{List<std::shared_ptr<bank>>::ctor::cons_(
                   std::move(bk0), List<std::shared_ptr<bank>>::ctor::nil_()),
-              0, 0});
-    std::shared_ptr<List<std::shared_ptr<bank>>> sys_ = ram_write_port_sys(
-        std::move(s),
-        (((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1));
+              0u, 0u});
+    std::shared_ptr<List<std::shared_ptr<bank>>> sys_ =
+        ram_write_port_sys(std::move(s), 17u);
     std::shared_ptr<bank> bk_ = std::move(sys_)->nth(
-        0, std::make_shared<bank>(
-               bank{List<std::shared_ptr<chip>>::ctor::nil_()}));
+        0u, std::make_shared<bank>(
+                bank{List<std::shared_ptr<chip>>::ctor::nil_()}));
     std::shared_ptr<chip> ch_ =
-        std::move(bk_)->bank_chips->nth(0, std::make_shared<chip>(chip{0}));
+        std::move(bk_)->bank_chips->nth(0u, std::make_shared<chip>(chip{0u}));
     return std::move(ch_)->chip_port;
   }();
 };

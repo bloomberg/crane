@@ -121,30 +121,37 @@ struct AddrPageDecompEdge0007 {
   decode_list(const std::shared_ptr<List<unsigned int>> &bytes);
 
   static inline const unsigned int t = []() {
- return std::visit(Overloaded {
- [](const typename List<std::shared_ptr<instruction>>::nil _args) -> unsigned int {
-      return 0;
- },
- [](const typename List<std::shared_ptr<instruction>>::cons _args) -> unsigned int {
-      std::shared_ptr<instruction> i = _args._a0;
-      std::shared_ptr<List<std::shared_ptr<instruction>>> l = _args._a1;
-      return std::visit(
-          Overloaded{
-              [&](const typename instruction::NOP _args) -> unsigned int {
-                return std::visit(
-                    Overloaded{[](const typename List<
-                                   std::shared_ptr<instruction>>::nil _args)
-                                   -> unsigned int { return (0 + 1); },
-                               [](const typename List<
-                                   std::shared_ptr<instruction>>::cons _args)
-                                   -> unsigned int { return 0; }},
-                    std::move(l)->v());
-              },
-              [](const typename instruction::LDM _args) -> unsigned int {
-                return 0;
-              }},
-          std::move(i)->v());
- }
- }, decode_list(List<unsigned int>::ctor::cons_(0, List<unsigned int>::ctor::cons_((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), List<unsigned int>::ctor::cons_(((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), List<unsigned int>::ctor::nil_()))))->v());
+    return std::visit(
+        Overloaded{
+            [](const typename List<std::shared_ptr<instruction>>::nil _args)
+                -> unsigned int { return 0u; },
+            [](const typename List<std::shared_ptr<instruction>>::cons _args)
+                -> unsigned int {
+              std::shared_ptr<instruction> i = _args._a0;
+              std::shared_ptr<List<std::shared_ptr<instruction>>> l = _args._a1;
+              return std::visit(
+                  Overloaded{
+                      [&](const typename instruction::NOP _args)
+                          -> unsigned int {
+                        return std::visit(
+                            Overloaded{
+                                [](const typename List<
+                                    std::shared_ptr<instruction>>::nil _args)
+                                    -> unsigned int { return 1u; },
+                                [](const typename List<
+                                    std::shared_ptr<instruction>>::cons _args)
+                                    -> unsigned int { return 0u; }},
+                            std::move(l)->v());
+                      },
+                      [](const typename instruction::LDM _args)
+                          -> unsigned int { return 0u; }},
+                  std::move(i)->v());
+            }},
+        decode_list(
+            List<unsigned int>::ctor::cons_(
+                0u, List<unsigned int>::ctor::cons_(
+                        99u, List<unsigned int>::ctor::cons_(
+                                 42u, List<unsigned int>::ctor::nil_()))))
+            ->v());
   }();
 };

@@ -35,19 +35,17 @@ WhereClause::expr_size(const std::shared_ptr<WhereClause::Expr> &e) {
   return std::visit(
       Overloaded{
           [](const typename WhereClause::Expr::Num _args) -> unsigned int {
-            return (0 + 1);
+            return 1u;
           },
           [](const typename WhereClause::Expr::Plus _args) -> unsigned int {
             std::shared_ptr<WhereClause::Expr> a = _args._a0;
             std::shared_ptr<WhereClause::Expr> b = _args._a1;
-            return (((0 + 1) + expr_size(std::move(a))) +
-                    expr_size(std::move(b)));
+            return ((1u + expr_size(std::move(a))) + expr_size(std::move(b)));
           },
           [](const typename WhereClause::Expr::Times _args) -> unsigned int {
             std::shared_ptr<WhereClause::Expr> a = _args._a0;
             std::shared_ptr<WhereClause::Expr> b = _args._a1;
-            return (((0 + 1) + expr_size(std::move(a))) +
-                    expr_size(std::move(b)));
+            return ((1u + expr_size(std::move(a))) + expr_size(std::move(b)));
           }},
       e->v());
 }

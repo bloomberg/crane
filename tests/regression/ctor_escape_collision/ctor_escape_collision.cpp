@@ -14,22 +14,22 @@ unsigned int CtorEscapeCollision::tag(const CtorEscapeCollision::item x) {
   return [&](void) {
     switch (x) {
     case item::D_: {
-      return (0 + 1);
+      return 1u;
     }
     case item::D_0: {
-      return ((0 + 1) + 1);
+      return 2u;
     }
     case item::D__: {
-      return (((0 + 1) + 1) + 1);
+      return 3u;
     }
     case item::D__0: {
-      return ((((0 + 1) + 1) + 1) + 1);
+      return 4u;
     }
     case item::D__1: {
-      return (((((0 + 1) + 1) + 1) + 1) + 1);
+      return 5u;
     }
     case item::D__2: {
-      return ((((((0 + 1) + 1) + 1) + 1) + 1) + 1);
+      return 6u;
     }
     }
   }();

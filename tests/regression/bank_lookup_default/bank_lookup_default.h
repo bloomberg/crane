@@ -75,12 +75,13 @@ public:
   }
   unsigned int length() const {
     return std::visit(
-        Overloaded{
-            [](const typename List<A>::nil _args) -> unsigned int { return 0; },
-            [](const typename List<A>::cons _args) -> unsigned int {
-              std::shared_ptr<List<A>> l_ = _args._a1;
-              return (std::move(l_)->length() + 1);
-            }},
+        Overloaded{[](const typename List<A>::nil _args) -> unsigned int {
+                     return 0u;
+                   },
+                   [](const typename List<A>::cons _args) -> unsigned int {
+                     std::shared_ptr<List<A>> l_ = _args._a1;
+                     return (std::move(l_)->length() + 1);
+                   }},
         this->v());
   }
 };
@@ -99,7 +100,7 @@ struct BankLookupDefault {
   };
 
   static inline const std::shared_ptr<ram_chip> empty_chip =
-      std::make_shared<ram_chip>(ram_chip{0});
+      std::make_shared<ram_chip>(ram_chip{0u});
 
   static inline const std::shared_ptr<ram_bank> empty_bank =
       std::make_shared<ram_bank>(
@@ -118,6 +119,5 @@ struct BankLookupDefault {
               List<std::shared_ptr<ram_bank>>::ctor::nil_())});
 
   static inline const unsigned int t =
-      get_bank(sample_state, (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1))
-          ->bank_chips->length();
+      get_bank(sample_state, 7u)->bank_chips->length();
 };

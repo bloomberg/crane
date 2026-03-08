@@ -24,5 +24,5 @@ struct FuncOnlySubmodule {
     };
   };
 
-  static inline const unsigned int t = Outer::Inner::bump(0);
+  static inline const unsigned int t = Outer::Inner::bump(0u);
 };

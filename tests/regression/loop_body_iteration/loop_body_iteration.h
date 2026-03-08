@@ -124,11 +124,9 @@ struct LoopBodyIteration {
 
   static inline const std::shared_ptr<state> sample =
       std::make_shared<state>(state{List<unsigned int>::ctor::cons_(
-          0,
-          List<unsigned int>::ctor::cons_(
-              (0 + 1), List<unsigned int>::ctor::cons_(
-                           ((0 + 1) + 1), List<unsigned int>::ctor::nil_())))});
+          0u, List<unsigned int>::ctor::cons_(
+                  1u, List<unsigned int>::ctor::cons_(
+                          2u, List<unsigned int>::ctor::nil_())))});
 
-  static inline const unsigned int t =
-      get_reg0(iterate_body((((((0 + 1) + 1) + 1) + 1) + 1), sample));
+  static inline const unsigned int t = get_reg0(iterate_body(5u, sample));
 };

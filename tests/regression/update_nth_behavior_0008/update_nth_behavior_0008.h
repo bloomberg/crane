@@ -89,15 +89,8 @@ struct UpdateNthBehavior0008 {
   program_cycles(const std::shared_ptr<state> &s,
                  const std::shared_ptr<List<instruction>> &prog);
 
-  static inline const unsigned int t = program_cycles(
-      std::make_shared<state>(state{
-          ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1)}),
-      List<instruction>::ctor::cons_(instruction::NOP,
-                                     List<instruction>::ctor::nil_()));
+  static inline const unsigned int t =
+      program_cycles(std::make_shared<state>(state{16u}),
+                     List<instruction>::ctor::cons_(
+                         instruction::NOP, List<instruction>::ctor::nil_()));
 };

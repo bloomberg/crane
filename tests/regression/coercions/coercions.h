@@ -22,11 +22,9 @@ struct Coercions {
 
   static unsigned int add_bool(const unsigned int n, const bool b);
 
-  static inline const unsigned int test_add_true =
-      add_bool((((((0 + 1) + 1) + 1) + 1) + 1), true);
+  static inline const unsigned int test_add_true = add_bool(5u, true);
 
-  static inline const unsigned int test_add_false =
-      add_bool((((((0 + 1) + 1) + 1) + 1) + 1), false);
+  static inline const unsigned int test_add_false = add_bool(5u, false);
 
   struct Wrapper {
     unsigned int unwrap;
@@ -35,8 +33,7 @@ struct Coercions {
   static unsigned int double_wrapped(const std::shared_ptr<Wrapper> &w);
 
   static inline const unsigned int test_double_wrapped =
-      double_wrapped(std::make_shared<Wrapper>(
-          Wrapper{(((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1)}));
+      double_wrapped(std::make_shared<Wrapper>(Wrapper{7u}));
 
   struct BoolBox {
     bool unbox;
@@ -46,8 +43,7 @@ struct Coercions {
                                   const std::shared_ptr<BoolBox> &bb);
 
   static inline const unsigned int test_add_boolbox =
-      add_boolbox(((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                  std::make_shared<BoolBox>(BoolBox{true}));
+      add_boolbox(10u, std::make_shared<BoolBox>(BoolBox{true}));
 
   struct Transform {
     std::function<unsigned int(unsigned int)> apply_transform;
@@ -58,5 +54,5 @@ struct Coercions {
           Transform{[](unsigned int n) { return (n + n); }});
 
   static inline const unsigned int test_fun_coercion =
-      double_transform->apply_transform((((((0 + 1) + 1) + 1) + 1) + 1));
+      double_transform->apply_transform(5u);
 };

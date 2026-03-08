@@ -30,5 +30,5 @@ struct ModpathEscapeCollision {
     };
   };
 
-  static inline const unsigned int t = (A::Token_::f(0) + B::Token_::g(0));
+  static inline const unsigned int t = (A::Token_::f(0u) + B::Token_::g(0u));
 };

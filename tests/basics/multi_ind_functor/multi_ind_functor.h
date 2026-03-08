@@ -224,7 +224,7 @@ template <Elem E> struct Container {
   static unsigned int mlist_length(const std::shared_ptr<mlist> &l) {
     return std::visit(
         Overloaded{
-            [](const typename mlist::MNil _args) -> unsigned int { return 0; },
+            [](const typename mlist::MNil _args) -> unsigned int { return 0u; },
             [](const typename mlist::MCons _args) -> unsigned int {
               std::shared_ptr<mlist> rest = _args._a1;
               return (mlist_length(std::move(rest)) + 1);
@@ -237,9 +237,9 @@ template <Elem E> struct Container {
         Overloaded{[](const typename mtree::Leaf _args) -> unsigned int {
                      std::shared_ptr<maybe> m = _args._a0;
                      if (is_nothing(m)) {
-                       return 0;
+                       return 0u;
                      } else {
-                       return (0 + 1);
+                       return 1u;
                      }
                    },
                    [](const typename mtree::Node _args) -> unsigned int {
@@ -255,90 +255,13 @@ template <Elem E> struct Container {
   }
 
   static const std::shared_ptr<maybe> &some_val() {
-    static const std::shared_ptr<maybe> v = maybe::ctor::Just_(
-        ((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) +
-                                             1) +
-                                            1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1));
+    static const std::shared_ptr<maybe> v = maybe::ctor::Just_(42u);
     return v;
   }
 
   static const std::shared_ptr<mlist> &sample_list() {
     static const std::shared_ptr<mlist> v = mlist::ctor::MCons_(
-        maybe::ctor::Just_(
-            ((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) +
-                                                  1) +
-                                                 1) +
-                                                1) +
-                                               1) +
-                                              1) +
-                                             1) +
-                                            1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1)),
+        maybe::ctor::Just_(42u),
         mlist::ctor::MCons_(maybe::ctor::Nothing_(), mlist::ctor::MNil_()));
     return v;
   }
@@ -352,45 +275,7 @@ template <Elem E> struct Container {
 struct NatElem {
   using t = unsigned int;
 
-  static inline const unsigned int dflt =
-      ((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1);
+  static inline const unsigned int dflt = 42u;
 };
 static_assert(Elem<NatElem>);
 

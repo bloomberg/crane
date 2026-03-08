@@ -17,45 +17,22 @@ unsigned int InstructionCycleSum::cycles(
   return std::visit(
       Overloaded{
           [](const typename InstructionCycleSum::instruction::NOP_ _args)
-              -> unsigned int {
-            return ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1);
-          },
+              -> unsigned int { return 8u; },
           [&](const typename InstructionCycleSum::instruction::JCN_ _args)
               -> unsigned int {
             unsigned int n = _args._a0;
-            if ((Nat::div(n, ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                              1)) == (0 + 1))) {
-              return ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1);
+            if ((Nat::div(n, 8u) == 1u)) {
+              return 16u;
             } else {
-              if (((s->acc_ == 0) && ((Nat::div(n, ((((0 + 1) + 1) + 1) + 1)) %
-                                       ((0 + 1) + 1)) == (0 + 1)))) {
-                return (
-                    (((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1);
+              if (((s->acc_ == 0u) && ((Nat::div(n, 4u) % 2u) == 1u))) {
+                return 16u;
               } else {
-                return ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1);
+                return 8u;
               }
             }
           },
           [](const typename InstructionCycleSum::instruction::INC_ _args)
-              -> unsigned int {
-            return ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1);
-          }},
+              -> unsigned int { return 8u; }},
       i->v());
 }
 
@@ -74,18 +51,8 @@ std::shared_ptr<InstructionCycleSum::state> InstructionCycleSum::execute(
           },
           [&](const typename InstructionCycleSum::instruction::INC_ _args)
               -> std::shared_ptr<InstructionCycleSum::state> {
-            return std::make_shared<InstructionCycleSum::state>(state{
-                ((s->acc_ + (0 + 1)) %
-                 ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1)),
-                s->carry_, s->test_});
+            return std::make_shared<InstructionCycleSum::state>(
+                state{((s->acc_ + 1u) % 16u), s->carry_, s->test_});
           }},
       i->v());
 }
@@ -98,7 +65,7 @@ unsigned int InstructionCycleSum::program_cycles(
       Overloaded{
           [](const typename List<
               std::shared_ptr<InstructionCycleSum::instruction>>::nil _args)
-              -> unsigned int { return 0; },
+              -> unsigned int { return 0u; },
           [&](const typename List<
               std::shared_ptr<InstructionCycleSum::instruction>>::cons _args)
               -> unsigned int {
@@ -134,6 +101,6 @@ unsigned int Nat::div(const unsigned int x, const unsigned int y) {
     return std::move(y);
   } else {
     unsigned int y_ = y - 1;
-    return Nat::divmod(x, y_, 0, y_).first;
+    return Nat::divmod(x, y_, 0u, y_).first;
   }
 }

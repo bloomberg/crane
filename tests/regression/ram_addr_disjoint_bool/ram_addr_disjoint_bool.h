@@ -25,21 +25,17 @@ struct RamAddrDisjointBool {
 
   static inline const unsigned int t =
       ([](void) {
-        if (ram_addr_disjointb(0, (0 + 1), ((0 + 1) + 1), (((0 + 1) + 1) + 1),
-                               0, (0 + 1), ((0 + 1) + 1),
-                               (((0 + 1) + 1) + 1))) {
-          return (0 + 1);
+        if (ram_addr_disjointb(0u, 1u, 2u, 3u, 0u, 1u, 2u, 3u)) {
+          return 1u;
         } else {
-          return 0;
+          return 0u;
         }
       }() +
        [](void) {
-         if (ram_addr_disjointb(0, (0 + 1), ((0 + 1) + 1), (((0 + 1) + 1) + 1),
-                                0, (0 + 1), ((0 + 1) + 1),
-                                ((((0 + 1) + 1) + 1) + 1))) {
-           return (0 + 1);
+         if (ram_addr_disjointb(0u, 1u, 2u, 3u, 0u, 1u, 2u, 4u)) {
+           return 1u;
          } else {
-           return 0;
+           return 0u;
          }
        }());
 };

@@ -591,11 +591,11 @@ std::shared_ptr<List<unsigned int>>
 BinomialHeap::make_list(const unsigned int n,
                         std::shared_ptr<List<unsigned int>> l) {
   if (n <= 0) {
-    return List<unsigned int>::ctor::cons_(0, std::move(l));
+    return List<unsigned int>::ctor::cons_(0u, std::move(l));
   } else {
     unsigned int n0 = n - 1;
     if (n0 <= 0) {
-      return List<unsigned int>::ctor::cons_((0 + 1), l);
+      return List<unsigned int>::ctor::cons_(1u, l);
     } else {
       unsigned int n1 = n0 - 1;
       return make_list(n1, List<unsigned int>::ctor::cons_(((n1 + 1) + 1), l));
@@ -613,6 +613,6 @@ BinomialHeap::key BinomialHeap::help(
     std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> _x = p.second;
     return k;
   } else {
-    return 0;
+    return 0u;
   }
 }

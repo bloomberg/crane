@@ -39,7 +39,7 @@ unsigned int JumpClassifierFlags::count_jumps(
       Overloaded{
           [](const typename List<
               std::shared_ptr<JumpClassifierFlags::instruction>>::nil _args)
-              -> unsigned int { return 0; },
+              -> unsigned int { return 0u; },
           [](const typename List<
               std::shared_ptr<JumpClassifierFlags::instruction>>::cons _args)
               -> unsigned int {
@@ -49,9 +49,9 @@ unsigned int JumpClassifierFlags::count_jumps(
                 rest = _args._a1;
             return ([&](void) {
               if (is_jump(std::move(i))) {
-                return (0 + 1);
+                return 1u;
               } else {
-                return 0;
+                return 0u;
               }
             }() + count_jumps(std::move(rest)));
           }},

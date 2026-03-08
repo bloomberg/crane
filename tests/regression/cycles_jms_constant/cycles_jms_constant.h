@@ -84,5 +84,6 @@ struct CyclesJmsConstant {
   static unsigned int cycles(const std::shared_ptr<state> &_x,
                              const std::shared_ptr<instruction> &i);
 
- static inline const unsigned int t = cycles(std::make_shared<state>(state{0}), instruction::ctor::JMS_((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1)));
+  static inline const unsigned int t =
+      cycles(std::make_shared<state>(state{0u}), instruction::ctor::JMS_(77u));
 };

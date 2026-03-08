@@ -121,12 +121,10 @@ struct GuardedPromWrite {
 
   static inline const std::shared_ptr<state> sample = std::make_shared<state>(
       state{List<unsigned int>::ctor::cons_(
-                0, List<unsigned int>::ctor::cons_(
-                       0, List<unsigned int>::ctor::cons_(
-                              0, List<unsigned int>::ctor::nil_()))),
-            (0 + 1), (((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-            true});
+                0u, List<unsigned int>::ctor::cons_(
+                        0u, List<unsigned int>::ctor::cons_(
+                                0u, List<unsigned int>::ctor::nil_()))),
+            1u, 9u, true});
 
-  static inline const unsigned int t =
-      execute_wpm(sample)->rom_->nth((0 + 1), 0);
+  static inline const unsigned int t = execute_wpm(sample)->rom_->nth(1u, 0u);
 };

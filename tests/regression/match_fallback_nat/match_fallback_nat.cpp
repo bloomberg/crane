@@ -19,6 +19,6 @@ unsigned int MatchFallbackNat::fallback(
                    return std::move(n);
                  },
                  [](const typename MatchFallbackNat::maybe_nat::NoneNat _args)
-                     -> unsigned int { return 0; }},
+                     -> unsigned int { return 0u; }},
       x->v());
 }

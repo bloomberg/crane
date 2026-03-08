@@ -85,6 +85,5 @@ struct ForwardSpecAscii {
 
   static unsigned int bump_node(const std::shared_ptr<node> &x);
 
-  static inline const unsigned int t =
-      bump_node(node::ctor::ANode_(((0 + 1) + 1)));
+  static inline const unsigned int t = bump_node(node::ctor::ANode_(2u));
 };

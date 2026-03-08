@@ -14,6 +14,6 @@ std::shared_ptr<ResetStateMemoryPreserve::state>
 ResetStateMemoryPreserve::reset_state(
     std::shared_ptr<ResetStateMemoryPreserve::state> s) {
   return std::make_shared<ResetStateMemoryPreserve::state>(
-      state{0, s->regs, false, 0, List<unsigned int>::ctor::nil_(), s->ram_sys,
-            s->rom});
+      state{0u, s->regs, false, 0u, List<unsigned int>::ctor::nil_(),
+            s->ram_sys, s->rom});
 }

@@ -53,12 +53,13 @@ public:
   variant_t &v_mut() { return v_; }
   unsigned int length() const {
     return std::visit(
-        Overloaded{
-            [](const typename List<A>::nil _args) -> unsigned int { return 0; },
-            [](const typename List<A>::cons _args) -> unsigned int {
-              std::shared_ptr<List<A>> l_ = _args._a1;
-              return (std::move(l_)->length() + 1);
-            }},
+        Overloaded{[](const typename List<A>::nil _args) -> unsigned int {
+                     return 0u;
+                   },
+                   [](const typename List<A>::cons _args) -> unsigned int {
+                     std::shared_ptr<List<A>> l_ = _args._a1;
+                     return (std::move(l_)->length() + 1);
+                   }},
         this->v());
   }
 };
@@ -72,7 +73,7 @@ struct CPS {
   fact_cps(const unsigned int n,
            const std::function<unsigned int(unsigned int)> k) {
     if (n <= 0) {
-      return k((0 + 1));
+      return k(1u);
     } else {
       unsigned int n_ = n - 1;
       return fact_cps(n_, [&](unsigned int r) { return k(((n_ + 1) * r)); });
@@ -85,11 +86,11 @@ struct CPS {
   fib_cps(const unsigned int n,
           const std::function<unsigned int(unsigned int)> k) {
     if (n <= 0) {
-      return k(0);
+      return k(0u);
     } else {
       unsigned int n1 = n - 1;
       if (n1 <= 0) {
-        return k((0 + 1));
+        return k(1u);
       } else {
         unsigned int n_ = n1 - 1;
         return fib_cps(n_, [&](unsigned int a) {
@@ -198,7 +199,7 @@ struct CPS {
     return std::visit(
         Overloaded{
             [&](const typename List<unsigned int>::nil _args) -> unsigned int {
-              return k(0);
+              return k(0u);
             },
             [&](const typename List<unsigned int>::cons _args) -> unsigned int {
               unsigned int x = _args._a0;
@@ -242,74 +243,30 @@ struct CPS {
 
   static unsigned int count_evens(const std::shared_ptr<List<unsigned int>> &l);
 
-  static inline const unsigned int test_fact_5 =
-      factorial((((((0 + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_fact_5 = factorial(5u);
 
-  static inline const unsigned int test_fib_7 =
-      fibonacci((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_fib_7 = fibonacci(7u);
 
-  static inline const unsigned int test_tree = tree_sum(
-      tree::ctor::Node_(tree::ctor::Node_(tree::ctor::Leaf_((0 + 1)),
-                                          tree::ctor::Leaf_(((0 + 1) + 1))),
-                        tree::ctor::Leaf_((((0 + 1) + 1) + 1))));
+  static inline const unsigned int test_tree = tree_sum(tree::ctor::Node_(
+      tree::ctor::Node_(tree::ctor::Leaf_(1u), tree::ctor::Leaf_(2u)),
+      tree::ctor::Leaf_(3u)));
 
   static inline const unsigned int test_list_sum =
       list_sum(List<unsigned int>::ctor::cons_(
-          ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-          List<unsigned int>::ctor::cons_(
-              ((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1),
-              List<unsigned int>::ctor::cons_(
-                  ((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1),
-                  List<unsigned int>::ctor::nil_()))));
+          10u, List<unsigned int>::ctor::cons_(
+                   20u, List<unsigned int>::ctor::cons_(
+                            30u, List<unsigned int>::ctor::nil_()))));
 
   static inline const unsigned int test_evens =
       count_evens(List<unsigned int>::ctor::cons_(
-          (0 + 1), List<unsigned int>::ctor::cons_(
-                       ((0 + 1) + 1),
-                       List<unsigned int>::ctor::cons_(
-                           (((0 + 1) + 1) + 1),
-                           List<unsigned int>::ctor::cons_(
-                               ((((0 + 1) + 1) + 1) + 1),
-                               List<unsigned int>::ctor::cons_(
-                                   (((((0 + 1) + 1) + 1) + 1) + 1),
-                                   List<unsigned int>::ctor::cons_(
-                                       ((((((0 + 1) + 1) + 1) + 1) + 1) + 1),
-                                       List<unsigned int>::ctor::nil_())))))));
+          1u,
+          List<unsigned int>::ctor::cons_(
+              2u,
+              List<unsigned int>::ctor::cons_(
+                  3u,
+                  List<unsigned int>::ctor::cons_(
+                      4u,
+                      List<unsigned int>::ctor::cons_(
+                          5u, List<unsigned int>::ctor::cons_(
+                                  6u, List<unsigned int>::ctor::nil_())))))));
 };

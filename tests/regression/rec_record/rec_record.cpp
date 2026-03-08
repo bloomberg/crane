@@ -14,7 +14,7 @@ unsigned int
 RecRecord::rlist_sum(const std::shared_ptr<RecRecord::rlist<unsigned int>> &l) {
   return std::visit(
       Overloaded{[](const typename RecRecord::rlist<unsigned int>::rnil _args)
-                     -> unsigned int { return 0; },
+                     -> unsigned int { return 0u; },
                  [](const typename RecRecord::rlist<unsigned int>::rcons _args)
                      -> unsigned int {
                    unsigned int x = _args._a0;
@@ -31,6 +31,6 @@ RecRecord::rnode_depth(const std::shared_ptr<RecRecord::RNode> &r) {
     std::shared_ptr<RecRecord::RNode> next = *r->rn_next;
     return (rnode_depth(next) + 1);
   } else {
-    return (0 + 1);
+    return 1u;
   }
 }

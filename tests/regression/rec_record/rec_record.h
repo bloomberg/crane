@@ -124,7 +124,7 @@ struct RecRecord {
   static unsigned int rlist_length(const std::shared_ptr<rlist<T1>> &l) {
     return std::visit(
         Overloaded{[](const typename rlist<T1>::rnil _args) -> unsigned int {
-                     return 0;
+                     return 0u;
                    },
                    [](const typename rlist<T1>::rcons _args) -> unsigned int {
                      std::shared_ptr<rlist<T1>> rest = _args._a1;
@@ -139,10 +139,9 @@ struct RecRecord {
 
   static inline const std::shared_ptr<rlist<unsigned int>> test_rlist =
       rlist<unsigned int>::ctor::rcons_(
-          (0 + 1), rlist<unsigned int>::ctor::rcons_(
-                       ((0 + 1) + 1), rlist<unsigned int>::ctor::rcons_(
-                                          (((0 + 1) + 1) + 1),
-                                          rlist<unsigned int>::ctor::rnil_())));
+          1u, rlist<unsigned int>::ctor::rcons_(
+                  2u, rlist<unsigned int>::ctor::rcons_(
+                          3u, rlist<unsigned int>::ctor::rnil_())));
 
   static inline const unsigned int test_rlist_len =
       rlist_length<unsigned int>(test_rlist);
@@ -151,59 +150,20 @@ struct RecRecord {
 
   static inline const std::shared_ptr<RNode> test_rnode =
       std::make_shared<RNode>(RNode{
-          (0 + 1),
+          1u,
           std::make_optional<std::shared_ptr<RNode>>(std::make_shared<RNode>(
-              RNode{((0 + 1) + 1),
+              RNode{2u,
                     std::make_optional<std::shared_ptr<RNode>>(
-                        std::make_shared<RNode>(
-                            RNode{(((0 + 1) + 1) + 1), std::nullopt}))}))});
+                        std::make_shared<RNode>(RNode{3u, std::nullopt}))}))});
 
   static inline const unsigned int test_rnode_depth = rnode_depth(test_rnode);
 
   static inline const std::shared_ptr<Employee> test_emp =
-      std::make_shared<Employee>(Employee{
-          ((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) +
-                                               1) +
-                                              1) +
-                                             1) +
-                                            1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1),
-          (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1)});
+      std::make_shared<Employee>(Employee{42u, 7u});
 
- static inline const std::shared_ptr<Department> test_dept = std::make_shared<Department>(Department{(((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1), test_emp, ((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1)});
+  static inline const std::shared_ptr<Department> test_dept =
+      std::make_shared<Department>(Department{7u, test_emp, 50u});
 
- static inline const unsigned int test_dept_head_name =
-     test_dept->dept_head->emp_name;
+  static inline const unsigned int test_dept_head_name =
+      test_dept->dept_head->emp_name;
 };

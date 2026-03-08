@@ -201,26 +201,15 @@ struct BinomialHeap {
   static key help(const std::shared_ptr<List<std::shared_ptr<tree>>> &c);
 
   static inline const key example1 = help(merge(
-      insert((((((0 + 1) + 1) + 1) + 1) + 1),
-             insert((((0 + 1) + 1) + 1),
-                    insert((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                           List<std::shared_ptr<tree>>::ctor::nil_()))),
+      insert(5u,
+             insert(3u, insert(7u, List<std::shared_ptr<tree>>::ctor::nil_()))),
       insert(
-          (((0 + 1) + 1) + 1),
-          insert(((((((0 + 1) + 1) + 1) + 1) + 1) + 1),
-                 insert((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                        List<std::shared_ptr<tree>>::ctor::nil_())))));
+          3u,
+          insert(6u, insert(9u, List<std::shared_ptr<tree>>::ctor::nil_())))));
 
-  static inline const key example2 = help(merge(
-      insert_list(
-          make_list(
-              ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-              List<unsigned int>::ctor::nil_()),
-          List<std::shared_ptr<tree>>::ctor::nil_()),
-      insert_list(
-          make_list(
-              (((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-               1),
-              List<unsigned int>::ctor::nil_()),
-          List<std::shared_ptr<tree>>::ctor::nil_())));
+  static inline const key example2 =
+      help(merge(insert_list(make_list(10u, List<unsigned int>::ctor::nil_()),
+                             List<std::shared_ptr<tree>>::ctor::nil_()),
+                 insert_list(make_list(11u, List<unsigned int>::ctor::nil_()),
+                             List<std::shared_ptr<tree>>::ctor::nil_())));
 };

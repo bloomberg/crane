@@ -84,15 +84,13 @@ struct RegionPatchWrite {
   static inline const unsigned int t =
       update_region(
           List<unsigned int>::ctor::cons_(
-              0, List<unsigned int>::ctor::cons_(
-                     0, List<unsigned int>::ctor::cons_(
-                            0, List<unsigned int>::ctor::cons_(
-                                   0, List<unsigned int>::ctor::nil_())))),
-          (0 + 1),
+              0u, List<unsigned int>::ctor::cons_(
+                      0u, List<unsigned int>::ctor::cons_(
+                              0u, List<unsigned int>::ctor::cons_(
+                                      0u, List<unsigned int>::ctor::nil_())))),
+          1u,
           List<unsigned int>::ctor::cons_(
-              (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-              List<unsigned int>::ctor::cons_(
-                  ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                  List<unsigned int>::ctor::nil_())))
-          ->nth(((0 + 1) + 1), 0);
+              7u, List<unsigned int>::ctor::cons_(
+                      8u, List<unsigned int>::ctor::nil_())))
+          ->nth(2u, 0u);
 };

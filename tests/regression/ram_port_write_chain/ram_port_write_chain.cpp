@@ -23,19 +23,12 @@ std::shared_ptr<RamPortWriteChain::chip>
 RamPortWriteChain::get_chip(const std::shared_ptr<RamPortWriteChain::bank> &bk,
                             const unsigned int c) {
   return bk->bank_chips->nth(
-      c, std::make_shared<RamPortWriteChain::chip>(chip{0}));
+      c, std::make_shared<RamPortWriteChain::chip>(chip{0u}));
 }
 
 std::shared_ptr<RamPortWriteChain::chip> RamPortWriteChain::upd_port_in_chip(
     const std::shared_ptr<RamPortWriteChain::chip> &_x, const unsigned int v) {
-  return std::make_shared<RamPortWriteChain::chip>(chip{(
-      std::move(v) %
-      ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1))});
+  return std::make_shared<RamPortWriteChain::chip>(chip{(std::move(v) % 16u)});
 }
 
 std::shared_ptr<RamPortWriteChain::bank> RamPortWriteChain::upd_chip_in_bank(

@@ -11,5 +11,5 @@
 #include <variant>
 
 bool BcdDigitUpperBound::is_bcd_digitb(const unsigned int n) {
-  return (n <= (((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+  return (n <= 9u);
 }

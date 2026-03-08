@@ -89,14 +89,8 @@ struct IszCycleBranch {
   static unsigned int cycles_isz(const std::shared_ptr<state> &s,
                                  const unsigned int r);
 
-  static inline const unsigned int t = cycles_isz(
-      std::make_shared<state>(state{List<unsigned int>::ctor::cons_(
-          (((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1),
-          List<unsigned int>::ctor::nil_())}),
-      0);
+  static inline const unsigned int t =
+      cycles_isz(std::make_shared<state>(state{List<unsigned int>::ctor::cons_(
+                     15u, List<unsigned int>::ctor::nil_())}),
+                 0u);
 };

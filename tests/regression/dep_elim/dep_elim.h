@@ -321,117 +321,33 @@ struct DepElim {
   static unsigned int get_present(const std::shared_ptr<avail> &a);
 
   static inline const unsigned int test_fin0 =
-      fin_to_nat((((0 + 1) + 1) + 1), fin::ctor::FZ_(((0 + 1) + 1)));
+      fin_to_nat(3u, fin::ctor::FZ_(2u));
 
-  static inline const unsigned int test_fin2 =
-      fin_to_nat((((0 + 1) + 1) + 1),
-                 fin::ctor::FS_(((0 + 1) + 1),
-                                fin::ctor::FS_((0 + 1), fin::ctor::FZ_(0))));
+  static inline const unsigned int test_fin2 = fin_to_nat(
+      3u, fin::ctor::FS_(2u, fin::ctor::FS_(1u, fin::ctor::FZ_(0u))));
 
   static inline const std::shared_ptr<vec<unsigned int>> my_vec =
       vec<unsigned int>::ctor::vcons_(
-          ((0 + 1) + 1),
-          ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
+          2u, 10u,
           vec<unsigned int>::ctor::vcons_(
-              (0 + 1),
-              ((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1),
+              1u, 20u,
               vec<unsigned int>::ctor::vcons_(
-                  0,
-                  ((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1),
-                  vec<unsigned int>::ctor::vnil_())));
+                  0u, 30u, vec<unsigned int>::ctor::vnil_())));
 
   static inline const std::shared_ptr<List<unsigned int>> test_vec_list =
-      vec_to_list<unsigned int>((((0 + 1) + 1) + 1), my_vec);
+      vec_to_list<unsigned int>(3u, my_vec);
 
   static inline const unsigned int test_vec_head =
-      vec_head<unsigned int>(((0 + 1) + 1), my_vec);
+      vec_head<unsigned int>(2u, my_vec);
 
   static inline const std::shared_ptr<List<unsigned int>> test_vec_tail_list =
-      vec_to_list<unsigned int>(((0 + 1) + 1),
-                                vec_tail<unsigned int>(((0 + 1) + 1), my_vec));
+      vec_to_list<unsigned int>(2u, vec_tail<unsigned int>(2u, my_vec));
 
   static inline const std::shared_ptr<List<unsigned int>> test_vec_map =
       vec_to_list<unsigned int>(
-          (((0 + 1) + 1) + 1),
-          vec_map<unsigned int, unsigned int>(
-              (((0 + 1) + 1) + 1), [](unsigned int n) { return (n + (0 + 1)); },
-              my_vec));
+          3u, vec_map<unsigned int, unsigned int>(
+                  3u, [](unsigned int n) { return (n + 1u); }, my_vec));
 
   static inline const unsigned int test_present =
-      get_present(avail::ctor::present_(
-          ((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) +
-                                               1) +
-                                              1) +
-                                             1) +
-                                            1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1)));
+      get_present(avail::ctor::present_(42u));
 };

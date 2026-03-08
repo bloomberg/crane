@@ -28,6 +28,5 @@ struct FuncOnlySubmoduleAb {
     };
   };
 
-  static inline const unsigned int t =
-      Root::A::inc(Root::B::dec((((0 + 1) + 1) + 1)));
+  static inline const unsigned int t = Root::A::inc(Root::B::dec(3u));
 };

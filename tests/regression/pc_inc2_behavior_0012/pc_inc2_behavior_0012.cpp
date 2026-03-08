@@ -30,7 +30,7 @@ std::shared_ptr<PcInc2Behavior0012::ram_reg> PcInc2Behavior0012::get_regRAM(
 unsigned int PcInc2Behavior0012::get_main(
     const std::shared_ptr<PcInc2Behavior0012::ram_reg> &rg,
     const unsigned int i) {
-  return rg->reg_main->nth(i, 0);
+  return rg->reg_main->nth(i, 0u);
 }
 
 unsigned int PcInc2Behavior0012::ram_read_main(

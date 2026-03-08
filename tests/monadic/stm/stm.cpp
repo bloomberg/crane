@@ -12,8 +12,8 @@
 #include <variant>
 
 unsigned int stmtest::stm_basic_counter() {
-  std::shared_ptr<stm::TVar<unsigned int>> c = stm::newTVar<unsigned int>(0);
-  c->write((0 + 1));
+  std::shared_ptr<stm::TVar<unsigned int>> c = stm::newTVar<unsigned int>(0u);
+  c->write(1u);
   return c->read();
 }
 
@@ -89,46 +89,7 @@ unsigned int stmtest::stm_orElse_retry_example() {
   std::shared_ptr<stm::TVar<std::shared_ptr<List<unsigned int>>>> q =
       stm::newTVar<std::shared_ptr<List<unsigned int>>>(
           List<unsigned int>::ctor::nil_());
-  return stm::orElse<unsigned int>(
-      stm_dequeue(q),
-      ((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1));
+  return stm::orElse<unsigned int>(stm_dequeue(q), 42u);
 }
 
 unsigned int stmtest::io_orElse_retry_example() {

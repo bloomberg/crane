@@ -73,35 +73,25 @@ struct ComputationalProof {
   static std::shared_ptr<List<unsigned int>>
   isort_dec(const std::shared_ptr<List<unsigned int>> &l);
 
-  static inline const bool test_eq_true = nat_eqb_dec(
-      (((((0 + 1) + 1) + 1) + 1) + 1), (((((0 + 1) + 1) + 1) + 1) + 1));
+  static inline const bool test_eq_true = nat_eqb_dec(5u, 5u);
 
-  static inline const bool test_eq_false = nat_eqb_dec(
-      (((0 + 1) + 1) + 1), (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+  static inline const bool test_eq_false = nat_eqb_dec(3u, 7u);
 
-  static inline const bool test_leb_true =
-      nat_leb_dec((((0 + 1) + 1) + 1), (((((0 + 1) + 1) + 1) + 1) + 1));
+  static inline const bool test_leb_true = nat_leb_dec(3u, 5u);
 
-  static inline const bool test_leb_false = nat_leb_dec(
-      ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), ((0 + 1) + 1));
+  static inline const bool test_leb_false = nat_leb_dec(8u, 2u);
 
-  static inline const unsigned int test_min =
-      min_dec(((((0 + 1) + 1) + 1) + 1),
-              (((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_min = min_dec(4u, 9u);
 
-  static inline const unsigned int test_max =
-      max_dec(((((0 + 1) + 1) + 1) + 1),
-              (((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_max = max_dec(4u, 9u);
 
   static inline const std::shared_ptr<List<unsigned int>> test_sort =
       isort_dec(List<unsigned int>::ctor::cons_(
-          (((((0 + 1) + 1) + 1) + 1) + 1),
+          5u,
           List<unsigned int>::ctor::cons_(
-              (0 + 1),
+              1u,
               List<unsigned int>::ctor::cons_(
-                  ((((0 + 1) + 1) + 1) + 1),
-                  List<unsigned int>::ctor::cons_(
-                      ((0 + 1) + 1), List<unsigned int>::ctor::cons_(
-                                         (((0 + 1) + 1) + 1),
-                                         List<unsigned int>::ctor::nil_()))))));
+                  4u, List<unsigned int>::ctor::cons_(
+                          2u, List<unsigned int>::ctor::cons_(
+                                  3u, List<unsigned int>::ctor::nil_()))))));
 };

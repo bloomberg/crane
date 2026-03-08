@@ -355,7 +355,7 @@ struct Cotree {
               return std::visit(
                   Overloaded{
                       [](const typename List<std::shared_ptr<tree<T1>>>::nil
-                             _args) -> unsigned int { return 0; },
+                             _args) -> unsigned int { return 0u; },
                       [&](const typename List<std::shared_ptr<tree<T1>>>::cons
                               _args) -> unsigned int {
                         std::shared_ptr<tree<T1>> t_ = _args._a0;
@@ -374,11 +374,11 @@ struct Cotree {
 
   static inline const std::shared_ptr<cotree<unsigned int>> sample_cotree =
       cotree<unsigned int>::ctor::conode_(
-          (0 + 1),
+          1u,
           colist<std::shared_ptr<cotree<unsigned int>>>::ctor::cocons_(
-              singleton_cotree<unsigned int>(((0 + 1) + 1)),
+              singleton_cotree<unsigned int>(2u),
               colist<std::shared_ptr<cotree<unsigned int>>>::ctor::cocons_(
-                  singleton_cotree<unsigned int>((((0 + 1) + 1) + 1)),
+                  singleton_cotree<unsigned int>(3u),
                   colist<
                       std::shared_ptr<cotree<unsigned int>>>::ctor::conil_())));
 
@@ -387,24 +387,24 @@ struct Cotree {
   static inline const unsigned int test_doubled_root =
       sample_cotree
           ->template comap_cotree<unsigned int>(
-              [](unsigned int n) { return (n * ((0 + 1) + 1)); })
+              [](unsigned int n) { return (n * 2u); })
           ->root();
 
   static std::shared_ptr<colist<unsigned int>> nats(const unsigned int n);
 
   static inline const std::shared_ptr<List<unsigned int>> test_first_five =
-      list_of_colist<unsigned int>((((((0 + 1) + 1) + 1) + 1) + 1), nats(0));
+      list_of_colist<unsigned int>(5u, nats(0u));
 
   static std::shared_ptr<colist<unsigned int>>
   binary_children(const unsigned int n);
 
   static inline const std::shared_ptr<cotree<unsigned int>> binary_tree =
-      unfold_cotree<unsigned int>(binary_children, 0);
+      unfold_cotree<unsigned int>(binary_children, 0u);
 
   static inline const unsigned int test_binary_root = binary_tree->root();
 
   static inline const std::shared_ptr<tree<unsigned int>> test_approx =
-      binary_tree->tree_of_cotree(((0 + 1) + 1));
+      binary_tree->tree_of_cotree(2u);
 
   static inline const unsigned int test_approx_root =
       tree_root<unsigned int>(test_approx);

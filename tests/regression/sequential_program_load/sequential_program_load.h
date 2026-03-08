@@ -125,22 +125,20 @@ struct SequentialProgramLoad {
   static inline const std::shared_ptr<state> sample =
       std::make_shared<state>(state{
           List<unsigned int>::ctor::cons_(
-              0,
+              0u,
               List<unsigned int>::ctor::cons_(
-                  0, List<unsigned int>::ctor::cons_(
-                         0, List<unsigned int>::ctor::cons_(
-                                0, List<unsigned int>::ctor::cons_(
-                                       0, List<unsigned int>::ctor::nil_()))))),
-          (0 + 1)});
+                  0u,
+                  List<unsigned int>::ctor::cons_(
+                      0u, List<unsigned int>::ctor::cons_(
+                              0u, List<unsigned int>::ctor::cons_(
+                                      0u, List<unsigned int>::ctor::nil_()))))),
+          1u});
 
   static inline const unsigned int t =
       load_program(sample,
                    List<unsigned int>::ctor::cons_(
-                       (((((0 + 1) + 1) + 1) + 1) + 1),
-                       List<unsigned int>::ctor::cons_(
-                           ((((((0 + 1) + 1) + 1) + 1) + 1) + 1),
-                           List<unsigned int>::ctor::cons_(
-                               (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                               List<unsigned int>::ctor::nil_()))))
-          ->rom_->nth(((0 + 1) + 1), 0);
+                       5u, List<unsigned int>::ctor::cons_(
+                               6u, List<unsigned int>::ctor::cons_(
+                                       7u, List<unsigned int>::ctor::nil_()))))
+          ->rom_->nth(2u, 0u);
 };

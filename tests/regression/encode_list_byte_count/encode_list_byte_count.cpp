@@ -14,31 +14,15 @@
 std::pair<unsigned int, unsigned int> EncodeListByteCount::encode(
     const std::shared_ptr<EncodeListByteCount::instruction> &i) {
   return std::visit(
-      Overloaded{
-          [](const typename EncodeListByteCount::instruction::NOP _args)
-              -> std::pair<unsigned int, unsigned int> {
-            return std::make_pair(0, 0);
-          },
-          [](const typename EncodeListByteCount::instruction::LDM _args)
-              -> std::pair<unsigned int, unsigned int> {
-            unsigned int n = _args._a0;
-            return std::make_pair(
-                (((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                    1) +
-                   1) +
-                  1) +
-                 1),
-                (std::move(n) %
-                 ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1)));
-          }},
+      Overloaded{[](const typename EncodeListByteCount::instruction::NOP _args)
+                     -> std::pair<unsigned int, unsigned int> {
+                   return std::make_pair(0u, 0u);
+                 },
+                 [](const typename EncodeListByteCount::instruction::LDM _args)
+                     -> std::pair<unsigned int, unsigned int> {
+                   unsigned int n = _args._a0;
+                   return std::make_pair(13u, (std::move(n) % 16u));
+                 }},
       i->v());
 }
 

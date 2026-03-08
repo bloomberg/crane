@@ -60,10 +60,10 @@ bool skiplist_test::nat_eq(const unsigned int _x0, const unsigned int _x1) {
 
 bool skiplist_test::stm_test_insert_lookup() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
-      SkipList<int, int>::template create<unsigned int, unsigned int>(0, 0);
+      SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   sl->insert(nat_lt, nat_eq, 5u, 50u, 2u);
   sl->insert(nat_lt, nat_eq, 3u, 30u, 1u);
-  sl->insert(nat_lt, nat_eq, 7u, 70u, 0);
+  sl->insert(nat_lt, nat_eq, 7u, 70u, 0u);
   sl->insert(nat_lt, nat_eq, 1u, 10u, 1u);
   std::optional<unsigned int> v5 = sl->lookup(nat_lt, nat_eq, 5u);
   std::optional<unsigned int> v3 = sl->lookup(nat_lt, nat_eq, 3u);
@@ -110,10 +110,10 @@ bool skiplist_test::stm_test_insert_lookup() {
 
 bool skiplist_test::stm_test_delete() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
-      SkipList<int, int>::template create<unsigned int, unsigned int>(0, 0);
+      SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   sl->insert(nat_lt, nat_eq, 5u, 50u, 2u);
   sl->insert(nat_lt, nat_eq, 3u, 30u, 1u);
-  sl->insert(nat_lt, nat_eq, 7u, 70u, 0);
+  sl->insert(nat_lt, nat_eq, 7u, 70u, 0u);
   sl->remove(nat_lt, nat_eq, 5u);
   std::optional<unsigned int> v5 = sl->lookup(nat_lt, nat_eq, 5u);
   std::optional<unsigned int> v3 = sl->lookup(nat_lt, nat_eq, 3u);
@@ -144,9 +144,9 @@ bool skiplist_test::stm_test_delete() {
 
 bool skiplist_test::stm_test_update() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
-      SkipList<int, int>::template create<unsigned int, unsigned int>(0, 0);
-  sl->insert(nat_lt, nat_eq, 5u, 50u, 0);
-  sl->insert(nat_lt, nat_eq, 5u, 500u, 0);
+      SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
+  sl->insert(nat_lt, nat_eq, 5u, 50u, 0u);
+  sl->insert(nat_lt, nat_eq, 5u, 500u, 0u);
   std::optional<unsigned int> v = sl->lookup(nat_lt, nat_eq, 5u);
   return [&](void) {
     if (v.has_value()) {
@@ -160,10 +160,10 @@ bool skiplist_test::stm_test_update() {
 
 bool skiplist_test::stm_test_minimum() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
-      SkipList<int, int>::template create<unsigned int, unsigned int>(0, 0);
-  sl->insert(nat_lt, nat_eq, 5u, 50u, 0);
-  sl->insert(nat_lt, nat_eq, 3u, 30u, 0);
-  sl->insert(nat_lt, nat_eq, 7u, 70u, 0);
+      SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
+  sl->insert(nat_lt, nat_eq, 5u, 50u, 0u);
+  sl->insert(nat_lt, nat_eq, 3u, 30u, 0u);
+  sl->insert(nat_lt, nat_eq, 7u, 70u, 0u);
   std::optional<std::pair<unsigned int, unsigned int>> minOpt = sl->minimum();
   return [&](void) {
     if (minOpt.has_value()) {
@@ -179,14 +179,14 @@ bool skiplist_test::stm_test_minimum() {
 
 bool skiplist_test::stm_test_length_isEmpty() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
-      SkipList<int, int>::template create<unsigned int, unsigned int>(0, 0);
+      SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   bool empty1 = sl->isEmpty();
   unsigned int len1 = sl->length();
-  sl->insert(nat_lt, nat_eq, 5u, 50u, 0);
-  sl->insert(nat_lt, nat_eq, 3u, 30u, 0);
+  sl->insert(nat_lt, nat_eq, 5u, 50u, 0u);
+  sl->insert(nat_lt, nat_eq, 3u, 30u, 0u);
   bool empty2 = sl->isEmpty();
   unsigned int len2 = sl->length();
-  bool c2 = PeanoNat::eqb(len1, 0);
+  bool c2 = PeanoNat::eqb(len1, 0u);
   bool c3 = !(empty2);
   bool c4 = PeanoNat::eqb(len2, 2u);
   return (empty1 && (c2 && (c3 && c4)));
@@ -194,10 +194,10 @@ bool skiplist_test::stm_test_length_isEmpty() {
 
 bool skiplist_test::stm_test_front_back() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
-      SkipList<int, int>::template create<unsigned int, unsigned int>(0, 0);
-  sl->insert(nat_lt, nat_eq, 5u, 50u, 0);
-  sl->insert(nat_lt, nat_eq, 3u, 30u, 0);
-  sl->insert(nat_lt, nat_eq, 7u, 70u, 0);
+      SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
+  sl->insert(nat_lt, nat_eq, 5u, 50u, 0u);
+  sl->insert(nat_lt, nat_eq, 3u, 30u, 0u);
+  sl->insert(nat_lt, nat_eq, 7u, 70u, 0u);
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
       frontOpt = sl->front();
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> backOpt =
@@ -206,8 +206,7 @@ bool skiplist_test::stm_test_front_back() {
   if (frontOpt.has_value()) {
     std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *frontOpt;
     c1 = PeanoNat::eqb(
-        SkipList<int, int>::template key<unsigned int, unsigned int>(p),
-        (((0 + 1) + 1) + 1));
+        SkipList<int, int>::template key<unsigned int, unsigned int>(p), 3u);
   } else {
     c1 = false;
   }
@@ -217,7 +216,7 @@ bool skiplist_test::stm_test_front_back() {
     c2 = PeanoNat::eqb(
         SkipList<int, int>::template key<unsigned int, unsigned int>(
             std::move(p)),
-        (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+        7u);
   } else {
     c2 = false;
   }
@@ -226,10 +225,10 @@ bool skiplist_test::stm_test_front_back() {
 
 bool skiplist_test::stm_test_popFront() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
-      SkipList<int, int>::template create<unsigned int, unsigned int>(0, 0);
-  sl->insert(nat_lt, nat_eq, 5u, 50u, 0);
-  sl->insert(nat_lt, nat_eq, 3u, 30u, 0);
-  sl->insert(nat_lt, nat_eq, 7u, 70u, 0);
+      SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
+  sl->insert(nat_lt, nat_eq, 5u, 50u, 0u);
+  sl->insert(nat_lt, nat_eq, 3u, 30u, 0u);
+  sl->insert(nat_lt, nat_eq, 7u, 70u, 0u);
   std::optional<std::pair<unsigned int, unsigned int>> pop1 = sl->popFront();
   std::optional<std::pair<unsigned int, unsigned int>> pop2 = sl->popFront();
   unsigned int len = sl->length();
@@ -257,10 +256,10 @@ bool skiplist_test::stm_test_popFront() {
 
 bool skiplist_test::stm_test_addUnique() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
-      SkipList<int, int>::template create<unsigned int, unsigned int>(0, 0);
-  bool r1 = sl->addUnique(nat_lt, nat_eq, 5u, 50u, 0);
-  bool r2 = sl->addUnique(nat_lt, nat_eq, 5u, 500u, 0);
-  bool r3 = sl->addUnique(nat_lt, nat_eq, 3u, 30u, 0);
+      SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
+  bool r1 = sl->addUnique(nat_lt, nat_eq, 5u, 50u, 0u);
+  bool r2 = sl->addUnique(nat_lt, nat_eq, 5u, 500u, 0u);
+  bool r3 = sl->addUnique(nat_lt, nat_eq, 3u, 30u, 0u);
   std::optional<unsigned int> v5 = sl->lookup(nat_lt, nat_eq, 5u);
   unsigned int len = sl->length();
   bool c2 = !(r2);
@@ -277,9 +276,9 @@ bool skiplist_test::stm_test_addUnique() {
 
 bool skiplist_test::stm_test_find() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
-      SkipList<int, int>::template create<unsigned int, unsigned int>(0, 0);
-  sl->insert(nat_lt, nat_eq, 5u, 50u, 0);
-  sl->insert(nat_lt, nat_eq, 3u, 30u, 0);
+      SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
+  sl->insert(nat_lt, nat_eq, 5u, 50u, 0u);
+  sl->insert(nat_lt, nat_eq, 3u, 30u, 0u);
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> pairOpt =
       sl->find(nat_lt, nat_eq, 5u);
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> noneOpt =
@@ -305,10 +304,10 @@ bool skiplist_test::stm_test_find() {
 
 bool skiplist_test::stm_test_navigation() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
-      SkipList<int, int>::template create<unsigned int, unsigned int>(0, 0);
-  sl->insert(nat_lt, nat_eq, 1u, 10u, 0);
-  sl->insert(nat_lt, nat_eq, 3u, 30u, 0);
-  sl->insert(nat_lt, nat_eq, 5u, 50u, 0);
+      SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
+  sl->insert(nat_lt, nat_eq, 1u, 10u, 0u);
+  sl->insert(nat_lt, nat_eq, 3u, 30u, 0u);
+  sl->insert(nat_lt, nat_eq, 5u, 50u, 0u);
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
       frontOpt = sl->front();
   if (frontOpt.has_value()) {
@@ -347,10 +346,10 @@ bool skiplist_test::stm_test_navigation() {
 
 bool skiplist_test::stm_test_bounds() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
-      SkipList<int, int>::template create<unsigned int, unsigned int>(0, 0);
-  sl->insert(nat_lt, nat_eq, 2u, 20u, 0);
-  sl->insert(nat_lt, nat_eq, 4u, 40u, 0);
-  sl->insert(nat_lt, nat_eq, 6u, 60u, 0);
+      SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
+  sl->insert(nat_lt, nat_eq, 2u, 20u, 0u);
+  sl->insert(nat_lt, nat_eq, 4u, 40u, 0u);
+  sl->insert(nat_lt, nat_eq, 6u, 60u, 0u);
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> lb3 =
       sl->findLowerBound(nat_lt, 3u);
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> lb4 =
@@ -390,31 +389,31 @@ bool skiplist_test::stm_test_bounds() {
 
 bool skiplist_test::stm_test_removeAll() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
-      SkipList<int, int>::template create<unsigned int, unsigned int>(0, 0);
-  sl->insert(nat_lt, nat_eq, 5u, 50u, 0);
-  sl->insert(nat_lt, nat_eq, 3u, 30u, 0);
-  sl->insert(nat_lt, nat_eq, 7u, 70u, 0);
+      SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
+  sl->insert(nat_lt, nat_eq, 5u, 50u, 0u);
+  sl->insert(nat_lt, nat_eq, 3u, 30u, 0u);
+  sl->insert(nat_lt, nat_eq, 7u, 70u, 0u);
   unsigned int count = sl->removeAll();
   bool empty = sl->isEmpty();
   unsigned int len = sl->length();
   bool c1 = PeanoNat::eqb(count, 3u);
-  bool c3 = PeanoNat::eqb(len, 0);
+  bool c3 = PeanoNat::eqb(len, 0u);
   return (c1 && (empty && c3));
 }
 
 bool skiplist_test::stm_test_bde_api() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
-      SkipList<int, int>::template create<unsigned int, unsigned int>(0, 0);
+      SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   std::pair<std::shared_ptr<SkipNode<unsigned int, unsigned int>>, bool>
-      result1 = sl->bde_add(nat_lt, nat_eq, 5u, 50u, 0);
+      result1 = sl->bde_add(nat_lt, nat_eq, 5u, 50u, 0u);
   std::shared_ptr<SkipNode<unsigned int, unsigned int>> _x0 = result1.first;
   bool front1 = result1.second;
   std::pair<std::shared_ptr<SkipNode<unsigned int, unsigned int>>, bool>
-      result2 = sl->bde_add(nat_lt, nat_eq, 3u, 30u, 0);
+      result2 = sl->bde_add(nat_lt, nat_eq, 3u, 30u, 0u);
   std::shared_ptr<SkipNode<unsigned int, unsigned int>> _x1 = result2.first;
   bool front2 = result2.second;
   std::pair<std::shared_ptr<SkipNode<unsigned int, unsigned int>>, bool>
-      result3 = sl->bde_add(nat_lt, nat_eq, 7u, 70u, 0);
+      result3 = sl->bde_add(nat_lt, nat_eq, 7u, 70u, 0u);
   std::shared_ptr<SkipNode<unsigned int, unsigned int>> _x2 = result3.first;
   bool front3 = result3.second;
   bool c3 = !(front3);
@@ -437,7 +436,7 @@ bool skiplist_test::stm_test_bde_api() {
   std::pair<std::pair<unsigned int, std::optional<std::shared_ptr<
                                         SkipNode<unsigned int, unsigned int>>>>,
             bool>
-      uniqueResult = sl->bde_addUnique(nat_lt, nat_eq, 5u, 500u, 0);
+      uniqueResult = sl->bde_addUnique(nat_lt, nat_eq, 5u, 500u, 0u);
   std::pair<
       unsigned int,
       std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>>

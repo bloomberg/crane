@@ -44,50 +44,9 @@ struct SPropTest {
 
   static unsigned int safe_div(const unsigned int, const unsigned int);
 
-  static inline const unsigned int test_guarded =
-      guarded_pred((((((0 + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_guarded = guarded_pred(5u);
 
-  static inline const unsigned int test_box =
-      ((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1);
+  static inline const unsigned int test_box = 42u;
 
-  static inline const unsigned int test_div =
-      safe_div(((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-               (((0 + 1) + 1) + 1));
+  static inline const unsigned int test_div = safe_div(10u, 3u);
 };

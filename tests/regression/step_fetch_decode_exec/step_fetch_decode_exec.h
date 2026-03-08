@@ -155,12 +155,11 @@ struct StepFetchDecodeExec {
 
   static inline const unsigned int t = [](void) {
     std::shared_ptr<state> s1 = step(std::make_shared<state>(
-        state{(((0 + 1) + 1) + 1), 0,
+        state{3u, 0u,
               List<unsigned int>::ctor::cons_(
-                  (0 + 1), List<unsigned int>::ctor::cons_(
-                               ((((((0 + 1) + 1) + 1) + 1) + 1) + 1),
-                               List<unsigned int>::ctor::cons_(
-                                   0, List<unsigned int>::ctor::nil_())))}));
+                  1u, List<unsigned int>::ctor::cons_(
+                          6u, List<unsigned int>::ctor::cons_(
+                                  0u, List<unsigned int>::ctor::nil_())))}));
     return (s1->acc + s1->pc);
   }();
 };

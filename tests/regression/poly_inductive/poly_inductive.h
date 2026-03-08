@@ -307,7 +307,7 @@ struct PolyInductive {
   static unsigned int ptree_size(const std::shared_ptr<ptree<T1>> &t) {
     return std::visit(
         Overloaded{[](const typename ptree<T1>::PLeaf _args) -> unsigned int {
-                     return (0 + 1);
+                     return 1u;
                    },
                    [](const typename ptree<T1>::PNode _args) -> unsigned int {
                      std::shared_ptr<ptree<T1>> l = _args._a0;
@@ -319,69 +319,30 @@ struct PolyInductive {
         t->v());
   }
 
-  static inline const unsigned int test_pbox = punbox<
-      unsigned int>(pbox<unsigned int>::ctor::PBox_((
-      (((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1) +
-      1)));
+  static inline const unsigned int test_pbox =
+      punbox<unsigned int>(pbox<unsigned int>::ctor::PBox_(42u));
 
-  static inline const unsigned int test_ppair_fst =
-      pfst<unsigned int, bool>(ppair<unsigned int, bool>::ctor::PPair_(
-          (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1), true));
+  static inline const unsigned int test_ppair_fst = pfst<unsigned int, bool>(
+      ppair<unsigned int, bool>::ctor::PPair_(7u, true));
 
-  static inline const bool test_ppair_snd =
-      psnd<unsigned int, bool>(ppair<unsigned int, bool>::ctor::PPair_(
-          (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1), true));
+  static inline const bool test_ppair_snd = psnd<unsigned int, bool>(
+      ppair<unsigned int, bool>::ctor::PPair_(7u, true));
 
- static inline const unsigned int test_pjust = pmaybe_default<unsigned int>(0, pmaybe<unsigned int>::ctor::PJust_((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1)));
+  static inline const unsigned int test_pjust =
+      pmaybe_default<unsigned int>(0u, pmaybe<unsigned int>::ctor::PJust_(99u));
 
- static inline const unsigned int test_pnothing =
-     pmaybe_default<unsigned int>(0, pmaybe<unsigned int>::ctor::PNothing_());
+  static inline const unsigned int test_pnothing =
+      pmaybe_default<unsigned int>(0u, pmaybe<unsigned int>::ctor::PNothing_());
 
- static inline const unsigned int test_pmap = pmaybe_default<unsigned int>(
-     0,
-     pmaybe_map<unsigned int, unsigned int>(
-         [](unsigned int x) { return (x + 1); },
-         pmaybe<unsigned int>::ctor::PJust_((((((0 + 1) + 1) + 1) + 1) + 1))));
+  static inline const unsigned int test_pmap = pmaybe_default<unsigned int>(
+      0u, pmaybe_map<unsigned int, unsigned int>(
+              [](unsigned int x) { return (x + 1); },
+              pmaybe<unsigned int>::ctor::PJust_(5u)));
 
- static inline const unsigned int test_ptree =
-     ptree_size<unsigned int>(ptree<unsigned int>::ctor::PNode_(
-         ptree<unsigned int>::ctor::PLeaf_((0 + 1)),
-         ptree<unsigned int>::ctor::PNode_(
-             ptree<unsigned int>::ctor::PLeaf_(((0 + 1) + 1)),
-             ptree<unsigned int>::ctor::PLeaf_((((0 + 1) + 1) + 1)))));
+  static inline const unsigned int test_ptree =
+      ptree_size<unsigned int>(ptree<unsigned int>::ctor::PNode_(
+          ptree<unsigned int>::ctor::PLeaf_(1u),
+          ptree<unsigned int>::ctor::PNode_(
+              ptree<unsigned int>::ctor::PLeaf_(2u),
+              ptree<unsigned int>::ctor::PLeaf_(3u))));
 };

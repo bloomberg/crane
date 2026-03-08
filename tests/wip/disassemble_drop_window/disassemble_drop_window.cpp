@@ -13,18 +13,10 @@
 
 std::shared_ptr<DisassembleDropWindow::instruction>
 DisassembleDropWindow::decode(const unsigned int b1, const unsigned int b2) {
-  if (((b1 % ((0 + 1) + 1)) == 0)) {
+  if (((b1 % 2u) == 0u)) {
     return instruction::ctor::NOP__();
   } else {
-    return instruction::ctor::LDM__(
-        (std::move(b2) %
-         ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1)));
+    return instruction::ctor::LDM__((std::move(b2) % 16u));
   }
 }
 
@@ -80,7 +72,7 @@ DisassembleDropWindow::disassemble(
                           std::shared_ptr<DisassembleDropWindow::instruction>,
                           unsigned int>>(
                           std::make_pair(decode(std::move(b1), std::move(b2)),
-                                         (std::move(addr) + ((0 + 1) + 1))));
+                                         (std::move(addr) + 2u)));
                     }},
                 std::move(l)->v());
           }},

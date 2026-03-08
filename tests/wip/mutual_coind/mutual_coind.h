@@ -214,11 +214,11 @@ struct MutualCoind {
     }
   }
 
-  static inline const unsigned int test_headA = headA<unsigned int>(countA(0));
+  static inline const unsigned int test_headA = headA<unsigned int>(countA(0u));
 
-  static inline const unsigned int test_headB = headB<unsigned int>(
-      countB(((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1)));
+  static inline const unsigned int test_headB =
+      headB<unsigned int>(countB(10u));
 
   static inline const std::shared_ptr<List<unsigned int>> test_take5 =
-      takeA<unsigned int>((((((0 + 1) + 1) + 1) + 1) + 1), countA(0));
+      takeA<unsigned int>(5u, countA(0u));
 };

@@ -64,22 +64,11 @@ struct PrimitiveRecTypeclass {
 
   static unsigned int rect_perimeter(const std::shared_ptr<rect> &r);
 
-  static inline const std::shared_ptr<point> p1 = std::make_shared<point>(
-      point{(((0 + 1) + 1) + 1), ((((0 + 1) + 1) + 1) + 1)});
+  static inline const std::shared_ptr<point> p1 =
+      std::make_shared<point>(point{3u, 4u});
 
-  static inline const std::shared_ptr<point> p2 = std::make_shared<point>(point{
-      ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-      ((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1)});
+  static inline const std::shared_ptr<point> p2 =
+      std::make_shared<point>(point{10u, 20u});
 
   static inline const unsigned int test_px = p1->px;
 
@@ -91,16 +80,13 @@ struct PrimitiveRecTypeclass {
       double_norm<pointNorm, std::shared_ptr<point>>(p1);
 
   static inline const std::shared_ptr<vec3> v1 =
-      std::make_shared<vec3>(vec3{(0 + 1), ((0 + 1) + 1), (((0 + 1) + 1) + 1)});
+      std::make_shared<vec3>(vec3{1u, 2u, 3u});
 
   static inline const unsigned int test_norm_vec3 = vec3Norm::norm(v1);
 
-  static inline const std::shared_ptr<rect> r1 = std::make_shared<rect>(rect{
-      std::make_shared<point>(point{((0 + 1) + 1), (((0 + 1) + 1) + 1)}),
-      std::make_shared<point>(point{
-          ((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-           1),
-          ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1)})});
+  static inline const std::shared_ptr<rect> r1 =
+      std::make_shared<rect>(rect{std::make_shared<point>(point{2u, 3u}),
+                                  std::make_shared<point>(point{12u, 8u})});
 
   static inline const unsigned int test_width = rect_width(r1);
 

@@ -41,17 +41,8 @@ RamStatusWriteChain::upd_status_in_reg(
     std::shared_ptr<RamStatusWriteChain::ram_reg> rg, const unsigned int i,
     const unsigned int v) {
   return std::make_shared<RamStatusWriteChain::ram_reg>(
-      ram_reg{update_nth<unsigned int>(
-          std::move(i),
-          (std::move(v) %
-           ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1)),
-          std::move(rg)->reg_status)});
+      ram_reg{update_nth<unsigned int>(std::move(i), (std::move(v) % 16u),
+                                       std::move(rg)->reg_status)});
 }
 
 std::shared_ptr<RamStatusWriteChain::ram_chip>

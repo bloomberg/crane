@@ -238,34 +238,34 @@ struct NestedIndStdlibList {
 
   static inline const std::shared_ptr<expr> test_add =
       expr::ctor::Add_(List<std::shared_ptr<expr>>::ctor::cons_(
-          expr::ctor::Lit_((0 + 1)),
+          expr::ctor::Lit_(1u),
           List<std::shared_ptr<expr>>::ctor::cons_(
-              expr::ctor::Lit_(((0 + 1) + 1)),
+              expr::ctor::Lit_(2u),
               List<std::shared_ptr<expr>>::ctor::cons_(
-                  expr::ctor::Lit_((((0 + 1) + 1) + 1)),
+                  expr::ctor::Lit_(3u),
                   List<std::shared_ptr<expr>>::ctor::nil_()))));
 
   static inline const std::shared_ptr<expr> test_mul =
       expr::ctor::Mul_(List<std::shared_ptr<expr>>::ctor::cons_(
-          expr::ctor::Lit_(((0 + 1) + 1)),
+          expr::ctor::Lit_(2u),
           List<std::shared_ptr<expr>>::ctor::cons_(
-              expr::ctor::Lit_((((0 + 1) + 1) + 1)),
+              expr::ctor::Lit_(3u),
               List<std::shared_ptr<expr>>::ctor::cons_(
-                  expr::ctor::Lit_(((((0 + 1) + 1) + 1) + 1)),
+                  expr::ctor::Lit_(4u),
                   List<std::shared_ptr<expr>>::ctor::nil_()))));
 
   static inline const std::shared_ptr<expr> test_nested =
       expr::ctor::Mul_(List<std::shared_ptr<expr>>::ctor::cons_(
           expr::ctor::Add_(List<std::shared_ptr<expr>>::ctor::cons_(
-              expr::ctor::Lit_((0 + 1)),
+              expr::ctor::Lit_(1u),
               List<std::shared_ptr<expr>>::ctor::cons_(
-                  expr::ctor::Lit_(((0 + 1) + 1)),
+                  expr::ctor::Lit_(2u),
                   List<std::shared_ptr<expr>>::ctor::nil_()))),
           List<std::shared_ptr<expr>>::ctor::cons_(
               expr::ctor::Add_(List<std::shared_ptr<expr>>::ctor::cons_(
-                  expr::ctor::Lit_((((0 + 1) + 1) + 1)),
+                  expr::ctor::Lit_(3u),
                   List<std::shared_ptr<expr>>::ctor::cons_(
-                      expr::ctor::Lit_(((((0 + 1) + 1) + 1) + 1)),
+                      expr::ctor::Lit_(4u),
                       List<std::shared_ptr<expr>>::ctor::nil_()))),
               List<std::shared_ptr<expr>>::ctor::nil_())));
 
@@ -282,6 +282,6 @@ struct NestedIndStdlibList {
   static inline const std::shared_ptr<List<unsigned int>> test_literals =
       literals(test_nested);
 
-  static inline const unsigned int test_doubled = eval(
-      lit_map([](unsigned int n) { return (n * ((0 + 1) + 1)); }, test_nested));
+  static inline const unsigned int test_doubled =
+      eval(lit_map([](unsigned int n) { return (n * 2u); }, test_nested));
 };

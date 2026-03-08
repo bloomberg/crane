@@ -92,7 +92,7 @@ struct DepRecord {
     static unsigned int m_op(unsigned int a0, unsigned int a1) {
       return (a0 + a1);
     }
-    static unsigned int m_id() { return 0; }
+    static unsigned int m_id() { return 0u; }
   };
   static_assert(Monoid<nat_monoid>);
 
@@ -101,7 +101,7 @@ struct DepRecord {
     static unsigned int m_op(unsigned int a0, unsigned int a1) {
       return (a0 * a1);
     }
-    static unsigned int m_id() { return (0 + 1); }
+    static unsigned int m_id() { return 1u; }
   };
   static_assert(Monoid<nat_mul_monoid>);
 
@@ -122,21 +122,16 @@ struct DepRecord {
 
   static inline const unsigned int test_fold_add =
       mfold<nat_monoid>(List<unsigned int>::ctor::cons_(
-          (0 + 1),
-          List<unsigned int>::ctor::cons_(
-              ((0 + 1) + 1), List<unsigned int>::ctor::cons_(
-                                 (((0 + 1) + 1) + 1),
-                                 List<unsigned int>::ctor::cons_(
-                                     ((((0 + 1) + 1) + 1) + 1),
-                                     List<unsigned int>::ctor::nil_())))));
+          1u, List<unsigned int>::ctor::cons_(
+                  2u, List<unsigned int>::ctor::cons_(
+                          3u, List<unsigned int>::ctor::cons_(
+                                  4u, List<unsigned int>::ctor::nil_())))));
 
   static inline const unsigned int test_fold_mul =
       mfold<nat_mul_monoid>(List<unsigned int>::ctor::cons_(
-          ((0 + 1) + 1),
-          List<unsigned int>::ctor::cons_(
-              (((0 + 1) + 1) + 1), List<unsigned int>::ctor::cons_(
-                                       ((((0 + 1) + 1) + 1) + 1),
-                                       List<unsigned int>::ctor::nil_()))));
+          2u, List<unsigned int>::ctor::cons_(
+                  3u, List<unsigned int>::ctor::cons_(
+                          4u, List<unsigned int>::ctor::nil_()))));
 
   enum class tag { TNat, TBool };
 
@@ -176,46 +171,7 @@ struct DepRecord {
   };
 
   static inline const std::shared_ptr<Tagged> tagged_nat =
-      std::make_shared<Tagged>(Tagged{
-          tag::TNat,
-          ((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) +
-                                               1) +
-                                              1) +
-                                             1) +
-                                            1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1)});
+      std::make_shared<Tagged>(Tagged{tag::TNat, 42u});
 
   static inline const std::shared_ptr<Tagged> tagged_bool =
       std::make_shared<Tagged>(Tagged{tag::TBool, true});

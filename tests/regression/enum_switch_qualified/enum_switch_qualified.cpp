@@ -29,10 +29,10 @@ EnumSwitchQualified::Outer::code(const EnumSwitchQualified::Outer::color c) {
   return [&](void) {
     switch (c) {
     case color::Red: {
-      return (0 + 1);
+      return 1u;
     }
     case color::Blue: {
-      return ((0 + 1) + 1);
+      return 2u;
     }
     }
   }();

@@ -230,19 +230,13 @@ struct WritesRegsClassifier {
       count_writes_regs(List<std::shared_ptr<instruction>>::ctor::cons_(
           instruction::ctor::NOP_(),
           List<std::shared_ptr<instruction>>::ctor::cons_(
-              instruction::ctor::FIM_(
-                  0,
-                  ((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                     1) +
-                    1) +
-                   1)),
+              instruction::ctor::FIM_(0u, 12u),
               List<std::shared_ptr<instruction>>::ctor::cons_(
-                  instruction::ctor::ADD_((0 + 1)),
+                  instruction::ctor::ADD_(1u),
                   List<std::shared_ptr<instruction>>::ctor::cons_(
-                      instruction::ctor::INC_(
-                          (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1)),
+                      instruction::ctor::INC_(7u),
                       List<std::shared_ptr<instruction>>::ctor::cons_(
-                          instruction::ctor::ISZ_((0 + 1), ((0 + 1) + 1)),
+                          instruction::ctor::ISZ_(1u, 2u),
                           List<
                               std::shared_ptr<instruction>>::ctor::nil_()))))));
 };

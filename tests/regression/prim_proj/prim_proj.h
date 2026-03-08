@@ -27,7 +27,7 @@ struct PrimProj {
                                            std::shared_ptr<point> p2);
 
   static inline const std::shared_ptr<point> origin =
-      std::make_shared<point>(point{0, 0});
+      std::make_shared<point>(point{0u, 0u});
 
   static std::shared_ptr<point> translate(const unsigned int dx,
                                           const unsigned int dy,

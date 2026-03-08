@@ -26,5 +26,5 @@ unsigned int PrimitiveRecTypeclass::rect_height(
 
 unsigned int PrimitiveRecTypeclass::rect_perimeter(
     const std::shared_ptr<PrimitiveRecTypeclass::rect> &r) {
-  return (((0 + 1) + 1) * (rect_width(r) + rect_height(r)));
+  return (2u * (rect_width(r) + rect_height(r)));
 }

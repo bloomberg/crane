@@ -20,5 +20,5 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 struct SignatureParityFix {
   static unsigned int f(const unsigned int seed);
 
-  static inline const unsigned int t = f(((((0 + 1) + 1) + 1) + 1));
+  static inline const unsigned int t = f(4u);
 };

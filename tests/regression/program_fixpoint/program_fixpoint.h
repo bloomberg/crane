@@ -130,17 +130,12 @@ struct ProgFix {
              std::shared_ptr<List<unsigned int>> l2);
 
   static inline const std::shared_ptr<List<unsigned int>> test_interleave =
-      interleave(
-          List<unsigned int>::ctor::cons_(
-              (0 + 1),
-              List<unsigned int>::ctor::cons_(
-                  (((0 + 1) + 1) + 1), List<unsigned int>::ctor::cons_(
-                                           (((((0 + 1) + 1) + 1) + 1) + 1),
-                                           List<unsigned int>::ctor::nil_()))),
-          List<unsigned int>::ctor::cons_(
-              ((0 + 1) + 1), List<unsigned int>::ctor::cons_(
-                                 ((((0 + 1) + 1) + 1) + 1),
-                                 List<unsigned int>::ctor::cons_(
-                                     ((((((0 + 1) + 1) + 1) + 1) + 1) + 1),
-                                     List<unsigned int>::ctor::nil_()))));
+      interleave(List<unsigned int>::ctor::cons_(
+                     1u, List<unsigned int>::ctor::cons_(
+                             3u, List<unsigned int>::ctor::cons_(
+                                     5u, List<unsigned int>::ctor::nil_()))),
+                 List<unsigned int>::ctor::cons_(
+                     2u, List<unsigned int>::ctor::cons_(
+                             4u, List<unsigned int>::ctor::cons_(
+                                     6u, List<unsigned int>::ctor::nil_()))));
 };

@@ -120,8 +120,13 @@ struct WpmUpdateGate {
   static std::shared_ptr<state> execute_wpm(std::shared_ptr<state> s);
 
   static inline const unsigned int t = [](void) {
- std::unique_ptr<state> s = std::make_unique<state>(state{List<unsigned int>::ctor::cons_(((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), List<unsigned int>::ctor::cons_((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), List<unsigned int>::ctor::cons_(((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), List<unsigned int>::ctor::nil_()))), (0 + 1), (((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), true});
- std::shared_ptr<state> s_ = execute_wpm(std::move(s));
- return std::move(s_)->rom->nth((0 + 1), 0);
+    std::unique_ptr<state> s = std::make_unique<state>(
+        state{List<unsigned int>::ctor::cons_(
+                  10u, List<unsigned int>::ctor::cons_(
+                           11u, List<unsigned int>::ctor::cons_(
+                                    12u, List<unsigned int>::ctor::nil_()))),
+              1u, 99u, true});
+    std::shared_ptr<state> s_ = execute_wpm(std::move(s));
+    return std::move(s_)->rom->nth(1u, 0u);
   }();
 };

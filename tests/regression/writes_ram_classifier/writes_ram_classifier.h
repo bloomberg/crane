@@ -186,7 +186,7 @@ struct WritesRamClassifier {
           List<std::shared_ptr<instruction>>::ctor::cons_(
               instruction::ctor::WRM_(),
               List<std::shared_ptr<instruction>>::ctor::cons_(
-                  instruction::ctor::ADD_((((0 + 1) + 1) + 1)),
+                  instruction::ctor::ADD_(3u),
                   List<std::shared_ptr<instruction>>::ctor::cons_(
                       instruction::ctor::WR3_(),
                       List<std::shared_ptr<instruction>>::ctor::cons_(

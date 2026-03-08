@@ -23,9 +23,8 @@ Cotree::binary_children(const unsigned int n) {
   return colist<unsigned int>::ctor::lazy_(
       [=](void) -> std::shared_ptr<Cotree::colist<unsigned int>> {
         return colist<unsigned int>::ctor::cocons_(
-            ((((0 + 1) + 1) * n) + (0 + 1)),
+            ((2u * n) + 1u),
             colist<unsigned int>::ctor::cocons_(
-                ((((0 + 1) + 1) * n) + ((0 + 1) + 1)),
-                colist<unsigned int>::ctor::conil_()));
+                ((2u * n) + 2u), colist<unsigned int>::ctor::conil_()));
       });
 }

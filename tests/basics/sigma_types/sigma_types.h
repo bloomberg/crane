@@ -128,19 +128,17 @@ struct SigmaTypes {
   static std::shared_ptr<List<unsigned int>>
   positives_up_to(const unsigned int k);
 
-  static inline const unsigned int test_double_5 =
-      use_nat_double((((((0 + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_double_5 = use_nat_double(5u);
 
-  static inline const unsigned int test_positive_3 =
-      get_positive((((0 + 1) + 1) + 1));
+  static inline const unsigned int test_positive_3 = get_positive(3u);
 
   static inline const unsigned int test_double_pos = std::visit(
       Overloaded{[](const typename Sig<unsigned int>::exist _args) -> auto {
         auto a = _args._a0;
         return a;
       }},
-      double_positive((((0 + 1) + 1) + 1))->v());
+      double_positive(3u)->v());
 
   static inline const std::shared_ptr<List<unsigned int>> test_positives =
-      positives_up_to((((((0 + 1) + 1) + 1) + 1) + 1));
+      positives_up_to(5u);
 };

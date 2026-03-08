@@ -15,46 +15,31 @@ unsigned int CyclesJcnNotTaken::cycles(
     const std::shared_ptr<CyclesJcnNotTaken::state> &s,
     const std::shared_ptr<CyclesJcnNotTaken::instruction> &i) {
   return std::visit(
-      Overloaded{
-          [&](const typename CyclesJcnNotTaken::instruction::JCN _args)
-              -> unsigned int {
-            unsigned int cond = _args._a0;
-            unsigned int c1 =
-                Nat::div(std::move(cond),
-                         ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
-            unsigned int c2 =
-                (Nat::div(std::move(cond), ((((0 + 1) + 1) + 1) + 1)) %
-                 ((0 + 1) + 1));
-            unsigned int c3 =
-                (Nat::div(std::move(cond), ((0 + 1) + 1)) % ((0 + 1) + 1));
-            unsigned int c4 = (std::move(cond) % ((0 + 1) + 1));
-            bool base_cond = (((s->acc == 0) && (std::move(c2) == (0 + 1))) ||
-                              ((s->carry && (std::move(c3) == (0 + 1))) ||
-                               (!(s->test_pin) && (std::move(c4) == (0 + 1)))));
-            bool jump;
-            if ((std::move(c1) == (0 + 1))) {
-              jump = !(std::move(base_cond));
-            } else {
-              jump = std::move(base_cond);
-            }
-            if (jump) {
-              return ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1);
-            } else {
-              return ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1);
-            }
-          },
-          [](const typename CyclesJcnNotTaken::instruction::NOP _args)
-              -> unsigned int {
-            return ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1);
-          }},
+      Overloaded{[&](const typename CyclesJcnNotTaken::instruction::JCN _args)
+                     -> unsigned int {
+                   unsigned int cond = _args._a0;
+                   unsigned int c1 = Nat::div(std::move(cond), 8u);
+                   unsigned int c2 = (Nat::div(std::move(cond), 4u) % 2u);
+                   unsigned int c3 = (Nat::div(std::move(cond), 2u) % 2u);
+                   unsigned int c4 = (std::move(cond) % 2u);
+                   bool base_cond =
+                       (((s->acc == 0u) && (std::move(c2) == 1u)) ||
+                        ((s->carry && (std::move(c3) == 1u)) ||
+                         (!(s->test_pin) && (std::move(c4) == 1u))));
+                   bool jump;
+                   if ((std::move(c1) == 1u)) {
+                     jump = !(std::move(base_cond));
+                   } else {
+                     jump = std::move(base_cond);
+                   }
+                   if (jump) {
+                     return 16u;
+                   } else {
+                     return 8u;
+                   }
+                 },
+                 [](const typename CyclesJcnNotTaken::instruction::NOP _args)
+                     -> unsigned int { return 8u; }},
       i->v());
 }
 
@@ -80,6 +65,6 @@ unsigned int Nat::div(const unsigned int x, const unsigned int y) {
     return std::move(y);
   } else {
     unsigned int y_ = y - 1;
-    return Nat::divmod(x, y_, 0, y_).first;
+    return Nat::divmod(x, y_, 0u, y_).first;
   }
 }

@@ -17,7 +17,7 @@ FetchPairWindow::fetch_pair(const std::shared_ptr<List<unsigned int>> &rom,
   return std::visit(
       Overloaded{[](const typename List<unsigned int>::nil _args)
                      -> std::pair<unsigned int, unsigned int> {
-                   return std::make_pair(0, 0);
+                   return std::make_pair(0u, 0u);
                  },
                  [](const typename List<unsigned int>::cons _args)
                      -> std::pair<unsigned int, unsigned int> {
@@ -27,7 +27,7 @@ FetchPairWindow::fetch_pair(const std::shared_ptr<List<unsigned int>> &rom,
                        Overloaded{
                            [](const typename List<unsigned int>::nil _args)
                                -> std::pair<unsigned int, unsigned int> {
-                             return std::make_pair(0, 0);
+                             return std::make_pair(0u, 0u);
                            },
                            [&](const typename List<unsigned int>::cons _args)
                                -> std::pair<unsigned int, unsigned int> {

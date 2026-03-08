@@ -248,48 +248,15 @@ struct JumpClassifierFlags {
 
   static inline const unsigned int t =
       count_jumps(List<std::shared_ptr<instruction>>::ctor::cons_(
-          instruction::ctor::ADD_(0),
+          instruction::ctor::ADD_(0u),
           List<std::shared_ptr<instruction>>::ctor::cons_(
-              instruction::ctor::JCN_(
-                  ((((0 + 1) + 1) + 1) + 1),
-                  ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1)),
+              instruction::ctor::JCN_(4u, 8u),
               List<std::shared_ptr<instruction>>::ctor::cons_(
                   instruction::ctor::NOP_(),
                   List<std::shared_ptr<instruction>>::ctor::cons_(
-                      instruction::ctor::JMS_(
-                          (((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) +
-                                                        1) +
-                                                       1) +
-                                                      1) +
-                                                     1) +
-                                                    1) +
-                                                   1) +
-                                                  1) +
-                                                 1) +
-                                                1) +
-                                               1) +
-                                              1) +
-                                             1) +
-                                            1) +
-                                           1) +
-                                          1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1)),
+                      instruction::ctor::JMS_(33u),
                       List<std::shared_ptr<instruction>>::ctor::cons_(
-                          instruction::ctor::ISZ_((0 + 1), ((0 + 1) + 1)),
+                          instruction::ctor::ISZ_(1u, 2u),
                           List<
                               std::shared_ptr<instruction>>::ctor::nil_()))))));
 };

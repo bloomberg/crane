@@ -76,9 +76,9 @@ struct Typeclasses {
   struct numBool {
     static unsigned int to_nat(bool b) {
       if (b) {
-        return (0 + 1);
+        return 1u;
       } else {
-        return 0;
+        return 0u;
       }
     }
   };
@@ -90,7 +90,7 @@ struct Typeclasses {
         T1 x = *o;
         return (_tcI0::to_nat(x) + 1);
       } else {
-        return 0;
+        return 0u;
       }
     }
   };
@@ -102,7 +102,7 @@ struct Typeclasses {
         return std::visit(
             Overloaded{
                 [](const typename List<T1>::nil _args) -> unsigned int {
-                  return 0;
+                  return 0u;
                 },
                 [&](const typename List<T1>::cons _args) -> unsigned int {
                   T1 x = _args._a0;
@@ -171,44 +171,7 @@ struct Typeclasses {
     }
   }
 
-  static inline const unsigned int test_nat = numNat::to_nat((
-      (((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) +
-                                         1) +
-                                        1) +
-                                       1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1) +
-      1));
+  static inline const unsigned int test_nat = numNat::to_nat(42u);
 
   static inline const unsigned int test_bool_true = numBool::to_nat(true);
 
@@ -216,88 +179,39 @@ struct Typeclasses {
 
   static inline const unsigned int test_option_some =
       numOption<numNat, unsigned int>::to_nat(
-          std::make_optional<unsigned int>((((((0 + 1) + 1) + 1) + 1) + 1)));
+          std::make_optional<unsigned int>(5u));
 
   static inline const unsigned int test_option_none =
       numOption<numNat, unsigned int>::to_nat(std::nullopt);
 
   static inline const unsigned int test_list =
       numList<numNat, unsigned int>::to_nat(List<unsigned int>::ctor::cons_(
-          (0 + 1),
-          List<unsigned int>::ctor::cons_(
-              ((0 + 1) + 1), List<unsigned int>::ctor::cons_(
-                                 (((0 + 1) + 1) + 1),
-                                 List<unsigned int>::ctor::cons_(
-                                     ((((0 + 1) + 1) + 1) + 1),
-                                     List<unsigned int>::ctor::nil_())))));
+          1u, List<unsigned int>::ctor::cons_(
+                  2u, List<unsigned int>::ctor::cons_(
+                          3u, List<unsigned int>::ctor::cons_(
+                                  4u, List<unsigned int>::ctor::nil_())))));
 
-  static inline const unsigned int test_sum = numeric_sum<
-      numNat, unsigned int>(List<unsigned int>::ctor::cons_(
-      ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-      List<unsigned int>::ctor::cons_(
-          ((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1),
-          List<unsigned int>::ctor::cons_(
-              ((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) +
-                                      1) +
-                                     1) +
-                                    1) +
-                                   1) +
-                                  1) +
-                                 1) +
-                                1) +
-                               1) +
-                              1) +
-                             1) +
-                            1) +
-                           1) +
-                          1) +
-                         1) +
-                        1) +
-                       1) +
-                      1) +
-                     1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1),
-              List<unsigned int>::ctor::nil_()))));
+  static inline const unsigned int test_sum =
+      numeric_sum<numNat, unsigned int>(List<unsigned int>::ctor::cons_(
+          10u, List<unsigned int>::ctor::cons_(
+                   20u, List<unsigned int>::ctor::cons_(
+                            30u, List<unsigned int>::ctor::nil_()))));
 
   static inline const unsigned int test_double =
-      numeric_double<numNat, unsigned int>(
-          (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+      numeric_double<numNat, unsigned int>(7u);
 
   static inline const std::pair<unsigned int, unsigned int> test_sort_pair =
-      sort_pair<ordNat, eqNat, unsigned int>((((((0 + 1) + 1) + 1) + 1) + 1),
-                                             (((0 + 1) + 1) + 1));
+      sort_pair<ordNat, eqNat, unsigned int>(5u, 3u);
 
   static inline const unsigned int test_min =
-      min_of<ordNat, eqNat, unsigned int>(
-          ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-          (((0 + 1) + 1) + 1));
+      min_of<ordNat, eqNat, unsigned int>(8u, 3u);
 
   static inline const unsigned int test_max =
-      max_of<ordNat, eqNat, unsigned int>(
-          ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-          (((0 + 1) + 1) + 1));
+      max_of<ordNat, eqNat, unsigned int>(8u, 3u);
 
   static inline const unsigned int test_describe_eq =
-      describe<eqNat, numNat, unsigned int>((((((0 + 1) + 1) + 1) + 1) + 1),
-                                            (((((0 + 1) + 1) + 1) + 1) + 1));
+      describe<eqNat, numNat, unsigned int>(5u, 5u);
 
   static inline const unsigned int test_describe_ne =
-      describe<eqNat, numNat, unsigned int>(
-          (((0 + 1) + 1) + 1), (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+      describe<eqNat, numNat, unsigned int>(3u, 7u);
 };

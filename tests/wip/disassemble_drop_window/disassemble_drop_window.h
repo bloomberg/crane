@@ -127,34 +127,31 @@ struct DisassembleDropWindow {
   static inline const unsigned int t = [](void) {
     if (disassemble(
             List<unsigned int>::ctor::cons_(
-                (0 + 1), List<unsigned int>::ctor::cons_(
-                             ((0 + 1) + 1),
-                             List<unsigned int>::ctor::cons_(
-                                 (((0 + 1) + 1) + 1),
-                                 List<unsigned int>::ctor::cons_(
-                                     ((((0 + 1) + 1) + 1) + 1),
-                                     List<unsigned int>::ctor::cons_(
-                                         (((((0 + 1) + 1) + 1) + 1) + 1),
-                                         List<unsigned int>::ctor::nil_()))))),
-            (0 + 1))
+                1u,
+                List<unsigned int>::ctor::cons_(
+                    2u,
+                    List<unsigned int>::ctor::cons_(
+                        3u,
+                        List<unsigned int>::ctor::cons_(
+                            4u, List<unsigned int>::ctor::cons_(
+                                    5u, List<unsigned int>::ctor::nil_()))))),
+            1u)
             .has_value()) {
       std::pair<std::shared_ptr<instruction>, unsigned int> p = *disassemble(
           List<unsigned int>::ctor::cons_(
-              (0 + 1), List<unsigned int>::ctor::cons_(
-                           ((0 + 1) + 1),
-                           List<unsigned int>::ctor::cons_(
-                               (((0 + 1) + 1) + 1),
-                               List<unsigned int>::ctor::cons_(
-                                   ((((0 + 1) + 1) + 1) + 1),
-                                   List<unsigned int>::ctor::cons_(
-                                       (((((0 + 1) + 1) + 1) + 1) + 1),
-                                       List<unsigned int>::ctor::nil_()))))),
-          (0 + 1));
+              1u,
+              List<unsigned int>::ctor::cons_(
+                  2u,
+                  List<unsigned int>::ctor::cons_(
+                      3u, List<unsigned int>::ctor::cons_(
+                              4u, List<unsigned int>::ctor::cons_(
+                                      5u, List<unsigned int>::ctor::nil_()))))),
+          1u);
       std::shared_ptr<instruction> _x = p.first;
       unsigned int next = p.second;
       return std::move(next);
     } else {
-      return 0;
+      return 0u;
     }
   }();
 };

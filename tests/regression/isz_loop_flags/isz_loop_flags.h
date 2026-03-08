@@ -95,27 +95,20 @@ struct IszLoopFlags {
     return [](void) {
       std::shared_ptr<state> s =
           std::make_shared<state>(state{List<unsigned int>::ctor::cons_(
-              (((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                    1) +
-                   1) +
-                  1) +
-                 1) +
-                1) +
-               1),
-              List<unsigned int>::ctor::cons_(
-                  (((0 + 1) + 1) + 1), List<unsigned int>::ctor::nil_()))});
+              15u, List<unsigned int>::ctor::cons_(
+                       3u, List<unsigned int>::ctor::nil_()))});
       return ([&](void) {
-        if (isz_loops(s, 0)) {
-          return (0 + 1);
+        if (isz_loops(s, 0u)) {
+          return 1u;
         } else {
-          return 0;
+          return 0u;
         }
       }() +
               [&](void) {
-                if (isz_terminates(s, 0)) {
-                  return (0 + 1);
+                if (isz_terminates(s, 0u)) {
+                  return 1u;
                 } else {
-                  return 0;
+                  return 0u;
                 }
               }());
     }();

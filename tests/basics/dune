@@ -143,6 +143,17 @@
   (deps nat_bde.t.exe)
   (action (run ./nat_bde.t.exe))))
 
+(subdir nat_gmp
+ (rule
+  (targets nat_gmp.t.exe)
+  (deps NatGMPTest.vo nat_gmp.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-gmp.sh %{project_root} nat_gmp.t.exe nat_gmp.cpp nat_gmp.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nat_gmp.t.exe)
+  (action (run ./nat_gmp.t.exe))))
+
 (subdir record_match
  (rule
   (targets record_match.t.exe)

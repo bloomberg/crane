@@ -81,6 +81,5 @@ struct MatchFallbackNat {
 
   static inline const unsigned int t =
       (fallback(maybe_nat::ctor::NoneNat_()) +
-       fallback(maybe_nat::ctor::SomeNat_(
-           (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1))));
+       fallback(maybe_nat::ctor::SomeNat_(7u)));
 };

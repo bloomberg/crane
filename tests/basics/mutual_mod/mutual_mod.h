@@ -87,13 +87,11 @@ struct EvenOdd {
   static unsigned int odd_length(const std::shared_ptr<odd_list> &o);
 
   static inline const std::shared_ptr<even_list> two = even_list::ctor::ECons_(
-      ((0 + 1) + 1), odd_list::ctor::OCons_((0 + 1), even_list::ctor::ENil_()));
+      2u, odd_list::ctor::OCons_(1u, even_list::ctor::ENil_()));
 
   static inline const std::shared_ptr<odd_list> three = odd_list::ctor::OCons_(
-      (((0 + 1) + 1) + 1),
-      even_list::ctor::ECons_(
-          ((0 + 1) + 1),
-          odd_list::ctor::OCons_((0 + 1), even_list::ctor::ENil_())));
+      3u, even_list::ctor::ECons_(
+              2u, odd_list::ctor::OCons_(1u, even_list::ctor::ENil_())));
 };
 
 const unsigned int test_even_len = EvenOdd::even_length(EvenOdd::two);

@@ -75,7 +75,7 @@ unsigned int WritesAccClassifier::count_writes_acc(
       Overloaded{
           [](const typename List<
               std::shared_ptr<WritesAccClassifier::instruction>>::nil _args)
-              -> unsigned int { return 0; },
+              -> unsigned int { return 0u; },
           [](const typename List<
               std::shared_ptr<WritesAccClassifier::instruction>>::cons _args)
               -> unsigned int {
@@ -85,9 +85,9 @@ unsigned int WritesAccClassifier::count_writes_acc(
                 rest = _args._a1;
             return ([&](void) {
               if (writes_acc(std::move(i))) {
-                return (0 + 1);
+                return 1u;
               } else {
-                return 0;
+                return 0u;
               }
             }() + count_writes_acc(std::move(rest)));
           }},

@@ -430,8 +430,7 @@ struct WritesAccClassifier {
       count_writes_acc(List<std::shared_ptr<instruction>>::ctor::cons_(
           instruction::ctor::NOP_(),
           List<std::shared_ptr<instruction>>::ctor::cons_(
-              instruction::ctor::LDM_(
-                  (((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1)),
+              instruction::ctor::LDM_(9u),
               List<std::shared_ptr<instruction>>::ctor::cons_(
                   instruction::ctor::RAR_(),
                   List<std::shared_ptr<instruction>>::ctor::cons_(
@@ -439,7 +438,7 @@ struct WritesAccClassifier {
                       List<std::shared_ptr<instruction>>::ctor::cons_(
                           instruction::ctor::NOP_(),
                           List<std::shared_ptr<instruction>>::ctor::cons_(
-                              instruction::ctor::ADD_((0 + 1)),
+                              instruction::ctor::ADD_(1u),
                               List<std::shared_ptr<instruction>>::ctor::
                                   nil_())))))));
 };

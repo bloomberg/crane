@@ -667,6 +667,41 @@ let rec convert_ml_type_to_cpp_type env (ns : Refset'.t) (tvars : Id.t list) (ml
       let _ = print_endline "TODO: TMETA OR TDUMMY OR TUNKNOWN OR TAXIOM"  in
       assert false *)
 
+(* Generate code for a custom-extracted constructor application *)
+and gen_expr_custom_cons env (ty : ml_type) r ts =
+  let args = List.rev_map (gen_expr env) ts in
+  let app x = (match args with
+    | [] -> x
+    | _ -> CPPfun_call(x, args)) in
+  (match ty with
+  | Miniml.Tglob (n, tys, _) ->
+    (* Filter out index type args - only keep parameters *)
+    let tys = match n with
+      | GlobRef.IndRef (kn, _) ->
+          (match Table.get_ind_num_param_vars_opt kn with
+          | Some num_param_vars -> List.firstn num_param_vars tys
+          | None -> tys)
+      | _ -> tys
+    in
+    let temps = List.map (convert_ml_type_to_cpp_type env Refset'.empty []) tys in
+    app (CPPglob (r, temps))
+  | _ -> app (CPPglob (r, [])))
+
+(* Try to fold a Peano numeral chain (nested constructors) into an integer *)
+and try_fold_numeral info expr =
+  match expr with
+  | MLcons (_ty, cr, []) ->
+    (match cr with
+     | GlobRef.ConstructRef (_, cidx) when cidx = info.Table.num_zero_ctor -> Some 0
+     | _ -> None)
+  | MLcons (_ty, cr, [inner]) ->
+    (match cr with
+     | GlobRef.ConstructRef (_, cidx) when cidx = info.Table.num_succ_ctor ->
+       Option.map (fun n -> n + 1) (try_fold_numeral info inner)
+     | _ -> None)
+  | MLmagic inner -> try_fold_numeral info inner
+  | _ -> None
+
 (* TODO: when an MLGlob has monadic type, needs to be funcall *)
 and gen_expr env (ml_e : ml_ast) : cpp_expr =
   match ml_e with
@@ -889,24 +924,27 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
          compiler deduce everything.  See filter_erased_type_args for why we
          must drop all args rather than just the erased ones. *)
       CPPglob (x, filter_erased_type_args tys_cpp)
+  | MLcons (_ty, r, _ts) when (match r with
+      | GlobRef.ConstructRef ((kn, i), _) -> Table.is_numeral_inductive (GlobRef.IndRef (kn, i))
+      | _ -> false) ->
+    (* Try to fold Peano numeral chain into an integer literal *)
+    let ind_ref = match r with
+      | GlobRef.ConstructRef ((kn, i), _) -> GlobRef.IndRef (kn, i)
+      | _ -> assert false
+    in
+    (match Table.get_numeral_info ind_ref with
+     | Some info ->
+       (match try_fold_numeral info ml_e with
+        | Some n ->
+          let rendered = Str.global_replace (Str.regexp_string "%n")
+                           (string_of_int n) info.Table.num_fmt in
+          CPPraw rendered
+        | None ->
+          (* Not a complete literal; fall through to normal custom handling *)
+          gen_expr_custom_cons env _ty r _ts)
+     | None -> gen_expr_custom_cons env _ty r _ts)
   | MLcons (ty, r, ts) when is_custom r ->
-    let args = List.rev_map (gen_expr env) ts in
-    let app x = (match args with
-      | [] -> x
-      | _ -> CPPfun_call(x, args)) in
-    (match ty with
-    | Tglob (n, tys, _) ->
-      (* Filter out index type args - only keep parameters *)
-      let tys = match n with
-        | GlobRef.IndRef (kn, _) ->
-            (match Table.get_ind_num_param_vars_opt kn with
-            | Some num_param_vars -> List.firstn num_param_vars tys
-            | None -> tys)
-        | _ -> tys
-      in
-      let temps = List.map (convert_ml_type_to_cpp_type env Refset'.empty []) tys in
-      app (CPPglob (r, temps))
-    | _ -> app (CPPglob (r, [])))
+    gen_expr_custom_cons env ty r ts
   | MLcons (ty, r, ts) when ts = [] && (match r with GlobRef.ConstructRef ((kn, _), _) -> is_enum_inductive (GlobRef.IndRef (kn, 0)) | _ -> false) ->
     (* Enum constructor: emit bare EnumType::Constructor value *)
     let ctor_name = Id.of_string (Common.pp_global_name Type r) in

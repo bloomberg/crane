@@ -20,23 +20,18 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 struct BcdDigitUpperBound {
   static bool is_bcd_digitb(const unsigned int n);
 
-  static inline const unsigned int t =
-      ([](void) {
-        if (is_bcd_digitb((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1))) {
-          return (0 + 1);
-        } else {
-          return 0;
-        }
-      }() +
-       [](void) {
-         if (is_bcd_digitb(
-                 ((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                    1) +
-                   1) +
-                  1))) {
-           return (0 + 1);
-         } else {
-           return 0;
-         }
-       }());
+  static inline const unsigned int t = ([](void) {
+    if (is_bcd_digitb(7u)) {
+      return 1u;
+    } else {
+      return 0u;
+    }
+  }() +
+                                        [](void) {
+                                          if (is_bcd_digitb(12u)) {
+                                            return 1u;
+                                          } else {
+                                            return 0u;
+                                          }
+                                        }());
 };

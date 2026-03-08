@@ -15,7 +15,7 @@ MutualIndexed::even_val(const unsigned int _x,
                         const std::shared_ptr<MutualIndexed::EvenTree> &t) {
   return std::visit(
       Overloaded{[](const typename MutualIndexed::EvenTree::ELeaf _args)
-                     -> unsigned int { return 0; },
+                     -> unsigned int { return 0u; },
                  [](const typename MutualIndexed::EvenTree::ENode _args)
                      -> unsigned int {
                    unsigned int v = _args._a1;

@@ -13,7 +13,7 @@
 unsigned int ProgramCyclesSingleton::cycles(
     const std::shared_ptr<ProgramCyclesSingleton::state> &_x,
     const ProgramCyclesSingleton::instruction _x0) {
-  return ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1);
+  return 8u;
 }
 
 unsigned int ProgramCyclesSingleton::program_cycles(
@@ -22,7 +22,7 @@ unsigned int ProgramCyclesSingleton::program_cycles(
   return std::visit(
       Overloaded{
           [](const typename List<ProgramCyclesSingleton::instruction>::nil
-                 _args) -> unsigned int { return 0; },
+                 _args) -> unsigned int { return 0u; },
           [&](const typename List<ProgramCyclesSingleton::instruction>::cons
                   _args) -> unsigned int {
             ProgramCyclesSingleton::instruction i = _args._a0;

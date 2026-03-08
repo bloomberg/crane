@@ -159,31 +159,15 @@ struct MutualIndexed {
 
   static inline const std::shared_ptr<EvenTree> leaf = EvenTree::ctor::ELeaf_();
 
-  static inline const std::shared_ptr<OddTree> tree1 = OddTree::ctor::ONode_(
-      0, ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-      EvenTree::ctor::ELeaf_());
+  static inline const std::shared_ptr<OddTree> tree1 =
+      OddTree::ctor::ONode_(0u, 10u, EvenTree::ctor::ELeaf_());
 
   static inline const std::shared_ptr<EvenTree> tree2 = EvenTree::ctor::ENode_(
-      (0 + 1),
-      ((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                1) +
-               1) +
-              1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1),
-      OddTree::ctor::ONode_(
-          0, ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-          EvenTree::ctor::ELeaf_()));
+      1u, 20u, OddTree::ctor::ONode_(0u, 10u, EvenTree::ctor::ELeaf_()));
 
-  static inline const unsigned int test_leaf_val = even_val(0, leaf);
+  static inline const unsigned int test_leaf_val = even_val(0u, leaf);
 
-  static inline const unsigned int test_tree1_val = odd_val((0 + 1), tree1);
+  static inline const unsigned int test_tree1_val = odd_val(1u, tree1);
 
-  static inline const unsigned int test_tree2_val =
-      even_val(((0 + 1) + 1), tree2);
+  static inline const unsigned int test_tree2_val = even_val(2u, tree2);
 };

@@ -47,14 +47,15 @@ unsigned int PeanoNat::modulo(const unsigned int x, const unsigned int y) {
     return std::move(x);
   } else {
     unsigned int y_ = y - 1;
-    return PeanoNat::sub(y_, PeanoNat::divmod(x, y_, 0, y_).second);
+    return PeanoNat::sub(y_, PeanoNat::divmod(x, y_, 0u, y_).second);
   }
 }
 
 std::shared_ptr<List<unsigned int>>
 WellFoundedRec::countdown_acc(const unsigned int n) {
   if (n <= 0) {
-    return List<unsigned int>::ctor::cons_(0, List<unsigned int>::ctor::nil_());
+    return List<unsigned int>::ctor::cons_(0u,
+                                           List<unsigned int>::ctor::nil_());
   } else {
     unsigned int m = n - 1;
     return List<unsigned int>::ctor::cons_(n, countdown_acc(std::move(m)));
@@ -68,11 +69,11 @@ WellFoundedRec::countdown(const unsigned int _x0) {
 
 unsigned int WellFoundedRec::div2_wf(const unsigned int x) {
   if (x <= 0) {
-    return 0;
+    return 0u;
   } else {
     unsigned int n0 = x - 1;
     if (n0 <= 0) {
-      return 0;
+      return 0u;
     } else {
       unsigned int m = n0 - 1;
       return (div2_wf(m) + 1);

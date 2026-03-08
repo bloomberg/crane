@@ -25,5 +25,6 @@ struct PromDataFallback {
 
   static unsigned int prom_data_or_zero(const std::shared_ptr<state> &s);
 
- static inline const unsigned int t = prom_data_or_zero(std::make_shared<state>(state{(((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), false}));
+  static inline const unsigned int t =
+      prom_data_or_zero(std::make_shared<state>(state{77u, false}));
 };

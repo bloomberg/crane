@@ -54,12 +54,13 @@ public:
   variant_t &v_mut() { return v_; }
   unsigned int length() const {
     return std::visit(
-        Overloaded{
-            [](const typename List<A>::nil _args) -> unsigned int { return 0; },
-            [](const typename List<A>::cons _args) -> unsigned int {
-              std::shared_ptr<List<A>> l_ = _args._a1;
-              return (std::move(l_)->length() + 1);
-            }},
+        Overloaded{[](const typename List<A>::nil _args) -> unsigned int {
+                     return 0u;
+                   },
+                   [](const typename List<A>::cons _args) -> unsigned int {
+                     std::shared_ptr<List<A>> l_ = _args._a1;
+                     return (std::move(l_)->length() + 1);
+                   }},
         this->v());
   }
 };
@@ -135,14 +136,9 @@ struct InstructionByteStreamEncode {
           List<std::shared_ptr<instruction>>::ctor::cons_(
               instruction::ctor::NOP_(),
               List<std::shared_ptr<instruction>>::ctor::cons_(
-                  instruction::ctor::LDM_((((0 + 1) + 1) + 1)),
+                  instruction::ctor::LDM_(3u),
                   List<std::shared_ptr<instruction>>::ctor::cons_(
-                      instruction::ctor::LDM_((
-                          (((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-                             1) +
-                            1) +
-                           1) +
-                          1)),
+                      instruction::ctor::LDM_(12u),
                       List<std::shared_ptr<instruction>>::ctor::nil_()))))
           ->length();
 };

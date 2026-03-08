@@ -153,9 +153,7 @@ struct DisassembleShortRomNone {
 
   static inline const bool t =
       is_none<std::pair<std::shared_ptr<instruction>, unsigned int>>(
-          disassemble(
-              List<unsigned int>::ctor::cons_(
-                  (((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                  List<unsigned int>::ctor::nil_()),
-              0));
+          disassemble(List<unsigned int>::ctor::cons_(
+                          9u, List<unsigned int>::ctor::nil_()),
+                      0u));
 };

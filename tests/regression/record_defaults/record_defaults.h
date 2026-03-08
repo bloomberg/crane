@@ -25,43 +25,44 @@ struct RecordDefaults {
     bool cfg_debug;
   };
 
- static inline const std::shared_ptr<Config> default_config = std::make_shared<Config>(Config{((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), ((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), (0 + 1), false});
+  static inline const std::shared_ptr<Config> default_config =
+      std::make_shared<Config>(Config{80u, 24u, 1u, false});
 
- static std::shared_ptr<Config> set_width(const unsigned int w,
-                                          std::shared_ptr<Config> c);
+  static std::shared_ptr<Config> set_width(const unsigned int w,
+                                           std::shared_ptr<Config> c);
 
- static std::shared_ptr<Config> set_debug(const bool d,
-                                          std::shared_ptr<Config> c);
+  static std::shared_ptr<Config> set_debug(const bool d,
+                                           std::shared_ptr<Config> c);
 
- struct Point {
-   unsigned int px;
-   unsigned int py;
- };
+  struct Point {
+    unsigned int px;
+    unsigned int py;
+  };
 
- struct Rect {
-   std::shared_ptr<Point> origin;
-   std::shared_ptr<Point> extent;
- };
+  struct Rect {
+    std::shared_ptr<Point> origin;
+    std::shared_ptr<Point> extent;
+  };
 
- static unsigned int rect_area(const std::shared_ptr<Rect> &r);
+  static unsigned int rect_area(const std::shared_ptr<Rect> &r);
 
- static std::shared_ptr<Rect> make_rect(const unsigned int x,
-                                        const unsigned int y,
-                                        const unsigned int w,
-                                        const unsigned int h);
+  static std::shared_ptr<Rect> make_rect(const unsigned int x,
+                                         const unsigned int y,
+                                         const unsigned int w,
+                                         const unsigned int h);
 
- static unsigned int total_cells(const std::shared_ptr<Config> &c);
+  static unsigned int total_cells(const std::shared_ptr<Config> &c);
 
- static inline const unsigned int test_default_width =
-     default_config->cfg_width;
+  static inline const unsigned int test_default_width =
+      default_config->cfg_width;
 
- static inline const bool test_default_debug = default_config->cfg_debug;
+  static inline const bool test_default_debug = default_config->cfg_debug;
 
- static inline const unsigned int test_cells = total_cells(default_config);
+  static inline const unsigned int test_cells = total_cells(default_config);
 
- static inline const unsigned int test_modified = total_cells(set_width(((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1), set_debug(true, default_config)));
+  static inline const unsigned int test_modified =
+      total_cells(set_width(120u, set_debug(true, default_config)));
 
- static inline const unsigned int test_rect_area = rect_area(make_rect(
-     0, 0, ((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-     (((((0 + 1) + 1) + 1) + 1) + 1)));
+  static inline const unsigned int test_rect_area =
+      rect_area(make_rect(0u, 0u, 10u, 5u));
 };

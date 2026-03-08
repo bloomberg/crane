@@ -15,10 +15,10 @@ LargeMutual::expr_size(const std::shared_ptr<LargeMutual::expr> &e) {
   return std::visit(
       Overloaded{
           [](const typename LargeMutual::expr::ENum _args) -> unsigned int {
-            return (0 + 1);
+            return 1u;
           },
           [](const typename LargeMutual::expr::EVar _args) -> unsigned int {
-            return (0 + 1);
+            return 1u;
           },
           [](const typename LargeMutual::expr::EAdd _args) -> unsigned int {
             std::shared_ptr<LargeMutual::expr> l = _args._a0;
@@ -45,10 +45,10 @@ LargeMutual::bexpr_size(const std::shared_ptr<LargeMutual::bexpr> &b) {
   return std::visit(
       Overloaded{
           [](const typename LargeMutual::bexpr::BTrue _args) -> unsigned int {
-            return (0 + 1);
+            return 1u;
           },
           [](const typename LargeMutual::bexpr::BFalse _args) -> unsigned int {
-            return (0 + 1);
+            return 1u;
           },
           [](const typename LargeMutual::bexpr::BEq _args) -> unsigned int {
             std::shared_ptr<LargeMutual::expr> l = _args._a0;
@@ -105,7 +105,7 @@ LargeMutual::stmt_size(const std::shared_ptr<LargeMutual::stmt> &s) {
                     1);
           },
           [](const typename LargeMutual::stmt::SSkip _args) -> unsigned int {
-            return (0 + 1);
+            return 1u;
           }},
       s->v());
 }

@@ -29,14 +29,12 @@ struct SetTestPinUpdate {
   static inline const unsigned int t = []() {
     return [](void) {
       std::shared_ptr<state> s_ =
-          set_test_pin(std::make_shared<state>(
-                           state{((((((0 + 1) + 1) + 1) + 1) + 1) + 1), false}),
-                       true);
+          set_test_pin(std::make_shared<state>(state{6u, false}), true);
       return (s_->acc + [&](void) {
         if (s_->test_pin) {
-          return (0 + 1);
+          return 1u;
         } else {
-          return 0;
+          return 0u;
         }
       }());
     }();

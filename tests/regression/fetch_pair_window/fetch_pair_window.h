@@ -81,13 +81,12 @@ struct FetchPairWindow {
              const unsigned int addr);
 
   static inline const unsigned int t = [](void) {
-    std::pair<unsigned int, unsigned int> p = fetch_pair(
-        List<unsigned int>::ctor::cons_(
-            (0 + 1), List<unsigned int>::ctor::cons_(
-                         ((0 + 1) + 1), List<unsigned int>::ctor::cons_(
-                                            (((0 + 1) + 1) + 1),
-                                            List<unsigned int>::ctor::nil_()))),
-        0);
+    std::pair<unsigned int, unsigned int> p =
+        fetch_pair(List<unsigned int>::ctor::cons_(
+                       1u, List<unsigned int>::ctor::cons_(
+                               2u, List<unsigned int>::ctor::cons_(
+                                       3u, List<unsigned int>::ctor::nil_()))),
+                   0u);
     return (p.first + p.second);
   }();
 };

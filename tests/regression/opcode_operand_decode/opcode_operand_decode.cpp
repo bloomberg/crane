@@ -13,23 +13,8 @@
 
 OpcodeOperandDecode::instruction
 OpcodeOperandDecode::decode(const unsigned int b1, const unsigned int _x) {
-  unsigned int opcode = Nat::div(
-      b1,
-      ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-           1) +
-          1) +
-         1) +
-        1) +
-       1));
-  unsigned int operand =
-      (b1 %
-       ((((((((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
-             1) +
-            1) +
-           1) +
-          1) +
-         1) +
-        1));
+  unsigned int opcode = Nat::div(b1, 16u);
+  unsigned int operand = (b1 % 16u);
   if (opcode <= 0) {
     return instruction::NOP_;
   } else {
@@ -265,6 +250,6 @@ unsigned int Nat::div(const unsigned int x, const unsigned int y) {
     return std::move(y);
   } else {
     unsigned int y_ = y - 1;
-    return Nat::divmod(x, y_, 0, y_).first;
+    return Nat::divmod(x, y_, 0u, y_).first;
   }
 }

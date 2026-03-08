@@ -13,5 +13,5 @@
 std::shared_ptr<ResetStatePcClear::state>
 ResetStatePcClear::reset_state(std::shared_ptr<ResetStatePcClear::state> s) {
   return std::make_shared<ResetStatePcClear::state>(
-      state{s->regs, false, 0, s->ram_sys, s->rom});
+      state{s->regs, false, 0u, s->ram_sys, s->rom});
 }

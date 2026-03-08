@@ -108,7 +108,7 @@ struct RamReadMainSelector {
 
   static inline const std::shared_ptr<ram_chip> empty_chip =
       std::make_shared<ram_chip>(
-          ram_chip{List<std::shared_ptr<ram_reg>>::ctor::nil_(), 0});
+          ram_chip{List<std::shared_ptr<ram_reg>>::ctor::nil_(), 0u});
 
   static inline const std::shared_ptr<ram_bank> empty_bank =
       std::make_shared<ram_bank>(
@@ -131,25 +131,22 @@ struct RamReadMainSelector {
   static inline const std::shared_ptr<ram_reg> sample_reg =
       std::make_shared<ram_reg>(ram_reg{
           List<unsigned int>::ctor::cons_(
-              (((((0 + 1) + 1) + 1) + 1) + 1),
-              List<unsigned int>::ctor::cons_(
-                  ((((((0 + 1) + 1) + 1) + 1) + 1) + 1),
-                  List<unsigned int>::ctor::cons_(
-                      (((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                      List<unsigned int>::ctor::cons_(
-                          ((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1),
-                          List<unsigned int>::ctor::nil_())))),
+              5u, List<unsigned int>::ctor::cons_(
+                      6u, List<unsigned int>::ctor::cons_(
+                              7u, List<unsigned int>::ctor::cons_(
+                                      8u, List<unsigned int>::ctor::nil_())))),
           List<unsigned int>::ctor::cons_(
-              0, List<unsigned int>::ctor::cons_(
-                     0, List<unsigned int>::ctor::cons_(
-                            0, List<unsigned int>::ctor::cons_(
-                                   0, List<unsigned int>::ctor::nil_()))))});
+              0u,
+              List<unsigned int>::ctor::cons_(
+                  0u, List<unsigned int>::ctor::cons_(
+                          0u, List<unsigned int>::ctor::cons_(
+                                  0u, List<unsigned int>::ctor::nil_()))))});
 
   static inline const std::shared_ptr<ram_chip> sample_chip =
       std::make_shared<ram_chip>(ram_chip{
           List<std::shared_ptr<ram_reg>>::ctor::cons_(
               sample_reg, List<std::shared_ptr<ram_reg>>::ctor::nil_()),
-          (((0 + 1) + 1) + 1)});
+          3u});
 
   static inline const std::shared_ptr<ram_bank> sample_bank =
       std::make_shared<ram_bank>(
@@ -157,13 +154,13 @@ struct RamReadMainSelector {
               sample_chip, List<std::shared_ptr<ram_chip>>::ctor::nil_())});
 
   static inline const std::shared_ptr<ram_sel> sample_sel =
-      std::make_shared<ram_sel>(ram_sel{0, 0, ((0 + 1) + 1)});
+      std::make_shared<ram_sel>(ram_sel{0u, 0u, 2u});
 
   static inline const std::shared_ptr<state> sample_state =
       std::make_shared<state>(
           state{List<std::shared_ptr<ram_bank>>::ctor::cons_(
                     sample_bank, List<std::shared_ptr<ram_bank>>::ctor::nil_()),
-                0, sample_sel});
+                0u, sample_sel});
 
   static inline const unsigned int t = ram_read_main(sample_state);
 };

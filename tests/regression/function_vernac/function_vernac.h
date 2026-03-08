@@ -82,11 +82,11 @@ struct FunctionVernac {
   template <MapsTo<unsigned int, unsigned int> F0>
   static unsigned int div2_F(F0 &&div3, const unsigned int n) {
     if (n <= 0) {
-      return 0;
+      return 0u;
     } else {
       unsigned int n0 = n - 1;
       if (n0 <= 0) {
-        return 0;
+        return 0u;
       } else {
         unsigned int p = n0 - 1;
         return (div3(p) + 1);
@@ -245,7 +245,7 @@ struct FunctionVernac {
     return std::visit(
         Overloaded{
             [](const typename List<unsigned int>::nil _args) -> unsigned int {
-              return 0;
+              return 0u;
             },
             [&](const typename List<unsigned int>::cons _args) -> unsigned int {
               unsigned int x = _args._a0;
@@ -397,18 +397,15 @@ struct FunctionVernac {
   R_list_sum_correct(const std::shared_ptr<List<unsigned int>> &l,
                      const unsigned int _res);
 
-  static inline const unsigned int test_div2 =
-      div2(((((((((((0 + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+  static inline const unsigned int test_div2 = div2(10u);
 
   static inline const unsigned int test_sum =
       list_sum(List<unsigned int>::ctor::cons_(
-          (0 + 1),
+          1u,
           List<unsigned int>::ctor::cons_(
-              ((0 + 1) + 1), List<unsigned int>::ctor::cons_(
-                                 (((0 + 1) + 1) + 1),
-                                 List<unsigned int>::ctor::cons_(
-                                     ((((0 + 1) + 1) + 1) + 1),
-                                     List<unsigned int>::ctor::cons_(
-                                         (((((0 + 1) + 1) + 1) + 1) + 1),
-                                         List<unsigned int>::ctor::nil_()))))));
+              2u,
+              List<unsigned int>::ctor::cons_(
+                  3u, List<unsigned int>::ctor::cons_(
+                          4u, List<unsigned int>::ctor::cons_(
+                                  5u, List<unsigned int>::ctor::nil_()))))));
 };
