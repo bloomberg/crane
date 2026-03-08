@@ -15,13 +15,13 @@ Definition sum_to (n : nat) : nat :=
     | O => acc
     | S p => go p (Nat.add m acc)
     end
-  in go n zero.
+  in go n 0.
 
 (* Anonymous fixpoint in function body *)
 Definition factorial (n : nat) : nat :=
   (fix fact (m : nat) : nat :=
     match m with
-    | O => one
+    | O => 1
     | S p => Nat.mul m (fact p)
     end) n.
 
@@ -29,12 +29,12 @@ Definition factorial (n : nat) : nat :=
 Definition double_sum (n : nat) : nat :=
   let fix outer (m : nat) : nat :=
     match m with
-    | O => zero
+    | O => 0
     | S p =>
       let fix inner (k : nat) : nat :=
         match k with
-        | O => zero
-        | S q => Nat.add one (inner q)
+        | O => 0
+        | S q => Nat.add 1 (inner q)
         end
       in Nat.add (inner m) (outer p)
     end
@@ -62,12 +62,12 @@ Definition test_shadow (n : nat) : nat :=
    bar foo.
 
 (* Test values *)
-Definition test_sum_5 := sum_to five.        (* 5+4+3+2+1 = 15 *)
-Definition test_sum_0 := sum_to zero.        (* 0 *)
-Definition test_fact_5 := factorial five.    (* 120 *)
-Definition test_fact_0 := factorial zero.    (* 1 *)
-Definition test_double := double_sum three.  (* 1 + (1+1) + (1+1+1) = 6 *)
-Definition test_gcd := gcd (Nat.mul four three) (Nat.mul two three). (* gcd(12,6) = 6 *)
+Definition test_sum_5 := sum_to 5.        (* 5+4+3+2+1 = 15 *)
+Definition test_sum_0 := sum_to 0.        (* 0 *)
+Definition test_fact_5 := factorial 5.    (* 120 *)
+Definition test_fact_0 := factorial 0.    (* 1 *)
+Definition test_double := double_sum 3.  (* 1 + (1+1) + (1+1+1) = 6 *)
+Definition test_gcd := gcd (Nat.mul 4 3) (Nat.mul 2 3). (* gcd(12,6) = 6 *)
 
 End AnonFixpoint.
 

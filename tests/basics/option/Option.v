@@ -10,7 +10,7 @@ From Crane Require Extraction.
 Module Option.
 
 (* Test option construction *)
-Definition some_val : option nat := Some five.
+Definition some_val : option nat := Some 5.
 Definition none_val : option nat := None.
 
 (* Test option pattern matching *)
@@ -21,7 +21,7 @@ Definition get_or_default (o : option nat) (default : nat) : nat :=
   end.
 
 (* Test nested options *)
-Definition nested_some : option (option nat) := Some (Some three).
+Definition nested_some : option (option nat) := Some (Some 3).
 Definition nested_none : option (option nat) := Some None.
 
 (* Test option in function results *)
@@ -46,10 +46,10 @@ Definition apply_if_some {A B : Type} (f : option (A -> B)) (x : A) : option B :
   end.
 
 (* Test values for verification *)
-Definition test_some := get_or_default some_val zero.
-Definition test_none := get_or_default none_val zero.
-Definition test_pred_zero := safe_pred zero.
-Definition test_pred_five := safe_pred five.
+Definition test_some := get_or_default some_val 0.
+Definition test_none := get_or_default none_val 0.
+Definition test_pred_zero := safe_pred 0.
+Definition test_pred_five := safe_pred 5.
 
 End Option.
 

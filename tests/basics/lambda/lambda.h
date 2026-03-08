@@ -27,7 +27,10 @@ struct Lambda {
 
   static unsigned int make_adder(const unsigned int, const unsigned int);
 
-  static inline const unsigned int with_let = (5u * 2u);
+  static inline const unsigned int with_let = [](void) {
+    unsigned int x = 5u;
+    return (std::move(x) * 2u);
+  }();
 
   template <MapsTo<unsigned int, unsigned int> F0>
   static unsigned int apply_fn(F0 &&f, const unsigned int _x0) {

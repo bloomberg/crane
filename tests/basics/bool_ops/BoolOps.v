@@ -64,12 +64,12 @@ Definition test_or_ff := my_orb false false.
 Definition test_or_ft := my_orb false true.
 Definition test_xor_tt := my_xorb true true.
 Definition test_xor_tf := my_xorb true false.
-Definition test_if_t := if_nat true five three.
-Definition test_if_f := if_nat false five three.
+Definition test_if_t := if_nat true 5 3.
+Definition test_if_f := if_nat false 5 3.
 Definition test_complex := complex_bool true false true.
-Definition test_eq_tt := nat_eq five five.
-Definition test_eq_tf := nat_eq five three.
-Definition test_lt := nat_lt three five.
+Definition test_eq_tt := nat_eq 5 5.
+Definition test_eq_tf := nat_eq 5 3.
+Definition test_lt := nat_lt 3 5.
 
 End BoolOps.
 

@@ -17,7 +17,7 @@ Arguments Left {A B} _.
 Arguments Right {A B} _.
 
 (* Test sum type construction *)
-Definition left_val : either nat bool := Left five.
+Definition left_val : either nat bool := Left 5.
 Definition right_val : either nat bool := Right true.
 
 (* Test pattern matching on sum types *)
@@ -62,7 +62,7 @@ Definition triple_test : triple nat bool nat := Second true.
 (* Test values *)
 Definition test_left := is_left left_val.
 Definition test_right := is_left right_val.
-Definition test_either := either_to_nat (Left three).
+Definition test_either := either_to_nat (Left 3).
 
 End Sum.
 

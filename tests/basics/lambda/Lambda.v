@@ -24,19 +24,19 @@ Definition make_adder (n : nat) : nat -> nat :=
 
 (* Lambda in let *)
 Definition with_let : nat :=
-  let f := fun x => Nat.mul x two in
-  f five.
+  let f := fun x => Nat.mul x 2 in
+  f 5.
 
 (* Lambda passed as argument *)
 Definition apply_fn (f : nat -> nat) (x : nat) : nat := f x.
 
-Definition use_apply : nat := apply_fn (fun x => Nat.add x one) five.
+Definition use_apply : nat := apply_fn (fun x => Nat.add x 1) 5.
 
 (* Test values *)
-Definition test_simple := simple_lambda five.
-Definition test_multi := multi_arg three four.
-Definition test_nested := nested_lambda one two three.
-Definition test_adder := make_adder three five.
+Definition test_simple := simple_lambda 5.
+Definition test_multi := multi_arg 3 4.
+Definition test_nested := nested_lambda 1 2 3.
+Definition test_adder := make_adder 3 5.
 Definition test_let := with_let.
 Definition test_apply := use_apply.
 

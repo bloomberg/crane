@@ -37,12 +37,12 @@ Arguments Trees {A} _ _.
 (* Mutual recursion over mutually inductive types *)
 Fixpoint tree_size {A : Type} (t : tree A) : nat :=
   match t with
-  | Leaf _ => one
+  | Leaf _ => 1
   | Node f => forest_size f
   end
 with forest_size {A : Type} (f : forest A) : nat :=
   match f with
-  | Empty => zero
+  | Empty => 0
   | Trees t rest => Nat.add (tree_size t) (forest_size rest)
   end.
 
@@ -54,20 +54,20 @@ Fixpoint tree_sum (t : tree nat) : nat :=
   end
 with forest_sum (f : forest nat) : nat :=
   match f with
-  | Empty => zero
+  | Empty => 0
   | Trees t rest => Nat.add (tree_sum t) (forest_sum rest)
   end.
 
 (* Test values *)
-Definition test_even_0 := is_even zero.
-Definition test_even_4 := is_even four.
-Definition test_odd_3 := is_odd three.
-Definition test_odd_4 := is_odd four.
+Definition test_even_0 := is_even 0.
+Definition test_even_4 := is_even 4.
+Definition test_odd_3 := is_odd 3.
+Definition test_odd_4 := is_odd 4.
 
-Definition simple_tree : tree nat := Node (Trees (Leaf one) (Trees (Leaf two) Empty)).
+Definition simple_tree : tree nat := Node (Trees (Leaf 1) (Trees (Leaf 2) Empty)).
 Definition nested_tree : tree nat :=
-  Node (Trees (Node (Trees (Leaf three) Empty))
-        (Trees (Leaf four) Empty)).
+  Node (Trees (Node (Trees (Leaf 3) Empty))
+        (Trees (Leaf 4) Empty)).
 
 Definition test_size_simple := tree_size simple_tree.
 Definition test_size_nested := tree_size nested_tree.

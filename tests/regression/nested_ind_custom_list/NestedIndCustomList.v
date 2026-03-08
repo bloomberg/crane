@@ -31,8 +31,8 @@ Definition root {A : Type} (t : rose A) : A :=
 (* Get list length *)
 Fixpoint list_length {A : Type} (l : list A) : nat :=
   match l with
-  | nil => zero
-  | cons _ rest => Nat.add one (list_length rest)
+  | nil => 0
+  | cons _ rest => Nat.add 1 (list_length rest)
   end.
 
 (* Get children count (not recursive into children) *)
@@ -44,15 +44,15 @@ Definition children_count {A : Type} (t : rose A) : nat :=
 (* Test rose tree *)
 Definition leaf (n : nat) : rose nat := Node n nil.
 Definition small_tree : rose nat :=
-  Node one (cons (leaf two) (cons (leaf three) nil)).
+  Node 1 (cons (leaf 2) (cons (leaf 3) nil)).
 
 Definition bigger_tree : rose nat :=
-  Node one (cons small_tree (cons (leaf four) nil)).
+  Node 1 (cons small_tree (cons (leaf 4) nil)).
 
 (* Test values *)
-Definition test_root_leaf := root (leaf five).
+Definition test_root_leaf := root (leaf 5).
 Definition test_root_small := root small_tree.
-Definition test_children_leaf := children_count (leaf five).
+Definition test_children_leaf := children_count (leaf 5).
 Definition test_children_small := children_count small_tree.
 Definition test_children_bigger := children_count bigger_tree.
 

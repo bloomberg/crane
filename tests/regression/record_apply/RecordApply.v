@@ -14,9 +14,9 @@ Definition apply_record (r : R) (a b : nat) : nat :=
   | {| f := g; _tag := _ |} => g a b
   end.
 
-Definition r : R := {| f := (fun x y => x); _tag := three|}.
+Definition r : R := {| f := (fun x y => x); _tag := 3|}.
 
-Definition three : nat := r.(f) three zero.
+Definition three : nat := r.(f) 3 0.
 
 End RecordApply.
 

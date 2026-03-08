@@ -42,7 +42,7 @@ Fixpoint map {A B : Type} (f : A -> B) (l : list A) : list B :=
   | cons x l' => cons (f x) (map f l')
   end.
 
-Definition mytest := app (cons three (cons one (cons two nil))) (cons eight (cons three (cons seven (cons nine nil)))).
+Definition mytest := app (cons 3 (cons 1 (cons 2 nil))) (cons 8 (cons 3 (cons 7 (cons 9 nil)))).
 
 (* Definition test2 := map (fun x => x + three) mytest. *)
 

@@ -34,7 +34,7 @@ Definition handle_left {A : Type} (e : either A empty) : A :=
   end.
 
 (* Create a Left value for testing *)
-Definition test_either : either nat empty := Left five.
+Definition test_either : either nat empty := Left 5.
 Definition test_handle := handle_left test_either.
 
 (* Empty match in complex expression *)

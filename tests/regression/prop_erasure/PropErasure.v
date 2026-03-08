@@ -15,7 +15,7 @@ Definition proof_of_true : True := I.
 Definition with_proof_arg (n : nat) (pf : n = n) : nat := n.
 
 (* Using the function - the proof should be erased *)
-Definition use_proof : nat := with_proof_arg five eq_refl.
+Definition use_proof : nat := with_proof_arg 5 eq_refl.
 
 (* Function returning proof that should become unit *)
 Definition returns_proof (n : nat) : n = n := eq_refl.
@@ -24,11 +24,11 @@ Definition returns_proof (n : nat) : n = n := eq_refl.
 Definition conj_proof : True /\ True := conj I I.
 
 (* A simple definition to verify extraction works *)
-Definition simple_value : nat := seven.
+Definition simple_value : nat := 7.
 
 (* Test that computation with proof args works *)
 Definition add_with_proof (a b : nat) (pf : True) : nat := Nat.add a b.
-Definition test_add_proof := add_with_proof three four I.
+Definition test_add_proof := add_with_proof 3 4 I.
 
 (* Test values *)
 Definition test_use_proof := use_proof.

@@ -12,10 +12,10 @@ Module Currying.
 Definition add3 (a b c : nat) : nat := Nat.add a (Nat.add b c).
 
 (* Partial application - apply one argument *)
-Definition add3_partial1 : nat -> nat -> nat := add3 one.
+Definition add3_partial1 : nat -> nat -> nat := add3 1.
 
 (* Partial application - apply two arguments *)
-Definition add3_partial2 : nat -> nat := add3 one two.
+Definition add3_partial2 : nat -> nat := add3 1 2.
 
 (* Explicit curry/uncurry *)
 Inductive pair (A B : Type) : Type :=
@@ -53,15 +53,15 @@ Section WithBase.
 End WithBase.
 
 (* After section, base becomes a parameter *)
-Definition add_ten : nat -> nat := add_base (Nat.mul two five).
+Definition add_ten : nat -> nat := add_base (Nat.mul 2 5).
 
 (* Test values *)
-Definition test_add3 := add3 one two three.
-Definition test_partial1 := add3_partial1 two three.
-Definition test_partial2 := add3_partial2 three.
-Definition test_curried := curried_add three four.
-Definition test_flip := flipped_sub three seven.
-Definition test_add_ten := add_ten five.
+Definition test_add3 := add3 1 2 3.
+Definition test_partial1 := add3_partial1 2 3.
+Definition test_partial2 := add3_partial2 3.
+Definition test_curried := curried_add 3 4.
+Definition test_flip := flipped_sub 3 7.
+Definition test_add_ten := add_ten 5.
 
 End Currying.
 

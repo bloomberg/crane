@@ -17,8 +17,8 @@ Section WithNat.
 End WithNat.
 
 (* After section, n becomes a parameter *)
-Definition add_five := add_n five.
-Definition mul_three := mul_n three.
+Definition add_five := add_n 5.
+Definition mul_three := mul_n 3.
 
 (* Nested sections *)
 Section Outer.
@@ -32,11 +32,11 @@ Section Outer.
   End Inner.
 
   (* b is now a parameter, a is still in scope *)
-  Definition use_inner := sum_ab three.
+  Definition use_inner := sum_ab 3.
 End Outer.
 
 (* Both a and b are now parameters *)
-Definition final_use := use_inner five.
+Definition final_use := use_inner 5.
 
 (* Section with type variable *)
 Section Polymorphic.
@@ -47,11 +47,11 @@ Section Polymorphic.
 End Polymorphic.
 
 (* Test values *)
-Definition test_add := add_five two.
-Definition test_mul := mul_three four.
+Definition test_add := add_five 2.
+Definition test_mul := mul_three 4.
 Definition test_nested := final_use.
-Definition test_id := identity nat seven.
-Definition test_const := const nat three nine.
+Definition test_id := identity nat 7.
+Definition test_const := const nat 3 9.
 
 End Sections.
 

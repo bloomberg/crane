@@ -99,24 +99,24 @@ Definition show_comparison {A : Type} `{Ord A} `{Show A} (x y : A) : string :=
 (* ============================================================= *)
 
 (* Test is_equal *)
-Definition test_eq_true : bool := is_equal (A := nat) forty_two forty_two.
-Definition test_eq_false : bool := is_equal (A := nat) forty_two forty_three.
+Definition test_eq_true : bool := is_equal (A := nat) 42 42.
+Definition test_eq_false : bool := is_equal (A := nat) 42 43.
 
 (* Test is_different *)
-Definition test_neq_true : bool := is_different (A := nat) forty_two forty_three.
-Definition test_neq_false : bool := is_different (A := nat) forty_two forty_two.
+Definition test_neq_true : bool := is_different (A := nat) 42 43.
+Definition test_neq_false : bool := is_different (A := nat) 42 42.
 
 (* Test is_less_than *)
-Definition test_lt_true : bool := is_less_than (A := nat) ten twenty.
-Definition test_lt_false : bool := is_less_than (A := nat) twenty ten.
+Definition test_lt_true : bool := is_less_than (A := nat) 10 20.
+Definition test_lt_false : bool := is_less_than (A := nat) 20 10.
 
 (* Test compare *)
-Definition test_compare_lt : Ordering := compare (A := nat) ten twenty.
-Definition test_compare_eq : Ordering := compare (A := nat) fifteen fifteen.
-Definition test_compare_gt : Ordering := compare (A := nat) twenty ten.
+Definition test_compare_lt : Ordering := compare (A := nat) 10 20.
+Definition test_compare_eq : Ordering := compare (A := nat) 15 15.
+Definition test_compare_gt : Ordering := compare (A := nat) 20 10.
 
 (* Test to_string *)
-Definition test_show : string := to_string (A := nat) forty_two.
+Definition test_show : string := to_string (A := nat) 42.
 
 (* Extract everything *)
 Crane Extraction "eq_ord_show"

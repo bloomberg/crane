@@ -20,6 +20,10 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
+struct Nat {
+  static inline const unsigned int one = 1u;
+};
+
 struct ParallelTest {
   static unsigned int ack(const std::pair<unsigned int, unsigned int> p);
 

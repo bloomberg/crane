@@ -15,12 +15,12 @@ Definition unit_val : unit := tt.
 Definition return_unit (n : nat) : unit := tt.
 
 (* Function taking unit *)
-Definition take_unit (u : unit) : nat := five.
+Definition take_unit (u : unit) : nat := 5.
 
 (* Pattern match on unit *)
 Definition match_unit (u : unit) : nat :=
   match u with
-  | tt => seven
+  | tt => 7
   end.
 
 (* Unit in a product *)
@@ -29,7 +29,7 @@ Inductive pair (A B : Type) : Type :=
 
 Arguments Pair {A B} _ _.
 
-Definition pair_with_unit : pair nat unit := Pair three tt.
+Definition pair_with_unit : pair nat unit := Pair 3 tt.
 Definition unit_pair : pair unit unit := Pair tt tt.
 
 (* Function with unit in signature *)
@@ -39,7 +39,7 @@ Definition unit_to_unit (u : unit) : unit := u.
 Definition seq {A B : Type} (a : A) (b : B) : B := b.
 
 Definition sequenced : nat :=
-  seq tt (seq tt five).
+  seq tt (seq tt 5).
 
 (* Test values *)
 Definition test_take := take_unit tt.

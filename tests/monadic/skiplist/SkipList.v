@@ -30,7 +30,7 @@ Set Implicit Arguments.
 (* ========================================================================= *)
 
 (* Maximum number of levels - supports up to 2^16 elements efficiently *)
-Definition maxLevels : nat := sixteen.
+Definition maxLevels : nat := 16.
 
 Crane Extract Inlined Constant maxLevels => "16u".
 
@@ -726,10 +726,10 @@ End Operations.
 (* ========================================================================= *)
 
 (* Status codes matching bdlcc::SkipList *)
-Definition e_SUCCESS   : nat := zero.
-Definition e_NOT_FOUND : nat := one.
-Definition e_DUPLICATE : nat := two.
-Definition e_INVALID   : nat := three.
+Definition e_SUCCESS   : nat := 0.
+Definition e_NOT_FOUND : nat := 1.
+Definition e_DUPLICATE : nat := 2.
+Definition e_INVALID   : nat := 3.
 
 (* These operations match BDE's type signatures as closely as possible:
    - Return status codes (nat) instead of option types
@@ -1011,21 +1011,21 @@ Definition nat_eq (x y : nat) : bool := Nat.eqb x y.
 Definition stm_test_insert_lookup (_ : void) : STM bool :=
   sl <- create 0 0 ;;
   (* Use multiple levels to test skip list structure *)
-  insert nat_lt nat_eq five fifty sl two ;;
-  insert nat_lt nat_eq three thirty sl one  ;;
-  insert nat_lt nat_eq seven seventy sl 0 ;;
-  insert nat_lt nat_eq one ten sl one  ;;
+  insert nat_lt nat_eq 5 50 sl 2 ;;
+  insert nat_lt nat_eq 3 30 sl 1  ;;
+  insert nat_lt nat_eq 7 70 sl 0 ;;
+  insert nat_lt nat_eq 1 10 sl 1  ;;
 
-  v5 <- lookup nat_lt nat_eq five sl ;;
-  v3 <- lookup nat_lt nat_eq three sl ;;
-  v7 <- lookup nat_lt nat_eq seven sl ;;
-  v1 <- lookup nat_lt nat_eq one  sl ;;
-  v9 <- lookup nat_lt nat_eq nine sl ;;
+  v5 <- lookup nat_lt nat_eq 5 sl ;;
+  v3 <- lookup nat_lt nat_eq 3 sl ;;
+  v7 <- lookup nat_lt nat_eq 7 sl ;;
+  v1 <- lookup nat_lt nat_eq 1  sl ;;
+  v9 <- lookup nat_lt nat_eq 9 sl ;;
 
-  let c1 := match v5 with Some n => Nat.eqb n fifty | _ => false end in
-  let c2 := match v3 with Some n => Nat.eqb n thirty | _ => false end in
-  let c3 := match v7 with Some n => Nat.eqb n seventy | _ => false end in
-  let c4 := match v1 with Some n => Nat.eqb n ten | _ => false end in
+  let c1 := match v5 with Some n => Nat.eqb n 50 | _ => false end in
+  let c2 := match v3 with Some n => Nat.eqb n 30 | _ => false end in
+  let c3 := match v7 with Some n => Nat.eqb n 70 | _ => false end in
+  let c4 := match v1 with Some n => Nat.eqb n 10 | _ => false end in
   let c5 := match v9 with None => true | _ => false end in
 
   Ret (andb c1 (andb c2 (andb c3 (andb c4 c5)))).
@@ -1033,20 +1033,20 @@ Definition stm_test_insert_lookup (_ : void) : STM bool :=
 Definition stm_test_delete (_ : void) : STM bool :=
   sl <- create 0 0 ;;
   (* Use multiple levels for delete test too *)
-  insert nat_lt nat_eq five fifty sl two ;;
-  insert nat_lt nat_eq three thirty sl one ;;
-  insert nat_lt nat_eq seven seventy sl 0 ;;
+  insert nat_lt nat_eq 5 50 sl 2 ;;
+  insert nat_lt nat_eq 3 30 sl 1 ;;
+  insert nat_lt nat_eq 7 70 sl 0 ;;
 
   (* Delete node at level 2 *)
-  remove nat_lt nat_eq five sl ;;
+  remove nat_lt nat_eq 5 sl ;;
 
-  v5 <- lookup nat_lt nat_eq five sl ;;
-  v3 <- lookup nat_lt nat_eq three sl ;;
-  v7 <- lookup nat_lt nat_eq seven sl ;;
+  v5 <- lookup nat_lt nat_eq 5 sl ;;
+  v3 <- lookup nat_lt nat_eq 3 sl ;;
+  v7 <- lookup nat_lt nat_eq 7 sl ;;
 
   let c1 := match v5 with None => true | _ => false end in
-  let c2 := match v3 with Some n => Nat.eqb n thirty | _ => false end in
-  let c3 := match v7 with Some n => Nat.eqb n seventy | _ => false end in
+  let c2 := match v3 with Some n => Nat.eqb n 30 | _ => false end in
+  let c3 := match v7 with Some n => Nat.eqb n 70 | _ => false end in
 
   Ret (andb c1 (andb c2 c3)).
 
@@ -1055,21 +1055,21 @@ Crane Extract Inlined Constant fivehundred => "500u".
 
 Definition stm_test_update (_ : void) : STM bool :=
   sl <- create 0 0 ;;
-  insert nat_lt nat_eq five fifty sl 0 ;;
-  insert nat_lt nat_eq five fivehundred  sl 0 ;;
+  insert nat_lt nat_eq 5 50 sl 0 ;;
+  insert nat_lt nat_eq 5 fivehundred  sl 0 ;;
 
-  v <- lookup nat_lt nat_eq five sl ;;
+  v <- lookup nat_lt nat_eq 5 sl ;;
   Ret (match v with Some n => Nat.eqb n fivehundred | _ => false end).
 
 Definition stm_test_minimum (_ : void) : STM bool :=
   sl <- create 0 0 ;;
-  insert nat_lt nat_eq five fifty sl 0 ;;
-  insert nat_lt nat_eq three thirty sl 0 ;;
-  insert nat_lt nat_eq seven seventy sl 0 ;;
+  insert nat_lt nat_eq 5 50 sl 0 ;;
+  insert nat_lt nat_eq 3 30 sl 0 ;;
+  insert nat_lt nat_eq 7 70 sl 0 ;;
 
   minOpt <- minimum sl ;;
   Ret (match minOpt with
-       | Some (k, v) => andb (Nat.eqb k three) (Nat.eqb v thirty)
+       | Some (k, v) => andb (Nat.eqb k 3) (Nat.eqb v 30)
        | _ => false
        end).
 
@@ -1079,21 +1079,21 @@ Definition stm_test_length_isEmpty (_ : void) : STM bool :=
   sl <- create 0 0 ;;
   empty1 <- isEmpty sl ;;
   len1 <- length sl ;;
-  insert nat_lt nat_eq five fifty sl 0 ;;
-  insert nat_lt nat_eq three thirty sl 0 ;;
+  insert nat_lt nat_eq 5 50 sl 0 ;;
+  insert nat_lt nat_eq 3 30 sl 0 ;;
   empty2 <- isEmpty sl ;;
   len2 <- length sl ;;
   let c1 := empty1 in
   let c2 := Nat.eqb len1 0 in
   let c3 := negb empty2 in
-  let c4 := Nat.eqb len2 two in
+  let c4 := Nat.eqb len2 2 in
   Ret (andb c1 (andb c2 (andb c3 c4))).
 
 Definition stm_test_front_back (_ : void) : STM bool :=
   sl <- create 0 0 ;;
-  insert nat_lt nat_eq five fifty sl 0 ;;
-  insert nat_lt nat_eq three thirty sl 0 ;;
-  insert nat_lt nat_eq seven seventy sl 0 ;;
+  insert nat_lt nat_eq 5 50 sl 0 ;;
+  insert nat_lt nat_eq 3 30 sl 0 ;;
+  insert nat_lt nat_eq 7 70 sl 0 ;;
   frontOpt <- front sl ;;
   backOpt <- back sl ;;
   let c1 := match frontOpt with
@@ -1108,41 +1108,41 @@ Definition stm_test_front_back (_ : void) : STM bool :=
 
 Definition stm_test_popFront (_ : void) : STM bool :=
   sl <- create 0 0 ;;
-  insert nat_lt nat_eq five fifty sl 0 ;;
-  insert nat_lt nat_eq three thirty sl 0 ;;
-  insert nat_lt nat_eq seven seventy sl 0 ;;
+  insert nat_lt nat_eq 5 50 sl 0 ;;
+  insert nat_lt nat_eq 3 30 sl 0 ;;
+  insert nat_lt nat_eq 7 70 sl 0 ;;
   pop1 <- popFront sl ;;
   pop2 <- popFront sl ;;
   len <- length sl ;;
-  let c1 := match pop1 with Some (k, v) => andb (Nat.eqb k three) (Nat.eqb v thirty) | _ => false end in
-  let c2 := match pop2 with Some (k, v) => andb (Nat.eqb k five) (Nat.eqb v fifty) | _ => false end in
-  let c3 := Nat.eqb len one  in
+  let c1 := match pop1 with Some (k, v) => andb (Nat.eqb k 3) (Nat.eqb v 30) | _ => false end in
+  let c2 := match pop2 with Some (k, v) => andb (Nat.eqb k 5) (Nat.eqb v 50) | _ => false end in
+  let c3 := Nat.eqb len 1  in
   Ret (andb c1 (andb c2 c3)).
 
 Definition stm_test_addUnique (_ : void) : STM bool :=
   sl <- create 0 0 ;;
-  r1 <- addUnique nat_lt nat_eq five fifty sl 0 ;;
-  r2 <- addUnique nat_lt nat_eq five fivehundred  sl 0 ;;  (* Should fail - key exists *)
-  r3 <- addUnique nat_lt nat_eq three thirty sl 0 ;;
-  v5 <- lookup nat_lt nat_eq five sl ;;
+  r1 <- addUnique nat_lt nat_eq 5 50 sl 0 ;;
+  r2 <- addUnique nat_lt nat_eq 5 fivehundred  sl 0 ;;  (* Should fail - key exists *)
+  r3 <- addUnique nat_lt nat_eq 3 30 sl 0 ;;
+  v5 <- lookup nat_lt nat_eq 5 sl ;;
   len <- length sl ;;
   let c1 := r1 in
   let c2 := negb r2 in
   let c3 := r3 in
-  let c4 := match v5 with Some n => Nat.eqb n fifty | _ => false end in (* Value unchanged *)
-  let c5 := Nat.eqb len two in
+  let c4 := match v5 with Some n => Nat.eqb n 50 | _ => false end in (* Value unchanged *)
+  let c5 := Nat.eqb len 2 in
   Ret (andb c1 (andb c2 (andb c3 (andb c4 c5)))).
 
 Definition stm_test_find (_ : void) : STM bool :=
   sl <- create 0 0 ;;
-  insert nat_lt nat_eq five fifty sl 0 ;;
-  insert nat_lt nat_eq three thirty sl 0 ;;
-  pairOpt <- find nat_lt nat_eq five sl ;;
-  noneOpt <- find nat_lt nat_eq nine sl ;;
+  insert nat_lt nat_eq 5 50 sl 0 ;;
+  insert nat_lt nat_eq 3 30 sl 0 ;;
+  pairOpt <- find nat_lt nat_eq 5 sl ;;
+  noneOpt <- find nat_lt nat_eq 9 sl ;;
   let c1 := match pairOpt with
             | Some p =>
                 let k := key p in
-                Nat.eqb k five
+                Nat.eqb k 5
             | None => false
             end in
   let c2 := match noneOpt with None => true | _ => false end in
@@ -1150,9 +1150,9 @@ Definition stm_test_find (_ : void) : STM bool :=
 
 Definition stm_test_navigation (_ : void) : STM bool :=
   sl <- create 0 0 ;;
-  insert nat_lt nat_eq one ten sl 0 ;;
-  insert nat_lt nat_eq three thirty sl 0 ;;
-  insert nat_lt nat_eq five fifty sl 0 ;;
+  insert nat_lt nat_eq 1 10 sl 0 ;;
+  insert nat_lt nat_eq 3 30 sl 0 ;;
+  insert nat_lt nat_eq 5 50 sl 0 ;;
   frontOpt <- front sl ;;
   match frontOpt with
   | None => Ret false
@@ -1162,10 +1162,10 @@ Definition stm_test_navigation (_ : void) : STM bool :=
       | None => Ret false
       | Some second =>
           prevOpt <- previous nat_eq second sl ;;
-          let c1 := Nat.eqb (key first) one in
-          let c2 := Nat.eqb (key second) three in
+          let c1 := Nat.eqb (key first) 1 in
+          let c2 := Nat.eqb (key second) 3 in
           let c3 := match prevOpt with
-                    | Some p => Nat.eqb (key p) one
+                    | Some p => Nat.eqb (key p) 1
                     | None => false
                     end in
           Ret (andb c1 (andb c2 c3))
@@ -1174,29 +1174,29 @@ Definition stm_test_navigation (_ : void) : STM bool :=
 
 Definition stm_test_bounds (_ : void) : STM bool :=
   sl <- create 0 0 ;;
-  insert nat_lt nat_eq two twenty sl 0 ;;
-  insert nat_lt nat_eq four forty sl 0 ;;
-  insert nat_lt nat_eq six sixty sl 0 ;;
-  (* findLowerBound three should return 4 (first >= 3) *)
-  lb3 <- findLowerBound nat_lt three sl ;;
+  insert nat_lt nat_eq 2 20 sl 0 ;;
+  insert nat_lt nat_eq 4 40 sl 0 ;;
+  insert nat_lt nat_eq 6 60 sl 0 ;;
+  (* findLowerBound 3 should return 4 (first >= 3) *)
+  lb3 <- findLowerBound nat_lt 3 sl ;;
   (* findLowerBound 4 should return 4 (first >= 4) *)
-  lb4 <- findLowerBound nat_lt four sl ;;
+  lb4 <- findLowerBound nat_lt 4 sl ;;
   (* findUpperBound 4 should return 6 (first > 4) *)
-  ub4 <- findUpperBound nat_lt nat_eq four sl ;;
-  let c1 := match lb3 with Some p => Nat.eqb (key p) four | None => false end in
-  let c2 := match lb4 with Some p => Nat.eqb (key p) four | None => false end in
-  let c3 := match ub4 with Some p => Nat.eqb (key p) six | None => false end in
+  ub4 <- findUpperBound nat_lt nat_eq 4 sl ;;
+  let c1 := match lb3 with Some p => Nat.eqb (key p) 4 | None => false end in
+  let c2 := match lb4 with Some p => Nat.eqb (key p) 4 | None => false end in
+  let c3 := match ub4 with Some p => Nat.eqb (key p) 6 | None => false end in
   Ret (andb c1 (andb c2 c3)).
 
 Definition stm_test_removeAll (_ : void) : STM bool :=
   sl <- create 0 0 ;;
-  insert nat_lt nat_eq five fifty sl 0 ;;
-  insert nat_lt nat_eq three thirty sl 0 ;;
-  insert nat_lt nat_eq seven seventy sl 0 ;;
+  insert nat_lt nat_eq 5 50 sl 0 ;;
+  insert nat_lt nat_eq 3 30 sl 0 ;;
+  insert nat_lt nat_eq 7 70 sl 0 ;;
   count <- removeAll sl ;;
   empty <- isEmpty sl ;;
   len <- length sl ;;
-  let c1 := Nat.eqb count three in
+  let c1 := Nat.eqb count 3 in
   let c2 := empty in
   let c3 := Nat.eqb len 0 in
   Ret (andb c1 (andb c2 c3)).
@@ -1206,13 +1206,13 @@ Definition stm_test_bde_api (_ : void) : STM bool :=
   sl <- create 0 0 ;;
 
   (* Test bde_add with newFrontFlag *)
-  result1 <- bde_add nat_lt nat_eq five fifty sl 0 ;;
+  result1 <- bde_add nat_lt nat_eq 5 50 sl 0 ;;
   let '(pair1, front1) := result1 in
 
-  result2 <- bde_add nat_lt nat_eq three thirty sl 0 ;;
+  result2 <- bde_add nat_lt nat_eq 3 30 sl 0 ;;
   let '(pair2, front2) := result2 in
 
-  result3 <- bde_add nat_lt nat_eq seven seventy sl 0 ;;
+  result3 <- bde_add nat_lt nat_eq 7 70 sl 0 ;;
   let '(pair3, front3) := result3 in
 
   (* First insert should be front, second should also be front (3 < 5), third not *)
@@ -1221,16 +1221,16 @@ Definition stm_test_bde_api (_ : void) : STM bool :=
   let c3 := negb front3 in
 
   (* Test bde_find with status codes *)
-  findResult <- bde_find nat_lt nat_eq five sl ;;
+  findResult <- bde_find nat_lt nat_eq 5 sl ;;
   let '(status1, item1) := findResult in
   let c4 := Nat.eqb status1 e_SUCCESS in
 
-  findResult2 <- bde_find nat_lt nat_eq nine sl ;;
+  findResult2 <- bde_find nat_lt nat_eq 9 sl ;;
   let '(status2, item2) := findResult2 in
   let c5 := Nat.eqb status2 e_NOT_FOUND in
 
   (* Test bde_addUnique with duplicate detection *)
-  uniqueResult <- bde_addUnique nat_lt nat_eq five fivehundred sl 0 ;;
+  uniqueResult <- bde_addUnique nat_lt nat_eq 5 fivehundred sl 0 ;;
   let '(status3, _, _) := uniqueResult in
   let c6 := Nat.eqb status3 e_DUPLICATE in
 
@@ -1239,7 +1239,7 @@ Definition stm_test_bde_api (_ : void) : STM bool :=
   let '(status4, frontItem) := frontResult in
   let c7 := Nat.eqb status4 e_SUCCESS in
   let c8 := match frontItem with
-            | Some p => Nat.eqb (key p) three
+            | Some p => Nat.eqb (key p) 3
             | None => false
             end in
 
@@ -1247,7 +1247,7 @@ Definition stm_test_bde_api (_ : void) : STM bool :=
   let '(status5, backItem) := backResult in
   let c9 := Nat.eqb status5 e_SUCCESS in
   let c10 := match backItem with
-             | Some p => Nat.eqb (key p) seven
+             | Some p => Nat.eqb (key p) 7
              | None => false
              end in
 
@@ -1307,19 +1307,19 @@ Definition run_tests : IO nat :=
   r11 <- test_bounds ghost ;;
   r12 <- test_removeAll ghost ;;
   r13 <- test_bde_api ghost ;;
-  let passed := (if r1 then one else zero) +
-                (if r2 then one else zero) +
-                (if r3 then one else zero) +
-                (if r4 then one else zero) +
-                (if r5 then one else zero) +
-                (if r6 then one else zero) +
-                (if r7 then one else zero) +
-                (if r8 then one else zero) +
-                (if r9 then one else zero) +
-                (if r10 then one else zero) +
-                (if r11 then one else zero) +
-                (if r12 then one else zero) +
-                (if r13 then one else zero) in
+  let passed := (if r1 then 1 else 0) +
+                (if r2 then 1 else 0) +
+                (if r3 then 1 else 0) +
+                (if r4 then 1 else 0) +
+                (if r5 then 1 else 0) +
+                (if r6 then 1 else 0) +
+                (if r7 then 1 else 0) +
+                (if r8 then 1 else 0) +
+                (if r9 then 1 else 0) +
+                (if r10 then 1 else 0) +
+                (if r11 then 1 else 0) +
+                (if r12 then 1 else 0) +
+                (if r13 then 1 else 0) in
   Ret passed.
 
 End skiplist_test.

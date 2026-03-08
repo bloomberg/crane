@@ -10,24 +10,24 @@ Module LetIn.
 
 (* Simple let binding *)
 Definition simple_let : nat :=
-  let x := five in x.
+  let x := 5 in x.
 
 (* Nested let bindings *)
 Definition nested_let : nat :=
-  let x := three in
-  let y := four in
+  let x := 3 in
+  let y := 4 in
   x.
 
 (* Let with computation *)
 Definition let_with_add : nat :=
-  let x := three in
-  let y := four in
+  let x := 3 in
+  let y := 4 in
   Nat.add x y.
 
 (* Shadowing in let *)
 Definition shadowed_let : nat :=
-  let x := five in
-  let x := three in
+  let x := 5 in
+  let x := 3 in
   x.
 
 (* Let in function body *)
@@ -37,8 +37,8 @@ Definition let_in_fun (n : nat) : nat :=
 
 (* Let binding a function *)
 Definition let_fun : nat :=
-  let f := fun x => Nat.add x one in
-  f five.
+  let f := fun x => Nat.add x 1 in
+  f 5.
 
 (* Let with pattern (destructuring) *)
 Inductive pair (A B : Type) : Type :=
@@ -47,16 +47,16 @@ Inductive pair (A B : Type) : Type :=
 Arguments Pair {A B} _ _.
 
 Definition let_destruct : nat :=
-  let p := Pair three four in
+  let p := Pair 3 4 in
   match p with
   | Pair x y => x
   end.
 
 (* Multiple independent lets *)
 Definition multi_let : nat :=
-  let a := one in
-  let b := two in
-  let c := three in
+  let a := 1 in
+  let b := 2 in
+  let c := 3 in
   Nat.add a (Nat.add b c).
 
 (* Test values *)
@@ -64,7 +64,7 @@ Definition test_simple := simple_let.
 Definition test_nested := nested_let.
 Definition test_add := let_with_add.
 Definition test_shadow := shadowed_let.
-Definition test_fun_call := let_in_fun three.
+Definition test_fun_call := let_in_fun 3.
 Definition test_let_fun := let_fun.
 Definition test_destruct := let_destruct.
 Definition test_multi := multi_let.

@@ -12,7 +12,7 @@ Module SingletonRecord.
 Record wrapper : Type := { value : nat }.
 
 (* Create wrapper *)
-Definition wrapped_five : wrapper := {| value := five |}.
+Definition wrapped_five : wrapper := {| value := 5 |}.
 
 (* Access field *)
 Definition get_value (w : wrapper) : nat := value w.
@@ -28,14 +28,14 @@ Definition unwrap (w : wrapper) : nat :=
 
 (* Function on wrapped value *)
 Definition double_wrapped (w : wrapper) : wrapper :=
-  {| value := Nat.mul two (value w) |}.
+  {| value := Nat.mul 2 (value w) |}.
 
 (* Polymorphic singleton record *)
 Record box (A : Type) : Type := { contents : A }.
 
 Arguments contents {A} _.
 
-Definition boxed_three : box nat := {| contents := three |}.
+Definition boxed_three : box nat := {| contents := 3 |}.
 Definition unbox {A : Type} (b : box A) : A := contents b.
 
 (* Nested singleton records *)
@@ -45,7 +45,7 @@ Definition double_unbox : nat := contents (contents nested_box).
 (* Singleton record with function field *)
 Record fn_wrapper : Type := { fn : nat -> nat }.
 
-Definition my_fn_wrapper : fn_wrapper := {| fn := Nat.add one |}.
+Definition my_fn_wrapper : fn_wrapper := {| fn := Nat.add 1 |}.
 Definition apply_wrapped (w : fn_wrapper) (n : nat) : nat := (fn w) n.
 
 (* Test values *)
@@ -55,7 +55,7 @@ Definition test_unwrap := unwrap wrapped_five.
 Definition test_double := value (double_wrapped wrapped_five).
 Definition test_unbox := unbox boxed_three.
 Definition test_double_unbox := double_unbox.
-Definition test_fn := apply_wrapped my_fn_wrapper seven.
+Definition test_fn := apply_wrapped my_fn_wrapper 7.
 
 End SingletonRecord.
 

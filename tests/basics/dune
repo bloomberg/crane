@@ -474,3 +474,47 @@
   (alias runtest)
   (deps typeclasses.t.exe)
   (action (run ./typeclasses.t.exe))))
+
+(subdir n_gmp
+ (rule
+  (targets n_gmp.t.exe)
+  (deps NGMPTest.vo n_gmp.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-gmp.sh %{project_root} n_gmp.t.exe n_gmp.cpp n_gmp.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps n_gmp.t.exe)
+  (action (run ./n_gmp.t.exe))))
+
+(subdir n_int
+ (rule
+  (targets n_int.t.exe)
+  (deps NIntTest.vo n_int.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} n_int.t.exe n_int.cpp n_int.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps n_int.t.exe)
+  (action (run ./n_int.t.exe))))
+
+(subdir z_gmp
+ (rule
+  (targets z_gmp.t.exe)
+  (deps ZGMPTest.vo z_gmp.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-gmp.sh %{project_root} z_gmp.t.exe z_gmp.cpp z_gmp.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps z_gmp.t.exe)
+  (action (run ./z_gmp.t.exe))))
+
+(subdir z_int
+ (rule
+  (targets z_int.t.exe)
+  (deps ZIntTest.vo z_int.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} z_int.t.exe z_int.cpp z_int.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps z_int.t.exe)
+  (action (run ./z_int.t.exe))))

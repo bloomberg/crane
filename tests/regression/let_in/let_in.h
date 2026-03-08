@@ -22,13 +22,20 @@ struct LetIn {
 
   static inline const unsigned int nested_let = 3u;
 
-  static inline const unsigned int let_with_add = (3u + 4u);
+  static inline const unsigned int let_with_add = [](void) {
+    unsigned int x = 3u;
+    unsigned int y = 4u;
+    return (std::move(x) + std::move(y));
+  }();
 
   static inline const unsigned int shadowed_let = 3u;
 
   static unsigned int let_in_fun(const unsigned int n);
 
-  static inline const unsigned int let_fun = (5u + 1u);
+  static inline const unsigned int let_fun = [](void) {
+    unsigned int x = 5u;
+    return (std::move(x) + 1u);
+  }();
 
   template <typename A, typename B> struct pair {
   public:
@@ -91,7 +98,12 @@ struct LetIn {
         std::move(p)->v());
   }();
 
-  static inline const unsigned int multi_let = (1u + (2u + 3u));
+  static inline const unsigned int multi_let = [](void) {
+    unsigned int a = 1u;
+    unsigned int b = 2u;
+    unsigned int c = 3u;
+    return (std::move(a) + (std::move(b) + std::move(c)));
+  }();
 
   static inline const unsigned int test_simple = simple_let;
 

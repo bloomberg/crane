@@ -17,9 +17,9 @@ Inductive cmp : Type :=
 (* Pattern matching on comparison *)
 Definition cmp_to_nat (c : cmp) : nat :=
   match c with
-  | CmpLt => zero
-  | CmpEq => one
-  | CmpGt => two
+  | CmpLt => 0
+  | CmpEq => 1
+  | CmpGt => 2
   end.
 
 (* Custom compare function *)
@@ -63,14 +63,14 @@ Definition flip_cmp (c : cmp) : cmp :=
 Definition test_lt_nat := cmp_to_nat CmpLt.
 Definition test_eq_nat := cmp_to_nat CmpEq.
 Definition test_gt_nat := cmp_to_nat CmpGt.
-Definition test_compare_lt := compare_nats three five.
-Definition test_compare_eq := compare_nats five five.
-Definition test_compare_gt := compare_nats seven five.
-Definition test_max := max_nat three seven.
-Definition test_min := min_nat three seven.
-Definition test_clamp_lo := clamp one three seven.
-Definition test_clamp_mid := clamp five three seven.
-Definition test_clamp_hi := clamp nine three seven.
+Definition test_compare_lt := compare_nats 3 5.
+Definition test_compare_eq := compare_nats 5 5.
+Definition test_compare_gt := compare_nats 7 5.
+Definition test_max := max_nat 3 7.
+Definition test_min := min_nat 3 7.
+Definition test_clamp_lo := clamp 1 3 7.
+Definition test_clamp_mid := clamp 5 3 7.
+Definition test_clamp_hi := clamp 9 3 7.
 Definition test_flip := flip_cmp CmpLt.
 
 End Comparison.

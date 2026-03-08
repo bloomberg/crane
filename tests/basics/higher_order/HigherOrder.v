@@ -58,17 +58,17 @@ Definition twice {A : Type} (f : A -> A) : A -> A := fun x => f (f x).
 Definition pipe {A B : Type} (x : A) (f : A -> B) : B := f x.
 
 (* Test list *)
-Definition test_list : list nat := cons one (cons two (cons three (cons four (cons five nil)))).
+Definition test_list : list nat := cons 1 (cons 2 (cons 3 (cons 4 (cons 5 nil)))).
 
 (* Test values *)
-Definition test_map := foldr Nat.add zero (map (Nat.add one) test_list).
-Definition test_foldr := foldr Nat.add zero test_list.
-Definition test_foldl := foldl Nat.add zero test_list.
-Definition test_compose := compose (Nat.mul two) (Nat.add one) three.
-Definition test_iterate := iterate three (Nat.add two) zero.
-Definition test_adder := adder five three.
-Definition test_twice := twice (Nat.add one) five.
-Definition test_pipe := pipe five (adder three).
+Definition test_map := foldr Nat.add 0 (map (Nat.add 1) test_list).
+Definition test_foldr := foldr Nat.add 0 test_list.
+Definition test_foldl := foldl Nat.add 0 test_list.
+Definition test_compose := compose (Nat.mul 2) (Nat.add 1) 3.
+Definition test_iterate := iterate 3 (Nat.add 2) 0.
+Definition test_adder := adder 5 3.
+Definition test_twice := twice (Nat.add 1) 5.
+Definition test_pipe := pipe 5 (adder 3).
 
 End HigherOrder.
 
