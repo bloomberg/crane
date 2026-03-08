@@ -212,6 +212,135 @@ struct DeepPatterns {
   static unsigned int
   guarded_match(const std::pair<unsigned int, unsigned int> p);
 
+  template <typename A, typename B> struct pair {
+  public:
+    struct Pair0 {
+      A _a0;
+      B _a1;
+    };
+    using variant_t = std::variant<Pair0>;
+
+  private:
+    variant_t v_;
+    explicit pair(Pair0 _v) : v_(std::move(_v)) {}
+
+  public:
+    struct ctor {
+      ctor() = delete;
+      static std::shared_ptr<pair<A, B>> Pair0_(A a0, B a1) {
+        return std::shared_ptr<pair<A, B>>(new pair<A, B>(Pair0{a0, a1}));
+      }
+      static std::unique_ptr<pair<A, B>> Pair0_uptr(A a0, B a1) {
+        return std::unique_ptr<pair<A, B>>(new pair<A, B>(Pair0{a0, a1}));
+      }
+    };
+    const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
+  };
+
+  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
+  static T3 pair_rect(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
+    return std::visit(
+        Overloaded{[&](const typename pair<T1, T2>::Pair0 _args) -> T3 {
+          T1 a = _args._a0;
+          T2 b = _args._a1;
+          return f(a, b);
+        }},
+        p->v());
+  }
+
+  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
+  static T3 pair_rec(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
+    return std::visit(
+        Overloaded{[&](const typename pair<T1, T2>::Pair0 _args) -> T3 {
+          T1 a = _args._a0;
+          T2 b = _args._a1;
+          return f(a, b);
+        }},
+        p->v());
+  }
+
+  template <typename A> struct mylist {
+  public:
+    struct nil {};
+    struct cons {
+      A _a0;
+      std::shared_ptr<mylist<A>> _a1;
+    };
+    using variant_t = std::variant<nil, cons>;
+
+  private:
+    variant_t v_;
+    explicit mylist(nil _v) : v_(std::move(_v)) {}
+    explicit mylist(cons _v) : v_(std::move(_v)) {}
+
+  public:
+    struct ctor {
+      ctor() = delete;
+      static std::shared_ptr<mylist<A>> nil_() {
+        return std::shared_ptr<mylist<A>>(new mylist<A>(nil{}));
+      }
+      static std::shared_ptr<mylist<A>>
+      cons_(A a0, const std::shared_ptr<mylist<A>> &a1) {
+        return std::shared_ptr<mylist<A>>(new mylist<A>(cons{a0, a1}));
+      }
+      static std::unique_ptr<mylist<A>> nil_uptr() {
+        return std::unique_ptr<mylist<A>>(new mylist<A>(nil{}));
+      }
+      static std::unique_ptr<mylist<A>>
+      cons_uptr(A a0, const std::shared_ptr<mylist<A>> &a1) {
+        return std::unique_ptr<mylist<A>>(new mylist<A>(cons{a0, a1}));
+      }
+    };
+    const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
+  };
+
+  template <typename T1, typename T2,
+            MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
+  static T2 mylist_rect(const T2 f, F1 &&f0,
+                        const std::shared_ptr<mylist<T1>> &m) {
+    return std::visit(
+        Overloaded{
+            [&](const typename mylist<T1>::nil _args) -> T2 { return f; },
+            [&](const typename mylist<T1>::cons _args) -> T2 {
+              T1 y = _args._a0;
+              std::shared_ptr<mylist<T1>> m0 = _args._a1;
+              return f0(y, m0, mylist_rect<T1, T2>(f, f0, m0));
+            }},
+        m->v());
+  }
+
+  template <typename T1, typename T2,
+            MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
+  static T2 mylist_rec(const T2 f, F1 &&f0,
+                       const std::shared_ptr<mylist<T1>> &m) {
+    return std::visit(
+        Overloaded{
+            [&](const typename mylist<T1>::nil _args) -> T2 { return f; },
+            [&](const typename mylist<T1>::cons _args) -> T2 {
+              T1 y = _args._a0;
+              std::shared_ptr<mylist<T1>> m0 = _args._a1;
+              return f0(y, m0, mylist_rec<T1, T2>(f, f0, m0));
+            }},
+        m->v());
+  }
+
+  static unsigned int match_pair_list(
+      const std::shared_ptr<
+          mylist<std::shared_ptr<pair<unsigned int, unsigned int>>>> &l);
+
+  static unsigned int match_two(const std::shared_ptr<mylist<unsigned int>> &l);
+
+  static unsigned int match_triple(
+      const std::shared_ptr<mylist<
+          std::shared_ptr<mylist<std::shared_ptr<mylist<unsigned int>>>>>> &l);
+
+  static unsigned int
+  deep_wildcard(const std::shared_ptr<
+                pair<std::shared_ptr<pair<unsigned int, unsigned int>>,
+                     std::shared_ptr<pair<unsigned int, unsigned int>>>> &p);
+
   static inline const unsigned int test_deep_some = deep_option(
       std::make_optional<std::optional<std::optional<unsigned int>>>(
           std::make_optional<std::optional<unsigned int>>(
@@ -258,4 +387,48 @@ struct DeepPatterns {
 
   static inline const unsigned int test_guarded =
       guarded_match(std::make_pair(3u, 7u));
+
+  static inline const unsigned int test_pair_list = match_pair_list(
+      mylist<std::shared_ptr<pair<unsigned int, unsigned int>>>::ctor::cons_(
+          pair<unsigned int, unsigned int>::ctor::Pair0_(5u, 3u),
+          mylist<std::shared_ptr<pair<unsigned int, unsigned int>>>::ctor::
+              nil_()));
+
+  static inline const unsigned int test_two_one =
+      match_two(mylist<unsigned int>::ctor::cons_(
+          7u, mylist<unsigned int>::ctor::nil_()));
+
+  static inline const unsigned int test_two_many =
+      match_two(mylist<unsigned int>::ctor::cons_(
+          7u, mylist<unsigned int>::ctor::cons_(
+                  8u, mylist<unsigned int>::ctor::nil_())));
+
+  static inline const unsigned int test_triple = match_triple(
+      mylist<std::shared_ptr<mylist<std::shared_ptr<mylist<unsigned int>>>>>::
+          ctor::cons_(
+              mylist<std::shared_ptr<mylist<unsigned int>>>::ctor::cons_(
+                  mylist<unsigned int>::ctor::cons_(
+                      9u, mylist<unsigned int>::ctor::nil_()),
+                  mylist<std::shared_ptr<mylist<unsigned int>>>::ctor::nil_()),
+              mylist<std::shared_ptr<mylist<
+                  std::shared_ptr<mylist<unsigned int>>>>>::ctor::nil_()));
+
+  static inline const unsigned int test_wildcard = deep_wildcard(
+      pair<std::shared_ptr<pair<unsigned int, unsigned int>>,
+           std::shared_ptr<pair<unsigned int, unsigned int>>>::ctor::
+          Pair0_(pair<unsigned int, unsigned int>::ctor::Pair0_(1u, 2u),
+                 pair<unsigned int, unsigned int>::ctor::Pair0_(3u, 4u)));
+
+  static inline const unsigned int t =
+      ((((((((((((test_deep_some + test_deep_none) + test_deep_pair) +
+                test_shape_3) +
+               test_shape_long) +
+              test_deep_sum) +
+             test_complex) +
+            test_guarded) +
+           test_pair_list) +
+          test_two_one) +
+         test_two_many) +
+        test_triple) +
+       test_wildcard);
 };

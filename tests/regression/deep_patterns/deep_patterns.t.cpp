@@ -75,6 +75,36 @@ int main() {
         std::cout << "Test 8 (guarded_match): PASSED" << std::endl;
     }
 
+    // Test 9: match_pair_list with custom types = 5
+    {
+        ASSERT(DeepPatterns::test_pair_list == 5);
+        std::cout << "Test 9 (match_pair_list): PASSED" << std::endl;
+    }
+
+    // Test 10: match_two with one element = 7
+    {
+        ASSERT(DeepPatterns::test_two_one == 7);
+        std::cout << "Test 10 (match_two one): PASSED" << std::endl;
+    }
+
+    // Test 11: match_two with many elements = 7
+    {
+        ASSERT(DeepPatterns::test_two_many == 7);
+        std::cout << "Test 11 (match_two many): PASSED" << std::endl;
+    }
+
+    // Test 12: match_triple nested lists = 9
+    {
+        ASSERT(DeepPatterns::test_triple == 9);
+        std::cout << "Test 12 (match_triple): PASSED" << std::endl;
+    }
+
+    // Test 13: deep_wildcard with nested pairs = 1
+    {
+        ASSERT(DeepPatterns::test_wildcard == 1);
+        std::cout << "Test 13 (deep_wildcard): PASSED" << std::endl;
+    }
+
     if (testStatus == 0) {
         std::cout << "\nAll deep_patterns tests passed!" << std::endl;
     } else {

@@ -14,17 +14,6 @@
 
 ; Test rules - compile C++ and run tests
 
-(subdir deep_match
- (rule
-  (targets deep_match.t.exe)
-  (deps DeepMatch.vo deep_match.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} deep_match.t.exe deep_match.cpp deep_match.t.cpp)))
- (rule
-  (alias runtest)
-  (deps deep_match.t.exe)
-  (action (run ./deep_match.t.exe))))
-
 (subdir implicit_args
  (rule
   (targets implicit_args.t.exe)
@@ -288,6 +277,61 @@
   (alias runtest)
   (deps deep_patterns.t.exe)
   (action (run ./deep_patterns.t.exe))))
+
+(subdir reg_pair_successor
+ (rule
+  (targets reg_pair_successor.t.exe)
+  (deps RegPairSuccessor.vo reg_pair_successor.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reg_pair_successor.t.exe reg_pair_successor.cpp reg_pair_successor.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reg_pair_successor.t.exe)
+  (action (run ./reg_pair_successor.t.exe))))
+
+(subdir pop_stack
+ (rule
+  (targets pop_stack.t.exe)
+  (deps PopStack.vo pop_stack.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pop_stack.t.exe pop_stack.cpp pop_stack.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pop_stack.t.exe)
+  (action (run ./pop_stack.t.exe))))
+
+(subdir push_stack
+ (rule
+  (targets push_stack.t.exe)
+  (deps PushStack.vo push_stack.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} push_stack.t.exe push_stack.cpp push_stack.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps push_stack.t.exe)
+  (action (run ./push_stack.t.exe))))
+
+(subdir program_cycles
+ (rule
+  (targets program_cycles.t.exe)
+  (deps ProgramCycles.vo program_cycles.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} program_cycles.t.exe program_cycles.cpp program_cycles.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps program_cycles.t.exe)
+  (action (run ./program_cycles.t.exe))))
+
+(subdir base_for_next_page_cross
+ (rule
+  (targets base_for_next_page_cross.t.exe)
+  (deps BaseForNextPageCross.vo base_for_next_page_cross.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} base_for_next_page_cross.t.exe base_for_next_page_cross.cpp base_for_next_page_cross.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps base_for_next_page_cross.t.exe)
+  (action (run ./base_for_next_page_cross.t.exe))))
 
 (subdir extract_directives
  (rule
@@ -563,17 +607,6 @@
   (alias runtest)
   (deps wrapper_decl_merge.t.exe)
   (action (run ./wrapper_decl_merge.t.exe))))
-
-(subdir func_only_submodule
- (rule
-  (targets func_only_submodule.t.exe)
-  (deps FuncOnlySubmodule.vo func_only_submodule.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} func_only_submodule.t.exe func_only_submodule.cpp func_only_submodule.t.cpp)))
- (rule
-  (alias runtest)
-  (deps func_only_submodule.t.exe)
-  (action (run ./func_only_submodule.t.exe))))
 
 (subdir forward_spec_ascii
  (rule
@@ -1323,17 +1356,6 @@
   (deps fetch_byte_default_zero.t.exe)
   (action (run ./fetch_byte_default_zero.t.exe))))
 
-(subdir program_cycles_singleton
- (rule
-  (targets program_cycles_singleton.t.exe)
-  (deps ProgramCyclesSingleton.vo program_cycles_singleton.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} program_cycles_singleton.t.exe program_cycles_singleton.cpp program_cycles_singleton.t.cpp)))
- (rule
-  (alias runtest)
-  (deps program_cycles_singleton.t.exe)
-  (action (run ./program_cycles_singleton.t.exe))))
-
 (subdir jump_target_some_jun
  (rule
   (targets jump_target_some_jun.t.exe)
@@ -1455,61 +1477,6 @@
   (deps get_reg_pair_odd_normalizes.t.exe)
   (action (run ./get_reg_pair_odd_normalizes.t.exe))))
 
-(subdir jcn_condition_carry_clear_gate
- (rule
-  (targets jcn_condition_carry_clear_gate.t.exe)
-  (deps JcnConditionCarryClearGate.vo jcn_condition_carry_clear_gate.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} jcn_condition_carry_clear_gate.t.exe jcn_condition_carry_clear_gate.cpp jcn_condition_carry_clear_gate.t.cpp)))
- (rule
-  (alias runtest)
-  (deps jcn_condition_carry_clear_gate.t.exe)
-  (action (run ./jcn_condition_carry_clear_gate.t.exe))))
-
-(subdir jcn_condition_nonzero_gate
- (rule
-  (targets jcn_condition_nonzero_gate.t.exe)
-  (deps JcnConditionNonzeroGate.vo jcn_condition_nonzero_gate.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} jcn_condition_nonzero_gate.t.exe jcn_condition_nonzero_gate.cpp jcn_condition_nonzero_gate.t.cpp)))
- (rule
-  (alias runtest)
-  (deps jcn_condition_nonzero_gate.t.exe)
-  (action (run ./jcn_condition_nonzero_gate.t.exe))))
-
-(subdir jcn_condition_test_high
- (rule
-  (targets jcn_condition_test_high.t.exe)
-  (deps JcnConditionTestHigh.vo jcn_condition_test_high.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} jcn_condition_test_high.t.exe jcn_condition_test_high.cpp jcn_condition_test_high.t.cpp)))
- (rule
-  (alias runtest)
-  (deps jcn_condition_test_high.t.exe)
-  (action (run ./jcn_condition_test_high.t.exe))))
-
-(subdir jcn_condition_test_low
- (rule
-  (targets jcn_condition_test_low.t.exe)
-  (deps JcnConditionTestLow.vo jcn_condition_test_low.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} jcn_condition_test_low.t.exe jcn_condition_test_low.cpp jcn_condition_test_low.t.cpp)))
- (rule
-  (alias runtest)
-  (deps jcn_condition_test_low.t.exe)
-  (action (run ./jcn_condition_test_low.t.exe))))
-
-(subdir jcn_condition_zero_gate
- (rule
-  (targets jcn_condition_zero_gate.t.exe)
-  (deps JcnConditionZeroGate.vo jcn_condition_zero_gate.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} jcn_condition_zero_gate.t.exe jcn_condition_zero_gate.cpp jcn_condition_zero_gate.t.cpp)))
- (rule
-  (alias runtest)
-  (deps jcn_condition_zero_gate.t.exe)
-  (action (run ./jcn_condition_zero_gate.t.exe))))
-
 (subdir jump_target_some_jms
  (rule
   (targets jump_target_some_jms.t.exe)
@@ -1532,94 +1499,6 @@
   (deps nibble_wrap_plus_19.t.exe)
   (action (run ./nibble_wrap_plus_19.t.exe))))
 
-(subdir pop_stack_empty_is_none
- (rule
-  (targets pop_stack_empty_is_none.t.exe)
-  (deps PopStackEmptyIsNone.vo pop_stack_empty_is_none.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} pop_stack_empty_is_none.t.exe pop_stack_empty_is_none.cpp pop_stack_empty_is_none.t.cpp)))
- (rule
-  (alias runtest)
-  (deps pop_stack_empty_is_none.t.exe)
-  (action (run ./pop_stack_empty_is_none.t.exe))))
-
-(subdir pop_stack_some_addr
- (rule
-  (targets pop_stack_some_addr.t.exe)
-  (deps PopStackSomeAddr.vo pop_stack_some_addr.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} pop_stack_some_addr.t.exe pop_stack_some_addr.cpp pop_stack_some_addr.t.cpp)))
- (rule
-  (alias runtest)
-  (deps pop_stack_some_addr.t.exe)
-  (action (run ./pop_stack_some_addr.t.exe))))
-
-(subdir program_cycles_three_nop
- (rule
-  (targets program_cycles_three_nop.t.exe)
-  (deps ProgramCyclesThreeNop.vo program_cycles_three_nop.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} program_cycles_three_nop.t.exe program_cycles_three_nop.cpp program_cycles_three_nop.t.cpp)))
- (rule
-  (alias runtest)
-  (deps program_cycles_three_nop.t.exe)
-  (action (run ./program_cycles_three_nop.t.exe))))
-
-(subdir push_stack_empty_len
- (rule
-  (targets push_stack_empty_len.t.exe)
-  (deps PushStackEmptyLen.vo push_stack_empty_len.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} push_stack_empty_len.t.exe push_stack_empty_len.cpp push_stack_empty_len.t.cpp)))
- (rule
-  (alias runtest)
-  (deps push_stack_empty_len.t.exe)
-  (action (run ./push_stack_empty_len.t.exe))))
-
-(subdir push_stack_overflow_head
- (rule
-  (targets push_stack_overflow_head.t.exe)
-  (deps PushStackOverflowHead.vo push_stack_overflow_head.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} push_stack_overflow_head.t.exe push_stack_overflow_head.cpp push_stack_overflow_head.t.cpp)))
- (rule
-  (alias runtest)
-  (deps push_stack_overflow_head.t.exe)
-  (action (run ./push_stack_overflow_head.t.exe))))
-
-(subdir push_stack_overflow_len
- (rule
-  (targets push_stack_overflow_len.t.exe)
-  (deps PushStackOverflowLen.vo push_stack_overflow_len.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} push_stack_overflow_len.t.exe push_stack_overflow_len.cpp push_stack_overflow_len.t.cpp)))
- (rule
-  (alias runtest)
-  (deps push_stack_overflow_len.t.exe)
-  (action (run ./push_stack_overflow_len.t.exe))))
-
-(subdir reg_pair_even_projection
- (rule
-  (targets reg_pair_even_projection.t.exe)
-  (deps RegPairEvenProjection.vo reg_pair_even_projection.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} reg_pair_even_projection.t.exe reg_pair_even_projection.cpp reg_pair_even_projection.t.cpp)))
- (rule
-  (alias runtest)
-  (deps reg_pair_even_projection.t.exe)
-  (action (run ./reg_pair_even_projection.t.exe))))
-
-(subdir reg_pair_odd_projection
- (rule
-  (targets reg_pair_odd_projection.t.exe)
-  (deps RegPairOddProjection.vo reg_pair_odd_projection.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} reg_pair_odd_projection.t.exe reg_pair_odd_projection.cpp reg_pair_odd_projection.t.cpp)))
- (rule
-  (alias runtest)
-  (deps reg_pair_odd_projection.t.exe)
-  (action (run ./reg_pair_odd_projection.t.exe))))
-
 (subdir valid_program_byte_256_reject
  (rule
   (targets valid_program_byte_256_reject.t.exe)
@@ -1631,115 +1510,16 @@
   (deps valid_program_byte_256_reject.t.exe)
   (action (run ./valid_program_byte_256_reject.t.exe))))
 
-(subdir encode_nop_bytes_in_range
+(subdir encode_bytes_in_range
  (rule
-  (targets encode_nop_bytes_in_range.t.exe)
-  (deps EncodeNopBytesInRange.vo encode_nop_bytes_in_range.t.cpp (source_tree .))
+  (targets encode_bytes_in_range.t.exe)
+  (deps EncodeBytesInRange.vo encode_bytes_in_range.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} encode_nop_bytes_in_range.t.exe encode_nop_bytes_in_range.cpp encode_nop_bytes_in_range.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} encode_bytes_in_range.t.exe encode_bytes_in_range.cpp encode_bytes_in_range.t.cpp)))
  (rule
   (alias runtest)
-  (deps encode_nop_bytes_in_range.t.exe)
-  (action (run ./encode_nop_bytes_in_range.t.exe))))
-
-(subdir encode_fim_bytes_in_range
- (rule
-  (targets encode_fim_bytes_in_range.t.exe)
-  (deps EncodeFimBytesInRange.vo encode_fim_bytes_in_range.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} encode_fim_bytes_in_range.t.exe encode_fim_bytes_in_range.cpp encode_fim_bytes_in_range.t.cpp)))
- (rule
-  (alias runtest)
-  (deps encode_fim_bytes_in_range.t.exe)
-  (action (run ./encode_fim_bytes_in_range.t.exe))))
-
-(subdir encode_ldm_bytes_in_range
- (rule
-  (targets encode_ldm_bytes_in_range.t.exe)
-  (deps EncodeLdmBytesInRange.vo encode_ldm_bytes_in_range.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} encode_ldm_bytes_in_range.t.exe encode_ldm_bytes_in_range.cpp encode_ldm_bytes_in_range.t.cpp)))
- (rule
-  (alias runtest)
-  (deps encode_ldm_bytes_in_range.t.exe)
-  (action (run ./encode_ldm_bytes_in_range.t.exe))))
-
-(subdir encode_tcs_bytes_in_range
- (rule
-  (targets encode_tcs_bytes_in_range.t.exe)
-  (deps EncodeTcsBytesInRange.vo encode_tcs_bytes_in_range.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} encode_tcs_bytes_in_range.t.exe encode_tcs_bytes_in_range.cpp encode_tcs_bytes_in_range.t.cpp)))
- (rule
-  (alias runtest)
-  (deps encode_tcs_bytes_in_range.t.exe)
-  (action (run ./encode_tcs_bytes_in_range.t.exe))))
-
-(subdir encode_clb_bytes_in_range
- (rule
-  (targets encode_clb_bytes_in_range.t.exe)
-  (deps EncodeClbBytesInRange.vo encode_clb_bytes_in_range.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} encode_clb_bytes_in_range.t.exe encode_clb_bytes_in_range.cpp encode_clb_bytes_in_range.t.cpp)))
- (rule
-  (alias runtest)
-  (deps encode_clb_bytes_in_range.t.exe)
-  (action (run ./encode_clb_bytes_in_range.t.exe))))
-
-(subdir encode_cmc_bytes_in_range
- (rule
-  (targets encode_cmc_bytes_in_range.t.exe)
-  (deps EncodeCmcBytesInRange.vo encode_cmc_bytes_in_range.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} encode_cmc_bytes_in_range.t.exe encode_cmc_bytes_in_range.cpp encode_cmc_bytes_in_range.t.cpp)))
- (rule
-  (alias runtest)
-  (deps encode_cmc_bytes_in_range.t.exe)
-  (action (run ./encode_cmc_bytes_in_range.t.exe))))
-
-(subdir encode_daa_bytes_in_range
- (rule
-  (targets encode_daa_bytes_in_range.t.exe)
-  (deps EncodeDaaBytesInRange.vo encode_daa_bytes_in_range.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} encode_daa_bytes_in_range.t.exe encode_daa_bytes_in_range.cpp encode_daa_bytes_in_range.t.cpp)))
- (rule
-  (alias runtest)
-  (deps encode_daa_bytes_in_range.t.exe)
-  (action (run ./encode_daa_bytes_in_range.t.exe))))
-
-(subdir encode_wr0_bytes_in_range
- (rule
-  (targets encode_wr0_bytes_in_range.t.exe)
-  (deps EncodeWr0BytesInRange.vo encode_wr0_bytes_in_range.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} encode_wr0_bytes_in_range.t.exe encode_wr0_bytes_in_range.cpp encode_wr0_bytes_in_range.t.cpp)))
- (rule
-  (alias runtest)
-  (deps encode_wr0_bytes_in_range.t.exe)
-  (action (run ./encode_wr0_bytes_in_range.t.exe))))
-
-(subdir encode_rdm_bytes_in_range
- (rule
-  (targets encode_rdm_bytes_in_range.t.exe)
-  (deps EncodeRdmBytesInRange.vo encode_rdm_bytes_in_range.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} encode_rdm_bytes_in_range.t.exe encode_rdm_bytes_in_range.cpp encode_rdm_bytes_in_range.t.cpp)))
- (rule
-  (alias runtest)
-  (deps encode_rdm_bytes_in_range.t.exe)
-  (action (run ./encode_rdm_bytes_in_range.t.exe))))
-
-(subdir encode_wpm_bytes_in_range
- (rule
-  (targets encode_wpm_bytes_in_range.t.exe)
-  (deps EncodeWpmBytesInRange.vo encode_wpm_bytes_in_range.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} encode_wpm_bytes_in_range.t.exe encode_wpm_bytes_in_range.cpp encode_wpm_bytes_in_range.t.cpp)))
- (rule
-  (alias runtest)
-  (deps encode_wpm_bytes_in_range.t.exe)
-  (action (run ./encode_wpm_bytes_in_range.t.exe))))
+  (deps encode_bytes_in_range.t.exe)
+  (action (run ./encode_bytes_in_range.t.exe))))
 
 (subdir rdr_reads_from_selected_port
  (rule
@@ -1851,127 +1631,6 @@
   (deps set_reg_pair_idempotent.t.exe)
   (action (run ./set_reg_pair_idempotent.t.exe))))
 
-(subdir inc_preserves_pair_partner
- (rule
-  (targets inc_preserves_pair_partner.t.exe)
-  (deps IncPreservesPairPartner.vo inc_preserves_pair_partner.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} inc_preserves_pair_partner.t.exe inc_preserves_pair_partner.cpp inc_preserves_pair_partner.t.cpp)))
- (rule
-  (alias runtest)
-  (deps inc_preserves_pair_partner.t.exe)
-  (action (run ./inc_preserves_pair_partner.t.exe))))
-
-(subdir inc_preserves_pair_partner_odd
- (rule
-  (targets inc_preserves_pair_partner_odd.t.exe)
-  (deps IncPreservesPairPartnerOdd.vo inc_preserves_pair_partner_odd.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} inc_preserves_pair_partner_odd.t.exe inc_preserves_pair_partner_odd.cpp inc_preserves_pair_partner_odd.t.cpp)))
- (rule
-  (alias runtest)
-  (deps inc_preserves_pair_partner_odd.t.exe)
-  (action (run ./inc_preserves_pair_partner_odd.t.exe))))
-
-(subdir xch_preserves_pair_partner
- (rule
-  (targets xch_preserves_pair_partner.t.exe)
-  (deps XchPreservesPairPartner.vo xch_preserves_pair_partner.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} xch_preserves_pair_partner.t.exe xch_preserves_pair_partner.cpp xch_preserves_pair_partner.t.cpp)))
- (rule
-  (alias runtest)
-  (deps xch_preserves_pair_partner.t.exe)
-  (action (run ./xch_preserves_pair_partner.t.exe))))
-
-(subdir xch_preserves_pair_partner_odd
- (rule
-  (targets xch_preserves_pair_partner_odd.t.exe)
-  (deps XchPreservesPairPartnerOdd.vo xch_preserves_pair_partner_odd.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} xch_preserves_pair_partner_odd.t.exe xch_preserves_pair_partner_odd.cpp xch_preserves_pair_partner_odd.t.cpp)))
- (rule
-  (alias runtest)
-  (deps xch_preserves_pair_partner_odd.t.exe)
-  (action (run ./xch_preserves_pair_partner_odd.t.exe))))
-
-(subdir inc_modifies_single_nibble_even
- (rule
-  (targets inc_modifies_single_nibble_even.t.exe)
-  (deps IncModifiesSingleNibbleEven.vo inc_modifies_single_nibble_even.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} inc_modifies_single_nibble_even.t.exe inc_modifies_single_nibble_even.cpp inc_modifies_single_nibble_even.t.cpp)))
- (rule
-  (alias runtest)
-  (deps inc_modifies_single_nibble_even.t.exe)
-  (action (run ./inc_modifies_single_nibble_even.t.exe))))
-
-(subdir inc_modifies_single_nibble_odd
- (rule
-  (targets inc_modifies_single_nibble_odd.t.exe)
-  (deps IncModifiesSingleNibbleOdd.vo inc_modifies_single_nibble_odd.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} inc_modifies_single_nibble_odd.t.exe inc_modifies_single_nibble_odd.cpp inc_modifies_single_nibble_odd.t.cpp)))
- (rule
-  (alias runtest)
-  (deps inc_modifies_single_nibble_odd.t.exe)
-  (action (run ./inc_modifies_single_nibble_odd.t.exe))))
-
-(subdir xch_modifies_single_nibble_even
- (rule
-  (targets xch_modifies_single_nibble_even.t.exe)
-  (deps XchModifiesSingleNibbleEven.vo xch_modifies_single_nibble_even.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} xch_modifies_single_nibble_even.t.exe xch_modifies_single_nibble_even.cpp xch_modifies_single_nibble_even.t.cpp)))
- (rule
-  (alias runtest)
-  (deps xch_modifies_single_nibble_even.t.exe)
-  (action (run ./xch_modifies_single_nibble_even.t.exe))))
-
-(subdir xch_modifies_single_nibble_odd
- (rule
-  (targets xch_modifies_single_nibble_odd.t.exe)
-  (deps XchModifiesSingleNibbleOdd.vo xch_modifies_single_nibble_odd.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} xch_modifies_single_nibble_odd.t.exe xch_modifies_single_nibble_odd.cpp xch_modifies_single_nibble_odd.t.cpp)))
- (rule
-  (alias runtest)
-  (deps xch_modifies_single_nibble_odd.t.exe)
-  (action (run ./xch_modifies_single_nibble_odd.t.exe))))
-
-(subdir ld_preserves_all_pairs
- (rule
-  (targets ld_preserves_all_pairs.t.exe)
-  (deps LdPreservesAllPairs.vo ld_preserves_all_pairs.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} ld_preserves_all_pairs.t.exe ld_preserves_all_pairs.cpp ld_preserves_all_pairs.t.cpp)))
- (rule
-  (alias runtest)
-  (deps ld_preserves_all_pairs.t.exe)
-  (action (run ./ld_preserves_all_pairs.t.exe))))
-
-(subdir add_preserves_all_pairs
- (rule
-  (targets add_preserves_all_pairs.t.exe)
-  (deps AddPreservesAllPairs.vo add_preserves_all_pairs.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} add_preserves_all_pairs.t.exe add_preserves_all_pairs.cpp add_preserves_all_pairs.t.cpp)))
- (rule
-  (alias runtest)
-  (deps add_preserves_all_pairs.t.exe)
-  (action (run ./add_preserves_all_pairs.t.exe))))
-
-(subdir sub_preserves_all_pairs
- (rule
-  (targets sub_preserves_all_pairs.t.exe)
-  (deps SubPreservesAllPairs.vo sub_preserves_all_pairs.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sub_preserves_all_pairs.t.exe sub_preserves_all_pairs.cpp sub_preserves_all_pairs.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sub_preserves_all_pairs.t.exe)
-  (action (run ./sub_preserves_all_pairs.t.exe))))
-
 (subdir fim_operates_on_pairs
  (rule
   (targets fim_operates_on_pairs.t.exe)
@@ -2016,28 +1675,6 @@
   (deps jin_uses_pair_for_jump.t.exe)
   (action (run ./jin_uses_pair_for_jump.t.exe))))
 
-(subdir set_reg_pair_get_reg_high
- (rule
-  (targets set_reg_pair_get_reg_high.t.exe)
-  (deps SetRegPairGetRegHigh.vo set_reg_pair_get_reg_high.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} set_reg_pair_get_reg_high.t.exe set_reg_pair_get_reg_high.cpp set_reg_pair_get_reg_high.t.cpp)))
- (rule
-  (alias runtest)
-  (deps set_reg_pair_get_reg_high.t.exe)
-  (action (run ./set_reg_pair_get_reg_high.t.exe))))
-
-(subdir set_reg_pair_get_reg_low
- (rule
-  (targets set_reg_pair_get_reg_low.t.exe)
-  (deps SetRegPairGetRegLow.vo set_reg_pair_get_reg_low.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} set_reg_pair_get_reg_low.t.exe set_reg_pair_get_reg_low.cpp set_reg_pair_get_reg_low.t.cpp)))
- (rule
-  (alias runtest)
-  (deps set_reg_pair_get_reg_low.t.exe)
-  (action (run ./set_reg_pair_get_reg_low.t.exe))))
-
 (subdir get_reg_pair_from_regs
  (rule
   (targets get_reg_pair_from_regs.t.exe)
@@ -2048,28 +1685,6 @@
   (alias runtest)
   (deps get_reg_pair_from_regs.t.exe)
   (action (run ./get_reg_pair_from_regs.t.exe))))
-
-(subdir odd_reg_same_pair_as_predecessor
- (rule
-  (targets odd_reg_same_pair_as_predecessor.t.exe)
-  (deps OddRegSamePairAsPredecessor.vo odd_reg_same_pair_as_predecessor.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} odd_reg_same_pair_as_predecessor.t.exe odd_reg_same_pair_as_predecessor.cpp odd_reg_same_pair_as_predecessor.t.cpp)))
- (rule
-  (alias runtest)
-  (deps odd_reg_same_pair_as_predecessor.t.exe)
-  (action (run ./odd_reg_same_pair_as_predecessor.t.exe))))
-
-(subdir even_reg_same_pair_as_successor
- (rule
-  (targets even_reg_same_pair_as_successor.t.exe)
-  (deps EvenRegSamePairAsSuccessor.vo even_reg_same_pair_as_successor.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} even_reg_same_pair_as_successor.t.exe even_reg_same_pair_as_successor.cpp even_reg_same_pair_as_successor.t.cpp)))
- (rule
-  (alias runtest)
-  (deps even_reg_same_pair_as_successor.t.exe)
-  (action (run ./even_reg_same_pair_as_successor.t.exe))))
 
 (subdir set_reg_affects_pair_high
  (rule
@@ -2324,28 +1939,6 @@
   (deps addr12_wrap_window.t.exe)
   (action (run ./addr12_wrap_window.t.exe))))
 
-(subdir base_for_next1_page_cross
- (rule
-  (targets base_for_next1_page_cross.t.exe)
-  (deps BaseForNext1PageCross.vo base_for_next1_page_cross.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} base_for_next1_page_cross.t.exe base_for_next1_page_cross.cpp base_for_next1_page_cross.t.cpp)))
- (rule
-  (alias runtest)
-  (deps base_for_next1_page_cross.t.exe)
-  (action (run ./base_for_next1_page_cross.t.exe))))
-
-(subdir base_for_next2_page_cross
- (rule
-  (targets base_for_next2_page_cross.t.exe)
-  (deps BaseForNext2PageCross.vo base_for_next2_page_cross.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} base_for_next2_page_cross.t.exe base_for_next2_page_cross.cpp base_for_next2_page_cross.t.cpp)))
- (rule
-  (alias runtest)
-  (deps base_for_next2_page_cross.t.exe)
-  (action (run ./base_for_next2_page_cross.t.exe))))
-
 (subdir decode_2_concrete_even_edge_0021
  (rule
   (targets decode_2_concrete_even_edge_0021.t.exe)
@@ -2378,39 +1971,6 @@
   (alias runtest)
   (deps decode_nop_wf_edge_0053.t.exe)
   (action (run ./decode_nop_wf_edge_0053.t.exe))))
-
-(subdir decode_opcode_0_wf_edge_0043
- (rule
-  (targets decode_opcode_0_wf_edge_0043.t.exe)
-  (deps DecodeOpcode0WfEdge0043.vo decode_opcode_0_wf_edge_0043.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_opcode_0_wf_edge_0043.t.exe decode_opcode_0_wf_edge_0043.cpp decode_opcode_0_wf_edge_0043.t.cpp)))
- (rule
-  (alias runtest)
-  (deps decode_opcode_0_wf_edge_0043.t.exe)
-  (action (run ./decode_opcode_0_wf_edge_0043.t.exe))))
-
-(subdir decode_opcode_2_wf_edge_0045
- (rule
-  (targets decode_opcode_2_wf_edge_0045.t.exe)
-  (deps DecodeOpcode2WfEdge0045.vo decode_opcode_2_wf_edge_0045.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_opcode_2_wf_edge_0045.t.exe decode_opcode_2_wf_edge_0045.cpp decode_opcode_2_wf_edge_0045.t.cpp)))
- (rule
-  (alias runtest)
-  (deps decode_opcode_2_wf_edge_0045.t.exe)
-  (action (run ./decode_opcode_2_wf_edge_0045.t.exe))))
-
-(subdir decode_opcode_4_wf_edge_0047
- (rule
-  (targets decode_opcode_4_wf_edge_0047.t.exe)
-  (deps DecodeOpcode4WfEdge0047.vo decode_opcode_4_wf_edge_0047.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_opcode_4_wf_edge_0047.t.exe decode_opcode_4_wf_edge_0047.cpp decode_opcode_4_wf_edge_0047.t.cpp)))
- (rule
-  (alias runtest)
-  (deps decode_opcode_4_wf_edge_0047.t.exe)
-  (action (run ./decode_opcode_4_wf_edge_0047.t.exe))))
 
 (subdir decode_wf_opcode_15_edge_0085
  (rule
@@ -2455,28 +2015,6 @@
   (alias runtest)
   (deps encode_decode_canonical_edge_0029.t.exe)
   (action (run ./encode_decode_canonical_edge_0029.t.exe))))
-
-(subdir encode_jun_bytes_in_range
- (rule
-  (targets encode_jun_bytes_in_range.t.exe)
-  (deps EncodeJunBytesInRange.vo encode_jun_bytes_in_range.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} encode_jun_bytes_in_range.t.exe encode_jun_bytes_in_range.cpp encode_jun_bytes_in_range.t.cpp)))
- (rule
-  (alias runtest)
-  (deps encode_jun_bytes_in_range.t.exe)
-  (action (run ./encode_jun_bytes_in_range.t.exe))))
-
-(subdir execute_daa_wf_edge_0107
- (rule
-  (targets execute_daa_wf_edge_0107.t.exe)
-  (deps ExecuteDaaWfEdge0107.vo execute_daa_wf_edge_0107.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_daa_wf_edge_0107.t.exe execute_daa_wf_edge_0107.cpp execute_daa_wf_edge_0107.t.cpp)))
- (rule
-  (alias runtest)
-  (deps execute_daa_wf_edge_0107.t.exe)
-  (action (run ./execute_daa_wf_edge_0107.t.exe))))
 
 (subdir execute_dac_wf_edge_0097
  (rule
@@ -2654,39 +2192,6 @@
   (deps page_offset_recompose.t.exe)
   (action (run ./page_offset_recompose.t.exe))))
 
-(subdir pc_inc1_edge_0011
- (rule
-  (targets pc_inc1_edge_0011.t.exe)
-  (deps PcInc1Edge0011.vo pc_inc1_edge_0011.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} pc_inc1_edge_0011.t.exe pc_inc1_edge_0011.cpp pc_inc1_edge_0011.t.cpp)))
- (rule
-  (alias runtest)
-  (deps pc_inc1_edge_0011.t.exe)
-  (action (run ./pc_inc1_edge_0011.t.exe))))
-
-(subdir pc_inc1_wrap_modulo
- (rule
-  (targets pc_inc1_wrap_modulo.t.exe)
-  (deps PcInc1WrapModulo.vo pc_inc1_wrap_modulo.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} pc_inc1_wrap_modulo.t.exe pc_inc1_wrap_modulo.cpp pc_inc1_wrap_modulo.t.cpp)))
- (rule
-  (alias runtest)
-  (deps pc_inc1_wrap_modulo.t.exe)
-  (action (run ./pc_inc1_wrap_modulo.t.exe))))
-
-(subdir pc_inc2_wrap_modulo
- (rule
-  (targets pc_inc2_wrap_modulo.t.exe)
-  (deps PcInc2WrapModulo.vo pc_inc2_wrap_modulo.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} pc_inc2_wrap_modulo.t.exe pc_inc2_wrap_modulo.cpp pc_inc2_wrap_modulo.t.cpp)))
- (rule
-  (alias runtest)
-  (deps pc_inc2_wrap_modulo.t.exe)
-  (action (run ./pc_inc2_wrap_modulo.t.exe))))
-
 (subdir prom_flagged_sum
  (rule
   (targets prom_flagged_sum.t.exe)
@@ -2742,115 +2247,16 @@
   (deps reg_index_bound_edge_0003.t.exe)
   (action (run ./reg_index_bound_edge_0003.t.exe))))
 
-(subdir set_prom_then_wpm_pc_bound
+(subdir set_prom_then_wpm
  (rule
-  (targets set_prom_then_wpm_pc_bound.t.exe)
-  (deps SetPromThenWpmPcBound.vo set_prom_then_wpm_pc_bound.t.cpp (source_tree .))
+  (targets set_prom_then_wpm.t.exe)
+  (deps SetPromThenWpm.vo set_prom_then_wpm.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} set_prom_then_wpm_pc_bound.t.exe set_prom_then_wpm_pc_bound.cpp set_prom_then_wpm_pc_bound.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} set_prom_then_wpm.t.exe set_prom_then_wpm.cpp set_prom_then_wpm.t.cpp)))
  (rule
   (alias runtest)
-  (deps set_prom_then_wpm_pc_bound.t.exe)
-  (action (run ./set_prom_then_wpm_pc_bound.t.exe))))
-
-(subdir set_prom_then_wpm_preserves_acc_bound
- (rule
-  (targets set_prom_then_wpm_preserves_acc_bound.t.exe)
-  (deps SetPromThenWpmPreservesAccBound.vo set_prom_then_wpm_preserves_acc_bound.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} set_prom_then_wpm_preserves_acc_bound.t.exe set_prom_then_wpm_preserves_acc_bound.cpp set_prom_then_wpm_preserves_acc_bound.t.cpp)))
- (rule
-  (alias runtest)
-  (deps set_prom_then_wpm_preserves_acc_bound.t.exe)
-  (action (run ./set_prom_then_wpm_preserves_acc_bound.t.exe))))
-
-(subdir set_prom_then_wpm_preserves_bank_bound
- (rule
-  (targets set_prom_then_wpm_preserves_bank_bound.t.exe)
-  (deps SetPromThenWpmPreservesBankBound.vo set_prom_then_wpm_preserves_bank_bound.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} set_prom_then_wpm_preserves_bank_bound.t.exe set_prom_then_wpm_preserves_bank_bound.cpp set_prom_then_wpm_preserves_bank_bound.t.cpp)))
- (rule
-  (alias runtest)
-  (deps set_prom_then_wpm_preserves_bank_bound.t.exe)
-  (action (run ./set_prom_then_wpm_preserves_bank_bound.t.exe))))
-
-(subdir set_prom_then_wpm_preserves_regs_length
- (rule
-  (targets set_prom_then_wpm_preserves_regs_length.t.exe)
-  (deps SetPromThenWpmPreservesRegsLength.vo set_prom_then_wpm_preserves_regs_length.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} set_prom_then_wpm_preserves_regs_length.t.exe set_prom_then_wpm_preserves_regs_length.cpp set_prom_then_wpm_preserves_regs_length.t.cpp)))
- (rule
-  (alias runtest)
-  (deps set_prom_then_wpm_preserves_regs_length.t.exe)
-  (action (run ./set_prom_then_wpm_preserves_regs_length.t.exe))))
-
-(subdir set_prom_then_wpm_preserves_rom_ports_length
- (rule
-  (targets set_prom_then_wpm_preserves_rom_ports_length.t.exe)
-  (deps SetPromThenWpmPreservesRomPortsLength.vo set_prom_then_wpm_preserves_rom_ports_length.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} set_prom_then_wpm_preserves_rom_ports_length.t.exe set_prom_then_wpm_preserves_rom_ports_length.cpp set_prom_then_wpm_preserves_rom_ports_length.t.cpp)))
- (rule
-  (alias runtest)
-  (deps set_prom_then_wpm_preserves_rom_ports_length.t.exe)
-  (action (run ./set_prom_then_wpm_preserves_rom_ports_length.t.exe))))
-
-(subdir set_prom_then_wpm_preserves_sel_rom_bound
- (rule
-  (targets set_prom_then_wpm_preserves_sel_rom_bound.t.exe)
-  (deps SetPromThenWpmPreservesSelRomBound.vo set_prom_then_wpm_preserves_sel_rom_bound.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} set_prom_then_wpm_preserves_sel_rom_bound.t.exe set_prom_then_wpm_preserves_sel_rom_bound.cpp set_prom_then_wpm_preserves_sel_rom_bound.t.cpp)))
- (rule
-  (alias runtest)
-  (deps set_prom_then_wpm_preserves_sel_rom_bound.t.exe)
-  (action (run ./set_prom_then_wpm_preserves_sel_rom_bound.t.exe))))
-
-(subdir set_prom_then_wpm_preserves_stack_length
- (rule
-  (targets set_prom_then_wpm_preserves_stack_length.t.exe)
-  (deps SetPromThenWpmPreservesStackLength.vo set_prom_then_wpm_preserves_stack_length.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} set_prom_then_wpm_preserves_stack_length.t.exe set_prom_then_wpm_preserves_stack_length.cpp set_prom_then_wpm_preserves_stack_length.t.cpp)))
- (rule
-  (alias runtest)
-  (deps set_prom_then_wpm_preserves_stack_length.t.exe)
-  (action (run ./set_prom_then_wpm_preserves_stack_length.t.exe))))
-
-(subdir set_prom_then_wpm_prom_addr_bound
- (rule
-  (targets set_prom_then_wpm_prom_addr_bound.t.exe)
-  (deps SetPromThenWpmPromAddrBound.vo set_prom_then_wpm_prom_addr_bound.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} set_prom_then_wpm_prom_addr_bound.t.exe set_prom_then_wpm_prom_addr_bound.cpp set_prom_then_wpm_prom_addr_bound.t.cpp)))
- (rule
-  (alias runtest)
-  (deps set_prom_then_wpm_prom_addr_bound.t.exe)
-  (action (run ./set_prom_then_wpm_prom_addr_bound.t.exe))))
-
-(subdir set_prom_then_wpm_prom_data_bound
- (rule
-  (targets set_prom_then_wpm_prom_data_bound.t.exe)
-  (deps SetPromThenWpmPromDataBound.vo set_prom_then_wpm_prom_data_bound.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} set_prom_then_wpm_prom_data_bound.t.exe set_prom_then_wpm_prom_data_bound.cpp set_prom_then_wpm_prom_data_bound.t.cpp)))
- (rule
-  (alias runtest)
-  (deps set_prom_then_wpm_prom_data_bound.t.exe)
-  (action (run ./set_prom_then_wpm_prom_data_bound.t.exe))))
-
-(subdir set_prom_then_wpm_rom_length
- (rule
-  (targets set_prom_then_wpm_rom_length.t.exe)
-  (deps SetPromThenWpmRomLength.vo set_prom_then_wpm_rom_length.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} set_prom_then_wpm_rom_length.t.exe set_prom_then_wpm_rom_length.cpp set_prom_then_wpm_rom_length.t.cpp)))
- (rule
-  (alias runtest)
-  (deps set_prom_then_wpm_rom_length.t.exe)
-  (action (run ./set_prom_then_wpm_rom_length.t.exe))))
+  (deps set_prom_then_wpm.t.exe)
+  (action (run ./set_prom_then_wpm.t.exe))))
 
 (subdir steps_counter_unroll
  (rule
@@ -2884,3 +2290,69 @@
   (alias runtest)
   (deps valid_layout_window.t.exe)
   (action (run ./valid_layout_window.t.exe))))
+
+(subdir decode_disassemble
+ (rule
+  (targets decode_disassemble.t.exe)
+  (deps DecodeDisassemble.vo decode_disassemble.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_disassemble.t.exe decode_disassemble.cpp decode_disassemble.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_disassemble.t.exe)
+  (action (run ./decode_disassemble.t.exe))))
+
+(subdir inc_xch_nibble
+ (rule
+  (targets inc_xch_nibble.t.exe)
+  (deps IncXchNibble.vo inc_xch_nibble.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inc_xch_nibble.t.exe inc_xch_nibble.cpp inc_xch_nibble.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps inc_xch_nibble.t.exe)
+  (action (run ./inc_xch_nibble.t.exe))))
+
+(subdir jcn_condition
+ (rule
+  (targets jcn_condition.t.exe)
+  (deps JcnCondition.vo jcn_condition.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} jcn_condition.t.exe jcn_condition.cpp jcn_condition.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps jcn_condition.t.exe)
+  (action (run ./jcn_condition.t.exe))))
+
+(subdir pc_increment
+ (rule
+  (targets pc_increment.t.exe)
+  (deps PcIncrement.vo pc_increment.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pc_increment.t.exe pc_increment.cpp pc_increment.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pc_increment.t.exe)
+  (action (run ./pc_increment.t.exe))))
+
+(subdir preserves_all_pairs
+ (rule
+  (targets preserves_all_pairs.t.exe)
+  (deps PreservesAllPairs.vo preserves_all_pairs.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} preserves_all_pairs.t.exe preserves_all_pairs.cpp preserves_all_pairs.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps preserves_all_pairs.t.exe)
+  (action (run ./preserves_all_pairs.t.exe))))
+
+(subdir register_pair
+ (rule
+  (targets register_pair.t.exe)
+  (deps RegisterPair.vo register_pair.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} register_pair.t.exe register_pair.cpp register_pair.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps register_pair.t.exe)
+  (action (run ./register_pair.t.exe))))
