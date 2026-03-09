@@ -2461,7 +2461,7 @@ let gen_record_cpp name fields ind =
     | None -> GlobRef.VarRef (Id.of_string ("_field" ^ (string_of_int i))) in
     (Fvar' (n, convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty ind.ip_vars t), VPublic)) l in
   let ty_vars = List.map (fun x -> (TTtypename, x)) ind.ip_vars in
-  Dstruct { ds_ref = name; ds_fields = l; ds_tparams = ty_vars; ds_constraint = None }
+  Dstruct { ds_ref = name; ds_fields = l; ds_tparams = ty_vars; ds_constraint = None; ds_needs_shared_from_this = false }
 
 (* Generate a C++ concept from a type class.
    Type class Eq(A) with method eqb : A -> A -> bool becomes:
@@ -2858,7 +2858,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type)
           if methods = [] && using_fields = [] then (None, Some class_ref, non_promoted_type_args)
           else begin
             let decl = Dstruct { ds_ref = name; ds_fields = using_fields @ methods;
-                                 ds_tparams = template_params; ds_constraint = None } in
+                                 ds_tparams = template_params; ds_constraint = None; ds_needs_shared_from_this = false } in
             (Some decl, Some class_ref, non_promoted_type_args)
           end
       | _ -> (None, Some class_ref, type_args))
@@ -3037,6 +3037,7 @@ let rec tvar_subst_expr (tvars : Id.t list) (e : cpp_expr) : cpp_expr =
   | CPPqualified (e', qid) -> CPPqualified (subst_e e', qid)
   | CPPmk_shared ty -> CPPmk_shared (subst_ty ty)
   | CPPmk_unique ty -> CPPmk_unique (subst_ty ty)
+  | CPPshared_from_this ty -> CPPshared_from_this (subst_ty ty)
   | _ -> e  (* CPPvar, CPPvisit, CPPstring, CPPuint, CPPfloat, CPPthis, CPPrequires *)
 
 and tvar_subst_stmt (tvars : Id.t list) (s : cpp_stmt) : cpp_stmt =
@@ -3971,9 +3972,66 @@ let gen_ind_header vars name cnames tys =
       let fields = if ty_vars == []
         then List.append (List.map (fun (x, y) -> (Fvar (x,y), VPublic)) constr) [make_decl,VPublic]
         else List.append (List.map (fun (x, y) -> (Fvar (x,y), VPublic)) constr) [make_def,VPublic] in
-      Dstruct { ds_ref = c; ds_fields = fields; ds_tparams = templates; ds_constraint = None })
+      Dstruct { ds_ref = c; ds_fields = fields; ds_tparams = templates; ds_constraint = None; ds_needs_shared_from_this = false })
     tys) in
   Dnspace (Some name, List.append (List.append header [vartydecl]) constrdecl)
+
+(* Replace [Sreturn (Some CPPthis)] with [Sreturn (Some (CPPshared_from_this inner_ty))]
+   in method bodies, including inside lambdas (e.g., std::visit branches).
+   When a method returns [this] directly, the generated C++ would produce
+   [return this;] which fails because [this] is a raw pointer but the return
+   type is [std::shared_ptr<T>].  Using [shared_from_this()] with
+   [const_pointer_cast] produces a valid [shared_ptr] from the raw pointer. *)
+let rec replace_return_this_expr inner_ty = function
+  | CPPthis -> CPPshared_from_this inner_ty
+  | CPPlambda (params, ret, body, cap) ->
+    CPPlambda (params, ret, List.map (replace_return_this_stmt inner_ty) body, cap)
+  | CPPfun_call (f, args) ->
+    CPPfun_call (replace_return_this_expr inner_ty f,
+                 List.map (replace_return_this_expr inner_ty) args)
+  | CPPoverloaded exprs ->
+    CPPoverloaded (List.map (replace_return_this_expr inner_ty) exprs)
+  | e -> e
+
+and replace_return_this_stmt inner_ty = function
+  | Sreturn (Some e) -> Sreturn (Some (replace_return_this_expr inner_ty e))
+  | Sif (cond, then_stmts, else_stmts) ->
+    Sif (cond,
+         List.map (replace_return_this_stmt inner_ty) then_stmts,
+         List.map (replace_return_this_stmt inner_ty) else_stmts)
+  | Scustom_case (ty, scrut, tys, brs, tag) ->
+    Scustom_case (ty, scrut, tys,
+      List.map (fun (binds, br_ty, stmts) ->
+        (binds, br_ty, List.map (replace_return_this_stmt inner_ty) stmts)
+      ) brs, tag)
+  | Sswitch (scrut, ind, brs) ->
+    Sswitch (scrut, ind,
+      List.map (fun (ctor, stmts) ->
+        (ctor, List.map (replace_return_this_stmt inner_ty) stmts)
+      ) brs)
+  | Sexpr e -> Sexpr (replace_return_this_expr inner_ty e)
+  | s -> s
+
+(* Check if any expression or statement contains [CPPshared_from_this]. *)
+let rec expr_has_shared_from_this = function
+  | CPPshared_from_this _ -> true
+  | CPPlambda (_, _, body, _) -> List.exists stmt_has_shared_from_this body
+  | CPPfun_call (f, args) ->
+    expr_has_shared_from_this f || List.exists expr_has_shared_from_this args
+  | CPPoverloaded exprs -> List.exists expr_has_shared_from_this exprs
+  | _ -> false
+
+and stmt_has_shared_from_this = function
+  | Sreturn (Some e) -> expr_has_shared_from_this e
+  | Sexpr e -> expr_has_shared_from_this e
+  | Sif (_, then_stmts, else_stmts) ->
+    List.exists stmt_has_shared_from_this then_stmts ||
+    List.exists stmt_has_shared_from_this else_stmts
+  | Scustom_case (_, _, _, brs, _) ->
+    List.exists (fun (_, _, stmts) -> List.exists stmt_has_shared_from_this stmts) brs
+  | Sswitch (_, _, brs) ->
+    List.exists (fun (_, stmts) -> List.exists stmt_has_shared_from_this stmts) brs
+  | _ -> false
 
 (* Generate a single method from a method candidate.
    name: the containing type's GlobRef
@@ -4192,6 +4250,14 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
     | Some id -> List.map (var_subst_stmt id CPPthis) stmts
     | None -> stmts
   in
+  (* Replace [return this;] with [return shared_from_this()] when the
+     return type is a shared_ptr.  This handles methods that return the
+     receiver unchanged (e.g., skipn's base case). *)
+  let stmts = match ret_cpp with
+    | Tshared_ptr inner_ty ->
+      List.map (replace_return_this_stmt inner_ty) stmts
+    | _ -> stmts
+  in
   (* Apply tvar_subst_stmt with the extended vars list (defined above).
      extended_vars covers positions 1..num_ind_vars (inductive vars) and
      num_ind_vars+1, num_ind_vars+2, etc. (extra vars) so tvar_subst_stmt
@@ -4232,7 +4298,7 @@ let gen_ind_header_v2 ?(is_mutual=false) vars name cnames tys method_candidates 
        This type cannot be constructed, matching the semantics of empty types. *)
     let method_fields = List.map (gen_single_method name vars) method_candidates in
     Dstruct { ds_ref = name; ds_fields = [(Fdeleted_ctor, VPublic)] @ method_fields;
-              ds_tparams = templates; ds_constraint = None }
+              ds_tparams = templates; ds_constraint = None; ds_needs_shared_from_this = false }
   else
 
   (* Check if all constructors are nullary: eligible for enum class *)
@@ -4436,6 +4502,14 @@ let gen_ind_header_v2 ?(is_mutual=false) vars name cnames tys method_candidates 
   (* 6. Generate methods from method candidates using shared helper *)
   let method_fields = List.map (gen_single_method name vars) method_candidates in
 
+  (* Detect if any method contains shared_from_this (i.e., returns 'this').
+     If so, the struct needs to inherit from std::enable_shared_from_this. *)
+  let needs_shared_from_this = List.exists (fun (fld, _vis) ->
+    match fld with
+    | Fmethod { mf_body; _ } -> List.exists stmt_has_shared_from_this mf_body
+    | _ -> false
+  ) method_fields in
+
   (* Combine all fields in order:
      - Constructor structs (public)
      - variant_t using (public)
@@ -4459,7 +4533,7 @@ let gen_ind_header_v2 ?(is_mutual=false) vars name cnames tys method_candidates 
   in
 
   (* Just the struct itself - no extra namespace wrapper *)
-  Dstruct { ds_ref = name; ds_fields = all_fields; ds_tparams = templates; ds_constraint = None }
+  Dstruct { ds_ref = name; ds_fields = all_fields; ds_tparams = templates; ds_constraint = None; ds_needs_shared_from_this = needs_shared_from_this }
 
 (* Generate methods for eponymous records.
    Uses the shared gen_single_method helper for records where methods are

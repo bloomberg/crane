@@ -116,6 +116,7 @@ and cpp_expr =
   | CPPunique_ptr_ctor of cpp_type * cpp_expr  (* std::unique_ptr<T>(expr) *)
   | CPPmk_unique of cpp_type                   (* std::make_unique<T> *)
   | CPPthis  (* this pointer in methods *)
+  | CPPshared_from_this of cpp_type  (* std::const_pointer_cast<T>(shared_from_this()) — for returning this as shared_ptr *)
   | CPPmember of cpp_expr * Id.t  (* expr.member - for accessing v_ etc *)
   | CPParrow of cpp_expr * Id.t   (* expr->member - for ptr->v_ access *)
   | CPPmethod_call of cpp_expr * Id.t * cpp_expr list  (* obj->method(args) *)
@@ -182,6 +183,7 @@ type cpp_decl =
       ds_fields : (cpp_field * cpp_visibility) list;
       ds_tparams : (template_type * Id.t) list;      (* [] for non-template structs *)
       ds_constraint : cpp_constraint option;          (* template constraint, if any *)
+      ds_needs_shared_from_this : bool;               (* inherit enable_shared_from_this when a method returns this *)
     }
   | Dstruct_decl of GlobRef.t
   | Dusing of GlobRef.t * cpp_type

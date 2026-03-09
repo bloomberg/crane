@@ -794,6 +794,7 @@ let rec lambda_needs_capture (params : (Minicpp.cpp_type * Names.Id.t option) li
     | CPPvar id -> (IdSet.add id refs, decls)
     (* CPPvar' removed — all vars now use CPPvar *)
     | CPPthis -> uses_this := true; (refs, decls)  (* 'this' requires capture *)
+    | CPPshared_from_this _ -> uses_this := true; (refs, decls)  (* shared_from_this() uses 'this' *)
     | CPPfun_call (f, args) ->
         let acc = collect_from_expr (refs, decls) f in
         List.fold_left collect_from_expr acc args
@@ -918,7 +919,7 @@ and expr_contains_capturing_lambda (e : Minicpp.cpp_expr) : bool =
   | CPPqualified (e', _) -> expr_contains_capturing_lambda e'
   | CPPrequires (_, constraints, _) -> List.exists (fun (e', _) -> expr_contains_capturing_lambda e') constraints
   | CPPbinop (_, lhs, rhs) -> expr_contains_capturing_lambda lhs || expr_contains_capturing_lambda rhs
-  | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _ | CPPstring _ | CPPuint _ | CPPfloat _ | CPPthis | CPPconvertible_to _ | CPPabort _ | CPPenum_val _ | CPPraw _ -> false
+  | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _ | CPPstring _ | CPPuint _ | CPPfloat _ | CPPthis | CPPshared_from_this _ | CPPconvertible_to _ | CPPabort _ | CPPenum_val _ | CPPraw _ -> false
 
 and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
   let open Minicpp in
@@ -1519,6 +1520,8 @@ and pp_cpp_expr env args t =
   | CPPunique_ptr_ctor (ty, expr) ->
       str (sn ()).unique_ptr ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ pp_cpp_expr env args expr ++ str ")"
   | CPPthis -> str "this"
+  | CPPshared_from_this ty ->
+      str "std::const_pointer_cast<" ++ pp_cpp_type false [] ty ++ str ">(this->shared_from_this())"
   | CPPmember (e, id) ->
       pp_cpp_expr env args e ++ str "." ++ Id.print id
   | CPParrow (e, id) ->
@@ -1819,26 +1822,33 @@ function
        When there ARE pending wrapper declarations (e.g., module functions like rev),
        keep the two-level structure so wrapper functions can reference the template class. *)
     (match decls, has_pending with
-    | [Dstruct { ds_fields = fields; ds_tparams = []; _ }], false ->
+    | [Dstruct { ds_fields = fields; ds_tparams = []; ds_needs_shared_from_this = sft; _ }], false ->
       (* MERGE non-template: struct Nat { ... } *)
       let struct_name = str struct_name_str in
       let f_s = with_render_ctx
         ~setup:(fun () -> in_struct_context := true)
         (fun () -> pp_cpp_fields_with_vis ~struct_name env fields) in
-      str "struct " ++ struct_name ++ str " {" ++ fnl ()
+      let inherit_clause = if sft then
+        str " : public std::enable_shared_from_this<" ++ struct_name ++ str ">"
+      else mt () in
+      str "struct " ++ struct_name ++ inherit_clause ++ str " {" ++ fnl ()
         ++ f_s ++ fnl () ++ str "};"
-    | [Dstruct { ds_fields = fields; ds_tparams = temps; ds_constraint = cstr; _ }], false ->
+    | [Dstruct { ds_fields = fields; ds_tparams = temps; ds_constraint = cstr; ds_needs_shared_from_this = sft; _ }], false ->
       (* MERGE template: template<typename A> struct List { ... } *)
       let struct_name = str struct_name_str in
       let f_s = with_render_ctx
         ~setup:(fun () -> in_struct_context := true; in_template_struct := true)
         (fun () -> pp_cpp_fields_with_vis ~struct_name env fields) in
       let args = pp_list pp_template_param temps in
+      let inherit_clause = if sft then
+        let type_args = pp_list (fun (_, id) -> Id.print id) temps in
+        str " : public std::enable_shared_from_this<" ++ struct_name ++ str "<" ++ type_args ++ str ">>"
+      else mt () in
       h (str "template <" ++ args ++ str ">")
       ++ (match cstr with
           | None -> fnl ()
           | Some c -> pp_cpp_expr env [] c ++ fnl ())
-      ++ str "struct " ++ struct_name ++ str " {" ++ fnl ()
+      ++ str "struct " ++ struct_name ++ inherit_clause ++ str " {" ++ fnl ()
         ++ f_s ++ fnl () ++ str "};"
     | _ ->
       (* No merge: keep wrapper struct (has pending decls or multiple children) *)
@@ -1905,7 +1915,7 @@ function
     let is_struct_member = is_qualified || !in_struct_context in
     let static_kw = if is_struct_member then str "static " else mt () in
     h (static_kw ++ (pp_cpp_type false [] ret_ty) ++ str " " ++ name ++ pp_par true params_s) ++ str ";"
-| Dstruct { ds_ref = id; ds_fields = fields; ds_tparams = tparams; ds_constraint = cstr } ->
+| Dstruct { ds_ref = id; ds_fields = fields; ds_tparams = tparams; ds_constraint = cstr; ds_needs_shared_from_this = sft } ->
     (* Struct name for inductive types.
        Regular inductives use their original Rocq name.
        EXCEPTION 1: Records keep their original case.
@@ -1937,7 +1947,14 @@ function
             | None -> fnl ()
             | Some c -> pp_cpp_expr env [] c ++ fnl ())
     in
-    tmpl ++ str "struct " ++ struct_name ++ str " {" ++ fnl () ++ f_s ++ fnl () ++ str "};"
+    let inherit_clause = if sft then
+      match tparams with
+      | [] -> str " : public std::enable_shared_from_this<" ++ struct_name ++ str ">"
+      | _ ->
+        let type_args = pp_list (fun (_, tid) -> Id.print tid) tparams in
+        str " : public std::enable_shared_from_this<" ++ struct_name ++ str "<" ++ type_args ++ str ">>"
+    else mt () in
+    tmpl ++ str "struct " ++ struct_name ++ inherit_clause ++ str " {" ++ fnl () ++ f_s ++ fnl () ++ str "};"
 | Dstruct_decl id ->
     str "struct " ++ pp_global Type id ++ str ";"
 | Dusing (id, ty) ->

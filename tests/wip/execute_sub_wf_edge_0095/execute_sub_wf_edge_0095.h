@@ -17,7 +17,8 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-template <typename A> struct List {
+template <typename A>
+struct List : public std::enable_shared_from_this<List<A>> {
 public:
   struct nil {};
   struct cons {
@@ -53,7 +54,7 @@ public:
   variant_t &v_mut() { return v_; }
   std::shared_ptr<List<A>> skipn(const unsigned int n) const {
     if (n <= 0) {
-      return this;
+      return std::const_pointer_cast<List<A>>(this->shared_from_this());
     } else {
       unsigned int n0 = n - 1;
       return std::visit(Overloaded{[](const typename List<A>::nil _args)

@@ -284,7 +284,7 @@ let register_methods_for_epon tbl cands ?(cross_module=false) ?(wrapper_module_n
   List.iter (fun (_l, se) ->
     match se with
     | SEdecl (Dterm (r, body, ty)) ->
-      if same_module r && body_safe_for_method body then
+      if same_module r then
         (match find_epon_arg_pos epon_ref ty with
          | Some (pos, ind_tvar_positions) ->
            add_candidate r body ty pos ind_tvar_positions
@@ -292,7 +292,7 @@ let register_methods_for_epon tbl cands ?(cross_module=false) ?(wrapper_module_n
     | SEdecl (Dfix (rv, defs, typs)) ->
       (* Mutual fixpoints: check each function in the fixpoint block. *)
       Array.iteri (fun i r ->
-        if same_module r && body_safe_for_method defs.(i) then
+        if same_module r then
           match find_epon_arg_pos epon_ref typs.(i) with
           | Some (pos, ind_tvar_positions) ->
             add_candidate r defs.(i) typs.(i) pos ind_tvar_positions
