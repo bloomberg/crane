@@ -1,0 +1,84 @@
+#include <algorithm>
+#include <any>
+#include <cassert>
+#include <fetch_ops.h>
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <variant>
+
+unsigned int FetchOps::fetch_byte(const std::shared_ptr<FetchOps::state> &s,
+                                  const unsigned int addr) {
+  return s->rom->nth(addr, 0u);
+}
+
+unsigned int
+FetchOps::fetch_byte_direct(const std::shared_ptr<List<unsigned int>> &rom_data,
+                            const unsigned int addr) {
+  return rom_data->nth(addr, 0u);
+}
+
+std::pair<unsigned int, unsigned int>
+FetchOps::fetch_pair(const std::shared_ptr<List<unsigned int>> &rom_data,
+                     const unsigned int addr) {
+  return std::visit(
+      Overloaded{[](const typename List<unsigned int>::nil _args)
+                     -> std::pair<unsigned int, unsigned int> {
+                   return std::make_pair(0u, 0u);
+                 },
+                 [](const typename List<unsigned int>::cons _args)
+                     -> std::pair<unsigned int, unsigned int> {
+                   unsigned int b1 = _args._a0;
+                   std::shared_ptr<List<unsigned int>> l = _args._a1;
+                   return std::visit(
+                       Overloaded{
+                           [](const typename List<unsigned int>::nil _args)
+                               -> std::pair<unsigned int, unsigned int> {
+                             return std::make_pair(0u, 0u);
+                           },
+                           [&](const typename List<unsigned int>::cons _args)
+                               -> std::pair<unsigned int, unsigned int> {
+                             unsigned int b2 = _args._a0;
+                             return std::make_pair(std::move(b1),
+                                                   std::move(b2));
+                           }},
+                       std::move(l)->v());
+                 }},
+      drop<unsigned int>(addr, rom_data)->v());
+}
+
+std::optional<std::pair<unsigned int, unsigned int>>
+FetchOps::fetch_window(const std::shared_ptr<List<unsigned int>> &rom_data,
+                       const unsigned int addr) {
+  return std::visit(
+      Overloaded{[](const typename List<unsigned int>::nil _args)
+                     -> std::optional<std::pair<unsigned int, unsigned int>> {
+                   return std::nullopt;
+                 },
+                 [&](const typename List<unsigned int>::cons _args)
+                     -> std::optional<std::pair<unsigned int, unsigned int>> {
+                   unsigned int b1 = _args._a0;
+                   std::shared_ptr<List<unsigned int>> l = _args._a1;
+                   return std::visit(
+                       Overloaded{
+                           [](const typename List<unsigned int>::nil _args)
+                               -> std::optional<
+                                   std::pair<unsigned int, unsigned int>> {
+                             return std::nullopt;
+                           },
+                           [&](const typename List<unsigned int>::cons _args)
+                               -> std::optional<
+                                   std::pair<unsigned int, unsigned int>> {
+                             return std::make_optional<
+                                 std::pair<unsigned int, unsigned int>>(
+                                 std::make_pair(std::move(b1),
+                                                (std::move(addr) + 2u)));
+                           }},
+                       std::move(l)->v());
+                 }},
+      drop<unsigned int>(addr, rom_data)->v());
+}

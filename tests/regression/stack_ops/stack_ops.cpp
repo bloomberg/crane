@@ -1,0 +1,225 @@
+#include <algorithm>
+#include <any>
+#include <cassert>
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <stack_ops.h>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <variant>
+
+std::pair<std::optional<unsigned int>, std::shared_ptr<StackOps::state_basic>>
+StackOps::pop_stack(std::shared_ptr<StackOps::state_basic> s) {
+  return std::visit(
+      Overloaded{[&](const typename List<unsigned int>::nil _args)
+                     -> std::pair<std::optional<unsigned int>,
+                                  std::shared_ptr<StackOps::state_basic>> {
+                   return std::make_pair(std::nullopt, std::move(s));
+                 },
+                 [](const typename List<unsigned int>::cons _args)
+                     -> std::pair<std::optional<unsigned int>,
+                                  std::shared_ptr<StackOps::state_basic>> {
+                   unsigned int x = _args._a0;
+                   std::shared_ptr<List<unsigned int>> xs = _args._a1;
+                   return std::make_pair(
+                       std::make_optional<unsigned int>(std::move(x)),
+                       std::make_shared<StackOps::state_basic>(
+                           state_basic{std::move(xs)}));
+                 }},
+      s->stack_basic->v());
+}
+
+bool StackOps::is_none(const std::optional<unsigned int> o) {
+  if (o.has_value()) {
+    unsigned int _x = *o;
+    return false;
+  } else {
+    return true;
+  }
+}
+
+unsigned int StackOps::option_or_zero(const std::optional<unsigned int> o) {
+  if (o.has_value()) {
+    unsigned int n = *o;
+    return n;
+  } else {
+    return 0u;
+  }
+}
+
+std::pair<std::optional<unsigned int>,
+          std::shared_ptr<StackOps::state_with_acc>>
+StackOps::pop_stack_acc(std::shared_ptr<StackOps::state_with_acc> s) {
+  return std::visit(
+      Overloaded{[&](const typename List<unsigned int>::nil _args)
+                     -> std::pair<std::optional<unsigned int>,
+                                  std::shared_ptr<StackOps::state_with_acc>> {
+                   return std::make_pair(std::nullopt, std::move(s));
+                 },
+                 [&](const typename List<unsigned int>::cons _args)
+                     -> std::pair<std::optional<unsigned int>,
+                                  std::shared_ptr<StackOps::state_with_acc>> {
+                   unsigned int a = _args._a0;
+                   std::shared_ptr<List<unsigned int>> rest = _args._a1;
+                   return std::make_pair(
+                       std::make_optional<unsigned int>(std::move(a)),
+                       std::make_shared<StackOps::state_with_acc>(
+                           state_with_acc{std::move(rest), std::move(s)->acc}));
+                 }},
+      s->stack_with_acc->v());
+}
+
+std::shared_ptr<StackOps::state_basic>
+StackOps::push_stack(const std::shared_ptr<StackOps::state_basic> &s,
+                     const unsigned int addr) {
+  return std::visit(
+      Overloaded{
+          [&](const typename List<unsigned int>::nil _args)
+              -> std::shared_ptr<StackOps::state_basic> {
+            return std::make_shared<StackOps::state_basic>(
+                state_basic{List<unsigned int>::ctor::cons_(
+                    std::move(addr), List<unsigned int>::ctor::nil_())});
+          },
+          [&](const typename List<unsigned int>::cons _args)
+              -> std::shared_ptr<StackOps::state_basic> {
+            unsigned int x = _args._a0;
+            std::shared_ptr<List<unsigned int>> l = _args._a1;
+            return std::visit(
+                Overloaded{
+                    [&](const typename List<unsigned int>::nil _args)
+                        -> std::shared_ptr<StackOps::state_basic> {
+                      return std::make_shared<StackOps::state_basic>(
+                          state_basic{List<unsigned int>::ctor::cons_(
+                              std::move(addr),
+                              List<unsigned int>::ctor::cons_(
+                                  std::move(x),
+                                  List<unsigned int>::ctor::nil_()))});
+                    },
+                    [&](const typename List<unsigned int>::cons _args)
+                        -> std::shared_ptr<StackOps::state_basic> {
+                      unsigned int y = _args._a0;
+                      std::shared_ptr<List<unsigned int>> l0 = _args._a1;
+                      return std::visit(
+                          Overloaded{
+                              [&](const typename List<unsigned int>::nil _args)
+                                  -> std::shared_ptr<StackOps::state_basic> {
+                                return std::make_shared<StackOps::state_basic>(
+                                    state_basic{List<unsigned int>::ctor::cons_(
+                                        std::move(addr),
+                                        List<unsigned int>::ctor::cons_(
+                                            std::move(x),
+                                            List<unsigned int>::ctor::cons_(
+                                                std::move(y),
+                                                List<unsigned int>::ctor::
+                                                    nil_())))});
+                              },
+                              [&](const typename List<unsigned int>::cons _args)
+                                  -> std::shared_ptr<StackOps::state_basic> {
+                                return std::make_shared<StackOps::state_basic>(
+                                    state_basic{List<unsigned int>::ctor::cons_(
+                                        std::move(addr),
+                                        List<unsigned int>::ctor::cons_(
+                                            std::move(x),
+                                            List<unsigned int>::ctor::cons_(
+                                                std::move(y),
+                                                List<unsigned int>::ctor::
+                                                    nil_())))});
+                              }},
+                          std::move(l0)->v());
+                    }},
+                std::move(l)->v());
+          }},
+      s->stack_basic->v());
+}
+
+unsigned int
+StackOps::top_or_zero(const std::shared_ptr<StackOps::state_basic> &s) {
+  return std::visit(
+      Overloaded{
+          [](const typename List<unsigned int>::nil _args) -> unsigned int {
+            return 0u;
+          },
+          [](const typename List<unsigned int>::cons _args) -> unsigned int {
+            unsigned int x = _args._a0;
+            return std::move(x);
+          }},
+      s->stack_basic->v());
+}
+
+std::shared_ptr<StackOps::state_basic>
+StackOps::push_stack_cap(const std::shared_ptr<StackOps::state_basic> &s,
+                         const unsigned int addr) {
+  std::shared_ptr<List<unsigned int>> new_stack = std::visit(
+      Overloaded{
+          [&](const typename List<unsigned int>::nil _args)
+              -> std::shared_ptr<List<unsigned int>> {
+            return List<unsigned int>::ctor::cons_(
+                std::move(addr), List<unsigned int>::ctor::nil_());
+          },
+          [&](const typename List<unsigned int>::cons _args)
+              -> std::shared_ptr<List<unsigned int>> {
+            unsigned int a = _args._a0;
+            std::shared_ptr<List<unsigned int>> l = _args._a1;
+            return std::visit(
+                Overloaded{
+                    [&](const typename List<unsigned int>::nil _args)
+                        -> std::shared_ptr<List<unsigned int>> {
+                      return List<unsigned int>::ctor::cons_(
+                          std::move(addr),
+                          List<unsigned int>::ctor::cons_(
+                              std::move(a), List<unsigned int>::ctor::nil_()));
+                    },
+                    [&](const typename List<unsigned int>::cons _args)
+                        -> std::shared_ptr<List<unsigned int>> {
+                      unsigned int b = _args._a0;
+                      std::shared_ptr<List<unsigned int>> l0 = _args._a1;
+                      return [&](void) {
+                        if (((std::move(l0).use_count() == 1) &&
+                             (std::move(l0)->v().index() == 1))) {
+                          auto &_rf = std::get<1>(std::move(l0)->v_mut());
+                          _rf._a0 = addr;
+                          _rf._a1 = List<unsigned int>::ctor::cons_(
+                              a, List<unsigned int>::ctor::cons_(
+                                     std::move(b),
+                                     List<unsigned int>::ctor::nil_()));
+                          return std::move(l0);
+                        } else {
+                          return std::visit(
+                              Overloaded{
+                                  [&](const typename List<unsigned int>::nil
+                                          _args)
+                                      -> std::shared_ptr<List<unsigned int>> {
+                                    return List<unsigned int>::ctor::cons_(
+                                        std::move(addr),
+                                        List<unsigned int>::ctor::cons_(
+                                            std::move(a),
+                                            List<unsigned int>::ctor::cons_(
+                                                std::move(b),
+                                                List<unsigned int>::ctor::
+                                                    nil_())));
+                                  },
+                                  [&](const typename List<unsigned int>::cons
+                                          _args)
+                                      -> std::shared_ptr<List<unsigned int>> {
+                                    return List<unsigned int>::ctor::cons_(
+                                        std::move(addr),
+                                        List<unsigned int>::ctor::cons_(
+                                            std::move(a),
+                                            List<unsigned int>::ctor::cons_(
+                                                std::move(b),
+                                                List<unsigned int>::ctor::
+                                                    nil_())));
+                                  }},
+                              std::move(l0)->v());
+                        }
+                      }();
+                    }},
+                std::move(l)->v());
+          }},
+      s->stack_basic->v());
+  return std::make_shared<StackOps::state_basic>(
+      state_basic{std::move(new_stack)});
+}

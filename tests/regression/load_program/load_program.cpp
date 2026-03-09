@@ -1,0 +1,101 @@
+#include <algorithm>
+#include <any>
+#include <cassert>
+#include <functional>
+#include <iostream>
+#include <load_program.h>
+#include <memory>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <variant>
+
+std::shared_ptr<LoadProgram::state>
+LoadProgram::set_prom_params(std::shared_ptr<LoadProgram::state> s,
+                             const unsigned int addr, const unsigned int data,
+                             const bool enable) {
+  return std::make_shared<LoadProgram::state>(state{
+      std::move(s)->rom, std::move(addr), std::move(data), std::move(enable)});
+}
+
+std::shared_ptr<LoadProgram::state>
+LoadProgram::execute_wpm(std::shared_ptr<LoadProgram::state> s) {
+  std::shared_ptr<List<unsigned int>> new_rom;
+  if (s->prom_enable) {
+    new_rom = update_nth<unsigned int>(s->prom_addr, s->prom_data, s->rom);
+  } else {
+    new_rom = std::move(s)->rom;
+  }
+  return std::make_shared<LoadProgram::state>(
+      state{std::move(new_rom), s->prom_addr, s->prom_data, s->prom_enable});
+}
+
+std::shared_ptr<LoadProgram::state>
+LoadProgram::load_program(std::shared_ptr<LoadProgram::state> s,
+                          const unsigned int base,
+                          const std::shared_ptr<List<unsigned int>> &bytes) {
+  return std::visit(
+      Overloaded{
+          [&](const typename List<unsigned int>::nil _args)
+              -> std::shared_ptr<LoadProgram::state> { return std::move(s); },
+          [&](const typename List<unsigned int>::cons _args)
+              -> std::shared_ptr<LoadProgram::state> {
+            unsigned int b = _args._a0;
+            std::shared_ptr<List<unsigned int>> rest = _args._a1;
+            std::shared_ptr<LoadProgram::state> s_ =
+                set_prom_params(std::move(s), base, std::move(b), true);
+            std::shared_ptr<LoadProgram::state> s__ =
+                execute_wpm(std::move(s_));
+            return load_program(std::move(s__), (base + 1u), std::move(rest));
+          }},
+      bytes->v());
+}
+
+std::shared_ptr<LoadProgram::state_extended>
+LoadProgram::set_prom_params_ext(std::shared_ptr<LoadProgram::state_extended> s,
+                                 const unsigned int addr,
+                                 const unsigned int data, const bool enable) {
+  return std::make_shared<LoadProgram::state_extended>(
+      state_extended{s->regs_len, s->rom_ext, s->pc, s->stack_len,
+                     std::move(addr), std::move(data), std::move(enable)});
+}
+
+std::shared_ptr<LoadProgram::state_extended>
+LoadProgram::execute_wpm_ext(std::shared_ptr<LoadProgram::state_extended> s) {
+  std::shared_ptr<List<unsigned int>> new_rom;
+  if (s->prom_enable_ext) {
+    new_rom = update_nth<unsigned int>(s->prom_addr_ext, s->prom_data_ext,
+                                       s->rom_ext);
+  } else {
+    new_rom = std::move(s)->rom_ext;
+  }
+  return std::make_shared<LoadProgram::state_extended>(
+      state_extended{s->regs_len, std::move(new_rom), s->pc, s->stack_len,
+                     s->prom_addr_ext, s->prom_data_ext, s->prom_enable_ext});
+}
+
+std::shared_ptr<LoadProgram::state_simple>
+LoadProgram::write_byte(std::shared_ptr<LoadProgram::state_simple> s,
+                        const unsigned int b) {
+  return std::make_shared<LoadProgram::state_simple>(state_simple{
+      update_nth<unsigned int>(s->ptr_, std::move(b), s->rom_), (s->ptr_ + 1)});
+}
+
+std::shared_ptr<LoadProgram::state_simple> LoadProgram::load_program_simple(
+    std::shared_ptr<LoadProgram::state_simple> s,
+    const std::shared_ptr<List<unsigned int>> &bytes) {
+  return std::visit(
+      Overloaded{[&](const typename List<unsigned int>::nil _args)
+                     -> std::shared_ptr<LoadProgram::state_simple> {
+                   return std::move(s);
+                 },
+                 [&](const typename List<unsigned int>::cons _args)
+                     -> std::shared_ptr<LoadProgram::state_simple> {
+                   unsigned int b = _args._a0;
+                   std::shared_ptr<List<unsigned int>> rest = _args._a1;
+                   return load_program_simple(
+                       write_byte(std::move(s), std::move(b)), std::move(rest));
+                 }},
+      bytes->v());
+}
