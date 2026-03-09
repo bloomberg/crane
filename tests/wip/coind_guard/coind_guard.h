@@ -179,7 +179,7 @@ struct CoindGuard {
 
   static inline const std::shared_ptr<Stream<unsigned int>> sum_stream =
       zipWith<unsigned int, unsigned int, unsigned int>(
-          [](const unsigned int _x0, const unsigned int _x1) {
+          [](const unsigned int _x0, const unsigned int _x1) -> unsigned int {
             return (_x0 + _x1);
           },
           nats, evens);

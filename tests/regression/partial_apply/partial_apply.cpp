@@ -58,7 +58,7 @@ unsigned int
 PartialApply::sum_with_init(const unsigned int init,
                             const std::shared_ptr<List<unsigned int>> &l) {
   return l->template fold_left<unsigned int>(
-      [](const unsigned int _x0, const unsigned int _x1) {
+      [](const unsigned int _x0, const unsigned int _x1) -> unsigned int {
         return (_x0 + _x1);
       },
       init);

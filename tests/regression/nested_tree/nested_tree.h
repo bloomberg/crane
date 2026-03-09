@@ -231,7 +231,8 @@ _flatten_tree_go(F0 &&f, const std::shared_ptr<NestedTree::tree<T1>> &t0) {
                        _args._a1;
                    return List<std::shared_ptr<List<T2>>>::ctor::cons_(
                        f(a), _flatten_tree_go<T1, T2>(
-                                 [&](const std::pair<T1, T1> _x0) {
+                                 [&](const std::pair<T1, T1> _x0)
+                                     -> std::shared_ptr<List<T2>> {
                                    return NestedTree::lift<T1, T2>(f, _x0);
                                  },
                                  std::move(t1)));

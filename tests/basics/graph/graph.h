@@ -165,7 +165,7 @@ template <typename _tcI0, typename T1> struct DirectedGraph {
   static std::shared_ptr<List<std::shared_ptr<DirectedEdge<T1>>>>
   edges(std::shared_ptr<Directed<std::any>> g, T1 n) {
     return g->directed_edges->filter(
-        [&](const std::shared_ptr<DirectedEdge<T1>> _x0) {
+        [&](const std::shared_ptr<DirectedEdge<T1>> _x0) -> bool {
           return directed_originates<_tcI0, T1>(n, _x0);
         });
   }
@@ -215,7 +215,7 @@ template <typename _tcI0, typename T1> struct UndirectedGraph {
   static std::shared_ptr<List<std::shared_ptr<UndirectedEdge<T1>>>>
   edges(std::shared_ptr<Undirected<std::any>> g, T1 n) {
     return g->undirected_edges->filter(
-        [&](const std::shared_ptr<UndirectedEdge<T1>> _x0) {
+        [&](const std::shared_ptr<UndirectedEdge<T1>> _x0) -> bool {
           return undirected_originates<_tcI0, T1>(n, _x0);
         });
   }

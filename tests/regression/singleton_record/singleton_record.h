@@ -56,8 +56,8 @@ struct SingletonRecord {
   };
 
   static inline const std::shared_ptr<fn_wrapper> my_fn_wrapper =
-      std::make_shared<fn_wrapper>(
-          fn_wrapper{[](const unsigned int _x0) { return (1u + _x0); }});
+      std::make_shared<fn_wrapper>(fn_wrapper{
+          [](const unsigned int _x0) -> unsigned int { return (1u + _x0); }});
 
   static unsigned int apply_wrapped(const std::shared_ptr<fn_wrapper> &w,
                                     const unsigned int n);

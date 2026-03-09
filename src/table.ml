@@ -334,6 +334,19 @@ let add_promoted_type_var r name = promoted_type_vars := GlobRef.Map.add r name 
 let is_promoted_type_var r = GlobRef.Map.mem r !promoted_type_vars
 let promoted_type_var_name r = GlobRef.Map.find_opt r !promoted_type_vars
 
+(* Table of promoted type bindings for typeclass instances.
+   Maps an instance ConstRef (e.g., nat_magma) to its promoted type variable
+   bindings [(carrier, nat)], so that call sites can substitute promoted
+   Tvars with concrete types during eta expansion. *)
+let instance_promoted_types = ref (GlobRef.Map.empty : (Names.Id.t * ml_type) list GlobRef.Map.t)
+let init_instance_promoted_types () = instance_promoted_types := GlobRef.Map.empty
+let add_instance_promoted_types r bindings =
+  instance_promoted_types := GlobRef.Map.add r bindings !instance_promoted_types
+let get_instance_promoted_types r =
+  match GlobRef.Map.find_opt r !instance_promoted_types with
+  | Some bindings -> bindings
+  | None -> []
+
 (* Table of projections used in higher-order positions (as function values).
    Projections not in this set are only accessed via record->field syntax
    and don't need standalone C++ function definitions. *)
@@ -1477,6 +1490,6 @@ let extract_skip_or_module q =
 let reset_tables () =
   init_typedefs (); init_cst_types (); init_inductives ();
   init_inductive_kinds (); init_enum_inductives (); init_sigma_assertions (); init_recursors ();
-  init_projs (); init_promoted_type_vars (); init_higher_order_projections ();
+  init_projs (); init_promoted_type_vars (); init_instance_promoted_types (); init_higher_order_projections ();
   init_axioms (); init_opaques (); reset_modfile ();
   init_glob_tys (); reset_used_custom_imports ()

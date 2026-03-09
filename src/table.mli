@@ -130,6 +130,9 @@ val add_promoted_type_var : GlobRef.t -> Names.Id.t -> unit
 val is_promoted_type_var : GlobRef.t -> bool
 val promoted_type_var_name : GlobRef.t -> Names.Id.t option
 
+val add_instance_promoted_types : GlobRef.t -> (Names.Id.t * Miniml.ml_type) list -> unit
+val get_instance_promoted_types : GlobRef.t -> (Names.Id.t * Miniml.ml_type) list
+
 val add_info_axiom : GlobRef.t -> unit
 val remove_info_axiom : GlobRef.t -> unit
 val add_log_axiom : GlobRef.t -> unit

@@ -1466,3 +1466,14 @@
   (alias runtest)
   (deps update_nth_bounds.t.exe)
   (action (run ./update_nth_bounds.t.exe))))
+
+(subdir todo_dependent_field_alias
+ (rule
+  (targets todo_dependent_field_alias.t.exe)
+  (deps TodoDependentFieldAlias.vo todo_dependent_field_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_dependent_field_alias.t.exe todo_dependent_field_alias.cpp todo_dependent_field_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_dependent_field_alias.t.exe)
+  (action (run ./todo_dependent_field_alias.t.exe))))

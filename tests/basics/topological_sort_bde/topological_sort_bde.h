@@ -564,15 +564,15 @@ struct TopologicalSort {
             else {
                 return graph_lookup<T1>(eqb_node, elem, graph0)
                     ->template fold_right<bsl::shared_ptr<List<T1> > >(
-                                 [&](const T1                         _x0,
-                                     const bsl::shared_ptr<List<T1> > _x1) {
-                                     return cycle_extract_aux<T1>(eqb_node,
-                                                                  graph0,
-                                                                  bsl::move(c),
-                                                                  _x0,
-                                                                  _x1);
-                                 },
-                                 List<T1>::ctor::cons_(elem, cycl));
+                        [&](const T1 _x0, const bsl::shared_ptr<List<T1> > _x1)
+                            -> bsl::shared_ptr<List<T1> > {
+                            return cycle_extract_aux<T1>(eqb_node,
+                                                         graph0,
+                                                         bsl::move(c),
+                                                         _x0,
+                                                         _x1);
+                        },
+                        List<T1>::ctor::cons_(elem, cycl));
             }
         }
     }
@@ -633,7 +633,7 @@ struct TopologicalSort {
                             })
                         ->template map<T1>(
                             [](const bsl::pair<T1, bsl::shared_ptr<List<T1> > >
-                                   _x0) {
+                                   _x0) -> T1 {
                                 return _x0.first;
                             });
                 bsl::shared_ptr<List<T1> > mins_;

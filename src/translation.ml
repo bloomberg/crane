@@ -187,6 +187,18 @@ let is_cpp_dummy_type = function
    must be dropped (see filter_erased_type_args). *)
 let is_erased_type t = t = Minicpp.Tany || is_cpp_dummy_type t
 
+(* Recursively check whether a C++ type contains Tany (std::any).
+   Used to detect when a let-binding's type annotation has unresolved
+   carrier projections that should be replaced by concrete types from
+   the generated lambda expression. *)
+let rec has_tany_in_type = function
+  | Tany -> true
+  | Tfun (dom, cod) -> List.exists has_tany_in_type dom || has_tany_in_type cod
+  | Tmod (_, t) -> has_tany_in_type t
+  | Tshared_ptr t -> has_tany_in_type t
+  | Tunique_ptr t -> has_tany_in_type t
+  | _ -> false
+
 (* If any type arg is erased (Tany or dummy_type), drop ALL explicit type args
    and let the C++ compiler deduce everything.  We must drop ALL args (not just
    the erased ones) because C++ template arguments are positional: removing only
@@ -1421,10 +1433,42 @@ and eta_fun env f args =
         else
           CPPfun_call (cglob, List.rev args)
       end else
+      (* Substitute promoted type vars in eta-expanded lambda params.
+         When partially applying a function like pick_op<nat_magma>, the domain
+         types may contain Tvar(1000, Some "carrier") — a promoted type var.
+         We resolve these to the concrete type from the typeclass instance
+         (e.g., unsigned int from nat_magma::carrier). *)
+      let missing_args, cod =
+        if typeclass_ml_args <> [] && missing_args <> [] then
+          let subst_map = List.concat_map (fun tc_arg ->
+            match tc_arg with
+            | MLglob (r, _) ->
+              let bindings = Table.get_instance_promoted_types r in
+              List.map (fun (var_name, ml_ty) ->
+                let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty in
+                (var_name, cpp_ty)
+              ) bindings
+            | _ -> []
+          ) typeclass_ml_args in
+          if subst_map <> [] then
+            let rec subst_promoted = function
+              | Tvar (1000, Some name) ->
+                (match List.find_opt (fun (vid, _) -> Id.equal vid name) subst_map with
+                 | Some (_, concrete) -> concrete
+                 | None -> Tvar (1000, Some name))
+              | Tmod (m, t) -> Tmod (m, subst_promoted t)
+              | Tfun (d, c) -> Tfun (List.map subst_promoted d, subst_promoted c)
+              | Tshared_ptr t -> Tshared_ptr (subst_promoted t)
+              | t -> t
+            in
+            (List.map subst_promoted missing_args, subst_promoted cod)
+          else (missing_args, cod)
+        else (missing_args, cod)
+      in
       let eta_args = List.mapi (fun i ty -> (Tmod (TMconst, ty), Some (Id.of_string ("_x" ^ string_of_int i)))) missing_args in
       let call_args = args @
          List.mapi (fun i _ -> (CPPvar (Id.of_string ("_x" ^ string_of_int i)))) eta_args in
-      CPPlambda (List.rev eta_args, None,[Sreturn (Some (CPPfun_call (cglob, List.rev call_args)))], false)
+      CPPlambda (List.rev eta_args, Some cod,[Sreturn (Some (CPPfun_call (cglob, List.rev call_args)))], false)
     | _ ->
       if id_is_typeclass_instance && args = [] then
         cglob
@@ -2160,6 +2204,16 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
   let result = begin match asgn with
   | [ Sasgn (_, None, e) ] ->
     let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars t in
+    (* When the type contains Tany (from erased carrier projections) but the
+       generated expression is a lambda with concrete types, derive the
+       std::function type from the lambda's parameter and return types. *)
+    let cpp_ty = match cpp_ty, e with
+      | Tfun (_, _), CPPlambda (params, Some ret_ty, _, _) when has_tany_in_type cpp_ty ->
+          let strip_tmod = function Tmod (_, t) -> t | t -> t in
+          let param_tys = List.rev_map (fun (ty, _) -> strip_tmod ty) params in
+          Tfun (param_tys, ret_ty)
+      | _ -> cpp_ty
+    in
     let cpp_ty = if use_unique then shared_to_unique cpp_ty else cpp_ty in
     let e = if use_unique then shared_expr_to_unique e else e in
     Sasgn (x_renamed, Some cpp_ty, e) :: gen_stmts env' k b
@@ -2694,6 +2748,22 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type)
             | Tglob (_, ta, _) when ta <> [] -> ta
             | _ -> type_args
           in
+          (* Register promoted type bindings for this instance so that
+             call sites (eta_fun) can substitute promoted Tvars with
+             concrete types.  E.g., for nat_magma : Magma, register
+             [(carrier, nat)] so pick_op<nat_magma> eta-expansion
+             uses unsigned int instead of std::any. *)
+          let ip_vars = Table.get_ind_ip_vars class_ref in
+          let nb_sign_keeps_inst = Table.get_ind_nb_sign_keeps class_ref in
+          let promoted_vars = List.filteri (fun i _ -> i >= nb_sign_keeps_inst) ip_vars in
+          let promoted_concrete =
+            if List.length type_args > nb_sign_keeps_inst then
+              List.filteri (fun i _ -> i >= nb_sign_keeps_inst) type_args
+            else [] in
+          if List.length promoted_vars = List.length promoted_concrete &&
+             promoted_vars <> [] then
+            Table.add_instance_promoted_types name
+              (List.map2 (fun var_name ml_ty -> (var_name, ml_ty)) promoted_vars promoted_concrete);
           (* Build the environment with lambda parameters for de Bruijn resolution.
              For parameterized instances, method bodies reference the outer lambda
              parameters (e.g., the typeclass dictionary) via MLrel indices.

@@ -445,7 +445,7 @@ comparison Pos::compare(const std::shared_ptr<Positive> &_x0,
 
 unsigned int Pos::to_nat(const std::shared_ptr<Positive> &x) {
   return iter_op<unsigned int>(
-      [](const unsigned int _x0, const unsigned int _x1) {
+      [](const unsigned int _x0, const unsigned int _x1) -> unsigned int {
         return (_x0 + _x1);
       },
       x, 1u);
@@ -622,7 +622,7 @@ std::shared_ptr<Positive> Coq_Pos::mul(const std::shared_ptr<Positive> &x,
 
 unsigned int Coq_Pos::to_nat(const std::shared_ptr<Positive> &x) {
   return iter_op<unsigned int>(
-      [](const unsigned int _x0, const unsigned int _x1) {
+      [](const unsigned int _x0, const unsigned int _x1) -> unsigned int {
         return (_x0 + _x1);
       },
       x, 1u);
