@@ -1573,7 +1573,6 @@
   (alias runtest)
   (deps update_nth_length_edge_0009.t.exe)
   (action (run ./update_nth_length_edge_0009.t.exe))))
-
 (subdir update_nth_out_of_bounds_length
  (rule
   (targets update_nth_out_of_bounds_length.t.exe)
@@ -1695,3 +1694,112 @@
   (deps wf_sys_upd_bank_prop.t.exe)
   (action (run ./wf_sys_upd_bank_prop.t.exe))))
 
+(subdir todo_monadic_global_alias
+ (rule
+  (targets todo_monadic_global_alias.t.exe)
+  (deps TodoMonadicGlobalAlias.vo todo_monadic_global_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_monadic_global_alias.t.exe todo_monadic_global_alias.cpp todo_monadic_global_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_monadic_global_alias.t.exe)
+  (action (run ./todo_monadic_global_alias.t.exe))))
+
+(subdir todo_nested_module_type
+ (rule
+  (targets todo_nested_module_type.t.exe)
+  (deps TodoNestedModuleType.vo todo_nested_module_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_nested_module_type.t.exe todo_nested_module_type.cpp todo_nested_module_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_nested_module_type.t.exe)
+  (action (run ./todo_nested_module_type.t.exe))))
+
+(subdir todo_with_module_constraint
+ (rule
+  (targets todo_with_module_constraint.t.exe)
+  (deps TodoWithModuleConstraint.vo todo_with_module_constraint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_with_module_constraint.t.exe todo_with_module_constraint.cpp todo_with_module_constraint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_with_module_constraint.t.exe)
+  (action (run ./todo_with_module_constraint.t.exe))))
+
+(subdir todo_with_type_constraint
+ (rule
+  (targets todo_with_type_constraint.t.exe)
+  (deps TodoWithTypeConstraint.vo todo_with_type_constraint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_with_type_constraint.t.exe todo_with_type_constraint.cpp todo_with_type_constraint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_with_type_constraint.t.exe)
+  (action (run ./todo_with_type_constraint.t.exe))))
+
+(subdir todo_nested_module_type_functor
+ (rule
+  (targets todo_nested_module_type_functor.t.exe)
+  (deps TodoNestedModuleTypeFunctor.vo todo_nested_module_type_functor.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_nested_module_type_functor.t.exe todo_nested_module_type_functor.cpp todo_nested_module_type_functor.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_nested_module_type_functor.t.exe)
+  (action (run ./todo_nested_module_type_functor.t.exe))))
+
+(subdir todo_extract_constant_noninline
+ (rule
+  (targets todo_extract_constant_noninline.t.exe)
+  (deps TodoExtractConstantNoninline.vo todo_extract_constant_noninline.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_extract_constant_noninline.t.exe todo_extract_constant_noninline.cpp todo_extract_constant_noninline.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_extract_constant_noninline.t.exe)
+  (action (run ./todo_extract_constant_noninline.t.exe))))
+
+(subdir todo_letin_applied_poly
+ (rule
+  (targets todo_letin_applied_poly.t.exe)
+  (deps TodoLetinAppliedPoly.vo todo_letin_applied_poly.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_letin_applied_poly.t.exe todo_letin_applied_poly.cpp todo_letin_applied_poly.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_letin_applied_poly.t.exe)
+  (action (run ./todo_letin_applied_poly.t.exe))))
+
+(subdir todo_polymorphic_erased_helper
+ (rule
+  (targets todo_polymorphic_erased_helper.t.exe)
+  (deps TodoPolymorphicErasedHelper.vo todo_polymorphic_erased_helper.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_polymorphic_erased_helper.t.exe todo_polymorphic_erased_helper.cpp todo_polymorphic_erased_helper.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_polymorphic_erased_helper.t.exe)
+  (action (run ./todo_polymorphic_erased_helper.t.exe))))
+
+(subdir todo_explicit_type_app_alias
+ (rule
+  (targets todo_explicit_type_app_alias.t.exe)
+  (deps TodoExplicitTypeAppAlias.vo todo_explicit_type_app_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_explicit_type_app_alias.t.exe todo_explicit_type_app_alias.cpp todo_explicit_type_app_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_explicit_type_app_alias.t.exe)
+  (action (run ./todo_explicit_type_app_alias.t.exe))))
+
+(subdir todo_dependent_field_alias
+ (rule
+  (targets todo_dependent_field_alias.t.exe)
+  (deps TodoDependentFieldAlias.vo todo_dependent_field_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_dependent_field_alias.t.exe todo_dependent_field_alias.cpp todo_dependent_field_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_dependent_field_alias.t.exe)
+  (action (run ./todo_dependent_field_alias.t.exe))))

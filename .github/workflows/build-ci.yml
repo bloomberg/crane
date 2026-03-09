@@ -22,6 +22,10 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Normalize Workspace Permissions
+        run: |
+          sudo chmod -R a+rwX "$GITHUB_WORKSPACE"
+
       - name: Build and Extract
         uses: coq-community/docker-coq-action@v1
         with:
@@ -73,19 +77,17 @@ jobs:
 
               echo "=== Building and running: $test_dir/$test_name ==="
 
-              # GMP tests need extra linker flags
-              extra_flags=""
-              if grep -q '#include <gmpxx.h>' "$test_dir/$test_name.cpp" 2>/dev/null || \
-                 grep -q '#include <gmpxx.h>' "$test_dir/$test_name.h" 2>/dev/null; then
-                extra_flags="-lgmpxx -lgmp"
+              compile_script="scripts/compile-std.sh"
+              if [[ "$test_name" == *_gmp ]]; then
+                compile_script="scripts/compile-gmp.sh"
               fi
 
               # Compile the test
-              if clang++ -std=c++23 -O2 -fbracket-depth=1024 \
-                  -I "$test_dir" -I theories/cpp \
-                  "$test_dir/$test_name.cpp" "$test_src" \
-                  $extra_flags \
-                  -o "$test_dir/$test_name.t.exe" 2>&1; then
+              if (
+                cd "$test_dir"
+                "$GITHUB_WORKSPACE/$compile_script" "$GITHUB_WORKSPACE" "$test_name.t.exe" \
+                  "$test_name.cpp" "$test_name.t.cpp"
+              ) 2>&1; then
                 # Run the test
                 if "$test_dir/$test_name.t.exe"; then
                   echo "✓ PASSED: $test_name"

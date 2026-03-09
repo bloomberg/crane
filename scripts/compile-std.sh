@@ -24,7 +24,11 @@ OPT_LEVEL="${CRANE_CPP_OPTIMIZATION:-O0}"
 
 # Precompiled header support
 PCH_SRC="$THEORIES_CPP/crane_pch.h"
-PCH_DIR="$PROJECT_ROOT/_build/pch"
+DEFAULT_PCH_DIR="$PROJECT_ROOT/_build/pch"
+if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+    DEFAULT_PCH_DIR="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/crane-pch"
+fi
+PCH_DIR="${CRANE_PCH_DIR:-$DEFAULT_PCH_DIR}"
 PCH_FILE="$PCH_DIR/crane_pch_${OPT_LEVEL}.h.pch"
 
 # Detect Homebrew LLVM
@@ -64,8 +68,9 @@ fi
 
 # Build PCH if it doesn't exist or is older than the source
 if [ -f "$PCH_SRC" ] && { [ ! -f "$PCH_FILE" ] || [ "$PCH_SRC" -nt "$PCH_FILE" ]; }; then
-    mkdir -p "$PCH_DIR"
-    "$CXX" -x c++-header "${CXX_FLAGS[@]}" "$PCH_SRC" -o "$PCH_FILE" 2>/dev/null || true
+    if mkdir -p "$PCH_DIR" 2>/dev/null; then
+        "$CXX" -x c++-header "${CXX_FLAGS[@]}" "$PCH_SRC" -o "$PCH_FILE" 2>/dev/null || true
+    fi
 fi
 
 # Use PCH if available
