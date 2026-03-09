@@ -37,10 +37,10 @@ jobs:
               opam exec -- dune build -p rocq-crane && dune install
             endGroup
 
-      - name: Install clang
+      - name: Install clang and GMP
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-19 libc++-19-dev libc++abi-19-dev
+          sudo apt-get install -y clang-19 libc++-19-dev libc++abi-19-dev libgmp-dev
           sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-19 100
           clang++ --version
 
@@ -73,10 +73,18 @@ jobs:
 
               echo "=== Building and running: $test_dir/$test_name ==="
 
+              # GMP tests need extra linker flags
+              extra_flags=""
+              if grep -q '#include <gmpxx.h>' "$test_dir/$test_name.cpp" 2>/dev/null || \
+                 grep -q '#include <gmpxx.h>' "$test_dir/$test_name.h" 2>/dev/null; then
+                extra_flags="-lgmpxx -lgmp"
+              fi
+
               # Compile the test
               if clang++ -std=c++23 -O2 -fbracket-depth=1024 \
                   -I "$test_dir" -I theories/cpp \
                   "$test_dir/$test_name.cpp" "$test_src" \
+                  $extra_flags \
                   -o "$test_dir/$test_name.t.exe" 2>&1; then
                 # Run the test
                 if "$test_dir/$test_name.t.exe"; then
