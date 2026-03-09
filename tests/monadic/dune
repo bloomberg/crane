@@ -11,6 +11,62 @@
 
 ; Test rules - compile C++ and run tests
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(subdir bind_type_inference
+ (rule
+  (targets bind_type_inference.t.exe)
+  (deps BindTypeInference.vo bind_type_inference.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bind_type_inference.t.exe bind_type_inference.cpp bind_type_inference.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bind_type_inference.t.exe)
+  (action (run ./bind_type_inference.t.exe))))
+
 (subdir free_monad
  (rule
   (targets free_monad.t.exe)
@@ -21,28 +77,6 @@
   (alias runtest)
   (deps free_monad.t.exe)
   (action (run ./free_monad.t.exe))))
-
-(subdir stm_hash_map
- (rule
-  (targets stm_hash_map.t.exe)
-  (deps StmHashMap.vo stm_hash_map.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} stm_hash_map.t.exe stm_hash_map.cpp stm_hash_map.t.cpp)))
- (rule
-  (alias runtest)
-  (deps stm_hash_map.t.exe)
-  (action (run ./stm_hash_map.t.exe))))
-
-(subdir stm_hash_map_bde
- (rule
-  (targets stm_hash_map_bde.t.exe)
-  (deps StmHashMap.vo stm_hash_map_bde.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-bde.sh %{project_root} stm_hash_map_bde.t.exe stm_hash_map_bde.cpp stm_hash_map_bde.t.cpp)))
- (rule
-  (alias runtest)
-  (deps stm_hash_map_bde.t.exe)
-  (action (run ./stm_hash_map_bde.t.exe))))
 
 (subdir io
  (rule
@@ -55,6 +89,17 @@
   (deps io.t.exe)
   (action (run ./io.t.exe))))
 
+(subdir mutable_vector
+ (rule
+  (targets mutable_vector.t.exe)
+  (deps MutableVectorTest.vo mutable_vector.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mutable_vector.t.exe mutable_vector.cpp mutable_vector.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mutable_vector.t.exe)
+  (action (run ./mutable_vector.t.exe))))
+
 (subdir parallel
  (rule
   (targets parallel.t.exe)
@@ -65,6 +110,50 @@
   (alias runtest)
   (deps parallel.t.exe)
   (action (run ./parallel.t.exe))))
+
+(subdir skiplist_bde
+ (rule
+  (targets skiplist_bde.t.exe)
+  (deps SkipList.vo skiplist_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} skiplist_bde.t.exe skiplist_bde.cpp skiplist_bde.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps skiplist_bde.t.exe)
+  (action (run ./skiplist_bde.t.exe))))
+
+(subdir skiplist
+ (rule
+  (targets skiplist.t.exe)
+  (deps SkipList.vo skiplist.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} skiplist.t.exe skiplist.cpp skiplist.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps skiplist.t.exe)
+  (action (run ./skiplist.t.exe))))
+
+(subdir stm_hash_map_bde
+ (rule
+  (targets stm_hash_map_bde.t.exe)
+  (deps StmHashMap.vo stm_hash_map_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} stm_hash_map_bde.t.exe stm_hash_map_bde.cpp stm_hash_map_bde.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps stm_hash_map_bde.t.exe)
+  (action (run ./stm_hash_map_bde.t.exe))))
+
+(subdir stm_hash_map
+ (rule
+  (targets stm_hash_map.t.exe)
+  (deps StmHashMap.vo stm_hash_map.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} stm_hash_map.t.exe stm_hash_map.cpp stm_hash_map.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps stm_hash_map.t.exe)
+  (action (run ./stm_hash_map.t.exe))))
 
 (subdir stm
  (rule
@@ -87,48 +176,3 @@
   (alias runtest)
   (deps thread.t.exe)
   (action (run ./thread.t.exe))))
-
-(subdir mutable_vector
- (rule
-  (targets mutable_vector.t.exe)
-  (deps MutableVectorTest.vo mutable_vector.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} mutable_vector.t.exe mutable_vector.cpp mutable_vector.t.cpp)))
- (rule
-  (alias runtest)
-  (deps mutable_vector.t.exe)
-  (action (run ./mutable_vector.t.exe))))
-
-(subdir bind_type_inference
- (rule
-  (targets bind_type_inference.t.exe)
-  (deps BindTypeInference.vo bind_type_inference.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} bind_type_inference.t.exe bind_type_inference.cpp bind_type_inference.t.cpp)))
- (rule
-  (alias runtest)
-  (deps bind_type_inference.t.exe)
-  (action (run ./bind_type_inference.t.exe))))
-
-
-(subdir skiplist
- (rule
-  (targets skiplist.t.exe)
-  (deps SkipList.vo skiplist.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} skiplist.t.exe skiplist.cpp skiplist.t.cpp)))
- (rule
-  (alias runtest)
-  (deps skiplist.t.exe)
-  (action (run ./skiplist.t.exe))))
-
-(subdir skiplist_bde
- (rule
-  (targets skiplist_bde.t.exe)
-  (deps SkipList.vo skiplist_bde.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-bde.sh %{project_root} skiplist_bde.t.exe skiplist_bde.cpp skiplist_bde.t.cpp)))
- (rule
-  (alias runtest)
-  (deps skiplist_bde.t.exe)
-  (action (run ./skiplist_bde.t.exe))))
