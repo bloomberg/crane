@@ -270,10 +270,21 @@ let topological_sort (reg : Method_registry.t) (entries : ((ModPath.t * ml_modul
     (* Compute in-degree for each non-main module. *)
     let in_degree : (int, int) Hashtbl.t = Hashtbl.create 16 in
     List.iter (fun i -> Hashtbl.replace in_degree i 0) non_main_indices;
+    (* Build reverse dependency index: dep -> list of modules that depend on it.
+       This avoids O(n²) scanning in the main loop below. *)
+    let reverse_deps : (int, int list) Hashtbl.t = Hashtbl.create 16 in
     Hashtbl.iter (fun idx dep_list ->
-      let count = List.length (List.filter (fun dep -> Hashtbl.mem in_degree dep) dep_list) in
-      if count > 0 then
-        Hashtbl.replace in_degree idx ((try Hashtbl.find in_degree idx with Not_found -> 0) + count)
+      let valid_deps = List.filter (fun dep -> Hashtbl.mem in_degree dep) dep_list in
+      let count = List.length valid_deps in
+      if count > 0 then begin
+        Hashtbl.replace in_degree idx ((try Hashtbl.find in_degree idx with Not_found -> 0) + count);
+        List.iter (fun dep ->
+          let existing = match Hashtbl.find_opt reverse_deps dep with
+            | Some l -> l | None -> []
+          in
+          Hashtbl.replace reverse_deps dep (idx :: existing)
+        ) valid_deps
+      end
     ) deps;
     (* Seed the queue with modules that have no incoming dependencies. *)
     let queue = Queue.create () in
@@ -286,13 +297,14 @@ let topological_sort (reg : Method_registry.t) (entries : ((ModPath.t * ml_modul
     while not (Queue.is_empty queue) do
       let idx = Queue.pop queue in
       sorted := idx :: !sorted;
-      Hashtbl.iter (fun dependent dep_list ->
-        if List.mem idx dep_list then begin
-          let new_deg = Hashtbl.find in_degree dependent - 1 in
-          Hashtbl.replace in_degree dependent new_deg;
-          if new_deg = 0 then Queue.push dependent queue
-        end
-      ) deps
+      (match Hashtbl.find_opt reverse_deps idx with
+       | Some dependents ->
+         List.iter (fun dependent ->
+           let new_deg = Hashtbl.find in_degree dependent - 1 in
+           Hashtbl.replace in_degree dependent new_deg;
+           if new_deg = 0 then Queue.push dependent queue
+         ) dependents
+       | None -> ())
     done;
     let sorted_indices = List.rev !sorted in
     if List.length sorted_indices <> List.length non_main_indices then

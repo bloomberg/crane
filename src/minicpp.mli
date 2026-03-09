@@ -62,7 +62,6 @@ type cpp_type =
   | Tvariant of cpp_type list
   | Tshared_ptr of cpp_type
   | Tunique_ptr of cpp_type
-  | Tstring
   | Tvoid
   | Ttodo
   | Tunknown
@@ -89,7 +88,6 @@ and cpp_stmt =
       (* Field assignment: obj.field = expr.
          Used for in-place mutation during memory reuse. *)
 
-(* add something for (mutual) fixpoints? *)
 and cpp_expr =
   | CPPvar of Id.t
   | CPPglob of GlobRef.t * cpp_type list * custom_info option
@@ -102,9 +100,8 @@ and cpp_expr =
   | CPPvisit
   | CPPmk_shared of cpp_type
   | CPPoverloaded of cpp_expr list (* cpp_expressions in list should only be lambdas. TODO: enforce in the AST? split up to a funcall *)
-  | CPPmatch of cpp_expr * (cpp_expr * cpp_expr) list
   | CPPstructmk of GlobRef.t * cpp_type list * cpp_expr list
-  | CPPstruct of GlobRef.t * cpp_type list *  cpp_expr list (* Figure out better name situation!! *)
+  | CPPstruct of GlobRef.t * cpp_type list *  cpp_expr list (* record struct construction via namespace *)
   | CPPstruct_id of Id.t * cpp_type list * cpp_expr list (* Local struct init with Id, e.g., Leaf{} *)
   | CPPget of cpp_expr * Id.t (* access from a struct (or class) *)
   | CPPget' of cpp_expr * GlobRef.t (* access from a struct (or class) *)
@@ -112,7 +109,6 @@ and cpp_expr =
   | CPPuint   of Uint63.t
   | CPPfloat  of Float64.t
   | CPPparray of cpp_expr array * cpp_expr
-(*| CPPnamespace of Id.t * cpp_expr    should we do this for namespace access (in general, as is not just cpp_expressions)? *)
   | CPPrequires of (cpp_type * Id.t) list * (cpp_expr * cpp_constraint) list * cpp_type list
   (* requires (params) { typename type_reqs; { expr } -> constraint; } *)
   | CPPnew of cpp_type * cpp_expr list  (* new Type(args) or new Type{args} *)
@@ -148,8 +144,7 @@ and cpp_field =
   | Fvar' of GlobRef.t * cpp_type
   | Ffundef of Id.t * cpp_type * (Id.t * cpp_type) list * cpp_stmt list
   | Ffundecl of Id.t * cpp_type * (Id.t * cpp_type) list
-  (* Method: name, template_params, return type, params, body, is_const, is_static *)
-  | Fmethod of Id.t * (template_type * Id.t) list * cpp_type * (Id.t * cpp_type) list * cpp_stmt list * bool * bool
+  | Fmethod of method_field
   (* Private constructor: params, initializer list (as stmts for v_(x) style) *)
   | Fconstructor of (Id.t * cpp_type) list * (Id.t * cpp_expr) list * bool (* bool = explicit *)
   (* Nested struct with its own visibility-annotated fields *)
@@ -158,6 +153,16 @@ and cpp_field =
   | Fnested_using of Id.t * cpp_type
   (* Deleted default constructor: ctor() = delete *)
   | Fdeleted_ctor
+
+and method_field = {
+  mf_name : Id.t;
+  mf_tparams : (template_type * Id.t) list;
+  mf_ret_type : cpp_type;
+  mf_params : (Id.t * cpp_type) list;
+  mf_body : cpp_stmt list;
+  mf_is_const : bool;
+  mf_is_static : bool;
+}
 
 (* C++ type schema.
    The integer is the number of variables in the schema. *)

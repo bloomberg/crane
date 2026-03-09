@@ -1,6 +1,27 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(*s Smart pointer optimization for MiniML AST. *)
+
+(* Smart pointer optimization for MiniML AST.
+
+   This module performs escape analysis on MiniML terms to determine
+   ownership and uniqueness of values, enabling three optimizations:
+
+   1. unique_ptr promotion: Values that are constructed and consumed
+      linearly (used exactly once, never aliased) can use std::unique_ptr
+      instead of std::shared_ptr, avoiding reference-counting overhead.
+
+   2. Owned/borrowed inference: Function parameters are classified as
+      "owned" (caller transfers ownership) or "borrowed" (caller retains
+      ownership, callee receives const&), reducing unnecessary copies
+      and reference-count bumps.
+
+   3. Memory reuse optimization: Destructive pattern matches on values
+      with use_count() == 1 can reuse the existing allocation by
+      mutating fields in-place rather than allocating a new object.
+
+   The analysis runs on the MiniML AST before translation to MiniCpp,
+   attaching ownership annotations that translation.ml and cpp.ml
+   use during code generation. *)
 
 open Miniml
 open Table

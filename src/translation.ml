@@ -526,7 +526,7 @@ let rec tvar_erase_type (ty : cpp_type) : cpp_type =
   | Tunique_ptr ty -> Tunique_ptr (tvar_erase_type ty)
   | Tid (id, tys) -> Tid (id, List.map tvar_erase_type tys)
   | Tqualified (ty, id) -> Tqualified (tvar_erase_type ty, id)
-  | _ -> ty  (* Tvoid, Tstring, Ttodo, Tunknown, Taxiom, Tany *)
+  | _ -> ty  (* Tvoid, Ttodo, Tunknown, Tany *)
 
 (* Check if a C++ type contains any unnamed Tvar (Tvar(_, None)).
    Used to detect types that can't be fully resolved in monomorphized contexts
@@ -657,7 +657,6 @@ let rec convert_ml_type_to_cpp_type env (ns : Refset'.t) (tvars : Id.t list) (ml
   | Tvar i | Tvar' i ->
       (try Tvar (i, Some (List.nth tvars (pred i)))
        with Failure _ -> Tvar (i, None))
-  | Tstring -> assert false (* TODO: get rid of Tstring in both ASTs *)
   | Tmeta {contents = Some t} -> convert_ml_type_to_cpp_type env ns tvars t
   | Tmeta {id = i} ->
       (* Unresolved meta - use std::any for type erasure.
@@ -672,6 +671,7 @@ let rec convert_ml_type_to_cpp_type env (ns : Refset'.t) (tvars : Id.t list) (ml
   | Tdummy Ktype -> Tglob (GlobRef.VarRef (Id.of_string ("dummy_type")), [], [])
   | Tdummy Kprop -> Tglob (GlobRef.VarRef (Id.of_string ("dummy_prop")), [], [])
   | Tdummy (Kimplicit _) -> Tglob (GlobRef.VarRef (Id.of_string ("dummy_implicit")), [], [])
+  | Tstring -> assert false (* Tstring is not used by the extraction pipeline *)
   | Tunknown -> Tany
   | Taxiom -> Tglob (GlobRef.VarRef (Id.of_string ("axiom")), [], [])
   (*
@@ -2811,7 +2811,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type)
                     (cpp_params, method_ret_ty, stmts)
                   end
                 in
-                Some (Fmethod (method_name, [], ret_ty, cpp_params, body_stmts, false, true), VPublic)
+                Some (Fmethod { mf_name = method_name; mf_tparams = []; mf_ret_type = ret_ty; mf_params = cpp_params; mf_body = body_stmts; mf_is_const = false; mf_is_static = true }, VPublic)
           in
           (* Zip fields with their types from ind_packet *)
           let fields_with_types =
@@ -3005,7 +3005,7 @@ let rec tvar_subst_type (tvars : Id.t list) (ty : cpp_type) : cpp_type =
   | Tunique_ptr ty -> Tunique_ptr (tvar_subst_type tvars ty)
   | Tid (id, tys) -> Tid (id, List.map (tvar_subst_type tvars) tys)
   | Tqualified (ty, id) -> Tqualified (tvar_subst_type tvars ty, id)
-  | _ -> ty  (* Tvoid, Tstring, Ttodo, Tunknown, Taxiom *)
+  | _ -> ty  (* Tvoid, Ttodo, Tunknown *)
 
 let rec tvar_subst_expr (tvars : Id.t list) (e : cpp_expr) : cpp_expr =
   let subst_ty = tvar_subst_type tvars in
@@ -4198,7 +4198,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
      can name them all correctly. *)
   let stmts = List.map (tvar_subst_stmt extended_vars) stmts in
 
-  (Fmethod (func_name, template_params, ret_cpp, params, stmts, true, false), VPublic)
+  (Fmethod { mf_name = func_name; mf_tparams = template_params; mf_ret_type = ret_cpp; mf_params = params; mf_body = stmts; mf_is_const = true; mf_is_static = false }, VPublic)
 
 (* New inductive generation: encapsulated struct with methods *)
 (* Generates:
@@ -4397,41 +4397,41 @@ let gen_ind_header_v2 ?(is_mutual=false) vars name cnames tys method_candidates 
   (* Add public accessor for v_ to enable pattern matching from outside *)
   let v_accessor = if is_coinductive then
     (* For coinductive: const variant_t& v() const { return lazy_v_.force(); } *)
-    (Fmethod (
-      Id.of_string "v",
-      [],
-      Tmod (TMconst, Tref (Tid (Id.of_string "variant_t", []))),
-      [],
-      [Sreturn (Some (CPPfun_call (CPPmember (CPPvar (Id.of_string "lazy_v_"), Id.of_string "force"), [])))],
-      true,
-      false
-    ), VPublic)
+    (Fmethod {
+      mf_name = Id.of_string "v";
+      mf_tparams = [];
+      mf_ret_type = Tmod (TMconst, Tref (Tid (Id.of_string "variant_t", [])));
+      mf_params = [];
+      mf_body = [Sreturn (Some (CPPfun_call (CPPmember (CPPvar (Id.of_string "lazy_v_"), Id.of_string "force"), [])))];
+      mf_is_const = true;
+      mf_is_static = false;
+    }, VPublic)
   else
     (* For inductive: const variant_t& v() const { return v_; } *)
-    (Fmethod (
-      Id.of_string "v",
-      [],
-      Tmod (TMconst, Tref (Tid (Id.of_string "variant_t", []))),
-      [],
-      [Sreturn (Some (CPPvar (Id.of_string "v_")))],
-      true,
-      false
-    ), VPublic) in
+    (Fmethod {
+      mf_name = Id.of_string "v";
+      mf_tparams = [];
+      mf_ret_type = Tmod (TMconst, Tref (Tid (Id.of_string "variant_t", [])));
+      mf_params = [];
+      mf_body = [Sreturn (Some (CPPvar (Id.of_string "v_")))];
+      mf_is_const = true;
+      mf_is_static = false;
+    }, VPublic) in
 
   (* Add mutable accessor for reuse optimization (Phase 3).
      For non-coinductive types: variant_t& v_mut() { return v_; }
      Not generated for coinductive types (lazy evaluation complicates reuse). *)
   let v_mut_accessor = if is_coinductive then []
   else
-    [(Fmethod (
-      Id.of_string "v_mut",
-      [],
-      Tref (Tid (Id.of_string "variant_t", [])),
-      [],
-      [Sreturn (Some (CPPvar (Id.of_string "v_")))],
-      false,  (* not const *)
-      false
-    ), VPublic)] in
+    [(Fmethod {
+      mf_name = Id.of_string "v_mut";
+      mf_tparams = [];
+      mf_ret_type = Tref (Tid (Id.of_string "variant_t", []));
+      mf_params = [];
+      mf_body = [Sreturn (Some (CPPvar (Id.of_string "v_")))];
+      mf_is_const = false;
+      mf_is_static = false;
+    }, VPublic)] in
 
   (* 6. Generate methods from method candidates using shared helper *)
   let method_fields = List.map (gen_single_method name vars) method_candidates in

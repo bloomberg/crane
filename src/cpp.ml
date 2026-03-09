@@ -193,7 +193,6 @@ type std_names = {
   visit : string;          (* "std::visit" or "bsl::visit" *)
   move : string;           (* "std::move" or "bsl::move" *)
   forward : string;        (* "std::forward" or "bsl::forward" *)
-  string_type : string;    (* "std::string" or "bsl::string" *)
   any_cast : string;       (* "std::any_cast" or "bsl::any_cast" *)
   logic_error : string;    (* "std::logic_error" or "bsl::logic_error" *)
   overloaded : string;     (* "Overloaded" or "bdlf::Overloaded" *)
@@ -208,7 +207,7 @@ let std_names : std_names ref = ref {
   shared_ptr = "std::shared_ptr"; unique_ptr = "std::unique_ptr";
   make_shared = "std::make_shared"; make_unique = "std::make_unique";
   visit = "std::visit"; move = "std::move"; forward = "std::forward";
-  string_type = "std::string"; any_cast = "std::any_cast";
+  any_cast = "std::any_cast";
   logic_error = "std::logic_error"; overloaded = "Overloaded";
   ns = "std"; str_suffix = "s";
   same_as = "std::same_as"; declval = "std::declval";
@@ -221,7 +220,7 @@ let init_std_names () =
       shared_ptr = "bsl::shared_ptr"; unique_ptr = "bsl::unique_ptr";
       make_shared = "bsl::make_shared"; make_unique = "bsl::make_unique";
       visit = "bsl::visit"; move = "bsl::move"; forward = "bsl::forward";
-      string_type = "bsl::string"; any_cast = "bsl::any_cast";
+      any_cast = "bsl::any_cast";
       logic_error = "bsl::logic_error"; overloaded = "bdlf::Overloaded";
       ns = "bsl";
       str_suffix = "_s"; same_as = "same_as"; declval = "bsl::declval";
@@ -232,7 +231,7 @@ let init_std_names () =
       shared_ptr = "std::shared_ptr"; unique_ptr = "std::unique_ptr";
       make_shared = "std::make_shared"; make_unique = "std::make_unique";
       visit = "std::visit"; move = "std::move"; forward = "std::forward";
-      string_type = "std::string"; any_cast = "std::any_cast";
+      any_cast = "std::any_cast";
       logic_error = "std::logic_error"; overloaded = "Overloaded";
       ns = "std"; str_suffix = "s";
       same_as = "std::same_as"; declval = "std::declval";
@@ -426,6 +425,28 @@ let is_eponymous_record_projection r =
 
 let is_suppressed_projection r =
   Table.is_projection r && not (Table.is_higher_order_projection r)
+
+(** Filter a Dfix group, removing entries that are inline customs,
+    method candidates (local or globally registered), eponymous record
+    projections, or suppressed projections.  Returns the three filtered
+    arrays (refs, bodies, types). *)
+let filter_dfix rv defs typs =
+  let is_method_candidate x =
+    List.exists (fun (r', _, _, _) ->
+      Environ.QGlobRef.equal Environ.empty_env x r'
+    ) !method_candidates
+  in
+  let is_global_method x = is_registered_method x <> None in
+  let filter = Array.to_list (Array.map (fun x ->
+    not (is_inline_custom x) &&
+    not (is_method_candidate x) &&
+    not (is_global_method x) &&
+    not (is_eponymous_record_projection x) &&
+    not (is_suppressed_projection x)
+  ) rv) in
+  (Array.filter_with filter rv,
+   Array.filter_with filter defs,
+   Array.filter_with filter typs)
 
 (* Beware of the side-effects of [pp_global] and [pp_modname].
    They are used to update table of content for modules. Many [let]
@@ -792,9 +813,6 @@ let rec lambda_needs_capture (params : (Minicpp.cpp_type * Names.Id.t option) li
         let inner_free = IdSet.diff inner_refs (IdSet.union inner_param_names inner_decls) in
         (IdSet.union refs inner_free, decls)
     | CPPoverloaded exprs -> List.fold_left collect_from_expr (refs, decls) exprs
-    | CPPmatch (scrut, cases) ->
-        let acc = collect_from_expr (refs, decls) scrut in
-        List.fold_left (fun a (p, b) -> collect_from_expr (collect_from_expr a p) b) acc cases
     | CPPstructmk (_, _, args) -> List.fold_left collect_from_expr (refs, decls) args
     | CPPstruct (_, _, args) -> List.fold_left collect_from_expr (refs, decls) args
     | CPPstruct_id (_, _, args) -> List.fold_left collect_from_expr (refs, decls) args
@@ -885,8 +903,6 @@ and expr_contains_capturing_lambda (e : Minicpp.cpp_expr) : bool =
   | CPPmove e' -> expr_contains_capturing_lambda e'
   | CPPforward (_, e') -> expr_contains_capturing_lambda e'
   | CPPoverloaded exprs -> List.exists expr_contains_capturing_lambda exprs
-  | CPPmatch (scrut, cases) ->
-      expr_contains_capturing_lambda scrut || List.exists (fun (p, b) -> expr_contains_capturing_lambda p || expr_contains_capturing_lambda b) cases
   | CPPstructmk (_, _, args) -> List.exists expr_contains_capturing_lambda args
   | CPPstruct (_, _, args) -> List.exists expr_contains_capturing_lambda args
   | CPPstruct_id (_, _, args) -> List.exists expr_contains_capturing_lambda args
@@ -1168,7 +1184,6 @@ let rec pp_cpp_type par vl t =
         cpp_angle (sn ()).shared_ptr (pp_rec false t)
     | Tunique_ptr t ->
         cpp_angle (sn ()).unique_ptr (pp_rec false t)
-    | Tstring -> str (sn ()).string_type
     | Tvoid -> str "void"
     | Ttodo -> str "auto"
     | Tunknown -> str "UNKNOWN" (* TODO: BAD *)
@@ -1424,7 +1439,6 @@ and pp_cpp_expr env args t =
   | CPPoverloaded ls ->
       let ls_s = pp_list_newline (pp_cpp_expr env args) ls in
       str (sn ()).overloaded ++ str " {" ++ fnl () ++ ls_s ++ fnl () ++ str "}"
-  | CPPmatch (_scrut, _ls) -> mt ()
   | CPPstructmk (id, tys, es) ->
       let es_s = pp_list (pp_cpp_expr env args) es in
       let templates =
@@ -1710,22 +1724,22 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
       pp_list (fun (id, ty) ->
           (pp_cpp_type false [] ty) ++ str " " ++ Id.print id) (List.rev params)
     in h ((pp_cpp_type false [] ret_ty) ++ str " " ++ Id.print id ++ pp_par true params_s) ++ str ";"
-| Fmethod (id, template_params, ret_ty, params, body, is_const, is_static) ->
+| Fmethod { mf_name; mf_tparams; mf_ret_type; mf_params; mf_body; mf_is_const; mf_is_static } ->
     let params_s =
       pp_list (fun (id, ty) ->
-          (pp_cpp_type false [] ty) ++ str " " ++ Id.print id) params
+          (pp_cpp_type false [] ty) ++ str " " ++ Id.print id) mf_params
     in
-    let const_s = if is_const then str " const" else mt () in
-    let static_s = if is_static then str "static " else mt () in
-    let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
-    let template_s = match template_params with
+    let const_s = if mf_is_const then str " const" else mt () in
+    let static_s = if mf_is_static then str "static " else mt () in
+    let body_s = pp_list_stmt (pp_cpp_stmt env []) mf_body in
+    let template_s = match mf_tparams with
       | [] -> mt ()
       | _ ->
-        let args = pp_list pp_template_param template_params in
+        let args = pp_list pp_template_param mf_tparams in
         str "template <" ++ args ++ str ">" ++ fnl ()
     in
     template_s ++
-      h (static_s ++ (pp_cpp_type false [] ret_ty) ++ str " " ++ Id.print id ++ pp_par true params_s ++ const_s ++ str " {") ++ fnl () ++ body_s ++ str "}"
+      h (static_s ++ (pp_cpp_type false [] mf_ret_type) ++ str " " ++ Id.print mf_name ++ pp_par true params_s ++ const_s ++ str " {") ++ fnl () ++ body_s ++ str "}"
 | Fconstructor (params, init_list, is_explicit) ->
     let sname = match struct_name with Some s -> s | None -> str "UNKNOWN_STRUCT" in
     let params_s =
@@ -2081,13 +2095,7 @@ let pp_decl = function
         | _ , _ -> mt ()
         end
     | Dfix (rv,defs,typs) ->
-          (* Filter out inline custom, method candidates, globally registered methods, and eponymous record projections *)
-          let is_method_candidate x = List.exists (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env x r') !method_candidates in
-          let is_global_method x = is_registered_method x <> None in
-          let filter = Array.to_list (Array.map (fun x -> not (is_inline_custom x) && not (is_method_candidate x) && not (is_global_method x) && not (is_eponymous_record_projection x) && not (is_suppressed_projection x)) rv) in
-          let rv = Array.filter_with filter rv in
-          let defs = Array.filter_with filter defs in
-          let typs = Array.filter_with filter typs in
+          let (rv, defs, typs) = filter_dfix rv defs typs in
           if Array.length rv = 0 then mt ()
           else
           let defs = List.filter (fun (_,_,l) -> l == []) (gen_dfuns (rv, defs, typs)) in
@@ -2432,13 +2440,7 @@ let pp_hdecl = function
                   let (ds, env) = gen_spec r a t in pp_cpp_decl env ds
             end
     | Dfix (rv,defs,typs) ->
-          (* Filter out inline custom, method candidates, and globally registered methods *)
-          let is_method_candidate x = List.exists (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env x r') !method_candidates in
-          let is_global_method x = is_registered_method x <> None in
-          let filter = Array.to_list (Array.map (fun x -> not (is_inline_custom x) && not (is_method_candidate x) && not (is_global_method x) && not (is_eponymous_record_projection x) && not (is_suppressed_projection x)) rv) in
-          let rv = Array.filter_with filter rv in
-          let defs = Array.filter_with filter defs in
-          let typs = Array.filter_with filter typs in
+          let (rv, defs, typs) = filter_dfix rv defs typs in
           if Array.length rv = 0 then mt ()
           else
           (* For template structs, generate full definitions inline, not just declarations *)
@@ -2486,12 +2488,7 @@ let pp_hdecl_spec_only = function
             let (ds, env) = gen_spec r a t in pp_cpp_decl env ds
         end
     | Dfix (rv,defs,typs) ->
-          let is_method_candidate x = List.exists (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env x r') !method_candidates in
-          let is_global_method x = is_registered_method x <> None in
-          let filter = Array.to_list (Array.map (fun x -> not (is_inline_custom x) && not (is_method_candidate x) && not (is_global_method x) && not (is_eponymous_record_projection x) && not (is_suppressed_projection x)) rv) in
-          let rv = Array.filter_with filter rv in
-          let defs = Array.filter_with filter defs in
-          let typs = Array.filter_with filter typs in
+          let (rv, defs, typs) = filter_dfix rv defs typs in
           if Array.length rv = 0 then mt ()
           else
             (* Generate specs derived from the full definition signatures (gen_dfuns_spec)
@@ -3269,7 +3266,6 @@ let rec prlist_sep_nonempty sep f = function
    The is_header parameter controls which definitions are generated via gen_dfuns_dual/gen_decl_for_pp_dual. *)
 let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
   let is_method_candidate x = List.exists (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env x r') !method_candidates in
-  let is_global_method x = is_registered_method x <> None in
 
   (* PHASE 1: Code generation (the expensive part — do this ONCE per function)
 
@@ -3347,13 +3343,7 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
             Method_registry.add_candidate reg epon_ref (r, defs.(i), typs.(i), pos)
         | None -> ()
       ) rv;
-      let filter = Array.to_list (Array.map (fun x ->
-        not (is_inline_custom x) && not (is_method_candidate x) &&
-        not (is_global_method x) && not (is_eponymous_record_projection x) &&
-        not (is_suppressed_projection x)) rv) in
-      let rv = Array.filter_with filter rv in
-      let defs = Array.filter_with filter defs in
-      let typs = Array.filter_with filter typs in
+      let (rv, defs, typs) = filter_dfix rv defs typs in
       if Array.length rv = 0 then ([], [], [])
       else
         let results = gen_dfuns_dual ~is_header (rv, defs, typs) in
