@@ -30,6 +30,7 @@ concept INNER = requires {
 };
 template <typename M>
 concept OUTER = requires {
+  requires INNER<typename M::Inner>;
   {
     M::step(std::declval<typename M::Inner::t>())
   } -> std::same_as<typename M::Inner::t>;
@@ -45,9 +46,7 @@ struct TodoWithModuleConstraint {
   };
 
   struct NatOuter {
-    struct Inner {
-      NatInner
-    };
+    using Inner = NatInner;
 
     static Inner::t step(const unsigned int n);
   };

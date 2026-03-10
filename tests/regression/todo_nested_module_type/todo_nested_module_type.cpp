@@ -10,9 +10,7 @@
 #include <todo_nested_module_type.h>
 #include <variant>
 
-NatInner
-
-    Inner::t
-    TodoNestedModuleType::NatOuter::step(const unsigned int n) {
+TodoNestedModuleType::NatOuter::Inner::t
+TodoNestedModuleType::NatOuter::step(const unsigned int n) {
   return (std::move(n) + 1);
 }

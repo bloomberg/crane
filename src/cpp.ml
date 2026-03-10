@@ -144,6 +144,9 @@ let render_ctx = {
   rc_in_template = false;
 }
 
+(* Accumulator for nested module type concepts that must be hoisted out of requires bodies *)
+let hoisted_concept_defs : Pp.t list ref = ref []
+
 (** Snapshot of render context state for save/restore.
    Using a record prevents individual fields from drifting out of sync
    across save/restore boundaries. *)
@@ -658,7 +661,12 @@ let typename_prefix_for name_str =
    types that belong to the current struct. *)
 let struct_qualifier_for r name_str =
   match render_ctx.rc_struct_name with
-  | Some struct_name when not (is_qualified_name name_str) ->
+  | Some struct_name when not render_ctx.rc_in_struct ->
+      let struct_name_str = Pp.string_of_ppcmds struct_name in
+      (* If the name already starts with the struct prefix, no qualification needed *)
+      if Common.contains_substring name_str (Str.global_replace (Str.regexp_string "::") "::" struct_name_str ^ "::") then
+        mt ()
+      else
       (* Enum types at global scope need no struct qualification.
          Enums inside structs need it. *)
       if Table.is_enum_inductive r then
@@ -666,7 +674,6 @@ let struct_qualifier_for r name_str =
            mt ()
          else
            let full_path = Pp.string_of_ppcmds (GlobRef.print r) in
-           let struct_name_str = Pp.string_of_ppcmds struct_name in
            let struct_name_dotted = Str.global_replace (Str.regexp_string "::") "." struct_name_str in
            if Common.contains_substring full_path struct_name_dotted then
              struct_name ++ str "::"
@@ -674,11 +681,18 @@ let struct_qualifier_for r name_str =
              mt ())
       else begin
         let full_path = Pp.string_of_ppcmds (GlobRef.print r) in
-        let struct_name_str = Pp.string_of_ppcmds struct_name in
         (* Normalize C++ :: separators to dots for comparison with Rocq paths *)
         let struct_name_dotted = Str.global_replace (Str.regexp_string "::") "." struct_name_str in
-        (* Only qualify if the type belongs to the current struct *)
-        if Common.contains_substring full_path struct_name_dotted then
+        (* Only qualify if the type belongs to the current struct.
+           For module alias types like Inner::t, the full path may point to
+           the original definition (e.g., NatInner.t) which is a sibling module
+           within the same parent struct. Check parent containment. *)
+        let parent_struct_dotted = match String.rindex_opt struct_name_dotted '.' with
+          | Some i -> String.sub struct_name_dotted 0 i
+          | None -> struct_name_dotted
+        in
+        if Common.contains_substring full_path struct_name_dotted ||
+           (is_qualified_name name_str && Common.contains_substring full_path parent_struct_dotted) then
           struct_name ++ str "::"
         else
           mt ()
@@ -2791,10 +2805,36 @@ and pp_module_type params = function
         | Spec (Sind (kn, _)) -> GlobRef.IndRef (kn, 0) :: acc
         | _ -> acc
       ) [] sign in
-      let pp_req (_label, specif) = match specif with
+      let pp_req (label, specif) = match specif with
         | Spec s -> pp_spec_as_requirement modtype_refs s
-        | Smodule _ -> mt () (* TODO: nested modules *)
-        | Smodtype _ -> mt () (* TODO: nested module types *)
+        | Smodule mod_type ->
+            (match mod_type with
+             | MTident kn ->
+                 (* Use pp_modname outside push_visible so that the concept name
+                    resolves without struct prefix (concepts are hoisted) *)
+                 let concept_name =
+                   match kn with
+                   | MPdot (_, l') -> str (Label.to_string l')
+                   | _ -> pp_modname kn
+                 in
+                 let label_name = Label.to_string label in
+                 str "  requires " ++ concept_name ++ str "<typename M::" ++ str label_name ++ str ">;" ++ fnl ()
+             | MTfunsig _ -> mt ()  (* Functor declarations not yet supported in concepts *)
+             | _ -> mt ())
+        | Smodtype nested_mt ->
+            (* Nested module type inside a concept body — hoist it as a sibling concept *)
+            let def = pp_module_type [] nested_mt in
+            let modtype_name = str (Label.to_string label) in
+            let concept_pp =
+              if Pp.ismt def then
+                str "template<typename M>" ++ fnl () ++
+                hov 1 (str "concept " ++ modtype_name ++ str " = true;")
+              else
+                str "template<typename M>" ++ fnl () ++
+                hov 1 (str "concept " ++ modtype_name ++ str " = requires {" ++ fnl () ++ def ++ str "};")
+            in
+            hoisted_concept_defs := concept_pp :: !hoisted_concept_defs;
+            mt ()  (* Don't emit in the requires body *)
       in
       let reqs = List.map pp_req sign in
       let reqs = List.filter (fun p -> not (Pp.ismt p)) reqs in
@@ -3076,13 +3116,23 @@ let rec pp_structure_elem ~is_header f = function
                List.filter_map (fun (l, se) ->
                  match se with
                  | SEmodtype m ->
+                     let old_hoisted = !hoisted_concept_defs in
+                     hoisted_concept_defs := [];
                      let def = pp_module_type [] m in
+                     let hoisted = List.rev !hoisted_concept_defs in
+                     hoisted_concept_defs := old_hoisted;
                      let modtype_name = str (Label.to_string l) in
                      let concept_pp =
-                       str "template<typename M>" ++ fnl () ++
-                       hov 1 (str "concept " ++ modtype_name ++ str " = requires {" ++ fnl () ++ def ++ str "};")
+                       if Pp.ismt def then
+                         str "template<typename M>" ++ fnl () ++
+                         hov 1 (str "concept " ++ modtype_name ++ str " = true;")
+                       else
+                         str "template<typename M>" ++ fnl () ++
+                         hov 1 (str "concept " ++ modtype_name ++ str " = requires {" ++ fnl () ++ def ++ str "};")
                      in
-                     Some concept_pp
+                     (* Prepend any hoisted nested concepts before the main concept *)
+                     let all = List.append hoisted [concept_pp] in
+                     Some (prlist_with_sep (fun () -> fnl () ++ fnl ()) identity all)
                  | _ -> None
                ) sel
              else [] in
@@ -3191,33 +3241,34 @@ let rec pp_structure_elem ~is_header f = function
                body
              end (* has_sibling_inductive_collision else branch *)
          | MEident _ ->
-             (* Module alias: generate as is *)
-             let body = with_render_ctx
-               ~setup:(fun () ->
-                 if is_header then
-                   render_ctx.rc_in_struct <- true
-                 else begin
-                   render_ctx.rc_struct_name <- (match render_ctx.rc_struct_name with
-                     | Some parent -> Some (parent ++ str "::" ++ name)
-                     | None -> Some name);
-                   render_ctx.rc_struct_mp <- Some mp
-                 end)
-               (fun () -> pp_module_expr ~is_header f [] m.ml_mod_expr) in
-             if is_header then
-               str "struct " ++ name ++ str " {" ++ fnl () ++ body ++ str "};"
-             else
-               body
+             (* Module alias: generate using declaration (header only) *)
+             if not is_header then mt () else
+             let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
+             str "using " ++ name ++ str " = " ++ body ++ str ";"
         )
   | (l,SEmodtype m) ->
       (* Module types become concepts - only in header.
          When inside a struct context, concepts have been hoisted to namespace scope
          (see module type concept hoisting), so skip them here. *)
       if not is_header || render_ctx.rc_in_struct then mt () else
+      let old_hoisted = !hoisted_concept_defs in
+      hoisted_concept_defs := [];
       let def = pp_module_type [] m in
+      let hoisted = List.rev !hoisted_concept_defs in
+      hoisted_concept_defs := old_hoisted;
       let name = pp_modname (MPdot (top_visible_mp (), l)) in
+      let hoisted_pp = if hoisted = [] then mt ()
+        else prlist_with_sep fnl identity hoisted ++ fnl () ++ fnl () in
       (* Generate a C++ concept with template parameter *)
+      let concept_pp =
+        if Pp.ismt def then
+          hov 1 (str "concept " ++ name ++ str " = true;")
+        else
+          hov 1 (str "concept " ++ name ++ str " = requires {" ++ fnl () ++ def ++ str "};")
+      in
+      hoisted_pp ++
       str "template<typename M>" ++ fnl () ++
-      hov 1 (str "concept " ++ name ++ str " = requires {" ++ fnl () ++ def ++ str "};") ++
+      concept_pp ++
       (match Common.get_duplicate (top_visible_mp ()) l with
        | None -> mt ()
        | Some ren -> fnl () ++ str ("template<typename M> concept "^ren^" = ") ++ name ++ str "<M>;")
@@ -3235,6 +3286,19 @@ and pp_module_expr ~is_header f params = function
       let (base, args) = collect_args [me'] me in
       let base_pp = pp_module_expr ~is_header f [] base in
       let args_pp = prlist_with_sep (fun () -> str ", ") (pp_module_expr ~is_header f []) args in
+      (* In template contexts, dependent names need 'template' keyword *)
+      let base_pp =
+        if render_ctx.rc_in_template then
+          let s = Pp.string_of_ppcmds base_pp in
+          if is_qualified_name s then
+            (* Insert 'template' before the last component: "Y::Make" -> "Y::template Make" *)
+            match String.rindex_opt s ':' with
+            | Some i when i > 0 && s.[i-1] = ':' ->
+                str (String.sub s 0 (i-1)) ++ str "::template " ++ str (String.sub s (i+1) (String.length s - i - 1))
+            | _ -> base_pp
+          else base_pp
+        else base_pp
+      in
       base_pp ++ str "<" ++ args_pp ++ str ">"
   | MEfunctor (mbid, mt, me) ->
       (* Functor body: just generate the body, template params are handled in pp_structure_elem *)

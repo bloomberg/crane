@@ -364,28 +364,6 @@
   (deps todo_monadic_global_alias.t.exe)
   (action (run ./todo_monadic_global_alias.t.exe))))
 
-(subdir todo_nested_module_type
- (rule
-  (targets todo_nested_module_type.t.exe)
-  (deps TodoNestedModuleType.vo todo_nested_module_type.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_nested_module_type.t.exe todo_nested_module_type.cpp todo_nested_module_type.t.cpp)))
- (rule
-  (alias runtest)
-  (deps todo_nested_module_type.t.exe)
-  (action (run ./todo_nested_module_type.t.exe))))
-
-(subdir todo_nested_module_type_functor
- (rule
-  (targets todo_nested_module_type_functor.t.exe)
-  (deps TodoNestedModuleTypeFunctor.vo todo_nested_module_type_functor.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_nested_module_type_functor.t.exe todo_nested_module_type_functor.cpp todo_nested_module_type_functor.t.cpp)))
- (rule
-  (alias runtest)
-  (deps todo_nested_module_type_functor.t.exe)
-  (action (run ./todo_nested_module_type_functor.t.exe))))
-
 (subdir todo_polymorphic_erased_helper
  (rule
   (targets todo_polymorphic_erased_helper.t.exe)
