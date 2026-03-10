@@ -1543,3 +1543,14 @@
   (alias runtest)
   (deps todo_polymorphic_erased_helper.t.exe)
   (action (run ./todo_polymorphic_erased_helper.t.exe))))
+
+(subdir todo_extract_constant_noninline
+ (rule
+  (targets todo_extract_constant_noninline.t.exe)
+  (deps TodoExtractConstantNoninline.vo todo_extract_constant_noninline.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_extract_constant_noninline.t.exe todo_extract_constant_noninline.cpp todo_extract_constant_noninline.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_extract_constant_noninline.t.exe)
+  (action (run ./todo_extract_constant_noninline.t.exe))))

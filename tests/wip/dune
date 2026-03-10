@@ -342,17 +342,6 @@
   (deps reset_state_clears_volatile_edge_0037.t.exe)
   (action (run ./reset_state_clears_volatile_edge_0037.t.exe))))
 
-(subdir todo_extract_constant_noninline
- (rule
-  (targets todo_extract_constant_noninline.t.exe)
-  (deps TodoExtractConstantNoninline.vo todo_extract_constant_noninline.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_extract_constant_noninline.t.exe todo_extract_constant_noninline.cpp todo_extract_constant_noninline.t.cpp)))
- (rule
-  (alias runtest)
-  (deps todo_extract_constant_noninline.t.exe)
-  (action (run ./todo_extract_constant_noninline.t.exe))))
-
 (subdir todo_monadic_global_alias
  (rule
   (targets todo_monadic_global_alias.t.exe)

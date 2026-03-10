@@ -3596,10 +3596,25 @@ let gen_dfun n b dom cod ty temps =
      erased template type args (see try_recover_erased_return_type). *)
   let saved_return_type = tctx.current_cpp_return_type in
   tctx.current_cpp_return_type <- Some cod;
+  (* For non-inlined custom constants (axioms mapped via Crane Extract Constant),
+     generate a forwarding body that delegates to the custom implementation
+     instead of the default CPPabort throw. *)
+  let custom_forwarding_body = match b with
+    | MLaxiom _ when is_custom n && not (to_inline n) ->
+      let custom_name = find_custom n in
+      let param_vars = List.rev_map (fun (id, _) -> CPPvar id) ids in
+      Some [Sreturn (Some (CPPfun_call (CPPraw custom_name, param_vars)))]
+    | _ -> None
+  in
   let inner =
     if missing == [] then
-      let b = List.map (glob_subst_stmt n rec_call) (gen_stmts env cofix_wrap b) in
-      (* let b = List.map forward_fun_args b in *)
+      let b = match custom_forwarding_body with
+        | Some stmts -> stmts
+        | None ->
+          let b = List.map (glob_subst_stmt n rec_call) (gen_stmts env cofix_wrap b) in
+          (* let b = List.map forward_fun_args b in *)
+          b
+      in
       clear_current_type_vars ();
       clear_current_param_types ();
       Dfundef ([n, []], cod, ids, sigma_asserts @ b)
@@ -3617,14 +3632,17 @@ let gen_dfun n b dom cod ty temps =
 
          Exception: axiom/exn bodies always throw — applying them to arguments
          produces invalid C++ (calling a void result). Generate the body directly. *)
-      let b = match b with
-        | MLaxiom _ | MLexn _ ->
-          List.map (glob_subst_stmt n rec_call) (gen_stmts env cofix_wrap b)
-        | _ ->
-          let k = List.length missing in
-          let lifted_b = ast_lift k b in
-          let args = List.rev (List.mapi (fun i _ -> MLrel (i + 1)) missing) in
-          List.map (glob_subst_stmt n rec_call) (gen_stmts env cofix_wrap (MLapp (lifted_b, args)))
+      let b = match custom_forwarding_body with
+        | Some stmts -> stmts
+        | None ->
+          (match b with
+          | MLaxiom _ | MLexn _ ->
+            List.map (glob_subst_stmt n rec_call) (gen_stmts env cofix_wrap b)
+          | _ ->
+            let k = List.length missing in
+            let lifted_b = ast_lift k b in
+            let args = List.rev (List.mapi (fun i _ -> MLrel (i + 1)) missing) in
+            List.map (glob_subst_stmt n rec_call) (gen_stmts env cofix_wrap (MLapp (lifted_b, args))))
       in
       (* let b = List.map forward_fun_args b in *)
       clear_current_type_vars ();
