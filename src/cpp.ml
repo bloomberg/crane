@@ -34,7 +34,7 @@ let method_registry : Method_registry.t option ref = ref None
 let get_method_registry () =
   match !method_registry with
   | Some r -> r
-  | None -> failwith "method_registry not initialized"
+  | None -> CErrors.anomaly (Pp.str "method_registry not initialized.")
 
 (* Pre-computed name resolution cache — populated once per extraction pass.
    Queries go through get_name_cache(). *)
@@ -43,7 +43,7 @@ let name_cache : Name_resolution.t option ref = ref None
 let get_name_cache () =
   match !name_cache with
   | Some c -> c
-  | None -> failwith "name_cache not initialized"
+  | None -> CErrors.anomaly (Pp.str "name_cache not initialized.")
 
 
 (*s Some utility functions. *)
@@ -55,6 +55,14 @@ let pp_parameters l =
 
 let pp_string_parameters l =
   (pp_boxed_tuple str l ++ space_if (not (List.is_empty l)))
+
+(* Helper to get custom type mapping with ids, returning option *)
+let find_type_custom_opt r =
+  if is_custom r then
+    (* Safe to call find_type_custom since is_custom returned true *)
+    Some (find_type_custom r)
+  else
+    None
 
 (*s C++ renaming issues. *)
 
@@ -110,17 +118,29 @@ let sig_preamble _ comment used_modules usf =
    These refs are saved/restored around sub-renders using with_render_ctx.
    ============================================================================ *)
 
-(* Inside a struct body? Affects qualification of nested type references. *)
-let in_struct_context = ref false
-(* TypeClass concepts already emitted for the current module? *)
-let concepts_hoisted = ref false
-(* Current struct name for qualifying out-of-struct definitions *)
-let current_struct_name : Pp.t option ref = ref None
-(* Current struct's ModPath for ModPath-based qualification checks.
-   Needed when the C++ struct name differs from the Rocq module path. *)
-let current_struct_mp : ModPath.t option ref = ref None
-(* Inside a template struct (functor)? Affects typename keyword insertion. *)
-let in_template_struct = ref false
+(* Consolidated render context state.
+   All mutable rendering context in a single record instead of 5 separate refs. *)
+type render_ctx = {
+  (* Inside a struct body? Affects qualification of nested type references. *)
+  mutable rc_in_struct : bool;
+  (* TypeClass concepts already emitted for the current module? *)
+  mutable rc_concepts_hoisted : bool;
+  (* Current struct name for qualifying out-of-struct definitions *)
+  mutable rc_struct_name : Pp.t option;
+  (* Current struct's ModPath for ModPath-based qualification checks.
+     Needed when the C++ struct name differs from the Rocq module path. *)
+  mutable rc_struct_mp : ModPath.t option;
+  (* Inside a template struct (functor)? Affects typename keyword insertion. *)
+  mutable rc_in_template : bool;
+}
+
+let render_ctx = {
+  rc_in_struct = false;
+  rc_concepts_hoisted = false;
+  rc_struct_name = None;
+  rc_struct_mp = None;
+  rc_in_template = false;
+}
 
 (* Snapshot of render context state for save/restore.
    Using a record prevents individual fields from drifting out of sync
@@ -134,19 +154,19 @@ type render_ctx_snapshot = {
 }
 
 let save_render_ctx () = {
-  rcs_in_struct = !in_struct_context;
-  rcs_concepts_hoisted = !concepts_hoisted;
-  rcs_struct_name = !current_struct_name;
-  rcs_struct_mp = !current_struct_mp;
-  rcs_in_template = !in_template_struct;
+  rcs_in_struct = render_ctx.rc_in_struct;
+  rcs_concepts_hoisted = render_ctx.rc_concepts_hoisted;
+  rcs_struct_name = render_ctx.rc_struct_name;
+  rcs_struct_mp = render_ctx.rc_struct_mp;
+  rcs_in_template = render_ctx.rc_in_template;
 }
 
 let restore_render_ctx s =
-  in_struct_context := s.rcs_in_struct;
-  concepts_hoisted := s.rcs_concepts_hoisted;
-  current_struct_name := s.rcs_struct_name;
-  current_struct_mp := s.rcs_struct_mp;
-  in_template_struct := s.rcs_in_template
+  render_ctx.rc_in_struct <- s.rcs_in_struct;
+  render_ctx.rc_concepts_hoisted <- s.rcs_concepts_hoisted;
+  render_ctx.rc_struct_name <- s.rcs_struct_name;
+  render_ctx.rc_struct_mp <- s.rcs_struct_mp;
+  render_ctx.rc_in_template <- s.rcs_in_template
 
 (* Execute [f] with modified render context, restoring the snapshot afterward.
    This replaces the error-prone pattern of manually saving/restoring individual refs. *)
@@ -386,13 +406,11 @@ let current_structure_decls : (Label.t * Miniml.ml_structure_elem) list ref = re
    This prevents state from one extraction affecting another when running multiple
    extractions in the same process (e.g., during 'dune build'). *)
 let reset_cpp_state () =
-  restore_render_ctx {
-    rcs_in_struct = false;
-    rcs_concepts_hoisted = false;
-    rcs_struct_name = None;
-    rcs_struct_mp = None;
-    rcs_in_template = false;
-  };
+  render_ctx.rc_in_struct <- false;
+  render_ctx.rc_concepts_hoisted <- false;
+  render_ctx.rc_struct_name <- None;
+  render_ctx.rc_struct_mp <- None;
+  render_ctx.rc_in_template <- false;
   eponymous_type_ref := None;
   eponymous_record := None;
   method_candidates := [];
@@ -624,7 +642,7 @@ let pp_inductive_type_name r =
 (* Add typename prefix for dependent types in template contexts.
    C++ requires 'typename' keyword when accessing nested types in templates. *)
 let typename_prefix_for name_str =
-  if !in_template_struct && is_qualified_name name_str then
+  if render_ctx.rc_in_template && is_qualified_name name_str then
     str "typename "
   else
     mt ()
@@ -633,7 +651,7 @@ let typename_prefix_for name_str =
    When generating out-of-struct member function definitions, we need to qualify
    types that belong to the current struct. *)
 let struct_qualifier_for r name_str =
-  match !current_struct_name with
+  match render_ctx.rc_struct_name with
   | Some struct_name when not (is_qualified_name name_str) ->
       (* Enum types at global scope need no struct qualification.
          Enums inside structs need it. *)
@@ -665,7 +683,7 @@ let struct_qualifier_for r name_str =
    When generating out-of-struct definitions, we add :: to call external functions
    rather than recursing into the struct's own member. *)
 let needs_global_qualifier x =
-  match !current_struct_name with
+  match render_ctx.rc_struct_name with
   | Some struct_name ->
       let name_str = str_global Term x in
       if is_qualified_name name_str then false  (* Already qualified *)
@@ -679,7 +697,7 @@ let needs_global_qualifier x =
           (* Fallback: check ModPath equality for renamed modules (e.g., Coq_Pos).
              When a module is renamed (modfstlev_rename), the C++ struct name differs
              from the Rocq path, so string comparison fails. Use ModPath comparison instead. *)
-          (match !current_struct_mp with
+          (match render_ctx.rc_struct_mp with
           | Some struct_mp -> not (ModPath.equal (modpath_of_r x) struct_mp)
           | None -> true)
   | None -> false
@@ -1070,12 +1088,12 @@ let rec pp_cpp_type par vl t =
        Can be parameterized like generic types: Leaf<int>
        When generating out-of-struct definitions, prepend struct name. *)
     | Tid (id, []) ->
-        (match !current_struct_name with
-         | Some struct_name when not !in_struct_context -> struct_name ++ str "::" ++ Id.print id
+        (match render_ctx.rc_struct_name with
+         | Some struct_name when not render_ctx.rc_in_struct -> struct_name ++ str "::" ++ Id.print id
          | _ -> Id.print id)
     | Tid (id, args) ->
-        (match !current_struct_name with
-         | Some struct_name when not !in_struct_context ->
+        (match render_ctx.rc_struct_name with
+         | Some struct_name when not render_ctx.rc_in_struct ->
              struct_name ++ str "::" ++ Id.print id ++ str "<" ++ pp_list (pp_rec false) args ++ str ">"
          | _ -> Id.print id ++ str "<" ++ pp_list (pp_rec false) args ++ str ">")
     | Tglob (r, tys, args) ->
@@ -1135,8 +1153,8 @@ let rec pp_cpp_type par vl t =
              (* Enum types at global scope need no struct qualification.
                 Enums inside structs (e.g., Comparison::cmp) need it. *)
              let qualifier =
-               match !current_struct_name with
-               | Some struct_name when not !in_struct_context ->
+               match render_ctx.rc_struct_name with
+               | Some struct_name when not render_ctx.rc_in_struct ->
                    if is_global_scope_enum_cached r' then
                      mt ()
                    else
@@ -1208,7 +1226,7 @@ and pp_cpp_expr env args t =
              Check if the method's eponymous type name matches current_struct_name.
              This prevents e.g. SigT::projT1 from being rendered as this->projT1()
              when generating code inside a different struct like Levenshtein. *)
-          (match !current_struct_name with
+          (match render_ctx.rc_struct_name with
            | Some sn ->
              let epon_name = Common.pp_global_name Type epon_ref in
              let sn_str = Pp.string_of_ppcmds sn in
@@ -1225,7 +1243,7 @@ and pp_cpp_expr env args t =
           (* Bare reference to a method on a DIFFERENT struct (used as a function value).
              Since C++ non-static member functions can't be passed as function pointers,
              wrap in a lambda that calls the method on its argument. *)
-          (match !current_struct_name with
+          (match render_ctx.rc_struct_name with
            | Some sn ->
              let epon_name = Common.pp_global_name Type epon_ref in
              let sn_str = Pp.string_of_ppcmds sn in
@@ -1493,13 +1511,12 @@ and pp_cpp_expr env args t =
          custom extraction or is not in scope, we fall back to the bare
          literal. *)
       let s = Uint63.to_string x in
-      (try
-        let gr = Nametab.locate (Libnames.qualid_of_string "int") in
-        if is_inline_custom gr then
-          let cpp_type = find_custom gr in
-          str (cpp_type ^ "(" ^ s ^ ")")
-        else str s
-      with Not_found -> str s)
+      (match (try Some (Nametab.locate (Libnames.qualid_of_string "int")) with Not_found -> None) with
+      | Some gr when is_inline_custom gr ->
+          (match find_custom_opt gr with
+          | Some cpp_type -> str (cpp_type ^ "(" ^ s ^ ")")
+          | None -> str s)
+      | _ -> str s)
   | CPPfloat f -> str (Printf.sprintf "%h" (Float64.to_float f))
   | CPPrequires (ty_vars, exprs, type_reqs) ->
       let ty_vars_s = match ty_vars with [] -> mt () | _ ->
@@ -1665,19 +1682,19 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
     | CCbody i -> (try
       let (_,_,ss) = List.nth cases i in
        pp_list_stmt (pp_cpp_stmt env []) ss
-      with Failure _ -> print_endline "Error: custom inlined syntax referencing an unbound case body in"; print_endline custom; assert false)
+      with Failure _ -> CErrors.anomaly Pp.(str "Custom syntax: unbound case body in: " ++ str custom))
     | CCty_arg i ->(try pp_cpp_type false vl (List.nth tyargs i)
-      with Failure _ -> print_endline "Error: custom inlined syntax referencing an unbound type argument in"; print_endline custom; assert false)
+      with Failure _ -> CErrors.anomaly Pp.(str "Custom syntax: unbound type argument in: " ++ str custom))
     | CCbr_var (i, j) -> (try
       let (ids,_,_) = List.nth cases i in
       let (id,_) = List.nth ids j in
       Id.print id
-      with Failure _ -> print_endline "Error: custom inlined syntax referencing an unbound case branch variable in"; print_endline custom; assert false)
+      with Failure _ -> CErrors.anomaly Pp.(str "Custom syntax: unbound case branch variable in: " ++ str custom))
     | CCbr_var_ty (i, j) -> (try
       let (ids,_,_) = List.nth cases i in
       let (_,ty) = List.nth ids j in
       pp_cpp_type false vl ty
-      with Failure _ -> print_endline "Error: custom inlined syntax referencing an unbound case branch type argument in"; print_endline custom; assert false)
+      with Failure _ -> CErrors.anomaly Pp.(str "Custom syntax: unbound case branch type argument in: " ++ str custom))
     | CCarg i -> (try
         let arg_expr = List.nth args i in
         let arg = pp_cpp_expr env [] arg_expr in
@@ -1693,7 +1710,7 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
         (match List.nth_opt arg_types i with
          | Some expected_ty -> wrap_any_cast_if_needed arg_expr arg expected_ty vl
          | None -> arg)
-      with Failure _ -> print_endline "Error: custom inlined syntax referencing an unbound term argument in"; print_endline custom; assert false) in
+      with Failure _ -> CErrors.anomaly Pp.(str "Custom syntax: unbound term argument in: " ++ str custom)) in
   List.fold_left (fun prev c -> prev ++ pp c) (mt ()) cmds
 
 let pp_template_type = function
@@ -1826,7 +1843,7 @@ function
       (* MERGE non-template: struct Nat { ... } *)
       let struct_name = str struct_name_str in
       let f_s = with_render_ctx
-        ~setup:(fun () -> in_struct_context := true)
+        ~setup:(fun () -> render_ctx.rc_in_struct <- true)
         (fun () -> pp_cpp_fields_with_vis ~struct_name env fields) in
       let inherit_clause = if sft then
         str " : public std::enable_shared_from_this<" ++ struct_name ++ str ">"
@@ -1837,7 +1854,7 @@ function
       (* MERGE template: template<typename A> struct List { ... } *)
       let struct_name = str struct_name_str in
       let f_s = with_render_ctx
-        ~setup:(fun () -> in_struct_context := true; in_template_struct := true)
+        ~setup:(fun () -> render_ctx.rc_in_struct <- true; render_ctx.rc_in_template <- true)
         (fun () -> pp_cpp_fields_with_vis ~struct_name env fields) in
       let args = pp_list pp_template_param temps in
       let inherit_clause = if sft then
@@ -1853,7 +1870,7 @@ function
     | _ ->
       (* No merge: keep wrapper struct (has pending decls or multiple children) *)
       let ds = with_render_ctx
-        ~setup:(fun () -> in_struct_context := true)
+        ~setup:(fun () -> render_ctx.rc_in_struct <- true)
         (fun () -> pp_list_stmt (pp_cpp_decl env) decls) in
       let pending_fwd = match Hashtbl.find_opt pending_wrapper_decls struct_name_str with
         | Some specs ->
@@ -1877,8 +1894,8 @@ function
     let is_lifted = match ids with
       | (GlobRef.VarRef _, _) :: _ -> true
       | _ -> false in
-    let name = match !current_struct_name with
-      | Some struct_name when not !in_struct_context && not is_lifted -> struct_name ++ str "::" ++ base_name
+    let name = match render_ctx.rc_struct_name with
+      | Some struct_name when not render_ctx.rc_in_struct && not is_lifted -> struct_name ++ str "::" ++ base_name
       | _ -> base_name
       in
     let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
@@ -1894,8 +1911,8 @@ function
        - in_struct_context: explicitly tracking struct nesting
        - current_struct_name set: generating out-of-struct definitions (no static) *)
     let is_qualified = List.length ids > 1 || (match ids with | [(_, tys)] when tys <> [] -> true | _ -> false) in
-    let is_struct_member = is_qualified || !in_struct_context in
-    let is_out_of_struct_def = match !current_struct_name with | Some _ -> not !in_struct_context | None -> false in
+    let is_struct_member = is_qualified || render_ctx.rc_in_struct in
+    let is_out_of_struct_def = match render_ctx.rc_struct_name with | Some _ -> not render_ctx.rc_in_struct | None -> false in
     let static_kw = if is_struct_member && not is_out_of_struct_def then str "static " else mt () in
       h (static_kw ++ (pp_cpp_type false [] ret_ty) ++ str " " ++ name ++ pp_par true params_s) ++ str "{" ++ body_s ++ str "}"
 | Dfundecl (ids, ret_ty, params) ->
@@ -1912,7 +1929,7 @@ function
     (* Add static for struct member functions *)
     (* Check if qualified name (out-of-line definition) OR inside a struct context *)
     let is_qualified = List.length ids > 1 || (match ids with | [(_, tys)] when tys <> [] -> true | _ -> false) in
-    let is_struct_member = is_qualified || !in_struct_context in
+    let is_struct_member = is_qualified || render_ctx.rc_in_struct in
     let static_kw = if is_struct_member then str "static " else mt () in
     h (static_kw ++ (pp_cpp_type false [] ret_ty) ++ str " " ++ name ++ pp_par true params_s) ++ str ";"
 | Dstruct { ds_ref = id; ds_fields = fields; ds_tparams = tparams; ds_constraint = cstr; ds_needs_shared_from_this = sft } ->
@@ -1935,7 +1952,7 @@ function
     let f_s = match tparams with
       | [] -> pp_cpp_fields_with_vis ~struct_name env fields
       | _ -> with_render_ctx
-        ~setup:(fun () -> in_template_struct := true)
+        ~setup:(fun () -> render_ctx.rc_in_template <- true)
         (fun () -> pp_cpp_fields_with_vis ~struct_name env fields)
     in
     let tmpl = match tparams with
@@ -1978,7 +1995,7 @@ function
        - ALL lambdas directly in a static inline initializer are "non-local"
        - But by wrapping in []() { return expr; }(), inner lambdas are now "local" *)
     let expr_pp = pp_cpp_expr env [] e in
-    if !in_template_struct then begin
+    if render_ctx.rc_in_template then begin
       (* DESIGN: Static data members in template structs use lazy initialization.
          Template static inline members have unordered dynamic initialization relative
          to other inline variables, causing static init order issues when accessed from
@@ -1993,11 +2010,11 @@ function
       str "}"
     end
     else begin
-      let static_kw = if !in_struct_context then str "static inline " else mt () in
+      let static_kw = if render_ctx.rc_in_struct then str "static inline " else mt () in
       (* Wrap in IIFE only when in struct context AND the expression contains lambdas.
          This is needed because C++ forbids capture-default [&] in non-local lambdas.
          If there are no lambdas, no wrapping is needed. *)
-      let needs_iife = !in_struct_context && expr_contains_capturing_lambda e in
+      let needs_iife = render_ctx.rc_in_struct && expr_contains_capturing_lambda e in
       let wrapped_expr = if needs_iife then
         str "[]() {" ++ fnl () ++ str "return " ++ expr_pp ++ str ";" ++ fnl () ++ str "}()"
       else
@@ -2133,7 +2150,7 @@ let pp_cpp_ind_header kn ind =
   | TypeClass fields ->
       (* Type classes become C++ concepts *)
       (* Skip if concepts have been hoisted or we're inside a struct *)
-      if !in_struct_context || !concepts_hoisted then mt ()
+      if render_ctx.rc_in_struct || render_ctx.rc_concepts_hoisted then mt ()
       else pp_cpp_decl (empty_env ()) (gen_typeclass_cpp names.(0) fields ind.ind_packets.(0))
   | Record fields ->
       (* Check if this is an eponymous record being merged into module struct *)
@@ -2318,7 +2335,7 @@ let pp_cpp_ind_header kn ind =
           let methods = match !eponymous_type_ref with
             | Some epon_ref when Environ.QGlobRef.equal Environ.empty_env ind_ref epon_ref ->
                 !method_candidates
-            | _ when not !in_struct_context && not is_inside_submodule_decl ->
+            | _ when not render_ctx.rc_in_struct && not is_inside_submodule_decl ->
                 (* For top-level inductives only, find methods from sibling declarations *)
                 find_methods_for_inductive ind_ref
             | _ ->
@@ -2373,7 +2390,7 @@ let pp_cpp_ind_header kn ind =
           let wrapped_decl = match decl with
             | Denum _ -> decl  (* Enums don't need namespace wrapper *)
             | _ ->
-              if !in_struct_context then decl
+              if render_ctx.rc_in_struct then decl
               else Dnspace (Some names.(i), [decl])
           in
           pp_cpp_decl (empty_env ()) wrapped_decl ++ pp (i+1)
@@ -2393,13 +2410,13 @@ let pp_hdecl = function
         let name = pp_global Type r in
         let l = rename_tvars keywords l in
         let ids, def =
-          try
-            let ids,s = find_type_custom r in
-            pp_string_parameters ids, str " =" ++ spc () ++ str s
-          with Not_found ->
-            pp_parameters l,
-            if t == Taxiom then str " (* AXIOM TO BE REALIZED *)"
-            else str " =" ++ spc () ++ pp_type false l t
+          match find_type_custom_opt r with
+          | Some (ids, s) ->
+              pp_string_parameters ids, str " =" ++ spc () ++ str s
+          | None ->
+              pp_parameters l,
+              if t == Taxiom then str " (* AXIOM TO BE REALIZED *)"
+              else str " =" ++ spc () ++ pp_type false l t
         in
         pp_tydef l name def
     | Dterm (r, a, Tglob (ty, args,e)) when is_monad ty ->
@@ -2445,13 +2462,13 @@ let pp_hdecl = function
             begin match ds, tvars with
             | Some ds , [] ->
                 (* For template structs, use full definitions instead of specs *)
-                if !in_template_struct then
+                if render_ctx.rc_in_template then
                   let (ds, env, _) = gen_decl r a t in pp_cpp_decl env ds
                 else
                   let (ds, env) = gen_spec r a t in pp_cpp_decl env ds
             | Some ds , _::_ -> pp_cpp_decl env ds
             | None , _ ->
-                if !in_template_struct then
+                if render_ctx.rc_in_template then
                   let (ds, env, _) = gen_decl r a t in pp_cpp_decl env ds
                 else
                   let (ds, env) = gen_spec r a t in pp_cpp_decl env ds
@@ -2461,7 +2478,7 @@ let pp_hdecl = function
           if Array.length rv = 0 then mt ()
           else
           (* For template structs, generate full definitions inline, not just declarations *)
-          if !in_template_struct then
+          if render_ctx.rc_in_template then
             pp_list_stmt (fun(ds, env, _) ->  pp_cpp_decl env ds) (gen_dfuns (rv, defs, typs))
           else
             pp_list_stmt (fun(ds, env) ->  pp_cpp_decl env ds) (gen_dfuns_header (rv, defs, typs))
@@ -2480,13 +2497,13 @@ let pp_hdecl_spec_only = function
         let name = pp_global Type r in
         let l = rename_tvars keywords l in
         let ids, def =
-          try
-            let ids,s = find_type_custom r in
-            pp_string_parameters ids, str " =" ++ spc () ++ str s
-          with Not_found ->
-            pp_parameters l,
-            if t == Taxiom then str " (* AXIOM TO BE REALIZED *)"
-            else str " =" ++ spc () ++ pp_type false l t
+          match find_type_custom_opt r with
+          | Some (ids, s) ->
+              pp_string_parameters ids, str " =" ++ spc () ++ str s
+          | None ->
+              pp_parameters l,
+              if t == Taxiom then str " (* AXIOM TO BE REALIZED *)"
+              else str " =" ++ spc () ++ pp_type false l t
         in
         pp_tydef l name def
     | Dterm (r, _, _) when List.exists (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env r r') !method_candidates -> mt ()
@@ -2527,15 +2544,15 @@ let pp_spec = function
       let name = pp_global_name Type r in
       let l = rename_tvars keywords vl in
       let ids, def =
-        try
-          let ids, s = find_type_custom r in
-          pp_string_parameters ids, str " =" ++ spc () ++ str s
-        with Not_found ->
-          let ids = pp_parameters l in
-          match ot with
-            | None -> ids, mt ()
-            | Some Taxiom -> ids, str " (* AXIOM TO BE REALIZED *)"
-            | Some t -> ids, str " =" ++ spc () ++ pp_type false l t
+        match find_type_custom_opt r with
+        | Some (ids, s) ->
+            pp_string_parameters ids, str " =" ++ spc () ++ str s
+        | None ->
+            let ids = pp_parameters l in
+            match ot with
+              | None -> ids, mt ()
+              | Some Taxiom -> ids, str " (* AXIOM TO BE REALIZED *)"
+              | Some t -> ids, str " =" ++ spc () ++ pp_type false l t
       in
         pp_tydef l name def
 
@@ -2841,7 +2858,7 @@ let rec pp_structure_elem ~is_header f = function
              in
              (* Set context: we're inside a template struct *)
              let struct_body = with_render_ctx
-               ~setup:(fun () -> in_struct_context := true; in_template_struct := true)
+               ~setup:(fun () -> render_ctx.rc_in_struct <- true; render_ctx.rc_in_template <- true)
                (fun () -> pp_module_expr ~is_header f (List.map (fun (mbid, _) -> MPbound mbid) template_params) body) in
              template_decl ++ fnl () ++
              str "struct " ++ name ++ str " {" ++ fnl () ++
@@ -2879,9 +2896,9 @@ let rec pp_structure_elem ~is_header f = function
              using_decl ++ static_assert
          | MEstruct (_mp, sel) ->
              (* Regular module: generate struct in header, member definitions in implementation *)
-             let old_context = !in_struct_context in
-             let old_struct_name = !current_struct_name in
-             let old_struct_mp = !current_struct_mp in
+             let old_context = render_ctx.rc_in_struct in
+             let old_struct_name = render_ctx.rc_struct_name in
+             let old_struct_mp = render_ctx.rc_struct_mp in
              let old_eponymous = !eponymous_type_ref in
              let old_methods = !method_candidates in
              (* Save parent's eponymous_record BEFORE detecting for this module *)
@@ -3066,27 +3083,27 @@ let rec pp_structure_elem ~is_header f = function
 
              (* When there's a concept collision, don't set struct context or
                 struct name — the module body is emitted without a wrapper. *)
-             let old_concepts_hoisted = !concepts_hoisted in
+             let old_concepts_hoisted = render_ctx.rc_concepts_hoisted in
              if is_header && not has_concept_collision then
-               in_struct_context := true
+               render_ctx.rc_in_struct <- true
              else if not is_header && not has_concept_collision then begin
                (* Track struct name for qualification - combine with parent for nested modules *)
-               current_struct_name := (match old_struct_name with
+               render_ctx.rc_struct_name <- (match old_struct_name with
                  | Some parent -> Some (parent ++ str "::" ++ name)
                  | None -> Some name);
-               current_struct_mp := Some mp
+               render_ctx.rc_struct_mp <- Some mp
              end;
              (* Mark concepts as hoisted so TypeClass items in the body are skipped *)
              if is_header && typeclass_concepts <> [] then
-               concepts_hoisted := true;
+               render_ctx.rc_concepts_hoisted <- true;
              begin
              let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
              (* Save method_candidates before restoring old state - need them for generating record methods *)
              let this_method_candidates = !method_candidates in
-             in_struct_context := old_context;
-             concepts_hoisted := old_concepts_hoisted;
-             current_struct_name := old_struct_name;
-             current_struct_mp := old_struct_mp;
+             render_ctx.rc_in_struct <- old_context;
+             render_ctx.rc_concepts_hoisted <- old_concepts_hoisted;
+             render_ctx.rc_struct_name <- old_struct_name;
+             render_ctx.rc_struct_mp <- old_struct_mp;
              eponymous_type_ref := old_eponymous;
              eponymous_record := old_eponymous_record;  (* Restore PARENT's value *)
              method_candidates := old_methods;
@@ -3170,12 +3187,12 @@ let rec pp_structure_elem ~is_header f = function
              let body = with_render_ctx
                ~setup:(fun () ->
                  if is_header then
-                   in_struct_context := true
+                   render_ctx.rc_in_struct <- true
                  else begin
-                   current_struct_name := (match !current_struct_name with
+                   render_ctx.rc_struct_name <- (match render_ctx.rc_struct_name with
                      | Some parent -> Some (parent ++ str "::" ++ name)
                      | None -> Some name);
-                   current_struct_mp := Some mp
+                   render_ctx.rc_struct_mp <- Some mp
                  end)
                (fun () -> pp_module_expr ~is_header f [] m.ml_mod_expr) in
              if is_header then
@@ -3187,7 +3204,7 @@ let rec pp_structure_elem ~is_header f = function
       (* Module types become concepts - only in header.
          When inside a struct context, concepts have been hoisted to namespace scope
          (see module type concept hoisting), so skip them here. *)
-      if not is_header || !in_struct_context then mt () else
+      if not is_header || render_ctx.rc_in_struct then mt () else
       let def = pp_module_type [] m in
       let name = pp_modname (MPdot (top_visible_mp (), l)) in
       (* Generate a C++ concept with template parameter *)
@@ -3421,7 +3438,7 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
   (* Render forward declarations with in_struct_context=true
      This makes pp_cpp_decl render as "static type func(...)" for injection into Dnspace struct *)
   let specs_pp = with_render_ctx
-    ~setup:(fun () -> in_struct_context := true)
+    ~setup:(fun () -> render_ctx.rc_in_struct <- true)
     (fun () -> prlist_sep_nonempty cut2 render_sel_specs all_results) in
 
   (* Render definitions with current_struct_name set
@@ -3430,8 +3447,8 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
      "WrapperName::" prefix to the function name. *)
   let defs_pp = with_render_ctx
     ~setup:(fun () ->
-      current_struct_name := Some (str wrapper_name);
-      current_struct_mp := Some wrapper_mp)
+      render_ctx.rc_struct_name <- Some (str wrapper_name);
+      render_ctx.rc_struct_mp <- Some wrapper_mp)
     (fun () -> prlist_sep_nonempty cut2 render_sel_defs all_results) in
 
   (* Render lifted decls (template helpers like _foo_aux)
@@ -3715,7 +3732,7 @@ let do_struct_with_decl_tracking ~is_header f s =
              (functions as flat forward declarations), non-colliding entries render normally *)
           if is_header then begin
             let (non_colliding_pp, colliding_pp) = with_render_ctx
-              ~setup:(fun () -> in_struct_context := true)
+              ~setup:(fun () -> render_ctx.rc_in_struct <- true)
               (fun () ->
                 let non_colliding = List.filter (fun (l, se) ->
                   match se with
@@ -3744,8 +3761,8 @@ let do_struct_with_decl_tracking ~is_header f s =
           end else begin
             let (non_colliding_pp, colliding_pp) = with_render_ctx
               ~setup:(fun () ->
-                current_struct_name := Some (str parent_name);
-                current_struct_mp := Some mp)
+                render_ctx.rc_struct_name <- Some (str parent_name);
+                render_ctx.rc_struct_mp <- Some mp)
               (fun () ->
                 let non_colliding = List.filter (fun (l, se) ->
                   match se with

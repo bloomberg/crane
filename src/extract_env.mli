@@ -10,33 +10,44 @@
 (*         *     (see LICENSE file for the text of the license)         *)
 (************************************************************************)
 
-(*s This module declares the extraction commands. *)
+(** {1 Extraction Environment and Commands}
+
+    Top-level entry points for the [Crane Extraction] vernacular commands.
+    Coordinates the full extraction pipeline:
+    {v Rocq source  -->  MiniML  -->  MiniCpp  -->  C++ files v}
+
+    Also handles dependency resolution, file I/O, compilation with
+    clang, and benchmarking. *)
 
 open Names
 open Libnames
 open Table
 
 val simple_extraction : opaque_access:Global.indirect_accessor -> qualid -> unit
-val full_extraction : opaque_access:Global.indirect_accessor -> string option -> qualid list -> unit
-val separate_extraction : opaque_access:Global.indirect_accessor -> qualid list -> unit
-val extraction_library : opaque_access:Global.indirect_accessor -> bool -> lident -> unit
+(** [Extraction qualid]: extract a single definition and print to stdout. *)
 
-(* For the test-suite : extraction to a particular or temporary file + clang on it *)
+val full_extraction : opaque_access:Global.indirect_accessor -> string option -> qualid list -> unit
+(** [Crane Extraction "file" qualids]: extract listed definitions to a file. *)
+
+val separate_extraction : opaque_access:Global.indirect_accessor -> qualid list -> unit
+(** [Separate Extraction qualids]: extract each definition to its own file. *)
+
+val extraction_library : opaque_access:Global.indirect_accessor -> bool -> lident -> unit
+(** [Extraction Library lib]: extract an entire library module. *)
 
 val extract_and_compile : opaque_access:Global.indirect_accessor -> string option -> qualid list -> unit
-
-(* For debug / external output via coqtop.byte + Drop : *)
+(** Extract to file then compile with clang.  Used by the test suite. *)
 
 val mono_environment :
  opaque_access:Global.indirect_accessor -> GlobRef.t list -> ModPath.t list -> Miniml.ml_structure
-
-(* Used by the Relation Extraction plugin *)
+(** Build the complete MiniML structure for a set of definitions. *)
 
 val print_one_decl :
   Miniml.ml_structure -> ModPath.t -> Miniml.ml_decl -> Pp.t
-
-(* Show the extraction of the current ongoing proof *)
+(** Pretty-print a single declaration.  Used by the Relation Extraction plugin. *)
 
 val show_extraction : pstate:Declare.Proof.t -> unit
+(** [Show Extraction]: show the extraction of the current ongoing proof. *)
 
 val benchmark : qualid -> (benchmark_lang * string * string) list -> unit
+(** [Crane Benchmark]: extract, compile, and benchmark with hyperfine. *)

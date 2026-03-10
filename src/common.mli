@@ -120,3 +120,25 @@ val pp_native_string : ml_ast -> Pp.t
 
 (* Registered sig type *)
 val sig_type_name : string
+
+(** {2 Synthetic name generators}
+
+    Centralized naming conventions for generated C++ identifiers.
+    Each function takes an integer index and returns a string or [Id.t]. *)
+
+val tvar_name : int -> string
+val tvar_id : int -> Id.t
+val anon_tvar_name : int -> string
+val anon_tvar_id : int -> Id.t
+val fun_tparam_name : int -> string
+val fun_tparam_id : int -> Id.t
+val field_param_name : int -> string
+val field_param_id : int -> Id.t
+val eta_param_name : int -> string
+val eta_param_id : int -> Id.t
+val tc_instance_name : int -> string
+val tc_instance_id : int -> Id.t
+val ctor_fallback_name : int -> string
+val ctor_fallback_id : int -> Id.t
+val db_fallback_name : int -> string
+val db_fallback_id : int -> Id.t

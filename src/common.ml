@@ -919,3 +919,25 @@ let pp_native_string c =
 (* Registered sig type *)
 
 let sig_type_name = "core.sig.type"
+
+(* ============================================================================
+   Synthetic name generators.
+   Centralized here so that naming conventions are defined in one place.
+   ============================================================================ *)
+
+let tvar_name i = "T" ^ string_of_int i
+let tvar_id i = Id.of_string (tvar_name i)
+let anon_tvar_name i = "_tvar" ^ string_of_int i
+let anon_tvar_id i = Id.of_string (anon_tvar_name i)
+let fun_tparam_name i = "F" ^ string_of_int i
+let fun_tparam_id i = Id.of_string (fun_tparam_name i)
+let field_param_name i = "_a" ^ string_of_int i
+let field_param_id i = Id.of_string (field_param_name i)
+let eta_param_name i = "_x" ^ string_of_int i
+let eta_param_id i = Id.of_string (eta_param_name i)
+let tc_instance_name i = "_tcI" ^ string_of_int i
+let tc_instance_id i = Id.of_string (tc_instance_name i)
+let ctor_fallback_name i = "Ctor" ^ string_of_int i
+let ctor_fallback_id i = Id.of_string (ctor_fallback_name i)
+let db_fallback_name i = "_db" ^ string_of_int i
+let db_fallback_id i = Id.of_string (db_fallback_name i)

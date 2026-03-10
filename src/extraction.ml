@@ -26,6 +26,7 @@ open Namegen
 open Miniml
 open Table
 open Mlutil
+open Common
 open Context.Rel.Declaration
 (*i*)
 
@@ -593,8 +594,8 @@ and extract_really_ind env kn mib =
                       let fn = List.nth field_names field_idx in
                       match fn.binder_name with
                       | Name id -> id
-                      | Anonymous -> Id.of_string ("_tvar" ^ string_of_int field_idx)
-                    else Id.of_string ("_tvar" ^ string_of_int field_idx) in
+                      | Anonymous -> anon_tvar_id field_idx
+                    else anon_tvar_id field_idx in
                     Some (pos, tv, field_idx, var_name)
                 | _ -> None
               ) prods in

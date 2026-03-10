@@ -87,7 +87,7 @@ let rec prefixes_mp mp = match mp with
 
 let rec get_nth_label_mp n = function
   | MPdot (mp,l) -> if Int.equal n 1 then l else get_nth_label_mp (n-1) mp
-  | _ -> failwith "get_nth_label: not enough MPdot"
+  | _ -> CErrors.anomaly (Pp.str "get_nth_label: not enough MPdot.")
 
 let common_prefix_from_list mp0 mpl =
   let prefixes = prefixes_mp mp0 in
@@ -120,20 +120,18 @@ let init_typedefs () = typedefs := Cmap_env.empty
 let add_typedef kn cb t =
   typedefs := Cmap_env.add kn (cb,t) !typedefs
 let lookup_typedef kn cb =
-  try
-    let (cb0,t) = Cmap_env.find kn !typedefs in
-    if cb0 == cb then Some t else None
-  with Not_found -> None
+  match Cmap_env.find_opt kn !typedefs with
+  | Some (cb0, t) when cb0 == cb -> Some t
+  | _ -> None
 
 let cst_types =
   ref (Cmap_env.empty : (constant_body * ml_schema) Cmap_env.t)
 let init_cst_types () = cst_types := Cmap_env.empty
 let add_cst_type kn cb s = cst_types := Cmap_env.add kn (cb,s) !cst_types
 let lookup_cst_type kn cb =
-  try
-    let (cb0,s) = Cmap_env.find kn !cst_types in
-    if cb0 == cb then Some s else None
-  with Not_found -> None
+  match Cmap_env.find_opt kn !cst_types with
+  | Some (cb0, s) when cb0 == cb -> Some s
+  | _ -> None
 
 (*s Inductives table. *)
 
@@ -143,11 +141,9 @@ let init_inductives () = inductives := Mindmap_env.empty
 let add_ind kn mib ml_ind =
   inductives := Mindmap_env.add kn (mib,ml_ind) !inductives
 let lookup_ind kn mib =
-  try
-    let (mib0,ml_ind) = Mindmap_env.find kn !inductives in
-    if mib == mib0 then Some ml_ind
-    else None
-  with Not_found -> None
+  match Mindmap_env.find_opt kn !inductives with
+  | Some (mib0, ml_ind) when mib == mib0 -> Some ml_ind
+  | _ -> None
 
 let unsafe_lookup_ind kn = snd (Mindmap_env.find kn !inductives)
 
@@ -175,8 +171,9 @@ let add_inductive_kind kn k =
 let is_coinductive r =
   let open GlobRef in match r with
     | ConstructRef ((kn,_),_) | IndRef (kn,_) ->
-      (try Mindmap_env.find kn !inductive_kinds == Coinductive
-       with Not_found -> false)
+      (match Mindmap_env.find_opt kn !inductive_kinds with
+       | Some Coinductive -> true
+       | _ -> false)
     | ConstRef _ | VarRef _ -> false
 
 let has_any_coinductive () =
@@ -198,10 +195,9 @@ let get_record_fields r =
     | IndRef (kn,_) -> kn
     | _ -> assert false
   in
-  try match Mindmap_env.find kn !inductive_kinds with
-    | Record f | TypeClass f -> f
-    | _ -> []
-  with Not_found -> []
+  match Mindmap_env.find_opt kn !inductive_kinds with
+  | Some (Record f | TypeClass f) -> f
+  | _ -> []
 
 let record_fields_of_type = function
   | Tglob (r,_,_) -> get_record_fields r
@@ -248,10 +244,9 @@ let get_ind_nb_sign_keeps r =
 let is_typeclass r =
   let open GlobRef in match r with
   | ConstructRef ((kn,_),_) | IndRef (kn,_) ->
-    (try match Mindmap_env.find kn !inductive_kinds with
-      | TypeClass _ -> true
-      | _ -> false
-    with Not_found -> false)
+    (match Mindmap_env.find_opt kn !inductive_kinds with
+     | Some (TypeClass _) -> true
+     | _ -> false)
   | _ -> false  (* ConstRef, VarRef are not type classes *)
 
 let is_typeclass_type = function
@@ -284,10 +279,15 @@ type sigma_assertion =
 let sigma_assertions : (int * sigma_assertion) list Refmap'.t ref = ref Refmap'.empty
 let init_sigma_assertions () = sigma_assertions := Refmap'.empty
 let add_sigma_assertion r idx a =
-  let existing = try Refmap'.find r !sigma_assertions with Not_found -> [] in
+  let existing = match Refmap'.find_opt r !sigma_assertions with
+    | Some l -> l
+    | None -> []
+  in
   sigma_assertions := Refmap'.add r ((idx, a) :: existing) !sigma_assertions
 let get_sigma_assertions r =
-  try Refmap'.find r !sigma_assertions with Not_found -> []
+  match Refmap'.find_opt r !sigma_assertions with
+  | Some l -> l
+  | None -> []
 
 (*s Recursors table. *)
 
@@ -962,7 +962,9 @@ type int_or_id = ArgInt of int | ArgId of Id.t
 let implicits_table = Summary.ref Refmap'.empty ~name:"CraneExtrImplicit"
 
 let implicits_of_global r =
- try Refmap'.find r !implicits_table with Not_found -> Int.Set.empty
+  match Refmap'.find_opt r !implicits_table with
+  | Some s -> s
+  | None -> Int.Set.empty
 
 let add_implicits r l =
   let names = argnames_of_global r in
@@ -1009,8 +1011,9 @@ let reset_modfile () =
   modfile_mps := MPmap.empty
 
 let string_of_modfile mp =
-  try MPmap.find mp !modfile_mps
-  with Not_found ->
+  match MPmap.find_opt mp !modfile_mps with
+  | Some s -> s
+  | None ->
     let id = Id.of_string (raw_string_of_modfile mp) in
     let id' = next_ident_away id !modfile_ids in
     let s' = Id.to_string id' in
@@ -1115,8 +1118,9 @@ let indref_of_match pv =
     | _ -> raise Not_found
 
 let is_custom_match pv =
-  try Refmap'.mem (indref_of_match pv) !custom_matchs
-  with Not_found -> false
+  match indref_of_match pv with
+  | r -> Refmap'.mem r !custom_matchs
+  | exception Not_found -> false
 
 let find_custom_match pv =
   let r = indref_of_match pv in
@@ -1169,7 +1173,10 @@ let ref_imports = Summary.ref Refmap'.empty ~name:"CraneRefImports"
 
 let add_ref_import r s =
   if not (String.is_empty s) then
-    let existing = try Refmap'.find r !ref_imports with Not_found -> StringSet.empty in
+    let existing = match Refmap'.find_opt r !ref_imports with
+      | Some s -> s
+      | None -> StringSet.empty
+    in
     ref_imports := Refmap'.add r (StringSet.add s existing) !ref_imports
 
 let ref_imports_object : (GlobRef.t * string) -> obj =
@@ -1197,8 +1204,9 @@ let custom_imports_object : string -> obj =
    actually referenced during extraction, plus any legacy global imports. *)
 let get_custom_imports () =
   let used_imports = Refset'.fold (fun r acc ->
-    try StringSet.union (Refmap'.find r !ref_imports) acc
-    with Not_found -> acc
+    match Refmap'.find_opt r !ref_imports with
+    | Some imports -> StringSet.union imports acc
+    | None -> acc
   ) !used_refs StringSet.empty in
   StringSet.elements (StringSet.union !custom_imports used_imports)
 
@@ -1472,7 +1480,10 @@ let extract_numeral r fmt =
 let extract_skip_or_module q =
   check_inside_section ();
   (* First try to resolve as a module *)
-  let mpo = try Some (Nametab.locate_module q) with Not_found -> None in
+  let mpo = match Nametab.locate_module q with
+    | mp -> Some mp
+    | exception Not_found -> None
+  in
   match mpo with
   | Some mp ->
       (* It's a module - skip it *)

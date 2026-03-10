@@ -39,6 +39,10 @@ let mk_cppglob (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
 let mk_cppglob_local (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
   CPPglob (r, tys, None)
 
+(* Safe wrappers for Table lookups that may fail *)
+let find_type_opt (r : GlobRef.t) : ml_type option =
+  try Some (Table.find_type r) with Not_found -> None
+
 (* ========================================================================== *)
 (*  Translation context — consolidated mutable state for expression compilation.
     All fields except local_inductives (which has a different lifecycle and is
@@ -87,8 +91,7 @@ let set_current_param_types (params : (Id.t * ml_type) list) =
   tctx.current_param_types <- List.mapi (fun i (_, ty) ->
     (i + 1, ty)) params
 let get_param_type_by_index (idx : int) : ml_type option =
-  try Some (List.assoc idx tctx.current_param_types)
-  with Not_found -> None
+  List.assoc_opt idx tctx.current_param_types
 let clear_current_param_types () =
   tctx.current_param_types <- []
 
@@ -443,7 +446,7 @@ let build_extended_tvar_names sig_indices sig_names body_tvars =
           let name = List.assoc mapped_sig_idx tvar_name_map in
           (i, name) :: acc
         else
-          (i, Id.of_string ("T" ^ string_of_int i)) :: acc
+          (i, tvar_id i) :: acc
       ) tvar_name_map body_extra_tvars
     end else tvar_name_map
   in
@@ -452,7 +455,7 @@ let build_extended_tvar_names sig_indices sig_names body_tvars =
       let idx = i + 1 in
       match List.assoc_opt idx tvar_name_map with
       | Some name -> name
-      | None -> Id.of_string ("_tvar" ^ string_of_int idx))
+      | None -> anon_tvar_id idx)
   else sig_names
 
 (* Convert ML params to C++ types with const/ref wrapping, and create forwarding-ref
@@ -468,13 +471,13 @@ let build_lifted_cpp_params convert_fn base_temps params =
   let fun_tys = List.filter_map (fun (x, ty, j) ->
       match ty with
       | Tmod (TMconst, Tfun (dom, cod_f)) ->
-          Some (x, TTfun (dom, cod_f), Id.of_string ("F" ^ (string_of_int j)))
+          Some (x, TTfun (dom, cod_f), fun_tparam_id j)
       | _ -> None) (List.mapi (fun j (x, ty) -> (x, ty, j)) (List.rev cpp_params)) in
   let n_params = List.length cpp_params in
   let cpp_params = List.mapi (fun j (x, ty) ->
       match ty with
       | Tmod (TMconst, Tfun (_, _)) ->
-        (x, Tref (Tref (Tvar (0, Some (Id.of_string ("F" ^ (string_of_int (n_params - j - 1))))))))
+        (x, Tref (Tref (Tvar (0, Some (fun_tparam_id (n_params - j - 1))))))
       | _ -> (x, ty)) cpp_params in
   let extra_temps = List.map (fun (_, t, n) -> (t, n)) fun_tys in
   let all_temps_with_funs = base_temps @ extra_temps in
@@ -492,8 +495,9 @@ let rec get_args_and_ret acc = function
 
 (* Check if a GlobRef returns a typeclass type (possibly through Tarr layers). *)
 let ref_returns_typeclass r =
-  try Table.is_typeclass_type (ml_return_type (Table.find_type r))
-  with Not_found -> false
+  match find_type_opt r with
+  | Some ty -> Table.is_typeclass_type (ml_return_type ty)
+  | None -> false
 
 (* Use Common.extract_at_pos for extracting elements at a position *)
 
@@ -729,7 +733,7 @@ and try_fold_numeral info expr =
 and gen_expr env (ml_e : ml_ast) : cpp_expr =
   match ml_e with
   | MLrel i ->
-    let var_expr = (try CPPvar (get_db_name i env) with Failure _ -> CPPvar (Id.of_string ("_db" ^ string_of_int i))) in
+    let var_expr = (try CPPvar (get_db_name i env) with Failure _ -> CPPvar (db_fallback_id i)) in
     (* Phase 2: move on last use.
        Emit std::move if: (1) the variable is dead after this point,
        (2) it's an owned variable (not borrowed), and
@@ -792,7 +796,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
            template function names as first-class values. *)
         (match a with
         | MLglob (r, tys_inner) ->
-          let ml_ty = try Table.find_type r with Not_found -> Tunknown in
+          let ml_ty = match find_type_opt r with Some ty -> ty | None -> Tunknown in
           let has_dummy_prefix = function
             | Tarr (t, _) when isTdummy t -> true
             | _ -> false in
@@ -812,7 +816,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
               | _ -> [] in
             let non_dummy_param_tys = collect_non_dummy_types ml_ty in
             let n = List.length non_dummy_param_tys in
-            let arg_names = List.init n (fun i -> "_a" ^ string_of_int i) in
+            let arg_names = List.init n (fun i -> field_param_name i) in
             let fn_name = Common.pp_global_name Term r in
             (* Collect all tvars from the ML type *)
             let all_tvars_set = List.fold_left collect_tvars_set IntSet.empty (non_dummy_param_tys @ [ml_ty]) in
@@ -913,7 +917,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
                 | _ ->
                   let rec render_ty = function
                     | Tvar (_, Some n) -> Id.to_string n
-                    | Tvar (i, None) -> "T" ^ string_of_int i
+                    | Tvar (i, None) -> tvar_name i
                     | Tglob (r, [], _) -> Common.pp_global_name Type r
                     | Tglob (r, tys, _) ->
                       Common.pp_global_name Type r ^ "<" ^
@@ -1206,10 +1210,9 @@ and eta_fun env f args =
   let is_typeclass_instance_arg ml_arg =
     match ml_arg with
     | MLglob (r, _) ->
-        (try
-          let arg_ty = Table.find_type r in
-          Table.is_typeclass_type arg_ty
-        with Not_found -> false)
+        (match find_type_opt r with
+        | Some arg_ty -> Table.is_typeclass_type arg_ty
+        | None -> false)
     | MLrel i ->
         (* Check if the referenced parameter is a type class instance *)
         (try
@@ -1251,8 +1254,8 @@ and eta_fun env f args =
         | Miniml.Tarr (t1, t2) -> collect_tarr_dom (resolve_tmeta t1 :: acc) t2
         | _ -> List.rev acc
       in
-      try
-        let ml_ty = Table.find_type id in
+      match find_type_opt id with
+      | Some ml_ty ->
         let all_dom = collect_tarr_dom [] ml_ty in
         (* Skip leading Tdummy Ktype positions — these correspond to type args
            (tys), not value args. *)
@@ -1268,7 +1271,7 @@ and eta_fun env f args =
           (List.filter is_value_arg primary, List.filter is_value_arg excess)
         else
           (args, [])
-      with Not_found -> (args, [])
+      | None -> (args, [])
     in
     (* Partition args into type class instances and regular args *)
     let (typeclass_ml_args, regular_ml_args) =
@@ -1354,7 +1357,7 @@ and eta_fun env f args =
         match tctx.current_cpp_return_type with
         | None -> None
         | Some ret_ty ->
-          match (try Some (Table.find_type id) with Not_found -> None) with
+          match find_type_opt id with
           | None -> None
           | Some ml_ty_orig ->
             let ret = resolve_tmeta (ml_return_type ml_ty_orig) in
@@ -1465,9 +1468,9 @@ and eta_fun env f args =
           else (missing_args, cod)
         else (missing_args, cod)
       in
-      let eta_args = List.mapi (fun i ty -> (Tmod (TMconst, ty), Some (Id.of_string ("_x" ^ string_of_int i)))) missing_args in
+      let eta_args = List.mapi (fun i ty -> (Tmod (TMconst, ty), Some (eta_param_id i))) missing_args in
       let call_args = args @
-         List.mapi (fun i _ -> (CPPvar (Id.of_string ("_x" ^ string_of_int i)))) eta_args in
+         List.mapi (fun i _ -> (CPPvar (eta_param_id i))) eta_args in
       CPPlambda (List.rev eta_args, Some cod,[Sreturn (Some (CPPfun_call (cglob, List.rev call_args)))], false)
     | _ ->
       if id_is_typeclass_instance && args = [] then
@@ -1538,7 +1541,7 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body =
     | _ -> ret
   in
   let asgns =  List.mapi (fun i x ->
-      let id = Id.of_string ("_a" ^ string_of_int i) in
+      let id = field_param_id i in
       let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars (snd x) in
       (* Only erase Tvars in constructor field types for indexed inductives *)
       let cpp_ty = if is_indexed_ind then tvar_erase_type cpp_ty else cpp_ty in
@@ -1613,10 +1616,11 @@ and gen_cpp_case (typ : ml_type) t env pv =
         in
         (match func_ref with
          | Some r ->
-             (try
-               let ret_ty = ml_return_type (Table.find_type r) in
+             (match find_type_opt r with
+             | Some ty ->
+               let ret_ty = ml_return_type ty in
                resolve_tvar_type typ ret_ty
-             with Not_found -> typ)
+             | None -> typ)
          | None -> typ)
     | _ -> typ
   in
@@ -1725,7 +1729,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
       let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty in
       if List.nth dummies i then
         Some (Sasgn (var_name, Some cpp_ty,
-          CPPmove (CPPmember (CPPvar (Id.of_string "_rf"), Id.of_string ("_a" ^ string_of_int i)))))
+          CPPmove (CPPmember (CPPvar (Id.of_string "_rf"), field_param_id i))))
       else None
     ) rev_ids' in
     let extract_stmts = List.filter_map Fun.id extract_stmts in
@@ -1758,7 +1762,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
     (* 5. Compute new field values and assign them back:
           _rf._aN = <new_value>; *)
     let assign_stmts = List.mapi (fun i tail_arg ->
-      let field_id = Id.of_string ("_a" ^ string_of_int i) in
+      let field_id = field_param_id i in
       let new_val = gen_expr body_env tail_arg in
       Sassign_field (CPPvar (Id.of_string "_rf"), field_id, new_val)
     ) tail_args in
@@ -1838,7 +1842,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       if i <= n_outer then
         List.nth outer_tvars (i - 1)
       else
-        Id.of_string ("T" ^ string_of_int i)
+        tvar_id i
     ) fix_tvar_indices in
     let all_temps = List.map (fun id -> (TTtypename, id)) all_tvar_names in
     (* Generate the lifted function name *)
@@ -2027,7 +2031,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       if i <= n_outer then
         List.nth outer_tvars (i - 1)
       else
-        Id.of_string ("T" ^ string_of_int i)
+        tvar_id i
     ) tvar_indices in
     let all_temps = List.map (fun id -> (TTtypename, id)) all_tvar_names in
 
@@ -2255,7 +2259,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       if i <= n_outer then
         List.nth outer_tvars (i - 1)
       else
-        Id.of_string ("T" ^ string_of_int i)
+        tvar_id i
     ) fix_tvar_indices in
     let all_temps = List.map (fun id -> (TTtypename, id)) all_tvar_names in
     let extended_tvar_names = build_extended_tvar_names fix_tvar_indices all_tvar_names all_body_tvars in
@@ -2496,7 +2500,7 @@ let gen_ind_cpp vars name cnames tys =
     Array.to_list (Array.mapi (fun i tys ->
       let c = cnames.(i) in
       (* eventually incorporate given names when they exist *)
-      let constr = List.mapi (fun i x -> (Id.of_string ("_a" ^ string_of_int i) , convert_ml_type_to_cpp_type (empty_env ()) (Refset'.add name Refset'.empty) vars x)) tys in
+      let constr = List.mapi (fun i x -> (field_param_id i , convert_ml_type_to_cpp_type (empty_env ()) (Refset'.add name Refset'.empty) vars x)) tys in
       let make_args = List.map(fun (x,_) -> mk_cppglob_local (GlobRef.VarRef x) []) constr in
       let ty_vars = List.mapi (fun i x -> Tvar (i, Some x)) vars in
       let make = Dfundef ([c, []; GlobRef.VarRef (Id.of_string "make"), []], Tshared_ptr (Tglob (name, ty_vars, [])), List.rev constr,
@@ -2696,7 +2700,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type)
             tc_acc ((id_of_mlid ml_id, lam_ty) :: lam_acc)
         else if Table.is_typeclass_type arg_ty then begin
           (* Typeclass constraint — becomes a template typename for the instance *)
-          let instance_name = Id.of_string ("_tcI" ^ string_of_int tc_idx) in
+          let instance_name = tc_instance_id tc_idx in
           strip_outer_layers rest_ty rest_body (tc_idx + 1)
             ((TTtypename, instance_name) :: tc_acc)
             ((instance_name, lam_ty) :: lam_acc)
@@ -2723,7 +2727,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type)
     | Tglob (_, type_args, _) ->
         let raw = List.fold_left collect_ml_tvars [] type_args in
         List.sort compare raw |> List.mapi (fun i _ ->
-          (TTtypename, Id.of_string ("T" ^ string_of_int (i + 1))))
+          (TTtypename, tvar_id (i + 1)))
     | _ -> []
   in
   (* Template params: typeclass params first, then type vars (matches gen_dfun convention) *)
@@ -2944,7 +2948,7 @@ let is_typeclass_instance (_body : ml_ast) (ty : ml_type) : bool =
 let get_tvars_indexed t =
   let get_name i n =
     match n with
-    | None -> Id.of_string ("T" ^ string_of_int i)
+    | None -> tvar_id i
     | Some n -> n in
   let rec aux l = function
     | Tvar (i, n) -> if List.exists (fun (x, _) -> i == x) l
@@ -3252,7 +3256,7 @@ let gen_dfun n b dom cod ty temps =
      get_missing returns types innermost-first from mldom, so index i maps to
      name _x(n_miss - 1 - i).  The resulting list is already in de Bruijn order
      (innermost first) because mapi iterates innermost-first. *)
-  let missing = List.mapi (fun i t -> (Id (Id.of_string ("_x" ^ string_of_int (n_miss - 1 - i))), t)) missing_types in
+  let missing = List.mapi (fun i t -> (Id (eta_param_id (n_miss - 1 - i)), t)) missing_types in
   (* Unify body lambda parameter types with the function signature types.
 
      When optimize_fix (mlutil.ml) promotes a polymorphic let-fix into a
@@ -3333,7 +3337,7 @@ let gen_dfun n b dom cod ty temps =
     if Table.is_typeclass_type ty then begin
       let i = !typeclass_counter in
       typeclass_counter := i + 1;
-      let instance_name = Id.of_string ("_tcI" ^ string_of_int i) in
+      let instance_name = tc_instance_id i in
       (* Build template param info *)
       let temp_info = match ty with
         | Miniml.Tglob (class_ref, type_args, _) ->
@@ -3436,9 +3440,9 @@ let gen_dfun n b dom cod ty temps =
         let fun_idx = get_tvar_indices (Tfun (fdom, fcod)) in
         let has_undeclared = List.exists (fun idx -> not (IntSet.mem idx primary)) fun_idx in
         if has_undeclared || has_hkt_erasure (Tfun (fdom, fcod)) then
-          Some (x, TTtypename, Id.of_string ("F" ^ (string_of_int i)))
+          Some (x, TTtypename, fun_tparam_id i)
         else
-          Some (x, TTfun (fdom, fcod), Id.of_string ("F" ^ (string_of_int i)))
+          Some (x, TTfun (fdom, fcod), fun_tparam_id i)
       | _ -> None) (List.mapi (fun i (x, ty) -> (x, ty, i)) (List.rev ids)) in
   (* Replace the parameter type of promoted (non-CPS) function params with
      the template type variable [F&&].  CPS params are left untouched — they
@@ -3449,7 +3453,7 @@ let gen_dfun n b dom cod ty temps =
   let ids = List.mapi (fun i (x, ty) ->
       match ty with
       |  (Tmod (TMconst, Tfun (dom, cod))) when not (is_cps_param_db i) ->
-        (x, Tref (Tref (Tvar (0, Some (Id.of_string ("F" ^ (string_of_int ((List.length ids) - i - 1))))))))
+        (x, Tref (Tref (Tvar (0, Some (fun_tparam_id ((List.length ids) - i - 1))))))
       | _ -> (x, ty)) ids in
   (* TODO: below is needed for lambdas in recursive positions, but is badddddd. *)
   (* let rec_fun_tys = List.map (fun (_,t, _) ->
@@ -3836,7 +3840,7 @@ let gen_decl_for_pp n b ty =
       let rec collect_tc_ids acc i = function
         | Miniml.Tarr (t1, t2) ->
           if Table.is_typeclass_type t1 then
-            collect_tc_ids (Id.of_string ("_tcI" ^ string_of_int i) :: acc) (i+1) t2
+            collect_tc_ids (tc_instance_id i :: acc) (i+1) t2
           else
             collect_tc_ids acc i t2
         | _ -> List.rev acc
@@ -3850,7 +3854,7 @@ let gen_decl_for_pp n b ty =
     let f, e = gen_dfun n b dom cod ty temps in
   let fun_tys = List.filter_map (fun (ty, i) ->
       match ty with
-      | Tfun (dom, cod) -> Some (Id.of_string ("F" ^ (string_of_int i)))
+      | Tfun (dom, cod) -> Some (fun_tparam_id i)
       | _ -> None) (List.mapi (fun i ty -> (ty, i)) dom) in
   let tvars = tc_param_ids @ tvars @ fun_tys in
     Some f, e, tvars
@@ -3882,7 +3886,7 @@ let gen_decl_for_dfuns n b ty =
       let rec collect_tc_ids acc i = function
         | Miniml.Tarr (t1, t2) ->
           if Table.is_typeclass_type t1 then
-            collect_tc_ids (Id.of_string ("_tcI" ^ string_of_int i) :: acc) (i+1) t2
+            collect_tc_ids (tc_instance_id i :: acc) (i+1) t2
           else
             collect_tc_ids acc i t2
         | _ -> List.rev acc
@@ -3895,7 +3899,7 @@ let gen_decl_for_dfuns n b ty =
     let (f, env) = gen_dfun n b dom cod ty temps in
     let fun_tys = List.filter_map (fun (ty, i) ->
       match ty with
-      | Tfun (dom, cod) -> Some (Id.of_string ("F" ^ (string_of_int i)))
+      | Tfun (dom, cod) -> Some (fun_tparam_id i)
       | _ -> None) (List.mapi (fun i ty -> (ty, i)) dom) in
     let tvars = tc_param_ids @ tvars @ fun_tys in
     f , env , tvars
@@ -4026,7 +4030,7 @@ let gen_ind_header vars name cnames tys =
     (fun i tys ->
       let c = cnames.(i) in
       (* eventually incorporate given names when they exist *)
-      let constr = List.mapi (fun i x -> (Id.of_string ("_a" ^ string_of_int i) , convert_ml_type_to_cpp_type (empty_env ()) (Refset'.add name Refset'.empty) vars x)) tys in
+      let constr = List.mapi (fun i x -> (field_param_id i , convert_ml_type_to_cpp_type (empty_env ()) (Refset'.add name Refset'.empty) vars x)) tys in
       (* For function parameters, use const ref for shared_ptr types *)
       let constr_params = List.map (fun (x, ty) ->
         let wrapped = match ty with
@@ -4173,7 +4177,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   (* After remapping, extra tvars are at positions num_ind_vars+1, num_ind_vars+2, ... *)
   let extra_tvars = List.map snd extra_remap in
   let extra_tvar_names = List.mapi (fun i _ ->
-    Id.of_string ("T" ^ string_of_int (i + 1))
+    tvar_id (i + 1)
   ) extra_tvars in
   let extra_tvar_map = List.combine extra_tvars extra_tvar_names in
   let subst_extra_tvars = make_subst_extra_tvars num_ind_vars extra_tvar_map in
@@ -4230,7 +4234,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   (* Extract function-typed parameters for template params *)
   let fun_params = List.filter_map (fun (id, cpp_ty, i, _) ->
     match cpp_ty with
-    | Tfun (dom, cod) -> Some (id, TTfun (dom, cod), Id.of_string ("F" ^ string_of_int i))
+    | Tfun (dom, cod) -> Some (id, TTfun (dom, cod), fun_tparam_id i)
     | _ -> None
   ) params_with_idx in
 
@@ -4245,7 +4249,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
      This matches gen_dfun's logic to ensure forward declarations and definitions agree. *)
   let params = List.map (fun (id, cpp_ty, i, owned) ->
     let wrapped = match cpp_ty with
-      | Tfun _ -> Tref (Tref (Tvar (0, Some (Id.of_string ("F" ^ string_of_int i)))))
+      | Tfun _ -> Tref (Tref (Tvar (0, Some (fun_tparam_id i))))
       | Tshared_ptr _ | Tunique_ptr _ ->
         if owned then cpp_ty  (* Pass by value for owned params *)
         else Tref (Tmod (TMconst, cpp_ty))  (* Const ref for borrowed params *)
@@ -4379,7 +4383,7 @@ let gen_ind_header_v2 ?(is_mutual=false) vars name cnames tys method_candidates 
     let ctor_names = Array.to_list (Array.map (fun c ->
       match c with
       | GlobRef.ConstructRef _ -> Id.of_string (Common.pp_global_name Type c)
-      | _ -> Id.of_string ("Ctor" ^ string_of_int 0)
+      | _ -> ctor_fallback_id 0
     ) cnames) in
     Denum { de_ref = name; de_ctors = ctor_names; de_tparams = [] }
   end
@@ -4396,7 +4400,7 @@ let gen_ind_header_v2 ?(is_mutual=false) vars name cnames tys method_candidates 
         | GlobRef.ConstructRef ((_, _), _) ->
             (* Get constructor name from the GlobRef *)
             Id.of_string (Common.pp_global_name Type c)
-        | _ -> Id.of_string ("Ctor" ^ string_of_int i)
+        | _ -> ctor_fallback_id i
       in
       (* Fields: convert types, using self_ty for recursive references *)
       let fields = List.mapi (fun j ty ->
@@ -4404,7 +4408,7 @@ let gen_ind_header_v2 ?(is_mutual=false) vars name cnames tys method_candidates 
         (* For indexed inductives (no template params), erase unnamed Tvars to std::any *)
         let cpp_ty = if vars = [] then tvar_erase_type cpp_ty else cpp_ty in
         (* Field name: use descriptive names if available, otherwise _a0, _a1, etc. *)
-        let field_name = Id.of_string ("_a" ^ string_of_int j) in
+        let field_name = field_param_id j in
         (Fvar (field_name, cpp_ty), VPublic)
       ) tys_list in
       (Fnested_struct (cname, fields), VPublic)
@@ -4416,7 +4420,7 @@ let gen_ind_header_v2 ?(is_mutual=false) vars name cnames tys method_candidates 
     (fun i c ->
       let cname_id = match c with
         | GlobRef.ConstructRef _ -> Id.of_string (Common.pp_global_name Type c)
-        | _ -> Id.of_string ("Ctor" ^ string_of_int i)
+        | _ -> ctor_fallback_id i
       in
       (* Use Tid for local nested struct types - no template args since they inherit *)
       Tid (cname_id, [])
@@ -4436,7 +4440,7 @@ let gen_ind_header_v2 ?(is_mutual=false) vars name cnames tys method_candidates 
     (fun i c ->
       let cname = match c with
         | GlobRef.ConstructRef _ -> Id.of_string (Common.pp_global_name Type c)
-        | _ -> Id.of_string ("Ctor" ^ string_of_int i)
+        | _ -> ctor_fallback_id i
       in
       let param_name = Id.of_string "_v" in
       let param_ty = Tid (cname, []) in
@@ -4474,7 +4478,7 @@ let gen_ind_header_v2 ?(is_mutual=false) vars name cnames tys method_candidates 
     let c = cnames.(i) in
     let cname = match c with
       | GlobRef.ConstructRef _ -> Common.pp_global_name Type c
-      | _ -> "Ctor" ^ string_of_int i
+      | _ -> ctor_fallback_name i
     in
     let factory_name = Id.of_string (cname ^ suffix) in
     let params = List.mapi (fun j ty ->
