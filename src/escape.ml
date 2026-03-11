@@ -391,7 +391,8 @@ let same_inductive t1 t2 =
   match t1, t2 with
   | Tglob (r1, args1, _), Tglob (r2, args2, _) ->
       Names.GlobRef.CanOrd.equal r1 r2 &&
-      List.length args1 = List.length args2
+      List.length args1 = List.length args2 &&
+      List.for_all2 (fun a b -> a = b) args1 args2
   | _ -> false
 
 (** Find branches suitable for memory reuse.

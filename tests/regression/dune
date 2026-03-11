@@ -1620,3 +1620,14 @@
   (alias runtest)
   (deps ram_state_ops.t.exe)
   (action (run ./ram_state_ops.t.exe))))
+
+(subdir decode_list
+ (rule
+  (targets decode_list.t.exe)
+  (deps DecodeList.vo decode_list.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_list.t.exe decode_list.cpp decode_list.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_list.t.exe)
+  (action (run ./decode_list.t.exe))))

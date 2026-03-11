@@ -12,50 +12,6 @@
  (flags (:standard -output-directory ../../tests/wip)))
 
 
-(subdir decode_list_empty
- (rule
-  (targets decode_list_empty.t.exe)
-  (deps DecodeListEmpty.vo decode_list_empty.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_list_empty.t.exe decode_list_empty.cpp decode_list_empty.t.cpp)))
- (rule
-  (alias runtest)
-  (deps decode_list_empty.t.exe)
-  (action (run ./decode_list_empty.t.exe))))
-
-(subdir decode_list_odd_tail
- (rule
-  (targets decode_list_odd_tail.t.exe)
-  (deps DecodeListOddTail.vo decode_list_odd_tail.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_list_odd_tail.t.exe decode_list_odd_tail.cpp decode_list_odd_tail.t.cpp)))
- (rule
-  (alias runtest)
-  (deps decode_list_odd_tail.t.exe)
-  (action (run ./decode_list_odd_tail.t.exe))))
-
-(subdir decode_list_pair_count
- (rule
-  (targets decode_list_pair_count.t.exe)
-  (deps DecodeListPairCount.vo decode_list_pair_count.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_list_pair_count.t.exe decode_list_pair_count.cpp decode_list_pair_count.t.cpp)))
- (rule
-  (alias runtest)
-  (deps decode_list_pair_count.t.exe)
-  (action (run ./decode_list_pair_count.t.exe))))
-
-(subdir decode_list_single_pair
- (rule
-  (targets decode_list_single_pair.t.exe)
-  (deps DecodeListSinglePair.vo decode_list_single_pair.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_list_single_pair.t.exe decode_list_single_pair.cpp decode_list_single_pair.t.cpp)))
- (rule
-  (alias runtest)
-  (deps decode_list_single_pair.t.exe)
-  (action (run ./decode_list_single_pair.t.exe))))
-
 (subdir load_program_head_write
  (rule
   (targets load_program_head_write.t.exe)

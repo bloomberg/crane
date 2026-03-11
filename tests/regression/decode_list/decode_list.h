@@ -65,7 +65,7 @@ public:
   }
 };
 
-struct DecodeListSinglePair {
+struct DecodeList {
   struct instruction {
   public:
     struct NOP {};
@@ -131,7 +131,54 @@ struct DecodeListSinglePair {
   static std::shared_ptr<List<std::shared_ptr<instruction>>>
   decode_list(const std::shared_ptr<List<unsigned int>> &bytes);
 
-  static inline const unsigned int t =
+  static inline const unsigned int t_empty =
+      decode_list(List<unsigned int>::ctor::nil_())->length();
+
+  static inline const unsigned int t_odd_tail = []() {
+    return std::visit(
+        Overloaded{
+            [](const typename List<std::shared_ptr<instruction>>::nil _args)
+                -> unsigned int { return 0u; },
+            [](const typename List<std::shared_ptr<instruction>>::cons _args)
+                -> unsigned int {
+              std::shared_ptr<instruction> i = _args._a0;
+              std::shared_ptr<List<std::shared_ptr<instruction>>> l = _args._a1;
+              return std::visit(
+                  Overloaded{
+                      [&](const typename instruction::NOP _args)
+                          -> unsigned int {
+                        return std::visit(
+                            Overloaded{
+                                [](const typename List<
+                                    std::shared_ptr<instruction>>::nil _args)
+                                    -> unsigned int { return 1u; },
+                                [](const typename List<
+                                    std::shared_ptr<instruction>>::cons _args)
+                                    -> unsigned int { return 0u; }},
+                            std::move(l)->v());
+                      },
+                      [](const typename instruction::LDM _args)
+                          -> unsigned int { return 0u; }},
+                  std::move(i)->v());
+            }},
+        decode_list(
+            List<unsigned int>::ctor::cons_(
+                0u, List<unsigned int>::ctor::cons_(
+                        99u, List<unsigned int>::ctor::cons_(
+                                 42u, List<unsigned int>::ctor::nil_()))))
+            ->v());
+  }();
+
+  static inline const unsigned int t_pair_count =
+      decode_list(
+          List<unsigned int>::ctor::cons_(
+              0u, List<unsigned int>::ctor::cons_(
+                      1u, List<unsigned int>::ctor::cons_(
+                              2u, List<unsigned int>::ctor::cons_(
+                                      3u, List<unsigned int>::ctor::nil_())))))
+          ->length();
+
+  static inline const unsigned int t_single_pair =
       decode_list(List<unsigned int>::ctor::cons_(
                       0u, List<unsigned int>::ctor::cons_(
                               7u, List<unsigned int>::ctor::nil_())))
