@@ -1022,7 +1022,7 @@ let init ?(compute = false) ?(inner = false) modular library =
   set_modular modular;
   set_library library;
   set_extrcompute compute;
-  Cpp.reset_cpp_state ();
+  Cpp_state.reset_cpp_state ();
   (* Reset ALL C++ global state from previous extractions *)
   reset ()
 
