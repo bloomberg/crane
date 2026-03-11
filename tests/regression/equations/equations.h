@@ -359,7 +359,7 @@ struct Equations {
                            const std::pair<unsigned int, unsigned int> _x5,
                            const unsigned int _x6,
                            const std::shared_ptr<gcd_graph> &_x7) {
-    return gcd_graph_mut<T1>(_x0, _x1, _x2, _x3, _x4, _x5, _x6, _x7);
+    return gcd_graph_mut(_x0, _x1, _x2, _x3, _x4, _x5, _x6, _x7);
   }
 
   static std::shared_ptr<gcd_graph>
@@ -371,7 +371,7 @@ struct Equations {
             MapsTo<T1, unsigned int, unsigned int, T1> F3>
   static T1 gcd_elim(F0 &&f, F1 &&f0, F2 &&f2, F3 &&f3,
                      const std::pair<unsigned int, unsigned int> p) {
-    return gcd_graph_mut<T1>(
+    return gcd_graph_mut(
         f, f0,
         [=](unsigned int _x, unsigned int _x0,
             std::shared_ptr<gcd_clause_3_graph> _x1, T1 x) {
@@ -695,7 +695,7 @@ struct Equations {
                            F4 &&_x4, const unsigned int _x5,
                            const unsigned int _x6,
                            const std::shared_ptr<collatz_steps_graph> &_x7) {
-    return collatz_steps_graph_mut<T1>(_x0, _x1, _x2, _x3, _x4, _x5, _x6, _x7);
+    return collatz_steps_graph_mut(_x0, _x1, _x2, _x3, _x4, _x5, _x6, _x7);
   }
 
   static std::shared_ptr<collatz_steps_graph>
@@ -705,7 +705,7 @@ struct Equations {
             MapsTo<T1, unsigned int, T1> F3>
   static T1 collatz_steps_elim(const T1 f, const T1 f0, F2 &&f2, F3 &&f3,
                                const unsigned int n) {
-    return collatz_steps_graph_mut<T1>(
+    return collatz_steps_graph_mut(
         f, f0,
         [](unsigned int _x, std::shared_ptr<collatz_steps_clause_3_graph> _x0,
            T1 x) { return x(); },

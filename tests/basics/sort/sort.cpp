@@ -129,8 +129,7 @@ Sort::merge_prog(const std::shared_ptr<List<unsigned int>> &_x,
 
 std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
 Sort::msort(const std::shared_ptr<List<unsigned int>> &_x0) {
-  return div_conq_split<
-      unsigned int, std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>>(
+  return div_conq_split(
       Sig<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
           List<unsigned int>::ctor::nil_()),
       [](unsigned int a) {
@@ -174,8 +173,7 @@ Sort::pair_merge_prog(const unsigned int _x, const unsigned int _x0,
 
 std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
 Sort::psort(const std::shared_ptr<List<unsigned int>> &_x0) {
-  return div_conq_pair<
-      unsigned int, std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>>(
+  return div_conq_pair(
       Sig<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
           List<unsigned int>::ctor::nil_()),
       [](unsigned int a) {
@@ -226,8 +224,7 @@ Sort::psort(const std::shared_ptr<List<unsigned int>> &_x0) {
 
 std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
 Sort::qsort(const std::shared_ptr<List<unsigned int>> &_x0) {
-  return div_conq_pivot<
-      unsigned int, std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>>(
+  return div_conq_pivot(
       Compare_dec::le_dec,
       Sig<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
           List<unsigned int>::ctor::nil_()),

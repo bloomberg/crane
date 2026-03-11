@@ -1431,8 +1431,12 @@ and eta_fun env f args =
             | _ -> None)
       in
       if filtered = [] && regular_type_args <> [] then begin
-        (* Case (a): tys was non-empty but all got filtered. *)
-        match try_recover_erased_return_type () with
+        (* Case (a): tys was non-empty but all got filtered.
+           Only attempt recovery when there are no non-erased value args —
+           if there are value args, C++ can deduce the template types from
+           them (and injecting explicit type args may conflict with the
+           template signature, e.g. hk_map's F0/F1 are function types). *)
+        match (if args = [] then try_recover_erased_return_type () else None) with
         | Some (idx, ret_ty, _) ->
           (* Replace the erased position with the concrete return type,
              then filter out any remaining erased entries. *)
@@ -1442,8 +1446,10 @@ and eta_fun env f args =
       end
       else if tys = [] then begin
         (* Case (b): tys is empty — synthesize type args from scratch.
-           Build one entry per Tdummy Ktype domain position. *)
-        match try_recover_erased_return_type () with
+           Build one entry per Tdummy Ktype domain position.
+           As in case (a), only attempt recovery when there are no value
+           args — if there are value args, C++ can deduce the types. *)
+        match (if args = [] then try_recover_erased_return_type () else None) with
         | Some (_idx, ret_ty, all_dom) ->
           List.filter_map (function
             | Miniml.Tdummy Miniml.Ktype -> Some ret_ty

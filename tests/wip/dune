@@ -11,14 +11,3 @@
    Crane)
  (flags (:standard -output-directory ../../tests/wip)))
 
-
-(subdir todo_erased_instance_param
- (rule
-  (targets todo_erased_instance_param.t.exe)
-  (deps TodoErasedInstanceParam.vo todo_erased_instance_param.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_erased_instance_param.t.exe todo_erased_instance_param.cpp todo_erased_instance_param.t.cpp)))
- (rule
-  (alias runtest)
-  (deps todo_erased_instance_param.t.exe)
-  (action (run ./todo_erased_instance_param.t.exe))))

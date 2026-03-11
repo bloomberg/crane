@@ -176,23 +176,20 @@ struct HigherKinded {
       tree_map<unsigned int, unsigned int>(
           [](unsigned int n) { return (n * 2u); }, test_tree);
 
-  static inline const std::optional<unsigned int> test_hk_option =
-      hk_map<std::optional<unsigned int>, unsigned int, unsigned int>(
-          []<typename _T1>(auto &&_a0,
-                           const std::optional<_T1> &_a1) -> decltype(auto) {
-            return map_option<_T1,
-                              std::invoke_result_t<decltype(_a0) &, _T1 &>>(
-                std::forward<decltype(_a0)>(_a0), _a1);
-          },
-          [](unsigned int n) { return (n + 1u); },
-          std::make_optional<unsigned int>(5u));
+  static inline const std::optional<unsigned int> test_hk_option = hk_map(
+      []<typename _T1>(auto &&_a0,
+                       const std::optional<_T1> &_a1) -> decltype(auto) {
+        return map_option<_T1, std::invoke_result_t<decltype(_a0) &, _T1 &>>(
+            std::forward<decltype(_a0)>(_a0), _a1);
+      },
+      [](unsigned int n) { return (n + 1u); },
+      std::make_optional<unsigned int>(5u));
 
-  static inline const std::shared_ptr<Tree<unsigned int>> test_hk_tree =
-      hk_map<std::shared_ptr<Tree<unsigned int>>, unsigned int, unsigned int>(
-          []<typename _T1>(auto &&_a0, const std::shared_ptr<Tree<_T1>> &_a1)
-              -> decltype(auto) {
-            return tree_map<_T1, std::invoke_result_t<decltype(_a0) &, _T1 &>>(
-                std::forward<decltype(_a0)>(_a0), _a1);
-          },
-          [](unsigned int n) { return (n + 10u); }, test_tree);
+  static inline const std::shared_ptr<Tree<unsigned int>> test_hk_tree = hk_map(
+      []<typename _T1>(
+          auto &&_a0, const std::shared_ptr<Tree<_T1>> &_a1) -> decltype(auto) {
+        return tree_map<_T1, std::invoke_result_t<decltype(_a0) &, _T1 &>>(
+            std::forward<decltype(_a0)>(_a0), _a1);
+      },
+      [](unsigned int n) { return (n + 10u); }, test_tree);
 };
