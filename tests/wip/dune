@@ -33,3 +33,1731 @@
   (alias runtest)
   (deps program_targets_region_scan.t.exe)
   (action (run ./program_targets_region_scan.t.exe))))
+  (deps decode_list_empty.t.exe)
+  (action (run ./decode_list_empty.t.exe))))
+
+(subdir decode_list_pair_count
+ (rule
+  (targets decode_list_pair_count.t.exe)
+  (deps DecodeListPairCount.vo decode_list_pair_count.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_list_pair_count.t.exe decode_list_pair_count.cpp decode_list_pair_count.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_list_pair_count.t.exe)
+  (action (run ./decode_list_pair_count.t.exe))))
+
+(subdir addr_page_decomp_edge_0007
+ (rule
+  (targets addr_page_decomp_edge_0007.t.exe)
+  (deps AddrPageDecompEdge0007.vo addr_page_decomp_edge_0007.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} addr_page_decomp_edge_0007.t.exe addr_page_decomp_edge_0007.cpp addr_page_decomp_edge_0007.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps addr_page_decomp_edge_0007.t.exe)
+  (action (run ./addr_page_decomp_edge_0007.t.exe))))
+
+(subdir addr_space_wrap_prop
+ (rule
+  (targets addr_space_wrap_prop.t.exe)
+  (deps AddrSpaceWrapProp.vo addr_space_wrap_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} addr_space_wrap_prop.t.exe addr_space_wrap_prop.cpp addr_space_wrap_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps addr_space_wrap_prop.t.exe)
+  (action (run ./addr_space_wrap_prop.t.exe))))
+
+(subdir bad_state_acc_overflow_not_wf_prop
+ (rule
+  (targets bad_state_acc_overflow_not_wf_prop.t.exe)
+  (deps BadStateAccOverflowNotWfProp.vo bad_state_acc_overflow_not_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bad_state_acc_overflow_not_wf_prop.t.exe bad_state_acc_overflow_not_wf_prop.cpp bad_state_acc_overflow_not_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bad_state_acc_overflow_not_wf_prop.t.exe)
+  (action (run ./bad_state_acc_overflow_not_wf_prop.t.exe))))
+
+(subdir bad_state_pc_overflow_not_wf_prop
+ (rule
+  (targets bad_state_pc_overflow_not_wf_prop.t.exe)
+  (deps BadStatePcOverflowNotWfProp.vo bad_state_pc_overflow_not_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bad_state_pc_overflow_not_wf_prop.t.exe bad_state_pc_overflow_not_wf_prop.cpp bad_state_pc_overflow_not_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bad_state_pc_overflow_not_wf_prop.t.exe)
+  (action (run ./bad_state_pc_overflow_not_wf_prop.t.exe))))
+
+(subdir bad_state_stack_overflow_not_wf_prop
+ (rule
+  (targets bad_state_stack_overflow_not_wf_prop.t.exe)
+  (deps BadStateStackOverflowNotWfProp.vo bad_state_stack_overflow_not_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bad_state_stack_overflow_not_wf_prop.t.exe bad_state_stack_overflow_not_wf_prop.cpp bad_state_stack_overflow_not_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bad_state_stack_overflow_not_wf_prop.t.exe)
+  (action (run ./bad_state_stack_overflow_not_wf_prop.t.exe))))
+
+(subdir bad_state_wrong_reg_count_not_wf_prop
+ (rule
+  (targets bad_state_wrong_reg_count_not_wf_prop.t.exe)
+  (deps BadStateWrongRegCountNotWfProp.vo bad_state_wrong_reg_count_not_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bad_state_wrong_reg_count_not_wf_prop.t.exe bad_state_wrong_reg_count_not_wf_prop.cpp bad_state_wrong_reg_count_not_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bad_state_wrong_reg_count_not_wf_prop.t.exe)
+  (action (run ./bad_state_wrong_reg_count_not_wf_prop.t.exe))))
+
+(subdir bbl_pops_stack_prop
+ (rule
+  (targets bbl_pops_stack_prop.t.exe)
+  (deps BblPopsStackProp.vo bbl_pops_stack_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bbl_pops_stack_prop.t.exe bbl_pops_stack_prop.cpp bbl_pops_stack_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bbl_pops_stack_prop.t.exe)
+  (action (run ./bbl_pops_stack_prop.t.exe))))
+
+(subdir branch_target_in_page_prop
+ (rule
+  (targets branch_target_in_page_prop.t.exe)
+  (deps BranchTargetInPageProp.vo branch_target_in_page_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} branch_target_in_page_prop.t.exe branch_target_in_page_prop.cpp branch_target_in_page_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps branch_target_in_page_prop.t.exe)
+  (action (run ./branch_target_in_page_prop.t.exe))))
+
+(subdir clb_clears_volatile_prop
+ (rule
+  (targets clb_clears_volatile_prop.t.exe)
+  (deps ClbClearsVolatileProp.vo clb_clears_volatile_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} clb_clears_volatile_prop.t.exe clb_clears_volatile_prop.cpp clb_clears_volatile_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps clb_clears_volatile_prop.t.exe)
+  (action (run ./clb_clears_volatile_prop.t.exe))))
+
+(subdir decode_add_wf_edge_0063
+ (rule
+  (targets decode_add_wf_edge_0063.t.exe)
+  (deps DecodeAddWfEdge0063.vo decode_add_wf_edge_0063.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_add_wf_edge_0063.t.exe decode_add_wf_edge_0063.cpp decode_add_wf_edge_0063.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_add_wf_edge_0063.t.exe)
+  (action (run ./decode_add_wf_edge_0063.t.exe))))
+
+(subdir decode_addr12_helper_edge_0027
+ (rule
+  (targets decode_addr12_helper_edge_0027.t.exe)
+  (deps DecodeAddr12HelperEdge0027.vo decode_addr12_helper_edge_0027.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_addr12_helper_edge_0027.t.exe decode_addr12_helper_edge_0027.cpp decode_addr12_helper_edge_0027.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_addr12_helper_edge_0027.t.exe)
+  (action (run ./decode_addr12_helper_edge_0027.t.exe))))
+
+(subdir decode_jun_wf_edge_0059
+ (rule
+  (targets decode_jun_wf_edge_0059.t.exe)
+  (deps DecodeJunWfEdge0059.vo decode_jun_wf_edge_0059.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_jun_wf_edge_0059.t.exe decode_jun_wf_edge_0059.cpp decode_jun_wf_edge_0059.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_jun_wf_edge_0059.t.exe)
+  (action (run ./decode_jun_wf_edge_0059.t.exe))))
+
+(subdir decode_list_single_pair
+ (rule
+  (targets decode_list_single_pair.t.exe)
+  (deps DecodeListSinglePair.vo decode_list_single_pair.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_list_single_pair.t.exe decode_list_single_pair.cpp decode_list_single_pair.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_list_single_pair.t.exe)
+  (action (run ./decode_list_single_pair.t.exe))))
+
+(subdir decode_opcode_6_to_13_wf_edge_0049
+ (rule
+  (targets decode_opcode_6_to_13_wf_edge_0049.t.exe)
+  (deps DecodeOpcode6To13WfEdge0049.vo decode_opcode_6_to_13_wf_edge_0049.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_opcode_6_to_13_wf_edge_0049.t.exe decode_opcode_6_to_13_wf_edge_0049.cpp decode_opcode_6_to_13_wf_edge_0049.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_opcode_6_to_13_wf_edge_0049.t.exe)
+  (action (run ./decode_opcode_6_to_13_wf_edge_0049.t.exe))))
+
+(subdir decode_other_wf_edge_0069
+ (rule
+  (targets decode_other_wf_edge_0069.t.exe)
+  (deps DecodeOtherWfEdge0069.vo decode_other_wf_edge_0069.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_other_wf_edge_0069.t.exe decode_other_wf_edge_0069.cpp decode_other_wf_edge_0069.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_other_wf_edge_0069.t.exe)
+  (action (run ./decode_other_wf_edge_0069.t.exe))))
+
+(subdir decode_wf_opcode_11_edge_0081
+ (rule
+  (targets decode_wf_opcode_11_edge_0081.t.exe)
+  (deps DecodeWfOpcode11Edge0081.vo decode_wf_opcode_11_edge_0081.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_11_edge_0081.t.exe decode_wf_opcode_11_edge_0081.cpp decode_wf_opcode_11_edge_0081.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_11_edge_0081.t.exe)
+  (action (run ./decode_wf_opcode_11_edge_0081.t.exe))))
+
+(subdir decode_wf_opcode_1_edge_0071
+ (rule
+  (targets decode_wf_opcode_1_edge_0071.t.exe)
+  (deps DecodeWfOpcode1Edge0071.vo decode_wf_opcode_1_edge_0071.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_1_edge_0071.t.exe decode_wf_opcode_1_edge_0071.cpp decode_wf_opcode_1_edge_0071.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_1_edge_0071.t.exe)
+  (action (run ./decode_wf_opcode_1_edge_0071.t.exe))))
+
+(subdir decode_wf_opcode_3_edge_0073
+ (rule
+  (targets decode_wf_opcode_3_edge_0073.t.exe)
+  (deps DecodeWfOpcode3Edge0073.vo decode_wf_opcode_3_edge_0073.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decode_wf_opcode_3_edge_0073.t.exe decode_wf_opcode_3_edge_0073.cpp decode_wf_opcode_3_edge_0073.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decode_wf_opcode_3_edge_0073.t.exe)
+  (action (run ./decode_wf_opcode_3_edge_0073.t.exe))))
+
+(subdir default_sel_wf_prop
+ (rule
+  (targets default_sel_wf_prop.t.exe)
+  (deps DefaultSelWfProp.vo default_sel_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} default_sel_wf_prop.t.exe default_sel_wf_prop.cpp default_sel_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps default_sel_wf_prop.t.exe)
+  (action (run ./default_sel_wf_prop.t.exe))))
+
+(subdir empty_bank_wf_prop
+ (rule
+  (targets empty_bank_wf_prop.t.exe)
+  (deps EmptyBankWfProp.vo empty_bank_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} empty_bank_wf_prop.t.exe empty_bank_wf_prop.cpp empty_bank_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps empty_bank_wf_prop.t.exe)
+  (action (run ./empty_bank_wf_prop.t.exe))))
+
+(subdir empty_chip_wf_prop
+ (rule
+  (targets empty_chip_wf_prop.t.exe)
+  (deps EmptyChipWfProp.vo empty_chip_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} empty_chip_wf_prop.t.exe empty_chip_wf_prop.cpp empty_chip_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps empty_chip_wf_prop.t.exe)
+  (action (run ./empty_chip_wf_prop.t.exe))))
+
+(subdir empty_reg_wf_prop
+ (rule
+  (targets empty_reg_wf_prop.t.exe)
+  (deps EmptyRegWfProp.vo empty_reg_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} empty_reg_wf_prop.t.exe empty_reg_wf_prop.cpp empty_reg_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps empty_reg_wf_prop.t.exe)
+  (action (run ./empty_reg_wf_prop.t.exe))))
+
+(subdir execute_add_wf_prop
+ (rule
+  (targets execute_add_wf_prop.t.exe)
+  (deps ExecuteAddWfProp.vo execute_add_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_add_wf_prop.t.exe execute_add_wf_prop.cpp execute_add_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_add_wf_prop.t.exe)
+  (action (run ./execute_add_wf_prop.t.exe))))
+
+(subdir execute_bbl_wf_prop
+ (rule
+  (targets execute_bbl_wf_prop.t.exe)
+  (deps ExecuteBblWfProp.vo execute_bbl_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_bbl_wf_prop.t.exe execute_bbl_wf_prop.cpp execute_bbl_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_bbl_wf_prop.t.exe)
+  (action (run ./execute_bbl_wf_prop.t.exe))))
+
+(subdir execute_clb_wf_prop
+ (rule
+  (targets execute_clb_wf_prop.t.exe)
+  (deps ExecuteClbWfProp.vo execute_clb_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_clb_wf_prop.t.exe execute_clb_wf_prop.cpp execute_clb_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_clb_wf_prop.t.exe)
+  (action (run ./execute_clb_wf_prop.t.exe))))
+
+(subdir execute_clc_wf_prop
+ (rule
+  (targets execute_clc_wf_prop.t.exe)
+  (deps ExecuteClcWfProp.vo execute_clc_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_clc_wf_prop.t.exe execute_clc_wf_prop.cpp execute_clc_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_clc_wf_prop.t.exe)
+  (action (run ./execute_clc_wf_prop.t.exe))))
+
+(subdir execute_cma_wf_edge_0101
+ (rule
+  (targets execute_cma_wf_edge_0101.t.exe)
+  (deps ExecuteCmaWfEdge0101.vo execute_cma_wf_edge_0101.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_cma_wf_edge_0101.t.exe execute_cma_wf_edge_0101.cpp execute_cma_wf_edge_0101.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_cma_wf_edge_0101.t.exe)
+  (action (run ./execute_cma_wf_edge_0101.t.exe))))
+
+(subdir execute_cma_wf_prop
+ (rule
+  (targets execute_cma_wf_prop.t.exe)
+  (deps ExecuteCmaWfProp.vo execute_cma_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_cma_wf_prop.t.exe execute_cma_wf_prop.cpp execute_cma_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_cma_wf_prop.t.exe)
+  (action (run ./execute_cma_wf_prop.t.exe))))
+
+(subdir execute_cmc_wf_prop
+ (rule
+  (targets execute_cmc_wf_prop.t.exe)
+  (deps ExecuteCmcWfProp.vo execute_cmc_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_cmc_wf_prop.t.exe execute_cmc_wf_prop.cpp execute_cmc_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_cmc_wf_prop.t.exe)
+  (action (run ./execute_cmc_wf_prop.t.exe))))
+
+(subdir execute_daa_wf_prop
+ (rule
+  (targets execute_daa_wf_prop.t.exe)
+  (deps ExecuteDaaWfProp.vo execute_daa_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_daa_wf_prop.t.exe execute_daa_wf_prop.cpp execute_daa_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_daa_wf_prop.t.exe)
+  (action (run ./execute_daa_wf_prop.t.exe))))
+
+(subdir execute_dac_wf_prop
+ (rule
+  (targets execute_dac_wf_prop.t.exe)
+  (deps ExecuteDacWfProp.vo execute_dac_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_dac_wf_prop.t.exe execute_dac_wf_prop.cpp execute_dac_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_dac_wf_prop.t.exe)
+  (action (run ./execute_dac_wf_prop.t.exe))))
+
+(subdir execute_fim_wf_prop
+ (rule
+  (targets execute_fim_wf_prop.t.exe)
+  (deps ExecuteFimWfProp.vo execute_fim_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_fim_wf_prop.t.exe execute_fim_wf_prop.cpp execute_fim_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_fim_wf_prop.t.exe)
+  (action (run ./execute_fim_wf_prop.t.exe))))
+
+(subdir execute_fin_wf_prop
+ (rule
+  (targets execute_fin_wf_prop.t.exe)
+  (deps ExecuteFinWfProp.vo execute_fin_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_fin_wf_prop.t.exe execute_fin_wf_prop.cpp execute_fin_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_fin_wf_prop.t.exe)
+  (action (run ./execute_fin_wf_prop.t.exe))))
+
+(subdir execute_iac_wf_prop
+ (rule
+  (targets execute_iac_wf_prop.t.exe)
+  (deps ExecuteIacWfProp.vo execute_iac_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_iac_wf_prop.t.exe execute_iac_wf_prop.cpp execute_iac_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_iac_wf_prop.t.exe)
+  (action (run ./execute_iac_wf_prop.t.exe))))
+
+(subdir execute_inc_wf_prop
+ (rule
+  (targets execute_inc_wf_prop.t.exe)
+  (deps ExecuteIncWfProp.vo execute_inc_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_inc_wf_prop.t.exe execute_inc_wf_prop.cpp execute_inc_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_inc_wf_prop.t.exe)
+  (action (run ./execute_inc_wf_prop.t.exe))))
+
+(subdir execute_isz_wf_prop
+ (rule
+  (targets execute_isz_wf_prop.t.exe)
+  (deps ExecuteIszWfProp.vo execute_isz_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_isz_wf_prop.t.exe execute_isz_wf_prop.cpp execute_isz_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_isz_wf_prop.t.exe)
+  (action (run ./execute_isz_wf_prop.t.exe))))
+
+(subdir execute_jcn_wf_prop
+ (rule
+  (targets execute_jcn_wf_prop.t.exe)
+  (deps ExecuteJcnWfProp.vo execute_jcn_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_jcn_wf_prop.t.exe execute_jcn_wf_prop.cpp execute_jcn_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_jcn_wf_prop.t.exe)
+  (action (run ./execute_jcn_wf_prop.t.exe))))
+
+(subdir execute_jin_wf_prop
+ (rule
+  (targets execute_jin_wf_prop.t.exe)
+  (deps ExecuteJinWfProp.vo execute_jin_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_jin_wf_prop.t.exe execute_jin_wf_prop.cpp execute_jin_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_jin_wf_prop.t.exe)
+  (action (run ./execute_jin_wf_prop.t.exe))))
+
+(subdir execute_jms_wf_prop
+ (rule
+  (targets execute_jms_wf_prop.t.exe)
+  (deps ExecuteJmsWfProp.vo execute_jms_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_jms_wf_prop.t.exe execute_jms_wf_prop.cpp execute_jms_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_jms_wf_prop.t.exe)
+  (action (run ./execute_jms_wf_prop.t.exe))))
+
+(subdir execute_jun_wf_prop
+ (rule
+  (targets execute_jun_wf_prop.t.exe)
+  (deps ExecuteJunWfProp.vo execute_jun_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_jun_wf_prop.t.exe execute_jun_wf_prop.cpp execute_jun_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_jun_wf_prop.t.exe)
+  (action (run ./execute_jun_wf_prop.t.exe))))
+
+(subdir execute_kbp_wf_prop
+ (rule
+  (targets execute_kbp_wf_prop.t.exe)
+  (deps ExecuteKbpWfProp.vo execute_kbp_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_kbp_wf_prop.t.exe execute_kbp_wf_prop.cpp execute_kbp_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_kbp_wf_prop.t.exe)
+  (action (run ./execute_kbp_wf_prop.t.exe))))
+
+(subdir execute_ld_wf_edge_0091
+ (rule
+  (targets execute_ld_wf_edge_0091.t.exe)
+  (deps ExecuteLdWfEdge0091.vo execute_ld_wf_edge_0091.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_ld_wf_edge_0091.t.exe execute_ld_wf_edge_0091.cpp execute_ld_wf_edge_0091.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_ld_wf_edge_0091.t.exe)
+  (action (run ./execute_ld_wf_edge_0091.t.exe))))
+
+(subdir execute_ld_wf_prop
+ (rule
+  (targets execute_ld_wf_prop.t.exe)
+  (deps ExecuteLdWfProp.vo execute_ld_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_ld_wf_prop.t.exe execute_ld_wf_prop.cpp execute_ld_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_ld_wf_prop.t.exe)
+  (action (run ./execute_ld_wf_prop.t.exe))))
+
+(subdir execute_ldm_wf_prop
+ (rule
+  (targets execute_ldm_wf_prop.t.exe)
+  (deps ExecuteLdmWfProp.vo execute_ldm_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_ldm_wf_prop.t.exe execute_ldm_wf_prop.cpp execute_ldm_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_ldm_wf_prop.t.exe)
+  (action (run ./execute_ldm_wf_prop.t.exe))))
+
+(subdir execute_nop_wf_prop
+ (rule
+  (targets execute_nop_wf_prop.t.exe)
+  (deps ExecuteNopWfProp.vo execute_nop_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_nop_wf_prop.t.exe execute_nop_wf_prop.cpp execute_nop_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_nop_wf_prop.t.exe)
+  (action (run ./execute_nop_wf_prop.t.exe))))
+
+(subdir execute_pc_bounded_bbl_prop
+ (rule
+  (targets execute_pc_bounded_bbl_prop.t.exe)
+  (deps ExecutePcBoundedBblProp.vo execute_pc_bounded_bbl_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_pc_bounded_bbl_prop.t.exe execute_pc_bounded_bbl_prop.cpp execute_pc_bounded_bbl_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_pc_bounded_bbl_prop.t.exe)
+  (action (run ./execute_pc_bounded_bbl_prop.t.exe))))
+
+(subdir execute_pc_bounded_nop_prop
+ (rule
+  (targets execute_pc_bounded_nop_prop.t.exe)
+  (deps ExecutePcBoundedNopProp.vo execute_pc_bounded_nop_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_pc_bounded_nop_prop.t.exe execute_pc_bounded_nop_prop.cpp execute_pc_bounded_nop_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_pc_bounded_nop_prop.t.exe)
+  (action (run ./execute_pc_bounded_nop_prop.t.exe))))
+
+(subdir execute_ral_wf_edge_0103
+ (rule
+  (targets execute_ral_wf_edge_0103.t.exe)
+  (deps ExecuteRalWfEdge0103.vo execute_ral_wf_edge_0103.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_ral_wf_edge_0103.t.exe execute_ral_wf_edge_0103.cpp execute_ral_wf_edge_0103.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_ral_wf_edge_0103.t.exe)
+  (action (run ./execute_ral_wf_edge_0103.t.exe))))
+
+(subdir execute_ral_wf_prop
+ (rule
+  (targets execute_ral_wf_prop.t.exe)
+  (deps ExecuteRalWfProp.vo execute_ral_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_ral_wf_prop.t.exe execute_ral_wf_prop.cpp execute_ral_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_ral_wf_prop.t.exe)
+  (action (run ./execute_ral_wf_prop.t.exe))))
+
+(subdir execute_rar_wf_prop
+ (rule
+  (targets execute_rar_wf_prop.t.exe)
+  (deps ExecuteRarWfProp.vo execute_rar_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_rar_wf_prop.t.exe execute_rar_wf_prop.cpp execute_rar_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_rar_wf_prop.t.exe)
+  (action (run ./execute_rar_wf_prop.t.exe))))
+
+(subdir execute_src_wf_prop
+ (rule
+  (targets execute_src_wf_prop.t.exe)
+  (deps ExecuteSrcWfProp.vo execute_src_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_src_wf_prop.t.exe execute_src_wf_prop.cpp execute_src_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_src_wf_prop.t.exe)
+  (action (run ./execute_src_wf_prop.t.exe))))
+
+(subdir execute_stc_wf_prop
+ (rule
+  (targets execute_stc_wf_prop.t.exe)
+  (deps ExecuteStcWfProp.vo execute_stc_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_stc_wf_prop.t.exe execute_stc_wf_prop.cpp execute_stc_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_stc_wf_prop.t.exe)
+  (action (run ./execute_stc_wf_prop.t.exe))))
+
+(subdir execute_sub_wf_edge_0095
+ (rule
+  (targets execute_sub_wf_edge_0095.t.exe)
+  (deps ExecuteSubWfEdge0095.vo execute_sub_wf_edge_0095.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_sub_wf_edge_0095.t.exe execute_sub_wf_edge_0095.cpp execute_sub_wf_edge_0095.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_sub_wf_edge_0095.t.exe)
+  (action (run ./execute_sub_wf_edge_0095.t.exe))))
+
+(subdir execute_sub_wf_prop
+ (rule
+  (targets execute_sub_wf_prop.t.exe)
+  (deps ExecuteSubWfProp.vo execute_sub_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_sub_wf_prop.t.exe execute_sub_wf_prop.cpp execute_sub_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_sub_wf_prop.t.exe)
+  (action (run ./execute_sub_wf_prop.t.exe))))
+
+(subdir execute_tcc_wf_edge_0105
+ (rule
+  (targets execute_tcc_wf_edge_0105.t.exe)
+  (deps ExecuteTccWfEdge0105.vo execute_tcc_wf_edge_0105.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_tcc_wf_edge_0105.t.exe execute_tcc_wf_edge_0105.cpp execute_tcc_wf_edge_0105.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_tcc_wf_edge_0105.t.exe)
+  (action (run ./execute_tcc_wf_edge_0105.t.exe))))
+
+(subdir execute_tcc_wf_prop
+ (rule
+  (targets execute_tcc_wf_prop.t.exe)
+  (deps ExecuteTccWfProp.vo execute_tcc_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_tcc_wf_prop.t.exe execute_tcc_wf_prop.cpp execute_tcc_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_tcc_wf_prop.t.exe)
+  (action (run ./execute_tcc_wf_prop.t.exe))))
+
+(subdir execute_tcs_wf_prop
+ (rule
+  (targets execute_tcs_wf_prop.t.exe)
+  (deps ExecuteTcsWfProp.vo execute_tcs_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_tcs_wf_prop.t.exe execute_tcs_wf_prop.cpp execute_tcs_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_tcs_wf_prop.t.exe)
+  (action (run ./execute_tcs_wf_prop.t.exe))))
+
+(subdir execute_xch_wf_prop
+ (rule
+  (targets execute_xch_wf_prop.t.exe)
+  (deps ExecuteXchWfProp.vo execute_xch_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} execute_xch_wf_prop.t.exe execute_xch_wf_prop.cpp execute_xch_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps execute_xch_wf_prop.t.exe)
+  (action (run ./execute_xch_wf_prop.t.exe))))
+
+(subdir forall_firstn_prop
+ (rule
+  (targets forall_firstn_prop.t.exe)
+  (deps ForallFirstnProp.vo forall_firstn_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} forall_firstn_prop.t.exe forall_firstn_prop.cpp forall_firstn_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps forall_firstn_prop.t.exe)
+  (action (run ./forall_firstn_prop.t.exe))))
+
+(subdir forall_repeat_prop
+ (rule
+  (targets forall_repeat_prop.t.exe)
+  (deps ForallRepeatProp.vo forall_repeat_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} forall_repeat_prop.t.exe forall_repeat_prop.cpp forall_repeat_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps forall_repeat_prop.t.exe)
+  (action (run ./forall_repeat_prop.t.exe))))
+
+(subdir forall_skipn_prop
+ (rule
+  (targets forall_skipn_prop.t.exe)
+  (deps ForallSkipnProp.vo forall_skipn_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} forall_skipn_prop.t.exe forall_skipn_prop.cpp forall_skipn_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps forall_skipn_prop.t.exe)
+  (action (run ./forall_skipn_prop.t.exe))))
+
+(subdir forall_update_nth_prop
+ (rule
+  (targets forall_update_nth_prop.t.exe)
+  (deps ForallUpdateNthProp.vo forall_update_nth_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} forall_update_nth_prop.t.exe forall_update_nth_prop.cpp forall_update_nth_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps forall_update_nth_prop.t.exe)
+  (action (run ./forall_update_nth_prop.t.exe))))
+
+(subdir get_bank_upd_bank_in_sys_prop
+ (rule
+  (targets get_bank_upd_bank_in_sys_prop.t.exe)
+  (deps GetBankUpdBankInSysProp.vo get_bank_upd_bank_in_sys_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} get_bank_upd_bank_in_sys_prop.t.exe get_bank_upd_bank_in_sys_prop.cpp get_bank_upd_bank_in_sys_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps get_bank_upd_bank_in_sys_prop.t.exe)
+  (action (run ./get_bank_upd_bank_in_sys_prop.t.exe))))
+
+(subdir get_bank_upd_bank_neq_prop
+ (rule
+  (targets get_bank_upd_bank_neq_prop.t.exe)
+  (deps GetBankUpdBankNeqProp.vo get_bank_upd_bank_neq_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} get_bank_upd_bank_neq_prop.t.exe get_bank_upd_bank_neq_prop.cpp get_bank_upd_bank_neq_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps get_bank_upd_bank_neq_prop.t.exe)
+  (action (run ./get_bank_upd_bank_neq_prop.t.exe))))
+
+(subdir get_chip_upd_chip_in_bank_prop
+ (rule
+  (targets get_chip_upd_chip_in_bank_prop.t.exe)
+  (deps GetChipUpdChipInBankProp.vo get_chip_upd_chip_in_bank_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} get_chip_upd_chip_in_bank_prop.t.exe get_chip_upd_chip_in_bank_prop.cpp get_chip_upd_chip_in_bank_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps get_chip_upd_chip_in_bank_prop.t.exe)
+  (action (run ./get_chip_upd_chip_in_bank_prop.t.exe))))
+
+(subdir get_chip_upd_chip_neq_prop
+ (rule
+  (targets get_chip_upd_chip_neq_prop.t.exe)
+  (deps GetChipUpdChipNeqProp.vo get_chip_upd_chip_neq_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} get_chip_upd_chip_neq_prop.t.exe get_chip_upd_chip_neq_prop.cpp get_chip_upd_chip_neq_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps get_chip_upd_chip_neq_prop.t.exe)
+  (action (run ./get_chip_upd_chip_neq_prop.t.exe))))
+
+(subdir get_main_upd_main_in_reg_prop
+ (rule
+  (targets get_main_upd_main_in_reg_prop.t.exe)
+  (deps GetMainUpdMainInRegProp.vo get_main_upd_main_in_reg_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} get_main_upd_main_in_reg_prop.t.exe get_main_upd_main_in_reg_prop.cpp get_main_upd_main_in_reg_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps get_main_upd_main_in_reg_prop.t.exe)
+  (action (run ./get_main_upd_main_in_reg_prop.t.exe))))
+
+(subdir get_main_upd_main_neq_prop
+ (rule
+  (targets get_main_upd_main_neq_prop.t.exe)
+  (deps GetMainUpdMainNeqProp.vo get_main_upd_main_neq_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} get_main_upd_main_neq_prop.t.exe get_main_upd_main_neq_prop.cpp get_main_upd_main_neq_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps get_main_upd_main_neq_prop.t.exe)
+  (action (run ./get_main_upd_main_neq_prop.t.exe))))
+
+(subdir get_pair_bound_prop
+ (rule
+  (targets get_pair_bound_prop.t.exe)
+  (deps GetPairBoundProp.vo get_pair_bound_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} get_pair_bound_prop.t.exe get_pair_bound_prop.cpp get_pair_bound_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps get_pair_bound_prop.t.exe)
+  (action (run ./get_pair_bound_prop.t.exe))))
+
+(subdir get_reg_upd_reg_in_chip_prop
+ (rule
+  (targets get_reg_upd_reg_in_chip_prop.t.exe)
+  (deps GetRegUpdRegInChipProp.vo get_reg_upd_reg_in_chip_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} get_reg_upd_reg_in_chip_prop.t.exe get_reg_upd_reg_in_chip_prop.cpp get_reg_upd_reg_in_chip_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps get_reg_upd_reg_in_chip_prop.t.exe)
+  (action (run ./get_reg_upd_reg_in_chip_prop.t.exe))))
+
+(subdir get_reg_upd_reg_neq_prop
+ (rule
+  (targets get_reg_upd_reg_neq_prop.t.exe)
+  (deps GetRegUpdRegNeqProp.vo get_reg_upd_reg_neq_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} get_reg_upd_reg_neq_prop.t.exe get_reg_upd_reg_neq_prop.cpp get_reg_upd_reg_neq_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps get_reg_upd_reg_neq_prop.t.exe)
+  (action (run ./get_reg_upd_reg_neq_prop.t.exe))))
+
+(subdir get_stat_bound_prop
+ (rule
+  (targets get_stat_bound_prop.t.exe)
+  (deps GetStatBoundProp.vo get_stat_bound_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} get_stat_bound_prop.t.exe get_stat_bound_prop.cpp get_stat_bound_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps get_stat_bound_prop.t.exe)
+  (action (run ./get_stat_bound_prop.t.exe))))
+
+(subdir init_is_reset_with_cleared_memory_edge_0039
+ (rule
+  (targets init_is_reset_with_cleared_memory_edge_0039.t.exe)
+  (deps InitIsResetWithClearedMemoryEdge0039.vo init_is_reset_with_cleared_memory_edge_0039.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} init_is_reset_with_cleared_memory_edge_0039.t.exe init_is_reset_with_cleared_memory_edge_0039.cpp init_is_reset_with_cleared_memory_edge_0039.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps init_is_reset_with_cleared_memory_edge_0039.t.exe)
+  (action (run ./init_is_reset_with_cleared_memory_edge_0039.t.exe))))
+
+(subdir init_is_reset_with_cleared_memory_prop
+ (rule
+  (targets init_is_reset_with_cleared_memory_prop.t.exe)
+  (deps InitIsResetWithClearedMemoryProp.vo init_is_reset_with_cleared_memory_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} init_is_reset_with_cleared_memory_prop.t.exe init_is_reset_with_cleared_memory_prop.cpp init_is_reset_with_cleared_memory_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps init_is_reset_with_cleared_memory_prop.t.exe)
+  (action (run ./init_is_reset_with_cleared_memory_prop.t.exe))))
+
+(subdir init_state_wf_prop
+ (rule
+  (targets init_state_wf_prop.t.exe)
+  (deps InitStateWfProp.vo init_state_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} init_state_wf_prop.t.exe init_state_wf_prop.cpp init_state_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps init_state_wf_prop.t.exe)
+  (action (run ./init_state_wf_prop.t.exe))))
+
+(subdir instr_wf_fim_even_prop
+ (rule
+  (targets instr_wf_fim_even_prop.t.exe)
+  (deps InstrWfFimEvenProp.vo instr_wf_fim_even_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instr_wf_fim_even_prop.t.exe instr_wf_fim_even_prop.cpp instr_wf_fim_even_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instr_wf_fim_even_prop.t.exe)
+  (action (run ./instr_wf_fim_even_prop.t.exe))))
+
+(subdir instr_wf_fim_odd_rejected_prop
+ (rule
+  (targets instr_wf_fim_odd_rejected_prop.t.exe)
+  (deps InstrWfFimOddRejectedProp.vo instr_wf_fim_odd_rejected_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instr_wf_fim_odd_rejected_prop.t.exe instr_wf_fim_odd_rejected_prop.cpp instr_wf_fim_odd_rejected_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instr_wf_fim_odd_rejected_prop.t.exe)
+  (action (run ./instr_wf_fim_odd_rejected_prop.t.exe))))
+
+(subdir instr_wf_jun_overflow_rejected_prop
+ (rule
+  (targets instr_wf_jun_overflow_rejected_prop.t.exe)
+  (deps InstrWfJunOverflowRejectedProp.vo instr_wf_jun_overflow_rejected_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instr_wf_jun_overflow_rejected_prop.t.exe instr_wf_jun_overflow_rejected_prop.cpp instr_wf_jun_overflow_rejected_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instr_wf_jun_overflow_rejected_prop.t.exe)
+  (action (run ./instr_wf_jun_overflow_rejected_prop.t.exe))))
+
+(subdir instr_wf_ldm_five_prop
+ (rule
+  (targets instr_wf_ldm_five_prop.t.exe)
+  (deps InstrWfLdmFiveProp.vo instr_wf_ldm_five_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instr_wf_ldm_five_prop.t.exe instr_wf_ldm_five_prop.cpp instr_wf_ldm_five_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instr_wf_ldm_five_prop.t.exe)
+  (action (run ./instr_wf_ldm_five_prop.t.exe))))
+
+(subdir instr_wf_ldm_overflow_rejected_prop
+ (rule
+  (targets instr_wf_ldm_overflow_rejected_prop.t.exe)
+  (deps InstrWfLdmOverflowRejectedProp.vo instr_wf_ldm_overflow_rejected_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instr_wf_ldm_overflow_rejected_prop.t.exe instr_wf_ldm_overflow_rejected_prop.cpp instr_wf_ldm_overflow_rejected_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instr_wf_ldm_overflow_rejected_prop.t.exe)
+  (action (run ./instr_wf_ldm_overflow_rejected_prop.t.exe))))
+
+(subdir instr_wf_nop_prop
+ (rule
+  (targets instr_wf_nop_prop.t.exe)
+  (deps InstrWfNopProp.vo instr_wf_nop_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instr_wf_nop_prop.t.exe instr_wf_nop_prop.cpp instr_wf_nop_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instr_wf_nop_prop.t.exe)
+  (action (run ./instr_wf_nop_prop.t.exe))))
+
+(subdir ldm_loads_immediate_prop
+ (rule
+  (targets ldm_loads_immediate_prop.t.exe)
+  (deps LdmLoadsImmediateProp.vo ldm_loads_immediate_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ldm_loads_immediate_prop.t.exe ldm_loads_immediate_prop.cpp ldm_loads_immediate_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ldm_loads_immediate_prop.t.exe)
+  (action (run ./ldm_loads_immediate_prop.t.exe))))
+
+(subdir nth_forall_lt_prop
+ (rule
+  (targets nth_forall_lt_prop.t.exe)
+  (deps NthForallLtProp.vo nth_forall_lt_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nth_forall_lt_prop.t.exe nth_forall_lt_prop.cpp nth_forall_lt_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nth_forall_lt_prop.t.exe)
+  (action (run ./nth_forall_lt_prop.t.exe))))
+
+(subdir page_base_idempotent_prop
+ (rule
+  (targets page_base_idempotent_prop.t.exe)
+  (deps PageBaseIdempotentProp.vo page_base_idempotent_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} page_base_idempotent_prop.t.exe page_base_idempotent_prop.cpp page_base_idempotent_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps page_base_idempotent_prop.t.exe)
+  (action (run ./page_base_idempotent_prop.t.exe))))
+
+(subdir page_base_plus_offset_bound_prop
+ (rule
+  (targets page_base_plus_offset_bound_prop.t.exe)
+  (deps PageBasePlusOffsetBoundProp.vo page_base_plus_offset_bound_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} page_base_plus_offset_bound_prop.t.exe page_base_plus_offset_bound_prop.cpp page_base_plus_offset_bound_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps page_base_plus_offset_bound_prop.t.exe)
+  (action (run ./page_base_plus_offset_bound_prop.t.exe))))
+
+(subdir page_base_plus_offset_same_page_prop
+ (rule
+  (targets page_base_plus_offset_same_page_prop.t.exe)
+  (deps PageBasePlusOffsetSamePageProp.vo page_base_plus_offset_same_page_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} page_base_plus_offset_same_page_prop.t.exe page_base_plus_offset_same_page_prop.cpp page_base_plus_offset_same_page_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps page_base_plus_offset_same_page_prop.t.exe)
+  (action (run ./page_base_plus_offset_same_page_prop.t.exe))))
+
+(subdir page_boundary_cross_prop
+ (rule
+  (targets page_boundary_cross_prop.t.exe)
+  (deps PageBoundaryCrossProp.vo page_boundary_cross_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} page_boundary_cross_prop.t.exe page_boundary_cross_prop.cpp page_boundary_cross_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps page_boundary_cross_prop.t.exe)
+  (action (run ./page_boundary_cross_prop.t.exe))))
+
+(subdir page_boundary_same_prop
+ (rule
+  (targets page_boundary_same_prop.t.exe)
+  (deps PageBoundarySameProp.vo page_boundary_same_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} page_boundary_same_prop.t.exe page_boundary_same_prop.cpp page_boundary_same_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps page_boundary_same_prop.t.exe)
+  (action (run ./page_boundary_same_prop.t.exe))))
+
+(subdir page_decomposition_prop
+ (rule
+  (targets page_decomposition_prop.t.exe)
+  (deps PageDecompositionProp.vo page_decomposition_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} page_decomposition_prop.t.exe page_decomposition_prop.cpp page_decomposition_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps page_decomposition_prop.t.exe)
+  (action (run ./page_decomposition_prop.t.exe))))
+
+(subdir page_of_inc2_cross_255_prop
+ (rule
+  (targets page_of_inc2_cross_255_prop.t.exe)
+  (deps PageOfInc2Cross255Prop.vo page_of_inc2_cross_255_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} page_of_inc2_cross_255_prop.t.exe page_of_inc2_cross_255_prop.cpp page_of_inc2_cross_255_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps page_of_inc2_cross_255_prop.t.exe)
+  (action (run ./page_of_inc2_cross_255_prop.t.exe))))
+
+(subdir page_of_page_base_prop
+ (rule
+  (targets page_of_page_base_prop.t.exe)
+  (deps PageOfPageBaseProp.vo page_of_page_base_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} page_of_page_base_prop.t.exe page_of_page_base_prop.cpp page_of_page_base_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps page_of_page_base_prop.t.exe)
+  (action (run ./page_of_page_base_prop.t.exe))))
+
+(subdir page_wrap_to_zero_prop
+ (rule
+  (targets page_wrap_to_zero_prop.t.exe)
+  (deps PageWrapToZeroProp.vo page_wrap_to_zero_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} page_wrap_to_zero_prop.t.exe page_wrap_to_zero_prop.cpp page_wrap_to_zero_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps page_wrap_to_zero_prop.t.exe)
+  (action (run ./page_wrap_to_zero_prop.t.exe))))
+
+(subdir pair_base_even_prop
+ (rule
+  (targets pair_base_even_prop.t.exe)
+  (deps PairBaseEvenProp.vo pair_base_even_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_base_even_prop.t.exe pair_base_even_prop.cpp pair_base_even_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_base_even_prop.t.exe)
+  (action (run ./pair_base_even_prop.t.exe))))
+
+(subdir pair_base_odd_prop
+ (rule
+  (targets pair_base_odd_prop.t.exe)
+  (deps PairBaseOddProp.vo pair_base_odd_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_base_odd_prop.t.exe pair_base_odd_prop.cpp pair_base_odd_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_base_odd_prop.t.exe)
+  (action (run ./pair_base_odd_prop.t.exe))))
+
+(subdir pair_successor_bounded_prop
+ (rule
+  (targets pair_successor_bounded_prop.t.exe)
+  (deps PairSuccessorBoundedProp.vo pair_successor_bounded_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_successor_bounded_prop.t.exe pair_successor_bounded_prop.cpp pair_successor_bounded_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_successor_bounded_prop.t.exe)
+  (action (run ./pair_successor_bounded_prop.t.exe))))
+
+(subdir pc_shape_fim_prop
+ (rule
+  (targets pc_shape_fim_prop.t.exe)
+  (deps PcShapeFimProp.vo pc_shape_fim_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pc_shape_fim_prop.t.exe pc_shape_fim_prop.cpp pc_shape_fim_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pc_shape_fim_prop.t.exe)
+  (action (run ./pc_shape_fim_prop.t.exe))))
+
+(subdir pc_shape_jcn_not_taken_prop
+ (rule
+  (targets pc_shape_jcn_not_taken_prop.t.exe)
+  (deps PcShapeJcnNotTakenProp.vo pc_shape_jcn_not_taken_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pc_shape_jcn_not_taken_prop.t.exe pc_shape_jcn_not_taken_prop.cpp pc_shape_jcn_not_taken_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pc_shape_jcn_not_taken_prop.t.exe)
+  (action (run ./pc_shape_jcn_not_taken_prop.t.exe))))
+
+(subdir pc_shape_jcn_taken_prop
+ (rule
+  (targets pc_shape_jcn_taken_prop.t.exe)
+  (deps PcShapeJcnTakenProp.vo pc_shape_jcn_taken_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pc_shape_jcn_taken_prop.t.exe pc_shape_jcn_taken_prop.cpp pc_shape_jcn_taken_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pc_shape_jcn_taken_prop.t.exe)
+  (action (run ./pc_shape_jcn_taken_prop.t.exe))))
+
+(subdir pc_shape_jin_prop
+ (rule
+  (targets pc_shape_jin_prop.t.exe)
+  (deps PcShapeJinProp.vo pc_shape_jin_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pc_shape_jin_prop.t.exe pc_shape_jin_prop.cpp pc_shape_jin_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pc_shape_jin_prop.t.exe)
+  (action (run ./pc_shape_jin_prop.t.exe))))
+
+(subdir pc_shape_jms_prop
+ (rule
+  (targets pc_shape_jms_prop.t.exe)
+  (deps PcShapeJmsProp.vo pc_shape_jms_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pc_shape_jms_prop.t.exe pc_shape_jms_prop.cpp pc_shape_jms_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pc_shape_jms_prop.t.exe)
+  (action (run ./pc_shape_jms_prop.t.exe))))
+
+(subdir pc_shape_jun_prop
+ (rule
+  (targets pc_shape_jun_prop.t.exe)
+  (deps PcShapeJunProp.vo pc_shape_jun_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pc_shape_jun_prop.t.exe pc_shape_jun_prop.cpp pc_shape_jun_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pc_shape_jun_prop.t.exe)
+  (action (run ./pc_shape_jun_prop.t.exe))))
+
+(subdir pc_shape_nop_prop
+ (rule
+  (targets pc_shape_nop_prop.t.exe)
+  (deps PcShapeNopProp.vo pc_shape_nop_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pc_shape_nop_prop.t.exe pc_shape_nop_prop.cpp pc_shape_nop_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pc_shape_nop_prop.t.exe)
+  (action (run ./pc_shape_nop_prop.t.exe))))
+
+(subdir pop_stack_forall_addr12_prop
+ (rule
+  (targets pop_stack_forall_addr12_prop.t.exe)
+  (deps PopStackForallAddr12Prop.vo pop_stack_forall_addr12_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pop_stack_forall_addr12_prop.t.exe pop_stack_forall_addr12_prop.cpp pop_stack_forall_addr12_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pop_stack_forall_addr12_prop.t.exe)
+  (action (run ./pop_stack_forall_addr12_prop.t.exe))))
+
+(subdir program_wf_targets_outside_prop
+ (rule
+  (targets program_wf_targets_outside_prop.t.exe)
+  (deps ProgramWfTargetsOutsideProp.vo program_wf_targets_outside_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} program_wf_targets_outside_prop.t.exe program_wf_targets_outside_prop.cpp program_wf_targets_outside_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps program_wf_targets_outside_prop.t.exe)
+  (action (run ./program_wf_targets_outside_prop.t.exe))))
+
+(subdir push_return_bound_prop
+ (rule
+  (targets push_return_bound_prop.t.exe)
+  (deps PushReturnBoundProp.vo push_return_bound_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} push_return_bound_prop.t.exe push_return_bound_prop.cpp push_return_bound_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps push_return_bound_prop.t.exe)
+  (action (run ./push_return_bound_prop.t.exe))))
+
+(subdir push_return_len_prop
+ (rule
+  (targets push_return_len_prop.t.exe)
+  (deps PushReturnLenProp.vo push_return_len_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} push_return_len_prop.t.exe push_return_len_prop.cpp push_return_len_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps push_return_len_prop.t.exe)
+  (action (run ./push_return_len_prop.t.exe))))
+
+(subdir ram_read_main_bound_edge_0041
+ (rule
+  (targets ram_read_main_bound_edge_0041.t.exe)
+  (deps RamReadMainBoundEdge0041.vo ram_read_main_bound_edge_0041.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_read_main_bound_edge_0041.t.exe ram_read_main_bound_edge_0041.cpp ram_read_main_bound_edge_0041.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_read_main_bound_edge_0041.t.exe)
+  (action (run ./ram_read_main_bound_edge_0041.t.exe))))
+
+(subdir ram_read_main_bound_prop
+ (rule
+  (targets ram_read_main_bound_prop.t.exe)
+  (deps RamReadMainBoundProp.vo ram_read_main_bound_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_read_main_bound_prop.t.exe ram_read_main_bound_prop.cpp ram_read_main_bound_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_read_main_bound_prop.t.exe)
+  (action (run ./ram_read_main_bound_prop.t.exe))))
+
+(subdir ram_write_main_sys_preserves_len_prop
+ (rule
+  (targets ram_write_main_sys_preserves_len_prop.t.exe)
+  (deps RamWriteMainSysPreservesLenProp.vo ram_write_main_sys_preserves_len_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_write_main_sys_preserves_len_prop.t.exe ram_write_main_sys_preserves_len_prop.cpp ram_write_main_sys_preserves_len_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_write_main_sys_preserves_len_prop.t.exe)
+  (action (run ./ram_write_main_sys_preserves_len_prop.t.exe))))
+
+(subdir ram_write_main_sys_preserves_wf_bank_prop
+ (rule
+  (targets ram_write_main_sys_preserves_wf_bank_prop.t.exe)
+  (deps RamWriteMainSysPreservesWfBankProp.vo ram_write_main_sys_preserves_wf_bank_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_write_main_sys_preserves_wf_bank_prop.t.exe ram_write_main_sys_preserves_wf_bank_prop.cpp ram_write_main_sys_preserves_wf_bank_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_write_main_sys_preserves_wf_bank_prop.t.exe)
+  (action (run ./ram_write_main_sys_preserves_wf_bank_prop.t.exe))))
+
+(subdir ram_write_status_sys_edge_0017
+ (rule
+  (targets ram_write_status_sys_edge_0017.t.exe)
+  (deps RamWriteStatusSysEdge0017.vo ram_write_status_sys_edge_0017.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_write_status_sys_edge_0017.t.exe ram_write_status_sys_edge_0017.cpp ram_write_status_sys_edge_0017.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_write_status_sys_edge_0017.t.exe)
+  (action (run ./ram_write_status_sys_edge_0017.t.exe))))
+
+(subdir ram_write_status_sys_preserves_len_prop
+ (rule
+  (targets ram_write_status_sys_preserves_len_prop.t.exe)
+  (deps RamWriteStatusSysPreservesLenProp.vo ram_write_status_sys_preserves_len_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_write_status_sys_preserves_len_prop.t.exe ram_write_status_sys_preserves_len_prop.cpp ram_write_status_sys_preserves_len_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_write_status_sys_preserves_len_prop.t.exe)
+  (action (run ./ram_write_status_sys_preserves_len_prop.t.exe))))
+
+(subdir ram_write_status_sys_preserves_wf_bank_prop
+ (rule
+  (targets ram_write_status_sys_preserves_wf_bank_prop.t.exe)
+  (deps RamWriteStatusSysPreservesWfBankProp.vo ram_write_status_sys_preserves_wf_bank_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ram_write_status_sys_preserves_wf_bank_prop.t.exe ram_write_status_sys_preserves_wf_bank_prop.cpp ram_write_status_sys_preserves_wf_bank_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ram_write_status_sys_preserves_wf_bank_prop.t.exe)
+  (action (run ./ram_write_status_sys_preserves_wf_bank_prop.t.exe))))
+
+(subdir reg_pair_odd_edge_0005
+ (rule
+  (targets reg_pair_odd_edge_0005.t.exe)
+  (deps RegPairOddEdge0005.vo reg_pair_odd_edge_0005.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reg_pair_odd_edge_0005.t.exe reg_pair_odd_edge_0005.cpp reg_pair_odd_edge_0005.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reg_pair_odd_edge_0005.t.exe)
+  (action (run ./reg_pair_odd_edge_0005.t.exe))))
+
+(subdir repeat_empty_bank_wf_prop
+ (rule
+  (targets repeat_empty_bank_wf_prop.t.exe)
+  (deps RepeatEmptyBankWfProp.vo repeat_empty_bank_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} repeat_empty_bank_wf_prop.t.exe repeat_empty_bank_wf_prop.cpp repeat_empty_bank_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps repeat_empty_bank_wf_prop.t.exe)
+  (action (run ./repeat_empty_bank_wf_prop.t.exe))))
+
+(subdir repeat_empty_chip_wf_prop
+ (rule
+  (targets repeat_empty_chip_wf_prop.t.exe)
+  (deps RepeatEmptyChipWfProp.vo repeat_empty_chip_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} repeat_empty_chip_wf_prop.t.exe repeat_empty_chip_wf_prop.cpp repeat_empty_chip_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps repeat_empty_chip_wf_prop.t.exe)
+  (action (run ./repeat_empty_chip_wf_prop.t.exe))))
+
+(subdir repeat_empty_reg_wf_prop
+ (rule
+  (targets repeat_empty_reg_wf_prop.t.exe)
+  (deps RepeatEmptyRegWfProp.vo repeat_empty_reg_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} repeat_empty_reg_wf_prop.t.exe repeat_empty_reg_wf_prop.cpp repeat_empty_reg_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps repeat_empty_reg_wf_prop.t.exe)
+  (action (run ./repeat_empty_reg_wf_prop.t.exe))))
+
+(subdir reset_state_clears_volatile_edge_0037
+ (rule
+  (targets reset_state_clears_volatile_edge_0037.t.exe)
+  (deps ResetStateClearsVolatileEdge0037.vo reset_state_clears_volatile_edge_0037.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reset_state_clears_volatile_edge_0037.t.exe reset_state_clears_volatile_edge_0037.cpp reset_state_clears_volatile_edge_0037.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reset_state_clears_volatile_edge_0037.t.exe)
+  (action (run ./reset_state_clears_volatile_edge_0037.t.exe))))
+
+(subdir reset_state_preserves_memory_prop
+ (rule
+  (targets reset_state_preserves_memory_prop.t.exe)
+  (deps ResetStatePreservesMemoryProp.vo reset_state_preserves_memory_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reset_state_preserves_memory_prop.t.exe reset_state_preserves_memory_prop.cpp reset_state_preserves_memory_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reset_state_preserves_memory_prop.t.exe)
+  (action (run ./reset_state_preserves_memory_prop.t.exe))))
+
+(subdir reset_state_wf_prop
+ (rule
+  (targets reset_state_wf_prop.t.exe)
+  (deps ResetStateWfProp.vo reset_state_wf_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reset_state_wf_prop.t.exe reset_state_wf_prop.cpp reset_state_wf_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reset_state_wf_prop.t.exe)
+  (action (run ./reset_state_wf_prop.t.exe))))
+
+(subdir set_prom_then_wpm_preserves_ram_forall
+ (rule
+  (targets set_prom_then_wpm_preserves_ram_forall.t.exe)
+  (deps SetPromThenWpmPreservesRamForall.vo set_prom_then_wpm_preserves_ram_forall.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} set_prom_then_wpm_preserves_ram_forall.t.exe set_prom_then_wpm_preserves_ram_forall.cpp set_prom_then_wpm_preserves_ram_forall.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps set_prom_then_wpm_preserves_ram_forall.t.exe)
+  (action (run ./set_prom_then_wpm_preserves_ram_forall.t.exe))))
+
+(subdir set_prom_then_wpm_preserves_regs_forall
+ (rule
+  (targets set_prom_then_wpm_preserves_regs_forall.t.exe)
+  (deps SetPromThenWpmPreservesRegsForall.vo set_prom_then_wpm_preserves_regs_forall.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} set_prom_then_wpm_preserves_regs_forall.t.exe set_prom_then_wpm_preserves_regs_forall.cpp set_prom_then_wpm_preserves_regs_forall.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps set_prom_then_wpm_preserves_regs_forall.t.exe)
+  (action (run ./set_prom_then_wpm_preserves_regs_forall.t.exe))))
+
+(subdir set_prom_then_wpm_preserves_rom_ports_forall
+ (rule
+  (targets set_prom_then_wpm_preserves_rom_ports_forall.t.exe)
+  (deps SetPromThenWpmPreservesRomPortsForall.vo set_prom_then_wpm_preserves_rom_ports_forall.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} set_prom_then_wpm_preserves_rom_ports_forall.t.exe set_prom_then_wpm_preserves_rom_ports_forall.cpp set_prom_then_wpm_preserves_rom_ports_forall.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps set_prom_then_wpm_preserves_rom_ports_forall.t.exe)
+  (action (run ./set_prom_then_wpm_preserves_rom_ports_forall.t.exe))))
+
+(subdir set_prom_then_wpm_preserves_sel_wf
+ (rule
+  (targets set_prom_then_wpm_preserves_sel_wf.t.exe)
+  (deps SetPromThenWpmPreservesSelWf.vo set_prom_then_wpm_preserves_sel_wf.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} set_prom_then_wpm_preserves_sel_wf.t.exe set_prom_then_wpm_preserves_sel_wf.cpp set_prom_then_wpm_preserves_sel_wf.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps set_prom_then_wpm_preserves_sel_wf.t.exe)
+  (action (run ./set_prom_then_wpm_preserves_sel_wf.t.exe))))
+
+(subdir set_prom_then_wpm_preserves_stack_forall
+ (rule
+  (targets set_prom_then_wpm_preserves_stack_forall.t.exe)
+  (deps SetPromThenWpmPreservesStackForall.vo set_prom_then_wpm_preserves_stack_forall.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} set_prom_then_wpm_preserves_stack_forall.t.exe set_prom_then_wpm_preserves_stack_forall.cpp set_prom_then_wpm_preserves_stack_forall.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps set_prom_then_wpm_preserves_stack_forall.t.exe)
+  (action (run ./set_prom_then_wpm_preserves_stack_forall.t.exe))))
+
+(subdir set_prom_then_wpm_rom_forall
+ (rule
+  (targets set_prom_then_wpm_rom_forall.t.exe)
+  (deps SetPromThenWpmRomForall.vo set_prom_then_wpm_rom_forall.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} set_prom_then_wpm_rom_forall.t.exe set_prom_then_wpm_rom_forall.cpp set_prom_then_wpm_rom_forall.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps set_prom_then_wpm_rom_forall.t.exe)
+  (action (run ./set_prom_then_wpm_rom_forall.t.exe))))
+
+(subdir set_reg_pair_high_nibble
+ (rule
+  (targets set_reg_pair_high_nibble.t.exe)
+  (deps SetRegPairHighNibble.vo set_reg_pair_high_nibble.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} set_reg_pair_high_nibble.t.exe set_reg_pair_high_nibble.cpp set_reg_pair_high_nibble.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps set_reg_pair_high_nibble.t.exe)
+  (action (run ./set_reg_pair_high_nibble.t.exe))))
+
+(subdir set_reg_pair_low_nibble
+ (rule
+  (targets set_reg_pair_low_nibble.t.exe)
+  (deps SetRegPairLowNibble.vo set_reg_pair_low_nibble.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} set_reg_pair_low_nibble.t.exe set_reg_pair_low_nibble.cpp set_reg_pair_low_nibble.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps set_reg_pair_low_nibble.t.exe)
+  (action (run ./set_reg_pair_low_nibble.t.exe))))
+
+(subdir set_reg_pair_roundtrip_value
+ (rule
+  (targets set_reg_pair_roundtrip_value.t.exe)
+  (deps SetRegPairRoundtripValue.vo set_reg_pair_roundtrip_value.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} set_reg_pair_roundtrip_value.t.exe set_reg_pair_roundtrip_value.cpp set_reg_pair_roundtrip_value.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps set_reg_pair_roundtrip_value.t.exe)
+  (action (run ./set_reg_pair_roundtrip_value.t.exe))))
+
+(subdir step_edge_0031
+ (rule
+  (targets step_edge_0031.t.exe)
+  (deps StepEdge0031.vo step_edge_0031.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} step_edge_0031.t.exe step_edge_0031.cpp step_edge_0031.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps step_edge_0031.t.exe)
+  (action (run ./step_edge_0031.t.exe))))
+
+(subdir update_nth_length_edge_0009
+ (rule
+  (targets update_nth_length_edge_0009.t.exe)
+  (deps UpdateNthLengthEdge0009.vo update_nth_length_edge_0009.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} update_nth_length_edge_0009.t.exe update_nth_length_edge_0009.cpp update_nth_length_edge_0009.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps update_nth_length_edge_0009.t.exe)
+  (action (run ./update_nth_length_edge_0009.t.exe))))
+(subdir update_nth_out_of_bounds_length
+ (rule
+  (targets update_nth_out_of_bounds_length.t.exe)
+  (deps UpdateNthOutOfBoundsLength.vo update_nth_out_of_bounds_length.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} update_nth_out_of_bounds_length.t.exe update_nth_out_of_bounds_length.cpp update_nth_out_of_bounds_length.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps update_nth_out_of_bounds_length.t.exe)
+  (action (run ./update_nth_out_of_bounds_length.t.exe))))
+
+(subdir valid_layout_small_prop
+ (rule
+  (targets valid_layout_small_prop.t.exe)
+  (deps ValidLayoutSmallProp.vo valid_layout_small_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} valid_layout_small_prop.t.exe valid_layout_small_prop.cpp valid_layout_small_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps valid_layout_small_prop.t.exe)
+  (action (run ./valid_layout_small_prop.t.exe))))
+
+(subdir wf_bank_from_sys_prop
+ (rule
+  (targets wf_bank_from_sys_prop.t.exe)
+  (deps WfBankFromSysProp.vo wf_bank_from_sys_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} wf_bank_from_sys_prop.t.exe wf_bank_from_sys_prop.cpp wf_bank_from_sys_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps wf_bank_from_sys_prop.t.exe)
+  (action (run ./wf_bank_from_sys_prop.t.exe))))
+
+(subdir wf_bank_upd_chip_prop
+ (rule
+  (targets wf_bank_upd_chip_prop.t.exe)
+  (deps WfBankUpdChipProp.vo wf_bank_upd_chip_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} wf_bank_upd_chip_prop.t.exe wf_bank_upd_chip_prop.cpp wf_bank_upd_chip_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps wf_bank_upd_chip_prop.t.exe)
+  (action (run ./wf_bank_upd_chip_prop.t.exe))))
+
+(subdir wf_chip_from_bank_prop
+ (rule
+  (targets wf_chip_from_bank_prop.t.exe)
+  (deps WfChipFromBankProp.vo wf_chip_from_bank_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} wf_chip_from_bank_prop.t.exe wf_chip_from_bank_prop.cpp wf_chip_from_bank_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps wf_chip_from_bank_prop.t.exe)
+  (action (run ./wf_chip_from_bank_prop.t.exe))))
+
+(subdir wf_chip_upd_port_prop
+ (rule
+  (targets wf_chip_upd_port_prop.t.exe)
+  (deps WfChipUpdPortProp.vo wf_chip_upd_port_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} wf_chip_upd_port_prop.t.exe wf_chip_upd_port_prop.cpp wf_chip_upd_port_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps wf_chip_upd_port_prop.t.exe)
+  (action (run ./wf_chip_upd_port_prop.t.exe))))
+
+(subdir wf_chip_upd_reg_prop
+ (rule
+  (targets wf_chip_upd_reg_prop.t.exe)
+  (deps WfChipUpdRegProp.vo wf_chip_upd_reg_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} wf_chip_upd_reg_prop.t.exe wf_chip_upd_reg_prop.cpp wf_chip_upd_reg_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps wf_chip_upd_reg_prop.t.exe)
+  (action (run ./wf_chip_upd_reg_prop.t.exe))))
+
+(subdir wf_reg_from_chip_prop
+ (rule
+  (targets wf_reg_from_chip_prop.t.exe)
+  (deps WfRegFromChipProp.vo wf_reg_from_chip_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} wf_reg_from_chip_prop.t.exe wf_reg_from_chip_prop.cpp wf_reg_from_chip_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps wf_reg_from_chip_prop.t.exe)
+  (action (run ./wf_reg_from_chip_prop.t.exe))))
+
+(subdir wf_reg_upd_main_prop
+ (rule
+  (targets wf_reg_upd_main_prop.t.exe)
+  (deps WfRegUpdMainProp.vo wf_reg_upd_main_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} wf_reg_upd_main_prop.t.exe wf_reg_upd_main_prop.cpp wf_reg_upd_main_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps wf_reg_upd_main_prop.t.exe)
+  (action (run ./wf_reg_upd_main_prop.t.exe))))
+
+(subdir wf_reg_upd_stat_prop
+ (rule
+  (targets wf_reg_upd_stat_prop.t.exe)
+  (deps WfRegUpdStatProp.vo wf_reg_upd_stat_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} wf_reg_upd_stat_prop.t.exe wf_reg_upd_stat_prop.cpp wf_reg_upd_stat_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps wf_reg_upd_stat_prop.t.exe)
+  (action (run ./wf_reg_upd_stat_prop.t.exe))))
+
+(subdir wf_sys_upd_bank_prop
+ (rule
+  (targets wf_sys_upd_bank_prop.t.exe)
+  (deps WfSysUpdBankProp.vo wf_sys_upd_bank_prop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} wf_sys_upd_bank_prop.t.exe wf_sys_upd_bank_prop.cpp wf_sys_upd_bank_prop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps wf_sys_upd_bank_prop.t.exe)
+  (action (run ./wf_sys_upd_bank_prop.t.exe))))
+
+(subdir todo_monadic_global_alias
+ (rule
+  (targets todo_monadic_global_alias.t.exe)
+  (deps TodoMonadicGlobalAlias.vo todo_monadic_global_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_monadic_global_alias.t.exe todo_monadic_global_alias.cpp todo_monadic_global_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_monadic_global_alias.t.exe)
+  (action (run ./todo_monadic_global_alias.t.exe))))
+
+(subdir todo_nested_module_type
+ (rule
+  (targets todo_nested_module_type.t.exe)
+  (deps TodoNestedModuleType.vo todo_nested_module_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_nested_module_type.t.exe todo_nested_module_type.cpp todo_nested_module_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_nested_module_type.t.exe)
+  (action (run ./todo_nested_module_type.t.exe))))
+
+(subdir todo_with_module_constraint
+ (rule
+  (targets todo_with_module_constraint.t.exe)
+  (deps TodoWithModuleConstraint.vo todo_with_module_constraint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_with_module_constraint.t.exe todo_with_module_constraint.cpp todo_with_module_constraint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_with_module_constraint.t.exe)
+  (action (run ./todo_with_module_constraint.t.exe))))
+
+(subdir todo_with_type_constraint
+ (rule
+  (targets todo_with_type_constraint.t.exe)
+  (deps TodoWithTypeConstraint.vo todo_with_type_constraint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_with_type_constraint.t.exe todo_with_type_constraint.cpp todo_with_type_constraint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_with_type_constraint.t.exe)
+  (action (run ./todo_with_type_constraint.t.exe))))
+
+(subdir todo_nested_module_type_functor
+ (rule
+  (targets todo_nested_module_type_functor.t.exe)
+  (deps TodoNestedModuleTypeFunctor.vo todo_nested_module_type_functor.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_nested_module_type_functor.t.exe todo_nested_module_type_functor.cpp todo_nested_module_type_functor.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_nested_module_type_functor.t.exe)
+  (action (run ./todo_nested_module_type_functor.t.exe))))
+
+(subdir todo_extract_constant_noninline
+ (rule
+  (targets todo_extract_constant_noninline.t.exe)
+  (deps TodoExtractConstantNoninline.vo todo_extract_constant_noninline.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_extract_constant_noninline.t.exe todo_extract_constant_noninline.cpp todo_extract_constant_noninline.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_extract_constant_noninline.t.exe)
+  (action (run ./todo_extract_constant_noninline.t.exe))))
+
+(subdir todo_polymorphic_erased_helper
+ (rule
+  (targets todo_polymorphic_erased_helper.t.exe)
+  (deps TodoPolymorphicErasedHelper.vo todo_polymorphic_erased_helper.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_polymorphic_erased_helper.t.exe todo_polymorphic_erased_helper.cpp todo_polymorphic_erased_helper.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_polymorphic_erased_helper.t.exe)
+  (action (run ./todo_polymorphic_erased_helper.t.exe))))
+
+(subdir todo_explicit_type_app_alias
+ (rule
+  (targets todo_explicit_type_app_alias.t.exe)
+  (deps TodoExplicitTypeAppAlias.vo todo_explicit_type_app_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_explicit_type_app_alias.t.exe todo_explicit_type_app_alias.cpp todo_explicit_type_app_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_explicit_type_app_alias.t.exe)
+  (action (run ./todo_explicit_type_app_alias.t.exe))))
+
+(subdir todo_dependent_field_alias
+ (rule
+  (targets todo_dependent_field_alias.t.exe)
+  (deps TodoDependentFieldAlias.vo todo_dependent_field_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_dependent_field_alias.t.exe todo_dependent_field_alias.cpp todo_dependent_field_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_dependent_field_alias.t.exe)
+  (action (run ./todo_dependent_field_alias.t.exe))))
+
+(subdir todo_type_app_instance_alias
+ (rule
+  (targets todo_type_app_instance_alias.t.exe)
+  (deps TodoTypeAppInstanceAlias.vo todo_type_app_instance_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_type_app_instance_alias.t.exe todo_type_app_instance_alias.cpp todo_type_app_instance_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_type_app_instance_alias.t.exe)
+  (action (run ./todo_type_app_instance_alias.t.exe))))
+
+(subdir todo_inline_custom_symbol
+ (rule
+  (targets todo_inline_custom_symbol.t.exe)
+  (deps TodoInlineCustomSymbol.vo todo_inline_custom_symbol.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_inline_custom_symbol.t.exe todo_inline_custom_symbol.cpp todo_inline_custom_symbol.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_inline_custom_symbol.t.exe)
+  (action (run ./todo_inline_custom_symbol.t.exe))))
+
+(subdir todo_type_subst_pack_alias
+ (rule
+  (targets todo_type_subst_pack_alias.t.exe)
+  (deps TodoTypeSubstPackAlias.vo todo_type_subst_pack_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_type_subst_pack_alias.t.exe todo_type_subst_pack_alias.cpp todo_type_subst_pack_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_type_subst_pack_alias.t.exe)
+  (action (run ./todo_type_subst_pack_alias.t.exe))))
+
+(subdir todo_inline_custom_poly_id
+ (rule
+  (targets todo_inline_custom_poly_id.t.exe)
+  (deps TodoInlineCustomPolyId.vo todo_inline_custom_poly_id.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_inline_custom_poly_id.t.exe todo_inline_custom_poly_id.cpp todo_inline_custom_poly_id.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_inline_custom_poly_id.t.exe)
+  (action (run ./todo_inline_custom_poly_id.t.exe))))
+
+(subdir todo_erased_instance_param
+ (rule
+  (targets todo_erased_instance_param.t.exe)
+  (deps TodoErasedInstanceParam.vo todo_erased_instance_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_erased_instance_param.t.exe todo_erased_instance_param.cpp todo_erased_instance_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_erased_instance_param.t.exe)
+  (action (run ./todo_erased_instance_param.t.exe))))
