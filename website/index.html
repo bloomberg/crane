@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <title>Crane</title>
+
+    <meta name="description" content="A new extraction system from Rocq to modern, memory-safe, performant C++." />
+    <meta name="theme-color" content="#7dd3fc" />
+
+    <!-- Open Graph (Slack / Discord / LinkedIn / Facebook) -->
+    <meta property="og:title" content="Crane" />
+    <meta property="og:description" content="A new extraction system from Rocq to modern, memory-safe, performant C++." />
+    <meta property="og:image" content="https://bloomberg.github.io/crane/assets/logo.svg" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:url" content="https://bloomberg.github.io/crane/" />
+    <meta property="og:type" content="website" />
+    <!-- Twitter / X card  -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="https://bloomberg.github.io/crane/assets/logo.svg">
+
+    <link rel="icon" href="assets/logo.png" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+      :root {
+        /* Bloomberg Palette */
+        --bb-black: #000000;
+        --bb-grey: #E2E3E7;
+        --bb-white: #FFFFFF;
+        --bb-red: #ED4436;
+        --bb-amber: #FF9E24;
+        --bb-yellow: #FFCC1D;
+        --bb-green: #4DAA50;
+        --bb-teal: #00D2B3;
+        --bb-lightblue: #00AEE5;
+        --bb-darkblue: #0067B1;
+        --bb-purple: #8A5DB5;
+        --bb-pink: #EA60A7;
+        /* App / UI Theme */
+        --b-dark: var(--bb-black);
+        /* page bg */
+        --b-dark-2: #050608;
+        /* sections */
+        --b-panel: #0A0B0E;
+        /* cards */
+        --b-ink: var(--bb-grey);
+        /* primary text */
+        --b-muted: #9FA0A4;
+        /* secondary text */
+        --b-blue: var(--bb-darkblue);
+        /* CTA + link color */
+        --b-border: #191A1F;
+        /* borders */
+        /* Fluorescent markers (terminal style) */
+        --hl-green: #d8ff58;
+        --hl-blue: #7dd3fc;
+        --hl-teal: #5df0d0;
+        --hl-amber: #ffe888;
+      }
+
+      * {
+        box-sizing: border-box
+      }
+
+      html,
+      body {
+        height: 100%
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans", sans-serif;
+        background: var(--b-dark);
+        color: var(--b-ink);
+      }
+
+      /* Global link styling */
+      a,
+      a:visited {
+        color: var(--b-blue);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      /* Buttons are links but shouldn't look like underlined links */
+      .btn,
+      .btn:visited,
+      .btn:hover,
+      .btn:active,
+      .btn:focus {
+        text-decoration: none !important;
+      }
+
+      /* Terminal highlight utilities (used mainly in hero) */
+      .hl-green {
+        background: var(--hl-green);
+        color: #000;
+        padding: 0 4px;
+        border-radius: 3px;
+        font-weight: 500;
+      }
+
+      .hl-teal {
+        background: var(--hl-teal);
+        color: #000;
+        padding: 0 4px;
+        border-radius: 3px;
+        font-weight: 500;
+      }
+
+      /* NAV */
+      nav.top {
+        position: fixed;
+        inset: 0 0 auto 0;
+        z-index: 20;
+        background: rgba(0, 0, 0, 0.9);
+        backdrop-filter: saturate(140%) blur(10px);
+        border-bottom: 1px solid var(--b-border);
+      }
+
+      .nav-wrap {
+        max-width: 1000px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 12px 18px;
+      }
+
+      .links {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+      }
+
+      .links a {
+        color: var(--b-ink);
+        opacity: .85;
+        font-size: 14px;
+        text-decoration: none;
+        transition: opacity .15s ease;
+      }
+
+      .links a:hover {
+        opacity: 1;
+        text-decoration: none;
+      }
+
+      /* HERO */
+      header.hero {
+        position: relative;
+        overflow: hidden;
+        padding-top: 56px;
+        /* space under fixed nav */
+        background:
+          radial-gradient(circle at 20% 0%, rgba(125, 211, 252, 0.28) 0%, transparent 55%),
+          radial-gradient(circle at 80% 0%, rgba(93, 240, 208, 0.18) 0%, transparent 60%),
+          #000000;
+      }
+
+      .hero-inner {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 84px 18px 80px;
+        position: relative;
+        text-align: center;
+      }
+
+      .hero-brand {
+        display: flex;
+        align-items: stretch;
+        justify-content: center;
+        gap: 28px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+      }
+
+      .hero-logo {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .hero-text {
+        flex: 1 1 auto;
+        max-width: 480px;
+        text-align: left;
+      }
+
+      #logo-large {
+        max-width: 170px;
+        width: 100%;
+        height: auto;
+        filter: drop-shadow(0 10px 40px rgba(0, 0, 0, .6));
+      }
+
+      h1.logo {
+        font-size: clamp(40px, 7vw, 64px);
+        margin: 0 0 10px;
+      }
+
+      h4.sub {
+        margin: 0;
+        font-weight: 300;
+        color: var(--b-ink);
+        opacity: .95;
+        font-size: clamp(16px, 2.3vw, 19px);
+        line-height: 1.6;
+      }
+
+      h4.sub img {
+        vertical-align: middle;
+        margin-right: 4px;
+      }
+
+      /* CTA + release info */
+      .cta-row {
+        margin: 28px 0 10px;
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        border: 1px solid var(--hl-blue);
+        padding: 10px 20px;
+        border-radius: 6px;
+        /* toned down */
+        background: rgba(125, 211, 252, 0.10);
+        font-weight: 600;
+        font-size: 14px;
+        text-transform: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        cursor: pointer;
+        color: var(--bb-grey);
+        /* default button text */
+        transition:
+          box-shadow .18s ease,
+          background-color .18s ease,
+          border-color .18s ease,
+          transform .08s ease;
+      }
+
+      .btn.primary {
+        background: var(--hl-blue);
+        border-color: var(--hl-blue);
+        color: #000;
+        /* primary uses dark text */
+      }
+
+      .btn:hover {
+        box-shadow: 0 0 28px rgba(125, 211, 252, 0.55);
+        transform: translateY(-1px);
+      }
+
+      .hero-release {
+        margin-top: 18px;
+        font-size: 13px;
+        color: var(--b-muted);
+      }
+
+      .hero-release span {
+        display: inline-block;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: rgba(216, 255, 88, 0.16);
+        color: #d8ff58;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: .12em;
+      }
+
+      @media (max-width:640px) {
+        .hero-inner {
+          padding-top: 72px
+        }
+
+        .hero-text {
+          text-align: center
+        }
+      }
+
+      /* QUICK START SECTION */
+      section.quick-start {
+        background: var(--b-dark-2);
+        padding: 72px 18px;
+        border-top: 1px solid var(--b-border);
+        border-bottom: 1px solid var(--b-border);
+      }
+
+      section.quick-start .container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      .qs-title {
+        text-align: center;
+        font-size: 28px;
+        margin: 0 0 10px;
+      }
+
+      .qs-sub {
+        text-align: center;
+        font-size: 15px;
+        color: var(--b-muted);
+        max-width: 620px;
+        margin: 12px auto 40px;
+      }
+
+      .qs-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 26px;
+      }
+
+      .qs-card {
+        display: block;
+        padding: 22px;
+        border-radius: 10px;
+        /* reduced radius */
+        background: var(--b-panel);
+        border: 1px solid var(--b-border);
+        color: var(--b-ink);
+        transition:
+          border-color .2s ease,
+          background-color .2s ease,
+          transform .08s ease,
+          box-shadow .18s ease;
+        text-decoration: none;
+      }
+
+      .qs-card:visited {
+        color: var(--b-ink);
+      }
+
+      .qs-card:hover {
+        border-color: var(--hl-blue);
+        background: #101218;
+        box-shadow: 0 0 16px rgba(125, 211, 252, 0.20);
+        transform: translateY(-1px);
+        text-decoration: none;
+      }
+
+      /* Icon + title row */
+      .qs-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;          /* space between icon and title */
+        margin-bottom: 8px; /* space before description */
+      }
+
+      /* Adjust title when in the row */
+      .qs-head h4 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 600;
+      }
+
+      /* Slightly shrink icon container to match title height */
+      .qs-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;       /* tighter, more Bloomberg-like */
+        margin-bottom: 0;         /* remove old spacing */
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(125,211,252,0.15);
+        color: var(--hl-blue);
+      }
+
+      .qs-card p {
+        margin: 0;
+        color: var(--b-muted);
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      /* Responsive */
+      @media(max-width: 960px) {
+        .qs-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media(max-width: 640px) {
+        .qs-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* PAPERS */
+      section.papers {
+        background: var(--b-dark);
+        padding: 56px 18px;
+        border-bottom: 1px solid var(--b-border);
+      }
+
+      section.papers .container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      .papers-title {
+        text-align: center;
+        font-size: 26px;
+        margin: 0 0 24px;
+      }
+
+      .papers-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .papers-list li {
+        padding: 14px 0;
+        border-top: 1px solid var(--b-border);
+      }
+
+      .papers-list li:last-child {
+        border-bottom: 1px solid var(--b-border);
+      }
+
+      .papers-list a {
+        font-weight: 500;
+        color: var(--hl-blue);
+      }
+
+      .paper-meta {
+        display: block;
+        font-size: 14px;
+        color: var(--b-muted);
+        margin-top: 4px;
+      }
+
+      /* FOOTER */
+      footer {
+        background: #000000;
+        padding: 18px 18px;
+        border-top: 1px solid var(--b-border);
+        color: var(--b-muted);
+        font-size: 13px;
+      }
+
+      footer .row {
+        display: flex;
+        gap: 22px;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+
+      footer a,
+      footer a:visited {
+        color: var(--bb-lightblue);
+        text-decoration: none;
+      }
+
+      footer a:hover {
+        text-decoration: underline;
+      }
+
+      .cpp-tag {
+        --light: #5fa9dd;
+        --dark:  #0a4c8a;
+        padding: 0 4px;
+        border-radius: 3px;
+        font-weight: 700;
+        color: white !important;
+        background: linear-gradient(135deg, var(--light), var(--dark));
+      }
+      .rocq-tag {
+        color: rgb(253 83 11) !important;
+        font-weight: 600;
+      }
+      .rocq-tag > img {
+        height: 1em;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="top" id="totop">
+      <div class="nav-wrap">
+        <div class="links">
+          <a href="https://github.com/bloomberg/crane">GitHub</a>
+          <a href="https://github.com/bloomberg/crane/tree/main/docs">Documentation</a>
+          <a href="https://github.com/bloomberg/crane/issues">Issues</a>
+        </div>
+      </div>
+    </nav>
+    <header class="hero" role="banner">
+      <div class="hero-inner">
+        <div class="hero-brand">
+          <div class="hero-logo">
+            <img src="assets/logo.svg" alt="Crane logo" id="logo-large">
+          </div>
+          <div class="hero-text">
+            <h1 class="logo">Crane</h1>
+            <h4 class="sub"> A new extraction system from <a class="rocq-tag" href="https://rocq-prover.org/"><img src="assets/rocq-small.png">Rocq</a> to <br>
+              <span class="hl-green">functional-style</span>, <span class="hl-green">memory-safe</span>, <span class="hl-green">thread-safe</span>, <span class="hl-green">readable</span>, <span class="hl-green">valid</span>, <span class="hl-green">performant</span>, and <span class="hl-green">modern</span> <a class="cpp-tag" href="https://isocpp.org/">C++</a>.
+            </h4>
+          </div>
+        </div>
+        <div class="cta-row">
+          <a class="btn primary" href="https://github.com/bloomberg/crane"> View on GitHub </a>
+        </div>
+        <p class="hero-release"> Latest version: <span>alpha</span>
+        </p>
+      </div>
+    </header>
+    <section class="quick-start">
+      <div class="container">
+        <h2 class="qs-title">Quick Start</h2>
+        <p class="qs-sub"> Explore common topics, guides, and documentation for Crane. </p>
+        <div class="qs-grid">
+          <a class="qs-card" href="https://github.com/bloomberg/crane/blob/main/docs/Getting-Started.md">
+            <div class="qs-head">
+            <div class="qs-icon">
+              <i class="fa-solid fa-book-open"></i>
+            </div>
+            <h4>Getting Started</h4>
+            </div>
+            <p>Install Crane, configure Rocq, and run your first extraction.</p>
+          </a>
+          <a class="qs-card" href="https://github.com/bloomberg/crane/blob/main/docs/Design-Principles.md">
+            <div class="qs-head">
+            <div class="qs-icon">
+              <i class="fa-solid fa-gem"></i>
+            </div>
+            <h4>Design Principles</h4>
+            </div>
+            <p>The goals and tradeoffs behind Crane's C++ extraction strategy.</p>
+          </a>
+          <a class="qs-card" href="https://github.com/bloomberg/crane/blob/main/docs/Examples.md">
+            <div class="qs-head">
+            <div class="qs-icon">
+              <i class="fa-solid fa-puzzle-piece"></i>
+            </div>
+            <h4>Examples</h4>
+            </div>
+            <p>Browse example Rocq projects and extracted C++ code.</p>
+          </a>
+          <a class="qs-card" href="https://github.com/bloomberg/crane/blob/main/docs/Reference-Manual.md">
+            <div class="qs-head">
+            <div class="qs-icon">
+              <i class="fa-regular fa-file-lines"></i>
+            </div>
+            <h4>Reference Manual</h4>
+            </div>
+            <p>Understand all Crane options, extraction rules, and flags.</p>
+          </a>
+          <a class="qs-card" href="https://github.com/bloomberg/crane/blob/main/docs/Crane-Base-Library.md">
+            <div class="qs-head">
+            <div class="qs-icon">
+              <i class="fa-solid fa-cubes"></i>
+            </div>
+            <h4>Crane Base Library</h4>
+            </div>
+            <p>Our Rocq library of types, monads, etc. used from extracted code.</p>
+          </a>
+          <a class="qs-card" href="https://github.com/bloomberg/crane/blob/main/docs/Roadmap.md">
+            <div class="qs-head">
+            <div class="qs-icon">
+              <i class="fa-solid fa-road"></i>
+            </div>
+            <h4>Roadmap</h4>
+            </div>
+            <p>Planned features and upcoming improvements.</p>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="papers">
+      <div class="container">
+        <h2 class="papers-title">Papers</h2>
+        <ul class="papers-list">
+          <li>
+            <a href="papers/crane-rocqpl26.pdf">
+              Crane Lowers Rocq Safely into C++ (Extended Abstract)
+            </a>
+            <span class="paper-meta">
+              Matthew Z. Weaver, Joomy Korkut. <a href="https://popl26.sigplan.org/home/rocqpl-2026">RocqPL 2026</a>.
+            </span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <footer id="footer" role="contentinfo">
+      <div class="row">
+        <div>© 2026 Bloomberg L.P.</div>
+        <ul style="list-style:none;display:flex;gap:18px;margin:0;padding:0;flex-wrap:wrap">
+          <li>
+            <a href="https://github.com/bloomberg/crane">GitHub</a>
+          </li>
+          <li>
+            <a href="https://github.com/bloomberg/crane/tree/main/docs">Documentation</a>
+          </li>
+          <li>
+            <a href="https://github.com/bloomberg/crane/issues">Issues</a>
+          </li>
+        </ul>
+      </div>
+    </footer>
+  </body>
+</html>
