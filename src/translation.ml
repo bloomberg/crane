@@ -2137,7 +2137,14 @@ and eta_fun env f args =
           in
           let eta_args =
             List.mapi
-              (fun i ty -> (Tmod (TMconst, ty), Some (eta_param_id i)))
+              (fun i ty ->
+                let wrapped =
+                  match ty with
+                  | Tshared_ptr _ | Tunique_ptr _ ->
+                    Tref (Tmod (TMconst, ty))
+                  | _ -> ty
+                in
+                (wrapped, Some (eta_param_id i)))
               missing_args
           in
           let call_args =

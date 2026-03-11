@@ -37,7 +37,7 @@ struct TodoTypeSubstPackAlias {
   }
 
   template <typename _tcI0, typename carrier> static carrier run_twice() {
-    std::function<carrier(carrier)> alias = [](const carrier _x0) -> carrier {
+    std::function<carrier(carrier)> alias = [](carrier _x0) -> carrier {
       return step_of<_tcI0>(_x0);
     };
     return alias(alias(_tcI0::seed()));

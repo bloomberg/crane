@@ -166,37 +166,34 @@ struct HigherOrder {
                               4u, list<unsigned int>::ctor::cons_(
                                       5u, list<unsigned int>::ctor::nil_())))));
   static inline const unsigned int test_map = foldr<unsigned int, unsigned int>(
-      [](const unsigned int _x0, const unsigned int _x1) -> unsigned int {
+      [](unsigned int _x0, unsigned int _x1) -> unsigned int {
         return (_x0 + _x1);
       },
       0u,
       map<unsigned int, unsigned int>(
-          [](const unsigned int _x0) -> unsigned int { return (1u + _x0); },
+          [](unsigned int _x0) -> unsigned int { return (1u + _x0); },
           test_list));
   static inline const unsigned int test_foldr =
       foldr<unsigned int, unsigned int>(
-          [](const unsigned int _x0, const unsigned int _x1) -> unsigned int {
+          [](unsigned int _x0, unsigned int _x1) -> unsigned int {
             return (_x0 + _x1);
           },
           0u, test_list);
   static inline const unsigned int test_foldl =
       foldl<unsigned int, unsigned int>(
-          [](const unsigned int _x0, const unsigned int _x1) -> unsigned int {
+          [](unsigned int _x0, unsigned int _x1) -> unsigned int {
             return (_x0 + _x1);
           },
           0u, test_list);
   static inline const unsigned int test_compose =
       compose<unsigned int, unsigned int, unsigned int>(
-          [](const unsigned int _x0) -> unsigned int { return (2u * _x0); },
-          [](const unsigned int _x0) -> unsigned int { return (1u + _x0); },
-          3u);
+          [](unsigned int _x0) -> unsigned int { return (2u * _x0); },
+          [](unsigned int _x0) -> unsigned int { return (1u + _x0); }, 3u);
   static inline const unsigned int test_iterate = iterate<unsigned int>(
-      3u, [](const unsigned int _x0) -> unsigned int { return (2u + _x0); },
-      0u);
+      3u, [](unsigned int _x0) -> unsigned int { return (2u + _x0); }, 0u);
   static inline const unsigned int test_adder = adder(5u, 3u);
   static inline const unsigned int test_twice = twice<unsigned int>(
-      [](const unsigned int _x0) -> unsigned int { return (1u + _x0); }, 5u);
+      [](unsigned int _x0) -> unsigned int { return (1u + _x0); }, 5u);
   static inline const unsigned int test_pipe = pipe<unsigned int, unsigned int>(
-      5u,
-      [](const unsigned int _x0) -> unsigned int { return adder(3u, _x0); });
+      5u, [](unsigned int _x0) -> unsigned int { return adder(3u, _x0); });
 };

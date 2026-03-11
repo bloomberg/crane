@@ -143,7 +143,7 @@ struct ImplicitArgs {
   }
 
   static inline const unsigned int use_apply_implicit = apply_implicit(
-      [](const unsigned int _x0) -> unsigned int { return (1u + _x0); }, 5u);
+      [](unsigned int _x0) -> unsigned int { return (1u + _x0); }, 5u);
   static unsigned int with_base(const unsigned int, const unsigned int);
   static unsigned int from_zero(const unsigned int);
   static unsigned int from_ten(const unsigned int);
@@ -193,8 +193,7 @@ struct ImplicitArgs {
   static inline const unsigned int test_compose =
       compose<unsigned int, unsigned int, unsigned int>(
           double_nat,
-          [](const unsigned int _x0) -> unsigned int { return (1u + _x0); },
-          3u);
+          [](unsigned int _x0) -> unsigned int { return (1u + _x0); }, 3u);
   static inline const unsigned int test_length =
       length<unsigned int>(mylist<unsigned int>::ctor::mycons_(
           1u, mylist<unsigned int>::ctor::mycons_(

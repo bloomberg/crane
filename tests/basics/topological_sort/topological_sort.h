@@ -463,7 +463,7 @@ struct TopologicalSort {
       } else {
         return graph_lookup<T1>(eqb_node, elem, graph0)
             ->template fold_right<std::shared_ptr<List<T1>>>(
-                [&](const T1 _x0, const std::shared_ptr<List<T1>> _x1)
+                [&](T1 _x0, const std::shared_ptr<List<T1>> &_x1)
                     -> std::shared_ptr<List<T1>> {
                   return cycle_extract_aux<T1>(eqb_node, graph0, std::move(c),
                                                _x0, _x1);
@@ -514,8 +514,9 @@ struct TopologicalSort {
                   return null<T1>(p.second);
                 })
                 ->template map<T1>(
-                    [](const std::pair<T1, std::shared_ptr<List<T1>>> _x0)
-                        -> T1 { return _x0.first; });
+                    [](std::pair<T1, std::shared_ptr<List<T1>>> _x0) -> T1 {
+                      return _x0.first;
+                    });
         std::shared_ptr<List<T1>> mins_;
         if (null<T1>(mins)) {
           mins_ = cycle_extract<T1>(eqb_node, graph0);

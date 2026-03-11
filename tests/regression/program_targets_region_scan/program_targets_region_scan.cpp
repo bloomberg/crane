@@ -51,6 +51,6 @@ bool ProgramTargetsRegionScan::program_targets_okb(
         List<std::shared_ptr<ProgramTargetsRegionScan::instruction>>> &prog,
     const std::shared_ptr<ProgramTargetsRegionScan::layout> &l) {
   return prog->forallb(
-      [&](const std::shared_ptr<ProgramTargetsRegionScan::instruction> _x0)
+      [&](const std::shared_ptr<ProgramTargetsRegionScan::instruction> &_x0)
           -> bool { return target_in_layoutb(l, _x0); });
 }
