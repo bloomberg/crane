@@ -35,7 +35,7 @@ Sort::sort_cons_prog(const unsigned int a,
                             Sig<std::shared_ptr<List<unsigned int>>>> {
                       std::shared_ptr<List<unsigned int>> x = _args._a0;
                       bool s0 = Compare_dec::le_lt_dec(std::move(a), y);
-                      if (s0) {
+                      if (std::move(s0)) {
                         return Sig<std::shared_ptr<List<unsigned int>>>::ctor::
                             exist_(List<unsigned int>::ctor::cons_(
                                 std::move(a), List<unsigned int>::ctor::cons_(
@@ -185,7 +185,7 @@ Sort::psort(const std::shared_ptr<List<unsigned int>> &_x0) {
       },
       [](unsigned int a1, unsigned int a2) {
         bool s = Compare_dec::le_lt_dec(a1, a2);
-        if (s) {
+        if (std::move(s)) {
           return Sig<std::shared_ptr<List<unsigned int>>>::ctor::exist_(
               List<unsigned int>::ctor::cons_(
                   a1, List<unsigned int>::ctor::cons_(
@@ -283,7 +283,7 @@ bool Compare_dec::le_gt_dec(const unsigned int _x0, const unsigned int _x1) {
 
 bool Compare_dec::le_dec(const unsigned int n, const unsigned int m) {
   bool s = Compare_dec::le_gt_dec(n, m);
-  if (s) {
+  if (std::move(s)) {
     return true;
   } else {
     return false;

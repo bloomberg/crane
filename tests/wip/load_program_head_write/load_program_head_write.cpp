@@ -18,7 +18,7 @@ LoadProgramHeadWrite::update_nth(const unsigned int n, const unsigned int x,
     return [&](void) {
       if (((l.use_count() == 1) && (l->v().index() == 1))) {
         auto &_rf = std::get<1>(l->v_mut());
-        std::any _x = std::move(_rf._a0);
+        std::shared_ptr<List<unsigned int>> xs = std::move(_rf._a1);
         _rf._a0 = x;
         _rf._a1 = xs;
         return l;
@@ -40,13 +40,14 @@ LoadProgramHeadWrite::update_nth(const unsigned int n, const unsigned int x,
   } else {
     unsigned int n_ = n - 1;
     return [&](void) {
-      if (((l.use_count() == 1) && (l->v().index() == 1))) {
-        auto &_rf = std::get<1>(l->v_mut());
+      if (((std::move(l).use_count() == 1) &&
+           (std::move(l)->v().index() == 1))) {
+        auto &_rf = std::get<1>(std::move(l)->v_mut());
         unsigned int y = std::move(_rf._a0);
         std::shared_ptr<List<unsigned int>> ys = std::move(_rf._a1);
-        _rf._a0 = y;
+        _rf._a0 = std::move(y);
         _rf._a1 = update_nth(n_, x, std::move(ys));
-        return l;
+        return std::move(l);
       } else {
         return std::visit(
             Overloaded{[&](const typename List<unsigned int>::nil _args)
@@ -61,7 +62,7 @@ LoadProgramHeadWrite::update_nth(const unsigned int n, const unsigned int x,
                              std::move(y),
                              update_nth(std::move(n_), x, std::move(ys)));
                        }},
-            l->v());
+            std::move(l)->v());
       }
     }();
   }

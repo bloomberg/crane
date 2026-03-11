@@ -224,7 +224,7 @@ struct CHT {
                      bsl::shared_ptr<List<bsl::pair<T1, T2> > > tl = _args._a1;
                      T1                                         k_ = p.first;
                      T2                                         v  = p.second;
-                     if (eqb(k, k_)) {
+                     if (eqb(k, bsl::move(k_))) {
                          return bsl::make_optional<T2>(bsl::move(v));
                      }
                      else {
@@ -258,7 +258,7 @@ struct CHT {
                      bsl::shared_ptr<List<bsl::pair<T1, T2> > > tl = _args._a1;
                      T1                                         k_ = p.first;
                      T2                                         v_ = p.second;
-                     if (eqb(k, k_)) {
+                     if (eqb(k, bsl::move(k_))) {
                          return List<bsl::pair<T1, T2> >::ctor::cons_(
                              bsl::make_pair(k, v),
                              tl);
@@ -295,7 +295,7 @@ struct CHT {
                     bsl::shared_ptr<List<bsl::pair<T1, T2> > > tl = _args._a1;
                     T1                                         k_ = p.first;
                     T2                                         v_ = p.second;
-                    if (eqb(k, k_)) {
+                    if (eqb(k, bsl::move(k_))) {
                         return bsl::make_pair(
                             bsl::make_optional<T2>(bsl::move(v_)),
                             bsl::move(tl));
@@ -308,10 +308,10 @@ struct CHT {
                                 k,
                                 bsl::move(tl));
                         return bsl::make_pair(
-                            q.first,
+                            bsl::move(q).first,
                             List<bsl::pair<T1, T2> >::ctor::cons_(
                                 bsl::make_pair(bsl::move(k_), bsl::move(v_)),
-                                q.second));
+                                bsl::move(q).second));
                     }
                 }},
             xs->v());

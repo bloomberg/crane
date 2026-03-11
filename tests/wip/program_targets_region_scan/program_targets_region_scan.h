@@ -172,7 +172,7 @@ struct ProgramTargetsRegionScan {
                 List<std::shared_ptr<instruction>>::ctor::cons_(
                     instruction::ctor::JMS_(218u),
                     List<std::shared_ptr<instruction>>::ctor::nil_())));
-    if (program_targets_okb(p, l)) {
+    if (program_targets_okb(std::move(p), std::move(l))) {
       return 1u;
     } else {
       return 0u;

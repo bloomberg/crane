@@ -77,7 +77,7 @@ bool LetFix::local_mem(const unsigned int n,
                  [&](const typename List<unsigned int>::cons _args) -> bool {
                    unsigned int x = _args._a0;
                    std::shared_ptr<List<unsigned int>> rest = _args._a1;
-                   if ((x == n)) {
+                   if ((std::move(x) == n)) {
                      return true;
                    } else {
                      return local_mem(n, std::move(rest));

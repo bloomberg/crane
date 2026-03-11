@@ -114,7 +114,7 @@ DeepPatterns::deep_sum(const std::shared_ptr<DeepPatterns::outer> &o) {
                            [](const typename DeepPatterns::inner::IRight _args)
                                -> unsigned int {
                              bool b = _args._a0;
-                             if (b) {
+                             if (std::move(b)) {
                                return 1u;
                              } else {
                                return 0u;

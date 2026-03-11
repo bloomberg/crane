@@ -53,7 +53,7 @@ bool ComputationalProof::le_dec(const unsigned int n, const unsigned int m) {
     } else {
       unsigned int n1 = m - 1;
       bool s = le_dec(n0, n1);
-      if (s) {
+      if (std::move(s)) {
         return true;
       } else {
         return false;

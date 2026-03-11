@@ -305,7 +305,7 @@ template <typename K, typename V> struct SkipList {
               curr->forward[level]));
       if (nextOpt.has_value()) {
         std::shared_ptr<SkipNode<T1, T2>> next0 = *nextOpt;
-        if (ltK(next0->key, target)) {
+        if (ltK(std::move(next0)->key, target)) {
           return SkipList<int, int>::template findPred_go<T1, T2>(
               ltK, fuel_, std::move(next0), target, level);
         } else {
@@ -456,11 +456,12 @@ template <typename K, typename V> struct SkipList {
     std::shared_ptr<SkipNode<T1, T2>> pred =
         SkipList<int, int>::template findPred<T1, T2>(ltK, curr, target, level);
     if (level <= 0) {
-      std::optional<std::shared_ptr<SkipNode<T1, T2>>> nextOpt = ptr_to_opt(
-          stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(pred->forward[0u]));
+      std::optional<std::shared_ptr<SkipNode<T1, T2>>> nextOpt =
+          ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
+              std::move(pred)->forward[0u]));
       if (nextOpt.has_value()) {
         std::shared_ptr<SkipNode<T1, T2>> node = *nextOpt;
-        return eqK(node->key, target);
+        return eqK(std::move(node)->key, target);
       } else {
         return false;
       }
@@ -559,15 +560,15 @@ template <typename K, typename V> struct SkipList {
                 const std::shared_ptr<SkipNode<T1, T2>> head,
                 const unsigned int maxLvl, const unsigned int acc) {
     if (fuel <= 0) {
-      return acc;
+      return std::move(acc);
     } else {
       unsigned int fuel_ = fuel - 1;
       std::optional<std::shared_ptr<SkipNode<T1, T2>>> firstOpt = ptr_to_opt(
           stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(head->forward[0u]));
       if (firstOpt.has_value()) {
         std::shared_ptr<SkipNode<T1, T2>> node = *firstOpt;
-        SkipList<int, int>::template unlinkNodeAtAllLevels<T1, T2>(head, node,
-                                                                   maxLvl);
+        SkipList<int, int>::template unlinkNodeAtAllLevels<T1, T2>(
+            head, std::move(node), maxLvl);
         return SkipList<int, int>::template removeAll_aux<T1, T2>(
             fuel_, head, maxLvl, (acc + 1));
       } else {

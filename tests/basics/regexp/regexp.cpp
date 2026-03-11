@@ -13,7 +13,7 @@
 
 bool Matcher::char_eq(const int64_t x, const int64_t y) {
   bool b = (x == y);
-  if (b) {
+  if (std::move(b)) {
     return true;
   } else {
     return false;
@@ -125,8 +125,8 @@ bool Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
                     [&](const typename Matcher::regexp::Cat _args) -> bool {
                       std::shared_ptr<Matcher::regexp> r3 = _args._a0;
                       std::shared_ptr<Matcher::regexp> r4 = _args._a1;
-                      if (regexp_eq(r1, r3)) {
-                        if (regexp_eq(r2, r4)) {
+                      if (regexp_eq(std::move(r1), std::move(r3))) {
+                        if (regexp_eq(std::move(r2), std::move(r4))) {
                           return true;
                         } else {
                           return false;
@@ -166,8 +166,8 @@ bool Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
                     [&](const typename Matcher::regexp::Alt _args) -> bool {
                       std::shared_ptr<Matcher::regexp> r3 = _args._a0;
                       std::shared_ptr<Matcher::regexp> r4 = _args._a1;
-                      if (regexp_eq(r1, r3)) {
-                        if (regexp_eq(r2, r4)) {
+                      if (regexp_eq(std::move(r1), std::move(r3))) {
+                        if (regexp_eq(std::move(r2), std::move(r4))) {
                           return true;
                         } else {
                           return false;
@@ -234,7 +234,7 @@ bool Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
                     },
                     [&](const typename Matcher::regexp::Star _args) -> bool {
                       std::shared_ptr<Matcher::regexp> r1 = _args._a0;
-                      if (regexp_eq(r0, r1)) {
+                      if (regexp_eq(std::move(r0), std::move(r1))) {
                         return true;
                       } else {
                         return false;
@@ -992,14 +992,14 @@ bool Matcher::NullEpsOrZero(const std::shared_ptr<Matcher::regexp> &r) {
                  [](const typename Matcher::regexp::Cat _args) -> auto {
                    std::shared_ptr<Matcher::regexp> r1 = _args._a0;
                    std::shared_ptr<Matcher::regexp> r2 = _args._a1;
-                   if (NullEpsOrZero(r1)) {
-                     if (NullEpsOrZero(r2)) {
+                   if (NullEpsOrZero(std::move(r1))) {
+                     if (NullEpsOrZero(std::move(r2))) {
                        return true;
                      } else {
                        return false;
                      }
                    } else {
-                     if (NullEpsOrZero(r2)) {
+                     if (NullEpsOrZero(std::move(r2))) {
                        return false;
                      } else {
                        return false;
@@ -1009,14 +1009,14 @@ bool Matcher::NullEpsOrZero(const std::shared_ptr<Matcher::regexp> &r) {
                  [](const typename Matcher::regexp::Alt _args) -> auto {
                    std::shared_ptr<Matcher::regexp> r1 = _args._a0;
                    std::shared_ptr<Matcher::regexp> r2 = _args._a1;
-                   if (NullEpsOrZero(r1)) {
-                     if (NullEpsOrZero(r2)) {
+                   if (NullEpsOrZero(std::move(r1))) {
+                     if (NullEpsOrZero(std::move(r2))) {
                        return true;
                      } else {
                        return true;
                      }
                    } else {
-                     if (NullEpsOrZero(r2)) {
+                     if (NullEpsOrZero(std::move(r2))) {
                        return true;
                      } else {
                        return false;
@@ -1035,7 +1035,7 @@ bool Matcher::NullEpsOrZero(const std::shared_ptr<Matcher::regexp> &r) {
 bool Matcher::parse(const std::shared_ptr<Matcher::regexp> &r,
                     const std::shared_ptr<List<int64_t>> &cs) {
   bool b = deriv_parse(r, cs);
-  if (b) {
+  if (std::move(b)) {
     return true;
   } else {
     return false;

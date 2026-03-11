@@ -449,7 +449,7 @@ struct SkipList {
                      curr->forward[level]));
             if (nextOpt.has_value()) {
                 bsl::shared_ptr<SkipNode<T1, T2> > next0 = *nextOpt;
-                if (ltK(next0->key, target)) {
+                if (ltK(bsl::move(next0)->key, target)) {
                     return SkipList<int, int>::template findPred_go<T1, T2>(
                                                               ltK,
                                                               fuel_,
@@ -666,10 +666,10 @@ struct SkipList {
         if (level <= 0) {
             bsl::optional<bsl::shared_ptr<SkipNode<T1, T2> > > nextOpt =
                  ptr_to_opt(stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2> > >(
-                     pred->forward[0u]));
+                     bsl::move(pred)->forward[0u]));
             if (nextOpt.has_value()) {
                 bsl::shared_ptr<SkipNode<T1, T2> > node = *nextOpt;
-                return eqK(node->key, target);
+                return eqK(bsl::move(node)->key, target);
             }
             else {
                 return false;
@@ -807,7 +807,7 @@ struct SkipList {
                                const unsigned int                       acc)
     {
         if (fuel <= 0) {
-            return acc;
+            return bsl::move(acc);
         }
         else {
             unsigned int fuel_ = fuel - 1;
@@ -817,9 +817,9 @@ struct SkipList {
             if (firstOpt.has_value()) {
                 bsl::shared_ptr<SkipNode<T1, T2> > node = *firstOpt;
                 SkipList<int, int>::template unlinkNodeAtAllLevels<T1, T2>(
-                                                                       head,
-                                                                       node,
-                                                                       maxLvl);
+                                                               head,
+                                                               bsl::move(node),
+                                                               maxLvl);
                 return SkipList<int, int>::template removeAll_aux<T1, T2>(
                                                                     fuel_,
                                                                     head,

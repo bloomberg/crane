@@ -1812,7 +1812,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
        Use ids' (renamed, same order as gen_cpp_pat_lambda) so that:
        - Variable names match what gen_expr/body_env expects (renamed names)
        - Field indices match constructor field order after List.rev *)
-    let dummies = List.rev_map (fun (x, _) -> match x with Dummy -> false | _ -> true) ids in
+    let dummies = List.map (fun (x, _) -> match x with Dummy -> false | _ -> true) ids in
     let rev_ids' = List.rev ids' in
     let extract_stmts = List.mapi (fun i (var_name, ml_ty) ->
       let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty in
@@ -1883,7 +1883,26 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     List.map (convert_ml_type_to_cpp_type env Refset'.empty tvars) tys
   | _ -> [] in
   let typ = convert_ml_type_to_cpp_type env Refset'.empty tvars typ in
+  (* Custom match templates may use %scrut multiple times (e.g., option:
+     "if (%scrut.has_value()) { ... *%scrut; ... }").  Each occurrence
+     re-prints the scrutinee C++ expression, so any std::move in the
+     scrutinee would fire multiple times.  Suppress moves when the
+     template duplicates the scrutinee. *)
+  let cmatch = find_custom_match pv in
+  let scrut_uses =
+    let plen = 6 in (* length of "%scrut" *)
+    let n = String.length cmatch in
+    let rec count i acc =
+      if i + plen > n then acc
+      else if String.sub cmatch i plen = "%scrut" then count (i + plen) (acc + 1)
+      else count (i + 1) acc
+    in count 0 0
+  in
+  let saved_dead = tctx.move_dead_after in
+  if scrut_uses > 1 then
+    tctx.move_dead_after <- Escape.IntSet.empty;
   let t = gen_expr env t in
+  tctx.move_dead_after <- saved_dead;
   let rec gen_cases = function
   | [] -> []
   | (ids,rty,p,t) :: cs ->
@@ -1897,7 +1916,6 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       br :: (gen_cases cs)
     | Pwild | Prel _ | Ptuple _ ->
       gen_cases cs) in
-  let cmatch = find_custom_match pv in
   Scustom_case (typ, t, temps, gen_cases (Array.to_list pv), cmatch)
 
 and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
@@ -2534,7 +2552,17 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
   let t = Common.last (a1 :: l) in
   [k (gen_expr env t)]
 | MLcase (typ, t, pv) when is_custom_match pv ->
-    [gen_custom_cpp_case env k typ t pv]
+    (* Set up dead-after for owned variables at their last use, same as the
+       default tail-position case below.  Without this, unique_ptr variables
+       passed as function arguments in the scrutinee would not get std::move. *)
+    let saved_dead = tctx.move_dead_after in
+    let tail_dead = Escape.IntSet.filter (fun i ->
+      Escape.nb_occur_match i ast = 1
+    ) tctx.move_owned_vars in
+    tctx.move_dead_after <- Escape.IntSet.union tctx.move_dead_after tail_dead;
+    let result = [gen_custom_cpp_case env k typ t pv] in
+    tctx.move_dead_after <- saved_dead;
+    result
 | MLglob (r, _) when is_ghost r ->
   [Sreturn None]
 | MLexn msg ->

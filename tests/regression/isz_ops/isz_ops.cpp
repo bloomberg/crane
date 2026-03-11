@@ -21,7 +21,7 @@ unsigned int IszOps::get_reg(const std::shared_ptr<IszOps::state> &s,
 unsigned int IszOps::cycles_isz(const std::shared_ptr<IszOps::state> &s,
                                 const unsigned int r) {
   unsigned int new_val = nibble_of_nat((get_reg(s, r) + 1u));
-  if ((new_val == 0u)) {
+  if ((std::move(new_val) == 0u)) {
     return 8u;
   } else {
     return 16u;

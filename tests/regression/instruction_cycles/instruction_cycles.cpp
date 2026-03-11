@@ -32,7 +32,7 @@ unsigned int InstructionCycles::cycles_jcn(
                    } else {
                      jump = std::move(base_cond);
                    }
-                   if (jump) {
+                   if (std::move(jump)) {
                      return 16u;
                    } else {
                      return 8u;
@@ -134,7 +134,8 @@ unsigned int InstructionCycles::cycles_sum(
                    if ((Nat::div(n, 8u) == 1u)) {
                      return 16u;
                    } else {
-                     if (((s->acc5 == 0u) && ((Nat::div(n, 4u) % 2u) == 1u))) {
+                     if (((s->acc5 == 0u) &&
+                          ((Nat::div(std::move(n), 4u) % 2u) == 1u))) {
                        return 16u;
                      } else {
                        return 8u;

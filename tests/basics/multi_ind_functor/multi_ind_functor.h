@@ -236,7 +236,7 @@ template <Elem E> struct Container {
     return std::visit(
         Overloaded{[](const typename mtree::Leaf _args) -> unsigned int {
                      std::shared_ptr<maybe> m = _args._a0;
-                     if (is_nothing(m)) {
+                     if (is_nothing(std::move(m))) {
                        return 0u;
                      } else {
                        return 1u;

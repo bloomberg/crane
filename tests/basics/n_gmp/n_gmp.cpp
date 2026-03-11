@@ -312,7 +312,7 @@ std::pair<mpz_class, mpz_class> BinNat::pos_div_eucl(const mpz_class a,
     mpz_class q = BinNat::pos_div_eucl(a_, b).first;
     mpz_class r = BinNat::pos_div_eucl(a_, b).second;
     mpz_class r_ = (std::move(r) * 2 + 1);
-    if ((b <= r_)) {
+    if ((b <= std::move(r_))) {
       return std::make_pair(
           (q * 2 + 1), (std::move(r_) >= b ? std::move(r_) - b : mpz_class(0)));
     } else {
@@ -323,7 +323,7 @@ std::pair<mpz_class, mpz_class> BinNat::pos_div_eucl(const mpz_class a,
     mpz_class q = BinNat::pos_div_eucl(a_, b).first;
     mpz_class r = BinNat::pos_div_eucl(a_, b).second;
     mpz_class r_ = (std::move(r) * 2);
-    if ((b <= r_)) {
+    if ((b <= std::move(r_))) {
       return std::make_pair(
           (q * 2 + 1), (std::move(r_) >= b ? std::move(r_) - b : mpz_class(0)));
     } else {

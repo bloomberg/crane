@@ -197,7 +197,7 @@ CpuEmulator::execute(std::shared_ptr<CpuEmulator::state> s,
           [&](const typename CpuEmulator::instr::RAR _args)
               -> std::shared_ptr<CpuEmulator::state> {
             unsigned int carry_bit;
-            if (s->ex_carry) {
+            if (std::move(s)->ex_carry) {
               carry_bit = 8u;
             } else {
               carry_bit = 0u;
@@ -262,7 +262,7 @@ CpuEmulator::execute(std::shared_ptr<CpuEmulator::state> s,
                   if ((a == 4u)) {
                     out = 2u;
                   } else {
-                    if ((a == 8u)) {
+                    if ((std::move(a) == 8u)) {
                       out = 3u;
                     } else {
                       out = 15u;

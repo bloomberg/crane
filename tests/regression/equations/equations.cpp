@@ -110,7 +110,7 @@ Equations::gcd_graph_correct(const std::pair<unsigned int, unsigned int> x) {
       unsigned int n2 = n0 - 1;
       return gcd_graph::ctor::gcd_graph_refinement_3_(n1, n2, [&](void) {
         bool refine = PeanoNat::ltb((n1 + 1), (n2 + 1));
-        if (refine) {
+        if (std::move(refine)) {
           return gcd_clause_3_graph::ctor::gcd_clause_3_graph_equation_1_(
               n1, n2, [&](void) {
                 std::pair<unsigned int, unsigned int> y =
@@ -176,7 +176,7 @@ Equations::collatz_steps_graph_correct(const unsigned int x) {
       return collatz_steps_graph::ctor::collatz_steps_graph_refinement_3_(
           n0, [&](void) {
             bool refine = PeanoNat::even(((n0 + 1) + 1));
-            if (refine) {
+            if (std::move(refine)) {
               return collatz_steps_clause_3_graph::ctor::
                   collatz_steps_clause_3_graph_equation_1_(n0, [&](void) {
                     unsigned int y = PeanoNat::div2(n0);

@@ -91,7 +91,7 @@ unsigned int WhereClause::aeval(const std::shared_ptr<WhereClause::AExpr> &e) {
             std::shared_ptr<WhereClause::BExpr> c = _args._a0;
             std::shared_ptr<WhereClause::AExpr> t = _args._a1;
             std::shared_ptr<WhereClause::AExpr> f = _args._a2;
-            if (beval(c)) {
+            if (beval(std::move(c))) {
               return aeval(std::move(t));
             } else {
               return aeval(std::move(f));

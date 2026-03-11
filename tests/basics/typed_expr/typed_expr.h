@@ -126,7 +126,7 @@ public:
               std::shared_ptr<Expr> c = _args._a1;
               std::shared_ptr<Expr> th = _args._a2;
               std::shared_ptr<Expr> el = _args._a3;
-              if (std::any_cast<bool>(c->eval(ty::TBool))) {
+              if (std::any_cast<bool>(std::move(c)->eval(ty::TBool))) {
                 return std::move(th)->eval(t0);
               } else {
                 return std::move(el)->eval(t0);

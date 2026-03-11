@@ -20,7 +20,7 @@ bool JcnOps::jcn_condition(const std::shared_ptr<JcnOps::state> &s,
   bool base = (((s->acc == 0u) && (std::move(c2) == 1u)) ||
                ((s->carry && (std::move(c3) == 1u)) ||
                 (!(s->test_pin) && (std::move(c4) == 1u))));
-  if ((c1 == 1u)) {
+  if ((std::move(c1) == 1u)) {
     return !(std::move(base));
   } else {
     return std::move(base);

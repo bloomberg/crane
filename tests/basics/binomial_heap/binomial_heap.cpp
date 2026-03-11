@@ -598,7 +598,8 @@ BinomialHeap::make_list(const unsigned int n,
       return List<unsigned int>::ctor::cons_(1u, l);
     } else {
       unsigned int n1 = n0 - 1;
-      return make_list(n1, List<unsigned int>::ctor::cons_(((n1 + 1) + 1), l));
+      return make_list(std::move(n1), List<unsigned int>::ctor::cons_(
+                                          ((std::move(n1) + 1) + 1), l));
     }
   }
 }
