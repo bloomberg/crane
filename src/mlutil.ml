@@ -1066,6 +1066,8 @@ let rec linear_beta_red a t =
       MLletin (id, ty, a0, linear_beta_red a t) )
   | _ -> MLapp (t, a)
 
+(** Marks leading lambdas as temporary (for later cleanup during optimization).
+*)
 let rec tmp_head_lams = function
   | MLlam (id, ty, t) -> MLlam (tmp_id id, ty, tmp_head_lams t)
   | e -> e
@@ -1187,10 +1189,9 @@ let is_opt_pat (_, p, _) =
   | Prel _ | Pwild -> true
   | _ -> false
 
-(* NOTE: Branch factoring is disabled. This optimization was inherited from the
-   Rocq OCaml extraction but has not been adapted for C++ code generation. The
-   function returns None unconditionally, which skips the optimization without
-   affecting correctness. *)
+(** Attempts to factor common branches in a match (currently disabled for C++
+    generation). Returns None unconditionally, skipping the optimization without
+    affecting correctness. *)
 let factor_branches _o _typ _br = None
 (* TODO: FIX EVENTUALLY!!!! if Array.exists is_opt_pat br then None (* already
    optimized *) else begin census_clean (); for i = 0 to Array.length br - 1 do
@@ -1217,10 +1218,13 @@ let rec merge_ids' ids ids' =
   | i :: ids, i' :: ids' ->
     (if fst i == Dummy then i' else i) :: merge_ids' ids ids'
 
+(** Checks if an ML AST node is an exception/error expression. *)
 let is_exn = function
   | MLexn _ -> true
   | _ -> false
 
+(** Permutes a case expression with surrounding function applications when all
+    branches are functions. *)
 let permut_case_fun br acc =
   let nb = ref max_int in
   Array.iter
@@ -1273,9 +1277,8 @@ let rec iota_red i lift br ((typ, r, a) as cons) =
   | Pwild when List.is_empty ids -> ast_lift lift c
   | _ -> raise Impossible (* TODO: handle some more cases *)
 
-(* [iota_gen] is an extension of [iota_red] where we allow to traverse matches
-   in the head of the first match *)
-
+(** Performs generalized iota-reduction by traversing matches in the scrutinee.
+*)
 let iota_gen br hd =
   let rec iota k = function
     | MLcons (typ, r, a) -> iota_red 0 k br (typ, r, a)
@@ -1290,17 +1293,18 @@ let iota_gen br hd =
   in
   iota 0 hd
 
+(** Checks if an ML expression is atomic (has no subexpressions). *)
 let is_atomic = function
   | MLrel _ | MLglob _ | MLexn _ | MLdummy _ -> true
   | _ -> false
 
+(** Checks if an expression is an immediate application of Rel 1. *)
 let is_imm_apply = function
   | MLapp (MLrel 1, _) -> true
   | _ -> false
 
-(** Program creates a let-in named "program_branch_NN" for each branch of match.
-    Unfolding them leads to more natural code (and more dummy removal) *)
-
+(** Checks if an identifier is a Program-generated branch (named
+    "program_branch_NN"). *)
 let is_program_branch = function
   | Tmp _ | Dummy -> false
   | Id id ->
@@ -1308,6 +1312,8 @@ let is_program_branch = function
     ( try Scanf.sscanf s "program_branch_%d%!" (fun _ -> true)
       with Scanf.Scan_failure _ | End_of_file -> false )
 
+(** Inlines a let-binding when the bound variable is used at most once (linear
+    usage). *)
 let expand_linear_let o id e =
   o.opt_lin_let || is_tmp id || is_program_branch id || is_imm_apply e
 
@@ -1329,6 +1335,8 @@ let magic_hd a =
   | e :: a -> MLmagic e :: a
   | [] -> assert false
 
+(** Core ML simplification: beta-reduction, iota-reduction, let-inlining, and
+    other optimizations. *)
 let rec simpl o = function
   | MLapp (f, []) -> simpl o f
   | MLapp (MLapp (f, a), a') -> simpl o (MLapp (f, a @ a'))
@@ -1372,8 +1380,8 @@ let rec simpl o = function
     | None -> ast_map (simpl o) e )
   | a -> ast_map (simpl o) a
 
-(* invariant : list [a] of arguments is non-empty *)
-
+(** Simplifies function application, performing beta-reduction and pushing
+    applications into let/case. Invariant: argument list [a] is non-empty. *)
 and simpl_app o a = function
   | MLlam (Dummy, ty, t) -> simpl o (MLapp (ast_pop t, List.tl a))
   | MLlam (id, ty, t) ->
@@ -1408,8 +1416,8 @@ and simpl_app o a = function
     e (* We just discard arguments in those cases. *)
   | f -> MLapp (f, a)
 
-(* Invariant : all empty matches should now be [MLexn] *)
-
+(** Simplifies match expressions via iota-reduction and case permutation.
+    Invariant: all empty matches should be [MLexn]. *)
 and simpl_case o typ br e =
   try
     (* Generalized iota-redex *)
@@ -1462,6 +1470,8 @@ let is_impl_kill = function
   | Kill (Kimplicit _) -> true
   | _ -> false
 
+(** Removes head lambdas at positions marked Kill in signature [bl]. Adjusts de
+    Bruijn indices accordingly. *)
 let kill_some_lams bl (ids, c) =
   let n = List.length bl in
   let n' = List.fold_left (fun n b -> if b == Keep then n + 1 else n) 0 bl in
@@ -1498,6 +1508,8 @@ let kill_some_lams bl (ids, c) =
     nothing to do, or if there is no lambda left at all. In addition, it now
     accepts a signature that may mention some implicits} *)
 
+(** Merges an implicit signature with identifier list, creating a full Keep/Kill
+    signature. *)
 let rec merge_implicits ids s =
   match (ids, s) with
   | [], _ -> []
@@ -1506,6 +1518,8 @@ let rec merge_implicits ids s =
   | _ :: ids, (Kill (Kimplicit _) as k) :: s -> k :: merge_implicits ids s
   | _ :: ids, _ :: s -> Keep :: merge_implicits ids s
 
+(** Removes dummy (erased) lambda parameters from a term. Raises Impossible if
+    nothing to remove. *)
 let kill_dummy_lams sign c =
   let ids, c = collect_lams c in
   let bl = merge_implicits (List.map fst ids) (List.rev sign) in
@@ -1522,12 +1536,8 @@ let kill_dummy_lams sign c =
   let ids', c = kill_some_lams bl (ids, c) in
   ((ids, bl), named_lams ids' c)
 
-(** {2 [eta_expansion_sign] takes a function [fun idn ... id1 -> c] and a
-    signature [s] and builds a eta-long version} *)
-
-(* For example, if [s = [Keep;Keep;Kill Prop;Keep]] then the output is : [fun
-   idn ... id1 x x _ x -> (c' 4 3 __ 1)] with [c' = lift 4 c] *)
-
+(** Eta-expands a function to match a given signature, adding lambdas as needed.
+*)
 let eta_expansion_sign s (ids, c) =
   let rec abs ids rels i = function
     | [] ->
@@ -1550,10 +1560,8 @@ let eta_expansion_sign s (ids, c) =
   in
   abs ids [] 1 s
 
-(** {2 If [s = [b1; ... ; bn]] then [case_expunge] decomposes [e] in [n] lambdas
-    (with eta-expansion if needed) and removes all dummy lambdas corresponding
-    to [Kill _] in [s]} *)
-
+(** Removes erased arguments from match branches by eta-expanding and
+    eliminating Kill'd lambdas. *)
 let case_expunge s e =
   let m = List.length s in
   let n = nb_lams e in
@@ -1565,11 +1573,8 @@ let case_expunge s e =
   in
   kill_some_lams (List.rev s) p
 
-(** {2 [term_expunge] takes a function [fun idn ... id1 -> c] and a signature
-    [s] and remove dummy lams. The difference with [case_expunge] is that we
-    here leave one dummy lambda if all lambdas are logical dummy and the target
-    language is strict} *)
-
+(** Removes erased leading lambdas from a term. Leaves one dummy lambda if all
+    are logical and language is strict. *)
 let term_expunge s (ids, c) =
   if List.is_empty s then
     c
@@ -1580,10 +1585,8 @@ let term_expunge s (ids, c) =
     else
       named_lams ids c
 
-(** {2 [kill_dummy_args (ids,bl) r t] looks for occurrences of [MLrel r] in [t]
-    and purge the args of [MLrel r] corresponding to a [Kill] in [bl]. It makes
-    eta-expansion if needed} *)
-
+(** Removes dummy arguments from applications of [MLrel r], purging arguments
+    marked Kill. *)
 let kill_dummy_args (ids, bl) r t =
   let m = List.length ids in
   let sign = List.rev bl in
@@ -1606,8 +1609,7 @@ let kill_dummy_args (ids, bl) r t =
   in
   killrec 0 t
 
-(** {2 The main function for local [dummy] elimination} *)
-
+(** Extracts signature from argument list (Kill for MLdummy, Keep otherwise). *)
 let sign_of_args a =
   List.map
     (function
@@ -1615,6 +1617,7 @@ let sign_of_args a =
       | _ -> Keep )
     a
 
+(** Removes all dummy (erased) bindings and arguments from an ML AST. *)
 let rec kill_dummy = function
   | MLfix (i, fi, c, is_cofix) ->
     ( try
@@ -1673,8 +1676,8 @@ and kill_dummy_fix i c s =
   done;
   (k, c)
 
-(** {2 Putting things together} *)
-
+(** Main normalization pass: applies simplification and dummy elimination
+    repeatedly until fixed point. *)
 let normalize a =
   let o = optims () in
   let rec norm a =
@@ -1698,6 +1701,8 @@ let general_optimize_fix f ids n args m c =
   let new_c = named_lams ids (normalize (MLapp (ast_subst new_f c, args))) in
   MLfix (0, [|f|], [|new_c|], false)
 
+(** Optimizes fixpoint definitions by inlining small recursive calls and
+    eta-reducing. *)
 let optimize_fix a =
   if not (optims ()).opt_fix_fun then
     a
@@ -1731,6 +1736,7 @@ let optimize_fix a =
 let ml_size_branch size pv =
   Array.fold_left (fun a (_, _, _, t) -> a + size t) 0 pv
 
+(** Computes the size (node count) of an ML AST for inlining heuristics. *)
 let rec ml_size = function
   | MLapp (t, l) -> List.length l + ml_size t + ml_size_list l
   | MLlam (_, _, t) -> 1 + ml_size t
@@ -1753,6 +1759,7 @@ and ml_size_list l = List.fold_left (fun a t -> a + ml_size t) 0 l
 
 and ml_size_array a = Array.fold_left (fun a t -> a + ml_size t) 0 a
 
+(** Checks if an ML expression is a fixpoint definition. *)
 let is_fix = function
   | MLfix _ -> true
   | _ -> false
@@ -1826,23 +1833,10 @@ let is_not_strict t =
 
 (** {2 Inlining decision} *)
 
-(* [inline_test] answers the following question: If we could inline [t] (the
-   user said nothing special), should we inline ?
-
-   We expand small terms with at least one non-strict variable (i.e. a variable
-   that may not be evaluated).
-
-   Furthermore we don't expand fixpoints.
-
-   Moreover, as mentioned by X. Leroy (bug #2241), inlining a constant from
-   inside an opaque module might break types. To avoid that, we require below
-   that both [r] and its body are globally visible. This isn't fully
-   satisfactory, since [r] might not be visible (functor), and anyway it might
-   be interesting to inline [r] at least inside its own structure. But to be
-   safe, we adopt this restriction for the moment. *)
-
 open Declareops
 
+(** Heuristic: decides if a constant should be auto-inlined based on size and
+    strictness analysis. *)
 let inline_test r t =
   if not (auto_inline ()) then
     false
@@ -1890,14 +1884,8 @@ let manual_inline = function
   | GlobRef.ConstRef c -> Cset_env.mem c manual_inline_set
   | _ -> false
 
-(* If the user doesn't say he wants to keep [t], we inline in two cases:
-   \begin{itemize} \item the user explicitly requests it \item [expansion_test]
-   answers that the inlining is a good idea, and we are free to act (AutoInline
-   is set) \end{itemize} *)
-
-(* Remap type variable indices in an ML AST. f maps original Tvar index to new
-   index. This is used when cross-module methods have different type variable
-   numbering than the containing inductive. *)
+(** Remaps type variable indices in an ML AST using function [f]. Used for
+    cross-module type variable renumbering. *)
 let remap_tvars f =
   let rec remap_type = function
     | Tvar i -> Tvar (f i)
@@ -1939,6 +1927,8 @@ let remap_tvars f =
   in
   remap_ast
 
+(** Final inlining decision combining auto-inlining heuristics and manual
+    settings. *)
 let inline r t =
   (not (to_keep r)) (* The user DOES want to keep it *)
   && (not (is_inline_custom r))

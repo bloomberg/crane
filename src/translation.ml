@@ -162,6 +162,7 @@ let return_captures_by_value stmts =
       | s -> s )
     stmts
 
+(** Check if an ML type is void (unit type mapped to C++ void). *)
 let ml_type_is_void : ml_type -> bool = function
   | Tglob (r, _, _) -> is_void r
   | _ -> false
@@ -231,6 +232,8 @@ let rec collect_tvars_set acc = function
   | Miniml.Tmeta {contents = Some t} -> collect_tvars_set acc t
   | _ -> acc
 
+(** Convert an IntSet of type variable indices back to a list, wrapping
+    [collect_tvars_set]. Used to collect all Tvar indices from an ml_type. *)
 let collect_tvars acc ty =
   IntSet.elements (collect_tvars_set (IntSet.of_list acc) ty)
 
@@ -295,8 +298,8 @@ let rec has_hkt_erasure = function
     List.exists has_hkt_erasure ts
   | _ -> false
 
-(* Collect all Tvar indices from an ML AST, using collect_tvars on embedded
-   types. *)
+(** Collect all Tvar indices from an ML AST, using collect_tvars on embedded
+    types. Used to find all type variables referenced in a function body. *)
 let rec collect_tvars_ast acc = function
   | MLlam (_, ty, body) -> collect_tvars_ast (collect_tvars acc ty) body
   | MLletin (_, ty, a, b) ->
@@ -755,6 +758,9 @@ let rec collect_free_rels_set n_bound acc = function
    |MLfloat _
    |MLstring _ -> acc
 
+(** Collect all free de Bruijn variables (rels) from an ML AST, wrapping
+    [collect_free_rels_set]. Used to detect which lambda parameters are
+    captured. *)
 let collect_free_rels n_bound body =
   IntSet.elements (collect_free_rels_set n_bound IntSet.empty body)
 
@@ -1715,6 +1721,10 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
   | MLaxiom s -> CPPabort ("unrealized axiom: " ^ s)
   | _ -> raise TODO
 
+(** Handle eta expansion, curried function application, and promoted type arg
+    resolution. Recovers erased template type args at call sites where C++ can't
+    deduce them from lambda arguments, using the enclosing function's return
+    type. *)
 and eta_fun env f args =
   let rec get_eta_args dom args =
     match (dom, args) with
@@ -2177,6 +2187,9 @@ and eta_fun env f args =
     else
       CPPfun_call (gen_expr env f, List.rev args)
 
+(** Generate a pattern-matching lambda for a single match branch. Wraps the
+    branch body in a lambda capturing pattern variables, used by gen_cpp_case
+    for std::visit. *)
 and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body =
   (* Get type variables in scope from enclosing function's template
      parameters *)
@@ -2309,6 +2322,9 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body =
   CPPlambda
     ([(Tmod (TMconst, constr), Some sname)], Some ret, asgns @ body_stmts, false)
 
+(** Generate std::visit-based pattern matching with expression reuse
+    optimization. Detects common subexpressions across branches and hoists them
+    to avoid recomputation. *)
 and gen_cpp_case (typ : ml_type) t env pv =
   (* When the match type annotation has unresolved Tvars, try to resolve from
      context. This handles monomorphic functions where MLcase has Tvar but the
@@ -2604,6 +2620,8 @@ and gen_cpp_case (typ : ml_type) t env pv =
     else
       gen_normal_visit_expr ()
 
+(** Generate a custom match body using user-provided custom extraction syntax.
+    Wraps the body in a lambda with pattern-bound variables for std::visit. *)
 and gen_cpp_custom_body env k rty ids body =
   let tvars = get_current_type_vars () in
   let ret = convert_ml_type_to_cpp_type env Refset'.empty tvars rty in
@@ -2616,6 +2634,8 @@ and gen_cpp_custom_body env k rty ids body =
   let body = gen_stmts env k body in
   (ids, ret, body)
 
+(** Generate a custom case expression using user-provided extraction syntax.
+    Entry point for custom pattern match generation. *)
 and gen_custom_cpp_case env k (typ : ml_type) t pv =
   let tvars = get_current_type_vars () in
   let temps =
@@ -2671,6 +2691,9 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   in
   Scustom_case (typ, t, temps, gen_cases (Array.to_list pv), cmatch)
 
+(** Generate C++ statements from an ML AST. The continuation [k] transforms the
+    final expression into a statement (e.g., return, assignment). Handles
+    let-bindings, pattern matching, fix expressions, and monadic operations. *)
 and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
   match ast with
   | MLletin (_, _, MLfix (x, ids, funs, _), b) as _whole ->
@@ -3698,6 +3721,9 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     tctx.move_dead_after <- saved_dead;
     result
 
+(** Generate a fixpoint (recursive function) definition. Handles both single and
+    mutually recursive functions. [all_fix_ids] contains names of all mutual
+    fixpoints; [fix_idx] is the index of this fixpoint in the mutual group. *)
 and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
   let ids, f = collect_lams f in
   let ids, _ =
@@ -4541,10 +4567,10 @@ and tvar_subst_stmt (tvars : Id.t list) (s : cpp_stmt) : cpp_stmt =
     (tvar_subst_type tvars)
     s
 
-(* Detect function-typed parameter positions that receive a freshly constructed
-   lambda in a self-recursive call.
+(** Detect function-typed parameter positions that receive a freshly constructed
+    lambda in a self-recursive call.
 
-   Higher-order function parameters are normally emitted as C++ template
+    Higher-order function parameters are normally emitted as C++ template
    parameters constrained with a [MapsTo] concept:
 
    template <MapsTo<T1, unsigned int> F0, MapsTo<T1, shared_ptr<tree>, T1,
@@ -6168,14 +6194,14 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
       },
     VPublic )
 
-(* New inductive generation: encapsulated struct with methods. Generates: struct
-   Tree { struct Leaf {}; struct Node { std::shared_ptr<Tree> left;
-   std::shared_ptr<Tree> right; }; using variant_t = std::variant<Leaf, Node>;
-   private: variant_t v_; explicit Tree(Leaf x) : v_(x) {} explicit Tree(Node x)
-   : v_(std::move(x)) {} public: struct ctor { ctor() = delete; static
-   std::shared_ptr<Tree> Leaf_() { return std::shared_ptr<Tree>(new
-   Tree(Leaf{})); } static std::shared_ptr<Tree> Node_(std::shared_ptr<Tree> l,
-   std::shared_ptr<Tree> r) { ... } }; }; *)
+(** New inductive generation: encapsulated struct with methods. Generates: struct
+    Tree { struct Leaf {}; struct Node { std::shared_ptr<Tree> left;
+    std::shared_ptr<Tree> right; }; using variant_t = std::variant<Leaf, Node>;
+    private: variant_t v_; explicit Tree(Leaf x) : v_(x) {} explicit Tree(Node x)
+    : v_(std::move(x)) {} public: struct ctor { ctor() = delete; static
+    std::shared_ptr<Tree> Leaf_() { return std::shared_ptr<Tree>(new
+    Tree(Leaf{})); } static std::shared_ptr<Tree> Node_(std::shared_ptr<Tree> l,
+    std::shared_ptr<Tree> r) { ... } }; }; *)
 let gen_ind_header_v2
     ?(is_mutual = false)
     vars

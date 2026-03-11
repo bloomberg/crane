@@ -110,19 +110,25 @@ let is_info_scheme env sg t =
   | Info, TypeScheme -> true
   | _ -> false
 
+(** Pushes a named assumption into the Rocq environment. *)
 let push_rel_assum (n, t) env = EConstr.push_rel (LocalAssum (n, t)) env
 
+(** Pushes multiple named assumptions into the Rocq environment. *)
 let push_rels_assum assums =
   EConstr.push_rel_context (List.map (fun (x, t) -> LocalAssum (x, t)) assums)
 
+(** Retrieves the body of a constant as an [EConstr.t]. *)
 let get_body lconstr = EConstr.of_constr lconstr
 
+(** Checks if a constant is opaque and retrieves its body if accessible. *)
 let get_opaque access env c =
   EConstr.of_constr (fst (Global.force_proof access c))
 
+(** Applies a Rocq term to a list of arguments. *)
 let applistc c args = EConstr.mkApp (c, Array.of_list args)
 
-(* Same as [Environ.push_rec_types], but for [EConstr.t] *)
+(** Pushes recursive type bindings into the environment. Same as
+    [Environ.push_rec_types], but for [EConstr.t]. *)
 let push_rec_types (lna, typarray, _) env =
   let ctxt =
     Array.map2_i
@@ -132,10 +138,12 @@ let push_rec_types (lna, typarray, _) env =
   in
   Array.fold_left (fun e assum -> EConstr.push_rel assum e) env ctxt
 
-(* Same as [Termops.nb_lam], but for [EConstr.t] *)
+(** Counts the number of leading lambdas in a term. Same as [Termops.nb_lam],
+    but for [EConstr.t]. *)
 let nb_lam sg c = List.length (fst (EConstr.decompose_lambda sg c))
 
-(* Same as [Term.decompose_lambda_n] but for [EConstr.t] *)
+(** Decomposes the first [n] lambdas from a term. Same as
+    [Term.decompose_lambda_n] but for [EConstr.t]. *)
 let decompose_lambda_n sg n =
   let rec lamdec_rec l n c =
     if n <= 0 then
@@ -179,6 +187,8 @@ let _ = Hook.set type_scheme_nb_args_hook type_scheme_nb_args'
    characters. Anyway, since type variables are local, the created name is just
    a matter of taste... See also Bug #3227 *)
 
+(** Generates a unique type variable name from a binder name, avoiding lexer
+    conflicts and unicode. *)
 let make_typvar n vl =
   let id = id_of_name n in
   let id' =
@@ -201,6 +211,7 @@ let rec type_sign_vl env sg c =
       (Keep :: s, make_typvar n.binder_name vl :: vl)
   | _ -> ([], [])
 
+(** Counts the number of default (non-erased) parameters in a type signature. *)
 let rec nb_default_params env sg c =
   match EConstr.kind sg (whd_all env sg c) with
   | Prod (n, t, d) ->
@@ -227,6 +238,7 @@ let sign_with_implicits r s nb_params =
 
 (** {2 From a type signature toward a type variable context (db)} *)
 
+(** Builds a de Bruijn variable context from a type signature. *)
 let db_from_sign s =
   let rec make i acc = function
     | [] -> acc
@@ -238,6 +250,7 @@ let db_from_sign s =
 (** {2 Create a type variable context from indications taken from an inductive
     type (see just below)} *)
 
+(** Builds a de Bruijn context for an inductive type from a position mapping. *)
 let rec db_from_ind dbmap i =
   if Int.equal i 0 then
     []
@@ -251,6 +264,8 @@ let rec db_from_ind dbmap i =
    of Rocq args for [(I args)] \item [j] : counter of ML type vars \item
    [relmax] : total args number of the constructor \end{itemize} *)
 
+(** Parses inductive type arguments into parameter/real argument lists, mapping
+    Rocq args to ML type vars. *)
 let parse_ind_args si args relmax =
   let rec parse i j = function
     | [] -> Int.Map.empty
@@ -262,6 +277,8 @@ let parse_ind_args si args relmax =
   in
   parse 1 1 si
 
+(** Validates sort polymorphism compatibility, rejecting extractions that use
+    Prop/SProp instantiation. *)
 let check_sort_poly sigma gr u =
   let u = EConstr.EInstance.kind sigma u in
   let qs, _ = UVars.Instance.to_array u in
@@ -281,6 +298,8 @@ let check_sort_poly sigma gr u =
         ++ spc ()
         ++ str "using Prop or SProp)." )
 
+(** Determines the relevance of a primitive projection from its representation.
+*)
 let relevance_of_projection_repr mib p =
   let _mind, i = Names.Projection.Repr.inductive p in
   match mib.mind_record with
@@ -290,7 +309,8 @@ let relevance_of_projection_repr mib p =
     let _, _, rs, _ = infos.(i) in
     rs.(Names.Projection.Repr.arg p)
 
-(** Because of automatic unboxing the easy way [mk_def c] on the constant body
+(** Converts a primitive projection into a fake match expression for extraction.
+    Because of automatic unboxing, the easy way [mk_def c] on the constant body
     of primitive projections doesn't work. We pretend that they are implemented
     by matches until someone figures out how to clean it up (test with #4710
     when working on this). *)
@@ -384,6 +404,8 @@ let fake_match_projection env p =
 (* [j] stands for the next ML type var. [j=0] means we do not generate ML type
    var anymore (in subterms for example). *)
 
+(** Extracts a Rocq CIC type into an ML type. The [db] context translates [Rel]
+    to [Tvar], and [j] is the next type var. *)
 let rec extract_type env sg db j c args =
   match EConstr.kind sg (whd_betaiotazeta env sg c) with
   | App (d, args') ->
@@ -476,13 +498,16 @@ let rec extract_type env sg db j c args =
   | Cast _ | LetIn _ | Construct _ | Int _ | Float _ | String _ | Array _ ->
     assert false
 
+(* TODO: I think type application isn't happening/reducing in instances where
+   not needed for OCaml. Type variables that are semantically instantiated in
+   Rocq are appearing in extracted code at the term level. *)
+
 (** {2 Auxiliary function dealing with type application. Precondition: [r] is a
     type scheme represented by the signature [s], and is completely applied:
     [List.length args = List.length s]} *)
 
-(* TODO: I think type application isn't happening/reducing in instances where
-   not needed for OCaml. Type variables that are semantically instantiated in
-   Rocq are appearing in extracted code at the term level. *)
+(** Extracts a type application (inductive applied to arguments), given a type
+    scheme and its signature. *)
 and extract_type_app env sg db (r, s) args =
   let ml_ty_args =
     List.fold_right
@@ -519,8 +544,6 @@ and extract_type_app env sg db (r, s) args =
   in
   Tglob (r, ml_ty_args, ml_args)
 
-(** {1 Extraction of a type scheme} *)
-
 (* [extract_type_scheme env db c p] works on a Rocq term [c] which is an
    informative type scheme. It means that [c] is not a Rocq type, but will be
    when applied to sufficiently many arguments ([p] in fact). This function
@@ -528,6 +551,10 @@ and extract_type_app env sg db (r, s) args =
 
 (* [db] is a context for translating Rocq [Rel] into ML type [Tvar]. *)
 
+(** {1 Extraction of a type scheme} *)
+
+(** Extracts a type scheme (universally quantified type) by decomposing [p]
+    lambdas with eta-expansion if needed. *)
 and extract_type_scheme env sg db c p =
   if Int.equal p 0 then
     extract_type env sg db 0 c []
@@ -542,10 +569,11 @@ and extract_type_scheme env sg db c p =
       let eta_args = List.rev_map EConstr.mkRel (List.interval 1 p) in
       extract_type env sg db 0 (EConstr.Vars.lift p c) eta_args
 
-(** {1 Extraction of an inductive type} *)
-
 (* First, a version with cache *)
 
+(** {1 Extraction of an inductive type} *)
+
+(** Extracts an inductive type, with caching to avoid redundant work. *)
 and extract_ind env kn =
   (* kn is supposed to be in long form *)
   let mib = Environ.lookup_mind kn env in
@@ -557,6 +585,8 @@ and extract_ind env kn =
 
 (* Then the real function *)
 
+(** Performs the actual inductive type extraction, building packets,
+    constructors, and detecting special cases. *)
 and extract_really_ind env kn mib =
   (* First, if this inductive is aliased via a Module, we process the original
      inductive if possible. When at toplevel of the monolithic case, we cannot
@@ -817,6 +847,7 @@ and extract_really_ind env kn mib =
    - [dbmap] is a translation map (produced by a call to [parse_in_args])
    - [i] is the rank of the current product (initially [params_nb+1])} *)
 
+(** Extracts a constructor's type signature into a list of ML types. *)
 and extract_type_cons env sg db dbmap c i =
   match EConstr.kind sg (whd_all env sg c) with
   | Prod (n, t, d) ->
@@ -828,6 +859,7 @@ and extract_type_cons env sg db dbmap c i =
 
 (** {2 Recording the ML type abbreviation of a Rocq type scheme constant} *)
 
+(** Looks up the ML type of a constant in the extraction environment. *)
 and mlt_env env r =
   let open GlobRef in
   match r with
@@ -855,14 +887,17 @@ and mlt_env env r =
         Some t
       | _ -> None ) )
 
+(** Expands a type alias using the environment. *)
 and expand env = type_expand (mlt_env env)
 
+(** Converts an ML type to a type signature (Keep/Kill list). *)
 and type2signature env = type_to_signature (mlt_env env)
 
 and type2sign env = type_to_sign (mlt_env env)
 
 (** {2 Extraction of the type of a constant} *)
 
+(** Computes and caches the ML type of a Rocq constant. *)
 and record_constant_type env sg kn opt_typ =
   let cb = lookup_constant kn env in
   match lookup_cst_type kn cb with
@@ -881,13 +916,15 @@ and record_constant_type env sg kn opt_typ =
     register_glob_def (GlobRef.ConstRef kn) mlt;
     schema
 
-(** {1 Extraction of a term} *)
-
 (* Precondition: [(c args)] is not a type scheme, and is informative. *)
 
 (* [mle] is a ML environment [Mlenv.t]. *)
 (* [mlt] is the ML type we want our extraction of [(c args)] to have. *)
 
+(** {1 Extraction of a term} *)
+
+(** Extracts a Rocq CIC term into an ML AST expression. Precondition: term is
+    informative and not a type scheme. *)
 and extract_term env sg mle mlt c args =
   match EConstr.kind sg c with
   | App (f, a) -> extract_term env sg mle mlt f (Array.to_list a @ args)
@@ -1012,18 +1049,22 @@ and extract_term env sg mle mlt c args =
 (** {2 [extract_maybe_term] is [extract_term] for usual terms, else [MLdummy]}
 *)
 
+(** Extracts a term that might be logical, returning [MLdummy] if the term is in
+    Prop/SProp. *)
 and extract_maybe_term env sg mle mlt c =
   try
     check_default env sg (type_of env sg c);
     extract_term env sg mle mlt c []
   with NotDefault d -> put_magic (mlt, Tdummy d) (MLdummy d)
 
-(** {2 Generic way to deal with an application} *)
-
 (* We first type all arguments starting with unknown meta types. This gives us
    the expected type of the head. Then we use the [mk_head] to produce the ML
    head from this type. *)
 
+(** {2 Generic way to deal with an application} *)
+
+(** Extracts a function application by typing arguments first, then building the
+    head. *)
 and extract_app env sg mle mlt mk_head args =
   let metas = List.map new_meta args in
   let type_head = type_recomp (metas, mlt) in
@@ -1033,6 +1074,8 @@ and extract_app env sg mle mlt mk_head args =
 (** {2 Auxiliary function used to extract arguments of constant or constructor}
 *)
 
+(** Builds ML argument list from raw arguments, inserting dummies for erased
+    positions per signature. *)
 and make_mlargs env sg e s args typs =
   let rec f = function
     | [], [], _ -> []
@@ -1058,6 +1101,10 @@ and make_mlargs env sg e s args typs =
    with declaration params. The downstream translation handles Tdummy entries:
    filter_erased_type_args drops all explicit type args when any is Tdummy, and
    the bind handler skips Tdummy entries when resolving continuation metas. *)
+
+(** Builds type argument list, filtering by signature. Extracts concrete ML
+    types for type parameters, emitting Tdummy Ktype for HKT failures to
+    preserve positional consistency. *)
 and make_tyargs env sg _mle args typs ~orig_typs =
   let db =
     List.rev (List.mapi (fun i _ -> i + 1) env.env_rel_context.env_rel_ctx)
@@ -1076,6 +1123,8 @@ and make_tyargs env sg _mle args typs ~orig_typs =
 
 (** {2 Extraction of a constant applied to arguments} *)
 
+(** Extracts a constant application (function call), handling type instantiation
+    and partial application. *)
 and extract_cst_app env sg mle mlt kn args =
   (* First, the [ml_schema] of the constant, in expanded version. *)
   let nb, t = record_constant_type env sg kn None in
@@ -1147,14 +1196,16 @@ and extract_cst_app env sg mle mlt kn args =
     let e = anonym_or_dummy_lams_typed (mlapp head mla) missing_types s' in
     put_magic_if magic2 (remove_n_lams (List.length optdummy) e)
 
-(** {2 Extraction of an inductive constructor applied to arguments} *)
-
 (* \begin{itemize} \item In ML, constructor arguments are uncurryfied. \item We
    managed to suppress logical parts inside inductive definitions, but they must
    appears outside (for partial applications for instance) \item We also
    suppressed all Rocq parameters to the inductives, since they are fixed, and
    thus are not used for the computation. \end{itemize} *)
 
+(** {2 Extraction of an inductive constructor applied to arguments} *)
+
+(** Extracts a constructor application, handling uncurrying, logical parameter
+    suppression, and partial application. *)
 and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
   (* First, we build the type of the constructor, stored in small pieces. *)
   let mi = extract_ind env kn in
@@ -1336,6 +1387,8 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
 
 (** {1 Extraction of a case} *)
 
+(** Extracts a match/case expression, handling logical singleton elimination and
+    branch extraction. *)
 and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
   (* EDIT HERE: Add type information into branches *)
   (* [br]: bodies of each branch (in functional form) *)
@@ -1416,6 +1469,8 @@ and extract_fix env sg mle i ((fi, ti, ci) as recd) is_cofix mlt =
 (* [decomp_lams_eta env c t] finds the number [n] of products in the type [t],
    and decompose the term [c] in [n] lambdas, with eta-expansion if needed. *)
 
+(** Decomposes lambdas with eta-expansion to reach [n] binders, given [m]
+    existing lambdas. *)
 let decomp_lams_eta_n n m env sg c t =
   let rels = fst (whd_decompose_prod_n env sg n t) in
   let rels', c = EConstr.decompose_lambda sg c in
@@ -1428,6 +1483,7 @@ let decomp_lams_eta_n n m env sg c t =
 (* Let's try to identify some situation where extracted code will allow
    generalisation of type variables *)
 
+(** Checks if a type variable can be generalized in the extracted code. *)
 let rec gentypvar_ok sg c =
   match EConstr.kind sg c with
   | Lambda _ | Const _ -> true
@@ -1438,10 +1494,13 @@ let rec gentypvar_ok sg c =
   | Cast (c, _, _) -> gentypvar_ok sg c
   | _ -> false
 
-(** {2 From a constant to a ML declaration} *)
+(** {2 From a constant to a ML declaration}
+
+    Adds universally quantified type variables to a type. *)
 let add_tvars n t =
   t (* if n <= 1 then t else Tarr (Tvar (n-1), add_tvars (n-1) t) *)
 
+(** Removes erased type arguments from a type scheme. *)
 let type_expunge env = type_expunge (mlt_env env)
 
 and type_expunge_from_sign env = type_expunge_from_sign (mlt_env env)
@@ -1481,6 +1540,9 @@ let rec try_peano_nat env sg t =
 (* Translate a predicate body (under a lambda binder) to a C++ assertion
    template. body has Rel 1 bound to the witness variable. Returns AssertExpr or
    AssertComment. *)
+
+(** Translates assertion predicates into C++ assertion format strings for sigma
+    type preconditions. *)
 let translate_predicate_body env sg body =
   let open Table in
   let body = whd_all env sg body in
@@ -1583,6 +1645,9 @@ let translate_predicate_body env sg body =
 (* Walk a function type, detect sigma-typed parameters, and register assertions.
    info_idx counts only informative (Keep) parameters — matching C++ param
    indices. *)
+
+(** Detects sigma type assertions (dependent pair projections) in function
+    parameters and registers them. *)
 let detect_sigma_assertions env sg kn typ =
   let func_ref = GlobRef.ConstRef kn in
   let rec walk env info_idx typ =
@@ -1620,6 +1685,8 @@ let detect_sigma_assertions env sg kn typ =
   in
   walk env 0 typ
 
+(** Extracts a standard (non-record) constant definition, handling lambda
+    decomposition and type expunging. *)
 let extract_std_constant env sg kn body typ =
   reset_meta_count ();
   (* The short type [t] (i.e. possibly with abbreviations). *)
@@ -1682,6 +1749,9 @@ let extract_std_constant env sg kn body typ =
   (trm, add_tvars numtvars (type_expunge_from_sign env s t))
 
 (* Extracts the type of an axiom, honors the Extraction Implicit declaration. *)
+
+(** Extracts an axiom declaration, honoring the Extraction Implicit declaration.
+*)
 let extract_axiom env sg kn typ =
   reset_meta_count ();
   (* The short type [t] (i.e. possibly with abbreviations). *)
@@ -1694,6 +1764,8 @@ let extract_axiom env sg kn typ =
   let s = sign_with_implicits (GlobRef.ConstRef kn) s 0 in
   type_expunge_from_sign env s t
 
+(** Extracts a fixpoint (recursive function) definition, handling mutual
+    recursion. *)
 let extract_fixpoint env sg vkn (fi, ti, ci) =
   let n = Array.length vkn in
   let types = Array.make n (Tdummy Kprop)
@@ -1726,6 +1798,8 @@ let extract_fixpoint env sg vkn (fi, ti, ci) =
   current_fixpoints := [];
   Dfix (Array.map (fun kn -> GlobRef.ConstRef kn) vkn, terms, types)
 
+(** Main entry point for extracting a constant declaration, dispatching on kind
+    (axiom, definition, etc.). *)
 let extract_constant access env kn cb =
   let sg = Evd.from_env env in
   let r = GlobRef.ConstRef kn in
@@ -1820,6 +1894,8 @@ let extract_constant access env kn cb =
         mk_ax ()
   with SingletonInductiveBecomesProp ind -> error_singleton_become_prop ind
 
+(** Extracts the specification (type signature) of a constant for module
+    signatures. *)
 let extract_constant_spec env kn cb =
   let sg = Evd.from_env env in
   let r = GlobRef.ConstRef kn in
@@ -1856,6 +1932,7 @@ let extract_constant_spec env kn cb =
       | _ -> Sval (r, MLaxiom "SVAL extraction issue", type_expunge env t) )
   with SingletonInductiveBecomesProp ind -> error_singleton_become_prop ind
 
+(** Extracts a module-level "with type" constraint. *)
 let extract_with_type env sg c =
   try
     let typ = type_of env sg c in
@@ -1868,6 +1945,7 @@ let extract_with_type env sg c =
     | _ -> None
   with SingletonInductiveBecomesProp ind -> error_singleton_become_prop ind
 
+(** Extracts a constructor specification for module signatures. *)
 let extract_constr env sg c =
   reset_meta_count ();
   try
@@ -1880,6 +1958,8 @@ let extract_constr env sg c =
       (extract_term env sg Mlenv.empty mlt c [], mlt)
   with SingletonInductiveBecomesProp ind -> error_singleton_become_prop ind
 
+(** Main entry point for extracting an inductive type definition, filtering
+    dummy types and implicits. *)
 let extract_inductive env kn =
   let ind = extract_ind env kn in
   add_recursors env kn;

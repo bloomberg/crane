@@ -80,6 +80,8 @@ module type VISIT = sig
   val needed_mp_all : ModPath.t -> bool
 end
 
+(** Visit module: dependency visitor that determines what to extract. Tracks
+    which constants, inductives, and module paths are needed. *)
 module Visit : VISIT = struct
   type must_visit = {
     mutable kn : KNset.t;
@@ -129,6 +131,8 @@ module Visit : VISIT = struct
   let add_spec_deps = spec_iter_references add_ref add_ref add_ref
 end
 
+(** Computes which declarations are accessible from a module field. Adds
+    constants, inductives, and submodules to the visit list. *)
 let add_field_label mp = function
   | lab, (SFBconst _ | SFBmind _ | SFBrules _) ->
     Visit.add_kn (KerName.make mp lab)
@@ -355,12 +359,9 @@ and extract_mbody_spec : 'a. _ -> _ -> 'a generic_module_body -> _ =
      (* Fall back to expanding the signature *)
      extract_msignature_spec env mp mb.mod_delta mb.mod_type
 
-(* From a [structure_body] (i.e. a list of [structure_field_body]) to
-   implementations.
-
-   NB: when [all=false], the evaluation order of the list is important: last to
-   first ensures correct dependencies. *)
-
+(** Recursively extracts a module structure to ML declarations. When all=false,
+    only extracts needed declarations based on dependency analysis. Evaluation
+    order (last to first) ensures correct dependencies. *)
 let rec extract_structure access env mp reso ~all = function
   | [] -> []
   | (l, SFBconst cb) :: struc ->
@@ -440,8 +441,8 @@ let rec extract_structure access env mp reso ~all = function
     else
       ms
 
-(* From [module_expr] and [module_expression] to implementations *)
-
+(** Extracts a module expression (functor application, module identifier, etc.).
+    Handles MEident, MEapply, and expands module expressions as needed. *)
 and extract_mexpr access env mp = function
   | MEwith _ -> assert false (* no 'with' syntax for modules *)
   | me when lang () != Cpp ->
@@ -458,6 +459,8 @@ and extract_mexpr access env mp = function
     Miniml.MEapply
       (extract_mexpr access env mp me, extract_mexpr access env mp (MEident arg))
 
+(** Extracts a module expression with functor support. Handles both MENoFunctor
+    (simple module) and MEMoreFunctor (functor) cases. *)
 and extract_mexpression access env mp mty = function
   | MENoFunctor me -> extract_mexpr access env mp me
   | MEMoreFunctor me ->
@@ -485,6 +488,8 @@ and extract_msignature access env mp reso ~all = function
         extract_mbody_spec env mp1 mtb,
         extract_msignature access env' mp reso ~all me )
 
+(** Builds the ML module structure for a given module body. Extracts both the
+    implementation and type signature. *)
 and extract_module access env mp ~all mb =
   (* A module has an empty [mod_expr] when : - it is a module variable (for
      instance X inside a Module F [X:SIG]) - it is a module assumption (Declare
@@ -556,6 +561,8 @@ and extract_module access env mp ~all mb =
   in
   {ml_mod_expr = impl; ml_mod_type = typ}
 
+(** Extracts a monomorphic environment for the given references and module
+    paths. Computes which declarations are needed and builds ML structures. *)
 let mono_environment ~opaque_access refs mpl =
   Visit.reset ();
   List.iter Visit.add_ref refs;
@@ -740,6 +747,8 @@ let module_filename mp =
 
 (** {2 Extraction of one decl to stdout} *)
 
+(** Renders a single ML declaration to C++ output. Performs renaming and runs
+    both Pre and Impl phases. *)
 let print_one_decl struc mp decl =
   let d = descr () in
   reset_renaming_tables AllButExternal;
@@ -789,7 +798,8 @@ let get_comment () =
     let split_comment = Str.split (Str.regexp "[ \t\n]+") s in
     Some (prlist_with_sep spc str split_comment)
 
-(* Helper to check if an executable is available in PATH *)
+(** Checks if an executable is available on the system PATH. Returns true if the
+    executable can be found. *)
 let executable_available exe =
   Sys.command ("which " ^ exe ^ " > /dev/null 2>&1") = 0
 
@@ -803,10 +813,8 @@ let ocamlopt_available () = executable_available "ocamlopt"
 
 let hyperfine_available () = executable_available "hyperfine"
 
-(* [format_buffer_to_string buf] takes a buffer [buf], pipes its contents
-   through {bde,clang}-format, and returns the formatted string. If
-   {bde,clang}-format is not available or fails, it returns the original buffer
-   contents. *)
+(** Formats a buffer using clang-format or bde-format. Returns the formatted
+    string, or the original buffer contents if formatting fails. *)
 let format_buffer_to_string (buf : Buffer.t) : string =
   if Table.format_style () = "None" then
     Buffer.contents buf
@@ -907,6 +915,9 @@ let mark_higher_order_projections struc =
   in
   Modutil.struct_iter scan_decl (fun _ -> ()) (fun _ -> ()) struc
 
+(** Renders an entire ML structure to C++ header and implementation files.
+    Performs dry run first for renaming, then generates and formats the output.
+*)
 let print_structure_to_file (fn, si, mo) dry struc =
   Buffer.clear buf;
   let d = descr () in
@@ -1069,12 +1080,16 @@ let full_extr opaque_access f (refs, mps) =
   print_structure_to_file (mono_filename f) false struc;
   reset ()
 
+(** Main entry point for full library extraction. Extracts the given references
+    and module paths to a single output file. *)
 let full_extraction ~opaque_access f lr =
   full_extr opaque_access f (locate_ref lr)
 
 (** {2 Separate extraction is similar to recursive extraction, with the output
     decomposed in many files, one per Rocq .v file} *)
 
+(** Entry point for extracting specific references to separate files. Each Rocq
+    .v file gets its own C++ output file. *)
 let separate_extraction ~opaque_access lr =
   init true false;
   let refs, mps = locate_ref lr in
@@ -1172,11 +1187,10 @@ let emit_test_status status test_id_str source_file =
       ++ str ":"
       ++ str source_file )
 
-(* Helper to derive source .v file from output directory. During extraction, we
-   write to paths like: _build/default/../../tests/basics/nat/nat.cpp This
-   function finds the corresponding .v file in that directory and cleans up the
-   path to be relative to project root (e.g., tests/basics/nat/Nat.v). Returns
-   empty string if we can't determine the source file uniquely. *)
+(** Derives the output source file path from extraction target. Resolves paths
+    like _build/default/../../tests/basics/nat/nat.cpp to
+    tests/basics/nat/Nat.v. Returns empty string if source file cannot be
+    determined uniquely. *)
 let derive_source_file filename =
   try
     let dir = Filename.dirname filename in
@@ -1608,6 +1622,8 @@ let clean_benchmark_lines output =
   let benchmark_re = Str.regexp "^\\(Benchmark [0-9]+: \\)" in
   Str.global_substitute benchmark_re (fun _ -> "") output
 
+(** Compiles and benchmarks extracted code using hyperfine. Validates the term
+    type (unit -> string) and compiles provided options. *)
 let benchmark term options =
   if not (hyperfine_available ()) then
     CErrors.user_err

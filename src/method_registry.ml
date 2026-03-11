@@ -669,38 +669,46 @@ let create (s : ml_structure) : t =
   compute_returns_any tbl s;
   {methods = tbl; candidates = cands}
 
-(** Look up method info for a function reference. *)
+(** Lookup full method information for a registered function. Returns
+    [Some method_info] if the function is a method, [None] otherwise. *)
 let lookup (reg : t) (func_ref : GlobRef.t) : method_info option =
   Hashtbl.find_opt reg.methods func_ref
 
-(** Check if a function is registered as a method, returning the eponymous type
-    and [this] position. *)
+(** Check if a function reference is registered as a method. Returns
+    [Some (epon_ref, this_pos)] if registered, [None] otherwise. *)
 let is_registered_method (reg : t) (func_ref : GlobRef.t) :
     (GlobRef.t * int) option =
   match Hashtbl.find_opt reg.methods func_ref with
   | Some info -> Some (info.epon_ref, info.this_pos)
   | None -> None
 
-(** Get the list of inductive type variable positions deducible from the
-    receiver. *)
+(** Get inductive type variable positions deducible from the method receiver.
+    Returns the list of type variable indices that can be omitted from the
+    method's template parameters. *)
 let lookup_ind_tvar_positions (reg : t) (func_ref : GlobRef.t) : int list =
   match Hashtbl.find_opt reg.methods func_ref with
   | Some info -> info.ind_tvar_positions
   | None -> []
 
-(** Check if a method's return type is erased to [std::any]. *)
+(** Check if a method returns [std::any] due to type erasure of indexed return
+    types. Returns [true] if the method's return type cannot be expressed in C++
+    template parameters. *)
 let method_returns_any (reg : t) (func_ref : GlobRef.t) : bool =
   match Hashtbl.find_opt reg.methods func_ref with
   | Some info -> info.returns_any
   | None -> false
 
-(** Get all method candidates for an inductive type. *)
+(** Get all method candidates for a given eponymous inductive type. Returns a
+    list of (func_ref, body, type, this_position) tuples for methods belonging
+    to this type. *)
 let get_candidates (reg : t) (ind_ref : GlobRef.t) : method_candidate list =
   match Hashtbl.find_opt reg.candidates ind_ref with
   | Some l -> l
   | None -> []
 
-(** Register a method manually (used by [cpp.ml] for special cases). *)
+(** Register a method manually for late-discovered methods not found during
+    initial scan. Used by cpp.ml when processing functors or modules that
+    generate methods dynamically. *)
 let register_method
     (reg : t)
     (func_ref : GlobRef.t)
@@ -709,7 +717,8 @@ let register_method
     ~(ind_tvar_positions : int list) =
   register_into reg.methods func_ref epon_ref this_pos ~ind_tvar_positions
 
-(** Add a method candidate manually. *)
+(** Add a method candidate to the registry for a specific inductive type.
+    Appends the candidate to the existing list for that inductive. *)
 let add_candidate (reg : t) (ind_ref : GlobRef.t) (cand : method_candidate) =
   let existing =
     match Hashtbl.find_opt reg.candidates ind_ref with
@@ -718,7 +727,9 @@ let add_candidate (reg : t) (ind_ref : GlobRef.t) (cand : method_candidate) =
   in
   Hashtbl.replace reg.candidates ind_ref (existing @ [cand])
 
-(** Mark a method's return type as erased to [std::any]. *)
+(** Mark a registered method's return type as erased to [std::any]. Updates the
+    method's [returns_any] flag to true. No-op if the function is not
+    registered. *)
 let register_method_returns_any (reg : t) (func_ref : GlobRef.t) =
   match Hashtbl.find_opt reg.methods func_ref with
   | Some info ->

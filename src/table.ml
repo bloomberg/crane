@@ -35,14 +35,16 @@ module StringSet = StringMap.Set
 (** {1 Utilities about [module_path] and [kernel_names] and [global_reference]}
 *)
 
+(** Check if a kernel name occurs in a global reference (for
+    inductives/constructors only). *)
 let occur_kn_in_ref kn =
   let open GlobRef in
   function
     | IndRef (kn', _) | ConstructRef ((kn', _), _) -> MutInd.CanOrd.equal kn kn'
     | ConstRef _ | VarRef _ -> false
 
-(* Return the "canonical" name used for declaring a name *)
-
+(** Return the canonical KerName representation used for declaring a global
+    reference. *)
 let repr_of_r =
   let open GlobRef in
   function
@@ -50,30 +52,42 @@ let repr_of_r =
     | IndRef (kn, _) | ConstructRef ((kn, _), _) -> MutInd.user kn
     | VarRef v -> Lib.make_kn v
 
+(** Extract the module path from a global reference. *)
 let modpath_of_r r = KerName.modpath (repr_of_r r)
 
+(** Extract the label (final name component) from a global reference. *)
 let label_of_r r = KerName.label (repr_of_r r)
 
+(** Strip module applications to find the base module path by recursively
+    unwrapping MPdot. *)
 let rec base_mp = function
   | MPdot (mp, l) -> base_mp mp
   | mp -> mp
 
+(** Check if a module path represents a top-level module file (MPfile). *)
 let is_modfile = function
   | MPfile _ -> true
   | _ -> false
 
+(** Convert a module file path to its raw capitalized string representation. *)
 let raw_string_of_modfile = function
   | MPfile f ->
     String.capitalize_ascii (Id.to_string (List.hd (DirPath.repr f)))
   | _ -> assert false
 
+(** Get the current module path during extraction from the global environment.
+*)
 let extraction_current_mp () =
   fst (Safe_typing.flatten_env (Global.safe_env ()))
 
+(** Check if a module path is the toplevel (interactive) module. *)
 let is_toplevel mp = ModPath.equal mp (extraction_current_mp ())
 
+(** Check if we are currently extracting at the toplevel (either a module file
+    or the interactive module). *)
 let at_toplevel mp = is_modfile mp || is_toplevel mp
 
+(** Compute the depth/length of a module path by counting MPdot constructors. *)
 let mp_length mp =
   let mp0 = extraction_current_mp () in
   let rec len = function
@@ -83,15 +97,20 @@ let mp_length mp =
   in
   len mp
 
+(** Generate all prefix module paths of a given path, useful for finding common
+    prefixes. *)
 let rec prefixes_mp mp =
   match mp with
   | MPdot (mp', _) -> MPset.add mp (prefixes_mp mp')
   | _ -> MPset.singleton mp
 
+(** Get the nth label in a module path using 1-based indexing. *)
 let rec get_nth_label_mp n = function
   | MPdot (mp, l) -> if Int.equal n 1 then l else get_nth_label_mp (n - 1) mp
   | _ -> CErrors.anomaly (Pp.str "get_nth_label: not enough MPdot.")
 
+(** Find the common module path prefix between mp0 and a list of module paths.
+*)
 let common_prefix_from_list mp0 mpl =
   let prefixes = prefixes_mp mp0 in
   let rec f = function
@@ -100,10 +119,14 @@ let common_prefix_from_list mp0 mpl =
   in
   f mpl
 
+(** Split a module path into (base_mp, label_list) by recursively extracting
+    labels. *)
 let rec parse_labels2 ll = function
   | MPdot (mp, l) -> parse_labels2 (l :: ll) mp
   | mp -> (mp, ll)
 
+(** Get the (base_mp, labels) pair for a global reference by decomposing its
+    kernel name. *)
 let labels_of_ref r =
   let mp, l = KerName.repr (repr_of_r r) in
   parse_labels2 [l] mp
@@ -120,10 +143,15 @@ let labels_of_ref r =
 
 let typedefs = ref (Cmap_env.empty : (constant_body * ml_type) Cmap_env.t)
 
+(** Initialize the typedef cache table. *)
 let init_typedefs () = typedefs := Cmap_env.empty
 
+(** Cache a type definition expansion for a constant, using the constant body as
+    a checksum. *)
 let add_typedef kn cb t = typedefs := Cmap_env.add kn (cb, t) !typedefs
 
+(** Lookup a cached typedef, returning Some only if the constant body checksum
+    matches. *)
 let lookup_typedef kn cb =
   match Cmap_env.find_opt kn !typedefs with
   | Some (cb0, t) when cb0 == cb -> Some t
@@ -131,10 +159,15 @@ let lookup_typedef kn cb =
 
 let cst_types = ref (Cmap_env.empty : (constant_body * ml_schema) Cmap_env.t)
 
+(** Initialize the constant type scheme cache table. *)
 let init_cst_types () = cst_types := Cmap_env.empty
 
+(** Cache a type scheme for a constant, using the constant body as a checksum.
+*)
 let add_cst_type kn cb s = cst_types := Cmap_env.add kn (cb, s) !cst_types
 
+(** Lookup a cached constant type scheme, returning Some only if the constant
+    body checksum matches. *)
 let lookup_cst_type kn cb =
   match Cmap_env.find_opt kn !cst_types with
   | Some (cb0, s) when cb0 == cb -> Some s
@@ -155,6 +188,8 @@ let lookup_ind kn mib =
   | Some (mib0, ml_ind) when mib == mib0 -> Some ml_ind
   | _ -> None
 
+(** Lookup inductive extraction info without safety checks, may raise Not_found.
+*)
 let unsafe_lookup_ind kn = snd (Mindmap_env.find kn !inductives)
 
 (* Get the number of parameters (not indices) for an inductive type. Returns
@@ -201,10 +236,14 @@ let needs_string_literals () = !needs_string_literals_flag
 
 let reset_needs_string_literals () = needs_string_literals_flag := false
 
+(** Check if an ML type is a coinductive type by inspecting its global
+    reference. *)
 let is_coinductive_type = function
   | Tglob (r, _, _) -> is_coinductive r
   | _ -> false
 
+(** Get the list of field references for a record or typeclass inductive type.
+*)
 let get_record_fields r =
   let kn =
     let open GlobRef in
@@ -217,12 +256,13 @@ let get_record_fields r =
   | Some (Record f | TypeClass f) -> f
   | _ -> []
 
+(** Get record fields from an ML type, filtering by extracting from Tglob. *)
 let record_fields_of_type = function
   | Tglob (r, _, _) -> get_record_fields r
   | _ -> []
 
-(* Get the field types from a record/typeclass inductive. Returns the ML types
-   for each field in order. *)
+(** Get the ML types of record/typeclass fields in order, with parameter
+    substitution applied. *)
 let record_field_types r =
   let open GlobRef in
   match r with
@@ -239,8 +279,8 @@ let record_field_types r =
       with Not_found | Invalid_argument _ -> [] )
   | _ -> []
 
-(* Get the ip_vars (type variable names) for an inductive type. For promoted
-   dependent records, this includes the promoted carrier names. *)
+(** Get the type variable names (ip_vars) for an inductive, including promoted
+    carriers for dependent records. *)
 let get_ind_ip_vars r =
   let open GlobRef in
   match r with
@@ -251,8 +291,8 @@ let get_ind_ip_vars r =
       with Not_found | Invalid_argument _ -> [] )
   | _ -> []
 
-(* Get the number of Keep entries in ip_sign for an inductive type. This is the
-   number of real (non-promoted) type parameters. *)
+(** Count the number of kept (non-erased) fields in an inductive's ip_sign, i.e.
+    real type parameters. *)
 let get_ind_nb_sign_keeps r =
   let open GlobRef in
   match r with
@@ -308,8 +348,11 @@ type sigma_assertion =
 let sigma_assertions : (int * sigma_assertion) list Refmap'.t ref =
   ref Refmap'.empty
 
+(** Initialize the sigma type assertion table. *)
 let init_sigma_assertions () = sigma_assertions := Refmap'.empty
 
+(** Record a sigma type assertion for a function parameter at the given index.
+*)
 let add_sigma_assertion r idx a =
   let existing =
     match Refmap'.find_opt r !sigma_assertions with
@@ -318,6 +361,7 @@ let add_sigma_assertion r idx a =
   in
   sigma_assertions := Refmap'.add r ((idx, a) :: existing) !sigma_assertions
 
+(** Retrieve all sigma type assertions for a given function reference. *)
 let get_sigma_assertions r =
   match Refmap'.find_opt r !sigma_assertions with
   | Some l -> l
@@ -748,6 +792,8 @@ let error_MPfile_as_mod mp b =
        ^ s2
        ^ "use (Recursive) Extraction Library instead.\n" ) )
 
+(** Extract argument names from a global definition's type by decomposing the
+    product. *)
 let argnames_of_global r =
   let env = Global.env () in
   let typ, _ = Typeops.type_of_global_in_context env r in
@@ -1178,6 +1224,8 @@ let implicits_of_global r =
   | Some s -> s
   | None -> Int.Set.empty
 
+(** Register implicit argument positions for a global reference by index or
+    name. *)
 let add_implicits r l =
   let names = argnames_of_global r in
   let n = List.length names in
@@ -1227,6 +1275,8 @@ let reset_modfile () =
   modfile_ids := !blacklist_table;
   modfile_mps := MPmap.empty
 
+(** Convert a module file to its output filename, avoiding blacklisted names via
+    de-duplication. *)
 let string_of_modfile mp =
   match MPmap.find_opt mp !modfile_mps with
   | Some s -> s
@@ -1238,8 +1288,8 @@ let string_of_modfile mp =
     modfile_mps := MPmap.add mp s' !modfile_mps;
     s'
 
-(* same as [string_of_modfile], but preserves the capital/uncapital 1st char *)
-
+(** Compute the full output file path for a module, preserving the original
+    capitalization of the first character. *)
 let file_of_modfile mp =
   let s0 =
     match mp with
@@ -1480,6 +1530,8 @@ let extract_callback optstr x =
     Lib.add_leaf (callback_extraction (optstr, qualid_ref))
   | _ -> error_constant ?loc:x.CAst.loc qualid_ref
 
+(** Generic constant extraction with validation, arity handling, and
+    registration to prevent redefinition. *)
 let extract_constant_generic
     r
     ids
@@ -1777,6 +1829,8 @@ let in_numeral : GlobRef.t * numeral_info -> obj =
        ~subst:(Some (fun (s, (r, info)) -> (fst (subst_global s r), info)))
        ~discharge:(fun x -> Some x)
 
+(** Detect and register numeral-like inductive types (zero/successor pattern)
+    for optimized extraction. *)
 let extract_numeral r fmt =
   check_inside_section ();
   let g = Smartlocate.global_with_alias r in
