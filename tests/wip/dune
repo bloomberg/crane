@@ -298,17 +298,6 @@
   (deps reset_state_clears_volatile_edge_0037.t.exe)
   (action (run ./reset_state_clears_volatile_edge_0037.t.exe))))
 
-(subdir todo_monadic_global_alias
- (rule
-  (targets todo_monadic_global_alias.t.exe)
-  (deps TodoMonadicGlobalAlias.vo todo_monadic_global_alias.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_monadic_global_alias.t.exe todo_monadic_global_alias.cpp todo_monadic_global_alias.t.cpp)))
- (rule
-  (alias runtest)
-  (deps todo_monadic_global_alias.t.exe)
-  (action (run ./todo_monadic_global_alias.t.exe))))
-
 (subdir update_nth_length_edge_0009
  (rule
   (targets update_nth_length_edge_0009.t.exe)

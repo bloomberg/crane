@@ -1576,3 +1576,14 @@
   (alias runtest)
   (deps mutual_coind.t.exe)
   (action (run ./mutual_coind.t.exe))))
+
+(subdir todo_monadic_global_alias
+ (rule
+  (targets todo_monadic_global_alias.t.exe)
+  (deps TodoMonadicGlobalAlias.vo todo_monadic_global_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_monadic_global_alias.t.exe todo_monadic_global_alias.cpp todo_monadic_global_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_monadic_global_alias.t.exe)
+  (action (run ./todo_monadic_global_alias.t.exe))))

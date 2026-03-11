@@ -135,6 +135,14 @@ let rec count_ml_arrows = function
   | Miniml.Tarr (_, t2) -> 1 + count_ml_arrows t2
   | _ -> 0
 
+(** Check if an ML type is a monadic type (outermost constructor is a registered
+    monad).  Monadic non-function definitions are generated as zero-arg thunks,
+    so bare references to them must be wrapped in a function call. *)
+let is_monadic_ml_type ty =
+  match resolve_tmeta ty with
+  | Miniml.Tglob (r, _, _) -> Table.is_monad r
+  | _ -> false
+
 (** Convert returned lambdas to capture by value.
     Lambdas returned from functions outlive the function's stack frame, so
     capturing by reference ([&]) would create dangling references.  This
@@ -774,7 +782,7 @@ and try_fold_numeral info expr =
 
 (** Generate C++ expression from ML AST.
     Main expression compiler - handles lambdas, applications, constructors, pattern matching, etc.
-    TODO: when an MLGlob has monadic type, needs to be funcall *)
+    Monadic non-function globals are wrapped in CPPfun_call by the MLglob case below. *)
 and gen_expr env (ml_e : ml_ast) : cpp_expr =
   match ml_e with
   | MLrel i ->
@@ -992,7 +1000,13 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
          drop ALL explicit type args via filter_erased_type_args and let the
          compiler deduce everything.  See filter_erased_type_args for why we
          must drop all args rather than just the erased ones. *)
-      mk_cppglob x (filter_erased_type_args tys_cpp)
+      let cglob = mk_cppglob x (filter_erased_type_args tys_cpp) in
+      (* Monadic non-function definitions (e.g. [base : IO nat]) are generated
+         as zero-arg thunks.  A bare [MLglob] reference to such a definition
+         must call the thunk to obtain its value. *)
+      (match find_type_opt x with
+       | Some ty when is_monadic_ml_type ty -> CPPfun_call (cglob, [])
+       | _ -> cglob)
   | MLcons (_ty, r, _ts) when (match r with
       | GlobRef.ConstructRef ((kn, i), _) -> Table.is_numeral_inductive (GlobRef.IndRef (kn, i))
       | _ -> false) ->
