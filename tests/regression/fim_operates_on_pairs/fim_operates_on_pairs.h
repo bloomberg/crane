@@ -143,9 +143,9 @@ struct FimOperatesOnPairs {
   static std::shared_ptr<state> set_reg_pair(const std::shared_ptr<state> &s,
                                              const unsigned int r,
                                              const unsigned int v);
-  static std::shared_ptr<state> execute_fim(const std::shared_ptr<state> &,
-                                            const unsigned int,
-                                            const unsigned int);
+  static std::shared_ptr<state> execute_fim(const std::shared_ptr<state> &_x0,
+                                            const unsigned int _x1,
+                                            const unsigned int _x2);
   static inline const std::shared_ptr<state> sample =
       std::make_shared<state>(state{List<unsigned int>::ctor::cons_(
           0u,

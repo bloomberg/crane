@@ -24,7 +24,7 @@ struct FuncOnlySubmoduleAb {
     };
 
     struct B {
-      static unsigned int dec(const unsigned int);
+      static unsigned int dec(const unsigned int _x0);
     };
   };
 

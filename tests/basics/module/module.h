@@ -183,7 +183,7 @@ static_assert(BaseType<NatBase>);
 
 struct NatOrdered {
   using t = unsigned int;
-  static comparison compare(const unsigned int, const unsigned int);
+  static comparison compare(const unsigned int _x0, const unsigned int _x1);
 };
 
 static_assert(OrderedType<NatOrdered>);

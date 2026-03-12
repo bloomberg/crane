@@ -29,7 +29,7 @@ struct Pos {
   static unsigned int mul(const unsigned int x, const unsigned int y);
   static comparison compare_cont(const comparison r, const unsigned int x,
                                  const unsigned int y);
-  static comparison compare(const unsigned int, const unsigned int);
+  static comparison compare(const unsigned int _x0, const unsigned int _x1);
   static bool eqb(const unsigned int p, const unsigned int q);
 };
 
@@ -46,14 +46,14 @@ struct Datatypes {
 };
 
 struct ZIntTest {
-  static int64_t add_test(const int64_t, const int64_t);
-  static int64_t mul_test(const int64_t, const int64_t);
-  static int64_t sub_test(const int64_t, const int64_t);
-  static int64_t abs_test(const int64_t);
-  static int64_t opp_test(const int64_t);
-  static bool eqb_test(const int64_t, const int64_t);
-  static bool ltb_test(const int64_t, const int64_t);
-  static bool leb_test(const int64_t, const int64_t);
+  static int64_t add_test(const int64_t _x0, const int64_t _x1);
+  static int64_t mul_test(const int64_t _x0, const int64_t _x1);
+  static int64_t sub_test(const int64_t _x0, const int64_t _x1);
+  static int64_t abs_test(const int64_t _x0);
+  static int64_t opp_test(const int64_t _x0);
+  static bool eqb_test(const int64_t _x0, const int64_t _x1);
+  static bool ltb_test(const int64_t _x0, const int64_t _x1);
+  static bool leb_test(const int64_t _x0, const int64_t _x1);
   static inline const int64_t zero_val = INT64_C(0);
   static inline const int64_t pos_val =
       static_cast<int64_t>((2u * (2u * (2u * (2u * (2u * 1u) + 1u)) + 1u)));

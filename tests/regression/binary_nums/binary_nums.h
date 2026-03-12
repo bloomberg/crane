@@ -255,8 +255,8 @@ struct Pos {
   static comparison compare_cont(const comparison r,
                                  const std::shared_ptr<Positive> &x,
                                  const std::shared_ptr<Positive> &y);
-  static comparison compare(const std::shared_ptr<Positive> &,
-                            const std::shared_ptr<Positive> &);
+  static comparison compare(const std::shared_ptr<Positive> &_x0,
+                            const std::shared_ptr<Positive> &_x1);
 
   template <typename T1, MapsTo<T1, T1, T1> F0>
   static T1 iter_op(F0 &&op, const std::shared_ptr<Positive> &p, const T1 a) {

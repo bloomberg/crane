@@ -643,8 +643,10 @@ let pp_hdecl = function
         let ds, env, _ = gen_decl r a t in
         pp_cpp_decl env ds
       else
-        let ds, env = gen_spec r a t in
-        pp_cpp_decl env ds
+        (* Use decl_to_spec on the result from gen_decl_for_pp to produce
+           a forward declaration. This correctly handles axiom values
+           (Dfundef -> Dfundecl). *)
+        pp_cpp_decl env (decl_to_spec ds)
     | Some ds, _ :: _ -> pp_cpp_decl env ds
     | None, _ ->
       if render_ctx.rc_in_template then
@@ -713,7 +715,8 @@ let pp_hdecl_spec_only = function
     let ds, env, tvars = gen_decl_for_pp r a t in
     ( match (ds, tvars) with
     | Some ds, _ :: _ -> pp_cpp_decl env (Translation.decl_to_spec ds)
-    | _ ->
+    | Some ds, [] -> pp_cpp_decl env (Translation.decl_to_spec ds)
+    | None, _ ->
       let ds, env = gen_spec r a t in
       pp_cpp_decl env ds )
   | Dfix (rv, defs, typs) ->

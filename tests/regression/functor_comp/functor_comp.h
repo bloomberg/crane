@@ -142,7 +142,7 @@ struct FunctorComp {
     static t push(const unsigned int x, std::shared_ptr<List<unsigned int>> s);
     static std::optional<std::pair<unsigned int, t>>
     pop(const std::shared_ptr<List<unsigned int>> &s);
-    static unsigned int size(const t);
+    static unsigned int size(const t _x0);
   };
 
   struct Queue {

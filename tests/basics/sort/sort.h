@@ -277,14 +277,14 @@ struct Sort {
              std::shared_ptr<List<unsigned int>> l1,
              std::shared_ptr<List<unsigned int>> l2);
   static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
-  msort(const std::shared_ptr<List<unsigned int>> &);
+  msort(const std::shared_ptr<List<unsigned int>> &_x0);
   static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
   pair_merge_prog(const unsigned int _x, const unsigned int _x0,
                   const std::shared_ptr<List<unsigned int>> &_x1,
                   std::shared_ptr<List<unsigned int>> l_,
                   std::shared_ptr<List<unsigned int>> l_0);
   static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
-  psort(const std::shared_ptr<List<unsigned int>> &);
+  psort(const std::shared_ptr<List<unsigned int>> &_x0);
   static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
-  qsort(const std::shared_ptr<List<unsigned int>> &);
+  qsort(const std::shared_ptr<List<unsigned int>> &_x0);
 };

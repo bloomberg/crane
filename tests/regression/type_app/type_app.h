@@ -143,7 +143,7 @@ struct TypeApp {
                       2u, list<unsigned int>::ctor::cons_(
                               3u, list<unsigned int>::ctor::nil_()))));
   static std::shared_ptr<list<unsigned int>>
-  map_succ(const std::shared_ptr<list<unsigned int>> &);
+  map_succ(const std::shared_ptr<list<unsigned int>> &_x0);
   static inline const std::shared_ptr<list<unsigned int>> test_map_succ =
       map_succ(list<unsigned int>::ctor::cons_(
           5u, list<unsigned int>::ctor::cons_(
@@ -160,7 +160,7 @@ struct TypeApp {
   struct NatMonoid {
     using T = unsigned int;
     static inline const unsigned int empty = 0u;
-    static unsigned int append(const unsigned int, const unsigned int);
+    static unsigned int append(const unsigned int _x0, const unsigned int _x1);
   };
 
   template <Monoid M> struct UseMonoid {

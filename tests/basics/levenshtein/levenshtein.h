@@ -748,6 +748,6 @@ struct Levenshtein {
   static std::shared_ptr<Nat>
   levenshtein_computed(const std::shared_ptr<String> &s,
                        const std::shared_ptr<String> &t);
-  static std::shared_ptr<Nat> levenshtein(const std::shared_ptr<String> &,
-                                          const std::shared_ptr<String> &);
+  static std::shared_ptr<Nat> levenshtein(const std::shared_ptr<String> &_x0,
+                                          const std::shared_ptr<String> &_x1);
 };

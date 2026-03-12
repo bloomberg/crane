@@ -76,7 +76,7 @@ struct PeanoNat {
 struct WellFoundedRec {
   static std::shared_ptr<List<unsigned int>>
   countdown_acc(const unsigned int n);
-  static std::shared_ptr<List<unsigned int>> countdown(const unsigned int);
+  static std::shared_ptr<List<unsigned int>> countdown(const unsigned int _x0);
   static unsigned int div2_wf(const unsigned int x);
   static unsigned int gcd_wf(const unsigned int x, const unsigned int b);
   static inline const unsigned int test_div2_0 = div2_wf(0u);

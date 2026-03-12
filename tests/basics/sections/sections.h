@@ -18,12 +18,12 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct Sections {
-  static unsigned int add_n(const unsigned int, const unsigned int);
-  static unsigned int mul_n(const unsigned int, const unsigned int);
-  static unsigned int add_five(const unsigned int);
-  static unsigned int mul_three(const unsigned int);
-  static unsigned int sum_ab(const unsigned int, const unsigned int);
-  static unsigned int prod_ab(const unsigned int, const unsigned int);
+  static unsigned int add_n(const unsigned int _x0, const unsigned int _x1);
+  static unsigned int mul_n(const unsigned int _x0, const unsigned int _x1);
+  static unsigned int add_five(const unsigned int _x0);
+  static unsigned int mul_three(const unsigned int _x0);
+  static unsigned int sum_ab(const unsigned int _x0, const unsigned int _x1);
+  static unsigned int prod_ab(const unsigned int _x0, const unsigned int _x1);
   static unsigned int use_inner(const unsigned int a);
   static inline const unsigned int final_use = use_inner(5u);
 

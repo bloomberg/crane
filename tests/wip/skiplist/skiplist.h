@@ -680,8 +680,8 @@ template <typename K, typename V> struct SkipList {
 };
 
 struct skiplist_test {
-  static bool nat_lt(const unsigned int, const unsigned int);
-  static bool nat_eq(const unsigned int, const unsigned int);
+  static bool nat_lt(const unsigned int _x0, const unsigned int _x1);
+  static bool nat_eq(const unsigned int _x0, const unsigned int _x1);
   static bool stm_test_insert_lookup();
   static bool stm_test_delete();
   static bool stm_test_update();

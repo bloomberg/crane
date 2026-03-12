@@ -20,8 +20,9 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 struct Currying {
   static unsigned int add3(const unsigned int a, const unsigned int b,
                            const unsigned int c);
-  static unsigned int add3_partial1(const unsigned int, const unsigned int);
-  static unsigned int add3_partial2(const unsigned int);
+  static unsigned int add3_partial1(const unsigned int _x0,
+                                    const unsigned int _x1);
+  static unsigned int add3_partial2(const unsigned int _x0);
 
   template <typename A, typename B> struct pair {
   public:
@@ -96,7 +97,8 @@ struct Currying {
 
   static unsigned int
   pair_add(const std::shared_ptr<pair<unsigned int, unsigned int>> &p);
-  static unsigned int curried_add(const unsigned int, const unsigned int);
+  static unsigned int curried_add(const unsigned int _x0,
+                                  const unsigned int _x1);
   static unsigned int uncurried_add3(
       const std::shared_ptr<
           pair<unsigned int, std::shared_ptr<pair<unsigned int, unsigned int>>>>
@@ -107,10 +109,11 @@ struct Currying {
     return f(a, b);
   }
 
-  static unsigned int sub(const unsigned int, const unsigned int);
-  static unsigned int flipped_sub(const unsigned int, const unsigned int);
-  static unsigned int add_base(const unsigned int, const unsigned int);
-  static unsigned int add_ten(const unsigned int);
+  static unsigned int sub(const unsigned int _x0, const unsigned int _x1);
+  static unsigned int flipped_sub(const unsigned int _x0,
+                                  const unsigned int _x1);
+  static unsigned int add_base(const unsigned int _x0, const unsigned int _x1);
+  static unsigned int add_ten(const unsigned int _x0);
   static inline const unsigned int test_add3 = add3(1u, 2u, 3u);
   static inline const unsigned int test_partial1 = add3_partial1(2u, 3u);
   static inline const unsigned int test_partial2 = add3_partial2(3u);

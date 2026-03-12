@@ -89,7 +89,7 @@ struct Pos {
                                               const unsigned int y);
   static comparison compare_cont(const comparison r, const unsigned int x,
                                  const unsigned int y);
-  static comparison compare(const unsigned int, const unsigned int);
+  static comparison compare(const unsigned int _x0, const unsigned int _x1);
   static bool eqb(const unsigned int p, const unsigned int q);
 };
 
@@ -106,16 +106,16 @@ struct BinNat {
 };
 
 struct NIntTest {
-  static unsigned int add_test(const unsigned int, const unsigned int);
-  static unsigned int mul_test(const unsigned int, const unsigned int);
-  static unsigned int sub_test(const unsigned int, const unsigned int);
-  static unsigned int div_test(const unsigned int, const unsigned int);
-  static bool eqb_test(const unsigned int, const unsigned int);
-  static bool ltb_test(const unsigned int, const unsigned int);
-  static bool leb_test(const unsigned int, const unsigned int);
-  static unsigned int succ_test(const unsigned int);
-  static unsigned int pred_test(const unsigned int);
-  static unsigned int double_test(const unsigned int);
+  static unsigned int add_test(const unsigned int _x0, const unsigned int _x1);
+  static unsigned int mul_test(const unsigned int _x0, const unsigned int _x1);
+  static unsigned int sub_test(const unsigned int _x0, const unsigned int _x1);
+  static unsigned int div_test(const unsigned int _x0, const unsigned int _x1);
+  static bool eqb_test(const unsigned int _x0, const unsigned int _x1);
+  static bool ltb_test(const unsigned int _x0, const unsigned int _x1);
+  static bool leb_test(const unsigned int _x0, const unsigned int _x1);
+  static unsigned int succ_test(const unsigned int _x0);
+  static unsigned int pred_test(const unsigned int _x0);
+  static unsigned int double_test(const unsigned int _x0);
   static inline const unsigned int zero_val = 0u;
   static inline const unsigned int five_val = (2u * (2u * 1u) + 1u);
   static inline const unsigned int big_val =
@@ -124,6 +124,6 @@ struct NIntTest {
         (2u * (2u * (2u * (2u * (2u * (2u * (2u * 1u + 1u) + 1u) + 1u) + 1u)) +
                1u))));
   static bool is_zero(const unsigned int n);
-  static unsigned int pos_add(const unsigned int, const unsigned int);
-  static unsigned int pos_succ(const unsigned int);
+  static unsigned int pos_add(const unsigned int _x0, const unsigned int _x1);
+  static unsigned int pos_succ(const unsigned int _x0);
 };

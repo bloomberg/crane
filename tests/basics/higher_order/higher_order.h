@@ -145,7 +145,7 @@ struct HigherOrder {
     }
   }
 
-  static unsigned int adder(const unsigned int, const unsigned int);
+  static unsigned int adder(const unsigned int _x0, const unsigned int _x1);
 
   template <typename T1, MapsTo<T1, T1> F0>
   static T1 twice(F0 &&f, const T1 x) {

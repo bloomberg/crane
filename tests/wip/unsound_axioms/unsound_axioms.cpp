@@ -40,6 +40,12 @@ unsigned int UnsoundAxioms::extract_proof_computation(
 
 bool UnsoundAxioms::use_type_eq(const unsigned int n) { return std::move(n); }
 
+std::shared_ptr<UnsoundAxioms::Rec> UnsoundAxioms::impossible_rec() {
+  throw std::logic_error("unrealized axiom: "
+                         "CraneTestsWIP.unsound_axioms.UnsoundAxioms."
+                         "UnsoundAxioms.impossible_rec");
+}
+
 unsigned int
 UnsoundAxioms::from_false(const std::shared_ptr<UnsoundAxioms::Rec> &r) {
   return [&](void) {

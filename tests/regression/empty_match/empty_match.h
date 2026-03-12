@@ -35,7 +35,7 @@ struct EmptyMatch {
     throw std::logic_error("absurd case");
   }
 
-  static unsigned int from_empty(const std::shared_ptr<empty> &);
+  static unsigned int from_empty(const std::shared_ptr<empty> &_x0);
 
   template <typename A, typename B> struct either {
   public:

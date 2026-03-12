@@ -1313,6 +1313,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       match find_type_opt x with
       | Some ml_ty when is_monadic_ml_type ml_ty -> true
       | Some _ when Table.is_cofixpoint x -> true
+      | Some _ when Table.is_axiom_value x -> true
       | _ -> false
     in
     if needs_call then
@@ -5415,13 +5416,24 @@ let gen_decl n b ty =
     let f, env = gen_dfun n b dom cod ty temps in
     (f, env, tvars)
   | _ ->
-    let saved_return_type = tctx.current_cpp_return_type in
-    tctx.current_cpp_return_type <- Some cty;
-    let inner = Dasgn (n, cty, gen_expr (empty_env ()) b) in
-    tctx.current_cpp_return_type <- saved_return_type;
-    ( match temps with
-    | [] -> (inner, empty_env (), tvars)
-    | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
+    match b with
+    | MLaxiom _ ->
+      (* Axiom values become zero-arg functions that throw std::logic_error
+         when called. This avoids throwing during static initialization
+         (which terminates the program before main). *)
+      let body_expr = gen_expr (empty_env ()) b in
+      let inner = Dfundef ([(n, [])], cty, [], [Sreturn (Some body_expr)]) in
+      ( match temps with
+      | [] -> (inner, empty_env (), tvars)
+      | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
+    | _ ->
+      let saved_return_type = tctx.current_cpp_return_type in
+      tctx.current_cpp_return_type <- Some cty;
+      let inner = Dasgn (n, cty, gen_expr (empty_env ()) b) in
+      tctx.current_cpp_return_type <- saved_return_type;
+      ( match temps with
+      | [] -> (inner, empty_env (), tvars)
+      | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
 
 (** Generate C++ declaration with pretty-printing adjustments *)
 let gen_decl_for_pp n b ty =
@@ -5510,10 +5522,19 @@ let gen_decl_for_pp n b ty =
     in
     let tvars = tc_param_ids @ tvars @ fun_tys in
     (Some f, e, tvars)
-  | _ -> (None, empty_env (), tc_param_ids @ tvars)
-(* let inner = Dasgn (n, Tmod (TMconst, ty), gen_expr (empty_env ()) b) in
-   (match temps with | [] -> inner, empty_env () | l -> Dtemplate (l, inner),
-   empty_env ())*)
+  | _ ->
+    ( match b with
+    | MLaxiom _ ->
+      (* Axiom values: generate as zero-arg function so they throw when
+         called, not at static init time *)
+      let body_expr = gen_expr (empty_env ()) b in
+      let inner = Dfundef ([(n, [])], cty, [], [Sreturn (Some body_expr)]) in
+      let ds = match temps with
+        | [] -> inner
+        | l -> Dtemplate (l, None, inner)
+      in
+      (Some ds, empty_env (), tc_param_ids @ tvars)
+    | _ -> (None, empty_env (), tc_param_ids @ tvars) )
 
 (** TODO: maybe cleanup this function/its name etc.. *)
 let gen_decl_for_dfuns n b ty =
@@ -5571,18 +5592,26 @@ let gen_spec n b ty =
   match ty with
   | Tfun (dom, cod) -> gen_sfun n b dom cod temps
   | _ ->
-    (* Expose the constant's C++ type so that inner call sites can recover
-       erased template type args (see try_recover_erased_return_type). Without
-       this, calls like pick<natBoxed>() inside a constant body cannot deduce
-       the missing type parameter. *)
-    let saved_return_type = tctx.current_cpp_return_type in
-    tctx.current_cpp_return_type <- Some ty;
-    let b = gen_expr (empty_env ()) b in
-    tctx.current_cpp_return_type <- saved_return_type;
-    let inner = Dasgn (n, Tmod (TMconst, ty), b) in
-    ( match temps with
-    | [] -> (inner, empty_env ())
-    | l -> (Dtemplate (l, None, inner), empty_env ()) )
+    match b with
+    | MLaxiom _ ->
+      (* Axiom values: generate as zero-arg function declaration *)
+      let inner = Dfundef ([(n, [])], ty, [], []) in
+      ( match temps with
+      | [] -> (inner, empty_env ())
+      | l -> (Dtemplate (l, None, inner), empty_env ()) )
+    | _ ->
+      (* Expose the constant's C++ type so that inner call sites can recover
+         erased template type args (see try_recover_erased_return_type). Without
+         this, calls like pick<natBoxed>() inside a constant body cannot deduce
+         the missing type parameter. *)
+      let saved_return_type = tctx.current_cpp_return_type in
+      tctx.current_cpp_return_type <- Some ty;
+      let b = gen_expr (empty_env ()) b in
+      tctx.current_cpp_return_type <- saved_return_type;
+      let inner = Dasgn (n, Tmod (TMconst, ty), b) in
+      ( match temps with
+      | [] -> (inner, empty_env ())
+      | l -> (Dtemplate (l, None, inner), empty_env ()) )
 
 (** TODO: maybe cleanup this function/its name etc.. *)
 let gen_spec_for_sfuns n b ty =

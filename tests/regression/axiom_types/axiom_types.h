@@ -17,23 +17,20 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
+enum class unit { tt };
+
 struct AxiomTypes {
   using MysteryType = std::any /* AXIOM TO BE REALIZED */;
-  static inline const MysteryType mystery_value = ([]() -> const MysteryType {
-    throw std::logic_error(
-        "unrealized axiom: "
-        "CraneTestsRegression.axiom_types.AxiomTypes.AxiomTypes.mystery_value");
-  })();
-  static MysteryType mystery_function(const MysteryType);
-  static inline const MysteryType use_axiom = mystery_function(mystery_value);
+  static MysteryType mystery_value();
+  static MysteryType mystery_function(const MysteryType _x0);
+  static MysteryType use_axiom(const unit _x);
 
   struct AxiomRecord {
     unsigned int normal_field;
     MysteryType axiom_field;
   };
 
-  static inline const std::shared_ptr<AxiomRecord> make_axiom_record =
-      std::make_shared<AxiomRecord>(AxiomRecord{42u, mystery_value});
+  static std::shared_ptr<AxiomRecord> make_axiom_record(const unit _x);
   static MysteryType extract_axiom_field(const std::shared_ptr<AxiomRecord> &r);
 
   struct AxiomInductive {
@@ -117,11 +114,9 @@ struct AxiomTypes {
         a->v());
   }
 
-  static inline const std::shared_ptr<AxiomInductive> use_axiom_inductive =
-      AxiomInductive::ctor::AxConstr2_(mystery_value);
+  static std::shared_ptr<AxiomInductive> use_axiom_inductive(const unit _x);
   static MysteryType axiom_identity(const MysteryType x);
-  static inline const MysteryType nested_axiom =
-      axiom_identity(mystery_function(axiom_identity(mystery_value)));
+  static MysteryType nested_axiom(const unit _x);
 
   template <typename A> struct list {
   public:
@@ -195,14 +190,9 @@ struct AxiomTypes {
         l->v());
   }
 
-  static inline const std::shared_ptr<list<MysteryType>> axiom_list =
-      list<MysteryType>::ctor::cons_(
-          mystery_value,
-          list<MysteryType>::ctor::cons_(mystery_function(mystery_value),
-                                         list<MysteryType>::ctor::nil_()));
+  static std::shared_ptr<list<MysteryType>> axiom_list(const unit _x);
 
   template <typename T1> static T1 poly_axiom(const T1 x) { return x; }
 
-  static inline const MysteryType use_poly_axiom =
-      poly_axiom<MysteryType>(mystery_value);
+  static MysteryType use_poly_axiom(const unit _x);
 };

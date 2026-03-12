@@ -59,7 +59,7 @@ struct SectionsModules {
 
   struct NatMonoid {
     using T = unsigned int;
-    static unsigned int op(const unsigned int, const unsigned int);
+    static unsigned int op(const unsigned int _x0, const unsigned int _x1);
     static inline const unsigned int id = 0u;
   };
 
@@ -84,7 +84,7 @@ struct SectionsModules {
 
   static unsigned int use_both(const unsigned int a, const unsigned int b,
                                const unsigned int c);
-  static unsigned int use_outer(const unsigned int, const unsigned int);
+  static unsigned int use_outer(const unsigned int _x0, const unsigned int _x1);
 
   struct Base {
     static inline const unsigned int base_val = 42u;

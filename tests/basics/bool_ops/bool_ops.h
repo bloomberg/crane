@@ -27,9 +27,9 @@ struct BoolOps {
   static unsigned int if_nat(const bool b, const unsigned int t,
                              const unsigned int f);
   static bool complex_bool(const bool a, const bool b, const bool c);
-  static bool nat_eq(const unsigned int, const unsigned int);
-  static bool nat_lt(const unsigned int, const unsigned int);
-  static bool nat_le(const unsigned int, const unsigned int);
+  static bool nat_eq(const unsigned int _x0, const unsigned int _x1);
+  static bool nat_lt(const unsigned int _x0, const unsigned int _x1);
+  static bool nat_le(const unsigned int _x0, const unsigned int _x1);
   static inline const bool test_neg_t = my_negb(true);
   static inline const bool test_neg_f = my_negb(false);
   static inline const bool test_and_tt = my_andb(true, true);

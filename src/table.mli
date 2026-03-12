@@ -294,6 +294,12 @@ val add_cofixpoint : GlobRef.t -> unit
 (** Check if a definition is a cofixpoint. *)
 val is_cofixpoint : GlobRef.t -> bool
 
+(** Add axiom value (non-function axiom generated as zero-arg function). *)
+val add_axiom_value : GlobRef.t -> unit
+
+(** Check if a definition is an axiom value. *)
+val is_axiom_value : GlobRef.t -> bool
+
 (** Add symbol. *)
 val add_symbol : GlobRef.t -> unit
 

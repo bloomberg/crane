@@ -19,7 +19,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct TodoInlineCustomSymbol {
-  static unsigned int alias(const unsigned int);
+  static unsigned int alias(const unsigned int _x0);
   static unsigned int twice(const unsigned int n);
   static inline const unsigned int test_value = twice(3u);
 };

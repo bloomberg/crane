@@ -19,10 +19,11 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct Lambda {
   static unsigned int simple_lambda(const unsigned int x);
-  static unsigned int multi_arg(const unsigned int, const unsigned int);
+  static unsigned int multi_arg(const unsigned int _x0, const unsigned int _x1);
   static unsigned int nested_lambda(const unsigned int x, const unsigned int y,
                                     const unsigned int z);
-  static unsigned int make_adder(const unsigned int, const unsigned int);
+  static unsigned int make_adder(const unsigned int _x0,
+                                 const unsigned int _x1);
   static inline const unsigned int with_let = [](void) {
     unsigned int x = 5u;
     return (std::move(x) * 2u);

@@ -53,8 +53,9 @@ struct Opaque {
   static unsigned int pred_of_succ(const unsigned int n);
   static bool nat_eq_dec(const unsigned int n, const unsigned int x);
   static bool are_equal(const unsigned int n, const unsigned int m);
-  static std::shared_ptr<Sig<unsigned int>>
-  bounded_add(const unsigned int, const unsigned int, const unsigned int);
+  static std::shared_ptr<Sig<unsigned int>> bounded_add(const unsigned int _x0,
+                                                        const unsigned int _x1,
+                                                        const unsigned int _x2);
   static inline const unsigned int test_safe_pred = safe_pred(5u);
   static inline const unsigned int test_pred_succ = pred_of_succ(7u);
   static inline const bool test_eq_true = are_equal(5u, 5u);
