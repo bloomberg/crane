@@ -1,3 +1,6 @@
+#ifndef INCLUDED_OPAQUE
+#define INCLUDED_OPAQUE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -66,3 +69,5 @@ struct Opaque {
   static inline const bool test_eq_true = are_equal(5u, 5u);
   static inline const bool test_eq_false = are_equal(3u, 7u);
 };
+
+#endif // INCLUDED_OPAQUE

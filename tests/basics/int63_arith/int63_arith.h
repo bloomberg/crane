@@ -1,3 +1,6 @@
+#ifndef INCLUDED_INT63_ARITH
+#define INCLUDED_INT63_ARITH
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -38,3 +41,5 @@ struct Int63Arith {
   static inline const int64_t test_abs_neg =
       i_abs(((int64_t(0) - int64_t(42)) & 0x7FFFFFFFFFFFFFFFLL));
 };
+
+#endif // INCLUDED_INT63_ARITH

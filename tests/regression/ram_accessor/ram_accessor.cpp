@@ -1,3 +1,5 @@
+#include <ram_accessor.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -5,7 +7,6 @@
 #include <iostream>
 #include <memory>
 #include <optional>
-#include <ram_accessor.h>
 #include <stdexcept>
 #include <string>
 #include <utility>

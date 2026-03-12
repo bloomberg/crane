@@ -1,3 +1,5 @@
+#include <stream.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -6,7 +8,6 @@
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <stream.h>
 #include <string>
 #include <variant>
 

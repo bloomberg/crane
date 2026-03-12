@@ -1,3 +1,5 @@
+#include <todo_extract_constant_noninline.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,7 +9,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <todo_extract_constant_noninline.h>
 #include <todo_extract_constant_noninline_support.h>
 #include <variant>
 

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PROP_ERASURE
+#define INCLUDED_PROP_ERASURE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -27,3 +30,5 @@ struct PropErasure {
   static inline const unsigned int test_use_proof = use_proof;
   static inline const unsigned int test_simple = simple_value;
 };
+
+#endif // INCLUDED_PROP_ERASURE

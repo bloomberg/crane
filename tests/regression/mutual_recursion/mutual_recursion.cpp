@@ -1,10 +1,11 @@
+#include <mutual_recursion.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <mutual_recursion.h>
 #include <optional>
 #include <stdexcept>
 #include <string>

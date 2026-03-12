@@ -1,3 +1,6 @@
+#ifndef INCLUDED_MERGESORT_FUEL
+#define INCLUDED_MERGESORT_FUEL
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -97,3 +100,5 @@ struct MergesortFuel {
   static std::shared_ptr<List<unsigned int>>
   msort(const std::shared_ptr<List<unsigned int>> &l);
 };
+
+#endif // INCLUDED_MERGESORT_FUEL

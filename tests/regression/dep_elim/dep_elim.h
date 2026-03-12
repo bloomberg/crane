@@ -1,3 +1,6 @@
+#ifndef INCLUDED_DEP_ELIM
+#define INCLUDED_DEP_ELIM
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -403,3 +406,5 @@ struct DepElim {
   static inline const unsigned int test_present =
       get_present(avail::ctor::present_(42u));
 };
+
+#endif // INCLUDED_DEP_ELIM

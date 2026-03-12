@@ -1,3 +1,6 @@
+#ifndef INCLUDED_NESTED_IND
+#define INCLUDED_NESTED_IND
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -568,3 +571,5 @@ struct NestedInd {
               test_literals),
           test_doubled);
 };
+
+#endif // INCLUDED_NESTED_IND

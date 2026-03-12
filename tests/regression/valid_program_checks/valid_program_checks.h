@@ -1,3 +1,6 @@
+#ifndef INCLUDED_VALID_PROGRAM_CHECKS
+#define INCLUDED_VALID_PROGRAM_CHECKS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -119,3 +122,5 @@ struct ValidProgramChecks {
          }
        }());
 };
+
+#endif // INCLUDED_VALID_PROGRAM_CHECKS

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_SIGMA_ASSERT
+#define INCLUDED_SIGMA_ASSERT
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -28,3 +31,5 @@ struct SigmaAssert {
   static inline const unsigned int test_pred = safe_pred(5u);
   static inline const unsigned int test_div2 = safe_div2(4u);
 };
+
+#endif // INCLUDED_SIGMA_ASSERT

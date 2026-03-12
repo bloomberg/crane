@@ -1,3 +1,5 @@
+#include <topological_sort.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,7 +9,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <topological_sort.h>
 #include <utility>
 #include <variant>
 

@@ -1,3 +1,5 @@
+#include <stm.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,7 +9,6 @@
 #include <mini_stm.h>
 #include <optional>
 #include <stdexcept>
-#include <stm.h>
 #include <string>
 #include <variant>
 

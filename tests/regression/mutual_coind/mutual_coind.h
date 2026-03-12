@@ -1,3 +1,6 @@
+#ifndef INCLUDED_MUTUAL_COIND
+#define INCLUDED_MUTUAL_COIND
+
 #include "lazy.h"
 #include <algorithm>
 #include <any>
@@ -264,3 +267,5 @@ struct MutualCoind {
   static inline const std::shared_ptr<List<unsigned int>> test_take5 =
       takeA<unsigned int>(5u, countA(0u));
 };
+
+#endif // INCLUDED_MUTUAL_COIND

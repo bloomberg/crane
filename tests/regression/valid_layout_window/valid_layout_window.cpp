@@ -1,3 +1,5 @@
+#include <valid_layout_window.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,7 +9,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <valid_layout_window.h>
 #include <variant>
 
 bool ValidLayoutWindow::valid_layoutb(

@@ -1,3 +1,5 @@
+#include <z_gmp.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -9,7 +11,6 @@
 #include <stdexcept>
 #include <string>
 #include <variant>
-#include <z_gmp.h>
 
 mpz_class Pos::succ(const mpz_class x) {
   if (x == 1) {

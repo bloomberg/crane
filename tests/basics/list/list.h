@@ -1,3 +1,6 @@
+#ifndef INCLUDED_LIST
+#define INCLUDED_LIST
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -168,3 +171,5 @@ struct List {
                               7u, list<unsigned int>::ctor::cons_(
                                       9u, list<unsigned int>::ctor::nil_())))));
 };
+
+#endif // INCLUDED_LIST

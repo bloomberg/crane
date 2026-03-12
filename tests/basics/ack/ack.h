@@ -1,3 +1,6 @@
+#ifndef INCLUDED_ACK
+#define INCLUDED_ACK
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -24,3 +27,5 @@ struct Nat {
 struct Ack {
   static unsigned int ack(const unsigned int m, const unsigned int n);
 };
+
+#endif // INCLUDED_ACK

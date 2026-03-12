@@ -1,3 +1,6 @@
+#ifndef INCLUDED_MONADIC
+#define INCLUDED_MONADIC
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -191,3 +194,5 @@ struct Monadic {
                                   5u, List<unsigned int>::ctor::nil_()))))))(
           0u);
 };
+
+#endif // INCLUDED_MONADIC

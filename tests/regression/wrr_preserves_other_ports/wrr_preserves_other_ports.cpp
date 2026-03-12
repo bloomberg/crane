@@ -1,3 +1,5 @@
+#include <wrr_preserves_other_ports.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -9,7 +11,6 @@
 #include <string>
 #include <utility>
 #include <variant>
-#include <wrr_preserves_other_ports.h>
 
 std::shared_ptr<WrrPreservesOtherPorts::state>
 WrrPreservesOtherPorts::execute_wrr(

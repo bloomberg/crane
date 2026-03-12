@@ -1,3 +1,6 @@
+#ifndef INCLUDED_MODPATH_ESCAPE_COLLISION
+#define INCLUDED_MODPATH_ESCAPE_COLLISION
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -32,3 +35,5 @@ struct ModpathEscapeCollision {
 
   static inline const unsigned int t = (A::Token_::f(0u) + B::Token_::g(0u));
 };
+
+#endif // INCLUDED_MODPATH_ESCAPE_COLLISION

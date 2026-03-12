@@ -1,3 +1,6 @@
+#ifndef INCLUDED_LOAD_PROGRAM_HEAD_WRITE
+#define INCLUDED_LOAD_PROGRAM_HEAD_WRITE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -127,3 +130,5 @@ struct LoadProgramHeadWrite {
     return std::move(s1)->rom->nth(1u, 0u);
   }();
 };
+
+#endif // INCLUDED_LOAD_PROGRAM_HEAD_WRITE

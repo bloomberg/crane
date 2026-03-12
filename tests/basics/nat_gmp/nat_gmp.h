@@ -1,3 +1,6 @@
+#ifndef INCLUDED_NAT_GMP
+#define INCLUDED_NAT_GMP
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -31,3 +34,5 @@ struct NatGMPTest {
   static inline const mpz_class another_big = mpz_class(1000);
   static mpz_class add_big(const mpz_class n);
 };
+
+#endif // INCLUDED_NAT_GMP

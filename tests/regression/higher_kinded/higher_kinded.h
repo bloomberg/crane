@@ -1,3 +1,6 @@
+#ifndef INCLUDED_HIGHER_KINDED
+#define INCLUDED_HIGHER_KINDED
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -203,3 +206,5 @@ struct HigherKinded {
       },
       [](unsigned int n) { return (n + 10u); }, test_tree);
 };
+
+#endif // INCLUDED_HIGHER_KINDED

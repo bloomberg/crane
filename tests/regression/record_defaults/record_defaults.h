@@ -1,3 +1,6 @@
+#ifndef INCLUDED_RECORD_DEFAULTS
+#define INCLUDED_RECORD_DEFAULTS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -57,3 +60,5 @@ struct RecordDefaults {
   static inline const unsigned int test_rect_area =
       rect_area(make_rect(0u, 0u, 10u, 5u));
 };
+
+#endif // INCLUDED_RECORD_DEFAULTS

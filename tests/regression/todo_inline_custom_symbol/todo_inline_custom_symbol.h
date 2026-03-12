@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TODO_INLINE_CUSTOM_SYMBOL
+#define INCLUDED_TODO_INLINE_CUSTOM_SYMBOL
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -23,3 +26,5 @@ struct TodoInlineCustomSymbol {
   static unsigned int twice(const unsigned int n);
   static inline const unsigned int test_value = twice(3u);
 };
+
+#endif // INCLUDED_TODO_INLINE_CUSTOM_SYMBOL

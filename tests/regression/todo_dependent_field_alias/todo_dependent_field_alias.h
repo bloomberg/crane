@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TODO_DEPENDENT_FIELD_ALIAS
+#define INCLUDED_TODO_DEPENDENT_FIELD_ALIAS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -49,3 +52,5 @@ struct TodoDependentFieldAlias {
     return alias(2u, 3u);
   }();
 };
+
+#endif // INCLUDED_TODO_DEPENDENT_FIELD_ALIAS

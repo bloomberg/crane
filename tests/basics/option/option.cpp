@@ -1,10 +1,11 @@
+#include <option.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <option.h>
 #include <optional>
 #include <stdexcept>
 #include <string>

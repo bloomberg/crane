@@ -1,3 +1,5 @@
+#include <todo_inline_custom_symbol.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,7 +9,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <todo_inline_custom_symbol.h>
 #include <todo_inline_custom_symbol_support.h>
 #include <variant>
 

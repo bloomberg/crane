@@ -1,3 +1,6 @@
+#ifndef INCLUDED_GET_PAIR_BOUND_PROP
+#define INCLUDED_GET_PAIR_BOUND_PROP
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -848,3 +851,5 @@ struct GetPairBoundProp {
                           3u, List<unsigned int>::ctor::cons_(
                                   4u, List<unsigned int>::ctor::nil_()))))});
 };
+
+#endif // INCLUDED_GET_PAIR_BOUND_PROP

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_SECTIONS_MODULES
+#define INCLUDED_SECTIONS_MODULES
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -101,3 +104,5 @@ struct SectionsModules {
   static inline const unsigned int test_extended =
       Extended::extended_fun(Extended::base_val);
 };
+
+#endif // INCLUDED_SECTIONS_MODULES

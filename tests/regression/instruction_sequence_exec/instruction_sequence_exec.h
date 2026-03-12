@@ -1,3 +1,6 @@
+#ifndef INCLUDED_INSTRUCTION_SEQUENCE_EXEC
+#define INCLUDED_INSTRUCTION_SEQUENCE_EXEC
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -182,3 +185,5 @@ struct InstructionSequenceExec {
     return (s_->pc_ + s_->acc_);
   }();
 };
+
+#endif // INCLUDED_INSTRUCTION_SEQUENCE_EXEC

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TODO_EXPLICIT_TYPE_APP_ALIAS
+#define INCLUDED_TODO_EXPLICIT_TYPE_APP_ALIAS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -34,3 +37,5 @@ struct TodoExplicitTypeAppAlias {
     }();
   }();
 };
+
+#endif // INCLUDED_TODO_EXPLICIT_TYPE_APP_ALIAS

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PAGE_ADDRESS
+#define INCLUDED_PAGE_ADDRESS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -39,3 +42,5 @@ struct PageAddress {
   static inline const unsigned int page_base_777 = page_base(777u);
   static inline const unsigned int branch_example = branch_target(100u, 42u);
 };
+
+#endif // INCLUDED_PAGE_ADDRESS

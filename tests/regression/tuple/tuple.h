@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TUPLE
+#define INCLUDED_TUPLE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -153,3 +156,5 @@ struct Tuple {
       Prod<std::shared_ptr<Nat>, std::shared_ptr<Nat>>>
       test_swap = swap<std::shared_ptr<Nat>, std::shared_ptr<Nat>>(test_pair);
 };
+
+#endif // INCLUDED_TUPLE

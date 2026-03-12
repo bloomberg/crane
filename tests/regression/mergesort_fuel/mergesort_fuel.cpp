@@ -1,10 +1,11 @@
+#include <mergesort_fuel.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <mergesort_fuel.h>
 #include <optional>
 #include <stdexcept>
 #include <string>

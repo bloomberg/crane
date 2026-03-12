@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PATHOLOGICAL_RECORD
+#define INCLUDED_PATHOLOGICAL_RECORD
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -56,3 +59,5 @@ struct PathologicalRecord {
       double_match(std::make_shared<Rec>(Rec{1u, 2u, 3u}),
                    std::make_shared<Rec>(Rec{4u, 5u, 6u}));
 };
+
+#endif // INCLUDED_PATHOLOGICAL_RECORD

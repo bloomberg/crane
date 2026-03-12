@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PSTRING
+#define INCLUDED_PSTRING
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -136,3 +139,5 @@ struct PString {
         l->v());
   }
 };
+
+#endif // INCLUDED_PSTRING

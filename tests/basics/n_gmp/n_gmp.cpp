@@ -1,3 +1,5 @@
+#include <n_gmp.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -5,7 +7,6 @@
 #include <gmpxx.h>
 #include <iostream>
 #include <memory>
-#include <n_gmp.h>
 #include <optional>
 #include <stdexcept>
 #include <string>

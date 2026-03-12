@@ -1,6 +1,7 @@
+#include <bcd_digit_upper_bound.h>
+
 #include <algorithm>
 #include <any>
-#include <bcd_digit_upper_bound.h>
 #include <cassert>
 #include <functional>
 #include <iostream>

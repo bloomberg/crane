@@ -1,3 +1,6 @@
+#ifndef INCLUDED_COLIST
+#define INCLUDED_COLIST
+
 #include "lazy.h"
 #include <algorithm>
 #include <any>
@@ -234,3 +237,5 @@ struct Colist {
           ->list_of_colist(
               Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_()))));
 };
+
+#endif // INCLUDED_COLIST

@@ -628,12 +628,14 @@ let header fn () =
   let himports =
     if Table.std_lib () = "BDE" then header_imports_bsl else header_imports
   in
-  let himports =
+  (* Component's own header must be first include (BDE Rule 5.5) *)
+  let self_include =
     match fn with
     | Some s ->
       let s = Filename.basename s in
-      (Filename.remove_extension s ^ ".h") :: himports
-    | None -> himports
+      let hdr = Filename.remove_extension s ^ ".h" in
+      mk_include hdr ++ fnl ()
+    | None -> mt ()
   in
   let h =
     List.fold_left
@@ -642,16 +644,32 @@ let header fn () =
       (himports @ imps)
   in
   if Table.std_lib () = "BDE" then
-    h ++ fnl2 () ++ str "namespace BloombergLP {" ++ fnl2 () ++ str "}"
+    self_include ++ fnl () ++ h ++ fnl2 () ++ str "namespace BloombergLP {" ++ fnl2 () ++ str "}"
   else
-    h ++ fnl2 ()
+    self_include ++ fnl () ++ h ++ fnl2 ()
 
 let mk_include_quoted s = str ("#include \"" ^ s ^ "\"")
 
-let spec_header () =
+let spec_header si () =
   let imps = get_custom_imports () in
   let himports =
     if Table.std_lib () = "BDE" then header_imports_bsl else header_imports
+  in
+  (* Include guard (BDE Rule 4.2.3): #ifndef INCLUDED_NAME *)
+  let guard_name =
+    match si with
+    | Some s ->
+      let base = Filename.basename s in
+      let name = Filename.remove_extension base in
+      Some (String.uppercase_ascii ("INCLUDED_" ^ name))
+    | None -> None
+  in
+  let guard_open =
+    match guard_name with
+    | Some g ->
+      str ("#ifndef " ^ g) ++ fnl ()
+      ++ str ("#define " ^ g) ++ fnl2 ()
+    | None -> mt ()
   in
   let h =
     List.fold_left
@@ -695,7 +713,8 @@ let spec_header () =
       mt ()
   in
   if Table.std_lib () = "BDE" then
-    h
+    guard_open
+    ++ h
     ++ fnl2 ()
     ++ str "using namespace BloombergLP;"
     ++ string_lit_directive
@@ -703,7 +722,8 @@ let spec_header () =
     ++ str fun_concept
     ++ fnl2 ()
   else
-    h
+    guard_open
+    ++ h
     ++ fnl2 ()
     ++ string_lit_directive
     ++ str fun_concept
@@ -713,6 +733,16 @@ let spec_header () =
           Ts::operator()...; };\n\
           template<class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;"
     ++ fnl2 ()
+
+(** Generate include guard closing for header files. *)
+let spec_footer si () =
+  match si with
+  | Some s ->
+    let base = Filename.basename s in
+    let name = Filename.remove_extension base in
+    let guard = String.uppercase_ascii ("INCLUDED_" ^ name) in
+    fnl () ++ str ("#endif // " ^ guard) ++ fnl ()
+  | None -> mt ()
 
 let mono_filename f =
   let d = descr () in
@@ -985,9 +1015,10 @@ let print_structure_to_file (fn, si, mo) dry struc =
       let ft = formatter false (Some cout) in
       ( try
           set_phase Intf;
-          pp_with ft (spec_header ());
+          pp_with ft (spec_header (Some si) ());
           pp_with ft (d.sig_preamble mo comment opened unsafe_needs);
           pp_with ft (d.pp_hstruct struc);
+          pp_with ft (spec_footer (Some si) ());
           Format.pp_print_flush ft ();
           close_out cout
         with reraise ->
@@ -1005,7 +1036,7 @@ let print_structure_to_file (fn, si, mo) dry struc =
     try
       pp_with ft (fnl2 () ++ str "/* Signature (.h) */" ++ fnl ());
       set_phase Intf;
-      pp_with ft (spec_header ());
+      pp_with ft (spec_header None ());
       pp_with ft (d.sig_preamble mo comment opened unsafe_needs);
       pp_with ft (d.pp_hstruct struc);
       Format.pp_print_flush ft ()

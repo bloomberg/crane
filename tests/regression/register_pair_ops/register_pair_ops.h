@@ -1,3 +1,6 @@
+#ifndef INCLUDED_REGISTER_PAIR_OPS
+#define INCLUDED_REGISTER_PAIR_OPS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -381,3 +384,5 @@ struct RegisterPairOps {
               test_register_pair_even_rounding),
           test_reg_pair_successor);
 };
+
+#endif // INCLUDED_REGISTER_PAIR_OPS

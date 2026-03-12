@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TODO_EXTRACT_CONSTANT_NONINLINE
+#define INCLUDED_TODO_EXTRACT_CONSTANT_NONINLINE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -23,3 +26,5 @@ struct TodoExtractConstantNoninline {
   static inline const unsigned int test_value = foreign_inc(4u);
   static inline const unsigned int twice_value = foreign_inc(foreign_inc(2u));
 };
+
+#endif // INCLUDED_TODO_EXTRACT_CONSTANT_NONINLINE

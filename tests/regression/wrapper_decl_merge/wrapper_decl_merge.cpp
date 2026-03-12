@@ -1,3 +1,5 @@
+#include <wrapper_decl_merge.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -8,7 +10,6 @@
 #include <stdexcept>
 #include <string>
 #include <variant>
-#include <wrapper_decl_merge.h>
 
 unsigned int WrapperDeclMerge::A::Nat::fa(const unsigned int n) {
   return std::move(n);

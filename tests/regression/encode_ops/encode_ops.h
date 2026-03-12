@@ -1,3 +1,6 @@
+#ifndef INCLUDED_ENCODE_OPS
+#define INCLUDED_ENCODE_OPS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -516,3 +519,5 @@ struct EncodeOps {
                                     test_encode_list_byte_count),
                      test_instruction_byte_stream_encode);
 };
+
+#endif // INCLUDED_ENCODE_OPS

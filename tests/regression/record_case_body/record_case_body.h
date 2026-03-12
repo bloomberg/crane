@@ -1,3 +1,6 @@
+#ifndef INCLUDED_RECORD_CASE_BODY
+#define INCLUDED_RECORD_CASE_BODY
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -133,3 +136,5 @@ struct RecordCaseBody {
   static inline const unsigned int test3 =
       let_in_body(std::make_shared<Rec>(Rec{0u, 1u, 2u}));
 };
+
+#endif // INCLUDED_RECORD_CASE_BODY

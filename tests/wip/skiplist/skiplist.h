@@ -1,3 +1,6 @@
+#ifndef INCLUDED_SKIPLIST
+#define INCLUDED_SKIPLIST
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -710,3 +713,5 @@ struct skiplist_test {
   static bool test_bde_api();
   static unsigned int run_tests();
 };
+
+#endif // INCLUDED_SKIPLIST

@@ -1,6 +1,7 @@
+#include <bench_let_in.h>
+
 #include <algorithm>
 #include <any>
-#include <bench_let_in.h>
 #include <cassert>
 #include <functional>
 #include <iostream>

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_DROP_HEAD_DEFAULT
+#define INCLUDED_DROP_HEAD_DEFAULT
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -100,3 +103,5 @@ struct DropHeadDefault {
                           9u, List<unsigned int>::ctor::nil_()))),
       1u);
 };
+
+#endif // INCLUDED_DROP_HEAD_DEFAULT

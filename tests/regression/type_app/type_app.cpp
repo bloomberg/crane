@@ -1,3 +1,5 @@
+#include <type_app.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,7 +9,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <type_app.h>
 #include <variant>
 
 std::shared_ptr<TypeApp::list<unsigned int>>

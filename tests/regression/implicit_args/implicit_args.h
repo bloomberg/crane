@@ -1,3 +1,6 @@
+#ifndef INCLUDED_IMPLICIT_ARGS
+#define INCLUDED_IMPLICIT_ARGS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -220,3 +223,5 @@ struct ImplicitArgs {
   static inline const unsigned int test_choose_true = use_choose_true;
   static inline const unsigned int test_choose_false = use_choose_false;
 };
+
+#endif // INCLUDED_IMPLICIT_ARGS

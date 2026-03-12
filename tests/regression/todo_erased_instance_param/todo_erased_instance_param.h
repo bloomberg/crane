@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TODO_ERASED_INSTANCE_PARAM
+#define INCLUDED_TODO_ERASED_INSTANCE_PARAM
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -36,3 +39,5 @@ struct TodoErasedInstanceParam {
   static inline const unsigned int test_value =
       (pick<natDefault, unsigned int>() + pick<natDefault, unsigned int>());
 };
+
+#endif // INCLUDED_TODO_ERASED_INSTANCE_PARAM

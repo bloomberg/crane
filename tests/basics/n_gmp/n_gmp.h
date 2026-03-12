@@ -1,3 +1,6 @@
+#ifndef INCLUDED_N_GMP
+#define INCLUDED_N_GMP
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -132,3 +135,5 @@ struct NGMPTest {
   static mpz_class pos_add(const mpz_class _x0, const mpz_class _x1);
   static mpz_class pos_succ(const mpz_class _x0);
 };
+
+#endif // INCLUDED_N_GMP

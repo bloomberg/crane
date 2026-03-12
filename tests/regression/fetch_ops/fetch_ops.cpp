@@ -1,7 +1,8 @@
+#include <fetch_ops.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <fetch_ops.h>
 #include <functional>
 #include <iostream>
 #include <memory>

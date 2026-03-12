@@ -1,3 +1,6 @@
+#ifndef INCLUDED_REGION_PATCH_WRITE
+#define INCLUDED_REGION_PATCH_WRITE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -109,3 +112,5 @@ struct RegionPatchWrite {
                       8u, List<unsigned int>::ctor::nil_())))
           ->nth(2u, 0u);
 };
+
+#endif // INCLUDED_REGION_PATCH_WRITE

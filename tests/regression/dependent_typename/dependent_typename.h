@@ -1,3 +1,6 @@
+#ifndef INCLUDED_DEPENDENT_TYPENAME
+#define INCLUDED_DEPENDENT_TYPENAME
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -67,3 +70,5 @@ struct DependentTypename {
     }
   };
 };
+
+#endif // INCLUDED_DEPENDENT_TYPENAME

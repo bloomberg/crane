@@ -1,3 +1,6 @@
+#ifndef INCLUDED_RDR_READS_FROM_SELECTED_PORT
+#define INCLUDED_RDR_READS_FROM_SELECTED_PORT
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -110,3 +113,5 @@ struct RdrReadsFromSelectedPort {
           2u});
   static inline const bool t = (execute_rdr(sample)->acc == 7u);
 };
+
+#endif // INCLUDED_RDR_READS_FROM_SELECTED_PORT

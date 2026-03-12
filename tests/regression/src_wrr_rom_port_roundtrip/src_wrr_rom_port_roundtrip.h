@@ -1,3 +1,6 @@
+#ifndef INCLUDED_SRC_WRR_ROM_PORT_ROUNDTRIP
+#define INCLUDED_SRC_WRR_ROM_PORT_ROUNDTRIP
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -176,3 +179,5 @@ struct SrcWrrRomPortRoundtrip {
   static inline const bool t =
       (after_wrr->rom_ports->nth(after_src->sel_rom, 0u) == 13u);
 };
+
+#endif // INCLUDED_SRC_WRR_ROM_PORT_ROUNDTRIP

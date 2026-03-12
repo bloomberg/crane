@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PRIM_FLOAT
+#define INCLUDED_PRIM_FLOAT
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -35,3 +38,5 @@ struct PrimFloat {
   static bool test_leb(const double _x0, const double _x1);
   static double test_of_uint63(const int64_t _x0);
 };
+
+#endif // INCLUDED_PRIM_FLOAT

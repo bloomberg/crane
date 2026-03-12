@@ -1,8 +1,9 @@
+#include <implicit_args.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
-#include <implicit_args.h>
 #include <iostream>
 #include <memory>
 #include <optional>

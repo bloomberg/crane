@@ -1,3 +1,6 @@
+#ifndef INCLUDED_POLY_INDUCTIVE
+#define INCLUDED_POLY_INDUCTIVE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -392,3 +395,5 @@ struct PolyInductive {
               ptree<unsigned int>::ctor::PLeaf_(2u),
               ptree<unsigned int>::ctor::PLeaf_(3u))));
 };
+
+#endif // INCLUDED_POLY_INDUCTIVE

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_Z_GMP
+#define INCLUDED_Z_GMP
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -64,3 +67,5 @@ struct ZGMPTest {
               1))));
   static mpz_class z_sign(const mpz_class z);
 };
+
+#endif // INCLUDED_Z_GMP

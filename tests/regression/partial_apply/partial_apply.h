@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PARTIAL_APPLY
+#define INCLUDED_PARTIAL_APPLY
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -204,3 +207,5 @@ struct PartialApply {
                         2u, List<unsigned int>::ctor::cons_(
                                 3u, List<unsigned int>::ctor::nil_()))));
 };
+
+#endif // INCLUDED_PARTIAL_APPLY

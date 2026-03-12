@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PRIM_PROJ
+#define INCLUDED_PRIM_PROJ
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -31,3 +34,5 @@ struct PrimProj {
                                           const unsigned int dy,
                                           std::shared_ptr<point> p);
 };
+
+#endif // INCLUDED_PRIM_PROJ

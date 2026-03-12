@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PROGRAM_WF
+#define INCLUDED_PROGRAM_WF
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -186,3 +189,5 @@ struct ProgramWf {
                   List<std::shared_ptr<instruction>>::ctor::nil_())));
   static inline const unsigned int sample_code_size = sample_layout->code_size;
 };
+
+#endif // INCLUDED_PROGRAM_WF

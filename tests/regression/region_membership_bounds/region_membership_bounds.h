@@ -1,3 +1,6 @@
+#ifndef INCLUDED_REGION_MEMBERSHIP_BOUNDS
+#define INCLUDED_REGION_MEMBERSHIP_BOUNDS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -45,3 +48,5 @@ struct RegionMembershipBounds {
     }();
   }();
 };
+
+#endif // INCLUDED_REGION_MEMBERSHIP_BOUNDS

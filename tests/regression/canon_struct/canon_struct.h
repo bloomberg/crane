@@ -1,3 +1,6 @@
+#ifndef INCLUDED_CANON_STRUCT
+#define INCLUDED_CANON_STRUCT
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -54,3 +57,5 @@ struct CanonStruct {
   static inline const bool test_nat = same<nat_eqType, unsigned int>(3u, 5u);
   static inline const bool test_bool = same<bool_eqType, bool>(true, false);
 };
+
+#endif // INCLUDED_CANON_STRUCT

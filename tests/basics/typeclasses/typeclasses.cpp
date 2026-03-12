@@ -1,3 +1,5 @@
+#include <typeclasses.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,6 +9,5 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <typeclasses.h>
 #include <utility>
 #include <variant>

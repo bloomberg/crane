@@ -1,3 +1,6 @@
+#ifndef INCLUDED_SECTIONS
+#define INCLUDED_SECTIONS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -37,3 +40,5 @@ struct Sections {
   static inline const unsigned int test_id = identity<unsigned int>(7u);
   static inline const unsigned int test_const = const_<unsigned int>(3u, 9u);
 };
+
+#endif // INCLUDED_SECTIONS

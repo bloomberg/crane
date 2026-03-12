@@ -1,3 +1,6 @@
+#ifndef INCLUDED_UNIVERSE_POLY
+#define INCLUDED_UNIVERSE_POLY
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -223,3 +226,5 @@ struct UniversePoly {
                   2u, List<unsigned int>::ctor::cons_(
                           3u, List<unsigned int>::ctor::nil_()))));
 };
+
+#endif // INCLUDED_UNIVERSE_POLY

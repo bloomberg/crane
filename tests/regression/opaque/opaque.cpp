@@ -1,10 +1,11 @@
+#include <opaque.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <opaque.h>
 #include <optional>
 #include <stdexcept>
 #include <string>

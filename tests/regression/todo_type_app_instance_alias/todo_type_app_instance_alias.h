@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TODO_TYPE_APP_INSTANCE_ALIAS
+#define INCLUDED_TODO_TYPE_APP_INSTANCE_ALIAS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -37,3 +40,5 @@ struct TodoTypeAppInstanceAlias {
     return (pick<natBoxed, unsigned int>() + pick<natBoxed, unsigned int>());
   }();
 };
+
+#endif // INCLUDED_TODO_TYPE_APP_INSTANCE_ALIAS

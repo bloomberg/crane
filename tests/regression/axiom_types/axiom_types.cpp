@@ -1,6 +1,7 @@
+#include <axiom_types.h>
+
 #include <algorithm>
 #include <any>
-#include <axiom_types.h>
 #include <cassert>
 #include <functional>
 #include <iostream>

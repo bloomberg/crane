@@ -1,3 +1,6 @@
+#ifndef INCLUDED_BIND_TYPE_INFERENCE
+#define INCLUDED_BIND_TYPE_INFERENCE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -101,3 +104,5 @@ struct BindTypeInference {
   static std::shared_ptr<List<int64_t>> test5();
   static int64_t test6();
 };
+
+#endif // INCLUDED_BIND_TYPE_INFERENCE

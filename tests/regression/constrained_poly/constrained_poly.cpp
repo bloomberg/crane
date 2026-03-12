@@ -1,7 +1,8 @@
+#include <constrained_poly.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <constrained_poly.h>
 #include <functional>
 #include <iostream>
 #include <memory>

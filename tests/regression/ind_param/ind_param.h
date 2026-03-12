@@ -1,3 +1,6 @@
+#ifndef INCLUDED_IND_PARAM
+#define INCLUDED_IND_PARAM
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -262,3 +265,5 @@ struct IndParam {
   static inline const unsigned int test_error =
       NatWrapper::get_size(NatWrapper::error_result());
 };
+
+#endif // INCLUDED_IND_PARAM

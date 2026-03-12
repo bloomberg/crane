@@ -1,3 +1,6 @@
+#ifndef INCLUDED_UNIT_TYPE
+#define INCLUDED_UNIT_TYPE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -100,3 +103,5 @@ struct UnitType {
   static inline const unsigned int test_match = match_unit(unit::tt);
   static inline const unsigned int test_seq = sequenced;
 };
+
+#endif // INCLUDED_UNIT_TYPE

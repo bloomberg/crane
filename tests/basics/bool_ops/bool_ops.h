@@ -1,3 +1,6 @@
+#ifndef INCLUDED_BOOL_OPS
+#define INCLUDED_BOOL_OPS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -45,3 +48,5 @@ struct BoolOps {
   static inline const bool test_eq_tf = nat_eq(5u, 3u);
   static inline const bool test_lt = nat_lt(3u, 5u);
 };
+
+#endif // INCLUDED_BOOL_OPS

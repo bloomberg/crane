@@ -1,3 +1,6 @@
+#ifndef INCLUDED_MUTUAL_RECURSION
+#define INCLUDED_MUTUAL_RECURSION
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -162,3 +165,5 @@ struct MutualRecursion {
   static inline const unsigned int test_eval = eval_expr(
       expr::ctor::BinOp_(0u, expr::ctor::Val_(5u), expr::ctor::Val_(10u)));
 };
+
+#endif // INCLUDED_MUTUAL_RECURSION

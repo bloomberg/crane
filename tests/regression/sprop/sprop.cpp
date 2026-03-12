@@ -1,3 +1,5 @@
+#include <sprop.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -5,7 +7,6 @@
 #include <iostream>
 #include <memory>
 #include <optional>
-#include <sprop.h>
 #include <stdexcept>
 #include <string>
 #include <utility>

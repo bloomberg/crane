@@ -1,7 +1,8 @@
+#include <deep_patterns.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <deep_patterns.h>
 #include <functional>
 #include <iostream>
 #include <memory>

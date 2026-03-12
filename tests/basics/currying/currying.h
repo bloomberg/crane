@@ -1,3 +1,6 @@
+#ifndef INCLUDED_CURRYING
+#define INCLUDED_CURRYING
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -126,3 +129,5 @@ struct Currying {
   static inline const unsigned int test_flip = flipped_sub(3u, 7u);
   static inline const unsigned int test_add_ten = add_ten(5u);
 };
+
+#endif // INCLUDED_CURRYING

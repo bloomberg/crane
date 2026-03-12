@@ -1,3 +1,6 @@
+#ifndef INCLUDED_WRR_PRESERVES_OTHER_PORTS
+#define INCLUDED_WRR_PRESERVES_OTHER_PORTS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -146,3 +149,5 @@ struct WrrPreservesOtherPorts {
   static inline const bool t =
       (execute_wrr(sample)->rom_ports->nth(0u, 0u) == 1u);
 };
+
+#endif // INCLUDED_WRR_PRESERVES_OTHER_PORTS

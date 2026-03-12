@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TYPED_EXPR
+#define INCLUDED_TYPED_EXPR
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -163,3 +166,5 @@ public:
         this->v());
   }
 };
+
+#endif // INCLUDED_TYPED_EXPR

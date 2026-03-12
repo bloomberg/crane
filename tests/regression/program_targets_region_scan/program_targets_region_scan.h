@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PROGRAM_TARGETS_REGION_SCAN
+#define INCLUDED_PROGRAM_TARGETS_REGION_SCAN
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -210,3 +213,5 @@ struct ProgramTargetsRegionScan {
     }
   }();
 };
+
+#endif // INCLUDED_PROGRAM_TARGETS_REGION_SCAN

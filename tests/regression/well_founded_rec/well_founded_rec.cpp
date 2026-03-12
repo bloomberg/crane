@@ -1,3 +1,5 @@
+#include <well_founded_rec.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -9,7 +11,6 @@
 #include <string>
 #include <utility>
 #include <variant>
-#include <well_founded_rec.h>
 
 unsigned int PeanoNat::sub(const unsigned int n, const unsigned int m) {
   if (n <= 0) {

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_COIND_GUARD
+#define INCLUDED_COIND_GUARD
+
 #include "lazy.h"
 #include <algorithm>
 #include <any>
@@ -222,3 +225,5 @@ struct CoindGuard {
       take<unsigned int>(5u, sum_stream);
   static inline const unsigned int test_iterate_hd = hd<unsigned int>(nats);
 };
+
+#endif // INCLUDED_COIND_GUARD

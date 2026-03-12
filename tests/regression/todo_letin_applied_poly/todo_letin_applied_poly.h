@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TODO_LETIN_APPLIED_POLY
+#define INCLUDED_TODO_LETIN_APPLIED_POLY
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -28,3 +31,5 @@ struct TodoLetinAppliedPoly {
     }
   }();
 };
+
+#endif // INCLUDED_TODO_LETIN_APPLIED_POLY

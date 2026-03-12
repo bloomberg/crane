@@ -1,3 +1,6 @@
+#ifndef INCLUDED_COMPARISON
+#define INCLUDED_COMPARISON
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -74,3 +77,5 @@ struct Comparison {
   static inline const unsigned int test_clamp_hi = clamp(9u, 3u, 7u);
   static inline const cmp test_flip = flip_cmp(cmp::CmpLt);
 };
+
+#endif // INCLUDED_COMPARISON

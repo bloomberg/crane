@@ -1,3 +1,5 @@
+#include <z_int.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -10,7 +12,6 @@
 #include <stdexcept>
 #include <string>
 #include <variant>
-#include <z_int.h>
 
 unsigned int Pos::succ(const unsigned int x) {
   if (x == 1u) {

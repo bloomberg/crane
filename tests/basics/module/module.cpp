@@ -1,10 +1,11 @@
+#include <module.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <module.h>
 #include <optional>
 #include <stdexcept>
 #include <string>

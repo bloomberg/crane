@@ -1,3 +1,6 @@
+#ifndef INCLUDED_DEPENDENT_TEMPLATE_STRESS
+#define INCLUDED_DEPENDENT_TEMPLATE_STRESS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -108,3 +111,5 @@ struct DependentTemplateStress {
     }
   };
 };
+
+#endif // INCLUDED_DEPENDENT_TEMPLATE_STRESS

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_RECORD_APPLY
+#define INCLUDED_RECORD_APPLY
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -29,3 +32,5 @@ struct RecordApply {
       R{[](unsigned int x, unsigned int _x) { return x; }, 3u});
   static inline const unsigned int three = r->f(3u, 0u);
 };
+
+#endif // INCLUDED_RECORD_APPLY

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_WPM_OPS
+#define INCLUDED_WPM_OPS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -276,3 +279,5 @@ struct WpmOps {
               test_wpm_updates_rom_at_addr),
           test_wpm_writes_exactly_once);
 };
+
+#endif // INCLUDED_WPM_OPS

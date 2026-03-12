@@ -1,3 +1,5 @@
+#include <unsound_axioms.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,7 +9,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <unsound_axioms.h>
 #include <variant>
 
 unsigned int

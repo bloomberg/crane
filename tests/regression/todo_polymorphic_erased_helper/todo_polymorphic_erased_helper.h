@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TODO_POLYMORPHIC_ERASED_HELPER
+#define INCLUDED_TODO_POLYMORPHIC_ERASED_HELPER
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -34,3 +37,5 @@ struct TodoPolymorphicErasedHelper {
     }();
   }();
 };
+
+#endif // INCLUDED_TODO_POLYMORPHIC_ERASED_HELPER

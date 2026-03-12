@@ -1,3 +1,6 @@
+#ifndef INCLUDED_SHADOW_QUAL_NODE
+#define INCLUDED_SHADOW_QUAL_NODE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -45,3 +48,5 @@ struct ShadowQualNode {
   static Node::shadow id(const Node::shadow x);
   static inline const Node::shadow t = id(Node::shadow::Tag);
 };
+
+#endif // INCLUDED_SHADOW_QUAL_NODE

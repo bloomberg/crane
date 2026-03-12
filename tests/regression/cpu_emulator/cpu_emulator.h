@@ -1,3 +1,6 @@
+#ifndef INCLUDED_CPU_EMULATOR
+#define INCLUDED_CPU_EMULATOR
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -856,3 +859,5 @@ struct CpuEmulator {
   static inline const unsigned int jun_pc =
       execute(sample, instr::ctor::JUN_(1024u))->ex_pc;
 };
+
+#endif // INCLUDED_CPU_EMULATOR

@@ -1,3 +1,5 @@
+#include <string_match.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -8,7 +10,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <string_match.h>
 #include <variant>
 
 bool StringMatch::is_empty(const std::string s) {

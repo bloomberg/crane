@@ -1,3 +1,6 @@
+#ifndef INCLUDED_MODULE
+#define INCLUDED_MODULE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -196,3 +199,5 @@ using NatMap = MakeMap<NatOrdered, NatBase>;
 static_assert(Map<NatMap>);
 const NatMap::t mymap = NatMap::add(
     1u, 10u, NatMap::add(2u, 20u, NatMap::add(3u, 30u, NatMap::empty())));
+
+#endif // INCLUDED_MODULE

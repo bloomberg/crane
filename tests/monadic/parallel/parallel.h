@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PARALLEL
+#define INCLUDED_PARALLEL
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -31,3 +34,5 @@ struct ParallelTest {
   static std::pair<unsigned int, unsigned int> slow(const unsigned int m,
                                                     const unsigned int n);
 };
+
+#endif // INCLUDED_PARALLEL

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_SPROP
+#define INCLUDED_SPROP
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -47,3 +50,5 @@ struct SPropTest {
   static inline const unsigned int test_box = 42u;
   static inline const unsigned int test_div = safe_div(10u, 3u);
 };
+
+#endif // INCLUDED_SPROP

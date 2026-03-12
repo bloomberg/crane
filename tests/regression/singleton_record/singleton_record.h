@@ -1,3 +1,6 @@
+#ifndef INCLUDED_SINGLETON_RECORD
+#define INCLUDED_SINGLETON_RECORD
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -65,3 +68,5 @@ struct SingletonRecord {
   static inline const unsigned int test_double_unbox = double_unbox;
   static inline const unsigned int test_fn = apply_wrapped(my_fn_wrapper, 7u);
 };
+
+#endif // INCLUDED_SINGLETON_RECORD

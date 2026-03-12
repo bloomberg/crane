@@ -1,7 +1,8 @@
+#include <count_loop_test_target.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <count_loop_test_target.h>
 #include <functional>
 #include <iostream>
 #include <memory>

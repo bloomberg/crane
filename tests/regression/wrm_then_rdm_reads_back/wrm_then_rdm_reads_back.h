@@ -1,3 +1,6 @@
+#ifndef INCLUDED_WRM_THEN_RDM_READS_BACK
+#define INCLUDED_WRM_THEN_RDM_READS_BACK
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -170,3 +173,5 @@ struct WrmThenRdmReadsBack {
       execute_rdm(execute_wrm(execute_src(sample, 3u)));
   static inline const bool t = (roundtrip->acc == 12u);
 };
+
+#endif // INCLUDED_WRM_THEN_RDM_READS_BACK

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PORT_WRITE_NIBBLE_MASK
+#define INCLUDED_PORT_WRITE_NIBBLE_MASK
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -30,3 +33,5 @@ struct PortWriteNibbleMask {
       upd_port_in_chip(std::make_shared<ram_chip>(ram_chip{0u}), 31u)
           ->chip_port;
 };
+
+#endif // INCLUDED_PORT_WRITE_NIBBLE_MASK

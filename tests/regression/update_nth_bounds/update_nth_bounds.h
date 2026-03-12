@@ -1,3 +1,6 @@
+#ifndef INCLUDED_UPDATE_NTH_BOUNDS
+#define INCLUDED_UPDATE_NTH_BOUNDS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -160,3 +163,5 @@ struct UpdateNthBounds {
                               3u, List<unsigned int>::ctor::nil_()))))
           ->length();
 };
+
+#endif // INCLUDED_UPDATE_NTH_BOUNDS

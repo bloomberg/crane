@@ -1,3 +1,6 @@
+#ifndef INCLUDED_ANON_FIXPOINT
+#define INCLUDED_ANON_FIXPOINT
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -31,3 +34,5 @@ struct AnonFixpoint {
   static inline const unsigned int test_double = double_sum(3u);
   static inline const unsigned int test_gcd = gcd((4u * 3u), (2u * 3u));
 };
+
+#endif // INCLUDED_ANON_FIXPOINT

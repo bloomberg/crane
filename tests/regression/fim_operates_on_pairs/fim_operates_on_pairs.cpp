@@ -1,7 +1,8 @@
+#include <fim_operates_on_pairs.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <fim_operates_on_pairs.h>
 #include <functional>
 #include <iostream>
 #include <memory>

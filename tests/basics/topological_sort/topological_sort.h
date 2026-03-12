@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TOPOLOGICAL_SORT
+#define INCLUDED_TOPOLOGICAL_SORT
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -589,3 +592,5 @@ struct TopologicalSort {
         ->template concat<std::pair<T1, unsigned int>>();
   }
 };
+
+#endif // INCLUDED_TOPOLOGICAL_SORT

@@ -1,10 +1,11 @@
+#include <opcode_operand_decode.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <opcode_operand_decode.h>
 #include <optional>
 #include <stdexcept>
 #include <string>

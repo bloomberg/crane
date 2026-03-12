@@ -1,3 +1,6 @@
+#ifndef INCLUDED_ISZ_OPS
+#define INCLUDED_ISZ_OPS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -141,3 +144,5 @@ struct IszOps {
           std::make_pair(test_cycle_branch, test_iterations_remaining),
           test_loop_flags);
 };
+
+#endif // INCLUDED_ISZ_OPS

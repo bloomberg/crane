@@ -1,3 +1,6 @@
+#ifndef INCLUDED_ADD_ONE
+#define INCLUDED_ADD_ONE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -66,3 +69,5 @@ public:
 };
 
 const std::shared_ptr<Nat> one = Nat::ctor::S_(Nat::ctor::O_());
+
+#endif // INCLUDED_ADD_ONE

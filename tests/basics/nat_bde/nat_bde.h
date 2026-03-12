@@ -1,3 +1,6 @@
+#ifndef INCLUDED_NAT_BDE
+#define INCLUDED_NAT_BDE
+
 #include <bdlf_overloaded.h>
 #include <bsl_concepts.h>
 #include <bsl_functional.h>
@@ -102,3 +105,5 @@ struct Nat {
     }
   };
 };
+
+#endif // INCLUDED_NAT_BDE

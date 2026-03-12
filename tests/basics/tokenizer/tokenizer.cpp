@@ -1,3 +1,5 @@
+#include <tokenizer.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -9,7 +11,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <tokenizer.h>
 #include <utility>
 #include <variant>
 #include <vector>

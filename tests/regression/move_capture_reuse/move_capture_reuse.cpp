@@ -1,10 +1,11 @@
+#include <move_capture_reuse.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <move_capture_reuse.h>
 #include <optional>
 #include <stdexcept>
 #include <string>

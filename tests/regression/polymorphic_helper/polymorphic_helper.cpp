@@ -1,3 +1,5 @@
+#include <polymorphic_helper.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -5,7 +7,6 @@
 #include <iostream>
 #include <memory>
 #include <optional>
-#include <polymorphic_helper.h>
 #include <stdexcept>
 #include <string>
 #include <variant>

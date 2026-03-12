@@ -1,6 +1,7 @@
+#include <bank_lookup_default.h>
+
 #include <algorithm>
 #include <any>
-#include <bank_lookup_default.h>
 #include <cassert>
 #include <functional>
 #include <iostream>

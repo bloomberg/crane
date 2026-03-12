@@ -1,3 +1,6 @@
+#ifndef INCLUDED_CLOSURES_IN_DATA
+#define INCLUDED_CLOSURES_IN_DATA
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -166,3 +169,5 @@ struct ClosuresInData {
   static inline const unsigned int test_maybe_none =
       maybe_apply(std::nullopt, 42u);
 };
+
+#endif // INCLUDED_CLOSURES_IN_DATA

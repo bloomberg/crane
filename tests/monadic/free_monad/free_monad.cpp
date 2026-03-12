@@ -1,7 +1,8 @@
+#include <free_monad.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <free_monad.h>
 #include <functional>
 #include <iostream>
 #include <memory>

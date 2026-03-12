@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TODO_WITH_MODULE_CONSTRAINT
+#define INCLUDED_TODO_WITH_MODULE_CONSTRAINT
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -59,3 +62,5 @@ struct TodoWithModuleConstraint {
   using Applied = UseNat<NatOuter>;
   static inline const unsigned int test_twice = Applied::twice();
 };
+
+#endif // INCLUDED_TODO_WITH_MODULE_CONSTRAINT

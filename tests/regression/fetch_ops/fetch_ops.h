@@ -1,3 +1,6 @@
+#ifndef INCLUDED_FETCH_OPS
+#define INCLUDED_FETCH_OPS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -179,3 +182,5 @@ struct FetchOps {
                                         fetch_pair_test),
                          fetch_window_test);
 };
+
+#endif // INCLUDED_FETCH_OPS

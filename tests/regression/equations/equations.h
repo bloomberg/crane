@@ -1,3 +1,6 @@
+#ifndef INCLUDED_EQUATIONS
+#define INCLUDED_EQUATIONS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -808,3 +811,5 @@ struct Equations {
   static inline const unsigned int test_gcd = gcd(std::make_pair(12u, 8u));
   static inline const unsigned int test_collatz = collatz_steps(6u);
 };
+
+#endif // INCLUDED_EQUATIONS

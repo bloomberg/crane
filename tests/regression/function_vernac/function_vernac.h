@@ -1,3 +1,6 @@
+#ifndef INCLUDED_FUNCTION_VERNAC
+#define INCLUDED_FUNCTION_VERNAC
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -465,3 +468,5 @@ struct FunctionVernac {
                           4u, List<unsigned int>::ctor::cons_(
                                   5u, List<unsigned int>::ctor::nil_()))))));
 };
+
+#endif // INCLUDED_FUNCTION_VERNAC

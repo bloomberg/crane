@@ -1,9 +1,10 @@
+#include <kbp_multibit_default.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
 #include <iostream>
-#include <kbp_multibit_default.h>
 #include <memory>
 #include <optional>
 #include <stdexcept>

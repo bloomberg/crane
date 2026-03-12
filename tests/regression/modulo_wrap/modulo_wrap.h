@@ -1,3 +1,6 @@
+#ifndef INCLUDED_MODULO_WRAP
+#define INCLUDED_MODULO_WRAP
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -35,3 +38,5 @@ struct ModuloWrap {
       t = std::make_pair(std::make_pair(test_addr12_wrap, test_byte_wrap),
                          test_nibble_wrap);
 };
+
+#endif // INCLUDED_MODULO_WRAP

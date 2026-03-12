@@ -1,3 +1,6 @@
+#ifndef INCLUDED_JUMP_TARGETS
+#define INCLUDED_JUMP_TARGETS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -535,3 +538,5 @@ struct JumpTargets {
                          test_jms),
           test_jun);
 };
+
+#endif // INCLUDED_JUMP_TARGETS

@@ -1,7 +1,8 @@
+#include <dependent_template_stress.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <dependent_template_stress.h>
 #include <functional>
 #include <iostream>
 #include <memory>

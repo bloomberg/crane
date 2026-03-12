@@ -1,3 +1,6 @@
+#ifndef INCLUDED_EQ_ORD_SHOW
+#define INCLUDED_EQ_ORD_SHOW
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -130,3 +133,5 @@ const Ordering test_compare_lt = compare<NatOrd, NatEq, unsigned int>(10u, 20u);
 const Ordering test_compare_eq = compare<NatOrd, NatEq, unsigned int>(15u, 15u);
 const Ordering test_compare_gt = compare<NatOrd, NatEq, unsigned int>(20u, 10u);
 const std::string test_show = to_string<NatShow, unsigned int>(42u);
+
+#endif // INCLUDED_EQ_ORD_SHOW

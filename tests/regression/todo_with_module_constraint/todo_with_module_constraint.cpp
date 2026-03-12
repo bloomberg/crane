@@ -1,3 +1,5 @@
+#include <todo_with_module_constraint.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,7 +9,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <todo_with_module_constraint.h>
 #include <variant>
 
 TodoWithModuleConstraint::NatOuter::Inner::t

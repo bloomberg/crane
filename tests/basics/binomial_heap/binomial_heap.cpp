@@ -1,6 +1,7 @@
+#include <binomial_heap.h>
+
 #include <algorithm>
 #include <any>
-#include <binomial_heap.h>
 #include <cassert>
 #include <functional>
 #include <iostream>

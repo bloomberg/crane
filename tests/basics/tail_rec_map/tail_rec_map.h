@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TAIL_REC_MAP
+#define INCLUDED_TAIL_REC_MAP
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -119,3 +122,5 @@ std::shared_ptr<List<T2>> better_map(F0 &&f,
   };
   return go(l, List<T2>::ctor::nil_());
 }
+
+#endif // INCLUDED_TAIL_REC_MAP

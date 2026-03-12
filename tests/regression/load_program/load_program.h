@@ -1,3 +1,6 @@
+#ifndef INCLUDED_LOAD_PROGRAM
+#define INCLUDED_LOAD_PROGRAM
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -316,3 +319,5 @@ struct LoadProgram {
               test_load_program_step_writes_at_base),
           test_sequential_program_load);
 };
+
+#endif // INCLUDED_LOAD_PROGRAM

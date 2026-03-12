@@ -1,3 +1,6 @@
+#ifndef INCLUDED_STEPS_COUNTER_UNROLL
+#define INCLUDED_STEPS_COUNTER_UNROLL
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -29,3 +32,5 @@ struct StepsCounterUnroll {
   static inline const unsigned int t =
       steps(5u, std::make_shared<state>(state{4094u}))->pc;
 };
+
+#endif // INCLUDED_STEPS_COUNTER_UNROLL

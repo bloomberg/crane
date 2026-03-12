@@ -1,3 +1,5 @@
+#include <set_cur_bank_modulo.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -5,7 +7,6 @@
 #include <iostream>
 #include <memory>
 #include <optional>
-#include <set_cur_bank_modulo.h>
 #include <stdexcept>
 #include <string>
 #include <utility>

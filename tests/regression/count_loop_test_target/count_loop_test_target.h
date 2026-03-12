@@ -1,3 +1,6 @@
+#ifndef INCLUDED_COUNT_LOOP_TEST_TARGET
+#define INCLUDED_COUNT_LOOP_TEST_TARGET
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -102,3 +105,5 @@ struct CountLoopTestTarget {
   static unsigned int target_of(const std::shared_ptr<instruction> &i);
   static inline const unsigned int t = target_of(count_loop_test(37u));
 };
+
+#endif // INCLUDED_COUNT_LOOP_TEST_TARGET

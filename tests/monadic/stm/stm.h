@@ -1,3 +1,6 @@
+#ifndef INCLUDED_STM
+#define INCLUDED_STM
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -123,3 +126,5 @@ struct stmtest {
   static unsigned int stm_orElse_retry_example();
   static unsigned int io_orElse_retry_example();
 };
+
+#endif // INCLUDED_STM

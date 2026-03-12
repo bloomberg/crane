@@ -1,7 +1,8 @@
+#include <dep_elim.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <dep_elim.h>
 #include <functional>
 #include <iostream>
 #include <memory>

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_RAM_INIT_RESET
+#define INCLUDED_RAM_INIT_RESET
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -177,3 +180,5 @@ std::shared_ptr<List<T1>> ListDef::repeat(const T1 x, const unsigned int n) {
     return List<T1>::ctor::cons_(x, ListDef::template repeat<T1>(x, k));
   }
 }
+
+#endif // INCLUDED_RAM_INIT_RESET

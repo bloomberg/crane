@@ -1,3 +1,6 @@
+#ifndef INCLUDED_FORALL_LIST
+#define INCLUDED_FORALL_LIST
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -124,3 +127,5 @@ struct ForallList {
   static inline const unsigned int updated_length =
       update_nth<unsigned int>(1u, 9u, sample)->length();
 };
+
+#endif // INCLUDED_FORALL_LIST

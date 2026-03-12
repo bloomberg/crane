@@ -1,6 +1,7 @@
+#include <canon_struct.h>
+
 #include <algorithm>
 #include <any>
-#include <canon_struct.h>
 #include <cassert>
 #include <functional>
 #include <iostream>

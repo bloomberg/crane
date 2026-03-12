@@ -1,3 +1,6 @@
+#ifndef INCLUDED_IO
+#define INCLUDED_IO
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -28,3 +31,5 @@ struct iotest {
   static std::string test4();
   static void test5();
 };
+
+#endif // INCLUDED_IO

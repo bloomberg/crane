@@ -1,3 +1,6 @@
+#ifndef INCLUDED_SORT
+#define INCLUDED_SORT
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -298,3 +301,5 @@ struct Sort {
   static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
   qsort(const std::shared_ptr<List<unsigned int>> &_x0);
 };
+
+#endif // INCLUDED_SORT

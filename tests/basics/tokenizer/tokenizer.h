@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TOKENIZER
+#define INCLUDED_TOKENIZER
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -217,3 +220,5 @@ struct Tokenizer {
     return list_to_vec_map_h<T1, T2>(f, l->rev());
   }
 };
+
+#endif // INCLUDED_TOKENIZER

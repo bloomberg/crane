@@ -1,3 +1,6 @@
+#ifndef INCLUDED_COTREE
+#define INCLUDED_COTREE
+
 #include "lazy.h"
 #include <algorithm>
 #include <any>
@@ -472,3 +475,5 @@ struct Cotree {
   static inline const unsigned int test_approx_size =
       tree_size<unsigned int>(test_approx);
 };
+
+#endif // INCLUDED_COTREE

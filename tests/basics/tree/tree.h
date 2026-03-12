@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TREE
+#define INCLUDED_TREE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -387,3 +390,5 @@ struct Tree {
                   Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_())),
                   tree<std::shared_ptr<Nat>>::ctor::leaf_())));
 };
+
+#endif // INCLUDED_TREE

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_BINOMIAL_HEAP
+#define INCLUDED_BINOMIAL_HEAP
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -229,3 +232,5 @@ struct BinomialHeap {
                  insert_list(make_list(11u, List<unsigned int>::ctor::nil_()),
                              List<std::shared_ptr<tree>>::ctor::nil_())));
 };
+
+#endif // INCLUDED_BINOMIAL_HEAP

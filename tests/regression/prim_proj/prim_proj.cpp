@@ -1,3 +1,5 @@
+#include <prim_proj.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -5,7 +7,6 @@
 #include <iostream>
 #include <memory>
 #include <optional>
-#include <prim_proj.h>
 #include <stdexcept>
 #include <string>
 #include <variant>

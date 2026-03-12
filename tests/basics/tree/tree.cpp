@@ -1,3 +1,5 @@
+#include <tree.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,5 +9,4 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <tree.h>
 #include <variant>

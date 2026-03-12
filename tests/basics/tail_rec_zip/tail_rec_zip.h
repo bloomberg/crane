@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TAIL_REC_ZIP
+#define INCLUDED_TAIL_REC_ZIP
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -178,3 +181,5 @@ better_zip(const std::shared_ptr<List<T1>> &la,
   };
   return go(la, lb, List<std::shared_ptr<Prod<T1, T2>>>::ctor::nil_());
 }
+
+#endif // INCLUDED_TAIL_REC_ZIP

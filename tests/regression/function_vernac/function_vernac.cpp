@@ -1,7 +1,8 @@
+#include <function_vernac.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <function_vernac.h>
 #include <functional>
 #include <iostream>
 #include <memory>

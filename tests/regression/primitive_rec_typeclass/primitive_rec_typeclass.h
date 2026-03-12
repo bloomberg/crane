@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PRIMITIVE_REC_TYPECLASS
+#define INCLUDED_PRIMITIVE_REC_TYPECLASS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -82,3 +85,5 @@ struct PrimitiveRecTypeclass {
   static inline const unsigned int test_height = rect_height(r1);
   static inline const unsigned int test_perimeter = rect_perimeter(r1);
 };
+
+#endif // INCLUDED_PRIMITIVE_REC_TYPECLASS

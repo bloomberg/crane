@@ -1,8 +1,9 @@
+#include <higher_order.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
-#include <higher_order.h>
 #include <iostream>
 #include <memory>
 #include <optional>

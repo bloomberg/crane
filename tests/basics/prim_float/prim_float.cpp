@@ -1,3 +1,5 @@
+#include <prim_float.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,7 +9,6 @@
 #include <iostream>
 #include <memory>
 #include <optional>
-#include <prim_float.h>
 #include <stdexcept>
 #include <string>
 #include <variant>

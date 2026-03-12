@@ -1,7 +1,8 @@
+#include <escape_collision.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <escape_collision.h>
 #include <functional>
 #include <iostream>
 #include <memory>

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_ERASED_RECORD
+#define INCLUDED_ERASED_RECORD
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -44,3 +47,5 @@ struct ErasedRecord {
   static inline const unsigned int test3 = access_mostly_props(
       std::make_shared<MostlyProps>(MostlyProps{5u, 10u, 15u}));
 };
+
+#endif // INCLUDED_ERASED_RECORD

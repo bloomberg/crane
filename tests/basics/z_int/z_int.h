@@ -1,3 +1,6 @@
+#ifndef INCLUDED_Z_INT
+#define INCLUDED_Z_INT
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -66,3 +69,5 @@ struct ZIntTest {
                1u)))));
   static int64_t z_sign(const int64_t z);
 };
+
+#endif // INCLUDED_Z_INT

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_MUTUAL_INDEXED
+#define INCLUDED_MUTUAL_INDEXED
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -192,3 +195,5 @@ struct MutualIndexed {
   static inline const unsigned int test_tree1_val = odd_val(1u, tree1);
   static inline const unsigned int test_tree2_val = even_val(2u, tree2);
 };
+
+#endif // INCLUDED_MUTUAL_INDEXED

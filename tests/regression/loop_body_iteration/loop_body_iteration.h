@@ -1,3 +1,6 @@
+#ifndef INCLUDED_LOOP_BODY_ITERATION
+#define INCLUDED_LOOP_BODY_ITERATION
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -142,3 +145,5 @@ struct LoopBodyIteration {
                           2u, List<unsigned int>::ctor::nil_())))});
   static inline const unsigned int t = get_reg0(iterate_body(5u, sample));
 };
+
+#endif // INCLUDED_LOOP_BODY_ITERATION

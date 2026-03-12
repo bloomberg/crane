@@ -1,3 +1,6 @@
+#ifndef INCLUDED_RESET_STATE
+#define INCLUDED_RESET_STATE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -164,3 +167,5 @@ struct ResetState {
   static inline const std::pair<unsigned int, unsigned int> t =
       std::make_pair(memory_preserve_test, pc_clear_test);
 };
+
+#endif // INCLUDED_RESET_STATE

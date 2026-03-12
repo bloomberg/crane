@@ -1,7 +1,8 @@
+#include <enum_switch_qualified.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <enum_switch_qualified.h>
 #include <functional>
 #include <iostream>
 #include <memory>

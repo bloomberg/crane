@@ -1,3 +1,6 @@
+#ifndef INCLUDED_INSTRUCTION_CYCLES
+#define INCLUDED_INSTRUCTION_CYCLES
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -707,3 +710,5 @@ struct InstructionCycles {
               test_program_cycles),
           test_program_cycles_single);
 };
+
+#endif // INCLUDED_INSTRUCTION_CYCLES

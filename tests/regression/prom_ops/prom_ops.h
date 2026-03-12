@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PROM_OPS
+#define INCLUDED_PROM_OPS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -551,3 +554,5 @@ struct PromOps {
               test10),
           test11);
 };
+
+#endif // INCLUDED_PROM_OPS

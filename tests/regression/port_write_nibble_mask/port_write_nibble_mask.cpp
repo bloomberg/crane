@@ -1,3 +1,5 @@
+#include <port_write_nibble_mask.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -5,7 +7,6 @@
 #include <iostream>
 #include <memory>
 #include <optional>
-#include <port_write_nibble_mask.h>
 #include <stdexcept>
 #include <string>
 #include <utility>

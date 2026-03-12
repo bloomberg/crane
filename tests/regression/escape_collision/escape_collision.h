@@ -1,3 +1,6 @@
+#ifndef INCLUDED_ESCAPE_COLLISION
+#define INCLUDED_ESCAPE_COLLISION
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -22,3 +25,5 @@ struct EscapeCollision {
   static unsigned int double_0(const unsigned int n);
   static inline const unsigned int t = (double_(1u) + double_0(2u));
 };
+
+#endif // INCLUDED_ESCAPE_COLLISION

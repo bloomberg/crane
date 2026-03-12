@@ -1,3 +1,6 @@
+#ifndef INCLUDED_DEEP_PATTERN
+#define INCLUDED_DEEP_PATTERN
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -197,3 +200,5 @@ struct DeepPattern {
   static inline const unsigned int test2 =
       multi_constructor(tree::ctor::Leaf_(5u), tree::ctor::Leaf_(10u));
 };
+
+#endif // INCLUDED_DEEP_PATTERN

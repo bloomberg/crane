@@ -1,3 +1,5 @@
+#include <todo_inline_custom_poly_id.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,6 +9,5 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <todo_inline_custom_poly_id.h>
 #include <todo_inline_custom_poly_id_support.h>
 #include <variant>

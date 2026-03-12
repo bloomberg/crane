@@ -1,3 +1,6 @@
+#ifndef INCLUDED_MOVE_CAPTURE_REUSE
+#define INCLUDED_MOVE_CAPTURE_REUSE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -151,3 +154,5 @@ struct MoveCaptureReuse {
         sample->v());
   }();
 };
+
+#endif // INCLUDED_MOVE_CAPTURE_REUSE

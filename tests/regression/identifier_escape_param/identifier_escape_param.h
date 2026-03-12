@@ -1,3 +1,6 @@
+#ifndef INCLUDED_IDENTIFIER_ESCAPE_PARAM
+#define INCLUDED_IDENTIFIER_ESCAPE_PARAM
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -22,3 +25,5 @@ struct IdentifierEscapeParam {
   static unsigned int add_one_from_param(const unsigned int double0);
   static inline const unsigned int t = add_one_from_param(6u);
 };
+
+#endif // INCLUDED_IDENTIFIER_ESCAPE_PARAM

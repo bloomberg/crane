@@ -1,7 +1,8 @@
+#include <coind_guard.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <coind_guard.h>
 #include <functional>
 #include <iostream>
 #include <memory>

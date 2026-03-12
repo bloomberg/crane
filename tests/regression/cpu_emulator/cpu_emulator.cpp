@@ -1,7 +1,8 @@
+#include <cpu_emulator.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <cpu_emulator.h>
 #include <functional>
 #include <iostream>
 #include <memory>

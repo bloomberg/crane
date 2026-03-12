@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PATTERN_IMPOSSIBLE
+#define INCLUDED_PATTERN_IMPOSSIBLE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -151,3 +154,5 @@ struct PatternImpossible {
       nested::ctor::Node_(nested::ctor::Leaf_(5u), nested::ctor::Leaf_(10u)));
   static inline const unsigned int test3 = double_match(three::One, three::Two);
 };
+
+#endif // INCLUDED_PATTERN_IMPOSSIBLE

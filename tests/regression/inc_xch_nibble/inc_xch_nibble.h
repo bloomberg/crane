@@ -1,3 +1,6 @@
+#ifndef INCLUDED_INC_XCH_NIBBLE
+#define INCLUDED_INC_XCH_NIBBLE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -186,3 +189,5 @@ struct IncXchNibble {
                                  xch_preserves_pair_partner) &&
                                 xch_preserves_pair_partner_odd);
 };
+
+#endif // INCLUDED_INC_XCH_NIBBLE

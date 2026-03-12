@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PRIM_ARRAY_OPS
+#define INCLUDED_PRIM_ARRAY_OPS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -27,3 +30,5 @@ struct PrimArrayOps {
   static inline const persistent_array<int64_t> test4 =
       test1.set(int64_t(2), int64_t(14));
 };
+
+#endif // INCLUDED_PRIM_ARRAY_OPS

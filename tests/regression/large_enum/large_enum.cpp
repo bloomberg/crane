@@ -1,9 +1,10 @@
+#include <large_enum.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
 #include <iostream>
-#include <large_enum.h>
 #include <memory>
 #include <optional>
 #include <stdexcept>

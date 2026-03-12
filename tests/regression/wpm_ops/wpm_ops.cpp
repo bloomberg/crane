@@ -1,3 +1,5 @@
+#include <wpm_ops.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -9,7 +11,6 @@
 #include <string>
 #include <utility>
 #include <variant>
-#include <wpm_ops.h>
 
 bool WpmOps::nat_list_eqb(const std::shared_ptr<List<unsigned int>> &xs,
                           const std::shared_ptr<List<unsigned int>> &ys) {

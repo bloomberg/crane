@@ -1,3 +1,6 @@
+#ifndef INCLUDED_KBP_MULTIBIT_DEFAULT
+#define INCLUDED_KBP_MULTIBIT_DEFAULT
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -28,3 +31,5 @@ struct KbpMultibitDefault {
 
   static inline const bool t = (execute_kbp(sample)->acc == 15u);
 };
+
+#endif // INCLUDED_KBP_MULTIBIT_DEFAULT

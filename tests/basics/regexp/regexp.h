@@ -1,3 +1,6 @@
+#ifndef INCLUDED_REGEXP
+#define INCLUDED_REGEXP
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -303,3 +306,5 @@ struct Matcher {
   static inline const std::shared_ptr<List<int64_t>> s4 =
       List<int64_t>::ctor::cons_(int64_t(0), List<int64_t>::ctor::nil_());
 };
+
+#endif // INCLUDED_REGEXP

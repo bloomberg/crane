@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PROGRAM_FIXPOINT
+#define INCLUDED_PROGRAM_FIXPOINT
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -176,3 +179,5 @@ struct ProgFix {
                              4u, List<unsigned int>::ctor::cons_(
                                      6u, List<unsigned int>::ctor::nil_()))));
 };
+
+#endif // INCLUDED_PROGRAM_FIXPOINT

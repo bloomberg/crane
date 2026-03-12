@@ -1,8 +1,9 @@
+#include <inductive_in_module.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
-#include <inductive_in_module.h>
 #include <iostream>
 #include <memory>
 #include <optional>

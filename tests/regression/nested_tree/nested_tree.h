@@ -1,3 +1,6 @@
+#ifndef INCLUDED_NESTED_TREE
+#define INCLUDED_NESTED_TREE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -288,3 +291,5 @@ _flatten_tree_go(F0 &&f,
           }},
       t0->v());
 }
+
+#endif // INCLUDED_NESTED_TREE

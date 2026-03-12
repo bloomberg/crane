@@ -1,7 +1,8 @@
+#include <coinductive.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <coinductive.h>
 #include <functional>
 #include <iostream>
 #include <memory>

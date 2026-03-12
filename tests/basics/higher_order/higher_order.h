@@ -1,3 +1,6 @@
+#ifndef INCLUDED_HIGHER_ORDER
+#define INCLUDED_HIGHER_ORDER
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -202,3 +205,5 @@ struct HigherOrder {
   static inline const unsigned int test_pipe = pipe<unsigned int, unsigned int>(
       5u, [](unsigned int _x0) -> unsigned int { return adder(3u, _x0); });
 };
+
+#endif // INCLUDED_HIGHER_ORDER

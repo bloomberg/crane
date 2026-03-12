@@ -1,3 +1,6 @@
+#ifndef INCLUDED_RECORD_PROJ
+#define INCLUDED_RECORD_PROJ
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -48,3 +51,5 @@ struct RecordProj {
   static inline const unsigned int test2 = complex_access(
       std::make_shared<ComplexRecord>(ComplexRecord{5u, 10u, 15u}));
 };
+
+#endif // INCLUDED_RECORD_PROJ

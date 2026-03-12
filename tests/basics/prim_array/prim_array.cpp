@@ -1,3 +1,5 @@
+#include <prim_array.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,7 +9,6 @@
 #include <memory>
 #include <optional>
 #include <persistent_array.h>
-#include <prim_array.h>
 #include <stdexcept>
 #include <string>
 #include <variant>

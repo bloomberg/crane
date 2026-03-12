@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TAIL_REC_REV
+#define INCLUDED_TAIL_REC_REV
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -89,3 +92,5 @@ std::shared_ptr<List<T1>> better_rev(const std::shared_ptr<List<T1>> &l) {
   };
   return go(l, List<T1>::ctor::nil_());
 }
+
+#endif // INCLUDED_TAIL_REC_REV

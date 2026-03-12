@@ -1,3 +1,6 @@
+#ifndef INCLUDED_WHERE_CLAUSE
+#define INCLUDED_WHERE_CLAUSE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -443,3 +446,5 @@ struct WhereClause {
       BExpr::ctor::BAnd_(BExpr::ctor::BTrue_(), BExpr::ctor::BTrue_()),
       AExpr::ctor::ANum_(10u), AExpr::ctor::ANum_(20u)));
 };
+
+#endif // INCLUDED_WHERE_CLAUSE

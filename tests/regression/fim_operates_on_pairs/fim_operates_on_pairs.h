@@ -1,3 +1,6 @@
+#ifndef INCLUDED_FIM_OPERATES_ON_PAIRS
+#define INCLUDED_FIM_OPERATES_ON_PAIRS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -166,3 +169,5 @@ struct FimOperatesOnPairs {
   static inline const bool t =
       (get_reg_pair(execute_fim(sample, 2u, 171u), 2u) == 171u);
 };
+
+#endif // INCLUDED_FIM_OPERATES_ON_PAIRS

@@ -1,3 +1,5 @@
+#include <mutable_vector.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -5,7 +7,6 @@
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <mutable_vector.h>
 #include <optional>
 #include <stdexcept>
 #include <string>

@@ -1,6 +1,7 @@
+#include <bool_dec_bde.h>
+
 #include <algorithm>
 #include <any>
-#include <bool_dec_bde.h>
 #include <cassert>
 #include <functional>
 #include <iostream>

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TOPOLOGICAL_SORT_BDE
+#define INCLUDED_TOPOLOGICAL_SORT_BDE
+
 #include <bdlf_overloaded.h>
 #include <bsl_concepts.h>
 #include <bsl_functional.h>
@@ -565,3 +568,5 @@ struct TopologicalSort {
         ->template concat<bsl::pair<T1, unsigned int>>();
   }
 };
+
+#endif // INCLUDED_TOPOLOGICAL_SORT_BDE

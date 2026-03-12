@@ -1,3 +1,6 @@
+#ifndef INCLUDED_EMPTY_MATCH
+#define INCLUDED_EMPTY_MATCH
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -150,3 +153,5 @@ struct EmptyMatch {
     throw std::logic_error("absurd case");
   }
 };
+
+#endif // INCLUDED_EMPTY_MATCH

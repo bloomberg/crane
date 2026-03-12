@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PAGE_OPS
+#define INCLUDED_PAGE_OPS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -289,3 +292,5 @@ struct PageOps {
               test_pc_inc2_wrap),
           test_disassemble_edge);
 };
+
+#endif // INCLUDED_PAGE_OPS

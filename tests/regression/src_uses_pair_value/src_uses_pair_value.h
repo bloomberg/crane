@@ -1,3 +1,6 @@
+#ifndef INCLUDED_SRC_USES_PAIR_VALUE
+#define INCLUDED_SRC_USES_PAIR_VALUE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -135,3 +138,5 @@ struct SrcUsesPairValue {
        ((after->sel_chip == 0u) &&
         ((after->sel_reg == 1u) && (after->sel_char == 11u))));
 };
+
+#endif // INCLUDED_SRC_USES_PAIR_VALUE

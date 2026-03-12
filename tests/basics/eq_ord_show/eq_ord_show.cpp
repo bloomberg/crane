@@ -1,7 +1,8 @@
+#include <eq_ord_show.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <eq_ord_show.h>
 #include <functional>
 #include <iostream>
 #include <memory>

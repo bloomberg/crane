@@ -1,3 +1,6 @@
+#ifndef INCLUDED_REC_RECORD
+#define INCLUDED_REC_RECORD
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -173,3 +176,5 @@ struct RecRecord {
   static inline const unsigned int test_dept_head_name =
       test_dept->dept_head->emp_name;
 };
+
+#endif // INCLUDED_REC_RECORD

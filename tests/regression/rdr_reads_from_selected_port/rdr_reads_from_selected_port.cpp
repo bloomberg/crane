@@ -1,3 +1,5 @@
+#include <rdr_reads_from_selected_port.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -5,7 +7,6 @@
 #include <iostream>
 #include <memory>
 #include <optional>
-#include <rdr_reads_from_selected_port.h>
 #include <stdexcept>
 #include <string>
 #include <variant>

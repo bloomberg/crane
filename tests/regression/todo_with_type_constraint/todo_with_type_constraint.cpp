@@ -1,3 +1,5 @@
+#include <todo_with_type_constraint.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,7 +9,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <todo_with_type_constraint.h>
 #include <variant>
 
 unsigned int TodoWithTypeConstraint::NatBase::bump(const unsigned int n) {

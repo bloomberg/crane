@@ -1,3 +1,6 @@
+#ifndef INCLUDED_N_INT
+#define INCLUDED_N_INT
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -132,3 +135,5 @@ struct NIntTest {
   static unsigned int pos_add(const unsigned int _x0, const unsigned int _x1);
   static unsigned int pos_succ(const unsigned int _x0);
 };
+
+#endif // INCLUDED_N_INT

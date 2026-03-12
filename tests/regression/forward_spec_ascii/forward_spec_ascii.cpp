@@ -1,7 +1,8 @@
+#include <forward_spec_ascii.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <forward_spec_ascii.h>
 #include <functional>
 #include <iostream>
 #include <memory>

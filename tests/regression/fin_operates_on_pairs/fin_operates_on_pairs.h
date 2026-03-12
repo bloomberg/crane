@@ -1,3 +1,6 @@
+#ifndef INCLUDED_FIN_OPERATES_ON_PAIRS
+#define INCLUDED_FIN_OPERATES_ON_PAIRS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -174,3 +177,5 @@ struct FinOperatesOnPairs {
   static inline const bool t =
       (get_reg_pair(execute_fin(sample, 2u), 2u) == 55u);
 };
+
+#endif // INCLUDED_FIN_OPERATES_ON_PAIRS

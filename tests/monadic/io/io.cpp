@@ -1,9 +1,10 @@
+#include <io.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <fstream>
 #include <functional>
-#include <io.h>
 #include <iostream>
 #include <memory>
 #include <optional>

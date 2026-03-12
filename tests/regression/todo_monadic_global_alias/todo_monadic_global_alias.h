@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TODO_MONADIC_GLOBAL_ALIAS
+#define INCLUDED_TODO_MONADIC_GLOBAL_ALIAS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -70,3 +73,5 @@ struct TodoMonadicGlobalAlias {
   static std::shared_ptr<Nat> alias();
   static std::shared_ptr<Nat> rebound();
 };
+
+#endif // INCLUDED_TODO_MONADIC_GLOBAL_ALIAS

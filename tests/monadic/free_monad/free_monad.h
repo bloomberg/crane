@@ -1,3 +1,6 @@
+#ifndef INCLUDED_FREE_MONAD
+#define INCLUDED_FREE_MONAD
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -153,3 +156,5 @@ struct FreeMonad {
 
   static inline const std::shared_ptr<IO> test = IO::ctor::pure_(unit::tt);
 };
+
+#endif // INCLUDED_FREE_MONAD

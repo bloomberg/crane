@@ -1,3 +1,6 @@
+#ifndef INCLUDED_OPTION
+#define INCLUDED_OPTION
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -53,3 +56,5 @@ struct Option {
   static inline const std::optional<unsigned int> test_pred_five =
       Option::safe_pred(5u);
 };
+
+#endif // INCLUDED_OPTION

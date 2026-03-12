@@ -1,3 +1,6 @@
+#ifndef INCLUDED_VALID_LAYOUT_WINDOW
+#define INCLUDED_VALID_LAYOUT_WINDOW
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -40,3 +43,5 @@ struct ValidLayoutWindow {
          }
        }());
 };
+
+#endif // INCLUDED_VALID_LAYOUT_WINDOW

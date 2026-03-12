@@ -1,3 +1,6 @@
+#ifndef INCLUDED_FUNC_ONLY_SUBMODULE_AB
+#define INCLUDED_FUNC_ONLY_SUBMODULE_AB
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -30,3 +33,5 @@ struct FuncOnlySubmoduleAb {
 
   static inline const unsigned int t = Root::A::inc(Root::B::dec(3u));
 };
+
+#endif // INCLUDED_FUNC_ONLY_SUBMODULE_AB

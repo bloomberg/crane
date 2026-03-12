@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TODO_NESTED_MODULE_TYPE_FUNCTOR
+#define INCLUDED_TODO_NESTED_MODULE_TYPE_FUNCTOR
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -42,3 +45,5 @@ struct TodoNestedModuleTypeFunctor {
     }
   };
 };
+
+#endif // INCLUDED_TODO_NESTED_MODULE_TYPE_FUNCTOR

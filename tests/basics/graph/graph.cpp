@@ -1,8 +1,9 @@
+#include <graph.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
-#include <graph.h>
 #include <iostream>
 #include <memory>
 #include <optional>

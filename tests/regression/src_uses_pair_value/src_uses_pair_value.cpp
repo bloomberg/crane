@@ -1,3 +1,5 @@
+#include <src_uses_pair_value.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -5,7 +7,6 @@
 #include <iostream>
 #include <memory>
 #include <optional>
-#include <src_uses_pair_value.h>
 #include <stdexcept>
 #include <string>
 #include <utility>

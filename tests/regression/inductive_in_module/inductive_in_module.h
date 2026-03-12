@@ -1,3 +1,6 @@
+#ifndef INCLUDED_INDUCTIVE_IN_MODULE
+#define INCLUDED_INDUCTIVE_IN_MODULE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -160,3 +163,5 @@ struct InductiveInModule {
 
   static inline const unsigned int final_test = Outer::test_option;
 };
+
+#endif // INCLUDED_INDUCTIVE_IN_MODULE

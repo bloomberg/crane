@@ -1,3 +1,6 @@
+#ifndef INCLUDED_EVEN_LENGTH_BYTE_VALIDATION
+#define INCLUDED_EVEN_LENGTH_BYTE_VALIDATION
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -107,3 +110,5 @@ struct EvenLengthByteValidation {
     }
   }();
 };
+
+#endif // INCLUDED_EVEN_LENGTH_BYTE_VALIDATION

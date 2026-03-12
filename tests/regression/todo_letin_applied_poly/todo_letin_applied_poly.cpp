@@ -1,3 +1,5 @@
+#include <todo_letin_applied_poly.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,5 +9,4 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <todo_letin_applied_poly.h>
 #include <variant>

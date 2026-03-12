@@ -1,3 +1,6 @@
+#ifndef INCLUDED_STRING_MATCH
+#define INCLUDED_STRING_MATCH
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -31,3 +34,5 @@ struct StringMatch {
   static inline const bool test_empty_false = is_empty("x");
   static inline const std::string test_cat = "foo"s + "bar"s;
 };
+
+#endif // INCLUDED_STRING_MATCH

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_CTOR_ESCAPE_COLLISION
+#define INCLUDED_CTOR_ESCAPE_COLLISION
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -81,3 +84,5 @@ struct CtorEscapeCollision {
         tag(item::D__1)) +
        tag(item::D__2));
 };
+
+#endif // INCLUDED_CTOR_ESCAPE_COLLISION

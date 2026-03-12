@@ -1,8 +1,9 @@
+#include <inc_xch_nibble.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
-#include <inc_xch_nibble.h>
 #include <iostream>
 #include <memory>
 #include <optional>

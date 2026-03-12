@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PRESERVES_ALL_PAIRS
+#define INCLUDED_PRESERVES_ALL_PAIRS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -132,3 +135,5 @@ struct PreservesAllPairs {
   static inline const bool t =
       ((add_preserves_pairs && ld_preserves_pairs) && sub_preserves_pairs);
 };
+
+#endif // INCLUDED_PRESERVES_ALL_PAIRS

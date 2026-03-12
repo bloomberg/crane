@@ -1,3 +1,6 @@
+#ifndef INCLUDED_COMPUTATIONAL_PROOF
+#define INCLUDED_COMPUTATIONAL_PROOF
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -96,3 +99,5 @@ struct ComputationalProof {
                           2u, List<unsigned int>::ctor::cons_(
                                   3u, List<unsigned int>::ctor::nil_()))))));
 };
+
+#endif // INCLUDED_COMPUTATIONAL_PROOF

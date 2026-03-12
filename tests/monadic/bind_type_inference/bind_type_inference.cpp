@@ -1,6 +1,7 @@
+#include <bind_type_inference.h>
+
 #include <algorithm>
 #include <any>
-#include <bind_type_inference.h>
 #include <cassert>
 #include <cstdint>
 #include <functional>

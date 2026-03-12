@@ -1,3 +1,5 @@
+#include <where_clause.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -8,7 +10,6 @@
 #include <stdexcept>
 #include <string>
 #include <variant>
-#include <where_clause.h>
 
 unsigned int WhereClause::eval(const std::shared_ptr<WhereClause::Expr> &e) {
   return std::visit(

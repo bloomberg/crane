@@ -1,3 +1,6 @@
+#ifndef INCLUDED_BINARY_NUMS
+#define INCLUDED_BINARY_NUMS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -444,3 +447,5 @@ struct BinaryNums {
   static inline const std::shared_ptr<Z> test_z_sign_zero =
       z_sign(Z::ctor::Z0_());
 };
+
+#endif // INCLUDED_BINARY_NUMS

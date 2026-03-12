@@ -1,3 +1,5 @@
+#include <update_nth_bounds.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,5 +9,4 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <update_nth_bounds.h>
 #include <variant>

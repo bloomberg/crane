@@ -1,3 +1,6 @@
+#ifndef INCLUDED_COERCIONS
+#define INCLUDED_COERCIONS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -50,3 +53,5 @@ struct Coercions {
   static inline const unsigned int test_fun_coercion =
       double_transform->apply_transform(5u);
 };
+
+#endif // INCLUDED_COERCIONS

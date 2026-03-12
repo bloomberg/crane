@@ -1,7 +1,8 @@
+#include <comparison.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <comparison.h>
 #include <functional>
 #include <iostream>
 #include <memory>

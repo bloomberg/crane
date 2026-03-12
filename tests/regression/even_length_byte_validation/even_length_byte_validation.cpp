@@ -1,7 +1,8 @@
+#include <even_length_byte_validation.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <even_length_byte_validation.h>
 #include <functional>
 #include <iostream>
 #include <memory>

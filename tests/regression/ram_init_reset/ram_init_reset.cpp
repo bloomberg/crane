@@ -1,3 +1,5 @@
+#include <ram_init_reset.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -5,7 +7,6 @@
 #include <iostream>
 #include <memory>
 #include <optional>
-#include <ram_init_reset.h>
 #include <stdexcept>
 #include <string>
 #include <utility>

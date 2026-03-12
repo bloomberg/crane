@@ -1,3 +1,5 @@
+#include <sum.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,7 +9,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <sum.h>
 #include <variant>
 
 unsigned int Sum::either_to_nat(

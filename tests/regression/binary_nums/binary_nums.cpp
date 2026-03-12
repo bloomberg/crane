@@ -1,6 +1,7 @@
+#include <binary_nums.h>
+
 #include <algorithm>
 #include <any>
-#include <binary_nums.h>
 #include <cassert>
 #include <functional>
 #include <iostream>

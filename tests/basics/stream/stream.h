@@ -1,3 +1,6 @@
+#ifndef INCLUDED_STREAM
+#define INCLUDED_STREAM
+
 #include "lazy.h"
 #include <algorithm>
 #include <any>
@@ -229,3 +232,5 @@ struct Stream {
               Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(
                   Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_())))))))));
 };
+
+#endif // INCLUDED_STREAM

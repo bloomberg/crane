@@ -1,7 +1,8 @@
+#include <empty_system_bank_count.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <empty_system_bank_count.h>
 #include <functional>
 #include <iostream>
 #include <memory>

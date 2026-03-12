@@ -1,3 +1,6 @@
+#ifndef INCLUDED_MATCH_FALLBACK_NAT
+#define INCLUDED_MATCH_FALLBACK_NAT
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -97,3 +100,5 @@ struct MatchFallbackNat {
       (fallback(maybe_nat::ctor::NoneNat_()) +
        fallback(maybe_nat::ctor::SomeNat_(7u)));
 };
+
+#endif // INCLUDED_MATCH_FALLBACK_NAT

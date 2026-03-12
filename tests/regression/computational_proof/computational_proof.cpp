@@ -1,7 +1,8 @@
+#include <computational_proof.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <computational_proof.h>
 #include <functional>
 #include <iostream>
 #include <memory>

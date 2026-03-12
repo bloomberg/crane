@@ -1,10 +1,11 @@
+#include <modpath_escape_collision.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <modpath_escape_collision.h>
 #include <optional>
 #include <stdexcept>
 #include <string>

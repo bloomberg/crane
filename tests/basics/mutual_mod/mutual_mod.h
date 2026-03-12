@@ -1,3 +1,6 @@
+#ifndef INCLUDED_MUTUAL_MOD
+#define INCLUDED_MUTUAL_MOD
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -122,3 +125,5 @@ struct EvenOdd {
 
 const unsigned int test_even_len = EvenOdd::even_length(EvenOdd::two);
 const unsigned int test_odd_len = EvenOdd::odd_length(EvenOdd::three);
+
+#endif // INCLUDED_MUTUAL_MOD

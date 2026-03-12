@@ -1,3 +1,6 @@
+#ifndef INCLUDED_JMS_BBL_ROUNDTRIP
+#define INCLUDED_JMS_BBL_ROUNDTRIP
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -34,3 +37,5 @@ struct JmsBblRoundtrip {
   static inline const bool t =
       (execute_bbl(execute_jms(sample, 200u))->pc == 102u);
 };
+
+#endif // INCLUDED_JMS_BBL_ROUNDTRIP

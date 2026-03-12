@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PROGRAM_WF_PROP
+#define INCLUDED_PROGRAM_WF_PROP
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -185,3 +188,5 @@ struct ProgramWfProp {
                   instruction::ctor::JMS_(218u),
                   List<std::shared_ptr<instruction>>::ctor::nil_())));
 };
+
+#endif // INCLUDED_PROGRAM_WF_PROP

@@ -1,3 +1,5 @@
+#include <timing_preserves_wf_simple.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,7 +9,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <timing_preserves_wf_simple.h>
 #include <variant>
 
 bool TimingPreservesWfSimple::wf(

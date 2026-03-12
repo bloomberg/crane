@@ -1,9 +1,10 @@
+#include <load_program.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
 #include <iostream>
-#include <load_program.h>
 #include <memory>
 #include <optional>
 #include <stdexcept>

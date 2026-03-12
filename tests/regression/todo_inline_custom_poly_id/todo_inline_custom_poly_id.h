@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TODO_INLINE_CUSTOM_POLY_ID
+#define INCLUDED_TODO_INLINE_CUSTOM_POLY_ID
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -29,3 +32,5 @@ struct TodoInlineCustomPolyId {
     }
   }();
 };
+
+#endif // INCLUDED_TODO_INLINE_CUSTOM_POLY_ID

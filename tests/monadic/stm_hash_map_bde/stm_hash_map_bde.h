@@ -1,3 +1,6 @@
+#ifndef INCLUDED_STM_HASH_MAP_BDE
+#define INCLUDED_STM_HASH_MAP_BDE
+
 #include <bdlf_overloaded.h>
 #include <bsl_concepts.h>
 #include <bsl_cstdint.h>
@@ -299,3 +302,5 @@ template <typename K, typename V> struct CHT {
     }
   }
 };
+
+#endif // INCLUDED_STM_HASH_MAP_BDE

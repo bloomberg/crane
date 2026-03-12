@@ -1,3 +1,6 @@
+#ifndef INCLUDED_FORWARD_SPEC_ASCII
+#define INCLUDED_FORWARD_SPEC_ASCII
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -100,3 +103,5 @@ struct ForwardSpecAscii {
   static unsigned int bump_node(const std::shared_ptr<node> &x);
   static inline const unsigned int t = bump_node(node::ctor::ANode_(2u));
 };
+
+#endif // INCLUDED_FORWARD_SPEC_ASCII

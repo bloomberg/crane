@@ -1,3 +1,6 @@
+#ifndef INCLUDED_SUM
+#define INCLUDED_SUM
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -265,3 +268,5 @@ struct Sum {
   static inline const unsigned int test_either =
       either_to_nat(either<unsigned int, unsigned int>::ctor::Left_(3u));
 };
+
+#endif // INCLUDED_SUM

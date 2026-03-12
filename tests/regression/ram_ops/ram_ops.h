@@ -1,3 +1,6 @@
+#ifndef INCLUDED_RAM_OPS
+#define INCLUDED_RAM_OPS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -879,3 +882,5 @@ struct RamOps {
               test_nested_bank_status_write),
           test_accessor_namespace);
 };
+
+#endif // INCLUDED_RAM_OPS

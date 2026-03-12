@@ -1,3 +1,5 @@
+#include <unit_type.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,7 +9,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <unit_type.h>
 #include <variant>
 
 unit UnitType::return_unit(const unsigned int _x) { return unit::tt; }

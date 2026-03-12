@@ -1,3 +1,6 @@
+#ifndef INCLUDED_WRR_RDR_ROUNDTRIP
+#define INCLUDED_WRR_RDR_ROUNDTRIP
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -145,3 +148,5 @@ struct WrrRdrRoundtrip {
           2u});
   static inline const bool t = (execute_rdr(execute_wrr(sample))->acc == 13u);
 };
+
+#endif // INCLUDED_WRR_RDR_ROUNDTRIP

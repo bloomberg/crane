@@ -1,8 +1,9 @@
+#include <instruction_cycles.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
-#include <instruction_cycles.h>
 #include <iostream>
 #include <memory>
 #include <optional>

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_POLYMORPHIC_HELPER
+#define INCLUDED_POLYMORPHIC_HELPER
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -168,3 +171,5 @@ std::shared_ptr<List<T1>> ListDef::repeat(const T1 x,
                  }},
       n->v());
 }
+
+#endif // INCLUDED_POLYMORPHIC_HELPER

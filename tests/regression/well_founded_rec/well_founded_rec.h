@@ -1,3 +1,6 @@
+#ifndef INCLUDED_WELL_FOUNDED_REC
+#define INCLUDED_WELL_FOUNDED_REC
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -94,3 +97,5 @@ struct WellFoundedRec {
   static inline const unsigned int test_gcd_2 = gcd_wf(35u, 14u);
   static inline const unsigned int test_gcd_3 = gcd_wf(0u, 5u);
 };
+
+#endif // INCLUDED_WELL_FOUNDED_REC

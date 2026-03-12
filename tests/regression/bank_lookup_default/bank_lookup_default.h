@@ -1,3 +1,6 @@
+#ifndef INCLUDED_BANK_LOOKUP_DEFAULT
+#define INCLUDED_BANK_LOOKUP_DEFAULT
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -134,3 +137,5 @@ struct BankLookupDefault {
   static inline const unsigned int t =
       get_bank(sample_state, 7u)->bank_chips->length();
 };
+
+#endif // INCLUDED_BANK_LOOKUP_DEFAULT

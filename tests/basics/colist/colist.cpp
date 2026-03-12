@@ -1,7 +1,8 @@
+#include <colist.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <colist.h>
 #include <functional>
 #include <iostream>
 #include <memory>

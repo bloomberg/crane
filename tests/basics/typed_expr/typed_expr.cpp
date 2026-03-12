@@ -1,3 +1,5 @@
+#include <typed_expr.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,5 +9,4 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <typed_expr.h>
 #include <variant>

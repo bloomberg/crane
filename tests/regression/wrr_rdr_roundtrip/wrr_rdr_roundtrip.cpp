@@ -1,3 +1,5 @@
+#include <wrr_rdr_roundtrip.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -8,7 +10,6 @@
 #include <stdexcept>
 #include <string>
 #include <variant>
-#include <wrr_rdr_roundtrip.h>
 
 std::shared_ptr<WrrRdrRoundtrip::state>
 WrrRdrRoundtrip::execute_wrr(std::shared_ptr<WrrRdrRoundtrip::state> s) {

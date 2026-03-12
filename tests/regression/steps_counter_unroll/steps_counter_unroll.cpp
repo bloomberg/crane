@@ -1,3 +1,5 @@
+#include <steps_counter_unroll.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -6,7 +8,6 @@
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <steps_counter_unroll.h>
 #include <string>
 #include <utility>
 #include <variant>

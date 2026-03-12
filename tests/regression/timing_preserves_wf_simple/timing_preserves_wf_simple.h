@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TIMING_PRESERVES_WF_SIMPLE
+#define INCLUDED_TIMING_PRESERVES_WF_SIMPLE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -86,3 +89,5 @@ struct TimingPreservesWfSimple {
        ((cycles(instr::JMS) == 24u) &&
         (wf(execute(sample, instr::NOP)) && wf(execute(sample, instr::FIM)))));
 };
+
+#endif // INCLUDED_TIMING_PRESERVES_WF_SIMPLE

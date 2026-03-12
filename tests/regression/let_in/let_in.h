@@ -1,3 +1,6 @@
+#ifndef INCLUDED_LET_IN
+#define INCLUDED_LET_IN
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -118,3 +121,5 @@ struct LetIn {
   static inline const unsigned int test_destruct = let_destruct;
   static inline const unsigned int test_multi = multi_let;
 };
+
+#endif // INCLUDED_LET_IN

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TODO_WITH_TYPE_CONSTRAINT
+#define INCLUDED_TODO_WITH_TYPE_CONSTRAINT
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -49,3 +52,5 @@ struct TodoWithTypeConstraint {
   using Applied = UseNat<NatBase>;
   static inline const unsigned int test_twice = Applied::twice();
 };
+
+#endif // INCLUDED_TODO_WITH_TYPE_CONSTRAINT

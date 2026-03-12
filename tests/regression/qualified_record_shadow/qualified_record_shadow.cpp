@@ -1,3 +1,5 @@
+#include <qualified_record_shadow.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -5,7 +7,6 @@
 #include <iostream>
 #include <memory>
 #include <optional>
-#include <qualified_record_shadow.h>
 #include <stdexcept>
 #include <string>
 #include <variant>

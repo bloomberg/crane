@@ -1,3 +1,6 @@
+#ifndef INCLUDED_JIN_USES_PAIR_FOR_JUMP
+#define INCLUDED_JIN_USES_PAIR_FOR_JUMP
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -129,3 +132,5 @@ struct JinUsesPairForJump {
             300u});
   static inline const bool t = (execute_jin(sample, 3u)->pc == 555u);
 };
+
+#endif // INCLUDED_JIN_USES_PAIR_FOR_JUMP

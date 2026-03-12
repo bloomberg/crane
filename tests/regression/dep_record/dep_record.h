@@ -1,3 +1,6 @@
+#ifndef INCLUDED_DEP_RECORD
+#define INCLUDED_DEP_RECORD
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -199,3 +202,5 @@ struct DepRecord {
   static inline const std::shared_ptr<Tagged> tagged_bool =
       std::make_shared<Tagged>(Tagged{tag::TBool, true});
 };
+
+#endif // INCLUDED_DEP_RECORD

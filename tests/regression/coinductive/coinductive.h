@@ -1,3 +1,6 @@
+#ifndef INCLUDED_COINDUCTIVE
+#define INCLUDED_COINDUCTIVE
+
 #include "lazy.h"
 #include <algorithm>
 #include <any>
@@ -164,3 +167,5 @@ struct Coinductive {
 
   static std::shared_ptr<tree> infinite_tree(const unsigned int n);
 };
+
+#endif // INCLUDED_COINDUCTIVE

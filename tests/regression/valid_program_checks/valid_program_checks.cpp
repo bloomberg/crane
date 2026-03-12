@@ -1,3 +1,5 @@
+#include <valid_program_checks.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -8,7 +10,6 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
-#include <valid_program_checks.h>
 #include <variant>
 
 bool ValidProgramChecks::valid_program(

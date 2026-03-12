@@ -1,3 +1,5 @@
+#include <thread.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -9,7 +11,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <thread.h>
 #include <thread>
 #include <variant>
 

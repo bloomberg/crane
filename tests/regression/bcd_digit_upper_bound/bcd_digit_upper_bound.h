@@ -1,3 +1,6 @@
+#ifndef INCLUDED_BCD_DIGIT_UPPER_BOUND
+#define INCLUDED_BCD_DIGIT_UPPER_BOUND
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -34,3 +37,5 @@ struct BcdDigitUpperBound {
                                           }
                                         }());
 };
+
+#endif // INCLUDED_BCD_DIGIT_UPPER_BOUND

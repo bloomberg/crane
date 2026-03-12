@@ -1,7 +1,8 @@
+#include <coercions.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <coercions.h>
 #include <functional>
 #include <iostream>
 #include <memory>

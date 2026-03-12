@@ -1,7 +1,8 @@
+#include <closures_in_data.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <closures_in_data.h>
 #include <functional>
 #include <iostream>
 #include <memory>

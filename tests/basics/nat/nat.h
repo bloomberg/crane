@@ -1,3 +1,6 @@
+#ifndef INCLUDED_NAT
+#define INCLUDED_NAT
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -110,3 +113,5 @@ struct Nat {
     }
   };
 };
+
+#endif // INCLUDED_NAT

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TODO_TYPE_SUBST_PACK_ALIAS
+#define INCLUDED_TODO_TYPE_SUBST_PACK_ALIAS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -55,3 +58,5 @@ struct TodoTypeSubstPackAlias {
   static inline const unsigned int test_value =
       run_twice<nat_pack, unsigned int>();
 };
+
+#endif // INCLUDED_TODO_TYPE_SUBST_PACK_ALIAS

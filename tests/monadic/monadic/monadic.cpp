@@ -1,10 +1,11 @@
+#include <monadic.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <monadic.h>
 #include <optional>
 #include <stdexcept>
 #include <string>

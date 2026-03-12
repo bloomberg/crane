@@ -1,3 +1,6 @@
+#ifndef INCLUDED_UNSOUND_AXIOMS
+#define INCLUDED_UNSOUND_AXIOMS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -55,3 +58,5 @@ struct UnsoundAxioms {
 
   static unsigned int use_prop_as_type(const std::shared_ptr<Rec> &r);
 };
+
+#endif // INCLUDED_UNSOUND_AXIOMS

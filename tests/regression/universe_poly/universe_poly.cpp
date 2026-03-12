@@ -1,3 +1,5 @@
+#include <universe_poly.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,5 +9,4 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <universe_poly.h>
 #include <variant>

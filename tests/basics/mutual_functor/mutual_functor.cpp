@@ -1,10 +1,11 @@
+#include <mutual_functor.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <mutual_functor.h>
 #include <optional>
 #include <stdexcept>
 #include <string>

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_BENCH_LET_IN
+#define INCLUDED_BENCH_LET_IN
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -163,3 +166,5 @@ struct BenchLetIn {
   static inline const unsigned int test_sum3 = sum3(1u, 2u, 3u);
   static inline const unsigned int test_chain = chain_pairs(1u, 2u, 3u);
 };
+
+#endif // INCLUDED_BENCH_LET_IN

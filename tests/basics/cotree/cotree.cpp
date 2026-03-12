@@ -1,7 +1,8 @@
+#include <cotree.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <cotree.h>
 #include <functional>
 #include <iostream>
 #include <memory>

@@ -1,3 +1,5 @@
+#include <skiplist.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -6,7 +8,6 @@
 #include <memory>
 #include <mini_stm.h>
 #include <optional>
-#include <skiplist.h>
 #include <skipnode.h>
 #include <stdexcept>
 #include <string>

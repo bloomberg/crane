@@ -1,3 +1,6 @@
+#ifndef INCLUDED_AXIOM_TYPES
+#define INCLUDED_AXIOM_TYPES
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -206,3 +209,5 @@ struct AxiomTypes {
 
   static MysteryType use_poly_axiom(const unit _x);
 };
+
+#endif // INCLUDED_AXIOM_TYPES

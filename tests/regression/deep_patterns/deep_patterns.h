@@ -1,3 +1,6 @@
+#ifndef INCLUDED_DEEP_PATTERNS
+#define INCLUDED_DEEP_PATTERNS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -484,3 +487,5 @@ struct DeepPatterns {
         test_triple) +
        test_wildcard);
 };
+
+#endif // INCLUDED_DEEP_PATTERNS

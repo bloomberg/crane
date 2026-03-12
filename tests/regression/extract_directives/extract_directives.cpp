@@ -1,7 +1,8 @@
+#include <extract_directives.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <extract_directives.h>
 #include <functional>
 #include <iostream>
 #include <memory>

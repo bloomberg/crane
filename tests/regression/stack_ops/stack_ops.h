@@ -1,3 +1,6 @@
+#ifndef INCLUDED_STACK_OPS
+#define INCLUDED_STACK_OPS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -179,3 +182,5 @@ struct StackOps {
                              overflow_len)),
           push_cap_test);
 };
+
+#endif // INCLUDED_STACK_OPS

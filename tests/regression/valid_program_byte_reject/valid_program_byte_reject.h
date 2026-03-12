@@ -1,3 +1,6 @@
+#ifndef INCLUDED_VALID_PROGRAM_BYTE_REJECT
+#define INCLUDED_VALID_PROGRAM_BYTE_REJECT
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -99,3 +102,5 @@ struct ValidProgramByteReject {
       0u,
       List<unsigned int>::ctor::cons_(256u, List<unsigned int>::ctor::nil_())));
 };
+
+#endif // INCLUDED_VALID_PROGRAM_BYTE_REJECT

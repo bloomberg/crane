@@ -1,3 +1,6 @@
+#ifndef INCLUDED_MUTUAL_RECORD
+#define INCLUDED_MUTUAL_RECORD
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -235,3 +238,5 @@ struct MutualRecord {
   static inline const unsigned int test_dept_count = dept_count(test_dept);
   static inline const unsigned int test_dept_id = dept_id(test_dept);
 };
+
+#endif // INCLUDED_MUTUAL_RECORD

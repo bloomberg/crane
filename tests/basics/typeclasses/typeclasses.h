@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TYPECLASSES
+#define INCLUDED_TYPECLASSES
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -222,3 +225,5 @@ struct Typeclasses {
   static inline const unsigned int test_describe_ne =
       describe<eqNat, numNat, unsigned int>(3u, 7u);
 };
+
+#endif // INCLUDED_TYPECLASSES

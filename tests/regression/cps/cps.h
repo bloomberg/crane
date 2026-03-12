@@ -1,3 +1,6 @@
+#ifndef INCLUDED_CPS
+#define INCLUDED_CPS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -301,3 +304,5 @@ struct CPS {
                           5u, List<unsigned int>::ctor::cons_(
                                   6u, List<unsigned int>::ctor::nil_())))))));
 };
+
+#endif // INCLUDED_CPS

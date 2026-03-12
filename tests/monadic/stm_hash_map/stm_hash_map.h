@@ -1,3 +1,6 @@
+#ifndef INCLUDED_STM_HASH_MAP
+#define INCLUDED_STM_HASH_MAP
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -320,3 +323,5 @@ template <typename K, typename V> struct CHT {
     }
   }
 };
+
+#endif // INCLUDED_STM_HASH_MAP

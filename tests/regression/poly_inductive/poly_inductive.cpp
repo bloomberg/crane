@@ -1,3 +1,5 @@
+#include <poly_inductive.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -5,7 +7,6 @@
 #include <iostream>
 #include <memory>
 #include <optional>
-#include <poly_inductive.h>
 #include <stdexcept>
 #include <string>
 #include <variant>

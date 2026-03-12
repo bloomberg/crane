@@ -1,3 +1,6 @@
+#ifndef INCLUDED_PRIM_ARRAY
+#define INCLUDED_PRIM_ARRAY
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -39,3 +42,5 @@ struct PrimArray {
   static inline const unsigned int copy_val = arr_copy.get(int64_t(2));
   static inline const unsigned int oob_get = arr5.get(int64_t(99));
 };
+
+#endif // INCLUDED_PRIM_ARRAY

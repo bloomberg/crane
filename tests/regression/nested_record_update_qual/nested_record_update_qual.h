@@ -1,3 +1,6 @@
+#ifndef INCLUDED_NESTED_RECORD_UPDATE_QUAL
+#define INCLUDED_NESTED_RECORD_UPDATE_QUAL
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -26,3 +29,5 @@ struct NestedRecordUpdateQual {
   static inline const std::shared_ptr<Shadow> t =
       bump(std::make_shared<Shadow>(Shadow{1u}));
 };
+
+#endif // INCLUDED_NESTED_RECORD_UPDATE_QUAL

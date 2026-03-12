@@ -1,3 +1,6 @@
+#ifndef INCLUDED_SIGMA_TYPES
+#define INCLUDED_SIGMA_TYPES
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -171,3 +174,5 @@ struct SigmaTypes {
   static inline const std::shared_ptr<List<unsigned int>> test_positives =
       positives_up_to(5u);
 };
+
+#endif // INCLUDED_SIGMA_TYPES

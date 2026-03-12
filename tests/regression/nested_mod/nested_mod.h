@@ -1,3 +1,6 @@
+#ifndef INCLUDED_NESTED_MOD
+#define INCLUDED_NESTED_MOD
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -195,3 +198,5 @@ struct NestedMod {
       Outer::shape_with_color(my_circle, my_color);
   static inline const unsigned int test_color = Outer::color_code(my_color);
 };
+
+#endif // INCLUDED_NESTED_MOD

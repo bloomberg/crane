@@ -1,8 +1,9 @@
+#include <higher_kinded.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
-#include <higher_kinded.h>
 #include <iostream>
 #include <memory>
 #include <optional>

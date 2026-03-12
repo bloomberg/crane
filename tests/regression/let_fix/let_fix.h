@@ -1,3 +1,6 @@
+#ifndef INCLUDED_LET_FIX
+#define INCLUDED_LET_FIX
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -160,3 +163,5 @@ struct LetFix {
                             30u, List<unsigned int>::ctor::cons_(
                                      40u, List<unsigned int>::ctor::nil_())))));
 };
+
+#endif // INCLUDED_LET_FIX

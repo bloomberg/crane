@@ -1,3 +1,6 @@
+#ifndef INCLUDED_SET_TEST_PIN_UPDATE
+#define INCLUDED_SET_TEST_PIN_UPDATE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -39,3 +42,5 @@ struct SetTestPinUpdate {
     }();
   }();
 };
+
+#endif // INCLUDED_SET_TEST_PIN_UPDATE

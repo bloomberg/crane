@@ -1,3 +1,6 @@
+#ifndef INCLUDED_STEP_FETCH_DECODE_EXEC
+#define INCLUDED_STEP_FETCH_DECODE_EXEC
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -190,3 +193,5 @@ struct StepFetchDecodeExec {
     return (s1->acc + s1->pc);
   }();
 };
+
+#endif // INCLUDED_STEP_FETCH_DECODE_EXEC

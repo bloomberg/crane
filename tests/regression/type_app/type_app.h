@@ -1,3 +1,6 @@
+#ifndef INCLUDED_TYPE_APP
+#define INCLUDED_TYPE_APP
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -182,3 +185,5 @@ struct TypeApp {
   using NatMonoidUser = UseMonoid<NatMonoid>;
   static inline const NatMonoid::T monoid_test = NatMonoidUser::combine_empty();
 };
+
+#endif // INCLUDED_TYPE_APP

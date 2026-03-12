@@ -1,3 +1,5 @@
+#include <todo_monadic_global_alias.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -7,7 +9,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <todo_monadic_global_alias.h>
 #include <variant>
 
 std::shared_ptr<Nat> TodoMonadicGlobalAlias::base() {

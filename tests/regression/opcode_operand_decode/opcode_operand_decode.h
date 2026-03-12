@@ -1,3 +1,6 @@
+#ifndef INCLUDED_OPCODE_OPERAND_DECODE
+#define INCLUDED_OPCODE_OPERAND_DECODE
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -98,3 +101,5 @@ struct OpcodeOperandDecode {
     }
   }();
 };
+
+#endif // INCLUDED_OPCODE_OPERAND_DECODE

@@ -1,3 +1,6 @@
+#ifndef INCLUDED_THREAD
+#define INCLUDED_THREAD
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -27,3 +30,5 @@ struct threadtest {
   static void test(const unsigned int m, const unsigned int n);
   static void test2(const unsigned int m, const unsigned int n);
 };
+
+#endif // INCLUDED_THREAD

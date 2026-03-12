@@ -1,3 +1,6 @@
+#ifndef INCLUDED_EXTRACT_DIRECTIVES
+#define INCLUDED_EXTRACT_DIRECTIVES
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -32,3 +35,5 @@ struct ExtractDirectives {
   static inline const unsigned int test_inner = inner_add(3u, 7u);
   static inline const unsigned int test_outer = outer_use(4u, 5u);
 };
+
+#endif // INCLUDED_EXTRACT_DIRECTIVES

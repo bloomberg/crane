@@ -1,3 +1,6 @@
+#ifndef INCLUDED_FUNCTOR_COMP
+#define INCLUDED_FUNCTOR_COMP
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -232,3 +235,5 @@ struct FunctorComp {
                                 30u, List<unsigned int>::ctor::nil_()))),
           Queue::empty));
 };
+
+#endif // INCLUDED_FUNCTOR_COMP

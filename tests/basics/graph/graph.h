@@ -1,3 +1,6 @@
+#ifndef INCLUDED_GRAPH
+#define INCLUDED_GRAPH
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -281,3 +284,5 @@ const bool test_int_eq = test_eq<NatEq, std::shared_ptr<Nat>>(
         Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_()))))),
     Nat::ctor::S_(Nat::ctor::S_(
         Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_()))))));
+
+#endif // INCLUDED_GRAPH

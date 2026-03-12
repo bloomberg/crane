@@ -1,3 +1,6 @@
+#ifndef INCLUDED_MUTUAL_FUNCTOR
+#define INCLUDED_MUTUAL_FUNCTOR
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -282,3 +285,5 @@ const unsigned int test_tree_size = NatTree::tree_size(NatTree::sample_tree());
 const unsigned int test_forest_size =
     NatTree::forest_size(NatTree::small_forest());
 const unsigned int test_tree_sum = NatTree::tree_sum(NatTree::sample_tree());
+
+#endif // INCLUDED_MUTUAL_FUNCTOR

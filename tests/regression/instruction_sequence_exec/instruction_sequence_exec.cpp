@@ -1,8 +1,9 @@
+#include <instruction_sequence_exec.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
 #include <functional>
-#include <instruction_sequence_exec.h>
 #include <iostream>
 #include <memory>
 #include <optional>

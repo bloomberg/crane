@@ -1,7 +1,8 @@
+#include <erased_record.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <erased_record.h>
 #include <functional>
 #include <iostream>
 #include <memory>

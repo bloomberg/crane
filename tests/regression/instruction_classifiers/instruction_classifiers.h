@@ -1,3 +1,6 @@
+#ifndef INCLUDED_INSTRUCTION_CLASSIFIERS
+#define INCLUDED_INSTRUCTION_CLASSIFIERS
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -1218,3 +1221,5 @@ struct InstructionClassifiers {
                          test_writes_regs),
           test_jump_classifier);
 };
+
+#endif // INCLUDED_INSTRUCTION_CLASSIFIERS

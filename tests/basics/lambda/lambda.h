@@ -1,3 +1,6 @@
+#ifndef INCLUDED_LAMBDA
+#define INCLUDED_LAMBDA
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -43,3 +46,5 @@ struct Lambda {
   static inline const unsigned int test_let = with_let;
   static inline const unsigned int test_apply = use_apply;
 };
+
+#endif // INCLUDED_LAMBDA

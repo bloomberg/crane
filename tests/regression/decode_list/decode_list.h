@@ -1,3 +1,6 @@
+#ifndef INCLUDED_DECODE_LIST
+#define INCLUDED_DECODE_LIST
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -210,3 +213,5 @@ struct DecodeList {
                               7u, List<unsigned int>::ctor::nil_())))
           ->length();
 };
+
+#endif // INCLUDED_DECODE_LIST

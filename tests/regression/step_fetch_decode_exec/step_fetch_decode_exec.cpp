@@ -1,3 +1,5 @@
+#include <step_fetch_decode_exec.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -6,7 +8,6 @@
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <step_fetch_decode_exec.h>
 #include <string>
 #include <utility>
 #include <variant>

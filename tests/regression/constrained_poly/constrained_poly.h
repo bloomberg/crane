@@ -1,3 +1,6 @@
+#ifndef INCLUDED_CONSTRAINED_POLY
+#define INCLUDED_CONSTRAINED_POLY
+
 #include <algorithm>
 #include <any>
 #include <cassert>
@@ -137,3 +140,5 @@ struct ConstrainedPoly {
           [](unsigned int n) { return (n + 1u); },
           UOption<unsigned int>::ctor::USome_(9u));
 };
+
+#endif // INCLUDED_CONSTRAINED_POLY

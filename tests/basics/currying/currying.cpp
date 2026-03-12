@@ -1,7 +1,8 @@
+#include <currying.h>
+
 #include <algorithm>
 #include <any>
 #include <cassert>
-#include <currying.h>
 #include <functional>
 #include <iostream>
 #include <memory>

@@ -1,3 +1,5 @@
+#include <skiplist_bde.h>
+
 #include <bdlf_overloaded.h>
 #include <bsl_concepts.h>
 #include <bsl_functional.h>
@@ -10,7 +12,6 @@
 #include <bsl_utility.h>
 #include <bsl_variant.h>
 #include <mini_stm.h>
-#include <skiplist_bde.h>
 #include <skipnode.h>
 
 namespace BloombergLP {}
