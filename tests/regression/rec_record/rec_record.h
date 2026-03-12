@@ -19,7 +19,7 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct RecRecord {
   template <typename A> struct rlist {
-  public:
+    // TYPES
     struct rnil {};
 
     struct rcons {
@@ -30,13 +30,16 @@ struct RecRecord {
     using variant_t = std::variant<rnil, rcons>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit rlist(rnil _v) : v_(std::move(_v)) {}
 
     explicit rlist(rcons _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -59,9 +62,11 @@ struct RecRecord {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2,

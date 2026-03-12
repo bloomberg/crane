@@ -31,7 +31,7 @@ struct IndParam {
     using wrapped = std::shared_ptr<typename C::t>;
 
     struct result {
-    public:
+      // TYPES
       struct Ok {
         std::shared_ptr<typename C::t> _a0;
       };
@@ -43,13 +43,16 @@ struct IndParam {
       using variant_t = std::variant<Ok, Err>;
 
     private:
+      // DATA
       variant_t v_;
 
+      // CREATORS
       explicit result(Ok _v) : v_(std::move(_v)) {}
 
       explicit result(Err _v) : v_(std::move(_v)) {}
 
     public:
+      // TYPES
       struct ctor {
         ctor() = delete;
 
@@ -72,9 +75,11 @@ struct IndParam {
         }
       };
 
-      const variant_t &v() const { return v_; }
-
+      // MANIPULATORS
       variant_t &v_mut() { return v_; }
+
+      // ACCESSORS
+      const variant_t &v() const { return v_; }
     };
 
     template <typename T1, MapsTo<T1, std::shared_ptr<typename C::t>> F0,
@@ -144,7 +149,7 @@ struct IndParam {
     using elem = unsigned int;
 
     struct t {
-    public:
+      // TYPES
       struct Empty {};
 
       struct Single {
@@ -159,8 +164,10 @@ struct IndParam {
       using variant_t = std::variant<Empty, Single, Pair>;
 
     private:
+      // DATA
       variant_t v_;
 
+      // CREATORS
       explicit t(Empty _v) : v_(std::move(_v)) {}
 
       explicit t(Single _v) : v_(std::move(_v)) {}
@@ -168,6 +175,7 @@ struct IndParam {
       explicit t(Pair _v) : v_(std::move(_v)) {}
 
     public:
+      // TYPES
       struct ctor {
         ctor() = delete;
 
@@ -196,9 +204,11 @@ struct IndParam {
         }
       };
 
-      const variant_t &v() const { return v_; }
-
+      // MANIPULATORS
       variant_t &v_mut() { return v_; }
+
+      // ACCESSORS
+      const variant_t &v() const { return v_; }
     };
 
     template <typename T1, MapsTo<T1, unsigned int> F1,

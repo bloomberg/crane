@@ -19,7 +19,7 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct WhereClause {
   struct Expr {
-  public:
+    // TYPES
     struct Num {
       unsigned int _a0;
     };
@@ -37,8 +37,10 @@ struct WhereClause {
     using variant_t = std::variant<Num, Plus, Times>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit Expr(Num _v) : v_(std::move(_v)) {}
 
     explicit Expr(Plus _v) : v_(std::move(_v)) {}
@@ -46,6 +48,7 @@ struct WhereClause {
     explicit Expr(Times _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -78,9 +81,11 @@ struct WhereClause {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -134,7 +139,7 @@ struct WhereClause {
   static unsigned int expr_size(const std::shared_ptr<Expr> &e);
 
   struct BExpr {
-  public:
+    // TYPES
     struct BTrue {};
 
     struct BFalse {};
@@ -156,8 +161,10 @@ struct WhereClause {
     using variant_t = std::variant<BTrue, BFalse, BAnd, BOr, BNot>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit BExpr(BTrue _v) : v_(std::move(_v)) {}
 
     explicit BExpr(BFalse _v) : v_(std::move(_v)) {}
@@ -169,6 +176,7 @@ struct WhereClause {
     explicit BExpr(BNot _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -219,9 +227,11 @@ struct WhereClause {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <
@@ -285,7 +295,7 @@ struct WhereClause {
   static bool beval(const std::shared_ptr<BExpr> &e);
 
   struct AExpr {
-  public:
+    // TYPES
     struct ANum {
       unsigned int _a0;
     };
@@ -304,8 +314,10 @@ struct WhereClause {
     using variant_t = std::variant<ANum, APlus, AIf>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit AExpr(ANum _v) : v_(std::move(_v)) {}
 
     explicit AExpr(APlus _v) : v_(std::move(_v)) {}
@@ -313,6 +325,7 @@ struct WhereClause {
     explicit AExpr(AIf _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -348,9 +361,11 @@ struct WhereClause {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <

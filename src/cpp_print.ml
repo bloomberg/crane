@@ -1458,47 +1458,89 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     in
     h (sname ++ str "() = delete;")
 
-(** Helper to print fields with visibility sections *)
+(** Helper to print fields with visibility and section tag grouping *)
 and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) env fields =
-  (* Group consecutive fields by visibility *)
-  let rec group_by_vis current_vis acc result = function
+  (* Group consecutive fields by (visibility, section_tag) *)
+  let rec group_fields current_vis current_tag acc result = function
     | [] ->
       if acc = [] then
         List.rev result
       else
-        List.rev ((current_vis, List.rev acc) :: result)
-    | (fld, vis) :: rest ->
-      if vis = current_vis then
-        group_by_vis current_vis (fld :: acc) result rest
+        List.rev ((current_vis, current_tag, List.rev acc) :: result)
+    | (fld, vis, tag) :: rest ->
+      if vis = current_vis && tag = current_tag then
+        group_fields current_vis current_tag (fld :: acc) result rest
       else
         let result' =
           if acc = [] then
             result
           else
-            (current_vis, List.rev acc) :: result
+            (current_vis, current_tag, List.rev acc) :: result
         in
-        group_by_vis vis [fld] result' rest
+        group_fields vis tag [fld] result' rest
   in
-  let groups = group_by_vis VPublic [] [] fields in
+  let groups = group_fields VPublic SNoTag [] [] fields in
   (* Check if we need visibility labels (only if mixed or all private) *)
   let needs_labels =
     match groups with
     | [] -> false
-    | [(VPublic, _)] -> false (* All public — struct default is public *)
-    | _ -> true (* Mixed or all private *)
+    | _ ->
+      let all_public = List.for_all (fun (vis, _, _) -> vis = VPublic) groups in
+      not all_public
   in
-  let pp_group (vis, flds) =
-    if needs_labels then
-      let vis_str =
-        match vis with
-        | VPublic -> "public:"
-        | VPrivate -> "private:"
+  let section_tag_str = function
+    | STypes -> Some "// TYPES"
+    | SData -> Some "// DATA"
+    | SCreators -> Some "// CREATORS"
+    | SManipulators -> Some "// MANIPULATORS"
+    | SAccessors -> Some "// ACCESSORS"
+    | SNoTag -> None
+  in
+  (* When printing groups, only emit visibility label when it changes *)
+  let rec pp_groups prev_vis = function
+    | [] -> mt ()
+    | [(vis, tag, flds)] ->
+      let vis_pp =
+        if needs_labels && vis <> prev_vis then
+          let vis_str =
+            match vis with
+            | VPublic -> "public:"
+            | VPrivate -> "private:"
+          in
+          str vis_str ++ fnl ()
+        else
+          mt ()
       in
-      str vis_str ++ fnl () ++ pp_list_stmt (pp_cpp_field ?struct_name env) flds
-    else
-      pp_list_stmt (pp_cpp_field ?struct_name env) flds
+      let tag_pp =
+        match section_tag_str tag with
+        | Some s -> str ("  " ^ s) ++ fnl ()
+        | None -> mt ()
+      in
+      vis_pp ++ tag_pp ++ pp_list_stmt (pp_cpp_field ?struct_name env) flds
+    | (vis, tag, flds) :: rest ->
+      let vis_pp =
+        if needs_labels && vis <> prev_vis then
+          let vis_str =
+            match vis with
+            | VPublic -> "public:"
+            | VPrivate -> "private:"
+          in
+          str vis_str ++ fnl ()
+        else
+          mt ()
+      in
+      let tag_pp =
+        match section_tag_str tag with
+        | Some s -> str ("  " ^ s) ++ fnl ()
+        | None -> mt ()
+      in
+      vis_pp
+      ++ tag_pp
+      ++ pp_list_stmt (pp_cpp_field ?struct_name env) flds
+      ++ fnl ()
+      ++ pp_groups vis rest
   in
-  prlist_with_sep fnl pp_group groups
+  pp_groups VPublic groups
 
 (** Generate a Meyers' singleton accessor for a static data member. Wraps the
     initializer in a function with a local [static const] variable, guaranteeing

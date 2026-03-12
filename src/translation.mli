@@ -169,7 +169,7 @@ val gen_record_methods :
   GlobRef.t ->
   variable list ->
   (GlobRef.t * ml_ast * ml_type * int) list ->
-  (cpp_field * cpp_visibility) list
+  (cpp_field * cpp_visibility * section_tag) list
 
 (** {2 Type Class Instance Generation} *)
 

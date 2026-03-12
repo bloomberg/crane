@@ -19,7 +19,7 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct HigherOrder {
   template <typename A> struct list {
-  public:
+    // TYPES
     struct nil {};
 
     struct cons {
@@ -30,13 +30,16 @@ struct HigherOrder {
     using variant_t = std::variant<nil, cons>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit list(nil _v) : v_(std::move(_v)) {}
 
     explicit list(cons _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -59,9 +62,11 @@ struct HigherOrder {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2,

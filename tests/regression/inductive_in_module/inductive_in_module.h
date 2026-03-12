@@ -65,7 +65,7 @@ struct InductiveInModule {
   struct Outer {
     struct Middle {
       template <typename A> struct option {
-      public:
+        // TYPES
         struct None {};
 
         struct Some {
@@ -75,13 +75,16 @@ struct InductiveInModule {
         using variant_t = std::variant<None, Some>;
 
       private:
+        // DATA
         variant_t v_;
 
+        // CREATORS
         explicit option(None _v) : v_(std::move(_v)) {}
 
         explicit option(Some _v) : v_(std::move(_v)) {}
 
       public:
+        // TYPES
         struct ctor {
           ctor() = delete;
 
@@ -102,9 +105,11 @@ struct InductiveInModule {
           }
         };
 
-        const variant_t &v() const { return v_; }
-
+        // MANIPULATORS
         variant_t &v_mut() { return v_; }
+
+        // ACCESSORS
+        const variant_t &v() const { return v_; }
       };
 
       template <typename T1, typename T2, MapsTo<T2, T1> F1>

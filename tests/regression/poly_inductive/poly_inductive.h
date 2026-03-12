@@ -19,7 +19,7 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct PolyInductive {
   template <typename A> struct pbox {
-  public:
+    // TYPES
     struct PBox {
       A _a0;
     };
@@ -27,11 +27,14 @@ struct PolyInductive {
     using variant_t = std::variant<PBox>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit pbox(PBox _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -44,9 +47,11 @@ struct PolyInductive {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
@@ -78,7 +83,7 @@ struct PolyInductive {
   }
 
   template <typename A, typename B> struct ppair {
-  public:
+    // TYPES
     struct PPair {
       A _a0;
       B _a1;
@@ -87,11 +92,14 @@ struct PolyInductive {
     using variant_t = std::variant<PPair>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit ppair(PPair _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -104,9 +112,11 @@ struct PolyInductive {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
@@ -152,7 +162,7 @@ struct PolyInductive {
   }
 
   template <typename A> struct pmaybe {
-  public:
+    // TYPES
     struct PNothing {};
 
     struct PJust {
@@ -162,13 +172,16 @@ struct PolyInductive {
     using variant_t = std::variant<PNothing, PJust>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit pmaybe(PNothing _v) : v_(std::move(_v)) {}
 
     explicit pmaybe(PJust _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -189,9 +202,11 @@ struct PolyInductive {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1> F1>
@@ -248,7 +263,7 @@ struct PolyInductive {
   }
 
   template <typename A> struct ptree {
-  public:
+    // TYPES
     struct PLeaf {
       A _a0;
     };
@@ -261,13 +276,16 @@ struct PolyInductive {
     using variant_t = std::variant<PLeaf, PNode>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit ptree(PLeaf _v) : v_(std::move(_v)) {}
 
     explicit ptree(PNode _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -292,9 +310,11 @@ struct PolyInductive {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <

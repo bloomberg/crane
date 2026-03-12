@@ -19,7 +19,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 template <typename A> struct List {
-public:
+  // TYPES
   struct nil {};
 
   struct cons {
@@ -30,13 +30,16 @@ public:
   using variant_t = std::variant<nil, cons>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit List(nil _v) : v_(std::move(_v)) {}
 
   explicit List(cons _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -59,9 +62,11 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 
   unsigned int length() const {
     return std::visit(
@@ -78,7 +83,7 @@ public:
 
 struct JumpTargets {
   struct instr_collection {
-  public:
+    // TYPES
     struct JUN_coll {
       unsigned int _a0;
     };
@@ -92,8 +97,10 @@ struct JumpTargets {
     using variant_t = std::variant<JUN_coll, JMS_coll, NOP_coll>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit instr_collection(JUN_coll _v) : v_(std::move(_v)) {}
 
     explicit instr_collection(JMS_coll _v) : v_(std::move(_v)) {}
@@ -101,6 +108,7 @@ struct JumpTargets {
     explicit instr_collection(NOP_coll _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -135,9 +143,11 @@ struct JumpTargets {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -197,7 +207,7 @@ struct JumpTargets {
           ->length();
 
   struct instr_region {
-  public:
+    // TYPES
     struct JUN_reg {
       unsigned int _a0;
     };
@@ -211,8 +221,10 @@ struct JumpTargets {
     using variant_t = std::variant<JUN_reg, JMS_reg, NOP_reg>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit instr_region(JUN_reg _v) : v_(std::move(_v)) {}
 
     explicit instr_region(JMS_reg _v) : v_(std::move(_v)) {}
@@ -220,6 +232,7 @@ struct JumpTargets {
     explicit instr_region(NOP_reg _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -248,9 +261,11 @@ struct JumpTargets {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -307,7 +322,7 @@ struct JumpTargets {
                 instr_region::ctor::JUN_reg_(40u));
 
   struct instr_jms {
-  public:
+    // TYPES
     struct JUN_jms {
       unsigned int _a0;
     };
@@ -321,8 +336,10 @@ struct JumpTargets {
     using variant_t = std::variant<JUN_jms, JMS_jms, NOP_jms>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit instr_jms(JUN_jms _v) : v_(std::move(_v)) {}
 
     explicit instr_jms(JMS_jms _v) : v_(std::move(_v)) {}
@@ -330,6 +347,7 @@ struct JumpTargets {
     explicit instr_jms(NOP_jms _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -358,9 +376,11 @@ struct JumpTargets {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -406,7 +426,7 @@ struct JumpTargets {
       option_nat_or_zero(jump_target_jms(instr_jms::ctor::JMS_jms_(144u)));
 
   struct instr_jun {
-  public:
+    // TYPES
     struct JUN_jun {
       unsigned int _a0;
     };
@@ -420,8 +440,10 @@ struct JumpTargets {
     using variant_t = std::variant<JUN_jun, JMS_jun, NOP_jun>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit instr_jun(JUN_jun _v) : v_(std::move(_v)) {}
 
     explicit instr_jun(JMS_jun _v) : v_(std::move(_v)) {}
@@ -429,6 +451,7 @@ struct JumpTargets {
     explicit instr_jun(NOP_jun _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -457,9 +480,11 @@ struct JumpTargets {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,

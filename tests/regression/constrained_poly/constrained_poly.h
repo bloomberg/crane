@@ -36,7 +36,7 @@ struct ConstrainedPoly {
   }
 
   template <typename A> struct UOption {
-  public:
+    // TYPES
     struct USome {
       A _a0;
     };
@@ -46,13 +46,16 @@ struct ConstrainedPoly {
     using variant_t = std::variant<USome, UNone>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit UOption(USome _v) : v_(std::move(_v)) {}
 
     explicit UOption(UNone _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -73,9 +76,11 @@ struct ConstrainedPoly {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>

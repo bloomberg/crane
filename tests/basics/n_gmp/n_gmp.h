@@ -27,7 +27,7 @@ struct Pos {
   static mpz_class pred_N(const mpz_class x);
 
   struct mask {
-  public:
+    // TYPES
     struct IsNul {};
 
     struct IsPos {
@@ -39,8 +39,10 @@ struct Pos {
     using variant_t = std::variant<IsNul, IsPos, IsNeg>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit mask(IsNul _v) : v_(std::move(_v)) {}
 
     explicit mask(IsPos _v) : v_(std::move(_v)) {}
@@ -48,6 +50,7 @@ struct Pos {
     explicit mask(IsNeg _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -76,9 +79,11 @@ struct Pos {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   static std::shared_ptr<mask> succ_double_mask(const std::shared_ptr<mask> &x);

@@ -34,7 +34,7 @@ struct AxiomTypes {
   static MysteryType extract_axiom_field(const std::shared_ptr<AxiomRecord> &r);
 
   struct AxiomInductive {
-  public:
+    // TYPES
     struct AxConstr1 {
       unsigned int _a0;
     };
@@ -46,13 +46,16 @@ struct AxiomTypes {
     using variant_t = std::variant<AxConstr1, AxConstr2>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit AxiomInductive(AxConstr1 _v) : v_(std::move(_v)) {}
 
     explicit AxiomInductive(AxConstr2 _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -77,9 +80,11 @@ struct AxiomTypes {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -119,7 +124,7 @@ struct AxiomTypes {
   static MysteryType nested_axiom(const unit _x);
 
   template <typename A> struct list {
-  public:
+    // TYPES
     struct nil {};
 
     struct cons {
@@ -130,13 +135,16 @@ struct AxiomTypes {
     using variant_t = std::variant<nil, cons>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit list(nil _v) : v_(std::move(_v)) {}
 
     explicit list(cons _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -159,9 +167,11 @@ struct AxiomTypes {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2,

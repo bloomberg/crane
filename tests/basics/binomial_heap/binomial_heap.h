@@ -19,7 +19,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 template <typename A> struct List {
-public:
+  // TYPES
   struct nil {};
 
   struct cons {
@@ -30,13 +30,16 @@ public:
   using variant_t = std::variant<nil, cons>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit List(nil _v) : v_(std::move(_v)) {}
 
   explicit List(cons _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -59,16 +62,18 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 
 struct BinomialHeap {
   using key = unsigned int;
 
   struct tree {
-  public:
+    // TYPES
     struct Node {
       key _a0;
       std::shared_ptr<tree> _a1;
@@ -80,13 +85,16 @@ struct BinomialHeap {
     using variant_t = std::variant<Node, Leaf>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
     explicit tree(Leaf _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -111,9 +119,11 @@ struct BinomialHeap {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, std::shared_ptr<tree>, T1,

@@ -132,7 +132,7 @@ struct LargeEnum {
   static bool is_neutral(const color c);
 
   struct tok {
-  public:
+    // TYPES
     struct TNum {
       unsigned int _a0;
     };
@@ -166,8 +166,10 @@ struct LargeEnum {
                      TBang, TSemicolon, TIdent, TEOF>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit tok(TNum _v) : v_(std::move(_v)) {}
 
     explicit tok(TPlus _v) : v_(std::move(_v)) {}
@@ -193,6 +195,7 @@ struct LargeEnum {
     explicit tok(TEOF _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -293,9 +296,11 @@ struct LargeEnum {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,

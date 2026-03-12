@@ -18,7 +18,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 template <typename A> struct List {
-public:
+  // TYPES
   struct nil {};
 
   struct cons {
@@ -29,13 +29,16 @@ public:
   using variant_t = std::variant<nil, cons>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit List(nil _v) : v_(std::move(_v)) {}
 
   explicit List(cons _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -58,9 +61,11 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 
 struct MutualRecord {
@@ -68,7 +73,7 @@ struct MutualRecord {
   struct employee;
 
   struct department {
-  public:
+    // TYPES
     struct mk_department {
       unsigned int _a0;
       std::shared_ptr<List<std::shared_ptr<employee>>> _a1;
@@ -77,11 +82,14 @@ struct MutualRecord {
     using variant_t = std::variant<mk_department>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit department(mk_department _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -100,13 +108,15 @@ struct MutualRecord {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   struct employee {
-  public:
+    // TYPES
     struct mk_employee {
       unsigned int _a0;
       unsigned int _a1;
@@ -115,11 +125,14 @@ struct MutualRecord {
     using variant_t = std::variant<mk_employee>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit employee(mk_employee _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -134,9 +147,11 @@ struct MutualRecord {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <

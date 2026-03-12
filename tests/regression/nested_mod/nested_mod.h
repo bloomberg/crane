@@ -66,7 +66,7 @@ struct NestedMod {
 
     struct Inner {
       struct shape {
-      public:
+        // TYPES
         struct Circle {
           unsigned int _a0;
         };
@@ -84,8 +84,10 @@ struct NestedMod {
         using variant_t = std::variant<Circle, Square, Triangle>;
 
       private:
+        // DATA
         variant_t v_;
 
+        // CREATORS
         explicit shape(Circle _v) : v_(std::move(_v)) {}
 
         explicit shape(Square _v) : v_(std::move(_v)) {}
@@ -93,6 +95,7 @@ struct NestedMod {
         explicit shape(Triangle _v) : v_(std::move(_v)) {}
 
       public:
+        // TYPES
         struct ctor {
           ctor() = delete;
 
@@ -123,9 +126,11 @@ struct NestedMod {
           }
         };
 
-        const variant_t &v() const { return v_; }
-
+        // MANIPULATORS
         variant_t &v_mut() { return v_; }
+
+        // ACCESSORS
+        const variant_t &v() const { return v_; }
       };
 
       template <typename T1, MapsTo<T1, unsigned int> F0,

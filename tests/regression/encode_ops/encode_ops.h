@@ -19,7 +19,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 template <typename A> struct List {
-public:
+  // TYPES
   struct nil {};
 
   struct cons {
@@ -30,13 +30,16 @@ public:
   using variant_t = std::variant<nil, cons>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit List(nil _v) : v_(std::move(_v)) {}
 
   explicit List(cons _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -59,9 +62,11 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 
   unsigned int length() const {
     return std::visit(
@@ -86,7 +91,7 @@ struct Nat {
 
 struct EncodeOps {
   struct instruction1 {
-  public:
+    // TYPES
     struct CLB {};
 
     struct CMC {};
@@ -120,8 +125,10 @@ struct EncodeOps {
         std::variant<CLB, CMC, DAA, FIM, JUN, LDM1, NOP1, RDM, TCS, WPM, WR0>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit instruction1(CLB _v) : v_(std::move(_v)) {}
 
     explicit instruction1(CMC _v) : v_(std::move(_v)) {}
@@ -145,6 +152,7 @@ struct EncodeOps {
     explicit instruction1(WR0 _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -239,9 +247,11 @@ struct EncodeOps {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int> F3,
@@ -325,7 +335,7 @@ struct EncodeOps {
        pair_in_range(encode1(instruction1::ctor::WR0_())));
 
   struct instruction2 {
-  public:
+    // TYPES
     struct NOP2 {};
 
     struct LDM2 {
@@ -335,13 +345,16 @@ struct EncodeOps {
     using variant_t = std::variant<NOP2, LDM2>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit instruction2(NOP2 _v) : v_(std::move(_v)) {}
 
     explicit instruction2(LDM2 _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -362,9 +375,11 @@ struct EncodeOps {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
@@ -409,7 +424,7 @@ struct EncodeOps {
           ->length();
 
   struct instruction3 {
-  public:
+    // TYPES
     struct NOP3 {};
 
     struct LDM3 {
@@ -419,13 +434,16 @@ struct EncodeOps {
     using variant_t = std::variant<NOP3, LDM3>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit instruction3(NOP3 _v) : v_(std::move(_v)) {}
 
     explicit instruction3(LDM3 _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -446,9 +464,11 @@ struct EncodeOps {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1>

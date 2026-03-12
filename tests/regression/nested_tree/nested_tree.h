@@ -19,7 +19,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct Nat {
-public:
+  // TYPES
   struct O {};
 
   struct S {
@@ -29,13 +29,16 @@ public:
   using variant_t = std::variant<O, S>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit Nat(O _v) : v_(std::move(_v)) {}
 
   explicit Nat(S _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -56,13 +59,15 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 
 template <typename A> struct List {
-public:
+  // TYPES
   struct nil {};
 
   struct cons {
@@ -73,13 +78,16 @@ public:
   using variant_t = std::variant<nil, cons>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit List(nil _v) : v_(std::move(_v)) {}
 
   explicit List(cons _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -102,9 +110,11 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 
   std::shared_ptr<List<A>> app(std::shared_ptr<List<A>> m) const {
     return std::visit(Overloaded{[&](const typename List<A>::nil _args)
@@ -122,7 +132,7 @@ public:
 
 struct NestedTree {
   template <typename A> struct tree {
-  public:
+    // TYPES
     struct leaf {};
 
     struct node {
@@ -133,13 +143,16 @@ struct NestedTree {
     using variant_t = std::variant<leaf, node>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit tree(leaf _v) : v_(std::move(_v)) {}
 
     explicit tree(node _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -162,9 +175,11 @@ struct NestedTree {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, typename F1>

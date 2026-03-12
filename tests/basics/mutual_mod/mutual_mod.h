@@ -22,7 +22,7 @@ struct EvenOdd {
   struct odd_list;
 
   struct even_list {
-  public:
+    // TYPES
     struct ENil {};
 
     struct ECons {
@@ -33,13 +33,16 @@ struct EvenOdd {
     using variant_t = std::variant<ENil, ECons>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit even_list(ENil _v) : v_(std::move(_v)) {}
 
     explicit even_list(ECons _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -62,13 +65,15 @@ struct EvenOdd {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   struct odd_list {
-  public:
+    // TYPES
     struct OCons {
       unsigned int _a0;
       std::shared_ptr<even_list> _a1;
@@ -77,11 +82,14 @@ struct EvenOdd {
     using variant_t = std::variant<OCons>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit odd_list(OCons _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -96,9 +104,11 @@ struct EvenOdd {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   static unsigned int even_length(const std::shared_ptr<even_list> &e);

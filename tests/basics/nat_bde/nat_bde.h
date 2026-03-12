@@ -24,7 +24,7 @@ concept MapsTo = requires(F &f, Args &...a) {
 
 struct Nat {
   struct nat {
-  public:
+    // TYPES
     struct O {};
     struct S {
       bsl::shared_ptr<nat> _a0;
@@ -32,11 +32,14 @@ struct Nat {
     using variant_t = bsl::variant<O, S>;
 
   private:
+    // DATA
     variant_t v_;
+    // CREATORS
     explicit nat(O _v) : v_(bsl::move(_v)) {}
     explicit nat(S _v) : v_(bsl::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
       static bsl::shared_ptr<nat> O_() {
@@ -52,8 +55,10 @@ struct Nat {
         return bsl::unique_ptr<nat>(new nat(S{a0}));
       }
     };
-    const variant_t &v() const { return v_; }
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
     int nat_to_int() const {
       return bsl::visit(
           bdlf::Overloaded{[](const typename nat::O _args) -> int { return 0; },

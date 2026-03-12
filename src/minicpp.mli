@@ -67,6 +67,15 @@ type cpp_visibility =
   | VPublic
   | VPrivate
 
+(** BDE section tags for struct member grouping. *)
+type section_tag =
+  | STypes
+  | SData
+  | SCreators
+  | SManipulators
+  | SAccessors
+  | SNoTag
+
 (** {2 C++ type modifiers} *)
 
 (** Type modifiers (const, static, extern). *)
@@ -230,7 +239,7 @@ and cpp_field =
   | Fmethod of method_field  (** Method with full descriptor *)
   | Fconstructor of (Id.t * cpp_type) list * (Id.t * cpp_expr) list * bool
       (** Constructor: parameters, member initializer list, explicit flag *)
-  | Fnested_struct of Id.t * (cpp_field * cpp_visibility) list
+  | Fnested_struct of Id.t * (cpp_field * cpp_visibility * section_tag) list
       (** Nested struct definition with visibility-annotated fields *)
   | Fnested_using of Id.t * cpp_type  (** Nested using type alias declaration *)
   | Fdeleted_ctor  (** Deleted default constructor: ctor() = delete *)
@@ -314,7 +323,7 @@ type cpp_decl =
           (may be unnamed) *)
   | Dstruct of {
       ds_ref : GlobRef.t;  (** Struct reference *)
-      ds_fields : (cpp_field * cpp_visibility) list;
+      ds_fields : (cpp_field * cpp_visibility * section_tag) list;
           (** Fields with visibility *)
       ds_tparams : (template_type * Id.t) list;
           (** Template parameters (empty for non-templates) *)

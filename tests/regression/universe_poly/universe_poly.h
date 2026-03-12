@@ -18,7 +18,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 template <typename A> struct List {
-public:
+  // TYPES
   struct nil {};
 
   struct cons {
@@ -29,13 +29,16 @@ public:
   using variant_t = std::variant<nil, cons>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit List(nil _v) : v_(std::move(_v)) {}
 
   explicit List(cons _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -58,9 +61,11 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 
 struct UniversePoly {
@@ -81,7 +86,7 @@ struct UniversePoly {
   static inline const bool test_psnd = test_pair->psnd;
 
   template <typename A> struct poption {
-  public:
+    // TYPES
     struct pnone {};
 
     struct psome {
@@ -91,13 +96,16 @@ struct UniversePoly {
     using variant_t = std::variant<pnone, psome>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit poption(pnone _v) : v_(std::move(_v)) {}
 
     explicit poption(psome _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -118,9 +126,11 @@ struct UniversePoly {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1> F1>

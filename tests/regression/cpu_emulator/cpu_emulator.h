@@ -20,7 +20,7 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 template <typename A>
 struct List : public std::enable_shared_from_this<List<A>> {
-public:
+  // TYPES
   struct nil {};
 
   struct cons {
@@ -31,13 +31,16 @@ public:
   using variant_t = std::variant<nil, cons>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit List(nil _v) : v_(std::move(_v)) {}
 
   explicit List(cons _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -60,9 +63,11 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 
   std::shared_ptr<List<A>> skipn(const unsigned int n) const {
     if (n <= 0) {
@@ -193,7 +198,7 @@ struct CpuEmulator {
   push_return(std::shared_ptr<state> s, const unsigned int ret);
 
   struct instr {
-  public:
+    // TYPES
     struct NOP {};
 
     struct LDM {
@@ -291,8 +296,10 @@ struct CpuEmulator {
                      SRC, FIN, JIN, ISZ, BBL>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit instr(NOP _v) : v_(std::move(_v)) {}
 
     explicit instr(LDM _v) : v_(std::move(_v)) {}
@@ -352,6 +359,7 @@ struct CpuEmulator {
     explicit instr(BBL _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -588,9 +596,11 @@ struct CpuEmulator {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <

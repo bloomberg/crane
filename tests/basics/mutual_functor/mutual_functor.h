@@ -34,7 +34,7 @@ template <Elem E> struct MutualTree {
   struct forest;
 
   struct tree {
-  public:
+    // TYPES
     struct Leaf {
       unsigned int _a0;
     };
@@ -47,13 +47,16 @@ template <Elem E> struct MutualTree {
     using variant_t = std::variant<Leaf, Node>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit tree(Leaf _v) : v_(std::move(_v)) {}
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -76,13 +79,15 @@ template <Elem E> struct MutualTree {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   struct forest {
-  public:
+    // TYPES
     struct FNil {};
 
     struct FCons {
@@ -93,13 +98,16 @@ template <Elem E> struct MutualTree {
     using variant_t = std::variant<FNil, FCons>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit forest(FNil _v) : v_(std::move(_v)) {}
 
     explicit forest(FCons _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -123,9 +131,11 @@ template <Elem E> struct MutualTree {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,

@@ -24,7 +24,7 @@ struct MutualRecursion {
   template <typename A> struct forest;
 
   template <typename A> struct tree {
-  public:
+    // TYPES
     struct Leaf {
       A _a0;
     };
@@ -36,13 +36,16 @@ struct MutualRecursion {
     using variant_t = std::variant<Leaf, Node>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit tree(Leaf _v) : v_(std::move(_v)) {}
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -65,13 +68,15 @@ struct MutualRecursion {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename A> struct forest {
-  public:
+    // TYPES
     struct Empty {};
 
     struct Trees {
@@ -82,13 +87,16 @@ struct MutualRecursion {
     using variant_t = std::variant<Empty, Trees>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit forest(Empty _v) : v_(std::move(_v)) {}
 
     explicit forest(Trees _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -113,9 +121,11 @@ struct MutualRecursion {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0,

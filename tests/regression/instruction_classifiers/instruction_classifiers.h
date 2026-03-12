@@ -19,7 +19,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 template <typename A> struct List {
-public:
+  // TYPES
   struct nil {};
 
   struct cons {
@@ -30,13 +30,16 @@ public:
   using variant_t = std::variant<nil, cons>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit List(nil _v) : v_(std::move(_v)) {}
 
   explicit List(cons _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -59,14 +62,16 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 
 struct InstructionClassifiers {
   struct instr_acc {
-  public:
+    // TYPES
     struct LDM {
       unsigned int _a0;
     };
@@ -138,8 +143,10 @@ struct InstructionClassifiers {
                                    DAC, RAL, RAR, TCC, TCS, DAA, KBP, NOP_acc>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit instr_acc(LDM _v) : v_(std::move(_v)) {}
 
     explicit instr_acc(LD _v) : v_(std::move(_v)) {}
@@ -193,6 +200,7 @@ struct InstructionClassifiers {
     explicit instr_acc(NOP_acc _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -405,9 +413,11 @@ struct InstructionClassifiers {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -558,7 +568,7 @@ struct InstructionClassifiers {
                                   nil_())))))));
 
   struct instr_ram {
-  public:
+    // TYPES
     struct WRM {};
 
     struct WMP {};
@@ -581,8 +591,10 @@ struct InstructionClassifiers {
         std::variant<WRM, WMP, WR0, WR1, WR2, WR3, NOP_ram, ADD_ram>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit instr_ram(WRM _v) : v_(std::move(_v)) {}
 
     explicit instr_ram(WMP _v) : v_(std::move(_v)) {}
@@ -600,6 +612,7 @@ struct InstructionClassifiers {
     explicit instr_ram(ADD_ram _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -668,9 +681,11 @@ struct InstructionClassifiers {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F7>
@@ -733,7 +748,7 @@ struct InstructionClassifiers {
                                   nil_())))))));
 
   struct instr_regs {
-  public:
+    // TYPES
     struct XCH_regs {
       unsigned int _a0;
     };
@@ -766,8 +781,10 @@ struct InstructionClassifiers {
         std::variant<XCH_regs, INC_regs, FIM, FIN, ISZ, NOP_regs, ADD_regs>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit instr_regs(XCH_regs _v) : v_(std::move(_v)) {}
 
     explicit instr_regs(INC_regs _v) : v_(std::move(_v)) {}
@@ -783,6 +800,7 @@ struct InstructionClassifiers {
     explicit instr_regs(ADD_regs _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -847,9 +865,11 @@ struct InstructionClassifiers {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <
@@ -947,7 +967,7 @@ struct InstructionClassifiers {
                           List<std::shared_ptr<instr_regs>>::ctor::nil_()))))));
 
   struct instr_jump {
-  public:
+    // TYPES
     struct JCN {
       unsigned int _a0;
       unsigned int _a1;
@@ -984,8 +1004,10 @@ struct InstructionClassifiers {
                                    ADD_jump, NOP_jump>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit instr_jump(JCN _v) : v_(std::move(_v)) {}
 
     explicit instr_jump(JUN _v) : v_(std::move(_v)) {}
@@ -1003,6 +1025,7 @@ struct InstructionClassifiers {
     explicit instr_jump(NOP_jump _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -1075,9 +1098,11 @@ struct InstructionClassifiers {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,

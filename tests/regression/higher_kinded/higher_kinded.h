@@ -24,7 +24,7 @@ struct HigherKinded {
   }
 
   template <typename A> struct Tree {
-  public:
+    // TYPES
     struct Leaf {
       A _a0;
     };
@@ -37,13 +37,16 @@ struct HigherKinded {
     using variant_t = std::variant<Leaf, Branch>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit Tree(Leaf _v) : v_(std::move(_v)) {}
 
     explicit Tree(Branch _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -68,9 +71,11 @@ struct HigherKinded {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <

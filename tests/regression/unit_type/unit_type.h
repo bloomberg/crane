@@ -26,7 +26,7 @@ struct UnitType {
   static unsigned int match_unit(const unit u);
 
   template <typename A, typename B> struct pair {
-  public:
+    // TYPES
     struct Pair0 {
       A _a0;
       B _a1;
@@ -35,11 +35,14 @@ struct UnitType {
     using variant_t = std::variant<Pair0>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit pair(Pair0 _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -52,9 +55,11 @@ struct UnitType {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>

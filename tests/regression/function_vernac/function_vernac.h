@@ -18,7 +18,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 template <typename A> struct List {
-public:
+  // TYPES
   struct nil {};
 
   struct cons {
@@ -29,13 +29,16 @@ public:
   using variant_t = std::variant<nil, cons>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit List(nil _v) : v_(std::move(_v)) {}
 
   explicit List(cons _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -58,13 +61,15 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 
 template <typename A> struct Sig {
-public:
+  // TYPES
   struct exist {
     A _a0;
   };
@@ -72,11 +77,14 @@ public:
   using variant_t = std::variant<exist>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit Sig(exist _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -89,9 +97,11 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 
 struct FunctionVernac {
@@ -115,7 +125,7 @@ struct FunctionVernac {
   static unsigned int div2(const unsigned int n);
 
   struct R_div2 {
-  public:
+    // TYPES
     struct R_div2_0 {
       unsigned int _a0;
     };
@@ -134,8 +144,10 @@ struct FunctionVernac {
     using variant_t = std::variant<R_div2_0, R_div2_1, R_div2_2>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit R_div2(R_div2_0 _v) : v_(std::move(_v)) {}
 
     explicit R_div2(R_div2_1 _v) : v_(std::move(_v)) {}
@@ -143,6 +155,7 @@ struct FunctionVernac {
     explicit R_div2(R_div2_2 _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -175,9 +188,11 @@ struct FunctionVernac {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -289,7 +304,7 @@ struct FunctionVernac {
   static unsigned int list_sum(const std::shared_ptr<List<unsigned int>> &l);
 
   struct R_list_sum {
-  public:
+    // TYPES
     struct R_list_sum_0 {
       std::shared_ptr<List<unsigned int>> _a0;
     };
@@ -305,13 +320,16 @@ struct FunctionVernac {
     using variant_t = std::variant<R_list_sum_0, R_list_sum_1>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit R_list_sum(R_list_sum_0 _v) : v_(std::move(_v)) {}
 
     explicit R_list_sum(R_list_sum_1 _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -343,9 +361,11 @@ struct FunctionVernac {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, std::shared_ptr<List<unsigned int>>> F0,

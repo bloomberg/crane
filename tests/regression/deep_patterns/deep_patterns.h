@@ -19,7 +19,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 template <typename A> struct List {
-public:
+  // TYPES
   struct nil {};
 
   struct cons {
@@ -30,13 +30,16 @@ public:
   using variant_t = std::variant<nil, cons>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit List(nil _v) : v_(std::move(_v)) {}
 
   explicit List(cons _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -59,9 +62,11 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 
   unsigned int length() const {
     return std::visit(
@@ -88,7 +93,7 @@ struct DeepPatterns {
   struct inner;
 
   struct outer {
-  public:
+    // TYPES
     struct OLeft {
       std::shared_ptr<inner> _a0;
     };
@@ -100,13 +105,16 @@ struct DeepPatterns {
     using variant_t = std::variant<OLeft, ORight>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit outer(OLeft _v) : v_(std::move(_v)) {}
 
     explicit outer(ORight _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -128,13 +136,15 @@ struct DeepPatterns {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   struct inner {
-  public:
+    // TYPES
     struct ILeft {
       unsigned int _a0;
     };
@@ -146,13 +156,16 @@ struct DeepPatterns {
     using variant_t = std::variant<ILeft, IRight>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit inner(ILeft _v) : v_(std::move(_v)) {}
 
     explicit inner(IRight _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -173,9 +186,11 @@ struct DeepPatterns {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, std::shared_ptr<inner>> F0,
@@ -241,7 +256,7 @@ struct DeepPatterns {
   guarded_match(const std::pair<unsigned int, unsigned int> p);
 
   template <typename A, typename B> struct pair {
-  public:
+    // TYPES
     struct Pair0 {
       A _a0;
       B _a1;
@@ -250,11 +265,14 @@ struct DeepPatterns {
     using variant_t = std::variant<Pair0>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit pair(Pair0 _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -267,9 +285,11 @@ struct DeepPatterns {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
@@ -295,7 +315,7 @@ struct DeepPatterns {
   }
 
   template <typename A> struct mylist {
-  public:
+    // TYPES
     struct nil {};
 
     struct cons {
@@ -306,13 +326,16 @@ struct DeepPatterns {
     using variant_t = std::variant<nil, cons>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit mylist(nil _v) : v_(std::move(_v)) {}
 
     explicit mylist(cons _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -335,9 +358,11 @@ struct DeepPatterns {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2,

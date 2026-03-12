@@ -19,7 +19,7 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct Nat {
   struct nat {
-  public:
+    // TYPES
     struct O {};
 
     struct S {
@@ -29,13 +29,16 @@ struct Nat {
     using variant_t = std::variant<O, S>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit nat(O _v) : v_(std::move(_v)) {}
 
     explicit nat(S _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -56,9 +59,11 @@ struct Nat {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
 
     int nat_to_int() const {
       return std::visit(

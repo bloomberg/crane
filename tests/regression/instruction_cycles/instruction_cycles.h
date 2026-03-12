@@ -19,7 +19,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 template <typename A> struct List {
-public:
+  // TYPES
   struct nil {};
 
   struct cons {
@@ -30,13 +30,16 @@ public:
   using variant_t = std::variant<nil, cons>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit List(nil _v) : v_(std::move(_v)) {}
 
   explicit List(cons _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -59,9 +62,11 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 
   template <MapsTo<bool, A> F0> bool forallb(F0 &&f) const {
     return std::visit(
@@ -92,7 +97,7 @@ struct InstructionCycles {
   };
 
   struct instruction1 {
-  public:
+    // TYPES
     struct JCN1 {
       unsigned int _a0;
       unsigned int _a1;
@@ -103,13 +108,16 @@ struct InstructionCycles {
     using variant_t = std::variant<JCN1, NOP1>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit instruction1(JCN1 _v) : v_(std::move(_v)) {}
 
     explicit instruction1(NOP1 _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -132,9 +140,11 @@ struct InstructionCycles {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
@@ -172,7 +182,7 @@ struct InstructionCycles {
                  instruction1::ctor::JCN1_(4u, 7u));
 
   struct instruction2 {
-  public:
+    // TYPES
     struct JMS2 {
       unsigned int _a0;
     };
@@ -182,13 +192,16 @@ struct InstructionCycles {
     using variant_t = std::variant<JMS2, NOP2>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit instruction2(JMS2 _v) : v_(std::move(_v)) {}
 
     explicit instruction2(NOP2 _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -209,9 +222,11 @@ struct InstructionCycles {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0>
@@ -474,7 +489,7 @@ struct InstructionCycles {
   };
 
   struct instruction5 {
-  public:
+    // TYPES
     struct NOP5 {};
 
     struct JCN5 {
@@ -488,8 +503,10 @@ struct InstructionCycles {
     using variant_t = std::variant<NOP5, JCN5, INC5>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit instruction5(NOP5 _v) : v_(std::move(_v)) {}
 
     explicit instruction5(JCN5 _v) : v_(std::move(_v)) {}
@@ -497,6 +514,7 @@ struct InstructionCycles {
     explicit instruction5(INC5 _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -525,9 +543,11 @@ struct InstructionCycles {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1,

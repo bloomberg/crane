@@ -20,7 +20,7 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 enum class bool0 { true0, false0 };
 
 struct Nat {
-public:
+  // TYPES
   struct O {};
 
   struct S {
@@ -30,13 +30,16 @@ public:
   using variant_t = std::variant<O, S>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit Nat(O _v) : v_(std::move(_v)) {}
 
   explicit Nat(S _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -57,9 +60,11 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 
   bool0 leb(const std::shared_ptr<Nat> &m) const {
     return std::visit(
@@ -82,7 +87,7 @@ public:
 };
 
 template <typename A, typename P> struct SigT {
-public:
+  // TYPES
   struct existT {
     A _a0;
     P _a1;
@@ -91,11 +96,14 @@ public:
   using variant_t = std::variant<existT>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit SigT(existT _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -108,9 +116,11 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 
   A projT1() const {
     return std::visit(
@@ -128,7 +138,7 @@ struct Bool {
 };
 
 struct Ascii {
-public:
+  // TYPES
   struct Ascii0 {
     bool0 _a0;
     bool0 _a1;
@@ -143,11 +153,14 @@ public:
   using variant_t = std::variant<Ascii0>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit Ascii(Ascii0 _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -166,9 +179,11 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 
   sumbool ascii_dec(const std::shared_ptr<Ascii> &b) const {
     return std::visit(
@@ -272,7 +287,7 @@ public:
 };
 
 struct String {
-public:
+  // TYPES
   struct EmptyString {};
 
   struct String0 {
@@ -283,13 +298,16 @@ public:
   using variant_t = std::variant<EmptyString, String0>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit String(EmptyString _v) : v_(std::move(_v)) {}
 
   explicit String(String0 _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -313,9 +331,11 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 
   std::shared_ptr<String> append(std::shared_ptr<String> s2) const {
     return std::visit(Overloaded{[&](const typename String::EmptyString _args)
@@ -346,7 +366,7 @@ public:
 
 struct Levenshtein {
   struct edit {
-  public:
+    // TYPES
     struct insertion {
       std::shared_ptr<Ascii> _a0;
       std::shared_ptr<String> _a1;
@@ -366,8 +386,10 @@ struct Levenshtein {
     using variant_t = std::variant<insertion, deletion, update>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit edit(insertion _v) : v_(std::move(_v)) {}
 
     explicit edit(deletion _v) : v_(std::move(_v)) {}
@@ -375,6 +397,7 @@ struct Levenshtein {
     explicit edit(update _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -416,9 +439,11 @@ struct Levenshtein {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1,
@@ -481,7 +506,7 @@ struct Levenshtein {
   }
 
   struct chain {
-  public:
+    // TYPES
     struct empty {};
 
     struct skip {
@@ -504,8 +529,10 @@ struct Levenshtein {
     using variant_t = std::variant<empty, skip, change>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit chain(empty _v) : v_(std::move(_v)) {}
 
     explicit chain(skip _v) : v_(std::move(_v)) {}
@@ -513,6 +540,7 @@ struct Levenshtein {
     explicit chain(change _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -558,9 +586,11 @@ struct Levenshtein {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1,

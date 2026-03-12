@@ -31,7 +31,7 @@ concept Elem = requires {
 
 template <Elem E> struct Container {
   struct maybe {
-  public:
+    // TYPES
     struct Nothing {};
 
     struct Just {
@@ -41,13 +41,16 @@ template <Elem E> struct Container {
     using variant_t = std::variant<Nothing, Just>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit maybe(Nothing _v) : v_(std::move(_v)) {}
 
     explicit maybe(Just _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -68,9 +71,11 @@ template <Elem E> struct Container {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
@@ -96,7 +101,7 @@ template <Elem E> struct Container {
   }
 
   struct mlist {
-  public:
+    // TYPES
     struct MNil {};
 
     struct MCons {
@@ -107,13 +112,16 @@ template <Elem E> struct Container {
     using variant_t = std::variant<MNil, MCons>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit mlist(MNil _v) : v_(std::move(_v)) {}
 
     explicit mlist(MCons _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -137,9 +145,11 @@ template <Elem E> struct Container {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1,
@@ -169,7 +179,7 @@ template <Elem E> struct Container {
   }
 
   struct mtree {
-  public:
+    // TYPES
     struct Leaf {
       std::shared_ptr<maybe> _a0;
     };
@@ -181,13 +191,16 @@ template <Elem E> struct Container {
     using variant_t = std::variant<Leaf, Node>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit mtree(Leaf _v) : v_(std::move(_v)) {}
 
     explicit mtree(Node _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -210,9 +223,11 @@ template <Elem E> struct Container {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, std::shared_ptr<maybe>> F0,

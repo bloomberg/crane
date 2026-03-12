@@ -19,7 +19,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 template <typename A> struct List {
-public:
+  // TYPES
   struct nil {};
 
   struct cons {
@@ -30,13 +30,16 @@ public:
   using variant_t = std::variant<nil, cons>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit List(nil _v) : v_(std::move(_v)) {}
 
   explicit List(cons _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -59,16 +62,18 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 
 struct Matcher {
   static bool char_eq(const int64_t x, const int64_t y);
 
   struct regexp {
-  public:
+    // TYPES
     struct Any {};
 
     struct Char {
@@ -96,8 +101,10 @@ struct Matcher {
     using variant_t = std::variant<Any, Char, Eps, Cat, Alt, Zero, Star>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit regexp(Any _v) : v_(std::move(_v)) {}
 
     explicit regexp(Char _v) : v_(std::move(_v)) {}
@@ -113,6 +120,7 @@ struct Matcher {
     explicit regexp(Star _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -180,9 +188,11 @@ struct Matcher {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <

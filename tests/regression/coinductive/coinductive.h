@@ -20,7 +20,7 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct Coinductive {
   struct stream {
-  public:
+    // TYPES
     struct Cons {
       unsigned int _a0;
       std::shared_ptr<stream> _a1;
@@ -29,8 +29,10 @@ struct Coinductive {
     using variant_t = std::variant<Cons>;
 
   private:
+    // DATA
     crane::lazy<variant_t> lazy_v_;
 
+    // CREATORS
     explicit stream(Cons _v)
         : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
@@ -38,6 +40,7 @@ struct Coinductive {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -61,6 +64,7 @@ struct Coinductive {
       }
     };
 
+    // ACCESSORS
     const variant_t &v() const { return lazy_v_.force(); }
   };
 
@@ -92,7 +96,7 @@ struct Coinductive {
   static inline const std::shared_ptr<stream> test_count = get_count;
 
   struct tree {
-  public:
+    // TYPES
     struct Leaf {
       unsigned int _a0;
     };
@@ -106,8 +110,10 @@ struct Coinductive {
     using variant_t = std::variant<Leaf, Node>;
 
   private:
+    // DATA
     crane::lazy<variant_t> lazy_v_;
 
+    // CREATORS
     explicit tree(Leaf _v)
         : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
@@ -118,6 +124,7 @@ struct Coinductive {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -151,6 +158,7 @@ struct Coinductive {
       }
     };
 
+    // ACCESSORS
     const variant_t &v() const { return lazy_v_.force(); }
   };
 

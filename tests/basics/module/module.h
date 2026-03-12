@@ -58,7 +58,7 @@ template <OrderedType K, BaseType V> struct MakeMap {
   using value = typename V::t;
 
   struct tree {
-  public:
+    // TYPES
     struct Empty {};
 
     struct Node {
@@ -71,13 +71,16 @@ template <OrderedType K, BaseType V> struct MakeMap {
     using variant_t = std::variant<Empty, Node>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit tree(Empty _v) : v_(std::move(_v)) {}
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -102,9 +105,11 @@ template <OrderedType K, BaseType V> struct MakeMap {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   using t = std::shared_ptr<tree>;

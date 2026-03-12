@@ -19,7 +19,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct Nat {
-public:
+  // TYPES
   struct O {};
 
   struct S {
@@ -29,13 +29,16 @@ public:
   using variant_t = std::variant<O, S>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit Nat(O _v) : v_(std::move(_v)) {}
 
   explicit Nat(S _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -56,13 +59,15 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 
 template <typename A> struct List {
-public:
+  // TYPES
   struct nil {};
 
   struct cons {
@@ -73,13 +78,16 @@ public:
   using variant_t = std::variant<nil, cons>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit List(nil _v) : v_(std::move(_v)) {}
 
   explicit List(cons _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -102,14 +110,16 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 
 struct Colist {
   template <typename A> struct colist {
-  public:
+    // TYPES
     struct conil {};
 
     struct cocons {
@@ -120,8 +130,10 @@ struct Colist {
     using variant_t = std::variant<conil, cocons>;
 
   private:
+    // DATA
     crane::lazy<variant_t> lazy_v_;
 
+    // CREATORS
     explicit colist(conil _v)
         : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
@@ -132,6 +144,7 @@ struct Colist {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -163,6 +176,7 @@ struct Colist {
       }
     };
 
+    // ACCESSORS
     const variant_t &v() const { return lazy_v_.force(); }
 
     std::shared_ptr<List<A>>

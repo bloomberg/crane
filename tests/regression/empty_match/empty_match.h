@@ -38,7 +38,7 @@ struct EmptyMatch {
   static unsigned int from_empty(const std::shared_ptr<empty> &_x0);
 
   template <typename A, typename B> struct either {
-  public:
+    // TYPES
     struct Left {
       A _a0;
     };
@@ -50,13 +50,16 @@ struct EmptyMatch {
     using variant_t = std::variant<Left, Right>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit either(Left _v) : v_(std::move(_v)) {}
 
     explicit either(Right _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -77,9 +80,11 @@ struct EmptyMatch {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1> F0,

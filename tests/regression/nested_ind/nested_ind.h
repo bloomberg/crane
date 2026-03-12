@@ -19,7 +19,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 template <typename A> struct List {
-public:
+  // TYPES
   struct nil {};
 
   struct cons {
@@ -30,13 +30,16 @@ public:
   using variant_t = std::variant<nil, cons>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit List(nil _v) : v_(std::move(_v)) {}
 
   explicit List(cons _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -59,9 +62,11 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 
   std::shared_ptr<List<A>> app(std::shared_ptr<List<A>> m) const {
     return std::visit(Overloaded{[&](const typename List<A>::nil _args)
@@ -79,7 +84,7 @@ public:
 
 struct NestedInd {
   template <typename A> struct custom_list {
-  public:
+    // TYPES
     struct cnil {};
 
     struct ccons {
@@ -90,13 +95,16 @@ struct NestedInd {
     using variant_t = std::variant<cnil, ccons>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit custom_list(cnil _v) : v_(std::move(_v)) {}
 
     explicit custom_list(ccons _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -121,9 +129,11 @@ struct NestedInd {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2,
@@ -157,7 +167,7 @@ struct NestedInd {
   }
 
   template <typename A> struct rose {
-  public:
+    // TYPES
     struct Node {
       A _a0;
       std::shared_ptr<custom_list<std::shared_ptr<rose<A>>>> _a1;
@@ -166,11 +176,14 @@ struct NestedInd {
     using variant_t = std::variant<Node>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit rose(Node _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -187,9 +200,11 @@ struct NestedInd {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <
@@ -286,7 +301,7 @@ struct NestedInd {
       children_count<unsigned int>(bigger_tree);
 
   struct expr {
-  public:
+    // TYPES
     struct Lit {
       unsigned int _a0;
     };
@@ -302,8 +317,10 @@ struct NestedInd {
     using variant_t = std::variant<Lit, Add, Mul>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit expr(Lit _v) : v_(std::move(_v)) {}
 
     explicit expr(Add _v) : v_(std::move(_v)) {}
@@ -311,6 +328,7 @@ struct NestedInd {
     explicit expr(Mul _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -343,9 +361,11 @@ struct NestedInd {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,

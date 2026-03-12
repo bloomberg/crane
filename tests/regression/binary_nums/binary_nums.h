@@ -20,7 +20,7 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 enum class comparison { Eq, Lt, Gt };
 
 struct Positive {
-public:
+  // TYPES
   struct xI {
     std::shared_ptr<Positive> _a0;
   };
@@ -34,8 +34,10 @@ public:
   using variant_t = std::variant<xI, xO, xH>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit Positive(xI _v) : v_(std::move(_v)) {}
 
   explicit Positive(xO _v) : v_(std::move(_v)) {}
@@ -43,6 +45,7 @@ private:
   explicit Positive(xH _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -73,13 +76,15 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 
 struct N {
-public:
+  // TYPES
   struct N0 {};
 
   struct Npos {
@@ -89,13 +94,16 @@ public:
   using variant_t = std::variant<N0, Npos>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit N(N0 _v) : v_(std::move(_v)) {}
 
   explicit N(Npos _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -114,13 +122,15 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 
 struct Z {
-public:
+  // TYPES
   struct Z0 {};
 
   struct Zpos {
@@ -134,8 +144,10 @@ public:
   using variant_t = std::variant<Z0, Zpos, Zneg>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit Z(Z0 _v) : v_(std::move(_v)) {}
 
   explicit Z(Zpos _v) : v_(std::move(_v)) {}
@@ -143,6 +155,7 @@ private:
   explicit Z(Zneg _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -169,9 +182,11 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 
 struct Pos {
@@ -186,7 +201,7 @@ struct Pos {
   static std::shared_ptr<N> pred_N(const std::shared_ptr<Positive> &x);
 
   struct mask {
-  public:
+    // TYPES
     struct IsNul {};
 
     struct IsPos {
@@ -198,8 +213,10 @@ struct Pos {
     using variant_t = std::variant<IsNul, IsPos, IsNeg>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit mask(IsNul _v) : v_(std::move(_v)) {}
 
     explicit mask(IsPos _v) : v_(std::move(_v)) {}
@@ -207,6 +224,7 @@ struct Pos {
     explicit mask(IsNeg _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -236,9 +254,11 @@ struct Pos {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   static std::shared_ptr<mask> succ_double_mask(const std::shared_ptr<mask> &x);

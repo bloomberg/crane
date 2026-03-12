@@ -55,7 +55,7 @@ struct PatternImpossible {
   }
 
   struct nested {
-  public:
+    // TYPES
     struct Leaf {
       unsigned int _a0;
     };
@@ -68,13 +68,16 @@ struct PatternImpossible {
     using variant_t = std::variant<Leaf, Node>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit nested(Leaf _v) : v_(std::move(_v)) {}
 
     explicit nested(Node _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -98,9 +101,11 @@ struct PatternImpossible {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <

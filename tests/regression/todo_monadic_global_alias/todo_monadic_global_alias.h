@@ -18,7 +18,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct Nat {
-public:
+  // TYPES
   struct O {};
 
   struct S {
@@ -28,13 +28,16 @@ public:
   using variant_t = std::variant<O, S>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit Nat(O _v) : v_(std::move(_v)) {}
 
   explicit Nat(S _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -55,9 +58,11 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 
 struct TodoMonadicGlobalAlias {

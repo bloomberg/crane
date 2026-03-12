@@ -3858,7 +3858,8 @@ let gen_record_cpp name fields ind =
                 Refset'.empty
                 ind.ip_vars
                 t ),
-          VPublic ) )
+          VPublic,
+          SNoTag ) )
       l
   in
   let ty_vars = List.map (fun x -> (TTtypename, x)) ind.ip_vars in
@@ -4392,7 +4393,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                   mf_is_const = false;
                   mf_is_static = true;
                 },
-              VPublic )
+              VPublic,
+              SNoTag )
       in
       (* Zip fields with their types from ind_packet *)
       let fields_with_types =
@@ -4443,7 +4445,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                   type_var_names
                   concrete_ml_ty
               in
-              (Fnested_using (var_name, concrete_cpp_ty), VPublic) )
+              (Fnested_using (var_name, concrete_cpp_ty), VPublic, SNoTag) )
             promoted_vars
             promoted_concrete_types
         else
@@ -5806,12 +5808,16 @@ let gen_ind_header vars name cnames tys =
            let fields =
              if ty_vars == [] then
                List.append
-                 (List.map (fun (x, y) -> (Fvar (x, y), VPublic)) constr)
-                 [(make_decl, VPublic)]
+                 (List.map
+                    (fun (x, y) -> (Fvar (x, y), VPublic, SNoTag))
+                    constr )
+                 [(make_decl, VPublic, SNoTag)]
              else
                List.append
-                 (List.map (fun (x, y) -> (Fvar (x, y), VPublic)) constr)
-                 [(make_def, VPublic)]
+                 (List.map
+                    (fun (x, y) -> (Fvar (x, y), VPublic, SNoTag))
+                    constr )
+                 [(make_def, VPublic, SNoTag)]
            in
            Dstruct
              {
@@ -6206,7 +6212,8 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
         mf_is_const = true;
         mf_is_static = false;
       },
-    VPublic )
+    VPublic,
+    SNoTag )
 
 (** New inductive generation: encapsulated struct with methods. Generates: struct
     Tree { struct Leaf {}; struct Node { std::shared_ptr<Tree> left;
@@ -6240,7 +6247,7 @@ let gen_ind_header_v2
     Dstruct
       {
         ds_ref = name;
-        ds_fields = [(Fdeleted_ctor, VPublic)] @ method_fields;
+        ds_fields = [(Fdeleted_ctor, VPublic, SNoTag)] @ method_fields;
         ds_tparams = templates;
         ds_constraint = None;
         ds_needs_shared_from_this = false;
@@ -6299,10 +6306,10 @@ let gen_ind_header_v2
                      (* Field name: use descriptive names if available,
                         otherwise _a0, _a1, etc. *)
                      let field_name = field_param_id j in
-                     (Fvar (field_name, cpp_ty), VPublic) )
+                     (Fvar (field_name, cpp_ty), VPublic, SNoTag) )
                    tys_list
                in
-               (Fnested_struct (cname, fields), VPublic) )
+               (Fnested_struct (cname, fields), VPublic, STypes) )
              tys )
       in
 
@@ -6325,7 +6332,7 @@ let gen_ind_header_v2
                 cnames ) )
       in
       let variant_using =
-        (Fnested_using (Id.of_string "variant_t", variant_ty), VPublic)
+        (Fnested_using (Id.of_string "variant_t", variant_ty), VPublic, STypes)
       in
 
       (* 3. Private variant member: v_ for inductive, lazy_v_ for coinductive *)
@@ -6339,7 +6346,9 @@ let gen_ind_header_v2
           Tid (Id.of_string "variant_t", [])
       in
       let variant_member =
-        (Fvar (Id.of_string variant_member_name, variant_member_ty), VPrivate)
+        ( Fvar (Id.of_string variant_member_name, variant_member_ty),
+          VPrivate,
+          SData )
       in
 
       (* 4. Private explicit constructors for each alternative *)
@@ -6370,13 +6379,15 @@ let gen_ind_header_v2
                  in
                  let init_list = [(Id.of_string "lazy_v_", init_expr)] in
                  ( Fconstructor ([(param_name, param_ty)], init_list, true),
-                   VPrivate )
+                   VPrivate,
+                   SCreators )
                else (* For inductive: v_(std::move(_v)) *)
                  let init_list =
                    [(Id.of_string "v_", CPPmove (CPPvar param_name))]
                  in
                  ( Fconstructor ([(param_name, param_ty)], init_list, true),
-                   VPrivate ) )
+                   VPrivate,
+                   SCreators ) )
              cnames )
       in
 
@@ -6393,7 +6404,11 @@ let gen_ind_header_v2
                 [CPPmove (CPPvar param_name)] )
           in
           let init_list = [(Id.of_string "lazy_v_", init_expr)] in
-          [(Fconstructor ([(param_name, param_ty)], init_list, true), VPrivate)]
+          [
+            ( Fconstructor ([(param_name, param_ty)], init_list, true),
+              VPrivate,
+              SCreators );
+          ]
         else
           []
       in
@@ -6441,7 +6456,9 @@ let gen_ind_header_v2
         let ctor_struct = CPPstruct_id (Id.of_string cname, [], ctor_args) in
         let new_expr = CPPnew (Tglob (name, ty_vars, []), [ctor_struct]) in
         let body = [Sreturn (Some (wrap_expr new_expr))] in
-        (Ffundef (factory_name, Tmod (TMstatic, ret_ty), params, body), VPublic)
+        ( Ffundef (factory_name, Tmod (TMstatic, ret_ty), params, body),
+          VPublic,
+          SNoTag )
       in
       let inner_ty = Tglob (name, ty_vars, []) in
       let factory_methods =
@@ -6500,7 +6517,8 @@ let gen_ind_header_v2
           let body = [Sreturn (Some shared_ptr_expr)] in
           [
             ( Ffundef (lazy_name, Tmod (TMstatic, self_ty), params, body),
-              VPublic );
+              VPublic,
+              SNoTag );
           ]
         else
           []
@@ -6508,12 +6526,14 @@ let gen_ind_header_v2
 
       (* Add deleted default constructor to ctor struct *)
       let ctor_struct_fields =
-        ((Fdeleted_ctor, VPublic) :: factory_methods)
+        ((Fdeleted_ctor, VPublic, SNoTag) :: factory_methods)
         @ uptr_factory_methods
         @ lazy_factory
       in
       let ctor_struct =
-        (Fnested_struct (Id.of_string "ctor", ctor_struct_fields), VPublic)
+        ( Fnested_struct (Id.of_string "ctor", ctor_struct_fields),
+          VPublic,
+          STypes )
       in
 
       (* Add public accessor for v_ to enable pattern matching from outside *)
@@ -6541,7 +6561,8 @@ let gen_ind_header_v2
                 mf_is_const = true;
                 mf_is_static = false;
               },
-            VPublic )
+            VPublic,
+            SAccessors )
         else (* For inductive: const variant_t& v() const { return v_; } *)
           ( Fmethod
               {
@@ -6554,7 +6575,8 @@ let gen_ind_header_v2
                 mf_is_const = true;
                 mf_is_static = false;
               },
-            VPublic )
+            VPublic,
+            SAccessors )
       in
 
       (* Add mutable accessor for reuse optimization (Phase 3). For
@@ -6575,7 +6597,8 @@ let gen_ind_header_v2
                   mf_is_const = false;
                   mf_is_static = false;
                 },
-              VPublic );
+              VPublic,
+              SManipulators );
           ]
       in
 
@@ -6589,7 +6612,7 @@ let gen_ind_header_v2
          std::enable_shared_from_this. *)
       let needs_shared_from_this =
         List.exists
-          (fun (fld, _vis) ->
+          (fun (fld, _vis, _tag) ->
             match fld with
             | Fmethod {mf_body; _} ->
               List.exists stmt_has_shared_from_this mf_body
@@ -6597,10 +6620,29 @@ let gen_ind_header_v2
           method_fields
       in
 
-      (* Combine all fields in order: - Constructor structs (public) - variant_t
-         using (public) - v_ member (private) - Private constructors - ctor
-         struct (public) - v() accessor (public) - v_mut() accessor (public,
-         non-coinductive only) - Methods (public) *)
+      (* Categorize user methods: const methods are ACCESSORS, non-const are
+         MANIPULATORS *)
+      let method_fields =
+        List.map
+          (fun (fld, vis, _tag) ->
+            match fld with
+            | Fmethod {mf_is_const = true; _} -> (fld, vis, SAccessors)
+            | Fmethod _ -> (fld, vis, SManipulators)
+            | _ -> (fld, vis, SNoTag) )
+          method_fields
+      in
+      (* Split methods into manipulators and accessors *)
+      let method_manipulators =
+        List.filter (fun (_, _, tag) -> tag = SManipulators) method_fields
+      in
+      let method_accessors =
+        List.filter (fun (_, _, tag) -> tag <> SManipulators) method_fields
+      in
+
+      (* BDE field ordering: public: constructor structs, variant_using (TYPES)
+         private: variant_member (DATA), private_ctors + lazy_ctor (CREATORS)
+         public: ctor_struct (TYPES), v_mut + manipulators (MANIPULATORS),
+         v_accessor + const methods (ACCESSORS) *)
       let all_fields =
         constructor_structs
         @ [variant_using]
@@ -6608,9 +6650,10 @@ let gen_ind_header_v2
         @ private_ctors
         @ lazy_ctor
         @ [ctor_struct]
-        @ [v_accessor]
         @ v_mut_accessor
-        @ method_fields
+        @ method_manipulators
+        @ [v_accessor]
+        @ method_accessors
       in
 
       (* Just the struct itself - no extra namespace wrapper *)

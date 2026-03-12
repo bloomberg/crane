@@ -36,7 +36,7 @@ struct ImplicitArgs {
   }
 
   template <typename A> struct mylist {
-  public:
+    // TYPES
     struct mynil {};
 
     struct mycons {
@@ -47,13 +47,16 @@ struct ImplicitArgs {
     using variant_t = std::variant<mynil, mycons>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit mylist(mynil _v) : v_(std::move(_v)) {}
 
     explicit mylist(mycons _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -76,9 +79,11 @@ struct ImplicitArgs {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2,

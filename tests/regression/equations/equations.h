@@ -80,7 +80,7 @@ struct Equations {
   struct gcd_clause_3_graph;
 
   struct gcd_graph {
-  public:
+    // TYPES
     struct gcd_graph_equation_1 {
       unsigned int _a0;
     };
@@ -99,8 +99,10 @@ struct Equations {
                                    gcd_graph_refinement_3>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit gcd_graph(gcd_graph_equation_1 _v) : v_(std::move(_v)) {}
 
     explicit gcd_graph(gcd_graph_equation_2 _v) : v_(std::move(_v)) {}
@@ -108,6 +110,7 @@ struct Equations {
     explicit gcd_graph(gcd_graph_refinement_3 _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -148,13 +151,15 @@ struct Equations {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   struct gcd_clause_3_graph {
-  public:
+    // TYPES
     struct gcd_clause_3_graph_equation_1 {
       unsigned int _a0;
       unsigned int _a1;
@@ -171,8 +176,10 @@ struct Equations {
                                    gcd_clause_3_graph_equation_2>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit gcd_clause_3_graph(gcd_clause_3_graph_equation_1 _v)
         : v_(std::move(_v)) {}
 
@@ -180,6 +187,7 @@ struct Equations {
         : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -212,9 +220,11 @@ struct Equations {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T1, unsigned int> F0,
@@ -473,7 +483,7 @@ struct Equations {
   struct collatz_steps_clause_3_graph;
 
   struct collatz_steps_graph {
-  public:
+    // TYPES
     struct collatz_steps_graph_equation_1 {};
 
     struct collatz_steps_graph_equation_2 {};
@@ -488,8 +498,10 @@ struct Equations {
                                    collatz_steps_graph_refinement_3>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit collatz_steps_graph(collatz_steps_graph_equation_1 _v)
         : v_(std::move(_v)) {}
 
@@ -500,6 +512,7 @@ struct Equations {
         : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -544,13 +557,15 @@ struct Equations {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   struct collatz_steps_clause_3_graph {
-  public:
+    // TYPES
     struct collatz_steps_clause_3_graph_equation_1 {
       unsigned int _a0;
       std::shared_ptr<collatz_steps_graph> _a1;
@@ -565,8 +580,10 @@ struct Equations {
                                    collatz_steps_clause_3_graph_equation_2>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit collatz_steps_clause_3_graph(
         collatz_steps_clause_3_graph_equation_1 _v)
         : v_(std::move(_v)) {}
@@ -576,6 +593,7 @@ struct Equations {
         : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -612,9 +630,11 @@ struct Equations {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, typename F2, typename F3, typename F4>

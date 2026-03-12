@@ -20,7 +20,7 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 enum class ty { TNat, TBool };
 
 struct Expr {
-public:
+  // TYPES
   struct ENat {
     unsigned int _a0;
   };
@@ -49,8 +49,10 @@ public:
   using variant_t = std::variant<ENat, EBool, EAdd, EEq, EIf>;
 
 private:
+  // DATA
   variant_t v_;
 
+  // CREATORS
   explicit Expr(ENat _v) : v_(std::move(_v)) {}
 
   explicit Expr(EBool _v) : v_(std::move(_v)) {}
@@ -62,6 +64,7 @@ private:
   explicit Expr(EIf _v) : v_(std::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
 
@@ -115,9 +118,11 @@ public:
     }
   };
 
-  const variant_t &v() const { return v_; }
-
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 
   std::any eval(const ty _x) const {
     return std::visit(

@@ -23,7 +23,7 @@ struct LargeMutual {
   struct bexpr;
 
   struct stmt {
-  public:
+    // TYPES
     struct SAssign {
       unsigned int _a0;
       std::shared_ptr<expr> _a1;
@@ -50,8 +50,10 @@ struct LargeMutual {
     using variant_t = std::variant<SAssign, SSeq, SIf, SWhile, SSkip>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit stmt(SAssign _v) : v_(std::move(_v)) {}
 
     explicit stmt(SSeq _v) : v_(std::move(_v)) {}
@@ -63,6 +65,7 @@ struct LargeMutual {
     explicit stmt(SSkip _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -118,13 +121,15 @@ struct LargeMutual {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   struct expr {
-  public:
+    // TYPES
     struct ENum {
       unsigned int _a0;
     };
@@ -152,8 +157,10 @@ struct LargeMutual {
     using variant_t = std::variant<ENum, EVar, EAdd, EMul, ECond>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit expr(ENum _v) : v_(std::move(_v)) {}
 
     explicit expr(EVar _v) : v_(std::move(_v)) {}
@@ -165,6 +172,7 @@ struct LargeMutual {
     explicit expr(ECond _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -217,13 +225,15 @@ struct LargeMutual {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   struct bexpr {
-  public:
+    // TYPES
     struct BTrue {};
 
     struct BFalse {};
@@ -255,8 +265,10 @@ struct LargeMutual {
     using variant_t = std::variant<BTrue, BFalse, BEq, BLt, BAnd, BOr, BNot>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit bexpr(BTrue _v) : v_(std::move(_v)) {}
 
     explicit bexpr(BFalse _v) : v_(std::move(_v)) {}
@@ -272,6 +284,7 @@ struct LargeMutual {
     explicit bexpr(BNot _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -342,9 +355,11 @@ struct LargeMutual {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, std::shared_ptr<expr>> F0,

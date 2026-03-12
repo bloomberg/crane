@@ -28,7 +28,7 @@ concept MapsTo = requires(F &f, Args &...a) {
 };
 
 template <typename A> struct List {
-public:
+  // TYPES
   struct nil {};
   struct cons {
     A _a0;
@@ -37,11 +37,14 @@ public:
   using variant_t = bsl::variant<nil, cons>;
 
 private:
+  // DATA
   variant_t v_;
+  // CREATORS
   explicit List(nil _v) : v_(bsl::move(_v)) {}
   explicit List(cons _v) : v_(bsl::move(_v)) {}
 
 public:
+  // TYPES
   struct ctor {
     ctor() = delete;
     static bsl::shared_ptr<List<A>> nil_() {
@@ -59,8 +62,10 @@ public:
       return bsl::unique_ptr<List<A>>(new List<A>(cons{a0, a1}));
     }
   };
-  const variant_t &v() const { return v_; }
+  // MANIPULATORS
   variant_t &v_mut() { return v_; }
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 struct STM {};
 struct TVar {};

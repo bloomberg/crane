@@ -734,7 +734,7 @@ let rec pp_structure_elem ~is_header f = function
                 let result =
                   prlist_with_sep
                     fnl
-                    (fun (fld, _vis) -> pp_cpp_field (empty_env ()) fld)
+                    (fun (fld, _vis, _tag) -> pp_cpp_field (empty_env ()) fld)
                     method_fields
                   ++ fnl ()
                 in

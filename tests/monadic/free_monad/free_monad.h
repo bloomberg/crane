@@ -21,7 +21,7 @@ enum class unit { tt };
 
 struct FreeMonad {
   struct IO {
-  public:
+    // TYPES
     struct pure {
       std::any _a0;
     };
@@ -40,8 +40,10 @@ struct FreeMonad {
     using variant_t = std::variant<pure, bind, get_line, print>;
 
   private:
+    // DATA
     variant_t v_;
 
+    // CREATORS
     explicit IO(pure _v) : v_(std::move(_v)) {}
 
     explicit IO(bind _v) : v_(std::move(_v)) {}
@@ -51,6 +53,7 @@ struct FreeMonad {
     explicit IO(print _v) : v_(std::move(_v)) {}
 
   public:
+    // TYPES
     struct ctor {
       ctor() = delete;
 
@@ -91,9 +94,11 @@ struct FreeMonad {
       }
     };
 
-    const variant_t &v() const { return v_; }
-
+    // MANIPULATORS
     variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0, typename F1, MapsTo<T1, std::string> F3>
