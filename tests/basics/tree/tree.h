@@ -170,6 +170,8 @@ public:
 };
 
 struct Tree {
+  /// A polymorphic binary tree. A tree is either a leaf or a
+  /// node with a left subtree, a value, and a right subtree.
   template <typename t_A> struct tree {
     // TYPES
     struct Leaf {};

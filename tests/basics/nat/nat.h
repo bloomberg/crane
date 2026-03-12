@@ -21,6 +21,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct Nat {
+  /// Peano natural numbers: O is zero and S n is the successor of n.
   struct nat {
     // TYPES
     struct O {};

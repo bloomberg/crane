@@ -190,19 +190,26 @@ let enum_name_collides_with_parent r =
     let parent_mp = Names.MutInd.modpath kn in
     ( match parent_mp with
     | Names.ModPath.MPdot (_, label) ->
-      String.equal capitalized (String.capitalize_ascii (Names.Label.to_string label))
+      String.equal
+        capitalized
+        (String.capitalize_ascii (Names.Label.to_string label))
     | _ -> false )
   | _ -> false
 
 (** Capitalize an enum type name, avoiding collision with parent module. *)
 let capitalize_enum_name s r =
-  if enum_name_collides_with_parent r then s
-  else String.capitalize_ascii s
+  if enum_name_collides_with_parent r then
+    s
+  else
+    String.capitalize_ascii s
 
-(** Same as capitalize_enum_name but for qualified names (capitalize last component). *)
+(** Same as capitalize_enum_name but for qualified names (capitalize last
+    component). *)
 let capitalize_enum_qualified s r =
-  if enum_name_collides_with_parent r then s
-  else Common.capitalize_last_component s
+  if enum_name_collides_with_parent r then
+    s
+  else
+    Common.capitalize_last_component s
 
 let pp_inductive_type_name r =
   let result =

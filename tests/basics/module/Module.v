@@ -3,17 +3,20 @@
 From Stdlib Require Import NArith.
 Open Scope nat_scope.
 
+(** A type with a single carrier type [t]. *)
 Module Type BaseType.
   Parameter t : Type.
 End BaseType.
 
-(* Module type defining ordered keys *)
+(** An ordered type with a carrier type [t] and a [compare] function
+    returning [Lt], [Eq], or [Gt]. *)
 Module Type OrderedType.
   Parameter t : Type.
   Parameter compare : t -> t -> comparison.
 End OrderedType.
 
-(* Module type for Maps *)
+(** Signature for finite maps from [key] to [value]. Provides
+    [empty], [add], and [find] operations. *)
 Module Type Map.
   Parameter key : Type.
   Parameter value : Type.
@@ -24,7 +27,8 @@ Module Type Map.
   Parameter find : key -> t -> option value.
 End Map.
 
-(* Functor creating Maps from ordered keys *)
+(** Functor that creates a [Map] from an [OrderedType] for keys and
+    a [BaseType] for values, using a binary search tree internally. *)
 Module MakeMap (K : OrderedType) (V : BaseType) : Map
   with Definition key := K.t
   with Definition value := V.t.

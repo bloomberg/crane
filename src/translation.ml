@@ -1355,7 +1355,9 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
            is_enum_inductive (GlobRef.IndRef (kn, 0))
          | _ -> false ->
     (* Enum constructor: emit bare EnumType::Constructor value *)
-    let ctor_name = Id.of_string (Common.enum_ctor_name (Common.pp_global_name Type r)) in
+    let ctor_name =
+      Id.of_string (Common.enum_ctor_name (Common.pp_global_name Type r))
+    in
     let ind_ref =
       match r with
       | GlobRef.ConstructRef ((kn, i), _) -> GlobRef.IndRef (kn, i)
@@ -1509,7 +1511,9 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
           let temps = build_template_params env tvars tys in
           (* Get the constructor base name (without module path) and add
              underscore suffix *)
-          let ctor_name = String.capitalize_ascii (Common.pp_global_name Type r) in
+          let ctor_name =
+            String.capitalize_ascii (Common.pp_global_name Type r)
+          in
           let factory_name = Id.of_string (ctor_name ^ "_") in
           (* Build: Type<temps>::ctor::Factory_(args) *)
           let type_expr = mk_cppglob n temps in
@@ -1518,7 +1522,9 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
           CPPfun_call (factory_expr, args)
         | _ ->
           (* Fallback for non-Tglob types - shouldn't happen in practice *)
-          let ctor_name = String.capitalize_ascii (Common.pp_global_name Type r) in
+          let ctor_name =
+            String.capitalize_ascii (Common.pp_global_name Type r)
+          in
           let factory_name = Id.of_string (ctor_name ^ "_") in
           let ctor_expr = CPPqualified (mk_cppglob r [], Id.of_string "ctor") in
           let factory_expr = CPPqualified (ctor_expr, factory_name) in
@@ -2212,7 +2218,8 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body =
   (* Get the constructor name as a simple Id *)
   let ctor_name =
     match cname with
-    | GlobRef.ConstructRef _ -> Id.of_string (String.capitalize_ascii (Common.pp_global_name Type cname))
+    | GlobRef.ConstructRef _ ->
+      Id.of_string (String.capitalize_ascii (Common.pp_global_name Type cname))
     | _ -> Id.of_string "unknown_ctor"
   in
   (* Build path: typename InductiveType<temps>::ConstructorName *)
@@ -2419,7 +2426,9 @@ and gen_cpp_case (typ : ml_type) t env pv =
                ids )
             env
         in
-        let ctor_name = Id.of_string (Common.enum_ctor_name (Common.pp_global_name Type r)) in
+        let ctor_name =
+          Id.of_string (Common.enum_ctor_name (Common.pp_global_name Type r))
+        in
         let body_stmts = gen_stmts env' (fun x -> Sreturn (Some x)) body in
         (ctor_name, body_stmts) :: gen_enum_branches cs
       | Pwild | Prel _ | Ptuple _ -> gen_enum_branches cs
@@ -3853,12 +3862,7 @@ let gen_record_cpp name fields ind =
           | None -> GlobRef.VarRef (Id.of_string ("_field" ^ string_of_int i))
         in
         ( Fvar'
-            ( n,
-              convert_ml_type_to_cpp_type
-                (empty_env ())
-                Refset'.empty
-                vars
-                t ),
+            (n, convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty vars t),
           VPublic,
           SNoTag ) )
       l
@@ -3894,9 +3898,13 @@ let gen_typeclass_cpp name fields ind =
   (* Split ip_vars into param vars (real type params) and promoted vars
      (associated types). Prefix param vars with t_ for BDE convention. *)
   let prefixed_ip_vars =
-    List.mapi (fun i x -> if i < nb_sign_keeps then Common.tparam_name x else x) ind.ip_vars
+    List.mapi
+      (fun i x -> if i < nb_sign_keeps then Common.tparam_name x else x)
+      ind.ip_vars
   in
-  let param_vars = List.filteri (fun i _ -> i < nb_sign_keeps) prefixed_ip_vars in
+  let param_vars =
+    List.filteri (fun i _ -> i < nb_sign_keeps) prefixed_ip_vars
+  in
   let promoted_vars =
     List.filteri (fun i _ -> i >= nb_sign_keeps) prefixed_ip_vars
   in
@@ -6267,7 +6275,8 @@ let gen_ind_header_v2
              (fun c ->
                match c with
                | GlobRef.ConstructRef _ ->
-                 Id.of_string (Common.enum_ctor_name (Common.pp_global_name Type c))
+                 Id.of_string
+                   (Common.enum_ctor_name (Common.pp_global_name Type c))
                | _ -> ctor_fallback_id 0 )
              cnames )
       in
@@ -6287,7 +6296,8 @@ let gen_ind_header_v2
                  match c with
                  | GlobRef.ConstructRef ((_, _), _) ->
                    (* Get constructor name from the GlobRef *)
-                   Id.of_string (String.capitalize_ascii (Common.pp_global_name Type c))
+                   Id.of_string
+                     (String.capitalize_ascii (Common.pp_global_name Type c))
                  | _ -> ctor_fallback_id i
                in
                (* Fields: convert types, using self_ty for recursive
@@ -6327,7 +6337,8 @@ let gen_ind_header_v2
                   let cname_id =
                     match c with
                     | GlobRef.ConstructRef _ ->
-                      Id.of_string (String.capitalize_ascii (Common.pp_global_name Type c))
+                      Id.of_string
+                        (String.capitalize_ascii (Common.pp_global_name Type c))
                     | _ -> ctor_fallback_id i
                   in
                   (* Use Tid for local nested struct types - no template args
@@ -6364,7 +6375,8 @@ let gen_ind_header_v2
                let cname =
                  match c with
                  | GlobRef.ConstructRef _ ->
-                   Id.of_string (String.capitalize_ascii (Common.pp_global_name Type c))
+                   Id.of_string
+                     (String.capitalize_ascii (Common.pp_global_name Type c))
                  | _ -> ctor_fallback_id i
                in
                let param_name = Id.of_string "_v" in
@@ -6427,7 +6439,8 @@ let gen_ind_header_v2
         let c = cnames.(i) in
         let cname =
           match c with
-          | GlobRef.ConstructRef _ -> String.capitalize_ascii (Common.pp_global_name Type c)
+          | GlobRef.ConstructRef _ ->
+            String.capitalize_ascii (Common.pp_global_name Type c)
           | _ -> ctor_fallback_name i
         in
         let factory_name = Id.of_string (cname ^ suffix) in

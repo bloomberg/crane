@@ -21,6 +21,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct HigherOrder {
+  /// A simple polymorphic list type.
   template <typename t_A> struct list {
     // TYPES
     struct Nil {};
@@ -98,6 +99,7 @@ struct HigherOrder {
         l->v());
   }
 
+  /// map f l applies f to each element of l, producing a new list.
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
   static std::shared_ptr<list<T2>> map(F0 &&f,
                                        const std::shared_ptr<list<T1>> &l) {
@@ -114,6 +116,8 @@ struct HigherOrder {
         l->v());
   }
 
+  /// foldr f z l folds l from the right using f with initial
+  /// accumulator z.
   template <typename T1, typename T2, MapsTo<T2, T1, T2> F0>
   static T2 foldr(F0 &&f, const T2 z, const std::shared_ptr<list<T1>> &l) {
     return std::visit(
@@ -126,6 +130,8 @@ struct HigherOrder {
         l->v());
   }
 
+  /// foldl f z l folds l from the left using f with initial
+  /// accumulator z. This is tail-recursive.
   template <typename T1, typename T2, MapsTo<T2, T2, T1> F0>
   static T2 foldl(F0 &&f, const T2 z, const std::shared_ptr<list<T1>> &l) {
     return std::visit(
@@ -138,11 +144,13 @@ struct HigherOrder {
         l->v());
   }
 
+  /// compose g f returns the composition of g after f.
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
   static T3 compose(F0 &&g, F1 &&f, const T1 x) {
     return g(f(x));
   }
 
+  /// iterate n f x applies f to x a total of n times.
   template <typename T1, MapsTo<T1, T1> F1>
   static T1 iterate(const unsigned int n, F1 &&f, const T1 x) {
     if (n <= 0) {
@@ -153,13 +161,16 @@ struct HigherOrder {
     }
   }
 
+  /// adder n returns a function that adds n to its argument.
   static unsigned int adder(const unsigned int _x0, const unsigned int _x1);
 
+  /// twice f returns a function that applies f two times.
   template <typename T1, MapsTo<T1, T1> F0>
   static T1 twice(F0 &&f, const T1 x) {
     return f(f(x));
   }
 
+  /// pipe x f applies f to x, simulating a pipeline operator.
   template <typename T1, typename T2, MapsTo<T2, T1> F1>
   static T2 pipe(const T1 x, F1 &&f) {
     return f(x);

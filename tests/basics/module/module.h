@@ -56,6 +56,8 @@ concept Map = requires {
   } -> std::same_as<std::optional<typename M::value>>;
 };
 
+/// Functor that creates a Map from an OrderedType for keys and
+/// a BaseType for values, using a binary search tree internally.
 template <OrderedType K, BaseType V> struct MakeMap {
   using key = typename K::t;
   using value = typename V::t;

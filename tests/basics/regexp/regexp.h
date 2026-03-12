@@ -75,6 +75,7 @@ public:
 struct Matcher {
   static bool char_eq(const int64_t x, const int64_t y);
 
+  /// Regular expression abstract syntax
   struct regexp {
     // TYPES
     struct Any {};
@@ -271,19 +272,31 @@ struct Matcher {
 
   static bool regexp_eq(const std::shared_ptr<regexp> &r,
                         const std::shared_ptr<regexp> &x);
+  /// An optimized constructor for Cat.
   static std::shared_ptr<regexp> OptCat(std::shared_ptr<regexp> r1,
                                         std::shared_ptr<regexp> r2);
+  /// Optimized version of Alt.
   static std::shared_ptr<regexp> OptAlt(std::shared_ptr<regexp> r1,
                                         std::shared_ptr<regexp> r2);
+  /// If r accepts the empty string, return Eps, else return Zero.
   static std::shared_ptr<regexp> null(const std::shared_ptr<regexp> &r);
   static bool accepts_null(const std::shared_ptr<regexp> &r);
+  /// This is the heart of the algorithm.  It returns a regexp denoting
+  /// { cs | (c::cs) in r }.
   static std::shared_ptr<regexp> deriv(const std::shared_ptr<regexp> &r,
                                        const int64_t c);
+  /// This calculates the derivative of a regular expression with respect to a
+  /// string.
   static std::shared_ptr<regexp>
   derivs(std::shared_ptr<regexp> r, const std::shared_ptr<List<int64_t>> &cs);
+  /// To see if cs matches r, calculate the derivative of r with respect
+  /// to s, and see if the resulting regexp accepts the empty string.
   static bool deriv_parse(const std::shared_ptr<regexp> &r,
                           const std::shared_ptr<List<int64_t>> &cs);
+  /// null r returns Eps or Zero
   static bool NullEpsOrZero(const std::shared_ptr<regexp> &r);
+  /// From this, we can build a decidable regexp matcher by running
+  /// the derivative-based parser.
   static bool parse(const std::shared_ptr<regexp> &r,
                     const std::shared_ptr<List<int64_t>> &cs);
   static bool parse_bool(const std::shared_ptr<regexp> &r,

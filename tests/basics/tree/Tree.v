@@ -5,6 +5,8 @@ Import ListNotations.
 
 Module Tree.
 
+(** A polymorphic binary tree. A [tree] is either a [leaf] or a
+    [node] with a left subtree, a value, and a right subtree. *)
 Inductive tree (A : Type) : Type :=
 | leaf : tree A
 | node : tree A -> A -> tree A -> tree A.
@@ -12,32 +14,36 @@ Inductive tree (A : Type) : Type :=
 Arguments leaf {A}.
 Arguments node {A} t1 x t2.
 
+(** Returns [true] if [t] is a [leaf], [false] otherwise. *)
 Definition is_leaf {A} (t : tree A) : bool :=
   match t with
   | leaf => true
   | node _ _ _ => false
   end.
 
-(* number of nodes (leaf counts as 1) *)
+(** Number of nodes in tree [t]. A [leaf] counts as 1. *)
 Fixpoint size {A} (t : tree A) : nat :=
   match t with
   | leaf => 1
   | node l _ r => 1 + size l + size r
   end.
 
-(* leaf has height 1 *)
+(** Height of tree [t]. A [leaf] has height 1. *)
 Fixpoint height {A} (t : tree A) : nat :=
   match t with
   | leaf => 1
   | node l _ r => 1 + Nat.max (height l) (height r)
   end.
 
+(** Collect all values in [t] into a list via in-order traversal. *)
 Fixpoint flatten {A : Type} (t : tree A) : list A :=
   match t with
   | leaf => []
   | node l x r => flatten l ++ (x :: flatten r)
   end.
 
+(** Merge two trees [t1] and [t2] element-wise using [combine].
+    Subtrees beyond the shape of the other tree are truncated. *)
 Fixpoint merge {A : Type}
                (combine : A -> A -> A)
                (t1 t2 : tree A) : tree A :=

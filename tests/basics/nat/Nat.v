@@ -12,16 +12,19 @@ Module Nat.
   Axiom iplus : int -> int -> int.
   Axiom iminus : int -> int -> int.
 
+  (** Peano natural numbers: [O] is zero and [S n] is the successor of [n]. *)
   Inductive nat : Type :=
   | O : nat
   | S (n : nat) : nat.
 
+  (** [add m n] computes the sum of [m] and [n] by recursion on [m]. *)
   Fixpoint add (m : nat) (n : nat) : nat :=
     match m with
     | O => n
     | S x => S (add x n)
     end.
 
+  (** Convert a Peano [nat] to a machine [int]. *)
   Fixpoint nat_to_int (n : nat) : int :=
     match n with
     | O => zero

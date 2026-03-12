@@ -12,6 +12,8 @@
 #include <utility>
 #include <variant>
 
+/// apply_all fns x applies every function in fns to x,
+/// returning the list of results.
 std::shared_ptr<List<unsigned int>> ClosuresInData::apply_all(
     const std::shared_ptr<List<std::function<unsigned int(unsigned int)>>> &fns,
     const unsigned int x) {
@@ -31,6 +33,8 @@ unsigned int ClosuresInData::apply_backward(
   return t->backward(x);
 }
 
+/// compose_all fns x folds fns left, threading x through each
+/// function in sequence.
 unsigned int ClosuresInData::compose_all(
     const std::shared_ptr<List<std::function<unsigned int(unsigned int)>>> &fns,
     const unsigned int x) {
@@ -41,6 +45,8 @@ unsigned int ClosuresInData::compose_all(
       x);
 }
 
+/// maybe_apply mf x applies function mf to x if present,
+/// otherwise returns x unchanged.
 unsigned int ClosuresInData::maybe_apply(
     const std::optional<std::function<unsigned int(unsigned int)>> mf,
     const unsigned int x) {

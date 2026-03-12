@@ -523,7 +523,9 @@ let rec pp_cpp_type par vl t =
                   mt ()
             | _ -> mt ()
           in
-          qualifier ++ str (capitalize_enum_qualified type_name_str r') ++ templates
+          qualifier
+          ++ str (capitalize_enum_qualified type_name_str r')
+          ++ templates
         else if is_qualified_name type_name_str then
           (* Already qualified (e.g., C::t from module parameter): add typename
              if in template *)
@@ -1111,7 +1113,8 @@ and pp_cpp_stmt env args = function
     ++ str "\");"
   | Sswitch (scrut, ind, branches) ->
     (* Generate switch statement for enum class matching. Use pp_global_name to
-       get the unqualified base name, capitalize to match enum class definition. *)
+       get the unqualified base name, capitalize to match enum class
+       definition. *)
     let type_name = pp_inductive_type_name_cached ind in
     let pp_branch (ctor, stmts) =
       str "case "

@@ -110,6 +110,7 @@ struct Nat {
 };
 
 struct ClosuresInData {
+  /// A list of functions: successor, doubling, and squaring.
   static inline const std::shared_ptr<
       List<std::function<unsigned int(unsigned int)>>>
       fn_list = List<std::function<unsigned int(unsigned int)>>::ctor::Cons_(
@@ -120,16 +121,20 @@ struct ClosuresInData {
                   [](unsigned int x) { return (x * x); },
                   List<std::function<unsigned int(unsigned int)>>::ctor::
                       Nil_())));
+  /// apply_all fns x applies every function in fns to x,
+  /// returning the list of results.
   static std::shared_ptr<List<unsigned int>> apply_all(
       const std::shared_ptr<List<std::function<unsigned int(unsigned int)>>>
           &fns,
       const unsigned int x);
 
+  /// A pair of invertible transformations: forward and backward.
   struct transform {
     std::function<unsigned int(unsigned int)> forward;
     std::function<unsigned int(unsigned int)> backward;
   };
 
+  /// A transform that doubles via addition and halves via division.
   static inline const std::shared_ptr<transform> double_transform =
       std::make_shared<transform>(
           transform{[](unsigned int x) { return (x + x); },
@@ -138,10 +143,13 @@ struct ClosuresInData {
                                     const unsigned int x);
   static unsigned int apply_backward(const std::shared_ptr<transform> &t,
                                      const unsigned int x);
+  /// compose_all fns x folds fns left, threading x through each
+  /// function in sequence.
   static unsigned int compose_all(
       const std::shared_ptr<List<std::function<unsigned int(unsigned int)>>>
           &fns,
       const unsigned int x);
+  /// A pipeline of transformations: increment, double, then add 10.
   static inline const std::shared_ptr<
       List<std::function<unsigned int(unsigned int)>>>
       pipeline = List<std::function<unsigned int(unsigned int)>>::ctor::Cons_(
@@ -152,6 +160,8 @@ struct ClosuresInData {
                   [](unsigned int x) { return (x + 10u); },
                   List<std::function<unsigned int(unsigned int)>>::ctor::
                       Nil_())));
+  /// maybe_apply mf x applies function mf to x if present,
+  /// otherwise returns x unchanged.
   static unsigned int
   maybe_apply(const std::optional<std::function<unsigned int(unsigned int)>> mf,
               const unsigned int x);

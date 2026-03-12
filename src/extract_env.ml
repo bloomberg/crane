@@ -644,7 +644,13 @@ let header fn () =
       (himports @ imps)
   in
   if Table.std_lib () = "BDE" then
-    self_include ++ fnl () ++ h ++ fnl2 () ++ str "namespace BloombergLP {" ++ fnl2 () ++ str "}"
+    self_include
+    ++ fnl ()
+    ++ h
+    ++ fnl2 ()
+    ++ str "namespace BloombergLP {"
+    ++ fnl2 ()
+    ++ str "}"
   else
     self_include ++ fnl () ++ h ++ fnl2 ()
 
@@ -667,8 +673,7 @@ let spec_header si () =
   let guard_open =
     match guard_name with
     | Some g ->
-      str ("#ifndef " ^ g) ++ fnl ()
-      ++ str ("#define " ^ g) ++ fnl2 ()
+      str ("#ifndef " ^ g) ++ fnl () ++ str ("#define " ^ g) ++ fnl2 ()
     | None -> mt ()
   in
   let h =
@@ -1096,6 +1101,56 @@ let rec locate_ref = function
       let refs, mps = locate_ref l in
       (refs, mp :: mps) )
 
+(** Derives the output source file path from extraction target. Resolves paths
+    like _build/default/../../tests/basics/nat/nat.cpp to
+    tests/basics/nat/Nat.v. Returns empty string if source file cannot be
+    determined uniquely. *)
+let derive_source_file filename =
+  try
+    let dir = Filename.dirname filename in
+    let files = Sys.readdir dir |> Array.to_list in
+    let v_files = List.filter (fun f -> Filename.check_suffix f ".v") files in
+    match v_files with
+    | [v] ->
+      let full_path = Filename.concat dir v in
+      (* Strip _build/default/ and ../../ prefixes that dune adds *)
+      let cleaned =
+        if String.starts_with ~prefix:"_build/default/" full_path then
+          String.sub full_path 15 (String.length full_path - 15)
+        else if String.starts_with ~prefix:"../../" full_path then
+          String.sub full_path 6 (String.length full_path - 6)
+        else
+          full_path
+      in
+      (* Resolve remaining ../ and ./ references by walking the path
+         components *)
+      let parts = String.split_on_char '/' cleaned in
+      let rec resolve acc = function
+        | [] -> List.rev acc
+        | ".." :: rest ->
+          (* Go up one directory by popping from accumulator *)
+          ( match acc with
+          | _ :: tail -> resolve tail rest
+          | [] -> resolve acc rest )
+        | "." :: rest -> resolve acc rest
+        | part :: rest -> resolve (part :: acc) rest
+      in
+      let resolved = String.concat "/" (resolve [] parts) in
+      (* If still absolute, make relative to current working directory *)
+      if String.length resolved > 0 && resolved.[0] = '/' then
+        let cwd = Sys.getcwd () in
+        if String.starts_with ~prefix:(cwd ^ "/") resolved then
+          String.sub
+            resolved
+            (String.length cwd + 1)
+            (String.length resolved - String.length cwd - 1)
+        else
+          resolved
+      else
+        resolved
+    | _ -> "" (* Not exactly one .v file - can't determine source uniquely *)
+  with _ -> ""
+
 (** {2 Recursive extraction in the Rocq toplevel. The vernacular command is
     \verb!Recursive Extraction! [qualid1] ... [qualidn]. Also used when
     extracting to a file with the command: \verb!Extraction "file"! [qualid1]
@@ -1108,7 +1163,15 @@ let full_extr opaque_access f (refs, mps) =
     optimize_struct (refs, mps) (mono_environment ~opaque_access refs mps)
   in
   warns ();
-  print_structure_to_file (mono_filename f) false struc;
+  let filenames = mono_filename f in
+  (* Parse doc comments from the source .v file, if available *)
+  ( match filenames with
+  | Some fn, _, _ ->
+    let source = derive_source_file fn in
+    if source <> "" then Doc_comments.parse_file source
+  | _ -> () );
+  print_structure_to_file filenames false struc;
+  Doc_comments.clear ();
   reset ()
 
 (** Main entry point for full library extraction. Extracts the given references
@@ -1217,56 +1280,6 @@ let emit_test_status status test_id_str source_file =
       ++ str test_id_str
       ++ str ":"
       ++ str source_file )
-
-(** Derives the output source file path from extraction target. Resolves paths
-    like _build/default/../../tests/basics/nat/nat.cpp to
-    tests/basics/nat/Nat.v. Returns empty string if source file cannot be
-    determined uniquely. *)
-let derive_source_file filename =
-  try
-    let dir = Filename.dirname filename in
-    let files = Sys.readdir dir |> Array.to_list in
-    let v_files = List.filter (fun f -> Filename.check_suffix f ".v") files in
-    match v_files with
-    | [v] ->
-      let full_path = Filename.concat dir v in
-      (* Strip _build/default/ and ../../ prefixes that dune adds *)
-      let cleaned =
-        if String.starts_with ~prefix:"_build/default/" full_path then
-          String.sub full_path 15 (String.length full_path - 15)
-        else if String.starts_with ~prefix:"../../" full_path then
-          String.sub full_path 6 (String.length full_path - 6)
-        else
-          full_path
-      in
-      (* Resolve remaining ../ and ./ references by walking the path
-         components *)
-      let parts = String.split_on_char '/' cleaned in
-      let rec resolve acc = function
-        | [] -> List.rev acc
-        | ".." :: rest ->
-          (* Go up one directory by popping from accumulator *)
-          ( match acc with
-          | _ :: tail -> resolve tail rest
-          | [] -> resolve acc rest )
-        | "." :: rest -> resolve acc rest
-        | part :: rest -> resolve (part :: acc) rest
-      in
-      let resolved = String.concat "/" (resolve [] parts) in
-      (* If still absolute, make relative to current working directory *)
-      if String.length resolved > 0 && resolved.[0] = '/' then
-        let cwd = Sys.getcwd () in
-        if String.starts_with ~prefix:(cwd ^ "/") resolved then
-          String.sub
-            resolved
-            (String.length cwd + 1)
-            (String.length resolved - String.length cwd - 1)
-        else
-          resolved
-      else
-        resolved
-    | _ -> "" (* Not exactly one .v file - can't determine source uniquely *)
-  with _ -> ""
 
 (* For the test-suite : extraction to a temporary file + run clang on it *)
 

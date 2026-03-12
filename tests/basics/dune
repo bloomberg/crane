@@ -529,3 +529,14 @@
   (alias runtest)
   (deps cotree.t.exe)
   (action (run ./cotree.t.exe))))
+
+(subdir doc_comments
+ (rule
+  (targets doc_comments.t.exe)
+  (deps DocComments.vo doc_comments.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} doc_comments.t.exe doc_comments.cpp doc_comments.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps doc_comments.t.exe)
+  (action (run ./doc_comments.t.exe))))

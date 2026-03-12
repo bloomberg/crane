@@ -303,464 +303,115 @@ and pp_module_type params = function
   | MTwith (mt, ML_With_type (idl, vl, typ)) -> pp_module_type [] mt
   | MTwith (mt, ML_With_module (idl, mp)) -> pp_module_type [] mt
 
+(** Format a doc comment string as [///] comment lines. Translates bracket
+    references [[name]] by stripping the brackets. Returns [mt ()] if no doc
+    comment is found for the given label. *)
+let pp_doc_comment label =
+  let name = Label.to_string label in
+  match Doc_comments.find_opt name with
+  | None -> mt ()
+  | Some text ->
+    let text = Doc_comments.translate_brackets ~translate:(fun s -> s) text in
+    let lines = String.split_on_char '\n' text in
+    let lines =
+      List.map
+        (fun line ->
+          let trimmed = String.trim line in
+          if trimmed = "" then
+            str "///"
+          else
+            str "/// " ++ str trimmed )
+        lines
+    in
+    prlist_with_sep fnl (fun x -> x) lines ++ fnl ()
+
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
     types, and declarations. *)
 let rec pp_structure_elem ~is_header f = function
   | l, SEdecl d ->
-    ( match Common.get_duplicate (top_visible_mp ()) l with
-    | None -> f d
-    | Some ren ->
-      v 1 (str ("namespace " ^ ren ^ " {") ++ fnl () ++ f d)
-      ++ fnl ()
-      ++ str "};" )
+    let body = f d in
+    if Pp.ismt body then
+      mt ()
+    else
+      let doc = pp_doc_comment l in
+      ( match Common.get_duplicate (top_visible_mp ()) l with
+      | None -> doc ++ body
+      | Some ren ->
+        doc
+        ++ v 1 (str ("namespace " ^ ren ^ " {") ++ fnl () ++ body)
+        ++ fnl ()
+        ++ str "};" )
   | l, SEmodule m ->
+    let doc = pp_doc_comment l in
     let mp = MPdot (top_visible_mp (), l) in
     let name = pp_modname mp in
-    ( match m.ml_mod_expr with
-    | MEfunctor _ ->
-      if not is_header then
-        mt ()
-      else
-        let get_template_and_body = function
-          | MEfunctor (mbid, mt, me) ->
-            let rec collect_params mbid mt me =
-              match me with
-              | MEfunctor (mbid', mt', me') ->
-                let params_rest, body = collect_params mbid' mt' me' in
-                ((mbid, mt) :: params_rest, body)
-              | _ -> ([(mbid, mt)], me)
-            in
-            collect_params mbid mt me
-          | _ -> ([], m.ml_mod_expr)
-        in
-        let template_params, body = get_template_and_body m.ml_mod_expr in
-        let pp_template_param (mbid, mt) =
-          let concept_name = pp_module_type [] mt in
-          let param_name = pp_modname (MPbound mbid) in
-          concept_name ++ str " " ++ param_name
-        in
-        let template_decl =
-          str "template<"
-          ++ prlist_with_sep
-               (fun () -> str ", ")
-               pp_template_param
-               template_params
-          ++ str ">"
-        in
-        let struct_body =
-          with_render_ctx
-            ~setup:(fun () ->
-              render_ctx.rc_in_struct <- true;
-              render_ctx.rc_in_template <- true )
-            (fun () ->
-              pp_module_expr
-                ~is_header
-                f
-                (List.map (fun (mbid, _) -> MPbound mbid) template_params)
-                body )
-        in
-        template_decl
-        ++ fnl ()
-        ++ str "struct "
-        ++ name
-        ++ str " {"
-        ++ fnl ()
-        ++ struct_body
-        ++ str "};"
-    | MEapply _ ->
-      if not is_header then
-        mt ()
-      else
-        let rec get_base_functor_mp = function
-          | MEapply (f, _) -> get_base_functor_mp f
-          | MEident fmp -> Some fmp
-          | _ -> None
-        in
-        ( match get_base_functor_mp m.ml_mod_expr with
-        | Some fmp -> Hashtbl.replace functor_app_sources mp fmp
-        | None -> () );
-        let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
-        let using_decl = str "using " ++ name ++ str " = " ++ body ++ str ";" in
-        let rec get_concept_name = function
-          | MTident kn -> Some (pp_modname kn)
-          | MTwith (mt, _) -> get_concept_name mt
-          | MTfunsig (_, mt, mt') -> get_concept_name mt'
-          | MTsig _ -> None
-        in
-        let static_assert =
-          match get_concept_name m.ml_mod_type with
-          | Some concept_name ->
-            fnl ()
-            ++ str "static_assert("
-            ++ concept_name
-            ++ str "<"
-            ++ name
-            ++ str ">);"
-          | None -> mt ()
-        in
-        using_decl ++ static_assert
-    | MEstruct (_mp, sel) ->
-      let old_context = render_ctx.rc_in_struct in
-      let old_struct_name = render_ctx.rc_struct_name in
-      let old_struct_mp = render_ctx.rc_struct_mp in
-      let old_eponymous = !eponymous_type_ref in
-      let old_methods = !method_candidates in
-      let old_eponymous_record = !eponymous_record in
-      eponymous_type_ref := None;
-      eponymous_record := None;
-      let module_name_str = Pp.string_of_ppcmds name in
-      let lowercase_module = String.lowercase_ascii module_name_str in
-      List.iter
-        (fun (_l, se) ->
-          match se with
-          | SEdecl (Dind (kn, ind)) ->
-            Array.iteri
-              (fun i p ->
-                let ind_ref = GlobRef.IndRef (kn, i) in
-                let ind_name = Common.pp_global_name Type ind_ref in
-                if String.lowercase_ascii ind_name = lowercase_module then
-                  match
-                    ind.ind_kind
-                  with
-                  | TypeClass _ -> ()
-                  | Record fields ->
-                    eponymous_record := Some (ind_ref, fields, p);
-                    register_eponymous_record ind_ref
-                  | _ -> eponymous_type_ref := Some ind_ref )
-              ind.ind_packets
-          | _ -> () )
-        sel;
-      method_candidates := [];
-      let epon_ref_opt =
-        match (!eponymous_type_ref, !eponymous_record) with
-        | Some r, _ -> Some r
-        | _, Some (r, _, _) -> Some r
-        | None, None -> None
-      in
-      ( match epon_ref_opt with
-      | Some epon_ref ->
-        let epon_modpath = modpath_of_r epon_ref in
-        let same_module r = ModPath.equal (modpath_of_r r) epon_modpath in
-        let module_type_aliases = ref [] in
-        List.iter
-          (fun (_l, se) ->
-            match se with
-            | SEdecl (Dtype (r, _, _))
-              when ModPath.equal (modpath_of_r r) epon_modpath ->
-              module_type_aliases := r :: !module_type_aliases
-            | _ -> () )
-          sel;
-        let forward_inductives = ref [] in
-        let seen_epon = ref false in
-        List.iter
-          (fun (_l, se) ->
-            match se with
-            | SEdecl (Dind (fwd_kn, fwd_ind)) ->
-              Array.iteri
-                (fun j _p ->
-                  let fwd_ref = GlobRef.IndRef (fwd_kn, j) in
-                  if Environ.QGlobRef.equal Environ.empty_env fwd_ref epon_ref
-                  then
-                    seen_epon := true
-                  else if !seen_epon then
-                    forward_inductives := fwd_ref :: !forward_inductives )
-                fwd_ind.ind_packets
-            | _ -> () )
-          sel;
-        let excluded_refs = !module_type_aliases @ !forward_inductives in
-        let rec refs_excluded ty =
-          match ty with
-          | Miniml.Tglob (r, args, _) ->
-            List.exists
-              (Environ.QGlobRef.equal Environ.empty_env r)
-              excluded_refs
-            || List.exists refs_excluded args
-          | Miniml.Tarr (t1, t2) -> refs_excluded t1 || refs_excluded t2
-          | Miniml.Tmeta {contents = Some t} -> refs_excluded t
-          | _ -> false
-        in
-        let process_decl (_l, se) =
-          match se with
-          | SEdecl (Dterm (r, body, ty)) ->
-            if
-              same_module r
-              && (not (refs_excluded ty))
-              && Method_registry.body_safe_for_method body
-            then (
-              match
-                Method_registry.find_epon_arg_pos epon_ref ty
-              with
-              | Some (pos, ind_tvar_positions) ->
-                method_candidates := (r, body, ty, pos) :: !method_candidates;
-                register_method r epon_ref pos ~ind_tvar_positions ();
-                Method_registry.add_candidate
-                  (get_method_registry ())
-                  epon_ref
-                  (r, body, ty, pos)
-              | None -> () )
-          | SEdecl (Dfix (rv, defs, typs)) ->
-            Array.iteri
-              (fun i r ->
-                if
-                  same_module r
-                  && (not (refs_excluded typs.(i)))
-                  && Method_registry.body_safe_for_method defs.(i)
-                then
-                  let ty = typs.(i) in
-                  let body = defs.(i) in
-                  match Method_registry.find_epon_arg_pos epon_ref ty with
-                  | Some (pos, ind_tvar_positions) ->
-                    method_candidates :=
-                      (r, body, ty, pos) :: !method_candidates;
-                    register_method r epon_ref pos ~ind_tvar_positions ();
-                    Method_registry.add_candidate
-                      (get_method_registry ())
-                      epon_ref
-                      (r, body, ty, pos)
-                  | None -> () )
-              rv
-          | _ -> ()
-        in
-        List.iter process_decl sel;
-        List.iter process_decl !current_structure_decls
-      | None -> () );
-      let this_eponymous_record = !eponymous_record in
-      let concept_simple_name_of ind_ref =
-        let sn = Common.pp_global_name Type ind_ref in
-        match String.rindex_opt sn ':' with
-        | Some idx
-          when idx > 0 && idx < String.length sn - 1 && sn.[idx - 1] = ':' ->
-          String.sub sn (idx + 1) (String.length sn - idx - 1)
-        | _ -> sn
-      in
-      let module_name_str_raw = Common.pp_module mp in
-      let has_concept_collision =
-        List.exists
-          (fun (_l, se) ->
-            match se with
-            | SEdecl (Dind (kn, ind)) ->
-              List.exists
-                (fun i ->
-                  match ind.ind_kind with
-                  | TypeClass _ ->
-                    let ind_ref = GlobRef.IndRef (kn, i) in
-                    String.equal
-                      (concept_simple_name_of ind_ref)
-                      module_name_str_raw
-                  | _ -> false )
-                (List.init (Array.length ind.ind_packets) Fun.id)
-            | _ -> false )
-          sel
-      in
-      let typeclass_concepts =
-        if is_header then
-          List.concat_map
-            (fun (_l, se) ->
-              match se with
-              | SEdecl (Dind (kn, ind)) ->
-                List.concat
-                  (List.init (Array.length ind.ind_packets) (fun i ->
-                     match ind.ind_kind with
-                     | TypeClass fields ->
-                       let ind_ref = GlobRef.IndRef (kn, i) in
-                       let packet = ind.ind_packets.(i) in
-                       [
-                         pp_cpp_decl
-                           (empty_env ())
-                           (Translation.gen_typeclass_cpp
-                              ind_ref
-                              fields
-                              packet );
-                       ]
-                     | _ -> [] ) )
-              | _ -> [] )
-            sel
-        else
-          []
-      in
-      let typeclasses_pp =
-        prlist_with_sep fnl (fun x -> x) typeclass_concepts
-      in
-      let typeclasses_pp =
-        if typeclass_concepts = [] then
+    let mod_pp =
+      match m.ml_mod_expr with
+      | MEfunctor _ ->
+        if not is_header then
           mt ()
         else
-          typeclasses_pp ++ fnl () ++ fnl ()
-      in
-      let modtype_concepts =
-        if is_header then
-          List.filter_map
-            (fun (l, se) ->
-              match se with
-              | SEmodtype m ->
-                let modtype_name = str (Label.to_string l) in
-                let rec get_base_concept = function
-                  | MTident kn -> Some kn
-                  | MTwith (mt, _) -> get_base_concept mt
-                  | _ -> None
-                in
-                let concept_pp =
-                  match get_base_concept m with
-                  | Some base_kn ->
-                    let base_name =
-                      match base_kn with
-                      | MPdot (_, l') -> str (Label.to_string l')
-                      | _ -> pp_modname base_kn
-                    in
-                    str "template<typename M>"
-                    ++ fnl ()
-                    ++ hov
-                         1
-                         ( str "concept "
-                         ++ modtype_name
-                         ++ str " = "
-                         ++ base_name
-                         ++ str "<M>;" )
-                  | None ->
-                    let old_hoisted = !hoisted_concept_defs in
-                    hoisted_concept_defs := [];
-                    let def = pp_module_type [] m in
-                    let hoisted = List.rev !hoisted_concept_defs in
-                    hoisted_concept_defs := old_hoisted;
-                    let main_concept =
-                      if Pp.ismt def then
-                        str "template<typename M>"
-                        ++ fnl ()
-                        ++ hov
-                             1
-                             (str "concept " ++ modtype_name ++ str " = true;")
-                      else
-                        str "template<typename M>"
-                        ++ fnl ()
-                        ++ hov
-                             1
-                             ( str "concept "
-                             ++ modtype_name
-                             ++ str " = requires {"
-                             ++ fnl ()
-                             ++ def
-                             ++ str "};" )
-                    in
-                    let all = List.append hoisted [main_concept] in
-                    prlist_with_sep (fun () -> fnl () ++ fnl ()) identity all
-                in
-                Some concept_pp
-              | _ -> None )
-            sel
-        else
-          []
-      in
-      let modtypes_pp = prlist_with_sep fnl (fun x -> x) modtype_concepts in
-      let modtypes_pp =
-        if modtype_concepts = [] then
+          let get_template_and_body = function
+            | MEfunctor (mbid, mt, me) ->
+              let rec collect_params mbid mt me =
+                match me with
+                | MEfunctor (mbid', mt', me') ->
+                  let params_rest, body = collect_params mbid' mt' me' in
+                  ((mbid, mt) :: params_rest, body)
+                | _ -> ([(mbid, mt)], me)
+              in
+              collect_params mbid mt me
+            | _ -> ([], m.ml_mod_expr)
+          in
+          let template_params, body = get_template_and_body m.ml_mod_expr in
+          let pp_template_param (mbid, mt) =
+            let concept_name = pp_module_type [] mt in
+            let param_name = pp_modname (MPbound mbid) in
+            concept_name ++ str " " ++ param_name
+          in
+          let template_decl =
+            str "template<"
+            ++ prlist_with_sep
+                 (fun () -> str ", ")
+                 pp_template_param
+                 template_params
+            ++ str ">"
+          in
+          let struct_body =
+            with_render_ctx
+              ~setup:(fun () ->
+                render_ctx.rc_in_struct <- true;
+                render_ctx.rc_in_template <- true )
+              (fun () ->
+                pp_module_expr
+                  ~is_header
+                  f
+                  (List.map (fun (mbid, _) -> MPbound mbid) template_params)
+                  body )
+          in
+          template_decl
+          ++ fnl ()
+          ++ str "struct "
+          ++ name
+          ++ str " {"
+          ++ fnl ()
+          ++ struct_body
+          ++ str "};"
+      | MEapply _ ->
+        if not is_header then
           mt ()
         else
-          modtypes_pp ++ fnl () ++ fnl ()
-      in
-      let old_concepts_hoisted = render_ctx.rc_concepts_hoisted in
-      if is_header && not has_concept_collision then
-        render_ctx.rc_in_struct <- true
-      else if (not is_header) && not has_concept_collision then (
-        render_ctx.rc_struct_name <-
-          ( match old_struct_name with
-          | Some parent -> Some (parent ++ str "::" ++ name)
-          | None -> Some name );
-        render_ctx.rc_struct_mp <- Some mp );
-      if is_header && typeclass_concepts <> [] then
-        render_ctx.rc_concepts_hoisted <- true;
-      let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
-      let this_method_candidates = !method_candidates in
-      render_ctx.rc_in_struct <- old_context;
-      render_ctx.rc_concepts_hoisted <- old_concepts_hoisted;
-      render_ctx.rc_struct_name <- old_struct_name;
-      render_ctx.rc_struct_mp <- old_struct_mp;
-      eponymous_type_ref := old_eponymous;
-      eponymous_record := old_eponymous_record;
-      method_candidates := old_methods;
-      if is_header then
-        let template_decl, record_fields_pp, record_methods_pp =
-          match this_eponymous_record with
-          | Some (epon_ref, fields, packet) ->
-            let ty_vars = packet.ip_vars in
-            let template_str =
-              if ty_vars = [] then
-                mt ()
-              else
-                str "template<"
-                ++ prlist_with_sep
-                     (fun () -> str ", ")
-                     (fun v -> str "typename " ++ Id.print v)
-                     ty_vars
-                ++ str ">"
-                ++ fnl ()
-            in
-            let field_list = List.combine fields packet.ip_types.(0) in
-            let pp_field (field_ref, field_ty) =
-              let field_name =
-                match field_ref with
-                | Some r -> str (Common.pp_global_name Term r)
-                | None -> str "_field"
-              in
-              let cpp_ty =
-                pp_cpp_type
-                  false
-                  ty_vars
-                  (convert_ml_type_to_cpp_type
-                     (empty_env ())
-                     Refset'.empty
-                     ty_vars
-                     field_ty )
-              in
-              cpp_ty ++ spc () ++ field_name ++ str ";"
-            in
-            let fields_pp = prlist_with_sep fnl pp_field field_list ++ fnl () in
-            let non_projection_candidates =
-              List.filter
-                (fun (r, _, _, _) -> not (Table.is_projection r))
-                (List.rev this_method_candidates)
-            in
-            let method_fields =
-              Translation.gen_record_methods
-                epon_ref
-                ty_vars
-                non_projection_candidates
-            in
-            let methods_pp =
-              if method_fields = [] then
-                mt ()
-              else
-                let saved_methods = !method_candidates in
-                method_candidates := this_method_candidates;
-                let result =
-                  prlist_with_sep
-                    fnl
-                    (fun (fld, _vis, _tag) -> pp_cpp_field (empty_env ()) fld)
-                    method_fields
-                  ++ fnl ()
-                in
-                method_candidates := saved_methods;
-                result
-            in
-            (template_str, fields_pp, methods_pp)
-          | None -> (mt (), mt (), mt ())
-        in
-        if has_concept_collision then
-          typeclasses_pp
-          ++ modtypes_pp
-          ++ record_fields_pp
-          ++ record_methods_pp
-          ++ body
-        else
-          let struct_def =
-            template_decl
-            ++ str "struct "
-            ++ name
-            ++ str " {"
-            ++ fnl ()
-            ++ record_fields_pp
-            ++ record_methods_pp
-            ++ body
-            ++ str "};"
+          let rec get_base_functor_mp = function
+            | MEapply (f, _) -> get_base_functor_mp f
+            | MEident fmp -> Some fmp
+            | _ -> None
+          in
+          ( match get_base_functor_mp m.ml_mod_expr with
+          | Some fmp -> Hashtbl.replace functor_app_sources mp fmp
+          | None -> () );
+          let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
+          let using_decl =
+            str "using " ++ name ++ str " = " ++ body ++ str ";"
           in
           let rec get_concept_name = function
             | MTident kn -> Some (pp_modname kn)
@@ -779,15 +430,403 @@ let rec pp_structure_elem ~is_header f = function
               ++ str ">);"
             | None -> mt ()
           in
-          typeclasses_pp ++ modtypes_pp ++ struct_def ++ static_assert
-      else
-        body
-    | MEident _ ->
-      if not is_header then
-        mt ()
-      else
+          using_decl ++ static_assert
+      | MEstruct (_mp, sel) ->
+        let old_context = render_ctx.rc_in_struct in
+        let old_struct_name = render_ctx.rc_struct_name in
+        let old_struct_mp = render_ctx.rc_struct_mp in
+        let old_eponymous = !eponymous_type_ref in
+        let old_methods = !method_candidates in
+        let old_eponymous_record = !eponymous_record in
+        eponymous_type_ref := None;
+        eponymous_record := None;
+        let module_name_str = Pp.string_of_ppcmds name in
+        let lowercase_module = String.lowercase_ascii module_name_str in
+        List.iter
+          (fun (_l, se) ->
+            match se with
+            | SEdecl (Dind (kn, ind)) ->
+              Array.iteri
+                (fun i p ->
+                  let ind_ref = GlobRef.IndRef (kn, i) in
+                  let ind_name = Common.pp_global_name Type ind_ref in
+                  if String.lowercase_ascii ind_name = lowercase_module then
+                    match
+                      ind.ind_kind
+                    with
+                    | TypeClass _ -> ()
+                    | Record fields ->
+                      eponymous_record := Some (ind_ref, fields, p);
+                      register_eponymous_record ind_ref
+                    | _ -> eponymous_type_ref := Some ind_ref )
+                ind.ind_packets
+            | _ -> () )
+          sel;
+        method_candidates := [];
+        let epon_ref_opt =
+          match (!eponymous_type_ref, !eponymous_record) with
+          | Some r, _ -> Some r
+          | _, Some (r, _, _) -> Some r
+          | None, None -> None
+        in
+        ( match epon_ref_opt with
+        | Some epon_ref ->
+          let epon_modpath = modpath_of_r epon_ref in
+          let same_module r = ModPath.equal (modpath_of_r r) epon_modpath in
+          let module_type_aliases = ref [] in
+          List.iter
+            (fun (_l, se) ->
+              match se with
+              | SEdecl (Dtype (r, _, _))
+                when ModPath.equal (modpath_of_r r) epon_modpath ->
+                module_type_aliases := r :: !module_type_aliases
+              | _ -> () )
+            sel;
+          let forward_inductives = ref [] in
+          let seen_epon = ref false in
+          List.iter
+            (fun (_l, se) ->
+              match se with
+              | SEdecl (Dind (fwd_kn, fwd_ind)) ->
+                Array.iteri
+                  (fun j _p ->
+                    let fwd_ref = GlobRef.IndRef (fwd_kn, j) in
+                    if Environ.QGlobRef.equal Environ.empty_env fwd_ref epon_ref
+                    then
+                      seen_epon := true
+                    else if !seen_epon then
+                      forward_inductives := fwd_ref :: !forward_inductives )
+                  fwd_ind.ind_packets
+              | _ -> () )
+            sel;
+          let excluded_refs = !module_type_aliases @ !forward_inductives in
+          let rec refs_excluded ty =
+            match ty with
+            | Miniml.Tglob (r, args, _) ->
+              List.exists
+                (Environ.QGlobRef.equal Environ.empty_env r)
+                excluded_refs
+              || List.exists refs_excluded args
+            | Miniml.Tarr (t1, t2) -> refs_excluded t1 || refs_excluded t2
+            | Miniml.Tmeta {contents = Some t} -> refs_excluded t
+            | _ -> false
+          in
+          let process_decl (_l, se) =
+            match se with
+            | SEdecl (Dterm (r, body, ty)) ->
+              if
+                same_module r
+                && (not (refs_excluded ty))
+                && Method_registry.body_safe_for_method body
+              then (
+                match
+                  Method_registry.find_epon_arg_pos epon_ref ty
+                with
+                | Some (pos, ind_tvar_positions) ->
+                  method_candidates := (r, body, ty, pos) :: !method_candidates;
+                  register_method r epon_ref pos ~ind_tvar_positions ();
+                  Method_registry.add_candidate
+                    (get_method_registry ())
+                    epon_ref
+                    (r, body, ty, pos)
+                | None -> () )
+            | SEdecl (Dfix (rv, defs, typs)) ->
+              Array.iteri
+                (fun i r ->
+                  if
+                    same_module r
+                    && (not (refs_excluded typs.(i)))
+                    && Method_registry.body_safe_for_method defs.(i)
+                  then
+                    let ty = typs.(i) in
+                    let body = defs.(i) in
+                    match Method_registry.find_epon_arg_pos epon_ref ty with
+                    | Some (pos, ind_tvar_positions) ->
+                      method_candidates :=
+                        (r, body, ty, pos) :: !method_candidates;
+                      register_method r epon_ref pos ~ind_tvar_positions ();
+                      Method_registry.add_candidate
+                        (get_method_registry ())
+                        epon_ref
+                        (r, body, ty, pos)
+                    | None -> () )
+                rv
+            | _ -> ()
+          in
+          List.iter process_decl sel;
+          List.iter process_decl !current_structure_decls
+        | None -> () );
+        let this_eponymous_record = !eponymous_record in
+        let concept_simple_name_of ind_ref =
+          let sn = Common.pp_global_name Type ind_ref in
+          match String.rindex_opt sn ':' with
+          | Some idx
+            when idx > 0 && idx < String.length sn - 1 && sn.[idx - 1] = ':' ->
+            String.sub sn (idx + 1) (String.length sn - idx - 1)
+          | _ -> sn
+        in
+        let module_name_str_raw = Common.pp_module mp in
+        let has_concept_collision =
+          List.exists
+            (fun (_l, se) ->
+              match se with
+              | SEdecl (Dind (kn, ind)) ->
+                List.exists
+                  (fun i ->
+                    match ind.ind_kind with
+                    | TypeClass _ ->
+                      let ind_ref = GlobRef.IndRef (kn, i) in
+                      String.equal
+                        (concept_simple_name_of ind_ref)
+                        module_name_str_raw
+                    | _ -> false )
+                  (List.init (Array.length ind.ind_packets) Fun.id)
+              | _ -> false )
+            sel
+        in
+        let typeclass_concepts =
+          if is_header then
+            List.concat_map
+              (fun (_l, se) ->
+                match se with
+                | SEdecl (Dind (kn, ind)) ->
+                  List.concat
+                    (List.init (Array.length ind.ind_packets) (fun i ->
+                       match ind.ind_kind with
+                       | TypeClass fields ->
+                         let ind_ref = GlobRef.IndRef (kn, i) in
+                         let packet = ind.ind_packets.(i) in
+                         [
+                           pp_cpp_decl
+                             (empty_env ())
+                             (Translation.gen_typeclass_cpp
+                                ind_ref
+                                fields
+                                packet );
+                         ]
+                       | _ -> [] ) )
+                | _ -> [] )
+              sel
+          else
+            []
+        in
+        let typeclasses_pp =
+          prlist_with_sep fnl (fun x -> x) typeclass_concepts
+        in
+        let typeclasses_pp =
+          if typeclass_concepts = [] then
+            mt ()
+          else
+            typeclasses_pp ++ fnl () ++ fnl ()
+        in
+        let modtype_concepts =
+          if is_header then
+            List.filter_map
+              (fun (l, se) ->
+                match se with
+                | SEmodtype m ->
+                  let modtype_name = str (Label.to_string l) in
+                  let rec get_base_concept = function
+                    | MTident kn -> Some kn
+                    | MTwith (mt, _) -> get_base_concept mt
+                    | _ -> None
+                  in
+                  let concept_pp =
+                    match get_base_concept m with
+                    | Some base_kn ->
+                      let base_name =
+                        match base_kn with
+                        | MPdot (_, l') -> str (Label.to_string l')
+                        | _ -> pp_modname base_kn
+                      in
+                      str "template<typename M>"
+                      ++ fnl ()
+                      ++ hov
+                           1
+                           ( str "concept "
+                           ++ modtype_name
+                           ++ str " = "
+                           ++ base_name
+                           ++ str "<M>;" )
+                    | None ->
+                      let old_hoisted = !hoisted_concept_defs in
+                      hoisted_concept_defs := [];
+                      let def = pp_module_type [] m in
+                      let hoisted = List.rev !hoisted_concept_defs in
+                      hoisted_concept_defs := old_hoisted;
+                      let main_concept =
+                        if Pp.ismt def then
+                          str "template<typename M>"
+                          ++ fnl ()
+                          ++ hov
+                               1
+                               (str "concept " ++ modtype_name ++ str " = true;")
+                        else
+                          str "template<typename M>"
+                          ++ fnl ()
+                          ++ hov
+                               1
+                               ( str "concept "
+                               ++ modtype_name
+                               ++ str " = requires {"
+                               ++ fnl ()
+                               ++ def
+                               ++ str "};" )
+                      in
+                      let all = List.append hoisted [main_concept] in
+                      prlist_with_sep (fun () -> fnl () ++ fnl ()) identity all
+                  in
+                  Some concept_pp
+                | _ -> None )
+              sel
+          else
+            []
+        in
+        let modtypes_pp = prlist_with_sep fnl (fun x -> x) modtype_concepts in
+        let modtypes_pp =
+          if modtype_concepts = [] then
+            mt ()
+          else
+            modtypes_pp ++ fnl () ++ fnl ()
+        in
+        let old_concepts_hoisted = render_ctx.rc_concepts_hoisted in
+        if is_header && not has_concept_collision then
+          render_ctx.rc_in_struct <- true
+        else if (not is_header) && not has_concept_collision then (
+          render_ctx.rc_struct_name <-
+            ( match old_struct_name with
+            | Some parent -> Some (parent ++ str "::" ++ name)
+            | None -> Some name );
+          render_ctx.rc_struct_mp <- Some mp );
+        if is_header && typeclass_concepts <> [] then
+          render_ctx.rc_concepts_hoisted <- true;
         let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
-        str "using " ++ name ++ str " = " ++ body ++ str ";" )
+        let this_method_candidates = !method_candidates in
+        render_ctx.rc_in_struct <- old_context;
+        render_ctx.rc_concepts_hoisted <- old_concepts_hoisted;
+        render_ctx.rc_struct_name <- old_struct_name;
+        render_ctx.rc_struct_mp <- old_struct_mp;
+        eponymous_type_ref := old_eponymous;
+        eponymous_record := old_eponymous_record;
+        method_candidates := old_methods;
+        if is_header then
+          let template_decl, record_fields_pp, record_methods_pp =
+            match this_eponymous_record with
+            | Some (epon_ref, fields, packet) ->
+              let ty_vars = packet.ip_vars in
+              let template_str =
+                if ty_vars = [] then
+                  mt ()
+                else
+                  str "template<"
+                  ++ prlist_with_sep
+                       (fun () -> str ", ")
+                       (fun v -> str "typename " ++ Id.print v)
+                       ty_vars
+                  ++ str ">"
+                  ++ fnl ()
+              in
+              let field_list = List.combine fields packet.ip_types.(0) in
+              let pp_field (field_ref, field_ty) =
+                let field_name =
+                  match field_ref with
+                  | Some r -> str (Common.pp_global_name Term r)
+                  | None -> str "_field"
+                in
+                let cpp_ty =
+                  pp_cpp_type
+                    false
+                    ty_vars
+                    (convert_ml_type_to_cpp_type
+                       (empty_env ())
+                       Refset'.empty
+                       ty_vars
+                       field_ty )
+                in
+                cpp_ty ++ spc () ++ field_name ++ str ";"
+              in
+              let fields_pp =
+                prlist_with_sep fnl pp_field field_list ++ fnl ()
+              in
+              let non_projection_candidates =
+                List.filter
+                  (fun (r, _, _, _) -> not (Table.is_projection r))
+                  (List.rev this_method_candidates)
+              in
+              let method_fields =
+                Translation.gen_record_methods
+                  epon_ref
+                  ty_vars
+                  non_projection_candidates
+              in
+              let methods_pp =
+                if method_fields = [] then
+                  mt ()
+                else
+                  let saved_methods = !method_candidates in
+                  method_candidates := this_method_candidates;
+                  let result =
+                    prlist_with_sep
+                      fnl
+                      (fun (fld, _vis, _tag) -> pp_cpp_field (empty_env ()) fld)
+                      method_fields
+                    ++ fnl ()
+                  in
+                  method_candidates := saved_methods;
+                  result
+              in
+              (template_str, fields_pp, methods_pp)
+            | None -> (mt (), mt (), mt ())
+          in
+          if has_concept_collision then
+            typeclasses_pp
+            ++ modtypes_pp
+            ++ record_fields_pp
+            ++ record_methods_pp
+            ++ body
+          else
+            let struct_def =
+              template_decl
+              ++ str "struct "
+              ++ name
+              ++ str " {"
+              ++ fnl ()
+              ++ record_fields_pp
+              ++ record_methods_pp
+              ++ body
+              ++ str "};"
+            in
+            let rec get_concept_name = function
+              | MTident kn -> Some (pp_modname kn)
+              | MTwith (mt, _) -> get_concept_name mt
+              | MTfunsig (_, mt, mt') -> get_concept_name mt'
+              | MTsig _ -> None
+            in
+            let static_assert =
+              match get_concept_name m.ml_mod_type with
+              | Some concept_name ->
+                fnl ()
+                ++ str "static_assert("
+                ++ concept_name
+                ++ str "<"
+                ++ name
+                ++ str ">);"
+              | None -> mt ()
+            in
+            typeclasses_pp ++ modtypes_pp ++ struct_def ++ static_assert
+        else
+          body
+      | MEident _ ->
+        if not is_header then
+          mt ()
+        else
+          let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
+          str "using " ++ name ++ str " = " ++ body ++ str ";"
+    in
+    if Pp.ismt mod_pp then
+      mt ()
+    else
+      doc ++ mod_pp
   | l, SEmodtype m ->
     if (not is_header) || render_ctx.rc_in_struct then
       mt ()

@@ -139,6 +139,9 @@ public:
   }
 };
 
+/// A graph abstraction parameterized by a container type G and
+/// node type A. Provides operations for building and querying
+/// the graph.
 template <typename I, typename t_A>
 concept Eq = requires(t_A a0, t_A a1) {
   { I::eqb(a1, a0) } -> std::convertible_to<bool>;
@@ -157,6 +160,7 @@ concept Graph = requires(t_G a0, t_A a1) {
 
 template <typename g, typename a> using edge = std::any;
 
+/// An edge in a directed graph, from edge_from to edge_to.
 template <typename t_A> struct DirectedEdge {
   t_A edge_from;
   t_A edge_to;
@@ -168,6 +172,7 @@ bool directed_originates(const T1 a,
   return _tcI0::eqb(e->edge_from, a);
 }
 
+/// A directed graph storing its directed_nodes and directed_edges.
 template <typename t_A> struct Directed {
   std::shared_ptr<List<t_A>> directed_nodes;
   std::shared_ptr<List<std::shared_ptr<DirectedEdge<t_A>>>> directed_edges;
@@ -211,6 +216,7 @@ template <typename _tcI0, typename T1> struct DirectedGraph {
   }
 };
 
+/// An edge in an undirected graph connecting edge_first and edge_second.
 template <typename t_A> struct UndirectedEdge {
   t_A edge_first;
   t_A edge_second;

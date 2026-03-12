@@ -12,6 +12,7 @@
 #include <utility>
 #include <variant>
 
+/// * Split
 std::pair<std::shared_ptr<List<unsigned int>>,
           std::shared_ptr<List<unsigned int>>>
 MergesortFuel::split(const std::shared_ptr<List<unsigned int>> &l) {
@@ -57,6 +58,7 @@ MergesortFuel::split(const std::shared_ptr<List<unsigned int>> &l) {
       l->v());
 }
 
+/// * Merge
 std::shared_ptr<List<unsigned int>>
 MergesortFuel::merge(std::shared_ptr<List<unsigned int>> l1,
                      const std::shared_ptr<List<unsigned int>> &l2) {
@@ -99,6 +101,7 @@ MergesortFuel::merge(std::shared_ptr<List<unsigned int>> l1,
   return merge_aux(l2);
 }
 
+/// * Fuel-based merge sort
 std::shared_ptr<List<unsigned int>>
 MergesortFuel::msort_go(const unsigned int fuel,
                         std::shared_ptr<List<unsigned int>> l) {
@@ -136,6 +139,7 @@ MergesortFuel::msort_go(const unsigned int fuel,
   }
 }
 
+/// * Top-level sort and correctness
 std::shared_ptr<List<unsigned int>>
 MergesortFuel::msort(const std::shared_ptr<List<unsigned int>> &l) {
   return msort_go(l->length(), l);

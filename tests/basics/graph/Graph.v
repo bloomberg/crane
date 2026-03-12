@@ -7,9 +7,13 @@ Import ListNotations.
 
 Module Graph.
 
+(** Decidable equality via a boolean function [eqb]. *)
 Class Eq (A : Type) : Type :=
   { eqb : A -> A -> bool }.
 
+(** A graph abstraction parameterized by a container type [G] and
+    node type [A]. Provides operations for building and querying
+    the graph. *)
 Class Graph (G : Type -> Type) (A : Type) : Type :=
   { edge : Type
   ; empty : G A
@@ -19,6 +23,7 @@ Class Graph (G : Type -> Type) (A : Type) : Type :=
   ; edges    : G A -> A -> list edge
   }.
 
+(** An edge in a directed graph, from [edge_from] to [edge_to]. *)
 Record DirectedEdge (A : Type) : Type :=
   { edge_from : A
   ; edge_to : A
@@ -31,6 +36,7 @@ Definition directed_originates
            {A : Type} `{Eq A} (a : A) (e : DirectedEdge A) : bool := 
   eqb (edge_from e) a.
 
+(** A directed graph storing its [directed_nodes] and [directed_edges]. *)
 Record Directed (A : Type) : Type :=
   { directed_nodes : list A
   ; directed_edges : list (DirectedEdge A)
@@ -57,6 +63,7 @@ Instance DirectedGraph {A : Type} `{Eq A} : Graph Directed A :=
   ; edges g n := filter (directed_originates n) (directed_edges g)
   }.
 
+(** An edge in an undirected graph connecting [edge_first] and [edge_second]. *)
 Record UndirectedEdge (A : Type) : Type :=
   { edge_first : A
   ; edge_second : A

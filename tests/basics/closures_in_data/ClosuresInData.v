@@ -7,34 +7,39 @@ Import ListNotations.
 
 Module ClosuresInData.
 
-(* List of functions *)
+(** A list of functions: successor, doubling, and squaring. *)
 Definition fn_list : list (nat -> nat) :=
   [S; fun x => x + x; fun x => x * x].
 
+(** [apply_all fns x] applies every function in [fns] to [x],
+    returning the list of results. *)
 Definition apply_all (fns : list (nat -> nat)) (x : nat) : list nat :=
   map (fun f => f x) fns.
 
-(* Record containing functions *)
+(** A pair of invertible transformations: [forward] and [backward]. *)
 Record transform := mk_transform {
   forward : nat -> nat;
   backward : nat -> nat
 }.
 
+(** A transform that doubles via addition and halves via division. *)
 Definition double_transform : transform :=
   mk_transform (fun x => x + x) (fun x => x / 2).
 
 Definition apply_forward (t : transform) (x : nat) : nat := forward t x.
 Definition apply_backward (t : transform) (x : nat) : nat := backward t x.
 
-(* Composing function lists *)
+(** [compose_all fns x] folds [fns] left, threading [x] through each
+    function in sequence. *)
 Definition compose_all (fns : list (nat -> nat)) (x : nat) : nat :=
   List.fold_left (fun acc f => f acc) fns x.
 
-(* Pipeline pattern *)
+(** A pipeline of transformations: increment, double, then add 10. *)
 Definition pipeline : list (nat -> nat) :=
   [fun x => x + 1; fun x => x * 2; fun x => x + 10].
 
-(* Option of function *)
+(** [maybe_apply mf x] applies function [mf] to [x] if present,
+    otherwise returns [x] unchanged. *)
 Definition maybe_apply (mf : option (nat -> nat)) (x : nat) : nat :=
   match mf with
   | None => x

@@ -246,6 +246,7 @@ bool Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
       r->v());
 }
 
+/// An optimized constructor for Cat.
 std::shared_ptr<Matcher::regexp>
 Matcher::OptCat(std::shared_ptr<Matcher::regexp> r1,
                 std::shared_ptr<Matcher::regexp> r2) {
@@ -507,6 +508,7 @@ Matcher::OptCat(std::shared_ptr<Matcher::regexp> r1,
   }();
 }
 
+/// Optimized version of Alt.
 std::shared_ptr<Matcher::regexp>
 Matcher::OptAlt(std::shared_ptr<Matcher::regexp> r1,
                 std::shared_ptr<Matcher::regexp> r2) {
@@ -865,6 +867,7 @@ Matcher::OptAlt(std::shared_ptr<Matcher::regexp> r1,
       r1->v());
 }
 
+/// If r accepts the empty string, return Eps, else return Zero.
 std::shared_ptr<Matcher::regexp>
 Matcher::null(const std::shared_ptr<Matcher::regexp> &r) {
   return std::visit(
@@ -907,6 +910,8 @@ bool Matcher::accepts_null(const std::shared_ptr<Matcher::regexp> &r) {
   return regexp_eq(null(r), regexp::ctor::Eps_());
 }
 
+/// This is the heart of the algorithm.  It returns a regexp denoting
+/// { cs | (c::cs) in r }.
 std::shared_ptr<Matcher::regexp>
 Matcher::deriv(const std::shared_ptr<Matcher::regexp> &r, const int64_t c) {
   return std::visit(
@@ -953,6 +958,8 @@ Matcher::deriv(const std::shared_ptr<Matcher::regexp> &r, const int64_t c) {
       r->v());
 }
 
+/// This calculates the derivative of a regular expression with respect to a
+/// string.
 std::shared_ptr<Matcher::regexp>
 Matcher::derivs(std::shared_ptr<Matcher::regexp> r,
                 const std::shared_ptr<List<int64_t>> &cs) {
@@ -969,6 +976,8 @@ Matcher::derivs(std::shared_ptr<Matcher::regexp> r,
       cs->v());
 }
 
+/// To see if cs matches r, calculate the derivative of r with respect
+/// to s, and see if the resulting regexp accepts the empty string.
 bool Matcher::deriv_parse(const std::shared_ptr<Matcher::regexp> &r,
                           const std::shared_ptr<List<int64_t>> &cs) {
   if (accepts_null(derivs(r, cs))) {
@@ -978,6 +987,7 @@ bool Matcher::deriv_parse(const std::shared_ptr<Matcher::regexp> &r,
   }
 }
 
+/// null r returns Eps or Zero
 bool Matcher::NullEpsOrZero(const std::shared_ptr<Matcher::regexp> &r) {
   return std::visit(
       Overloaded{[](const typename Matcher::regexp::Any _args) -> auto {
@@ -1032,6 +1042,8 @@ bool Matcher::NullEpsOrZero(const std::shared_ptr<Matcher::regexp> &r) {
       r->v());
 }
 
+/// From this, we can build a decidable regexp matcher by running
+/// the derivative-based parser.
 bool Matcher::parse(const std::shared_ptr<Matcher::regexp> &r,
                     const std::shared_ptr<List<int64_t>> &cs) {
   bool b = deriv_parse(r, cs);
