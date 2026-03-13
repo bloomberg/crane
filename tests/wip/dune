@@ -44,3 +44,14 @@
   (alias runtest)
   (deps unsound_axioms.t.exe)
   (action (run ./unsound_axioms.t.exe))))
+
+(subdir pulse_parse_certificate
+ (rule
+  (targets pulse_parse_certificate.t.exe)
+  (deps PulseParseCertificate.vo pulse_parse_certificate.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pulse_parse_certificate.t.exe pulse_parse_certificate.cpp pulse_parse_certificate.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pulse_parse_certificate.t.exe)
+  (action (run ./pulse_parse_certificate.t.exe))))
