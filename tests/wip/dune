@@ -45,13 +45,13 @@
   (deps unsound_axioms.t.exe)
   (action (run ./unsound_axioms.t.exe))))
 
-(subdir pulse_parse_certificate
+(subdir double_opposite_witnesses
  (rule
-  (targets pulse_parse_certificate.t.exe)
-  (deps PulseParseCertificate.vo pulse_parse_certificate.t.cpp (source_tree .))
+  (targets double_opposite_witnesses.t.exe)
+  (deps DoubleOppositeWitnesses.vo double_opposite_witnesses.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} pulse_parse_certificate.t.exe pulse_parse_certificate.cpp pulse_parse_certificate.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} double_opposite_witnesses.t.exe double_opposite_witnesses.cpp double_opposite_witnesses.t.cpp)))
  (rule
   (alias runtest)
-  (deps pulse_parse_certificate.t.exe)
-  (action (run ./pulse_parse_certificate.t.exe))))
+  (deps double_opposite_witnesses.t.exe)
+  (action (run ./double_opposite_witnesses.t.exe))))
