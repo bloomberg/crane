@@ -55,3 +55,14 @@
   (alias runtest)
   (deps double_opposite_witnesses.t.exe)
   (action (run ./double_opposite_witnesses.t.exe))))
+
+(subdir epoch_cell_glyph_trace
+ (rule
+  (targets epoch_cell_glyph_trace.t.exe)
+  (deps EpochCellGlyphTrace.vo epoch_cell_glyph_trace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} epoch_cell_glyph_trace.t.exe epoch_cell_glyph_trace.cpp epoch_cell_glyph_trace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps epoch_cell_glyph_trace.t.exe)
+  (action (run ./epoch_cell_glyph_trace.t.exe))))
