@@ -55,3 +55,14 @@
   (alias runtest)
   (deps double_opposite_witnesses.t.exe)
   (action (run ./double_opposite_witnesses.t.exe))))
+
+(subdir fold_sequence_state_trace
+ (rule
+  (targets fold_sequence_state_trace.t.exe)
+  (deps FoldSequenceStateTrace.vo fold_sequence_state_trace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fold_sequence_state_trace.t.exe fold_sequence_state_trace.cpp fold_sequence_state_trace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fold_sequence_state_trace.t.exe)
+  (action (run ./fold_sequence_state_trace.t.exe))))
