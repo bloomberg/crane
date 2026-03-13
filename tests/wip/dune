@@ -55,3 +55,14 @@
   (alias runtest)
   (deps double_opposite_witnesses.t.exe)
   (action (run ./double_opposite_witnesses.t.exe))))
+
+(subdir density_potential_trace
+ (rule
+  (targets density_potential_trace.t.exe)
+  (deps DensityPotentialTrace.vo density_potential_trace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} density_potential_trace.t.exe density_potential_trace.cpp density_potential_trace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps density_potential_trace.t.exe)
+  (action (run ./density_potential_trace.t.exe))))
