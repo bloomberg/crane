@@ -55,3 +55,14 @@
   (alias runtest)
   (deps double_opposite_witnesses.t.exe)
   (action (run ./double_opposite_witnesses.t.exe))))
+
+(subdir polygon_winding_area_trace
+ (rule
+  (targets polygon_winding_area_trace.t.exe)
+  (deps PolygonWindingAreaTrace.vo polygon_winding_area_trace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} polygon_winding_area_trace.t.exe polygon_winding_area_trace.cpp polygon_winding_area_trace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps polygon_winding_area_trace.t.exe)
+  (action (run ./polygon_winding_area_trace.t.exe))))
