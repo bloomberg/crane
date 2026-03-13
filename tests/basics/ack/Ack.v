@@ -20,5 +20,6 @@ Require Crane.Mapping.Std.
 Require Crane.Mapping.NatIntStd.
 Crane Extraction "ack" Ack.
 
-(* Require Extraction. *)
-(* Extraction "ack.ml" Ack. *)
+(* OCaml extraction for differential testing *)
+From Stdlib Require Extraction ExtrOcamlBasic ExtrOcamlNatInt.
+Extraction "ack_ocaml.ml" Ack.ack.
