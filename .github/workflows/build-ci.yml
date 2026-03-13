@@ -88,8 +88,8 @@ jobs:
                 "$GITHUB_WORKSPACE/$compile_script" "$GITHUB_WORKSPACE" "$test_name.t.exe" \
                   "$test_name.cpp" "$test_name.t.cpp"
               ) 2>&1; then
-                # Run the test
-                if "$test_dir/$test_name.t.exe"; then
+                # Run the test from its directory (tests may read files by relative path)
+                if (cd "$test_dir" && "./$test_name.t.exe"); then
                   echo "✓ PASSED: $test_name"
                   passed=$((passed + 1))
                 else
