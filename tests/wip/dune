@@ -55,3 +55,14 @@
   (alias runtest)
   (deps double_opposite_witnesses.t.exe)
   (action (run ./double_opposite_witnesses.t.exe))))
+
+(subdir record_erased_proof_fields
+ (rule
+  (targets record_erased_proof_fields.t.exe)
+  (deps RecordErasedProofFields.vo record_erased_proof_fields.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_erased_proof_fields.t.exe record_erased_proof_fields.cpp record_erased_proof_fields.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_erased_proof_fields.t.exe)
+  (action (run ./record_erased_proof_fields.t.exe))))
