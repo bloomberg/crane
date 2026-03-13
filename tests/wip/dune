@@ -320,6 +320,17 @@
   (deps todo_monadic_global_alias.t.exe)
   (action (run ./todo_monadic_global_alias.t.exe))))
 
+(subdir pulse_parse_certificate
+ (rule
+  (targets pulse_parse_certificate.t.exe)
+  (deps PulseParseCertificate.vo pulse_parse_certificate.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pulse_parse_certificate.t.exe pulse_parse_certificate.cpp pulse_parse_certificate.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pulse_parse_certificate.t.exe)
+  (action (run ./pulse_parse_certificate.t.exe))))
+
 (subdir update_nth_length_edge_0009
  (rule
   (targets update_nth_length_edge_0009.t.exe)
