@@ -23,13 +23,13 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 struct WrapperDeclMerge {
   struct A {
     struct Nat {
-      static unsigned int fa(const unsigned int n);
+      __attribute__((pure)) static unsigned int fa(const unsigned int n);
     };
   };
 
   struct B {
     struct Nat {
-      static unsigned int fb(const unsigned int n);
+      __attribute__((pure)) static unsigned int fb(const unsigned int n);
     };
   };
 

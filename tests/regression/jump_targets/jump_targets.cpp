@@ -12,7 +12,8 @@
 #include <utility>
 #include <variant>
 
-std::optional<unsigned int> JumpTargets::jump_target_collection(
+__attribute__((pure)) std::optional<unsigned int>
+JumpTargets::jump_target_collection(
     const std::shared_ptr<JumpTargets::instr_collection> &i) {
   return std::visit(
       Overloaded{
@@ -59,12 +60,14 @@ std::shared_ptr<List<unsigned int>> JumpTargets::collect_targets(
       prog->v());
 }
 
-bool JumpTargets::addr_in_region(
-    const unsigned int addr, const std::shared_ptr<JumpTargets::layout> &l) {
+__attribute__((pure)) bool
+JumpTargets::addr_in_region(const unsigned int addr,
+                            const std::shared_ptr<JumpTargets::layout> &l) {
   return (l->base_ <= addr && addr < (l->base_ + l->code_));
 }
 
-std::optional<unsigned int> JumpTargets::jump_target_region(
+__attribute__((pure)) std::optional<unsigned int>
+JumpTargets::jump_target_region(
     const std::shared_ptr<JumpTargets::instr_region> &i) {
   return std::visit(
       Overloaded{[](const typename JumpTargets::instr_region::JUN_reg _args)
@@ -82,9 +85,9 @@ std::optional<unsigned int> JumpTargets::jump_target_region(
       i->v());
 }
 
-bool JumpTargets::in_layout(
-    const std::shared_ptr<JumpTargets::layout> &l,
-    const std::shared_ptr<JumpTargets::instr_region> &i) {
+__attribute__((pure)) bool
+JumpTargets::in_layout(const std::shared_ptr<JumpTargets::layout> &l,
+                       const std::shared_ptr<JumpTargets::instr_region> &i) {
   if (jump_target_region(i).has_value()) {
     unsigned int a = *jump_target_region(i);
     return addr_in_region(a, l);
@@ -93,7 +96,7 @@ bool JumpTargets::in_layout(
   }
 }
 
-std::optional<unsigned int>
+__attribute__((pure)) std::optional<unsigned int>
 JumpTargets::jump_target_jms(const std::shared_ptr<JumpTargets::instr_jms> &i) {
   return std::visit(
       Overloaded{[](const typename JumpTargets::instr_jms::JUN_jms _args)
@@ -111,7 +114,7 @@ JumpTargets::jump_target_jms(const std::shared_ptr<JumpTargets::instr_jms> &i) {
       i->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 JumpTargets::option_nat_or_zero(const std::optional<unsigned int> o) {
   if (o.has_value()) {
     unsigned int n = *o;
@@ -121,7 +124,7 @@ JumpTargets::option_nat_or_zero(const std::optional<unsigned int> o) {
   }
 }
 
-std::optional<unsigned int>
+__attribute__((pure)) std::optional<unsigned int>
 JumpTargets::jump_target_jun(const std::shared_ptr<JumpTargets::instr_jun> &i) {
   return std::visit(
       Overloaded{[](const typename JumpTargets::instr_jun::JUN_jun _args)
@@ -139,7 +142,8 @@ JumpTargets::jump_target_jun(const std::shared_ptr<JumpTargets::instr_jun> &i) {
       i->v());
 }
 
-unsigned int JumpTargets::target_default(const std::optional<unsigned int> o) {
+__attribute__((pure)) unsigned int
+JumpTargets::target_default(const std::optional<unsigned int> o) {
   if (o.has_value()) {
     unsigned int a = *o;
     return a;

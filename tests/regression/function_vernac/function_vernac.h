@@ -65,10 +65,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 template <typename t_A> struct Sig {
@@ -101,15 +101,16 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct FunctionVernac {
   template <MapsTo<unsigned int, unsigned int> F0>
-  static unsigned int div2_F(F0 &&div3, const unsigned int n) {
+  __attribute__((pure)) static unsigned int div2_F(F0 &&div3,
+                                                   const unsigned int n) {
     if (n <= 0) {
       return 0u;
     } else {
@@ -125,7 +126,7 @@ struct FunctionVernac {
 
   static std::shared_ptr<Sig<unsigned int>>
   div2_terminate(const unsigned int n);
-  static unsigned int div2(const unsigned int n);
+  __attribute__((pure)) static unsigned int div2(const unsigned int n);
 
   struct R_div2 {
     // TYPES
@@ -192,10 +193,10 @@ struct FunctionVernac {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -287,8 +288,8 @@ struct FunctionVernac {
                                                 const unsigned int _res);
 
   template <MapsTo<unsigned int, std::shared_ptr<List<unsigned int>>> F0>
-  static unsigned int list_sum_F(F0 &&list_sum0,
-                                 const std::shared_ptr<List<unsigned int>> &l) {
+  __attribute__((pure)) static unsigned int
+  list_sum_F(F0 &&list_sum0, const std::shared_ptr<List<unsigned int>> &l) {
     return std::visit(
         Overloaded{
             [](const typename List<unsigned int>::Nil _args) -> unsigned int {
@@ -304,7 +305,8 @@ struct FunctionVernac {
 
   static std::shared_ptr<Sig<unsigned int>>
   list_sum_terminate(const std::shared_ptr<List<unsigned int>> &l);
-  static unsigned int list_sum(const std::shared_ptr<List<unsigned int>> &l);
+  __attribute__((pure)) static unsigned int
+  list_sum(const std::shared_ptr<List<unsigned int>> &l);
 
   struct R_list_sum {
     // TYPES
@@ -365,10 +367,10 @@ struct FunctionVernac {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, std::shared_ptr<List<unsigned int>>> F0,

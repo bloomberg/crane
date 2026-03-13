@@ -66,10 +66,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   t_A nth(const unsigned int n, const t_A default0) const {
     if (n <= 0) {
@@ -216,10 +216,10 @@ struct RamStateOps {
           empty_ram, default_sel,
           ListDef::template repeat<unsigned int>(0u, 8u)});
   static std::shared_ptr<state> reset_state(std::shared_ptr<state> s);
-  static unsigned int get_main(const std::shared_ptr<ram_reg> &rg,
-                               const unsigned int i);
-  static unsigned int get_stat(const std::shared_ptr<ram_reg> &rg,
-                               const unsigned int i);
+  __attribute__((pure)) static unsigned int
+  get_main(const std::shared_ptr<ram_reg> &rg, const unsigned int i);
+  __attribute__((pure)) static unsigned int
+  get_stat(const std::shared_ptr<ram_reg> &rg, const unsigned int i);
   static std::shared_ptr<ram_reg> upd_main_in_reg(std::shared_ptr<ram_reg> rg,
                                                   const unsigned int i,
                                                   const unsigned int v);
@@ -249,13 +249,15 @@ struct RamStateOps {
   static std::shared_ptr<ram_chip>
   current_chip(const std::shared_ptr<state> &s);
   static std::shared_ptr<ram_reg> current_reg(const std::shared_ptr<state> &s);
-  static unsigned int ram_read_main(const std::shared_ptr<state> &s);
+  __attribute__((pure)) static unsigned int
+  ram_read_main(const std::shared_ptr<state> &s);
   static std::shared_ptr<List<std::shared_ptr<ram_bank>>>
   ram_write_main_sys(const std::shared_ptr<state> &s, const unsigned int v);
   static std::shared_ptr<List<std::shared_ptr<ram_bank>>>
   ram_write_status_sys(const std::shared_ptr<state> &s, const unsigned int idx,
                        const unsigned int v);
-  static std::pair<std::optional<unsigned int>, std::shared_ptr<state>>
+  __attribute__((pure)) static std::pair<std::optional<unsigned int>,
+                                         std::shared_ptr<state>>
   pop_stack(std::shared_ptr<state> s);
   static inline const std::shared_ptr<state> stack_state =
       std::make_shared<state>(state{

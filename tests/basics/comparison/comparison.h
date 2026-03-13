@@ -57,13 +57,16 @@ struct Comparison {
     }();
   }
 
-  static unsigned int cmp_to_nat(const Cmp c);
-  static Cmp compare_nats(const unsigned int a, const unsigned int b);
-  static unsigned int max_nat(const unsigned int a, const unsigned int b);
-  static unsigned int min_nat(const unsigned int a, const unsigned int b);
-  static unsigned int clamp(const unsigned int val, const unsigned int lo,
-                            const unsigned int hi);
-  static Cmp flip_cmp(const Cmp c);
+  __attribute__((pure)) static unsigned int cmp_to_nat(const Cmp c);
+  __attribute__((pure)) static Cmp compare_nats(const unsigned int a,
+                                                const unsigned int b);
+  __attribute__((pure)) static unsigned int max_nat(const unsigned int a,
+                                                    const unsigned int b);
+  __attribute__((pure)) static unsigned int min_nat(const unsigned int a,
+                                                    const unsigned int b);
+  __attribute__((pure)) static unsigned int
+  clamp(const unsigned int val, const unsigned int lo, const unsigned int hi);
+  __attribute__((pure)) static Cmp flip_cmp(const Cmp c);
   static inline const unsigned int test_lt_nat = cmp_to_nat(Cmp::e_CMPLT);
   static inline const unsigned int test_eq_nat = cmp_to_nat(Cmp::e_CMPEQ);
   static inline const unsigned int test_gt_nat = cmp_to_nat(Cmp::e_CMPGT);

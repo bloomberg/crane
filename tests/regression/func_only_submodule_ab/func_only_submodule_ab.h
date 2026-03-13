@@ -23,11 +23,11 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 struct FuncOnlySubmoduleAb {
   struct Root {
     struct A {
-      static unsigned int inc(const unsigned int n);
+      __attribute__((pure)) static unsigned int inc(const unsigned int n);
     };
 
     struct B {
-      static unsigned int dec(const unsigned int _x0);
+      __attribute__((pure)) static unsigned int dec(const unsigned int _x0);
     };
   };
 

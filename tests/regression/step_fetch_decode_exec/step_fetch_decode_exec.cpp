@@ -12,7 +12,7 @@
 #include <utility>
 #include <variant>
 
-unsigned int StepFetchDecodeExec::fetch_byte(
+__attribute__((pure)) unsigned int StepFetchDecodeExec::fetch_byte(
     const std::shared_ptr<StepFetchDecodeExec::state> &s,
     const unsigned int addr) {
   return s->rom->nth(addr, 0u);

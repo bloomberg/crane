@@ -22,10 +22,12 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct PeanoNat {
-  static bool leb(const unsigned int n, const unsigned int m);
-  static bool ltb(const unsigned int n, const unsigned int m);
-  static bool even(const unsigned int n);
-  static unsigned int div2(const unsigned int n);
+  __attribute__((pure)) static bool leb(const unsigned int n,
+                                        const unsigned int m);
+  __attribute__((pure)) static bool ltb(const unsigned int n,
+                                        const unsigned int m);
+  __attribute__((pure)) static bool even(const unsigned int n);
+  __attribute__((pure)) static unsigned int div2(const unsigned int n);
 };
 
 template <typename I, typename t_A>
@@ -38,8 +40,9 @@ concept FunctionalInduction =
 
 struct Equations {
   template <MapsTo<unsigned int, std::pair<unsigned int, unsigned int>> F3>
-  static unsigned int gcd_clause_3(const unsigned int n, const unsigned int n0,
-                                   const bool refine, F3 &&gcd0) {
+  __attribute__((pure)) static unsigned int
+  gcd_clause_3(const unsigned int n, const unsigned int n0, const bool refine,
+               F3 &&gcd0) {
     if (refine) {
       return gcd0(std::make_pair(
           (n + 1), ((((std::move(n0) + 1) - (n + 1)) > (std::move(n0) + 1)
@@ -55,7 +58,7 @@ struct Equations {
   }
 
   template <MapsTo<unsigned int, std::pair<unsigned int, unsigned int>> F1>
-  static unsigned int
+  __attribute__((pure)) static unsigned int
   gcd_functional(const std::pair<unsigned int, unsigned int> p, F1 &&gcd0) {
     unsigned int n = p.first;
     unsigned int n0 = p.second;
@@ -72,11 +75,13 @@ struct Equations {
     }
   }
 
-  static unsigned int gcd(const std::pair<unsigned int, unsigned int> x);
-  static unsigned int gcd_unfold_clause_3(const unsigned int n,
-                                          const unsigned int n0,
-                                          const bool refine);
-  static unsigned int gcd_unfold(const std::pair<unsigned int, unsigned int> p);
+  __attribute__((pure)) static unsigned int
+  gcd(const std::pair<unsigned int, unsigned int> x);
+  __attribute__((pure)) static unsigned int
+  gcd_unfold_clause_3(const unsigned int n, const unsigned int n0,
+                      const bool refine);
+  __attribute__((pure)) static unsigned int
+  gcd_unfold(const std::pair<unsigned int, unsigned int> p);
   struct gcd_graph;
   struct gcd_clause_3_graph;
 
@@ -153,10 +158,10 @@ struct Equations {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   struct gcd_clause_3_graph {
@@ -222,10 +227,10 @@ struct Equations {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T1, unsigned int> F0,
@@ -449,9 +454,9 @@ struct Equations {
           std::function<unsigned int(std::pair<unsigned int, unsigned int>)>>);
 
   template <MapsTo<unsigned int, unsigned int> F2>
-  static unsigned int collatz_steps_clause_3(const unsigned int n,
-                                             const bool refine,
-                                             F2 &&collatz_steps0) {
+  __attribute__((pure)) static unsigned int
+  collatz_steps_clause_3(const unsigned int n, const bool refine,
+                         F2 &&collatz_steps0) {
     if (refine) {
       return (collatz_steps0(PeanoNat::div2(std::move(n))) + 1);
     } else {
@@ -460,8 +465,8 @@ struct Equations {
   }
 
   template <MapsTo<unsigned int, unsigned int> F1>
-  static unsigned int collatz_steps_functional(const unsigned int n,
-                                               F1 &&collatz_steps0) {
+  __attribute__((pure)) static unsigned int
+  collatz_steps_functional(const unsigned int n, F1 &&collatz_steps0) {
     if (n <= 0) {
       return 0u;
     } else {
@@ -476,10 +481,11 @@ struct Equations {
     }
   }
 
-  static unsigned int collatz_steps(const unsigned int x);
-  static unsigned int collatz_steps_unfold_clause_3(const unsigned int n,
-                                                    const bool refine);
-  static unsigned int collatz_steps_unfold(const unsigned int n);
+  __attribute__((pure)) static unsigned int collatz_steps(const unsigned int x);
+  __attribute__((pure)) static unsigned int
+  collatz_steps_unfold_clause_3(const unsigned int n, const bool refine);
+  __attribute__((pure)) static unsigned int
+  collatz_steps_unfold(const unsigned int n);
   struct collatz_steps_graph;
   struct collatz_steps_clause_3_graph;
 
@@ -559,10 +565,10 @@ struct Equations {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   struct collatz_steps_clause_3_graph {
@@ -632,10 +638,10 @@ struct Equations {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, typename F2, typename F3, typename F4>

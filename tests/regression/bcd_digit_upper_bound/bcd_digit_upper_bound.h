@@ -21,7 +21,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct BcdDigitUpperBound {
-  static bool is_bcd_digitb(const unsigned int n);
+  __attribute__((pure)) static bool is_bcd_digitb(const unsigned int n);
   static inline const unsigned int t = ([](void) {
     if (is_bcd_digitb(7u)) {
       return 1u;

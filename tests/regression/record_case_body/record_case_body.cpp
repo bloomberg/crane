@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-unsigned int
+__attribute__((pure)) unsigned int
 RecordCaseBody::case_in_body(const std::shared_ptr<RecordCaseBody::Rec> &r) {
   return [&](void) {
     unsigned int a = r->f1;
@@ -26,7 +26,8 @@ RecordCaseBody::case_in_body(const std::shared_ptr<RecordCaseBody::Rec> &r) {
   }();
 }
 
-unsigned int RecordCaseBody::helper(const unsigned int n) {
+__attribute__((pure)) unsigned int
+RecordCaseBody::helper(const unsigned int n) {
   if (n <= 0) {
     return 0u;
   } else {
@@ -35,7 +36,7 @@ unsigned int RecordCaseBody::helper(const unsigned int n) {
   }
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RecordCaseBody::fix_in_body(const std::shared_ptr<RecordCaseBody::Rec> &r) {
   return [&](void) {
     unsigned int a = r->f1;
@@ -45,7 +46,7 @@ RecordCaseBody::fix_in_body(const std::shared_ptr<RecordCaseBody::Rec> &r) {
   }();
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RecordCaseBody::let_in_body(const std::shared_ptr<RecordCaseBody::Rec> &r) {
   return [&](void) {
     unsigned int a = r->f1;
@@ -63,7 +64,7 @@ RecordCaseBody::let_in_body(const std::shared_ptr<RecordCaseBody::Rec> &r) {
   }();
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RecordCaseBody::apply_nonfld(const std::shared_ptr<RecordCaseBody::Rec> &r) {
   return [&](void) {
     unsigned int a = r->f1;
@@ -73,7 +74,7 @@ RecordCaseBody::apply_nonfld(const std::shared_ptr<RecordCaseBody::Rec> &r) {
   }();
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RecordCaseBody::conditional_body(const std::shared_ptr<RecordCaseBody::Rec> &r,
                                  const bool flag) {
   return [&](void) {
@@ -93,7 +94,7 @@ RecordCaseBody::conditional_body(const std::shared_ptr<RecordCaseBody::Rec> &r,
   }();
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RecordCaseBody::outer_ref(const unsigned int x,
                           const std::shared_ptr<RecordCaseBody::Rec> &r) {
   return [&](void) {
@@ -104,7 +105,7 @@ RecordCaseBody::outer_ref(const unsigned int x,
   }();
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RecordCaseBody::lambda_body(const std::shared_ptr<RecordCaseBody::Rec> &r,
                             const unsigned int n) {
   return [&](void) {
@@ -115,7 +116,7 @@ RecordCaseBody::lambda_body(const std::shared_ptr<RecordCaseBody::Rec> &r,
   }();
 }
 
-unsigned int RecordCaseBody::nested_record_match(
+__attribute__((pure)) unsigned int RecordCaseBody::nested_record_match(
     const std::shared_ptr<RecordCaseBody::RecRec> &rr) {
   return [&](void) {
     std::shared_ptr<RecordCaseBody::Rec> r = rr->inner;
@@ -129,7 +130,7 @@ unsigned int RecordCaseBody::nested_record_match(
   }();
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RecordCaseBody::global_in_body(const std::shared_ptr<RecordCaseBody::Rec> &r) {
   return [&](void) {
     unsigned int a = r->f1;
@@ -139,7 +140,7 @@ RecordCaseBody::global_in_body(const std::shared_ptr<RecordCaseBody::Rec> &r) {
   }();
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RecordCaseBody::guarded_body(const std::shared_ptr<RecordCaseBody::Rec> &r) {
   return [&](void) {
     unsigned int a = r->f1;
@@ -168,7 +169,7 @@ std::shared_ptr<RecordCaseBody::Rec> RecordCaseBody::constructor_body(
   }();
 }
 
-unsigned int RecordCaseBody::sum_list(
+__attribute__((pure)) unsigned int RecordCaseBody::sum_list(
     const std::shared_ptr<RecordCaseBody::list<unsigned int>> &l) {
   return std::visit(
       Overloaded{
@@ -183,7 +184,7 @@ unsigned int RecordCaseBody::sum_list(
       l->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RecordCaseBody::list_in_body(const std::shared_ptr<RecordCaseBody::Rec> &r) {
   return [&](void) {
     unsigned int a = r->f1;

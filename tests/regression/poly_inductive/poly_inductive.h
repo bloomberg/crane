@@ -51,10 +51,10 @@ struct PolyInductive {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
@@ -118,10 +118,10 @@ struct PolyInductive {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
@@ -208,10 +208,10 @@ struct PolyInductive {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1> F1>
@@ -316,10 +316,10 @@ struct PolyInductive {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <
@@ -361,7 +361,8 @@ struct PolyInductive {
   }
 
   template <typename T1>
-  static unsigned int ptree_size(const std::shared_ptr<ptree<T1>> &t) {
+  __attribute__((pure)) static unsigned int
+  ptree_size(const std::shared_ptr<ptree<T1>> &t) {
     return std::visit(
         Overloaded{[](const typename ptree<T1>::PLeaf _args) -> unsigned int {
                      return 1u;

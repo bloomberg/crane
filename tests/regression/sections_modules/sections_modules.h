@@ -54,15 +54,16 @@ concept Monoid = requires {
 };
 
 struct SectionsModules {
-  static unsigned int add_params(const unsigned int x, const unsigned int y,
-                                 const unsigned int n);
-  static unsigned int count_down_from_x(const unsigned int x,
-                                        const unsigned int y,
-                                        const unsigned int n);
+  __attribute__((pure)) static unsigned int
+  add_params(const unsigned int x, const unsigned int y, const unsigned int n);
+  __attribute__((pure)) static unsigned int
+  count_down_from_x(const unsigned int x, const unsigned int y,
+                    const unsigned int n);
 
   struct NatMonoid {
     using T = unsigned int;
-    static unsigned int op(const unsigned int _x0, const unsigned int _x1);
+    __attribute__((pure)) static unsigned int op(const unsigned int _x0,
+                                                 const unsigned int _x1);
     static inline const unsigned int id = 0u;
   };
 
@@ -70,9 +71,11 @@ struct SectionsModules {
   static inline const unsigned int use_monoid = TransparentMod::op(5u, 10u);
 
   template <Semigroup M> struct MakeDoubleOp {
-    static typename M::T double_(const typename M::T x) { return M::op(x, x); }
+    __attribute__((pure)) static typename M::T double_(const typename M::T x) {
+      return M::op(x, x);
+    }
 
-    static typename M::T quad(const typename M::T x) {
+    __attribute__((pure)) static typename M::T quad(const typename M::T x) {
       return double_(double_(x));
     }
   };
@@ -81,24 +84,27 @@ struct SectionsModules {
   static inline const NatMonoid::T test_double = NatDoubleOp::double_(5u);
 
   struct LocalDefs {
-    static unsigned int private_helper(const unsigned int n);
-    static unsigned int public_use(const unsigned int n);
+    __attribute__((pure)) static unsigned int
+    private_helper(const unsigned int n);
+    __attribute__((pure)) static unsigned int public_use(const unsigned int n);
   };
 
-  static unsigned int use_both(const unsigned int a, const unsigned int b,
-                               const unsigned int c);
-  static unsigned int use_outer(const unsigned int _x0, const unsigned int _x1);
+  __attribute__((pure)) static unsigned int
+  use_both(const unsigned int a, const unsigned int b, const unsigned int c);
+  __attribute__((pure)) static unsigned int use_outer(const unsigned int _x0,
+                                                      const unsigned int _x1);
 
   struct Base {
     static inline const unsigned int base_val = 42u;
-    static unsigned int base_fun(const unsigned int n);
+    __attribute__((pure)) static unsigned int base_fun(const unsigned int n);
   };
 
   struct Extended {
     static inline const unsigned int base_val = 42u;
-    static unsigned int base_fun(const unsigned int n);
+    __attribute__((pure)) static unsigned int base_fun(const unsigned int n);
     static inline const unsigned int extended_val = 100u;
-    static unsigned int extended_fun(const unsigned int n);
+    __attribute__((pure)) static unsigned int
+    extended_fun(const unsigned int n);
   };
 
   static inline const unsigned int test_extended =

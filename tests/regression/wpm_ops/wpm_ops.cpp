@@ -12,8 +12,9 @@
 #include <utility>
 #include <variant>
 
-bool WpmOps::nat_list_eqb(const std::shared_ptr<List<unsigned int>> &xs,
-                          const std::shared_ptr<List<unsigned int>> &ys) {
+__attribute__((pure)) bool
+WpmOps::nat_list_eqb(const std::shared_ptr<List<unsigned int>> &xs,
+                     const std::shared_ptr<List<unsigned int>> &ys) {
   return std::visit(
       Overloaded{
           [&](const typename List<unsigned int>::Nil _args) -> bool {

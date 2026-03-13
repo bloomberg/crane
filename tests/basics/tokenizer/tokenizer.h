@@ -70,10 +70,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   std::shared_ptr<List<t_A>> rev() const {
     return std::visit(
@@ -108,16 +108,17 @@ public:
 struct ToString {
   template <typename T1, typename T2, MapsTo<std::string, T1> F0,
             MapsTo<std::string, T2> F1>
-  static std::string pair_to_string(F0 &&p1, F1 &&p2,
-                                    const std::pair<T1, T2> x) {
+  __attribute__((pure)) static std::string
+  pair_to_string(F0 &&p1, F1 &&p2, const std::pair<T1, T2> x) {
     T1 a = x.first;
     T2 b = x.second;
     return "("s + p1(a) + ", "s + p2(b) + ")"s;
   }
 
   template <typename T1, MapsTo<std::string, T1> F0>
-  static std::string intersperse(F0 &&p, const std::string sep,
-                                 const std::shared_ptr<List<T1>> &l) {
+  __attribute__((pure)) static std::string
+  intersperse(F0 &&p, const std::string sep,
+              const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{
             [](const typename List<T1>::Nil _args) -> std::string {
@@ -141,8 +142,8 @@ struct ToString {
   }
 
   template <typename T1, MapsTo<std::string, T1> F0>
-  static std::string list_to_string(F0 &&p,
-                                    const std::shared_ptr<List<T1>> &l) {
+  __attribute__((pure)) static std::string
+  list_to_string(F0 &&p, const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{
             [](const typename List<T1>::Nil _args) -> std::string {
@@ -167,8 +168,8 @@ struct ToString {
 };
 
 struct Tokenizer {
-  static std::pair<std::optional<std::basic_string_view<char>>,
-                   std::basic_string_view<char>>
+  __attribute__((pure)) static std::pair<
+      std::optional<std::basic_string_view<char>>, std::basic_string_view<char>>
   next_token(const std::basic_string_view<char> input,
              const std::basic_string_view<char> soft,
              const std::basic_string_view<char> hard);
@@ -178,7 +179,8 @@ struct Tokenizer {
               const std::basic_string_view<char> hard);
 
   template <typename T1>
-  static std::vector<T1> list_to_vec_h(const std::shared_ptr<List<T1>> &l) {
+  __attribute__((pure)) static std::vector<T1>
+  list_to_vec_h(const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{[](const typename List<T1>::Nil _args) -> std::vector<T1> {
                      return {};
@@ -194,13 +196,14 @@ struct Tokenizer {
   }
 
   template <typename T1>
-  static std::vector<T1> list_to_vec(const std::shared_ptr<List<T1>> &l) {
+  __attribute__((pure)) static std::vector<T1>
+  list_to_vec(const std::shared_ptr<List<T1>> &l) {
     return list_to_vec_h<T1>(l->rev());
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  static std::vector<T2> list_to_vec_map_h(F0 &&f,
-                                           const std::shared_ptr<List<T1>> &l) {
+  __attribute__((pure)) static std::vector<T2>
+  list_to_vec_map_h(F0 &&f, const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{[](const typename List<T1>::Nil _args) -> std::vector<T2> {
                      return {};
@@ -216,8 +219,8 @@ struct Tokenizer {
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  static std::vector<T2> list_to_vec_map(F0 &&f,
-                                         const std::shared_ptr<List<T1>> &l) {
+  __attribute__((pure)) static std::vector<T2>
+  list_to_vec_map(F0 &&f, const std::shared_ptr<List<T1>> &l) {
     return list_to_vec_map_h<T1, T2>(f, l->rev());
   }
 };

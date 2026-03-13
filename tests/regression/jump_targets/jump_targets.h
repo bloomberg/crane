@@ -66,12 +66,12 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  unsigned int length() const {
+  __attribute__((pure)) unsigned int length() const {
     return std::visit(
         Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
                      return 0u;
@@ -147,10 +147,10 @@ struct JumpTargets {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -191,7 +191,7 @@ struct JumpTargets {
         i->v());
   }
 
-  static std::optional<unsigned int>
+  __attribute__((pure)) static std::optional<unsigned int>
   jump_target_collection(const std::shared_ptr<instr_collection> &i);
   static std::shared_ptr<List<unsigned int>> collect_targets(
       const std::shared_ptr<List<std::shared_ptr<instr_collection>>> &prog);
@@ -265,10 +265,10 @@ struct JumpTargets {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -314,12 +314,13 @@ struct JumpTargets {
     unsigned int code_;
   };
 
-  static bool addr_in_region(const unsigned int addr,
-                             const std::shared_ptr<layout> &l);
-  static std::optional<unsigned int>
+  __attribute__((pure)) static bool
+  addr_in_region(const unsigned int addr, const std::shared_ptr<layout> &l);
+  __attribute__((pure)) static std::optional<unsigned int>
   jump_target_region(const std::shared_ptr<instr_region> &i);
-  static bool in_layout(const std::shared_ptr<layout> &l,
-                        const std::shared_ptr<instr_region> &i);
+  __attribute__((pure)) static bool
+  in_layout(const std::shared_ptr<layout> &l,
+            const std::shared_ptr<instr_region> &i);
   static inline const bool test_region_check =
       in_layout(std::make_shared<layout>(layout{16u, 32u}),
                 instr_region::ctor::JUN_reg_(40u));
@@ -380,10 +381,10 @@ struct JumpTargets {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -422,9 +423,10 @@ struct JumpTargets {
         i->v());
   }
 
-  static std::optional<unsigned int>
+  __attribute__((pure)) static std::optional<unsigned int>
   jump_target_jms(const std::shared_ptr<instr_jms> &i);
-  static unsigned int option_nat_or_zero(const std::optional<unsigned int> o);
+  __attribute__((pure)) static unsigned int
+  option_nat_or_zero(const std::optional<unsigned int> o);
   static inline const unsigned int test_jms =
       option_nat_or_zero(jump_target_jms(instr_jms::ctor::JMS_jms_(144u)));
 
@@ -484,10 +486,10 @@ struct JumpTargets {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -526,9 +528,10 @@ struct JumpTargets {
         i->v());
   }
 
-  static std::optional<unsigned int>
+  __attribute__((pure)) static std::optional<unsigned int>
   jump_target_jun(const std::shared_ptr<instr_jun> &i);
-  static unsigned int target_default(const std::optional<unsigned int> o);
+  __attribute__((pure)) static unsigned int
+  target_default(const std::optional<unsigned int> o);
   static inline const unsigned int test_jun =
       target_default(jump_target_jun(instr_jun::ctor::JUN_jun_(511u)));
   static inline const std::pair<

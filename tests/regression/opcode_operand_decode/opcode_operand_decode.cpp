@@ -12,7 +12,7 @@
 #include <utility>
 #include <variant>
 
-OpcodeOperandDecode::Instruction
+__attribute__((pure)) OpcodeOperandDecode::Instruction
 OpcodeOperandDecode::decode(const unsigned int b1, const unsigned int _x) {
   unsigned int opcode = Nat::div(b1, 16u);
   unsigned int operand = (b1 % 16u);
@@ -230,10 +230,9 @@ OpcodeOperandDecode::decode(const unsigned int b1, const unsigned int _x) {
   }
 }
 
-std::pair<unsigned int, unsigned int> Nat::divmod(const unsigned int x,
-                                                  const unsigned int y,
-                                                  const unsigned int q,
-                                                  const unsigned int u) {
+__attribute__((pure)) std::pair<unsigned int, unsigned int>
+Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
+            const unsigned int u) {
   if (x <= 0) {
     return std::make_pair(std::move(q), std::move(u));
   } else {
@@ -247,7 +246,8 @@ std::pair<unsigned int, unsigned int> Nat::divmod(const unsigned int x,
   }
 }
 
-unsigned int Nat::div(const unsigned int x, const unsigned int y) {
+__attribute__((pure)) unsigned int Nat::div(const unsigned int x,
+                                            const unsigned int y) {
   if (y <= 0) {
     return std::move(y);
   } else {

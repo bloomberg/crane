@@ -66,27 +66,29 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct PeanoNat {
-  static unsigned int sub(const unsigned int n, const unsigned int m);
-  static std::pair<unsigned int, unsigned int> divmod(const unsigned int x,
-                                                      const unsigned int y,
-                                                      const unsigned int q,
-                                                      const unsigned int u);
-  static unsigned int modulo(const unsigned int x, const unsigned int y);
+  __attribute__((pure)) static unsigned int sub(const unsigned int n,
+                                                const unsigned int m);
+  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
+  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
+         const unsigned int u);
+  __attribute__((pure)) static unsigned int modulo(const unsigned int x,
+                                                   const unsigned int y);
 };
 
 struct WellFoundedRec {
   static std::shared_ptr<List<unsigned int>>
   countdown_acc(const unsigned int n);
   static std::shared_ptr<List<unsigned int>> countdown(const unsigned int _x0);
-  static unsigned int div2_wf(const unsigned int x);
-  static unsigned int gcd_wf(const unsigned int x, const unsigned int b);
+  __attribute__((pure)) static unsigned int div2_wf(const unsigned int x);
+  __attribute__((pure)) static unsigned int gcd_wf(const unsigned int x,
+                                                   const unsigned int b);
   static inline const unsigned int test_div2_0 = div2_wf(0u);
   static inline const unsigned int test_div2_1 = div2_wf(1u);
   static inline const unsigned int test_div2_7 = div2_wf(7u);

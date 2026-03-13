@@ -24,9 +24,9 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 enum class Comparison { e_EQ, e_LT, e_GT };
 
 struct Pos {
-  static unsigned int succ(const unsigned int x);
-  static unsigned int pred_double(const unsigned int x);
-  static unsigned int pred_N(const unsigned int x);
+  __attribute__((pure)) static unsigned int succ(const unsigned int x);
+  __attribute__((pure)) static unsigned int pred_double(const unsigned int x);
+  __attribute__((pure)) static unsigned int pred_N(const unsigned int x);
 
   struct mask {
     // TYPES
@@ -82,10 +82,10 @@ struct Pos {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   static std::shared_ptr<mask> succ_double_mask(const std::shared_ptr<mask> &x);
@@ -95,35 +95,46 @@ struct Pos {
                                         const unsigned int y);
   static std::shared_ptr<mask> sub_mask_carry(const unsigned int x,
                                               const unsigned int y);
-  static Comparison compare_cont(const Comparison r, const unsigned int x,
-                                 const unsigned int y);
-  static Comparison compare(const unsigned int _x0, const unsigned int _x1);
-  static bool eqb(const unsigned int p, const unsigned int q);
+  __attribute__((pure)) static Comparison
+  compare_cont(const Comparison r, const unsigned int x, const unsigned int y);
+  __attribute__((pure)) static Comparison compare(const unsigned int _x0,
+                                                  const unsigned int _x1);
+  __attribute__((pure)) static bool eqb(const unsigned int p,
+                                        const unsigned int q);
 };
 
 struct Coq_Pos {
-  static unsigned int add_carry(const unsigned int x, const unsigned int y);
+  __attribute__((pure)) static unsigned int add_carry(const unsigned int x,
+                                                      const unsigned int y);
 };
 
 struct BinNat {
-  static Comparison compare(const unsigned int n, const unsigned int m);
-  static std::pair<unsigned int, unsigned int>
+  __attribute__((pure)) static Comparison compare(const unsigned int n,
+                                                  const unsigned int m);
+  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
   pos_div_eucl(const unsigned int a, const unsigned int b);
-  static std::pair<unsigned int, unsigned int> div_eucl(const unsigned int a,
-                                                        const unsigned int b);
+  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
+  div_eucl(const unsigned int a, const unsigned int b);
 };
 
 struct NIntTest {
-  static unsigned int add_test(const unsigned int _x0, const unsigned int _x1);
-  static unsigned int mul_test(const unsigned int _x0, const unsigned int _x1);
-  static unsigned int sub_test(const unsigned int _x0, const unsigned int _x1);
-  static unsigned int div_test(const unsigned int _x0, const unsigned int _x1);
-  static bool eqb_test(const unsigned int _x0, const unsigned int _x1);
-  static bool ltb_test(const unsigned int _x0, const unsigned int _x1);
-  static bool leb_test(const unsigned int _x0, const unsigned int _x1);
-  static unsigned int succ_test(const unsigned int _x0);
-  static unsigned int pred_test(const unsigned int _x0);
-  static unsigned int double_test(const unsigned int _x0);
+  __attribute__((pure)) static unsigned int add_test(const unsigned int _x0,
+                                                     const unsigned int _x1);
+  __attribute__((pure)) static unsigned int mul_test(const unsigned int _x0,
+                                                     const unsigned int _x1);
+  __attribute__((pure)) static unsigned int sub_test(const unsigned int _x0,
+                                                     const unsigned int _x1);
+  __attribute__((pure)) static unsigned int div_test(const unsigned int _x0,
+                                                     const unsigned int _x1);
+  __attribute__((pure)) static bool eqb_test(const unsigned int _x0,
+                                             const unsigned int _x1);
+  __attribute__((pure)) static bool ltb_test(const unsigned int _x0,
+                                             const unsigned int _x1);
+  __attribute__((pure)) static bool leb_test(const unsigned int _x0,
+                                             const unsigned int _x1);
+  __attribute__((pure)) static unsigned int succ_test(const unsigned int _x0);
+  __attribute__((pure)) static unsigned int pred_test(const unsigned int _x0);
+  __attribute__((pure)) static unsigned int double_test(const unsigned int _x0);
   static inline const unsigned int zero_val = 0u;
   static inline const unsigned int five_val = (2u * (2u * 1u) + 1u);
   static inline const unsigned int big_val =
@@ -131,9 +142,10 @@ struct NIntTest {
        (2u *
         (2u * (2u * (2u * (2u * (2u * (2u * (2u * 1u + 1u) + 1u) + 1u) + 1u)) +
                1u))));
-  static bool is_zero(const unsigned int n);
-  static unsigned int pos_add(const unsigned int _x0, const unsigned int _x1);
-  static unsigned int pos_succ(const unsigned int _x0);
+  __attribute__((pure)) static bool is_zero(const unsigned int n);
+  __attribute__((pure)) static unsigned int pos_add(const unsigned int _x0,
+                                                    const unsigned int _x1);
+  __attribute__((pure)) static unsigned int pos_succ(const unsigned int _x0);
 };
 
 #endif // INCLUDED_N_INT

@@ -240,13 +240,13 @@ RamOps::get_regRAM(const std::shared_ptr<RamOps::ram_chip_sel> &ch,
   return ch->chip_regs_sel->nth(r, empty_reg_sel);
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RamOps::get_main_sel(const std::shared_ptr<RamOps::ram_reg_sel> &rg,
                      const unsigned int i) {
   return rg->reg_main_sel->nth(i, 0u);
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RamOps::ram_read_main(const std::shared_ptr<RamOps::state_sel> &s) {
   std::shared_ptr<RamOps::ram_bank_sel> bk = get_bank_sel(s, s->cur_bank_sel);
   std::shared_ptr<RamOps::ram_chip_sel> ch =
@@ -274,13 +274,13 @@ RamOps::get_regRAM_nested(const std::shared_ptr<RamOps::ram_chip_nested> &ch,
   return ch->chip_regs_nested->nth(r, empty_reg_nested);
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RamOps::get_main_nested(const std::shared_ptr<RamOps::ram_reg_nested> &rg,
                         const unsigned int i) {
   return rg->reg_main_nested->nth(i, 0u);
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RamOps::ram_read_main_nested(const std::shared_ptr<RamOps::state_nested> &s) {
   std::shared_ptr<RamOps::ram_bank_nested> bk =
       get_bank_nested(s, s->cur_bank_nested);
@@ -291,19 +291,19 @@ RamOps::ram_read_main_nested(const std::shared_ptr<RamOps::state_nested> &s) {
   return get_main_nested(std::move(rg), s->sel_ram_nested->sel_char_nested);
 }
 
-RamOps::reg_frame
+__attribute__((pure)) RamOps::reg_frame
 RamOps::upd_main_in_reg_frame(const std::shared_ptr<List<unsigned int>> &rg,
                               const unsigned int i, const unsigned int v) {
   return update_nth_frame<unsigned int>(i, v, rg);
 }
 
-RamOps::chip_frame RamOps::upd_reg_in_chip_frame(
+__attribute__((pure)) RamOps::chip_frame RamOps::upd_reg_in_chip_frame(
     const std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> &ch,
     const unsigned int r, const std::shared_ptr<List<unsigned int>> &rg) {
   return update_nth_frame<RamOps::reg_frame>(r, rg, ch);
 }
 
-RamOps::bank_frame RamOps::upd_chip_in_bank_frame(
+__attribute__((pure)) RamOps::bank_frame RamOps::upd_chip_in_bank_frame(
     const std::shared_ptr<
         List<std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>>> &bk,
     const unsigned int c,
@@ -324,10 +324,11 @@ RamOps::execute_write(std::shared_ptr<RamOps::state_preserve> s,
       ram_write_main_sys_preserve(s, std::move(v)), s->cur_bank_preserve});
 }
 
-bool RamOps::ram_addr_disjointb(const unsigned int b1, const unsigned int c1,
-                                const unsigned int r1, const unsigned int i1,
-                                const unsigned int b2, const unsigned int c2,
-                                const unsigned int r2, const unsigned int i2) {
+__attribute__((pure)) bool
+RamOps::ram_addr_disjointb(const unsigned int b1, const unsigned int c1,
+                           const unsigned int r1, const unsigned int i1,
+                           const unsigned int b2, const unsigned int c2,
+                           const unsigned int r2, const unsigned int i2) {
   return !((((b1 == b2 && c1 == c2) && r1 == r2) && i1 == i2));
 }
 
@@ -375,7 +376,7 @@ RamOps::write_status0(std::shared_ptr<RamOps::state_nested_bank> s,
           0u, std::move(b_), std::move(s)->banks_)});
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RamOps::read_status0(const std::shared_ptr<RamOps::state_nested_bank> &s) {
   std::shared_ptr<RamOps::bank_nested_bank> b = get_bank0(s);
   std::shared_ptr<RamOps::chip_nested_bank> c = get_chip0(std::move(b));
@@ -383,7 +384,7 @@ RamOps::read_status0(const std::shared_ptr<RamOps::state_nested_bank> &s) {
   return std::move(r)->status_->nth(0u, 0u);
 }
 
-unsigned int RamOps::score(const RamOps::Item x) {
+__attribute__((pure)) unsigned int RamOps::score(const RamOps::Item x) {
   return [&](void) {
     switch (x) {
     case Item::e_S_: {

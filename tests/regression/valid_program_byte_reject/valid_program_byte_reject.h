@@ -66,12 +66,13 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  template <MapsTo<bool, t_A> F0> bool forallb(F0 &&f) const {
+  template <MapsTo<bool, t_A> F0>
+  __attribute__((pure)) bool forallb(F0 &&f) const {
     return std::visit(
         Overloaded{
             [](const typename List<t_A>::Nil _args) -> bool { return true; },
@@ -83,7 +84,7 @@ public:
         this->v());
   }
 
-  unsigned int length() const {
+  __attribute__((pure)) unsigned int length() const {
     return std::visit(
         Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
                      return 0u;
@@ -97,7 +98,8 @@ public:
 };
 
 struct ValidProgramByteReject {
-  static bool valid_program(const std::shared_ptr<List<unsigned int>> &bytes);
+  __attribute__((pure)) static bool
+  valid_program(const std::shared_ptr<List<unsigned int>> &bytes);
   static inline const bool t = valid_program(List<unsigned int>::ctor::Cons_(
       0u,
       List<unsigned int>::ctor::Cons_(256u, List<unsigned int>::ctor::Nil_())));

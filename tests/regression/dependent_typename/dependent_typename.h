@@ -41,7 +41,9 @@ struct DependentTypename {
       return v;
     }
 
-    static typename M::t identity(const typename M::t x) { return x; }
+    __attribute__((pure)) static typename M::t identity(const typename M::t x) {
+      return x;
+    }
 
     static const typename M::t &make_default() {
       static const typename M::t v = M::default_;
@@ -64,7 +66,7 @@ struct DependentTypename {
       return v;
     }
 
-    static typename C::template t<unsigned int>
+    __attribute__((pure)) static typename C::template t<unsigned int>
     use_singleton(const unsigned int _x0) {
       return C::template singleton<unsigned int>(_x0);
     }

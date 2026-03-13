@@ -66,12 +66,12 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  unsigned int length() const {
+  __attribute__((pure)) unsigned int length() const {
     return std::visit(
         Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
                      return 0u;
@@ -158,10 +158,10 @@ struct DisassembleOps {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F2,
@@ -206,7 +206,8 @@ struct DisassembleOps {
                                               const unsigned int b2);
   static std::shared_ptr<List<unsigned int>>
   drop_(const unsigned int n, std::shared_ptr<List<unsigned int>> l);
-  static std::optional<std::pair<std::shared_ptr<instruction>, unsigned int>>
+  __attribute__((pure)) static std::optional<
+      std::pair<std::shared_ptr<instruction>, unsigned int>>
   disassemble1(const std::shared_ptr<List<unsigned int>> &rom,
                const unsigned int addr);
   static inline const unsigned int test_disassemble_drop_window = [](void) {
@@ -263,7 +264,8 @@ struct DisassembleOps {
     }
   }
 
-  static std::optional<std::pair<std::shared_ptr<instruction>, unsigned int>>
+  __attribute__((pure)) static std::optional<
+      std::pair<std::shared_ptr<instruction>, unsigned int>>
   disassemble2(const std::shared_ptr<List<unsigned int>> &rom,
                const unsigned int addr);
   static inline const unsigned int test_disassemble_next_address = [](void) {
@@ -292,11 +294,13 @@ struct DisassembleOps {
   }();
   static std::shared_ptr<instruction> decode3(const unsigned int b1,
                                               const unsigned int b2);
-  static std::optional<std::pair<std::shared_ptr<instruction>, unsigned int>>
+  __attribute__((pure)) static std::optional<
+      std::pair<std::shared_ptr<instruction>, unsigned int>>
   disassemble3(const std::shared_ptr<List<unsigned int>> &rom,
                const unsigned int addr);
 
-  template <typename T1> static bool is_none(const std::optional<T1> o) {
+  template <typename T1>
+  __attribute__((pure)) static bool is_none(const std::optional<T1> o) {
     if (o.has_value()) {
       T1 _x = *o;
       return false;
@@ -312,7 +316,8 @@ struct DisassembleOps {
                        0u));
   static std::shared_ptr<instruction> decode4(const unsigned int b1,
                                               const unsigned int b2);
-  static std::optional<std::pair<std::shared_ptr<instruction>, unsigned int>>
+  __attribute__((pure)) static std::optional<
+      std::pair<std::shared_ptr<instruction>, unsigned int>>
   disassemble4(const std::shared_ptr<List<unsigned int>> &rom,
                const unsigned int addr);
 

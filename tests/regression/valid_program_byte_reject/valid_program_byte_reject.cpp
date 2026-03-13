@@ -12,7 +12,7 @@
 #include <utility>
 #include <variant>
 
-bool ValidProgramByteReject::valid_program(
+__attribute__((pure)) bool ValidProgramByteReject::valid_program(
     const std::shared_ptr<List<unsigned int>> &bytes) {
   return ((bytes->length() % 2u) == 0u &&
           bytes->forallb([](unsigned int b) { return b < 256u; }));

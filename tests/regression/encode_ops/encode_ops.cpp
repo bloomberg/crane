@@ -12,7 +12,7 @@
 #include <utility>
 #include <variant>
 
-std::pair<unsigned int, unsigned int>
+__attribute__((pure)) std::pair<unsigned int, unsigned int>
 EncodeOps::encode1(const std::shared_ptr<EncodeOps::instruction1> &i) {
   return std::visit(
       Overloaded{[](const typename EncodeOps::instruction1::CLB _args)
@@ -68,13 +68,14 @@ EncodeOps::encode1(const std::shared_ptr<EncodeOps::instruction1> &i) {
       i->v());
 }
 
-bool EncodeOps::pair_in_range(const std::pair<unsigned int, unsigned int> p) {
+__attribute__((pure)) bool
+EncodeOps::pair_in_range(const std::pair<unsigned int, unsigned int> p) {
   unsigned int b1 = p.first;
   unsigned int b2 = p.second;
   return (b1 < 256u && b2 < 256u);
 }
 
-std::pair<unsigned int, unsigned int>
+__attribute__((pure)) std::pair<unsigned int, unsigned int>
 EncodeOps::encode2(const std::shared_ptr<EncodeOps::instruction2> &i) {
   return std::visit(
       Overloaded{[](const typename EncodeOps::instruction2::NOP2 _args)
@@ -112,7 +113,7 @@ std::shared_ptr<List<unsigned int>> EncodeOps::encode_list2(
       prog->v());
 }
 
-std::pair<unsigned int, unsigned int>
+__attribute__((pure)) std::pair<unsigned int, unsigned int>
 EncodeOps::encode3(const std::shared_ptr<EncodeOps::instruction3> &i) {
   return std::visit(
       Overloaded{[](const typename EncodeOps::instruction3::NOP3 _args)
@@ -150,10 +151,9 @@ std::shared_ptr<List<unsigned int>> EncodeOps::encode_list3(
       prog->v());
 }
 
-std::pair<unsigned int, unsigned int> Nat::divmod(const unsigned int x,
-                                                  const unsigned int y,
-                                                  const unsigned int q,
-                                                  const unsigned int u) {
+__attribute__((pure)) std::pair<unsigned int, unsigned int>
+Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
+            const unsigned int u) {
   if (x <= 0) {
     return std::make_pair(std::move(q), std::move(u));
   } else {
@@ -167,7 +167,8 @@ std::pair<unsigned int, unsigned int> Nat::divmod(const unsigned int x,
   }
 }
 
-unsigned int Nat::div(const unsigned int x, const unsigned int y) {
+__attribute__((pure)) unsigned int Nat::div(const unsigned int x,
+                                            const unsigned int y) {
   if (y <= 0) {
     return std::move(y);
   } else {

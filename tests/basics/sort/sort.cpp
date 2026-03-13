@@ -257,7 +257,8 @@ Sort::qsort(const std::shared_ptr<List<unsigned int>> &_x0) {
       _x0);
 }
 
-bool Compare_dec::le_lt_dec(const unsigned int n, const unsigned int m) {
+__attribute__((pure)) bool Compare_dec::le_lt_dec(const unsigned int n,
+                                                  const unsigned int m) {
   if (n <= 0) {
     return true;
   } else {
@@ -275,11 +276,13 @@ bool Compare_dec::le_lt_dec(const unsigned int n, const unsigned int m) {
   }
 }
 
-bool Compare_dec::le_gt_dec(const unsigned int _x0, const unsigned int _x1) {
+__attribute__((pure)) bool Compare_dec::le_gt_dec(const unsigned int _x0,
+                                                  const unsigned int _x1) {
   return Compare_dec::le_lt_dec(_x0, _x1);
 }
 
-bool Compare_dec::le_dec(const unsigned int n, const unsigned int m) {
+__attribute__((pure)) bool Compare_dec::le_dec(const unsigned int n,
+                                               const unsigned int m) {
   bool s = Compare_dec::le_gt_dec(n, m);
   if (std::move(s)) {
     return true;

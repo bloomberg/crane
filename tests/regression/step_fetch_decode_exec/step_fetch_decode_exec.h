@@ -66,10 +66,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   t_A nth(const unsigned int n, const t_A default0) const {
     if (n <= 0) {
@@ -140,10 +140,10 @@ struct StepFetchDecodeExec {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
@@ -178,8 +178,8 @@ struct StepFetchDecodeExec {
     std::shared_ptr<List<unsigned int>> rom;
   };
 
-  static unsigned int fetch_byte(const std::shared_ptr<state> &s,
-                                 const unsigned int addr);
+  __attribute__((pure)) static unsigned int
+  fetch_byte(const std::shared_ptr<state> &s, const unsigned int addr);
   static std::shared_ptr<instruction> decode(const unsigned int b1,
                                              const unsigned int b2);
   static std::shared_ptr<state> execute(std::shared_ptr<state> s,

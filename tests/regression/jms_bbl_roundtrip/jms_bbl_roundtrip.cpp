@@ -12,7 +12,8 @@
 #include <utility>
 #include <variant>
 
-unsigned int JmsBblRoundtrip::addr12_of_nat(const unsigned int n) {
+__attribute__((pure)) unsigned int
+JmsBblRoundtrip::addr12_of_nat(const unsigned int n) {
   return (n % 4096u);
 }
 

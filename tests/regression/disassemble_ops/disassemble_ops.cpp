@@ -42,7 +42,7 @@ DisassembleOps::drop_(const unsigned int n,
   }
 }
 
-std::optional<
+__attribute__((pure)) std::optional<
     std::pair<std::shared_ptr<DisassembleOps::instruction>, unsigned int>>
 DisassembleOps::disassemble1(const std::shared_ptr<List<unsigned int>> &rom,
                              const unsigned int addr) {
@@ -89,7 +89,7 @@ DisassembleOps::decode2(const unsigned int b1, const unsigned int b2) {
   }
 }
 
-std::optional<
+__attribute__((pure)) std::optional<
     std::pair<std::shared_ptr<DisassembleOps::instruction>, unsigned int>>
 DisassembleOps::disassemble2(const std::shared_ptr<List<unsigned int>> &rom,
                              const unsigned int addr) {
@@ -136,7 +136,7 @@ DisassembleOps::decode3(const unsigned int b1, const unsigned int b2) {
   }
 }
 
-std::optional<
+__attribute__((pure)) std::optional<
     std::pair<std::shared_ptr<DisassembleOps::instruction>, unsigned int>>
 DisassembleOps::disassemble3(const std::shared_ptr<List<unsigned int>> &rom,
                              const unsigned int addr) {
@@ -183,7 +183,7 @@ DisassembleOps::decode4(const unsigned int b1, const unsigned int b2) {
   }
 }
 
-std::optional<
+__attribute__((pure)) std::optional<
     std::pair<std::shared_ptr<DisassembleOps::instruction>, unsigned int>>
 DisassembleOps::disassemble4(const std::shared_ptr<List<unsigned int>> &rom,
                              const unsigned int addr) {

@@ -66,10 +66,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   template <typename T1, MapsTo<T1, T1, t_A> F0>
   T1 fold_left(F0 &&f, const T1 a0) const {
@@ -143,10 +143,10 @@ struct PartialApply {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, unsigned int, T1> F0>
@@ -176,7 +176,7 @@ struct PartialApply {
   static std::shared_ptr<
       List<std::pair<unsigned int, std::pair<unsigned int, unsigned int>>>>
   double_tag(const std::shared_ptr<List<unsigned int>> &l);
-  static unsigned int
+  __attribute__((pure)) static unsigned int
   sum_with_init(const unsigned int init,
                 const std::shared_ptr<List<unsigned int>> &l);
   static inline const std::shared_ptr<List<unsigned int>> test_inc =

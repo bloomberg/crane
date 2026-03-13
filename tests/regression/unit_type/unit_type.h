@@ -24,9 +24,9 @@ enum class Unit { e_TT };
 
 struct UnitType {
   static inline const Unit unit_val = Unit::e_TT;
-  static Unit return_unit(const unsigned int _x);
-  static unsigned int take_unit(const Unit _x);
-  static unsigned int match_unit(const Unit u);
+  __attribute__((pure)) static Unit return_unit(const unsigned int _x);
+  __attribute__((pure)) static unsigned int take_unit(const Unit _x);
+  __attribute__((pure)) static unsigned int match_unit(const Unit u);
 
   template <typename t_A, typename t_B> struct pair {
     // TYPES
@@ -61,10 +61,10 @@ struct UnitType {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
@@ -93,7 +93,7 @@ struct UnitType {
       pair<unsigned int, Unit>::ctor::Pair0_(3u, Unit::e_TT);
   static inline const std::shared_ptr<pair<Unit, Unit>> unit_pair =
       pair<Unit, Unit>::ctor::Pair0_(Unit::e_TT, Unit::e_TT);
-  static Unit unit_to_unit(const Unit u);
+  __attribute__((pure)) static Unit unit_to_unit(const Unit u);
 
   template <typename T1, typename T2> static T2 seq(const T1 _x, const T2 b) {
     return b;

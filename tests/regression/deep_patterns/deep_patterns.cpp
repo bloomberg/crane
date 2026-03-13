@@ -12,7 +12,7 @@
 #include <utility>
 #include <variant>
 
-unsigned int DeepPatterns::deep_option(
+__attribute__((pure)) unsigned int DeepPatterns::deep_option(
     const std::optional<std::optional<std::optional<unsigned int>>> x) {
   if (x.has_value()) {
     std::optional<std::optional<unsigned int>> o = *x;
@@ -32,7 +32,7 @@ unsigned int DeepPatterns::deep_option(
   }
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 DeepPatterns::deep_pair(const std::pair<std::pair<unsigned int, unsigned int>,
                                         std::pair<unsigned int, unsigned int>>
                             p) {
@@ -45,7 +45,7 @@ DeepPatterns::deep_pair(const std::pair<std::pair<unsigned int, unsigned int>,
   return (((a + b) + c) + d);
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 DeepPatterns::list_shape(const std::shared_ptr<List<unsigned int>> &l) {
   return std::visit(
       Overloaded{
@@ -100,7 +100,7 @@ DeepPatterns::list_shape(const std::shared_ptr<List<unsigned int>> &l) {
       l->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 DeepPatterns::deep_sum(const std::shared_ptr<DeepPatterns::outer> &o) {
   return std::visit(
       Overloaded{
@@ -130,7 +130,7 @@ DeepPatterns::deep_sum(const std::shared_ptr<DeepPatterns::outer> &o) {
       o->v());
 }
 
-unsigned int DeepPatterns::complex_match(
+__attribute__((pure)) unsigned int DeepPatterns::complex_match(
     const std::optional<
         std::pair<unsigned int, std::shared_ptr<List<unsigned int>>>>
         x) {
@@ -163,7 +163,7 @@ unsigned int DeepPatterns::complex_match(
   }
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 DeepPatterns::guarded_match(const std::pair<unsigned int, unsigned int> p) {
   unsigned int a = p.first;
   unsigned int b = p.second;
@@ -174,7 +174,7 @@ DeepPatterns::guarded_match(const std::pair<unsigned int, unsigned int> p) {
   }
 }
 
-unsigned int DeepPatterns::match_pair_list(
+__attribute__((pure)) unsigned int DeepPatterns::match_pair_list(
     const std::shared_ptr<DeepPatterns::mylist<
         std::shared_ptr<DeepPatterns::pair<unsigned int, unsigned int>>>> &l) {
   return std::visit(
@@ -199,7 +199,7 @@ unsigned int DeepPatterns::match_pair_list(
       l->v());
 }
 
-unsigned int DeepPatterns::match_two(
+__attribute__((pure)) unsigned int DeepPatterns::match_two(
     const std::shared_ptr<DeepPatterns::mylist<unsigned int>> &l) {
   return std::visit(
       Overloaded{
@@ -220,7 +220,7 @@ unsigned int DeepPatterns::match_two(
       l->v());
 }
 
-unsigned int DeepPatterns::match_triple(
+__attribute__((pure)) unsigned int DeepPatterns::match_triple(
     const std::shared_ptr<
         DeepPatterns::mylist<std::shared_ptr<DeepPatterns::mylist<
             std::shared_ptr<DeepPatterns::mylist<unsigned int>>>>>> &l) {
@@ -265,7 +265,7 @@ unsigned int DeepPatterns::match_triple(
       l->v());
 }
 
-unsigned int DeepPatterns::deep_wildcard(
+__attribute__((pure)) unsigned int DeepPatterns::deep_wildcard(
     const std::shared_ptr<DeepPatterns::pair<
         std::shared_ptr<DeepPatterns::pair<unsigned int, unsigned int>>,
         std::shared_ptr<DeepPatterns::pair<unsigned int, unsigned int>>>> &p) {

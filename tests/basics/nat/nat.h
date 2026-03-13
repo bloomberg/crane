@@ -64,13 +64,13 @@ struct Nat {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     /// Convert a Peano nat to a machine int.
-    int nat_to_int() const {
+    __attribute__((pure)) int nat_to_int() const {
       return std::visit(
           Overloaded{[](const typename nat::O _args) -> int { return 0; },
                      [](const typename nat::S _args) -> int {

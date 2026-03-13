@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-ShadowQualNode::Node::Shadow
+__attribute__((pure)) ShadowQualNode::Node::Shadow
 ShadowQualNode::id(const ShadowQualNode::Node::Shadow x) {
   return x;
 }

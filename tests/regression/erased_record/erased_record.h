@@ -29,8 +29,10 @@ struct ErasedRecord {
     unsigned int field4;
   };
 
-  static unsigned int complex_match(const std::shared_ptr<ManyProps> &r);
-  static unsigned int unusual_body(const std::shared_ptr<ManyProps> &r);
+  __attribute__((pure)) static unsigned int
+  complex_match(const std::shared_ptr<ManyProps> &r);
+  __attribute__((pure)) static unsigned int
+  unusual_body(const std::shared_ptr<ManyProps> &r);
 
   struct MostlyProps {
     unsigned int real1;
@@ -38,7 +40,7 @@ struct ErasedRecord {
     unsigned int real3;
   };
 
-  static unsigned int
+  __attribute__((pure)) static unsigned int
   access_mostly_props(const std::shared_ptr<MostlyProps> &r);
   static inline const unsigned int test1 =
       complex_match(std::make_shared<ManyProps>(ManyProps{1u, 2u, 3u, 4u, 5u}));

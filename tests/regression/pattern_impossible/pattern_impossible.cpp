@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-unsigned int
+__attribute__((pure)) unsigned int
 PatternImpossible::complex_match(const PatternImpossible::Three x) {
   return [&](void) {
     switch (x) {
@@ -28,7 +28,7 @@ PatternImpossible::complex_match(const PatternImpossible::Three x) {
   }();
 }
 
-unsigned int PatternImpossible::nested_match(
+__attribute__((pure)) unsigned int PatternImpossible::nested_match(
     const std::shared_ptr<PatternImpossible::nested> &n) {
   return std::visit(
       Overloaded{
@@ -64,8 +64,9 @@ unsigned int PatternImpossible::nested_match(
       n->v());
 }
 
-unsigned int PatternImpossible::double_match(const PatternImpossible::Three x,
-                                             const PatternImpossible::Three y) {
+__attribute__((pure)) unsigned int
+PatternImpossible::double_match(const PatternImpossible::Three x,
+                                const PatternImpossible::Three y) {
   return [&](void) {
     switch (x) {
     case Three::e_ONE: {
@@ -93,7 +94,7 @@ unsigned int PatternImpossible::double_match(const PatternImpossible::Three x,
   }();
 }
 
-unsigned int PatternImpossible::multi_arg_pattern(
+__attribute__((pure)) unsigned int PatternImpossible::multi_arg_pattern(
     const std::shared_ptr<PatternImpossible::nested> &n) {
   return std::visit(
       Overloaded{

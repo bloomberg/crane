@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-std::optional<unsigned int> ProgramWfProp::jump_target(
+__attribute__((pure)) std::optional<unsigned int> ProgramWfProp::jump_target(
     const std::shared_ptr<ProgramWfProp::instruction> &i) {
   return std::visit(
       Overloaded{[](const typename ProgramWfProp::instruction::JUN _args)

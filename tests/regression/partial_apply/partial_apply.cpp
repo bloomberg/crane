@@ -55,7 +55,7 @@ PartialApply::double_tag(const std::shared_ptr<List<unsigned int>> &l) {
       [](unsigned int x) { return std::make_pair(x, std::make_pair(x, x)); });
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 PartialApply::sum_with_init(const unsigned int init,
                             const std::shared_ptr<List<unsigned int>> &l) {
   return l->template fold_left<unsigned int>(

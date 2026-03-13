@@ -39,53 +39,68 @@ concept Show = requires(t_A a0) {
 };
 
 struct NatEq {
-  static bool eqb(unsigned int a0, unsigned int a1) { return a0 == a1; }
+  __attribute__((pure)) static bool eqb(unsigned int a0, unsigned int a1) {
+    return a0 == a1;
+  }
 
-  static bool neqb(unsigned int x, unsigned int y) { return !(x == y); }
+  __attribute__((pure)) static bool neqb(unsigned int x, unsigned int y) {
+    return !(x == y);
+  }
 };
 
 static_assert(Eq<NatEq, unsigned int>);
 
 struct NatOrd {
-  static bool lt(unsigned int a0, unsigned int a1) { return a0 < a1; }
+  __attribute__((pure)) static bool lt(unsigned int a0, unsigned int a1) {
+    return a0 < a1;
+  }
 
-  static bool le(unsigned int a0, unsigned int a1) { return a0 <= a1; }
+  __attribute__((pure)) static bool le(unsigned int a0, unsigned int a1) {
+    return a0 <= a1;
+  }
 
-  static bool gt(unsigned int x, unsigned int y) { return y < x; }
+  __attribute__((pure)) static bool gt(unsigned int x, unsigned int y) {
+    return y < x;
+  }
 
-  static bool ge(unsigned int x, unsigned int y) { return y <= x; }
+  __attribute__((pure)) static bool ge(unsigned int x, unsigned int y) {
+    return y <= x;
+  }
 };
 
 static_assert(Ord<NatOrd, unsigned int>);
 
 struct NatShow {
-  static std::string show(unsigned int _x) { return "<nat>"; }
+  __attribute__((pure)) static std::string show(unsigned int _x) {
+    return "<nat>";
+  }
 };
 
 static_assert(Show<NatShow, unsigned int>);
 
-template <typename _tcI0, typename T1> bool is_equal(const T1 x, const T1 y) {
+template <typename _tcI0, typename T1>
+__attribute__((pure)) bool is_equal(const T1 x, const T1 y) {
   return _tcI0::eqb(x, y);
 }
 
 template <typename _tcI0, typename T1>
-bool is_different(const T1 x, const T1 y) {
+__attribute__((pure)) bool is_different(const T1 x, const T1 y) {
   return _tcI0::neqb(x, y);
 }
 
 template <typename _tcI0, typename _tcI1, typename T1>
-bool is_less_than(const T1 x, const T1 y) {
+__attribute__((pure)) bool is_less_than(const T1 x, const T1 y) {
   return _tcI0::lt(x, y);
 }
 
 template <typename _tcI0, typename _tcI1, typename T1>
-bool is_less_or_equal(const T1 x, const T1 y) {
+__attribute__((pure)) bool is_less_or_equal(const T1 x, const T1 y) {
   return _tcI0::le(x, y);
 }
 enum class Ordering { e_LT, e_EQ, e_GT };
 
 template <typename _tcI0, typename _tcI1, typename T1>
-Ordering compare(const T1 x, const T1 y) {
+__attribute__((pure)) Ordering compare(const T1 x, const T1 y) {
   if (_tcI0::lt(x, y)) {
     return Ordering::e_LT;
   } else {
@@ -97,12 +112,13 @@ Ordering compare(const T1 x, const T1 y) {
   }
 }
 
-template <typename _tcI0, typename T1> std::string to_string(const T1 x) {
+template <typename _tcI0, typename T1>
+__attribute__((pure)) std::string to_string(const T1 x) {
   return _tcI0::show(x);
 }
 
 template <typename _tcI0, typename _tcI1, typename T1>
-std::string show_if_equal(const T1 x, const T1 y) {
+__attribute__((pure)) std::string show_if_equal(const T1 x, const T1 y) {
   if (_tcI1::eqb(x, y)) {
     return _tcI0::show(x);
   } else {
@@ -111,7 +127,7 @@ std::string show_if_equal(const T1 x, const T1 y) {
 }
 
 template <typename _tcI0, typename _tcI1, typename _tcI2, typename T1>
-std::string show_comparison(const T1 x, const T1 y) {
+__attribute__((pure)) std::string show_comparison(const T1 x, const T1 y) {
   if (_tcI1::lt(x, y)) {
     return _tcI0::show(x) + " < "s + _tcI0::show(y);
   } else {

@@ -75,10 +75,10 @@ struct HigherKinded {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <
@@ -156,10 +156,12 @@ struct HigherKinded {
         t->v());
   }
 
-  static unsigned int tree_sum(const std::shared_ptr<Tree<unsigned int>> &t);
+  __attribute__((pure)) static unsigned int
+  tree_sum(const std::shared_ptr<Tree<unsigned int>> &t);
 
   template <typename T1>
-  static unsigned int tree_size(const std::shared_ptr<Tree<T1>> &t) {
+  __attribute__((pure)) static unsigned int
+  tree_size(const std::shared_ptr<Tree<T1>> &t) {
     return tree_fold<T1, unsigned int>(
         [](T1 _x) { return 1u; },
         [](unsigned int _x0, unsigned int _x1) -> unsigned int {
@@ -169,7 +171,8 @@ struct HigherKinded {
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  static std::optional<T2> map_option(F0 &&f, const std::optional<T1> o) {
+  __attribute__((pure)) static std::optional<T2>
+  map_option(F0 &&f, const std::optional<T1> o) {
     if (o.has_value()) {
       T1 x = *o;
       return std::make_optional<T2>(f(x));

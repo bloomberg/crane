@@ -65,10 +65,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 template <typename t_A> struct Sig {
@@ -101,10 +101,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 template <typename t_A, typename t_P> struct SigT {
@@ -140,10 +140,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   t_A projT1() const {
     return std::visit(
@@ -159,10 +159,11 @@ struct SigmaTypes {
   static std::shared_ptr<SigT<unsigned int, std::any>>
   nat_with_double(const unsigned int n);
   static std::shared_ptr<Sig<unsigned int>> positive_succ(const unsigned int n);
-  static unsigned int get_positive(const unsigned int n);
+  __attribute__((pure)) static unsigned int get_positive(const unsigned int n);
   static std::shared_ptr<Sig<unsigned int>>
   double_positive(const unsigned int n);
-  static unsigned int use_nat_double(const unsigned int n);
+  __attribute__((pure)) static unsigned int
+  use_nat_double(const unsigned int n);
   static std::shared_ptr<List<unsigned int>>
   positives_up_to(const unsigned int k);
   static inline const unsigned int test_double_5 = use_nat_double(5u);

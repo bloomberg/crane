@@ -65,12 +65,12 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  unsigned int length() const {
+  __attribute__((pure)) unsigned int length() const {
     return std::visit(
         Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
                      return 0u;
@@ -84,11 +84,11 @@ public:
 };
 
 struct Nat {
-  static bool even(const unsigned int n);
+  __attribute__((pure)) static bool even(const unsigned int n);
 };
 
 struct CPS {
-  static unsigned int
+  __attribute__((pure)) static unsigned int
   fact_cps(const unsigned int n,
            const std::function<unsigned int(unsigned int)> k) {
     if (n <= 0) {
@@ -100,9 +100,9 @@ struct CPS {
     }
   }
 
-  static unsigned int factorial(const unsigned int n);
+  __attribute__((pure)) static unsigned int factorial(const unsigned int n);
 
-  static unsigned int
+  __attribute__((pure)) static unsigned int
   fib_cps(const unsigned int n,
           const std::function<unsigned int(unsigned int)> k) {
     if (n <= 0) {
@@ -121,7 +121,7 @@ struct CPS {
     }
   }
 
-  static unsigned int fibonacci(const unsigned int n);
+  __attribute__((pure)) static unsigned int fibonacci(const unsigned int n);
 
   struct tree {
     // TYPES
@@ -170,10 +170,10 @@ struct CPS {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -208,7 +208,7 @@ struct CPS {
                       t->v());
   }
 
-  static unsigned int
+  __attribute__((pure)) static unsigned int
   tree_sum_cps(const std::shared_ptr<tree> &t,
                const std::function<unsigned int(unsigned int)> k) {
     return std::visit(
@@ -229,9 +229,10 @@ struct CPS {
         t->v());
   }
 
-  static unsigned int tree_sum(const std::shared_ptr<tree> &t);
+  __attribute__((pure)) static unsigned int
+  tree_sum(const std::shared_ptr<tree> &t);
 
-  static unsigned int
+  __attribute__((pure)) static unsigned int
   sum_cps(const std::shared_ptr<List<unsigned int>> &l,
           const std::function<unsigned int(unsigned int)> k) {
     return std::visit(
@@ -249,10 +250,11 @@ struct CPS {
         l->v());
   }
 
-  static unsigned int list_sum(const std::shared_ptr<List<unsigned int>> &l);
+  __attribute__((pure)) static unsigned int
+  list_sum(const std::shared_ptr<List<unsigned int>> &l);
 
   template <MapsTo<bool, unsigned int> F0>
-  static unsigned int partition_cps(
+  __attribute__((pure)) static unsigned int partition_cps(
       F0 &&p, const std::shared_ptr<List<unsigned int>> &l,
       const std::function<unsigned int(std::shared_ptr<List<unsigned int>>,
                                        std::shared_ptr<List<unsigned int>>)>
@@ -280,7 +282,8 @@ struct CPS {
         l->v());
   }
 
-  static unsigned int count_evens(const std::shared_ptr<List<unsigned int>> &l);
+  __attribute__((pure)) static unsigned int
+  count_evens(const std::shared_ptr<List<unsigned int>> &l);
   static inline const unsigned int test_fact_5 = factorial(5u);
   static inline const unsigned int test_fib_7 = fibonacci(7u);
   static inline const unsigned int test_tree = tree_sum(tree::ctor::Node_(

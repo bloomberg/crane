@@ -63,10 +63,10 @@ struct MatchFallbackNat {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0>
@@ -95,7 +95,9 @@ struct MatchFallbackNat {
         m->v());
   }
 
-  static unsigned int fallback(const std::shared_ptr<maybe_nat> &x);
+  __attribute__((pure)) static unsigned int
+  fallback(const std::shared_ptr<maybe_nat> &x);
+
   static inline const unsigned int t =
       (fallback(maybe_nat::ctor::NoneNat_()) +
        fallback(maybe_nat::ctor::SomeNat_(7u)));

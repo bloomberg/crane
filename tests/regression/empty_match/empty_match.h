@@ -38,7 +38,8 @@ struct EmptyMatch {
     throw std::logic_error("absurd case");
   }
 
-  static unsigned int from_empty(const std::shared_ptr<empty> &_x0);
+  __attribute__((pure)) static unsigned int
+  from_empty(const std::shared_ptr<empty> &_x0);
 
   template <typename t_A, typename t_B> struct either {
     // TYPES
@@ -88,10 +89,10 @@ struct EmptyMatch {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1> F0,

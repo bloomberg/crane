@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-bool MutualRecursion::is_even(const unsigned int n) {
+__attribute__((pure)) bool MutualRecursion::is_even(const unsigned int n) {
   if (n <= 0) {
     return true;
   } else {
@@ -20,7 +20,7 @@ bool MutualRecursion::is_even(const unsigned int n) {
   }
 }
 
-bool MutualRecursion::is_odd(const unsigned int n) {
+__attribute__((pure)) bool MutualRecursion::is_odd(const unsigned int n) {
   if (n <= 0) {
     return false;
   } else {
@@ -29,7 +29,7 @@ bool MutualRecursion::is_odd(const unsigned int n) {
   }
 }
 
-unsigned int MutualRecursion::tree_sum(
+__attribute__((pure)) unsigned int MutualRecursion::tree_sum(
     const std::shared_ptr<MutualRecursion::tree<unsigned int>> &t) {
   return std::visit(
       Overloaded{
@@ -47,7 +47,7 @@ unsigned int MutualRecursion::tree_sum(
       t->v());
 }
 
-unsigned int MutualRecursion::forest_sum(
+__attribute__((pure)) unsigned int MutualRecursion::forest_sum(
     const std::shared_ptr<MutualRecursion::forest<unsigned int>> &f) {
   return std::visit(
       Overloaded{

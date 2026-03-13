@@ -69,10 +69,10 @@ struct EvenOdd {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   struct odd_list {
@@ -108,14 +108,16 @@ struct EvenOdd {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
-  static unsigned int even_length(const std::shared_ptr<even_list> &e);
-  static unsigned int odd_length(const std::shared_ptr<odd_list> &o);
+  __attribute__((pure)) static unsigned int
+  even_length(const std::shared_ptr<even_list> &e);
+  __attribute__((pure)) static unsigned int
+  odd_length(const std::shared_ptr<odd_list> &o);
   static inline const std::shared_ptr<even_list> two = even_list::ctor::ECons_(
       2u, odd_list::ctor::OCons_(1u, even_list::ctor::ENil_()));
   static inline const std::shared_ptr<odd_list> three = odd_list::ctor::OCons_(

@@ -12,13 +12,13 @@
 #include <utility>
 #include <variant>
 
-unsigned int
+__attribute__((pure)) unsigned int
 SrcUsesPairValue::get_reg(const std::shared_ptr<SrcUsesPairValue::state> &s,
                           const unsigned int r) {
   return s->regs->nth(r, 0u);
 }
 
-unsigned int SrcUsesPairValue::get_reg_pair(
+__attribute__((pure)) unsigned int SrcUsesPairValue::get_reg_pair(
     const std::shared_ptr<SrcUsesPairValue::state> &s, const unsigned int r) {
   unsigned int base = (((r - (r % 2u)) > r ? 0 : (r - (r % 2u))));
   return ((get_reg(s, base) * 16u) + get_reg(s, (base + 1u)));
@@ -34,10 +34,9 @@ SrcUsesPairValue::execute_src(std::shared_ptr<SrcUsesPairValue::state> s,
             (std::move(pair_val) % 16u)});
 }
 
-std::pair<unsigned int, unsigned int> Nat::divmod(const unsigned int x,
-                                                  const unsigned int y,
-                                                  const unsigned int q,
-                                                  const unsigned int u) {
+__attribute__((pure)) std::pair<unsigned int, unsigned int>
+Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
+            const unsigned int u) {
   if (x <= 0) {
     return std::make_pair(std::move(q), std::move(u));
   } else {
@@ -51,7 +50,8 @@ std::pair<unsigned int, unsigned int> Nat::divmod(const unsigned int x,
   }
 }
 
-unsigned int Nat::div(const unsigned int x, const unsigned int y) {
+__attribute__((pure)) unsigned int Nat::div(const unsigned int x,
+                                            const unsigned int y) {
   if (y <= 0) {
     return std::move(y);
   } else {

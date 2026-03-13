@@ -66,10 +66,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   t_A nth(const unsigned int n, const t_A default0) const {
     if (n <= 0) {
@@ -444,9 +444,10 @@ struct RamOps {
   get_chip_sel(const std::shared_ptr<ram_bank_sel> &bk, const unsigned int c);
   static std::shared_ptr<ram_reg_sel>
   get_regRAM(const std::shared_ptr<ram_chip_sel> &ch, const unsigned int r);
-  static unsigned int get_main_sel(const std::shared_ptr<ram_reg_sel> &rg,
-                                   const unsigned int i);
-  static unsigned int ram_read_main(const std::shared_ptr<state_sel> &s);
+  __attribute__((pure)) static unsigned int
+  get_main_sel(const std::shared_ptr<ram_reg_sel> &rg, const unsigned int i);
+  __attribute__((pure)) static unsigned int
+  ram_read_main(const std::shared_ptr<state_sel> &s);
   static inline const std::shared_ptr<ram_reg_sel> sample_reg_sel =
       std::make_shared<ram_reg_sel>(ram_reg_sel{
           List<unsigned int>::ctor::Cons_(
@@ -524,9 +525,10 @@ struct RamOps {
   static std::shared_ptr<ram_reg_nested>
   get_regRAM_nested(const std::shared_ptr<ram_chip_nested> &ch,
                     const unsigned int r);
-  static unsigned int get_main_nested(const std::shared_ptr<ram_reg_nested> &rg,
-                                      const unsigned int i);
-  static unsigned int
+  __attribute__((pure)) static unsigned int
+  get_main_nested(const std::shared_ptr<ram_reg_nested> &rg,
+                  const unsigned int i);
+  __attribute__((pure)) static unsigned int
   ram_read_main_nested(const std::shared_ptr<state_nested> &s);
   static inline const std::shared_ptr<ram_reg_nested> sample_reg_nested =
       std::make_shared<ram_reg_nested>(ram_reg_nested{
@@ -600,13 +602,13 @@ struct RamOps {
   using reg_frame = std::shared_ptr<List<unsigned int>>;
   using chip_frame = std::shared_ptr<List<reg_frame>>;
   using bank_frame = std::shared_ptr<List<chip_frame>>;
-  static reg_frame
+  __attribute__((pure)) static reg_frame
   upd_main_in_reg_frame(const std::shared_ptr<List<unsigned int>> &rg,
                         const unsigned int i, const unsigned int v);
-  static chip_frame upd_reg_in_chip_frame(
+  __attribute__((pure)) static chip_frame upd_reg_in_chip_frame(
       const std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> &ch,
       const unsigned int r, const std::shared_ptr<List<unsigned int>> &rg);
-  static bank_frame upd_chip_in_bank_frame(
+  __attribute__((pure)) static bank_frame upd_chip_in_bank_frame(
       const std::shared_ptr<
           List<std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>>> &bk,
       const unsigned int c,
@@ -717,10 +719,11 @@ struct RamOps {
           1u});
   static inline const bool test_write_main_preserves_other_bank =
       execute_write(sample_preserve, 99u)->ram_sys_preserve->nth(3u, 0u) == 40u;
-  static bool ram_addr_disjointb(const unsigned int b1, const unsigned int c1,
-                                 const unsigned int r1, const unsigned int i1,
-                                 const unsigned int b2, const unsigned int c2,
-                                 const unsigned int r2, const unsigned int i2);
+  __attribute__((pure)) static bool
+  ram_addr_disjointb(const unsigned int b1, const unsigned int c1,
+                     const unsigned int r1, const unsigned int i1,
+                     const unsigned int b2, const unsigned int c2,
+                     const unsigned int r2, const unsigned int i2);
   static inline const unsigned int test_addr_disjoint_bool =
       ([](void) {
         if (ram_addr_disjointb(0u, 1u, 2u, 3u, 0u, 1u, 2u, 3u)) {
@@ -795,7 +798,8 @@ struct RamOps {
   get_reg0(const std::shared_ptr<chip_nested_bank> &c);
   static std::shared_ptr<state_nested_bank>
   write_status0(std::shared_ptr<state_nested_bank> s, const unsigned int v);
-  static unsigned int read_status0(const std::shared_ptr<state_nested_bank> &s);
+  __attribute__((pure)) static unsigned int
+  read_status0(const std::shared_ptr<state_nested_bank> &s);
   static inline const std::shared_ptr<state_nested_bank> sample_nested_bank =
       std::make_shared<state_nested_bank>(state_nested_bank{
           List<std::shared_ptr<bank_nested_bank>>::ctor::Cons_(
@@ -845,7 +849,7 @@ struct RamOps {
     }();
   }
 
-  static unsigned int score(const Item x);
+  __attribute__((pure)) static unsigned int score(const Item x);
   static inline const unsigned int test_accessor_namespace =
       (score(Item::e_S_) + score(Item::e_S_0));
 

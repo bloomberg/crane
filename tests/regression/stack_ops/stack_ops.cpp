@@ -12,6 +12,7 @@
 #include <utility>
 #include <variant>
 
+__attribute__((pure))
 std::pair<std::optional<unsigned int>, std::shared_ptr<StackOps::state_basic>>
 StackOps::pop_stack(std::shared_ptr<StackOps::state_basic> s) {
   return std::visit(
@@ -33,7 +34,8 @@ StackOps::pop_stack(std::shared_ptr<StackOps::state_basic> s) {
       s->stack_basic->v());
 }
 
-bool StackOps::is_none(const std::optional<unsigned int> o) {
+__attribute__((pure)) bool
+StackOps::is_none(const std::optional<unsigned int> o) {
   if (o.has_value()) {
     unsigned int _x = *o;
     return false;
@@ -42,7 +44,8 @@ bool StackOps::is_none(const std::optional<unsigned int> o) {
   }
 }
 
-unsigned int StackOps::option_or_zero(const std::optional<unsigned int> o) {
+__attribute__((pure)) unsigned int
+StackOps::option_or_zero(const std::optional<unsigned int> o) {
   if (o.has_value()) {
     unsigned int n = *o;
     return n;
@@ -51,8 +54,8 @@ unsigned int StackOps::option_or_zero(const std::optional<unsigned int> o) {
   }
 }
 
-std::pair<std::optional<unsigned int>,
-          std::shared_ptr<StackOps::state_with_acc>>
+__attribute__((pure)) std::pair<std::optional<unsigned int>,
+                                std::shared_ptr<StackOps::state_with_acc>>
 StackOps::pop_stack_acc(std::shared_ptr<StackOps::state_with_acc> s) {
   return std::visit(
       Overloaded{[&](const typename List<unsigned int>::Nil _args)
@@ -136,7 +139,7 @@ StackOps::push_stack(const std::shared_ptr<StackOps::state_basic> &s,
       s->stack_basic->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 StackOps::top_or_zero(const std::shared_ptr<StackOps::state_basic> &s) {
   return std::visit(
       Overloaded{

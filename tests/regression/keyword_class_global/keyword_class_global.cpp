@@ -11,6 +11,7 @@
 #include <string>
 #include <variant>
 
-unsigned int KeywordClassGlobal::class_(const unsigned int n) {
+__attribute__((pure)) unsigned int
+KeywordClassGlobal::class_(const unsigned int n) {
   return (n + n);
 }

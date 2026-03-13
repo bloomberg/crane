@@ -65,10 +65,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct MutualRecord {
@@ -112,10 +112,10 @@ struct MutualRecord {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   struct employee {
@@ -151,10 +151,10 @@ struct MutualRecord {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <
@@ -207,16 +207,21 @@ struct MutualRecord {
         e->v());
   }
 
-  static unsigned int dept_id(const std::shared_ptr<department> &d);
+  __attribute__((pure)) static unsigned int
+  dept_id(const std::shared_ptr<department> &d);
   static std::shared_ptr<List<std::shared_ptr<employee>>>
   dept_employees(const std::shared_ptr<department> &d);
-  static unsigned int emp_id(const std::shared_ptr<employee> &e);
-  static unsigned int emp_salary(const std::shared_ptr<employee> &e);
-  static unsigned int dept_total_salary(const std::shared_ptr<department> &d);
-  static unsigned int
+  __attribute__((pure)) static unsigned int
+  emp_id(const std::shared_ptr<employee> &e);
+  __attribute__((pure)) static unsigned int
+  emp_salary(const std::shared_ptr<employee> &e);
+  __attribute__((pure)) static unsigned int
+  dept_total_salary(const std::shared_ptr<department> &d);
+  __attribute__((pure)) static unsigned int
   emp_list_salary(const std::shared_ptr<List<std::shared_ptr<employee>>> &l);
-  static unsigned int dept_count(const std::shared_ptr<department> &d);
-  static unsigned int
+  __attribute__((pure)) static unsigned int
+  dept_count(const std::shared_ptr<department> &d);
+  __attribute__((pure)) static unsigned int
   emp_list_count(const std::shared_ptr<List<std::shared_ptr<employee>>> &l);
   static inline const std::shared_ptr<employee> emp1 =
       employee::ctor::Mk_employee_(1u, 50u);

@@ -69,10 +69,10 @@ struct Sum {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1> F0,
@@ -111,11 +111,12 @@ struct Sum {
       either<unsigned int, bool>::ctor::Left_(5u);
   static inline const std::shared_ptr<either<unsigned int, bool>> right_val =
       either<unsigned int, bool>::ctor::Right_(true);
-  static unsigned int
+  __attribute__((pure)) static unsigned int
   either_to_nat(const std::shared_ptr<either<unsigned int, unsigned int>> &e);
 
   template <typename T1, typename T2>
-  static bool is_left(const std::shared_ptr<either<T1, T2>> &e) {
+  __attribute__((pure)) static bool
+  is_left(const std::shared_ptr<either<T1, T2>> &e) {
     return std::visit(
         Overloaded{[](const typename either<T1, T2>::Left _args) -> bool {
                      return true;
@@ -222,10 +223,10 @@ struct Sum {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, typename T3, typename T4,

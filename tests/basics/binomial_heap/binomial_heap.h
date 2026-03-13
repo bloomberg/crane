@@ -66,10 +66,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct BinomialHeap {
@@ -123,10 +123,10 @@ struct BinomialHeap {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, std::shared_ptr<tree>, T1,
@@ -169,16 +169,19 @@ struct BinomialHeap {
   static std::shared_ptr<List<std::shared_ptr<tree>>>
   carry(const std::shared_ptr<List<std::shared_ptr<tree>>> &q,
         std::shared_ptr<tree> t);
-  static priqueue insert(const unsigned int x,
-                         const std::shared_ptr<List<std::shared_ptr<tree>>> &q);
-  static priqueue join(const std::shared_ptr<List<std::shared_ptr<tree>>> &p,
-                       const std::shared_ptr<List<std::shared_ptr<tree>>> &q,
-                       std::shared_ptr<tree> c);
+  __attribute__((pure)) static priqueue
+  insert(const unsigned int x,
+         const std::shared_ptr<List<std::shared_ptr<tree>>> &q);
+  __attribute__((pure)) static priqueue
+  join(const std::shared_ptr<List<std::shared_ptr<tree>>> &p,
+       const std::shared_ptr<List<std::shared_ptr<tree>>> &q,
+       std::shared_ptr<tree> c);
 
   template <MapsTo<std::shared_ptr<List<std::shared_ptr<tree>>>,
                    std::shared_ptr<List<std::shared_ptr<tree>>>>
                 F1>
-  static priqueue unzip(const std::shared_ptr<tree> &t, F1 &&cont) {
+  __attribute__((pure)) static priqueue unzip(const std::shared_ptr<tree> &t,
+                                              F1 &&cont) {
     return std::visit(
         Overloaded{[&](const typename tree::Node _args)
                        -> std::shared_ptr<List<std::shared_ptr<tree>>> {
@@ -202,24 +205,28 @@ struct BinomialHeap {
         t->v());
   }
 
-  static priqueue heap_delete_max(const std::shared_ptr<tree> &t);
-  static key
+  __attribute__((pure)) static priqueue
+  heap_delete_max(const std::shared_ptr<tree> &t);
+  __attribute__((pure)) static key
   find_max_helper(const unsigned int current,
                   const std::shared_ptr<List<std::shared_ptr<tree>>> &q);
-  static std::optional<key>
+  __attribute__((pure)) static std::optional<key>
   find_max(const std::shared_ptr<List<std::shared_ptr<tree>>> &q);
-  static std::pair<priqueue, priqueue>
+  __attribute__((pure)) static std::pair<priqueue, priqueue>
   delete_max_aux(const unsigned int m,
                  const std::shared_ptr<List<std::shared_ptr<tree>>> &p);
-  static std::optional<std::pair<key, priqueue>>
+  __attribute__((pure)) static std::optional<std::pair<key, priqueue>>
   delete_max(const std::shared_ptr<List<std::shared_ptr<tree>>> &q);
-  static priqueue merge(const std::shared_ptr<List<std::shared_ptr<tree>>> &p,
-                        const std::shared_ptr<List<std::shared_ptr<tree>>> &q);
-  static priqueue insert_list(const std::shared_ptr<List<unsigned int>> &l,
-                              std::shared_ptr<List<std::shared_ptr<tree>>> q);
+  __attribute__((pure)) static priqueue
+  merge(const std::shared_ptr<List<std::shared_ptr<tree>>> &p,
+        const std::shared_ptr<List<std::shared_ptr<tree>>> &q);
+  __attribute__((pure)) static priqueue
+  insert_list(const std::shared_ptr<List<unsigned int>> &l,
+              std::shared_ptr<List<std::shared_ptr<tree>>> q);
   static std::shared_ptr<List<unsigned int>>
   make_list(const unsigned int n, std::shared_ptr<List<unsigned int>> l);
-  static key help(const std::shared_ptr<List<std::shared_ptr<tree>>> &c);
+  __attribute__((pure)) static key
+  help(const std::shared_ptr<List<std::shared_ptr<tree>>> &c);
   static inline const key example1 = help(merge(
       insert(5u,
              insert(3u, insert(7u, List<std::shared_ptr<tree>>::ctor::Nil_()))),

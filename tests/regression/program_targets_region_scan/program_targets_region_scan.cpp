@@ -11,7 +11,8 @@
 #include <string>
 #include <variant>
 
-std::optional<unsigned int> ProgramTargetsRegionScan::jump_target(
+__attribute__((pure)) std::optional<unsigned int>
+ProgramTargetsRegionScan::jump_target(
     const std::shared_ptr<ProgramTargetsRegionScan::instruction> &i) {
   return std::visit(
       Overloaded{
@@ -30,13 +31,13 @@ std::optional<unsigned int> ProgramTargetsRegionScan::jump_target(
       i->v());
 }
 
-bool ProgramTargetsRegionScan::addr_in_regionb(
+__attribute__((pure)) bool ProgramTargetsRegionScan::addr_in_regionb(
     const unsigned int addr,
     const std::shared_ptr<ProgramTargetsRegionScan::layout> &l) {
   return (l->base_addr <= addr && addr < (l->base_addr + l->code_size));
 }
 
-bool ProgramTargetsRegionScan::target_in_layoutb(
+__attribute__((pure)) bool ProgramTargetsRegionScan::target_in_layoutb(
     const std::shared_ptr<ProgramTargetsRegionScan::layout> &l,
     const std::shared_ptr<ProgramTargetsRegionScan::instruction> &i) {
   if (jump_target(i).has_value()) {
@@ -47,7 +48,7 @@ bool ProgramTargetsRegionScan::target_in_layoutb(
   }
 }
 
-bool ProgramTargetsRegionScan::program_targets_okb(
+__attribute__((pure)) bool ProgramTargetsRegionScan::program_targets_okb(
     const std::shared_ptr<
         List<std::shared_ptr<ProgramTargetsRegionScan::instruction>>> &prog,
     const std::shared_ptr<ProgramTargetsRegionScan::layout> &l) {

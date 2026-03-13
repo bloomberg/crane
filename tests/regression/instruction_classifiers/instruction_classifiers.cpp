@@ -12,7 +12,7 @@
 #include <utility>
 #include <variant>
 
-bool InstructionClassifiers::writes_acc(
+__attribute__((pure)) bool InstructionClassifiers::writes_acc(
     const std::shared_ptr<InstructionClassifiers::instr_acc> &i) {
   return std::visit(
       Overloaded{
@@ -71,7 +71,7 @@ bool InstructionClassifiers::writes_acc(
       i->v());
 }
 
-unsigned int InstructionClassifiers::count_writes_acc(
+__attribute__((pure)) unsigned int InstructionClassifiers::count_writes_acc(
     const std::shared_ptr<
         List<std::shared_ptr<InstructionClassifiers::instr_acc>>> &prog) {
   return std::visit(
@@ -97,7 +97,7 @@ unsigned int InstructionClassifiers::count_writes_acc(
       prog->v());
 }
 
-bool InstructionClassifiers::writes_ram(
+__attribute__((pure)) bool InstructionClassifiers::writes_ram(
     const std::shared_ptr<InstructionClassifiers::instr_ram> &i) {
   return std::visit(
       Overloaded{
@@ -120,7 +120,7 @@ bool InstructionClassifiers::writes_ram(
       i->v());
 }
 
-unsigned int InstructionClassifiers::count_writes_ram(
+__attribute__((pure)) unsigned int InstructionClassifiers::count_writes_ram(
     const std::shared_ptr<
         List<std::shared_ptr<InstructionClassifiers::instr_ram>>> &prog) {
   return std::visit(
@@ -146,7 +146,7 @@ unsigned int InstructionClassifiers::count_writes_ram(
       prog->v());
 }
 
-bool InstructionClassifiers::writes_regs(
+__attribute__((pure)) bool InstructionClassifiers::writes_regs(
     const std::shared_ptr<InstructionClassifiers::instr_regs> &i) {
   return std::visit(
       Overloaded{
@@ -167,7 +167,7 @@ bool InstructionClassifiers::writes_regs(
       i->v());
 }
 
-unsigned int InstructionClassifiers::count_writes_regs(
+__attribute__((pure)) unsigned int InstructionClassifiers::count_writes_regs(
     const std::shared_ptr<
         List<std::shared_ptr<InstructionClassifiers::instr_regs>>> &prog) {
   return std::visit(
@@ -193,7 +193,7 @@ unsigned int InstructionClassifiers::count_writes_regs(
       prog->v());
 }
 
-bool InstructionClassifiers::is_jump(
+__attribute__((pure)) bool InstructionClassifiers::is_jump(
     const std::shared_ptr<InstructionClassifiers::instr_jump> &i) {
   return std::visit(
       Overloaded{
@@ -216,7 +216,7 @@ bool InstructionClassifiers::is_jump(
       i->v());
 }
 
-unsigned int InstructionClassifiers::count_jumps(
+__attribute__((pure)) unsigned int InstructionClassifiers::count_jumps(
     const std::shared_ptr<
         List<std::shared_ptr<InstructionClassifiers::instr_jump>>> &prog) {
   return std::visit(

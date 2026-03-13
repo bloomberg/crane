@@ -66,10 +66,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   t_A nth(const unsigned int n, const t_A default0) const {
     if (n <= 0) {
@@ -102,14 +102,14 @@ struct FetchOps {
     std::shared_ptr<List<unsigned int>> rom;
   };
 
-  static unsigned int fetch_byte(const std::shared_ptr<state> &s,
-                                 const unsigned int addr);
+  __attribute__((pure)) static unsigned int
+  fetch_byte(const std::shared_ptr<state> &s, const unsigned int addr);
   static inline const unsigned int fetch_default_test =
       fetch_byte(std::make_shared<state>(state{List<unsigned int>::ctor::Cons_(
                      1u, List<unsigned int>::ctor::Cons_(
                              2u, List<unsigned int>::ctor::Nil_()))}),
                  5u);
-  static unsigned int
+  __attribute__((pure)) static unsigned int
   fetch_byte_direct(const std::shared_ptr<List<unsigned int>> &rom_data,
                     const unsigned int addr);
   static inline const unsigned int fetch_in_range_test = fetch_byte_direct(
@@ -140,7 +140,7 @@ struct FetchOps {
     }
   }
 
-  static std::pair<unsigned int, unsigned int>
+  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
   fetch_pair(const std::shared_ptr<List<unsigned int>> &rom_data,
              const unsigned int addr);
   static inline const unsigned int fetch_pair_test = [](void) {
@@ -152,7 +152,8 @@ struct FetchOps {
                    0u);
     return (p.first + p.second);
   }();
-  static std::optional<std::pair<unsigned int, unsigned int>>
+  __attribute__((
+      pure)) static std::optional<std::pair<unsigned int, unsigned int>>
   fetch_window(const std::shared_ptr<List<unsigned int>> &rom_data,
                const unsigned int addr);
   static inline const unsigned int fetch_window_test = [](void) {

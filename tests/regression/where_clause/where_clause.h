@@ -85,10 +85,10 @@ struct WhereClause {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -138,8 +138,10 @@ struct WhereClause {
                       e->v());
   }
 
-  static unsigned int eval(const std::shared_ptr<Expr> &e);
-  static unsigned int expr_size(const std::shared_ptr<Expr> &e);
+  __attribute__((pure)) static unsigned int
+  eval(const std::shared_ptr<Expr> &e);
+  __attribute__((pure)) static unsigned int
+  expr_size(const std::shared_ptr<Expr> &e);
 
   struct BExpr {
     // TYPES
@@ -231,10 +233,10 @@ struct WhereClause {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <
@@ -295,7 +297,7 @@ struct WhereClause {
         b->v());
   }
 
-  static bool beval(const std::shared_ptr<BExpr> &e);
+  __attribute__((pure)) static bool beval(const std::shared_ptr<BExpr> &e);
 
   struct AExpr {
     // TYPES
@@ -365,10 +367,10 @@ struct WhereClause {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <
@@ -429,7 +431,8 @@ struct WhereClause {
                       a->v());
   }
 
-  static unsigned int aeval(const std::shared_ptr<AExpr> &e);
+  __attribute__((pure)) static unsigned int
+  aeval(const std::shared_ptr<AExpr> &e);
   static inline const unsigned int test_eval_plus =
       eval(Expr::ctor::Plus_(Expr::ctor::Num_(3u), Expr::ctor::Num_(4u)));
   static inline const unsigned int test_eval_times =

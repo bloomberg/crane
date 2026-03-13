@@ -65,12 +65,13 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  template <MapsTo<bool, t_A> F0> bool forallb(F0 &&f) const {
+  template <MapsTo<bool, t_A> F0>
+  __attribute__((pure)) bool forallb(F0 &&f) const {
     return std::visit(
         Overloaded{
             [](const typename List<t_A>::Nil _args) -> bool { return true; },
@@ -140,10 +141,10 @@ struct ProgramTargetsRegionScan {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -187,13 +188,14 @@ struct ProgramTargetsRegionScan {
     unsigned int code_size;
   };
 
-  static std::optional<unsigned int>
+  __attribute__((pure)) static std::optional<unsigned int>
   jump_target(const std::shared_ptr<instruction> &i);
-  static bool addr_in_regionb(const unsigned int addr,
-                              const std::shared_ptr<layout> &l);
-  static bool target_in_layoutb(const std::shared_ptr<layout> &l,
-                                const std::shared_ptr<instruction> &i);
-  static bool program_targets_okb(
+  __attribute__((pure)) static bool
+  addr_in_regionb(const unsigned int addr, const std::shared_ptr<layout> &l);
+  __attribute__((pure)) static bool
+  target_in_layoutb(const std::shared_ptr<layout> &l,
+                    const std::shared_ptr<instruction> &i);
+  __attribute__((pure)) static bool program_targets_okb(
       const std::shared_ptr<List<std::shared_ptr<instruction>>> &prog,
       const std::shared_ptr<layout> &l);
   static inline const unsigned int t = [](void) {

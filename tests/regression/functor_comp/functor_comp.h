@@ -66,10 +66,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   template <typename T1, MapsTo<T1, T1, t_A> F0>
   T1 fold_left(F0 &&f, const T1 a0) const {
@@ -100,7 +100,7 @@ public:
         this->v());
   }
 
-  unsigned int length() const {
+  __attribute__((pure)) unsigned int length() const {
     return std::visit(
         Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
                      return 0u;
@@ -149,10 +149,11 @@ struct FunctorComp {
   struct Stack {
     using t = std::shared_ptr<List<unsigned int>>;
     static inline const t empty = List<unsigned int>::ctor::Nil_();
-    static t push(const unsigned int x, std::shared_ptr<List<unsigned int>> s);
-    static std::optional<std::pair<unsigned int, t>>
+    __attribute__((pure)) static t push(const unsigned int x,
+                                        std::shared_ptr<List<unsigned int>> s);
+    __attribute__((pure)) static std::optional<std::pair<unsigned int, t>>
     pop(const std::shared_ptr<List<unsigned int>> &s);
-    static unsigned int size(const t _x0);
+    __attribute__((pure)) static unsigned int size(const t _x0);
   };
 
   struct Queue {
@@ -160,23 +161,25 @@ struct FunctorComp {
                         std::shared_ptr<List<unsigned int>>>;
     static inline const t empty = std::make_pair(
         List<unsigned int>::ctor::Nil_(), List<unsigned int>::ctor::Nil_());
-    static t push(const unsigned int x,
-                  const std::pair<std::shared_ptr<List<unsigned int>>,
-                                  std::shared_ptr<List<unsigned int>>>
-                      q);
-    static std::optional<std::pair<unsigned int, t>>
+    __attribute__((pure)) static t
+    push(const unsigned int x,
+         const std::pair<std::shared_ptr<List<unsigned int>>,
+                         std::shared_ptr<List<unsigned int>>>
+             q);
+    __attribute__((pure)) static std::optional<std::pair<unsigned int, t>>
     pop(const std::pair<std::shared_ptr<List<unsigned int>>,
                         std::shared_ptr<List<unsigned int>>>
             q);
-    static unsigned int
+    __attribute__((pure)) static unsigned int
     size(const std::pair<std::shared_ptr<List<unsigned int>>,
                          std::shared_ptr<List<unsigned int>>>
              q);
   };
 
   template <CONTAINER C> struct ContainerOps {
-    static typename C::t push_list(const std::shared_ptr<List<unsigned int>> &l,
-                                   const typename C::t c) {
+    __attribute__((pure)) static typename C::t
+    push_list(const std::shared_ptr<List<unsigned int>> &l,
+              const typename C::t c) {
       return l->template fold_left<typename C::t>(
           [](typename C::t acc, unsigned int x) { return C::push(x, acc); }, c);
     }

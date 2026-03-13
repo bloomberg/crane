@@ -64,12 +64,12 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  Bool0 leb(const std::shared_ptr<Nat> &m) const {
+  __attribute__((pure)) Bool0 leb(const std::shared_ptr<Nat> &m) const {
     return std::visit(
         Overloaded{
             [](const typename Nat::O _args) -> Bool0 { return Bool0::e_TRUE0; },
@@ -122,10 +122,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   t_A projT1() const {
     return std::visit(
@@ -139,7 +139,7 @@ public:
 enum class Sumbool { e_LEFT, e_RIGHT };
 
 struct Bool {
-  static Sumbool bool_dec(const Bool0 b1, const Bool0 b2);
+  __attribute__((pure)) static Sumbool bool_dec(const Bool0 b1, const Bool0 b2);
 };
 
 struct Ascii {
@@ -185,12 +185,13 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  Sumbool ascii_dec(const std::shared_ptr<Ascii> &b) const {
+  __attribute__((pure)) Sumbool
+  ascii_dec(const std::shared_ptr<Ascii> &b) const {
     return std::visit(
         Overloaded{[&](const typename Ascii::Ascii0 _args) -> auto {
           Bool0 b0 = _args.d_a0;
@@ -337,10 +338,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   std::shared_ptr<String> append(std::shared_ptr<String> s2) const {
     return std::visit(Overloaded{[&](const typename String::EmptyString _args)
@@ -445,10 +446,10 @@ struct Levenshtein {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1,
@@ -592,10 +593,10 @@ struct Levenshtein {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1,

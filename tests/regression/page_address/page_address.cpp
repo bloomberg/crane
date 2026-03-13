@@ -12,27 +12,28 @@
 #include <utility>
 #include <variant>
 
-unsigned int PageAddress::addr12_of_nat(const unsigned int n) {
+__attribute__((pure)) unsigned int
+PageAddress::addr12_of_nat(const unsigned int n) {
   return (n % 4096u);
 }
 
-unsigned int PageAddress::page_of(const unsigned int p) {
+__attribute__((pure)) unsigned int PageAddress::page_of(const unsigned int p) {
   return Nat::div(addr12_of_nat(p), 256u);
 }
 
-unsigned int PageAddress::page_base(const unsigned int p) {
+__attribute__((pure)) unsigned int
+PageAddress::page_base(const unsigned int p) {
   return (page_of(p) * 256u);
 }
 
-unsigned int PageAddress::branch_target(const unsigned int pc,
-                                        const unsigned int off) {
+__attribute__((pure)) unsigned int
+PageAddress::branch_target(const unsigned int pc, const unsigned int off) {
   return (page_base(addr12_of_nat((pc + 2u))) + (off % 256u));
 }
 
-std::pair<unsigned int, unsigned int> Nat::divmod(const unsigned int x,
-                                                  const unsigned int y,
-                                                  const unsigned int q,
-                                                  const unsigned int u) {
+__attribute__((pure)) std::pair<unsigned int, unsigned int>
+Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
+            const unsigned int u) {
   if (x <= 0) {
     return std::make_pair(std::move(q), std::move(u));
   } else {
@@ -46,7 +47,8 @@ std::pair<unsigned int, unsigned int> Nat::divmod(const unsigned int x,
   }
 }
 
-unsigned int Nat::div(const unsigned int x, const unsigned int y) {
+__attribute__((pure)) unsigned int Nat::div(const unsigned int x,
+                                            const unsigned int y) {
   if (y <= 0) {
     return std::move(y);
   } else {

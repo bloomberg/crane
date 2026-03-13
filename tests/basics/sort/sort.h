@@ -66,12 +66,12 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  unsigned int length() const {
+  __attribute__((pure)) unsigned int length() const {
     return std::visit(
         Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
                      return 0u;
@@ -114,16 +114,19 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct Compare_dec {
-  static bool le_lt_dec(const unsigned int n, const unsigned int m);
-  static bool le_gt_dec(const unsigned int _x0, const unsigned int _x1);
-  static bool le_dec(const unsigned int n, const unsigned int m);
+  __attribute__((pure)) static bool le_lt_dec(const unsigned int n,
+                                              const unsigned int m);
+  __attribute__((pure)) static bool le_gt_dec(const unsigned int _x0,
+                                              const unsigned int _x1);
+  __attribute__((pure)) static bool le_dec(const unsigned int n,
+                                           const unsigned int m);
 };
 
 struct Sort {
@@ -152,7 +155,8 @@ struct Sort {
   }
 
   template <typename T1>
-  static std::pair<std::shared_ptr<List<T1>>, std::shared_ptr<List<T1>>>
+  __attribute__((pure)) static std::pair<std::shared_ptr<List<T1>>,
+                                         std::shared_ptr<List<T1>>>
   split(const std::shared_ptr<List<T1>> &ls) {
     return std::visit(
         Overloaded{
@@ -226,7 +230,8 @@ struct Sort {
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  static std::pair<std::shared_ptr<List<T1>>, std::shared_ptr<List<T1>>>
+  __attribute__((pure)) static std::pair<std::shared_ptr<List<T1>>,
+                                         std::shared_ptr<List<T1>>>
   split_pivot(F0 &&le_dec0, const T1 pivot,
               const std::shared_ptr<List<T1>> &l) {
     return std::visit(

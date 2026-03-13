@@ -14,7 +14,8 @@
 #include <utility>
 #include <variant>
 
-bool PeanoNat::eqb(const unsigned int n, const unsigned int m) {
+__attribute__((pure)) bool PeanoNat::eqb(const unsigned int n,
+                                         const unsigned int m) {
   if (n <= 0) {
     if (m <= 0) {
       return true;
@@ -33,7 +34,8 @@ bool PeanoNat::eqb(const unsigned int n, const unsigned int m) {
   }
 }
 
-bool PeanoNat::leb(const unsigned int n, const unsigned int m) {
+__attribute__((pure)) bool PeanoNat::leb(const unsigned int n,
+                                         const unsigned int m) {
   if (n <= 0) {
     return true;
   } else {
@@ -47,19 +49,22 @@ bool PeanoNat::leb(const unsigned int n, const unsigned int m) {
   }
 }
 
-bool PeanoNat::ltb(const unsigned int n, const unsigned int m) {
+__attribute__((pure)) bool PeanoNat::ltb(const unsigned int n,
+                                         const unsigned int m) {
   return PeanoNat::leb((std::move(n) + 1), m);
 }
 
-bool skiplist_test::nat_lt(const unsigned int _x0, const unsigned int _x1) {
+__attribute__((pure)) bool skiplist_test::nat_lt(const unsigned int _x0,
+                                                 const unsigned int _x1) {
   return PeanoNat::ltb(_x0, _x1);
 }
 
-bool skiplist_test::nat_eq(const unsigned int _x0, const unsigned int _x1) {
+__attribute__((pure)) bool skiplist_test::nat_eq(const unsigned int _x0,
+                                                 const unsigned int _x1) {
   return PeanoNat::eqb(_x0, _x1);
 }
 
-bool skiplist_test::stm_test_insert_lookup() {
+__attribute__((pure)) bool skiplist_test::stm_test_insert_lookup() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
       SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   sl->insert(nat_lt, nat_eq, 5u, 50u, 2u);
@@ -109,7 +114,7 @@ bool skiplist_test::stm_test_insert_lookup() {
   return (c1 && (c2 && (c3 && (c4 && c5))));
 }
 
-bool skiplist_test::stm_test_delete() {
+__attribute__((pure)) bool skiplist_test::stm_test_delete() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
       SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   sl->insert(nat_lt, nat_eq, 5u, 50u, 2u);
@@ -143,7 +148,7 @@ bool skiplist_test::stm_test_delete() {
   return (c1 && (c2 && c3));
 }
 
-bool skiplist_test::stm_test_update() {
+__attribute__((pure)) bool skiplist_test::stm_test_update() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
       SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   sl->insert(nat_lt, nat_eq, 5u, 50u, 0u);
@@ -159,7 +164,7 @@ bool skiplist_test::stm_test_update() {
   }();
 }
 
-bool skiplist_test::stm_test_minimum() {
+__attribute__((pure)) bool skiplist_test::stm_test_minimum() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
       SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   sl->insert(nat_lt, nat_eq, 5u, 50u, 0u);
@@ -178,7 +183,7 @@ bool skiplist_test::stm_test_minimum() {
   }();
 }
 
-bool skiplist_test::stm_test_length_isEmpty() {
+__attribute__((pure)) bool skiplist_test::stm_test_length_isEmpty() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
       SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   bool empty1 = sl->isEmpty();
@@ -193,7 +198,7 @@ bool skiplist_test::stm_test_length_isEmpty() {
   return (empty1 && (c2 && (c3 && c4)));
 }
 
-bool skiplist_test::stm_test_front_back() {
+__attribute__((pure)) bool skiplist_test::stm_test_front_back() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
       SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   sl->insert(nat_lt, nat_eq, 5u, 50u, 0u);
@@ -224,7 +229,7 @@ bool skiplist_test::stm_test_front_back() {
   return (c1 && c2);
 }
 
-bool skiplist_test::stm_test_popFront() {
+__attribute__((pure)) bool skiplist_test::stm_test_popFront() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
       SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   sl->insert(nat_lt, nat_eq, 5u, 50u, 0u);
@@ -255,7 +260,7 @@ bool skiplist_test::stm_test_popFront() {
   return (c1 && (c2 && c3));
 }
 
-bool skiplist_test::stm_test_addUnique() {
+__attribute__((pure)) bool skiplist_test::stm_test_addUnique() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
       SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   bool r1 = sl->addUnique(nat_lt, nat_eq, 5u, 50u, 0u);
@@ -275,7 +280,7 @@ bool skiplist_test::stm_test_addUnique() {
   return (r1 && (c2 && (r3 && (c4 && c5))));
 }
 
-bool skiplist_test::stm_test_find() {
+__attribute__((pure)) bool skiplist_test::stm_test_find() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
       SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   sl->insert(nat_lt, nat_eq, 5u, 50u, 0u);
@@ -303,7 +308,7 @@ bool skiplist_test::stm_test_find() {
   return (c1 && c2);
 }
 
-bool skiplist_test::stm_test_navigation() {
+__attribute__((pure)) bool skiplist_test::stm_test_navigation() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
       SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   sl->insert(nat_lt, nat_eq, 1u, 10u, 0u);
@@ -345,7 +350,7 @@ bool skiplist_test::stm_test_navigation() {
   }
 }
 
-bool skiplist_test::stm_test_bounds() {
+__attribute__((pure)) bool skiplist_test::stm_test_bounds() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
       SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   sl->insert(nat_lt, nat_eq, 2u, 20u, 0u);
@@ -388,7 +393,7 @@ bool skiplist_test::stm_test_bounds() {
   return (c1 && (c2 && c3));
 }
 
-bool skiplist_test::stm_test_removeAll() {
+__attribute__((pure)) bool skiplist_test::stm_test_removeAll() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
       SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   sl->insert(nat_lt, nat_eq, 5u, 50u, 0u);
@@ -402,7 +407,7 @@ bool skiplist_test::stm_test_removeAll() {
   return (c1 && (empty && c3));
 }
 
-bool skiplist_test::stm_test_bde_api() {
+__attribute__((pure)) bool skiplist_test::stm_test_bde_api() {
   std::shared_ptr<SkipList<unsigned int, unsigned int>> sl =
       SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   std::pair<std::shared_ptr<SkipNode<unsigned int, unsigned int>>, bool>
@@ -489,59 +494,59 @@ bool skiplist_test::stm_test_bde_api() {
                                                       std::move(c10))))))))));
 }
 
-bool skiplist_test::test_insert_lookup() {
+__attribute__((pure)) bool skiplist_test::test_insert_lookup() {
   return stm::atomically([&] { return stm_test_insert_lookup(); });
 }
 
-bool skiplist_test::test_delete() {
+__attribute__((pure)) bool skiplist_test::test_delete() {
   return stm::atomically([&] { return stm_test_delete(); });
 }
 
-bool skiplist_test::test_update() {
+__attribute__((pure)) bool skiplist_test::test_update() {
   return stm::atomically([&] { return stm_test_update(); });
 }
 
-bool skiplist_test::test_minimum() {
+__attribute__((pure)) bool skiplist_test::test_minimum() {
   return stm::atomically([&] { return stm_test_minimum(); });
 }
 
-bool skiplist_test::test_length_isEmpty() {
+__attribute__((pure)) bool skiplist_test::test_length_isEmpty() {
   return stm::atomically([&] { return stm_test_length_isEmpty(); });
 }
 
-bool skiplist_test::test_front_back() {
+__attribute__((pure)) bool skiplist_test::test_front_back() {
   return stm::atomically([&] { return stm_test_front_back(); });
 }
 
-bool skiplist_test::test_popFront() {
+__attribute__((pure)) bool skiplist_test::test_popFront() {
   return stm::atomically([&] { return stm_test_popFront(); });
 }
 
-bool skiplist_test::test_addUnique() {
+__attribute__((pure)) bool skiplist_test::test_addUnique() {
   return stm::atomically([&] { return stm_test_addUnique(); });
 }
 
-bool skiplist_test::test_find() {
+__attribute__((pure)) bool skiplist_test::test_find() {
   return stm::atomically([&] { return stm_test_find(); });
 }
 
-bool skiplist_test::test_navigation() {
+__attribute__((pure)) bool skiplist_test::test_navigation() {
   return stm::atomically([&] { return stm_test_navigation(); });
 }
 
-bool skiplist_test::test_bounds() {
+__attribute__((pure)) bool skiplist_test::test_bounds() {
   return stm::atomically([&] { return stm_test_bounds(); });
 }
 
-bool skiplist_test::test_removeAll() {
+__attribute__((pure)) bool skiplist_test::test_removeAll() {
   return stm::atomically([&] { return stm_test_removeAll(); });
 }
 
-bool skiplist_test::test_bde_api() {
+__attribute__((pure)) bool skiplist_test::test_bde_api() {
   return stm::atomically([&] { return stm_test_bde_api(); });
 }
 
-unsigned int skiplist_test::run_tests() {
+__attribute__((pure)) unsigned int skiplist_test::run_tests() {
   bool r1 = test_insert_lookup();
   bool r2 = test_delete();
   bool r3 = test_update();

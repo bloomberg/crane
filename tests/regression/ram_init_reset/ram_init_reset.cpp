@@ -19,6 +19,7 @@ RamInitReset::reset_state(std::shared_ptr<RamInitReset::state> s) {
             s->state_ram, default_sel, s->state_rom});
 }
 
+__attribute__((pure))
 std::pair<std::optional<unsigned int>, std::shared_ptr<RamInitReset::state>>
 RamInitReset::pop_stack(std::shared_ptr<RamInitReset::state> s) {
   return std::visit(

@@ -14,17 +14,17 @@
 
 void iotest::test1(const std::string _x) { return; }
 
-Unit iotest::test2(const std::string s) {
+__attribute__((pure)) Unit iotest::test2(const std::string s) {
   std::cout << s;
   return Unit::e_TT;
 }
 
-void iotest::test3(const std::string s) {
+__attribute__((pure)) void iotest::test3(const std::string s) {
   std::cout << s << '\n';
   return;
 }
 
-std::string iotest::test4() {
+__attribute__((pure)) std::string iotest::test4() {
   std::cout << "what is your name?"s << '\n';
   std::string s2 = []() -> std::string {
     std::string s;
@@ -35,7 +35,7 @@ std::string iotest::test4() {
   return "I read the name "s + s2 + " from the command line!"s;
 }
 
-void iotest::test5() {
+__attribute__((pure)) void iotest::test5() {
   std::string s = []() -> std::string {
     std::ifstream file("file.txt"s);
     if (!file) {

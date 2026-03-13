@@ -66,19 +66,20 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct Nat {
-  static unsigned int pow(const unsigned int n, const unsigned int m);
-  static std::pair<unsigned int, unsigned int> divmod(const unsigned int x,
-                                                      const unsigned int y,
-                                                      const unsigned int q,
-                                                      const unsigned int u);
-  static unsigned int div(const unsigned int x, const unsigned int y);
+  __attribute__((pure)) static unsigned int pow(const unsigned int n,
+                                                const unsigned int m);
+  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
+  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
+         const unsigned int u);
+  __attribute__((pure)) static unsigned int div(const unsigned int x,
+                                                const unsigned int y);
 };
 
 struct PageOps {
@@ -86,15 +87,19 @@ struct PageOps {
     unsigned int pc;
   };
 
-  static unsigned int addr12_of_nat(const unsigned int n);
-  static unsigned int page_of(const unsigned int p);
-  static unsigned int page_base(const unsigned int p);
-  static unsigned int page_offset(const unsigned int p);
-  static unsigned int pc_inc1(const std::shared_ptr<state> &s);
-  static unsigned int pc_inc2(const std::shared_ptr<state> &s);
-  static unsigned int base_for_next1(const std::shared_ptr<state> &s);
-  static unsigned int base_for_next2(const std::shared_ptr<state> &s);
-  static unsigned int recompose(const unsigned int p);
+  __attribute__((pure)) static unsigned int addr12_of_nat(const unsigned int n);
+  __attribute__((pure)) static unsigned int page_of(const unsigned int p);
+  __attribute__((pure)) static unsigned int page_base(const unsigned int p);
+  __attribute__((pure)) static unsigned int page_offset(const unsigned int p);
+  __attribute__((pure)) static unsigned int
+  pc_inc1(const std::shared_ptr<state> &s);
+  __attribute__((pure)) static unsigned int
+  pc_inc2(const std::shared_ptr<state> &s);
+  __attribute__((pure)) static unsigned int
+  base_for_next1(const std::shared_ptr<state> &s);
+  __attribute__((pure)) static unsigned int
+  base_for_next2(const std::shared_ptr<state> &s);
+  __attribute__((pure)) static unsigned int recompose(const unsigned int p);
   static inline const unsigned int max_addr = ((
       (Nat::pow(2u, 12u) - 1u) > Nat::pow(2u, 12u) ? 0
                                                    : (Nat::pow(2u, 12u) - 1u)));
@@ -141,10 +146,10 @@ struct PageOps {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
@@ -197,7 +202,8 @@ struct PageOps {
     }
   }
 
-  static std::optional<std::pair<std::shared_ptr<instruction>, unsigned int>>
+  __attribute__((pure)) static std::optional<
+      std::pair<std::shared_ptr<instruction>, unsigned int>>
   disassemble(const std::shared_ptr<List<unsigned int>> &rom,
               const unsigned int addr);
   static inline const unsigned int test_page_base_alignment =

@@ -12,7 +12,7 @@
 #include <utility>
 #include <variant>
 
-unsigned int NestedMod::Outer::Inner::area(
+__attribute__((pure)) unsigned int NestedMod::Outer::Inner::area(
     const std::shared_ptr<NestedMod::Outer::Inner::shape> &s) {
   return std::visit(
       Overloaded{
@@ -35,7 +35,7 @@ unsigned int NestedMod::Outer::Inner::area(
       s->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 NestedMod::Outer::shape_with_color(const std::shared_ptr<Inner::shape> &s,
                                    const NestedMod::Outer::Color c) {
   return [&](void) {
@@ -53,7 +53,8 @@ NestedMod::Outer::shape_with_color(const std::shared_ptr<Inner::shape> &s,
   }();
 }
 
-unsigned int NestedMod::Outer::color_code(const NestedMod::Outer::Color c) {
+__attribute__((pure)) unsigned int
+NestedMod::Outer::color_code(const NestedMod::Outer::Color c) {
   return [&](void) {
     switch (c) {
     case Color::e_RED: {
@@ -69,10 +70,9 @@ unsigned int NestedMod::Outer::color_code(const NestedMod::Outer::Color c) {
   }();
 }
 
-std::pair<unsigned int, unsigned int> Nat::divmod(const unsigned int x,
-                                                  const unsigned int y,
-                                                  const unsigned int q,
-                                                  const unsigned int u) {
+__attribute__((pure)) std::pair<unsigned int, unsigned int>
+Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
+            const unsigned int u) {
   if (x <= 0) {
     return std::make_pair(std::move(q), std::move(u));
   } else {
@@ -86,7 +86,8 @@ std::pair<unsigned int, unsigned int> Nat::divmod(const unsigned int x,
   }
 }
 
-unsigned int Nat::div(const unsigned int x, const unsigned int y) {
+__attribute__((pure)) unsigned int Nat::div(const unsigned int x,
+                                            const unsigned int y) {
   if (y <= 0) {
     return std::move(y);
   } else {

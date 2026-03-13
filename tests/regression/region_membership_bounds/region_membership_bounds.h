@@ -26,8 +26,8 @@ struct RegionMembershipBounds {
     unsigned int code_size;
   };
 
-  static bool addr_in_regionb(const unsigned int addr,
-                              const std::shared_ptr<layout> &l);
+  __attribute__((pure)) static bool
+  addr_in_regionb(const unsigned int addr, const std::shared_ptr<layout> &l);
   static inline const unsigned int t = []() {
     return [](void) {
       std::shared_ptr<layout> l = std::make_shared<layout>(layout{100u, 20u});

@@ -66,10 +66,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   t_A nth(const unsigned int n, const t_A default0) const {
     if (n <= 0) {
@@ -136,7 +136,8 @@ struct LoopBodyIteration {
     }
   }
 
-  static unsigned int get_reg0(const std::shared_ptr<state> &s);
+  __attribute__((pure)) static unsigned int
+  get_reg0(const std::shared_ptr<state> &s);
   static std::shared_ptr<state> count_loop_body(std::shared_ptr<state> s);
   static std::shared_ptr<state> iterate_body(const unsigned int n,
                                              std::shared_ptr<state> s);

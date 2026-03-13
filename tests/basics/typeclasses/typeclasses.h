@@ -66,10 +66,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 template <typename I, typename t_A>
@@ -87,13 +87,15 @@ concept Ord = requires(t_A a0, t_A a1) {
 
 struct Typeclasses {
   struct numNat {
-    static unsigned int to_nat(unsigned int n) { return n; }
+    __attribute__((pure)) static unsigned int to_nat(unsigned int n) {
+      return n;
+    }
   };
 
   static_assert(Numeric<numNat, unsigned int>);
 
   struct numBool {
-    static unsigned int to_nat(bool b) {
+    __attribute__((pure)) static unsigned int to_nat(bool b) {
       if (b) {
         return 1u;
       } else {
@@ -105,7 +107,7 @@ struct Typeclasses {
   static_assert(Numeric<numBool, bool>);
 
   template <typename _tcI0, typename T1> struct numOption {
-    static unsigned int to_nat(std::optional<T1> o) {
+    __attribute__((pure)) static unsigned int to_nat(std::optional<T1> o) {
       if (o.has_value()) {
         T1 x = *o;
         return (_tcI0::to_nat(x) + 1);
@@ -116,7 +118,8 @@ struct Typeclasses {
   };
 
   template <typename _tcI0, typename T1> struct numList {
-    static unsigned int to_nat(std::shared_ptr<List<T1>> a0) {
+    __attribute__((pure)) static unsigned int
+    to_nat(std::shared_ptr<List<T1>> a0) {
       std::function<unsigned int(std::shared_ptr<List<T1>>)> sum;
       sum = [&](std::shared_ptr<List<T1>> l) -> unsigned int {
         return std::visit(
@@ -136,29 +139,35 @@ struct Typeclasses {
   };
 
   template <typename _tcI0, typename T1>
-  static unsigned int numeric_sum(const std::shared_ptr<List<T1>> &l) {
+  __attribute__((pure)) static unsigned int
+  numeric_sum(const std::shared_ptr<List<T1>> &l) {
     return numList<_tcI0, T1>::to_nat(l);
   }
 
   template <typename _tcI0, typename T1>
-  static unsigned int numeric_double(const T1 x) {
+  __attribute__((pure)) static unsigned int numeric_double(const T1 x) {
     return (_tcI0::to_nat(x) + _tcI0::to_nat(x));
   }
 
   struct eqNat {
-    static bool eqb(unsigned int a0, unsigned int a1) { return a0 == a1; }
+    __attribute__((pure)) static bool eqb(unsigned int a0, unsigned int a1) {
+      return a0 == a1;
+    }
   };
 
   static_assert(Eq<eqNat, unsigned int>);
 
   struct ordNat {
-    static bool leb(unsigned int a0, unsigned int a1) { return a0 <= a1; }
+    __attribute__((pure)) static bool leb(unsigned int a0, unsigned int a1) {
+      return a0 <= a1;
+    }
   };
 
   static_assert(Ord<ordNat, unsigned int>);
 
   template <typename _tcI0, typename _tcI1, typename T1>
-  static std::pair<T1, T1> sort_pair(const T1 x, const T1 y) {
+  __attribute__((pure)) static std::pair<T1, T1> sort_pair(const T1 x,
+                                                           const T1 y) {
     if (_tcI0::leb(x, y)) {
       return std::make_pair(x, y);
     } else {
@@ -185,7 +194,7 @@ struct Typeclasses {
   }
 
   template <typename _tcI0, typename _tcI1, typename T1>
-  static unsigned int describe(const T1 x, const T1 y) {
+  __attribute__((pure)) static unsigned int describe(const T1 x, const T1 y) {
     if (_tcI0::eqb(x, y)) {
       return _tcI1::to_nat(x);
     } else {

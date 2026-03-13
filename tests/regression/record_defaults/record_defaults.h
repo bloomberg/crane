@@ -45,12 +45,14 @@ struct RecordDefaults {
     std::shared_ptr<Point> extent;
   };
 
-  static unsigned int rect_area(const std::shared_ptr<Rect> &r);
+  __attribute__((pure)) static unsigned int
+  rect_area(const std::shared_ptr<Rect> &r);
   static std::shared_ptr<Rect> make_rect(const unsigned int x,
                                          const unsigned int y,
                                          const unsigned int w,
                                          const unsigned int h);
-  static unsigned int total_cells(const std::shared_ptr<Config> &c);
+  __attribute__((pure)) static unsigned int
+  total_cells(const std::shared_ptr<Config> &c);
   static inline const unsigned int test_default_width =
       default_config->cfg_width;
   static inline const bool test_default_debug = default_config->cfg_debug;

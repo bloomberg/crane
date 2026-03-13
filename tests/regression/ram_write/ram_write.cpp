@@ -12,8 +12,9 @@
 #include <utility>
 #include <variant>
 
-unsigned int RamWrite::get_main(const std::shared_ptr<RamWrite::ram_reg> &rg,
-                                const unsigned int i) {
+__attribute__((pure)) unsigned int
+RamWrite::get_main(const std::shared_ptr<RamWrite::ram_reg> &rg,
+                   const unsigned int i) {
   return rg->reg_main->nth(i, 0u);
 }
 
@@ -93,7 +94,7 @@ RamWrite::current_reg(const std::shared_ptr<RamWrite::state> &s) {
   return get_regRAM(current_chip(s), s->state_sel->sel_reg);
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RamWrite::ram_read_main(const std::shared_ptr<RamWrite::state> &s) {
   return get_main(current_reg(s), s->state_sel->sel_char);
 }

@@ -12,7 +12,8 @@
 #include <utility>
 #include <variant>
 
-unsigned int PeanoNat::sub(const unsigned int n, const unsigned int m) {
+__attribute__((pure)) unsigned int PeanoNat::sub(const unsigned int n,
+                                                 const unsigned int m) {
   if (n <= 0) {
     return std::move(n);
   } else {
@@ -26,10 +27,9 @@ unsigned int PeanoNat::sub(const unsigned int n, const unsigned int m) {
   }
 }
 
-std::pair<unsigned int, unsigned int> PeanoNat::divmod(const unsigned int x,
-                                                       const unsigned int y,
-                                                       const unsigned int q,
-                                                       const unsigned int u) {
+__attribute__((pure)) std::pair<unsigned int, unsigned int>
+PeanoNat::divmod(const unsigned int x, const unsigned int y,
+                 const unsigned int q, const unsigned int u) {
   if (x <= 0) {
     return std::make_pair(std::move(q), std::move(u));
   } else {
@@ -43,7 +43,8 @@ std::pair<unsigned int, unsigned int> PeanoNat::divmod(const unsigned int x,
   }
 }
 
-unsigned int PeanoNat::modulo(const unsigned int x, const unsigned int y) {
+__attribute__((pure)) unsigned int PeanoNat::modulo(const unsigned int x,
+                                                    const unsigned int y) {
   if (y <= 0) {
     return std::move(x);
   } else {
@@ -68,7 +69,8 @@ WellFoundedRec::countdown(const unsigned int _x0) {
   return countdown_acc(_x0);
 }
 
-unsigned int WellFoundedRec::div2_wf(const unsigned int x) {
+__attribute__((pure)) unsigned int
+WellFoundedRec::div2_wf(const unsigned int x) {
   if (x <= 0) {
     return 0u;
   } else {
@@ -82,8 +84,8 @@ unsigned int WellFoundedRec::div2_wf(const unsigned int x) {
   }
 }
 
-unsigned int WellFoundedRec::gcd_wf(const unsigned int x,
-                                    const unsigned int b) {
+__attribute__((pure)) unsigned int
+WellFoundedRec::gcd_wf(const unsigned int x, const unsigned int b) {
   if (x <= 0) {
     return std::move(b);
   } else {

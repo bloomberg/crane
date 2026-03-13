@@ -66,10 +66,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct InstructionClassifiers {
@@ -417,10 +417,10 @@ struct InstructionClassifiers {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -551,8 +551,9 @@ struct InstructionClassifiers {
         i->v());
   }
 
-  static bool writes_acc(const std::shared_ptr<instr_acc> &i);
-  static unsigned int count_writes_acc(
+  __attribute__((pure)) static bool
+  writes_acc(const std::shared_ptr<instr_acc> &i);
+  __attribute__((pure)) static unsigned int count_writes_acc(
       const std::shared_ptr<List<std::shared_ptr<instr_acc>>> &prog);
   static inline const unsigned int test_writes_acc =
       count_writes_acc(List<std::shared_ptr<instr_acc>>::ctor::Cons_(
@@ -685,10 +686,10 @@ struct InstructionClassifiers {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F7>
@@ -731,8 +732,9 @@ struct InstructionClassifiers {
         i->v());
   }
 
-  static bool writes_ram(const std::shared_ptr<instr_ram> &i);
-  static unsigned int count_writes_ram(
+  __attribute__((pure)) static bool
+  writes_ram(const std::shared_ptr<instr_ram> &i);
+  __attribute__((pure)) static unsigned int count_writes_ram(
       const std::shared_ptr<List<std::shared_ptr<instr_ram>>> &prog);
   static inline const unsigned int test_writes_ram =
       count_writes_ram(List<std::shared_ptr<instr_ram>>::ctor::Cons_(
@@ -869,10 +871,10 @@ struct InstructionClassifiers {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <
@@ -953,8 +955,9 @@ struct InstructionClassifiers {
         i->v());
   }
 
-  static bool writes_regs(const std::shared_ptr<instr_regs> &i);
-  static unsigned int count_writes_regs(
+  __attribute__((pure)) static bool
+  writes_regs(const std::shared_ptr<instr_regs> &i);
+  __attribute__((pure)) static unsigned int count_writes_regs(
       const std::shared_ptr<List<std::shared_ptr<instr_regs>>> &prog);
   static inline const unsigned int test_writes_regs =
       count_writes_regs(List<std::shared_ptr<instr_regs>>::ctor::Cons_(
@@ -1102,10 +1105,10 @@ struct InstructionClassifiers {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
@@ -1198,8 +1201,9 @@ struct InstructionClassifiers {
         i->v());
   }
 
-  static bool is_jump(const std::shared_ptr<instr_jump> &i);
-  static unsigned int
+  __attribute__((pure)) static bool
+  is_jump(const std::shared_ptr<instr_jump> &i);
+  __attribute__((pure)) static unsigned int
   count_jumps(const std::shared_ptr<List<std::shared_ptr<instr_jump>>> &prog);
   static inline const unsigned int test_jump_classifier =
       count_jumps(List<std::shared_ptr<instr_jump>>::ctor::Cons_(

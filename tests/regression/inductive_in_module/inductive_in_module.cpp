@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-unsigned int InductiveInModule::Inner::color_to_nat(
+__attribute__((pure)) unsigned int InductiveInModule::Inner::color_to_nat(
     const InductiveInModule::Inner::Color c) {
   return [&](void) {
     switch (c) {

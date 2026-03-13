@@ -95,10 +95,10 @@ struct TypeApp {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2,
@@ -168,7 +168,8 @@ struct TypeApp {
   struct NatMonoid {
     using T = unsigned int;
     static inline const unsigned int empty = 0u;
-    static unsigned int append(const unsigned int _x0, const unsigned int _x1);
+    __attribute__((pure)) static unsigned int append(const unsigned int _x0,
+                                                     const unsigned int _x1);
   };
 
   template <Monoid M> struct UseMonoid {
@@ -177,7 +178,7 @@ struct TypeApp {
       return v;
     }
 
-    static typename M::T triple(const typename M::T x) {
+    __attribute__((pure)) static typename M::T triple(const typename M::T x) {
       return M::append(x, M::append(x, x));
     }
   };

@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-unsigned int
+__attribute__((pure)) unsigned int
 LargeMutual::expr_size(const std::shared_ptr<LargeMutual::expr> &e) {
   return std::visit(
       Overloaded{
@@ -42,7 +42,7 @@ LargeMutual::expr_size(const std::shared_ptr<LargeMutual::expr> &e) {
       e->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 LargeMutual::bexpr_size(const std::shared_ptr<LargeMutual::bexpr> &b) {
   return std::visit(
       Overloaded{
@@ -79,7 +79,7 @@ LargeMutual::bexpr_size(const std::shared_ptr<LargeMutual::bexpr> &b) {
       b->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 LargeMutual::stmt_size(const std::shared_ptr<LargeMutual::stmt> &s) {
   return std::visit(
       Overloaded{

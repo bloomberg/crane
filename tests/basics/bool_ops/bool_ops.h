@@ -23,16 +23,20 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 struct BoolOps {
   static inline const bool bool_true = true;
   static inline const bool bool_false = false;
-  static bool my_negb(const bool b);
-  static bool my_andb(const bool a, const bool b);
-  static bool my_orb(const bool a, const bool b);
-  static bool my_xorb(const bool a, const bool b);
-  static unsigned int if_nat(const bool b, const unsigned int t,
-                             const unsigned int f);
-  static bool complex_bool(const bool a, const bool b, const bool c);
-  static bool nat_eq(const unsigned int _x0, const unsigned int _x1);
-  static bool nat_lt(const unsigned int _x0, const unsigned int _x1);
-  static bool nat_le(const unsigned int _x0, const unsigned int _x1);
+  __attribute__((pure)) static bool my_negb(const bool b);
+  __attribute__((pure)) static bool my_andb(const bool a, const bool b);
+  __attribute__((pure)) static bool my_orb(const bool a, const bool b);
+  __attribute__((pure)) static bool my_xorb(const bool a, const bool b);
+  __attribute__((pure)) static unsigned int
+  if_nat(const bool b, const unsigned int t, const unsigned int f);
+  __attribute__((pure)) static bool complex_bool(const bool a, const bool b,
+                                                 const bool c);
+  __attribute__((pure)) static bool nat_eq(const unsigned int _x0,
+                                           const unsigned int _x1);
+  __attribute__((pure)) static bool nat_lt(const unsigned int _x0,
+                                           const unsigned int _x1);
+  __attribute__((pure)) static bool nat_le(const unsigned int _x0,
+                                           const unsigned int _x1);
   static inline const bool test_neg_t = my_negb(true);
   static inline const bool test_neg_f = my_negb(false);
   static inline const bool test_and_tt = my_andb(true, true);

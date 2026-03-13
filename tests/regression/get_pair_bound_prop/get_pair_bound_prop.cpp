@@ -12,7 +12,7 @@
 #include <utility>
 #include <variant>
 
-unsigned int
+__attribute__((pure)) unsigned int
 GetPairBoundProp::get_reg(const std::shared_ptr<GetPairBoundProp::state> &s,
                           const unsigned int r) {
   return s->ex_regs->nth(r, 0u);
@@ -24,11 +24,12 @@ GetPairBoundProp::set_reg(const std::shared_ptr<GetPairBoundProp::state> &s,
   return update_nth<unsigned int>(r, (v % 16u), s->ex_regs);
 }
 
-unsigned int GetPairBoundProp::pair_base(const unsigned int r) {
+__attribute__((pure)) unsigned int
+GetPairBoundProp::pair_base(const unsigned int r) {
   return (((r - (r % 2u)) > r ? 0 : (r - (r % 2u))));
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 GetPairBoundProp::get_pair(const std::shared_ptr<GetPairBoundProp::state> &s,
                            const unsigned int r) {
   unsigned int base = pair_base(r);
@@ -367,10 +368,9 @@ GetPairBoundProp::execute(std::shared_ptr<GetPairBoundProp::state> s,
       i->v());
 }
 
-std::pair<unsigned int, unsigned int> Nat::divmod(const unsigned int x,
-                                                  const unsigned int y,
-                                                  const unsigned int q,
-                                                  const unsigned int u) {
+__attribute__((pure)) std::pair<unsigned int, unsigned int>
+Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
+            const unsigned int u) {
   if (x <= 0) {
     return std::make_pair(std::move(q), std::move(u));
   } else {
@@ -384,7 +384,8 @@ std::pair<unsigned int, unsigned int> Nat::divmod(const unsigned int x,
   }
 }
 
-unsigned int Nat::div(const unsigned int x, const unsigned int y) {
+__attribute__((pure)) unsigned int Nat::div(const unsigned int x,
+                                            const unsigned int y) {
   if (y <= 0) {
     return std::move(y);
   } else {

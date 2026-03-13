@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-TodoNestedModuleType::NatOuter::Inner::t
+__attribute__((pure)) TodoNestedModuleType::NatOuter::Inner::t
 TodoNestedModuleType::NatOuter::step(const unsigned int n) {
   return (std::move(n) + 1);
 }

@@ -65,10 +65,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct DepElim {
@@ -119,10 +119,10 @@ struct DepElim {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -157,8 +157,8 @@ struct DepElim {
                       f1->v());
   }
 
-  static unsigned int fin_to_nat(const unsigned int _x,
-                                 const std::shared_ptr<fin> &f);
+  __attribute__((pure)) static unsigned int
+  fin_to_nat(const unsigned int _x, const std::shared_ptr<fin> &f);
 
   template <typename t_A> struct vec {
     // TYPES
@@ -206,10 +206,10 @@ struct DepElim {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2,
@@ -349,10 +349,10 @@ struct DepElim {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0>
@@ -381,7 +381,8 @@ struct DepElim {
         a->v());
   }
 
-  static unsigned int get_present(const std::shared_ptr<avail> &a);
+  __attribute__((pure)) static unsigned int
+  get_present(const std::shared_ptr<avail> &a);
   static inline const unsigned int test_fin0 =
       fin_to_nat(3u, fin::ctor::FZ_(2u));
   static inline const unsigned int test_fin2 = fin_to_nat(

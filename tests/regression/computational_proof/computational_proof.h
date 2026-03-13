@@ -65,19 +65,25 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct ComputationalProof {
-  static bool nat_eq_dec(const unsigned int n, const unsigned int x);
-  static bool nat_eqb_dec(const unsigned int n, const unsigned int m);
-  static bool le_dec(const unsigned int n, const unsigned int m);
-  static bool nat_leb_dec(const unsigned int n, const unsigned int m);
-  static unsigned int min_dec(const unsigned int n, const unsigned int m);
-  static unsigned int max_dec(const unsigned int n, const unsigned int m);
+  __attribute__((pure)) static bool nat_eq_dec(const unsigned int n,
+                                               const unsigned int x);
+  __attribute__((pure)) static bool nat_eqb_dec(const unsigned int n,
+                                                const unsigned int m);
+  __attribute__((pure)) static bool le_dec(const unsigned int n,
+                                           const unsigned int m);
+  __attribute__((pure)) static bool nat_leb_dec(const unsigned int n,
+                                                const unsigned int m);
+  __attribute__((pure)) static unsigned int min_dec(const unsigned int n,
+                                                    const unsigned int m);
+  __attribute__((pure)) static unsigned int max_dec(const unsigned int n,
+                                                    const unsigned int m);
   static std::shared_ptr<List<unsigned int>>
   insert_dec(const unsigned int x,
              const std::shared_ptr<List<unsigned int>> &l);

@@ -22,9 +22,10 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct SetoidRw {
-  static unsigned int mod3(const unsigned int n);
-  static unsigned int classify_mod3(const unsigned int n);
-  static unsigned int add_mod3(const unsigned int x, const unsigned int y);
+  __attribute__((pure)) static unsigned int mod3(const unsigned int n);
+  __attribute__((pure)) static unsigned int classify_mod3(const unsigned int n);
+  __attribute__((pure)) static unsigned int add_mod3(const unsigned int x,
+                                                     const unsigned int y);
   static inline const unsigned int test_mod3_0 = mod3(0u);
   static inline const unsigned int test_mod3_5 = mod3(5u);
   static inline const unsigned int test_mod3_9 = mod3(9u);

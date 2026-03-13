@@ -29,7 +29,7 @@ struct LetIn {
     return (std::move(x) + std::move(y));
   }();
   static inline const unsigned int shadowed_let = 3u;
-  static unsigned int let_in_fun(const unsigned int n);
+  __attribute__((pure)) static unsigned int let_in_fun(const unsigned int n);
   static inline const unsigned int let_fun = [](void) {
     unsigned int x = 5u;
     return (std::move(x) + 1u);
@@ -68,10 +68,10 @@ struct LetIn {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>

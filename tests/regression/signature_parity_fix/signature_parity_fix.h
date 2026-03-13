@@ -21,7 +21,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct SignatureParityFix {
-  static unsigned int f(const unsigned int seed);
+  __attribute__((pure)) static unsigned int f(const unsigned int seed);
   static inline const unsigned int t = f(4u);
 };
 

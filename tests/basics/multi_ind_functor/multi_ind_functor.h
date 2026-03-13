@@ -75,10 +75,10 @@ template <Elem E> struct Container {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
@@ -149,10 +149,10 @@ template <Elem E> struct Container {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1,
@@ -227,10 +227,10 @@ template <Elem E> struct Container {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, std::shared_ptr<maybe>> F0,
@@ -261,7 +261,8 @@ template <Elem E> struct Container {
                       m->v());
   }
 
-  static bool is_nothing(const std::shared_ptr<maybe> &m) {
+  __attribute__((pure)) static bool
+  is_nothing(const std::shared_ptr<maybe> &m) {
     return std::visit(
         Overloaded{
             [](const typename maybe::Nothing _args) -> bool { return true; },
@@ -269,7 +270,8 @@ template <Elem E> struct Container {
         m->v());
   }
 
-  static unsigned int mlist_length(const std::shared_ptr<mlist> &l) {
+  __attribute__((pure)) static unsigned int
+  mlist_length(const std::shared_ptr<mlist> &l) {
     return std::visit(
         Overloaded{
             [](const typename mlist::MNil _args) -> unsigned int { return 0u; },
@@ -280,7 +282,8 @@ template <Elem E> struct Container {
         l->v());
   }
 
-  static unsigned int tree_size(const std::shared_ptr<mtree> &t0) {
+  __attribute__((pure)) static unsigned int
+  tree_size(const std::shared_ptr<mtree> &t0) {
     return std::visit(
         Overloaded{[](const typename mtree::Leaf _args) -> unsigned int {
                      std::shared_ptr<maybe> m = _args.d_a0;

@@ -17,7 +17,7 @@ TypeApp::map_succ(const std::shared_ptr<TypeApp::list<unsigned int>> &_x0) {
       [](unsigned int x) { return (x + 1u); }, _x0);
 }
 
-unsigned int TypeApp::NatMonoid::append(const unsigned int _x0,
-                                        const unsigned int _x1) {
+__attribute__((pure)) unsigned int
+TypeApp::NatMonoid::append(const unsigned int _x0, const unsigned int _x1) {
   return (_x0 + _x1);
 }

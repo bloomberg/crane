@@ -12,18 +12,19 @@
 #include <utility>
 #include <variant>
 
-unsigned int FetchOps::fetch_byte(const std::shared_ptr<FetchOps::state> &s,
-                                  const unsigned int addr) {
+__attribute__((pure)) unsigned int
+FetchOps::fetch_byte(const std::shared_ptr<FetchOps::state> &s,
+                     const unsigned int addr) {
   return s->rom->nth(addr, 0u);
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 FetchOps::fetch_byte_direct(const std::shared_ptr<List<unsigned int>> &rom_data,
                             const unsigned int addr) {
   return rom_data->nth(addr, 0u);
 }
 
-std::pair<unsigned int, unsigned int>
+__attribute__((pure)) std::pair<unsigned int, unsigned int>
 FetchOps::fetch_pair(const std::shared_ptr<List<unsigned int>> &rom_data,
                      const unsigned int addr) {
   return std::visit(
@@ -52,7 +53,7 @@ FetchOps::fetch_pair(const std::shared_ptr<List<unsigned int>> &rom_data,
       drop<unsigned int>(addr, rom_data)->v());
 }
 
-std::optional<std::pair<unsigned int, unsigned int>>
+__attribute__((pure)) std::optional<std::pair<unsigned int, unsigned int>>
 FetchOps::fetch_window(const std::shared_ptr<List<unsigned int>> &rom_data,
                        const unsigned int addr) {
   return std::visit(

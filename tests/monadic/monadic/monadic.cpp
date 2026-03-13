@@ -12,8 +12,8 @@
 #include <utility>
 #include <variant>
 
-std::optional<unsigned int> Monadic::safe_div(const unsigned int n,
-                                              const unsigned int m) {
+__attribute__((pure)) std::optional<unsigned int>
+Monadic::safe_div(const unsigned int n, const unsigned int m) {
   if (m <= 0) {
     return std::nullopt;
   } else {
@@ -22,8 +22,8 @@ std::optional<unsigned int> Monadic::safe_div(const unsigned int n,
   }
 }
 
-std::optional<unsigned int> Monadic::safe_sub(const unsigned int n,
-                                              const unsigned int m) {
+__attribute__((pure)) std::optional<unsigned int>
+Monadic::safe_sub(const unsigned int n, const unsigned int m) {
   if (n < m) {
     return std::nullopt;
   } else {
@@ -34,9 +34,9 @@ std::optional<unsigned int> Monadic::safe_sub(const unsigned int n,
   }
 }
 
-std::optional<unsigned int> Monadic::div_then_sub(const unsigned int a,
-                                                  const unsigned int b,
-                                                  const unsigned int c) {
+__attribute__((pure)) std::optional<unsigned int>
+Monadic::div_then_sub(const unsigned int a, const unsigned int b,
+                      const unsigned int c) {
   return option_bind<unsigned int, unsigned int>(
       safe_div(a, b), [=](unsigned int x) mutable {
         return option_bind<unsigned int, unsigned int>(
@@ -44,10 +44,9 @@ std::optional<unsigned int> Monadic::div_then_sub(const unsigned int a,
       });
 }
 
-std::pair<unsigned int, unsigned int> Nat::divmod(const unsigned int x,
-                                                  const unsigned int y,
-                                                  const unsigned int q,
-                                                  const unsigned int u) {
+__attribute__((pure)) std::pair<unsigned int, unsigned int>
+Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
+            const unsigned int u) {
   if (x <= 0) {
     return std::make_pair(std::move(q), std::move(u));
   } else {
@@ -61,7 +60,8 @@ std::pair<unsigned int, unsigned int> Nat::divmod(const unsigned int x,
   }
 }
 
-unsigned int Nat::div(const unsigned int x, const unsigned int y) {
+__attribute__((pure)) unsigned int Nat::div(const unsigned int x,
+                                            const unsigned int y) {
   if (y <= 0) {
     return std::move(y);
   } else {

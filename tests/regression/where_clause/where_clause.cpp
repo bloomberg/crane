@@ -11,7 +11,8 @@
 #include <string>
 #include <variant>
 
-unsigned int WhereClause::eval(const std::shared_ptr<WhereClause::Expr> &e) {
+__attribute__((pure)) unsigned int
+WhereClause::eval(const std::shared_ptr<WhereClause::Expr> &e) {
   return std::visit(
       Overloaded{
           [](const typename WhereClause::Expr::Num _args) -> unsigned int {
@@ -31,7 +32,7 @@ unsigned int WhereClause::eval(const std::shared_ptr<WhereClause::Expr> &e) {
       e->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 WhereClause::expr_size(const std::shared_ptr<WhereClause::Expr> &e) {
   return std::visit(
       Overloaded{
@@ -51,7 +52,8 @@ WhereClause::expr_size(const std::shared_ptr<WhereClause::Expr> &e) {
       e->v());
 }
 
-bool WhereClause::beval(const std::shared_ptr<WhereClause::BExpr> &e) {
+__attribute__((pure)) bool
+WhereClause::beval(const std::shared_ptr<WhereClause::BExpr> &e) {
   return std::visit(
       Overloaded{[](const typename WhereClause::BExpr::BTrue _args) -> bool {
                    return true;
@@ -76,7 +78,8 @@ bool WhereClause::beval(const std::shared_ptr<WhereClause::BExpr> &e) {
       e->v());
 }
 
-unsigned int WhereClause::aeval(const std::shared_ptr<WhereClause::AExpr> &e) {
+__attribute__((pure)) unsigned int
+WhereClause::aeval(const std::shared_ptr<WhereClause::AExpr> &e) {
   return std::visit(
       Overloaded{
           [](const typename WhereClause::AExpr::ANum _args) -> unsigned int {

@@ -65,10 +65,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct UniversePoly {
@@ -130,10 +130,10 @@ struct UniversePoly {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1> F1>
@@ -208,7 +208,8 @@ struct UniversePoly {
           });
 
   template <typename T1>
-  static unsigned int poly_length(const std::shared_ptr<List<T1>> &l) {
+  __attribute__((pure)) static unsigned int
+  poly_length(const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{[](const typename List<T1>::Nil _args) -> unsigned int {
                      return 0u;

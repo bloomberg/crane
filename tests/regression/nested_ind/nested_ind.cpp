@@ -20,7 +20,8 @@ NestedInd::leaf(const unsigned int n) {
           std::shared_ptr<NestedInd::rose<unsigned int>>>::ctor::Cnil_());
 }
 
-unsigned int NestedInd::eval(const std::shared_ptr<NestedInd::expr> &e) {
+__attribute__((pure)) unsigned int
+NestedInd::eval(const std::shared_ptr<NestedInd::expr> &e) {
   return std::visit(
       Overloaded{
           [](const typename NestedInd::expr::Lit _args) -> unsigned int {
@@ -81,7 +82,8 @@ unsigned int NestedInd::eval(const std::shared_ptr<NestedInd::expr> &e) {
       e->v());
 }
 
-unsigned int NestedInd::expr_size(const std::shared_ptr<NestedInd::expr> &e) {
+__attribute__((pure)) unsigned int
+NestedInd::expr_size(const std::shared_ptr<NestedInd::expr> &e) {
   return std::visit(
       Overloaded{
           [](const typename NestedInd::expr::Lit _args) -> unsigned int {
@@ -150,7 +152,8 @@ unsigned int NestedInd::expr_size(const std::shared_ptr<NestedInd::expr> &e) {
       e->v());
 }
 
-unsigned int NestedInd::expr_depth(const std::shared_ptr<NestedInd::expr> &e) {
+__attribute__((pure)) unsigned int
+NestedInd::expr_depth(const std::shared_ptr<NestedInd::expr> &e) {
   return std::visit(
       Overloaded{
           [](const typename NestedInd::expr::Lit _args) -> unsigned int {

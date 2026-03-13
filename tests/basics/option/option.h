@@ -24,20 +24,22 @@ struct Option {
   static inline const std::optional<unsigned int> some_val =
       std::make_optional<unsigned int>(5u);
   static inline const std::optional<unsigned int> none_val = std::nullopt;
-  static unsigned int get_or_default(const std::optional<unsigned int> o,
-                                     const unsigned int default0);
+  __attribute__((pure)) static unsigned int
+  get_or_default(const std::optional<unsigned int> o,
+                 const unsigned int default0);
   static inline const std::optional<std::optional<unsigned int>> nested_some =
       std::make_optional<std::optional<unsigned int>>(
           std::make_optional<unsigned int>(3u));
   static inline const std::optional<std::optional<unsigned int>> nested_none =
       std::make_optional<std::optional<unsigned int>>(std::nullopt);
-  static std::optional<unsigned int> safe_pred(const unsigned int n);
-  static std::optional<unsigned int>
+  __attribute__((pure)) static std::optional<unsigned int>
+  safe_pred(const unsigned int n);
+  __attribute__((pure)) static std::optional<unsigned int>
   chain_options(const std::optional<unsigned int> o1,
                 const std::optional<unsigned int> o2);
 
   template <typename T1, typename T2>
-  static std::optional<T2>
+  __attribute__((pure)) static std::optional<T2>
   apply_if_some(const std::optional<std::function<T2(T1)>> f, const T1 x) {
     if (f.has_value()) {
       std::function<T2(T1)> g = *f;

@@ -19,13 +19,13 @@ RamStateOps::reset_state(std::shared_ptr<RamStateOps::state> s) {
             s->state_ram, default_sel, s->state_rom});
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RamStateOps::get_main(const std::shared_ptr<RamStateOps::ram_reg> &rg,
                       const unsigned int i) {
   return rg->reg_main->nth(i, 0u);
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RamStateOps::get_stat(const std::shared_ptr<RamStateOps::ram_reg> &rg,
                       const unsigned int i) {
   return rg->reg_status->nth(i, 0u);
@@ -115,7 +115,7 @@ RamStateOps::current_reg(const std::shared_ptr<RamStateOps::state> &s) {
   return get_regRAM(current_chip(s), s->state_sel->sel_reg);
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RamStateOps::ram_read_main(const std::shared_ptr<RamStateOps::state> &s) {
   return get_main(current_reg(s), s->state_sel->sel_char);
 }
@@ -151,6 +151,7 @@ RamStateOps::ram_write_status_sys(const std::shared_ptr<RamStateOps::state> &s,
   return upd_bank_in_sys(s, s->state_sel->sel_bank, std::move(bk_));
 }
 
+__attribute__((pure))
 std::pair<std::optional<unsigned int>, std::shared_ptr<RamStateOps::state>>
 RamStateOps::pop_stack(std::shared_ptr<RamStateOps::state> s) {
   return std::visit(

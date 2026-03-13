@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-unsigned int
+__attribute__((pure)) unsigned int
 ErasedRecord::complex_match(const std::shared_ptr<ErasedRecord::ManyProps> &r) {
   return [&](void) {
     unsigned int f0 = r->field0;
@@ -23,7 +23,7 @@ ErasedRecord::complex_match(const std::shared_ptr<ErasedRecord::ManyProps> &r) {
   }();
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 ErasedRecord::unusual_body(const std::shared_ptr<ErasedRecord::ManyProps> &r) {
   return [&](void) {
     unsigned int f0 = r->field0;
@@ -35,7 +35,7 @@ ErasedRecord::unusual_body(const std::shared_ptr<ErasedRecord::ManyProps> &r) {
   }();
 }
 
-unsigned int ErasedRecord::access_mostly_props(
+__attribute__((pure)) unsigned int ErasedRecord::access_mostly_props(
     const std::shared_ptr<ErasedRecord::MostlyProps> &r) {
   return [&](void) {
     unsigned int r1 = r->real1;

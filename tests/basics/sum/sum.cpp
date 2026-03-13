@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-unsigned int Sum::either_to_nat(
+__attribute__((pure)) unsigned int Sum::either_to_nat(
     const std::shared_ptr<Sum::either<unsigned int, unsigned int>> &e) {
   return std::visit(
       Overloaded{

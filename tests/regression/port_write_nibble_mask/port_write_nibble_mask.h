@@ -26,7 +26,7 @@ struct PortWriteNibbleMask {
     unsigned int chip_port;
   };
 
-  static unsigned int nibble_of_nat(const unsigned int n);
+  __attribute__((pure)) static unsigned int nibble_of_nat(const unsigned int n);
   static std::shared_ptr<ram_chip>
   upd_port_in_chip(const std::shared_ptr<ram_chip> &_x, const unsigned int v);
   static inline const unsigned int t =

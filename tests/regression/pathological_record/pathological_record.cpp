@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-unsigned int PathologicalRecord::hof_access(
+__attribute__((pure)) unsigned int PathologicalRecord::hof_access(
     const std::shared_ptr<PathologicalRecord::Rec> &r) {
   return [&](void) {
     unsigned int a = r->f1;
@@ -21,7 +21,7 @@ unsigned int PathologicalRecord::hof_access(
   }();
 }
 
-unsigned int PathologicalRecord::nested_lets(
+__attribute__((pure)) unsigned int PathologicalRecord::nested_lets(
     const std::shared_ptr<PathologicalRecord::Rec> &r) {
   return [&](void) {
     unsigned int a = r->f1;
@@ -31,7 +31,7 @@ unsigned int PathologicalRecord::nested_lets(
   }();
 }
 
-unsigned int PathologicalRecord::conditional_access(
+__attribute__((pure)) unsigned int PathologicalRecord::conditional_access(
     const std::shared_ptr<PathologicalRecord::Rec> &r, const bool flag) {
   return [&](void) {
     unsigned int a = r->f1;
@@ -45,7 +45,7 @@ unsigned int PathologicalRecord::conditional_access(
   }();
 }
 
-unsigned int PathologicalRecord::countdown(
+__attribute__((pure)) unsigned int PathologicalRecord::countdown(
     const unsigned int n, const std::shared_ptr<PathologicalRecord::Rec> &r) {
   if (n <= 0) {
     return r->f1;
@@ -60,7 +60,7 @@ unsigned int PathologicalRecord::countdown(
   }
 }
 
-unsigned int PathologicalRecord::double_match(
+__attribute__((pure)) unsigned int PathologicalRecord::double_match(
     const std::shared_ptr<PathologicalRecord::Rec> &r1,
     const std::shared_ptr<PathologicalRecord::Rec> &r2) {
   return [&](void) {
@@ -79,7 +79,7 @@ unsigned int PathologicalRecord::double_match(
   }();
 }
 
-unsigned int PathologicalRecord::closure_over_fields(
+__attribute__((pure)) unsigned int PathologicalRecord::closure_over_fields(
     const std::shared_ptr<PathologicalRecord::Rec> &r, const unsigned int x) {
   return [&](void) {
     unsigned int a = r->f1;
@@ -89,7 +89,7 @@ unsigned int PathologicalRecord::closure_over_fields(
   }();
 }
 
-unsigned int PathologicalRecord::guarded_pattern(
+__attribute__((pure)) unsigned int PathologicalRecord::guarded_pattern(
     const std::shared_ptr<PathologicalRecord::Rec> &r) {
   return [&](void) {
     unsigned int a = r->f1;
@@ -107,7 +107,7 @@ unsigned int PathologicalRecord::guarded_pattern(
   }();
 }
 
-unsigned int PathologicalRecord::scrambled_access(
+__attribute__((pure)) unsigned int PathologicalRecord::scrambled_access(
     const std::shared_ptr<PathologicalRecord::BigRec> &r) {
   return [&](void) {
     unsigned int a = r->bf1;
@@ -119,7 +119,7 @@ unsigned int PathologicalRecord::scrambled_access(
   }();
 }
 
-unsigned int PathologicalRecord::repeated_access(
+__attribute__((pure)) unsigned int PathologicalRecord::repeated_access(
     const std::shared_ptr<PathologicalRecord::BigRec> &r) {
   return [&](void) {
     unsigned int a = r->bf1;

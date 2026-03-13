@@ -65,10 +65,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct ProgramWf {
@@ -128,10 +128,10 @@ struct ProgramWf {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -175,7 +175,7 @@ struct ProgramWf {
     unsigned int code_size;
   };
 
-  static std::optional<unsigned int>
+  __attribute__((pure)) static std::optional<unsigned int>
   jump_target(const std::shared_ptr<instruction> &i);
   static inline const std::shared_ptr<layout> sample_layout =
       std::make_shared<layout>(layout{200u, 20u});

@@ -27,9 +27,12 @@ struct SingletonRecord {
 
   static inline const std::shared_ptr<wrapper> wrapped_five =
       std::make_shared<wrapper>(wrapper{5u});
-  static unsigned int get_value(const std::shared_ptr<wrapper> &w);
-  static unsigned int get_value2(const std::shared_ptr<wrapper> &w);
-  static unsigned int unwrap(const std::shared_ptr<wrapper> &w);
+  __attribute__((pure)) static unsigned int
+  get_value(const std::shared_ptr<wrapper> &w);
+  __attribute__((pure)) static unsigned int
+  get_value2(const std::shared_ptr<wrapper> &w);
+  __attribute__((pure)) static unsigned int
+  unwrap(const std::shared_ptr<wrapper> &w);
   static std::shared_ptr<wrapper> double_wrapped(std::shared_ptr<wrapper> w);
 
   template <typename t_A> struct box {
@@ -56,8 +59,8 @@ struct SingletonRecord {
   static inline const std::shared_ptr<fn_wrapper> my_fn_wrapper =
       std::make_shared<fn_wrapper>(fn_wrapper{
           [](unsigned int _x0) -> unsigned int { return (1u + _x0); }});
-  static unsigned int apply_wrapped(const std::shared_ptr<fn_wrapper> &w,
-                                    const unsigned int n);
+  __attribute__((pure)) static unsigned int
+  apply_wrapped(const std::shared_ptr<fn_wrapper> &w, const unsigned int n);
   static inline const unsigned int test_get = get_value(wrapped_five);
   static inline const unsigned int test_get2 = get_value2(wrapped_five);
   static inline const unsigned int test_unwrap = unwrap(wrapped_five);

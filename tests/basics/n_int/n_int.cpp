@@ -12,7 +12,7 @@
 #include <utility>
 #include <variant>
 
-unsigned int Pos::succ(const unsigned int x) {
+__attribute__((pure)) unsigned int Pos::succ(const unsigned int x) {
   if (x == 1u) {
     return (2u * 1u);
   } else if (x % 2u != 0u) {
@@ -24,7 +24,7 @@ unsigned int Pos::succ(const unsigned int x) {
   }
 }
 
-unsigned int Pos::pred_double(const unsigned int x) {
+__attribute__((pure)) unsigned int Pos::pred_double(const unsigned int x) {
   if (x == 1u) {
     return 1u;
   } else if (x % 2u != 0u) {
@@ -36,7 +36,7 @@ unsigned int Pos::pred_double(const unsigned int x) {
   }
 }
 
-unsigned int Pos::pred_N(const unsigned int x) {
+__attribute__((pure)) unsigned int Pos::pred_N(const unsigned int x) {
   if (x == 1u) {
     return 0u;
   } else if (x % 2u != 0u) {
@@ -158,8 +158,9 @@ std::shared_ptr<Pos::mask> Pos::sub_mask_carry(const unsigned int x,
   }
 }
 
-Comparison Pos::compare_cont(const Comparison r, const unsigned int x,
-                             const unsigned int y) {
+__attribute__((pure)) Comparison Pos::compare_cont(const Comparison r,
+                                                   const unsigned int x,
+                                                   const unsigned int y) {
   if (x == 1u) {
     if (y == 1u) {
       return r;
@@ -195,11 +196,13 @@ Comparison Pos::compare_cont(const Comparison r, const unsigned int x,
   }
 }
 
-Comparison Pos::compare(const unsigned int _x0, const unsigned int _x1) {
+__attribute__((pure)) Comparison Pos::compare(const unsigned int _x0,
+                                              const unsigned int _x1) {
   return compare_cont(Comparison::e_EQ, _x0, _x1);
 }
 
-bool Pos::eqb(const unsigned int p, const unsigned int q) {
+__attribute__((pure)) bool Pos::eqb(const unsigned int p,
+                                    const unsigned int q) {
   if (p == 1u) {
     if (q == 1u) {
       return true;
@@ -235,7 +238,8 @@ bool Pos::eqb(const unsigned int p, const unsigned int q) {
   }
 }
 
-unsigned int Coq_Pos::add_carry(const unsigned int x, const unsigned int y) {
+__attribute__((pure)) unsigned int Coq_Pos::add_carry(const unsigned int x,
+                                                      const unsigned int y) {
   if (x == 1u) {
     if (y == 1u) {
       return (2u * 1u + 1u);
@@ -271,7 +275,8 @@ unsigned int Coq_Pos::add_carry(const unsigned int x, const unsigned int y) {
   }
 }
 
-Comparison BinNat::compare(const unsigned int n, const unsigned int m) {
+__attribute__((pure)) Comparison BinNat::compare(const unsigned int n,
+                                                 const unsigned int m) {
   if (n == 0u) {
     if (m == 0u) {
       return Comparison::e_EQ;
@@ -290,7 +295,7 @@ Comparison BinNat::compare(const unsigned int n, const unsigned int m) {
   }
 }
 
-std::pair<unsigned int, unsigned int>
+__attribute__((pure)) std::pair<unsigned int, unsigned int>
 BinNat::pos_div_eucl(const unsigned int a, const unsigned int b) {
   if (a == 1u) {
     if (b == 0u) {
@@ -332,8 +337,8 @@ BinNat::pos_div_eucl(const unsigned int a, const unsigned int b) {
   }
 }
 
-std::pair<unsigned int, unsigned int> BinNat::div_eucl(const unsigned int a,
-                                                       const unsigned int b) {
+__attribute__((pure)) std::pair<unsigned int, unsigned int>
+BinNat::div_eucl(const unsigned int a, const unsigned int b) {
   if (a == 0u) {
     return std::make_pair(0u, 0u);
   } else {
@@ -347,49 +352,55 @@ std::pair<unsigned int, unsigned int> BinNat::div_eucl(const unsigned int a,
   }
 }
 
-unsigned int NIntTest::add_test(const unsigned int _x0,
-                                const unsigned int _x1) {
+__attribute__((pure)) unsigned int NIntTest::add_test(const unsigned int _x0,
+                                                      const unsigned int _x1) {
   return (_x0 + _x1);
 }
 
-unsigned int NIntTest::mul_test(const unsigned int _x0,
-                                const unsigned int _x1) {
+__attribute__((pure)) unsigned int NIntTest::mul_test(const unsigned int _x0,
+                                                      const unsigned int _x1) {
   return (_x0 * _x1);
 }
 
-unsigned int NIntTest::sub_test(const unsigned int _x0,
-                                const unsigned int _x1) {
+__attribute__((pure)) unsigned int NIntTest::sub_test(const unsigned int _x0,
+                                                      const unsigned int _x1) {
   return (_x0 >= _x1 ? _x0 - _x1 : 0u);
 }
 
-unsigned int NIntTest::div_test(const unsigned int _x0,
-                                const unsigned int _x1) {
+__attribute__((pure)) unsigned int NIntTest::div_test(const unsigned int _x0,
+                                                      const unsigned int _x1) {
   return (_x1 == 0u ? 0u : _x0 / _x1);
 }
 
-bool NIntTest::eqb_test(const unsigned int _x0, const unsigned int _x1) {
+__attribute__((pure)) bool NIntTest::eqb_test(const unsigned int _x0,
+                                              const unsigned int _x1) {
   return _x0 == _x1;
 }
 
-bool NIntTest::ltb_test(const unsigned int _x0, const unsigned int _x1) {
+__attribute__((pure)) bool NIntTest::ltb_test(const unsigned int _x0,
+                                              const unsigned int _x1) {
   return _x0 < _x1;
 }
 
-bool NIntTest::leb_test(const unsigned int _x0, const unsigned int _x1) {
+__attribute__((pure)) bool NIntTest::leb_test(const unsigned int _x0,
+                                              const unsigned int _x1) {
   return _x0 <= _x1;
 }
 
-unsigned int NIntTest::succ_test(const unsigned int _x0) { return (_x0 + 1u); }
+__attribute__((pure)) unsigned int NIntTest::succ_test(const unsigned int _x0) {
+  return (_x0 + 1u);
+}
 
-unsigned int NIntTest::pred_test(const unsigned int _x0) {
+__attribute__((pure)) unsigned int NIntTest::pred_test(const unsigned int _x0) {
   return (_x0 == 0u ? 0u : _x0 - 1u);
 }
 
-unsigned int NIntTest::double_test(const unsigned int _x0) {
+__attribute__((pure)) unsigned int
+NIntTest::double_test(const unsigned int _x0) {
   return (_x0 * 2u);
 }
 
-bool NIntTest::is_zero(const unsigned int n) {
+__attribute__((pure)) bool NIntTest::is_zero(const unsigned int n) {
   if (n == 0u) {
     return true;
   } else {
@@ -398,8 +409,11 @@ bool NIntTest::is_zero(const unsigned int n) {
   }
 }
 
-unsigned int NIntTest::pos_add(const unsigned int _x0, const unsigned int _x1) {
+__attribute__((pure)) unsigned int NIntTest::pos_add(const unsigned int _x0,
+                                                     const unsigned int _x1) {
   return (_x0 + _x1);
 }
 
-unsigned int NIntTest::pos_succ(const unsigned int _x0) { return (_x0 + 1u); }
+__attribute__((pure)) unsigned int NIntTest::pos_succ(const unsigned int _x0) {
+  return (_x0 + 1u);
+}

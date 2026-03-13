@@ -79,10 +79,10 @@ struct IndParam {
       };
 
       // MANIPULATORS
-      variant_t &v_mut() { return d_v_; }
+      __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
       // ACCESSORS
-      const variant_t &v() const { return d_v_; }
+      __attribute__((pure)) const variant_t &v() const { return d_v_; }
     };
 
     template <typename T1, MapsTo<T1, std::shared_ptr<typename C::t>> F0,
@@ -124,7 +124,8 @@ struct IndParam {
       return result::ctor::Ok_(C::t::ctor::Pair_(e1, e2));
     }
 
-    static unsigned int get_size(const std::shared_ptr<result> &r) {
+    __attribute__((pure)) static unsigned int
+    get_size(const std::shared_ptr<result> &r) {
       return std::visit(
           Overloaded{[](const typename result::Ok _args) -> unsigned int {
                        std::shared_ptr<typename C::t> c = _args.d_a0;
@@ -208,10 +209,10 @@ struct IndParam {
       };
 
       // MANIPULATORS
-      variant_t &v_mut() { return d_v_; }
+      __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
       // ACCESSORS
-      const variant_t &v() const { return d_v_; }
+      __attribute__((pure)) const variant_t &v() const { return d_v_; }
     };
 
     template <typename T1, MapsTo<T1, unsigned int> F1,
@@ -250,7 +251,7 @@ struct IndParam {
           t0->v());
     }
 
-    static unsigned int size(const std::shared_ptr<t> &c);
+    __attribute__((pure)) static unsigned int size(const std::shared_ptr<t> &c);
   };
 
   using NatWrapper = Wrapper<NatContainer>;

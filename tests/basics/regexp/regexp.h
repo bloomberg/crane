@@ -66,14 +66,14 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct Matcher {
-  static bool char_eq(const int64_t x, const int64_t y);
+  __attribute__((pure)) static bool char_eq(const int64_t x, const int64_t y);
 
   /// Regular expression abstract syntax
   struct regexp {
@@ -193,10 +193,10 @@ struct Matcher {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <
@@ -270,8 +270,8 @@ struct Matcher {
         r->v());
   }
 
-  static bool regexp_eq(const std::shared_ptr<regexp> &r,
-                        const std::shared_ptr<regexp> &x);
+  __attribute__((pure)) static bool regexp_eq(const std::shared_ptr<regexp> &r,
+                                              const std::shared_ptr<regexp> &x);
   /// An optimized constructor for Cat.
   static std::shared_ptr<regexp> OptCat(std::shared_ptr<regexp> r1,
                                         std::shared_ptr<regexp> r2);
@@ -280,7 +280,8 @@ struct Matcher {
                                         std::shared_ptr<regexp> r2);
   /// If r accepts the empty string, return Eps, else return Zero.
   static std::shared_ptr<regexp> null(const std::shared_ptr<regexp> &r);
-  static bool accepts_null(const std::shared_ptr<regexp> &r);
+  __attribute__((pure)) static bool
+  accepts_null(const std::shared_ptr<regexp> &r);
   /// This is the heart of the algorithm.  It returns a regexp denoting
   /// { cs | (c::cs) in r }.
   static std::shared_ptr<regexp> deriv(const std::shared_ptr<regexp> &r,
@@ -291,16 +292,20 @@ struct Matcher {
   derivs(std::shared_ptr<regexp> r, const std::shared_ptr<List<int64_t>> &cs);
   /// To see if cs matches r, calculate the derivative of r with respect
   /// to s, and see if the resulting regexp accepts the empty string.
-  static bool deriv_parse(const std::shared_ptr<regexp> &r,
-                          const std::shared_ptr<List<int64_t>> &cs);
+  __attribute__((pure)) static bool
+  deriv_parse(const std::shared_ptr<regexp> &r,
+              const std::shared_ptr<List<int64_t>> &cs);
   /// null r returns Eps or Zero
-  static bool NullEpsOrZero(const std::shared_ptr<regexp> &r);
+  __attribute__((pure)) static bool
+  NullEpsOrZero(const std::shared_ptr<regexp> &r);
   /// From this, we can build a decidable regexp matcher by running
   /// the derivative-based parser.
-  static bool parse(const std::shared_ptr<regexp> &r,
-                    const std::shared_ptr<List<int64_t>> &cs);
-  static bool parse_bool(const std::shared_ptr<regexp> &r,
-                         const std::shared_ptr<List<int64_t>> &cs);
+  __attribute__((pure)) static bool
+  parse(const std::shared_ptr<regexp> &r,
+        const std::shared_ptr<List<int64_t>> &cs);
+  __attribute__((pure)) static bool
+  parse_bool(const std::shared_ptr<regexp> &r,
+             const std::shared_ptr<List<int64_t>> &cs);
   static inline const std::shared_ptr<regexp> r1 =
       regexp::ctor::Cat_(regexp::ctor::Star_(regexp::ctor::Char_(int64_t(0))),
                          regexp::ctor::Char_(int64_t(1)));

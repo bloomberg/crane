@@ -12,7 +12,7 @@
 #include <string>
 #include <variant>
 
-bool Matcher::char_eq(const int64_t x, const int64_t y) {
+__attribute__((pure)) bool Matcher::char_eq(const int64_t x, const int64_t y) {
   bool b = x == y;
   if (std::move(b)) {
     return true;
@@ -21,8 +21,9 @@ bool Matcher::char_eq(const int64_t x, const int64_t y) {
   }
 }
 
-bool Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
-                        const std::shared_ptr<Matcher::regexp> &x) {
+__attribute__((pure)) bool
+Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
+                   const std::shared_ptr<Matcher::regexp> &x) {
   return std::visit(
       Overloaded{
           [&](const typename Matcher::regexp::Any _args) -> auto {
@@ -906,7 +907,8 @@ Matcher::null(const std::shared_ptr<Matcher::regexp> &r) {
       r->v());
 }
 
-bool Matcher::accepts_null(const std::shared_ptr<Matcher::regexp> &r) {
+__attribute__((pure)) bool
+Matcher::accepts_null(const std::shared_ptr<Matcher::regexp> &r) {
   return regexp_eq(null(r), regexp::ctor::Eps_());
 }
 
@@ -978,8 +980,9 @@ Matcher::derivs(std::shared_ptr<Matcher::regexp> r,
 
 /// To see if cs matches r, calculate the derivative of r with respect
 /// to s, and see if the resulting regexp accepts the empty string.
-bool Matcher::deriv_parse(const std::shared_ptr<Matcher::regexp> &r,
-                          const std::shared_ptr<List<int64_t>> &cs) {
+__attribute__((pure)) bool
+Matcher::deriv_parse(const std::shared_ptr<Matcher::regexp> &r,
+                     const std::shared_ptr<List<int64_t>> &cs) {
   if (accepts_null(derivs(r, cs))) {
     return true;
   } else {
@@ -988,7 +991,8 @@ bool Matcher::deriv_parse(const std::shared_ptr<Matcher::regexp> &r,
 }
 
 /// null r returns Eps or Zero
-bool Matcher::NullEpsOrZero(const std::shared_ptr<Matcher::regexp> &r) {
+__attribute__((pure)) bool
+Matcher::NullEpsOrZero(const std::shared_ptr<Matcher::regexp> &r) {
   return std::visit(
       Overloaded{[](const typename Matcher::regexp::Any _args) -> auto {
                    return false;
@@ -1044,8 +1048,9 @@ bool Matcher::NullEpsOrZero(const std::shared_ptr<Matcher::regexp> &r) {
 
 /// From this, we can build a decidable regexp matcher by running
 /// the derivative-based parser.
-bool Matcher::parse(const std::shared_ptr<Matcher::regexp> &r,
-                    const std::shared_ptr<List<int64_t>> &cs) {
+__attribute__((pure)) bool
+Matcher::parse(const std::shared_ptr<Matcher::regexp> &r,
+               const std::shared_ptr<List<int64_t>> &cs) {
   bool b = deriv_parse(r, cs);
   if (std::move(b)) {
     return true;
@@ -1054,8 +1059,9 @@ bool Matcher::parse(const std::shared_ptr<Matcher::regexp> &r,
   }
 }
 
-bool Matcher::parse_bool(const std::shared_ptr<Matcher::regexp> &r,
-                         const std::shared_ptr<List<int64_t>> &cs) {
+__attribute__((pure)) bool
+Matcher::parse_bool(const std::shared_ptr<Matcher::regexp> &r,
+                    const std::shared_ptr<List<int64_t>> &cs) {
   if (parse(r, cs)) {
     return true;
   } else {

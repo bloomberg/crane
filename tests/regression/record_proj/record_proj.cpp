@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-unsigned int
+__attribute__((pure)) unsigned int
 RecordProj::weird_access(const std::shared_ptr<RecordProj::Point> &p) {
   return [&](void) {
     unsigned int a = p->x;
@@ -21,7 +21,7 @@ RecordProj::weird_access(const std::shared_ptr<RecordProj::Point> &p) {
   }();
 }
 
-unsigned int RecordProj::complex_access(
+__attribute__((pure)) unsigned int RecordProj::complex_access(
     const std::shared_ptr<RecordProj::ComplexRecord> &c) {
   return [&](void) {
     unsigned int f1 = c->field1;
@@ -31,7 +31,7 @@ unsigned int RecordProj::complex_access(
   }();
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RecordProj::nested_record_match(const std::shared_ptr<RecordProj::Point> &p1,
                                 const std::shared_ptr<RecordProj::Point> &p2) {
   return [&](void) {

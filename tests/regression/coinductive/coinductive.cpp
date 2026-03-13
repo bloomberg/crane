@@ -25,7 +25,8 @@ Coinductive::count_from(const unsigned int n) {
       });
 }
 
-unsigned int Coinductive::hd(const std::shared_ptr<Coinductive::stream> &s) {
+__attribute__((pure)) unsigned int
+Coinductive::hd(const std::shared_ptr<Coinductive::stream> &s) {
   return std::visit(
       Overloaded{
           [](const typename Coinductive::stream::Cons _args) -> unsigned int {

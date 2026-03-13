@@ -13,8 +13,8 @@
 #include <variant>
 
 /// * Split
-std::pair<std::shared_ptr<List<unsigned int>>,
-          std::shared_ptr<List<unsigned int>>>
+__attribute__((pure)) std::pair<std::shared_ptr<List<unsigned int>>,
+                                std::shared_ptr<List<unsigned int>>>
 MergesortFuel::split(const std::shared_ptr<List<unsigned int>> &l) {
   return std::visit(
       Overloaded{
@@ -145,7 +145,8 @@ MergesortFuel::msort(const std::shared_ptr<List<unsigned int>> &l) {
   return msort_go(l->length(), l);
 }
 
-bool Compare_dec::le_lt_dec(const unsigned int n, const unsigned int m) {
+__attribute__((pure)) bool Compare_dec::le_lt_dec(const unsigned int n,
+                                                  const unsigned int m) {
   if (n <= 0) {
     return true;
   } else {

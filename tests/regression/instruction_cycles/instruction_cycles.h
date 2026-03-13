@@ -66,12 +66,13 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  template <MapsTo<bool, t_A> F0> bool forallb(F0 &&f) const {
+  template <MapsTo<bool, t_A> F0>
+  __attribute__((pure)) bool forallb(F0 &&f) const {
     return std::visit(
         Overloaded{
             [](const typename List<t_A>::Nil _args) -> bool { return true; },
@@ -85,11 +86,11 @@ public:
 };
 
 struct Nat {
-  static std::pair<unsigned int, unsigned int> divmod(const unsigned int x,
-                                                      const unsigned int y,
-                                                      const unsigned int q,
-                                                      const unsigned int u);
-  static unsigned int div(const unsigned int x, const unsigned int y);
+  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
+  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
+         const unsigned int u);
+  __attribute__((pure)) static unsigned int div(const unsigned int x,
+                                                const unsigned int y);
 };
 
 struct InstructionCycles {
@@ -144,10 +145,10 @@ struct InstructionCycles {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
@@ -178,8 +179,9 @@ struct InstructionCycles {
         i->v());
   }
 
-  static unsigned int cycles_jcn(const std::shared_ptr<state1> &s,
-                                 const std::shared_ptr<instruction1> &i);
+  __attribute__((pure)) static unsigned int
+  cycles_jcn(const std::shared_ptr<state1> &s,
+             const std::shared_ptr<instruction1> &i);
   static inline const unsigned int test_cycles_jcn_not_taken =
       cycles_jcn(std::make_shared<state1>(state1{1u, false, true}),
                  instruction1::ctor::JCN1_(4u, 7u));
@@ -226,10 +228,10 @@ struct InstructionCycles {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0>
@@ -262,8 +264,9 @@ struct InstructionCycles {
     unsigned int acc2;
   };
 
-  static unsigned int cycles_jms(const std::shared_ptr<state2> &_x,
-                                 const std::shared_ptr<instruction2> &i);
+  __attribute__((pure)) static unsigned int
+  cycles_jms(const std::shared_ptr<state2> &_x,
+             const std::shared_ptr<instruction2> &i);
   static inline const unsigned int test_cycles_jms_constant = cycles_jms(
       std::make_shared<state2>(state2{0u}), instruction2::ctor::JMS2_(77u));
   enum class Instr3 {
@@ -352,7 +355,7 @@ struct InstructionCycles {
     }();
   }
 
-  static unsigned int cycles_min(const Instr3 i);
+  __attribute__((pure)) static unsigned int cycles_min(const Instr3 i);
   static inline const std::shared_ptr<List<Instr3>> all_instrs3 =
       List<Instr3>::ctor::Cons_(
           Instr3::e_NOP3,
@@ -461,7 +464,7 @@ struct InstructionCycles {
     }();
   }
 
-  static unsigned int cycles_max(const Instr4 i);
+  __attribute__((pure)) static unsigned int cycles_max(const Instr4 i);
   static inline const std::shared_ptr<List<Instr4>> all_instrs4 =
       List<Instr4>::ctor::Cons_(
           Instr4::e_NOP4,
@@ -547,10 +550,10 @@ struct InstructionCycles {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1,
@@ -589,11 +592,12 @@ struct InstructionCycles {
         i->v());
   }
 
-  static unsigned int cycles_sum(const std::shared_ptr<state5> &s,
-                                 const std::shared_ptr<instruction5> &i);
+  __attribute__((pure)) static unsigned int
+  cycles_sum(const std::shared_ptr<state5> &s,
+             const std::shared_ptr<instruction5> &i);
   static std::shared_ptr<state5>
   execute5(std::shared_ptr<state5> s, const std::shared_ptr<instruction5> &i);
-  static unsigned int program_cycles5(
+  __attribute__((pure)) static unsigned int program_cycles5(
       const std::shared_ptr<state5> &s,
       const std::shared_ptr<List<std::shared_ptr<instruction5>>> &prog);
   static inline const unsigned int test_instruction_cycle_sum = program_cycles5(
@@ -633,9 +637,9 @@ struct InstructionCycles {
     unsigned int acc6;
   };
 
-  static unsigned int cycles6(const std::shared_ptr<state6> &_x,
-                              const Instruction6 _x0);
-  static unsigned int
+  __attribute__((pure)) static unsigned int
+  cycles6(const std::shared_ptr<state6> &_x, const Instruction6 _x0);
+  __attribute__((pure)) static unsigned int
   program_cycles6(const std::shared_ptr<state6> &s,
                   const std::shared_ptr<List<Instruction6>> &prog);
   static inline const unsigned int singleton_cycles6 = program_cycles6(
@@ -681,9 +685,9 @@ struct InstructionCycles {
     unsigned int acc7;
   };
 
-  static unsigned int cycles7(const std::shared_ptr<state7> &_x,
-                              const Instruction7 _x0);
-  static unsigned int
+  __attribute__((pure)) static unsigned int
+  cycles7(const std::shared_ptr<state7> &_x, const Instruction7 _x0);
+  __attribute__((pure)) static unsigned int
   program_cycles7(const std::shared_ptr<state7> &s,
                   const std::shared_ptr<List<Instruction7>> &prog);
   static inline const unsigned int test_program_cycles_single = program_cycles7(

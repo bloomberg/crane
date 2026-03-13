@@ -32,13 +32,17 @@ struct RecordProj {
     unsigned int field3;
   };
 
-  static unsigned int weird_access(const std::shared_ptr<Point> &p);
-  static unsigned int complex_access(const std::shared_ptr<ComplexRecord> &c);
-  static unsigned int nested_record_match(const std::shared_ptr<Point> &p1,
-                                          const std::shared_ptr<Point> &p2);
+  __attribute__((pure)) static unsigned int
+  weird_access(const std::shared_ptr<Point> &p);
+  __attribute__((pure)) static unsigned int
+  complex_access(const std::shared_ptr<ComplexRecord> &c);
+  __attribute__((pure)) static unsigned int
+  nested_record_match(const std::shared_ptr<Point> &p1,
+                      const std::shared_ptr<Point> &p2);
 
   template <MapsTo<unsigned int, unsigned int> F0>
-  static unsigned int apply_to_field(F0 &&f, const std::shared_ptr<Point> &p) {
+  __attribute__((pure)) static unsigned int
+  apply_to_field(F0 &&f, const std::shared_ptr<Point> &p) {
     return [&](void) {
       unsigned int a = p->x;
       unsigned int b = p->y;

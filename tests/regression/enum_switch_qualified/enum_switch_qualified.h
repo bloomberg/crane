@@ -52,8 +52,8 @@ struct EnumSwitchQualified {
       }();
     }
 
-    static Color flip(const Color c);
-    static unsigned int code(const Color c);
+    __attribute__((pure)) static Color flip(const Color c);
+    __attribute__((pure)) static unsigned int code(const Color c);
   };
 
   static inline const unsigned int t =

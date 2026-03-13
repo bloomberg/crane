@@ -65,10 +65,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct DropHeadDefault {
@@ -93,7 +93,7 @@ struct DropHeadDefault {
     }
   }
 
-  static unsigned int
+  __attribute__((pure)) static unsigned int
   head_after_drop(const std::shared_ptr<List<unsigned int>> &rom,
                   const unsigned int addr);
   static inline const unsigned int t = head_after_drop(

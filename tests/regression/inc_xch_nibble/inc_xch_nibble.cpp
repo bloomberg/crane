@@ -12,17 +12,18 @@
 #include <utility>
 #include <variant>
 
-unsigned int
+__attribute__((pure)) unsigned int
 IncXchNibble::get_reg(const std::shared_ptr<IncXchNibble::state> &s,
                       const unsigned int r) {
   return s->regs->nth(r, 0u);
 }
 
-unsigned int IncXchNibble::nibble_of_nat(const unsigned int n) {
+__attribute__((pure)) unsigned int
+IncXchNibble::nibble_of_nat(const unsigned int n) {
   return (n % 16u);
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 IncXchNibble::get_reg_pair(const std::shared_ptr<IncXchNibble::state> &s,
                            const unsigned int r) {
   unsigned int base = (((r - (r % 2u)) > r ? 0 : (r - (r % 2u))));

@@ -23,13 +23,13 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 struct ModpathEscapeCollision {
   struct A {
     struct Token_ {
-      static unsigned int f(const unsigned int n);
+      __attribute__((pure)) static unsigned int f(const unsigned int n);
     };
   };
 
   struct B {
     struct Token_ {
-      static unsigned int g(const unsigned int n);
+      __attribute__((pure)) static unsigned int g(const unsigned int n);
     };
   };
 

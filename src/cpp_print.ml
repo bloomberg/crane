@@ -1211,6 +1211,15 @@ and pp_cpp_stmt env args = function
       []
       cmds
 
+(** Check if a return type is eligible for __attribute__((pure)). Types that
+    involve allocation (shared_ptr, unique_ptr), side effects (void), or are
+    unknown at definition time (type variables, any, todo) are excluded. *)
+and is_pure_return_type = function
+  | Tshared_ptr _ | Tunique_ptr _ -> false
+  | Tvoid | Tvar _ | Tany | Ttodo | Tunknown -> false
+  | Tmod (_, t) | Tref t -> is_pure_return_type t
+  | _ -> true
+
 (** Check if a C++ type is concrete (can be used in any_cast). Type variables
     and unknown types are not concrete - we can't cast to them. *)
 and is_concrete_cpp_type = function
@@ -1353,8 +1362,15 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
         params
     in
     let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
+    let pure_attr =
+      if is_pure_return_type ret_ty then
+        str "__attribute__((pure)) "
+      else
+        mt ()
+    in
     h
-      ( pp_cpp_type false [] ret_ty
+      ( pure_attr
+      ++ pp_cpp_type false [] ret_ty
       ++ str " "
       ++ Id.print id
       ++ pp_par true params_s
@@ -1368,8 +1384,15 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
         (fun (id, ty) -> pp_cpp_type false [] ty ++ str " " ++ Id.print id)
         (List.rev params)
     in
+    let pure_attr =
+      if is_pure_return_type ret_ty then
+        str "__attribute__((pure)) "
+      else
+        mt ()
+    in
     h
-      ( pp_cpp_type false [] ret_ty
+      ( pure_attr
+      ++ pp_cpp_type false [] ret_ty
       ++ str " "
       ++ Id.print id
       ++ pp_par true params_s )
@@ -1406,10 +1429,17 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
         let lines = Doc_comments.format_as_cpp_lines text in
         prlist_with_sep fnl (fun l -> str l) lines ++ fnl ()
     in
+    let pure_attr =
+      if is_pure_return_type mf_ret_type then
+        str "__attribute__((pure)) "
+      else
+        mt ()
+    in
     doc_comment
     ++ template_s
     ++ h
-         ( static_s
+         ( pure_attr
+         ++ static_s
          ++ pp_cpp_type false [] mf_ret_type
          ++ str " "
          ++ Id.print mf_name
@@ -1764,8 +1794,15 @@ let rec pp_cpp_decl env = function
       else
         mt ()
     in
+    let pure_attr =
+      if is_pure_return_type ret_ty then
+        str "__attribute__((pure)) "
+      else
+        mt ()
+    in
     h
-      ( static_kw
+      ( pure_attr
+      ++ static_kw
       ++ pp_cpp_type false [] ret_ty
       ++ str " "
       ++ name
@@ -1804,8 +1841,15 @@ let rec pp_cpp_decl env = function
     in
     let is_struct_member = is_qualified || render_ctx.rc_in_struct in
     let static_kw = if is_struct_member then str "static " else mt () in
+    let pure_attr =
+      if is_pure_return_type ret_ty then
+        str "__attribute__((pure)) "
+      else
+        mt ()
+    in
     h
-      ( static_kw
+      ( pure_attr
+      ++ static_kw
       ++ pp_cpp_type false [] ret_ty
       ++ str " "
       ++ name

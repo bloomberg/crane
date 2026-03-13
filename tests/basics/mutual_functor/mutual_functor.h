@@ -83,10 +83,10 @@ template <Elem E> struct MutualTree {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   struct forest {
@@ -135,10 +135,10 @@ template <Elem E> struct MutualTree {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -198,7 +198,8 @@ template <Elem E> struct MutualTree {
         f1->v());
   }
 
-  static unsigned int tree_size(const std::shared_ptr<tree> &t0) {
+  __attribute__((pure)) static unsigned int
+  tree_size(const std::shared_ptr<tree> &t0) {
     return std::visit(
         Overloaded{
             [](const typename tree::Leaf _args) -> unsigned int { return 1u; },
@@ -209,7 +210,8 @@ template <Elem E> struct MutualTree {
         t0->v());
   }
 
-  static unsigned int forest_size(const std::shared_ptr<forest> &f) {
+  __attribute__((pure)) static unsigned int
+  forest_size(const std::shared_ptr<forest> &f) {
     return std::visit(
         Overloaded{[](const typename forest::FNil _args) -> unsigned int {
                      return 0u;
@@ -223,7 +225,8 @@ template <Elem E> struct MutualTree {
         f->v());
   }
 
-  static unsigned int tree_sum(const std::shared_ptr<tree> &t0) {
+  __attribute__((pure)) static unsigned int
+  tree_sum(const std::shared_ptr<tree> &t0) {
     return std::visit(
         Overloaded{[](const typename tree::Leaf _args) -> unsigned int {
                      unsigned int n = _args.d_a0;
@@ -237,7 +240,8 @@ template <Elem E> struct MutualTree {
         t0->v());
   }
 
-  static unsigned int forest_sum(const std::shared_ptr<forest> &f) {
+  __attribute__((pure)) static unsigned int
+  forest_sum(const std::shared_ptr<forest> &f) {
     return std::visit(
         Overloaded{[](const typename forest::FNil _args) -> unsigned int {
                      return 0u;

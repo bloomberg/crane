@@ -25,7 +25,7 @@ RecordDefaults::set_debug(const bool d,
       Config{c->cfg_width, c->cfg_height, c->cfg_depth, std::move(d)});
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RecordDefaults::rect_area(const std::shared_ptr<RecordDefaults::Rect> &r) {
   return (r->extent->px * r->extent->py);
 }
@@ -40,7 +40,7 @@ RecordDefaults::make_rect(const unsigned int x, const unsigned int y,
                Point{std::move(w), std::move(h)})});
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RecordDefaults::total_cells(const std::shared_ptr<RecordDefaults::Config> &c) {
   return ((c->cfg_width * c->cfg_height) * c->cfg_depth);
 }

@@ -11,8 +11,9 @@
 #include <string>
 #include <variant>
 
-unsigned int DepElim::fin_to_nat(const unsigned int _x,
-                                 const std::shared_ptr<DepElim::fin> &f) {
+__attribute__((pure)) unsigned int
+DepElim::fin_to_nat(const unsigned int _x,
+                    const std::shared_ptr<DepElim::fin> &f) {
   return std::visit(
       Overloaded{[](const typename DepElim::fin::FZ _args) -> unsigned int {
                    return 0u;
@@ -25,7 +26,8 @@ unsigned int DepElim::fin_to_nat(const unsigned int _x,
       f->v());
 }
 
-unsigned int DepElim::get_present(const std::shared_ptr<DepElim::avail> &a) {
+__attribute__((pure)) unsigned int
+DepElim::get_present(const std::shared_ptr<DepElim::avail> &a) {
   return std::visit(
       Overloaded{
           [](const typename DepElim::avail::Present _args) -> unsigned int {

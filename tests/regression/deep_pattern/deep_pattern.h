@@ -68,10 +68,10 @@ struct DeepPattern {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -151,10 +151,10 @@ struct DeepPattern {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2,
@@ -183,18 +183,22 @@ struct DeepPattern {
         l->v());
   }
 
-  static unsigned int deep_match(const std::shared_ptr<tree> &t);
-  static unsigned int multi_constructor(const std::shared_ptr<tree> &t1,
-                                        const std::shared_ptr<tree> &t2);
-  static unsigned int
+  __attribute__((pure)) static unsigned int
+  deep_match(const std::shared_ptr<tree> &t);
+  __attribute__((pure)) static unsigned int
+  multi_constructor(const std::shared_ptr<tree> &t1,
+                    const std::shared_ptr<tree> &t2);
+  __attribute__((pure)) static unsigned int
   list_deep_match(const std::shared_ptr<list<std::shared_ptr<tree>>> &l);
-  static unsigned int wildcard_with_bindings(const std::shared_ptr<tree> &t);
+  __attribute__((pure)) static unsigned int
+  wildcard_with_bindings(const std::shared_ptr<tree> &t);
   static std::shared_ptr<tree> as_pattern_test(std::shared_ptr<tree> t);
-  static bool has_value(const std::shared_ptr<tree> &t,
-                        const unsigned int target);
-  static unsigned int conditional_match(const std::shared_ptr<tree> &t,
-                                        const unsigned int target);
-  static unsigned int nested_let_match(const std::shared_ptr<tree> &t);
+  __attribute__((pure)) static bool has_value(const std::shared_ptr<tree> &t,
+                                              const unsigned int target);
+  __attribute__((pure)) static unsigned int
+  conditional_match(const std::shared_ptr<tree> &t, const unsigned int target);
+  __attribute__((pure)) static unsigned int
+  nested_let_match(const std::shared_ptr<tree> &t);
   static inline const unsigned int test1 = deep_match(
       tree::ctor::Node_(tree::ctor::Leaf_(1u), tree::ctor::Leaf_(2u)));
   static inline const unsigned int test2 =

@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-EnumSwitchQualified::Outer::Color
+__attribute__((pure)) EnumSwitchQualified::Outer::Color
 EnumSwitchQualified::Outer::flip(const EnumSwitchQualified::Outer::Color c) {
   return [&](void) {
     switch (c) {
@@ -25,7 +25,7 @@ EnumSwitchQualified::Outer::flip(const EnumSwitchQualified::Outer::Color c) {
   }();
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 EnumSwitchQualified::Outer::code(const EnumSwitchQualified::Outer::Color c) {
   return [&](void) {
     switch (c) {

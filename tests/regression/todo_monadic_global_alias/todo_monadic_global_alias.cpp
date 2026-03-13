@@ -11,14 +11,16 @@
 #include <string>
 #include <variant>
 
-std::shared_ptr<Nat> TodoMonadicGlobalAlias::base() {
+__attribute__((pure)) std::shared_ptr<Nat> TodoMonadicGlobalAlias::base() {
   return Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(
       Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_())))))));
 }
 
-std::shared_ptr<Nat> TodoMonadicGlobalAlias::alias() { return base(); }
+__attribute__((pure)) std::shared_ptr<Nat> TodoMonadicGlobalAlias::alias() {
+  return base();
+}
 
-std::shared_ptr<Nat> TodoMonadicGlobalAlias::rebound() {
+__attribute__((pure)) std::shared_ptr<Nat> TodoMonadicGlobalAlias::rebound() {
   std::shared_ptr<Nat> x = base();
   return Nat::ctor::S_(x);
 }

@@ -54,10 +54,10 @@ struct BenchLetIn {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
@@ -82,11 +82,15 @@ struct BenchLetIn {
         p->v());
   }
 
-  static unsigned int swap_snd(const unsigned int a, const unsigned int b);
-  static unsigned int add_via_pair(const unsigned int a, const unsigned int b);
-  static unsigned int nested_swap(const unsigned int a, const unsigned int b,
-                                  const unsigned int c, const unsigned int d);
-  static unsigned int sum_via_pairs(const unsigned int n);
+  __attribute__((pure)) static unsigned int swap_snd(const unsigned int a,
+                                                     const unsigned int b);
+  __attribute__((pure)) static unsigned int add_via_pair(const unsigned int a,
+                                                         const unsigned int b);
+  __attribute__((pure)) static unsigned int nested_swap(const unsigned int a,
+                                                        const unsigned int b,
+                                                        const unsigned int c,
+                                                        const unsigned int d);
+  __attribute__((pure)) static unsigned int sum_via_pairs(const unsigned int n);
 
   template <typename t_A, typename t_B, typename t_C> struct triple {
     // TYPES
@@ -124,10 +128,10 @@ struct BenchLetIn {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, typename T3, typename T4,
@@ -156,12 +160,12 @@ struct BenchLetIn {
         t->v());
   }
 
-  static unsigned int mid3(const unsigned int a, const unsigned int b,
-                           const unsigned int c);
-  static unsigned int sum3(const unsigned int a, const unsigned int b,
-                           const unsigned int c);
-  static unsigned int chain_pairs(const unsigned int a, const unsigned int b,
-                                  const unsigned int c);
+  __attribute__((pure)) static unsigned int
+  mid3(const unsigned int a, const unsigned int b, const unsigned int c);
+  __attribute__((pure)) static unsigned int
+  sum3(const unsigned int a, const unsigned int b, const unsigned int c);
+  __attribute__((pure)) static unsigned int
+  chain_pairs(const unsigned int a, const unsigned int b, const unsigned int c);
   static inline const unsigned int test_swap = swap_snd(3u, 4u);
   static inline const unsigned int test_add = add_via_pair(3u, 4u);
   static inline const unsigned int test_nested = nested_swap(1u, 2u, 3u, 4u);

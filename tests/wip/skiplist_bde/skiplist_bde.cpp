@@ -15,7 +15,8 @@
 #include <skipnode.h>
 
 namespace BloombergLP {}
-bool PeanoNat::eqb(const unsigned int n, const unsigned int m) {
+__attribute__((pure)) bool PeanoNat::eqb(const unsigned int n,
+                                         const unsigned int m) {
   if (n <= 0) {
     if (m <= 0) {
       return true;
@@ -33,7 +34,8 @@ bool PeanoNat::eqb(const unsigned int n, const unsigned int m) {
     }
   }
 }
-bool PeanoNat::leb(const unsigned int n, const unsigned int m) {
+__attribute__((pure)) bool PeanoNat::leb(const unsigned int n,
+                                         const unsigned int m) {
   if (n <= 0) {
     return true;
   } else {
@@ -46,6 +48,7 @@ bool PeanoNat::leb(const unsigned int n, const unsigned int m) {
     }
   }
 }
-bool PeanoNat::ltb(const unsigned int n, const unsigned int m) {
+__attribute__((pure)) bool PeanoNat::ltb(const unsigned int n,
+                                         const unsigned int m) {
   return PeanoNat::leb((bsl::move(n) + 1), m);
 }

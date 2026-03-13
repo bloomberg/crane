@@ -21,7 +21,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct Bool {
-  static bool eqb(const bool b1, const bool b2);
+  __attribute__((pure)) static bool eqb(const bool b1, const bool b2);
 };
 
 template <typename I>
@@ -36,7 +36,9 @@ struct CanonStruct {
   struct nat_eqType {
     using carrier = unsigned int;
 
-    static bool eqb(unsigned int a0, unsigned int a1) { return a0 == a1; }
+    __attribute__((pure)) static bool eqb(unsigned int a0, unsigned int a1) {
+      return a0 == a1;
+    }
   };
 
   static_assert(EqType<nat_eqType>);
@@ -44,13 +46,15 @@ struct CanonStruct {
   struct bool_eqType {
     using carrier = bool;
 
-    static bool eqb(bool a0, bool a1) { return Bool::eqb(a0, a1); }
+    __attribute__((pure)) static bool eqb(bool a0, bool a1) {
+      return Bool::eqb(a0, a1);
+    }
   };
 
   static_assert(EqType<bool_eqType>);
 
   template <typename _tcI0, typename carrier>
-  static bool same(const carrier x, const carrier y) {
+  __attribute__((pure)) static bool same(const carrier x, const carrier y) {
     return _tcI0::eqb(x, y);
   }
 

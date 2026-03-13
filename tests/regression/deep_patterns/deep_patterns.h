@@ -66,12 +66,12 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  unsigned int length() const {
+  __attribute__((pure)) unsigned int length() const {
     return std::visit(
         Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
                      return 0u;
@@ -85,13 +85,14 @@ public:
 };
 
 struct DeepPatterns {
-  static unsigned int deep_option(
+  __attribute__((pure)) static unsigned int deep_option(
       const std::optional<std::optional<std::optional<unsigned int>>> x);
-  static unsigned int
+  __attribute__((pure)) static unsigned int
   deep_pair(const std::pair<std::pair<unsigned int, unsigned int>,
                             std::pair<unsigned int, unsigned int>>
                 p);
-  static unsigned int list_shape(const std::shared_ptr<List<unsigned int>> &l);
+  __attribute__((pure)) static unsigned int
+  list_shape(const std::shared_ptr<List<unsigned int>> &l);
   struct outer;
   struct inner;
 
@@ -140,10 +141,10 @@ struct DeepPatterns {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   struct inner {
@@ -190,10 +191,10 @@ struct DeepPatterns {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, std::shared_ptr<inner>> F0,
@@ -250,12 +251,13 @@ struct DeepPatterns {
                       i->v());
   }
 
-  static unsigned int deep_sum(const std::shared_ptr<outer> &o);
-  static unsigned int
+  __attribute__((pure)) static unsigned int
+  deep_sum(const std::shared_ptr<outer> &o);
+  __attribute__((pure)) static unsigned int
   complex_match(const std::optional<
                 std::pair<unsigned int, std::shared_ptr<List<unsigned int>>>>
                     x);
-  static unsigned int
+  __attribute__((pure)) static unsigned int
   guarded_match(const std::pair<unsigned int, unsigned int> p);
 
   template <typename t_A, typename t_B> struct pair {
@@ -291,10 +293,10 @@ struct DeepPatterns {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
@@ -364,10 +366,10 @@ struct DeepPatterns {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2,
@@ -400,14 +402,15 @@ struct DeepPatterns {
         m->v());
   }
 
-  static unsigned int match_pair_list(
+  __attribute__((pure)) static unsigned int match_pair_list(
       const std::shared_ptr<
           mylist<std::shared_ptr<pair<unsigned int, unsigned int>>>> &l);
-  static unsigned int match_two(const std::shared_ptr<mylist<unsigned int>> &l);
-  static unsigned int match_triple(
+  __attribute__((pure)) static unsigned int
+  match_two(const std::shared_ptr<mylist<unsigned int>> &l);
+  __attribute__((pure)) static unsigned int match_triple(
       const std::shared_ptr<mylist<
           std::shared_ptr<mylist<std::shared_ptr<mylist<unsigned int>>>>>> &l);
-  static unsigned int
+  __attribute__((pure)) static unsigned int
   deep_wildcard(const std::shared_ptr<
                 pair<std::shared_ptr<pair<unsigned int, unsigned int>>,
                      std::shared_ptr<pair<unsigned int, unsigned int>>>> &p);

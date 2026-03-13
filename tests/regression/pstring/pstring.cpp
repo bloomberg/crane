@@ -11,7 +11,8 @@
 #include <string>
 #include <variant>
 
-std::string PString::nat_to_string(const std::shared_ptr<Nat> &n) {
+__attribute__((pure)) std::string
+PString::nat_to_string(const std::shared_ptr<Nat> &n) {
   return std::visit(
       Overloaded{[](const typename Nat::O _args) -> std::string { return "O"; },
                  [](const typename Nat::S _args) -> std::string {
@@ -21,7 +22,7 @@ std::string PString::nat_to_string(const std::shared_ptr<Nat> &n) {
       n->v());
 }
 
-int PString::nat_to_int(const std::shared_ptr<Nat> &n) {
+__attribute__((pure)) int PString::nat_to_int(const std::shared_ptr<Nat> &n) {
   return std::visit(
       Overloaded{[](const typename Nat::O _args) -> int { return 0; },
                  [](const typename Nat::S _args) -> int {

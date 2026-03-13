@@ -66,10 +66,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct ListDef {
@@ -166,7 +166,8 @@ struct RamInitReset {
                 List<unsigned int>::ctor::Nil_(), empty_ram, default_sel,
                 ListDef::template repeat<unsigned int>(0u, 8u)});
   static std::shared_ptr<state> reset_state(std::shared_ptr<state> s);
-  static std::pair<std::optional<unsigned int>, std::shared_ptr<state>>
+  __attribute__((pure)) static std::pair<std::optional<unsigned int>,
+                                         std::shared_ptr<state>>
   pop_stack(std::shared_ptr<state> s);
   static inline const unsigned int reset_pc = reset_state(init_state)->state_pc;
 };

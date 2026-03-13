@@ -125,10 +125,10 @@ struct LargeMutual {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   struct expr {
@@ -229,10 +229,10 @@ struct LargeMutual {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   struct bexpr {
@@ -359,10 +359,10 @@ struct LargeMutual {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, std::shared_ptr<expr>> F0,
@@ -603,9 +603,12 @@ struct LargeMutual {
         b->v());
   }
 
-  static unsigned int expr_size(const std::shared_ptr<expr> &e);
-  static unsigned int bexpr_size(const std::shared_ptr<bexpr> &b);
-  static unsigned int stmt_size(const std::shared_ptr<stmt> &s);
+  __attribute__((pure)) static unsigned int
+  expr_size(const std::shared_ptr<expr> &e);
+  __attribute__((pure)) static unsigned int
+  bexpr_size(const std::shared_ptr<bexpr> &b);
+  __attribute__((pure)) static unsigned int
+  stmt_size(const std::shared_ptr<stmt> &s);
   static inline const std::shared_ptr<expr> test_expr = expr::ctor::EAdd_(
       expr::ctor::ENum_(1u),
       expr::ctor::EMul_(expr::ctor::ENum_(2u), expr::ctor::ENum_(3u)));

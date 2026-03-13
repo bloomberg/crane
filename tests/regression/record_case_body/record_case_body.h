@@ -27,27 +27,34 @@ struct RecordCaseBody {
     unsigned int f3;
   };
 
-  static unsigned int case_in_body(const std::shared_ptr<Rec> &r);
-  static unsigned int helper(const unsigned int n);
-  static unsigned int fix_in_body(const std::shared_ptr<Rec> &r);
-  static unsigned int let_in_body(const std::shared_ptr<Rec> &r);
-  static unsigned int apply_nonfld(const std::shared_ptr<Rec> &r);
-  static unsigned int conditional_body(const std::shared_ptr<Rec> &r,
-                                       const bool flag);
-  static unsigned int outer_ref(const unsigned int x,
-                                const std::shared_ptr<Rec> &r);
-  static unsigned int lambda_body(const std::shared_ptr<Rec> &r,
-                                  const unsigned int n);
+  __attribute__((pure)) static unsigned int
+  case_in_body(const std::shared_ptr<Rec> &r);
+  __attribute__((pure)) static unsigned int helper(const unsigned int n);
+  __attribute__((pure)) static unsigned int
+  fix_in_body(const std::shared_ptr<Rec> &r);
+  __attribute__((pure)) static unsigned int
+  let_in_body(const std::shared_ptr<Rec> &r);
+  __attribute__((pure)) static unsigned int
+  apply_nonfld(const std::shared_ptr<Rec> &r);
+  __attribute__((pure)) static unsigned int
+  conditional_body(const std::shared_ptr<Rec> &r, const bool flag);
+  __attribute__((pure)) static unsigned int
+  outer_ref(const unsigned int x, const std::shared_ptr<Rec> &r);
+  __attribute__((pure)) static unsigned int
+  lambda_body(const std::shared_ptr<Rec> &r, const unsigned int n);
 
   struct RecRec {
     std::shared_ptr<Rec> inner;
     unsigned int outer_field;
   };
 
-  static unsigned int nested_record_match(const std::shared_ptr<RecRec> &rr);
+  __attribute__((pure)) static unsigned int
+  nested_record_match(const std::shared_ptr<RecRec> &rr);
   static inline const unsigned int global_const = 42u;
-  static unsigned int global_in_body(const std::shared_ptr<Rec> &r);
-  static unsigned int guarded_body(const std::shared_ptr<Rec> &r);
+  __attribute__((pure)) static unsigned int
+  global_in_body(const std::shared_ptr<Rec> &r);
+  __attribute__((pure)) static unsigned int
+  guarded_body(const std::shared_ptr<Rec> &r);
   static std::shared_ptr<Rec> constructor_body(const std::shared_ptr<Rec> &r);
 
   template <typename t_A> struct list {
@@ -95,10 +102,10 @@ struct RecordCaseBody {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2,
@@ -127,8 +134,10 @@ struct RecordCaseBody {
         l->v());
   }
 
-  static unsigned int sum_list(const std::shared_ptr<list<unsigned int>> &l);
-  static unsigned int list_in_body(const std::shared_ptr<Rec> &r);
+  __attribute__((pure)) static unsigned int
+  sum_list(const std::shared_ptr<list<unsigned int>> &l);
+  __attribute__((pure)) static unsigned int
+  list_in_body(const std::shared_ptr<Rec> &r);
   static inline const unsigned int test1 =
       case_in_body(std::make_shared<Rec>(Rec{1u, 2u, 3u}));
   static inline const unsigned int test2 =

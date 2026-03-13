@@ -130,9 +130,9 @@ struct LargeEnum {
     }();
   }
 
-  static unsigned int color_to_nat(const Color c);
-  static bool is_warm(const Color c);
-  static bool is_neutral(const Color c);
+  __attribute__((pure)) static unsigned int color_to_nat(const Color c);
+  __attribute__((pure)) static bool is_warm(const Color c);
+  __attribute__((pure)) static bool is_neutral(const Color c);
 
   struct tok {
     // TYPES
@@ -300,10 +300,10 @@ struct LargeEnum {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -364,8 +364,9 @@ struct LargeEnum {
         t->v());
   }
 
-  static unsigned int tok_to_nat(const std::shared_ptr<tok> &t);
-  static bool is_operator(const std::shared_ptr<tok> &t);
+  __attribute__((pure)) static unsigned int
+  tok_to_nat(const std::shared_ptr<tok> &t);
+  __attribute__((pure)) static bool is_operator(const std::shared_ptr<tok> &t);
   static inline const unsigned int test_red = color_to_nat(Color::e_RED);
   static inline const unsigned int test_pink = color_to_nat(Color::e_PINK);
   static inline const bool test_warm_red = is_warm(Color::e_RED);

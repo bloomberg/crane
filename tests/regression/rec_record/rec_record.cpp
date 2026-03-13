@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-unsigned int
+__attribute__((pure)) unsigned int
 RecRecord::rlist_sum(const std::shared_ptr<RecRecord::rlist<unsigned int>> &l) {
   return std::visit(
       Overloaded{[](const typename RecRecord::rlist<unsigned int>::Rnil _args)
@@ -26,7 +26,7 @@ RecRecord::rlist_sum(const std::shared_ptr<RecRecord::rlist<unsigned int>> &l) {
       l->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RecRecord::rnode_depth(const std::shared_ptr<RecRecord::RNode> &r) {
   if (r->rn_next.has_value()) {
     std::shared_ptr<RecRecord::RNode> next = *r->rn_next;

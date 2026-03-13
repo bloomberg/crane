@@ -26,10 +26,10 @@ enum class Unit { e_TT };
 
 struct iotest {
   static void test1(const std::string _x);
-  static Unit test2(const std::string s);
-  static void test3(const std::string s);
-  static std::string test4();
-  static void test5();
+  __attribute__((pure)) static Unit test2(const std::string s);
+  __attribute__((pure)) static void test3(const std::string s);
+  __attribute__((pure)) static std::string test4();
+  __attribute__((pure)) static void test5();
 };
 
 #endif // INCLUDED_IO

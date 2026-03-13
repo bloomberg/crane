@@ -35,28 +35,31 @@ struct UnsoundAxioms {
     unsigned int f2;
   };
 
-  static unsigned int cast_confusion(const std::shared_ptr<Rec> &r);
-  static unsigned int choose_in_match(const std::shared_ptr<Rec> &r);
+  __attribute__((pure)) static unsigned int
+  cast_confusion(const std::shared_ptr<Rec> &r);
+  __attribute__((pure)) static unsigned int
+  choose_in_match(const std::shared_ptr<Rec> &r);
 
   struct ProofRec {
     unsigned int pf_val;
     unsigned int pf_val2;
   };
 
-  static unsigned int
+  __attribute__((pure)) static unsigned int
   extract_proof_computation(const std::shared_ptr<ProofRec> &pr);
-  static bool use_type_eq(const unsigned int n);
+  __attribute__((pure)) static bool use_type_eq(const unsigned int n);
   static std::shared_ptr<Rec> impossible_rec();
   static inline const unsigned int use_impossible = [](void) {
     unsigned int a = impossible_rec()->f1;
     unsigned int b = impossible_rec()->f2;
     return (a + std::move(b));
   }();
-  static unsigned int from_false(const std::shared_ptr<Rec> &r);
+  __attribute__((pure)) static unsigned int
+  from_false(const std::shared_ptr<Rec> &r);
   static inline const std::any prop_as_type =
       ([]() -> const std::any { throw std::logic_error("unreachable"); })();
-
-  static unsigned int use_prop_as_type(const std::shared_ptr<Rec> &r);
+  __attribute__((pure)) static unsigned int
+  use_prop_as_type(const std::shared_ptr<Rec> &r);
 };
 
 #endif // INCLUDED_UNSOUND_AXIOMS

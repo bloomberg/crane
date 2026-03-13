@@ -66,10 +66,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   t_A nth(const unsigned int n, const t_A default0) const {
     if (n <= 0) {
@@ -96,7 +96,7 @@ public:
     }
   }
 
-  unsigned int length() const {
+  __attribute__((pure)) unsigned int length() const {
     return std::visit(
         Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
                      return 0u;
@@ -202,8 +202,8 @@ struct RamWrite {
           state{ListDef::template repeat<unsigned int>(0u, 16u), 0u, false, 0u,
                 List<unsigned int>::ctor::Nil_(), empty_ram, default_sel,
                 ListDef::template repeat<unsigned int>(0u, 8u)});
-  static unsigned int get_main(const std::shared_ptr<ram_reg> &rg,
-                               const unsigned int i);
+  __attribute__((pure)) static unsigned int
+  get_main(const std::shared_ptr<ram_reg> &rg, const unsigned int i);
   static std::shared_ptr<ram_reg> upd_main_in_reg(std::shared_ptr<ram_reg> rg,
                                                   const unsigned int i,
                                                   const unsigned int v);
@@ -231,7 +231,8 @@ struct RamWrite {
   static std::shared_ptr<ram_chip>
   current_chip(const std::shared_ptr<state> &s);
   static std::shared_ptr<ram_reg> current_reg(const std::shared_ptr<state> &s);
-  static unsigned int ram_read_main(const std::shared_ptr<state> &s);
+  __attribute__((pure)) static unsigned int
+  ram_read_main(const std::shared_ptr<state> &s);
   static std::shared_ptr<List<std::shared_ptr<ram_bank>>>
   ram_write_main_sys(const std::shared_ptr<state> &s, const unsigned int v);
   static std::shared_ptr<List<std::shared_ptr<ram_bank>>>

@@ -12,7 +12,7 @@
 #include <utility>
 #include <variant>
 
-unsigned int InstructionCycles::cycles_jcn(
+__attribute__((pure)) unsigned int InstructionCycles::cycles_jcn(
     const std::shared_ptr<InstructionCycles::state1> &s,
     const std::shared_ptr<InstructionCycles::instruction1> &i) {
   return std::visit(
@@ -44,7 +44,7 @@ unsigned int InstructionCycles::cycles_jcn(
       i->v());
 }
 
-unsigned int InstructionCycles::cycles_jms(
+__attribute__((pure)) unsigned int InstructionCycles::cycles_jms(
     const std::shared_ptr<InstructionCycles::state2> &_x,
     const std::shared_ptr<InstructionCycles::instruction2> &i) {
   return std::visit(
@@ -55,7 +55,8 @@ unsigned int InstructionCycles::cycles_jms(
       i->v());
 }
 
-unsigned int InstructionCycles::cycles_min(const InstructionCycles::Instr3 i) {
+__attribute__((pure)) unsigned int
+InstructionCycles::cycles_min(const InstructionCycles::Instr3 i) {
   return [&](void) {
     switch (i) {
     case Instr3::e_NOP3: {
@@ -89,7 +90,8 @@ unsigned int InstructionCycles::cycles_min(const InstructionCycles::Instr3 i) {
   }();
 }
 
-unsigned int InstructionCycles::cycles_max(const InstructionCycles::Instr4 i) {
+__attribute__((pure)) unsigned int
+InstructionCycles::cycles_max(const InstructionCycles::Instr4 i) {
   return [&](void) {
     switch (i) {
     case Instr4::e_NOP4: {
@@ -123,7 +125,7 @@ unsigned int InstructionCycles::cycles_max(const InstructionCycles::Instr4 i) {
   }();
 }
 
-unsigned int InstructionCycles::cycles_sum(
+__attribute__((pure)) unsigned int InstructionCycles::cycles_sum(
     const std::shared_ptr<InstructionCycles::state5> &s,
     const std::shared_ptr<InstructionCycles::instruction5> &i) {
   return std::visit(
@@ -168,7 +170,7 @@ std::shared_ptr<InstructionCycles::state5> InstructionCycles::execute5(
       i->v());
 }
 
-unsigned int InstructionCycles::program_cycles5(
+__attribute__((pure)) unsigned int InstructionCycles::program_cycles5(
     const std::shared_ptr<InstructionCycles::state5> &s,
     const std::shared_ptr<
         List<std::shared_ptr<InstructionCycles::instruction5>>> &prog) {
@@ -190,13 +192,13 @@ unsigned int InstructionCycles::program_cycles5(
       prog->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 InstructionCycles::cycles6(const std::shared_ptr<InstructionCycles::state6> &_x,
                            const InstructionCycles::Instruction6 _x0) {
   return 8u;
 }
 
-unsigned int InstructionCycles::program_cycles6(
+__attribute__((pure)) unsigned int InstructionCycles::program_cycles6(
     const std::shared_ptr<InstructionCycles::state6> &s,
     const std::shared_ptr<List<InstructionCycles::Instruction6>> &prog) {
   return std::visit(
@@ -213,13 +215,13 @@ unsigned int InstructionCycles::program_cycles6(
       prog->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 InstructionCycles::cycles7(const std::shared_ptr<InstructionCycles::state7> &_x,
                            const InstructionCycles::Instruction7 _x0) {
   return 8u;
 }
 
-unsigned int InstructionCycles::program_cycles7(
+__attribute__((pure)) unsigned int InstructionCycles::program_cycles7(
     const std::shared_ptr<InstructionCycles::state7> &s,
     const std::shared_ptr<List<InstructionCycles::Instruction7>> &prog) {
   return std::visit(
@@ -236,10 +238,9 @@ unsigned int InstructionCycles::program_cycles7(
       prog->v());
 }
 
-std::pair<unsigned int, unsigned int> Nat::divmod(const unsigned int x,
-                                                  const unsigned int y,
-                                                  const unsigned int q,
-                                                  const unsigned int u) {
+__attribute__((pure)) std::pair<unsigned int, unsigned int>
+Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
+            const unsigned int u) {
   if (x <= 0) {
     return std::make_pair(std::move(q), std::move(u));
   } else {
@@ -253,7 +254,8 @@ std::pair<unsigned int, unsigned int> Nat::divmod(const unsigned int x,
   }
 }
 
-unsigned int Nat::div(const unsigned int x, const unsigned int y) {
+__attribute__((pure)) unsigned int Nat::div(const unsigned int x,
+                                            const unsigned int y) {
   if (y <= 0) {
     return std::move(y);
   } else {

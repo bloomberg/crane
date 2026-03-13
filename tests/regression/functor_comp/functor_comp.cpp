@@ -12,12 +12,13 @@
 #include <utility>
 #include <variant>
 
-FunctorComp::Stack::t
+__attribute__((pure)) FunctorComp::Stack::t
 FunctorComp::Stack::push(const unsigned int x,
                          std::shared_ptr<List<unsigned int>> s) {
   return List<unsigned int>::ctor::Cons_(std::move(x), std::move(s));
 }
 
+__attribute__((pure))
 std::optional<std::pair<unsigned int, FunctorComp::Stack::t>>
 FunctorComp::Stack::pop(const std::shared_ptr<List<unsigned int>> &s) {
   return std::visit(
@@ -39,11 +40,12 @@ FunctorComp::Stack::pop(const std::shared_ptr<List<unsigned int>> &s) {
       s->v());
 }
 
-unsigned int FunctorComp::Stack::size(const FunctorComp::Stack::t _x0) {
+__attribute__((pure)) unsigned int
+FunctorComp::Stack::size(const FunctorComp::Stack::t _x0) {
   return _x0->length();
 }
 
-FunctorComp::Queue::t
+__attribute__((pure)) FunctorComp::Queue::t
 FunctorComp::Queue::push(const unsigned int x,
                          const std::pair<std::shared_ptr<List<unsigned int>>,
                                          std::shared_ptr<List<unsigned int>>>
@@ -54,6 +56,7 @@ FunctorComp::Queue::push(const unsigned int x,
                         List<unsigned int>::ctor::Cons_(x, back));
 }
 
+__attribute__((pure))
 std::optional<std::pair<unsigned int, FunctorComp::Queue::t>>
 FunctorComp::Queue::pop(const std::pair<std::shared_ptr<List<unsigned int>>,
                                         std::shared_ptr<List<unsigned int>>>
@@ -111,7 +114,7 @@ FunctorComp::Queue::pop(const std::pair<std::shared_ptr<List<unsigned int>>,
       front->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 FunctorComp::Queue::size(const std::pair<std::shared_ptr<List<unsigned int>>,
                                          std::shared_ptr<List<unsigned int>>>
                              q) {

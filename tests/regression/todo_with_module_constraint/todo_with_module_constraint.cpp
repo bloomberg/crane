@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-TodoWithModuleConstraint::NatOuter::Inner::t
+__attribute__((pure)) TodoWithModuleConstraint::NatOuter::Inner::t
 TodoWithModuleConstraint::NatOuter::step(const unsigned int n) {
   return (std::move(n) + 1);
 }

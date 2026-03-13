@@ -21,8 +21,9 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct Coercions {
-  static unsigned int bool_to_nat(const bool b);
-  static unsigned int add_bool(const unsigned int n, const bool b);
+  __attribute__((pure)) static unsigned int bool_to_nat(const bool b);
+  __attribute__((pure)) static unsigned int add_bool(const unsigned int n,
+                                                     const bool b);
   static inline const unsigned int test_add_true = add_bool(5u, true);
   static inline const unsigned int test_add_false = add_bool(5u, false);
 
@@ -30,7 +31,8 @@ struct Coercions {
     unsigned int unwrap;
   };
 
-  static unsigned int double_wrapped(const std::shared_ptr<Wrapper> &w);
+  __attribute__((pure)) static unsigned int
+  double_wrapped(const std::shared_ptr<Wrapper> &w);
   static inline const unsigned int test_double_wrapped =
       double_wrapped(std::make_shared<Wrapper>(Wrapper{7u}));
 
@@ -38,8 +40,8 @@ struct Coercions {
     bool unbox;
   };
 
-  static unsigned int add_boolbox(const unsigned int n,
-                                  const std::shared_ptr<BoolBox> &bb);
+  __attribute__((pure)) static unsigned int
+  add_boolbox(const unsigned int n, const std::shared_ptr<BoolBox> &bb);
   static inline const unsigned int test_add_boolbox =
       add_boolbox(10u, std::make_shared<BoolBox>(BoolBox{true}));
 

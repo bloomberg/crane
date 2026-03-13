@@ -27,7 +27,7 @@ concept Default = requires {
 
 struct TodoErasedInstanceParam {
   struct natDefault {
-    static unsigned int def() { return 4u; }
+    __attribute__((pure)) static unsigned int def() { return 4u; }
   };
 
   static_assert(Default<natDefault, unsigned int>);

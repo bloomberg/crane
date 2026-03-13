@@ -66,12 +66,12 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  unsigned int length() const {
+  __attribute__((pure)) unsigned int length() const {
     return std::visit(
         Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
                      return 0u;
@@ -85,11 +85,11 @@ public:
 };
 
 struct Nat {
-  static std::pair<unsigned int, unsigned int> divmod(const unsigned int x,
-                                                      const unsigned int y,
-                                                      const unsigned int q,
-                                                      const unsigned int u);
-  static unsigned int div(const unsigned int x, const unsigned int y);
+  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
+  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
+         const unsigned int u);
+  __attribute__((pure)) static unsigned int div(const unsigned int x,
+                                                const unsigned int y);
 };
 
 struct EncodeOps {
@@ -251,10 +251,10 @@ struct EncodeOps {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int> F3,
@@ -321,9 +321,10 @@ struct EncodeOps {
         i->v());
   }
 
-  static std::pair<unsigned int, unsigned int>
+  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
   encode1(const std::shared_ptr<instruction1> &i);
-  static bool pair_in_range(const std::pair<unsigned int, unsigned int> p);
+  __attribute__((pure)) static bool
+  pair_in_range(const std::pair<unsigned int, unsigned int> p);
   static inline const bool test_encode_bytes_in_range =
       ((((((((((pair_in_range(encode1(instruction1::ctor::CLB_())) &&
                 pair_in_range(encode1(instruction1::ctor::CMC_()))) &&
@@ -379,10 +380,10 @@ struct EncodeOps {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
@@ -411,7 +412,7 @@ struct EncodeOps {
         i->v());
   }
 
-  static std::pair<unsigned int, unsigned int>
+  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
   encode2(const std::shared_ptr<instruction2> &i);
   static std::shared_ptr<List<unsigned int>> encode_list2(
       const std::shared_ptr<List<std::shared_ptr<instruction2>>> &prog);
@@ -468,10 +469,10 @@ struct EncodeOps {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
@@ -500,7 +501,7 @@ struct EncodeOps {
         i->v());
   }
 
-  static std::pair<unsigned int, unsigned int>
+  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
   encode3(const std::shared_ptr<instruction3> &i);
   static std::shared_ptr<List<unsigned int>> encode_list3(
       const std::shared_ptr<List<std::shared_ptr<instruction3>>> &prog);

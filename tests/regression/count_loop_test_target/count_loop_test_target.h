@@ -66,10 +66,10 @@ struct CountLoopTestTarget {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
@@ -102,7 +102,8 @@ struct CountLoopTestTarget {
 
   static std::shared_ptr<instruction>
   count_loop_test(const unsigned int loop_addr);
-  static unsigned int target_of(const std::shared_ptr<instruction> &i);
+  __attribute__((pure)) static unsigned int
+  target_of(const std::shared_ptr<instruction> &i);
   static inline const unsigned int t = target_of(count_loop_test(37u));
 };
 

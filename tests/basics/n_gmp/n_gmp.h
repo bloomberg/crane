@@ -25,9 +25,9 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 enum class Comparison { e_EQ, e_LT, e_GT };
 
 struct Pos {
-  static mpz_class succ(const mpz_class x);
-  static mpz_class pred_double(const mpz_class x);
-  static mpz_class pred_N(const mpz_class x);
+  __attribute__((pure)) static mpz_class succ(const mpz_class x);
+  __attribute__((pure)) static mpz_class pred_double(const mpz_class x);
+  __attribute__((pure)) static mpz_class pred_N(const mpz_class x);
 
   struct mask {
     // TYPES
@@ -83,10 +83,10 @@ struct Pos {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   static std::shared_ptr<mask> succ_double_mask(const std::shared_ptr<mask> &x);
@@ -95,35 +95,45 @@ struct Pos {
   static std::shared_ptr<mask> sub_mask(const mpz_class x, const mpz_class y);
   static std::shared_ptr<mask> sub_mask_carry(const mpz_class x,
                                               const mpz_class y);
-  static Comparison compare_cont(const Comparison r, const mpz_class x,
-                                 const mpz_class y);
-  static Comparison compare(const mpz_class _x0, const mpz_class _x1);
-  static bool eqb(const mpz_class p, const mpz_class q);
+  __attribute__((pure)) static Comparison
+  compare_cont(const Comparison r, const mpz_class x, const mpz_class y);
+  __attribute__((pure)) static Comparison compare(const mpz_class _x0,
+                                                  const mpz_class _x1);
+  __attribute__((pure)) static bool eqb(const mpz_class p, const mpz_class q);
 };
 
 struct Coq_Pos {
-  static mpz_class add_carry(const mpz_class x, const mpz_class y);
+  __attribute__((pure)) static mpz_class add_carry(const mpz_class x,
+                                                   const mpz_class y);
 };
 
 struct BinNat {
-  static Comparison compare(const mpz_class n, const mpz_class m);
-  static std::pair<mpz_class, mpz_class> pos_div_eucl(const mpz_class a,
-                                                      const mpz_class b);
-  static std::pair<mpz_class, mpz_class> div_eucl(const mpz_class a,
-                                                  const mpz_class b);
+  __attribute__((pure)) static Comparison compare(const mpz_class n,
+                                                  const mpz_class m);
+  __attribute__((pure)) static std::pair<mpz_class, mpz_class>
+  pos_div_eucl(const mpz_class a, const mpz_class b);
+  __attribute__((pure)) static std::pair<mpz_class, mpz_class>
+  div_eucl(const mpz_class a, const mpz_class b);
 };
 
 struct NGMPTest {
-  static mpz_class add_test(const mpz_class _x0, const mpz_class _x1);
-  static mpz_class mul_test(const mpz_class _x0, const mpz_class _x1);
-  static mpz_class sub_test(const mpz_class _x0, const mpz_class _x1);
-  static mpz_class div_test(const mpz_class _x0, const mpz_class _x1);
-  static bool eqb_test(const mpz_class _x0, const mpz_class _x1);
-  static bool ltb_test(const mpz_class _x0, const mpz_class _x1);
-  static bool leb_test(const mpz_class _x0, const mpz_class _x1);
-  static mpz_class succ_test(const mpz_class _x0);
-  static mpz_class pred_test(const mpz_class _x0);
-  static mpz_class double_test(const mpz_class _x0);
+  __attribute__((pure)) static mpz_class add_test(const mpz_class _x0,
+                                                  const mpz_class _x1);
+  __attribute__((pure)) static mpz_class mul_test(const mpz_class _x0,
+                                                  const mpz_class _x1);
+  __attribute__((pure)) static mpz_class sub_test(const mpz_class _x0,
+                                                  const mpz_class _x1);
+  __attribute__((pure)) static mpz_class div_test(const mpz_class _x0,
+                                                  const mpz_class _x1);
+  __attribute__((pure)) static bool eqb_test(const mpz_class _x0,
+                                             const mpz_class _x1);
+  __attribute__((pure)) static bool ltb_test(const mpz_class _x0,
+                                             const mpz_class _x1);
+  __attribute__((pure)) static bool leb_test(const mpz_class _x0,
+                                             const mpz_class _x1);
+  __attribute__((pure)) static mpz_class succ_test(const mpz_class _x0);
+  __attribute__((pure)) static mpz_class pred_test(const mpz_class _x0);
+  __attribute__((pure)) static mpz_class double_test(const mpz_class _x0);
   static inline const mpz_class zero_val = mpz_class(0);
   static inline const mpz_class five_val = (2 * (2 * mpz_class(1)) + 1);
   static inline const mpz_class big_val =
@@ -131,9 +141,10 @@ struct NGMPTest {
        (2 *
         (2 * (2 * (2 * (2 * (2 * (2 * (2 * mpz_class(1) + 1) + 1) + 1) + 1)) +
               1))));
-  static bool is_zero(const mpz_class n);
-  static mpz_class pos_add(const mpz_class _x0, const mpz_class _x1);
-  static mpz_class pos_succ(const mpz_class _x0);
+  __attribute__((pure)) static bool is_zero(const mpz_class n);
+  __attribute__((pure)) static mpz_class pos_add(const mpz_class _x0,
+                                                 const mpz_class _x1);
+  __attribute__((pure)) static mpz_class pos_succ(const mpz_class _x0);
 };
 
 #endif // INCLUDED_N_GMP

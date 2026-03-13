@@ -21,19 +21,22 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct Lambda {
-  static unsigned int simple_lambda(const unsigned int x);
-  static unsigned int multi_arg(const unsigned int _x0, const unsigned int _x1);
-  static unsigned int nested_lambda(const unsigned int x, const unsigned int y,
-                                    const unsigned int z);
-  static unsigned int make_adder(const unsigned int _x0,
-                                 const unsigned int _x1);
+  __attribute__((pure)) static unsigned int simple_lambda(const unsigned int x);
+  __attribute__((pure)) static unsigned int multi_arg(const unsigned int _x0,
+                                                      const unsigned int _x1);
+  __attribute__((pure)) static unsigned int nested_lambda(const unsigned int x,
+                                                          const unsigned int y,
+                                                          const unsigned int z);
+  __attribute__((pure)) static unsigned int make_adder(const unsigned int _x0,
+                                                       const unsigned int _x1);
   static inline const unsigned int with_let = [](void) {
     unsigned int x = 5u;
     return (std::move(x) * 2u);
   }();
 
   template <MapsTo<unsigned int, unsigned int> F0>
-  static unsigned int apply_fn(F0 &&f, const unsigned int _x0) {
+  __attribute__((pure)) static unsigned int apply_fn(F0 &&f,
+                                                     const unsigned int _x0) {
     return f(std::move(_x0));
   }
 

@@ -66,10 +66,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   t_A nth(const unsigned int n, const t_A default0) const {
     if (n <= 0) {
@@ -96,7 +96,7 @@ public:
     }
   }
 
-  unsigned int length() const {
+  __attribute__((pure)) unsigned int length() const {
     return std::visit(
         Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
                      return 0u;
@@ -110,12 +110,13 @@ public:
 };
 
 struct Bool {
-  static bool eqb(const bool b1, const bool b2);
+  __attribute__((pure)) static bool eqb(const bool b1, const bool b2);
 };
 
 struct PromOps {
-  static bool nat_list_eqb(const std::shared_ptr<List<unsigned int>> &xs,
-                           const std::shared_ptr<List<unsigned int>> &ys);
+  __attribute__((pure)) static bool
+  nat_list_eqb(const std::shared_ptr<List<unsigned int>> &xs,
+               const std::shared_ptr<List<unsigned int>> &ys);
 
   template <typename T1>
   static std::shared_ptr<List<T1>>
@@ -156,7 +157,8 @@ struct PromOps {
     bool prom_enable1;
   };
 
-  static unsigned int prom_data_or_zero(const std::shared_ptr<state1> &s);
+  __attribute__((pure)) static unsigned int
+  prom_data_or_zero(const std::shared_ptr<state1> &s);
   static inline const unsigned int test1 =
       prom_data_or_zero(std::make_shared<state1>(state1{77u, false}));
 
@@ -167,7 +169,8 @@ struct PromOps {
     bool prom_enable2;
   };
 
-  static unsigned int flagged_sum(const std::shared_ptr<state2> &s);
+  __attribute__((pure)) static unsigned int
+  flagged_sum(const std::shared_ptr<state2> &s);
   static inline const unsigned int test2 =
       flagged_sum(std::make_shared<state2>(state2{3u, 12u, 77u, false}));
 

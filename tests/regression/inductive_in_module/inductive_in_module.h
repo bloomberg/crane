@@ -59,7 +59,7 @@ struct InductiveInModule {
     }
 
     static inline const Color default_color = Color::e_RED;
-    static unsigned int color_to_nat(const Color c);
+    __attribute__((pure)) static unsigned int color_to_nat(const Color c);
   };
 
   static inline const unsigned int test_color =
@@ -109,10 +109,10 @@ struct InductiveInModule {
         };
 
         // MANIPULATORS
-        variant_t &v_mut() { return d_v_; }
+        __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
         // ACCESSORS
-        const variant_t &v() const { return d_v_; }
+        __attribute__((pure)) const variant_t &v() const { return d_v_; }
       };
 
       template <typename T1, typename T2, MapsTo<T2, T1> F1>

@@ -65,9 +65,9 @@ public:
     }
   };
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
   template <typename T1>
   bsl::shared_ptr<List<bsl::pair<t_A, T1>>>
   combine(const bsl::shared_ptr<List<T1>> &l_) const {
@@ -100,7 +100,8 @@ public:
             }},
         this->v());
   }
-  template <MapsTo<bool, t_A> F0> bsl::optional<t_A> find(F0 &&f) const {
+  template <MapsTo<bool, t_A> F0>
+  __attribute__((pure)) bsl::optional<t_A> find(F0 &&f) const {
     return bsl::visit(
         bdlf::Overloaded{
             [](const typename List<t_A>::Nil _args) -> bsl::optional<t_A> {
@@ -177,7 +178,7 @@ public:
             }},
         this->v());
   }
-  unsigned int length() const {
+  __attribute__((pure)) unsigned int length() const {
     return bsl::visit(
         bdlf::Overloaded{
             [](const typename List<t_A>::Nil _args) -> unsigned int {
@@ -210,15 +211,16 @@ struct ListDef {
 struct ToString {
   template <typename T1, typename T2, MapsTo<std::string, T1> F0,
             MapsTo<std::string, T2> F1>
-  static std::string pair_to_string(F0 &&p1, F1 &&p2,
-                                    const bsl::pair<T1, T2> x) {
+  __attribute__((pure)) static std::string
+  pair_to_string(F0 &&p1, F1 &&p2, const bsl::pair<T1, T2> x) {
     T1 a = x.first;
     T2 b = x.second;
     return "("_s + p1(a) + ", "_s + p2(b) + ")"_s;
   }
   template <typename T1, MapsTo<std::string, T1> F0>
-  static std::string intersperse(F0 &&p, const std::string sep,
-                                 const bsl::shared_ptr<List<T1>> &l) {
+  __attribute__((pure)) static std::string
+  intersperse(F0 &&p, const std::string sep,
+              const bsl::shared_ptr<List<T1>> &l) {
     return bsl::visit(
         bdlf::Overloaded{
             [](const typename List<T1>::Nil _args) -> std::string {
@@ -241,8 +243,8 @@ struct ToString {
         l->v());
   }
   template <typename T1, MapsTo<std::string, T1> F0>
-  static std::string list_to_string(F0 &&p,
-                                    const bsl::shared_ptr<List<T1>> &l) {
+  __attribute__((pure)) static std::string
+  list_to_string(F0 &&p, const bsl::shared_ptr<List<T1>> &l) {
     return bsl::visit(
         bdlf::Overloaded{
             [](const typename List<T1>::Nil _args) -> std::string {
@@ -328,9 +330,9 @@ struct TopologicalSort {
     return get_elems_aux(l, List<T1>::ctor::Nil_());
   }
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  static entry<T1> make_entry(F0 &&eqb_node,
-                              bsl::shared_ptr<List<bsl::pair<T1, T1>>> l,
-                              const T1 e) {
+  __attribute__((pure)) static entry<T1>
+  make_entry(F0 &&eqb_node, bsl::shared_ptr<List<bsl::pair<T1, T1>>> l,
+             const T1 e) {
     return bsl::make_pair(
         e, bsl::move(l)->template fold_right<bsl::shared_ptr<List<T1>>>(
                [=](bsl::pair<T1, T1> x, bsl::shared_ptr<List<T1>> ret) mutable {
@@ -343,8 +345,8 @@ struct TopologicalSort {
                List<T1>::ctor::Nil_()));
   }
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  static graph<T1> make_graph(F0 &&eqb_node,
-                              bsl::shared_ptr<List<bsl::pair<T1, T1>>> l) {
+  __attribute__((pure)) static graph<T1>
+  make_graph(F0 &&eqb_node, bsl::shared_ptr<List<bsl::pair<T1, T1>>> l) {
     bsl::shared_ptr<List<T1>> elems = get_elems<T1>(eqb_node, bsl::move(l));
     return bsl::move(elems)
         ->template fold_right<bsl::shared_ptr<List<entry<T1>>>>(
@@ -379,8 +381,8 @@ struct TopologicalSort {
     }
   }
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  static bool contains(F0 &&eqb_node, const T1 elem,
-                       const bsl::shared_ptr<List<T1>> &es) {
+  __attribute__((pure)) static bool
+  contains(F0 &&eqb_node, const T1 elem, const bsl::shared_ptr<List<T1>> &es) {
     if (es->find([=](T1 x) mutable { return eqb_node(elem, x); }).has_value()) {
       T1 _x = *es->find([=](T1 x) mutable { return eqb_node(elem, x); });
       return true;
@@ -420,7 +422,7 @@ struct TopologicalSort {
     }
   }
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  static bsl::optional<T1> cycle_entry(
+  __attribute__((pure)) static bsl::optional<T1> cycle_entry(
       F0 &&eqb_node,
       bsl::shared_ptr<List<bsl::pair<T1, bsl::shared_ptr<List<T1>>>>> graph0) {
     return bsl::visit(
@@ -476,7 +478,8 @@ struct TopologicalSort {
       return List<T1>::ctor::Nil_();
     }
   }
-  template <typename T1> static bool null(const bsl::shared_ptr<List<T1>> &xs) {
+  template <typename T1>
+  __attribute__((pure)) static bool null(const bsl::shared_ptr<List<T1>> &xs) {
     return bsl::visit(
         bdlf::Overloaded{
             [](const typename List<T1>::Nil _args) -> bool { return true; },
@@ -484,7 +487,7 @@ struct TopologicalSort {
         xs->v());
   }
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  static order<T1> topological_sort_aux(
+  __attribute__((pure)) static order<T1> topological_sort_aux(
       F0 &&eqb_node,
       const bsl::shared_ptr<List<bsl::pair<T1, bsl::shared_ptr<List<T1>>>>>
           &graph0,
@@ -542,7 +545,7 @@ struct TopologicalSort {
     return topological_sort_aux<T1>(eqb_node, g_, g_->length());
   }
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  static order<T1> topological_sort_graph(
+  __attribute__((pure)) static order<T1> topological_sort_graph(
       F0 &&eqb_node,
       const bsl::shared_ptr<List<bsl::pair<T1, bsl::shared_ptr<List<T1>>>>>
           &graph0) {

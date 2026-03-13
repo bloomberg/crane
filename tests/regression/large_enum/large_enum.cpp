@@ -11,7 +11,8 @@
 #include <string>
 #include <variant>
 
-unsigned int LargeEnum::color_to_nat(const LargeEnum::Color c) {
+__attribute__((pure)) unsigned int
+LargeEnum::color_to_nat(const LargeEnum::Color c) {
   return [&](void) {
     switch (c) {
     case Color::e_RED: {
@@ -54,7 +55,7 @@ unsigned int LargeEnum::color_to_nat(const LargeEnum::Color c) {
   }();
 }
 
-bool LargeEnum::is_warm(const LargeEnum::Color c) {
+__attribute__((pure)) bool LargeEnum::is_warm(const LargeEnum::Color c) {
   return [&](void) {
     switch (c) {
     case Color::e_RED: {
@@ -97,7 +98,7 @@ bool LargeEnum::is_warm(const LargeEnum::Color c) {
   }();
 }
 
-bool LargeEnum::is_neutral(const LargeEnum::Color c) {
+__attribute__((pure)) bool LargeEnum::is_neutral(const LargeEnum::Color c) {
   return [&](void) {
     switch (c) {
     case Color::e_RED: {
@@ -140,7 +141,8 @@ bool LargeEnum::is_neutral(const LargeEnum::Color c) {
   }();
 }
 
-unsigned int LargeEnum::tok_to_nat(const std::shared_ptr<LargeEnum::tok> &t) {
+__attribute__((pure)) unsigned int
+LargeEnum::tok_to_nat(const std::shared_ptr<LargeEnum::tok> &t) {
   return std::visit(
       Overloaded{
           [](const typename LargeEnum::tok::TNum _args) -> unsigned int {
@@ -184,7 +186,8 @@ unsigned int LargeEnum::tok_to_nat(const std::shared_ptr<LargeEnum::tok> &t) {
       t->v());
 }
 
-bool LargeEnum::is_operator(const std::shared_ptr<LargeEnum::tok> &t) {
+__attribute__((pure)) bool
+LargeEnum::is_operator(const std::shared_ptr<LargeEnum::tok> &t) {
   return std::visit(
       Overloaded{[](const typename LargeEnum::tok::TNum _args) -> bool {
                    return false;

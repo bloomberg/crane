@@ -66,10 +66,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
     return std::visit(
@@ -133,10 +133,10 @@ struct NestedInd {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2,
@@ -204,10 +204,10 @@ struct NestedInd {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <
@@ -249,7 +249,7 @@ struct NestedInd {
   }
 
   template <typename T1>
-  static unsigned int
+  __attribute__((pure)) static unsigned int
   custom_list_length(const std::shared_ptr<custom_list<T1>> &l) {
     return std::visit(
         Overloaded{
@@ -264,7 +264,8 @@ struct NestedInd {
   }
 
   template <typename T1>
-  static unsigned int children_count(const std::shared_ptr<rose<T1>> &t) {
+  __attribute__((pure)) static unsigned int
+  children_count(const std::shared_ptr<rose<T1>> &t) {
     return std::visit(
         Overloaded{[](const typename rose<T1>::Node _args) -> unsigned int {
           std::shared_ptr<custom_list<std::shared_ptr<rose<T1>>>> children =
@@ -367,10 +368,10 @@ struct NestedInd {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -418,9 +419,12 @@ struct NestedInd {
         e->v());
   }
 
-  static unsigned int eval(const std::shared_ptr<expr> &e);
-  static unsigned int expr_size(const std::shared_ptr<expr> &e);
-  static unsigned int expr_depth(const std::shared_ptr<expr> &e);
+  __attribute__((pure)) static unsigned int
+  eval(const std::shared_ptr<expr> &e);
+  __attribute__((pure)) static unsigned int
+  expr_size(const std::shared_ptr<expr> &e);
+  __attribute__((pure)) static unsigned int
+  expr_depth(const std::shared_ptr<expr> &e);
   static std::shared_ptr<List<unsigned int>>
   literals(const std::shared_ptr<expr> &e);
 

@@ -67,10 +67,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   template <typename T1>
   std::shared_ptr<List<std::pair<t_A, T1>>>
@@ -104,7 +104,8 @@ public:
         this->v());
   }
 
-  template <MapsTo<bool, t_A> F0> std::optional<t_A> find(F0 &&f) const {
+  template <MapsTo<bool, t_A> F0>
+  __attribute__((pure)) std::optional<t_A> find(F0 &&f) const {
     return std::visit(
         Overloaded{
             [](const typename List<t_A>::Nil _args) -> std::optional<t_A> {
@@ -185,7 +186,7 @@ public:
         this->v());
   }
 
-  unsigned int length() const {
+  __attribute__((pure)) unsigned int length() const {
     return std::visit(
         Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
                      return 0u;
@@ -219,16 +220,17 @@ struct ListDef {
 struct ToString {
   template <typename T1, typename T2, MapsTo<std::string, T1> F0,
             MapsTo<std::string, T2> F1>
-  static std::string pair_to_string(F0 &&p1, F1 &&p2,
-                                    const std::pair<T1, T2> x) {
+  __attribute__((pure)) static std::string
+  pair_to_string(F0 &&p1, F1 &&p2, const std::pair<T1, T2> x) {
     T1 a = x.first;
     T2 b = x.second;
     return "("s + p1(a) + ", "s + p2(b) + ")"s;
   }
 
   template <typename T1, MapsTo<std::string, T1> F0>
-  static std::string intersperse(F0 &&p, const std::string sep,
-                                 const std::shared_ptr<List<T1>> &l) {
+  __attribute__((pure)) static std::string
+  intersperse(F0 &&p, const std::string sep,
+              const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{
             [](const typename List<T1>::Nil _args) -> std::string {
@@ -252,8 +254,8 @@ struct ToString {
   }
 
   template <typename T1, MapsTo<std::string, T1> F0>
-  static std::string list_to_string(F0 &&p,
-                                    const std::shared_ptr<List<T1>> &l) {
+  __attribute__((pure)) static std::string
+  list_to_string(F0 &&p, const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{
             [](const typename List<T1>::Nil _args) -> std::string {
@@ -341,9 +343,9 @@ struct TopologicalSort {
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  static entry<T1> make_entry(F0 &&eqb_node,
-                              std::shared_ptr<List<std::pair<T1, T1>>> l,
-                              const T1 e) {
+  __attribute__((pure)) static entry<T1>
+  make_entry(F0 &&eqb_node, std::shared_ptr<List<std::pair<T1, T1>>> l,
+             const T1 e) {
     return std::make_pair(
         e, std::move(l)->template fold_right<std::shared_ptr<List<T1>>>(
                [=](std::pair<T1, T1> x, std::shared_ptr<List<T1>> ret) mutable {
@@ -357,8 +359,8 @@ struct TopologicalSort {
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  static graph<T1> make_graph(F0 &&eqb_node,
-                              std::shared_ptr<List<std::pair<T1, T1>>> l) {
+  __attribute__((pure)) static graph<T1>
+  make_graph(F0 &&eqb_node, std::shared_ptr<List<std::pair<T1, T1>>> l) {
     std::shared_ptr<List<T1>> elems = get_elems<T1>(eqb_node, std::move(l));
     return std::move(elems)
         ->template fold_right<std::shared_ptr<List<entry<T1>>>>(
@@ -395,8 +397,8 @@ struct TopologicalSort {
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  static bool contains(F0 &&eqb_node, const T1 elem,
-                       const std::shared_ptr<List<T1>> &es) {
+  __attribute__((pure)) static bool
+  contains(F0 &&eqb_node, const T1 elem, const std::shared_ptr<List<T1>> &es) {
     if (es->find([=](T1 x) mutable { return eqb_node(elem, x); }).has_value()) {
       T1 _x = *es->find([=](T1 x) mutable { return eqb_node(elem, x); });
       return true;
@@ -438,7 +440,7 @@ struct TopologicalSort {
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  static std::optional<T1> cycle_entry(
+  __attribute__((pure)) static std::optional<T1> cycle_entry(
       F0 &&eqb_node,
       std::shared_ptr<List<std::pair<T1, std::shared_ptr<List<T1>>>>> graph0) {
     return std::visit(
@@ -498,7 +500,8 @@ struct TopologicalSort {
     }
   }
 
-  template <typename T1> static bool null(const std::shared_ptr<List<T1>> &xs) {
+  template <typename T1>
+  __attribute__((pure)) static bool null(const std::shared_ptr<List<T1>> &xs) {
     return std::visit(
         Overloaded{
             [](const typename List<T1>::Nil _args) -> bool { return true; },
@@ -507,7 +510,7 @@ struct TopologicalSort {
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  static order<T1> topological_sort_aux(
+  __attribute__((pure)) static order<T1> topological_sort_aux(
       F0 &&eqb_node,
       const std::shared_ptr<List<std::pair<T1, std::shared_ptr<List<T1>>>>>
           &graph0,
@@ -567,7 +570,7 @@ struct TopologicalSort {
   }
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
-  static order<T1> topological_sort_graph(
+  __attribute__((pure)) static order<T1> topological_sort_graph(
       F0 &&eqb_node,
       const std::shared_ptr<List<std::pair<T1, std::shared_ptr<List<T1>>>>>
           &graph0) {

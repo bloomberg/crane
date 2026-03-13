@@ -15,8 +15,8 @@
 #include <variant>
 #include <vector>
 
-std::pair<std::optional<std::basic_string_view<char>>,
-          std::basic_string_view<char>>
+__attribute__((pure)) std::pair<std::optional<std::basic_string_view<char>>,
+                                std::basic_string_view<char>>
 Tokenizer::next_token(const std::basic_string_view<char> input,
                       const std::basic_string_view<char> soft,
                       const std::basic_string_view<char> hard) {

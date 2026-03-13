@@ -68,12 +68,15 @@ struct Coinductive {
     };
 
     // ACCESSORS
-    const variant_t &v() const { return d_lazyV_.force(); }
+    __attribute__((pure)) const variant_t &v() const {
+      return d_lazyV_.force();
+    }
   };
 
   static std::shared_ptr<stream> zeros();
   static std::shared_ptr<stream> count_from(const unsigned int n);
-  static unsigned int hd(const std::shared_ptr<stream> &s);
+  __attribute__((pure)) static unsigned int
+  hd(const std::shared_ptr<stream> &s);
   static std::shared_ptr<stream> tl(const std::shared_ptr<stream> &s);
 
   template <MapsTo<unsigned int, unsigned int> F0>
@@ -162,7 +165,9 @@ struct Coinductive {
     };
 
     // ACCESSORS
-    const variant_t &v() const { return d_lazyV_.force(); }
+    __attribute__((pure)) const variant_t &v() const {
+      return d_lazyV_.force();
+    }
   };
 
   static std::shared_ptr<tree> infinite_tree(const unsigned int n);

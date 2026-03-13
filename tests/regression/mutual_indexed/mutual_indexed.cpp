@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-unsigned int
+__attribute__((pure)) unsigned int
 MutualIndexed::even_val(const unsigned int _x,
                         const std::shared_ptr<MutualIndexed::EvenTree> &t) {
   return std::visit(
@@ -25,7 +25,7 @@ MutualIndexed::even_val(const unsigned int _x,
       t->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 MutualIndexed::odd_val(const unsigned int _x,
                        const std::shared_ptr<MutualIndexed::OddTree> &t) {
   return std::visit(

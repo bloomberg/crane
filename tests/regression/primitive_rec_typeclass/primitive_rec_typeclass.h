@@ -32,7 +32,7 @@ struct PrimitiveRecTypeclass {
   };
 
   struct pointNorm {
-    static unsigned int norm(std::shared_ptr<point> p) {
+    __attribute__((pure)) static unsigned int norm(std::shared_ptr<point> p) {
       return (p->px + p->py);
     }
   };
@@ -46,7 +46,7 @@ struct PrimitiveRecTypeclass {
   };
 
   struct vec3Norm {
-    static unsigned int norm(std::shared_ptr<vec3> v) {
+    __attribute__((pure)) static unsigned int norm(std::shared_ptr<vec3> v) {
       return ((v->vx + v->vy) + v->vz);
     }
   };
@@ -54,7 +54,7 @@ struct PrimitiveRecTypeclass {
   static_assert(HasNorm<vec3Norm, std::shared_ptr<vec3>>);
 
   template <typename _tcI0, typename T1>
-  static unsigned int double_norm(const T1 x) {
+  __attribute__((pure)) static unsigned int double_norm(const T1 x) {
     return (_tcI0::norm(x) + _tcI0::norm(x));
   }
 
@@ -63,9 +63,12 @@ struct PrimitiveRecTypeclass {
     std::shared_ptr<point> bot_right;
   };
 
-  static unsigned int rect_width(const std::shared_ptr<rect> &r);
-  static unsigned int rect_height(const std::shared_ptr<rect> &r);
-  static unsigned int rect_perimeter(const std::shared_ptr<rect> &r);
+  __attribute__((pure)) static unsigned int
+  rect_width(const std::shared_ptr<rect> &r);
+  __attribute__((pure)) static unsigned int
+  rect_height(const std::shared_ptr<rect> &r);
+  __attribute__((pure)) static unsigned int
+  rect_perimeter(const std::shared_ptr<rect> &r);
   static inline const std::shared_ptr<point> p1 =
       std::make_shared<point>(point{3u, 4u});
   static inline const std::shared_ptr<point> p2 =

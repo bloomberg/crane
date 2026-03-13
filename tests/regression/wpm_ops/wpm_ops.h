@@ -66,10 +66,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   t_A nth(const unsigned int n, const t_A default0) const {
     if (n <= 0) {
@@ -132,8 +132,9 @@ struct WpmOps {
     }
   }
 
-  static bool nat_list_eqb(const std::shared_ptr<List<unsigned int>> &xs,
-                           const std::shared_ptr<List<unsigned int>> &ys);
+  __attribute__((pure)) static bool
+  nat_list_eqb(const std::shared_ptr<List<unsigned int>> &xs,
+               const std::shared_ptr<List<unsigned int>> &ys);
 
   struct state1 {
     std::shared_ptr<List<unsigned int>> rom1;

@@ -22,11 +22,11 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct Nat {
-  static std::pair<unsigned int, unsigned int> divmod(const unsigned int x,
-                                                      const unsigned int y,
-                                                      const unsigned int q,
-                                                      const unsigned int u);
-  static unsigned int div(const unsigned int x, const unsigned int y);
+  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
+  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
+         const unsigned int u);
+  __attribute__((pure)) static unsigned int div(const unsigned int x,
+                                                const unsigned int y);
 };
 
 struct OpcodeOperandDecode {
@@ -80,7 +80,8 @@ struct OpcodeOperandDecode {
     }();
   }
 
-  static Instruction decode(const unsigned int b1, const unsigned int _x);
+  __attribute__((pure)) static Instruction decode(const unsigned int b1,
+                                                  const unsigned int _x);
   static inline const unsigned int t = [](void) {
     switch (decode(224u, 0u)) {
     case Instruction::e_NOP_: {

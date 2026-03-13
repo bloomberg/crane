@@ -11,7 +11,8 @@
 #include <string>
 #include <variant>
 
-unsigned int BenchLetIn::swap_snd(const unsigned int a, const unsigned int b) {
+__attribute__((pure)) unsigned int BenchLetIn::swap_snd(const unsigned int a,
+                                                        const unsigned int b) {
   std::unique_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p =
       pair<unsigned int, unsigned int>::ctor::Pair0_uptr(std::move(a),
                                                          std::move(b));
@@ -25,8 +26,8 @@ unsigned int BenchLetIn::swap_snd(const unsigned int a, const unsigned int b) {
       std::move(p)->v());
 }
 
-unsigned int BenchLetIn::add_via_pair(const unsigned int a,
-                                      const unsigned int b) {
+__attribute__((pure)) unsigned int
+BenchLetIn::add_via_pair(const unsigned int a, const unsigned int b) {
   std::unique_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p =
       pair<unsigned int, unsigned int>::ctor::Pair0_uptr(std::move(a),
                                                          std::move(b));
@@ -41,9 +42,9 @@ unsigned int BenchLetIn::add_via_pair(const unsigned int a,
       std::move(p)->v());
 }
 
-unsigned int BenchLetIn::nested_swap(const unsigned int a, const unsigned int b,
-                                     const unsigned int c,
-                                     const unsigned int d) {
+__attribute__((pure)) unsigned int
+BenchLetIn::nested_swap(const unsigned int a, const unsigned int b,
+                        const unsigned int c, const unsigned int d) {
   std::unique_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p1 =
       pair<unsigned int, unsigned int>::ctor::Pair0_uptr(std::move(a),
                                                          std::move(b));
@@ -66,7 +67,8 @@ unsigned int BenchLetIn::nested_swap(const unsigned int a, const unsigned int b,
       std::move(p1)->v());
 }
 
-unsigned int BenchLetIn::sum_via_pairs(const unsigned int n) {
+__attribute__((pure)) unsigned int
+BenchLetIn::sum_via_pairs(const unsigned int n) {
   if (n <= 0) {
     return 0u;
   } else {
@@ -85,8 +87,9 @@ unsigned int BenchLetIn::sum_via_pairs(const unsigned int n) {
   }
 }
 
-unsigned int BenchLetIn::mid3(const unsigned int a, const unsigned int b,
-                              const unsigned int c) {
+__attribute__((pure)) unsigned int BenchLetIn::mid3(const unsigned int a,
+                                                    const unsigned int b,
+                                                    const unsigned int c) {
   std::unique_ptr<BenchLetIn::triple<unsigned int, unsigned int, unsigned int>>
       t = triple<unsigned int, unsigned int, unsigned int>::ctor::Triple0_uptr(
           std::move(a), std::move(b), std::move(c));
@@ -101,8 +104,9 @@ unsigned int BenchLetIn::mid3(const unsigned int a, const unsigned int b,
       std::move(t)->v());
 }
 
-unsigned int BenchLetIn::sum3(const unsigned int a, const unsigned int b,
-                              const unsigned int c) {
+__attribute__((pure)) unsigned int BenchLetIn::sum3(const unsigned int a,
+                                                    const unsigned int b,
+                                                    const unsigned int c) {
   std::unique_ptr<BenchLetIn::triple<unsigned int, unsigned int, unsigned int>>
       t = triple<unsigned int, unsigned int, unsigned int>::ctor::Triple0_uptr(
           std::move(a), std::move(b), std::move(c));
@@ -119,8 +123,9 @@ unsigned int BenchLetIn::sum3(const unsigned int a, const unsigned int b,
       std::move(t)->v());
 }
 
-unsigned int BenchLetIn::chain_pairs(const unsigned int a, const unsigned int b,
-                                     const unsigned int c) {
+__attribute__((pure)) unsigned int
+BenchLetIn::chain_pairs(const unsigned int a, const unsigned int b,
+                        const unsigned int c) {
   std::unique_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p1 =
       pair<unsigned int, unsigned int>::ctor::Pair0_uptr(std::move(a),
                                                          std::move(b));

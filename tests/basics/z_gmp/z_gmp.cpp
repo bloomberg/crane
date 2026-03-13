@@ -12,7 +12,7 @@
 #include <string>
 #include <variant>
 
-mpz_class Pos::succ(const mpz_class x) {
+__attribute__((pure)) mpz_class Pos::succ(const mpz_class x) {
   if (x == 1) {
     return (2 * mpz_class(1));
   } else if (x % 2 != 0) {
@@ -24,7 +24,7 @@ mpz_class Pos::succ(const mpz_class x) {
   }
 }
 
-mpz_class Pos::add(const mpz_class x, const mpz_class y) {
+__attribute__((pure)) mpz_class Pos::add(const mpz_class x, const mpz_class y) {
   if (x == 1) {
     if (y == 1) {
       return (2 * mpz_class(1));
@@ -60,7 +60,8 @@ mpz_class Pos::add(const mpz_class x, const mpz_class y) {
   }
 }
 
-mpz_class Pos::add_carry(const mpz_class x, const mpz_class y) {
+__attribute__((pure)) mpz_class Pos::add_carry(const mpz_class x,
+                                               const mpz_class y) {
   if (x == 1) {
     if (y == 1) {
       return (2 * mpz_class(1) + 1);
@@ -96,7 +97,7 @@ mpz_class Pos::add_carry(const mpz_class x, const mpz_class y) {
   }
 }
 
-mpz_class Pos::pred_double(const mpz_class x) {
+__attribute__((pure)) mpz_class Pos::pred_double(const mpz_class x) {
   if (x == 1) {
     return mpz_class(1);
   } else if (x % 2 != 0) {
@@ -108,7 +109,7 @@ mpz_class Pos::pred_double(const mpz_class x) {
   }
 }
 
-mpz_class Pos::mul(const mpz_class x, const mpz_class y) {
+__attribute__((pure)) mpz_class Pos::mul(const mpz_class x, const mpz_class y) {
   if (x == 1) {
     return std::move(y);
   } else if (x % 2 != 0) {
@@ -120,8 +121,9 @@ mpz_class Pos::mul(const mpz_class x, const mpz_class y) {
   }
 }
 
-Comparison Pos::compare_cont(const Comparison r, const mpz_class x,
-                             const mpz_class y) {
+__attribute__((pure)) Comparison Pos::compare_cont(const Comparison r,
+                                                   const mpz_class x,
+                                                   const mpz_class y) {
   if (x == 1) {
     if (y == 1) {
       return r;
@@ -157,11 +159,12 @@ Comparison Pos::compare_cont(const Comparison r, const mpz_class x,
   }
 }
 
-Comparison Pos::compare(const mpz_class _x0, const mpz_class _x1) {
+__attribute__((pure)) Comparison Pos::compare(const mpz_class _x0,
+                                              const mpz_class _x1) {
   return compare_cont(Comparison::e_EQ, _x0, _x1);
 }
 
-bool Pos::eqb(const mpz_class p, const mpz_class q) {
+__attribute__((pure)) bool Pos::eqb(const mpz_class p, const mpz_class q) {
   if (p == 1) {
     if (q == 1) {
       return true;
@@ -197,7 +200,7 @@ bool Pos::eqb(const mpz_class p, const mpz_class q) {
   }
 }
 
-mpz_class BinInt::double_(const mpz_class x) {
+__attribute__((pure)) mpz_class BinInt::double_(const mpz_class x) {
   if (x == 0) {
     return mpz_class(0);
   } else if (x > 0) {
@@ -209,7 +212,7 @@ mpz_class BinInt::double_(const mpz_class x) {
   }
 }
 
-mpz_class BinInt::succ_double(const mpz_class x) {
+__attribute__((pure)) mpz_class BinInt::succ_double(const mpz_class x) {
   if (x == 0) {
     return mpz_class(1);
   } else if (x > 0) {
@@ -221,7 +224,7 @@ mpz_class BinInt::succ_double(const mpz_class x) {
   }
 }
 
-mpz_class BinInt::pred_double(const mpz_class x) {
+__attribute__((pure)) mpz_class BinInt::pred_double(const mpz_class x) {
   if (x == 0) {
     return (-mpz_class(1));
   } else if (x > 0) {
@@ -233,7 +236,8 @@ mpz_class BinInt::pred_double(const mpz_class x) {
   }
 }
 
-mpz_class BinInt::pos_sub(const mpz_class x, const mpz_class y) {
+__attribute__((pure)) mpz_class BinInt::pos_sub(const mpz_class x,
+                                                const mpz_class y) {
   if (x == 1) {
     if (y == 1) {
       return mpz_class(0);
@@ -269,7 +273,8 @@ mpz_class BinInt::pos_sub(const mpz_class x, const mpz_class y) {
   }
 }
 
-Comparison BinInt::compare(const mpz_class x, const mpz_class y) {
+__attribute__((pure)) Comparison BinInt::compare(const mpz_class x,
+                                                 const mpz_class y) {
   if (x == 0) {
     if (y == 0) {
       return Comparison::e_EQ;
@@ -305,35 +310,45 @@ Comparison BinInt::compare(const mpz_class x, const mpz_class y) {
   }
 }
 
-mpz_class ZGMPTest::add_test(const mpz_class _x0, const mpz_class _x1) {
+__attribute__((pure)) mpz_class ZGMPTest::add_test(const mpz_class _x0,
+                                                   const mpz_class _x1) {
   return (_x0 + _x1);
 }
 
-mpz_class ZGMPTest::mul_test(const mpz_class _x0, const mpz_class _x1) {
+__attribute__((pure)) mpz_class ZGMPTest::mul_test(const mpz_class _x0,
+                                                   const mpz_class _x1) {
   return (_x0 * _x1);
 }
 
-mpz_class ZGMPTest::sub_test(const mpz_class _x0, const mpz_class _x1) {
+__attribute__((pure)) mpz_class ZGMPTest::sub_test(const mpz_class _x0,
+                                                   const mpz_class _x1) {
   return (_x0 - _x1);
 }
 
-mpz_class ZGMPTest::abs_test(const mpz_class _x0) { return abs(_x0); }
+__attribute__((pure)) mpz_class ZGMPTest::abs_test(const mpz_class _x0) {
+  return abs(_x0);
+}
 
-mpz_class ZGMPTest::opp_test(const mpz_class _x0) { return (-_x0); }
+__attribute__((pure)) mpz_class ZGMPTest::opp_test(const mpz_class _x0) {
+  return (-_x0);
+}
 
-bool ZGMPTest::eqb_test(const mpz_class _x0, const mpz_class _x1) {
+__attribute__((pure)) bool ZGMPTest::eqb_test(const mpz_class _x0,
+                                              const mpz_class _x1) {
   return _x0 == _x1;
 }
 
-bool ZGMPTest::ltb_test(const mpz_class _x0, const mpz_class _x1) {
+__attribute__((pure)) bool ZGMPTest::ltb_test(const mpz_class _x0,
+                                              const mpz_class _x1) {
   return _x0 < _x1;
 }
 
-bool ZGMPTest::leb_test(const mpz_class _x0, const mpz_class _x1) {
+__attribute__((pure)) bool ZGMPTest::leb_test(const mpz_class _x0,
+                                              const mpz_class _x1) {
   return _x0 <= _x1;
 }
 
-mpz_class ZGMPTest::z_sign(const mpz_class z) {
+__attribute__((pure)) mpz_class ZGMPTest::z_sign(const mpz_class z) {
   if (z == 0) {
     return mpz_class(0);
   } else if (z > 0) {
@@ -345,7 +360,7 @@ mpz_class ZGMPTest::z_sign(const mpz_class z) {
   }
 }
 
-Comparison Datatypes::CompOpp(const Comparison r) {
+__attribute__((pure)) Comparison Datatypes::CompOpp(const Comparison r) {
   return [&](void) {
     switch (r) {
     case Comparison::e_EQ: {

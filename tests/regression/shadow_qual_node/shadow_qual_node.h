@@ -45,7 +45,7 @@ struct ShadowQualNode {
     }
   };
 
-  static Node::Shadow id(const Node::Shadow x);
+  __attribute__((pure)) static Node::Shadow id(const Node::Shadow x);
   static inline const Node::Shadow t = id(Node::Shadow::e_TAG);
 };
 

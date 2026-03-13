@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-unsigned int
+__attribute__((pure)) unsigned int
 DeepPattern::deep_match(const std::shared_ptr<DeepPattern::tree> &t) {
   return std::visit(
       Overloaded{
@@ -236,7 +236,7 @@ DeepPattern::deep_match(const std::shared_ptr<DeepPattern::tree> &t) {
       t->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 DeepPattern::multi_constructor(const std::shared_ptr<DeepPattern::tree> &t1,
                                const std::shared_ptr<DeepPattern::tree> &t2) {
   return std::visit(
@@ -356,7 +356,7 @@ DeepPattern::multi_constructor(const std::shared_ptr<DeepPattern::tree> &t1,
       t1->v());
 }
 
-unsigned int DeepPattern::list_deep_match(
+__attribute__((pure)) unsigned int DeepPattern::list_deep_match(
     const std::shared_ptr<DeepPattern::list<std::shared_ptr<DeepPattern::tree>>>
         &l) {
   return std::visit(
@@ -608,7 +608,7 @@ unsigned int DeepPattern::list_deep_match(
       l->v());
 }
 
-unsigned int DeepPattern::wildcard_with_bindings(
+__attribute__((pure)) unsigned int DeepPattern::wildcard_with_bindings(
     const std::shared_ptr<DeepPattern::tree> &t) {
   return std::visit(
       Overloaded{
@@ -653,8 +653,9 @@ DeepPattern::as_pattern_test(std::shared_ptr<DeepPattern::tree> t) {
       t->v());
 }
 
-bool DeepPattern::has_value(const std::shared_ptr<DeepPattern::tree> &t,
-                            const unsigned int target) {
+__attribute__((pure)) bool
+DeepPattern::has_value(const std::shared_ptr<DeepPattern::tree> &t,
+                       const unsigned int target) {
   return std::visit(
       Overloaded{[&](const typename DeepPattern::tree::Leaf _args) -> bool {
                    unsigned int n = _args.d_a0;
@@ -669,7 +670,7 @@ bool DeepPattern::has_value(const std::shared_ptr<DeepPattern::tree> &t,
       t->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 DeepPattern::conditional_match(const std::shared_ptr<DeepPattern::tree> &t,
                                const unsigned int target) {
   return std::visit(
@@ -701,7 +702,7 @@ DeepPattern::conditional_match(const std::shared_ptr<DeepPattern::tree> &t,
       t->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 DeepPattern::nested_let_match(const std::shared_ptr<DeepPattern::tree> &t) {
   return std::visit(
       Overloaded{

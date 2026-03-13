@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-unsigned int
+__attribute__((pure)) unsigned int
 MutualRecord::dept_id(const std::shared_ptr<MutualRecord::department> &d) {
   return std::visit(
       Overloaded{
@@ -38,7 +38,7 @@ MutualRecord::dept_employees(
       d->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 MutualRecord::emp_id(const std::shared_ptr<MutualRecord::employee> &e) {
   return std::visit(
       Overloaded{[](const typename MutualRecord::employee::Mk_employee _args)
@@ -49,7 +49,7 @@ MutualRecord::emp_id(const std::shared_ptr<MutualRecord::employee> &e) {
       e->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 MutualRecord::emp_salary(const std::shared_ptr<MutualRecord::employee> &e) {
   return std::visit(
       Overloaded{[](const typename MutualRecord::employee::Mk_employee _args)
@@ -60,7 +60,7 @@ MutualRecord::emp_salary(const std::shared_ptr<MutualRecord::employee> &e) {
       e->v());
 }
 
-unsigned int MutualRecord::dept_total_salary(
+__attribute__((pure)) unsigned int MutualRecord::dept_total_salary(
     const std::shared_ptr<MutualRecord::department> &d) {
   return std::visit(
       Overloaded{[](const typename MutualRecord::department::Mk_department
@@ -72,7 +72,7 @@ unsigned int MutualRecord::dept_total_salary(
       d->v());
 }
 
-unsigned int MutualRecord::emp_list_salary(
+__attribute__((pure)) unsigned int MutualRecord::emp_list_salary(
     const std::shared_ptr<List<std::shared_ptr<MutualRecord::employee>>> &l) {
   return std::visit(
       Overloaded{
@@ -89,7 +89,7 @@ unsigned int MutualRecord::emp_list_salary(
       l->v());
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 MutualRecord::dept_count(const std::shared_ptr<MutualRecord::department> &d) {
   return std::visit(
       Overloaded{[](const typename MutualRecord::department::Mk_department
@@ -101,7 +101,7 @@ MutualRecord::dept_count(const std::shared_ptr<MutualRecord::department> &d) {
       d->v());
 }
 
-unsigned int MutualRecord::emp_list_count(
+__attribute__((pure)) unsigned int MutualRecord::emp_list_count(
     const std::shared_ptr<List<std::shared_ptr<MutualRecord::employee>>> &l) {
   return std::visit(
       Overloaded{

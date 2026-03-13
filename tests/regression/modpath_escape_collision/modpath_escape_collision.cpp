@@ -11,10 +11,12 @@
 #include <string>
 #include <variant>
 
-unsigned int ModpathEscapeCollision::A::Token_::f(const unsigned int n) {
+__attribute__((pure)) unsigned int
+ModpathEscapeCollision::A::Token_::f(const unsigned int n) {
   return std::move(n);
 }
 
-unsigned int ModpathEscapeCollision::B::Token_::g(const unsigned int n) {
+__attribute__((pure)) unsigned int
+ModpathEscapeCollision::B::Token_::g(const unsigned int n) {
   return (std::move(n) + 1);
 }

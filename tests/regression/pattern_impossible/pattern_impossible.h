@@ -105,10 +105,10 @@ struct PatternImpossible {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <
@@ -145,10 +145,13 @@ struct PatternImpossible {
                       n->v());
   }
 
-  static unsigned int complex_match(const Three x);
-  static unsigned int nested_match(const std::shared_ptr<nested> &n);
-  static unsigned int double_match(const Three x, const Three y);
-  static unsigned int multi_arg_pattern(const std::shared_ptr<nested> &n);
+  __attribute__((pure)) static unsigned int complex_match(const Three x);
+  __attribute__((pure)) static unsigned int
+  nested_match(const std::shared_ptr<nested> &n);
+  __attribute__((pure)) static unsigned int double_match(const Three x,
+                                                         const Three y);
+  __attribute__((pure)) static unsigned int
+  multi_arg_pattern(const std::shared_ptr<nested> &n);
   static inline const unsigned int test1 = complex_match(Three::e_ONE);
   static inline const unsigned int test2 = nested_match(
       nested::ctor::Node_(nested::ctor::Leaf_(5u), nested::ctor::Leaf_(10u)));

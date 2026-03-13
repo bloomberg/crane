@@ -21,8 +21,8 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct MutualRecursion {
-  static bool is_even(const unsigned int n);
-  static bool is_odd(const unsigned int n);
+  __attribute__((pure)) static bool is_even(const unsigned int n);
+  __attribute__((pure)) static bool is_odd(const unsigned int n);
   template <typename t_A> struct tree;
   template <typename t_A> struct forest;
 
@@ -72,10 +72,10 @@ struct MutualRecursion {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename t_A> struct forest {
@@ -125,10 +125,10 @@ struct MutualRecursion {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0,
@@ -194,7 +194,8 @@ struct MutualRecursion {
   }
 
   template <typename T1>
-  static unsigned int tree_size(const std::shared_ptr<tree<T1>> &t) {
+  __attribute__((pure)) static unsigned int
+  tree_size(const std::shared_ptr<tree<T1>> &t) {
     return std::visit(
         Overloaded{[](const typename tree<T1>::Leaf _args) -> unsigned int {
                      return 1u;
@@ -207,7 +208,8 @@ struct MutualRecursion {
   }
 
   template <typename T1>
-  static unsigned int forest_size(const std::shared_ptr<forest<T1>> &f) {
+  __attribute__((pure)) static unsigned int
+  forest_size(const std::shared_ptr<forest<T1>> &f) {
     return std::visit(
         Overloaded{[](const typename forest<T1>::Empty _args) -> unsigned int {
                      return 0u;
@@ -221,8 +223,9 @@ struct MutualRecursion {
         f->v());
   }
 
-  static unsigned int tree_sum(const std::shared_ptr<tree<unsigned int>> &t);
-  static unsigned int
+  __attribute__((pure)) static unsigned int
+  tree_sum(const std::shared_ptr<tree<unsigned int>> &t);
+  __attribute__((pure)) static unsigned int
   forest_sum(const std::shared_ptr<forest<unsigned int>> &f);
   static inline const bool test_even_0 = is_even(0u);
   static inline const bool test_even_4 = is_even(4u);

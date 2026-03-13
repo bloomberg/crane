@@ -11,11 +11,12 @@
 #include <string>
 #include <variant>
 
-unsigned int ForwardSpecAscii::helper_nat(const unsigned int n) {
+__attribute__((pure)) unsigned int
+ForwardSpecAscii::helper_nat(const unsigned int n) {
   return (std::move(n) + 1);
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 ForwardSpecAscii::bump_node(const std::shared_ptr<ForwardSpecAscii::node> &x) {
   return std::visit(
       Overloaded{[](const typename ForwardSpecAscii::node::ANode _args)

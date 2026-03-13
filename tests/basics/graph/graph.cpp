@@ -14,7 +14,8 @@
 /// A graph abstraction parameterized by a container type G and
 /// node type A. Provides operations for building and querying
 /// the graph.
-bool nat_eqb(const std::shared_ptr<Nat> &n, const std::shared_ptr<Nat> &m) {
+__attribute__((pure)) bool nat_eqb(const std::shared_ptr<Nat> &n,
+                                   const std::shared_ptr<Nat> &m) {
   return std::visit(
       Overloaded{
           [&](const typename Nat::O _args) -> bool {

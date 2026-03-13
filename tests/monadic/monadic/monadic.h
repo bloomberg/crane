@@ -68,10 +68,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   template <typename T1, MapsTo<T1, T1, t_A> F0>
   T1 fold_left(F0 &&f, const T1 a0) const {
@@ -88,20 +88,22 @@ public:
 };
 
 struct Nat {
-  static std::pair<unsigned int, unsigned int> divmod(const unsigned int x,
-                                                      const unsigned int y,
-                                                      const unsigned int q,
-                                                      const unsigned int u);
-  static unsigned int div(const unsigned int x, const unsigned int y);
+  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
+  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
+         const unsigned int u);
+  __attribute__((pure)) static unsigned int div(const unsigned int x,
+                                                const unsigned int y);
 };
 
 struct Monadic {
-  template <typename T1> static std::optional<T1> option_return(const T1 x) {
+  template <typename T1>
+  __attribute__((pure)) static std::optional<T1> option_return(const T1 x) {
     return std::make_optional<T1>(x);
   }
 
   template <typename T1, typename T2, MapsTo<std::optional<T2>, T1> F1>
-  static std::optional<T2> option_bind(const std::optional<T1> ma, F1 &&f) {
+  __attribute__((pure)) static std::optional<T2>
+  option_bind(const std::optional<T1> ma, F1 &&f) {
     if (ma.has_value()) {
       T1 a = *ma;
       return f(a);
@@ -110,23 +112,24 @@ struct Monadic {
     }
   }
 
-  static std::optional<unsigned int> safe_div(const unsigned int n,
-                                              const unsigned int m);
-  static std::optional<unsigned int> safe_sub(const unsigned int n,
-                                              const unsigned int m);
-  static std::optional<unsigned int> div_then_sub(const unsigned int a,
-                                                  const unsigned int b,
-                                                  const unsigned int c);
+  __attribute__((pure)) static std::optional<unsigned int>
+  safe_div(const unsigned int n, const unsigned int m);
+  __attribute__((pure)) static std::optional<unsigned int>
+  safe_sub(const unsigned int n, const unsigned int m);
+  __attribute__((pure)) static std::optional<unsigned int>
+  div_then_sub(const unsigned int a, const unsigned int b,
+               const unsigned int c);
   template <typename s, typename a>
   using State = std::function<std::pair<a, s>(s)>;
 
   template <typename T1, typename T2>
-  static State<T1, T2> state_return(const T2 x) {
+  __attribute__((pure)) static State<T1, T2> state_return(const T2 x) {
     return [=](T1 s) mutable { return std::make_pair(x, s); };
   }
 
   template <typename T1, typename T2, typename T3, MapsTo<State<T1, T3>, T2> F1>
-  static State<T1, T3> state_bind(const State<T1, T2> ma, F1 &&f) {
+  __attribute__((pure)) static State<T1, T3> state_bind(const State<T1, T2> ma,
+                                                        F1 &&f) {
     return [=](T1 s) mutable {
       T2 a = ma(s).first;
       T1 s_ = ma(s).second;
@@ -139,12 +142,13 @@ struct Monadic {
     return v;
   }
 
-  template <typename T1> static State<T1, Unit> state_put(const T1 s) {
+  template <typename T1>
+  __attribute__((pure)) static State<T1, Unit> state_put(const T1 s) {
     return [=](T1 _x) mutable { return std::make_pair(Unit::e_TT, s); };
   }
 
   template <typename T1>
-  static State<unsigned int, unsigned int>
+  __attribute__((pure)) static State<unsigned int, unsigned int>
   count_elements(const std::shared_ptr<List<T1>> &l) {
     return l->template fold_left<State<unsigned int, unsigned int>>(
         [](std::function<std::pair<unsigned int, unsigned int>(unsigned int)>

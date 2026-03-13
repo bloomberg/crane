@@ -62,10 +62,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 template <typename t_A> struct List {
@@ -113,10 +113,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   template <MapsTo<bool, t_A> F0>
   std::shared_ptr<List<t_A>> filter(F0 &&f) const {
@@ -172,8 +172,8 @@ template <typename t_A> struct DirectedEdge {
 };
 
 template <typename _tcI0, typename T1>
-bool directed_originates(const T1 a,
-                         const std::shared_ptr<DirectedEdge<T1>> &e) {
+__attribute__((pure)) bool
+directed_originates(const T1 a, const std::shared_ptr<DirectedEdge<T1>> &e) {
   return _tcI0::eqb(e->edge_from, a);
 }
 
@@ -228,8 +228,9 @@ template <typename t_A> struct UndirectedEdge {
 };
 
 template <typename _tcI0, typename T1>
-bool undirected_originates(const T1 a,
-                           const std::shared_ptr<UndirectedEdge<T1>> &e) {
+__attribute__((pure)) bool
+undirected_originates(const T1 a,
+                      const std::shared_ptr<UndirectedEdge<T1>> &e) {
   return (_tcI0::eqb(e->edge_first, a) || _tcI0::eqb(e->edge_second, a));
 }
 
@@ -277,17 +278,20 @@ template <typename _tcI0, typename T1> struct UndirectedGraph {
   }
 };
 
-bool nat_eqb(const std::shared_ptr<Nat> &n, const std::shared_ptr<Nat> &m);
+__attribute__((pure)) bool nat_eqb(const std::shared_ptr<Nat> &n,
+                                   const std::shared_ptr<Nat> &m);
 
 struct NatEq {
-  static bool eqb(std::shared_ptr<Nat> a0, std::shared_ptr<Nat> a1) {
+  __attribute__((pure)) static bool eqb(std::shared_ptr<Nat> a0,
+                                        std::shared_ptr<Nat> a1) {
     return nat_eqb(a0, a1);
   }
 };
 
 static_assert(Eq<NatEq, std::shared_ptr<Nat>>);
 
-template <typename _tcI0, typename T1> bool test_eq(const T1 x, const T1 y) {
+template <typename _tcI0, typename T1>
+__attribute__((pure)) bool test_eq(const T1 x, const T1 y) {
   return _tcI0::eqb(x, y);
 }
 

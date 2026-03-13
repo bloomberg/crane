@@ -80,10 +80,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct N {
@@ -126,10 +126,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct Z {
@@ -186,10 +186,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct Pos {
@@ -258,10 +258,10 @@ struct Pos {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   static std::shared_ptr<mask> succ_double_mask(const std::shared_ptr<mask> &x);
@@ -275,11 +275,12 @@ struct Pos {
                  const std::shared_ptr<Positive> &y);
   static std::shared_ptr<Positive> mul(const std::shared_ptr<Positive> &x,
                                        std::shared_ptr<Positive> y);
-  static Comparison compare_cont(const Comparison r,
-                                 const std::shared_ptr<Positive> &x,
-                                 const std::shared_ptr<Positive> &y);
-  static Comparison compare(const std::shared_ptr<Positive> &_x0,
-                            const std::shared_ptr<Positive> &_x1);
+  __attribute__((pure)) static Comparison
+  compare_cont(const Comparison r, const std::shared_ptr<Positive> &x,
+               const std::shared_ptr<Positive> &y);
+  __attribute__((pure)) static Comparison
+  compare(const std::shared_ptr<Positive> &_x0,
+          const std::shared_ptr<Positive> &_x1);
 
   template <typename T1, MapsTo<T1, T1, T1> F0>
   static T1 iter_op(F0 &&op, const std::shared_ptr<Positive> &p, const T1 a) {
@@ -296,7 +297,8 @@ struct Pos {
         p->v());
   }
 
-  static unsigned int to_nat(const std::shared_ptr<Positive> &x);
+  __attribute__((pure)) static unsigned int
+  to_nat(const std::shared_ptr<Positive> &x);
 };
 
 struct Coq_Pos {
@@ -324,19 +326,20 @@ struct Coq_Pos {
         p->v());
   }
 
-  static unsigned int to_nat(const std::shared_ptr<Positive> &x);
+  __attribute__((pure)) static unsigned int
+  to_nat(const std::shared_ptr<Positive> &x);
 };
 
 struct BinNat {
   static std::shared_ptr<N> sub(std::shared_ptr<N> n,
                                 const std::shared_ptr<N> &m);
-  static Comparison compare(const std::shared_ptr<N> &n,
-                            const std::shared_ptr<N> &m);
+  __attribute__((pure)) static Comparison compare(const std::shared_ptr<N> &n,
+                                                  const std::shared_ptr<N> &m);
   static std::shared_ptr<N> pred(const std::shared_ptr<N> &n);
   static std::shared_ptr<N> add(std::shared_ptr<N> n, std::shared_ptr<N> m);
   static std::shared_ptr<N> mul(const std::shared_ptr<N> &n,
                                 const std::shared_ptr<N> &m);
-  static unsigned int to_nat(const std::shared_ptr<N> &a);
+  __attribute__((pure)) static unsigned int to_nat(const std::shared_ptr<N> &a);
 };
 
 struct BinInt {
@@ -351,14 +354,14 @@ struct BinInt {
                                 const std::shared_ptr<Z> &n);
   static std::shared_ptr<Z> mul(const std::shared_ptr<Z> &x,
                                 const std::shared_ptr<Z> &y);
-  static Comparison compare(const std::shared_ptr<Z> &x,
-                            const std::shared_ptr<Z> &y);
-  static unsigned int to_nat(const std::shared_ptr<Z> &z);
+  __attribute__((pure)) static Comparison compare(const std::shared_ptr<Z> &x,
+                                                  const std::shared_ptr<Z> &y);
+  __attribute__((pure)) static unsigned int to_nat(const std::shared_ptr<Z> &z);
   static std::shared_ptr<Z> abs(const std::shared_ptr<Z> &z);
 };
 
 struct Datatypes {
-  static Comparison CompOpp(const Comparison r);
+  __attribute__((pure)) static Comparison CompOpp(const Comparison r);
 };
 
 struct BinaryNums {

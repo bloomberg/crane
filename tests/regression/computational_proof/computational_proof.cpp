@@ -11,8 +11,8 @@
 #include <string>
 #include <variant>
 
-bool ComputationalProof::nat_eq_dec(const unsigned int n,
-                                    const unsigned int x) {
+__attribute__((pure)) bool
+ComputationalProof::nat_eq_dec(const unsigned int n, const unsigned int x) {
   if (n <= 0) {
     if (x <= 0) {
       return true;
@@ -35,8 +35,8 @@ bool ComputationalProof::nat_eq_dec(const unsigned int n,
   }
 }
 
-bool ComputationalProof::nat_eqb_dec(const unsigned int n,
-                                     const unsigned int m) {
+__attribute__((pure)) bool
+ComputationalProof::nat_eqb_dec(const unsigned int n, const unsigned int m) {
   if (nat_eq_dec(n, m)) {
     return true;
   } else {
@@ -44,7 +44,8 @@ bool ComputationalProof::nat_eqb_dec(const unsigned int n,
   }
 }
 
-bool ComputationalProof::le_dec(const unsigned int n, const unsigned int m) {
+__attribute__((pure)) bool ComputationalProof::le_dec(const unsigned int n,
+                                                      const unsigned int m) {
   if (n <= 0) {
     return true;
   } else {
@@ -63,8 +64,8 @@ bool ComputationalProof::le_dec(const unsigned int n, const unsigned int m) {
   }
 }
 
-bool ComputationalProof::nat_leb_dec(const unsigned int n,
-                                     const unsigned int m) {
+__attribute__((pure)) bool
+ComputationalProof::nat_leb_dec(const unsigned int n, const unsigned int m) {
   if (le_dec(n, m)) {
     return true;
   } else {
@@ -72,8 +73,8 @@ bool ComputationalProof::nat_leb_dec(const unsigned int n,
   }
 }
 
-unsigned int ComputationalProof::min_dec(const unsigned int n,
-                                         const unsigned int m) {
+__attribute__((pure)) unsigned int
+ComputationalProof::min_dec(const unsigned int n, const unsigned int m) {
   if (le_dec(n, m)) {
     return std::move(n);
   } else {
@@ -81,8 +82,8 @@ unsigned int ComputationalProof::min_dec(const unsigned int n,
   }
 }
 
-unsigned int ComputationalProof::max_dec(const unsigned int n,
-                                         const unsigned int m) {
+__attribute__((pure)) unsigned int
+ComputationalProof::max_dec(const unsigned int n, const unsigned int m) {
   if (le_dec(n, m)) {
     return std::move(m);
   } else {

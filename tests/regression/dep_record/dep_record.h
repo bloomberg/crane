@@ -65,10 +65,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 template <typename I>
@@ -92,7 +92,8 @@ struct DepRecord {
   struct nat_magma {
     using carrier = unsigned int;
 
-    static unsigned int op(unsigned int a0, unsigned int a1) {
+    __attribute__((pure)) static unsigned int op(unsigned int a0,
+                                                 unsigned int a1) {
       return (a0 + a1);
     }
   };
@@ -102,7 +103,9 @@ struct DepRecord {
   struct bool_magma {
     using carrier = bool;
 
-    static bool op(bool a0, bool a1) { return (a0 && a1); }
+    __attribute__((pure)) static bool op(bool a0, bool a1) {
+      return (a0 && a1);
+    }
   };
 
   static_assert(Magma<bool_magma>);
@@ -111,11 +114,12 @@ struct DepRecord {
   struct nat_monoid {
     using m_carrier = unsigned int;
 
-    static unsigned int m_op(unsigned int a0, unsigned int a1) {
+    __attribute__((pure)) static unsigned int m_op(unsigned int a0,
+                                                   unsigned int a1) {
       return (a0 + a1);
     }
 
-    static unsigned int m_id() { return 0u; }
+    __attribute__((pure)) static unsigned int m_id() { return 0u; }
   };
 
   static_assert(Monoid<nat_monoid>);
@@ -123,11 +127,12 @@ struct DepRecord {
   struct nat_mul_monoid {
     using m_carrier = unsigned int;
 
-    static unsigned int m_op(unsigned int a0, unsigned int a1) {
+    __attribute__((pure)) static unsigned int m_op(unsigned int a0,
+                                                   unsigned int a1) {
       return (a0 * a1);
     }
 
-    static unsigned int m_id() { return 1u; }
+    __attribute__((pure)) static unsigned int m_id() { return 1u; }
   };
 
   static_assert(Monoid<nat_mul_monoid>);

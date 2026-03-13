@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-bool MutualRecursion::even(const unsigned int n) {
+__attribute__((pure)) bool MutualRecursion::even(const unsigned int n) {
   if (n <= 0) {
     return true;
   } else {
@@ -20,7 +20,7 @@ bool MutualRecursion::even(const unsigned int n) {
   }
 }
 
-bool MutualRecursion::odd(const unsigned int n) {
+__attribute__((pure)) bool MutualRecursion::odd(const unsigned int n) {
   if (n <= 0) {
     return false;
   } else {
@@ -29,8 +29,9 @@ bool MutualRecursion::odd(const unsigned int n) {
   }
 }
 
-unsigned int MutualRecursion::sum_even_indices(const unsigned int n,
-                                               const unsigned int acc) {
+__attribute__((pure)) unsigned int
+MutualRecursion::sum_even_indices(const unsigned int n,
+                                  const unsigned int acc) {
   if (n <= 0) {
     return std::move(acc);
   } else {
@@ -39,8 +40,8 @@ unsigned int MutualRecursion::sum_even_indices(const unsigned int n,
   }
 }
 
-unsigned int MutualRecursion::sum_odd_indices(const unsigned int n,
-                                              const unsigned int acc) {
+__attribute__((pure)) unsigned int
+MutualRecursion::sum_odd_indices(const unsigned int n, const unsigned int acc) {
   if (n <= 0) {
     return std::move(acc);
   } else {
@@ -49,8 +50,8 @@ unsigned int MutualRecursion::sum_odd_indices(const unsigned int n,
   }
 }
 
-unsigned int MutualRecursion::process_a(const unsigned int n,
-                                        const unsigned int m) {
+__attribute__((pure)) unsigned int
+MutualRecursion::process_a(const unsigned int n, const unsigned int m) {
   if (n <= 0) {
     return std::move(m);
   } else {
@@ -59,8 +60,8 @@ unsigned int MutualRecursion::process_a(const unsigned int n,
   }
 }
 
-unsigned int MutualRecursion::process_b(const unsigned int n,
-                                        const unsigned int m) {
+__attribute__((pure)) unsigned int
+MutualRecursion::process_b(const unsigned int n, const unsigned int m) {
   if (n <= 0) {
     return std::move(m);
   } else {
@@ -69,7 +70,7 @@ unsigned int MutualRecursion::process_b(const unsigned int n,
   }
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 MutualRecursion::eval_expr(const std::shared_ptr<MutualRecursion::expr> &e) {
   return std::visit(
       Overloaded{
@@ -102,7 +103,7 @@ MutualRecursion::eval_expr(const std::shared_ptr<MutualRecursion::expr> &e) {
       e->v());
 }
 
-unsigned int MutualRecursion::f1(const unsigned int n) {
+__attribute__((pure)) unsigned int MutualRecursion::f1(const unsigned int n) {
   if (n <= 0) {
     return 0u;
   } else {
@@ -111,7 +112,7 @@ unsigned int MutualRecursion::f1(const unsigned int n) {
   }
 }
 
-unsigned int MutualRecursion::f2(const unsigned int n) {
+__attribute__((pure)) unsigned int MutualRecursion::f2(const unsigned int n) {
   if (n <= 0) {
     return 0u;
   } else {
@@ -120,7 +121,7 @@ unsigned int MutualRecursion::f2(const unsigned int n) {
   }
 }
 
-unsigned int MutualRecursion::f3(const unsigned int n) {
+__attribute__((pure)) unsigned int MutualRecursion::f3(const unsigned int n) {
   if (n <= 0) {
     return 0u;
   } else {

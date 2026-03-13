@@ -385,9 +385,9 @@ std::shared_ptr<Positive> Pos::mul(const std::shared_ptr<Positive> &x,
       x->v());
 }
 
-Comparison Pos::compare_cont(const Comparison r,
-                             const std::shared_ptr<Positive> &x,
-                             const std::shared_ptr<Positive> &y) {
+__attribute__((pure)) Comparison
+Pos::compare_cont(const Comparison r, const std::shared_ptr<Positive> &x,
+                  const std::shared_ptr<Positive> &y) {
   return std::visit(
       Overloaded{
           [&](const typename Positive::XI _args) -> Comparison {
@@ -441,12 +441,14 @@ Comparison Pos::compare_cont(const Comparison r,
       x->v());
 }
 
-Comparison Pos::compare(const std::shared_ptr<Positive> &_x0,
-                        const std::shared_ptr<Positive> &_x1) {
+__attribute__((pure)) Comparison
+Pos::compare(const std::shared_ptr<Positive> &_x0,
+             const std::shared_ptr<Positive> &_x1) {
   return compare_cont(Comparison::e_EQ, _x0, _x1);
 }
 
-unsigned int Pos::to_nat(const std::shared_ptr<Positive> &x) {
+__attribute__((pure)) unsigned int
+Pos::to_nat(const std::shared_ptr<Positive> &x) {
   return iter_op<unsigned int>(
       [](unsigned int _x0, unsigned int _x1) -> unsigned int {
         return (_x0 + _x1);
@@ -624,7 +626,8 @@ std::shared_ptr<Positive> Coq_Pos::mul(const std::shared_ptr<Positive> &x,
       x->v());
 }
 
-unsigned int Coq_Pos::to_nat(const std::shared_ptr<Positive> &x) {
+__attribute__((pure)) unsigned int
+Coq_Pos::to_nat(const std::shared_ptr<Positive> &x) {
   return iter_op<unsigned int>(
       [](unsigned int _x0, unsigned int _x1) -> unsigned int {
         return (_x0 + _x1);
@@ -678,8 +681,8 @@ std::shared_ptr<N> BinNat::sub(std::shared_ptr<N> n,
   }();
 }
 
-Comparison BinNat::compare(const std::shared_ptr<N> &n,
-                           const std::shared_ptr<N> &m) {
+__attribute__((pure)) Comparison BinNat::compare(const std::shared_ptr<N> &n,
+                                                 const std::shared_ptr<N> &m) {
   return std::visit(
       Overloaded{
           [&](const typename N::N0 _args) -> Comparison {
@@ -777,7 +780,7 @@ std::shared_ptr<N> BinNat::mul(const std::shared_ptr<N> &n,
       n->v());
 }
 
-unsigned int BinNat::to_nat(const std::shared_ptr<N> &a) {
+__attribute__((pure)) unsigned int BinNat::to_nat(const std::shared_ptr<N> &a) {
   return std::visit(
       Overloaded{[](const typename N::N0 _args) -> unsigned int { return 0u; },
                  [](const typename N::Npos _args) -> unsigned int {
@@ -1041,8 +1044,8 @@ std::shared_ptr<Z> BinInt::mul(const std::shared_ptr<Z> &x,
       x->v());
 }
 
-Comparison BinInt::compare(const std::shared_ptr<Z> &x,
-                           const std::shared_ptr<Z> &y) {
+__attribute__((pure)) Comparison BinInt::compare(const std::shared_ptr<Z> &x,
+                                                 const std::shared_ptr<Z> &y) {
   return std::visit(
       Overloaded{
           [&](const typename Z::Z0 _args) -> Comparison {
@@ -1092,7 +1095,7 @@ Comparison BinInt::compare(const std::shared_ptr<Z> &x,
       x->v());
 }
 
-unsigned int BinInt::to_nat(const std::shared_ptr<Z> &z) {
+__attribute__((pure)) unsigned int BinInt::to_nat(const std::shared_ptr<Z> &z) {
   return std::visit(
       Overloaded{
           [](const typename Z::Z0 _args) -> unsigned int { return 0u; },
@@ -1151,7 +1154,7 @@ std::shared_ptr<Z> BinaryNums::z_sign(const std::shared_ptr<Z> &z) {
       z->v());
 }
 
-Comparison Datatypes::CompOpp(const Comparison r) {
+__attribute__((pure)) Comparison Datatypes::CompOpp(const Comparison r) {
   return [&](void) {
     switch (r) {
     case Comparison::e_EQ: {

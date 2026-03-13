@@ -66,12 +66,13 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  template <MapsTo<bool, t_A> F0> bool forallb(F0 &&f) const {
+  template <MapsTo<bool, t_A> F0>
+  __attribute__((pure)) bool forallb(F0 &&f) const {
     return std::visit(
         Overloaded{
             [](const typename List<t_A>::Nil _args) -> bool { return true; },
@@ -110,16 +111,21 @@ public:
 };
 
 struct PeanoNat {
-  static unsigned int sub(const unsigned int n, const unsigned int m);
-  static bool eqb(const unsigned int n, const unsigned int m);
-  static bool leb(const unsigned int n, const unsigned int m);
-  static bool ltb(const unsigned int n, const unsigned int m);
-  static std::pair<unsigned int, unsigned int> divmod(const unsigned int x,
-                                                      const unsigned int y,
-                                                      const unsigned int q,
-                                                      const unsigned int u);
-  static unsigned int div(const unsigned int x, const unsigned int y);
-  static unsigned int modulo(const unsigned int x, const unsigned int y);
+  __attribute__((pure)) static unsigned int sub(const unsigned int n,
+                                                const unsigned int m);
+  __attribute__((pure)) static bool eqb(const unsigned int n,
+                                        const unsigned int m);
+  __attribute__((pure)) static bool leb(const unsigned int n,
+                                        const unsigned int m);
+  __attribute__((pure)) static bool ltb(const unsigned int n,
+                                        const unsigned int m);
+  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
+  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
+         const unsigned int u);
+  __attribute__((pure)) static unsigned int div(const unsigned int x,
+                                                const unsigned int y);
+  __attribute__((pure)) static unsigned int modulo(const unsigned int x,
+                                                   const unsigned int y);
 };
 
 struct ListDef {
@@ -166,12 +172,12 @@ struct RegisterPairOps {
     std::shared_ptr<List<unsigned int>> regs;
   };
 
-  static unsigned int get_reg(const std::shared_ptr<state> &s,
-                              const unsigned int r);
+  __attribute__((pure)) static unsigned int
+  get_reg(const std::shared_ptr<state> &s, const unsigned int r);
   static std::shared_ptr<state>
   set_reg(std::shared_ptr<state> s, const unsigned int r, const unsigned int v);
-  static unsigned int get_reg_pair(const std::shared_ptr<state> &s,
-                                   const unsigned int r);
+  __attribute__((pure)) static unsigned int
+  get_reg_pair(const std::shared_ptr<state> &s, const unsigned int r);
   static std::shared_ptr<state> set_reg_pair(const std::shared_ptr<state> &s,
                                              const unsigned int r,
                                              const unsigned int v);
@@ -274,7 +280,7 @@ struct RegisterPairOps {
   static inline const bool test_set_reg_pair_preserves_other_pairs =
       PeanoNat::eqb(get_reg_pair(set_reg_pair(sample_preserves, 0u, 171u), 2u),
                     get_reg_pair(sample_preserves, 2u));
-  static unsigned int pair_base(const unsigned int r);
+  __attribute__((pure)) static unsigned int pair_base(const unsigned int r);
   static inline const std::shared_ptr<state> sample_register_pair =
       std::make_shared<state>(state{List<unsigned int>::ctor::Cons_(
           0u,
@@ -295,8 +301,8 @@ struct RegisterPairOps {
       get_reg(set_reg_pair(sample_register_pair, 2u, 171u), 2u), 10u);
   static inline const bool test_set_pair_get_low = PeanoNat::eqb(
       get_reg(set_reg_pair(sample_register_pair, 2u, 171u), 3u), 11u);
-  static unsigned int pair_index(const unsigned int r);
-  static bool pair_property(const unsigned int r);
+  __attribute__((pure)) static unsigned int pair_index(const unsigned int r);
+  __attribute__((pure)) static bool pair_property(const unsigned int r);
   static inline const std::shared_ptr<List<unsigned int>> test_regs =
       ListDef::seq(0u, 16u);
   static inline const bool test_register_pair_architecture =

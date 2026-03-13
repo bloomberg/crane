@@ -11,20 +11,21 @@
 #include <string>
 #include <variant>
 
-AxiomTypes::MysteryType AxiomTypes::mystery_value() {
+__attribute__((pure)) AxiomTypes::MysteryType AxiomTypes::mystery_value() {
   throw std::logic_error(
       "unrealized axiom: "
       "CraneTestsRegression.axiom_types.AxiomTypes.AxiomTypes.mystery_value");
 }
 
-AxiomTypes::MysteryType
+__attribute__((pure)) AxiomTypes::MysteryType
 AxiomTypes::mystery_function(const AxiomTypes::MysteryType _x0) {
   throw std::logic_error("unrealized axiom: "
                          "CraneTestsRegression.axiom_types.AxiomTypes."
                          "AxiomTypes.mystery_function");
 }
 
-AxiomTypes::MysteryType AxiomTypes::use_axiom(const Unit _x) {
+__attribute__((pure)) AxiomTypes::MysteryType
+AxiomTypes::use_axiom(const Unit _x) {
   return mystery_function(mystery_value());
 }
 
@@ -34,7 +35,7 @@ AxiomTypes::make_axiom_record(const Unit _x) {
       AxiomRecord{42u, mystery_value()});
 }
 
-AxiomTypes::MysteryType AxiomTypes::extract_axiom_field(
+__attribute__((pure)) AxiomTypes::MysteryType AxiomTypes::extract_axiom_field(
     const std::shared_ptr<AxiomTypes::AxiomRecord> &r) {
   return r->axiom_field;
 }
@@ -44,12 +45,13 @@ AxiomTypes::use_axiom_inductive(const Unit _x) {
   return AxiomInductive::ctor::AxConstr2_(mystery_value());
 }
 
-AxiomTypes::MysteryType
+__attribute__((pure)) AxiomTypes::MysteryType
 AxiomTypes::axiom_identity(const AxiomTypes::MysteryType x) {
   return x;
 }
 
-AxiomTypes::MysteryType AxiomTypes::nested_axiom(const Unit _x) {
+__attribute__((pure)) AxiomTypes::MysteryType
+AxiomTypes::nested_axiom(const Unit _x) {
   return axiom_identity(mystery_function(axiom_identity(mystery_value())));
 }
 
@@ -61,6 +63,7 @@ AxiomTypes::axiom_list(const Unit _x) {
                            list<AxiomTypes::MysteryType>::ctor::Nil_()));
 }
 
-AxiomTypes::MysteryType AxiomTypes::use_poly_axiom(const Unit _x) {
+__attribute__((pure)) AxiomTypes::MysteryType
+AxiomTypes::use_poly_axiom(const Unit _x) {
   return poly_axiom<AxiomTypes::MysteryType>(mystery_value());
 }

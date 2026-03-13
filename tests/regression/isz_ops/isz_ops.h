@@ -66,10 +66,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   t_A nth(const unsigned int n, const t_A default0) const {
     if (n <= 0) {
@@ -98,26 +98,28 @@ public:
 };
 
 struct IszOps {
-  static unsigned int nibble_of_nat(const unsigned int n);
+  __attribute__((pure)) static unsigned int nibble_of_nat(const unsigned int n);
 
   struct state {
     std::shared_ptr<List<unsigned int>> regs;
   };
 
-  static unsigned int get_reg(const std::shared_ptr<state> &s,
-                              const unsigned int r);
-  static unsigned int cycles_isz(const std::shared_ptr<state> &s,
-                                 const unsigned int r);
+  __attribute__((pure)) static unsigned int
+  get_reg(const std::shared_ptr<state> &s, const unsigned int r);
+  __attribute__((pure)) static unsigned int
+  cycles_isz(const std::shared_ptr<state> &s, const unsigned int r);
   static inline const unsigned int test_cycle_branch =
       cycles_isz(std::make_shared<state>(state{List<unsigned int>::ctor::Cons_(
                      15u, List<unsigned int>::ctor::Nil_())}),
                  0u);
-  static unsigned int isz_iterations(const unsigned int v);
+  __attribute__((pure)) static unsigned int
+  isz_iterations(const unsigned int v);
   static inline const unsigned int test_iterations_remaining =
       (isz_iterations(0u) + isz_iterations(12u));
-  static bool isz_loops(const std::shared_ptr<state> &s, const unsigned int r);
-  static bool isz_terminates(const std::shared_ptr<state> &s,
-                             const unsigned int r);
+  __attribute__((pure)) static bool isz_loops(const std::shared_ptr<state> &s,
+                                              const unsigned int r);
+  __attribute__((pure)) static bool
+  isz_terminates(const std::shared_ptr<state> &s, const unsigned int r);
   static inline const unsigned int test_loop_flags = []() {
     return [](void) {
       std::shared_ptr<state> s =

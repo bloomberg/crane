@@ -22,11 +22,11 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct Nat {
-  static std::pair<unsigned int, unsigned int> divmod(const unsigned int x,
-                                                      const unsigned int y,
-                                                      const unsigned int q,
-                                                      const unsigned int u);
-  static unsigned int div(const unsigned int x, const unsigned int y);
+  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
+  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
+         const unsigned int u);
+  __attribute__((pure)) static unsigned int div(const unsigned int x,
+                                                const unsigned int y);
 };
 
 struct JcnOps {
@@ -37,16 +37,18 @@ struct JcnOps {
     unsigned int pc;
   };
 
-  static bool jcn_condition(const std::shared_ptr<state> &s,
-                            const unsigned int cond);
-  static unsigned int addr12_of_nat(const unsigned int n);
-  static unsigned int pc_inc2(const std::shared_ptr<state> &s);
-  static unsigned int page_of(const unsigned int p);
-  static unsigned int page_base(const unsigned int p);
-  static unsigned int base_for_next2(const std::shared_ptr<state> &s);
-  static unsigned int branch_target(const std::shared_ptr<state> &s,
-                                    const unsigned int cond,
-                                    const unsigned int off);
+  __attribute__((pure)) static bool
+  jcn_condition(const std::shared_ptr<state> &s, const unsigned int cond);
+  __attribute__((pure)) static unsigned int addr12_of_nat(const unsigned int n);
+  __attribute__((pure)) static unsigned int
+  pc_inc2(const std::shared_ptr<state> &s);
+  __attribute__((pure)) static unsigned int page_of(const unsigned int p);
+  __attribute__((pure)) static unsigned int page_base(const unsigned int p);
+  __attribute__((pure)) static unsigned int
+  base_for_next2(const std::shared_ptr<state> &s);
+  __attribute__((pure)) static unsigned int
+  branch_target(const std::shared_ptr<state> &s, const unsigned int cond,
+                const unsigned int off);
   static inline const unsigned int test_branch_target = branch_target(
       std::make_shared<state>(state{0u, true, false, 300u}), 2u, 17u);
   static inline const bool check_carry_clear_gate =

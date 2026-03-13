@@ -64,10 +64,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   std::shared_ptr<Nat> max(std::shared_ptr<Nat> m) const {
     return std::visit(
@@ -150,10 +150,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
     return std::visit(
@@ -220,10 +220,10 @@ struct Tree {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
     template <typename T1, MapsTo<T1, std::shared_ptr<tree<t_A>>, T1, t_A,
                                   std::shared_ptr<tree<t_A>>, T1>
@@ -260,7 +260,7 @@ struct Tree {
     }
 
     /// Returns true if t is a leaf, false otherwise.
-    Bool0 is_leaf() const {
+    __attribute__((pure)) Bool0 is_leaf() const {
       return std::visit(
           Overloaded{[](const typename tree<t_A>::Leaf _args) -> Bool0 {
                        return Bool0::e_TRUE0;

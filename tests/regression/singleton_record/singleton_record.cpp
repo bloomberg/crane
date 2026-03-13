@@ -11,17 +11,17 @@
 #include <string>
 #include <variant>
 
-unsigned int
+__attribute__((pure)) unsigned int
 SingletonRecord::get_value(const std::shared_ptr<SingletonRecord::wrapper> &w) {
   return w->value;
 }
 
-unsigned int SingletonRecord::get_value2(
+__attribute__((pure)) unsigned int SingletonRecord::get_value2(
     const std::shared_ptr<SingletonRecord::wrapper> &w) {
   return w->value;
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 SingletonRecord::unwrap(const std::shared_ptr<SingletonRecord::wrapper> &w) {
   return w->value;
 }
@@ -32,7 +32,7 @@ SingletonRecord::double_wrapped(std::shared_ptr<SingletonRecord::wrapper> w) {
       wrapper{(2u * std::move(w)->value)});
 }
 
-unsigned int SingletonRecord::apply_wrapped(
+__attribute__((pure)) unsigned int SingletonRecord::apply_wrapped(
     const std::shared_ptr<SingletonRecord::fn_wrapper> &w,
     const unsigned int n) {
   return w->fn(n);

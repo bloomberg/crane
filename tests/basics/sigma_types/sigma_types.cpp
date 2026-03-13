@@ -21,7 +21,8 @@ SigmaTypes::positive_succ(const unsigned int n) {
   return Sig<unsigned int>::ctor::Exist_((std::move(n) + 1));
 }
 
-unsigned int SigmaTypes::get_positive(const unsigned int n) {
+__attribute__((pure)) unsigned int
+SigmaTypes::get_positive(const unsigned int n) {
   return std::visit(
       Overloaded{[](const typename Sig<unsigned int>::Exist _args) -> auto {
         auto a = _args.d_a0;
@@ -48,7 +49,8 @@ SigmaTypes::double_positive(const unsigned int n) {
           p->v())));
 }
 
-unsigned int SigmaTypes::use_nat_double(const unsigned int n) {
+__attribute__((pure)) unsigned int
+SigmaTypes::use_nat_double(const unsigned int n) {
   return nat_with_double(n)->projT1();
 }
 

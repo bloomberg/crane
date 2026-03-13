@@ -12,17 +12,18 @@
 #include <utility>
 #include <variant>
 
-unsigned int
+__attribute__((pure)) unsigned int
 PreservesAllPairs::get_reg(const std::shared_ptr<PreservesAllPairs::state> &s,
                            const unsigned int r) {
   return s->regs->nth(r, 0u);
 }
 
-unsigned int PreservesAllPairs::nibble_of_nat(const unsigned int n) {
+__attribute__((pure)) unsigned int
+PreservesAllPairs::nibble_of_nat(const unsigned int n) {
   return (n % 16u);
 }
 
-unsigned int PreservesAllPairs::get_reg_pair(
+__attribute__((pure)) unsigned int PreservesAllPairs::get_reg_pair(
     const std::shared_ptr<PreservesAllPairs::state> &s, const unsigned int r) {
   unsigned int base = (((r - (r % 2u)) > r ? 0 : (r - (r % 2u))));
   return ((get_reg(s, base) * 16u) + get_reg(s, (base + 1u)));

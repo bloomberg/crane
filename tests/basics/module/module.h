@@ -23,7 +23,8 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 enum class Comparison { e_EQ, e_LT, e_GT };
 
 struct Nat {
-  static Comparison compare(const unsigned int n, const unsigned int m);
+  __attribute__((pure)) static Comparison compare(const unsigned int n,
+                                                  const unsigned int m);
 };
 
 template <typename M>
@@ -111,10 +112,10 @@ template <OrderedType K, BaseType V> struct MakeMap {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   using t = std::shared_ptr<tree>;
@@ -124,8 +125,9 @@ template <OrderedType K, BaseType V> struct MakeMap {
     return v;
   }
 
-  static t add(const typename K::t k, const typename V::t v,
-               const std::shared_ptr<tree> &m) {
+  __attribute__((pure)) static t add(const typename K::t k,
+                                     const typename V::t v,
+                                     const std::shared_ptr<tree> &m) {
     return std::visit(
         Overloaded{
             [&](const typename tree::Empty _args) -> std::shared_ptr<tree> {
@@ -156,8 +158,8 @@ template <OrderedType K, BaseType V> struct MakeMap {
         m->v());
   }
 
-  static std::optional<value> find(const typename K::t k,
-                                   const std::shared_ptr<tree> &m) {
+  __attribute__((pure)) static std::optional<value>
+  find(const typename K::t k, const std::shared_ptr<tree> &m) {
     return std::visit(
         Overloaded{[](const typename tree::Empty _args)
                        -> std::optional<typename V::t> { return std::nullopt; },
@@ -193,7 +195,8 @@ static_assert(BaseType<NatBase>);
 
 struct NatOrdered {
   using t = unsigned int;
-  static Comparison compare(const unsigned int _x0, const unsigned int _x1);
+  __attribute__((pure)) static Comparison compare(const unsigned int _x0,
+                                                  const unsigned int _x1);
 };
 
 static_assert(OrderedType<NatOrdered>);

@@ -22,11 +22,11 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct Nat {
-  static std::pair<unsigned int, unsigned int> divmod(const unsigned int x,
-                                                      const unsigned int y,
-                                                      const unsigned int q,
-                                                      const unsigned int u);
-  static unsigned int div(const unsigned int x, const unsigned int y);
+  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
+  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
+         const unsigned int u);
+  __attribute__((pure)) static unsigned int div(const unsigned int x,
+                                                const unsigned int y);
 };
 
 struct NestedMod {
@@ -130,10 +130,10 @@ struct NestedMod {
         };
 
         // MANIPULATORS
-        variant_t &v_mut() { return d_v_; }
+        __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
         // ACCESSORS
-        const variant_t &v() const { return d_v_; }
+        __attribute__((pure)) const variant_t &v() const { return d_v_; }
       };
 
       template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -182,12 +182,13 @@ struct NestedMod {
             s->v());
       }
 
-      static unsigned int area(const std::shared_ptr<shape> &s);
+      __attribute__((pure)) static unsigned int
+      area(const std::shared_ptr<shape> &s);
     };
 
-    static unsigned int shape_with_color(const std::shared_ptr<Inner::shape> &s,
-                                         const Color c);
-    static unsigned int color_code(const Color c);
+    __attribute__((pure)) static unsigned int
+    shape_with_color(const std::shared_ptr<Inner::shape> &s, const Color c);
+    __attribute__((pure)) static unsigned int color_code(const Color c);
   };
 
   static inline const std::shared_ptr<Outer::Inner::shape> my_circle =

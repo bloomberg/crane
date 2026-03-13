@@ -66,10 +66,10 @@ struct RecRecord {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2,
@@ -139,7 +139,8 @@ struct RecRecord {
   };
 
   template <typename T1>
-  static unsigned int rlist_length(const std::shared_ptr<rlist<T1>> &l) {
+  __attribute__((pure)) static unsigned int
+  rlist_length(const std::shared_ptr<rlist<T1>> &l) {
     return std::visit(
         Overloaded{[](const typename rlist<T1>::Rnil _args) -> unsigned int {
                      return 0u;
@@ -151,8 +152,10 @@ struct RecRecord {
         l->v());
   }
 
-  static unsigned int rlist_sum(const std::shared_ptr<rlist<unsigned int>> &l);
-  static unsigned int rnode_depth(const std::shared_ptr<RNode> &r);
+  __attribute__((pure)) static unsigned int
+  rlist_sum(const std::shared_ptr<rlist<unsigned int>> &l);
+  __attribute__((pure)) static unsigned int
+  rnode_depth(const std::shared_ptr<RNode> &r);
   static inline const std::shared_ptr<rlist<unsigned int>> test_rlist =
       rlist<unsigned int>::ctor::Rcons_(
           1u, rlist<unsigned int>::ctor::Rcons_(

@@ -50,17 +50,19 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct Opaque {
-  static unsigned int safe_pred(const unsigned int n);
-  static unsigned int pred_of_succ(const unsigned int n);
-  static bool nat_eq_dec(const unsigned int n, const unsigned int x);
-  static bool are_equal(const unsigned int n, const unsigned int m);
+  __attribute__((pure)) static unsigned int safe_pred(const unsigned int n);
+  __attribute__((pure)) static unsigned int pred_of_succ(const unsigned int n);
+  __attribute__((pure)) static bool nat_eq_dec(const unsigned int n,
+                                               const unsigned int x);
+  __attribute__((pure)) static bool are_equal(const unsigned int n,
+                                              const unsigned int m);
   static std::shared_ptr<Sig<unsigned int>> bounded_add(const unsigned int _x0,
                                                         const unsigned int _x1,
                                                         const unsigned int _x2);

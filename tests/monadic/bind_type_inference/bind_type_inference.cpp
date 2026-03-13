@@ -13,16 +13,16 @@
 #include <variant>
 #include <vector>
 
-int64_t BindTypeInference::test1() {
+__attribute__((pure)) int64_t BindTypeInference::test1() {
   return ignoreAndReturn<int64_t>(int64_t(42));
 }
 
-int64_t BindTypeInference::test2() {
+__attribute__((pure)) int64_t BindTypeInference::test2() {
   return transform<Unit, int64_t>(Unit::e_TT,
                                   [](Unit _x) { return int64_t(42); });
 }
 
-int64_t BindTypeInference::test3() {
+__attribute__((pure)) int64_t BindTypeInference::test3() {
   return nested<Unit, bool, int64_t>(
       Unit::e_TT, [](Unit _x) { return true; },
       [](bool b) {
@@ -34,7 +34,7 @@ int64_t BindTypeInference::test3() {
       });
 }
 
-int64_t BindTypeInference::test4() {
+__attribute__((pure)) int64_t BindTypeInference::test4() {
   std::vector<int64_t> v = {};
   v.push_back(int64_t(1));
   v.push_back(int64_t(2));
@@ -46,12 +46,13 @@ std::shared_ptr<List<int64_t>> BindTypeInference::intToList(const int64_t n) {
   return List<int64_t>::ctor::Cons_(n, List<int64_t>::ctor::Nil_());
 }
 
-std::shared_ptr<List<int64_t>> BindTypeInference::test5() {
+__attribute__((pure)) std::shared_ptr<List<int64_t>>
+BindTypeInference::test5() {
   int64_t x = int64_t(1);
   return intToList(x);
 }
 
-int64_t BindTypeInference::test6() {
+__attribute__((pure)) int64_t BindTypeInference::test6() {
   Unit _x = Unit::e_TT;
   bool y = true;
   return [&](void) {

@@ -21,14 +21,16 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct MutualRecursion {
-  static bool even(const unsigned int n);
-  static bool odd(const unsigned int n);
-  static unsigned int sum_even_indices(const unsigned int n,
-                                       const unsigned int acc);
-  static unsigned int sum_odd_indices(const unsigned int n,
-                                      const unsigned int acc);
-  static unsigned int process_a(const unsigned int n, const unsigned int m);
-  static unsigned int process_b(const unsigned int n, const unsigned int m);
+  __attribute__((pure)) static bool even(const unsigned int n);
+  __attribute__((pure)) static bool odd(const unsigned int n);
+  __attribute__((pure)) static unsigned int
+  sum_even_indices(const unsigned int n, const unsigned int acc);
+  __attribute__((pure)) static unsigned int
+  sum_odd_indices(const unsigned int n, const unsigned int acc);
+  __attribute__((pure)) static unsigned int process_a(const unsigned int n,
+                                                      const unsigned int m);
+  __attribute__((pure)) static unsigned int process_b(const unsigned int n,
+                                                      const unsigned int m);
 
   struct expr {
     // TYPES
@@ -97,10 +99,10 @@ struct MutualRecursion {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -156,10 +158,11 @@ struct MutualRecursion {
         e->v());
   }
 
-  static unsigned int eval_expr(const std::shared_ptr<expr> &e);
-  static unsigned int f1(const unsigned int n);
-  static unsigned int f2(const unsigned int n);
-  static unsigned int f3(const unsigned int n);
+  __attribute__((pure)) static unsigned int
+  eval_expr(const std::shared_ptr<expr> &e);
+  __attribute__((pure)) static unsigned int f1(const unsigned int n);
+  __attribute__((pure)) static unsigned int f2(const unsigned int n);
+  __attribute__((pure)) static unsigned int f3(const unsigned int n);
   static inline const bool test_even = even(10u);
   static inline const unsigned int test_sum = sum_even_indices(5u, 0u);
   static inline const unsigned int test_eval = eval_expr(

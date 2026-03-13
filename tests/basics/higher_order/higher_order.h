@@ -67,10 +67,10 @@ struct HigherOrder {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2,
@@ -162,7 +162,8 @@ struct HigherOrder {
   }
 
   /// adder n returns a function that adds n to its argument.
-  static unsigned int adder(const unsigned int _x0, const unsigned int _x1);
+  __attribute__((pure)) static unsigned int adder(const unsigned int _x0,
+                                                  const unsigned int _x1);
 
   /// twice f returns a function that applies f two times.
   template <typename T1, MapsTo<T1, T1> F0>

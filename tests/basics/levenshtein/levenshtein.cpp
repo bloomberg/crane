@@ -395,7 +395,7 @@ Levenshtein::levenshtein(const std::shared_ptr<String> &_x0,
   return levenshtein_computed(_x0, _x1);
 }
 
-Sumbool Bool::bool_dec(const Bool0 b1, const Bool0 b2) {
+__attribute__((pure)) Sumbool Bool::bool_dec(const Bool0 b1, const Bool0 b2) {
   return [&](void) {
     switch (b1) {
     case Bool0::e_TRUE0: {

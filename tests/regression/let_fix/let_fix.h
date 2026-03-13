@@ -65,14 +65,15 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
 struct LetFix {
-  static unsigned int local_sum(const std::shared_ptr<List<unsigned int>> &l);
+  __attribute__((pure)) static unsigned int
+  local_sum(const std::shared_ptr<List<unsigned int>> &l);
 
   template <typename T1>
   static std::shared_ptr<List<T1>>
@@ -100,11 +101,12 @@ struct LetFix {
 
   static std::shared_ptr<List<unsigned int>> local_flatten(
       const std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> &xss);
-  static bool local_mem(const unsigned int n,
-                        const std::shared_ptr<List<unsigned int>> &l);
+  __attribute__((pure)) static bool
+  local_mem(const unsigned int n, const std::shared_ptr<List<unsigned int>> &l);
 
   template <typename T1>
-  static unsigned int local_length(const std::shared_ptr<List<T1>> &xs) {
+  __attribute__((pure)) static unsigned int
+  local_length(const std::shared_ptr<List<T1>> &xs) {
     return std::visit(
         Overloaded{[](const typename List<T1>::Nil _args) -> unsigned int {
                      return 0u;

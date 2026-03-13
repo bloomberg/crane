@@ -66,12 +66,12 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  unsigned int length() const {
+  __attribute__((pure)) unsigned int length() const {
     return std::visit(
         Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
                      return 0u;
@@ -94,10 +94,13 @@ struct StackOps {
     unsigned int acc;
   };
 
-  static std::pair<std::optional<unsigned int>, std::shared_ptr<state_basic>>
+  __attribute__((pure)) static std::pair<std::optional<unsigned int>,
+                                         std::shared_ptr<state_basic>>
   pop_stack(std::shared_ptr<state_basic> s);
-  static bool is_none(const std::optional<unsigned int> o);
-  static unsigned int option_or_zero(const std::optional<unsigned int> o);
+  __attribute__((pure)) static bool
+  is_none(const std::optional<unsigned int> o);
+  __attribute__((pure)) static unsigned int
+  option_or_zero(const std::optional<unsigned int> o);
   static inline const bool empty_is_none =
       is_none(pop_stack(std::make_shared<state_basic>(
                             state_basic{List<unsigned int>::ctor::Nil_()}))
@@ -108,7 +111,8 @@ struct StackOps {
                         9u, List<unsigned int>::ctor::Cons_(
                                 8u, List<unsigned int>::ctor::Nil_()))}))
           .first);
-  static std::pair<std::optional<unsigned int>, std::shared_ptr<state_with_acc>>
+  __attribute__((pure)) static std::pair<std::optional<unsigned int>,
+                                         std::shared_ptr<state_with_acc>>
   pop_stack_acc(std::shared_ptr<state_with_acc> s);
   static inline const unsigned int pop_acc_test = [](void) {
     std::optional<unsigned int> o =
@@ -134,7 +138,8 @@ struct StackOps {
   }();
   static std::shared_ptr<state_basic>
   push_stack(const std::shared_ptr<state_basic> &s, const unsigned int addr);
-  static unsigned int top_or_zero(const std::shared_ptr<state_basic> &s);
+  __attribute__((pure)) static unsigned int
+  top_or_zero(const std::shared_ptr<state_basic> &s);
   static inline const unsigned int empty_len =
       push_stack(std::make_shared<state_basic>(
                      state_basic{List<unsigned int>::ctor::Nil_()}),

@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-bool BoolOps::my_negb(const bool b) {
+__attribute__((pure)) bool BoolOps::my_negb(const bool b) {
   if (b) {
     return false;
   } else {
@@ -19,7 +19,7 @@ bool BoolOps::my_negb(const bool b) {
   }
 }
 
-bool BoolOps::my_andb(const bool a, const bool b) {
+__attribute__((pure)) bool BoolOps::my_andb(const bool a, const bool b) {
   if (a) {
     return std::move(b);
   } else {
@@ -27,7 +27,7 @@ bool BoolOps::my_andb(const bool a, const bool b) {
   }
 }
 
-bool BoolOps::my_orb(const bool a, const bool b) {
+__attribute__((pure)) bool BoolOps::my_orb(const bool a, const bool b) {
   if (a) {
     return true;
   } else {
@@ -35,7 +35,7 @@ bool BoolOps::my_orb(const bool a, const bool b) {
   }
 }
 
-bool BoolOps::my_xorb(const bool a, const bool b) {
+__attribute__((pure)) bool BoolOps::my_xorb(const bool a, const bool b) {
   if (a) {
     if (b) {
       return false;
@@ -51,8 +51,8 @@ bool BoolOps::my_xorb(const bool a, const bool b) {
   }
 }
 
-unsigned int BoolOps::if_nat(const bool b, const unsigned int t,
-                             const unsigned int f) {
+__attribute__((pure)) unsigned int
+BoolOps::if_nat(const bool b, const unsigned int t, const unsigned int f) {
   if (b) {
     return std::move(t);
   } else {
@@ -60,18 +60,22 @@ unsigned int BoolOps::if_nat(const bool b, const unsigned int t,
   }
 }
 
-bool BoolOps::complex_bool(const bool a, const bool b, const bool c) {
+__attribute__((pure)) bool BoolOps::complex_bool(const bool a, const bool b,
+                                                 const bool c) {
   return my_orb(my_andb(a, b), my_andb(my_negb(a), c));
 }
 
-bool BoolOps::nat_eq(const unsigned int _x0, const unsigned int _x1) {
+__attribute__((pure)) bool BoolOps::nat_eq(const unsigned int _x0,
+                                           const unsigned int _x1) {
   return _x0 == _x1;
 }
 
-bool BoolOps::nat_lt(const unsigned int _x0, const unsigned int _x1) {
+__attribute__((pure)) bool BoolOps::nat_lt(const unsigned int _x0,
+                                           const unsigned int _x1) {
   return _x0 < _x1;
 }
 
-bool BoolOps::nat_le(const unsigned int _x0, const unsigned int _x1) {
+__attribute__((pure)) bool BoolOps::nat_le(const unsigned int _x0,
+                                           const unsigned int _x1) {
   return _x0 <= _x1;
 }

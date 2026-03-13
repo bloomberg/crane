@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-unsigned int Opaque::safe_pred(const unsigned int n) {
+__attribute__((pure)) unsigned int Opaque::safe_pred(const unsigned int n) {
   if (n <= 0) {
     throw std::logic_error("absurd case");
   } else {
@@ -20,11 +20,12 @@ unsigned int Opaque::safe_pred(const unsigned int n) {
   }
 }
 
-unsigned int Opaque::pred_of_succ(const unsigned int n) {
+__attribute__((pure)) unsigned int Opaque::pred_of_succ(const unsigned int n) {
   return safe_pred((std::move(n) + 1));
 }
 
-bool Opaque::nat_eq_dec(const unsigned int n, const unsigned int x) {
+__attribute__((pure)) bool Opaque::nat_eq_dec(const unsigned int n,
+                                              const unsigned int x) {
   if (n <= 0) {
     if (x <= 0) {
       return true;
@@ -47,7 +48,8 @@ bool Opaque::nat_eq_dec(const unsigned int n, const unsigned int x) {
   }
 }
 
-bool Opaque::are_equal(const unsigned int n, const unsigned int m) {
+__attribute__((pure)) bool Opaque::are_equal(const unsigned int n,
+                                             const unsigned int m) {
   if (nat_eq_dec(n, m)) {
     return true;
   } else {

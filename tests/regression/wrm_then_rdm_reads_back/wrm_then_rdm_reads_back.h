@@ -66,10 +66,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   t_A nth(const unsigned int n, const t_A default0) const {
     if (n <= 0) {
@@ -139,10 +139,10 @@ struct WrmThenRdmReadsBack {
     unsigned int sel_char;
   };
 
-  static unsigned int get_reg(const std::shared_ptr<state> &s,
-                              const unsigned int r);
-  static unsigned int get_reg_pair(const std::shared_ptr<state> &s,
-                                   const unsigned int r);
+  __attribute__((pure)) static unsigned int
+  get_reg(const std::shared_ptr<state> &s, const unsigned int r);
+  __attribute__((pure)) static unsigned int
+  get_reg_pair(const std::shared_ptr<state> &s, const unsigned int r);
   static std::shared_ptr<state> execute_src(std::shared_ptr<state> s,
                                             const unsigned int r);
   static std::shared_ptr<state> execute_wrm(std::shared_ptr<state> s);

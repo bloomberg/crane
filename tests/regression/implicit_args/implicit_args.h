@@ -83,10 +83,10 @@ struct ImplicitArgs {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2,
@@ -120,7 +120,8 @@ struct ImplicitArgs {
   }
 
   template <typename T1>
-  static unsigned int length(const std::shared_ptr<mylist<T1>> &l) {
+  __attribute__((pure)) static unsigned int
+  length(const std::shared_ptr<mylist<T1>> &l) {
     return std::visit(
         Overloaded{[](const typename mylist<T1>::Mynil _args) -> unsigned int {
                      return 0u;
@@ -135,27 +136,30 @@ struct ImplicitArgs {
   static inline const unsigned int explicit_id = id<unsigned int>(5u);
   static inline const unsigned int explicit_fst =
       fst_of<unsigned int, bool>(3u, true);
-  static unsigned int add_one(const unsigned int _x0);
-  static unsigned int double_nat(const unsigned int n);
-  static unsigned int add_implicit(const unsigned int _x0,
-                                   const unsigned int _x1);
+  __attribute__((pure)) static unsigned int add_one(const unsigned int _x0);
+  __attribute__((pure)) static unsigned int double_nat(const unsigned int n);
+  __attribute__((pure)) static unsigned int
+  add_implicit(const unsigned int _x0, const unsigned int _x1);
   static inline const unsigned int use_add_implicit = add_implicit(5u, 3u);
-  static unsigned int scale(const unsigned int _x0, const unsigned int _x1);
+  __attribute__((pure)) static unsigned int scale(const unsigned int _x0,
+                                                  const unsigned int _x1);
   static inline const unsigned int use_scale = scale(3u, 7u);
-  static unsigned int combine(const unsigned int a, const unsigned int b,
-                              const unsigned int x);
+  __attribute__((pure)) static unsigned int
+  combine(const unsigned int a, const unsigned int b, const unsigned int x);
   static inline const unsigned int use_combine = combine(2u, 3u, 4u);
 
   template <MapsTo<unsigned int, unsigned int> F0>
-  static unsigned int apply_implicit(F0 &&f, const unsigned int _x0) {
+  __attribute__((pure)) static unsigned int
+  apply_implicit(F0 &&f, const unsigned int _x0) {
     return f(std::move(_x0));
   }
 
   static inline const unsigned int use_apply_implicit = apply_implicit(
       [](unsigned int _x0) -> unsigned int { return (1u + _x0); }, 5u);
-  static unsigned int with_base(const unsigned int _x0, const unsigned int _x1);
-  static unsigned int from_zero(const unsigned int _x0);
-  static unsigned int from_ten(const unsigned int _x0);
+  __attribute__((pure)) static unsigned int with_base(const unsigned int _x0,
+                                                      const unsigned int _x1);
+  __attribute__((pure)) static unsigned int from_zero(const unsigned int _x0);
+  __attribute__((pure)) static unsigned int from_ten(const unsigned int _x0);
   static inline const unsigned int use_from_zero = from_zero(5u);
   static inline const unsigned int use_from_ten = from_ten(5u);
 
@@ -177,19 +181,19 @@ struct ImplicitArgs {
   static inline const unsigned int use_head_nonempty =
       head_or<unsigned int>(0u, mylist<unsigned int>::ctor::Mycons_(
                                     7u, mylist<unsigned int>::ctor::Mynil_()));
-  static unsigned int
+  __attribute__((pure)) static unsigned int
   sum_with_init(const unsigned int init,
                 const std::shared_ptr<mylist<unsigned int>> &l);
   static inline const unsigned int use_sum_init =
       sum_with_init(5u, mylist<unsigned int>::ctor::Mycons_(
                             1u, mylist<unsigned int>::ctor::Mycons_(
                                     2u, mylist<unsigned int>::ctor::Mynil_())));
-  static unsigned int nested_implicits(const unsigned int a,
-                                       const unsigned int b,
-                                       const unsigned int c);
+  __attribute__((pure)) static unsigned int
+  nested_implicits(const unsigned int a, const unsigned int b,
+                   const unsigned int c);
   static inline const unsigned int use_nested = nested_implicits(1u, 2u, 3u);
-  static unsigned int choose_branch(const bool flag, const unsigned int t,
-                                    const unsigned int f);
+  __attribute__((pure)) static unsigned int
+  choose_branch(const bool flag, const unsigned int t, const unsigned int f);
   static inline const unsigned int use_choose_true =
       choose_branch(true, 7u, 3u);
   static inline const unsigned int use_choose_false =

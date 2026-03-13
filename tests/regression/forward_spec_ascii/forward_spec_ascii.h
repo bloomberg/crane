@@ -65,10 +65,10 @@ struct ForwardSpecAscii {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
@@ -99,8 +99,10 @@ struct ForwardSpecAscii {
                       n->v());
   }
 
-  static unsigned int helper_nat(const unsigned int n);
-  static unsigned int bump_node(const std::shared_ptr<node> &x);
+  __attribute__((pure)) static unsigned int helper_nat(const unsigned int n);
+  __attribute__((pure)) static unsigned int
+  bump_node(const std::shared_ptr<node> &x);
+
   static inline const unsigned int t = bump_node(node::ctor::ANode_(2u));
 };
 

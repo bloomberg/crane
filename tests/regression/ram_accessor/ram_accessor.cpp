@@ -12,13 +12,13 @@
 #include <utility>
 #include <variant>
 
-unsigned int
+__attribute__((pure)) unsigned int
 RamAccessor::get_main(const std::shared_ptr<RamAccessor::ram_reg> &rg,
                       const unsigned int i) {
   return rg->reg_main->nth(i, 0u);
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RamAccessor::get_stat(const std::shared_ptr<RamAccessor::ram_reg> &rg,
                       const unsigned int i) {
   return rg->reg_status->nth(i, 0u);
@@ -108,7 +108,7 @@ RamAccessor::current_reg(const std::shared_ptr<RamAccessor::state> &s) {
   return get_regRAM(current_chip(s), s->state_sel->sel_reg);
 }
 
-unsigned int
+__attribute__((pure)) unsigned int
 RamAccessor::ram_read_main(const std::shared_ptr<RamAccessor::state> &s) {
   return get_main(current_reg(s), s->state_sel->sel_char);
 }

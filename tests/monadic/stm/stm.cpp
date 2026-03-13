@@ -12,39 +12,39 @@
 #include <string>
 #include <variant>
 
-unsigned int stmtest::stm_basic_counter() {
+__attribute__((pure)) unsigned int stmtest::stm_basic_counter() {
   std::shared_ptr<stm::TVar<unsigned int>> c = stm::newTVar<unsigned int>(0u);
   c->write(1u);
   return c->read();
 }
 
-unsigned int stmtest::io_basic_counter() {
+__attribute__((pure)) unsigned int stmtest::io_basic_counter() {
   return stm::atomically([&] { return stm_basic_counter(); });
 }
 
-unsigned int stmtest::stm_inc(const unsigned int x) {
+__attribute__((pure)) unsigned int stmtest::stm_inc(const unsigned int x) {
   std::shared_ptr<stm::TVar<unsigned int>> c = stm::newTVar<unsigned int>(x);
   ::template modifyTVar<unsigned int>(c,
                                       [](unsigned int n) { return (n + 1); });
   return c->read();
 }
 
-unsigned int stmtest::io_inc(const unsigned int x) {
+__attribute__((pure)) unsigned int stmtest::io_inc(const unsigned int x) {
   return stm::atomically([&] { return stm_inc(x); });
 }
 
-unsigned int stmtest::stm_add_self(const unsigned int x) {
+__attribute__((pure)) unsigned int stmtest::stm_add_self(const unsigned int x) {
   std::shared_ptr<stm::TVar<unsigned int>> c = stm::newTVar<unsigned int>(x);
   unsigned int v = c->read();
   c->write((v + x));
   return c->read();
 }
 
-unsigned int stmtest::io_add_self(const unsigned int x) {
+__attribute__((pure)) unsigned int stmtest::io_add_self(const unsigned int x) {
   return stm::atomically([&] { return stm_add_self(x); });
 }
 
-void stmtest::stm_enqueue(
+__attribute__((pure)) void stmtest::stm_enqueue(
     const std::shared_ptr<stm::TVar<std::shared_ptr<List<unsigned int>>>> q,
     const unsigned int x) {
   std::shared_ptr<List<unsigned int>> xs = q->read();
@@ -52,7 +52,7 @@ void stmtest::stm_enqueue(
       List<unsigned int>::ctor::Cons_(x, List<unsigned int>::ctor::Nil_())));
 }
 
-unsigned int stmtest::stm_dequeue(
+__attribute__((pure)) unsigned int stmtest::stm_dequeue(
     const std::shared_ptr<stm::TVar<std::shared_ptr<List<unsigned int>>>> q) {
   std::shared_ptr<List<unsigned int>> xs = q->read();
   return std::visit(
@@ -69,13 +69,14 @@ unsigned int stmtest::stm_dequeue(
       xs->v());
 }
 
-unsigned int stmtest::stm_tryDequeue(
+__attribute__((pure)) unsigned int stmtest::stm_tryDequeue(
     const std::shared_ptr<stm::TVar<std::shared_ptr<List<unsigned int>>>> q,
     const unsigned int dflt) {
   return stm::orElse<unsigned int>(stm_dequeue(q), dflt);
 }
 
-unsigned int stmtest::stm_queue_roundtrip(const unsigned int x) {
+__attribute__((pure)) unsigned int
+stmtest::stm_queue_roundtrip(const unsigned int x) {
   std::shared_ptr<stm::TVar<std::shared_ptr<List<unsigned int>>>> q =
       stm::newTVar<std::shared_ptr<List<unsigned int>>>(
           List<unsigned int>::ctor::Nil_());
@@ -83,17 +84,18 @@ unsigned int stmtest::stm_queue_roundtrip(const unsigned int x) {
   return stm_dequeue(q);
 }
 
-unsigned int stmtest::io_queue_roundtrip(const unsigned int x) {
+__attribute__((pure)) unsigned int
+stmtest::io_queue_roundtrip(const unsigned int x) {
   return stm::atomically([&] { return stm_queue_roundtrip(x); });
 }
 
-unsigned int stmtest::stm_orElse_retry_example() {
+__attribute__((pure)) unsigned int stmtest::stm_orElse_retry_example() {
   std::shared_ptr<stm::TVar<std::shared_ptr<List<unsigned int>>>> q =
       stm::newTVar<std::shared_ptr<List<unsigned int>>>(
           List<unsigned int>::ctor::Nil_());
   return stm::orElse<unsigned int>(stm_dequeue(q), 42u);
 }
 
-unsigned int stmtest::io_orElse_retry_example() {
+__attribute__((pure)) unsigned int stmtest::io_orElse_retry_example() {
   return stm::atomically([&] { return stm_orElse_retry_example(); });
 }

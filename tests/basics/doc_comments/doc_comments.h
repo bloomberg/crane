@@ -23,7 +23,8 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 struct DocComments {
   /// add computes the sum of two natural numbers n and m.
   /// It works by structural recursion on n.
-  static unsigned int add(const unsigned int n, const unsigned int m);
+  __attribute__((pure)) static unsigned int add(const unsigned int n,
+                                                const unsigned int m);
 
   /// A simple pair holding two values of possibly different types.
   template <typename t_A, typename t_B> struct pair {
@@ -79,10 +80,10 @@ struct DocComments {
     };
 
     // MANIPULATORS
-    variant_t &v_mut() { return d_v_; }
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2,
@@ -115,13 +116,14 @@ struct DocComments {
         m->v());
   }
 
-  static unsigned int no_doc_comment(const unsigned int x);
+  __attribute__((pure)) static unsigned int
+  no_doc_comment(const unsigned int x);
 
   /// The identity function: returns its argument unchanged.
   template <typename T1> static T1 identity(const T1 x) { return x; }
 
   /// double n returns 2 * n.
-  static unsigned int double_(const unsigned int n);
+  __attribute__((pure)) static unsigned int double_(const unsigned int n);
 };
 
 #endif // INCLUDED_DOC_COMMENTS

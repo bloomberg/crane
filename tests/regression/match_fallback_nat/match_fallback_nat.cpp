@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-unsigned int MatchFallbackNat::fallback(
+__attribute__((pure)) unsigned int MatchFallbackNat::fallback(
     const std::shared_ptr<MatchFallbackNat::maybe_nat> &x) {
   return std::visit(
       Overloaded{[](const typename MatchFallbackNat::maybe_nat::SomeNat _args)

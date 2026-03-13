@@ -11,7 +11,8 @@
 #include <string>
 #include <variant>
 
-unsigned int CtorEscapeCollision::tag(const CtorEscapeCollision::Item x) {
+__attribute__((pure)) unsigned int
+CtorEscapeCollision::tag(const CtorEscapeCollision::Item x) {
   return [&](void) {
     switch (x) {
     case Item::e_D_: {

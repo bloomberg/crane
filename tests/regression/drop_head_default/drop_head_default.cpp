@@ -11,7 +11,7 @@
 #include <string>
 #include <variant>
 
-unsigned int
+__attribute__((pure)) unsigned int
 DropHeadDefault::head_after_drop(const std::shared_ptr<List<unsigned int>> &rom,
                                  const unsigned int addr) {
   return std::visit(

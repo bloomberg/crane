@@ -66,10 +66,10 @@ public:
   };
 
   // MANIPULATORS
-  variant_t &v_mut() { return d_v_; }
+  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   template <typename T1, MapsTo<T1, T1, t_A> F0>
   T1 fold_left(F0 &&f, const T1 a0) const {
@@ -102,11 +102,11 @@ public:
 };
 
 struct Nat {
-  static std::pair<unsigned int, unsigned int> divmod(const unsigned int x,
-                                                      const unsigned int y,
-                                                      const unsigned int q,
-                                                      const unsigned int u);
-  static unsigned int div(const unsigned int x, const unsigned int y);
+  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
+  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
+         const unsigned int u);
+  __attribute__((pure)) static unsigned int div(const unsigned int x,
+                                                const unsigned int y);
 };
 
 struct ClosuresInData {
@@ -139,13 +139,13 @@ struct ClosuresInData {
       std::make_shared<transform>(
           transform{[](unsigned int x) { return (x + x); },
                     [](unsigned int x) { return Nat::div(x, 2u); }});
-  static unsigned int apply_forward(const std::shared_ptr<transform> &t,
-                                    const unsigned int x);
-  static unsigned int apply_backward(const std::shared_ptr<transform> &t,
-                                     const unsigned int x);
+  __attribute__((pure)) static unsigned int
+  apply_forward(const std::shared_ptr<transform> &t, const unsigned int x);
+  __attribute__((pure)) static unsigned int
+  apply_backward(const std::shared_ptr<transform> &t, const unsigned int x);
   /// compose_all fns x folds fns left, threading x through each
   /// function in sequence.
-  static unsigned int compose_all(
+  __attribute__((pure)) static unsigned int compose_all(
       const std::shared_ptr<List<std::function<unsigned int(unsigned int)>>>
           &fns,
       const unsigned int x);
@@ -162,7 +162,7 @@ struct ClosuresInData {
                       Nil_())));
   /// maybe_apply mf x applies function mf to x if present,
   /// otherwise returns x unchanged.
-  static unsigned int
+  __attribute__((pure)) static unsigned int
   maybe_apply(const std::optional<std::function<unsigned int(unsigned int)>> mf,
               const unsigned int x);
   static inline const std::shared_ptr<List<unsigned int>> test_apply_all =
