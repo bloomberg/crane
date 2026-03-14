@@ -55,3 +55,14 @@
   (alias runtest)
   (deps double_opposite_witnesses.t.exe)
   (action (run ./double_opposite_witnesses.t.exe))))
+
+(subdir coalition_bid_honor_trace
+ (rule
+  (targets coalition_bid_honor_trace.t.exe)
+  (deps CoalitionBidHonorTrace.vo coalition_bid_honor_trace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} coalition_bid_honor_trace.t.exe coalition_bid_honor_trace.cpp coalition_bid_honor_trace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps coalition_bid_honor_trace.t.exe)
+  (action (run ./coalition_bid_honor_trace.t.exe))))
