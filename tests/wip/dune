@@ -55,3 +55,14 @@
   (alias runtest)
   (deps double_opposite_witnesses.t.exe)
   (action (run ./double_opposite_witnesses.t.exe))))
+
+(subdir validated_pump_delivery_trace
+ (rule
+  (targets validated_pump_delivery_trace.t.exe)
+  (deps ValidatedPumpDeliveryTrace.vo validated_pump_delivery_trace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} validated_pump_delivery_trace.t.exe validated_pump_delivery_trace.cpp validated_pump_delivery_trace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps validated_pump_delivery_trace.t.exe)
+  (action (run ./validated_pump_delivery_trace.t.exe))))
