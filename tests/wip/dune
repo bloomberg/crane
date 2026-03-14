@@ -55,3 +55,14 @@
   (alias runtest)
   (deps double_opposite_witnesses.t.exe)
   (action (run ./double_opposite_witnesses.t.exe))))
+
+(subdir historical_event_safety_trace
+ (rule
+  (targets historical_event_safety_trace.t.exe)
+  (deps HistoricalEventSafetyTrace.vo historical_event_safety_trace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} historical_event_safety_trace.t.exe historical_event_safety_trace.cpp historical_event_safety_trace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps historical_event_safety_trace.t.exe)
+  (action (run ./historical_event_safety_trace.t.exe))))
