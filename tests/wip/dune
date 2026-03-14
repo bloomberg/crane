@@ -55,3 +55,14 @@
   (alias runtest)
   (deps double_opposite_witnesses.t.exe)
   (action (run ./double_opposite_witnesses.t.exe))))
+
+(subdir validated_virtual_crossmatch_trace
+ (rule
+  (targets validated_virtual_crossmatch_trace.t.exe)
+  (deps ValidatedVirtualCrossmatchTrace.vo validated_virtual_crossmatch_trace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} validated_virtual_crossmatch_trace.t.exe validated_virtual_crossmatch_trace.cpp validated_virtual_crossmatch_trace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps validated_virtual_crossmatch_trace.t.exe)
+  (action (run ./validated_virtual_crossmatch_trace.t.exe))))
