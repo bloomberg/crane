@@ -55,3 +55,14 @@
   (alias runtest)
   (deps double_opposite_witnesses.t.exe)
   (action (run ./double_opposite_witnesses.t.exe))))
+
+(subdir opposite_property_transfer_trace
+ (rule
+  (targets opposite_property_transfer_trace.t.exe)
+  (deps OppositePropertyTransferTrace.vo opposite_property_transfer_trace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} opposite_property_transfer_trace.t.exe opposite_property_transfer_trace.cpp opposite_property_transfer_trace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps opposite_property_transfer_trace.t.exe)
+  (action (run ./opposite_property_transfer_trace.t.exe))))
