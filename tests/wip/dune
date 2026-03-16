@@ -56,6 +56,16 @@
   (deps double_opposite_witnesses.t.exe)
   (action (run ./double_opposite_witnesses.t.exe))))
 
+(subdir pendant_sumtree_roundtrip
+ (rule
+  (targets pendant_sumtree_roundtrip.t.exe)
+  (deps PendantSumtreeRoundtrip.vo pendant_sumtree_roundtrip.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pendant_sumtree_roundtrip.t.exe pendant_sumtree_roundtrip.cpp pendant_sumtree_roundtrip.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pendant_sumtree_roundtrip.t.exe)
+  (action (run ./pendant_sumtree_roundtrip.t.exe))))
 (subdir coalition_bid_honor_trace
  (rule
   (targets coalition_bid_honor_trace.t.exe)
