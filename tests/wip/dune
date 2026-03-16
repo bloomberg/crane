@@ -66,3 +66,83 @@
   (alias runtest)
   (deps historical_event_safety_trace.t.exe)
   (action (run ./historical_event_safety_trace.t.exe))))
+(subdir validated_virtual_crossmatch_trace
+ (rule
+  (targets validated_virtual_crossmatch_trace.t.exe)
+  (deps ValidatedVirtualCrossmatchTrace.vo validated_virtual_crossmatch_trace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} validated_virtual_crossmatch_trace.t.exe validated_virtual_crossmatch_trace.cpp validated_virtual_crossmatch_trace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps validated_virtual_crossmatch_trace.t.exe)
+  (action (run ./validated_virtual_crossmatch_trace.t.exe))))
+(subdir pendant_sumtree_roundtrip
+ (rule
+  (targets pendant_sumtree_roundtrip.t.exe)
+  (deps PendantSumtreeRoundtrip.vo pendant_sumtree_roundtrip.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pendant_sumtree_roundtrip.t.exe pendant_sumtree_roundtrip.cpp pendant_sumtree_roundtrip.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pendant_sumtree_roundtrip.t.exe)
+  (action (run ./pendant_sumtree_roundtrip.t.exe))))
+(subdir coalition_bid_honor_trace
+ (rule
+  (targets coalition_bid_honor_trace.t.exe)
+  (deps CoalitionBidHonorTrace.vo coalition_bid_honor_trace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} coalition_bid_honor_trace.t.exe coalition_bid_honor_trace.cpp coalition_bid_honor_trace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps coalition_bid_honor_trace.t.exe)
+  (action (run ./coalition_bid_honor_trace.t.exe))))
+(subdir epoch_cell_glyph_trace
+ (rule
+  (targets epoch_cell_glyph_trace.t.exe)
+  (deps EpochCellGlyphTrace.vo epoch_cell_glyph_trace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} epoch_cell_glyph_trace.t.exe epoch_cell_glyph_trace.cpp epoch_cell_glyph_trace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps epoch_cell_glyph_trace.t.exe)
+  (action (run ./epoch_cell_glyph_trace.t.exe))))
+(subdir polygon_winding_area_trace
+ (rule
+  (targets polygon_winding_area_trace.t.exe)
+  (deps PolygonWindingAreaTrace.vo polygon_winding_area_trace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} polygon_winding_area_trace.t.exe polygon_winding_area_trace.cpp polygon_winding_area_trace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps polygon_winding_area_trace.t.exe)
+  (action (run ./polygon_winding_area_trace.t.exe))))
+(subdir density_potential_trace
+ (rule
+  (targets density_potential_trace.t.exe)
+  (deps DensityPotentialTrace.vo density_potential_trace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} density_potential_trace.t.exe density_potential_trace.cpp density_potential_trace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps density_potential_trace.t.exe)
+  (action (run ./density_potential_trace.t.exe))))
+(subdir record_erased_proof_fields
+ (rule
+  (targets record_erased_proof_fields.t.exe)
+  (deps RecordErasedProofFields.vo record_erased_proof_fields.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_erased_proof_fields.t.exe record_erased_proof_fields.cpp record_erased_proof_fields.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_erased_proof_fields.t.exe)
+  (action (run ./record_erased_proof_fields.t.exe))))
+(subdir fold_sequence_state_trace
+ (rule
+  (targets fold_sequence_state_trace.t.exe)
+  (deps FoldSequenceStateTrace.vo fold_sequence_state_trace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fold_sequence_state_trace.t.exe fold_sequence_state_trace.cpp fold_sequence_state_trace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fold_sequence_state_trace.t.exe)
+  (action (run ./fold_sequence_state_trace.t.exe))))
