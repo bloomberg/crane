@@ -75,8 +75,7 @@ struct MatchFallbackNat {
     return std::visit(
         Overloaded{
             [&](const typename maybe_nat::SomeNat _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f(std::move(n));
+              return f(_args.d_a0);
             },
             [&](const typename maybe_nat::NoneNat _args) -> T1 { return f0; }},
         m->v());
@@ -88,8 +87,7 @@ struct MatchFallbackNat {
     return std::visit(
         Overloaded{
             [&](const typename maybe_nat::SomeNat _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f(std::move(n));
+              return f(_args.d_a0);
             },
             [&](const typename maybe_nat::NoneNat _args) -> T1 { return f0; }},
         m->v());

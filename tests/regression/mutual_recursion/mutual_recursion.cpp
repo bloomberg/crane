@@ -75,28 +75,22 @@ MutualRecursion::eval_expr(const std::shared_ptr<MutualRecursion::expr> &e) {
   return std::visit(
       Overloaded{
           [](const typename MutualRecursion::expr::Val _args) -> unsigned int {
-            unsigned int n = _args.d_a0;
-            return std::move(n);
+            return _args.d_a0;
           },
           [](const typename MutualRecursion::expr::BinOp _args)
               -> unsigned int {
-            unsigned int op = _args.d_a0;
-            std::shared_ptr<MutualRecursion::expr> l = _args.d_a1;
-            std::shared_ptr<MutualRecursion::expr> r = _args.d_a2;
-            if (op <= 0) {
-              return (eval_expr(std::move(l)) + eval_expr(std::move(r)));
+            if (_args.d_a0 <= 0) {
+              return (eval_expr(_args.d_a1) + eval_expr(_args.d_a2));
             } else {
-              unsigned int _x = op - 1;
-              return (eval_expr(std::move(l)) * eval_expr(std::move(r)));
+              unsigned int _x = _args.d_a0 - 1;
+              return (eval_expr(_args.d_a1) * eval_expr(_args.d_a2));
             }
           },
           [](const typename MutualRecursion::expr::UnOp _args) -> unsigned int {
-            unsigned int op = _args.d_a0;
-            std::shared_ptr<MutualRecursion::expr> e_ = _args.d_a1;
-            if (op <= 0) {
-              return eval_expr(std::move(e_));
+            if (_args.d_a0 <= 0) {
+              return eval_expr(_args.d_a1);
             } else {
-              unsigned int _x = op - 1;
+              unsigned int _x = _args.d_a0 - 1;
               return 0u;
             }
           }},

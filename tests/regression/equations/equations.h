@@ -250,23 +250,21 @@ struct Equations {
       return std::visit(
           Overloaded{
               [&](const typename gcd_graph::Gcd_graph_equation_1 _args) -> T1 {
-                unsigned int y = _args.d_a0;
-                return f(std::move(y));
+                return f(_args.d_a0);
               },
               [&](const typename gcd_graph::Gcd_graph_equation_2 _args) -> T1 {
-                unsigned int n = _args.d_a0;
-                return f0(std::move(n));
+                return f0(_args.d_a0);
               },
               [&](const typename gcd_graph::Gcd_graph_refinement_3 _args)
                   -> T1 {
-                unsigned int n = _args.d_a0;
-                unsigned int n0 = _args.d_a1;
-                std::shared_ptr<gcd_clause_3_graph> hind = _args.d_a2;
-                return f1(n, n0, hind,
-                          f5(n, n0, PeanoNat::ltb((n + 1), (n0 + 1)))(
-                              gcd_unfold_clause_3(
-                                  n, n0, PeanoNat::ltb((n + 1), (n0 + 1))),
-                              hind));
+                return f1(
+                    _args.d_a0, _args.d_a1, _args.d_a2,
+                    f5(_args.d_a0, _args.d_a1,
+                       PeanoNat::ltb((_args.d_a0 + 1), (_args.d_a1 + 1)))(
+                        gcd_unfold_clause_3(
+                            _args.d_a0, _args.d_a1,
+                            PeanoNat::ltb((_args.d_a0 + 1), (_args.d_a1 + 1))),
+                        _args.d_a2));
               }},
           g->v());
     };
@@ -275,36 +273,40 @@ struct Equations {
       return std::visit(
           Overloaded{
               [&](const typename gcd_clause_3_graph::
-                      Gcd_clause_3_graph_equation_1 _args) -> T2 {
-                unsigned int n = _args.d_a0;
-                unsigned int n0 = _args.d_a1;
-                std::shared_ptr<gcd_graph> hind = _args.d_a2;
+                      Gcd_clause_3_graph_equation_1 _args0) -> T2 {
                 return f2(
-                    n, n0, hind,
-                    f4(std::make_pair((n + 1), ((((n0 + 1) - (n + 1)) > (n0 + 1)
-                                                     ? 0
-                                                     : ((n0 + 1) - (n + 1))))),
-                       gcd(std::make_pair((n + 1),
-                                          ((((n0 + 1) - (n + 1)) > (n0 + 1)
-                                                ? 0
-                                                : ((n0 + 1) - (n + 1)))))),
-                       hind));
+                    _args0.d_a0, _args0.d_a1, _args0.d_a2,
+                    f4(std::make_pair(
+                           (_args0.d_a0 + 1),
+                           ((((_args0.d_a1 + 1) - (_args0.d_a0 + 1)) >
+                                     (_args0.d_a1 + 1)
+                                 ? 0
+                                 : ((_args0.d_a1 + 1) - (_args0.d_a0 + 1))))),
+                       gcd(std::make_pair(
+                           (_args0.d_a0 + 1),
+                           ((((_args0.d_a1 + 1) - (_args0.d_a0 + 1)) >
+                                     (_args0.d_a1 + 1)
+                                 ? 0
+                                 : ((_args0.d_a1 + 1) - (_args0.d_a0 + 1)))))),
+                       _args0.d_a2));
               },
               [&](const typename gcd_clause_3_graph::
-                      Gcd_clause_3_graph_equation_2 _args) -> T2 {
-                unsigned int n = _args.d_a0;
-                unsigned int n0 = _args.d_a1;
-                std::shared_ptr<gcd_graph> hind = _args.d_a2;
-                return f3(n, n0, hind,
-                          f4(std::make_pair(((((n + 1) - (n0 + 1)) > (n + 1)
-                                                  ? 0
-                                                  : ((n + 1) - (n0 + 1)))),
-                                            (n0 + 1)),
-                             gcd(std::make_pair(((((n + 1) - (n0 + 1)) > (n + 1)
-                                                      ? 0
-                                                      : ((n + 1) - (n0 + 1)))),
-                                                (n0 + 1))),
-                             hind));
+                      Gcd_clause_3_graph_equation_2 _args0) -> T2 {
+                return f3(
+                    _args0.d_a0, _args0.d_a1, _args0.d_a2,
+                    f4(std::make_pair(
+                           ((((_args0.d_a0 + 1) - (_args0.d_a1 + 1)) >
+                                     (_args0.d_a0 + 1)
+                                 ? 0
+                                 : ((_args0.d_a0 + 1) - (_args0.d_a1 + 1)))),
+                           (_args0.d_a1 + 1)),
+                       gcd(std::make_pair(
+                           ((((_args0.d_a0 + 1) - (_args0.d_a1 + 1)) >
+                                     (_args0.d_a0 + 1)
+                                 ? 0
+                                 : ((_args0.d_a0 + 1) - (_args0.d_a1 + 1)))),
+                           (_args0.d_a1 + 1))),
+                       _args0.d_a2));
               }},
           g->v());
     };
@@ -329,23 +331,21 @@ struct Equations {
       return std::visit(
           Overloaded{
               [&](const typename gcd_graph::Gcd_graph_equation_1 _args) -> T1 {
-                unsigned int y = _args.d_a0;
-                return f(std::move(y));
+                return f(_args.d_a0);
               },
               [&](const typename gcd_graph::Gcd_graph_equation_2 _args) -> T1 {
-                unsigned int n = _args.d_a0;
-                return f0(std::move(n));
+                return f0(_args.d_a0);
               },
               [&](const typename gcd_graph::Gcd_graph_refinement_3 _args)
                   -> T1 {
-                unsigned int n = _args.d_a0;
-                unsigned int n0 = _args.d_a1;
-                std::shared_ptr<gcd_clause_3_graph> hind = _args.d_a2;
-                return f1(n, n0, hind,
-                          f5(n, n0, PeanoNat::ltb((n + 1), (n0 + 1)))(
-                              gcd_unfold_clause_3(
-                                  n, n0, PeanoNat::ltb((n + 1), (n0 + 1))),
-                              hind));
+                return f1(
+                    _args.d_a0, _args.d_a1, _args.d_a2,
+                    f5(_args.d_a0, _args.d_a1,
+                       PeanoNat::ltb((_args.d_a0 + 1), (_args.d_a1 + 1)))(
+                        gcd_unfold_clause_3(
+                            _args.d_a0, _args.d_a1,
+                            PeanoNat::ltb((_args.d_a0 + 1), (_args.d_a1 + 1))),
+                        _args.d_a2));
               }},
           g->v());
     };
@@ -354,36 +354,40 @@ struct Equations {
       return std::visit(
           Overloaded{
               [&](const typename gcd_clause_3_graph::
-                      Gcd_clause_3_graph_equation_1 _args) -> T2 {
-                unsigned int n = _args.d_a0;
-                unsigned int n0 = _args.d_a1;
-                std::shared_ptr<gcd_graph> hind = _args.d_a2;
+                      Gcd_clause_3_graph_equation_1 _args0) -> T2 {
                 return f2(
-                    n, n0, hind,
-                    f4(std::make_pair((n + 1), ((((n0 + 1) - (n + 1)) > (n0 + 1)
-                                                     ? 0
-                                                     : ((n0 + 1) - (n + 1))))),
-                       gcd(std::make_pair((n + 1),
-                                          ((((n0 + 1) - (n + 1)) > (n0 + 1)
-                                                ? 0
-                                                : ((n0 + 1) - (n + 1)))))),
-                       hind));
+                    _args0.d_a0, _args0.d_a1, _args0.d_a2,
+                    f4(std::make_pair(
+                           (_args0.d_a0 + 1),
+                           ((((_args0.d_a1 + 1) - (_args0.d_a0 + 1)) >
+                                     (_args0.d_a1 + 1)
+                                 ? 0
+                                 : ((_args0.d_a1 + 1) - (_args0.d_a0 + 1))))),
+                       gcd(std::make_pair(
+                           (_args0.d_a0 + 1),
+                           ((((_args0.d_a1 + 1) - (_args0.d_a0 + 1)) >
+                                     (_args0.d_a1 + 1)
+                                 ? 0
+                                 : ((_args0.d_a1 + 1) - (_args0.d_a0 + 1)))))),
+                       _args0.d_a2));
               },
               [&](const typename gcd_clause_3_graph::
-                      Gcd_clause_3_graph_equation_2 _args) -> T2 {
-                unsigned int n = _args.d_a0;
-                unsigned int n0 = _args.d_a1;
-                std::shared_ptr<gcd_graph> hind = _args.d_a2;
-                return f3(n, n0, hind,
-                          f4(std::make_pair(((((n + 1) - (n0 + 1)) > (n + 1)
-                                                  ? 0
-                                                  : ((n + 1) - (n0 + 1)))),
-                                            (n0 + 1)),
-                             gcd(std::make_pair(((((n + 1) - (n0 + 1)) > (n + 1)
-                                                      ? 0
-                                                      : ((n + 1) - (n0 + 1)))),
-                                                (n0 + 1))),
-                             hind));
+                      Gcd_clause_3_graph_equation_2 _args0) -> T2 {
+                return f3(
+                    _args0.d_a0, _args0.d_a1, _args0.d_a2,
+                    f4(std::make_pair(
+                           ((((_args0.d_a0 + 1) - (_args0.d_a1 + 1)) >
+                                     (_args0.d_a0 + 1)
+                                 ? 0
+                                 : ((_args0.d_a0 + 1) - (_args0.d_a1 + 1)))),
+                           (_args0.d_a1 + 1)),
+                       gcd(std::make_pair(
+                           ((((_args0.d_a0 + 1) - (_args0.d_a1 + 1)) >
+                                     (_args0.d_a0 + 1)
+                                 ? 0
+                                 : ((_args0.d_a0 + 1) - (_args0.d_a1 + 1)))),
+                           (_args0.d_a1 + 1))),
+                       _args0.d_a2));
               }},
           g->v());
     };
@@ -667,12 +671,11 @@ struct Equations {
               },
               [&](const typename collatz_steps_graph::
                       Collatz_steps_graph_refinement_3 _args) -> T1 {
-                unsigned int n = _args.d_a0;
-                std::shared_ptr<collatz_steps_clause_3_graph> hind = _args.d_a1;
-                return f1(n, hind,
-                          f5(n, PeanoNat::even(((n + 1) + 1)),
+                return f1(_args.d_a0, _args.d_a1,
+                          f5(_args.d_a0, PeanoNat::even(((_args.d_a0 + 1) + 1)),
                              collatz_steps_unfold_clause_3(
-                                 n, PeanoNat::even(((n + 1) + 1))))(hind));
+                                 _args.d_a0, PeanoNat::even(((_args.d_a0 + 1) +
+                                                             1))))(_args.d_a1));
               }},
           c->v());
     };
@@ -681,20 +684,18 @@ struct Equations {
       return std::visit(
           Overloaded{
               [&](const typename collatz_steps_clause_3_graph::
-                      Collatz_steps_clause_3_graph_equation_1 _args) -> T2 {
-                unsigned int n = _args.d_a0;
-                std::shared_ptr<collatz_steps_graph> hind = _args.d_a1;
-                return f2(n, hind,
-                          f4(PeanoNat::div2(n),
-                             collatz_steps(PeanoNat::div2(n)), hind));
+                      Collatz_steps_clause_3_graph_equation_1 _args0) -> T2 {
+                return f2(_args0.d_a0, _args0.d_a1,
+                          f4(PeanoNat::div2(_args0.d_a0),
+                             collatz_steps(PeanoNat::div2(_args0.d_a0)),
+                             _args0.d_a1));
               },
               [&](const typename collatz_steps_clause_3_graph::
-                      Collatz_steps_clause_3_graph_equation_2 _args) -> T2 {
-                unsigned int n = _args.d_a0;
-                std::shared_ptr<collatz_steps_graph> hind = _args.d_a1;
-                return f3(
-                    n, hind,
-                    f4(((3u * n) + 1u), collatz_steps(((3u * n) + 1u)), hind));
+                      Collatz_steps_clause_3_graph_equation_2 _args0) -> T2 {
+                return f3(_args0.d_a0, _args0.d_a1,
+                          f4(((3u * _args0.d_a0) + 1u),
+                             collatz_steps(((3u * _args0.d_a0) + 1u)),
+                             _args0.d_a1));
               }},
           c->v());
     };
@@ -730,12 +731,11 @@ struct Equations {
               },
               [&](const typename collatz_steps_graph::
                       Collatz_steps_graph_refinement_3 _args) -> T1 {
-                unsigned int n = _args.d_a0;
-                std::shared_ptr<collatz_steps_clause_3_graph> hind = _args.d_a1;
-                return f1(n, hind,
-                          f5(n, PeanoNat::even(((n + 1) + 1)),
+                return f1(_args.d_a0, _args.d_a1,
+                          f5(_args.d_a0, PeanoNat::even(((_args.d_a0 + 1) + 1)),
                              collatz_steps_unfold_clause_3(
-                                 n, PeanoNat::even(((n + 1) + 1))))(hind));
+                                 _args.d_a0, PeanoNat::even(((_args.d_a0 + 1) +
+                                                             1))))(_args.d_a1));
               }},
           c->v());
     };
@@ -744,20 +744,18 @@ struct Equations {
       return std::visit(
           Overloaded{
               [&](const typename collatz_steps_clause_3_graph::
-                      Collatz_steps_clause_3_graph_equation_1 _args) -> T2 {
-                unsigned int n = _args.d_a0;
-                std::shared_ptr<collatz_steps_graph> hind = _args.d_a1;
-                return f2(n, hind,
-                          f4(PeanoNat::div2(n),
-                             collatz_steps(PeanoNat::div2(n)), hind));
+                      Collatz_steps_clause_3_graph_equation_1 _args0) -> T2 {
+                return f2(_args0.d_a0, _args0.d_a1,
+                          f4(PeanoNat::div2(_args0.d_a0),
+                             collatz_steps(PeanoNat::div2(_args0.d_a0)),
+                             _args0.d_a1));
               },
               [&](const typename collatz_steps_clause_3_graph::
-                      Collatz_steps_clause_3_graph_equation_2 _args) -> T2 {
-                unsigned int n = _args.d_a0;
-                std::shared_ptr<collatz_steps_graph> hind = _args.d_a1;
-                return f3(
-                    n, hind,
-                    f4(((3u * n) + 1u), collatz_steps(((3u * n) + 1u)), hind));
+                      Collatz_steps_clause_3_graph_equation_2 _args0) -> T2 {
+                return f3(_args0.d_a0, _args0.d_a1,
+                          f4(((3u * _args0.d_a0) + 1u),
+                             collatz_steps(((3u * _args0.d_a0) + 1u)),
+                             _args0.d_a1));
               }},
           c->v());
     };

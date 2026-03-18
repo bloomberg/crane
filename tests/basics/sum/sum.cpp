@@ -16,14 +16,8 @@ __attribute__((pure)) unsigned int Sum::either_to_nat(
   return std::visit(
       Overloaded{
           [](const typename Sum::either<unsigned int, unsigned int>::Left _args)
-              -> unsigned int {
-            unsigned int n = _args.d_a0;
-            return std::move(n);
-          },
+              -> unsigned int { return _args.d_a0; },
           [](const typename Sum::either<unsigned int, unsigned int>::Right
-                 _args) -> unsigned int {
-            unsigned int m = _args.d_a0;
-            return std::move(m);
-          }},
+                 _args) -> unsigned int { return _args.d_a0; }},
       e->v());
 }

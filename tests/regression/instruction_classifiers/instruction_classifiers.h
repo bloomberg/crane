@@ -438,32 +438,25 @@ struct InstructionClassifiers {
     return std::visit(
         Overloaded{
             [&](const typename instr_acc::LDM _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f(std::move(n));
+              return f(_args.d_a0);
             },
             [&](const typename instr_acc::LD _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             },
             [&](const typename instr_acc::ADD _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f1(std::move(n));
+              return f1(_args.d_a0);
             },
             [&](const typename instr_acc::SUB _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f2(std::move(n));
+              return f2(_args.d_a0);
             },
             [&](const typename instr_acc::INC _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f3(std::move(n));
+              return f3(_args.d_a0);
             },
             [&](const typename instr_acc::XCH _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f4(std::move(n));
+              return f4(_args.d_a0);
             },
             [&](const typename instr_acc::BBL _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f5(std::move(n));
+              return f5(_args.d_a0);
             },
             [&](const typename instr_acc::SBM _args) -> T1 { return f6; },
             [&](const typename instr_acc::RDM _args) -> T1 { return f7; },
@@ -502,32 +495,25 @@ struct InstructionClassifiers {
     return std::visit(
         Overloaded{
             [&](const typename instr_acc::LDM _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f(std::move(n));
+              return f(_args.d_a0);
             },
             [&](const typename instr_acc::LD _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             },
             [&](const typename instr_acc::ADD _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f1(std::move(n));
+              return f1(_args.d_a0);
             },
             [&](const typename instr_acc::SUB _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f2(std::move(n));
+              return f2(_args.d_a0);
             },
             [&](const typename instr_acc::INC _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f3(std::move(n));
+              return f3(_args.d_a0);
             },
             [&](const typename instr_acc::XCH _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f4(std::move(n));
+              return f4(_args.d_a0);
             },
             [&](const typename instr_acc::BBL _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f5(std::move(n));
+              return f5(_args.d_a0);
             },
             [&](const typename instr_acc::SBM _args) -> T1 { return f6; },
             [&](const typename instr_acc::RDM _args) -> T1 { return f7; },
@@ -706,8 +692,7 @@ struct InstructionClassifiers {
             [&](const typename instr_ram::WR3 _args) -> T1 { return f4; },
             [&](const typename instr_ram::NOP_ram _args) -> T1 { return f5; },
             [&](const typename instr_ram::ADD_ram _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f6(std::move(n));
+              return f6(_args.d_a0);
             }},
         i->v());
   }
@@ -726,8 +711,7 @@ struct InstructionClassifiers {
             [&](const typename instr_ram::WR3 _args) -> T1 { return f4; },
             [&](const typename instr_ram::NOP_ram _args) -> T1 { return f5; },
             [&](const typename instr_ram::ADD_ram _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f6(std::move(n));
+              return f6(_args.d_a0);
             }},
         i->v());
   }
@@ -887,31 +871,23 @@ struct InstructionClassifiers {
     return std::visit(
         Overloaded{
             [&](const typename instr_regs::XCH_regs _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f(std::move(n));
+              return f(_args.d_a0);
             },
             [&](const typename instr_regs::INC_regs _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             },
             [&](const typename instr_regs::FIM _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              unsigned int n0 = _args.d_a1;
-              return f1(std::move(n), std::move(n0));
+              return f1(_args.d_a0, _args.d_a1);
             },
             [&](const typename instr_regs::FIN _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f2(std::move(n));
+              return f2(_args.d_a0);
             },
             [&](const typename instr_regs::ISZ _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              unsigned int n0 = _args.d_a1;
-              return f3(std::move(n), std::move(n0));
+              return f3(_args.d_a0, _args.d_a1);
             },
             [&](const typename instr_regs::NOP_regs _args) -> T1 { return f4; },
             [&](const typename instr_regs::ADD_regs _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f5(std::move(n));
+              return f5(_args.d_a0);
             }},
         i->v());
   }
@@ -926,31 +902,23 @@ struct InstructionClassifiers {
     return std::visit(
         Overloaded{
             [&](const typename instr_regs::XCH_regs _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f(std::move(n));
+              return f(_args.d_a0);
             },
             [&](const typename instr_regs::INC_regs _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             },
             [&](const typename instr_regs::FIM _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              unsigned int n0 = _args.d_a1;
-              return f1(std::move(n), std::move(n0));
+              return f1(_args.d_a0, _args.d_a1);
             },
             [&](const typename instr_regs::FIN _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f2(std::move(n));
+              return f2(_args.d_a0);
             },
             [&](const typename instr_regs::ISZ _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              unsigned int n0 = _args.d_a1;
-              return f3(std::move(n), std::move(n0));
+              return f3(_args.d_a0, _args.d_a1);
             },
             [&](const typename instr_regs::NOP_regs _args) -> T1 { return f4; },
             [&](const typename instr_regs::ADD_regs _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f5(std::move(n));
+              return f5(_args.d_a0);
             }},
         i->v());
   }
@@ -1121,34 +1089,25 @@ struct InstructionClassifiers {
                             const std::shared_ptr<instr_jump> &i) {
     return std::visit(
         Overloaded{[&](const typename instr_jump::JCN _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     unsigned int n0 = _args.d_a1;
-                     return f(std::move(n), std::move(n0));
+                     return f(_args.d_a0, _args.d_a1);
                    },
                    [&](const typename instr_jump::JUN _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f0(std::move(n));
+                     return f0(_args.d_a0);
                    },
                    [&](const typename instr_jump::JMS _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f1(std::move(n));
+                     return f1(_args.d_a0);
                    },
                    [&](const typename instr_jump::JIN _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f2(std::move(n));
+                     return f2(_args.d_a0);
                    },
                    [&](const typename instr_jump::BBL_jump _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f3(std::move(n));
+                     return f3(_args.d_a0);
                    },
                    [&](const typename instr_jump::ISZ_jump _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     unsigned int n0 = _args.d_a1;
-                     return f4(std::move(n), std::move(n0));
+                     return f4(_args.d_a0, _args.d_a1);
                    },
                    [&](const typename instr_jump::ADD_jump _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f5(std::move(n));
+                     return f5(_args.d_a0);
                    },
                    [&](const typename instr_jump::NOP_jump _args) -> T1 {
                      return f6;
@@ -1166,34 +1125,25 @@ struct InstructionClassifiers {
                            const std::shared_ptr<instr_jump> &i) {
     return std::visit(
         Overloaded{[&](const typename instr_jump::JCN _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     unsigned int n0 = _args.d_a1;
-                     return f(std::move(n), std::move(n0));
+                     return f(_args.d_a0, _args.d_a1);
                    },
                    [&](const typename instr_jump::JUN _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f0(std::move(n));
+                     return f0(_args.d_a0);
                    },
                    [&](const typename instr_jump::JMS _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f1(std::move(n));
+                     return f1(_args.d_a0);
                    },
                    [&](const typename instr_jump::JIN _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f2(std::move(n));
+                     return f2(_args.d_a0);
                    },
                    [&](const typename instr_jump::BBL_jump _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f3(std::move(n));
+                     return f3(_args.d_a0);
                    },
                    [&](const typename instr_jump::ISZ_jump _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     unsigned int n0 = _args.d_a1;
-                     return f4(std::move(n), std::move(n0));
+                     return f4(_args.d_a0, _args.d_a1);
                    },
                    [&](const typename instr_jump::ADD_jump _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f5(std::move(n));
+                     return f5(_args.d_a0);
                    },
                    [&](const typename instr_jump::NOP_jump _args) -> T1 {
                      return f6;

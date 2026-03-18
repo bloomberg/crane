@@ -96,12 +96,10 @@ struct AxiomTypes {
                                 const std::shared_ptr<AxiomInductive> &a) {
     return std::visit(
         Overloaded{[&](const typename AxiomInductive::AxConstr1 _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f(std::move(n));
+                     return f(_args.d_a0);
                    },
                    [&](const typename AxiomInductive::AxConstr2 _args) -> T1 {
-                     MysteryType m = _args.d_a0;
-                     return f0(m);
+                     return f0(_args.d_a0);
                    }},
         a->v());
   }
@@ -112,12 +110,10 @@ struct AxiomTypes {
                                const std::shared_ptr<AxiomInductive> &a) {
     return std::visit(
         Overloaded{[&](const typename AxiomInductive::AxConstr1 _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f(std::move(n));
+                     return f(_args.d_a0);
                    },
                    [&](const typename AxiomInductive::AxConstr2 _args) -> T1 {
-                     MysteryType m = _args.d_a0;
-                     return f0(m);
+                     return f0(_args.d_a0);
                    }},
         a->v());
   }
@@ -183,9 +179,8 @@ struct AxiomTypes {
     return std::visit(
         Overloaded{[&](const typename list<T1>::Nil _args) -> T2 { return f; },
                    [&](const typename list<T1>::Cons _args) -> T2 {
-                     T1 y = _args.d_a0;
-                     std::shared_ptr<list<T1>> l0 = _args.d_a1;
-                     return f0(y, l0, list_rect<T1, T2>(f, f0, l0));
+                     return f0(_args.d_a0, _args.d_a1,
+                               list_rect<T1, T2>(f, f0, _args.d_a1));
                    }},
         l->v());
   }
@@ -196,9 +191,8 @@ struct AxiomTypes {
     return std::visit(
         Overloaded{[&](const typename list<T1>::Nil _args) -> T2 { return f; },
                    [&](const typename list<T1>::Cons _args) -> T2 {
-                     T1 y = _args.d_a0;
-                     std::shared_ptr<list<T1>> l0 = _args.d_a1;
-                     return f0(y, l0, list_rec<T1, T2>(f, f0, l0));
+                     return f0(_args.d_a0, _args.d_a1,
+                               list_rec<T1, T2>(f, f0, _args.d_a1));
                    }},
         l->v());
   }

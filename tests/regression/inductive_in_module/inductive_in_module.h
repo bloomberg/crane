@@ -122,8 +122,7 @@ struct InductiveInModule {
             Overloaded{
                 [&](const typename option<T1>::None _args) -> T2 { return f; },
                 [&](const typename option<T1>::Some _args) -> T2 {
-                  T1 a = _args.d_a0;
-                  return f0(a);
+                  return f0(_args.d_a0);
                 }},
             o->v());
       }
@@ -135,8 +134,7 @@ struct InductiveInModule {
             Overloaded{
                 [&](const typename option<T1>::None _args) -> T2 { return f; },
                 [&](const typename option<T1>::Some _args) -> T2 {
-                  T1 a = _args.d_a0;
-                  return f0(a);
+                  return f0(_args.d_a0);
                 }},
             o->v());
       }
@@ -149,8 +147,7 @@ struct InductiveInModule {
                          return default0;
                        },
                        [](const typename option<T1>::Some _args) -> T1 {
-                         T1 x = _args.d_a0;
-                         return x;
+                         return _args.d_a0;
                        }},
             o->v());
       }

@@ -77,9 +77,8 @@ public:
                        -> std::shared_ptr<List<t_A>> { return m; },
                    [&](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {
-                     t_A a = _args.d_a0;
-                     std::shared_ptr<List<t_A>> l1 = _args.d_a1;
-                     return List<t_A>::ctor::Cons_(a, std::move(l1)->app(m));
+                     return List<t_A>::ctor::Cons_(_args.d_a0,
+                                                   _args.d_a1->app(m));
                    }},
         this->v());
   }
@@ -147,9 +146,8 @@ struct NestedInd {
         Overloaded{
             [&](const typename custom_list<T1>::Cnil _args) -> T2 { return f; },
             [&](const typename custom_list<T1>::Ccons _args) -> T2 {
-              T1 y = _args.d_a0;
-              std::shared_ptr<custom_list<T1>> c0 = _args.d_a1;
-              return f0(y, c0, custom_list_rect<T1, T2>(f, f0, c0));
+              return f0(_args.d_a0, _args.d_a1,
+                        custom_list_rect<T1, T2>(f, f0, _args.d_a1));
             }},
         c->v());
   }
@@ -162,9 +160,8 @@ struct NestedInd {
         Overloaded{
             [&](const typename custom_list<T1>::Cnil _args) -> T2 { return f; },
             [&](const typename custom_list<T1>::Ccons _args) -> T2 {
-              T1 y = _args.d_a0;
-              std::shared_ptr<custom_list<T1>> c0 = _args.d_a1;
-              return f0(y, c0, custom_list_rec<T1, T2>(f, f0, c0));
+              return f0(_args.d_a0, _args.d_a1,
+                        custom_list_rec<T1, T2>(f, f0, _args.d_a1));
             }},
         c->v());
   }
@@ -217,10 +214,7 @@ struct NestedInd {
   static T2 rose_rect(F0 &&f, const std::shared_ptr<rose<T1>> &r) {
     return std::visit(
         Overloaded{[&](const typename rose<T1>::Node _args) -> T2 {
-          T1 a = _args.d_a0;
-          std::shared_ptr<custom_list<std::shared_ptr<rose<T1>>>> c =
-              _args.d_a1;
-          return f(a, std::move(c));
+          return f(_args.d_a0, _args.d_a1);
         }},
         r->v());
   }
@@ -232,18 +226,14 @@ struct NestedInd {
   static T2 rose_rec(F0 &&f, const std::shared_ptr<rose<T1>> &r) {
     return std::visit(
         Overloaded{[&](const typename rose<T1>::Node _args) -> T2 {
-          T1 a = _args.d_a0;
-          std::shared_ptr<custom_list<std::shared_ptr<rose<T1>>>> c =
-              _args.d_a1;
-          return f(a, std::move(c));
+          return f(_args.d_a0, _args.d_a1);
         }},
         r->v());
   }
 
   template <typename T1> static T1 root(const std::shared_ptr<rose<T1>> &t) {
     return std::visit(Overloaded{[](const typename rose<T1>::Node _args) -> T1 {
-                        T1 x = _args.d_a0;
-                        return x;
+                        return _args.d_a0;
                       }},
                       t->v());
   }
@@ -257,8 +247,7 @@ struct NestedInd {
               return 0u;
             },
             [](const typename custom_list<T1>::Ccons _args) -> unsigned int {
-              std::shared_ptr<custom_list<T1>> rest = _args.d_a1;
-              return (1u + custom_list_length<T1>(std::move(rest)));
+              return (1u + custom_list_length<T1>(_args.d_a1));
             }},
         l->v());
   }
@@ -268,10 +257,7 @@ struct NestedInd {
   children_count(const std::shared_ptr<rose<T1>> &t) {
     return std::visit(
         Overloaded{[](const typename rose<T1>::Node _args) -> unsigned int {
-          std::shared_ptr<custom_list<std::shared_ptr<rose<T1>>>> children =
-              _args.d_a1;
-          return custom_list_length<std::shared_ptr<rose<T1>>>(
-              std::move(children));
+          return custom_list_length<std::shared_ptr<rose<T1>>>(_args.d_a1);
         }},
         t->v());
   }
@@ -379,44 +365,32 @@ struct NestedInd {
             MapsTo<T1, std::shared_ptr<List<std::shared_ptr<expr>>>> F2>
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1,
                       const std::shared_ptr<expr> &e) {
-    return std::visit(
-        Overloaded{[&](const typename expr::Lit _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f(std::move(n));
-                   },
-                   [&](const typename expr::Add _args) -> T1 {
-                     std::shared_ptr<List<std::shared_ptr<expr>>> l =
-                         _args.d_a0;
-                     return f0(std::move(l));
-                   },
-                   [&](const typename expr::Mul _args) -> T1 {
-                     std::shared_ptr<List<std::shared_ptr<expr>>> l =
-                         _args.d_a0;
-                     return f1(std::move(l));
-                   }},
-        e->v());
+    return std::visit(Overloaded{[&](const typename expr::Lit _args) -> T1 {
+                                   return f(_args.d_a0);
+                                 },
+                                 [&](const typename expr::Add _args) -> T1 {
+                                   return f0(_args.d_a0);
+                                 },
+                                 [&](const typename expr::Mul _args) -> T1 {
+                                   return f1(_args.d_a0);
+                                 }},
+                      e->v());
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, std::shared_ptr<List<std::shared_ptr<expr>>>> F1,
             MapsTo<T1, std::shared_ptr<List<std::shared_ptr<expr>>>> F2>
   static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, const std::shared_ptr<expr> &e) {
-    return std::visit(
-        Overloaded{[&](const typename expr::Lit _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f(std::move(n));
-                   },
-                   [&](const typename expr::Add _args) -> T1 {
-                     std::shared_ptr<List<std::shared_ptr<expr>>> l =
-                         _args.d_a0;
-                     return f0(std::move(l));
-                   },
-                   [&](const typename expr::Mul _args) -> T1 {
-                     std::shared_ptr<List<std::shared_ptr<expr>>> l =
-                         _args.d_a0;
-                     return f1(std::move(l));
-                   }},
-        e->v());
+    return std::visit(Overloaded{[&](const typename expr::Lit _args) -> T1 {
+                                   return f(_args.d_a0);
+                                 },
+                                 [&](const typename expr::Add _args) -> T1 {
+                                   return f0(_args.d_a0);
+                                 },
+                                 [&](const typename expr::Mul _args) -> T1 {
+                                   return f1(_args.d_a0);
+                                 }},
+                      e->v());
   }
 
   __attribute__((pure)) static unsigned int
@@ -433,11 +407,9 @@ struct NestedInd {
     return std::visit(
         Overloaded{
             [&](const typename expr::Lit _args) -> std::shared_ptr<expr> {
-              unsigned int n = _args.d_a0;
-              return expr::ctor::Lit_(f(std::move(n)));
+              return expr::ctor::Lit_(f(_args.d_a0));
             },
             [&](const typename expr::Add _args) -> std::shared_ptr<expr> {
-              std::shared_ptr<List<std::shared_ptr<expr>>> es = _args.d_a0;
               return expr::ctor::Add_([&](void) {
                 std::function<std::shared_ptr<List<std::shared_ptr<expr>>>(
                     std::shared_ptr<List<std::shared_ptr<expr>>>)>
@@ -454,20 +426,15 @@ struct NestedInd {
                           [&](const typename List<std::shared_ptr<expr>>::Cons
                                   _args)
                               -> std::shared_ptr<List<std::shared_ptr<expr>>> {
-                            std::shared_ptr<expr> e_ = _args.d_a0;
-                            std::shared_ptr<List<std::shared_ptr<expr>>> rest =
-                                _args.d_a1;
                             return List<std::shared_ptr<expr>>::ctor::Cons_(
-                                lit_map(f, std::move(e_)),
-                                aux(std::move(rest)));
+                                lit_map(f, _args.d_a0), aux(_args.d_a1));
                           }},
                       l->v());
                 };
-                return aux(es);
+                return aux(_args.d_a0);
               }());
             },
             [&](const typename expr::Mul _args) -> std::shared_ptr<expr> {
-              std::shared_ptr<List<std::shared_ptr<expr>>> es = _args.d_a0;
               return expr::ctor::Mul_([&](void) {
                 std::function<std::shared_ptr<List<std::shared_ptr<expr>>>(
                     std::shared_ptr<List<std::shared_ptr<expr>>>)>
@@ -484,16 +451,12 @@ struct NestedInd {
                           [&](const typename List<std::shared_ptr<expr>>::Cons
                                   _args)
                               -> std::shared_ptr<List<std::shared_ptr<expr>>> {
-                            std::shared_ptr<expr> e_ = _args.d_a0;
-                            std::shared_ptr<List<std::shared_ptr<expr>>> rest =
-                                _args.d_a1;
                             return List<std::shared_ptr<expr>>::ctor::Cons_(
-                                lit_map(f, std::move(e_)),
-                                aux(std::move(rest)));
+                                lit_map(f, _args.d_a0), aux(_args.d_a1));
                           }},
                       l->v());
                 };
-                return aux(es);
+                return aux(_args.d_a0);
               }());
             }},
         e->v());

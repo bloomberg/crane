@@ -23,9 +23,7 @@ LetFix::local_sum(const std::shared_ptr<List<unsigned int>> &l) {
               return std::move(acc);
             },
             [&](const typename List<unsigned int>::Cons _args) -> unsigned int {
-              unsigned int x = _args.d_a0;
-              std::shared_ptr<List<unsigned int>> rest = _args.d_a1;
-              return go((std::move(acc) + std::move(x)), std::move(rest));
+              return go((std::move(acc) + _args.d_a0), _args.d_a1);
             }},
         xs->v());
   };
@@ -42,30 +40,24 @@ std::shared_ptr<List<unsigned int>> LetFix::local_flatten(
           },
           [](const typename List<std::shared_ptr<List<unsigned int>>>::Cons
                  _args) -> std::shared_ptr<List<unsigned int>> {
-            std::shared_ptr<List<unsigned int>> xs = _args.d_a0;
-            std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> rest =
-                _args.d_a1;
             std::function<std::shared_ptr<List<unsigned int>>(
                 std::shared_ptr<List<unsigned int>>)>
                 inner;
             inner = [&](std::shared_ptr<List<unsigned int>> ys)
                 -> std::shared_ptr<List<unsigned int>> {
               return std::visit(
-                  Overloaded{[&](const typename List<unsigned int>::Nil _args)
+                  Overloaded{[&](const typename List<unsigned int>::Nil _args0)
                                  -> std::shared_ptr<List<unsigned int>> {
-                               return local_flatten(rest);
+                               return local_flatten(_args.d_a1);
                              },
-                             [&](const typename List<unsigned int>::Cons _args)
+                             [&](const typename List<unsigned int>::Cons _args0)
                                  -> std::shared_ptr<List<unsigned int>> {
-                               unsigned int y = _args.d_a0;
-                               std::shared_ptr<List<unsigned int>> ys_ =
-                                   _args.d_a1;
                                return List<unsigned int>::ctor::Cons_(
-                                   std::move(y), inner(std::move(ys_)));
+                                   _args0.d_a0, inner(_args0.d_a1));
                              }},
                   ys->v());
             };
-            return inner(xs);
+            return inner(_args.d_a0);
           }},
       xss->v());
 }
@@ -78,12 +70,10 @@ LetFix::local_mem(const unsigned int n,
                    return false;
                  },
                  [&](const typename List<unsigned int>::Cons _args) -> bool {
-                   unsigned int x = _args.d_a0;
-                   std::shared_ptr<List<unsigned int>> rest = _args.d_a1;
-                   if (std::move(x) == n) {
+                   if (_args.d_a0 == n) {
                      return true;
                    } else {
-                     return local_mem(n, std::move(rest));
+                     return local_mem(n, _args.d_a1);
                    }
                  }},
       l->v());

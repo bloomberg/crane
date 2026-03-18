@@ -102,16 +102,13 @@ ComputationalProof::insert_dec(const unsigned int x,
                  },
                  [&](const typename List<unsigned int>::Cons _args)
                      -> std::shared_ptr<List<unsigned int>> {
-                   unsigned int y = _args.d_a0;
-                   std::shared_ptr<List<unsigned int>> rest = _args.d_a1;
-                   if (le_dec(x, y)) {
+                   if (le_dec(x, _args.d_a0)) {
                      return List<unsigned int>::ctor::Cons_(
                          std::move(x), List<unsigned int>::ctor::Cons_(
-                                           std::move(y), std::move(rest)));
+                                           _args.d_a0, _args.d_a1));
                    } else {
                      return List<unsigned int>::ctor::Cons_(
-                         std::move(y),
-                         insert_dec(std::move(x), std::move(rest)));
+                         _args.d_a0, insert_dec(std::move(x), _args.d_a1));
                    }
                  }},
       l->v());
@@ -119,16 +116,14 @@ ComputationalProof::insert_dec(const unsigned int x,
 
 std::shared_ptr<List<unsigned int>>
 ComputationalProof::isort_dec(const std::shared_ptr<List<unsigned int>> &l) {
-  return std::visit(
-      Overloaded{[](const typename List<unsigned int>::Nil _args)
-                     -> std::shared_ptr<List<unsigned int>> {
-                   return List<unsigned int>::ctor::Nil_();
-                 },
-                 [](const typename List<unsigned int>::Cons _args)
-                     -> std::shared_ptr<List<unsigned int>> {
-                   unsigned int x = _args.d_a0;
-                   std::shared_ptr<List<unsigned int>> rest = _args.d_a1;
-                   return insert_dec(std::move(x), isort_dec(std::move(rest)));
-                 }},
-      l->v());
+  return std::visit(Overloaded{[](const typename List<unsigned int>::Nil _args)
+                                   -> std::shared_ptr<List<unsigned int>> {
+                                 return List<unsigned int>::ctor::Nil_();
+                               },
+                               [](const typename List<unsigned int>::Cons _args)
+                                   -> std::shared_ptr<List<unsigned int>> {
+                                 return insert_dec(_args.d_a0,
+                                                   isort_dec(_args.d_a1));
+                               }},
+                    l->v());
 }

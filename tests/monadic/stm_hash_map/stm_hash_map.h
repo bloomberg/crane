@@ -187,15 +187,13 @@ template <typename K, typename V> struct CHT {
                        -> std::optional<T2> { return std::nullopt; },
                    [&](const typename List<std::pair<T1, T2>>::Cons _args)
                        -> std::optional<T2> {
-                     std::pair<T1, T2> p = _args.d_a0;
-                     std::shared_ptr<List<std::pair<T1, T2>>> tl = _args.d_a1;
-                     T1 k_ = p.first;
-                     T2 v = p.second;
-                     if (eqb(k, std::move(k_))) {
-                       return std::make_optional<T2>(std::move(v));
+                     T1 k_ = _args.d_a0.first;
+                     T2 v = _args.d_a0.second;
+                     if (eqb(k, k_)) {
+                       return std::make_optional<T2>(v);
                      } else {
                        return CHT<int, int>::template assoc_lookup<T1, T2>(
-                           eqb, k, tl);
+                           eqb, k, _args.d_a1);
                      }
                    }},
         xs->v());
@@ -214,18 +212,16 @@ template <typename K, typename V> struct CHT {
             },
             [&](const typename List<std::pair<T1, T2>>::Cons _args)
                 -> std::shared_ptr<List<std::pair<T1, T2>>> {
-              std::pair<T1, T2> p = _args.d_a0;
-              std::shared_ptr<List<std::pair<T1, T2>>> tl = _args.d_a1;
-              T1 k_ = p.first;
-              T2 v_ = p.second;
-              if (eqb(k, std::move(k_))) {
+              T1 k_ = _args.d_a0.first;
+              T2 v_ = _args.d_a0.second;
+              if (eqb(k, k_)) {
                 return List<std::pair<T1, T2>>::ctor::Cons_(
-                    std::make_pair(k, v), tl);
+                    std::make_pair(k, v), _args.d_a1);
               } else {
                 return List<std::pair<T1, T2>>::ctor::Cons_(
-                    std::make_pair(std::move(k_), std::move(v_)),
+                    std::make_pair(k_, v_),
                     CHT<int, int>::template assoc_insert_or_replace<T1, T2>(
-                        eqb, k, v, tl));
+                        eqb, k, v, _args.d_a1));
               }
             }},
         xs->v());
@@ -245,24 +241,19 @@ template <typename K, typename V> struct CHT {
                    [&](const typename List<std::pair<T1, T2>>::Cons _args)
                        -> std::pair<std::optional<T2>,
                                     std::shared_ptr<List<std::pair<T1, T2>>>> {
-                     std::pair<T1, T2> p = _args.d_a0;
-                     std::shared_ptr<List<std::pair<T1, T2>>> tl = _args.d_a1;
-                     T1 k_ = p.first;
-                     T2 v_ = p.second;
-                     if (eqb(k, std::move(k_))) {
-                       return std::make_pair(
-                           std::make_optional<T2>(std::move(v_)),
-                           std::move(tl));
+                     T1 k_ = _args.d_a0.first;
+                     T2 v_ = _args.d_a0.second;
+                     if (eqb(k, k_)) {
+                       return std::make_pair(std::make_optional<T2>(v_),
+                                             std::move(_args.d_a1));
                      } else {
                        std::pair<std::optional<T2>,
                                  std::shared_ptr<List<std::pair<T1, T2>>>>
                            q = CHT<int, int>::template assoc_remove<T1, T2>(
-                               eqb, k, std::move(tl));
+                               eqb, k, std::move(_args.d_a1));
                        return std::make_pair(
-                           std::move(q).first,
-                           List<std::pair<T1, T2>>::ctor::Cons_(
-                               std::make_pair(std::move(k_), std::move(v_)),
-                               std::move(q).second));
+                           q.first, List<std::pair<T1, T2>>::ctor::Cons_(
+                                        std::make_pair(k_, v_), q.second));
                      }
                    }},
         xs->v());

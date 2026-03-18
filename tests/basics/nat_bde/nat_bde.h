@@ -66,8 +66,7 @@ struct Nat {
       return bsl::visit(
           bdlf::Overloaded{[](const typename nat::O _args) -> int { return 0; },
                            [](const typename nat::S _args) -> int {
-                             bsl::shared_ptr<nat> n_ = _args.d_a0;
-                             return 1 + bsl::move(n_)->nat_to_int();
+                             return 1 + _args.d_a0->nat_to_int();
                            }},
           this->v());
     }
@@ -76,19 +75,19 @@ struct Nat {
       return bsl::visit(
           bdlf::Overloaded{[&](const typename nat::O _args) -> T1 { return f; },
                            [&](const typename nat::S _args) -> T1 {
-                             bsl::shared_ptr<nat> n0 = _args.d_a0;
-                             return f0(n0, n0->template nat_rec<T1>(f, f0));
+                             return f0(_args.d_a0,
+                                       _args.d_a0->template nat_rec<T1>(f, f0));
                            }},
           this->v());
     }
     template <typename T1, MapsTo<T1, bsl::shared_ptr<nat>, T1> F1>
     T1 nat_rect(const T1 f, F1 &&f0) const {
       return bsl::visit(
-          bdlf::Overloaded{[&](const typename nat::O _args) -> T1 { return f; },
-                           [&](const typename nat::S _args) -> T1 {
-                             bsl::shared_ptr<nat> n0 = _args.d_a0;
-                             return f0(n0, n0->template nat_rect<T1>(f, f0));
-                           }},
+          bdlf::Overloaded{
+              [&](const typename nat::O _args) -> T1 { return f; },
+              [&](const typename nat::S _args) -> T1 {
+                return f0(_args.d_a0, _args.d_a0->template nat_rect<T1>(f, f0));
+              }},
           this->v());
     }
     bsl::shared_ptr<nat> add(bsl::shared_ptr<nat> n) const {
@@ -98,8 +97,7 @@ struct Nat {
                 return n;
               },
               [&](const typename nat::S _args) -> bsl::shared_ptr<nat> {
-                bsl::shared_ptr<nat> x = _args.d_a0;
-                return nat::ctor::S_(bsl::move(x)->add(n));
+                return nat::ctor::S_(_args.d_a0->add(n));
               }},
           this->v());
     }

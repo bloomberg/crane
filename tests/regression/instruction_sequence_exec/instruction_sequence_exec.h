@@ -145,8 +145,7 @@ struct InstructionSequenceExec {
             [&](const typename instruction::NOP_ _args) -> T1 { return f; },
             [&](const typename instruction::INC_PC _args) -> T1 { return f0; },
             [&](const typename instruction::ADD_ACC _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f1(std::move(n));
+              return f1(_args.d_a0);
             }},
         i->v());
   }
@@ -159,8 +158,7 @@ struct InstructionSequenceExec {
             [&](const typename instruction::NOP_ _args) -> T1 { return f; },
             [&](const typename instruction::INC_PC _args) -> T1 { return f0; },
             [&](const typename instruction::ADD_ACC _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f1(std::move(n));
+              return f1(_args.d_a0);
             }},
         i->v());
   }

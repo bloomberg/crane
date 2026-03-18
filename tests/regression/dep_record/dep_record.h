@@ -145,9 +145,8 @@ struct DepRecord {
               return _tcI0::m_id();
             },
             [&](const typename List<m_carrier>::Cons _args) -> m_carrier {
-              m_carrier x = _args.d_a0;
-              std::shared_ptr<List<m_carrier>> rest = _args.d_a1;
-              return _tcI0::m_op(x, mfold<_tcI0, m_carrier>(rest));
+              return _tcI0::m_op(_args.d_a0,
+                                 mfold<_tcI0, m_carrier>(_args.d_a1));
             }},
         l->v());
   }

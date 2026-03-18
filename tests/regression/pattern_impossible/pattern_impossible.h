@@ -115,34 +115,30 @@ struct PatternImpossible {
       typename T1, MapsTo<T1, unsigned int> F0,
       MapsTo<T1, std::shared_ptr<nested>, T1, std::shared_ptr<nested>, T1> F1>
   static T1 nested_rect(F0 &&f, F1 &&f0, const std::shared_ptr<nested> &n) {
-    return std::visit(Overloaded{[&](const typename nested::Leaf _args) -> T1 {
-                                   unsigned int n0 = _args.d_a0;
-                                   return f(std::move(n0));
-                                 },
-                                 [&](const typename nested::Node _args) -> T1 {
-                                   std::shared_ptr<nested> n0 = _args.d_a0;
-                                   std::shared_ptr<nested> n1 = _args.d_a1;
-                                   return f0(n0, nested_rect<T1>(f, f0, n0), n1,
-                                             nested_rect<T1>(f, f0, n1));
-                                 }},
-                      n->v());
+    return std::visit(
+        Overloaded{[&](const typename nested::Leaf _args) -> T1 {
+                     return f(_args.d_a0);
+                   },
+                   [&](const typename nested::Node _args) -> T1 {
+                     return f0(_args.d_a0, nested_rect<T1>(f, f0, _args.d_a0),
+                               _args.d_a1, nested_rect<T1>(f, f0, _args.d_a1));
+                   }},
+        n->v());
   }
 
   template <
       typename T1, MapsTo<T1, unsigned int> F0,
       MapsTo<T1, std::shared_ptr<nested>, T1, std::shared_ptr<nested>, T1> F1>
   static T1 nested_rec(F0 &&f, F1 &&f0, const std::shared_ptr<nested> &n) {
-    return std::visit(Overloaded{[&](const typename nested::Leaf _args) -> T1 {
-                                   unsigned int n0 = _args.d_a0;
-                                   return f(std::move(n0));
-                                 },
-                                 [&](const typename nested::Node _args) -> T1 {
-                                   std::shared_ptr<nested> n0 = _args.d_a0;
-                                   std::shared_ptr<nested> n1 = _args.d_a1;
-                                   return f0(n0, nested_rec<T1>(f, f0, n0), n1,
-                                             nested_rec<T1>(f, f0, n1));
-                                 }},
-                      n->v());
+    return std::visit(
+        Overloaded{[&](const typename nested::Leaf _args) -> T1 {
+                     return f(_args.d_a0);
+                   },
+                   [&](const typename nested::Node _args) -> T1 {
+                     return f0(_args.d_a0, nested_rec<T1>(f, f0, _args.d_a0),
+                               _args.d_a1, nested_rec<T1>(f, f0, _args.d_a1));
+                   }},
+        n->v());
   }
 
   __attribute__((pure)) static unsigned int complex_match(const Three x);

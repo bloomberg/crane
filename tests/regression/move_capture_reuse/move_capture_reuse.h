@@ -78,10 +78,8 @@ public:
                 -> std::shared_ptr<List<T1>> { return List<T1>::ctor::Nil_(); },
             [&](const typename List<t_A>::Cons _args)
                 -> std::shared_ptr<List<T1>> {
-              t_A a = _args.d_a0;
-              std::shared_ptr<List<t_A>> l0 = _args.d_a1;
-              return List<T1>::ctor::Cons_(f(a),
-                                           std::move(l0)->template map<T1>(f));
+              return List<T1>::ctor::Cons_(f(_args.d_a0),
+                                           _args.d_a1->template map<T1>(f));
             }},
         this->v());
   }
@@ -92,8 +90,7 @@ public:
                      return 0u;
                    },
                    [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     std::shared_ptr<List<t_A>> l_ = _args.d_a1;
-                     return (std::move(l_)->length() + 1);
+                     return (_args.d_a1->length() + 1);
                    }},
         this->v());
   }
@@ -104,9 +101,8 @@ public:
                        -> std::shared_ptr<List<t_A>> { return m; },
                    [&](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {
-                     t_A a = _args.d_a0;
-                     std::shared_ptr<List<t_A>> l1 = _args.d_a1;
-                     return List<t_A>::ctor::Cons_(a, std::move(l1)->app(m));
+                     return List<t_A>::ctor::Cons_(_args.d_a0,
+                                                   _args.d_a1->app(m));
                    }},
         this->v());
   }
@@ -133,22 +129,17 @@ struct MoveCaptureReuse {
                    _args) -> unsigned int { return 0u; },
             [](const typename List<std::shared_ptr<List<unsigned int>>>::Cons
                    _args) -> unsigned int {
-              std::shared_ptr<List<unsigned int>> a = _args.d_a0;
-              std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> l =
-                  _args.d_a1;
               return std::visit(
                   Overloaded{
                       [](const typename List<
-                          std::shared_ptr<List<unsigned int>>>::Nil _args)
+                          std::shared_ptr<List<unsigned int>>>::Nil _args0)
                           -> unsigned int { return 0u; },
                       [&](const typename List<
-                          std::shared_ptr<List<unsigned int>>>::Cons _args)
+                          std::shared_ptr<List<unsigned int>>>::Cons _args0)
                           -> unsigned int {
-                        std::shared_ptr<List<unsigned int>> b = _args.d_a0;
-                        return (std::move(a)->length() +
-                                std::move(b)->length());
+                        return (_args.d_a0->length() + _args0.d_a0->length());
                       }},
-                  std::move(l)->v());
+                  _args.d_a1->v());
             }},
         sample->v());
   }();

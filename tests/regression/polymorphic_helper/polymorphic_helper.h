@@ -73,8 +73,7 @@ public:
                      return m;
                    },
                    [&](const typename Nat::S _args) -> std::shared_ptr<Nat> {
-                     std::shared_ptr<Nat> p = _args.d_a0;
-                     return Nat::ctor::S_(std::move(p)->add(m));
+                     return Nat::ctor::S_(_args.d_a0->add(m));
                    }},
         this->v());
   }
@@ -137,8 +136,7 @@ public:
               return Nat::ctor::O_();
             },
             [](const typename List<t_A>::Cons _args) -> std::shared_ptr<Nat> {
-              std::shared_ptr<List<t_A>> l_ = _args.d_a1;
-              return Nat::ctor::S_(std::move(l_)->length());
+              return Nat::ctor::S_(_args.d_a1->length());
             }},
         this->v());
   }
@@ -165,9 +163,8 @@ std::shared_ptr<List<T1>> ListDef::repeat(const T1 x,
                    return List<T1>::ctor::Nil_();
                  },
                  [&](const typename Nat::S _args) -> std::shared_ptr<List<T1>> {
-                   std::shared_ptr<Nat> k = _args.d_a0;
                    return List<T1>::ctor::Cons_(
-                       x, ListDef::template repeat<T1>(x, std::move(k)));
+                       x, ListDef::template repeat<T1>(x, _args.d_a0));
                  }},
       n->v());
 }

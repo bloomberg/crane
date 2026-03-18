@@ -81,12 +81,10 @@ struct Sum {
                         const std::shared_ptr<either<T1, T2>> &e) {
     return std::visit(
         Overloaded{[&](const typename either<T1, T2>::Left _args) -> T3 {
-                     T1 a = _args.d_a0;
-                     return f(a);
+                     return f(_args.d_a0);
                    },
                    [&](const typename either<T1, T2>::Right _args) -> T3 {
-                     T2 b = _args.d_a0;
-                     return f0(b);
+                     return f0(_args.d_a0);
                    }},
         e->v());
   }
@@ -97,12 +95,10 @@ struct Sum {
                        const std::shared_ptr<either<T1, T2>> &e) {
     return std::visit(
         Overloaded{[&](const typename either<T1, T2>::Left _args) -> T3 {
-                     T1 a = _args.d_a0;
-                     return f(a);
+                     return f(_args.d_a0);
                    },
                    [&](const typename either<T1, T2>::Right _args) -> T3 {
-                     T2 b = _args.d_a0;
-                     return f0(b);
+                     return f0(_args.d_a0);
                    }},
         e->v());
   }
@@ -130,33 +126,31 @@ struct Sum {
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1> F0>
   static std::shared_ptr<either<T3, T2>>
   map_left(F0 &&f, const std::shared_ptr<either<T1, T2>> &e) {
-    return std::visit(Overloaded{[&](const typename either<T1, T2>::Left _args)
-                                     -> std::shared_ptr<either<T3, T2>> {
-                                   T1 a = _args.d_a0;
-                                   return either<T3, T2>::ctor::Left_(f(a));
-                                 },
-                                 [](const typename either<T1, T2>::Right _args)
-                                     -> std::shared_ptr<either<T3, T2>> {
-                                   T2 b = _args.d_a0;
-                                   return either<T3, T2>::ctor::Right_(b);
-                                 }},
-                      e->v());
+    return std::visit(
+        Overloaded{[&](const typename either<T1, T2>::Left _args)
+                       -> std::shared_ptr<either<T3, T2>> {
+                     return either<T3, T2>::ctor::Left_(f(_args.d_a0));
+                   },
+                   [](const typename either<T1, T2>::Right _args)
+                       -> std::shared_ptr<either<T3, T2>> {
+                     return either<T3, T2>::ctor::Right_(_args.d_a0);
+                   }},
+        e->v());
   }
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T2> F0>
   static std::shared_ptr<either<T1, T3>>
   map_right(F0 &&f, const std::shared_ptr<either<T1, T2>> &e) {
-    return std::visit(Overloaded{[](const typename either<T1, T2>::Left _args)
-                                     -> std::shared_ptr<either<T1, T3>> {
-                                   T1 a = _args.d_a0;
-                                   return either<T1, T3>::ctor::Left_(a);
-                                 },
-                                 [&](const typename either<T1, T2>::Right _args)
-                                     -> std::shared_ptr<either<T1, T3>> {
-                                   T2 b = _args.d_a0;
-                                   return either<T1, T3>::ctor::Right_(f(b));
-                                 }},
-                      e->v());
+    return std::visit(
+        Overloaded{[](const typename either<T1, T2>::Left _args)
+                       -> std::shared_ptr<either<T1, T3>> {
+                     return either<T1, T3>::ctor::Left_(_args.d_a0);
+                   },
+                   [&](const typename either<T1, T2>::Right _args)
+                       -> std::shared_ptr<either<T1, T3>> {
+                     return either<T1, T3>::ctor::Right_(f(_args.d_a0));
+                   }},
+        e->v());
   }
 
   template <typename t_A, typename t_B, typename t_C> struct triple {
@@ -235,16 +229,13 @@ struct Sum {
                         const std::shared_ptr<triple<T1, T2, T3>> &t) {
     return std::visit(
         Overloaded{[&](const typename triple<T1, T2, T3>::First _args) -> T4 {
-                     T1 a = _args.d_a0;
-                     return f(a);
+                     return f(_args.d_a0);
                    },
                    [&](const typename triple<T1, T2, T3>::Second _args) -> T4 {
-                     T2 b = _args.d_a0;
-                     return f0(b);
+                     return f0(_args.d_a0);
                    },
                    [&](const typename triple<T1, T2, T3>::Third _args) -> T4 {
-                     T3 c = _args.d_a0;
-                     return f1(c);
+                     return f1(_args.d_a0);
                    }},
         t->v());
   }
@@ -255,16 +246,13 @@ struct Sum {
                        const std::shared_ptr<triple<T1, T2, T3>> &t) {
     return std::visit(
         Overloaded{[&](const typename triple<T1, T2, T3>::First _args) -> T4 {
-                     T1 a = _args.d_a0;
-                     return f(a);
+                     return f(_args.d_a0);
                    },
                    [&](const typename triple<T1, T2, T3>::Second _args) -> T4 {
-                     T2 b = _args.d_a0;
-                     return f0(b);
+                     return f0(_args.d_a0);
                    },
                    [&](const typename triple<T1, T2, T3>::Third _args) -> T4 {
-                     T3 c = _args.d_a0;
-                     return f1(c);
+                     return f1(_args.d_a0);
                    }},
         t->v());
   }

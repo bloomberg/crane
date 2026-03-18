@@ -94,9 +94,8 @@ struct DocComments {
         Overloaded{
             [&](const typename mylist<T1>::Mynil _args) -> T2 { return f; },
             [&](const typename mylist<T1>::Mycons _args) -> T2 {
-              T1 y = _args.d_a0;
-              std::shared_ptr<mylist<T1>> m0 = _args.d_a1;
-              return f0(y, m0, mylist_rect<T1, T2>(f, f0, m0));
+              return f0(_args.d_a0, _args.d_a1,
+                        mylist_rect<T1, T2>(f, f0, _args.d_a1));
             }},
         m->v());
   }
@@ -109,9 +108,8 @@ struct DocComments {
         Overloaded{
             [&](const typename mylist<T1>::Mynil _args) -> T2 { return f; },
             [&](const typename mylist<T1>::Mycons _args) -> T2 {
-              T1 y = _args.d_a0;
-              std::shared_ptr<mylist<T1>> m0 = _args.d_a1;
-              return f0(y, m0, mylist_rec<T1, T2>(f, f0, m0));
+              return f0(_args.d_a0, _args.d_a1,
+                        mylist_rec<T1, T2>(f, f0, _args.d_a1));
             }},
         m->v());
   }

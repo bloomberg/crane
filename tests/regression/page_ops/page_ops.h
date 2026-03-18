@@ -159,8 +159,7 @@ struct PageOps {
         Overloaded{
             [&](const typename instruction::NOP _args) -> T1 { return f; },
             [&](const typename instruction::LDM _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             }},
         i->v());
   }
@@ -172,8 +171,7 @@ struct PageOps {
         Overloaded{
             [&](const typename instruction::NOP _args) -> T1 { return f; },
             [&](const typename instruction::LDM _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             }},
         i->v());
   }
@@ -194,9 +192,7 @@ struct PageOps {
                                    },
                                    [&](const typename List<T1>::Cons _args)
                                        -> std::shared_ptr<List<T1>> {
-                                     std::shared_ptr<List<T1>> l_ = _args.d_a1;
-                                     return drop<T1>(std::move(n_),
-                                                     std::move(l_));
+                                     return drop<T1>(std::move(n_), _args.d_a1);
                                    }},
                         l->v());
     }

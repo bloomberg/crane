@@ -77,9 +77,7 @@ public:
         Overloaded{
             [&](const typename List<t_A>::Nil _args) -> T1 { return a0; },
             [&](const typename List<t_A>::Cons _args) -> T1 {
-              t_A b = _args.d_a0;
-              std::shared_ptr<List<t_A>> l0 = _args.d_a1;
-              return std::move(l0)->template fold_left<T1>(f, f(a0, b));
+              return _args.d_a1->template fold_left<T1>(f, f(a0, _args.d_a0));
             }},
         this->v());
   }
@@ -92,10 +90,8 @@ public:
                 -> std::shared_ptr<List<T1>> { return List<T1>::ctor::Nil_(); },
             [&](const typename List<t_A>::Cons _args)
                 -> std::shared_ptr<List<T1>> {
-              t_A a = _args.d_a0;
-              std::shared_ptr<List<t_A>> l0 = _args.d_a1;
-              return List<T1>::ctor::Cons_(f(a),
-                                           std::move(l0)->template map<T1>(f));
+              return List<T1>::ctor::Cons_(f(_args.d_a0),
+                                           _args.d_a1->template map<T1>(f));
             }},
         this->v());
   }
@@ -153,9 +149,7 @@ struct PartialApply {
   static T2 tagged_rect(F0 &&f, const std::shared_ptr<tagged<T1>> &t) {
     return std::visit(
         Overloaded{[&](const typename tagged<T1>::Tag _args) -> T2 {
-          unsigned int n = _args.d_a0;
-          T1 a = _args.d_a1;
-          return f(std::move(n), a);
+          return f(_args.d_a0, _args.d_a1);
         }},
         t->v());
   }
@@ -164,9 +158,7 @@ struct PartialApply {
   static T2 tagged_rec(F0 &&f, const std::shared_ptr<tagged<T1>> &t) {
     return std::visit(
         Overloaded{[&](const typename tagged<T1>::Tag _args) -> T2 {
-          unsigned int n = _args.d_a0;
-          T1 a = _args.d_a1;
-          return f(std::move(n), a);
+          return f(_args.d_a0, _args.d_a1);
         }},
         t->v());
   }

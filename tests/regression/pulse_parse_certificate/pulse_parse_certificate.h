@@ -78,10 +78,8 @@ public:
                 -> std::shared_ptr<List<T1>> { return List<T1>::ctor::Nil_(); },
             [&](const typename List<t_A>::Cons _args)
                 -> std::shared_ptr<List<T1>> {
-              t_A a = _args.d_a0;
-              std::shared_ptr<List<t_A>> l0 = _args.d_a1;
-              return List<T1>::ctor::Cons_(f(a),
-                                           std::move(l0)->template map<T1>(f));
+              return List<T1>::ctor::Cons_(f(_args.d_a0),
+                                           _args.d_a1->template map<T1>(f));
             }},
         this->v());
   }
@@ -92,8 +90,7 @@ public:
                      return 0u;
                    },
                    [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     std::shared_ptr<List<t_A>> l_ = _args.d_a1;
-                     return (std::move(l_)->length() + 1);
+                     return (_args.d_a1->length() + 1);
                    }},
         this->v());
   }

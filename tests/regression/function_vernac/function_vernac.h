@@ -209,20 +209,15 @@ struct FunctionVernac {
                         const std::shared_ptr<R_div2> &r) {
     return std::visit(
         Overloaded{[&](const typename R_div2::R_div2_0 _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f(std::move(n));
+                     return f(_args.d_a0);
                    },
                    [&](const typename R_div2::R_div2_1 _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f0(std::move(n));
+                     return f0(_args.d_a0);
                    },
                    [&](const typename R_div2::R_div2_2 _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     unsigned int p = _args.d_a1;
-                     unsigned int _res = _args.d_a2;
-                     std::shared_ptr<R_div2> r0 = _args.d_a3;
-                     return f1(std::move(n), p, _res, r0,
-                               R_div2_rect<T1>(f, f0, f1, p, _res, r0));
+                     return f1(_args.d_a0, _args.d_a1, _args.d_a2, _args.d_a3,
+                               R_div2_rect<T1>(f, f0, f1, _args.d_a1,
+                                               _args.d_a2, _args.d_a3));
                    }},
         r->v());
   }
@@ -237,20 +232,15 @@ struct FunctionVernac {
                        const std::shared_ptr<R_div2> &r) {
     return std::visit(
         Overloaded{[&](const typename R_div2::R_div2_0 _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f(std::move(n));
+                     return f(_args.d_a0);
                    },
                    [&](const typename R_div2::R_div2_1 _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f0(std::move(n));
+                     return f0(_args.d_a0);
                    },
                    [&](const typename R_div2::R_div2_2 _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     unsigned int p = _args.d_a1;
-                     unsigned int _res = _args.d_a2;
-                     std::shared_ptr<R_div2> r0 = _args.d_a3;
-                     return f1(std::move(n), p, _res, r0,
-                               R_div2_rec<T1>(f, f0, f1, p, _res, r0));
+                     return f1(_args.d_a0, _args.d_a1, _args.d_a2, _args.d_a3,
+                               R_div2_rec<T1>(f, f0, f1, _args.d_a1, _args.d_a2,
+                                              _args.d_a3));
                    }},
         r->v());
   }
@@ -296,9 +286,7 @@ struct FunctionVernac {
               return 0u;
             },
             [&](const typename List<unsigned int>::Cons _args) -> unsigned int {
-              unsigned int x = _args.d_a0;
-              std::shared_ptr<List<unsigned int>> xs = _args.d_a1;
-              return (std::move(x) + list_sum0(std::move(xs)));
+              return (_args.d_a0 + list_sum0(_args.d_a1));
             }},
         l->v());
   }
@@ -384,17 +372,13 @@ struct FunctionVernac {
                             const std::shared_ptr<R_list_sum> &r) {
     return std::visit(
         Overloaded{[&](const typename R_list_sum::R_list_sum_0 _args) -> T1 {
-                     std::shared_ptr<List<unsigned int>> l = _args.d_a0;
-                     return f(std::move(l));
+                     return f(_args.d_a0);
                    },
                    [&](const typename R_list_sum::R_list_sum_1 _args) -> T1 {
-                     std::shared_ptr<List<unsigned int>> l = _args.d_a0;
-                     unsigned int x = _args.d_a1;
-                     std::shared_ptr<List<unsigned int>> xs = _args.d_a2;
-                     unsigned int _res = _args.d_a3;
-                     std::shared_ptr<R_list_sum> r0 = _args.d_a4;
-                     return f0(std::move(l), std::move(x), xs, _res, r0,
-                               R_list_sum_rect<T1>(f, f0, xs, _res, r0));
+                     return f0(_args.d_a0, _args.d_a1, _args.d_a2, _args.d_a3,
+                               _args.d_a4,
+                               R_list_sum_rect<T1>(f, f0, _args.d_a2,
+                                                   _args.d_a3, _args.d_a4));
                    }},
         r->v());
   }
@@ -409,17 +393,13 @@ struct FunctionVernac {
                  const unsigned int _x0, const std::shared_ptr<R_list_sum> &r) {
     return std::visit(
         Overloaded{[&](const typename R_list_sum::R_list_sum_0 _args) -> T1 {
-                     std::shared_ptr<List<unsigned int>> l = _args.d_a0;
-                     return f(std::move(l));
+                     return f(_args.d_a0);
                    },
                    [&](const typename R_list_sum::R_list_sum_1 _args) -> T1 {
-                     std::shared_ptr<List<unsigned int>> l = _args.d_a0;
-                     unsigned int x = _args.d_a1;
-                     std::shared_ptr<List<unsigned int>> xs = _args.d_a2;
-                     unsigned int _res = _args.d_a3;
-                     std::shared_ptr<R_list_sum> r0 = _args.d_a4;
-                     return f0(std::move(l), std::move(x), xs, _res, r0,
-                               R_list_sum_rec<T1>(f, f0, xs, _res, r0));
+                     return f0(_args.d_a0, _args.d_a1, _args.d_a2, _args.d_a3,
+                               _args.d_a4,
+                               R_list_sum_rec<T1>(f, f0, _args.d_a2, _args.d_a3,
+                                                  _args.d_a4));
                    }},
         r->v());
   }
@@ -438,10 +418,8 @@ struct FunctionVernac {
                      return f2();
                    },
                    [&](const typename List<unsigned int>::Cons _args) -> auto {
-                     unsigned int n = _args.d_a0;
-                     std::shared_ptr<List<unsigned int>> l0 = _args.d_a1;
-                     std::function<T1(T1)> f3 = f1(std::move(n), l0);
-                     T1 hrec = list_sum_rect<T1>(f, f0, std::move(l0));
+                     std::function<T1(T1)> f3 = f1(_args.d_a0, _args.d_a1);
+                     T1 hrec = list_sum_rect<T1>(f, f0, _args.d_a1);
                      return f3(hrec);
                    }},
         l->v());

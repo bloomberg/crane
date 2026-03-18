@@ -182,8 +182,7 @@ struct MutualCoind {
   static T1 headA(const std::shared_ptr<streamA<T1>> &s) {
     return std::visit(
         Overloaded{[](const typename streamA<T1>::ConsA _args) -> T1 {
-          T1 x = _args.d_a0;
-          return x;
+          return _args.d_a0;
         }},
         s->v());
   }
@@ -194,11 +193,9 @@ struct MutualCoind {
     return streamB<T1>::ctor::lazy_(
         [=](void) mutable -> std::shared_ptr<streamB<T1>> {
           return std::visit(
-              Overloaded{[](const typename streamA<T1>::ConsA _args)
-                             -> std::shared_ptr<streamB<T1>> {
-                std::shared_ptr<streamB<T1>> t = _args.d_a1;
-                return t;
-              }},
+              Overloaded{
+                  [](const typename streamA<T1>::ConsA _args)
+                      -> std::shared_ptr<streamB<T1>> { return _args.d_a1; }},
               s->v());
         });
   }
@@ -207,8 +204,7 @@ struct MutualCoind {
   static T1 headB(const std::shared_ptr<streamB<T1>> &s) {
     return std::visit(
         Overloaded{[](const typename streamB<T1>::ConsB _args) -> T1 {
-          T1 x = _args.d_a0;
-          return x;
+          return _args.d_a0;
         }},
         s->v());
   }
@@ -219,11 +215,9 @@ struct MutualCoind {
     return streamA<T1>::ctor::lazy_(
         [=](void) mutable -> std::shared_ptr<streamA<T1>> {
           return std::visit(
-              Overloaded{[](const typename streamB<T1>::ConsB _args)
-                             -> std::shared_ptr<streamA<T1>> {
-                std::shared_ptr<streamA<T1>> t = _args.d_a1;
-                return t;
-              }},
+              Overloaded{
+                  [](const typename streamB<T1>::ConsB _args)
+                      -> std::shared_ptr<streamA<T1>> { return _args.d_a1; }},
               s->v());
         });
   }
@@ -240,9 +234,8 @@ struct MutualCoind {
       unsigned int f = fuel - 1;
       return std::visit(Overloaded{[&](const typename streamA<T1>::ConsA _args)
                                        -> std::shared_ptr<List<T1>> {
-                          T1 x = _args.d_a0;
-                          std::shared_ptr<streamB<T1>> t = _args.d_a1;
-                          return List<T1>::ctor::Cons_(x, takeB<T1>(f, t));
+                          return List<T1>::ctor::Cons_(
+                              _args.d_a0, takeB<T1>(f, _args.d_a1));
                         }},
                         s->v());
     }
@@ -257,9 +250,8 @@ struct MutualCoind {
       unsigned int f = fuel - 1;
       return std::visit(Overloaded{[&](const typename streamB<T1>::ConsB _args)
                                        -> std::shared_ptr<List<T1>> {
-                          T1 x = _args.d_a0;
-                          std::shared_ptr<streamA<T1>> t = _args.d_a1;
-                          return List<T1>::ctor::Cons_(x, takeA<T1>(f, t));
+                          return List<T1>::ctor::Cons_(
+                              _args.d_a0, takeA<T1>(f, _args.d_a1));
                         }},
                         s->v());
     }

@@ -125,9 +125,8 @@ public:
                        -> std::shared_ptr<List<t_A>> { return m; },
                    [&](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {
-                     t_A a = _args.d_a0;
-                     std::shared_ptr<List<t_A>> l1 = _args.d_a1;
-                     return List<t_A>::ctor::Cons_(a, std::move(l1)->app(m));
+                     return List<t_A>::ctor::Cons_(_args.d_a0,
+                                                   _args.d_a1->app(m));
                    }},
         this->v());
   }
@@ -191,9 +190,8 @@ struct NestedTree {
         Overloaded{
             [&](const typename tree<T2>::Leaf _args) -> T1 { return f(); },
             [&](const typename tree<T2>::Node _args) -> T1 {
-              T2 y = _args.d_a0;
-              std::shared_ptr<tree<std::pair<T2, T2>>> t0 = _args.d_a1;
-              return f0(y, t0, tree_rect<T1, T2>(f, f0, t0));
+              return f0(_args.d_a0, _args.d_a1,
+                        tree_rect<T1, T2>(f, f0, _args.d_a1));
             }},
         t->v());
   }
@@ -204,9 +202,8 @@ struct NestedTree {
         Overloaded{
             [&](const typename tree<T2>::Leaf _args) -> T1 { return f(); },
             [&](const typename tree<T2>::Node _args) -> T1 {
-              T2 y = _args.d_a0;
-              std::shared_ptr<tree<std::pair<T2, T2>>> t0 = _args.d_a1;
-              return f0(y, t0, tree_rec<T1, T2>(f, f0, t0));
+              return f0(_args.d_a0, _args.d_a1,
+                        tree_rec<T1, T2>(f, f0, _args.d_a1));
             }},
         t->v());
   }
@@ -278,16 +275,13 @@ _flatten_tree_go(F0 &&f,
           },
           [&](const typename NestedTree::template tree<T1>::Node _args)
               -> std::shared_ptr<List<std::shared_ptr<List<T2>>>> {
-            T1 a = _args.d_a0;
-            std::shared_ptr<NestedTree::template tree<std::pair<T1, T1>>> t1 =
-                _args.d_a1;
             return List<std::shared_ptr<List<T2>>>::ctor::Cons_(
-                f(a),
+                f(_args.d_a0),
                 _flatten_tree_go<T1, T2>(
                     [&](std::pair<T1, T1> _x0) -> std::shared_ptr<List<T2>> {
                       return NestedTree::template lift<T1, T2>(f, _x0);
                     },
-                    std::move(t1)));
+                    _args.d_a1));
           }},
       t0->v());
 }

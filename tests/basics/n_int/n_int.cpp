@@ -56,8 +56,7 @@ Pos::succ_double_mask(const std::shared_ptr<Pos::mask> &x) {
               -> std::shared_ptr<Pos::mask> { return mask::ctor::IsPos_(1u); },
           [](const typename Pos::mask::IsPos _args)
               -> std::shared_ptr<Pos::mask> {
-            unsigned int p = _args.d_a0;
-            return mask::ctor::IsPos_((2u * std::move(p) + 1u));
+            return mask::ctor::IsPos_((2u * _args.d_a0 + 1u));
           },
           [](const typename Pos::mask::IsNeg _args)
               -> std::shared_ptr<Pos::mask> { return mask::ctor::IsNeg_(); }},
@@ -72,8 +71,7 @@ Pos::double_mask(const std::shared_ptr<Pos::mask> &x) {
               -> std::shared_ptr<Pos::mask> { return mask::ctor::IsNul_(); },
           [](const typename Pos::mask::IsPos _args)
               -> std::shared_ptr<Pos::mask> {
-            unsigned int p = _args.d_a0;
-            return mask::ctor::IsPos_((2u * std::move(p)));
+            return mask::ctor::IsPos_((2u * _args.d_a0));
           },
           [](const typename Pos::mask::IsNeg _args)
               -> std::shared_ptr<Pos::mask> { return mask::ctor::IsNeg_(); }},

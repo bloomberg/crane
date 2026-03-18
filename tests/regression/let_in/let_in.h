@@ -78,9 +78,7 @@ struct LetIn {
   static T3 pair_rect(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
     return std::visit(
         Overloaded{[&](const typename pair<T1, T2>::Pair0 _args) -> T3 {
-          T1 a = _args.d_a0;
-          T2 b = _args.d_a1;
-          return f(a, b);
+          return f(_args.d_a0, _args.d_a1);
         }},
         p->v());
   }
@@ -89,9 +87,7 @@ struct LetIn {
   static T3 pair_rec(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
     return std::visit(
         Overloaded{[&](const typename pair<T1, T2>::Pair0 _args) -> T3 {
-          T1 a = _args.d_a0;
-          T2 b = _args.d_a1;
-          return f(a, b);
+          return f(_args.d_a0, _args.d_a1);
         }},
         p->v());
   }
@@ -102,10 +98,7 @@ struct LetIn {
     return std::visit(
         Overloaded{
             [](const typename pair<unsigned int, unsigned int>::Pair0 _args)
-                -> unsigned int {
-              unsigned int x = _args.d_a0;
-              return std::move(x);
-            }},
+                -> unsigned int { return _args.d_a0; }},
         std::move(p)->v());
   }();
   static inline const unsigned int multi_let = [](void) {

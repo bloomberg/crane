@@ -33,26 +33,22 @@ DecodeList::decode_list(const std::shared_ptr<List<unsigned int>> &bytes) {
           [](const typename List<unsigned int>::Cons _args)
               -> std::shared_ptr<
                   List<std::shared_ptr<DecodeList::instruction>>> {
-            unsigned int b1 = _args.d_a0;
-            std::shared_ptr<List<unsigned int>> l = _args.d_a1;
             return std::visit(
                 Overloaded{
-                    [](const typename List<unsigned int>::Nil _args)
+                    [](const typename List<unsigned int>::Nil _args0)
                         -> std::shared_ptr<
                             List<std::shared_ptr<DecodeList::instruction>>> {
                       return List<std::shared_ptr<DecodeList::instruction>>::
                           ctor::Nil_();
                     },
-                    [&](const typename List<unsigned int>::Cons _args)
+                    [&](const typename List<unsigned int>::Cons _args0)
                         -> std::shared_ptr<
                             List<std::shared_ptr<DecodeList::instruction>>> {
-                      unsigned int b2 = _args.d_a0;
-                      std::shared_ptr<List<unsigned int>> rest = _args.d_a1;
                       return List<std::shared_ptr<DecodeList::instruction>>::
-                          ctor::Cons_(decode(std::move(b1), std::move(b2)),
-                                      decode_list(std::move(rest)));
+                          ctor::Cons_(decode(_args.d_a0, _args0.d_a0),
+                                      decode_list(_args0.d_a1));
                     }},
-                std::move(l)->v());
+                _args.d_a1->v());
           }},
       bytes->v());
 }

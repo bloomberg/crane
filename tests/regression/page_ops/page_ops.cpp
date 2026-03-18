@@ -76,25 +76,22 @@ PageOps::disassemble(const std::shared_ptr<List<unsigned int>> &rom,
           [&](const typename List<unsigned int>::Cons _args)
               -> std::optional<std::pair<std::shared_ptr<PageOps::instruction>,
                                          unsigned int>> {
-            unsigned int b1 = _args.d_a0;
-            std::shared_ptr<List<unsigned int>> l = _args.d_a1;
             return std::visit(
                 Overloaded{
-                    [](const typename List<unsigned int>::Nil _args)
+                    [](const typename List<unsigned int>::Nil _args0)
                         -> std::optional<
                             std::pair<std::shared_ptr<PageOps::instruction>,
                                       unsigned int>> { return std::nullopt; },
-                    [&](const typename List<unsigned int>::Cons _args)
+                    [&](const typename List<unsigned int>::Cons _args0)
                         -> std::optional<
                             std::pair<std::shared_ptr<PageOps::instruction>,
                                       unsigned int>> {
-                      unsigned int b2 = _args.d_a0;
                       return std::make_optional<std::pair<
                           std::shared_ptr<PageOps::instruction>, unsigned int>>(
-                          std::make_pair(decode(std::move(b1), std::move(b2)),
+                          std::make_pair(decode(_args.d_a0, _args0.d_a0),
                                          (std::move(addr) + 2u)));
                     }},
-                std::move(l)->v());
+                _args.d_a1->v());
           }},
       drop<unsigned int>(addr, rom)->v());
 }

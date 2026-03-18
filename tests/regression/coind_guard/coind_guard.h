@@ -128,8 +128,7 @@ struct CoindGuard {
   template <typename T1> static T1 hd(const std::shared_ptr<Stream<T1>> &s) {
     return std::visit(
         Overloaded{[](const typename Stream<T1>::Cons _args) -> T1 {
-          T1 x = _args.d_a0;
-          return x;
+          return _args.d_a0;
         }},
         s->v());
   }
@@ -140,8 +139,7 @@ struct CoindGuard {
         [=](void) mutable -> std::shared_ptr<Stream<T1>> {
           return std::visit(Overloaded{[](const typename Stream<T1>::Cons _args)
                                            -> std::shared_ptr<Stream<T1>> {
-                              std::shared_ptr<Stream<T1>> t = _args.d_a1;
-                              return t;
+                              return _args.d_a1;
                             }},
                             s->v());
         });

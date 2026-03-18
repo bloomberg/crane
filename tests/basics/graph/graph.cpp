@@ -21,18 +21,16 @@ __attribute__((pure)) bool nat_eqb(const std::shared_ptr<Nat> &n,
           [&](const typename Nat::O _args) -> bool {
             return std::visit(
                 Overloaded{
-                    [](const typename Nat::O _args) -> bool { return true; },
-                    [](const typename Nat::S _args) -> bool { return false; }},
+                    [](const typename Nat::O _args0) -> bool { return true; },
+                    [](const typename Nat::S _args0) -> bool { return false; }},
                 m->v());
           },
           [&](const typename Nat::S _args) -> bool {
-            std::shared_ptr<Nat> n_ = _args.d_a0;
             return std::visit(
                 Overloaded{
-                    [](const typename Nat::O _args) -> bool { return false; },
-                    [&](const typename Nat::S _args) -> bool {
-                      std::shared_ptr<Nat> m_ = _args.d_a0;
-                      return nat_eqb(std::move(n_), std::move(m_));
+                    [](const typename Nat::O _args0) -> bool { return false; },
+                    [&](const typename Nat::S _args0) -> bool {
+                      return nat_eqb(_args.d_a0, _args0.d_a0);
                     }},
                 m->v());
           }},

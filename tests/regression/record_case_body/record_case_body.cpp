@@ -176,11 +176,7 @@ __attribute__((pure)) unsigned int RecordCaseBody::sum_list(
           [](const typename RecordCaseBody::list<unsigned int>::Nil _args)
               -> unsigned int { return 0u; },
           [](const typename RecordCaseBody::list<unsigned int>::Cons _args)
-              -> unsigned int {
-            unsigned int x = _args.d_a0;
-            std::shared_ptr<RecordCaseBody::list<unsigned int>> xs = _args.d_a1;
-            return (std::move(x) + sum_list(std::move(xs)));
-          }},
+              -> unsigned int { return (_args.d_a0 + sum_list(_args.d_a1)); }},
       l->v());
 }
 

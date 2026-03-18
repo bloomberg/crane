@@ -135,22 +135,18 @@ template <OrderedType K, BaseType V> struct MakeMap {
                                        tree::ctor::Empty_());
             },
             [&](const typename tree::Node _args) -> std::shared_ptr<tree> {
-              std::shared_ptr<tree> l = _args.d_a0;
-              typename K::t k_ = _args.d_a1;
-              typename V::t v_ = _args.d_a2;
-              std::shared_ptr<tree> r = _args.d_a3;
               return [&](void) {
-                switch (K::compare(k, k_)) {
+                switch (K::compare(k, _args.d_a1)) {
                 case Comparison::e_EQ: {
-                  return tree::ctor::Node_(std::move(l), k, v, std::move(r));
+                  return tree::ctor::Node_(_args.d_a0, k, v, _args.d_a3);
                 }
                 case Comparison::e_LT: {
-                  return tree::ctor::Node_(add(k, v, std::move(l)), k_, v_,
-                                           std::move(r));
+                  return tree::ctor::Node_(add(k, v, _args.d_a0), _args.d_a1,
+                                           _args.d_a2, _args.d_a3);
                 }
                 case Comparison::e_GT: {
-                  return tree::ctor::Node_(std::move(l), k_, v_,
-                                           add(k, v, std::move(r)));
+                  return tree::ctor::Node_(_args.d_a0, _args.d_a1, _args.d_a2,
+                                           add(k, v, _args.d_a3));
                 }
                 }
               }();
@@ -165,20 +161,16 @@ template <OrderedType K, BaseType V> struct MakeMap {
                        -> std::optional<typename V::t> { return std::nullopt; },
                    [&](const typename tree::Node _args)
                        -> std::optional<typename V::t> {
-                     std::shared_ptr<tree> l = _args.d_a0;
-                     typename K::t k_ = _args.d_a1;
-                     typename V::t v_ = _args.d_a2;
-                     std::shared_ptr<tree> r = _args.d_a3;
                      return [&](void) {
-                       switch (K::compare(k, k_)) {
+                       switch (K::compare(k, _args.d_a1)) {
                        case Comparison::e_EQ: {
-                         return std::make_optional<typename V::t>(v_);
+                         return std::make_optional<typename V::t>(_args.d_a2);
                        }
                        case Comparison::e_LT: {
-                         return find(k, std::move(l));
+                         return find(k, _args.d_a0);
                        }
                        case Comparison::e_GT: {
-                         return find(k, std::move(r));
+                         return find(k, _args.d_a3);
                        }
                        }
                      }();

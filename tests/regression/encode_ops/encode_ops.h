@@ -77,8 +77,7 @@ public:
                      return 0u;
                    },
                    [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     std::shared_ptr<List<t_A>> l_ = _args.d_a1;
-                     return (std::move(l_)->length() + 1);
+                     return (_args.d_a1->length() + 1);
                    }},
         this->v());
   }
@@ -269,17 +268,13 @@ struct EncodeOps {
             [&](const typename instruction1::CMC _args) -> T1 { return f0; },
             [&](const typename instruction1::DAA _args) -> T1 { return f1; },
             [&](const typename instruction1::FIM _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              unsigned int n0 = _args.d_a1;
-              return f2(std::move(n), std::move(n0));
+              return f2(_args.d_a0, _args.d_a1);
             },
             [&](const typename instruction1::JUN _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f3(std::move(n));
+              return f3(_args.d_a0);
             },
             [&](const typename instruction1::LDM1 _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f4(std::move(n));
+              return f4(_args.d_a0);
             },
             [&](const typename instruction1::NOP1 _args) -> T1 { return f5; },
             [&](const typename instruction1::RDM _args) -> T1 { return f6; },
@@ -301,17 +296,13 @@ struct EncodeOps {
             [&](const typename instruction1::CMC _args) -> T1 { return f0; },
             [&](const typename instruction1::DAA _args) -> T1 { return f1; },
             [&](const typename instruction1::FIM _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              unsigned int n0 = _args.d_a1;
-              return f2(std::move(n), std::move(n0));
+              return f2(_args.d_a0, _args.d_a1);
             },
             [&](const typename instruction1::JUN _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f3(std::move(n));
+              return f3(_args.d_a0);
             },
             [&](const typename instruction1::LDM1 _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f4(std::move(n));
+              return f4(_args.d_a0);
             },
             [&](const typename instruction1::NOP1 _args) -> T1 { return f5; },
             [&](const typename instruction1::RDM _args) -> T1 { return f6; },
@@ -393,8 +384,7 @@ struct EncodeOps {
         Overloaded{
             [&](const typename instruction2::NOP2 _args) -> T1 { return f; },
             [&](const typename instruction2::LDM2 _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             }},
         i->v());
   }
@@ -406,8 +396,7 @@ struct EncodeOps {
         Overloaded{
             [&](const typename instruction2::NOP2 _args) -> T1 { return f; },
             [&](const typename instruction2::LDM2 _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             }},
         i->v());
   }
@@ -482,8 +471,7 @@ struct EncodeOps {
         Overloaded{
             [&](const typename instruction3::NOP3 _args) -> T1 { return f; },
             [&](const typename instruction3::LDM3 _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             }},
         i->v());
   }
@@ -495,8 +483,7 @@ struct EncodeOps {
         Overloaded{
             [&](const typename instruction3::NOP3 _args) -> T1 { return f; },
             [&](const typename instruction3::LDM3 _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             }},
         i->v());
   }

@@ -89,13 +89,10 @@ struct IndParam {
               MapsTo<T1, unsigned int> F1>
     static T1 result_rect(F0 &&f, F1 &&f0, const std::shared_ptr<result> &r) {
       return std::visit(Overloaded{[&](const typename result::Ok _args) -> T1 {
-                                     std::shared_ptr<typename C::t> t0 =
-                                         _args.d_a0;
-                                     return f(std::move(t0));
+                                     return f(_args.d_a0);
                                    },
                                    [&](const typename result::Err _args) -> T1 {
-                                     unsigned int n = _args.d_a0;
-                                     return f0(std::move(n));
+                                     return f0(_args.d_a0);
                                    }},
                         r->v());
     }
@@ -104,13 +101,10 @@ struct IndParam {
               MapsTo<T1, unsigned int> F1>
     static T1 result_rec(F0 &&f, F1 &&f0, const std::shared_ptr<result> &r) {
       return std::visit(Overloaded{[&](const typename result::Ok _args) -> T1 {
-                                     std::shared_ptr<typename C::t> t0 =
-                                         _args.d_a0;
-                                     return f(std::move(t0));
+                                     return f(_args.d_a0);
                                    },
                                    [&](const typename result::Err _args) -> T1 {
-                                     unsigned int n = _args.d_a0;
-                                     return f0(std::move(n));
+                                     return f0(_args.d_a0);
                                    }},
                         r->v());
     }
@@ -128,8 +122,7 @@ struct IndParam {
     get_size(const std::shared_ptr<result> &r) {
       return std::visit(
           Overloaded{[](const typename result::Ok _args) -> unsigned int {
-                       std::shared_ptr<typename C::t> c = _args.d_a0;
-                       return C::size(std::move(c));
+                       return C::size(_args.d_a0);
                      },
                      [](const typename result::Err _args) -> unsigned int {
                        return 0u;
@@ -222,13 +215,10 @@ struct IndParam {
       return std::visit(
           Overloaded{[&](const typename t::Empty _args) -> T1 { return f; },
                      [&](const typename t::Single _args) -> T1 {
-                       unsigned int e = _args.d_a0;
-                       return f0(std::move(e));
+                       return f0(_args.d_a0);
                      },
                      [&](const typename t::Pair _args) -> T1 {
-                       unsigned int e = _args.d_a0;
-                       unsigned int e0 = _args.d_a1;
-                       return f1(std::move(e), std::move(e0));
+                       return f1(_args.d_a0, _args.d_a1);
                      }},
           t0->v());
     }
@@ -240,13 +230,10 @@ struct IndParam {
       return std::visit(
           Overloaded{[&](const typename t::Empty _args) -> T1 { return f; },
                      [&](const typename t::Single _args) -> T1 {
-                       unsigned int e = _args.d_a0;
-                       return f0(std::move(e));
+                       return f0(_args.d_a0);
                      },
                      [&](const typename t::Pair _args) -> T1 {
-                       unsigned int e = _args.d_a0;
-                       unsigned int e0 = _args.d_a1;
-                       return f1(std::move(e), std::move(e0));
+                       return f1(_args.d_a0, _args.d_a1);
                      }},
           t0->v());
     }

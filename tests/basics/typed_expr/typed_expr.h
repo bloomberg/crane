@@ -131,37 +131,26 @@ public:
     return std::visit(
         Overloaded{
             [](const typename Expr::ENat _args) -> std::any {
-              unsigned int n = _args.d_a0;
-              return std::move(n);
+              return _args.d_a0;
             },
             [](const typename Expr::EBool _args) -> std::any {
-              bool b = _args.d_a0;
-              return std::move(b);
+              return _args.d_a0;
             },
             [](const typename Expr::EAdd _args) -> std::any {
-              std::shared_ptr<Expr> a = _args.d_a0;
-              std::shared_ptr<Expr> b = _args.d_a1;
               return (
-                  std::any_cast<unsigned int>(std::move(a)->eval(Ty::e_TNAT)) +
-                  std::any_cast<unsigned int>(std::move(b)->eval(Ty::e_TNAT)));
+                  std::any_cast<unsigned int>(_args.d_a0->eval(Ty::e_TNAT)) +
+                  std::any_cast<unsigned int>(_args.d_a1->eval(Ty::e_TNAT)));
             },
             [](const typename Expr::EEq _args) -> std::any {
-              std::shared_ptr<Expr> a = _args.d_a0;
-              std::shared_ptr<Expr> b = _args.d_a1;
               return std::any_cast<unsigned int>(
-                         std::move(a)->eval(Ty::e_TNAT)) ==
-                     std::any_cast<unsigned int>(
-                         std::move(b)->eval(Ty::e_TNAT));
+                         _args.d_a0->eval(Ty::e_TNAT)) ==
+                     std::any_cast<unsigned int>(_args.d_a1->eval(Ty::e_TNAT));
             },
             [](const typename Expr::EIf _args) -> std::any {
-              Ty t0 = _args.d_a0;
-              std::shared_ptr<Expr> c = _args.d_a1;
-              std::shared_ptr<Expr> th = _args.d_a2;
-              std::shared_ptr<Expr> el = _args.d_a3;
-              if (std::any_cast<bool>(std::move(c)->eval(Ty::e_TBOOL))) {
-                return std::move(th)->eval(t0);
+              if (std::any_cast<bool>(_args.d_a1->eval(Ty::e_TBOOL))) {
+                return _args.d_a2->eval(_args.d_a0);
               } else {
-                return std::move(el)->eval(t0);
+                return _args.d_a3->eval(_args.d_a0);
               }
             }},
         this->v());

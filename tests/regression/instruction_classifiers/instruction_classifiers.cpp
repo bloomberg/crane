@@ -82,17 +82,13 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_acc(
           [](const typename List<
               std::shared_ptr<InstructionClassifiers::instr_acc>>::Cons _args)
               -> unsigned int {
-            std::shared_ptr<InstructionClassifiers::instr_acc> i = _args.d_a0;
-            std::shared_ptr<
-                List<std::shared_ptr<InstructionClassifiers::instr_acc>>>
-                rest = _args.d_a1;
             return ([&](void) {
-              if (writes_acc(std::move(i))) {
+              if (writes_acc(_args.d_a0)) {
                 return 1u;
               } else {
                 return 0u;
               }
-            }() + count_writes_acc(std::move(rest)));
+            }() + count_writes_acc(_args.d_a1));
           }},
       prog->v());
 }
@@ -131,17 +127,13 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_ram(
           [](const typename List<
               std::shared_ptr<InstructionClassifiers::instr_ram>>::Cons _args)
               -> unsigned int {
-            std::shared_ptr<InstructionClassifiers::instr_ram> i = _args.d_a0;
-            std::shared_ptr<
-                List<std::shared_ptr<InstructionClassifiers::instr_ram>>>
-                rest = _args.d_a1;
             return ([&](void) {
-              if (writes_ram(std::move(i))) {
+              if (writes_ram(_args.d_a0)) {
                 return 1u;
               } else {
                 return 0u;
               }
-            }() + count_writes_ram(std::move(rest)));
+            }() + count_writes_ram(_args.d_a1));
           }},
       prog->v());
 }
@@ -178,17 +170,13 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_regs(
           [](const typename List<
               std::shared_ptr<InstructionClassifiers::instr_regs>>::Cons _args)
               -> unsigned int {
-            std::shared_ptr<InstructionClassifiers::instr_regs> i = _args.d_a0;
-            std::shared_ptr<
-                List<std::shared_ptr<InstructionClassifiers::instr_regs>>>
-                rest = _args.d_a1;
             return ([&](void) {
-              if (writes_regs(std::move(i))) {
+              if (writes_regs(_args.d_a0)) {
                 return 1u;
               } else {
                 return 0u;
               }
-            }() + count_writes_regs(std::move(rest)));
+            }() + count_writes_regs(_args.d_a1));
           }},
       prog->v());
 }
@@ -227,17 +215,13 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_jumps(
           [](const typename List<
               std::shared_ptr<InstructionClassifiers::instr_jump>>::Cons _args)
               -> unsigned int {
-            std::shared_ptr<InstructionClassifiers::instr_jump> i = _args.d_a0;
-            std::shared_ptr<
-                List<std::shared_ptr<InstructionClassifiers::instr_jump>>>
-                rest = _args.d_a1;
             return ([&](void) {
-              if (is_jump(std::move(i))) {
+              if (is_jump(_args.d_a0)) {
                 return 1u;
               } else {
                 return 0u;
               }
-            }() + count_jumps(std::move(rest)));
+            }() + count_jumps(_args.d_a1));
           }},
       prog->v());
 }

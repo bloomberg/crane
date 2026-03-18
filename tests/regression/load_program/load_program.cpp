@@ -42,13 +42,11 @@ LoadProgram::load_program(std::shared_ptr<LoadProgram::state> s,
               -> std::shared_ptr<LoadProgram::state> { return std::move(s); },
           [&](const typename List<unsigned int>::Cons _args)
               -> std::shared_ptr<LoadProgram::state> {
-            unsigned int b = _args.d_a0;
-            std::shared_ptr<List<unsigned int>> rest = _args.d_a1;
             std::shared_ptr<LoadProgram::state> s_ =
-                set_prom_params(std::move(s), base, std::move(b), true);
+                set_prom_params(std::move(s), base, _args.d_a0, true);
             std::shared_ptr<LoadProgram::state> s__ =
                 execute_wpm(std::move(s_));
-            return load_program(std::move(s__), (base + 1u), std::move(rest));
+            return load_program(std::move(s__), (base + 1u), _args.d_a1);
           }},
       bytes->v());
 }
@@ -93,10 +91,8 @@ std::shared_ptr<LoadProgram::state_simple> LoadProgram::load_program_simple(
                  },
                  [&](const typename List<unsigned int>::Cons _args)
                      -> std::shared_ptr<LoadProgram::state_simple> {
-                   unsigned int b = _args.d_a0;
-                   std::shared_ptr<List<unsigned int>> rest = _args.d_a1;
                    return load_program_simple(
-                       write_byte(std::move(s), std::move(b)), std::move(rest));
+                       write_byte(std::move(s), _args.d_a0), _args.d_a1);
                  }},
       bytes->v());
 }

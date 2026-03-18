@@ -77,9 +77,8 @@ public:
                        -> std::shared_ptr<List<t_A>> { return m; },
                    [&](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {
-                     t_A a = _args.d_a0;
-                     std::shared_ptr<List<t_A>> l1 = _args.d_a1;
-                     return List<t_A>::ctor::Cons_(a, std::move(l1)->app(m));
+                     return List<t_A>::ctor::Cons_(_args.d_a0,
+                                                   _args.d_a1->app(m));
                    }},
         this->v());
   }

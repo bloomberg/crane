@@ -76,9 +76,7 @@ struct List {
           Overloaded{
               [&](const typename list<t_A>::Nil _args) -> t_A { return x; },
               [](const typename list<t_A>::Cons _args) -> t_A {
-                t_A y = _args.d_a0;
-                std::shared_ptr<list<t_A>> ls = _args.d_a1;
-                return std::move(ls)->last(y);
+                return _args.d_a1->last(_args.d_a0);
               }},
           this->v());
     }
@@ -88,8 +86,7 @@ struct List {
           Overloaded{
               [&](const typename list<t_A>::Nil _args) -> t_A { return x; },
               [](const typename list<t_A>::Cons _args) -> t_A {
-                t_A y = _args.d_a0;
-                return y;
+                return _args.d_a0;
               }},
           this->v());
     }
@@ -100,9 +97,8 @@ struct List {
           Overloaded{
               [&](const typename list<t_A>::Nil _args) -> T1 { return f; },
               [&](const typename list<t_A>::Cons _args) -> T1 {
-                t_A y = _args.d_a0;
-                std::shared_ptr<list<t_A>> l0 = _args.d_a1;
-                return f0(y, l0, l0->template list_rec<T1>(f, f0));
+                return f0(_args.d_a0, _args.d_a1,
+                          _args.d_a1->template list_rec<T1>(f, f0));
               }},
           this->v());
     }
@@ -113,24 +109,21 @@ struct List {
           Overloaded{
               [&](const typename list<t_A>::Nil _args) -> T1 { return f; },
               [&](const typename list<t_A>::Cons _args) -> T1 {
-                t_A y = _args.d_a0;
-                std::shared_ptr<list<t_A>> l0 = _args.d_a1;
-                return f0(y, l0, l0->template list_rect<T1>(f, f0));
+                return f0(_args.d_a0, _args.d_a1,
+                          _args.d_a1->template list_rect<T1>(f, f0));
               }},
           this->v());
     }
 
     std::shared_ptr<list<t_A>> tl() const {
-      return std::visit(Overloaded{[](const typename list<t_A>::Nil _args)
-                                       -> std::shared_ptr<list<t_A>> {
-                                     return list<t_A>::ctor::Nil_();
-                                   },
-                                   [](const typename list<t_A>::Cons _args)
-                                       -> std::shared_ptr<list<t_A>> {
-                                     std::shared_ptr<list<t_A>> ls = _args.d_a1;
-                                     return std::move(ls);
-                                   }},
-                        this->v());
+      return std::visit(
+          Overloaded{[](const typename list<t_A>::Nil _args)
+                         -> std::shared_ptr<list<t_A>> {
+                       return list<t_A>::ctor::Nil_();
+                     },
+                     [](const typename list<t_A>::Cons _args)
+                         -> std::shared_ptr<list<t_A>> { return _args.d_a1; }},
+          this->v());
     }
 
     std::shared_ptr<list<t_A>> app(std::shared_ptr<list<t_A>> l2) const {
@@ -139,9 +132,8 @@ struct List {
                          -> std::shared_ptr<list<t_A>> { return l2; },
                      [&](const typename list<t_A>::Cons _args)
                          -> std::shared_ptr<list<t_A>> {
-                       t_A x = _args.d_a0;
-                       std::shared_ptr<list<t_A>> l3 = _args.d_a1;
-                       return list<t_A>::ctor::Cons_(x, std::move(l3)->app(l2));
+                       return list<t_A>::ctor::Cons_(_args.d_a0,
+                                                     _args.d_a1->app(l2));
                      }},
           this->v());
     }
@@ -154,11 +146,9 @@ struct List {
                                    },
                                    [&](const typename list<t_A>::Cons _args)
                                        -> std::shared_ptr<list<T1>> {
-                                     t_A x = _args.d_a0;
-                                     std::shared_ptr<list<t_A>> l_ = _args.d_a1;
                                      return list<T1>::ctor::Cons_(
-                                         f(x),
-                                         std::move(l_)->template map<T1>(f));
+                                         f(_args.d_a0),
+                                         _args.d_a1->template map<T1>(f));
                                    }},
                         this->v());
     }

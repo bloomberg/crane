@@ -126,13 +126,11 @@ public:
                                  },
                                  [&](const typename List<t_A>::Cons _args)
                                      -> std::shared_ptr<List<t_A>> {
-                                   t_A x = _args.d_a0;
-                                   std::shared_ptr<List<t_A>> l0 = _args.d_a1;
-                                   if (f(x)) {
+                                   if (f(_args.d_a0)) {
                                      return List<t_A>::ctor::Cons_(
-                                         x, std::move(l0)->filter(f));
+                                         _args.d_a0, _args.d_a1->filter(f));
                                    } else {
-                                     return std::move(l0)->filter(f);
+                                     return _args.d_a1->filter(f);
                                    }
                                  }},
                       this->v());

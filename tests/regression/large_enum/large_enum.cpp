@@ -146,8 +146,7 @@ LargeEnum::tok_to_nat(const std::shared_ptr<LargeEnum::tok> &t) {
   return std::visit(
       Overloaded{
           [](const typename LargeEnum::tok::TNum _args) -> unsigned int {
-            unsigned int n = _args.d_a0;
-            return std::move(n);
+            return _args.d_a0;
           },
           [](const typename LargeEnum::tok::TPlus _args) -> unsigned int {
             return 100u;
@@ -177,8 +176,7 @@ LargeEnum::tok_to_nat(const std::shared_ptr<LargeEnum::tok> &t) {
             return 108u;
           },
           [](const typename LargeEnum::tok::TIdent _args) -> unsigned int {
-            unsigned int n = _args.d_a0;
-            return (200u + std::move(n));
+            return (200u + _args.d_a0);
           },
           [](const typename LargeEnum::tok::TEOF _args) -> unsigned int {
             return 999u;

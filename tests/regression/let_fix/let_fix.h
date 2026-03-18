@@ -89,10 +89,8 @@ struct LetFix {
                   -> std::shared_ptr<List<T1>> { return std::move(acc); },
               [&](const typename List<T1>::Cons _args)
                   -> std::shared_ptr<List<T1>> {
-                T1 x = _args.d_a0;
-                std::shared_ptr<List<T1>> rest = _args.d_a1;
-                return go(List<T1>::ctor::Cons_(x, std::move(acc)),
-                          std::move(rest));
+                return go(List<T1>::ctor::Cons_(_args.d_a0, std::move(acc)),
+                          _args.d_a1);
               }},
           xs->v());
     };
@@ -112,8 +110,7 @@ struct LetFix {
                      return 0u;
                    },
                    [](const typename List<T1>::Cons _args) -> unsigned int {
-                     std::shared_ptr<List<T1>> rest = _args.d_a1;
-                     return (local_length<T1>(std::move(rest)) + 1);
+                     return (local_length<T1>(_args.d_a1) + 1);
                    }},
         xs->v());
   }

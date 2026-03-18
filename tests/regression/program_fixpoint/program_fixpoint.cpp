@@ -37,10 +37,7 @@ std::shared_ptr<List<unsigned int>> ProgFix::interleave_func(
                     -> std::shared_ptr<
                         SigT<std::shared_ptr<List<unsigned int>>,
                              std::shared_ptr<List<unsigned int>>>> {
-                  std::shared_ptr<SigT<std::shared_ptr<List<unsigned int>>,
-                                       std::shared_ptr<List<unsigned int>>>>
-                      a = _args.d_a0;
-                  return std::move(a);
+                  return _args.d_a0;
                 }},
             std::move(y)->v()));
       };
@@ -60,11 +57,8 @@ std::shared_ptr<List<unsigned int>> ProgFix::interleave_func(
                      },
                      [&](const typename List<unsigned int>::Cons _args)
                          -> std::shared_ptr<List<unsigned int>> {
-                       unsigned int x0 = _args.d_a0;
-                       std::shared_ptr<List<unsigned int>> xs = _args.d_a1;
                        return List<unsigned int>::ctor::Cons_(
-                           std::move(x0),
-                           interleave0(std::move(l2), std::move(xs)));
+                           _args.d_a0, interleave0(std::move(l2), _args.d_a1));
                      }},
           std::move(l1)->v());
     }

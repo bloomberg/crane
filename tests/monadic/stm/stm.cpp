@@ -61,10 +61,8 @@ __attribute__((pure)) unsigned int stmtest::stm_dequeue(
             return stm::retry<unsigned int>();
           },
           [&](const typename List<unsigned int>::Cons _args) -> unsigned int {
-            unsigned int y = _args.d_a0;
-            std::shared_ptr<List<unsigned int>> ys = _args.d_a1;
-            q->write(ys);
-            return y;
+            q->write(_args.d_a1);
+            return _args.d_a0;
           }},
       xs->v());
 }

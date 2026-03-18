@@ -27,33 +27,28 @@ MergesortFuel::split(const std::shared_ptr<List<unsigned int>> &l) {
           [](const typename List<unsigned int>::Cons _args)
               -> std::pair<std::shared_ptr<List<unsigned int>>,
                            std::shared_ptr<List<unsigned int>>> {
-            unsigned int x = _args.d_a0;
-            std::shared_ptr<List<unsigned int>> l0 = _args.d_a1;
             return std::visit(
                 Overloaded{
-                    [&](const typename List<unsigned int>::Nil _args)
+                    [&](const typename List<unsigned int>::Nil _args0)
                         -> std::pair<std::shared_ptr<List<unsigned int>>,
                                      std::shared_ptr<List<unsigned int>>> {
                       return std::make_pair(
                           List<unsigned int>::ctor::Cons_(
-                              std::move(x), List<unsigned int>::ctor::Nil_()),
+                              _args.d_a0, List<unsigned int>::ctor::Nil_()),
                           List<unsigned int>::ctor::Nil_());
                     },
-                    [&](const typename List<unsigned int>::Cons _args)
+                    [&](const typename List<unsigned int>::Cons _args0)
                         -> std::pair<std::shared_ptr<List<unsigned int>>,
                                      std::shared_ptr<List<unsigned int>>> {
-                      unsigned int y = _args.d_a0;
-                      std::shared_ptr<List<unsigned int>> rest = _args.d_a1;
                       std::shared_ptr<List<unsigned int>> l1 =
-                          split(rest).first;
+                          split(_args0.d_a1).first;
                       std::shared_ptr<List<unsigned int>> l2 =
-                          split(rest).second;
+                          split(_args0.d_a1).second;
                       return std::make_pair(
-                          List<unsigned int>::ctor::Cons_(x, std::move(l1)),
-                          List<unsigned int>::ctor::Cons_(std::move(y),
-                                                          std::move(l2)));
+                          List<unsigned int>::ctor::Cons_(_args.d_a0, l1),
+                          List<unsigned int>::ctor::Cons_(_args0.d_a0, l2));
                     }},
-                std::move(l0)->v());
+                _args.d_a1->v());
           }},
       l->v());
 }
@@ -75,23 +70,18 @@ MergesortFuel::merge(std::shared_ptr<List<unsigned int>> l1,
             },
             [&](const typename List<unsigned int>::Cons _args)
                 -> std::shared_ptr<List<unsigned int>> {
-              unsigned int a1 = _args.d_a0;
-              std::shared_ptr<List<unsigned int>> l1_ = _args.d_a1;
               return std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil _args)
+                      [&](const typename List<unsigned int>::Nil _args0)
                           -> std::shared_ptr<List<unsigned int>> { return l1; },
-                      [&](const typename List<unsigned int>::Cons _args)
+                      [&](const typename List<unsigned int>::Cons _args0)
                           -> std::shared_ptr<List<unsigned int>> {
-                        unsigned int a2 = _args.d_a0;
-                        std::shared_ptr<List<unsigned int>> l2_ = _args.d_a1;
-                        if (Compare_dec::le_lt_dec(a1, a2)) {
+                        if (Compare_dec::le_lt_dec(_args.d_a0, _args0.d_a0)) {
                           return List<unsigned int>::ctor::Cons_(
-                              std::move(a1),
-                              merge(std::move(l1_), std::move(l3)));
+                              _args.d_a0, merge(_args.d_a1, std::move(l3)));
                         } else {
                           return List<unsigned int>::ctor::Cons_(
-                              std::move(a2), merge_aux(std::move(l2_)));
+                              _args0.d_a0, merge_aux(_args0.d_a1));
                         }
                       }},
                   l3->v());
@@ -117,23 +107,21 @@ MergesortFuel::msort_go(const unsigned int fuel,
             },
             [&](const typename List<unsigned int>::Cons _args)
                 -> std::shared_ptr<List<unsigned int>> {
-              unsigned int x = _args.d_a0;
-              std::shared_ptr<List<unsigned int>> l0 = _args.d_a1;
               return std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil _args)
+                      [&](const typename List<unsigned int>::Nil _args0)
                           -> std::shared_ptr<List<unsigned int>> {
                         return List<unsigned int>::ctor::Cons_(
-                            std::move(x), List<unsigned int>::ctor::Nil_());
+                            _args.d_a0, List<unsigned int>::ctor::Nil_());
                       },
-                      [&](const typename List<unsigned int>::Cons _args)
+                      [&](const typename List<unsigned int>::Cons _args0)
                           -> std::shared_ptr<List<unsigned int>> {
                         std::shared_ptr<List<unsigned int>> l1 = split(l).first;
                         std::shared_ptr<List<unsigned int>> l2 =
                             split(l).second;
                         return merge(msort_go(fuel_, l1), msort_go(fuel_, l2));
                       }},
-                  std::move(l0)->v());
+                  _args.d_a1->v());
             }},
         l->v());
   }

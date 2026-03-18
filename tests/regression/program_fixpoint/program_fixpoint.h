@@ -148,8 +148,7 @@ public:
   t_A projT1() const {
     return std::visit(
         Overloaded{[](const typename SigT<t_A, t_P>::ExistT _args) -> t_A {
-          t_A a = _args.d_a0;
-          return a;
+          return _args.d_a0;
         }},
         this->v());
   }
@@ -157,8 +156,7 @@ public:
   t_P projT2() const {
     return std::visit(
         Overloaded{[](const typename SigT<t_A, t_P>::ExistT _args) -> t_P {
-          t_P h = _args.d_a1;
-          return h;
+          return _args.d_a1;
         }},
         this->v());
   }

@@ -83,10 +83,8 @@ public:
                    },
                    [](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {
-                     t_A x = _args.d_a0;
-                     std::shared_ptr<List<t_A>> l_ = _args.d_a1;
-                     return std::move(l_)->rev()->app(
-                         List<t_A>::ctor::Cons_(x, List<t_A>::ctor::Nil_()));
+                     return _args.d_a1->rev()->app(List<t_A>::ctor::Cons_(
+                         _args.d_a0, List<t_A>::ctor::Nil_()));
                    }},
         this->v());
   }
@@ -97,9 +95,8 @@ public:
                        -> std::shared_ptr<List<t_A>> { return m; },
                    [&](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {
-                     t_A a = _args.d_a0;
-                     std::shared_ptr<List<t_A>> l1 = _args.d_a1;
-                     return List<t_A>::ctor::Cons_(a, std::move(l1)->app(m));
+                     return List<t_A>::ctor::Cons_(_args.d_a0,
+                                                   _args.d_a1->app(m));
                    }},
         this->v());
   }
@@ -125,18 +122,16 @@ struct ToString {
               return "";
             },
             [&](const typename List<T1>::Cons _args) -> std::string {
-              T1 z = _args.d_a0;
-              std::shared_ptr<List<T1>> l_ = _args.d_a1;
               return std::visit(
                   Overloaded{
-                      [&](const typename List<T1>::Nil _args) -> std::string {
-                        return sep + p(z);
+                      [&](const typename List<T1>::Nil _args0) -> std::string {
+                        return sep + p(_args.d_a0);
                       },
-                      [&](const typename List<T1>::Cons _args) -> std::string {
-                        return sep + p(z) +
-                               intersperse<T1>(p, sep, std::move(l_));
+                      [&](const typename List<T1>::Cons _args0) -> std::string {
+                        return sep + p(_args.d_a0) +
+                               intersperse<T1>(p, sep, _args.d_a1);
                       }},
-                  l_->v());
+                  _args.d_a1->v());
             }},
         l->v());
   }
@@ -150,18 +145,16 @@ struct ToString {
               return "[]";
             },
             [&](const typename List<T1>::Cons _args) -> std::string {
-              T1 y = _args.d_a0;
-              std::shared_ptr<List<T1>> l_ = _args.d_a1;
               return std::visit(
                   Overloaded{
-                      [&](const typename List<T1>::Nil _args) -> std::string {
-                        return "["s + p(y) + "]"s;
+                      [&](const typename List<T1>::Nil _args0) -> std::string {
+                        return "["s + p(_args.d_a0) + "]"s;
                       },
-                      [&](const typename List<T1>::Cons _args) -> std::string {
-                        return "["s + p(y) +
-                               intersperse<T1>(p, "; ", std::move(l_)) + "]"s;
+                      [&](const typename List<T1>::Cons _args0) -> std::string {
+                        return "["s + p(_args.d_a0) +
+                               intersperse<T1>(p, "; ", _args.d_a1) + "]"s;
                       }},
-                  l_->v());
+                  _args.d_a1->v());
             }},
         l->v());
   }
@@ -186,10 +179,8 @@ struct Tokenizer {
                      return {};
                    },
                    [](const typename List<T1>::Cons _args) -> std::vector<T1> {
-                     T1 a = _args.d_a0;
-                     std::shared_ptr<List<T1>> l_ = _args.d_a1;
-                     std::vector<T1> v = list_to_vec_h<T1>(l_);
-                     v.push_back(a);
+                     std::vector<T1> v = list_to_vec_h<T1>(_args.d_a1);
+                     v.push_back(_args.d_a0);
                      return v;
                    }},
         l->v());
@@ -209,10 +200,9 @@ struct Tokenizer {
                      return {};
                    },
                    [&](const typename List<T1>::Cons _args) -> std::vector<T2> {
-                     T1 a = _args.d_a0;
-                     std::shared_ptr<List<T1>> l_ = _args.d_a1;
-                     std::vector<T2> v = list_to_vec_map_h<T1, T2>(f, l_);
-                     v.push_back(f(a));
+                     std::vector<T2> v =
+                         list_to_vec_map_h<T1, T2>(f, _args.d_a1);
+                     v.push_back(f(_args.d_a0));
                      return v;
                    }},
         l->v());

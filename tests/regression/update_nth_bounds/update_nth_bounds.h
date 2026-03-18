@@ -82,8 +82,7 @@ public:
                                    },
                                    [&](const typename List<t_A>::Cons _args)
                                        -> std::shared_ptr<List<t_A>> {
-                                     std::shared_ptr<List<t_A>> l0 = _args.d_a1;
-                                     return std::move(l0)->skipn(n0);
+                                     return _args.d_a1->skipn(n0);
                                    }},
                         this->v());
     }
@@ -100,10 +99,8 @@ public:
                                    },
                                    [&](const typename List<t_A>::Cons _args)
                                        -> std::shared_ptr<List<t_A>> {
-                                     t_A a = _args.d_a0;
-                                     std::shared_ptr<List<t_A>> l0 = _args.d_a1;
                                      return List<t_A>::ctor::Cons_(
-                                         a, std::move(l0)->firstn(n0));
+                                         _args.d_a0, _args.d_a1->firstn(n0));
                                    }},
                         this->v());
     }
@@ -115,8 +112,7 @@ public:
                      return 0u;
                    },
                    [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     std::shared_ptr<List<t_A>> l_ = _args.d_a1;
-                     return (std::move(l_)->length() + 1);
+                     return (_args.d_a1->length() + 1);
                    }},
         this->v());
   }
@@ -127,9 +123,8 @@ public:
                        -> std::shared_ptr<List<t_A>> { return m; },
                    [&](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {
-                     t_A a = _args.d_a0;
-                     std::shared_ptr<List<t_A>> l1 = _args.d_a1;
-                     return List<t_A>::ctor::Cons_(a, std::move(l1)->app(m));
+                     return List<t_A>::ctor::Cons_(_args.d_a0,
+                                                   _args.d_a1->app(m));
                    }},
         this->v());
   }

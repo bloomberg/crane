@@ -286,12 +286,10 @@ struct Pos {
   static T1 iter_op(F0 &&op, const std::shared_ptr<Positive> &p, const T1 a) {
     return std::visit(
         Overloaded{[&](const typename Positive::XI _args) -> T1 {
-                     std::shared_ptr<Positive> p0 = _args.d_a0;
-                     return op(a, iter_op<T1>(op, std::move(p0), op(a, a)));
+                     return op(a, iter_op<T1>(op, _args.d_a0, op(a, a)));
                    },
                    [&](const typename Positive::XO _args) -> T1 {
-                     std::shared_ptr<Positive> p0 = _args.d_a0;
-                     return iter_op<T1>(op, std::move(p0), op(a, a));
+                     return iter_op<T1>(op, _args.d_a0, op(a, a));
                    },
                    [&](const typename Positive::XH _args) -> T1 { return a; }},
         p->v());
@@ -315,12 +313,10 @@ struct Coq_Pos {
   static T1 iter_op(F0 &&op, const std::shared_ptr<Positive> &p, const T1 a) {
     return std::visit(
         Overloaded{[&](const typename Positive::XI _args) -> T1 {
-                     std::shared_ptr<Positive> p0 = _args.d_a0;
-                     return op(a, iter_op<T1>(op, std::move(p0), op(a, a)));
+                     return op(a, iter_op<T1>(op, _args.d_a0, op(a, a)));
                    },
                    [&](const typename Positive::XO _args) -> T1 {
-                     std::shared_ptr<Positive> p0 = _args.d_a0;
-                     return iter_op<T1>(op, std::move(p0), op(a, a));
+                     return iter_op<T1>(op, _args.d_a0, op(a, a));
                    },
                    [&](const typename Positive::XH _args) -> T1 { return a; }},
         p->v());

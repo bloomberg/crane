@@ -164,9 +164,7 @@ struct MutualRecord {
   static T1 department_rect(F0 &&f, const std::shared_ptr<department> &d) {
     return std::visit(
         Overloaded{[&](const typename department::Mk_department _args) -> T1 {
-          unsigned int n = _args.d_a0;
-          std::shared_ptr<List<std::shared_ptr<employee>>> l = _args.d_a1;
-          return f(std::move(n), std::move(l));
+          return f(_args.d_a0, _args.d_a1);
         }},
         d->v());
   }
@@ -178,9 +176,7 @@ struct MutualRecord {
   static T1 department_rec(F0 &&f, const std::shared_ptr<department> &d) {
     return std::visit(
         Overloaded{[&](const typename department::Mk_department _args) -> T1 {
-          unsigned int n = _args.d_a0;
-          std::shared_ptr<List<std::shared_ptr<employee>>> l = _args.d_a1;
-          return f(std::move(n), std::move(l));
+          return f(_args.d_a0, _args.d_a1);
         }},
         d->v());
   }
@@ -189,9 +185,7 @@ struct MutualRecord {
   static T1 employee_rect(F0 &&f, const std::shared_ptr<employee> &e) {
     return std::visit(
         Overloaded{[&](const typename employee::Mk_employee _args) -> T1 {
-          unsigned int n = _args.d_a0;
-          unsigned int n0 = _args.d_a1;
-          return f(std::move(n), std::move(n0));
+          return f(_args.d_a0, _args.d_a1);
         }},
         e->v());
   }
@@ -200,9 +194,7 @@ struct MutualRecord {
   static T1 employee_rec(F0 &&f, const std::shared_ptr<employee> &e) {
     return std::visit(
         Overloaded{[&](const typename employee::Mk_employee _args) -> T1 {
-          unsigned int n = _args.d_a0;
-          unsigned int n0 = _args.d_a1;
-          return f(std::move(n), std::move(n0));
+          return f(_args.d_a0, _args.d_a1);
         }},
         e->v());
   }

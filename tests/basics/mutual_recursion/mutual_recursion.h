@@ -136,12 +136,10 @@ struct MutualRecursion {
   static T2 tree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<tree<T1>> &t) {
     return std::visit(
         Overloaded{[&](const typename tree<T1>::Leaf _args) -> T2 {
-                     T1 a = _args.d_a0;
-                     return f(a);
+                     return f(_args.d_a0);
                    },
                    [&](const typename tree<T1>::Node _args) -> T2 {
-                     std::shared_ptr<forest<T1>> f1 = _args.d_a0;
-                     return f0(std::move(f1));
+                     return f0(_args.d_a0);
                    }},
         t->v());
   }
@@ -151,12 +149,10 @@ struct MutualRecursion {
   static T2 tree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<tree<T1>> &t) {
     return std::visit(
         Overloaded{[&](const typename tree<T1>::Leaf _args) -> T2 {
-                     T1 a = _args.d_a0;
-                     return f(a);
+                     return f(_args.d_a0);
                    },
                    [&](const typename tree<T1>::Node _args) -> T2 {
-                     std::shared_ptr<forest<T1>> f1 = _args.d_a0;
-                     return f0(std::move(f1));
+                     return f0(_args.d_a0);
                    }},
         t->v());
   }
@@ -170,9 +166,8 @@ struct MutualRecursion {
         Overloaded{
             [&](const typename forest<T1>::Empty _args) -> T2 { return f; },
             [&](const typename forest<T1>::Trees _args) -> T2 {
-              std::shared_ptr<tree<T1>> t = _args.d_a0;
-              std::shared_ptr<forest<T1>> f2 = _args.d_a1;
-              return f0(std::move(t), f2, forest_rect<T1, T2>(f, f0, f2));
+              return f0(_args.d_a0, _args.d_a1,
+                        forest_rect<T1, T2>(f, f0, _args.d_a1));
             }},
         f1->v());
   }
@@ -186,9 +181,8 @@ struct MutualRecursion {
         Overloaded{
             [&](const typename forest<T1>::Empty _args) -> T2 { return f; },
             [&](const typename forest<T1>::Trees _args) -> T2 {
-              std::shared_ptr<tree<T1>> t = _args.d_a0;
-              std::shared_ptr<forest<T1>> f2 = _args.d_a1;
-              return f0(std::move(t), f2, forest_rec<T1, T2>(f, f0, f2));
+              return f0(_args.d_a0, _args.d_a1,
+                        forest_rec<T1, T2>(f, f0, _args.d_a1));
             }},
         f1->v());
   }
@@ -201,8 +195,7 @@ struct MutualRecursion {
                      return 1u;
                    },
                    [](const typename tree<T1>::Node _args) -> unsigned int {
-                     std::shared_ptr<forest<T1>> f = _args.d_a0;
-                     return forest_size<T1>(std::move(f));
+                     return forest_size<T1>(_args.d_a0);
                    }},
         t->v());
   }
@@ -215,10 +208,8 @@ struct MutualRecursion {
                      return 0u;
                    },
                    [](const typename forest<T1>::Trees _args) -> unsigned int {
-                     std::shared_ptr<tree<T1>> t = _args.d_a0;
-                     std::shared_ptr<forest<T1>> rest = _args.d_a1;
-                     return (tree_size<T1>(std::move(t)) +
-                             forest_size<T1>(std::move(rest)));
+                     return (tree_size<T1>(_args.d_a0) +
+                             forest_size<T1>(_args.d_a1));
                    }},
         f->v());
   }

@@ -79,9 +79,7 @@ public:
         Overloaded{
             [&](const typename List<t_A>::Nil _args) -> T1 { return a0; },
             [&](const typename List<t_A>::Cons _args) -> T1 {
-              t_A b = _args.d_a0;
-              std::shared_ptr<List<t_A>> l0 = _args.d_a1;
-              return std::move(l0)->template fold_left<T1>(f, f(a0, b));
+              return _args.d_a1->template fold_left<T1>(f, f(a0, _args.d_a0));
             }},
         this->v());
   }

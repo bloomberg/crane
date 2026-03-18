@@ -74,14 +74,12 @@ public:
         Overloaded{
             [](const typename Nat::O _args) -> Bool0 { return Bool0::e_TRUE0; },
             [&](const typename Nat::S _args) -> Bool0 {
-              std::shared_ptr<Nat> n_ = _args.d_a0;
               return std::visit(
-                  Overloaded{[](const typename Nat::O _args) -> Bool0 {
+                  Overloaded{[](const typename Nat::O _args0) -> Bool0 {
                                return Bool0::e_FALSE0;
                              },
-                             [&](const typename Nat::S _args) -> Bool0 {
-                               std::shared_ptr<Nat> m_ = _args.d_a0;
-                               return std::move(n_)->leb(std::move(m_));
+                             [&](const typename Nat::S _args0) -> Bool0 {
+                               return _args.d_a0->leb(_args0.d_a0);
                              }},
                   m->v());
             }},
@@ -130,8 +128,7 @@ public:
   t_A projT1() const {
     return std::visit(
         Overloaded{[](const typename SigT<t_A, t_P>::ExistT _args) -> t_A {
-          t_A a = _args.d_a0;
-          return a;
+          return _args.d_a0;
         }},
         this->v());
   }
@@ -194,47 +191,35 @@ public:
   ascii_dec(const std::shared_ptr<Ascii> &b) const {
     return std::visit(
         Overloaded{[&](const typename Ascii::Ascii0 _args) -> auto {
-          Bool0 b0 = _args.d_a0;
-          Bool0 b1 = _args.d_a1;
-          Bool0 b2 = _args.d_a2;
-          Bool0 b3 = _args.d_a3;
-          Bool0 b4 = _args.d_a4;
-          Bool0 b5 = _args.d_a5;
-          Bool0 b6 = _args.d_a6;
-          Bool0 b7 = _args.d_a7;
           return std::visit(
-              Overloaded{[&](const typename Ascii::Ascii0 _args) -> Sumbool {
-                Bool0 b8 = _args.d_a0;
-                Bool0 b9 = _args.d_a1;
-                Bool0 b10 = _args.d_a2;
-                Bool0 b11 = _args.d_a3;
-                Bool0 b12 = _args.d_a4;
-                Bool0 b13 = _args.d_a5;
-                Bool0 b14 = _args.d_a6;
-                Bool0 b15 = _args.d_a7;
+              Overloaded{[&](const typename Ascii::Ascii0 _args0) -> Sumbool {
                 return [&](void) {
-                  switch (Bool::bool_dec(b0, b8)) {
+                  switch (Bool::bool_dec(_args.d_a0, _args0.d_a0)) {
                   case Sumbool::e_LEFT: {
                     return [&](void) {
-                      switch (Bool::bool_dec(b1, b9)) {
+                      switch (Bool::bool_dec(_args.d_a1, _args0.d_a1)) {
                       case Sumbool::e_LEFT: {
                         return [&](void) {
-                          switch (Bool::bool_dec(b2, b10)) {
+                          switch (Bool::bool_dec(_args.d_a2, _args0.d_a2)) {
                           case Sumbool::e_LEFT: {
                             return [&](void) {
-                              switch (Bool::bool_dec(b3, b11)) {
+                              switch (Bool::bool_dec(_args.d_a3, _args0.d_a3)) {
                               case Sumbool::e_LEFT: {
                                 return [&](void) {
-                                  switch (Bool::bool_dec(b4, b12)) {
+                                  switch (
+                                      Bool::bool_dec(_args.d_a4, _args0.d_a4)) {
                                   case Sumbool::e_LEFT: {
                                     return [&](void) {
-                                      switch (Bool::bool_dec(b5, b13)) {
+                                      switch (Bool::bool_dec(_args.d_a5,
+                                                             _args0.d_a5)) {
                                       case Sumbool::e_LEFT: {
                                         return [&](void) {
-                                          switch (Bool::bool_dec(b6, b14)) {
+                                          switch (Bool::bool_dec(_args.d_a6,
+                                                                 _args0.d_a6)) {
                                           case Sumbool::e_LEFT: {
                                             return [&](void) {
-                                              switch (Bool::bool_dec(b7, b15)) {
+                                              switch (Bool::bool_dec(
+                                                  _args.d_a7, _args0.d_a7)) {
                                               case Sumbool::e_LEFT: {
                                                 return Sumbool::e_LEFT;
                                               }
@@ -348,11 +333,8 @@ public:
                                      -> std::shared_ptr<String> { return s2; },
                                  [&](const typename String::String0 _args)
                                      -> std::shared_ptr<String> {
-                                   std::shared_ptr<Ascii> c = _args.d_a0;
-                                   std::shared_ptr<String> s1_ = _args.d_a1;
                                    return String::ctor::String0_(
-                                       std::move(c),
-                                       std::move(s1_)->append(s2));
+                                       _args.d_a0, _args.d_a1->append(s2));
                                  }},
                       this->v());
   }
@@ -363,8 +345,7 @@ public:
             [](const typename String::EmptyString _args)
                 -> std::shared_ptr<Nat> { return Nat::ctor::O_(); },
             [](const typename String::String0 _args) -> std::shared_ptr<Nat> {
-              std::shared_ptr<String> s_ = _args.d_a1;
-              return Nat::ctor::S_(std::move(s_)->length());
+              return Nat::ctor::S_(_args.d_a1->length());
             }},
         this->v());
   }
@@ -464,20 +445,13 @@ struct Levenshtein {
                       const std::shared_ptr<edit> &e) {
     return std::visit(
         Overloaded{[&](const typename edit::Insertion _args) -> T1 {
-                     std::shared_ptr<Ascii> a = _args.d_a0;
-                     std::shared_ptr<String> s = _args.d_a1;
-                     return f(std::move(a), std::move(s));
+                     return f(_args.d_a0, _args.d_a1);
                    },
                    [&](const typename edit::Deletion _args) -> T1 {
-                     std::shared_ptr<Ascii> a = _args.d_a0;
-                     std::shared_ptr<String> s = _args.d_a1;
-                     return f0(std::move(a), std::move(s));
+                     return f0(_args.d_a0, _args.d_a1);
                    },
                    [&](const typename edit::Update _args) -> T1 {
-                     std::shared_ptr<Ascii> a_ = _args.d_a0;
-                     std::shared_ptr<Ascii> a = _args.d_a1;
-                     std::shared_ptr<String> s = _args.d_a2;
-                     return f1(std::move(a_), std::move(a), std::move(s));
+                     return f1(_args.d_a0, _args.d_a1, _args.d_a2);
                    }},
         e->v());
   }
@@ -493,20 +467,13 @@ struct Levenshtein {
            const std::shared_ptr<String> &_x0, const std::shared_ptr<edit> &e) {
     return std::visit(
         Overloaded{[&](const typename edit::Insertion _args) -> T1 {
-                     std::shared_ptr<Ascii> a = _args.d_a0;
-                     std::shared_ptr<String> s = _args.d_a1;
-                     return f(std::move(a), std::move(s));
+                     return f(_args.d_a0, _args.d_a1);
                    },
                    [&](const typename edit::Deletion _args) -> T1 {
-                     std::shared_ptr<Ascii> a = _args.d_a0;
-                     std::shared_ptr<String> s = _args.d_a1;
-                     return f0(std::move(a), std::move(s));
+                     return f0(_args.d_a0, _args.d_a1);
                    },
                    [&](const typename edit::Update _args) -> T1 {
-                     std::shared_ptr<Ascii> a_ = _args.d_a0;
-                     std::shared_ptr<Ascii> a = _args.d_a1;
-                     std::shared_ptr<String> s = _args.d_a2;
-                     return f1(std::move(a_), std::move(a), std::move(s));
+                     return f1(_args.d_a0, _args.d_a1, _args.d_a2);
                    }},
         e->v());
   }
@@ -615,23 +582,16 @@ struct Levenshtein {
     return std::visit(
         Overloaded{[&](const typename chain::Empty _args) -> T1 { return f; },
                    [&](const typename chain::Skip _args) -> T1 {
-                     std::shared_ptr<Ascii> a = _args.d_a0;
-                     std::shared_ptr<String> s = _args.d_a1;
-                     std::shared_ptr<String> t = _args.d_a2;
-                     std::shared_ptr<Nat> n = _args.d_a3;
-                     std::shared_ptr<chain> c0 = _args.d_a4;
-                     return f0(std::move(a), s, t, n, c0,
-                               chain_rect<T1>(f, f0, f1, s, t, n, c0));
+                     return f0(_args.d_a0, _args.d_a1, _args.d_a2, _args.d_a3,
+                               _args.d_a4,
+                               chain_rect<T1>(f, f0, f1, _args.d_a1, _args.d_a2,
+                                              _args.d_a3, _args.d_a4));
                    },
                    [&](const typename chain::Change _args) -> T1 {
-                     std::shared_ptr<String> s = _args.d_a0;
-                     std::shared_ptr<String> t = _args.d_a1;
-                     std::shared_ptr<String> u = _args.d_a2;
-                     std::shared_ptr<Nat> n = _args.d_a3;
-                     std::shared_ptr<edit> e = _args.d_a4;
-                     std::shared_ptr<chain> c0 = _args.d_a5;
-                     return f1(std::move(s), t, u, n, std::move(e), c0,
-                               chain_rect<T1>(f, f0, f1, t, u, n, c0));
+                     return f1(_args.d_a0, _args.d_a1, _args.d_a2, _args.d_a3,
+                               _args.d_a4, _args.d_a5,
+                               chain_rect<T1>(f, f0, f1, _args.d_a1, _args.d_a2,
+                                              _args.d_a3, _args.d_a5));
                    }},
         c->v());
   }
@@ -652,23 +612,16 @@ struct Levenshtein {
     return std::visit(
         Overloaded{[&](const typename chain::Empty _args) -> T1 { return f; },
                    [&](const typename chain::Skip _args) -> T1 {
-                     std::shared_ptr<Ascii> a = _args.d_a0;
-                     std::shared_ptr<String> s = _args.d_a1;
-                     std::shared_ptr<String> t = _args.d_a2;
-                     std::shared_ptr<Nat> n = _args.d_a3;
-                     std::shared_ptr<chain> c0 = _args.d_a4;
-                     return f0(std::move(a), s, t, n, c0,
-                               chain_rec<T1>(f, f0, f1, s, t, n, c0));
+                     return f0(_args.d_a0, _args.d_a1, _args.d_a2, _args.d_a3,
+                               _args.d_a4,
+                               chain_rec<T1>(f, f0, f1, _args.d_a1, _args.d_a2,
+                                             _args.d_a3, _args.d_a4));
                    },
                    [&](const typename chain::Change _args) -> T1 {
-                     std::shared_ptr<String> s = _args.d_a0;
-                     std::shared_ptr<String> t = _args.d_a1;
-                     std::shared_ptr<String> u = _args.d_a2;
-                     std::shared_ptr<Nat> n = _args.d_a3;
-                     std::shared_ptr<edit> e = _args.d_a4;
-                     std::shared_ptr<chain> c0 = _args.d_a5;
-                     return f1(std::move(s), t, u, n, std::move(e), c0,
-                               chain_rec<T1>(f, f0, f1, t, u, n, c0));
+                     return f1(_args.d_a0, _args.d_a1, _args.d_a2, _args.d_a3,
+                               _args.d_a4, _args.d_a5,
+                               chain_rec<T1>(f, f0, f1, _args.d_a1, _args.d_a2,
+                                             _args.d_a3, _args.d_a5));
                    }},
         c->v());
   }
@@ -683,15 +636,13 @@ struct Levenshtein {
   template <typename T1>
   static T1 _inserts_chain_F(const std::shared_ptr<String> &s) {
     return std::visit(
-        Overloaded{[](const typename String::EmptyString _args) -> T1 {
+        Overloaded{[](const typename String::EmptyString _args0) -> T1 {
                      return chain::ctor::Empty_();
                    },
-                   [](const typename String::String0 _args) -> T1 {
-                     std::shared_ptr<Ascii> a = _args.d_a0;
-                     std::shared_ptr<String> s0 = _args.d_a1;
-                     return chain::ctor::Skip_(std::move(a), s0, s0,
-                                               Nat::ctor::O_(),
-                                               _inserts_chain_F<T1>(s0));
+                   [](const typename String::String0 _args0) -> T1 {
+                     return chain::ctor::Skip_(
+                         _args0.d_a0, _args0.d_a1, _args0.d_a1, Nat::ctor::O_(),
+                         _inserts_chain_F<T1>(_args0.d_a1));
                    }},
         s->v());
   }

@@ -31,11 +31,9 @@ FunctorComp::Stack::pop(const std::shared_ptr<List<unsigned int>> &s) {
           [](const typename List<unsigned int>::Cons _args)
               -> std::optional<std::pair<unsigned int,
                                          std::shared_ptr<List<unsigned int>>>> {
-            unsigned int x = _args.d_a0;
-            std::shared_ptr<List<unsigned int>> rest = _args.d_a1;
             return std::make_optional<
                 std::pair<unsigned int, std::shared_ptr<List<unsigned int>>>>(
-                std::make_pair(std::move(x), std::move(rest)));
+                std::make_pair(_args.d_a0, _args.d_a1));
           }},
       s->v());
 }
@@ -72,28 +70,26 @@ FunctorComp::Queue::pop(const std::pair<std::shared_ptr<List<unsigned int>>,
                                       std::shared_ptr<List<unsigned int>>>>> {
             return std::visit(
                 Overloaded{
-                    [](const typename List<unsigned int>::Nil _args)
+                    [](const typename List<unsigned int>::Nil _args0)
                         -> std::optional<std::pair<
                             unsigned int,
                             std::pair<std::shared_ptr<List<unsigned int>>,
                                       std::shared_ptr<List<unsigned int>>>>> {
                       return std::nullopt;
                     },
-                    [](const typename List<unsigned int>::Cons _args)
+                    [](const typename List<unsigned int>::Cons _args0)
                         -> std::optional<std::pair<
                             unsigned int,
                             std::pair<std::shared_ptr<List<unsigned int>>,
                                       std::shared_ptr<List<unsigned int>>>>> {
-                      unsigned int x = _args.d_a0;
-                      std::shared_ptr<List<unsigned int>> rest = _args.d_a1;
                       return std::make_optional<std::pair<
                           unsigned int,
                           std::pair<std::shared_ptr<List<unsigned int>>,
                                     std::shared_ptr<List<unsigned int>>>>>(
                           std::make_pair(
-                              std::move(x),
+                              _args0.d_a0,
                               std::make_pair(
-                                  std::move(rest),
+                                  _args0.d_a1,
                                   List<unsigned int>::ctor::Nil_())));
                     }},
                 back->rev()->v());
@@ -103,13 +99,10 @@ FunctorComp::Queue::pop(const std::pair<std::shared_ptr<List<unsigned int>>,
                   std::pair<unsigned int,
                             std::pair<std::shared_ptr<List<unsigned int>>,
                                       std::shared_ptr<List<unsigned int>>>>> {
-            unsigned int x = _args.d_a0;
-            std::shared_ptr<List<unsigned int>> rest = _args.d_a1;
             return std::make_optional<std::pair<
                 unsigned int, std::pair<std::shared_ptr<List<unsigned int>>,
                                         std::shared_ptr<List<unsigned int>>>>>(
-                std::make_pair(std::move(x),
-                               std::make_pair(std::move(rest), back)));
+                std::make_pair(_args.d_a0, std::make_pair(_args.d_a1, back)));
           }},
       front->v());
 }

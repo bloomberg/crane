@@ -18,10 +18,7 @@ MutualIndexed::even_val(const unsigned int _x,
       Overloaded{[](const typename MutualIndexed::EvenTree::ELeaf _args)
                      -> unsigned int { return 0u; },
                  [](const typename MutualIndexed::EvenTree::ENode _args)
-                     -> unsigned int {
-                   unsigned int v = _args.d_a1;
-                   return std::move(v);
-                 }},
+                     -> unsigned int { return _args.d_a1; }},
       t->v());
 }
 
@@ -30,9 +27,6 @@ MutualIndexed::odd_val(const unsigned int _x,
                        const std::shared_ptr<MutualIndexed::OddTree> &t) {
   return std::visit(
       Overloaded{[](const typename MutualIndexed::OddTree::ONode _args)
-                     -> unsigned int {
-        unsigned int v = _args.d_a1;
-        return std::move(v);
-      }},
+                     -> unsigned int { return _args.d_a1; }},
       t->v());
 }

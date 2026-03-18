@@ -77,8 +77,7 @@ public:
                      return 0u;
                    },
                    [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     std::shared_ptr<List<t_A>> l_ = _args.d_a1;
-                     return (std::move(l_)->length() + 1);
+                     return (_args.d_a1->length() + 1);
                    }},
         this->v());
   }
@@ -173,12 +172,10 @@ struct DisassembleOps {
             [&](const typename instruction::NOP _args) -> T1 { return f; },
             [&](const typename instruction::NOP2 _args) -> T1 { return f0; },
             [&](const typename instruction::LDM _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f1(std::move(n));
+              return f1(_args.d_a0);
             },
             [&](const typename instruction::LDM2 _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f2(std::move(n));
+              return f2(_args.d_a0);
             }},
         i->v());
   }
@@ -192,12 +189,10 @@ struct DisassembleOps {
             [&](const typename instruction::NOP _args) -> T1 { return f; },
             [&](const typename instruction::NOP2 _args) -> T1 { return f0; },
             [&](const typename instruction::LDM _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f1(std::move(n));
+              return f1(_args.d_a0);
             },
             [&](const typename instruction::LDM2 _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f2(std::move(n));
+              return f2(_args.d_a0);
             }},
         i->v());
   }
@@ -256,9 +251,7 @@ struct DisassembleOps {
                                    },
                                    [&](const typename List<T1>::Cons _args)
                                        -> std::shared_ptr<List<T1>> {
-                                     std::shared_ptr<List<T1>> l_ = _args.d_a1;
-                                     return drop<T1>(std::move(n_),
-                                                     std::move(l_));
+                                     return drop<T1>(std::move(n_), _args.d_a1);
                                    }},
                         l->v());
     }

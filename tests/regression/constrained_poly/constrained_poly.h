@@ -92,8 +92,7 @@ struct ConstrainedPoly {
     return std::visit(
         Overloaded{
             [&](const typename UOption<T1>::USome _args) -> T2 {
-              T1 a = _args.d_a0;
-              return f(a);
+              return f(_args.d_a0);
             },
             [&](const typename UOption<T1>::UNone _args) -> T2 { return f0; }},
         u->v());
@@ -105,8 +104,7 @@ struct ConstrainedPoly {
     return std::visit(
         Overloaded{
             [&](const typename UOption<T1>::USome _args) -> T2 {
-              T1 a = _args.d_a0;
-              return f(a);
+              return f(_args.d_a0);
             },
             [&](const typename UOption<T1>::UNone _args) -> T2 { return f0; }},
         u->v());
@@ -117,8 +115,8 @@ struct ConstrainedPoly {
   uoption_map(F0 &&f, const std::shared_ptr<UOption<T1>> &o) {
     return std::visit(Overloaded{[&](const typename UOption<T1>::USome _args)
                                      -> std::shared_ptr<UOption<T2>> {
-                                   T1 x = _args.d_a0;
-                                   return UOption<T2>::ctor::USome_(f(x));
+                                   return UOption<T2>::ctor::USome_(
+                                       f(_args.d_a0));
                                  },
                                  [](const typename UOption<T1>::UNone _args)
                                      -> std::shared_ptr<UOption<T2>> {

@@ -163,13 +163,11 @@ RamStateOps::pop_stack(std::shared_ptr<RamStateOps::state> s) {
                  [&](const typename List<unsigned int>::Cons _args)
                      -> std::pair<std::optional<unsigned int>,
                                   std::shared_ptr<RamStateOps::state>> {
-                   unsigned int x = _args.d_a0;
-                   std::shared_ptr<List<unsigned int>> xs = _args.d_a1;
                    return std::make_pair(
-                       std::make_optional<unsigned int>(std::move(x)),
+                       std::make_optional<unsigned int>(_args.d_a0),
                        std::make_shared<RamStateOps::state>(
                            state{s->state_regs, s->state_acc, s->state_carry,
-                                 s->state_pc, std::move(xs), s->state_ram,
+                                 s->state_pc, _args.d_a1, s->state_ram,
                                  s->state_sel, s->state_rom}));
                  }},
       s->state_stack->v());

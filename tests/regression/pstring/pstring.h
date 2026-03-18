@@ -133,9 +133,8 @@ struct PString {
                      return "[]";
                    },
                    [&](const typename List<T1>::Cons _args) -> std::string {
-                     T1 y = _args.d_a0;
-                     std::shared_ptr<List<T1>> l_ = _args.d_a1;
-                     return p(y) + "::"s + list_to_string<T1>(p, std::move(l_));
+                     return p(_args.d_a0) + "::"s +
+                            list_to_string<T1>(p, _args.d_a1);
                    }},
         l->v());
   }

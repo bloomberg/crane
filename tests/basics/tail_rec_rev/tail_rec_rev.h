@@ -83,10 +83,8 @@ std::shared_ptr<List<T1>> better_rev(const std::shared_ptr<List<T1>> &l) {
                        -> std::shared_ptr<List<T1>> { return std::move(acc); },
                    [&](const typename List<T1>::Cons _args)
                        -> std::shared_ptr<List<T1>> {
-                     T1 x = _args.d_a0;
-                     std::shared_ptr<List<T1>> xs = _args.d_a1;
-                     return go(std::move(xs),
-                               List<T1>::ctor::Cons_(x, std::move(acc)));
+                     return go(_args.d_a1, List<T1>::ctor::Cons_(
+                                               _args.d_a0, std::move(acc)));
                    }},
         l0->v());
   };

@@ -143,18 +143,13 @@ struct NestedMod {
                            const std::shared_ptr<shape> &s) {
         return std::visit(
             Overloaded{[&](const typename shape::Circle _args) -> T1 {
-                         unsigned int n = _args.d_a0;
-                         return f(std::move(n));
+                         return f(_args.d_a0);
                        },
                        [&](const typename shape::Square _args) -> T1 {
-                         unsigned int n = _args.d_a0;
-                         return f0(std::move(n));
+                         return f0(_args.d_a0);
                        },
                        [&](const typename shape::Triangle _args) -> T1 {
-                         unsigned int n = _args.d_a0;
-                         unsigned int n0 = _args.d_a1;
-                         unsigned int n1 = _args.d_a2;
-                         return f1(std::move(n), std::move(n0), std::move(n1));
+                         return f1(_args.d_a0, _args.d_a1, _args.d_a2);
                        }},
             s->v());
       }
@@ -166,18 +161,13 @@ struct NestedMod {
                           const std::shared_ptr<shape> &s) {
         return std::visit(
             Overloaded{[&](const typename shape::Circle _args) -> T1 {
-                         unsigned int n = _args.d_a0;
-                         return f(std::move(n));
+                         return f(_args.d_a0);
                        },
                        [&](const typename shape::Square _args) -> T1 {
-                         unsigned int n = _args.d_a0;
-                         return f0(std::move(n));
+                         return f0(_args.d_a0);
                        },
                        [&](const typename shape::Triangle _args) -> T1 {
-                         unsigned int n = _args.d_a0;
-                         unsigned int n0 = _args.d_a1;
-                         unsigned int n1 = _args.d_a2;
-                         return f1(std::move(n), std::move(n0), std::move(n1));
+                         return f1(_args.d_a0, _args.d_a1, _args.d_a2);
                        }},
             s->v());
       }

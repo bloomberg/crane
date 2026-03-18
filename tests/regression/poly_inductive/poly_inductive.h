@@ -61,8 +61,7 @@ struct PolyInductive {
   static T2 pbox_rect(F0 &&f, const std::shared_ptr<pbox<T1>> &p) {
     return std::visit(
         Overloaded{[&](const typename pbox<T1>::PBox _args) -> T2 {
-          T1 a = _args.d_a0;
-          return f(a);
+          return f(_args.d_a0);
         }},
         p->v());
   }
@@ -71,16 +70,14 @@ struct PolyInductive {
   static T2 pbox_rec(F0 &&f, const std::shared_ptr<pbox<T1>> &p) {
     return std::visit(
         Overloaded{[&](const typename pbox<T1>::PBox _args) -> T2 {
-          T1 a = _args.d_a0;
-          return f(a);
+          return f(_args.d_a0);
         }},
         p->v());
   }
 
   template <typename T1> static T1 punbox(const std::shared_ptr<pbox<T1>> &b) {
     return std::visit(Overloaded{[](const typename pbox<T1>::PBox _args) -> T1 {
-                        T1 x = _args.d_a0;
-                        return x;
+                        return _args.d_a0;
                       }},
                       b->v());
   }
@@ -128,9 +125,7 @@ struct PolyInductive {
   static T3 ppair_rect(F0 &&f, const std::shared_ptr<ppair<T1, T2>> &p) {
     return std::visit(
         Overloaded{[&](const typename ppair<T1, T2>::PPair _args) -> T3 {
-          T1 a = _args.d_a0;
-          T2 b = _args.d_a1;
-          return f(a, b);
+          return f(_args.d_a0, _args.d_a1);
         }},
         p->v());
   }
@@ -139,9 +134,7 @@ struct PolyInductive {
   static T3 ppair_rec(F0 &&f, const std::shared_ptr<ppair<T1, T2>> &p) {
     return std::visit(
         Overloaded{[&](const typename ppair<T1, T2>::PPair _args) -> T3 {
-          T1 a = _args.d_a0;
-          T2 b = _args.d_a1;
-          return f(a, b);
+          return f(_args.d_a0, _args.d_a1);
         }},
         p->v());
   }
@@ -150,8 +143,7 @@ struct PolyInductive {
   static T1 pfst(const std::shared_ptr<ppair<T1, T2>> &p) {
     return std::visit(
         Overloaded{[](const typename ppair<T1, T2>::PPair _args) -> T1 {
-          T1 a = _args.d_a0;
-          return a;
+          return _args.d_a0;
         }},
         p->v());
   }
@@ -160,8 +152,7 @@ struct PolyInductive {
   static T2 psnd(const std::shared_ptr<ppair<T1, T2>> &p) {
     return std::visit(
         Overloaded{[](const typename ppair<T1, T2>::PPair _args) -> T2 {
-          T2 b = _args.d_a1;
-          return b;
+          return _args.d_a1;
         }},
         p->v());
   }
@@ -221,8 +212,7 @@ struct PolyInductive {
         Overloaded{
             [&](const typename pmaybe<T1>::PNothing _args) -> T2 { return f; },
             [&](const typename pmaybe<T1>::PJust _args) -> T2 {
-              T1 a = _args.d_a0;
-              return f0(a);
+              return f0(_args.d_a0);
             }},
         p->v());
   }
@@ -234,8 +224,7 @@ struct PolyInductive {
         Overloaded{
             [&](const typename pmaybe<T1>::PNothing _args) -> T2 { return f; },
             [&](const typename pmaybe<T1>::PJust _args) -> T2 {
-              T1 a = _args.d_a0;
-              return f0(a);
+              return f0(_args.d_a0);
             }},
         p->v());
   }
@@ -249,8 +238,8 @@ struct PolyInductive {
                                  },
                                  [&](const typename pmaybe<T1>::PJust _args)
                                      -> std::shared_ptr<pmaybe<T2>> {
-                                   T1 x = _args.d_a0;
-                                   return pmaybe<T2>::ctor::PJust_(f(x));
+                                   return pmaybe<T2>::ctor::PJust_(
+                                       f(_args.d_a0));
                                  }},
                       m->v());
   }
@@ -261,8 +250,7 @@ struct PolyInductive {
         Overloaded{
             [&](const typename pmaybe<T1>::PNothing _args) -> T1 { return d; },
             [](const typename pmaybe<T1>::PJust _args) -> T1 {
-              T1 x = _args.d_a0;
-              return x;
+              return _args.d_a0;
             }},
         m->v());
   }
@@ -329,14 +317,12 @@ struct PolyInductive {
   static T2 ptree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<ptree<T1>> &p) {
     return std::visit(
         Overloaded{[&](const typename ptree<T1>::PLeaf _args) -> T2 {
-                     T1 y = _args.d_a0;
-                     return f(y);
+                     return f(_args.d_a0);
                    },
                    [&](const typename ptree<T1>::PNode _args) -> T2 {
-                     std::shared_ptr<ptree<T1>> p0 = _args.d_a0;
-                     std::shared_ptr<ptree<T1>> p1 = _args.d_a1;
-                     return f0(p0, ptree_rect<T1, T2>(f, f0, p0), p1,
-                               ptree_rect<T1, T2>(f, f0, p1));
+                     return f0(
+                         _args.d_a0, ptree_rect<T1, T2>(f, f0, _args.d_a0),
+                         _args.d_a1, ptree_rect<T1, T2>(f, f0, _args.d_a1));
                    }},
         p->v());
   }
@@ -348,14 +334,12 @@ struct PolyInductive {
   static T2 ptree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<ptree<T1>> &p) {
     return std::visit(
         Overloaded{[&](const typename ptree<T1>::PLeaf _args) -> T2 {
-                     T1 y = _args.d_a0;
-                     return f(y);
+                     return f(_args.d_a0);
                    },
                    [&](const typename ptree<T1>::PNode _args) -> T2 {
-                     std::shared_ptr<ptree<T1>> p0 = _args.d_a0;
-                     std::shared_ptr<ptree<T1>> p1 = _args.d_a1;
-                     return f0(p0, ptree_rec<T1, T2>(f, f0, p0), p1,
-                               ptree_rec<T1, T2>(f, f0, p1));
+                     return f0(_args.d_a0, ptree_rec<T1, T2>(f, f0, _args.d_a0),
+                               _args.d_a1,
+                               ptree_rec<T1, T2>(f, f0, _args.d_a1));
                    }},
         p->v());
   }
@@ -368,10 +352,8 @@ struct PolyInductive {
                      return 1u;
                    },
                    [](const typename ptree<T1>::PNode _args) -> unsigned int {
-                     std::shared_ptr<ptree<T1>> l = _args.d_a0;
-                     std::shared_ptr<ptree<T1>> r = _args.d_a1;
-                     return ((ptree_size<T1>(std::move(l)) +
-                              ptree_size<T1>(std::move(r))) +
+                     return ((ptree_size<T1>(_args.d_a0) +
+                              ptree_size<T1>(_args.d_a1)) +
                              1);
                    }},
         t->v());

@@ -135,11 +135,9 @@ struct BinomialHeap {
   static T1 tree_rect(F0 &&f, const T1 f0, const std::shared_ptr<tree> &t) {
     return std::visit(
         Overloaded{[&](const typename tree::Node _args) -> T1 {
-                     unsigned int k = _args.d_a0;
-                     std::shared_ptr<tree> t0 = _args.d_a1;
-                     std::shared_ptr<tree> t1 = _args.d_a2;
-                     return f(std::move(k), t0, tree_rect<T1>(f, f0, t0), t1,
-                              tree_rect<T1>(f, f0, t1));
+                     return f(_args.d_a0, _args.d_a1,
+                              tree_rect<T1>(f, f0, _args.d_a1), _args.d_a2,
+                              tree_rect<T1>(f, f0, _args.d_a2));
                    },
                    [&](const typename tree::Leaf _args) -> T1 { return f0; }},
         t->v());
@@ -151,11 +149,9 @@ struct BinomialHeap {
   static T1 tree_rec(F0 &&f, const T1 f0, const std::shared_ptr<tree> &t) {
     return std::visit(
         Overloaded{[&](const typename tree::Node _args) -> T1 {
-                     unsigned int k = _args.d_a0;
-                     std::shared_ptr<tree> t0 = _args.d_a1;
-                     std::shared_ptr<tree> t1 = _args.d_a2;
-                     return f(std::move(k), t0, tree_rec<T1>(f, f0, t0), t1,
-                              tree_rec<T1>(f, f0, t1));
+                     return f(_args.d_a0, _args.d_a1,
+                              tree_rec<T1>(f, f0, _args.d_a1), _args.d_a2,
+                              tree_rec<T1>(f, f0, _args.d_a2));
                    },
                    [&](const typename tree::Leaf _args) -> T1 { return f0; }},
         t->v());
@@ -185,18 +181,16 @@ struct BinomialHeap {
     return std::visit(
         Overloaded{[&](const typename tree::Node _args)
                        -> std::shared_ptr<List<std::shared_ptr<tree>>> {
-                     unsigned int x = _args.d_a0;
-                     std::shared_ptr<tree> t1 = _args.d_a1;
-                     std::shared_ptr<tree> t2 = _args.d_a2;
                      std::function<std::shared_ptr<List<std::shared_ptr<tree>>>(
                          std::shared_ptr<List<std::shared_ptr<tree>>>)>
                          f = [=](std::shared_ptr<List<std::shared_ptr<tree>>>
                                      q) mutable {
                            return List<std::shared_ptr<tree>>::ctor::Cons_(
-                               tree::ctor::Node_(x, t1, tree::ctor::Leaf_()),
+                               tree::ctor::Node_(_args.d_a0, _args.d_a1,
+                                                 tree::ctor::Leaf_()),
                                cont(q));
                          };
-                     return unzip(std::move(t2), f);
+                     return unzip(_args.d_a2, f);
                    },
                    [&](const typename tree::Leaf _args)
                        -> std::shared_ptr<List<std::shared_ptr<tree>>> {

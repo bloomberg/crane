@@ -20,10 +20,7 @@ __attribute__((pure)) unsigned int CountLoopTestTarget::target_of(
     const std::shared_ptr<CountLoopTestTarget::instruction> &i) {
   return std::visit(
       Overloaded{[](const typename CountLoopTestTarget::instruction::ISZ _args)
-                     -> unsigned int {
-                   unsigned int a = _args.d_a1;
-                   return std::move(a);
-                 },
+                     -> unsigned int { return _args.d_a1; },
                  [](const typename CountLoopTestTarget::instruction::NOP _args)
                      -> unsigned int { return 0u; }},
       i->v());

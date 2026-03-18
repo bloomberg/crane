@@ -18,15 +18,12 @@ PulseParseCertificateCase::first_true(const std::shared_ptr<List<bool>> &xs) {
                      -> std::optional<unsigned int> { return std::nullopt; },
                  [](const typename List<bool>::Cons _args)
                      -> std::optional<unsigned int> {
-                   bool x = _args.d_a0;
-                   std::shared_ptr<List<bool>> xs_ = _args.d_a1;
-                   if (std::move(x)) {
+                   if (_args.d_a0) {
                      return std::make_optional<unsigned int>(0u);
                    } else {
-                     if (first_true(xs_).has_value()) {
-                       unsigned int idx = *first_true(xs_);
-                       return std::make_optional<unsigned int>(
-                           (std::move(idx) + 1));
+                     if (first_true(_args.d_a1).has_value()) {
+                       unsigned int idx = *first_true(_args.d_a1);
+                       return std::make_optional<unsigned int>((idx + 1));
                      } else {
                        return std::nullopt;
                      }
@@ -42,14 +39,11 @@ PulseParseCertificateCase::last_true(const std::shared_ptr<List<bool>> &xs) {
                      -> std::optional<unsigned int> { return std::nullopt; },
                  [](const typename List<bool>::Cons _args)
                      -> std::optional<unsigned int> {
-                   bool x = _args.d_a0;
-                   std::shared_ptr<List<bool>> xs_ = _args.d_a1;
-                   if (last_true(xs_).has_value()) {
-                     unsigned int idx = *last_true(xs_);
-                     return std::make_optional<unsigned int>(
-                         (std::move(idx) + 1));
+                   if (last_true(_args.d_a1).has_value()) {
+                     unsigned int idx = *last_true(_args.d_a1);
+                     return std::make_optional<unsigned int>((idx + 1));
                    } else {
-                     if (std::move(x)) {
+                     if (_args.d_a0) {
                        return std::make_optional<unsigned int>(0u);
                      } else {
                        return std::nullopt;
@@ -68,14 +62,12 @@ PulseParseCertificateCase::trace_to_runs(
                                },
                                [](const typename List<bool>::Cons _args)
                                    -> std::shared_ptr<List<unsigned int>> {
-                                 bool b = _args.d_a0;
-                                 std::shared_ptr<List<bool>> xs_ = _args.d_a1;
-                                 if (std::move(b)) {
+                                 if (_args.d_a0) {
                                    return List<unsigned int>::ctor::Cons_(
-                                       2u, trace_to_runs(std::move(xs_)));
+                                       2u, trace_to_runs(_args.d_a1));
                                  } else {
                                    return List<unsigned int>::ctor::Cons_(
-                                       1u, trace_to_runs(std::move(xs_)));
+                                       1u, trace_to_runs(_args.d_a1));
                                  }
                                }},
                     xs->v());
@@ -84,16 +76,11 @@ PulseParseCertificateCase::trace_to_runs(
 __attribute__((pure)) unsigned int
 PulseParseCertificateCase::pulse_base_from_runs(
     const std::shared_ptr<List<unsigned int>> &rs) {
-  return std::visit(
-      Overloaded{
-          [](const typename List<unsigned int>::Nil _args) -> unsigned int {
-            return 1u;
-          },
-          [](const typename List<unsigned int>::Cons _args) -> unsigned int {
-            unsigned int x = _args.d_a0;
-            return std::move(x);
-          }},
-      rs->v());
+  return std::visit(Overloaded{[](const typename List<unsigned int>::Nil _args)
+                                   -> unsigned int { return 1u; },
+                               [](const typename List<unsigned int>::Cons _args)
+                                   -> unsigned int { return _args.d_a0; }},
+                    rs->v());
 }
 
 __attribute__((pure)) PulseParseCertificateCase::PulseClass
@@ -158,33 +145,25 @@ __attribute__((pure)) bool PulseParseCertificateCase::pulse_class_list_eqb(
             return std::visit(
                 Overloaded{
                     [](const typename List<
-                        PulseParseCertificateCase::PulseClass>::Nil _args)
+                        PulseParseCertificateCase::PulseClass>::Nil _args0)
                         -> bool { return true; },
                     [](const typename List<
-                        PulseParseCertificateCase::PulseClass>::Cons _args)
+                        PulseParseCertificateCase::PulseClass>::Cons _args0)
                         -> bool { return false; }},
                 ys->v());
           },
           [&](const typename List<PulseParseCertificateCase::PulseClass>::Cons
                   _args) -> bool {
-            PulseParseCertificateCase::PulseClass x = _args.d_a0;
-            std::shared_ptr<List<PulseParseCertificateCase::PulseClass>> xs_ =
-                _args.d_a1;
             return std::visit(
                 Overloaded{
                     [](const typename List<
-                        PulseParseCertificateCase::PulseClass>::Nil _args)
+                        PulseParseCertificateCase::PulseClass>::Nil _args0)
                         -> bool { return false; },
                     [&](const typename List<
-                        PulseParseCertificateCase::PulseClass>::Cons _args)
+                        PulseParseCertificateCase::PulseClass>::Cons _args0)
                         -> bool {
-                      PulseParseCertificateCase::PulseClass y = _args.d_a0;
-                      std::shared_ptr<
-                          List<PulseParseCertificateCase::PulseClass>>
-                          ys_ = _args.d_a1;
-                      return (
-                          pulse_class_eqb(x, y) &&
-                          pulse_class_list_eqb(std::move(xs_), std::move(ys_)));
+                      return (pulse_class_eqb(_args.d_a0, _args0.d_a0) &&
+                              pulse_class_list_eqb(_args.d_a1, _args0.d_a1));
                     }},
                 ys->v());
           }},

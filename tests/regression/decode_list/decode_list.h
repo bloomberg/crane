@@ -77,8 +77,7 @@ public:
                      return 0u;
                    },
                    [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     std::shared_ptr<List<t_A>> l_ = _args.d_a1;
-                     return (std::move(l_)->length() + 1);
+                     return (_args.d_a1->length() + 1);
                    }},
         this->v());
   }
@@ -140,8 +139,7 @@ struct DecodeList {
         Overloaded{
             [&](const typename instruction::NOP _args) -> T1 { return f; },
             [&](const typename instruction::LDM _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             }},
         i->v());
   }
@@ -153,8 +151,7 @@ struct DecodeList {
         Overloaded{
             [&](const typename instruction::NOP _args) -> T1 { return f; },
             [&](const typename instruction::LDM _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             }},
         i->v());
   }
@@ -168,30 +165,27 @@ struct DecodeList {
   static inline const unsigned int t_odd_tail = []() {
     return std::visit(
         Overloaded{
-            [](const typename List<std::shared_ptr<instruction>>::Nil _args)
+            [](const typename List<std::shared_ptr<instruction>>::Nil _args0)
                 -> unsigned int { return 0u; },
-            [](const typename List<std::shared_ptr<instruction>>::Cons _args)
+            [](const typename List<std::shared_ptr<instruction>>::Cons _args0)
                 -> unsigned int {
-              std::shared_ptr<instruction> i = _args.d_a0;
-              std::shared_ptr<List<std::shared_ptr<instruction>>> l =
-                  _args.d_a1;
               return std::visit(
                   Overloaded{
-                      [&](const typename instruction::NOP _args)
+                      [&](const typename instruction::NOP _args1)
                           -> unsigned int {
                         return std::visit(
                             Overloaded{
                                 [](const typename List<
-                                    std::shared_ptr<instruction>>::Nil _args)
+                                    std::shared_ptr<instruction>>::Nil _args2)
                                     -> unsigned int { return 1u; },
                                 [](const typename List<
-                                    std::shared_ptr<instruction>>::Cons _args)
+                                    std::shared_ptr<instruction>>::Cons _args2)
                                     -> unsigned int { return 0u; }},
-                            std::move(l)->v());
+                            _args0.d_a1->v());
                       },
-                      [](const typename instruction::LDM _args)
+                      [](const typename instruction::LDM _args1)
                           -> unsigned int { return 0u; }},
-                  std::move(i)->v());
+                  _args0.d_a0->v());
             }},
         decode_list(
             List<unsigned int>::ctor::Cons_(

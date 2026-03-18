@@ -85,9 +85,7 @@ struct DropHeadDefault {
                                    },
                                    [&](const typename List<T1>::Cons _args)
                                        -> std::shared_ptr<List<T1>> {
-                                     std::shared_ptr<List<T1>> l_ = _args.d_a1;
-                                     return drop<T1>(std::move(n_),
-                                                     std::move(l_));
+                                     return drop<T1>(std::move(n_), _args.d_a1);
                                    }},
                         l->v());
     }

@@ -1,0 +1,142 @@
+#include <record_erased_proof_fields.h>
+
+#include <algorithm>
+#include <any>
+#include <cassert>
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <variant>
+
+__attribute__((pure)) unsigned int RecordErasedProofFieldsCase::kind_code(
+    const RecordErasedProofFieldsCase::ItemKind k) {
+  return [&](void) {
+    switch (k) {
+    case ItemKind::e_KINDA: {
+      return 0u;
+    }
+    case ItemKind::e_KINDB: {
+      return 1u;
+    }
+    case ItemKind::e_KINDC: {
+      return 2u;
+    }
+    case ItemKind::e_KINDD: {
+      return 3u;
+    }
+    case ItemKind::e_KINDE: {
+      return 4u;
+    }
+    case ItemKind::e_KINDF: {
+      return 5u;
+    }
+    case ItemKind::e_KINDG: {
+      return 6u;
+    }
+    }
+  }();
+}
+
+__attribute__((pure)) unsigned int RecordErasedProofFieldsCase::tag_code(
+    const std::shared_ptr<RecordErasedProofFieldsCase::StoredTag> &t) {
+  return std::visit(
+      Overloaded{
+          [](const typename RecordErasedProofFieldsCase::StoredTag::TagPrimary
+                 _args) -> unsigned int {
+            return (10u + kind_code(_args.d_a0));
+          },
+          [](const typename RecordErasedProofFieldsCase::StoredTag::TagSecondary
+                 _args) -> unsigned int {
+            return (20u + kind_code(_args.d_a0));
+          }},
+      t->v());
+}
+
+__attribute__((pure)) unsigned int RecordErasedProofFieldsCase::bucket_code(
+    const RecordErasedProofFieldsCase::TraceBucket b) {
+  return [&](void) {
+    switch (b) {
+    case TraceBucket::e_BUCKETA: {
+      return 30u;
+    }
+    case TraceBucket::e_BUCKETB: {
+      return 31u;
+    }
+    case TraceBucket::e_BUCKETC: {
+      return 32u;
+    }
+    }
+  }();
+}
+
+std::shared_ptr<RecordErasedProofFieldsCase::StoredTag>
+RecordErasedProofFieldsCase::bucket_to_tag(
+    const RecordErasedProofFieldsCase::TraceBucket b) {
+  return [&](void) {
+    switch (b) {
+    case TraceBucket::e_BUCKETA: {
+      return StoredTag::ctor::TagSecondary_(ItemKind::e_KINDD);
+    }
+    case TraceBucket::e_BUCKETB: {
+      return StoredTag::ctor::TagSecondary_(ItemKind::e_KINDE);
+    }
+    case TraceBucket::e_BUCKETC: {
+      return StoredTag::ctor::TagSecondary_(ItemKind::e_KINDB);
+    }
+    }
+  }();
+}
+
+__attribute__((pure)) unsigned int
+RecordErasedProofFieldsCase::left_kind_code_of(
+    const std::shared_ptr<RecordErasedProofFieldsCase::PrimaryRecord> &r) {
+  return kind_code(r->primary_left_kind);
+}
+
+__attribute__((pure)) unsigned int
+RecordErasedProofFieldsCase::right_kind_code_of(
+    const std::shared_ptr<RecordErasedProofFieldsCase::PrimaryRecord> &r) {
+  return kind_code(r->primary_right_kind);
+}
+
+__attribute__((pure)) unsigned int RecordErasedProofFieldsCase::tag_code_of(
+    const std::shared_ptr<RecordErasedProofFieldsCase::PrimaryRecord> &r) {
+  return tag_code(r->primary_tag);
+}
+
+__attribute__((pure)) unsigned int RecordErasedProofFieldsCase::bucket_code_of(
+    const std::shared_ptr<RecordErasedProofFieldsCase::ErasedProofRecord> &r) {
+  return bucket_code(r->erased_bucket);
+}
+
+std::shared_ptr<List<unsigned int>> RecordErasedProofFieldsCase::trace_codes_of(
+    std::shared_ptr<RecordErasedProofFieldsCase::PrimaryRecord> primary,
+    std::shared_ptr<RecordErasedProofFieldsCase::ErasedProofRecord> erased) {
+  return List<unsigned int>::ctor::Cons_(
+      left_kind_code_of(primary),
+      List<unsigned int>::ctor::Cons_(
+          right_kind_code_of(primary),
+          List<unsigned int>::ctor::Cons_(
+              tag_code_of(primary),
+              List<unsigned int>::ctor::Cons_(
+                  bucket_code_of(erased),
+                  List<unsigned int>::ctor::Cons_(
+                      tag_code(bucket_to_tag(erased->erased_bucket)),
+                      List<unsigned int>::ctor::Nil_())))));
+}
+
+__attribute__((pure)) unsigned int
+RecordErasedProofFieldsCase::trace_checksum_of(
+    const std::shared_ptr<RecordErasedProofFieldsCase::PrimaryRecord> &primary,
+    const std::shared_ptr<RecordErasedProofFieldsCase::ErasedProofRecord>
+        &erased) {
+  return trace_codes_of(primary, erased)
+      ->template fold_left<unsigned int>(
+          [](unsigned int _x0, unsigned int _x1) -> unsigned int {
+            return (_x0 + _x1);
+          },
+          0u);
+}

@@ -78,9 +78,7 @@ struct CountLoopTestTarget {
     return std::visit(
         Overloaded{
             [&](const typename instruction::ISZ _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              unsigned int n0 = _args.d_a1;
-              return f(std::move(n), std::move(n0));
+              return f(_args.d_a0, _args.d_a1);
             },
             [&](const typename instruction::NOP _args) -> T1 { return f0; }},
         i->v());
@@ -92,9 +90,7 @@ struct CountLoopTestTarget {
     return std::visit(
         Overloaded{
             [&](const typename instruction::ISZ _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              unsigned int n0 = _args.d_a1;
-              return f(std::move(n), std::move(n0));
+              return f(_args.d_a0, _args.d_a1);
             },
             [&](const typename instruction::NOP _args) -> T1 { return f0; }},
         i->v());

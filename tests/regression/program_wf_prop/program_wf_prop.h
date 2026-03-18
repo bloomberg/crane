@@ -141,12 +141,10 @@ struct ProgramWfProp {
     return std::visit(
         Overloaded{
             [&](const typename instruction::JUN _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f(std::move(n));
+              return f(_args.d_a0);
             },
             [&](const typename instruction::JMS _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             },
             [&](const typename instruction::NOP _args) -> T1 { return f1; }},
         i->v());
@@ -159,12 +157,10 @@ struct ProgramWfProp {
     return std::visit(
         Overloaded{
             [&](const typename instruction::JUN _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f(std::move(n));
+              return f(_args.d_a0);
             },
             [&](const typename instruction::JMS _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             },
             [&](const typename instruction::NOP _args) -> T1 { return f1; }},
         i->v());

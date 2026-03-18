@@ -101,12 +101,10 @@ struct EmptyMatch {
                         const std::shared_ptr<either<T1, T2>> &e) {
     return std::visit(
         Overloaded{[&](const typename either<T1, T2>::Left _args) -> T3 {
-                     T1 a = _args.d_a0;
-                     return f(a);
+                     return f(_args.d_a0);
                    },
                    [&](const typename either<T1, T2>::Right _args) -> T3 {
-                     T2 b = _args.d_a0;
-                     return f0(b);
+                     return f0(_args.d_a0);
                    }},
         e->v());
   }
@@ -117,12 +115,10 @@ struct EmptyMatch {
                        const std::shared_ptr<either<T1, T2>> &e) {
     return std::visit(
         Overloaded{[&](const typename either<T1, T2>::Left _args) -> T3 {
-                     T1 a = _args.d_a0;
-                     return f(a);
+                     return f(_args.d_a0);
                    },
                    [&](const typename either<T1, T2>::Right _args) -> T3 {
-                     T2 b = _args.d_a0;
-                     return f0(b);
+                     return f0(_args.d_a0);
                    }},
         e->v());
   }
@@ -133,15 +129,9 @@ struct EmptyMatch {
     return std::visit(
         Overloaded{
             [](const typename either<T1, std::shared_ptr<empty>>::Left _args)
-                -> T1 {
-              T1 a = _args.d_a0;
-              return a;
-            },
+                -> T1 { return _args.d_a0; },
             [](const typename either<T1, std::shared_ptr<empty>>::Right _args)
-                -> T1 {
-              std::shared_ptr<empty> v = _args.d_a0;
-              return absurd<T1>(std::move(v));
-            }},
+                -> T1 { return absurd<T1>(_args.d_a0); }},
         e->v());
   }
 

@@ -78,19 +78,17 @@ public:
                        return default0;
                      },
                      [](const typename List<t_A>::Cons _args) -> t_A {
-                       t_A x = _args.d_a0;
-                       return x;
+                       return _args.d_a0;
                      }},
           this->v());
     } else {
       unsigned int m = n - 1;
       return std::visit(
-          Overloaded{[&](const typename List<t_A>::Nil _args) -> t_A {
+          Overloaded{[&](const typename List<t_A>::Nil _args0) -> t_A {
                        return default0;
                      },
-                     [&](const typename List<t_A>::Cons _args) -> t_A {
-                       std::shared_ptr<List<t_A>> l_ = _args.d_a1;
-                       return std::move(l_)->nth(m, default0);
+                     [&](const typename List<t_A>::Cons _args0) -> t_A {
+                       return _args0.d_a1->nth(m, default0);
                      }},
           this->v());
     }
@@ -132,9 +130,7 @@ struct FetchOps {
                                    },
                                    [&](const typename List<T1>::Cons _args)
                                        -> std::shared_ptr<List<T1>> {
-                                     std::shared_ptr<List<T1>> l_ = _args.d_a1;
-                                     return drop<T1>(std::move(n_),
-                                                     std::move(l_));
+                                     return drop<T1>(std::move(n_), _args.d_a1);
                                    }},
                         l->v());
     }

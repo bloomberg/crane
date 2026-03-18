@@ -64,9 +64,7 @@ struct BenchLetIn {
   static T3 pair_rect(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
     return std::visit(
         Overloaded{[&](const typename pair<T1, T2>::Pair0 _args) -> T3 {
-          T1 a = _args.d_a0;
-          T2 b = _args.d_a1;
-          return f(a, b);
+          return f(_args.d_a0, _args.d_a1);
         }},
         p->v());
   }
@@ -75,9 +73,7 @@ struct BenchLetIn {
   static T3 pair_rec(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
     return std::visit(
         Overloaded{[&](const typename pair<T1, T2>::Pair0 _args) -> T3 {
-          T1 a = _args.d_a0;
-          T2 b = _args.d_a1;
-          return f(a, b);
+          return f(_args.d_a0, _args.d_a1);
         }},
         p->v());
   }
@@ -139,10 +135,7 @@ struct BenchLetIn {
   static T4 triple_rect(F0 &&f, const std::shared_ptr<triple<T1, T2, T3>> &t) {
     return std::visit(
         Overloaded{[&](const typename triple<T1, T2, T3>::Triple0 _args) -> T4 {
-          T1 a = _args.d_a0;
-          T2 b = _args.d_a1;
-          T3 c = _args.d_a2;
-          return f(a, b, c);
+          return f(_args.d_a0, _args.d_a1, _args.d_a2);
         }},
         t->v());
   }
@@ -152,10 +145,7 @@ struct BenchLetIn {
   static T4 triple_rec(F0 &&f, const std::shared_ptr<triple<T1, T2, T3>> &t) {
     return std::visit(
         Overloaded{[&](const typename triple<T1, T2, T3>::Triple0 _args) -> T4 {
-          T1 a = _args.d_a0;
-          T2 b = _args.d_a1;
-          T3 c = _args.d_a2;
-          return f(a, b, c);
+          return f(_args.d_a0, _args.d_a1, _args.d_a2);
         }},
         t->v());
   }

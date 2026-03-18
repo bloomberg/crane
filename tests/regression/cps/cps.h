@@ -76,8 +76,7 @@ public:
                      return 0u;
                    },
                    [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     std::shared_ptr<List<t_A>> l_ = _args.d_a1;
-                     return (std::move(l_)->length() + 1);
+                     return (_args.d_a1->length() + 1);
                    }},
         this->v());
   }
@@ -179,53 +178,46 @@ struct CPS {
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, std::shared_ptr<tree>, T1, std::shared_ptr<tree>, T1> F1>
   static T1 tree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(Overloaded{[&](const typename tree::Leaf _args) -> T1 {
-                                   unsigned int n = _args.d_a0;
-                                   return f(std::move(n));
-                                 },
-                                 [&](const typename tree::Node _args) -> T1 {
-                                   std::shared_ptr<tree> t0 = _args.d_a0;
-                                   std::shared_ptr<tree> t1 = _args.d_a1;
-                                   return f0(t0, tree_rect<T1>(f, f0, t0), t1,
-                                             tree_rect<T1>(f, f0, t1));
-                                 }},
-                      t->v());
+    return std::visit(
+        Overloaded{[&](const typename tree::Leaf _args) -> T1 {
+                     return f(_args.d_a0);
+                   },
+                   [&](const typename tree::Node _args) -> T1 {
+                     return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
+                               _args.d_a1, tree_rect<T1>(f, f0, _args.d_a1));
+                   }},
+        t->v());
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, std::shared_ptr<tree>, T1, std::shared_ptr<tree>, T1> F1>
   static T1 tree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(Overloaded{[&](const typename tree::Leaf _args) -> T1 {
-                                   unsigned int n = _args.d_a0;
-                                   return f(std::move(n));
-                                 },
-                                 [&](const typename tree::Node _args) -> T1 {
-                                   std::shared_ptr<tree> t0 = _args.d_a0;
-                                   std::shared_ptr<tree> t1 = _args.d_a1;
-                                   return f0(t0, tree_rec<T1>(f, f0, t0), t1,
-                                             tree_rec<T1>(f, f0, t1));
-                                 }},
-                      t->v());
+    return std::visit(
+        Overloaded{[&](const typename tree::Leaf _args) -> T1 {
+                     return f(_args.d_a0);
+                   },
+                   [&](const typename tree::Node _args) -> T1 {
+                     return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
+                               _args.d_a1, tree_rec<T1>(f, f0, _args.d_a1));
+                   }},
+        t->v());
   }
 
   __attribute__((pure)) static unsigned int
   tree_sum_cps(const std::shared_ptr<tree> &t,
                const std::function<unsigned int(unsigned int)> k) {
     return std::visit(
-        Overloaded{[&](const typename tree::Leaf _args) -> unsigned int {
-                     unsigned int n = _args.d_a0;
-                     return k(std::move(n));
-                   },
-                   [&](const typename tree::Node _args) -> unsigned int {
-                     std::shared_ptr<tree> l = _args.d_a0;
-                     std::shared_ptr<tree> r = _args.d_a1;
-                     return tree_sum_cps(
-                         std::move(l), [=](unsigned int sl) mutable {
-                           return tree_sum_cps(r, [=](unsigned int sr) mutable {
-                             return k((sl + sr));
-                           });
-                         });
-                   }},
+        Overloaded{
+            [&](const typename tree::Leaf _args) -> unsigned int {
+              return k(_args.d_a0);
+            },
+            [&](const typename tree::Node _args) -> unsigned int {
+              return tree_sum_cps(_args.d_a0, [=](unsigned int sl) mutable {
+                return tree_sum_cps(_args.d_a1, [=](unsigned int sr) mutable {
+                  return k((sl + sr));
+                });
+              });
+            }},
         t->v());
   }
 
@@ -241,10 +233,8 @@ struct CPS {
               return k(0u);
             },
             [&](const typename List<unsigned int>::Cons _args) -> unsigned int {
-              unsigned int x = _args.d_a0;
-              std::shared_ptr<List<unsigned int>> rest = _args.d_a1;
-              return sum_cps(std::move(rest), [=](unsigned int r) mutable {
-                return k((x + r));
+              return sum_cps(_args.d_a1, [=](unsigned int r) mutable {
+                return k((_args.d_a0 + r));
               });
             }},
         l->v());
@@ -266,16 +256,16 @@ struct CPS {
                        List<unsigned int>::ctor::Nil_());
             },
             [&](const typename List<unsigned int>::Cons _args) -> unsigned int {
-              unsigned int x = _args.d_a0;
-              std::shared_ptr<List<unsigned int>> rest = _args.d_a1;
               return partition_cps(
-                  p, std::move(rest),
+                  p, _args.d_a1,
                   [=](std::shared_ptr<List<unsigned int>> yes,
                       std::shared_ptr<List<unsigned int>> no) mutable {
-                    if (p(x)) {
-                      return k(List<unsigned int>::ctor::Cons_(x, yes), no);
+                    if (p(_args.d_a0)) {
+                      return k(List<unsigned int>::ctor::Cons_(_args.d_a0, yes),
+                               no);
                     } else {
-                      return k(yes, List<unsigned int>::ctor::Cons_(x, no));
+                      return k(yes,
+                               List<unsigned int>::ctor::Cons_(_args.d_a0, no));
                     }
                   });
             }},

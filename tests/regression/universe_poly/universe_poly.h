@@ -143,8 +143,7 @@ struct UniversePoly {
         Overloaded{
             [&](const typename poption<T1>::Pnone _args) -> T2 { return f; },
             [&](const typename poption<T1>::Psome _args) -> T2 {
-              T1 a = _args.d_a0;
-              return f0(a);
+              return f0(_args.d_a0);
             }},
         p->v());
   }
@@ -156,8 +155,7 @@ struct UniversePoly {
         Overloaded{
             [&](const typename poption<T1>::Pnone _args) -> T2 { return f; },
             [&](const typename poption<T1>::Psome _args) -> T2 {
-              T1 a = _args.d_a0;
-              return f0(a);
+              return f0(_args.d_a0);
             }},
         p->v());
   }
@@ -171,8 +169,8 @@ struct UniversePoly {
                                  },
                                  [&](const typename poption<T1>::Psome _args)
                                      -> std::shared_ptr<poption<T2>> {
-                                   T1 x = _args.d_a0;
-                                   return poption<T2>::ctor::Psome_(f(x));
+                                   return poption<T2>::ctor::Psome_(
+                                       f(_args.d_a0));
                                  }},
                       o->v());
   }
@@ -187,8 +185,7 @@ struct UniversePoly {
                                  },
                                  [&](const typename poption<T1>::Psome _args)
                                      -> std::shared_ptr<poption<T2>> {
-                                   T1 x = _args.d_a0;
-                                   return f(x);
+                                   return f(_args.d_a0);
                                  }},
                       o->v());
   }
@@ -215,8 +212,7 @@ struct UniversePoly {
                      return 0u;
                    },
                    [](const typename List<T1>::Cons _args) -> unsigned int {
-                     std::shared_ptr<List<T1>> rest = _args.d_a1;
-                     return (poly_length<T1>(std::move(rest)) + 1);
+                     return (poly_length<T1>(_args.d_a1) + 1);
                    }},
         l->v());
   }

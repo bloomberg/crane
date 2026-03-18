@@ -31,9 +31,8 @@ LoadProgramHeadWrite::update_nth(const unsigned int n, const unsigned int x,
                        },
                        [&](const typename List<unsigned int>::Cons _args)
                            -> std::shared_ptr<List<unsigned int>> {
-                         std::shared_ptr<List<unsigned int>> xs = _args.d_a1;
                          return List<unsigned int>::ctor::Cons_(std::move(x),
-                                                                std::move(xs));
+                                                                _args.d_a1);
                        }},
             l->v());
       }
@@ -50,17 +49,15 @@ LoadProgramHeadWrite::update_nth(const unsigned int n, const unsigned int x,
         return std::move(l);
       } else {
         return std::visit(
-            Overloaded{[&](const typename List<unsigned int>::Nil _args)
+            Overloaded{[&](const typename List<unsigned int>::Nil _args0)
                            -> std::shared_ptr<List<unsigned int>> {
                          return std::move(l);
                        },
-                       [&](const typename List<unsigned int>::Cons _args)
+                       [&](const typename List<unsigned int>::Cons _args0)
                            -> std::shared_ptr<List<unsigned int>> {
-                         unsigned int y = _args.d_a0;
-                         std::shared_ptr<List<unsigned int>> ys = _args.d_a1;
                          return List<unsigned int>::ctor::Cons_(
-                             std::move(y),
-                             update_nth(std::move(n_), x, std::move(ys)));
+                             _args0.d_a0,
+                             update_nth(std::move(n_), x, _args0.d_a1));
                        }},
             std::move(l)->v());
       }
@@ -98,14 +95,12 @@ std::shared_ptr<LoadProgramHeadWrite::state> LoadProgramHeadWrite::load_program(
                  },
                  [&](const typename List<unsigned int>::Cons _args)
                      -> std::shared_ptr<LoadProgramHeadWrite::state> {
-                   unsigned int b = _args.d_a0;
-                   std::shared_ptr<List<unsigned int>> rest = _args.d_a1;
                    std::shared_ptr<LoadProgramHeadWrite::state> s1 =
-                       set_prom_params(std::move(s), base, std::move(b), true);
+                       set_prom_params(std::move(s), base, _args.d_a0, true);
                    std::shared_ptr<LoadProgramHeadWrite::state> s2 =
                        execute_wpm(std::move(s1));
                    return load_program(std::move(s2), ((base + 1u) % 4096u),
-                                       std::move(rest));
+                                       _args.d_a1);
                  }},
       bytes->v());
 }

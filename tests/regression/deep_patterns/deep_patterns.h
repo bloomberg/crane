@@ -77,8 +77,7 @@ public:
                      return 0u;
                    },
                    [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     std::shared_ptr<List<t_A>> l_ = _args.d_a1;
-                     return (std::move(l_)->length() + 1);
+                     return (_args.d_a1->length() + 1);
                    }},
         this->v());
   }
@@ -201,12 +200,10 @@ struct DeepPatterns {
             MapsTo<T1, unsigned int> F1>
   static T1 outer_rect(F0 &&f, F1 &&f0, const std::shared_ptr<outer> &o) {
     return std::visit(Overloaded{[&](const typename outer::OLeft _args) -> T1 {
-                                   std::shared_ptr<inner> i = _args.d_a0;
-                                   return f(std::move(i));
+                                   return f(_args.d_a0);
                                  },
                                  [&](const typename outer::ORight _args) -> T1 {
-                                   unsigned int n = _args.d_a0;
-                                   return f0(std::move(n));
+                                   return f0(_args.d_a0);
                                  }},
                       o->v());
   }
@@ -215,12 +212,10 @@ struct DeepPatterns {
             MapsTo<T1, unsigned int> F1>
   static T1 outer_rec(F0 &&f, F1 &&f0, const std::shared_ptr<outer> &o) {
     return std::visit(Overloaded{[&](const typename outer::OLeft _args) -> T1 {
-                                   std::shared_ptr<inner> i = _args.d_a0;
-                                   return f(std::move(i));
+                                   return f(_args.d_a0);
                                  },
                                  [&](const typename outer::ORight _args) -> T1 {
-                                   unsigned int n = _args.d_a0;
-                                   return f0(std::move(n));
+                                   return f0(_args.d_a0);
                                  }},
                       o->v());
   }
@@ -228,12 +223,10 @@ struct DeepPatterns {
   template <typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, bool> F1>
   static T1 inner_rect(F0 &&f, F1 &&f0, const std::shared_ptr<inner> &i) {
     return std::visit(Overloaded{[&](const typename inner::ILeft _args) -> T1 {
-                                   unsigned int n = _args.d_a0;
-                                   return f(std::move(n));
+                                   return f(_args.d_a0);
                                  },
                                  [&](const typename inner::IRight _args) -> T1 {
-                                   bool b = _args.d_a0;
-                                   return f0(std::move(b));
+                                   return f0(_args.d_a0);
                                  }},
                       i->v());
   }
@@ -241,12 +234,10 @@ struct DeepPatterns {
   template <typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, bool> F1>
   static T1 inner_rec(F0 &&f, F1 &&f0, const std::shared_ptr<inner> &i) {
     return std::visit(Overloaded{[&](const typename inner::ILeft _args) -> T1 {
-                                   unsigned int n = _args.d_a0;
-                                   return f(std::move(n));
+                                   return f(_args.d_a0);
                                  },
                                  [&](const typename inner::IRight _args) -> T1 {
-                                   bool b = _args.d_a0;
-                                   return f0(std::move(b));
+                                   return f0(_args.d_a0);
                                  }},
                       i->v());
   }
@@ -303,9 +294,7 @@ struct DeepPatterns {
   static T3 pair_rect(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
     return std::visit(
         Overloaded{[&](const typename pair<T1, T2>::Pair0 _args) -> T3 {
-          T1 a = _args.d_a0;
-          T2 b = _args.d_a1;
-          return f(a, b);
+          return f(_args.d_a0, _args.d_a1);
         }},
         p->v());
   }
@@ -314,9 +303,7 @@ struct DeepPatterns {
   static T3 pair_rec(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
     return std::visit(
         Overloaded{[&](const typename pair<T1, T2>::Pair0 _args) -> T3 {
-          T1 a = _args.d_a0;
-          T2 b = _args.d_a1;
-          return f(a, b);
+          return f(_args.d_a0, _args.d_a1);
         }},
         p->v());
   }
@@ -380,9 +367,8 @@ struct DeepPatterns {
         Overloaded{
             [&](const typename mylist<T1>::Nil _args) -> T2 { return f; },
             [&](const typename mylist<T1>::Cons _args) -> T2 {
-              T1 y = _args.d_a0;
-              std::shared_ptr<mylist<T1>> m0 = _args.d_a1;
-              return f0(y, m0, mylist_rect<T1, T2>(f, f0, m0));
+              return f0(_args.d_a0, _args.d_a1,
+                        mylist_rect<T1, T2>(f, f0, _args.d_a1));
             }},
         m->v());
   }
@@ -395,9 +381,8 @@ struct DeepPatterns {
         Overloaded{
             [&](const typename mylist<T1>::Nil _args) -> T2 { return f; },
             [&](const typename mylist<T1>::Cons _args) -> T2 {
-              T1 y = _args.d_a0;
-              std::shared_ptr<mylist<T1>> m0 = _args.d_a1;
-              return f0(y, m0, mylist_rec<T1, T2>(f, f0, m0));
+              return f0(_args.d_a0, _args.d_a1,
+                        mylist_rec<T1, T2>(f, f0, _args.d_a1));
             }},
         m->v());
   }

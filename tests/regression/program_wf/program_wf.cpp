@@ -16,13 +16,11 @@ ProgramWf::jump_target(const std::shared_ptr<ProgramWf::instruction> &i) {
   return std::visit(
       Overloaded{[](const typename ProgramWf::instruction::JUN _args)
                      -> std::optional<unsigned int> {
-                   unsigned int a = _args.d_a0;
-                   return std::make_optional<unsigned int>(std::move(a));
+                   return std::make_optional<unsigned int>(_args.d_a0);
                  },
                  [](const typename ProgramWf::instruction::JMS _args)
                      -> std::optional<unsigned int> {
-                   unsigned int a = _args.d_a0;
-                   return std::make_optional<unsigned int>(std::move(a));
+                   return std::make_optional<unsigned int>(_args.d_a0);
                  },
                  [](const typename ProgramWf::instruction::NOP _args)
                      -> std::optional<unsigned int> { return std::nullopt; }},

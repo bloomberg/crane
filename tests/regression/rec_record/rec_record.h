@@ -80,9 +80,8 @@ struct RecRecord {
         Overloaded{
             [&](const typename rlist<T1>::Rnil _args) -> T2 { return f; },
             [&](const typename rlist<T1>::Rcons _args) -> T2 {
-              T1 y = _args.d_a0;
-              std::shared_ptr<rlist<T1>> r0 = _args.d_a1;
-              return f0(y, r0, rlist_rect<T1, T2>(f, f0, r0));
+              return f0(_args.d_a0, _args.d_a1,
+                        rlist_rect<T1, T2>(f, f0, _args.d_a1));
             }},
         r->v());
   }
@@ -95,9 +94,8 @@ struct RecRecord {
         Overloaded{
             [&](const typename rlist<T1>::Rnil _args) -> T2 { return f; },
             [&](const typename rlist<T1>::Rcons _args) -> T2 {
-              T1 y = _args.d_a0;
-              std::shared_ptr<rlist<T1>> r0 = _args.d_a1;
-              return f0(y, r0, rlist_rec<T1, T2>(f, f0, r0));
+              return f0(_args.d_a0, _args.d_a1,
+                        rlist_rec<T1, T2>(f, f0, _args.d_a1));
             }},
         r->v());
   }
@@ -146,8 +144,7 @@ struct RecRecord {
                      return 0u;
                    },
                    [](const typename rlist<T1>::Rcons _args) -> unsigned int {
-                     std::shared_ptr<rlist<T1>> rest = _args.d_a1;
-                     return (rlist_length<T1>(std::move(rest)) + 1);
+                     return (rlist_length<T1>(_args.d_a1) + 1);
                    }},
         l->v());
   }

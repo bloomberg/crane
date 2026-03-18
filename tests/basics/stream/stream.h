@@ -178,13 +178,11 @@ struct Stream {
                 return List<t_A>::ctor::Nil_();
               },
               [&](const typename Nat::S _args) -> std::shared_ptr<List<t_A>> {
-                std::shared_ptr<Nat> n_ = _args.d_a0;
                 return std::visit(
-                    Overloaded{[&](const typename stream<t_A>::Scons _args)
+                    Overloaded{[&](const typename stream<t_A>::Scons _args0)
                                    -> std::shared_ptr<List<t_A>> {
-                      t_A x = _args.d_a0;
-                      std::shared_ptr<stream<t_A>> xs = _args.d_a1;
-                      return List<t_A>::ctor::Cons_(x, xs->take(std::move(n_)));
+                      return List<t_A>::ctor::Cons_(
+                          _args0.d_a0, _args0.d_a1->take(_args.d_a0));
                     }},
                     this->v());
               }},
@@ -198,9 +196,8 @@ struct Stream {
             return std::visit(
                 Overloaded{[&](const typename stream<t_A>::Scons _args)
                                -> std::shared_ptr<stream<t_A>> {
-                  t_A a = _args.d_a0;
-                  std::shared_ptr<stream<t_A>> as_ = _args.d_a1;
-                  return stream<t_A>::ctor::Scons_(a, sb->interleave(as_));
+                  return stream<t_A>::ctor::Scons_(_args.d_a0,
+                                                   sb->interleave(_args.d_a1));
                 }},
                 this->v());
           });

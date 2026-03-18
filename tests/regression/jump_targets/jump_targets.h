@@ -77,8 +77,7 @@ public:
                      return 0u;
                    },
                    [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     std::shared_ptr<List<t_A>> l_ = _args.d_a1;
-                     return (std::move(l_)->length() + 1);
+                     return (_args.d_a1->length() + 1);
                    }},
         this->v());
   }
@@ -159,12 +158,10 @@ struct JumpTargets {
                                   const std::shared_ptr<instr_collection> &i) {
     return std::visit(
         Overloaded{[&](const typename instr_collection::JUN_coll _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f(std::move(n));
+                     return f(_args.d_a0);
                    },
                    [&](const typename instr_collection::JMS_coll _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f0(std::move(n));
+                     return f0(_args.d_a0);
                    },
                    [&](const typename instr_collection::NOP_coll _args) -> T1 {
                      return f1;
@@ -178,12 +175,10 @@ struct JumpTargets {
                                  const std::shared_ptr<instr_collection> &i) {
     return std::visit(
         Overloaded{[&](const typename instr_collection::JUN_coll _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f(std::move(n));
+                     return f(_args.d_a0);
                    },
                    [&](const typename instr_collection::JMS_coll _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f0(std::move(n));
+                     return f0(_args.d_a0);
                    },
                    [&](const typename instr_collection::NOP_coll _args) -> T1 {
                      return f1;
@@ -277,12 +272,10 @@ struct JumpTargets {
                               const std::shared_ptr<instr_region> &i) {
     return std::visit(
         Overloaded{[&](const typename instr_region::JUN_reg _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f(std::move(n));
+                     return f(_args.d_a0);
                    },
                    [&](const typename instr_region::JMS_reg _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f0(std::move(n));
+                     return f0(_args.d_a0);
                    },
                    [&](const typename instr_region::NOP_reg _args) -> T1 {
                      return f1;
@@ -296,12 +289,10 @@ struct JumpTargets {
                              const std::shared_ptr<instr_region> &i) {
     return std::visit(
         Overloaded{[&](const typename instr_region::JUN_reg _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f(std::move(n));
+                     return f(_args.d_a0);
                    },
                    [&](const typename instr_region::JMS_reg _args) -> T1 {
-                     unsigned int n = _args.d_a0;
-                     return f0(std::move(n));
+                     return f0(_args.d_a0);
                    },
                    [&](const typename instr_region::NOP_reg _args) -> T1 {
                      return f1;
@@ -394,12 +385,10 @@ struct JumpTargets {
     return std::visit(
         Overloaded{
             [&](const typename instr_jms::JUN_jms _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f(std::move(n));
+              return f(_args.d_a0);
             },
             [&](const typename instr_jms::JMS_jms _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             },
             [&](const typename instr_jms::NOP_jms _args) -> T1 { return f1; }},
         i->v());
@@ -412,12 +401,10 @@ struct JumpTargets {
     return std::visit(
         Overloaded{
             [&](const typename instr_jms::JUN_jms _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f(std::move(n));
+              return f(_args.d_a0);
             },
             [&](const typename instr_jms::JMS_jms _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             },
             [&](const typename instr_jms::NOP_jms _args) -> T1 { return f1; }},
         i->v());
@@ -499,12 +486,10 @@ struct JumpTargets {
     return std::visit(
         Overloaded{
             [&](const typename instr_jun::JUN_jun _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f(std::move(n));
+              return f(_args.d_a0);
             },
             [&](const typename instr_jun::JMS_jun _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             },
             [&](const typename instr_jun::NOP_jun _args) -> T1 { return f1; }},
         i->v());
@@ -517,12 +502,10 @@ struct JumpTargets {
     return std::visit(
         Overloaded{
             [&](const typename instr_jun::JUN_jun _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f(std::move(n));
+              return f(_args.d_a0);
             },
             [&](const typename instr_jun::JMS_jun _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             },
             [&](const typename instr_jun::NOP_jun _args) -> T1 { return f1; }},
         i->v());

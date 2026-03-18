@@ -61,11 +61,7 @@ __attribute__((pure)) unsigned int ImplicitArgs::sum_with_init(
               -> unsigned int { return std::move(init); },
           [&](const typename ImplicitArgs::mylist<unsigned int>::Mycons _args)
               -> unsigned int {
-            unsigned int x = _args.d_a0;
-            std::shared_ptr<ImplicitArgs::mylist<unsigned int>> rest =
-                _args.d_a1;
-            return (std::move(x) +
-                    sum_with_init(std::move(init), std::move(rest)));
+            return (_args.d_a0 + sum_with_init(std::move(init), _args.d_a1));
           }},
       l->v());
 }

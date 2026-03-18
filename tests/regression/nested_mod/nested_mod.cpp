@@ -17,20 +17,12 @@ __attribute__((pure)) unsigned int NestedMod::Outer::Inner::area(
   return std::visit(
       Overloaded{
           [](const typename NestedMod::Outer::Inner::shape::Circle _args)
-              -> unsigned int {
-            unsigned int r = _args.d_a0;
-            return ((r * r) * 3u);
-          },
+              -> unsigned int { return ((_args.d_a0 * _args.d_a0) * 3u); },
           [](const typename NestedMod::Outer::Inner::shape::Square _args)
-              -> unsigned int {
-            unsigned int side = _args.d_a0;
-            return (side * side);
-          },
+              -> unsigned int { return (_args.d_a0 * _args.d_a0); },
           [](const typename NestedMod::Outer::Inner::shape::Triangle _args)
               -> unsigned int {
-            unsigned int a = _args.d_a0;
-            unsigned int b = _args.d_a1;
-            return Nat::div((std::move(a) * std::move(b)), 2u);
+            return Nat::div((_args.d_a0 * _args.d_a1), 2u);
           }},
       s->v());
 }

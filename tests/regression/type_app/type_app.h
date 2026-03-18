@@ -107,9 +107,8 @@ struct TypeApp {
     return std::visit(
         Overloaded{[&](const typename list<T1>::Nil _args) -> T2 { return f; },
                    [&](const typename list<T1>::Cons _args) -> T2 {
-                     T1 y = _args.d_a0;
-                     std::shared_ptr<list<T1>> l0 = _args.d_a1;
-                     return f0(y, l0, list_rect<T1, T2>(f, f0, l0));
+                     return f0(_args.d_a0, _args.d_a1,
+                               list_rect<T1, T2>(f, f0, _args.d_a1));
                    }},
         l->v());
   }
@@ -120,9 +119,8 @@ struct TypeApp {
     return std::visit(
         Overloaded{[&](const typename list<T1>::Nil _args) -> T2 { return f; },
                    [&](const typename list<T1>::Cons _args) -> T2 {
-                     T1 y = _args.d_a0;
-                     std::shared_ptr<list<T1>> l0 = _args.d_a1;
-                     return f0(y, l0, list_rec<T1, T2>(f, f0, l0));
+                     return f0(_args.d_a0, _args.d_a1,
+                               list_rec<T1, T2>(f, f0, _args.d_a1));
                    }},
         l->v());
   }
@@ -136,9 +134,8 @@ struct TypeApp {
                 -> std::shared_ptr<list<T2>> { return list<T2>::ctor::Nil_(); },
             [&](const typename list<T1>::Cons _args)
                 -> std::shared_ptr<list<T2>> {
-              T1 x = _args.d_a0;
-              std::shared_ptr<list<T1>> xs = _args.d_a1;
-              return list<T2>::ctor::Cons_(f(x), map<T1, T2>(f, std::move(xs)));
+              return list<T2>::ctor::Cons_(f(_args.d_a0),
+                                           map<T1, T2>(f, _args.d_a1));
             }},
         l->v());
   }

@@ -18,11 +18,10 @@ __attribute__((pure)) unsigned int InstructionCycles::cycles_jcn(
   return std::visit(
       Overloaded{[&](const typename InstructionCycles::instruction1::JCN1 _args)
                      -> unsigned int {
-                   unsigned int cond = _args.d_a0;
-                   unsigned int c1 = Nat::div(cond, 8u);
-                   unsigned int c2 = (Nat::div(cond, 4u) % 2u);
-                   unsigned int c3 = (Nat::div(cond, 2u) % 2u);
-                   unsigned int c4 = (std::move(cond) % 2u);
+                   unsigned int c1 = Nat::div(_args.d_a0, 8u);
+                   unsigned int c2 = (Nat::div(_args.d_a0, 4u) % 2u);
+                   unsigned int c3 = (Nat::div(_args.d_a0, 2u) % 2u);
+                   unsigned int c4 = (_args.d_a0 % 2u);
                    bool base_cond =
                        ((s->acc1 == 0u && std::move(c2) == 1u) ||
                         ((s->carry1 && std::move(c3) == 1u) ||
@@ -133,12 +132,11 @@ __attribute__((pure)) unsigned int InstructionCycles::cycles_sum(
                      -> unsigned int { return 8u; },
                  [&](const typename InstructionCycles::instruction5::JCN5 _args)
                      -> unsigned int {
-                   unsigned int n = _args.d_a0;
-                   if (Nat::div(n, 8u) == 1u) {
+                   if (Nat::div(_args.d_a0, 8u) == 1u) {
                      return 16u;
                    } else {
                      if ((s->acc5 == 0u &&
-                          (Nat::div(std::move(n), 4u) % 2u) == 1u)) {
+                          (Nat::div(_args.d_a0, 4u) % 2u) == 1u)) {
                        return 16u;
                      } else {
                        return 8u;
@@ -182,12 +180,8 @@ __attribute__((pure)) unsigned int InstructionCycles::program_cycles5(
           [&](const typename List<
               std::shared_ptr<InstructionCycles::instruction5>>::Cons _args)
               -> unsigned int {
-            std::shared_ptr<InstructionCycles::instruction5> i = _args.d_a0;
-            std::shared_ptr<
-                List<std::shared_ptr<InstructionCycles::instruction5>>>
-                rest = _args.d_a1;
-            return (cycles_sum(s, i) +
-                    program_cycles5(execute5(s, i), std::move(rest)));
+            return (cycles_sum(s, _args.d_a0) +
+                    program_cycles5(execute5(s, _args.d_a0), _args.d_a1));
           }},
       prog->v());
 }
@@ -207,10 +201,7 @@ __attribute__((pure)) unsigned int InstructionCycles::program_cycles6(
               -> unsigned int { return 0u; },
           [&](const typename List<InstructionCycles::Instruction6>::Cons _args)
               -> unsigned int {
-            InstructionCycles::Instruction6 i = _args.d_a0;
-            std::shared_ptr<List<InstructionCycles::Instruction6>> rest =
-                _args.d_a1;
-            return (cycles6(s, i) + program_cycles6(s, std::move(rest)));
+            return (cycles6(s, _args.d_a0) + program_cycles6(s, _args.d_a1));
           }},
       prog->v());
 }
@@ -230,10 +221,7 @@ __attribute__((pure)) unsigned int InstructionCycles::program_cycles7(
               -> unsigned int { return 0u; },
           [&](const typename List<InstructionCycles::Instruction7>::Cons _args)
               -> unsigned int {
-            InstructionCycles::Instruction7 i = _args.d_a0;
-            std::shared_ptr<List<InstructionCycles::Instruction7>> rest =
-                _args.d_a1;
-            return (cycles7(s, i) + program_cycles7(s, std::move(rest)));
+            return (cycles7(s, _args.d_a0) + program_cycles7(s, _args.d_a1));
           }},
       prog->v());
 }

@@ -77,9 +77,7 @@ public:
         Overloaded{
             [&](const typename List<t_A>::Nil _args) -> T1 { return a0; },
             [&](const typename List<t_A>::Cons _args) -> T1 {
-              t_A b = _args.d_a0;
-              std::shared_ptr<List<t_A>> l0 = _args.d_a1;
-              return std::move(l0)->template fold_left<T1>(f, f(a0, b));
+              return _args.d_a1->template fold_left<T1>(f, f(a0, _args.d_a0));
             }},
         this->v());
   }
@@ -92,10 +90,8 @@ public:
                    },
                    [](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {
-                     t_A x = _args.d_a0;
-                     std::shared_ptr<List<t_A>> l_ = _args.d_a1;
-                     return std::move(l_)->rev()->app(
-                         List<t_A>::ctor::Cons_(x, List<t_A>::ctor::Nil_()));
+                     return _args.d_a1->rev()->app(List<t_A>::ctor::Cons_(
+                         _args.d_a0, List<t_A>::ctor::Nil_()));
                    }},
         this->v());
   }
@@ -106,8 +102,7 @@ public:
                      return 0u;
                    },
                    [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     std::shared_ptr<List<t_A>> l_ = _args.d_a1;
-                     return (std::move(l_)->length() + 1);
+                     return (_args.d_a1->length() + 1);
                    }},
         this->v());
   }
@@ -118,9 +113,8 @@ public:
                        -> std::shared_ptr<List<t_A>> { return m; },
                    [&](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {
-                     t_A a = _args.d_a0;
-                     std::shared_ptr<List<t_A>> l1 = _args.d_a1;
-                     return List<t_A>::ctor::Cons_(a, std::move(l1)->app(m));
+                     return List<t_A>::ctor::Cons_(_args.d_a0,
+                                                   _args.d_a1->app(m));
                    }},
         this->v());
   }

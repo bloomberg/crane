@@ -77,33 +77,29 @@ struct DeepPattern {
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, std::shared_ptr<tree>, T1, std::shared_ptr<tree>, T1> F1>
   static T1 tree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(Overloaded{[&](const typename tree::Leaf _args) -> T1 {
-                                   unsigned int n = _args.d_a0;
-                                   return f(std::move(n));
-                                 },
-                                 [&](const typename tree::Node _args) -> T1 {
-                                   std::shared_ptr<tree> t0 = _args.d_a0;
-                                   std::shared_ptr<tree> t1 = _args.d_a1;
-                                   return f0(t0, tree_rect<T1>(f, f0, t0), t1,
-                                             tree_rect<T1>(f, f0, t1));
-                                 }},
-                      t->v());
+    return std::visit(
+        Overloaded{[&](const typename tree::Leaf _args) -> T1 {
+                     return f(_args.d_a0);
+                   },
+                   [&](const typename tree::Node _args) -> T1 {
+                     return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
+                               _args.d_a1, tree_rect<T1>(f, f0, _args.d_a1));
+                   }},
+        t->v());
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, std::shared_ptr<tree>, T1, std::shared_ptr<tree>, T1> F1>
   static T1 tree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    return std::visit(Overloaded{[&](const typename tree::Leaf _args) -> T1 {
-                                   unsigned int n = _args.d_a0;
-                                   return f(std::move(n));
-                                 },
-                                 [&](const typename tree::Node _args) -> T1 {
-                                   std::shared_ptr<tree> t0 = _args.d_a0;
-                                   std::shared_ptr<tree> t1 = _args.d_a1;
-                                   return f0(t0, tree_rec<T1>(f, f0, t0), t1,
-                                             tree_rec<T1>(f, f0, t1));
-                                 }},
-                      t->v());
+    return std::visit(
+        Overloaded{[&](const typename tree::Leaf _args) -> T1 {
+                     return f(_args.d_a0);
+                   },
+                   [&](const typename tree::Node _args) -> T1 {
+                     return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
+                               _args.d_a1, tree_rec<T1>(f, f0, _args.d_a1));
+                   }},
+        t->v());
   }
 
   template <typename t_A> struct list {
@@ -163,9 +159,8 @@ struct DeepPattern {
     return std::visit(
         Overloaded{[&](const typename list<T1>::Nil _args) -> T2 { return f; },
                    [&](const typename list<T1>::Cons _args) -> T2 {
-                     T1 y = _args.d_a0;
-                     std::shared_ptr<list<T1>> l0 = _args.d_a1;
-                     return f0(y, l0, list_rect<T1, T2>(f, f0, l0));
+                     return f0(_args.d_a0, _args.d_a1,
+                               list_rect<T1, T2>(f, f0, _args.d_a1));
                    }},
         l->v());
   }
@@ -176,9 +171,8 @@ struct DeepPattern {
     return std::visit(
         Overloaded{[&](const typename list<T1>::Nil _args) -> T2 { return f; },
                    [&](const typename list<T1>::Cons _args) -> T2 {
-                     T1 y = _args.d_a0;
-                     std::shared_ptr<list<T1>> l0 = _args.d_a1;
-                     return f0(y, l0, list_rec<T1, T2>(f, f0, l0));
+                     return f0(_args.d_a0, _args.d_a1,
+                               list_rec<T1, T2>(f, f0, _args.d_a1));
                    }},
         l->v());
   }

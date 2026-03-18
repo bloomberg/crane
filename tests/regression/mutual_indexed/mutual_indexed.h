@@ -128,10 +128,7 @@ struct MutualIndexed {
         Overloaded{
             [&](const typename EvenTree::ELeaf _args) -> T1 { return f; },
             [&](const typename EvenTree::ENode _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              unsigned int n0 = _args.d_a1;
-              std::shared_ptr<OddTree> o = _args.d_a2;
-              return f0(std::move(n), std::move(n0), std::move(o));
+              return f0(_args.d_a0, _args.d_a1, _args.d_a2);
             }},
         e->v());
   }
@@ -144,10 +141,7 @@ struct MutualIndexed {
         Overloaded{
             [&](const typename EvenTree::ELeaf _args) -> T1 { return f; },
             [&](const typename EvenTree::ENode _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              unsigned int n0 = _args.d_a1;
-              std::shared_ptr<OddTree> o = _args.d_a2;
-              return f0(std::move(n), std::move(n0), std::move(o));
+              return f0(_args.d_a0, _args.d_a1, _args.d_a2);
             }},
         e->v());
   }
@@ -159,10 +153,7 @@ struct MutualIndexed {
                          const std::shared_ptr<OddTree> &o) {
     return std::visit(
         Overloaded{[&](const typename OddTree::ONode _args) -> T1 {
-          unsigned int n = _args.d_a0;
-          unsigned int n0 = _args.d_a1;
-          std::shared_ptr<EvenTree> e = _args.d_a2;
-          return f(std::move(n), std::move(n0), std::move(e));
+          return f(_args.d_a0, _args.d_a1, _args.d_a2);
         }},
         o->v());
   }
@@ -174,10 +165,7 @@ struct MutualIndexed {
                         const std::shared_ptr<OddTree> &o) {
     return std::visit(
         Overloaded{[&](const typename OddTree::ONode _args) -> T1 {
-          unsigned int n = _args.d_a0;
-          unsigned int n0 = _args.d_a1;
-          std::shared_ptr<EvenTree> e = _args.d_a2;
-          return f(std::move(n), std::move(n0), std::move(e));
+          return f(_args.d_a0, _args.d_a1, _args.d_a2);
         }},
         o->v());
   }

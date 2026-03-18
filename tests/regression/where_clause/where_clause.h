@@ -96,46 +96,36 @@ struct WhereClause {
             MapsTo<T1, std::shared_ptr<Expr>, T1, std::shared_ptr<Expr>, T1> F2>
   static T1 Expr_rect(F0 &&f, F1 &&f0, F2 &&f1,
                       const std::shared_ptr<Expr> &e) {
-    return std::visit(Overloaded{[&](const typename Expr::Num _args) -> T1 {
-                                   unsigned int n = _args.d_a0;
-                                   return f(std::move(n));
-                                 },
-                                 [&](const typename Expr::Plus _args) -> T1 {
-                                   std::shared_ptr<Expr> e0 = _args.d_a0;
-                                   std::shared_ptr<Expr> e1 = _args.d_a1;
-                                   return f0(e0, Expr_rect<T1>(f, f0, f1, e0),
-                                             e1, Expr_rect<T1>(f, f0, f1, e1));
-                                 },
-                                 [&](const typename Expr::Times _args) -> T1 {
-                                   std::shared_ptr<Expr> e0 = _args.d_a0;
-                                   std::shared_ptr<Expr> e1 = _args.d_a1;
-                                   return f1(e0, Expr_rect<T1>(f, f0, f1, e0),
-                                             e1, Expr_rect<T1>(f, f0, f1, e1));
-                                 }},
-                      e->v());
+    return std::visit(
+        Overloaded{
+            [&](const typename Expr::Num _args) -> T1 { return f(_args.d_a0); },
+            [&](const typename Expr::Plus _args) -> T1 {
+              return f0(_args.d_a0, Expr_rect<T1>(f, f0, f1, _args.d_a0),
+                        _args.d_a1, Expr_rect<T1>(f, f0, f1, _args.d_a1));
+            },
+            [&](const typename Expr::Times _args) -> T1 {
+              return f1(_args.d_a0, Expr_rect<T1>(f, f0, f1, _args.d_a0),
+                        _args.d_a1, Expr_rect<T1>(f, f0, f1, _args.d_a1));
+            }},
+        e->v());
   }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, std::shared_ptr<Expr>, T1, std::shared_ptr<Expr>, T1> F1,
             MapsTo<T1, std::shared_ptr<Expr>, T1, std::shared_ptr<Expr>, T1> F2>
   static T1 Expr_rec(F0 &&f, F1 &&f0, F2 &&f1, const std::shared_ptr<Expr> &e) {
-    return std::visit(Overloaded{[&](const typename Expr::Num _args) -> T1 {
-                                   unsigned int n = _args.d_a0;
-                                   return f(std::move(n));
-                                 },
-                                 [&](const typename Expr::Plus _args) -> T1 {
-                                   std::shared_ptr<Expr> e0 = _args.d_a0;
-                                   std::shared_ptr<Expr> e1 = _args.d_a1;
-                                   return f0(e0, Expr_rec<T1>(f, f0, f1, e0),
-                                             e1, Expr_rec<T1>(f, f0, f1, e1));
-                                 },
-                                 [&](const typename Expr::Times _args) -> T1 {
-                                   std::shared_ptr<Expr> e0 = _args.d_a0;
-                                   std::shared_ptr<Expr> e1 = _args.d_a1;
-                                   return f1(e0, Expr_rec<T1>(f, f0, f1, e0),
-                                             e1, Expr_rec<T1>(f, f0, f1, e1));
-                                 }},
-                      e->v());
+    return std::visit(
+        Overloaded{
+            [&](const typename Expr::Num _args) -> T1 { return f(_args.d_a0); },
+            [&](const typename Expr::Plus _args) -> T1 {
+              return f0(_args.d_a0, Expr_rec<T1>(f, f0, f1, _args.d_a0),
+                        _args.d_a1, Expr_rec<T1>(f, f0, f1, _args.d_a1));
+            },
+            [&](const typename Expr::Times _args) -> T1 {
+              return f1(_args.d_a0, Expr_rec<T1>(f, f0, f1, _args.d_a0),
+                        _args.d_a1, Expr_rec<T1>(f, f0, f1, _args.d_a1));
+            }},
+        e->v());
   }
 
   __attribute__((pure)) static unsigned int
@@ -250,20 +240,20 @@ struct WhereClause {
         Overloaded{[&](const typename BExpr::BTrue _args) -> T1 { return f; },
                    [&](const typename BExpr::BFalse _args) -> T1 { return f0; },
                    [&](const typename BExpr::BAnd _args) -> T1 {
-                     std::shared_ptr<BExpr> b0 = _args.d_a0;
-                     std::shared_ptr<BExpr> b1 = _args.d_a1;
-                     return f1(b0, BExpr_rect<T1>(f, f0, f1, f2, f3, b0), b1,
-                               BExpr_rect<T1>(f, f0, f1, f2, f3, b1));
+                     return f1(_args.d_a0,
+                               BExpr_rect<T1>(f, f0, f1, f2, f3, _args.d_a0),
+                               _args.d_a1,
+                               BExpr_rect<T1>(f, f0, f1, f2, f3, _args.d_a1));
                    },
                    [&](const typename BExpr::BOr _args) -> T1 {
-                     std::shared_ptr<BExpr> b0 = _args.d_a0;
-                     std::shared_ptr<BExpr> b1 = _args.d_a1;
-                     return f2(b0, BExpr_rect<T1>(f, f0, f1, f2, f3, b0), b1,
-                               BExpr_rect<T1>(f, f0, f1, f2, f3, b1));
+                     return f2(_args.d_a0,
+                               BExpr_rect<T1>(f, f0, f1, f2, f3, _args.d_a0),
+                               _args.d_a1,
+                               BExpr_rect<T1>(f, f0, f1, f2, f3, _args.d_a1));
                    },
                    [&](const typename BExpr::BNot _args) -> T1 {
-                     std::shared_ptr<BExpr> b0 = _args.d_a0;
-                     return f3(b0, BExpr_rect<T1>(f, f0, f1, f2, f3, b0));
+                     return f3(_args.d_a0,
+                               BExpr_rect<T1>(f, f0, f1, f2, f3, _args.d_a0));
                    }},
         b->v());
   }
@@ -279,20 +269,20 @@ struct WhereClause {
         Overloaded{[&](const typename BExpr::BTrue _args) -> T1 { return f; },
                    [&](const typename BExpr::BFalse _args) -> T1 { return f0; },
                    [&](const typename BExpr::BAnd _args) -> T1 {
-                     std::shared_ptr<BExpr> b0 = _args.d_a0;
-                     std::shared_ptr<BExpr> b1 = _args.d_a1;
-                     return f1(b0, BExpr_rec<T1>(f, f0, f1, f2, f3, b0), b1,
-                               BExpr_rec<T1>(f, f0, f1, f2, f3, b1));
+                     return f1(_args.d_a0,
+                               BExpr_rec<T1>(f, f0, f1, f2, f3, _args.d_a0),
+                               _args.d_a1,
+                               BExpr_rec<T1>(f, f0, f1, f2, f3, _args.d_a1));
                    },
                    [&](const typename BExpr::BOr _args) -> T1 {
-                     std::shared_ptr<BExpr> b0 = _args.d_a0;
-                     std::shared_ptr<BExpr> b1 = _args.d_a1;
-                     return f2(b0, BExpr_rec<T1>(f, f0, f1, f2, f3, b0), b1,
-                               BExpr_rec<T1>(f, f0, f1, f2, f3, b1));
+                     return f2(_args.d_a0,
+                               BExpr_rec<T1>(f, f0, f1, f2, f3, _args.d_a0),
+                               _args.d_a1,
+                               BExpr_rec<T1>(f, f0, f1, f2, f3, _args.d_a1));
                    },
                    [&](const typename BExpr::BNot _args) -> T1 {
-                     std::shared_ptr<BExpr> b0 = _args.d_a0;
-                     return f3(b0, BExpr_rec<T1>(f, f0, f1, f2, f3, b0));
+                     return f3(_args.d_a0,
+                               BExpr_rec<T1>(f, f0, f1, f2, f3, _args.d_a0));
                    }},
         b->v());
   }
@@ -381,25 +371,21 @@ struct WhereClause {
           F2>
   static T1 AExpr_rect(F0 &&f, F1 &&f0, F2 &&f1,
                        const std::shared_ptr<AExpr> &a) {
-    return std::visit(Overloaded{[&](const typename AExpr::ANum _args) -> T1 {
-                                   unsigned int n = _args.d_a0;
-                                   return f(std::move(n));
-                                 },
-                                 [&](const typename AExpr::APlus _args) -> T1 {
-                                   std::shared_ptr<AExpr> a0 = _args.d_a0;
-                                   std::shared_ptr<AExpr> a1 = _args.d_a1;
-                                   return f0(a0, AExpr_rect<T1>(f, f0, f1, a0),
-                                             a1, AExpr_rect<T1>(f, f0, f1, a1));
-                                 },
-                                 [&](const typename AExpr::AIf _args) -> T1 {
-                                   std::shared_ptr<BExpr> b = _args.d_a0;
-                                   std::shared_ptr<AExpr> a0 = _args.d_a1;
-                                   std::shared_ptr<AExpr> a1 = _args.d_a2;
-                                   return f1(std::move(b), a0,
-                                             AExpr_rect<T1>(f, f0, f1, a0), a1,
-                                             AExpr_rect<T1>(f, f0, f1, a1));
-                                 }},
-                      a->v());
+    return std::visit(
+        Overloaded{
+            [&](const typename AExpr::ANum _args) -> T1 {
+              return f(_args.d_a0);
+            },
+            [&](const typename AExpr::APlus _args) -> T1 {
+              return f0(_args.d_a0, AExpr_rect<T1>(f, f0, f1, _args.d_a0),
+                        _args.d_a1, AExpr_rect<T1>(f, f0, f1, _args.d_a1));
+            },
+            [&](const typename AExpr::AIf _args) -> T1 {
+              return f1(_args.d_a0, _args.d_a1,
+                        AExpr_rect<T1>(f, f0, f1, _args.d_a1), _args.d_a2,
+                        AExpr_rect<T1>(f, f0, f1, _args.d_a2));
+            }},
+        a->v());
   }
 
   template <
@@ -410,25 +396,21 @@ struct WhereClause {
           F2>
   static T1 AExpr_rec(F0 &&f, F1 &&f0, F2 &&f1,
                       const std::shared_ptr<AExpr> &a) {
-    return std::visit(Overloaded{[&](const typename AExpr::ANum _args) -> T1 {
-                                   unsigned int n = _args.d_a0;
-                                   return f(std::move(n));
-                                 },
-                                 [&](const typename AExpr::APlus _args) -> T1 {
-                                   std::shared_ptr<AExpr> a0 = _args.d_a0;
-                                   std::shared_ptr<AExpr> a1 = _args.d_a1;
-                                   return f0(a0, AExpr_rec<T1>(f, f0, f1, a0),
-                                             a1, AExpr_rec<T1>(f, f0, f1, a1));
-                                 },
-                                 [&](const typename AExpr::AIf _args) -> T1 {
-                                   std::shared_ptr<BExpr> b = _args.d_a0;
-                                   std::shared_ptr<AExpr> a0 = _args.d_a1;
-                                   std::shared_ptr<AExpr> a1 = _args.d_a2;
-                                   return f1(std::move(b), a0,
-                                             AExpr_rec<T1>(f, f0, f1, a0), a1,
-                                             AExpr_rec<T1>(f, f0, f1, a1));
-                                 }},
-                      a->v());
+    return std::visit(
+        Overloaded{[&](const typename AExpr::ANum _args) -> T1 {
+                     return f(_args.d_a0);
+                   },
+                   [&](const typename AExpr::APlus _args) -> T1 {
+                     return f0(_args.d_a0, AExpr_rec<T1>(f, f0, f1, _args.d_a0),
+                               _args.d_a1,
+                               AExpr_rec<T1>(f, f0, f1, _args.d_a1));
+                   },
+                   [&](const typename AExpr::AIf _args) -> T1 {
+                     return f1(_args.d_a0, _args.d_a1,
+                               AExpr_rec<T1>(f, f0, f1, _args.d_a1), _args.d_a2,
+                               AExpr_rec<T1>(f, f0, f1, _args.d_a2));
+                   }},
+        a->v());
   }
 
   __attribute__((pure)) static unsigned int

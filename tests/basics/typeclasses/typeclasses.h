@@ -128,9 +128,7 @@ struct Typeclasses {
                   return 0u;
                 },
                 [&](const typename List<T1>::Cons _args) -> unsigned int {
-                  T1 x = _args.d_a0;
-                  std::shared_ptr<List<T1>> rest = _args.d_a1;
-                  return (_tcI0::to_nat(x) + sum(std::move(rest)));
+                  return (_tcI0::to_nat(_args.d_a0) + sum(_args.d_a1));
                 }},
             l->v());
       };

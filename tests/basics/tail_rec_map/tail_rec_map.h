@@ -78,10 +78,8 @@ public:
                    },
                    [](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {
-                     t_A x = _args.d_a0;
-                     std::shared_ptr<List<t_A>> l_ = _args.d_a1;
-                     return std::move(l_)->rev()->app(
-                         List<t_A>::ctor::Cons_(x, List<t_A>::ctor::Nil_()));
+                     return _args.d_a1->rev()->app(List<t_A>::ctor::Cons_(
+                         _args.d_a0, List<t_A>::ctor::Nil_()));
                    }},
         this->v());
   }
@@ -92,9 +90,8 @@ public:
                        -> std::shared_ptr<List<t_A>> { return m; },
                    [&](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {
-                     t_A a = _args.d_a0;
-                     std::shared_ptr<List<t_A>> l1 = _args.d_a1;
-                     return List<t_A>::ctor::Cons_(a, std::move(l1)->app(m));
+                     return List<t_A>::ctor::Cons_(_args.d_a0,
+                                                   _args.d_a1->app(m));
                    }},
         this->v());
   }
@@ -114,10 +111,8 @@ std::shared_ptr<List<T2>> better_map(F0 &&f,
                 -> std::shared_ptr<List<T2>> { return std::move(acc)->rev(); },
             [&](const typename List<T1>::Cons _args)
                 -> std::shared_ptr<List<T2>> {
-              T1 x = _args.d_a0;
-              std::shared_ptr<List<T1>> xs = _args.d_a1;
-              return go(std::move(xs),
-                        List<T2>::ctor::Cons_(f(x), std::move(acc)));
+              return go(_args.d_a1,
+                        List<T2>::ctor::Cons_(f(_args.d_a0), std::move(acc)));
             }},
         l0->v());
   };

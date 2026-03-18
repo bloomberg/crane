@@ -68,6 +68,7 @@ type translation_ctx = {
   mutable move_dead_after : Escape.IntSet.t;
   mutable move_suppress_tail : bool;
   mutable move_n_params : int;
+  mutable match_param_counter : int;
 }
 
 let tctx =
@@ -84,6 +85,7 @@ let tctx =
     move_dead_after = Escape.IntSet.empty;
     move_suppress_tail = false;
     move_n_params = 0;
+    match_param_counter = 0;
   }
 
 (** Accessor wrappers — thin layer over tctx fields. *)
@@ -179,17 +181,20 @@ let with_escape_analysis body f =
   let saved_dead = tctx.move_dead_after in
   let saved_owned = tctx.move_owned_vars in
   let saved_nparams = tctx.move_n_params in
+  let saved_match_counter = tctx.match_param_counter in
   tctx.unique_bindings <- Escape.analyze body;
   tctx.current_letin_depth <- 0;
   tctx.move_dead_after <- Escape.IntSet.empty;
   tctx.move_owned_vars <- Escape.IntSet.empty;
   tctx.move_n_params <- 0;
+  tctx.match_param_counter <- 0;
   let result = f () in
   tctx.unique_bindings <- saved_ub;
   tctx.current_letin_depth <- saved_depth;
   tctx.move_dead_after <- saved_dead;
   tctx.move_owned_vars <- saved_owned;
   tctx.move_n_params <- saved_nparams;
+  tctx.match_param_counter <- saved_match_counter;
   result
 
 (** Swap shared_ptr to unique_ptr in a C++ type. *)
@@ -2213,7 +2218,7 @@ and eta_fun env f args =
 (** Generate a pattern-matching lambda for a single match branch. Wraps the
     branch body in a lambda capturing pattern variables, used by gen_cpp_case
     for std::visit. *)
-and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body =
+and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body sname =
   (* Get type variables in scope from enclosing function's template
      parameters *)
   let tvars = get_current_type_vars () in
@@ -2258,22 +2263,6 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body =
       Tqualified (ind_type, ctor_name)
     | _ -> Tid (ctor_name, [])
   in
-  let sname = Id.of_string "_args" in
-  (* Check if this is an indexed inductive (has indices but no params). Only
-     erase Tvars for constructor field types, NOT for the function's return
-     type. The return type's Tvars come from the function's template params, not
-     the inductive's indices. *)
-  let is_indexed_ind =
-    match typ with
-    | Tglob (GlobRef.IndRef (kn, _), tys, _) ->
-      (* It's indexed if: there are type args (indices) AND no param vars *)
-      tys <> []
-      &&
-      ( match Table.get_ind_num_param_vars_opt kn with
-      | Some 0 -> true
-      | _ -> false )
-    | _ -> false
-  in
   let ret = convert_ml_type_to_cpp_type env Refset'.empty tvars rty in
   (* For pattern matching lambdas, use 'auto' when the return type can't be
      expressed as a valid C++ type annotation: - Unnamed Tvar (T1, T2 not in
@@ -2286,63 +2275,38 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body =
     | Minicpp.Tfun _ -> Minicpp.Ttodo (* C++ can deduce the return type *)
     | _ -> ret
   in
-  let asgns =
-    List.mapi
-      (fun i x ->
-        let id = field_param_id i in
-        let cpp_ty =
-          convert_ml_type_to_cpp_type env Refset'.empty tvars (snd x)
-        in
-        (* Only erase Tvars in constructor field types for indexed inductives *)
-        let cpp_ty =
-          if is_indexed_ind then tvar_erase_type cpp_ty else cpp_ty
-        in
-        (* Use 'auto' for unresolved type variables in non-template contexts.
-           This handles cases where MLcase type annotations have Tvar/Tvar' that
-           can't be resolved (e.g., sig's type parameter in Function
-           vernacular). Check for Tvar(_, None) at any depth: a top-level
-           Tvar(_, None) becomes auto directly; a nested one (e.g.
-           Tshared_ptr(Tglob(list, [Tvar(1, None)]))) must also become auto
-           since List<auto> is invalid C++. *)
-        let cpp_ty =
-          if tvars = [] && has_unnamed_tvar cpp_ty then
-            Minicpp.Ttodo
-          else
-            cpp_ty
-        in
-        Sasgn
-          ( fst x,
-            Some cpp_ty,
-            CPPget (mk_cppglob_local (GlobRef.VarRef sname) [], id) ) )
-      (List.rev ids)
-  in
-  let asgns = List.filteri (fun i _ -> List.nth dummies i) asgns in
-  (* Phase 2: Add pattern-bound variables as owned for move insertion. Pattern
-     variables are extracted from the scrutinee into local variables, so they
-     own their values. ids is in de Bruijn order. *)
+  (* Pattern variables are field accesses from the const lambda parameter,
+     not owned local variables. Don't add them to move_owned_vars — moving
+     from a const parameter's fields is invalid. *)
   let saved_dead = tctx.move_dead_after in
   let saved_owned = tctx.move_owned_vars in
   let n_pat_vars = List.length ids in
-  let pat_owned =
-    Escape.IntSet.of_list
-      (List.filter_map
-         (fun i ->
-           let db = i + 1 in
-           let _, ml_ty = List.nth ids i in
-           if Escape.is_shared_ptr_type ml_ty then Some db else None )
-         (List.init n_pat_vars (fun i -> i)) )
-  in
   (* Shift existing owned vars by n_pat_vars (pattern vars add binders) *)
   let shifted_outer =
     Escape.IntSet.map (fun i -> i + n_pat_vars) tctx.move_owned_vars
   in
-  tctx.move_owned_vars <- Escape.IntSet.union pat_owned shifted_outer;
+  tctx.move_owned_vars <- shifted_outer;
   tctx.move_dead_after <- Escape.IntSet.empty;
+  let saved_match_counter = tctx.match_param_counter in
   let body_stmts = gen_stmts env (fun x -> Sreturn (Some x)) body in
+  tctx.match_param_counter <- saved_match_counter;
   tctx.move_dead_after <- saved_dead;
   tctx.move_owned_vars <- saved_owned;
+  (* Substitute pattern variable references with direct field accesses:
+     var_name  →  _args.d_aX *)
+  let rev_ids = List.rev ids in
+  let body_stmts =
+    List.fold_left
+      (fun stmts (i, (var_name, _ty)) ->
+        if List.nth dummies i then
+          let field_expr = CPPget (CPPvar sname, field_param_id i) in
+          List.map (local_var_subst_stmt var_name field_expr) stmts
+        else stmts)
+      body_stmts
+      (List.mapi (fun i x -> (i, x)) rev_ids)
+  in
   CPPlambda
-    ([(Tmod (TMconst, constr), Some sname)], Some ret, asgns @ body_stmts, false)
+    ([(Tmod (TMconst, constr), Some sname)], Some ret, body_stmts, false)
 
 (** Generate std::visit-based pattern matching with expression reuse
     optimization. Detects common subexpressions across branches and hoists them
@@ -2462,6 +2426,15 @@ and gen_cpp_case (typ : ml_type) t env pv =
           ( CPPvisit,
             CPPmethod_call (x, Id.of_string "v", []) :: [CPPoverloaded cases] )
       in
+      (* Allocate a unique _args name for this match level. All branches of the
+         same match share the same name; nested matches get the next name. *)
+      let match_i = tctx.match_param_counter in
+      tctx.match_param_counter <- match_i + 1;
+      let sname =
+        Id.of_string
+          (if match_i = 0 then "_args"
+           else "_args" ^ string_of_int (match_i - 1))
+      in
       let rec gen_cases = function
         | [] -> []
         | (ids, rty, p, t) :: cs ->
@@ -2484,7 +2457,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
                 | _ -> true )
               ids
           in
-          let br = gen_cpp_pat_lambda env' typ rty r ids' dummies t in
+          let br = gen_cpp_pat_lambda env' typ rty r ids' dummies t sname in
           tctx.env_types <- saved_env_types;
           br :: gen_cases cs
         | Pwild | Prel _ | Ptuple _ -> gen_cases cs
@@ -5144,6 +5117,7 @@ let gen_dfun n b dom cod ty temps =
   in
   tctx.unique_bindings <- Escape.analyze b;
   tctx.current_letin_depth <- 0;
+  tctx.match_param_counter <- 0;
   (* Phase 2: Initialize owned-variable tracking for move insertion. Parameters
      at de Bruijn indices 1..n_params; owned ones get added to the set. *)
   let n_all_params = List.length all_params in
@@ -6172,6 +6146,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   tctx.move_dead_after <- Escape.IntSet.empty;
   tctx.move_owned_vars <- Escape.IntSet.empty;
   tctx.move_n_params <- 0;
+  tctx.match_param_counter <- 0;
   tctx.unique_bindings <- Escape.analyze inner_body;
   tctx.current_letin_depth <- 0;
   (* Set current type vars to include both the inductive's type vars and extra

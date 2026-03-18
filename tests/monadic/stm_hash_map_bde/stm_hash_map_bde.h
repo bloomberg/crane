@@ -171,14 +171,13 @@ template <typename K, typename V> struct CHT {
                 -> bsl::optional<T2> { return bsl::nullopt; },
             [&](const typename List<bsl::pair<T1, T2>>::Cons _args)
                 -> bsl::optional<T2> {
-              bsl::pair<T1, T2> p = _args.d_a0;
-              bsl::shared_ptr<List<bsl::pair<T1, T2>>> tl = _args.d_a1;
-              T1 k_ = p.first;
-              T2 v = p.second;
-              if (eqb(k, bsl::move(k_))) {
-                return bsl::make_optional<T2>(bsl::move(v));
+              T1 k_ = _args.d_a0.first;
+              T2 v = _args.d_a0.second;
+              if (eqb(k, k_)) {
+                return bsl::make_optional<T2>(v);
               } else {
-                return CHT<int, int>::template assoc_lookup<T1, T2>(eqb, k, tl);
+                return CHT<int, int>::template assoc_lookup<T1, T2>(eqb, k,
+                                                                    _args.d_a1);
               }
             }},
         xs->v());
@@ -196,18 +195,16 @@ template <typename K, typename V> struct CHT {
             },
             [&](const typename List<bsl::pair<T1, T2>>::Cons _args)
                 -> bsl::shared_ptr<List<bsl::pair<T1, T2>>> {
-              bsl::pair<T1, T2> p = _args.d_a0;
-              bsl::shared_ptr<List<bsl::pair<T1, T2>>> tl = _args.d_a1;
-              T1 k_ = p.first;
-              T2 v_ = p.second;
-              if (eqb(k, bsl::move(k_))) {
+              T1 k_ = _args.d_a0.first;
+              T2 v_ = _args.d_a0.second;
+              if (eqb(k, k_)) {
                 return List<bsl::pair<T1, T2>>::ctor::Cons_(
-                    bsl::make_pair(k, v), tl);
+                    bsl::make_pair(k, v), _args.d_a1);
               } else {
                 return List<bsl::pair<T1, T2>>::ctor::Cons_(
-                    bsl::make_pair(bsl::move(k_), bsl::move(v_)),
+                    bsl::make_pair(k_, v_),
                     CHT<int, int>::template assoc_insert_or_replace<T1, T2>(
-                        eqb, k, v, tl));
+                        eqb, k, v, _args.d_a1));
               }
             }},
         xs->v());
@@ -227,23 +224,19 @@ template <typename K, typename V> struct CHT {
             [&](const typename List<bsl::pair<T1, T2>>::Cons _args)
                 -> bsl::pair<bsl::optional<T2>,
                              bsl::shared_ptr<List<bsl::pair<T1, T2>>>> {
-              bsl::pair<T1, T2> p = _args.d_a0;
-              bsl::shared_ptr<List<bsl::pair<T1, T2>>> tl = _args.d_a1;
-              T1 k_ = p.first;
-              T2 v_ = p.second;
-              if (eqb(k, bsl::move(k_))) {
-                return bsl::make_pair(bsl::make_optional<T2>(bsl::move(v_)),
-                                      bsl::move(tl));
+              T1 k_ = _args.d_a0.first;
+              T2 v_ = _args.d_a0.second;
+              if (eqb(k, k_)) {
+                return bsl::make_pair(bsl::make_optional<T2>(v_),
+                                      bsl::move(_args.d_a1));
               } else {
                 bsl::pair<bsl::optional<T2>,
                           bsl::shared_ptr<List<bsl::pair<T1, T2>>>>
                     q = CHT<int, int>::template assoc_remove<T1, T2>(
-                        eqb, k, bsl::move(tl));
-                return bsl::make_pair(
-                    bsl::move(q).first,
-                    List<bsl::pair<T1, T2>>::ctor::Cons_(
-                        bsl::make_pair(bsl::move(k_), bsl::move(v_)),
-                        bsl::move(q).second));
+                        eqb, k, bsl::move(_args.d_a1));
+                return bsl::make_pair(q.first,
+                                      List<bsl::pair<T1, T2>>::ctor::Cons_(
+                                          bsl::make_pair(k_, v_), q.second));
               }
             }},
         xs->v());

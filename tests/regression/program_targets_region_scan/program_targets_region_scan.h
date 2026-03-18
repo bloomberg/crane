@@ -76,9 +76,7 @@ public:
         Overloaded{
             [](const typename List<t_A>::Nil _args) -> bool { return true; },
             [&](const typename List<t_A>::Cons _args) -> bool {
-              t_A a = _args.d_a0;
-              std::shared_ptr<List<t_A>> l0 = _args.d_a1;
-              return (f(a) && std::move(l0)->forallb(f));
+              return (f(_args.d_a0) && _args.d_a1->forallb(f));
             }},
         this->v());
   }
@@ -154,12 +152,10 @@ struct ProgramTargetsRegionScan {
     return std::visit(
         Overloaded{
             [&](const typename instruction::JUN _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f(std::move(n));
+              return f(_args.d_a0);
             },
             [&](const typename instruction::JMS _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             },
             [&](const typename instruction::NOP _args) -> T1 { return f1; }},
         i->v());
@@ -172,12 +168,10 @@ struct ProgramTargetsRegionScan {
     return std::visit(
         Overloaded{
             [&](const typename instruction::JUN _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f(std::move(n));
+              return f(_args.d_a0);
             },
             [&](const typename instruction::JMS _args) -> T1 {
-              unsigned int n = _args.d_a0;
-              return f0(std::move(n));
+              return f0(_args.d_a0);
             },
             [&](const typename instruction::NOP _args) -> T1 { return f1; }},
         i->v());

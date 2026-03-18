@@ -34,16 +34,9 @@ __attribute__((pure)) unsigned int MutualRecursion::tree_sum(
   return std::visit(
       Overloaded{
           [](const typename MutualRecursion::tree<unsigned int>::Leaf _args)
-              -> unsigned int {
-            unsigned int n = _args.d_a0;
-            return std::move(n);
-          },
+              -> unsigned int { return _args.d_a0; },
           [](const typename MutualRecursion::tree<unsigned int>::Node _args)
-              -> unsigned int {
-            std::shared_ptr<MutualRecursion::forest<unsigned int>> f =
-                _args.d_a0;
-            return forest_sum(std::move(f));
-          }},
+              -> unsigned int { return forest_sum(_args.d_a0); }},
       t->v());
 }
 
@@ -55,10 +48,7 @@ __attribute__((pure)) unsigned int MutualRecursion::forest_sum(
               -> unsigned int { return 0u; },
           [](const typename MutualRecursion::forest<unsigned int>::Trees _args)
               -> unsigned int {
-            std::shared_ptr<MutualRecursion::tree<unsigned int>> t = _args.d_a0;
-            std::shared_ptr<MutualRecursion::forest<unsigned int>> rest =
-                _args.d_a1;
-            return (tree_sum(std::move(t)) + forest_sum(std::move(rest)));
+            return (tree_sum(_args.d_a0) + forest_sum(_args.d_a1));
           }},
       f->v());
 }

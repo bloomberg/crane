@@ -76,8 +76,7 @@ public:
                      return 0u;
                    },
                    [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     std::shared_ptr<List<t_A>> l_ = _args.d_a1;
-                     return (std::move(l_)->length() + 1);
+                     return (_args.d_a1->length() + 1);
                    }},
         this->v());
   }
@@ -95,24 +94,21 @@ struct ForallList {
                                    },
                                    [&](const typename List<T1>::Cons _args)
                                        -> std::shared_ptr<List<T1>> {
-                                     std::shared_ptr<List<T1>> xs = _args.d_a1;
-                                     return List<T1>::ctor::Cons_(
-                                         x, std::move(xs));
+                                     return List<T1>::ctor::Cons_(x,
+                                                                  _args.d_a1);
                                    }},
                         l->v());
     } else {
       unsigned int n_ = n - 1;
-      return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
+      return std::visit(Overloaded{[](const typename List<T1>::Nil _args0)
                                        -> std::shared_ptr<List<T1>> {
                                      return List<T1>::ctor::Nil_();
                                    },
-                                   [&](const typename List<T1>::Cons _args)
+                                   [&](const typename List<T1>::Cons _args0)
                                        -> std::shared_ptr<List<T1>> {
-                                     T1 y = _args.d_a0;
-                                     std::shared_ptr<List<T1>> ys = _args.d_a1;
                                      return List<T1>::ctor::Cons_(
-                                         y,
-                                         update_nth<T1>(n_, x, std::move(ys)));
+                                         _args0.d_a0,
+                                         update_nth<T1>(n_, x, _args0.d_a1));
                                    }},
                         l->v());
     }

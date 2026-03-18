@@ -77,8 +77,7 @@ public:
                      return 0u;
                    },
                    [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     std::shared_ptr<List<t_A>> l_ = _args.d_a1;
-                     return (std::move(l_)->length() + 1);
+                     return (_args.d_a1->length() + 1);
                    }},
         this->v());
   }
@@ -147,8 +146,7 @@ struct Sort {
           Overloaded{
               [&](const typename List<T1>::Nil _args) -> auto { return x; },
               [&](const typename List<T1>::Cons _args) -> auto {
-                T1 a = _args.d_a0;
-                return x0(a);
+                return x0(_args.d_a0);
               }},
           ls->v());
     }
@@ -159,40 +157,38 @@ struct Sort {
                                          std::shared_ptr<List<T1>>>
   split(const std::shared_ptr<List<T1>> &ls) {
     return std::visit(
-        Overloaded{
-            [](const typename List<T1>::Nil _args)
-                -> std::pair<std::shared_ptr<List<T1>>,
-                             std::shared_ptr<List<T1>>> {
-              return std::make_pair(List<T1>::ctor::Nil_(),
-                                    List<T1>::ctor::Nil_());
-            },
-            [](const typename List<T1>::Cons _args)
-                -> std::pair<std::shared_ptr<List<T1>>,
-                             std::shared_ptr<List<T1>>> {
-              T1 h1 = _args.d_a0;
-              std::shared_ptr<List<T1>> l = _args.d_a1;
-              return std::visit(
-                  Overloaded{
-                      [&](const typename List<T1>::Nil _args)
-                          -> std::pair<std::shared_ptr<List<T1>>,
-                                       std::shared_ptr<List<T1>>> {
-                        return std::make_pair(
-                            List<T1>::ctor::Cons_(h1, List<T1>::ctor::Nil_()),
-                            List<T1>::ctor::Nil_());
-                      },
-                      [&](const typename List<T1>::Cons _args)
-                          -> std::pair<std::shared_ptr<List<T1>>,
-                                       std::shared_ptr<List<T1>>> {
-                        T1 h2 = _args.d_a0;
-                        std::shared_ptr<List<T1>> ls_ = _args.d_a1;
-                        std::shared_ptr<List<T1>> ls1 = split<T1>(ls_).first;
-                        std::shared_ptr<List<T1>> ls2 = split<T1>(ls_).second;
-                        return std::make_pair(
-                            List<T1>::ctor::Cons_(h1, ls1),
-                            List<T1>::ctor::Cons_(h2, std::move(ls2)));
-                      }},
-                  std::move(l)->v());
-            }},
+        Overloaded{[](const typename List<T1>::Nil _args)
+                       -> std::pair<std::shared_ptr<List<T1>>,
+                                    std::shared_ptr<List<T1>>> {
+                     return std::make_pair(List<T1>::ctor::Nil_(),
+                                           List<T1>::ctor::Nil_());
+                   },
+                   [](const typename List<T1>::Cons _args)
+                       -> std::pair<std::shared_ptr<List<T1>>,
+                                    std::shared_ptr<List<T1>>> {
+                     return std::visit(
+                         Overloaded{
+                             [&](const typename List<T1>::Nil _args0)
+                                 -> std::pair<std::shared_ptr<List<T1>>,
+                                              std::shared_ptr<List<T1>>> {
+                               return std::make_pair(
+                                   List<T1>::ctor::Cons_(
+                                       _args.d_a0, List<T1>::ctor::Nil_()),
+                                   List<T1>::ctor::Nil_());
+                             },
+                             [&](const typename List<T1>::Cons _args0)
+                                 -> std::pair<std::shared_ptr<List<T1>>,
+                                              std::shared_ptr<List<T1>>> {
+                               std::shared_ptr<List<T1>> ls1 =
+                                   split<T1>(_args0.d_a1).first;
+                               std::shared_ptr<List<T1>> ls2 =
+                                   split<T1>(_args0.d_a1).second;
+                               return std::make_pair(
+                                   List<T1>::ctor::Cons_(_args.d_a0, ls1),
+                                   List<T1>::ctor::Cons_(_args0.d_a0, ls2));
+                             }},
+                         _args.d_a1->v());
+                   }},
         ls->v());
   }
 
@@ -211,20 +207,17 @@ struct Sort {
         Overloaded{
             [&](const typename List<T1>::Nil _args) -> auto { return x; },
             [&](const typename List<T1>::Cons _args) -> auto {
-              T1 a = _args.d_a0;
-              std::shared_ptr<List<T1>> l0 = _args.d_a1;
               return std::visit(
-                  Overloaded{[&](const typename List<T1>::Nil _args) -> auto {
-                               return x0(a);
+                  Overloaded{[&](const typename List<T1>::Nil _args0) -> auto {
+                               return x0(_args.d_a0);
                              },
-                             [&](const typename List<T1>::Cons _args) -> auto {
-                               T1 a0 = _args.d_a0;
-                               std::shared_ptr<List<T1>> l1 = _args.d_a1;
-                               return x2(
-                                   a, a0, l1, x1(a, a0),
-                                   div_conq_pair<T1, T2>(x, x0, x1, x2, l1));
+                             [&](const typename List<T1>::Cons _args0) -> auto {
+                               return x2(_args.d_a0, _args0.d_a0, _args0.d_a1,
+                                         x1(_args.d_a0, _args0.d_a0),
+                                         div_conq_pair<T1, T2>(x, x0, x1, x2,
+                                                               _args0.d_a1));
                              }},
-                  std::move(l0)->v());
+                  _args.d_a1->v());
             }},
         l->v());
   }
@@ -244,18 +237,16 @@ struct Sort {
                    [&](const typename List<T1>::Cons _args)
                        -> std::pair<std::shared_ptr<List<T1>>,
                                     std::shared_ptr<List<T1>>> {
-                     T1 a = _args.d_a0;
-                     std::shared_ptr<List<T1>> l_ = _args.d_a1;
                      std::shared_ptr<List<T1>> l1 =
-                         split_pivot<T1>(le_dec0, pivot, l_).first;
+                         split_pivot<T1>(le_dec0, pivot, _args.d_a1).first;
                      std::shared_ptr<List<T1>> l2 =
-                         split_pivot<T1>(le_dec0, pivot, l_).second;
-                     if (le_dec0(a, pivot)) {
-                       return std::make_pair(List<T1>::ctor::Cons_(a, l1),
-                                             std::move(l2));
+                         split_pivot<T1>(le_dec0, pivot, _args.d_a1).second;
+                     if (le_dec0(_args.d_a0, pivot)) {
+                       return std::make_pair(
+                           List<T1>::ctor::Cons_(_args.d_a0, l1), l2);
                      } else {
                        return std::make_pair(
-                           l1, List<T1>::ctor::Cons_(a, std::move(l2)));
+                           l1, List<T1>::ctor::Cons_(_args.d_a0, l2));
                      }
                    }},
         l->v());
@@ -269,14 +260,14 @@ struct Sort {
         Overloaded{
             [&](const typename List<T1>::Nil _args) -> auto { return x; },
             [&](const typename List<T1>::Cons _args) -> auto {
-              T1 a = _args.d_a0;
-              std::shared_ptr<List<T1>> l0 = _args.d_a1;
               return x0(
-                  a, l0,
-                  div_conq_pivot<T1, T2>(le_dec0, x, x0,
-                                         split_pivot(le_dec0, a, l0).first),
-                  div_conq_pivot<T1, T2>(le_dec0, x, x0,
-                                         split_pivot(le_dec0, a, l0).second));
+                  _args.d_a0, _args.d_a1,
+                  div_conq_pivot<T1, T2>(
+                      le_dec0, x, x0,
+                      split_pivot(le_dec0, _args.d_a0, _args.d_a1).first),
+                  div_conq_pivot<T1, T2>(
+                      le_dec0, x, x0,
+                      split_pivot(le_dec0, _args.d_a0, _args.d_a1).second));
             }},
         l->v());
   }

@@ -97,9 +97,8 @@ struct ImplicitArgs {
         Overloaded{
             [&](const typename mylist<T1>::Mynil _args) -> T2 { return f; },
             [&](const typename mylist<T1>::Mycons _args) -> T2 {
-              T1 y = _args.d_a0;
-              std::shared_ptr<mylist<T1>> m0 = _args.d_a1;
-              return f0(y, m0, mylist_rect<T1, T2>(f, f0, m0));
+              return f0(_args.d_a0, _args.d_a1,
+                        mylist_rect<T1, T2>(f, f0, _args.d_a1));
             }},
         m->v());
   }
@@ -112,9 +111,8 @@ struct ImplicitArgs {
         Overloaded{
             [&](const typename mylist<T1>::Mynil _args) -> T2 { return f; },
             [&](const typename mylist<T1>::Mycons _args) -> T2 {
-              T1 y = _args.d_a0;
-              std::shared_ptr<mylist<T1>> m0 = _args.d_a1;
-              return f0(y, m0, mylist_rec<T1, T2>(f, f0, m0));
+              return f0(_args.d_a0, _args.d_a1,
+                        mylist_rec<T1, T2>(f, f0, _args.d_a1));
             }},
         m->v());
   }
@@ -127,8 +125,7 @@ struct ImplicitArgs {
                      return 0u;
                    },
                    [](const typename mylist<T1>::Mycons _args) -> unsigned int {
-                     std::shared_ptr<mylist<T1>> rest = _args.d_a1;
-                     return (1u + length<T1>(std::move(rest)));
+                     return (1u + length<T1>(_args.d_a1));
                    }},
         l->v());
   }
@@ -170,8 +167,7 @@ struct ImplicitArgs {
                      return default0;
                    },
                    [](const typename mylist<T1>::Mycons _args) -> T1 {
-                     T1 x = _args.d_a0;
-                     return x;
+                     return _args.d_a0;
                    }},
         l->v());
   }

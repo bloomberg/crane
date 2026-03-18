@@ -18,13 +18,11 @@ ProgramTargetsRegionScan::jump_target(
       Overloaded{
           [](const typename ProgramTargetsRegionScan::instruction::JUN _args)
               -> std::optional<unsigned int> {
-            unsigned int a = _args.d_a0;
-            return std::make_optional<unsigned int>(std::move(a));
+            return std::make_optional<unsigned int>(_args.d_a0);
           },
           [](const typename ProgramTargetsRegionScan::instruction::JMS _args)
               -> std::optional<unsigned int> {
-            unsigned int a = _args.d_a0;
-            return std::make_optional<unsigned int>(std::move(a));
+            return std::make_optional<unsigned int>(_args.d_a0);
           },
           [](const typename ProgramTargetsRegionScan::instruction::NOP _args)
               -> std::optional<unsigned int> { return std::nullopt; }},
