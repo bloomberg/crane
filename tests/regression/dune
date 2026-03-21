@@ -1884,3 +1884,14 @@
   (alias runtest)
   (deps pulse_parse_certificate.t.exe)
   (action (run ./pulse_parse_certificate.t.exe))))
+
+(subdir loopify_tail
+ (rule
+  (targets loopify_tail.t.exe)
+  (deps LoopifyTail.vo loopify_tail.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_tail.t.exe loopify_tail.cpp loopify_tail.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_tail.t.exe)
+  (action (run ./loopify_tail.t.exe))))

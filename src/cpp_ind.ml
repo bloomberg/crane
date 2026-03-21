@@ -524,23 +524,66 @@ let pp_cpp_ind_header kn ind =
               (List.rev methods)
               ind.ind_kind
           in
-          (* DESIGN: Contextual wrapping for inductive definitions - If inside a
-             struct/module: generate the inductive directly (no namespace
-             wrapper) - If at module scope: wrap in a namespace struct (which
-             becomes a struct via Dnspace)
-
-             This allows inductives to nest naturally inside modules while
-             maintaining proper scoping at the module level. *)
-          let wrapped_decl =
-            match decl with
-            | Denum _ -> decl (* Enums don't need namespace wrapper *)
-            | _ ->
-              if render_ctx.rc_in_struct then
-                decl
-              else
-                Dnspace (Some names.(i), [decl])
+          (* Check if this inductive is being promoted into its module struct.
+             When promoted, render fields flat (no wrapping struct) since the
+             module struct provides the wrapper. *)
+          let is_promoted =
+            match !eponymous_promote_ref with
+            | Some r -> Environ.QGlobRef.equal Environ.empty_env r names.(i)
+            | None -> false
           in
-          pp_cpp_decl (empty_env ()) wrapped_decl ++ pp (i + 1)
+          if is_promoted then
+            (* Apply loopification to the promoted inductive declaration.
+               Promoted structs render fields directly via
+               pp_cpp_fields_with_vis, bypassing pp_cpp_decl's maybe_loopify
+               wrapper, so we must loopify here. *)
+            let decl =
+              if Table.loopify () then
+                let pp_type t = Pp.string_of_ppcmds (pp_cpp_type false [] t) in
+                let pp_expr e =
+                  Pp.string_of_ppcmds (pp_cpp_expr ([], Id.Set.empty) [] e)
+                in
+                Loopify.transform_decl ~pp_type ~pp_expr decl
+              else
+                decl
+            in
+            match decl with
+            | Dstruct {ds_fields; ds_needs_shared_from_this; ds_tparams; _} ->
+              eponymous_promote_sft := ds_needs_shared_from_this;
+              let struct_name =
+                str (String.capitalize_ascii (str_global Type names.(i)))
+              in
+              let f_s =
+                with_render_ctx
+                  ~setup:(fun () ->
+                    render_ctx.rc_in_struct <- true;
+                    if ds_tparams <> [] then
+                      render_ctx.rc_in_template <- true )
+                  (fun () ->
+                    pp_cpp_fields_with_vis ~struct_name (empty_env ()) ds_fields )
+              in
+              f_s ++ pp (i + 1)
+            | _ ->
+              (* Non-Dstruct promoted inductive (shouldn't happen normally) *)
+              pp_cpp_decl (empty_env ()) decl ++ pp (i + 1)
+          else
+            (* DESIGN: Contextual wrapping for inductive definitions - If inside
+               a struct/module: generate the inductive directly (no namespace
+               wrapper) - If at module scope: wrap in a namespace struct (which
+               becomes a struct via Dnspace)
+
+               This allows inductives to nest naturally inside modules while
+               maintaining proper scoping at the module level. *)
+            let wrapped_decl =
+              match decl with
+              | Denum _ -> decl (* Enums don't need namespace wrapper *)
+              | _ ->
+                if render_ctx.rc_in_struct then
+                  decl
+                else
+                  Dnspace (Some names.(i), [decl])
+            in
+            pp_cpp_decl (empty_env ()) wrapped_decl ++ pp (i + 1)
     in
     forward_decls ++ pp 0
 
@@ -569,7 +612,7 @@ let pp_hdecl = function
         ( pp_parameters l,
           if t == Taxiom then (
             register_axiom_type r;
-            str " = std::any /* AXIOM TO BE REALIZED */")
+            str " = std::any /* AXIOM TO BE REALIZED */" )
           else
             str " =" ++ spc () ++ pp_type false l t )
     in
@@ -705,7 +748,7 @@ let pp_hdecl_spec_only = function
         ( pp_parameters l,
           if t == Taxiom then (
             register_axiom_type r;
-            str " = std::any /* AXIOM TO BE REALIZED */")
+            str " = std::any /* AXIOM TO BE REALIZED */" )
           else
             str " =" ++ spc () ++ pp_type false l t )
     in

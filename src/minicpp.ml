@@ -103,6 +103,7 @@ type cpp_type =
   | Tqualified of
       cpp_type * Id.t (* typename Base<T>::nested - for nested struct access *)
   | Tref of cpp_type
+  | Tptr of cpp_type
   | Tvariant of cpp_type list
   | Tshared_ptr of cpp_type
   | Tunique_ptr of cpp_type
@@ -110,6 +111,7 @@ type cpp_type =
   | Ttodo
   | Tunknown
   | Tany (* std::any - for type-erased storage of existential types *)
+  | Tdecltype of cpp_expr (* decltype(expr) *)
 
 (** C++ type meta-variable for unification. *)
 and cpp_meta = {
@@ -140,9 +142,21 @@ and cpp_stmt =
   | Sraw of string
     (* Raw C++ code, printed verbatim. Used for low-level operations in reuse
        optimization. *)
+  | Sstruct_def of Id.t * (Id.t * cpp_type) list
+    (* Local struct definition: struct Name { T1 f1; T2 f2; }; *)
+  | Susing of Id.t * cpp_type
+    (* Local using alias: using Name = Type; *)
+  | Sdecl_init of Id.t * cpp_type
+    (* Value-initialized declaration: Type name{}; *)
   | Sassign_field of cpp_expr * Id.t * cpp_expr
-(* Field assignment: obj.field = expr. Used for in-place mutation during memory
-   reuse. *)
+  (* Field assignment: obj.field = expr. Used for in-place mutation during
+     memory reuse. *)
+  | Swhile of cpp_expr * cpp_stmt list
+    (* while (condition) { body } — used by loopify pass *)
+  | Sblock of cpp_stmt list
+    (* { stmts } — scoped block for local declarations *)
+  | Scontinue
+(* continue; — used in loopified while loops *)
 
 (** C++ expressions. *)
 and cpp_expr =
@@ -202,8 +216,12 @@ and cpp_expr =
     (* Raw C++ expression, printed verbatim. Used for low-level operations
        (e.g., literal "1" for use_count check). *)
   | CPPbinop of string * cpp_expr * cpp_expr
-(* Binary operator: operator string, lhs, rhs. Used for conditions in reuse
-   optimization (&&, ==). *)
+    (* Binary operator: operator string, lhs, rhs. Used for conditions in reuse
+       optimization (&&, ==). *)
+  | CPPbool of bool (* true / false literal *)
+  | CPPint of int (* integer literal *)
+  | CPPbrace_init (* {} — empty brace initialization *)
+  | CPPunop of string * cpp_expr (* unary operator: !expr, -expr, etc. *)
 
 (** A C++ constraint expression (used in requires clauses). *)
 and cpp_constraint = cpp_expr
@@ -273,9 +291,11 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   | Tshared_ptr t -> Tshared_ptr (map_cpp_type f t)
   | Tunique_ptr t -> Tunique_ptr (map_cpp_type f t)
   | Tref t -> Tref (map_cpp_type f t)
+  | Tptr t -> Tptr (map_cpp_type f t)
   | Tvariant ts -> Tvariant (List.map (map_cpp_type f) ts)
   | Tnamespace (r, t) -> Tnamespace (r, map_cpp_type f t)
   | Tqualified (t, id) -> Tqualified (map_cpp_type f t, id)
+  | Tdecltype _ -> ty (* decltype wraps CPPraw, no sub-types to map *)
   | Tvar _ | Tvoid | Ttodo | Tunknown | Tany -> ty
 
 (** [map_expr fe fs ft e] applies [fe] to sub-expressions, [fs] to
@@ -333,6 +353,10 @@ let map_expr
   | CPPenum_val _ -> e
   | CPPraw _ -> e
   | CPPbinop (op, e1, e2) -> CPPbinop (op, fe e1, fe e2)
+  | CPPbool _ -> e
+  | CPPint _ -> e
+  | CPPbrace_init -> e
+  | CPPunop (op, e') -> CPPunop (op, fe e')
 
 (** [map_stmt fe fs ft s] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
@@ -368,7 +392,14 @@ let map_stmt
   | Sif (cond, then_br, else_br) ->
     Sif (fe cond, List.map fs then_br, List.map fs else_br)
   | Sraw _ -> s
+  | Sstruct_def (id, fields) ->
+    Sstruct_def (id, List.map (fun (fid, ty) -> (fid, ft ty)) fields)
+  | Susing (id, ty) -> Susing (id, ft ty)
+  | Sdecl_init (id, ty) -> Sdecl_init (id, ft ty)
   | Sassign_field (obj, field, e) -> Sassign_field (fe obj, field, fe e)
+  | Swhile (cond, body) -> Swhile (fe cond, List.map fs body)
+  | Sblock stmts -> Sblock (List.map fs stmts)
+  | Scontinue -> s
 
 (** C++ top-level declarations. *)
 type cpp_decl =

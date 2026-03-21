@@ -1,0 +1,63 @@
+// Copyright 2025 Bloomberg Finance L.P.
+// Distributed under the terms of the GNU LGPL v2.1 license.
+#include <iostream>
+#include <loopify_structures.h>
+
+namespace {
+int testStatus = 0;
+void aSsErT(bool condition, const char *message, int line) {
+  if (condition) {
+    std::cout << "Error " __FILE__ "(" << line << "): " << message
+              << "    (failed)" << std::endl;
+    if (0 <= testStatus && testStatus <= 100)
+      ++testStatus;
+  }
+}
+} // namespace
+#define ASSERT(X) aSsErT(!(X), #X, __LINE__);
+
+int main() {
+  using NestedList =
+      ::List<std::shared_ptr<LoopifyStructures::nested>>;
+
+  // Test nested structure
+  auto elem1 = LoopifyStructures::nested::ctor::Elem_(5u);
+  auto elem2 = LoopifyStructures::nested::ctor::Elem_(3u);
+  auto inner_list = NestedList::ctor::Cons_(
+      elem1, NestedList::ctor::Cons_(elem2, NestedList::ctor::Nil_()));
+  auto nested = LoopifyStructures::nested::ctor::NList_(inner_list);
+
+  ASSERT(LoopifyStructures::nested_sum(nested) == 8u); // 5 + 3
+
+  auto elem_only = LoopifyStructures::nested::ctor::Elem_(10u);
+  ASSERT(LoopifyStructures::nested_sum(elem_only) == 10u);
+
+  // Test nested_depth
+  ASSERT(LoopifyStructures::nested_depth(nested) >= 0u);
+
+  // Test nested_flatten
+  auto flattened = LoopifyStructures::nested_flatten(nested);
+  ASSERT(flattened != nullptr);
+
+  // Test quadtree
+  auto leaf1 = LoopifyStructures::quadtree::ctor::QLeaf_(1u);
+  auto leaf2 = LoopifyStructures::quadtree::ctor::QLeaf_(2u);
+  auto leaf3 = LoopifyStructures::quadtree::ctor::QLeaf_(3u);
+  auto leaf4 = LoopifyStructures::quadtree::ctor::QLeaf_(4u);
+  auto quad =
+      LoopifyStructures::quadtree::ctor::Quad_(leaf1, leaf2, leaf3, leaf4);
+
+  ASSERT(LoopifyStructures::quad_sum(quad) == 10u); // 1+2+3+4
+
+  // Test quad_depth
+  ASSERT(LoopifyStructures::quad_depth(leaf1) == 0u);
+  ASSERT(LoopifyStructures::quad_depth(quad) == 1u);
+
+  // Test quad_map
+  auto doubled =
+      LoopifyStructures::quad_map([](unsigned int x) { return x * 2; }, quad);
+  ASSERT(LoopifyStructures::quad_sum(doubled) == 20u); // 2+4+6+8
+
+  std::cout << "All structure tests passed!\n";
+  return testStatus;
+}

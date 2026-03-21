@@ -157,6 +157,21 @@ VERNAC COMMAND EXTEND ResetExtractionInline CLASSIFIED AS SIDEFF
   -> { reset_extraction_inline () }
 END
 
+VERNAC COMMAND EXTEND ExtractionLoopify CLASSIFIED AS SIDEFF
+| [ "Crane" "Loopify" ne_global_list(l) ]
+  -> { extraction_loopify true l }
+END
+
+VERNAC COMMAND EXTEND ExtractionNoLoopify CLASSIFIED AS SIDEFF
+| [ "Crane" "NoLoopify" ne_global_list(l) ]
+  -> { extraction_loopify false l }
+END
+
+VERNAC COMMAND EXTEND ResetExtractionLoopify CLASSIFIED AS SIDEFF
+| [ "Crane" "Reset" "Loopify" ]
+  -> { reset_extraction_loopify () }
+END
+
 VERNAC COMMAND EXTEND ExtractionImplicit CLASSIFIED AS SIDEFF
 (* Custom implicit arguments of some csts/inds/constructors *)
 | [ "Crane" "Extraction" "Implicit" global(r) "[" crane_int_or_id_list(l) "]" ]

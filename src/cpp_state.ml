@@ -309,6 +309,24 @@ let functor_app_sources : (ModPath.t, ModPath.t) Hashtbl.t = Hashtbl.create 16
     arg become methods on m. *)
 let eponymous_type_ref : GlobRef.t option ref = ref None
 
+(** Set during module rendering when the eponymous inductive should be promoted
+    into the module struct. cpp_ind.ml checks this to render fields flat instead
+    of a wrapping struct. *)
+let eponymous_promote_ref : GlobRef.t option ref = ref None
+
+(** Accumulator for non-inductive definitions that should be emitted after the
+    promoted template struct at file scope. *)
+let eponymous_deferred : Pp.t ref = ref (Pp.mt ())
+
+(** Set of promoted inductives — overrides is_merged_inductive for name
+    resolution so that promoted types use the capitalized module name. *)
+let promoted_inductives : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 4
+
+(** Whether the promoted inductive needs enable_shared_from_this. Captured
+    during flat rendering in cpp_ind.ml, consumed by the MEstruct wrapper in
+    cpp.ml. *)
+let eponymous_promote_sft : bool ref = ref false
+
 (** Collected method candidates: (function_ref, body, type, this_position) for
     current eponymous type. this_position is the index (0-based) of the first
     argument that matches the eponymous type. *)
@@ -604,6 +622,10 @@ let reset_cpp_state () =
   render_ctx.rc_in_template <- false;
   Doc_comments.reset ();
   eponymous_type_ref := None;
+  eponymous_promote_ref := None;
+  eponymous_deferred := Pp.mt ();
+  Hashtbl.clear promoted_inductives;
+  eponymous_promote_sft := false;
   eponymous_record := None;
   method_candidates := [];
   current_structure_decls := [];

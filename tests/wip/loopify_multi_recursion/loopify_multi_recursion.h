@@ -1,0 +1,307 @@
+#ifndef INCLUDED_LOOPIFY_MULTI_RECURSION
+#define INCLUDED_LOOPIFY_MULTI_RECURSION
+
+#include <algorithm>
+#include <any>
+#include <cassert>
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <variant>
+
+template <typename F, typename R, typename... Args>
+concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+
+template <class... Ts> struct Overloaded : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
+
+struct LoopifyMultiRecursion {
+  __attribute__((pure)) static unsigned int
+  mixed_arith_fuel(const unsigned int fuel, const unsigned int n);
+  __attribute__((pure)) static unsigned int mixed_arith(const unsigned int n);
+  __attribute__((pure)) static bool
+  bool_or_chain_fuel(const unsigned int fuel, const unsigned int n,
+                     const unsigned int target);
+  __attribute__((pure)) static unsigned int
+  bool_or_chain(const unsigned int n, const unsigned int target);
+  __attribute__((pure)) static bool bool_and_chain_fuel(const unsigned int fuel,
+                                                        const unsigned int n);
+  __attribute__((pure)) static unsigned int
+  bool_and_chain(const unsigned int n);
+
+  struct quadtree {
+    // TYPES
+    struct QLeaf {
+      unsigned int d_a0;
+    };
+
+    struct QQuad {
+      std::shared_ptr<quadtree> d_a0;
+      std::shared_ptr<quadtree> d_a1;
+      std::shared_ptr<quadtree> d_a2;
+      std::shared_ptr<quadtree> d_a3;
+    };
+
+    using variant_t = std::variant<QLeaf, QQuad>;
+
+  private:
+    // DATA
+    variant_t d_v_;
+
+    // CREATORS
+    explicit quadtree(QLeaf _v) : d_v_(std::move(_v)) {}
+
+    explicit quadtree(QQuad _v) : d_v_(std::move(_v)) {}
+
+  public:
+    // TYPES
+    struct ctor {
+      ctor() = delete;
+
+      static std::shared_ptr<quadtree> QLeaf_(unsigned int a0) {
+        return std::shared_ptr<quadtree>(new quadtree(QLeaf{a0}));
+      }
+
+      static std::shared_ptr<quadtree>
+      QQuad_(const std::shared_ptr<quadtree> &a0,
+             const std::shared_ptr<quadtree> &a1,
+             const std::shared_ptr<quadtree> &a2,
+             const std::shared_ptr<quadtree> &a3) {
+        return std::shared_ptr<quadtree>(new quadtree(QQuad{a0, a1, a2, a3}));
+      }
+
+      static std::unique_ptr<quadtree> QLeaf_uptr(unsigned int a0) {
+        return std::unique_ptr<quadtree>(new quadtree(QLeaf{a0}));
+      }
+
+      static std::unique_ptr<quadtree>
+      QQuad_uptr(const std::shared_ptr<quadtree> &a0,
+                 const std::shared_ptr<quadtree> &a1,
+                 const std::shared_ptr<quadtree> &a2,
+                 const std::shared_ptr<quadtree> &a3) {
+        return std::unique_ptr<quadtree>(new quadtree(QQuad{a0, a1, a2, a3}));
+      }
+    };
+
+    // MANIPULATORS
+    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  };
+
+  template <
+      typename T1, MapsTo<T1, unsigned int> F0,
+      MapsTo<T1, std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1,
+             std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1>
+          F1>
+  static T1 quadtree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<quadtree> &q) {
+    struct _Enter {
+      const std::shared_ptr<quadtree> q;
+    };
+
+    struct _Call1 {
+      const std::shared_ptr<quadtree> _s0;
+      const std::shared_ptr<quadtree> _s1;
+      const std::shared_ptr<quadtree> _s2;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a3) _s3;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a2) _s4;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a1) _s5;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a0) _s6;
+    };
+
+    struct _Call2 {
+      T1 _s0;
+      const std::shared_ptr<quadtree> _s1;
+      const std::shared_ptr<quadtree> _s2;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a3) _s3;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a2) _s4;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a1) _s5;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a0) _s6;
+    };
+
+    struct _Call3 {
+      T1 _s0;
+      T1 _s1;
+      const std::shared_ptr<quadtree> _s2;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a3) _s3;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a2) _s4;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a1) _s5;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a0) _s6;
+    };
+
+    struct _Call4 {
+      T1 _s0;
+      T1 _s1;
+      T1 _s2;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a3) _s3;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a2) _s4;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a1) _s5;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a0) _s6;
+    };
+
+    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
+    T1 _result{};
+    std::vector<_Frame> _stack;
+    _stack.push_back(_Enter{q});
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      std::visit(
+          Overloaded{[&](_Enter _f) {
+                       const std::shared_ptr<quadtree> q = _f.q;
+                       std::visit(
+                           Overloaded{
+                               [&](const typename quadtree::QLeaf _args) -> T1 {
+                                 _result = f(_args.d_a0);
+                                 return {};
+                               },
+                               [&](const typename quadtree::QQuad _args) -> T1 {
+                                 _stack.push_back(_Call1{_args.d_a2, _args.d_a1,
+                                                         _args.d_a0, _args.d_a3,
+                                                         _args.d_a2, _args.d_a1,
+                                                         _args.d_a0});
+                                 _stack.push_back(_Enter{_args.d_a3});
+                                 return {};
+                               }},
+                           q->v());
+                     },
+                     [&](_Call1 _f) {
+                       _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
+                                               _f._s4, _f._s5, _f._s6});
+                       _stack.push_back(_Enter{_f._s0});
+                     },
+                     [&](_Call2 _f) {
+                       _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
+                                               _f._s4, _f._s5, _f._s6});
+                       _stack.push_back(_Enter{_f._s1});
+                     },
+                     [&](_Call3 _f) {
+                       _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
+                                               _f._s4, _f._s5, _f._s6});
+                       _stack.push_back(_Enter{_f._s2});
+                     },
+                     [&](_Call4 _f) {
+                       _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4,
+                                    _f._s1, _f._s3, _f._s0);
+                     }},
+          _frame);
+    }
+    return _result;
+  }
+
+  template <
+      typename T1, MapsTo<T1, unsigned int> F0,
+      MapsTo<T1, std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1,
+             std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1>
+          F1>
+  static T1 quadtree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<quadtree> &q) {
+    struct _Enter {
+      const std::shared_ptr<quadtree> q;
+    };
+
+    struct _Call1 {
+      const std::shared_ptr<quadtree> _s0;
+      const std::shared_ptr<quadtree> _s1;
+      const std::shared_ptr<quadtree> _s2;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a3) _s3;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a2) _s4;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a1) _s5;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a0) _s6;
+    };
+
+    struct _Call2 {
+      T1 _s0;
+      const std::shared_ptr<quadtree> _s1;
+      const std::shared_ptr<quadtree> _s2;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a3) _s3;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a2) _s4;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a1) _s5;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a0) _s6;
+    };
+
+    struct _Call3 {
+      T1 _s0;
+      T1 _s1;
+      const std::shared_ptr<quadtree> _s2;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a3) _s3;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a2) _s4;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a1) _s5;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a0) _s6;
+    };
+
+    struct _Call4 {
+      T1 _s0;
+      T1 _s1;
+      T1 _s2;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a3) _s3;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a2) _s4;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a1) _s5;
+      decltype(std::declval<const typename quadtree::QQuad &>().d_a0) _s6;
+    };
+
+    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
+    T1 _result{};
+    std::vector<_Frame> _stack;
+    _stack.push_back(_Enter{q});
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      std::visit(
+          Overloaded{[&](_Enter _f) {
+                       const std::shared_ptr<quadtree> q = _f.q;
+                       std::visit(
+                           Overloaded{
+                               [&](const typename quadtree::QLeaf _args) -> T1 {
+                                 _result = f(_args.d_a0);
+                                 return {};
+                               },
+                               [&](const typename quadtree::QQuad _args) -> T1 {
+                                 _stack.push_back(_Call1{_args.d_a2, _args.d_a1,
+                                                         _args.d_a0, _args.d_a3,
+                                                         _args.d_a2, _args.d_a1,
+                                                         _args.d_a0});
+                                 _stack.push_back(_Enter{_args.d_a3});
+                                 return {};
+                               }},
+                           q->v());
+                     },
+                     [&](_Call1 _f) {
+                       _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
+                                               _f._s4, _f._s5, _f._s6});
+                       _stack.push_back(_Enter{_f._s0});
+                     },
+                     [&](_Call2 _f) {
+                       _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
+                                               _f._s4, _f._s5, _f._s6});
+                       _stack.push_back(_Enter{_f._s1});
+                     },
+                     [&](_Call3 _f) {
+                       _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
+                                               _f._s4, _f._s5, _f._s6});
+                       _stack.push_back(_Enter{_f._s2});
+                     },
+                     [&](_Call4 _f) {
+                       _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4,
+                                    _f._s1, _f._s3, _f._s0);
+                     }},
+          _frame);
+    }
+    return _result;
+  }
+
+  __attribute__((pure)) static unsigned int
+  quad_count_leaves(const std::shared_ptr<quadtree> &t);
+  __attribute__((pure)) static unsigned int
+  quad_depth(const std::shared_ptr<quadtree> &t);
+  __attribute__((pure)) static unsigned int
+  hofstadter_q_fuel(const unsigned int fuel, const unsigned int n);
+  __attribute__((pure)) static unsigned int hofstadter_q(const unsigned int n);
+};
+
+#endif // INCLUDED_LOOPIFY_MULTI_RECURSION

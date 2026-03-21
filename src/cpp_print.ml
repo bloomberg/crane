@@ -30,13 +30,14 @@ open Translation
 open Cpp_state
 open Cpp_names
 
-(** Registry of GlobRefs that are axiom types (extracted as std::any).
-    Functions whose return type involves an axiom type should not be marked
+(** Registry of GlobRefs that are axiom types (extracted as std::any). Functions
+    whose return type involves an axiom type should not be marked
     __attribute__((pure)) because they may transitively call axiom stubs that
     throw std::logic_error. *)
 let axiom_type_refs : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 16
 
 let register_axiom_type (r : GlobRef.t) = Hashtbl.replace axiom_type_refs r ()
+
 let is_axiom_type_ref (r : GlobRef.t) = Hashtbl.mem axiom_type_refs r
 
 (** Check if a lambda actually needs to capture variables from enclosing scope.
@@ -140,16 +141,26 @@ let rec lambda_needs_capture
      |CPPconvertible_to _
      |CPPabort _
      |CPPenum_val _
-     |CPPraw _ -> (refs, decls)
+     |CPPraw _
+     |CPPbool _
+     |CPPint _
+     |CPPbrace_init
+     |CPPunop _ -> (refs, decls)
   and collect_from_stmt (refs, decls) stmt =
     match stmt with
     | Sreturn None -> (refs, decls)
     | Sreturn (Some e) -> collect_from_expr (refs, decls) e
     | Sexpr e -> collect_from_expr (refs, decls) e
     | Sdecl (id, _) -> (refs, IdSet.add id decls)
-    | Sasgn (id, _, e) ->
+    | Sasgn (id, ty, e) ->
       let refs', decls' = collect_from_expr (refs, decls) e in
-      (refs', IdSet.add id decls')
+      ( match ty with
+      | Some _ ->
+        (* Declaration: ty id = e; — id is a new local *)
+        (refs', IdSet.add id decls')
+      | None ->
+        (* Assignment: id = e; — id is a reference to an outer variable *)
+        (IdSet.add id refs', decls') )
     | Sif (cond, then_stmts, else_stmts) ->
       List.fold_left
         collect_from_stmt
@@ -174,7 +185,14 @@ let rec lambda_needs_capture
         branches
     | Sassign_field (obj, _, e) ->
       collect_from_expr (collect_from_expr (refs, decls) obj) e
-    | Sthrow _ | Sassert _ | Sraw _ -> (refs, decls)
+    | Swhile (cond, body) ->
+      List.fold_left
+        collect_from_stmt
+        (collect_from_expr (refs, decls) cond)
+        body
+    | Sblock stmts -> List.fold_left collect_from_stmt (refs, decls) stmts
+    | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _ | Susing _ | Sdecl_init _
+    | Scontinue -> (refs, decls)
   in
   let all_refs, local_decls =
     List.fold_left collect_from_stmt (IdSet.empty, IdSet.empty) body
@@ -234,7 +252,11 @@ and expr_contains_capturing_lambda (e : Minicpp.cpp_expr) : bool =
    |CPPconvertible_to _
    |CPPabort _
    |CPPenum_val _
-   |CPPraw _ -> false
+   |CPPraw _
+   |CPPbool _
+   |CPPint _
+   |CPPbrace_init
+   |CPPunop _ -> false
 
 and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
   let open Minicpp in
@@ -249,7 +271,10 @@ and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
     expr scrut || List.exists (fun (_, stmts) -> any stmts) branches
   | Scustom_case (_, scrut, _, branches, _) ->
     expr scrut || List.exists (fun (_, _, stmts) -> any stmts) branches
-  | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ -> false
+  | Swhile (cond, body) -> expr cond || any body
+  | Sblock stmts -> any stmts
+  | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _ | Susing _
+  | Sdecl_init _ | Scontinue -> false
 
 (** {2 Pretty-printing C++ syntax.} *)
 
@@ -485,6 +510,7 @@ let rec pp_cpp_type par vl t =
         "function"
         (pp_rec false c ++ pp_par true (pp_list (pp_rec false) d))
     | Tref t -> pp_rec false t ++ str "&"
+    | Tptr t -> pp_rec false t ++ str "*"
     | Tmod (m, t) -> pp_tymod m ++ pp_rec false t
     | Tnamespace (r, t) ->
       (* DESIGN: Namespace-qualified types for inductive types. Rocq's
@@ -573,6 +599,10 @@ let rec pp_cpp_type par vl t =
     | Ttodo -> str "auto"
     | Tunknown -> str "UNKNOWN"
     | Tany -> str "std::any"
+    | Tdecltype e ->
+      (* Print decltype(expr) where expr has been rewritten by
+         rewrite_field_access_for_decltype to use std::declval. *)
+      str "decltype(" ++ pp_cpp_expr ([], Id.Set.empty) [] e ++ str ")"
   in
   h (pp_rec par t)
 
@@ -651,6 +681,9 @@ and pp_cpp_expr env args t =
           (* Eponymous record: use capitalized name (merged into module
              struct). *)
           str (Common.pp_type_name_capitalized x)
+        else if Hashtbl.mem promoted_inductives x then
+          (* Promoted inductive: use capitalized name directly *)
+          str (String.capitalize_ascii type_name_str)
         else if is_qualified_name type_name_str then
           (* Already qualified (e.g., C::t from module parameter): use as-is *)
           str type_name_str
@@ -1089,6 +1122,10 @@ and pp_cpp_expr env args t =
     ++ str op
     ++ str " "
     ++ pp_cpp_expr env args rhs
+  | CPPbool b -> str (if b then "true" else "false")
+  | CPPint n -> str (string_of_int n)
+  | CPPbrace_init -> str "{}"
+  | CPPunop (op, e) -> str op ++ pp_cpp_expr env args e
 
 (** Pretty-print a MiniCpp statement as C++ source. *)
 and pp_cpp_stmt env args = function
@@ -1165,6 +1202,34 @@ and pp_cpp_stmt env args = function
     ++ fnl ()
     ++ str "}"
   | Sraw code -> str code
+  | Sstruct_def (name, fields) ->
+    str "struct "
+    ++ Id.print name
+    ++ str " { "
+    ++ prlist_with_sep mt
+         (fun (fid, ty) ->
+           pp_cpp_type false [] ty ++ str " " ++ Id.print fid ++ str "; ")
+         fields
+    ++ str "};"
+  | Susing (name, ty) ->
+    str "using " ++ Id.print name ++ str " = " ++ pp_cpp_type false [] ty ++ str ";"
+  | Sdecl_init (id, ty) ->
+    pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str "{};"
+  | Swhile (cond, body) ->
+    str "while ("
+    ++ pp_cpp_expr env args cond
+    ++ str ") {"
+    ++ fnl ()
+    ++ pp_list_stmt (pp_cpp_stmt env args) body
+    ++ fnl ()
+    ++ str "}"
+  | Sblock stmts ->
+    str "{"
+    ++ fnl ()
+    ++ pp_list_stmt (pp_cpp_stmt env args) stmts
+    ++ fnl ()
+    ++ str "}"
+  | Scontinue -> str "continue;"
   | Sassign_field (obj, field, e) ->
     pp_cpp_expr env args obj
     ++ str "."
@@ -1222,14 +1287,14 @@ and pp_cpp_stmt env args = function
 
 (** Check if a return type is eligible for __attribute__((pure)). Types that
     involve allocation (shared_ptr, unique_ptr), side effects (void), or are
-    unknown at definition time (type variables, any, todo) are excluded.
-    Axiom type refs are also excluded since functions operating on axiom types
-    may transitively call axiom stubs that throw std::logic_error. *)
+    unknown at definition time (type variables, any, todo) are excluded. Axiom
+    type refs are also excluded since functions operating on axiom types may
+    transitively call axiom stubs that throw std::logic_error. *)
 and is_pure_return_type = function
   | Tshared_ptr _ | Tunique_ptr _ -> false
   | Tvoid | Tvar _ | Tany | Ttodo | Tunknown -> false
   | Tglob (r, _, _) when is_axiom_type_ref r -> false
-  | Tmod (_, t) | Tref t -> is_pure_return_type t
+  | Tmod (_, t) | Tref t | Tptr t -> is_pure_return_type t
   | _ -> true
 
 (** Check if a C++ type is concrete (can be used in any_cast). Type variables
@@ -1631,9 +1696,33 @@ let pp_meyers_singleton env id ty expr_pp =
   ++ fnl ()
   ++ str "}"
 
+(** Extract the primary GlobRef from a declaration, if any. *)
+let rec decl_globref = function
+  | Dtemplate (_, _, inner) -> decl_globref inner
+  | Dfundef ((r, _) :: _, _, _, _) -> Some r
+  | Dstruct ds -> Some ds.ds_ref
+  | Dnspace (Some r, _) -> Some r
+  | _ -> None
+
+(** Apply loopify transformation to a declaration before rendering. *)
+let maybe_loopify decl =
+  let should =
+    match decl_globref decl with
+    | Some r -> Table.should_loopify r
+    | None -> Table.loopify ()
+  in
+  if should then
+    let pp_type t = Pp.string_of_ppcmds (pp_cpp_type false [] t) in
+    let pp_expr e = Pp.string_of_ppcmds (pp_cpp_expr ([], Id.Set.empty) [] e) in
+    Loopify.transform_decl ~pp_type ~pp_expr decl
+  else
+    decl
+
 (** Pretty-print a MiniCpp declaration as C++ source. Handles templates,
     namespaces/structs, functions, assignments, enums, etc. *)
-let rec pp_cpp_decl env = function
+let rec pp_cpp_decl env decl = pp_cpp_decl_raw env (maybe_loopify decl)
+
+and pp_cpp_decl_raw env = function
   | Dtemplate (temps, cstr, Dasgn (id, ty, e)) when render_ctx.rc_in_struct ->
     let args = pp_list pp_template_param temps in
     let expr_pp = pp_cpp_expr env [] e in
@@ -1648,9 +1737,9 @@ let rec pp_cpp_decl env = function
     ++ ( match cstr with
     | None -> fnl ()
     | Some c -> pp_cpp_expr env [] c ++ fnl () )
-    ++ pp_cpp_decl env decl
+    ++ pp_cpp_decl_raw env decl
   | Dnspace (None, decls) ->
-    let ds = pp_list_stmt (pp_cpp_decl env) decls in
+    let ds = pp_list_stmt (pp_cpp_decl_raw env) decls in
     h (str "namespace " ++ str "{") ++ fnl () ++ ds ++ fnl () ++ str "};"
   | Dnspace (Some id, decls) ->
     let struct_name_str =
@@ -1743,7 +1832,7 @@ let rec pp_cpp_decl env = function
       let ds =
         with_render_ctx
           ~setup:(fun () -> render_ctx.rc_in_struct <- true)
-          (fun () -> pp_list_stmt (pp_cpp_decl env) decls)
+          (fun () -> pp_list_stmt (pp_cpp_decl_raw env) decls)
       in
       let pending_fwd =
         match Hashtbl.find_opt pending_wrapper_decls struct_name_str with

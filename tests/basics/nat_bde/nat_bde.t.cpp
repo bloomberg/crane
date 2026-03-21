@@ -34,11 +34,11 @@ void aSsErT(bool condition, const char *message, int line) {
 
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-bsl::shared_ptr<Nat::nat> int_to_nat(int x) {
+bsl::shared_ptr<Nat> int_to_nat(int x) {
   if (x <= 0) {
-    return Nat::nat::ctor::O_();
+    return Nat::ctor::O_();
   } else {
-    return Nat::nat::ctor::S_(int_to_nat(x - 1));
+    return Nat::ctor::S_(int_to_nat(x - 1));
   }
 }
 

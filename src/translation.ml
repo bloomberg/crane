@@ -2275,9 +2275,9 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body sname =
     | Minicpp.Tfun _ -> Minicpp.Ttodo (* C++ can deduce the return type *)
     | _ -> ret
   in
-  (* Pattern variables are field accesses from the const lambda parameter,
-     not owned local variables. Don't add them to move_owned_vars — moving
-     from a const parameter's fields is invalid. *)
+  (* Pattern variables are field accesses from the const lambda parameter, not
+     owned local variables. Don't add them to move_owned_vars — moving from a
+     const parameter's fields is invalid. *)
   let saved_dead = tctx.move_dead_after in
   let saved_owned = tctx.move_owned_vars in
   let n_pat_vars = List.length ids in
@@ -2292,8 +2292,8 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body sname =
   tctx.match_param_counter <- saved_match_counter;
   tctx.move_dead_after <- saved_dead;
   tctx.move_owned_vars <- saved_owned;
-  (* Substitute pattern variable references with direct field accesses:
-     var_name  →  _args.d_aX *)
+  (* Substitute pattern variable references with direct field accesses: var_name
+     → _args.d_aX *)
   let rev_ids = List.rev ids in
   let body_stmts =
     List.fold_left
@@ -2301,12 +2301,12 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body sname =
         if List.nth dummies i then
           let field_expr = CPPget (CPPvar sname, field_param_id i) in
           List.map (local_var_subst_stmt var_name field_expr) stmts
-        else stmts)
+        else
+          stmts )
       body_stmts
       (List.mapi (fun i x -> (i, x)) rev_ids)
   in
-  CPPlambda
-    ([(Tmod (TMconst, constr), Some sname)], Some ret, body_stmts, false)
+  CPPlambda ([(Tmod (TMconst, constr), Some sname)], Some ret, body_stmts, false)
 
 (** Generate std::visit-based pattern matching with expression reuse
     optimization. Detects common subexpressions across branches and hoists them
@@ -2432,8 +2432,10 @@ and gen_cpp_case (typ : ml_type) t env pv =
       tctx.match_param_counter <- match_i + 1;
       let sname =
         Id.of_string
-          (if match_i = 0 then "_args"
-           else "_args" ^ string_of_int (match_i - 1))
+          ( if match_i = 0 then
+              "_args"
+            else
+              "_args" ^ string_of_int (match_i - 1) )
       in
       let rec gen_cases = function
         | [] -> []
@@ -2495,8 +2497,8 @@ and gen_cpp_case (typ : ml_type) t env pv =
       let cond =
         CPPbinop
           ( "&&",
-            CPPbinop ("==", use_count_call, CPPraw "1"),
-            CPPbinop ("==", index_call, CPPraw (string_of_int branch_idx)) )
+            CPPbinop ("==", use_count_call, CPPint 1),
+            CPPbinop ("==", index_call, CPPint branch_idx) )
       in
       (* Build the reuse body *)
       (* 1. Get mutable reference to the variant alternative:

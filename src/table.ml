@@ -1068,6 +1068,62 @@ let {Goptions.get = conservative_types} =
     ~value:false
     ()
 
+(* This option enables the loopify pass, which converts recursive functions into
+   iterative while loops to prevent stack overflow on deep inputs. *)
+let {Goptions.get = loopify} =
+  declare_bool_option_and_ref ~key:["Crane"; "Loopify"] ~value:false ()
+
+(* Per-function loopify/noloopify table. First set = force-loopify, second set =
+   force-noloopify. *)
+
+let empty_loopify_table = (Refset'.empty, Refset'.empty)
+
+let loopify_table = Summary.ref empty_loopify_table ~name:"CraneExtrLoopify"
+
+let should_loopify r =
+  let yes, no = !loopify_table in
+  if Refset'.mem r yes then
+    true
+  else if Refset'.mem r no then
+    false
+  else
+    loopify ()
+
+let add_loopify_entries b l =
+  let f b = if b then Refset'.add else Refset'.remove in
+  let y, n = !loopify_table in
+  loopify_table := (List.fold_right (f b) l y, List.fold_right (f (not b)) l n)
+
+let loopify_extraction : bool * GlobRef.t list -> obj =
+  declare_object
+  @@ superglobal_object
+       "Crane Extraction Loopify"
+       ~cache:(fun (b, l) -> add_loopify_entries b l)
+       ~subst:
+         (Some
+            (fun (s, (b, l)) ->
+              (b, List.map (fun x -> fst (subst_global s x)) l) ) )
+       ~discharge:(fun x -> Some x)
+
+let extraction_loopify b l =
+  let refs = List.map Smartlocate.global_with_alias l in
+  List.iter
+    (fun r ->
+      match r with
+      | GlobRef.ConstRef _ -> ()
+      | _ -> error_constant r )
+    refs;
+  Lib.add_leaf (loopify_extraction (b, refs))
+
+let reset_loopify : unit -> obj =
+  declare_object
+  @@ superglobal_object_nodischarge
+       "Crane Reset Extraction Loopify"
+       ~cache:(fun () -> loopify_table := empty_loopify_table)
+       ~subst:None
+
+let reset_extraction_loopify () = Lib.add_leaf (reset_loopify ())
+
 (* Allows to print a comment at the beginning of the output files *)
 let {Goptions.get = file_comment} =
   declare_string_option_and_ref

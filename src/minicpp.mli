@@ -103,6 +103,7 @@ type cpp_type =
   | Tqualified of cpp_type * Id.t
       (** Nested type access, e.g., typename Base<T>::nested *)
   | Tref of cpp_type  (** C++ reference type *)
+  | Tptr of cpp_type  (** C++ pointer type *)
   | Tvariant of cpp_type list  (** std::variant<...> for sum types *)
   | Tshared_ptr of cpp_type  (** std::shared_ptr<T> for managed memory *)
   | Tunique_ptr of cpp_type  (** std::unique_ptr<T> for unique ownership *)
@@ -110,6 +111,7 @@ type cpp_type =
   | Ttodo  (** Placeholder during development *)
   | Tunknown  (** Type inference failed *)
   | Tany  (** std::any for type-erased storage of existentials *)
+  | Tdecltype of cpp_expr  (** decltype(expr) for deduced types *)
 
 (** Type metavariable for unification. *)
 and cpp_meta = {
@@ -146,8 +148,18 @@ and cpp_stmt =
       (** Conditional: condition, then-branch, else-branch (used for reuse
           optimization) *)
   | Sraw of string  (** Raw C++ code printed verbatim *)
+  | Sstruct_def of Id.t * (Id.t * cpp_type) list
+      (** Local struct definition: struct Name { T1 f1; T2 f2; }; *)
+  | Susing of Id.t * cpp_type
+      (** Local using alias: using Name = Type; *)
+  | Sdecl_init of Id.t * cpp_type
+      (** Value-initialized declaration: Type name{}; *)
   | Sassign_field of cpp_expr * Id.t * cpp_expr
       (** Field assignment for in-place mutation during memory reuse *)
+  | Swhile of cpp_expr * cpp_stmt list
+      (** While loop: condition and body (used by loopify pass) *)
+  | Sblock of cpp_stmt list  (** Scoped block for local declarations *)
+  | Scontinue  (** Continue statement for loopified while loops *)
 
 (** {2 C++ expressions} *)
 
@@ -211,6 +223,10 @@ and cpp_expr =
   | CPPraw of string  (** Raw C++ expression code *)
   | CPPbinop of string * cpp_expr * cpp_expr
       (** Binary operator for reuse optimization conditions *)
+  | CPPbool of bool  (** Boolean literal: true/false *)
+  | CPPint of int  (** Integer literal *)
+  | CPPbrace_init  (** Empty brace initialization: {} *)
+  | CPPunop of string * cpp_expr  (** Unary operator: !expr, -expr, etc. *)
 
 (** Alias for constraint expressions in requires clauses. *)
 and cpp_constraint = cpp_expr

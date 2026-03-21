@@ -376,6 +376,22 @@ val bde_dir : unit -> string
 (** Check if conservative types mode is enabled. *)
 val conservative_types : unit -> bool
 
+(** {2 Loopify pass} *)
+
+(** Check if the loopify pass is enabled (recursive → iterative transformation).
+*)
+val loopify : unit -> bool
+
+(** Check whether a specific function should be loopified (per-function override
+    first, then global setting). *)
+val should_loopify : GlobRef.t -> bool
+
+(** Mark references for loopify (true) or noloopify (false). *)
+val extraction_loopify : bool -> qualid list -> unit
+
+(** Reset per-function loopify table. *)
+val reset_extraction_loopify : unit -> unit
+
 (** {2 File comment} *)
 
 (** Get comment to print at the beginning of files. *)

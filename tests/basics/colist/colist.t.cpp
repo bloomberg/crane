@@ -62,9 +62,11 @@ std::shared_ptr<Nat> int_to_nat(int x) {
   return Nat::ctor::S_(int_to_nat(x - 1));
 }
 
+using NatColist = Colist<std::shared_ptr<Nat>>;
+
 int main() {
   // Test 1: first_three should be [0, 1, 2]
-  auto ft = Colist::first_three;
+  auto ft = NatColist::first_three();
   auto vec = list_to_vec<std::shared_ptr<Nat>>(ft);
   ASSERT(vec.size() == 3);
   ASSERT(nat_to_int(vec[0]) == 0);
@@ -72,7 +74,7 @@ int main() {
   ASSERT(nat_to_int(vec[2]) == 2);
 
   // Test 2: nats creates an infinite stream that doesn't diverge
-  auto stream = Colist::nats(Nat::ctor::O_());
+  auto stream = NatColist::nats(Nat::ctor::O_());
   // Converting 5 elements should work without stack overflow
   auto five = stream->list_of_colist(int_to_nat(5));
   auto vec5 = list_to_vec<std::shared_ptr<Nat>>(five);
@@ -84,7 +86,7 @@ int main() {
   ASSERT(nat_to_int(vec5[4]) == 4);
 
   // Test 3: nats starting from a non-zero value
-  auto stream5 = Colist::nats(int_to_nat(5));
+  auto stream5 = NatColist::nats(int_to_nat(5));
   auto three = stream5->list_of_colist(int_to_nat(3));
   auto vec3 = list_to_vec<std::shared_ptr<Nat>>(three);
   ASSERT(vec3.size() == 3);

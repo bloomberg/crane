@@ -1,0 +1,260 @@
+#include <loopify_option_maybe.h>
+
+#include <algorithm>
+#include <any>
+#include <cassert>
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <variant>
+
+__attribute__((pure)) std::optional<unsigned int>
+LoopifyOptionMaybe::find_even(const std::shared_ptr<List<unsigned int>> &l) {
+  std::optional<unsigned int> _result;
+  std::shared_ptr<List<unsigned int>> _loop_l = l;
+  bool _continue = true;
+  while (_continue) {
+    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+                            _result = std::nullopt;
+                            _continue = false;
+                          },
+                          [&](const typename List<unsigned int>::Cons _args) {
+                            if ((_args.d_a0 % 2u) == 0u) {
+                              _result =
+                                  std::make_optional<unsigned int>(_args.d_a0);
+                              _continue = false;
+                            } else {
+                              _loop_l = _args.d_a1;
+                            }
+                          }},
+               _loop_l->v());
+  }
+  return _result;
+}
+
+__attribute__((pure)) std::optional<unsigned int>
+LoopifyOptionMaybe::find_greater(const unsigned int threshold,
+                                 const std::shared_ptr<List<unsigned int>> &l) {
+  std::optional<unsigned int> _result;
+  std::shared_ptr<List<unsigned int>> _loop_l = l;
+  bool _continue = true;
+  while (_continue) {
+    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+                            _result = std::nullopt;
+                            _continue = false;
+                          },
+                          [&](const typename List<unsigned int>::Cons _args) {
+                            if (threshold < _args.d_a0) {
+                              _result =
+                                  std::make_optional<unsigned int>(_args.d_a0);
+                              _continue = false;
+                            } else {
+                              _loop_l = _args.d_a1;
+                            }
+                          }},
+               _loop_l->v());
+  }
+  return _result;
+}
+
+__attribute__((pure)) std::optional<unsigned int> LoopifyOptionMaybe::lookup(
+    const unsigned int key,
+    const std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> &l) {
+  std::optional<unsigned int> _result;
+  std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> _loop_l = l;
+  bool _continue = true;
+  while (_continue) {
+    std::visit(
+        Overloaded{
+            [&](const typename List<std::pair<unsigned int, unsigned int>>::Nil
+                    _args) {
+              _result = std::nullopt;
+              _continue = false;
+            },
+            [&](const typename List<std::pair<unsigned int, unsigned int>>::Cons
+                    _args) {
+              unsigned int k = _args.d_a0.first;
+              unsigned int v = _args.d_a0.second;
+              if (key == k) {
+                _result = std::make_optional<unsigned int>(v);
+                _continue = false;
+              } else {
+                _loop_l = _args.d_a1;
+              }
+            }},
+        _loop_l->v());
+  }
+  return _result;
+}
+
+std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::lookup_all(
+    const unsigned int key,
+    const std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> &l) {
+  struct _Enter {
+    const std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> l;
+  };
+
+  struct _Call1 {
+    unsigned int _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Call1>;
+  std::shared_ptr<List<unsigned int>> _result{};
+  std::vector<_Frame> _stack;
+  _stack.push_back(_Enter{l});
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    std::visit(
+        Overloaded{
+            [&](_Enter _f) {
+              const std::shared_ptr<List<std::pair<unsigned int, unsigned int>>>
+                  l = _f.l;
+              std::visit(
+                  Overloaded{
+                      [&](const typename List<
+                          std::pair<unsigned int, unsigned int>>::Nil _args)
+                          -> std::shared_ptr<List<unsigned int>> {
+                        _result = List<unsigned int>::ctor::Nil_();
+                        return {};
+                      },
+                      [&](const typename List<
+                          std::pair<unsigned int, unsigned int>>::Cons _args)
+                          -> std::shared_ptr<List<unsigned int>> {
+                        unsigned int k = _args.d_a0.first;
+                        unsigned int v = _args.d_a0.second;
+                        if (key == k) {
+                          _stack.push_back(_Call1{v});
+                          _stack.push_back(_Enter{_args.d_a1});
+                        } else {
+                          _stack.push_back(_Enter{_args.d_a1});
+                        }
+                        return {};
+                      }},
+                  l->v());
+            },
+            [&](_Call1 _f) {
+              _result = List<unsigned int>::ctor::Cons_(_f._s0, _result);
+            }},
+        _frame);
+  }
+  return _result;
+}
+
+__attribute__((pure)) std::optional<unsigned int>
+LoopifyOptionMaybe::safe_head(const std::shared_ptr<List<unsigned int>> &l) {
+  return std::visit(
+      Overloaded{[](const typename List<unsigned int>::Nil _args)
+                     -> std::optional<unsigned int> { return std::nullopt; },
+                 [](const typename List<unsigned int>::Cons _args)
+                     -> std::optional<unsigned int> {
+                   return std::make_optional<unsigned int>(_args.d_a0);
+                 }},
+      l->v());
+}
+
+__attribute__((pure)) std::optional<std::shared_ptr<List<unsigned int>>>
+LoopifyOptionMaybe::safe_tail(const std::shared_ptr<List<unsigned int>> &l) {
+  return std::visit(
+      Overloaded{
+          [](const typename List<unsigned int>::Nil _args)
+              -> std::optional<std::shared_ptr<List<unsigned int>>> {
+            return std::nullopt;
+          },
+          [](const typename List<unsigned int>::Cons _args)
+              -> std::optional<std::shared_ptr<List<unsigned int>>> {
+            return std::make_optional<std::shared_ptr<List<unsigned int>>>(
+                _args.d_a1);
+          }},
+      l->v());
+}
+
+std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::catMaybes(
+    const std::shared_ptr<List<std::optional<unsigned int>>> &l) {
+  struct _Enter {
+    const std::shared_ptr<List<std::optional<unsigned int>>> l;
+  };
+
+  struct _Call1 {
+    unsigned int _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Call1>;
+  std::shared_ptr<List<unsigned int>> _result{};
+  std::vector<_Frame> _stack;
+  _stack.push_back(_Enter{l});
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    std::visit(
+        Overloaded{
+            [&](_Enter _f) {
+              const std::shared_ptr<List<std::optional<unsigned int>>> l = _f.l;
+              std::visit(
+                  Overloaded{
+                      [&](const typename List<std::optional<unsigned int>>::Nil
+                              _args) -> std::shared_ptr<List<unsigned int>> {
+                        _result = List<unsigned int>::ctor::Nil_();
+                        return {};
+                      },
+                      [&](const typename List<std::optional<unsigned int>>::Cons
+                              _args) -> std::shared_ptr<List<unsigned int>> {
+                        if (_args.d_a0.has_value()) {
+                          unsigned int x = *_args.d_a0;
+                          _stack.push_back(_Call1{x});
+                          _stack.push_back(_Enter{_args.d_a1});
+                        } else {
+                          _stack.push_back(_Enter{_args.d_a1});
+                        }
+                        return {};
+                      }},
+                  l->v());
+            },
+            [&](_Call1 _f) {
+              _result = List<unsigned int>::ctor::Cons_(_f._s0, _result);
+            }},
+        _frame);
+  }
+  return _result;
+}
+
+__attribute__((pure)) std::optional<unsigned int>
+LoopifyOptionMaybe::find_index_even_aux(
+    const std::shared_ptr<List<unsigned int>> &l, const unsigned int idx) {
+  std::optional<unsigned int> _result;
+  unsigned int _loop_idx = idx;
+  std::shared_ptr<List<unsigned int>> _loop_l = l;
+  bool _continue = true;
+  while (_continue) {
+    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+                            _result = std::nullopt;
+                            _continue = false;
+                          },
+                          [&](const typename List<unsigned int>::Cons _args) {
+                            if ((_args.d_a0 % 2u) == 0u) {
+                              _result = std::make_optional<unsigned int>(
+                                  std::move(_loop_idx));
+                              _continue = false;
+                            } else {
+                              unsigned int _next_idx =
+                                  (std::move(_loop_idx) + 1u);
+                              std::shared_ptr<List<unsigned int>> _next_l =
+                                  _args.d_a1;
+                              _loop_idx = std::move(_next_idx);
+                              _loop_l = std::move(_next_l);
+                            }
+                          }},
+               _loop_l->v());
+  }
+  return _result;
+}
+
+__attribute__((pure)) std::optional<unsigned int>
+LoopifyOptionMaybe::find_index_even(
+    const std::shared_ptr<List<unsigned int>> &l) {
+  return find_index_even_aux(l, 0u);
+}

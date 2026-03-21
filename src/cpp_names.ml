@@ -51,6 +51,8 @@ let pp_modname mp = str (Common.pp_module mp)
     use List<A>). Returns false if it was NOT merged (has pending declarations →
     use List::list<A>). *)
 let is_merged_inductive (r : GlobRef.t) : bool =
+  Hashtbl.mem promoted_inductives r
+  ||
   let base = str_global Type r in
   let wrapper_name = String.capitalize_ascii base in
   not (Hashtbl.mem unmerged_wrappers wrapper_name)
@@ -176,6 +178,8 @@ let inductive_name_info r =
   match r with
   | GlobRef.IndRef _ when is_eponymous_record_global r ->
     (str (Common.pp_type_name_capitalized r), false)
+  | GlobRef.IndRef _ when Hashtbl.mem promoted_inductives r ->
+    (str (String.capitalize_ascii (str_global Type r)), false)
   | GlobRef.IndRef _ when is_local_inductive r -> (pp_global Type r, false)
   | GlobRef.IndRef _ -> (str (String.capitalize_ascii (str_global Type r)), true)
   | _ -> (pp_global Type r, false)
@@ -216,6 +220,8 @@ let pp_inductive_type_name r =
     match r with
     | GlobRef.IndRef _ when is_eponymous_record_global r ->
       str (Common.pp_type_name_capitalized r)
+    | GlobRef.IndRef _ when Hashtbl.mem promoted_inductives r ->
+      str (String.capitalize_ascii (str_global Type r))
     | GlobRef.IndRef _ when is_record_inductive r -> pp_global Type r
     | GlobRef.IndRef _ when is_enum_inductive r ->
       let base_name = Common.pp_global_name Type r in
@@ -343,14 +349,18 @@ let is_global_scope_enum_cached : GlobRef.t -> bool =
   with_cache Name_resolution.is_global_scope_enum (fun r ->
     Hashtbl.mem global_scope_enum_table r )
 
-(** Cache-backed is_merged_inductive check — avoids hashtable lookup. *)
+(** Cache-backed is_merged_inductive check — avoids hashtable lookup. Promoted
+    inductives always count as merged regardless of cache. *)
 let is_merged_inductive_cached : GlobRef.t -> bool =
-  with_cache
-    (fun cache r ->
-      match Name_resolution.resolve_type cache r with
-      | Some rtn -> rtn.Name_resolution.rtn_is_merged
-      | None -> is_merged_inductive r )
-    is_merged_inductive
+ fun r ->
+   Hashtbl.mem promoted_inductives r
+   || with_cache
+        (fun cache r ->
+          match Name_resolution.resolve_type cache r with
+          | Some rtn -> rtn.Name_resolution.rtn_is_merged
+          | None -> is_merged_inductive r )
+        is_merged_inductive
+        r
 
 (** Cache-backed inductive classification queries. *)
 let get_ind_kind_cached : GlobRef.t -> Minicpp.cpp_ind_kind option =

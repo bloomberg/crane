@@ -680,9 +680,108 @@ let rec pp_structure_elem ~is_header f = function
           else
             modtypes_pp ++ fnl () ++ fnl ()
         in
+        (* Determine if this module should be promoted: eponymous inductive
+           (not record) where the module struct IS the type directly. *)
+        (* Only promote top-level modules (not nested inside another struct)
+           that don't contain nested submodules with their own inductives.
+           Promoting modules with nested types would break external
+           accessibility of those types. *)
+        let has_nested_submodules =
+          List.exists
+            (fun (_l, se) ->
+              match se with
+              | SEmodule _ -> true
+              | _ -> false )
+            sel
+        in
+        let has_extra_inductives =
+          let ind_count =
+            List.fold_left
+              (fun acc (_l, se) ->
+                match se with
+                | SEdecl (Dind _) -> acc + 1
+                | _ -> acc )
+              0
+              sel
+          in
+          ind_count > 1
+        in
+        let is_promoted =
+          !eponymous_type_ref <> None
+          && (not old_context)
+          && (not has_nested_submodules)
+          && not has_extra_inductives
+        in
+        (* Extract template params from the eponymous inductive packet. *)
+        let promoted_tparams =
+          if is_promoted then
+            List.find_map
+              (fun (_l, se) ->
+                match se with
+                | SEdecl (Dind (kn, ind)) ->
+                  let found = ref None in
+                  Array.iteri
+                    (fun i p ->
+                      let ind_ref = GlobRef.IndRef (kn, i) in
+                      if
+                        Option.map
+                          (fun r ->
+                            Environ.QGlobRef.equal Environ.empty_env r ind_ref )
+                          !eponymous_type_ref
+                        = Some true
+                      then
+                        let param_sign =
+                          List.firstn ind.ind_nparams p.ip_sign
+                        in
+                        let num_param_vars =
+                          List.length
+                            (List.filter
+                               (fun x -> x == Miniml.Keep)
+                               param_sign )
+                        in
+                        found := Some (List.firstn num_param_vars p.ip_vars) )
+                    ind.ind_packets;
+                  !found
+                | _ -> None )
+              sel
+          else
+            None
+        in
+        (* Save previous promotion state for the eponymous inductive, if any.
+           The same inductive may have been promoted when rendered standalone
+           but should not be promoted when rendered nested. *)
+        let was_previously_promoted =
+          match !eponymous_type_ref with
+          | Some r -> Hashtbl.mem promoted_inductives r
+          | None -> false
+        in
+        (* Set promotion state before body rendering. *)
+        if is_promoted then (
+          eponymous_promote_ref := !eponymous_type_ref;
+          Option.iter
+            (fun r -> Hashtbl.replace promoted_inductives r ())
+            !eponymous_type_ref;
+          eponymous_deferred := Pp.mt ();
+          eponymous_promote_sft := false )
+        else
+          (* When NOT promoted (e.g., nested context), ensure the eponymous
+             inductive is NOT marked as promoted. A previous standalone
+             rendering of the same module may have added it. *)
+          Option.iter
+            (fun r -> Hashtbl.remove promoted_inductives r)
+            !eponymous_type_ref;
+        let old_in_template = render_ctx.rc_in_template in
         let old_concepts_hoisted = render_ctx.rc_concepts_hoisted in
-        if is_header && not has_concept_collision then
-          render_ctx.rc_in_struct <- true
+        if is_header && not has_concept_collision then (
+          render_ctx.rc_in_struct <- true;
+          (* For promoted modules with template params, set rc_in_template so
+             non-inductive defs inside get full inline definitions. *)
+          if is_promoted then
+            match
+              promoted_tparams
+            with
+            | Some (_ :: _) -> render_ctx.rc_in_template <- true
+            | _ -> () )
         else if (not is_header) && not has_concept_collision then (
           render_ctx.rc_struct_name <-
             ( match old_struct_name with
@@ -694,121 +793,188 @@ let rec pp_structure_elem ~is_header f = function
         let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
         let this_method_candidates = !method_candidates in
         render_ctx.rc_in_struct <- old_context;
+        render_ctx.rc_in_template <- old_in_template;
         render_ctx.rc_concepts_hoisted <- old_concepts_hoisted;
         render_ctx.rc_struct_name <- old_struct_name;
         render_ctx.rc_struct_mp <- old_struct_mp;
         eponymous_type_ref := old_eponymous;
         eponymous_record := old_eponymous_record;
         method_candidates := old_methods;
+        (* Restore promotion state for the eponymous inductive if it was
+           previously promoted (before this nested rendering removed it). *)
+        if (not is_promoted) && was_previously_promoted then
+          Option.iter
+            (fun r -> Hashtbl.replace promoted_inductives r ())
+            !eponymous_type_ref;
+        (* Capture and clean up promotion state. *)
+        let this_promoted = is_promoted in
+        let this_deferred = !eponymous_deferred in
+        let this_promote_sft = !eponymous_promote_sft in
+        if is_promoted then (
+          eponymous_promote_ref := None;
+          eponymous_deferred := Pp.mt ();
+          eponymous_promote_sft := false );
         if is_header then
-          let template_decl, record_fields_pp, record_methods_pp =
-            match this_eponymous_record with
-            | Some (epon_ref, fields, packet) ->
-              let ty_vars = packet.ip_vars in
-              let template_str =
-                if ty_vars = [] then
-                  mt ()
-                else
-                  str "template<"
-                  ++ prlist_with_sep
-                       (fun () -> str ", ")
-                       (fun v -> str "typename " ++ Id.print v)
-                       ty_vars
-                  ++ str ">"
-                  ++ fnl ()
-              in
-              let field_list = List.combine fields packet.ip_types.(0) in
-              let pp_field (field_ref, field_ty) =
-                let field_name =
-                  match field_ref with
-                  | Some r -> str (Common.pp_global_name Term r)
-                  | None -> str "_field"
+          if this_promoted then
+            (* Promoted module: the module struct IS the eponymous type. Wrap
+               body in a template struct with the inductive's template params
+               and emit deferred defs at file scope. *)
+            let template_decl =
+              match promoted_tparams with
+              | Some (_ :: _ as vars) ->
+                str "template<"
+                ++ prlist_with_sep
+                     (fun () -> str ", ")
+                     (fun v ->
+                       str "typename " ++ Id.print (Common.tparam_name v) )
+                     vars
+                ++ str ">"
+                ++ fnl ()
+              | _ -> mt ()
+            in
+            let inherit_clause =
+              if this_promote_sft then
+                let type_args =
+                  match promoted_tparams with
+                  | Some (_ :: _ as vars) ->
+                    str "<"
+                    ++ prlist_with_sep
+                         (fun () -> str ", ")
+                         (fun v -> Id.print (Common.tparam_name v))
+                         vars
+                    ++ str ">"
+                  | _ -> mt ()
                 in
-                let cpp_ty =
-                  pp_cpp_type
-                    false
-                    ty_vars
-                    (convert_ml_type_to_cpp_type
-                       (empty_env ())
-                       Refset'.empty
-                       ty_vars
-                       field_ty )
-                in
-                cpp_ty ++ spc () ++ field_name ++ str ";"
-              in
-              let fields_pp =
-                prlist_with_sep fnl pp_field field_list ++ fnl ()
-              in
-              let non_projection_candidates =
-                List.filter
-                  (fun (r, _, _, _) -> not (Table.is_projection r))
-                  (List.rev this_method_candidates)
-              in
-              let method_fields =
-                Translation.gen_record_methods
-                  epon_ref
-                  ty_vars
-                  non_projection_candidates
-              in
-              let methods_with_refs =
-                List.combine non_projection_candidates method_fields
-              in
-              let methods_pp =
-                if method_fields = [] then
-                  mt ()
-                else
-                  let saved_methods = !method_candidates in
-                  method_candidates := this_method_candidates;
-                  let result =
-                    prlist_with_sep
-                      fnl
-                      (fun ((_r, _, _, _), (fld, _vis, _tag)) ->
-                        pp_cpp_field (empty_env ()) fld )
-                      methods_with_refs
-                    ++ fnl ()
-                  in
-                  method_candidates := saved_methods;
-                  result
-              in
-              (template_str, fields_pp, methods_pp)
-            | None -> (mt (), mt (), mt ())
-          in
-          if has_concept_collision then
-            typeclasses_pp
-            ++ modtypes_pp
-            ++ record_fields_pp
-            ++ record_methods_pp
-            ++ body
-          else
+                str " : public std::enable_shared_from_this<"
+                ++ name
+                ++ type_args
+                ++ str ">"
+              else
+                mt ()
+            in
             let struct_def =
               template_decl
               ++ str "struct "
               ++ name
+              ++ inherit_clause
               ++ str " {"
               ++ fnl ()
-              ++ record_fields_pp
-              ++ record_methods_pp
               ++ body
               ++ str "};"
             in
-            let rec get_concept_name = function
-              | MTident kn -> Some (pp_modname kn)
-              | MTwith (mt, _) -> get_concept_name mt
-              | MTfunsig (_, mt, mt') -> get_concept_name mt'
-              | MTsig _ -> None
+            typeclasses_pp ++ modtypes_pp ++ struct_def ++ this_deferred
+          else
+            let template_decl, record_fields_pp, record_methods_pp =
+              match this_eponymous_record with
+              | Some (epon_ref, fields, packet) ->
+                let ty_vars = packet.ip_vars in
+                let template_str =
+                  if ty_vars = [] then
+                    mt ()
+                  else
+                    str "template<"
+                    ++ prlist_with_sep
+                         (fun () -> str ", ")
+                         (fun v -> str "typename " ++ Id.print v)
+                         ty_vars
+                    ++ str ">"
+                    ++ fnl ()
+                in
+                let field_list = List.combine fields packet.ip_types.(0) in
+                let pp_field (field_ref, field_ty) =
+                  let field_name =
+                    match field_ref with
+                    | Some r -> str (Common.pp_global_name Term r)
+                    | None -> str "_field"
+                  in
+                  let cpp_ty =
+                    pp_cpp_type
+                      false
+                      ty_vars
+                      (convert_ml_type_to_cpp_type
+                         (empty_env ())
+                         Refset'.empty
+                         ty_vars
+                         field_ty )
+                  in
+                  cpp_ty ++ spc () ++ field_name ++ str ";"
+                in
+                let fields_pp =
+                  prlist_with_sep fnl pp_field field_list ++ fnl ()
+                in
+                let non_projection_candidates =
+                  List.filter
+                    (fun (r, _, _, _) -> not (Table.is_projection r))
+                    (List.rev this_method_candidates)
+                in
+                let method_fields =
+                  Translation.gen_record_methods
+                    epon_ref
+                    ty_vars
+                    non_projection_candidates
+                in
+                let methods_with_refs =
+                  List.combine non_projection_candidates method_fields
+                in
+                let methods_pp =
+                  if method_fields = [] then
+                    mt ()
+                  else
+                    let saved_methods = !method_candidates in
+                    method_candidates := this_method_candidates;
+                    let result =
+                      prlist_with_sep
+                        fnl
+                        (fun ((_r, _, _, _), (fld, _vis, _tag)) ->
+                          pp_cpp_field (empty_env ()) fld )
+                        methods_with_refs
+                      ++ fnl ()
+                    in
+                    method_candidates := saved_methods;
+                    result
+                in
+                (template_str, fields_pp, methods_pp)
+              | None -> (mt (), mt (), mt ())
             in
-            let static_assert =
-              match get_concept_name m.ml_mod_type with
-              | Some concept_name ->
-                fnl ()
-                ++ str "static_assert("
-                ++ concept_name
-                ++ str "<"
+            if has_concept_collision then
+              typeclasses_pp
+              ++ modtypes_pp
+              ++ record_fields_pp
+              ++ record_methods_pp
+              ++ body
+            else
+              let struct_def =
+                template_decl
+                ++ str "struct "
                 ++ name
-                ++ str ">);"
-              | None -> mt ()
-            in
-            typeclasses_pp ++ modtypes_pp ++ struct_def ++ static_assert
+                ++ str " {"
+                ++ fnl ()
+                ++ record_fields_pp
+                ++ record_methods_pp
+                ++ body
+                ++ str "};"
+              in
+              let rec get_concept_name = function
+                | MTident kn -> Some (pp_modname kn)
+                | MTwith (mt, _) -> get_concept_name mt
+                | MTfunsig (_, mt, mt') -> get_concept_name mt'
+                | MTsig _ -> None
+              in
+              let static_assert =
+                match get_concept_name m.ml_mod_type with
+                | Some concept_name ->
+                  fnl ()
+                  ++ str "static_assert("
+                  ++ concept_name
+                  ++ str "<"
+                  ++ name
+                  ++ str ">);"
+                | None -> mt ()
+              in
+              typeclasses_pp ++ modtypes_pp ++ struct_def ++ static_assert
+        else if this_promoted then
+          (* Promoted template: all defs are inline in header, skip .cpp *)
+          mt ()
         else
           body
       | MEident _ ->
