@@ -47,15 +47,13 @@ std::shared_ptr<List<unsigned int>> LoopifyListGenerators::cycle_fuel(
                   std::visit(
                       Overloaded{
                           [&](const typename List<unsigned int>::Nil _args)
-                              -> std::shared_ptr<List<unsigned int>> {
+                              -> void {
                             _result = List<unsigned int>::ctor::Nil_();
-                            return {};
                           },
                           [&](const typename List<unsigned int>::Cons _args)
-                              -> std::shared_ptr<List<unsigned int>> {
+                              -> void {
                             _stack.push_back(_Call1{l});
                             _stack.push_back(_Enter{n_, fuel_});
-                            return {};
                           }},
                       l->v());
                 }
@@ -172,17 +170,15 @@ std::shared_ptr<List<unsigned int>> LoopifyListGenerators::replicate_each(
                      std::visit(
                          Overloaded{
                              [&](const typename List<unsigned int>::Nil _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _result = List<unsigned int>::ctor::Nil_();
-                               return {};
                              },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                std::shared_ptr<List<unsigned int>> reps =
                                    replicate_elem(n, _args.d_a0);
                                _stack.push_back(_Call1{std::move(reps)});
                                _stack.push_back(_Enter{_args.d_a1});
-                               return {};
                              }},
                          l->v());
                    },
@@ -219,22 +215,18 @@ LoopifyListGenerators::enumerate_aux(
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               const unsigned int idx = _f.idx;
               std::visit(
-                  Overloaded{
-                      [&](const typename List<unsigned int>::Nil _args)
-                          -> std::shared_ptr<
-                              List<std::pair<unsigned int, unsigned int>>> {
-                        _result = List<std::pair<unsigned int,
-                                                 unsigned int>>::ctor::Nil_();
-                        return {};
-                      },
-                      [&](const typename List<unsigned int>::Cons _args)
-                          -> std::shared_ptr<
-                              List<std::pair<unsigned int, unsigned int>>> {
-                        _stack.push_back(
-                            _Call1{std::make_pair(idx, _args.d_a0)});
-                        _stack.push_back(_Enter{_args.d_a1, (idx + 1u)});
-                        return {};
-                      }},
+                  Overloaded{[&](const typename List<unsigned int>::Nil _args)
+                                 -> void {
+                               _result =
+                                   List<std::pair<unsigned int,
+                                                  unsigned int>>::ctor::Nil_();
+                             },
+                             [&](const typename List<unsigned int>::Cons _args)
+                                 -> void {
+                               _stack.push_back(
+                                   _Call1{std::make_pair(idx, _args.d_a0)});
+                               _stack.push_back(_Enter{_args.d_a1, (idx + 1u)});
+                             }},
                   l->v());
             },
             [&](_Call1 _f) {

@@ -2353,7 +2353,7 @@ let rec rewrite_enter_lambda_return
       List.map
         (fun lambda ->
           match lambda with
-          | CPPlambda (lparams, lret_ty, body, _capture) ->
+          | CPPlambda (lparams, _lret_ty, body, _capture) ->
             let lenv =
               type_env_of_lambda_params lparams @ collect_type_env body @ env
             in
@@ -2370,12 +2370,7 @@ let rec rewrite_enter_lambda_return
                 varying_param_types
                 body
             in
-            let new_body =
-              match lret_ty with
-              | Some Tvoid | None -> new_body
-              | Some _ -> new_body @ [Sreturn (Some CPPbrace_init)]
-            in
-            CPPlambda (lparams, lret_ty, new_body, false)
+            CPPlambda (lparams, Some Tvoid, new_body, false)
           | e -> e )
         lambdas
     in
@@ -2395,7 +2390,7 @@ let rec rewrite_enter_lambda_return
           List.map
             (fun lambda ->
               match lambda with
-              | CPPlambda (lparams, lret_ty, body, _capture) ->
+              | CPPlambda (lparams, _lret_ty, body, _capture) ->
                 let extended_body =
                   List.map
                     (fun stmt ->
@@ -2422,12 +2417,7 @@ let rec rewrite_enter_lambda_return
                     varying_param_types
                     extended_body
                 in
-                let new_body =
-                  match lret_ty with
-                  | Some Tvoid | None -> new_body
-                  | Some _ -> new_body @ [Sreturn (Some CPPbrace_init)]
-                in
-                CPPlambda (lparams, lret_ty, new_body, false)
+                CPPlambda (lparams, Some Tvoid, new_body, false)
               | e -> e )
             lambdas
         in
@@ -3491,10 +3481,10 @@ let rec rewrite_multi_enter check varying = function
       List.map
         (fun lambda ->
           match lambda with
-          | CPPlambda (lparams, lret_ty, body, _capture) ->
+          | CPPlambda (lparams, _lret_ty, body, _capture) ->
             CPPlambda
               ( lparams,
-                lret_ty,
+                Some Tvoid,
                 List.concat_map (rewrite_multi_enter check varying) body,
                 false )
           | e -> e )
@@ -3513,7 +3503,7 @@ let rec rewrite_multi_enter check varying = function
           List.map
             (fun lambda ->
               match lambda with
-              | CPPlambda (lparams, lret_ty, body, _capture) ->
+              | CPPlambda (lparams, _lret_ty, body, _capture) ->
                 let extended_body =
                   List.map
                     (fun stmt ->
@@ -3524,7 +3514,7 @@ let rec rewrite_multi_enter check varying = function
                 in
                 CPPlambda
                   ( lparams,
-                    lret_ty,
+                    Some Tvoid,
                     List.concat_map
                       (rewrite_multi_enter check varying)
                       extended_body,

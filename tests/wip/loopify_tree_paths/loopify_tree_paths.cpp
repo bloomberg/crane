@@ -43,20 +43,16 @@ LoopifyTreePaths::map_cons(
                   Overloaded{
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Nil _args)
-                          -> std::shared_ptr<
-                              List<std::shared_ptr<List<unsigned int>>>> {
+                          -> void {
                         _result = List<
                             std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Cons _args)
-                          -> std::shared_ptr<
-                              List<std::shared_ptr<List<unsigned int>>>> {
+                          -> void {
                         _stack.push_back(_Call1{
                             List<unsigned int>::ctor::Cons_(x, _args.d_a0)});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       }},
                   ll->v());
             },
@@ -106,22 +102,18 @@ LoopifyTreePaths::paths(const std::shared_ptr<LoopifyTreePaths::tree> &t) {
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyTreePaths::tree::Leaf _args)
-                          -> std::shared_ptr<
-                              List<std::shared_ptr<List<unsigned int>>>> {
+                          -> void {
                         _result = List<std::shared_ptr<List<unsigned int>>>::
                             ctor::Cons_(
                                 List<unsigned int>::ctor::Nil_(),
                                 List<std::shared_ptr<List<unsigned int>>>::
                                     ctor::Nil_());
-                        return {};
                       },
                       [&](const typename LoopifyTreePaths::tree::Node _args)
-                          -> std::shared_ptr<
-                              List<std::shared_ptr<List<unsigned int>>>> {
+                          -> void {
                         _stack.push_back(
                             _Call1{_args.d_a0, _args.d_a1, _args.d_a1});
                         _stack.push_back(_Enter{_args.d_a2});
-                        return {};
                       }},
                   t->v());
             },
@@ -171,20 +163,18 @@ __attribute__((pure)) unsigned int LoopifyTreePaths::count_paths_sum_aux(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyTreePaths::tree::Leaf _args)
-                          -> unsigned int {
+                          -> void {
                         if (acc == target) {
                           _result = 1u;
                         } else {
                           _result = 0u;
                         }
-                        return {};
                       },
                       [&](const typename LoopifyTreePaths::tree::Node _args)
-                          -> unsigned int {
+                          -> void {
                         unsigned int new_acc = (acc + _args.d_a1);
                         _stack.push_back(_Call1{_args.d_a0, new_acc});
                         _stack.push_back(_Enter{_args.d_a2, new_acc});
-                        return {};
                       }},
                   t->v());
             },
@@ -238,8 +228,7 @@ LoopifyTreePaths::find_path_sum(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyTreePaths::tree::Leaf _args)
-                          -> std::optional<
-                              std::shared_ptr<List<unsigned int>>> {
+                          -> void {
                         if (acc == target) {
                           _result = std::make_optional<
                               std::shared_ptr<List<unsigned int>>>(
@@ -247,15 +236,12 @@ LoopifyTreePaths::find_path_sum(
                         } else {
                           _result = std::nullopt;
                         }
-                        return {};
                       },
                       [&](const typename LoopifyTreePaths::tree::Node _args)
-                          -> std::optional<
-                              std::shared_ptr<List<unsigned int>>> {
+                          -> void {
                         unsigned int new_acc = (acc + _args.d_a1);
                         _stack.push_back(_Call1{_args, target, new_acc});
                         _stack.push_back(_Enter{_args.d_a0, new_acc});
-                        return {};
                       }},
                   t->v());
             },
@@ -324,15 +310,11 @@ __attribute__((pure)) unsigned int LoopifyTreePaths::max_path_sum(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyTreePaths::tree::Leaf _args)
-                          -> unsigned int {
-                        _result = 0u;
-                        return {};
-                      },
+                          -> void { _result = 0u; },
                       [&](const typename LoopifyTreePaths::tree::Node _args)
-                          -> unsigned int {
+                          -> void {
                         _stack.push_back(_Call1{_args.d_a0, _args.d_a1});
                         _stack.push_back(_Enter{_args.d_a2});
-                        return {};
                       }},
                   t->v());
             },
@@ -379,15 +361,13 @@ std::shared_ptr<List<unsigned int>> LoopifyTreePaths::flatten_paths(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyTreePaths::tree::Leaf _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename LoopifyTreePaths::tree::Node _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _stack.push_back(_Call1{_args.d_a0, _args.d_a1});
                         _stack.push_back(_Enter{_args.d_a2});
-                        return {};
                       }},
                   t->v());
             },

@@ -38,18 +38,16 @@ LoopifyScans::scanl(const unsigned int acc,
                      std::visit(
                          Overloaded{
                              [&](const typename List<unsigned int>::Nil _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _result = List<unsigned int>::ctor::Cons_(
                                    std::move(acc),
                                    List<unsigned int>::ctor::Nil_());
-                               return {};
                              },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _stack.push_back(_Call1{acc});
                                _stack.push_back(
                                    _Enter{_args.d_a1, (acc + _args.d_a0)});
-                               return {};
                              }},
                          l->v());
                    },
@@ -87,18 +85,16 @@ LoopifyScans::scanl_mult(const unsigned int acc,
                      std::visit(
                          Overloaded{
                              [&](const typename List<unsigned int>::Nil _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _result = List<unsigned int>::ctor::Cons_(
                                    std::move(acc),
                                    List<unsigned int>::ctor::Nil_());
-                               return {};
                              },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _stack.push_back(_Call1{acc});
                                _stack.push_back(
                                    _Enter{_args.d_a1, (acc * _args.d_a0)});
-                               return {};
                              }},
                          l->v());
                    },
@@ -136,14 +132,13 @@ LoopifyScans::running_max(const unsigned int current,
                      std::visit(
                          Overloaded{
                              [&](const typename List<unsigned int>::Nil _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _result = List<unsigned int>::ctor::Cons_(
                                    std::move(current),
                                    List<unsigned int>::ctor::Nil_());
-                               return {};
                              },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                unsigned int new_max;
                                if (current < _args.d_a0) {
                                  new_max = _args.d_a0;
@@ -153,7 +148,6 @@ LoopifyScans::running_max(const unsigned int current,
                                _stack.push_back(_Call1{std::move(current)});
                                _stack.push_back(
                                    _Enter{_args.d_a1, std::move(new_max)});
-                               return {};
                              }},
                          l->v());
                    },
@@ -191,14 +185,13 @@ LoopifyScans::running_min(const unsigned int current,
                      std::visit(
                          Overloaded{
                              [&](const typename List<unsigned int>::Nil _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _result = List<unsigned int>::ctor::Cons_(
                                    std::move(current),
                                    List<unsigned int>::ctor::Nil_());
-                               return {};
                              },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                unsigned int new_min;
                                if (_args.d_a0 < current) {
                                  new_min = _args.d_a0;
@@ -208,7 +201,6 @@ LoopifyScans::running_min(const unsigned int current,
                                _stack.push_back(_Call1{std::move(current)});
                                _stack.push_back(
                                    _Enter{_args.d_a1, std::move(new_min)});
-                               return {};
                              }},
                          l->v());
                    },
@@ -246,12 +238,11 @@ LoopifyScans::pairwise_diff(const unsigned int prev,
                      std::visit(
                          Overloaded{
                              [&](const typename List<unsigned int>::Nil _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _result = List<unsigned int>::ctor::Nil_();
-                               return {};
                              },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                unsigned int diff;
                                if (_args.d_a0 < prev) {
                                  unsigned int sub =
@@ -276,7 +267,6 @@ LoopifyScans::pairwise_diff(const unsigned int prev,
                                }
                                _stack.push_back(_Call1{std::move(diff)});
                                _stack.push_back(_Enter{_args.d_a1, _args.d_a0});
-                               return {};
                              }},
                          l->v());
                    },
@@ -318,14 +308,13 @@ LoopifyScans::accumulate_if_even(const unsigned int acc,
                      std::visit(
                          Overloaded{
                              [&](const typename List<unsigned int>::Nil _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _result = List<unsigned int>::ctor::Cons_(
                                    std::move(acc),
                                    List<unsigned int>::ctor::Nil_());
-                               return {};
                              },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                if ((_args.d_a0 % 2u) == 0u) {
                                  _stack.push_back(_Call1{acc});
                                  _stack.push_back(
@@ -334,7 +323,6 @@ LoopifyScans::accumulate_if_even(const unsigned int acc,
                                  _stack.push_back(_Call2{acc});
                                  _stack.push_back(_Enter{_args.d_a1, acc});
                                }
-                               return {};
                              }},
                          l->v());
                    },

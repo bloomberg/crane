@@ -118,13 +118,12 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::lookup_all(
                   Overloaded{
                       [&](const typename List<
                           std::pair<unsigned int, unsigned int>>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<
                           std::pair<unsigned int, unsigned int>>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         unsigned int k = _args.d_a0.first;
                         unsigned int v = _args.d_a0.second;
                         if (key == k) {
@@ -133,7 +132,6 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::lookup_all(
                         } else {
                           _stack.push_back(_Enter{_args.d_a1});
                         }
-                        return {};
                       }},
                   l->v());
             },
@@ -197,12 +195,11 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::catMaybes(
               std::visit(
                   Overloaded{
                       [&](const typename List<std::optional<unsigned int>>::Nil
-                              _args) -> std::shared_ptr<List<unsigned int>> {
+                              _args) -> void {
                         _result = List<unsigned int>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<std::optional<unsigned int>>::Cons
-                              _args) -> std::shared_ptr<List<unsigned int>> {
+                              _args) -> void {
                         if (_args.d_a0.has_value()) {
                           unsigned int x = *_args.d_a0;
                           _stack.push_back(_Call1{x});
@@ -210,7 +207,6 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::catMaybes(
                         } else {
                           _stack.push_back(_Enter{_args.d_a1});
                         }
-                        return {};
                       }},
                   l->v());
             },

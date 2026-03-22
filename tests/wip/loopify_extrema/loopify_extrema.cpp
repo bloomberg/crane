@@ -36,27 +36,21 @@ LoopifyExtrema::maximum(const std::shared_ptr<List<unsigned int>> &l) {
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> unsigned int {
-                        _result = 0u;
-                        return {};
-                      },
+                          -> void { _result = 0u; },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> unsigned int {
+                          -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename List<unsigned int>::Nil
-                                        _args0) -> unsigned int {
+                                        _args0) -> void {
                                   _result = _args.d_a0;
-                                  return {};
                                 },
                                 [&](const typename List<unsigned int>::Cons
-                                        _args0) -> unsigned int {
+                                        _args0) -> void {
                                   _stack.push_back(_Call1{_args});
                                   _stack.push_back(_Enter{_args.d_a1});
-                                  return {};
                                 }},
                             _args.d_a1->v());
-                        return {};
                       }},
                   l->v());
             },
@@ -98,27 +92,21 @@ LoopifyExtrema::minimum(const std::shared_ptr<List<unsigned int>> &l) {
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> unsigned int {
-                        _result = 0u;
-                        return {};
-                      },
+                          -> void { _result = 0u; },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> unsigned int {
+                          -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename List<unsigned int>::Nil
-                                        _args0) -> unsigned int {
+                                        _args0) -> void {
                                   _result = _args.d_a0;
-                                  return {};
                                 },
                                 [&](const typename List<unsigned int>::Cons
-                                        _args0) -> unsigned int {
+                                        _args0) -> void {
                                   _stack.push_back(_Call1{_args});
                                   _stack.push_back(_Enter{_args.d_a1});
-                                  return {};
                                 }},
                             _args.d_a1->v());
-                        return {};
                       }},
                   l->v());
             },
@@ -160,30 +148,22 @@ LoopifyExtrema::minmax(const std::shared_ptr<List<unsigned int>> &l) {
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> std::pair<unsigned int, unsigned int> {
-                        _result = std::make_pair(0u, 0u);
-                        return {};
-                      },
+                          -> void { _result = std::make_pair(0u, 0u); },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> std::pair<unsigned int, unsigned int> {
+                          -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename List<unsigned int>::Nil
-                                        _args0)
-                                    -> std::pair<unsigned int, unsigned int> {
+                                        _args0) -> void {
                                   _result =
                                       std::make_pair(_args.d_a0, _args.d_a0);
-                                  return {};
                                 },
                                 [&](const typename List<unsigned int>::Cons
-                                        _args0)
-                                    -> std::pair<unsigned int, unsigned int> {
+                                        _args0) -> void {
                                   _stack.push_back(_Call1{_args});
                                   _stack.push_back(_Enter{_args.d_a1});
-                                  return {};
                                 }},
                             _args.d_a1->v());
-                        return {};
                       }},
                   l->v());
             },

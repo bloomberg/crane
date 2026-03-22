@@ -50,61 +50,54 @@ LoopifyExpr::eval(const std::shared_ptr<LoopifyExpr::expr> &e) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     std::visit(
-        Overloaded{[&](_Enter _f) {
-                     const std::shared_ptr<LoopifyExpr::expr> e = _f.e;
-                     std::visit(
-                         Overloaded{
-                             [&](const typename LoopifyExpr::expr::Val _args)
-                                 -> unsigned int {
-                               _result = _args.d_a0;
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Succ _args)
-                                 -> unsigned int {
-                               _stack.push_back(_Call1{});
-                               _stack.push_back(_Enter{_args.d_a0});
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Add _args)
-                                 -> unsigned int {
-                               _stack.push_back(_Call2{_args.d_a0});
-                               _stack.push_back(_Enter{_args.d_a1});
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Mul _args)
-                                 -> unsigned int {
-                               _stack.push_back(_Call4{_args.d_a0});
-                               _stack.push_back(_Enter{_args.d_a1});
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Cond _args)
-                                 -> unsigned int {
-                               _stack.push_back(_Call6{_args});
-                               _stack.push_back(_Enter{_args.d_a0});
-                               return {};
-                             }},
-                         e->v());
-                   },
-                   [&](_Call1 _f) { _result = (_result + 1); },
-                   [&](_Call2 _f) {
-                     _stack.push_back(_Call3{_result});
-                     _stack.push_back(_Enter{_f._s0});
-                   },
-                   [&](_Call3 _f) { _result = (_result + _f._s0); },
-                   [&](_Call4 _f) {
-                     _stack.push_back(_Call5{_result});
-                     _stack.push_back(_Enter{_f._s0});
-                   },
-                   [&](_Call5 _f) { _result = (_result * _f._s0); },
-                   [&](_Call6 _f) {
-                     const typename LoopifyExpr::expr::Cond _args = _f._s0;
-                     unsigned int _cond0 = _result;
-                     if (0u < _cond0) {
-                       _stack.push_back(_Enter{_args.d_a1});
-                     } else {
-                       _stack.push_back(_Enter{_args.d_a2});
-                     }
-                   }},
+        Overloaded{
+            [&](_Enter _f) {
+              const std::shared_ptr<LoopifyExpr::expr> e = _f.e;
+              std::visit(
+                  Overloaded{
+                      [&](const typename LoopifyExpr::expr::Val _args) -> void {
+                        _result = _args.d_a0;
+                      },
+                      [&](const typename LoopifyExpr::expr::Succ _args)
+                          -> void {
+                        _stack.push_back(_Call1{});
+                        _stack.push_back(_Enter{_args.d_a0});
+                      },
+                      [&](const typename LoopifyExpr::expr::Add _args) -> void {
+                        _stack.push_back(_Call2{_args.d_a0});
+                        _stack.push_back(_Enter{_args.d_a1});
+                      },
+                      [&](const typename LoopifyExpr::expr::Mul _args) -> void {
+                        _stack.push_back(_Call4{_args.d_a0});
+                        _stack.push_back(_Enter{_args.d_a1});
+                      },
+                      [&](const typename LoopifyExpr::expr::Cond _args)
+                          -> void {
+                        _stack.push_back(_Call6{_args});
+                        _stack.push_back(_Enter{_args.d_a0});
+                      }},
+                  e->v());
+            },
+            [&](_Call1 _f) { _result = (_result + 1); },
+            [&](_Call2 _f) {
+              _stack.push_back(_Call3{_result});
+              _stack.push_back(_Enter{_f._s0});
+            },
+            [&](_Call3 _f) { _result = (_result + _f._s0); },
+            [&](_Call4 _f) {
+              _stack.push_back(_Call5{_result});
+              _stack.push_back(_Enter{_f._s0});
+            },
+            [&](_Call5 _f) { _result = (_result * _f._s0); },
+            [&](_Call6 _f) {
+              const typename LoopifyExpr::expr::Cond _args = _f._s0;
+              unsigned int _cond0 = _result;
+              if (0u < _cond0) {
+                _stack.push_back(_Enter{_args.d_a1});
+              } else {
+                _stack.push_back(_Enter{_args.d_a2});
+              }
+            }},
         _frame);
   }
   return _result;
@@ -163,35 +156,28 @@ LoopifyExpr::depth(const std::shared_ptr<LoopifyExpr::expr> &e) {
             [&](_Enter _f) {
               const std::shared_ptr<LoopifyExpr::expr> e = _f.e;
               std::visit(
-                  Overloaded{[&](const typename LoopifyExpr::expr::Val _args)
-                                 -> unsigned int {
-                               _result = 0u;
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Succ _args)
-                                 -> unsigned int {
-                               _stack.push_back(_Call1{});
-                               _stack.push_back(_Enter{_args.d_a0});
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Add _args)
-                                 -> unsigned int {
-                               _stack.push_back(_Call2{_args.d_a0});
-                               _stack.push_back(_Enter{_args.d_a1});
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Mul _args)
-                                 -> unsigned int {
-                               _stack.push_back(_Call4{_args.d_a0});
-                               _stack.push_back(_Enter{_args.d_a1});
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Cond _args)
-                                 -> unsigned int {
-                               _stack.push_back(_Call6{_args.d_a1, _args.d_a0});
-                               _stack.push_back(_Enter{_args.d_a2});
-                               return {};
-                             }},
+                  Overloaded{
+                      [&](const typename LoopifyExpr::expr::Val _args) -> void {
+                        _result = 0u;
+                      },
+                      [&](const typename LoopifyExpr::expr::Succ _args)
+                          -> void {
+                        _stack.push_back(_Call1{});
+                        _stack.push_back(_Enter{_args.d_a0});
+                      },
+                      [&](const typename LoopifyExpr::expr::Add _args) -> void {
+                        _stack.push_back(_Call2{_args.d_a0});
+                        _stack.push_back(_Enter{_args.d_a1});
+                      },
+                      [&](const typename LoopifyExpr::expr::Mul _args) -> void {
+                        _stack.push_back(_Call4{_args.d_a0});
+                        _stack.push_back(_Enter{_args.d_a1});
+                      },
+                      [&](const typename LoopifyExpr::expr::Cond _args)
+                          -> void {
+                        _stack.push_back(_Call6{_args.d_a1, _args.d_a0});
+                        _stack.push_back(_Enter{_args.d_a2});
+                      }},
                   e->v());
             },
             [&](_Call1 _f) { _result = (_result + 1); },
@@ -268,59 +254,50 @@ LoopifyExpr::count_vals(const std::shared_ptr<LoopifyExpr::expr> &e) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     std::visit(
-        Overloaded{[&](_Enter _f) {
-                     const std::shared_ptr<LoopifyExpr::expr> e = _f.e;
-                     std::visit(
-                         Overloaded{
-                             [&](const typename LoopifyExpr::expr::Val _args)
-                                 -> unsigned int {
-                               _result = 1u;
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Succ _args)
-                                 -> unsigned int {
-                               _stack.push_back(_Enter{_args.d_a0});
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Add _args)
-                                 -> unsigned int {
-                               _stack.push_back(_Call1{_args.d_a0});
-                               _stack.push_back(_Enter{_args.d_a1});
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Mul _args)
-                                 -> unsigned int {
-                               _stack.push_back(_Call3{_args.d_a0});
-                               _stack.push_back(_Enter{_args.d_a1});
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Cond _args)
-                                 -> unsigned int {
-                               _stack.push_back(_Call5{_args.d_a1, _args.d_a0});
-                               _stack.push_back(_Enter{_args.d_a2});
-                               return {};
-                             }},
-                         e->v());
-                   },
-                   [&](_Call1 _f) {
-                     _stack.push_back(_Call2{_result});
-                     _stack.push_back(_Enter{_f._s0});
-                   },
-                   [&](_Call2 _f) { _result = (_result + _f._s0); },
-                   [&](_Call3 _f) {
-                     _stack.push_back(_Call4{_result});
-                     _stack.push_back(_Enter{_f._s0});
-                   },
-                   [&](_Call4 _f) { _result = (_result + _f._s0); },
-                   [&](_Call5 _f) {
-                     _stack.push_back(_Call6{_result, _f._s1});
-                     _stack.push_back(_Enter{_f._s0});
-                   },
-                   [&](_Call6 _f) {
-                     _stack.push_back(_Call7{_f._s0, _result});
-                     _stack.push_back(_Enter{_f._s1});
-                   },
-                   [&](_Call7 _f) { _result = (_result + (_f._s1 + _f._s0)); }},
+        Overloaded{
+            [&](_Enter _f) {
+              const std::shared_ptr<LoopifyExpr::expr> e = _f.e;
+              std::visit(
+                  Overloaded{
+                      [&](const typename LoopifyExpr::expr::Val _args) -> void {
+                        _result = 1u;
+                      },
+                      [&](const typename LoopifyExpr::expr::Succ _args)
+                          -> void { _stack.push_back(_Enter{_args.d_a0}); },
+                      [&](const typename LoopifyExpr::expr::Add _args) -> void {
+                        _stack.push_back(_Call1{_args.d_a0});
+                        _stack.push_back(_Enter{_args.d_a1});
+                      },
+                      [&](const typename LoopifyExpr::expr::Mul _args) -> void {
+                        _stack.push_back(_Call3{_args.d_a0});
+                        _stack.push_back(_Enter{_args.d_a1});
+                      },
+                      [&](const typename LoopifyExpr::expr::Cond _args)
+                          -> void {
+                        _stack.push_back(_Call5{_args.d_a1, _args.d_a0});
+                        _stack.push_back(_Enter{_args.d_a2});
+                      }},
+                  e->v());
+            },
+            [&](_Call1 _f) {
+              _stack.push_back(_Call2{_result});
+              _stack.push_back(_Enter{_f._s0});
+            },
+            [&](_Call2 _f) { _result = (_result + _f._s0); },
+            [&](_Call3 _f) {
+              _stack.push_back(_Call4{_result});
+              _stack.push_back(_Enter{_f._s0});
+            },
+            [&](_Call4 _f) { _result = (_result + _f._s0); },
+            [&](_Call5 _f) {
+              _stack.push_back(_Call6{_result, _f._s1});
+              _stack.push_back(_Enter{_f._s0});
+            },
+            [&](_Call6 _f) {
+              _stack.push_back(_Call7{_f._s0, _result});
+              _stack.push_back(_Enter{_f._s1});
+            },
+            [&](_Call7 _f) { _result = (_result + (_f._s1 + _f._s0)); }},
         _frame);
   }
   return _result;
@@ -379,35 +356,28 @@ LoopifyExpr::size(const std::shared_ptr<LoopifyExpr::expr> &e) {
             [&](_Enter _f) {
               const std::shared_ptr<LoopifyExpr::expr> e = _f.e;
               std::visit(
-                  Overloaded{[&](const typename LoopifyExpr::expr::Val _args)
-                                 -> unsigned int {
-                               _result = 1u;
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Succ _args)
-                                 -> unsigned int {
-                               _stack.push_back(_Call1{});
-                               _stack.push_back(_Enter{_args.d_a0});
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Add _args)
-                                 -> unsigned int {
-                               _stack.push_back(_Call2{_args.d_a0});
-                               _stack.push_back(_Enter{_args.d_a1});
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Mul _args)
-                                 -> unsigned int {
-                               _stack.push_back(_Call4{_args.d_a0});
-                               _stack.push_back(_Enter{_args.d_a1});
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Cond _args)
-                                 -> unsigned int {
-                               _stack.push_back(_Call6{_args.d_a1, _args.d_a0});
-                               _stack.push_back(_Enter{_args.d_a2});
-                               return {};
-                             }},
+                  Overloaded{
+                      [&](const typename LoopifyExpr::expr::Val _args) -> void {
+                        _result = 1u;
+                      },
+                      [&](const typename LoopifyExpr::expr::Succ _args)
+                          -> void {
+                        _stack.push_back(_Call1{});
+                        _stack.push_back(_Enter{_args.d_a0});
+                      },
+                      [&](const typename LoopifyExpr::expr::Add _args) -> void {
+                        _stack.push_back(_Call2{_args.d_a0});
+                        _stack.push_back(_Enter{_args.d_a1});
+                      },
+                      [&](const typename LoopifyExpr::expr::Mul _args) -> void {
+                        _stack.push_back(_Call4{_args.d_a0});
+                        _stack.push_back(_Enter{_args.d_a1});
+                      },
+                      [&](const typename LoopifyExpr::expr::Cond _args)
+                          -> void {
+                        _stack.push_back(_Call6{_args.d_a1, _args.d_a0});
+                        _stack.push_back(_Enter{_args.d_a2});
+                      }},
                   e->v());
             },
             [&](_Call1 _f) { _result = (_result + 1); },
@@ -525,36 +495,28 @@ LoopifyExpr::simplify(const std::shared_ptr<LoopifyExpr::expr> &e) {
             [&](_Enter _f) {
               const std::shared_ptr<LoopifyExpr::expr> e = _f.e;
               std::visit(
-                  Overloaded{[&](const typename LoopifyExpr::expr::Val _args)
-                                 -> std::shared_ptr<LoopifyExpr::expr> {
-                               _result = expr::ctor::Val_(_args.d_a0);
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Succ _args)
-                                 -> std::shared_ptr<LoopifyExpr::expr> {
-                               _stack.push_back(_Call1{});
-                               _stack.push_back(_Enter{_args.d_a0});
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Add _args)
-                                 -> std::shared_ptr<LoopifyExpr::expr> {
-                               _stack.push_back(_Call2{_args});
-                               _stack.push_back(_Enter{_args.d_a0});
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Mul _args)
-                                 -> std::shared_ptr<LoopifyExpr::expr> {
-                               _stack.push_back(_Call8{_args});
-                               _stack.push_back(_Enter{_args.d_a0});
-                               return {};
-                             },
-                             [&](const typename LoopifyExpr::expr::Cond _args)
-                                 -> std::shared_ptr<LoopifyExpr::expr> {
-                               _stack.push_back(
-                                   _Call14{_args.d_a1, _args.d_a0});
-                               _stack.push_back(_Enter{_args.d_a2});
-                               return {};
-                             }},
+                  Overloaded{
+                      [&](const typename LoopifyExpr::expr::Val _args) -> void {
+                        _result = expr::ctor::Val_(_args.d_a0);
+                      },
+                      [&](const typename LoopifyExpr::expr::Succ _args)
+                          -> void {
+                        _stack.push_back(_Call1{});
+                        _stack.push_back(_Enter{_args.d_a0});
+                      },
+                      [&](const typename LoopifyExpr::expr::Add _args) -> void {
+                        _stack.push_back(_Call2{_args});
+                        _stack.push_back(_Enter{_args.d_a0});
+                      },
+                      [&](const typename LoopifyExpr::expr::Mul _args) -> void {
+                        _stack.push_back(_Call8{_args});
+                        _stack.push_back(_Enter{_args.d_a0});
+                      },
+                      [&](const typename LoopifyExpr::expr::Cond _args)
+                          -> void {
+                        _stack.push_back(_Call14{_args.d_a1, _args.d_a0});
+                        _stack.push_back(_Enter{_args.d_a2});
+                      }},
                   e->v());
             },
             [&](_Call1 _f) { _result = expr::ctor::Succ_(_result); },
@@ -1141,21 +1103,16 @@ LoopifyExpr::eval_simple(const std::shared_ptr<LoopifyExpr::simple_expr> &e) {
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyExpr::simple_expr::Lit _args)
-                          -> unsigned int {
-                        _result = _args.d_a0;
-                        return {};
-                      },
+                          -> void { _result = _args.d_a0; },
                       [&](const typename LoopifyExpr::simple_expr::Plus _args)
-                          -> unsigned int {
+                          -> void {
                         _stack.push_back(_Call1{_args.d_a0});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       },
                       [&](const typename LoopifyExpr::simple_expr::IfPos _args)
-                          -> unsigned int {
+                          -> void {
                         _stack.push_back(_Call3{_args});
                         _stack.push_back(_Enter{_args.d_a0});
-                        return {};
                       }},
                   e->v());
             },
@@ -1223,21 +1180,16 @@ LoopifyExpr::depth_simple(const std::shared_ptr<LoopifyExpr::simple_expr> &e) {
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyExpr::simple_expr::Lit _args)
-                          -> unsigned int {
-                        _result = 0u;
-                        return {};
-                      },
+                          -> void { _result = 0u; },
                       [&](const typename LoopifyExpr::simple_expr::Plus _args)
-                          -> unsigned int {
+                          -> void {
                         _stack.push_back(_Call1{_args.d_a0});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       },
                       [&](const typename LoopifyExpr::simple_expr::IfPos _args)
-                          -> unsigned int {
+                          -> void {
                         _stack.push_back(_Call3{_args.d_a1, _args.d_a0});
                         _stack.push_back(_Enter{_args.d_a2});
-                        return {};
                       }},
                   e->v());
             },
@@ -1290,13 +1242,10 @@ __attribute__((pure)) unsigned int LoopifyExpr::sum_shapes(
                   Overloaded{
                       [&](const typename List<
                           std::shared_ptr<LoopifyExpr::shape>>::Nil _args)
-                          -> unsigned int {
-                        _result = 0u;
-                        return {};
-                      },
+                          -> void { _result = 0u; },
                       [&](const typename List<
                           std::shared_ptr<LoopifyExpr::shape>>::Cons _args)
-                          -> unsigned int {
+                          -> void {
                         unsigned int val = std::visit(
                             Overloaded{
                                 [](const typename LoopifyExpr::shape::Circle
@@ -1314,7 +1263,6 @@ __attribute__((pure)) unsigned int LoopifyExpr::sum_shapes(
                             _args.d_a0->v());
                         _stack.push_back(_Call1{std::move(val)});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       }},
                   l->v());
             },
@@ -1353,18 +1301,14 @@ LoopifyExpr::count_by_shape(
                   Overloaded{
                       [&](const typename List<
                           std::shared_ptr<LoopifyExpr::shape>>::Nil _args)
-                          -> std::pair<std::pair<unsigned int, unsigned int>,
-                                       unsigned int> {
+                          -> void {
                         _result = std::make_pair(std::make_pair(0u, 0u), 0u);
-                        return {};
                       },
                       [&](const typename List<
                           std::shared_ptr<LoopifyExpr::shape>>::Cons _args)
-                          -> std::pair<std::pair<unsigned int, unsigned int>,
-                                       unsigned int> {
+                          -> void {
                         _stack.push_back(_Call1{_args});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       }},
                   l->v());
             },
@@ -1433,21 +1377,16 @@ LoopifyExpr::eval_cond(const std::shared_ptr<LoopifyExpr::cond_expr> &e) {
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyExpr::cond_expr::CLit _args)
-                          -> unsigned int {
-                        _result = _args.d_a0;
-                        return {};
-                      },
+                          -> void { _result = _args.d_a0; },
                       [&](const typename LoopifyExpr::cond_expr::CPlus _args)
-                          -> unsigned int {
+                          -> void {
                         _stack.push_back(_Call1{_args.d_a0});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       },
                       [&](const typename LoopifyExpr::cond_expr::CCond _args)
-                          -> unsigned int {
+                          -> void {
                         _stack.push_back(_Call3{_args});
                         _stack.push_back(_Enter{_args.d_a0});
-                        return {};
                       }},
                   e->v());
             },
@@ -1515,21 +1454,16 @@ LoopifyExpr::depth_cond(const std::shared_ptr<LoopifyExpr::cond_expr> &e) {
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyExpr::cond_expr::CLit _args)
-                          -> unsigned int {
-                        _result = 0u;
-                        return {};
-                      },
+                          -> void { _result = 0u; },
                       [&](const typename LoopifyExpr::cond_expr::CPlus _args)
-                          -> unsigned int {
+                          -> void {
                         _stack.push_back(_Call1{_args.d_a0});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       },
                       [&](const typename LoopifyExpr::cond_expr::CCond _args)
-                          -> unsigned int {
+                          -> void {
                         _stack.push_back(_Call3{_args.d_a1, _args.d_a0});
                         _stack.push_back(_Enter{_args.d_a2});
-                        return {};
                       }},
                   e->v());
             },

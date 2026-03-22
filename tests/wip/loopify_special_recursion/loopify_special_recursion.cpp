@@ -47,15 +47,13 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::process_twice_fuel(
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           _result = List<unsigned int>::ctor::Nil_();
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           _stack.push_back(_Call1{_args, fuel_});
                           _stack.push_back(_Enter{_args.d_a1, fuel_});
-                          return {};
                         }},
                     l->v());
               }
@@ -109,16 +107,12 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::double_append(
               const std::shared_ptr<List<unsigned int>> l1 = _f.l1;
               std::visit(
                   Overloaded{[&](const typename List<unsigned int>::Nil _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
-                               _result = std::move(l2);
-                               return {};
-                             },
+                                 -> void { _result = std::move(l2); },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _stack.push_back(_Call1{_args});
                                _stack.push_back(
                                    _Enter{std::move(l2), _args.d_a1});
-                               return {};
                              }},
                   l1->v());
             },
@@ -158,12 +152,11 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::remove_if_sum_even(
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         unsigned int next_val = std::visit(
                             Overloaded{
                                 [](const typename List<unsigned int>::Nil
@@ -179,7 +172,6 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::remove_if_sum_even(
                           _stack.push_back(_Call1{_args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
                         }
-                        return {};
                       }},
                   l->v());
             },
@@ -219,13 +211,12 @@ LoopifySpecialRecursion::reverse_insert(const unsigned int x,
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Cons_(
                             std::move(x), List<unsigned int>::ctor::Nil_());
-                        return {};
                       },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         if (_args.d_a0 < x) {
                           _stack.push_back(_Call1{_args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1, std::move(x)});
@@ -233,7 +224,6 @@ LoopifySpecialRecursion::reverse_insert(const unsigned int x,
                           _result = List<unsigned int>::ctor::Cons_(
                               std::move(x), std::move(l));
                         }
-                        return {};
                       }},
                   l->v());
             },
@@ -281,15 +271,13 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::collect_sorted(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifySpecialRecursion::tree::Leaf
-                              _args) -> std::shared_ptr<List<unsigned int>> {
+                              _args) -> void {
                         _result = List<unsigned int>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename LoopifySpecialRecursion::tree::Node
-                              _args) -> std::shared_ptr<List<unsigned int>> {
+                              _args) -> void {
                         _stack.push_back(_Call1{_args.d_a0, _args.d_a1});
                         _stack.push_back(_Enter{_args.d_a2});
-                        return {};
                       }},
                   t->v());
             },
@@ -333,19 +321,15 @@ __attribute__((pure)) unsigned int LoopifySpecialRecursion::sum_odd_indices_aux(
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> unsigned int {
-                        _result = 0u;
-                        return {};
-                      },
+                          -> void { _result = 0u; },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> unsigned int {
+                          -> void {
                         if ((idx % 2u) == 1u) {
                           _stack.push_back(_Call1{_args.d_a0});
                           _stack.push_back(_Enter{(idx + 1u), _args.d_a1});
                         } else {
                           _stack.push_back(_Enter{(idx + 1u), _args.d_a1});
                         }
-                        return {};
                       }},
                   l->v());
             },
@@ -391,12 +375,9 @@ __attribute__((pure)) unsigned int LoopifySpecialRecursion::categorize_by(
                      std::visit(
                          Overloaded{
                              [&](const typename List<unsigned int>::Nil _args)
-                                 -> unsigned int {
-                               _result = 0u;
-                               return {};
-                             },
+                                 -> void { _result = 0u; },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> unsigned int {
+                                 -> void {
                                if (k < _args.d_a0) {
                                  _stack.push_back(_Call1{3u});
                                  _stack.push_back(_Enter{_args.d_a1});
@@ -409,7 +390,6 @@ __attribute__((pure)) unsigned int LoopifySpecialRecursion::categorize_by(
                                    _stack.push_back(_Enter{_args.d_a1});
                                  }
                                }
-                               return {};
                              }},
                          l->v());
                    },
@@ -451,12 +431,11 @@ LoopifySpecialRecursion::between(const unsigned int lo, const unsigned int hi,
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         if (lo <= _args.d_a0) {
                           if (_args.d_a0 <= hi) {
                             _stack.push_back(_Call1{_args.d_a0});
@@ -470,7 +449,6 @@ LoopifySpecialRecursion::between(const unsigned int lo, const unsigned int hi,
                           _stack.push_back(
                               _Enter{_args.d_a1, std::move(hi), std::move(lo)});
                         }
-                        return {};
                       }},
                   l->v());
             },
@@ -510,16 +488,14 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::merge_levels(
                   Overloaded{
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _stack.push_back(_Call1{_args.d_a0});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       }},
                   ll->v());
             },

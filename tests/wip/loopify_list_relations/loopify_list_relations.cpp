@@ -41,29 +41,21 @@ __attribute__((pure)) bool LoopifyListRelations::is_prefix_of(
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> bool {
-                        _result = true;
-                        return {};
-                      },
+                          -> void { _result = true; },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> bool {
+                          -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename List<unsigned int>::Nil
-                                        _args0) -> bool {
-                                  _result = false;
-                                  return {};
-                                },
+                                        _args0) -> void { _result = false; },
                                 [&](const typename List<unsigned int>::Cons
-                                        _args0) -> bool {
+                                        _args0) -> void {
                                   _stack.push_back(
                                       _Call1{_args.d_a0 == _args0.d_a0});
                                   _stack.push_back(
                                       _Enter{_args0.d_a1, _args.d_a1});
-                                  return {};
                                 }},
                             l2->v());
-                        return {};
                       }},
                   l1->v());
             },
@@ -238,12 +230,11 @@ std::shared_ptr<List<unsigned int>> LoopifyListRelations::find_sublists_aux(
               std::shared_ptr<List<unsigned int>> needle = _f.needle;
               std::visit(
                   Overloaded{[&](const typename List<unsigned int>::Nil _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _result = List<unsigned int>::ctor::Nil_();
-                               return {};
                              },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                if (is_prefix_of(needle, haystack)) {
                                  _stack.push_back(_Call1{idx});
                                  _stack.push_back(_Enter{(idx + 1u), _args.d_a1,
@@ -253,7 +244,6 @@ std::shared_ptr<List<unsigned int>> LoopifyListRelations::find_sublists_aux(
                                                          _args.d_a1,
                                                          std::move(needle)});
                                }
-                               return {};
                              }},
                   haystack->v());
             },
@@ -300,7 +290,7 @@ LoopifyListRelations::list_eq(const std::shared_ptr<List<unsigned int>> &l1,
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> bool {
+                          -> void {
                         _result = std::visit(
                             Overloaded{
                                 [](const typename List<unsigned int>::Nil
@@ -308,27 +298,21 @@ LoopifyListRelations::list_eq(const std::shared_ptr<List<unsigned int>> &l1,
                                 [](const typename List<unsigned int>::Cons
                                        _args0) -> bool { return false; }},
                             l2->v());
-                        return {};
                       },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> bool {
+                          -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename List<unsigned int>::Nil
-                                        _args0) -> bool {
-                                  _result = false;
-                                  return {};
-                                },
+                                        _args0) -> void { _result = false; },
                                 [&](const typename List<unsigned int>::Cons
-                                        _args0) -> bool {
+                                        _args0) -> void {
                                   _stack.push_back(
                                       _Call1{_args.d_a0 == _args0.d_a0});
                                   _stack.push_back(
                                       _Enter{_args0.d_a1, _args.d_a1});
-                                  return {};
                                 }},
                             l2->v());
-                        return {};
                       }},
                   l1->v());
             },
@@ -418,38 +402,28 @@ LoopifyListRelations::zip(const std::shared_ptr<List<unsigned int>> &l1,
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> std::shared_ptr<
-                              List<std::pair<unsigned int, unsigned int>>> {
+                          -> void {
                         _result = List<std::pair<unsigned int,
                                                  unsigned int>>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> std::shared_ptr<
-                              List<std::pair<unsigned int, unsigned int>>> {
+                          -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename List<unsigned int>::Nil
-                                        _args0)
-                                    -> std::shared_ptr<List<std::pair<
-                                        unsigned int, unsigned int>>> {
+                                        _args0) -> void {
                                   _result = List<
                                       std::pair<unsigned int,
                                                 unsigned int>>::ctor::Nil_();
-                                  return {};
                                 },
                                 [&](const typename List<unsigned int>::Cons
-                                        _args0)
-                                    -> std::shared_ptr<List<std::pair<
-                                        unsigned int, unsigned int>>> {
+                                        _args0) -> void {
                                   _stack.push_back(_Call1{
                                       std::make_pair(_args.d_a0, _args0.d_a0)});
                                   _stack.push_back(
                                       _Enter{_args0.d_a1, _args.d_a1});
-                                  return {};
                                 }},
                             l2->v());
-                        return {};
                       }},
                   l1->v());
             },
@@ -500,55 +474,36 @@ LoopifyListRelations::zip3(const std::shared_ptr<List<unsigned int>> &l1,
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> std::shared_ptr<List<
-                              std::pair<std::pair<unsigned int, unsigned int>,
-                                        unsigned int>>> {
+                          -> void {
                         _result = List<
                             std::pair<std::pair<unsigned int, unsigned int>,
                                       unsigned int>>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> std::shared_ptr<List<
-                              std::pair<std::pair<unsigned int, unsigned int>,
-                                        unsigned int>>> {
+                          -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename List<unsigned int>::Nil
-                                        _args0)
-                                    -> std::shared_ptr<List<std::pair<
-                                        std::pair<unsigned int, unsigned int>,
-                                        unsigned int>>> {
+                                        _args0) -> void {
                                   _result = List<std::pair<
                                       std::pair<unsigned int, unsigned int>,
                                       unsigned int>>::ctor::Nil_();
-                                  return {};
                                 },
                                 [&](const typename List<unsigned int>::Cons
-                                        _args0)
-                                    -> std::shared_ptr<List<std::pair<
-                                        std::pair<unsigned int, unsigned int>,
-                                        unsigned int>>> {
+                                        _args0) -> void {
                                   std::visit(
                                       Overloaded{
                                           [&](const typename List<
                                               unsigned int>::Nil _args1)
-                                              -> std::shared_ptr<List<std::pair<
-                                                  std::pair<unsigned int,
-                                                            unsigned int>,
-                                                  unsigned int>>> {
+                                              -> void {
                                             _result = List<std::pair<
                                                 std::pair<unsigned int,
                                                           unsigned int>,
                                                 unsigned int>>::ctor::Nil_();
-                                            return {};
                                           },
                                           [&](const typename List<
                                               unsigned int>::Cons _args1)
-                                              -> std::shared_ptr<List<std::pair<
-                                                  std::pair<unsigned int,
-                                                            unsigned int>,
-                                                  unsigned int>>> {
+                                              -> void {
                                             _stack.push_back(
                                                 _Call1{std::make_pair(
                                                     std::make_pair(_args.d_a0,
@@ -557,13 +512,10 @@ LoopifyListRelations::zip3(const std::shared_ptr<List<unsigned int>> &l1,
                                             _stack.push_back(
                                                 _Enter{_args1.d_a1, _args0.d_a1,
                                                        _args.d_a1});
-                                            return {};
                                           }},
                                       l3->v());
-                                  return {};
                                 }},
                             l2->v());
-                        return {};
                       }},
                   l1->v());
             },
@@ -607,31 +559,23 @@ LoopifyListRelations::interleave(std::shared_ptr<List<unsigned int>> l1,
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
-                        _result = std::move(l2);
-                        return {};
-                      },
+                          -> void { _result = std::move(l2); },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename List<unsigned int>::Nil
-                                        _args0)
-                                    -> std::shared_ptr<List<unsigned int>> {
+                                        _args0) -> void {
                                   _result = std::move(l1);
-                                  return {};
                                 },
                                 [&](const typename List<unsigned int>::Cons
-                                        _args0)
-                                    -> std::shared_ptr<List<unsigned int>> {
+                                        _args0) -> void {
                                   _stack.push_back(
                                       _Call1{_args.d_a0, _args0.d_a0});
                                   _stack.push_back(
                                       _Enter{_args0.d_a1, _args.d_a1});
-                                  return {};
                                 }},
                             std::move(l2)->v());
-                        return {};
                       }},
                   l1->v());
             },
@@ -684,23 +628,15 @@ LoopifyListRelations::merge_fuel(const unsigned int fuel,
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<List<unsigned int>> {
-                          _result = std::move(l2);
-                          return {};
-                        },
+                            -> void { _result = std::move(l2); },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           std::visit(
                               Overloaded{
                                   [&](const typename List<unsigned int>::Nil
-                                          _args0)
-                                      -> std::shared_ptr<List<unsigned int>> {
-                                    _result = l1;
-                                    return {};
-                                  },
+                                          _args0) -> void { _result = l1; },
                                   [&](const typename List<unsigned int>::Cons
-                                          _args0)
-                                      -> std::shared_ptr<List<unsigned int>> {
+                                          _args0) -> void {
                                     if (_args.d_a0 <= _args0.d_a0) {
                                       _stack.push_back(_Call1{_args.d_a0});
                                       _stack.push_back(
@@ -711,10 +647,8 @@ LoopifyListRelations::merge_fuel(const unsigned int fuel,
                                       _stack.push_back(_Enter{
                                           _args0.d_a1, l1, std::move(fuel_)});
                                     }
-                                    return {};
                                   }},
                               l2->v());
-                          return {};
                         }},
                     l1->v());
               }
@@ -766,12 +700,9 @@ LoopifyListRelations::union_(const std::shared_ptr<List<unsigned int>> &l1,
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
-                        _result = std::move(l2);
-                        return {};
-                      },
+                          -> void { _result = std::move(l2); },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         if ([&](void) {
                               std::function<bool(
                                   unsigned int,
@@ -806,18 +737,16 @@ LoopifyListRelations::union_(const std::shared_ptr<List<unsigned int>> &l1,
                                                 Overloaded{
                                                     [&](const typename List<
                                                         unsigned int>::Nil
-                                                            _args) -> bool {
+                                                            _args) -> void {
                                                       _result = false;
-                                                      return {};
                                                     },
                                                     [&](const typename List<
                                                         unsigned int>::Cons
-                                                            _args) -> bool {
+                                                            _args) -> void {
                                                       _stack.push_back(_Call1{
                                                           y == _args.d_a0});
                                                       _stack.push_back(
                                                           _Enter{_args.d_a1});
-                                                      return {};
                                                     }},
                                                 ys->v());
                                           },
@@ -835,7 +764,6 @@ LoopifyListRelations::union_(const std::shared_ptr<List<unsigned int>> &l1,
                           _stack.push_back(_Call1{_args.d_a0});
                           _stack.push_back(_Enter{std::move(l2), _args.d_a1});
                         }
-                        return {};
                       }},
                   l1->v());
             },
@@ -875,12 +803,11 @@ std::shared_ptr<List<unsigned int>> LoopifyListRelations::intersection(
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         if ([&](void) {
                               std::function<bool(
                                   unsigned int,
@@ -915,18 +842,16 @@ std::shared_ptr<List<unsigned int>> LoopifyListRelations::intersection(
                                                 Overloaded{
                                                     [&](const typename List<
                                                         unsigned int>::Nil
-                                                            _args) -> bool {
+                                                            _args) -> void {
                                                       _result = false;
-                                                      return {};
                                                     },
                                                     [&](const typename List<
                                                         unsigned int>::Cons
-                                                            _args) -> bool {
+                                                            _args) -> void {
                                                       _stack.push_back(_Call1{
                                                           y == _args.d_a0});
                                                       _stack.push_back(
                                                           _Enter{_args.d_a1});
-                                                      return {};
                                                     }},
                                                 ys->v());
                                           },
@@ -944,7 +869,6 @@ std::shared_ptr<List<unsigned int>> LoopifyListRelations::intersection(
                         } else {
                           _stack.push_back(_Enter{std::move(l2), _args.d_a1});
                         }
-                        return {};
                       }},
                   l1->v());
             },

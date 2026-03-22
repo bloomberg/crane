@@ -87,24 +87,21 @@ public:
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       std::visit(
-          Overloaded{[&](_Enter _f) {
-                       const List *_self = _f._self;
-                       std::visit(
-                           Overloaded{[&](const typename List<t_A>::Nil _args)
-                                          -> unsigned int {
-                                        _result = 0u;
-                                        return {};
-                                      },
-                                      [&](const typename List<t_A>::Cons _args)
-                                          -> unsigned int {
-                                        _stack.push_back(_Call1{});
-                                        _stack.push_back(
-                                            _Enter{_args.d_a1.get()});
-                                        return {};
-                                      }},
-                           _self->v());
-                     },
-                     [&](_Call1 _f) { _result = (_result + 1); }},
+          Overloaded{
+              [&](_Enter _f) {
+                const List *_self = _f._self;
+                std::visit(
+                    Overloaded{
+                        [&](const typename List<t_A>::Nil _args) -> void {
+                          _result = 0u;
+                        },
+                        [&](const typename List<t_A>::Cons _args) -> void {
+                          _stack.push_back(_Call1{});
+                          _stack.push_back(_Enter{_args.d_a1.get()});
+                        }},
+                    _self->v());
+              },
+              [&](_Call1 _f) { _result = (_result + 1); }},
           _frame);
     }
     return _result;

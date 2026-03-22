@@ -43,22 +43,18 @@ LoopifyListPairing::unzip(
                   Overloaded{
                       [&](const typename List<
                           std::pair<unsigned int, unsigned int>>::Nil _args)
-                          -> std::pair<std::shared_ptr<List<unsigned int>>,
-                                       std::shared_ptr<List<unsigned int>>> {
+                          -> void {
                         _result =
                             std::make_pair(List<unsigned int>::ctor::Nil_(),
                                            List<unsigned int>::ctor::Nil_());
-                        return {};
                       },
                       [&](const typename List<
                           std::pair<unsigned int, unsigned int>>::Cons _args)
-                          -> std::pair<std::shared_ptr<List<unsigned int>>,
-                                       std::shared_ptr<List<unsigned int>>> {
+                          -> void {
                         unsigned int a = _args.d_a0.first;
                         unsigned int b = _args.d_a0.second;
                         _stack.push_back(_Call1{b, a});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       }},
                   l->v());
             },
@@ -100,22 +96,17 @@ LoopifyListPairing::swizzle(const std::shared_ptr<List<unsigned int>> &l) {
             [&](_Enter _f) {
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
-                  Overloaded{
-                      [&](const typename List<unsigned int>::Nil _args)
-                          -> std::pair<std::shared_ptr<List<unsigned int>>,
-                                       std::shared_ptr<List<unsigned int>>> {
-                        _result =
-                            std::make_pair(List<unsigned int>::ctor::Nil_(),
-                                           List<unsigned int>::ctor::Nil_());
-                        return {};
-                      },
-                      [&](const typename List<unsigned int>::Cons _args)
-                          -> std::pair<std::shared_ptr<List<unsigned int>>,
-                                       std::shared_ptr<List<unsigned int>>> {
-                        _stack.push_back(_Call1{_args});
-                        _stack.push_back(_Enter{_args.d_a1});
-                        return {};
-                      }},
+                  Overloaded{[&](const typename List<unsigned int>::Nil _args)
+                                 -> void {
+                               _result = std::make_pair(
+                                   List<unsigned int>::ctor::Nil_(),
+                                   List<unsigned int>::ctor::Nil_());
+                             },
+                             [&](const typename List<unsigned int>::Cons _args)
+                                 -> void {
+                               _stack.push_back(_Call1{_args});
+                               _stack.push_back(_Enter{_args.d_a1});
+                             }},
                   l->v());
             },
             [&](_Call1 _f) {
@@ -155,22 +146,17 @@ LoopifyListPairing::partition(const std::shared_ptr<List<unsigned int>> &l) {
             [&](_Enter _f) {
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
-                  Overloaded{
-                      [&](const typename List<unsigned int>::Nil _args)
-                          -> std::pair<std::shared_ptr<List<unsigned int>>,
-                                       std::shared_ptr<List<unsigned int>>> {
-                        _result =
-                            std::make_pair(List<unsigned int>::ctor::Nil_(),
-                                           List<unsigned int>::ctor::Nil_());
-                        return {};
-                      },
-                      [&](const typename List<unsigned int>::Cons _args)
-                          -> std::pair<std::shared_ptr<List<unsigned int>>,
-                                       std::shared_ptr<List<unsigned int>>> {
-                        _stack.push_back(_Call1{_args});
-                        _stack.push_back(_Enter{_args.d_a1});
-                        return {};
-                      }},
+                  Overloaded{[&](const typename List<unsigned int>::Nil _args)
+                                 -> void {
+                               _result = std::make_pair(
+                                   List<unsigned int>::ctor::Nil_(),
+                                   List<unsigned int>::ctor::Nil_());
+                             },
+                             [&](const typename List<unsigned int>::Cons _args)
+                                 -> void {
+                               _stack.push_back(_Call1{_args});
+                               _stack.push_back(_Enter{_args.d_a1});
+                             }},
                   l->v());
             },
             [&](_Call1 _f) {
@@ -240,63 +226,47 @@ LoopifyListPairing::zip_longest_fuel(
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<
-                                List<std::pair<unsigned int, unsigned int>>> {
+                            -> void {
                           std::visit(
                               Overloaded{
                                   [&](const typename List<unsigned int>::Nil
-                                          _args0)
-                                      -> std::shared_ptr<List<std::pair<
-                                          unsigned int, unsigned int>>> {
+                                          _args0) -> void {
                                     _result = List<
                                         std::pair<unsigned int,
                                                   unsigned int>>::ctor::Nil_();
-                                    return {};
                                   },
                                   [&](const typename List<unsigned int>::Cons
-                                          _args0)
-                                      -> std::shared_ptr<List<std::pair<
-                                          unsigned int, unsigned int>>> {
+                                          _args0) -> void {
                                     _stack.push_back(_Call1{
                                         std::make_pair(default0, _args0.d_a0)});
                                     _stack.push_back(
                                         _Enter{_args0.d_a1,
                                                List<unsigned int>::ctor::Nil_(),
                                                std::move(fuel_)});
-                                    return {};
                                   }},
                               l2->v());
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<
-                                List<std::pair<unsigned int, unsigned int>>> {
+                            -> void {
                           std::visit(
                               Overloaded{
                                   [&](const typename List<unsigned int>::Nil
-                                          _args0)
-                                      -> std::shared_ptr<List<std::pair<
-                                          unsigned int, unsigned int>>> {
+                                          _args0) -> void {
                                     _stack.push_back(_Call2{
                                         std::make_pair(_args.d_a0, default0)});
                                     _stack.push_back(
                                         _Enter{List<unsigned int>::ctor::Nil_(),
                                                _args.d_a1, std::move(fuel_)});
-                                    return {};
                                   },
                                   [&](const typename List<unsigned int>::Cons
-                                          _args0)
-                                      -> std::shared_ptr<List<std::pair<
-                                          unsigned int, unsigned int>>> {
+                                          _args0) -> void {
                                     _stack.push_back(_Call3{std::make_pair(
                                         _args.d_a0, _args0.d_a0)});
                                     _stack.push_back(_Enter{_args0.d_a1,
                                                             _args.d_a1,
                                                             std::move(fuel_)});
-                                    return {};
                                   }},
                               l2->v());
-                          return {};
                         }},
                     l1->v());
               }
@@ -365,31 +335,25 @@ LoopifyListPairing::zipWith(const std::shared_ptr<List<unsigned int>> &l1,
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename List<unsigned int>::Nil
-                                        _args0)
-                                    -> std::shared_ptr<List<unsigned int>> {
+                                        _args0) -> void {
                                   _result = List<unsigned int>::ctor::Nil_();
-                                  return {};
                                 },
                                 [&](const typename List<unsigned int>::Cons
-                                        _args0)
-                                    -> std::shared_ptr<List<unsigned int>> {
+                                        _args0) -> void {
                                   _stack.push_back(
                                       _Call1{(_args.d_a0 + _args0.d_a0)});
                                   _stack.push_back(
                                       _Enter{_args0.d_a1, _args.d_a1});
-                                  return {};
                                 }},
                             l2->v());
-                        return {};
                       }},
                   l1->v());
             },
@@ -427,22 +391,17 @@ LoopifyListPairing::split_even_odd(
             [&](_Enter _f) {
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
-                  Overloaded{
-                      [&](const typename List<unsigned int>::Nil _args)
-                          -> std::pair<std::shared_ptr<List<unsigned int>>,
-                                       std::shared_ptr<List<unsigned int>>> {
-                        _result =
-                            std::make_pair(List<unsigned int>::ctor::Nil_(),
-                                           List<unsigned int>::ctor::Nil_());
-                        return {};
-                      },
-                      [&](const typename List<unsigned int>::Cons _args)
-                          -> std::pair<std::shared_ptr<List<unsigned int>>,
-                                       std::shared_ptr<List<unsigned int>>> {
-                        _stack.push_back(_Call1{_args});
-                        _stack.push_back(_Enter{_args.d_a1});
-                        return {};
-                      }},
+                  Overloaded{[&](const typename List<unsigned int>::Nil _args)
+                                 -> void {
+                               _result = std::make_pair(
+                                   List<unsigned int>::ctor::Nil_(),
+                                   List<unsigned int>::ctor::Nil_());
+                             },
+                             [&](const typename List<unsigned int>::Cons _args)
+                                 -> void {
+                               _stack.push_back(_Call1{_args});
+                               _stack.push_back(_Enter{_args.d_a1});
+                             }},
                   l->v());
             },
             [&](_Call1 _f) {

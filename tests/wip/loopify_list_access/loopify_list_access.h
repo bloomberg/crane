@@ -144,19 +144,15 @@ struct LoopifyListAccess {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> unsigned int {
-                          _result = 0u;
-                          return {};
-                        },
+                            -> void { _result = 0u; },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> unsigned int {
+                            -> void {
                           if (p(_args.d_a0)) {
                             _stack.push_back(_Call1{1u});
                             _stack.push_back(_Enter{_args.d_a1});
                           } else {
                             _stack.push_back(_Enter{_args.d_a1});
                           }
-                          return {};
                         }},
                     l->v());
               },

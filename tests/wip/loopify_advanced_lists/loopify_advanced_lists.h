@@ -91,27 +91,24 @@ public:
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       std::visit(
-          Overloaded{[&](_Enter _f) {
-                       const List *_self = _f._self;
-                       std::shared_ptr<List<t_A>> m = _f.m;
-                       std::visit(
-                           Overloaded{[&](const typename List<t_A>::Nil _args)
-                                          -> std::shared_ptr<List<t_A>> {
-                                        _result = m;
-                                        return {};
-                                      },
-                                      [&](const typename List<t_A>::Cons _args)
-                                          -> std::shared_ptr<List<t_A>> {
-                                        _stack.push_back(_Call1{_args.d_a0});
-                                        _stack.push_back(
-                                            _Enter{m.get(), _args.d_a1});
-                                        return {};
-                                      }},
-                           _self->v());
-                     },
-                     [&](_Call1 _f) {
-                       _result = List<t_A>::ctor::Cons_(_f._s0, _result);
-                     }},
+          Overloaded{
+              [&](_Enter _f) {
+                const List *_self = _f._self;
+                std::shared_ptr<List<t_A>> m = _f.m;
+                std::visit(
+                    Overloaded{
+                        [&](const typename List<t_A>::Nil _args) -> void {
+                          _result = m;
+                        },
+                        [&](const typename List<t_A>::Cons _args) -> void {
+                          _stack.push_back(_Call1{_args.d_a0});
+                          _stack.push_back(_Enter{m.get(), _args.d_a1});
+                        }},
+                    _self->v());
+              },
+              [&](_Call1 _f) {
+                _result = List<t_A>::ctor::Cons_(_f._s0, _result);
+              }},
           _frame);
     }
     return _result;
@@ -158,15 +155,13 @@ struct LoopifyAdvancedLists {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           _result = List<unsigned int>::ctor::Nil_();
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           _stack.push_back(_Call1{f(_args.d_a0)});
                           _stack.push_back(_Enter{_args.d_a1});
-                          return {};
                         }},
                     l->v());
               },
@@ -201,15 +196,11 @@ struct LoopifyAdvancedLists {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> bool {
-                          _result = true;
-                          return {};
-                        },
+                            -> void { _result = true; },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> bool {
+                            -> void {
                           _stack.push_back(_Call1{p(_args.d_a0)});
                           _stack.push_back(_Enter{_args.d_a1});
-                          return {};
                         }},
                     l->v());
               },
@@ -244,15 +235,11 @@ struct LoopifyAdvancedLists {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> bool {
-                          _result = false;
-                          return {};
-                        },
+                            -> void { _result = false; },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> bool {
+                            -> void {
                           _stack.push_back(_Call1{p(_args.d_a0)});
                           _stack.push_back(_Enter{_args.d_a1});
-                          return {};
                         }},
                     l->v());
               },

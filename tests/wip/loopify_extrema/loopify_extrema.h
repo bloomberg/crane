@@ -106,27 +106,21 @@ struct LoopifyExtrema {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> unsigned int {
-                          _result = 0u;
-                          return {};
-                        },
+                            -> void { _result = 0u; },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> unsigned int {
+                            -> void {
                           std::visit(
                               Overloaded{
                                   [&](const typename List<unsigned int>::Nil
-                                          _args0) -> unsigned int {
+                                          _args0) -> void {
                                     _result = f(_args.d_a0);
-                                    return {};
                                   },
                                   [&](const typename List<unsigned int>::Cons
-                                          _args0) -> unsigned int {
+                                          _args0) -> void {
                                     _stack.push_back(_Call1{_args, f});
                                     _stack.push_back(_Enter{_args.d_a1});
-                                    return {};
                                   }},
                               _args.d_a1->v());
-                          return {};
                         }},
                     l->v());
               },
@@ -172,27 +166,21 @@ struct LoopifyExtrema {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> unsigned int {
-                          _result = 0u;
-                          return {};
-                        },
+                            -> void { _result = 0u; },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> unsigned int {
+                            -> void {
                           std::visit(
                               Overloaded{
                                   [&](const typename List<unsigned int>::Nil
-                                          _args0) -> unsigned int {
+                                          _args0) -> void {
                                     _result = f(_args.d_a0);
-                                    return {};
                                   },
                                   [&](const typename List<unsigned int>::Cons
-                                          _args0) -> unsigned int {
+                                          _args0) -> void {
                                     _stack.push_back(_Call1{_args, f});
                                     _stack.push_back(_Enter{_args.d_a1});
-                                    return {};
                                   }},
                               _args.d_a1->v());
-                          return {};
                         }},
                     l->v());
               },
@@ -238,27 +226,21 @@ struct LoopifyExtrema {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> unsigned int {
-                          _result = 0u;
-                          return {};
-                        },
+                            -> void { _result = 0u; },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> unsigned int {
+                            -> void {
                           std::visit(
                               Overloaded{
                                   [&](const typename List<unsigned int>::Nil
-                                          _args0) -> unsigned int {
+                                          _args0) -> void {
                                     _result = _args.d_a0;
-                                    return {};
                                   },
                                   [&](const typename List<unsigned int>::Cons
-                                          _args0) -> unsigned int {
+                                          _args0) -> void {
                                     _stack.push_back(_Call1{_args, f});
                                     _stack.push_back(_Enter{_args.d_a1});
-                                    return {};
                                   }},
                               _args.d_a1->v());
-                          return {};
                         }},
                     l->v());
               },
@@ -305,27 +287,21 @@ struct LoopifyExtrema {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> unsigned int {
-                          _result = 0u;
-                          return {};
-                        },
+                            -> void { _result = 0u; },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> unsigned int {
+                            -> void {
                           std::visit(
                               Overloaded{
                                   [&](const typename List<unsigned int>::Nil
-                                          _args0) -> unsigned int {
+                                          _args0) -> void {
                                     _result = _args.d_a0;
-                                    return {};
                                   },
                                   [&](const typename List<unsigned int>::Cons
-                                          _args0) -> unsigned int {
+                                          _args0) -> void {
                                     _stack.push_back(_Call1{_args, f});
                                     _stack.push_back(_Enter{_args.d_a1});
-                                    return {};
                                   }},
                               _args.d_a1->v());
-                          return {};
                         }},
                     l->v());
               },

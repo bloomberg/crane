@@ -50,26 +50,18 @@ LoopifyPairs::unzip(
                   Overloaded{
                       [&](const typename LoopifyPairs::list<
                           std::pair<unsigned int, unsigned int>>::Nil _args)
-                          -> std::pair<
-                              std::shared_ptr<LoopifyPairs::list<unsigned int>>,
-                              std::shared_ptr<
-                                  LoopifyPairs::list<unsigned int>>> {
+                          -> void {
                         _result =
                             std::make_pair(list<unsigned int>::ctor::Nil_(),
                                            list<unsigned int>::ctor::Nil_());
-                        return {};
                       },
                       [&](const typename LoopifyPairs::list<
                           std::pair<unsigned int, unsigned int>>::Cons _args)
-                          -> std::pair<
-                              std::shared_ptr<LoopifyPairs::list<unsigned int>>,
-                              std::shared_ptr<
-                                  LoopifyPairs::list<unsigned int>>> {
+                          -> void {
                         unsigned int x = _args.d_a0.first;
                         unsigned int y = _args.d_a0.second;
                         _stack.push_back(_Call1{y, x});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       }},
                   l->v());
             },
@@ -122,30 +114,16 @@ LoopifyPairs::partition3(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyPairs::list<unsigned int>::Nil
-                              _args)
-                          -> std::pair<
-                              std::shared_ptr<LoopifyPairs::list<unsigned int>>,
-                              std::pair<std::shared_ptr<
-                                            LoopifyPairs::list<unsigned int>>,
-                                        std::shared_ptr<LoopifyPairs::list<
-                                            unsigned int>>>> {
+                              _args) -> void {
                         _result = std::make_pair(
                             list<unsigned int>::ctor::Nil_(),
                             std::make_pair(list<unsigned int>::ctor::Nil_(),
                                            list<unsigned int>::ctor::Nil_()));
-                        return {};
                       },
                       [&](const typename LoopifyPairs::list<unsigned int>::Cons
-                              _args)
-                          -> std::pair<
-                              std::shared_ptr<LoopifyPairs::list<unsigned int>>,
-                              std::pair<std::shared_ptr<
-                                            LoopifyPairs::list<unsigned int>>,
-                                        std::shared_ptr<LoopifyPairs::list<
-                                            unsigned int>>>> {
+                              _args) -> void {
                         _stack.push_back(_Call1{pivot, _args});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       }},
                   l->v());
             },
@@ -208,30 +186,23 @@ LoopifyPairs::min_max(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyPairs::list<unsigned int>::Nil
-                              _args) -> std::pair<unsigned int, unsigned int> {
+                              _args) -> void {
                         _result = std::make_pair(0u, 0u);
-                        return {};
                       },
                       [&](const typename LoopifyPairs::list<unsigned int>::Cons
-                              _args) -> std::pair<unsigned int, unsigned int> {
+                              _args) -> void {
                         std::visit(
-                            Overloaded{
-                                [&](const typename LoopifyPairs::list<
-                                    unsigned int>::Nil _args0)
-                                    -> std::pair<unsigned int, unsigned int> {
-                                  _result =
-                                      std::make_pair(_args.d_a0, _args.d_a0);
-                                  return {};
-                                },
-                                [&](const typename LoopifyPairs::list<
-                                    unsigned int>::Cons _args0)
-                                    -> std::pair<unsigned int, unsigned int> {
-                                  _stack.push_back(_Call1{_args});
-                                  _stack.push_back(_Enter{_args.d_a1});
-                                  return {};
-                                }},
+                            Overloaded{[&](const typename LoopifyPairs::list<
+                                           unsigned int>::Nil _args0) -> void {
+                                         _result = std::make_pair(_args.d_a0,
+                                                                  _args.d_a0);
+                                       },
+                                       [&](const typename LoopifyPairs::list<
+                                           unsigned int>::Cons _args0) -> void {
+                                         _stack.push_back(_Call1{_args});
+                                         _stack.push_back(_Enter{_args.d_a1});
+                                       }},
                             _args.d_a1->v());
-                        return {};
                       }},
                   l->v());
             },
@@ -287,15 +258,13 @@ LoopifyPairs::sum_and_count(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyPairs::list<unsigned int>::Nil
-                              _args) -> std::pair<unsigned int, unsigned int> {
+                              _args) -> void {
                         _result = std::make_pair(0u, 0u);
-                        return {};
                       },
                       [&](const typename LoopifyPairs::list<unsigned int>::Cons
-                              _args) -> std::pair<unsigned int, unsigned int> {
+                              _args) -> void {
                         _stack.push_back(_Call1{_args});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       }},
                   l->v());
             },
@@ -338,19 +307,13 @@ LoopifyPairs::sum_prod_count(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyPairs::list<unsigned int>::Nil
-                              _args)
-                          -> std::pair<unsigned int,
-                                       std::pair<unsigned int, unsigned int>> {
+                              _args) -> void {
                         _result = std::make_pair(0u, std::make_pair(1u, 0u));
-                        return {};
                       },
                       [&](const typename LoopifyPairs::list<unsigned int>::Cons
-                              _args)
-                          -> std::pair<unsigned int,
-                                       std::pair<unsigned int, unsigned int>> {
+                              _args) -> void {
                         _stack.push_back(_Call1{_args});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       }},
                   l->v());
             },
@@ -401,13 +364,12 @@ std::shared_ptr<LoopifyPairs::list<unsigned int>> LoopifyPairs::lookup_all(
                   Overloaded{
                       [&](const typename LoopifyPairs::list<
                           std::pair<unsigned int, unsigned int>>::Nil _args)
-                          -> std::shared_ptr<LoopifyPairs::list<unsigned int>> {
+                          -> void {
                         _result = list<unsigned int>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename LoopifyPairs::list<
                           std::pair<unsigned int, unsigned int>>::Cons _args)
-                          -> std::shared_ptr<LoopifyPairs::list<unsigned int>> {
+                          -> void {
                         unsigned int k = _args.d_a0.first;
                         unsigned int v = _args.d_a0.second;
                         if (k == key) {
@@ -416,7 +378,6 @@ std::shared_ptr<LoopifyPairs::list<unsigned int>> LoopifyPairs::lookup_all(
                         } else {
                           _stack.push_back(_Enter{_args.d_a1});
                         }
-                        return {};
                       }},
                   l->v());
             },
@@ -462,21 +423,17 @@ LoopifyPairs::swap_pairs(
                   Overloaded{
                       [&](const typename LoopifyPairs::list<
                           std::pair<unsigned int, unsigned int>>::Nil _args)
-                          -> std::shared_ptr<LoopifyPairs::list<
-                              std::pair<unsigned int, unsigned int>>> {
+                          -> void {
                         _result = list<std::pair<unsigned int,
                                                  unsigned int>>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename LoopifyPairs::list<
                           std::pair<unsigned int, unsigned int>>::Cons _args)
-                          -> std::shared_ptr<LoopifyPairs::list<
-                              std::pair<unsigned int, unsigned int>>> {
+                          -> void {
                         unsigned int a = _args.d_a0.first;
                         unsigned int b = _args.d_a0.second;
                         _stack.push_back(_Call1{std::make_pair(b, a)});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       }},
                   l->v());
             },

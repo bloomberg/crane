@@ -127,17 +127,16 @@ struct LoopifyTreeVariants {
               [&](_Enter _f) {
                 const std::shared_ptr<ternary> t = _f.t;
                 std::visit(
-                    Overloaded{[&](const typename ternary::TLeaf _args) -> T1 {
-                                 _result = f;
-                                 return {};
-                               },
-                               [&](const typename ternary::TNode _args) -> T1 {
-                                 _stack.push_back(_Call1{
-                                     _args.d_a2, _args.d_a0, _args.d_a3,
-                                     _args.d_a2, _args.d_a1, _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a3});
-                                 return {};
-                               }},
+                    Overloaded{
+                        [&](const typename ternary::TLeaf _args) -> void {
+                          _result = f;
+                        },
+                        [&](const typename ternary::TNode _args) -> void {
+                          _stack.push_back(_Call1{_args.d_a2, _args.d_a0,
+                                                  _args.d_a3, _args.d_a2,
+                                                  _args.d_a1, _args.d_a0});
+                          _stack.push_back(_Enter{_args.d_a3});
+                        }},
                     t->v());
               },
               [&](_Call1 _f) {
@@ -208,17 +207,16 @@ struct LoopifyTreeVariants {
               [&](_Enter _f) {
                 const std::shared_ptr<ternary> t = _f.t;
                 std::visit(
-                    Overloaded{[&](const typename ternary::TLeaf _args) -> T1 {
-                                 _result = f;
-                                 return {};
-                               },
-                               [&](const typename ternary::TNode _args) -> T1 {
-                                 _stack.push_back(_Call1{
-                                     _args.d_a2, _args.d_a0, _args.d_a3,
-                                     _args.d_a2, _args.d_a1, _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a3});
-                                 return {};
-                               }},
+                    Overloaded{
+                        [&](const typename ternary::TLeaf _args) -> void {
+                          _result = f;
+                        },
+                        [&](const typename ternary::TNode _args) -> void {
+                          _stack.push_back(_Call1{_args.d_a2, _args.d_a0,
+                                                  _args.d_a3, _args.d_a2,
+                                                  _args.d_a1, _args.d_a0});
+                          _stack.push_back(_Enter{_args.d_a3});
+                        }},
                     t->v());
               },
               [&](_Call1 _f) {
@@ -364,43 +362,41 @@ struct LoopifyTreeVariants {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       std::visit(
-          Overloaded{[&](_Enter _f) {
-                       const std::shared_ptr<quadtree> q = _f.q;
-                       std::visit(
-                           Overloaded{
-                               [&](const typename quadtree::QLeaf _args) -> T1 {
-                                 _result = f(_args.d_a0);
-                                 return {};
-                               },
-                               [&](const typename quadtree::Quad _args) -> T1 {
-                                 _stack.push_back(_Call1{_args.d_a2, _args.d_a1,
-                                                         _args.d_a0, _args.d_a3,
-                                                         _args.d_a2, _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a3});
-                                 return {};
-                               }},
-                           q->v());
-                     },
-                     [&](_Call1 _f) {
-                       _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
-                                               _f._s4, _f._s5, _f._s6});
-                       _stack.push_back(_Enter{_f._s0});
-                     },
-                     [&](_Call2 _f) {
-                       _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
-                                               _f._s4, _f._s5, _f._s6});
-                       _stack.push_back(_Enter{_f._s1});
-                     },
-                     [&](_Call3 _f) {
-                       _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
-                                               _f._s4, _f._s5, _f._s6});
-                       _stack.push_back(_Enter{_f._s2});
-                     },
-                     [&](_Call4 _f) {
-                       _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4,
-                                    _f._s1, _f._s3, _f._s0);
-                     }},
+          Overloaded{
+              [&](_Enter _f) {
+                const std::shared_ptr<quadtree> q = _f.q;
+                std::visit(
+                    Overloaded{
+                        [&](const typename quadtree::QLeaf _args) -> void {
+                          _result = f(_args.d_a0);
+                        },
+                        [&](const typename quadtree::Quad _args) -> void {
+                          _stack.push_back(_Call1{
+                              _args.d_a2, _args.d_a1, _args.d_a0, _args.d_a3,
+                              _args.d_a2, _args.d_a1, _args.d_a0});
+                          _stack.push_back(_Enter{_args.d_a3});
+                        }},
+                    q->v());
+              },
+              [&](_Call1 _f) {
+                _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4,
+                                        _f._s5, _f._s6});
+                _stack.push_back(_Enter{_f._s0});
+              },
+              [&](_Call2 _f) {
+                _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4,
+                                        _f._s5, _f._s6});
+                _stack.push_back(_Enter{_f._s1});
+              },
+              [&](_Call3 _f) {
+                _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3, _f._s4,
+                                        _f._s5, _f._s6});
+                _stack.push_back(_Enter{_f._s2});
+              },
+              [&](_Call4 _f) {
+                _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
+                             _f._s3, _f._s0);
+              }},
           _frame);
     }
     return _result;
@@ -464,43 +460,41 @@ struct LoopifyTreeVariants {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       std::visit(
-          Overloaded{[&](_Enter _f) {
-                       const std::shared_ptr<quadtree> q = _f.q;
-                       std::visit(
-                           Overloaded{
-                               [&](const typename quadtree::QLeaf _args) -> T1 {
-                                 _result = f(_args.d_a0);
-                                 return {};
-                               },
-                               [&](const typename quadtree::Quad _args) -> T1 {
-                                 _stack.push_back(_Call1{_args.d_a2, _args.d_a1,
-                                                         _args.d_a0, _args.d_a3,
-                                                         _args.d_a2, _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a3});
-                                 return {};
-                               }},
-                           q->v());
-                     },
-                     [&](_Call1 _f) {
-                       _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
-                                               _f._s4, _f._s5, _f._s6});
-                       _stack.push_back(_Enter{_f._s0});
-                     },
-                     [&](_Call2 _f) {
-                       _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
-                                               _f._s4, _f._s5, _f._s6});
-                       _stack.push_back(_Enter{_f._s1});
-                     },
-                     [&](_Call3 _f) {
-                       _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
-                                               _f._s4, _f._s5, _f._s6});
-                       _stack.push_back(_Enter{_f._s2});
-                     },
-                     [&](_Call4 _f) {
-                       _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4,
-                                    _f._s1, _f._s3, _f._s0);
-                     }},
+          Overloaded{
+              [&](_Enter _f) {
+                const std::shared_ptr<quadtree> q = _f.q;
+                std::visit(
+                    Overloaded{
+                        [&](const typename quadtree::QLeaf _args) -> void {
+                          _result = f(_args.d_a0);
+                        },
+                        [&](const typename quadtree::Quad _args) -> void {
+                          _stack.push_back(_Call1{
+                              _args.d_a2, _args.d_a1, _args.d_a0, _args.d_a3,
+                              _args.d_a2, _args.d_a1, _args.d_a0});
+                          _stack.push_back(_Enter{_args.d_a3});
+                        }},
+                    q->v());
+              },
+              [&](_Call1 _f) {
+                _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4,
+                                        _f._s5, _f._s6});
+                _stack.push_back(_Enter{_f._s0});
+              },
+              [&](_Call2 _f) {
+                _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4,
+                                        _f._s5, _f._s6});
+                _stack.push_back(_Enter{_f._s1});
+              },
+              [&](_Call3 _f) {
+                _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3, _f._s4,
+                                        _f._s5, _f._s6});
+                _stack.push_back(_Enter{_f._s2});
+              },
+              [&](_Call4 _f) {
+                _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
+                             _f._s3, _f._s0);
+              }},
           _frame);
     }
     return _result;
@@ -599,15 +593,13 @@ struct LoopifyTreeVariants {
                 const std::shared_ptr<leaf_tree> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename leaf_tree::LLeaf _args) -> T1 {
+                        [&](const typename leaf_tree::LLeaf _args) -> void {
                           _result = f(_args.d_a0);
-                          return {};
                         },
-                        [&](const typename leaf_tree::LNode _args) -> T1 {
+                        [&](const typename leaf_tree::LNode _args) -> void {
                           _stack.push_back(
                               _Call1{_args.d_a0, _args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
-                          return {};
                         }},
                     l->v());
               },
@@ -658,15 +650,13 @@ struct LoopifyTreeVariants {
                 const std::shared_ptr<leaf_tree> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename leaf_tree::LLeaf _args) -> T1 {
+                        [&](const typename leaf_tree::LLeaf _args) -> void {
                           _result = f(_args.d_a0);
-                          return {};
                         },
-                        [&](const typename leaf_tree::LNode _args) -> T1 {
+                        [&](const typename leaf_tree::LNode _args) -> void {
                           _stack.push_back(
                               _Call1{_args.d_a0, _args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
-                          return {};
                         }},
                     l->v());
               },

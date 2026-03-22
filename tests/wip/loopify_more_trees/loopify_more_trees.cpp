@@ -44,15 +44,11 @@ LoopifyMoreTrees::mirror(const std::shared_ptr<LoopifyMoreTrees::tree> &t) {
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyMoreTrees::tree::Leaf _args)
-                          -> std::shared_ptr<LoopifyMoreTrees::tree> {
-                        _result = tree::ctor::Leaf_();
-                        return {};
-                      },
+                          -> void { _result = tree::ctor::Leaf_(); },
                       [&](const typename LoopifyMoreTrees::tree::Node _args)
-                          -> std::shared_ptr<LoopifyMoreTrees::tree> {
+                          -> void {
                         _stack.push_back(_Call1{_args.d_a2, _args.d_a1});
                         _stack.push_back(_Enter{_args.d_a0});
-                        return {};
                       }},
                   t->v());
             },
@@ -102,7 +98,7 @@ __attribute__((pure)) bool LoopifyMoreTrees::same_shape(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyMoreTrees::tree::Leaf _args)
-                          -> bool {
+                          -> void {
                         _result = std::visit(
                             Overloaded{
                                 [](const typename LoopifyMoreTrees::tree::Leaf
@@ -110,27 +106,21 @@ __attribute__((pure)) bool LoopifyMoreTrees::same_shape(
                                 [](const typename LoopifyMoreTrees::tree::Node
                                        _args0) -> bool { return false; }},
                             t2->v());
-                        return {};
                       },
                       [&](const typename LoopifyMoreTrees::tree::Node _args)
-                          -> bool {
+                          -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename LoopifyMoreTrees::tree::Leaf
-                                        _args0) -> bool {
-                                  _result = false;
-                                  return {};
-                                },
+                                        _args0) -> void { _result = false; },
                                 [&](const typename LoopifyMoreTrees::tree::Node
-                                        _args0) -> bool {
+                                        _args0) -> void {
                                   _stack.push_back(
                                       _Call1{_args0.d_a0, _args.d_a0});
                                   _stack.push_back(
                                       _Enter{_args0.d_a2, _args.d_a2});
-                                  return {};
                                 }},
                             t2->v());
-                        return {};
                       }},
                   t1->v());
             },
@@ -179,18 +169,16 @@ std::shared_ptr<List<unsigned int>> LoopifyMoreTrees::tree_to_list(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyMoreTrees::tree::Leaf _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename LoopifyMoreTrees::tree::Node _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _stack.push_back(_Call1{
                             _args.d_a0,
                             List<unsigned int>::ctor::Cons_(
                                 _args.d_a1, List<unsigned int>::ctor::Nil_())});
                         _stack.push_back(_Enter{_args.d_a2});
-                        return {};
                       }},
                   t->v());
             },
@@ -240,15 +228,11 @@ __attribute__((pure)) unsigned int LoopifyMoreTrees::count_nodes(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyMoreTrees::tree::Leaf _args)
-                          -> unsigned int {
-                        _result = 0u;
-                        return {};
-                      },
+                          -> void { _result = 0u; },
                       [&](const typename LoopifyMoreTrees::tree::Node _args)
-                          -> unsigned int {
+                          -> void {
                         _stack.push_back(_Call1{_args.d_a0, 1u});
                         _stack.push_back(_Enter{_args.d_a2});
-                        return {};
                       }},
                   t->v());
             },
@@ -304,32 +288,24 @@ LoopifyMoreTrees::tree_max(std::shared_ptr<LoopifyMoreTrees::tree> t1,
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyMoreTrees::tree::Leaf _args)
-                          -> std::shared_ptr<LoopifyMoreTrees::tree> {
-                        _result = std::move(t2);
-                        return {};
-                      },
+                          -> void { _result = std::move(t2); },
                       [&](const typename LoopifyMoreTrees::tree::Node _args)
-                          -> std::shared_ptr<LoopifyMoreTrees::tree> {
+                          -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename LoopifyMoreTrees::tree::Leaf
-                                        _args0)
-                                    -> std::shared_ptr<LoopifyMoreTrees::tree> {
+                                        _args0) -> void {
                                   _result = std::move(t1);
-                                  return {};
                                 },
                                 [&](const typename LoopifyMoreTrees::tree::Node
-                                        _args0)
-                                    -> std::shared_ptr<LoopifyMoreTrees::tree> {
+                                        _args0) -> void {
                                   _stack.push_back(_Call1{
                                       _args0.d_a0, _args.d_a0,
                                       std::max(_args.d_a1, _args0.d_a1)});
                                   _stack.push_back(
                                       _Enter{_args0.d_a2, _args.d_a2});
-                                  return {};
                                 }},
                             std::move(t2)->v());
-                        return {};
                       }},
                   t1->v());
             },
@@ -378,15 +354,11 @@ __attribute__((pure)) unsigned int LoopifyMoreTrees::sum_of_max_branches(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyMoreTrees::tree::Leaf _args)
-                          -> unsigned int {
-                        _result = 0u;
-                        return {};
-                      },
+                          -> void { _result = 0u; },
                       [&](const typename LoopifyMoreTrees::tree::Node _args)
-                          -> unsigned int {
+                          -> void {
                         _stack.push_back(_Call1{_args.d_a0, _args.d_a1});
                         _stack.push_back(_Enter{_args.d_a2});
-                        return {};
                       }},
                   t->v());
             },
@@ -437,14 +409,13 @@ LoopifyMoreTrees::insert_bst(const unsigned int x,
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyMoreTrees::tree::Leaf _args)
-                          -> std::shared_ptr<LoopifyMoreTrees::tree> {
+                          -> void {
                         _result =
                             tree::ctor::Node_(tree::ctor::Leaf_(), std::move(x),
                                               tree::ctor::Leaf_());
-                        return {};
                       },
                       [&](const typename LoopifyMoreTrees::tree::Node _args)
-                          -> std::shared_ptr<LoopifyMoreTrees::tree> {
+                          -> void {
                         if (x <= _args.d_a1) {
                           _stack.push_back(_Call1{_args.d_a2, _args.d_a1});
                           _stack.push_back(_Enter{_args.d_a0, std::move(x)});
@@ -452,7 +423,6 @@ LoopifyMoreTrees::insert_bst(const unsigned int x,
                           _stack.push_back(_Call2{_args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a2, std::move(x)});
                         }
-                        return {};
                       }},
                   t->v());
             },
@@ -491,15 +461,11 @@ LoopifyMoreTrees::build_bst(const std::shared_ptr<List<unsigned int>> &l) {
                      std::visit(
                          Overloaded{
                              [&](const typename List<unsigned int>::Nil _args)
-                                 -> std::shared_ptr<LoopifyMoreTrees::tree> {
-                               _result = tree::ctor::Leaf_();
-                               return {};
-                             },
+                                 -> void { _result = tree::ctor::Leaf_(); },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::shared_ptr<LoopifyMoreTrees::tree> {
+                                 -> void {
                                _stack.push_back(_Call1{_args.d_a0});
                                _stack.push_back(_Enter{_args.d_a1});
-                               return {};
                              }},
                          l->v());
                    },
@@ -536,16 +502,12 @@ LoopifyMoreTrees::append_lists(const std::shared_ptr<List<unsigned int>> &l1,
                      std::visit(
                          Overloaded{
                              [&](const typename List<unsigned int>::Nil _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
-                               _result = std::move(l2);
-                               return {};
-                             },
+                                 -> void { _result = std::move(l2); },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _stack.push_back(_Call1{_args.d_a0});
                                _stack.push_back(
                                    _Enter{std::move(l2), _args.d_a1});
-                               return {};
                              }},
                          l1->v());
                    },
@@ -585,16 +547,14 @@ std::shared_ptr<List<unsigned int>> LoopifyMoreTrees::flatten(
                   Overloaded{
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _stack.push_back(_Call1{_args.d_a0});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       }},
                   ll->v());
             },
@@ -635,19 +595,15 @@ LoopifyMoreTrees::map_tree_to_list(
                   Overloaded{
                       [&](const typename List<
                           std::shared_ptr<LoopifyMoreTrees::tree>>::Nil _args)
-                          -> std::shared_ptr<
-                              List<std::shared_ptr<List<unsigned int>>>> {
+                          -> void {
                         _result = List<
                             std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<
                           std::shared_ptr<LoopifyMoreTrees::tree>>::Cons _args)
-                          -> std::shared_ptr<
-                              List<std::shared_ptr<List<unsigned int>>>> {
+                          -> void {
                         _stack.push_back(_Call1{tree_to_list(_args.d_a0)});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       }},
                   lt->v());
             },
@@ -716,18 +672,12 @@ LoopifyMoreTrees::append_trees(
                   Overloaded{
                       [&](const typename List<
                           std::shared_ptr<LoopifyMoreTrees::tree>>::Nil _args)
-                          -> std::shared_ptr<
-                              List<std::shared_ptr<LoopifyMoreTrees::tree>>> {
-                        _result = std::move(l2);
-                        return {};
-                      },
+                          -> void { _result = std::move(l2); },
                       [&](const typename List<
                           std::shared_ptr<LoopifyMoreTrees::tree>>::Cons _args)
-                          -> std::shared_ptr<
-                              List<std::shared_ptr<LoopifyMoreTrees::tree>>> {
+                          -> void {
                         _stack.push_back(_Call1{_args.d_a0});
                         _stack.push_back(_Enter{std::move(l2), _args.d_a1});
-                        return {};
                       }},
                   l1->v());
             },
@@ -772,20 +722,16 @@ LoopifyMoreTrees::concat_map_children(
                   Overloaded{
                       [&](const typename List<
                           std::shared_ptr<LoopifyMoreTrees::tree>>::Nil _args)
-                          -> std::shared_ptr<
-                              List<std::shared_ptr<LoopifyMoreTrees::tree>>> {
+                          -> void {
                         _result =
                             List<std::shared_ptr<LoopifyMoreTrees::tree>>::
                                 ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<
                           std::shared_ptr<LoopifyMoreTrees::tree>>::Cons _args)
-                          -> std::shared_ptr<
-                              List<std::shared_ptr<LoopifyMoreTrees::tree>>> {
+                          -> void {
                         _stack.push_back(_Call1{tree_children(_args.d_a0)});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       }},
                   lt->v());
             },
@@ -832,16 +778,12 @@ LoopifyMoreTrees::tree_levels_fuel(
                     Overloaded{
                         [&](const typename List<
                             std::shared_ptr<LoopifyMoreTrees::tree>>::Nil _args)
-                            -> std::shared_ptr<
-                                List<std::shared_ptr<List<unsigned int>>>> {
+                            -> void {
                           _result = List<std::shared_ptr<List<unsigned int>>>::
                               ctor::Nil_();
-                          return {};
                         },
                         [&](const typename List<std::shared_ptr<
-                                LoopifyMoreTrees::tree>>::Cons _args)
-                            -> std::shared_ptr<
-                                List<std::shared_ptr<List<unsigned int>>>> {
+                                LoopifyMoreTrees::tree>>::Cons _args) -> void {
                           std::shared_ptr<List<unsigned int>> values =
                               flatten(map_tree_to_list(level));
                           std::shared_ptr<
@@ -849,7 +791,6 @@ LoopifyMoreTrees::tree_levels_fuel(
                               next = concat_map_children(level);
                           _stack.push_back(_Call1{std::move(values)});
                           _stack.push_back(_Enter{std::move(next), fuel_});
-                          return {};
                         }},
                     level->v());
               }

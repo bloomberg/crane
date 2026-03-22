@@ -40,19 +40,17 @@ LoopifyPredicates::remove_all(const unsigned int x,
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         if (x == _args.d_a0) {
                           _stack.push_back(_Enter{_args.d_a1, std::move(x)});
                         } else {
                           _stack.push_back(_Call1{_args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1, std::move(x)});
                         }
-                        return {};
                       }},
                   l->v());
             },

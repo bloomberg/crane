@@ -74,15 +74,13 @@ LoopifyListGeneration::stutter(const std::shared_ptr<List<unsigned int>> &l) {
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
                   Overloaded{[&](const typename List<unsigned int>::Nil _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _result = List<unsigned int>::ctor::Nil_();
-                               return {};
                              },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _stack.push_back(_Call1{_args.d_a0, _args.d_a0});
                                _stack.push_back(_Enter{_args.d_a1});
-                               return {};
                              }},
                   l->v());
             },
@@ -193,20 +191,18 @@ std::shared_ptr<List<unsigned int>> LoopifyListGeneration::replicate_list(
                   Overloaded{
                       [&](const typename List<
                           std::pair<unsigned int, unsigned int>>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<
                           std::pair<unsigned int, unsigned int>>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         unsigned int n = _args.d_a0.first;
                         unsigned int x = _args.d_a0.second;
                         std::shared_ptr<List<unsigned int>> rep =
                             replicate(n, x);
                         _stack.push_back(_Call1{std::move(rep)});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       }},
                   l->v());
             },

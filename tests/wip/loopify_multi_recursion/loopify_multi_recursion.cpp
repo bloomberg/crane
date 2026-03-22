@@ -255,16 +255,12 @@ __attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_count_leaves(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyMultiRecursion::quadtree::QLeaf
-                              _args) -> unsigned int {
-                        _result = 1u;
-                        return {};
-                      },
+                              _args) -> void { _result = 1u; },
                       [&](const typename LoopifyMultiRecursion::quadtree::QQuad
-                              _args) -> unsigned int {
+                              _args) -> void {
                         _stack.push_back(
                             _Call1{_args.d_a2, _args.d_a1, _args.d_a0});
                         _stack.push_back(_Enter{_args.d_a3});
-                        return {};
                       }},
                   t->v());
             },
@@ -336,16 +332,12 @@ __attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_depth(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyMultiRecursion::quadtree::QLeaf
-                              _args) -> unsigned int {
-                        _result = 0u;
-                        return {};
-                      },
+                              _args) -> void { _result = 0u; },
                       [&](const typename LoopifyMultiRecursion::quadtree::QQuad
-                              _args) -> unsigned int {
+                              _args) -> void {
                         _stack.push_back(
                             _Call1{_args.d_a2, _args.d_a1, _args.d_a0, 1u});
                         _stack.push_back(_Enter{_args.d_a3});
-                        return {};
                       }},
                   t->v());
             },

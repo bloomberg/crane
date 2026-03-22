@@ -99,19 +99,17 @@ struct LoopifyPredicates {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           _result = List<unsigned int>::ctor::Nil_();
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           if (p(_args.d_a0)) {
                             _stack.push_back(_Call1{_args.d_a0});
                             _stack.push_back(_Enter{_args.d_a1});
                           } else {
                             _result = List<unsigned int>::ctor::Nil_();
                           }
-                          return {};
                         }},
                     l->v());
               },
@@ -146,18 +144,16 @@ struct LoopifyPredicates {
             } else {
               std::visit(
                   Overloaded{[&](const typename List<unsigned int>::Nil _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _result = List<unsigned int>::ctor::Nil_();
-                               return {};
                              },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                if (p(_args.d_a0)) {
                                  _stack.push_back(_Enter{_args.d_a1});
                                } else {
                                  _result = std::move(l);
                                }
-                               return {};
                              }},
                   l->v());
             }
@@ -195,16 +191,13 @@ struct LoopifyPredicates {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::pair<std::shared_ptr<List<unsigned int>>,
-                                         std::shared_ptr<List<unsigned int>>> {
+                            -> void {
                           _result =
                               std::make_pair(List<unsigned int>::ctor::Nil_(),
                                              List<unsigned int>::ctor::Nil_());
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::pair<std::shared_ptr<List<unsigned int>>,
-                                         std::shared_ptr<List<unsigned int>>> {
+                            -> void {
                           if (p(_args.d_a0)) {
                             _stack.push_back(_Call1{_args});
                             _stack.push_back(_Enter{_args.d_a1});
@@ -212,7 +205,6 @@ struct LoopifyPredicates {
                             _result = std::make_pair(
                                 List<unsigned int>::ctor::Nil_(), std::move(l));
                           }
-                          return {};
                         }},
                     l->v());
               },
@@ -256,16 +248,13 @@ struct LoopifyPredicates {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::pair<std::shared_ptr<List<unsigned int>>,
-                                         std::shared_ptr<List<unsigned int>>> {
+                            -> void {
                           _result =
                               std::make_pair(List<unsigned int>::ctor::Nil_(),
                                              List<unsigned int>::ctor::Nil_());
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::pair<std::shared_ptr<List<unsigned int>>,
-                                         std::shared_ptr<List<unsigned int>>> {
+                            -> void {
                           if (p(_args.d_a0)) {
                             _result = std::make_pair(
                                 List<unsigned int>::ctor::Nil_(), std::move(l));
@@ -273,7 +262,6 @@ struct LoopifyPredicates {
                             _stack.push_back(_Call1{_args});
                             _stack.push_back(_Enter{_args.d_a1});
                           }
-                          return {};
                         }},
                     l->v());
               },
@@ -315,19 +303,17 @@ struct LoopifyPredicates {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           _result = List<unsigned int>::ctor::Nil_();
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           if (p(_args.d_a0)) {
                             _stack.push_back(_Call1{_args.d_a0});
                             _stack.push_back(_Enter{_args.d_a1});
                           } else {
                             _stack.push_back(_Enter{_args.d_a1});
                           }
-                          return {};
                         }},
                     l->v());
               },
@@ -365,19 +351,17 @@ struct LoopifyPredicates {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           _result = List<unsigned int>::ctor::Nil_();
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           if (p(_args.d_a0)) {
                             _stack.push_back(_Enter{_args.d_a1});
                           } else {
                             _stack.push_back(_Call1{_args.d_a0});
                             _stack.push_back(_Enter{_args.d_a1});
                           }
-                          return {};
                         }},
                     l->v());
               },
@@ -414,15 +398,11 @@ struct LoopifyPredicates {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> bool {
-                          _result = true;
-                          return {};
-                        },
+                            -> void { _result = true; },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> bool {
+                            -> void {
                           _stack.push_back(_Call1{p(_args.d_a0)});
                           _stack.push_back(_Enter{_args.d_a1});
-                          return {};
                         }},
                     l->v());
               },
@@ -457,15 +437,11 @@ struct LoopifyPredicates {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> bool {
-                          _result = false;
-                          return {};
-                        },
+                            -> void { _result = false; },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> bool {
+                            -> void {
                           _stack.push_back(_Call1{p(_args.d_a0)});
                           _stack.push_back(_Enter{_args.d_a1});
-                          return {};
                         }},
                     l->v());
               },
@@ -541,12 +517,11 @@ struct LoopifyPredicates {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           _result = List<unsigned int>::ctor::Nil_();
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           if (p(_args.d_a0)) {
                             _stack.push_back(_Call1{idx});
                             _stack.push_back(_Enter{(idx + 1u), _args.d_a1});
@@ -554,7 +529,6 @@ struct LoopifyPredicates {
                             _stack.push_back(
                                 _Enter{(std::move(idx) + 1u), _args.d_a1});
                           }
-                          return {};
                         }},
                     l->v());
               },
@@ -601,19 +575,17 @@ struct LoopifyPredicates {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           _result = List<unsigned int>::ctor::Nil_();
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           if (eq(x, _args.d_a0)) {
                             _result = _args.d_a1;
                           } else {
                             _stack.push_back(_Call1{_args.d_a0});
                             _stack.push_back(_Enter{_args.d_a1, std::move(x)});
                           }
-                          return {};
                         }},
                     l->v());
               },

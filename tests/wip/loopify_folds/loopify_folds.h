@@ -88,24 +88,21 @@ public:
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       std::visit(
-          Overloaded{[&](_Enter _f) {
-                       const List *_self = _f._self;
-                       std::visit(
-                           Overloaded{[&](const typename List<t_A>::Nil _args)
-                                          -> unsigned int {
-                                        _result = 0u;
-                                        return {};
-                                      },
-                                      [&](const typename List<t_A>::Cons _args)
-                                          -> unsigned int {
-                                        _stack.push_back(_Call1{});
-                                        _stack.push_back(
-                                            _Enter{_args.d_a1.get()});
-                                        return {};
-                                      }},
-                           _self->v());
-                     },
-                     [&](_Call1 _f) { _result = (_result + 1); }},
+          Overloaded{
+              [&](_Enter _f) {
+                const List *_self = _f._self;
+                std::visit(
+                    Overloaded{
+                        [&](const typename List<t_A>::Nil _args) -> void {
+                          _result = 0u;
+                        },
+                        [&](const typename List<t_A>::Cons _args) -> void {
+                          _stack.push_back(_Call1{});
+                          _stack.push_back(_Enter{_args.d_a1.get()});
+                        }},
+                    _self->v());
+              },
+              [&](_Call1 _f) { _result = (_result + 1); }},
           _frame);
     }
     return _result;
@@ -168,15 +165,11 @@ struct LoopifyFolds {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> unsigned int {
-                          _result = std::move(acc);
-                          return {};
-                        },
+                            -> void { _result = std::move(acc); },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> unsigned int {
+                            -> void {
                           _stack.push_back(_Call1{_args.d_a0});
                           _stack.push_back(_Enter{std::move(acc), _args.d_a1});
-                          return {};
                         }},
                     l->v());
               },
@@ -214,17 +207,15 @@ struct LoopifyFolds {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           _result = List<unsigned int>::ctor::Cons_(
                               std::move(acc), List<unsigned int>::ctor::Nil_());
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           _stack.push_back(_Call1{acc});
                           _stack.push_back(
                               _Enter{_args.d_a1, f(acc, _args.d_a0)});
-                          return {};
                         }},
                     l->v());
               },
@@ -264,16 +255,14 @@ struct LoopifyFolds {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           _result = List<unsigned int>::ctor::Cons_(
                               std::move(acc), List<unsigned int>::ctor::Nil_());
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           _stack.push_back(_Call1{acc, f, _args});
                           _stack.push_back(_Enter{_args.d_a1});
-                          return {};
                         }},
                     l->v());
               },
@@ -377,27 +366,21 @@ struct LoopifyFolds {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> unsigned int {
-                          _result = 0u;
-                          return {};
-                        },
+                            -> void { _result = 0u; },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> unsigned int {
+                            -> void {
                           std::visit(
                               Overloaded{
                                   [&](const typename List<unsigned int>::Nil
-                                          _args0) -> unsigned int {
+                                          _args0) -> void {
                                     _result = _args.d_a0;
-                                    return {};
                                   },
                                   [&](const typename List<unsigned int>::Cons
-                                          _args0) -> unsigned int {
+                                          _args0) -> void {
                                     _stack.push_back(_Call1{_args.d_a0});
                                     _stack.push_back(_Enter{_args.d_a1});
-                                    return {};
                                   }},
                               _args.d_a1->v());
-                          return {};
                         }},
                     l->v());
               },
@@ -438,20 +421,16 @@ struct LoopifyFolds {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::pair<unsigned int,
-                                         std::shared_ptr<List<unsigned int>>> {
+                            -> void {
                           _result = std::make_pair(
                               std::move(acc), List<unsigned int>::ctor::Nil_());
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::pair<unsigned int,
-                                         std::shared_ptr<List<unsigned int>>> {
+                            -> void {
                           unsigned int acc_ = f(acc, _args.d_a0).first;
                           unsigned int y = f(acc, _args.d_a0).second;
                           _stack.push_back(_Call1{y});
                           _stack.push_back(_Enter{_args.d_a1, acc_});
-                          return {};
                         }},
                     l->v());
               },

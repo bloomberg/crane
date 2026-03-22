@@ -44,20 +44,16 @@ LoopifyListSubsequences::map_cons_helper(
                   Overloaded{
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Nil _args)
-                          -> std::shared_ptr<
-                              List<std::shared_ptr<List<unsigned int>>>> {
+                          -> void {
                         _result = List<
                             std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Cons _args)
-                          -> std::shared_ptr<
-                              List<std::shared_ptr<List<unsigned int>>>> {
+                          -> void {
                         _stack.push_back(_Call1{
                             List<unsigned int>::ctor::Cons_(x, _args.d_a0)});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       }},
                   ll->v());
             },
@@ -94,21 +90,17 @@ LoopifyListSubsequences::tails(std::shared_ptr<List<unsigned int>> l) {
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> std::shared_ptr<
-                              List<std::shared_ptr<List<unsigned int>>>> {
+                          -> void {
                         _result = List<std::shared_ptr<List<unsigned int>>>::
                             ctor::Cons_(
                                 List<unsigned int>::ctor::Nil_(),
                                 List<std::shared_ptr<List<unsigned int>>>::
                                     ctor::Nil_());
-                        return {};
                       },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> std::shared_ptr<
-                              List<std::shared_ptr<List<unsigned int>>>> {
+                          -> void {
                         _stack.push_back(_Call1{std::move(l)});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       }},
                   l->v());
             },
@@ -156,21 +148,17 @@ LoopifyListSubsequences::inits_fuel(
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<
-                                List<std::shared_ptr<List<unsigned int>>>> {
+                            -> void {
                           _result = List<std::shared_ptr<List<unsigned int>>>::
                               ctor::Cons_(
                                   List<unsigned int>::ctor::Nil_(),
                                   List<std::shared_ptr<List<unsigned int>>>::
                                       ctor::Nil_());
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<
-                                List<std::shared_ptr<List<unsigned int>>>> {
+                            -> void {
                           _stack.push_back(_Call1{_args});
                           _stack.push_back(_Enter{_args.d_a1, fuel_});
-                          return {};
                         }},
                     l->v());
               }
@@ -218,29 +206,23 @@ std::shared_ptr<List<unsigned int>> LoopifyListSubsequences::init_list(
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename List<unsigned int>::Nil
-                                        _args0)
-                                    -> std::shared_ptr<List<unsigned int>> {
+                                        _args0) -> void {
                                   _result = List<unsigned int>::ctor::Nil_();
-                                  return {};
                                 },
                                 [&](const typename List<unsigned int>::Cons
-                                        _args0)
-                                    -> std::shared_ptr<List<unsigned int>> {
+                                        _args0) -> void {
                                   _stack.push_back(_Call1{_args.d_a0});
                                   _stack.push_back(_Enter{_args.d_a1});
-                                  return {};
                                 }},
                             _args.d_a1->v());
-                        return {};
                       }},
                   l->v());
             },
@@ -280,16 +262,14 @@ LoopifyListSubsequences::snoc(const std::shared_ptr<List<unsigned int>> &l,
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Cons_(
                             std::move(x), List<unsigned int>::ctor::Nil_());
-                        return {};
                       },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _stack.push_back(_Call1{_args.d_a0});
                         _stack.push_back(_Enter{std::move(x), _args.d_a1});
-                        return {};
                       }},
                   l->v());
             },
@@ -394,19 +374,15 @@ LoopifyListSubsequences::split_at(const unsigned int n,
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::pair<std::shared_ptr<List<unsigned int>>,
-                                         std::shared_ptr<List<unsigned int>>> {
+                            -> void {
                           _result =
                               std::make_pair(List<unsigned int>::ctor::Nil_(),
                                              List<unsigned int>::ctor::Nil_());
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::pair<std::shared_ptr<List<unsigned int>>,
-                                         std::shared_ptr<List<unsigned int>>> {
+                            -> void {
                           _stack.push_back(_Call1{_args});
                           _stack.push_back(_Enter{_args.d_a1, n_});
-                          return {};
                         }},
                     l->v());
               }

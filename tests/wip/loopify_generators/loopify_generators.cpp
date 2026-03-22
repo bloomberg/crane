@@ -99,61 +99,45 @@ LoopifyGenerators::zip_longest_aux(
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<
-                                List<std::pair<unsigned int, unsigned int>>> {
+                            -> void {
                           std::visit(
                               Overloaded{
                                   [&](const typename List<unsigned int>::Nil
-                                          _args0)
-                                      -> std::shared_ptr<List<std::pair<
-                                          unsigned int, unsigned int>>> {
+                                          _args0) -> void {
                                     _result = List<
                                         std::pair<unsigned int,
                                                   unsigned int>>::ctor::Nil_();
-                                    return {};
                                   },
                                   [&](const typename List<unsigned int>::Cons
-                                          _args0)
-                                      -> std::shared_ptr<List<std::pair<
-                                          unsigned int, unsigned int>>> {
+                                          _args0) -> void {
                                     _stack.push_back(_Call1{
                                         std::make_pair(default0, _args0.d_a0)});
                                     _stack.push_back(_Enter{
                                         f, _args0.d_a1,
                                         List<unsigned int>::ctor::Nil_()});
-                                    return {};
                                   }},
                               l2->v());
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<
-                                List<std::pair<unsigned int, unsigned int>>> {
+                            -> void {
                           std::visit(
                               Overloaded{
                                   [&](const typename List<unsigned int>::Nil
-                                          _args0)
-                                      -> std::shared_ptr<List<std::pair<
-                                          unsigned int, unsigned int>>> {
+                                          _args0) -> void {
                                     _stack.push_back(_Call2{
                                         std::make_pair(_args.d_a0, default0)});
                                     _stack.push_back(_Enter{
                                         f, List<unsigned int>::ctor::Nil_(),
                                         _args.d_a1});
-                                    return {};
                                   },
                                   [&](const typename List<unsigned int>::Cons
-                                          _args0)
-                                      -> std::shared_ptr<List<std::pair<
-                                          unsigned int, unsigned int>>> {
+                                          _args0) -> void {
                                     _stack.push_back(_Call3{std::make_pair(
                                         _args.d_a0, _args0.d_a0)});
                                     _stack.push_back(
                                         _Enter{f, _args0.d_a1, _args.d_a1});
-                                    return {};
                                   }},
                               l2->v());
-                          return {};
                         }},
                     l1->v());
               }
@@ -199,15 +183,11 @@ LoopifyGenerators::len_impl(const std::shared_ptr<List<unsigned int>> &l) {
                      std::visit(
                          Overloaded{
                              [&](const typename List<unsigned int>::Nil _args)
-                                 -> unsigned int {
-                               _result = 0u;
-                               return {};
-                             },
+                                 -> void { _result = 0u; },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> unsigned int {
+                                 -> void {
                                _stack.push_back(_Call1{});
                                _stack.push_back(_Enter{_args.d_a1});
-                               return {};
                              }},
                          l->v());
                    },
@@ -312,12 +292,11 @@ LoopifyGenerators::take(const unsigned int n,
                      std::visit(
                          Overloaded{
                              [&](const typename List<unsigned int>::Nil _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _result = List<unsigned int>::ctor::Nil_();
-                               return {};
                              },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                if (n == 0u) {
                                  _result = List<unsigned int>::ctor::Nil_();
                                } else {
@@ -328,7 +307,6 @@ LoopifyGenerators::take(const unsigned int n,
                                                   ? 0
                                                   : (std::move(n) - 1u)))});
                                }
-                               return {};
                              }},
                          l->v());
                    },
@@ -442,16 +420,14 @@ std::shared_ptr<List<unsigned int>> LoopifyGenerators::replicate_each(
                      std::visit(
                          Overloaded{
                              [&](const typename List<unsigned int>::Nil _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _result = List<unsigned int>::ctor::Nil_();
-                               return {};
                              },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _stack.push_back(
                                    _Call1{replicate_single(_args.d_a0, n)});
                                _stack.push_back(_Enter{_args.d_a1});
-                               return {};
                              }},
                          l->v());
                    },

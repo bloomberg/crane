@@ -35,27 +35,21 @@ LoopifyComparators::maximum_by(const std::shared_ptr<List<unsigned int>> &l) {
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> unsigned int {
-                        _result = 0u;
-                        return {};
-                      },
+                          -> void { _result = 0u; },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> unsigned int {
+                          -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename List<unsigned int>::Nil
-                                        _args0) -> unsigned int {
+                                        _args0) -> void {
                                   _result = _args.d_a0;
-                                  return {};
                                 },
                                 [&](const typename List<unsigned int>::Cons
-                                        _args0) -> unsigned int {
+                                        _args0) -> void {
                                   _stack.push_back(_Call1{_args});
                                   _stack.push_back(_Enter{_args.d_a1});
-                                  return {};
                                 }},
                             _args.d_a1->v());
-                        return {};
                       }},
                   l->v());
             },
@@ -97,27 +91,21 @@ LoopifyComparators::minimum_by(const std::shared_ptr<List<unsigned int>> &l) {
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> unsigned int {
-                        _result = 0u;
-                        return {};
-                      },
+                          -> void { _result = 0u; },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> unsigned int {
+                          -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename List<unsigned int>::Nil
-                                        _args0) -> unsigned int {
+                                        _args0) -> void {
                                   _result = _args.d_a0;
-                                  return {};
                                 },
                                 [&](const typename List<unsigned int>::Cons
-                                        _args0) -> unsigned int {
+                                        _args0) -> void {
                                   _stack.push_back(_Call1{_args});
                                   _stack.push_back(_Enter{_args.d_a1});
-                                  return {};
                                 }},
                             _args.d_a1->v());
-                        return {};
                       }},
                   l->v());
             },
@@ -175,23 +163,15 @@ LoopifyComparators::merge_by_fuel(const unsigned int fuel,
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<List<unsigned int>> {
-                          _result = std::move(l2);
-                          return {};
-                        },
+                            -> void { _result = std::move(l2); },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           std::visit(
                               Overloaded{
                                   [&](const typename List<unsigned int>::Nil
-                                          _args0)
-                                      -> std::shared_ptr<List<unsigned int>> {
-                                    _result = l1;
-                                    return {};
-                                  },
+                                          _args0) -> void { _result = l1; },
                                   [&](const typename List<unsigned int>::Cons
-                                          _args0)
-                                      -> std::shared_ptr<List<unsigned int>> {
+                                          _args0) -> void {
                                     if (_args.d_a0 <= _args0.d_a0) {
                                       _stack.push_back(_Call1{_args.d_a0});
                                       _stack.push_back(
@@ -202,10 +182,8 @@ LoopifyComparators::merge_by_fuel(const unsigned int fuel,
                                       _stack.push_back(_Enter{
                                           _args0.d_a1, l1, std::move(fuel_)});
                                     }
-                                    return {};
                                   }},
                               l2->v());
-                          return {};
                         }},
                     l1->v());
               }
@@ -257,13 +235,12 @@ LoopifyComparators::insert_sorted(const unsigned int x,
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Cons_(
                             std::move(x), List<unsigned int>::ctor::Nil_());
-                        return {};
                       },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         if (x <= _args.d_a0) {
                           _result = List<unsigned int>::ctor::Cons_(
                               std::move(x), std::move(l));
@@ -271,7 +248,6 @@ LoopifyComparators::insert_sorted(const unsigned int x,
                           _stack.push_back(_Call1{_args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1, std::move(x)});
                         }
-                        return {};
                       }},
                   l->v());
             },
@@ -307,15 +283,13 @@ std::shared_ptr<List<unsigned int>> LoopifyComparators::insertion_sort(
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
                   Overloaded{[&](const typename List<unsigned int>::Nil _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _result = List<unsigned int>::ctor::Nil_();
-                               return {};
                              },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _stack.push_back(_Call1{_args.d_a0});
                                _stack.push_back(_Enter{_args.d_a1});
-                               return {};
                              }},
                   l->v());
             },

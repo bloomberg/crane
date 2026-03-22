@@ -189,13 +189,12 @@ std::shared_ptr<List<unsigned int>> LoopifyListAccess::lookup_all(
                   Overloaded{
                       [&](const typename List<
                           std::pair<unsigned int, unsigned int>>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<
                           std::pair<unsigned int, unsigned int>>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         unsigned int k = _args.d_a0.first;
                         unsigned int v = _args.d_a0.second;
                         if (k == key) {
@@ -204,7 +203,6 @@ std::shared_ptr<List<unsigned int>> LoopifyListAccess::lookup_all(
                         } else {
                           _stack.push_back(_Enter{_args.d_a1});
                         }
-                        return {};
                       }},
                   l->v());
             },
@@ -240,19 +238,15 @@ LoopifyListAccess::count(const unsigned int x,
                      std::visit(
                          Overloaded{
                              [&](const typename List<unsigned int>::Nil _args)
-                                 -> unsigned int {
-                               _result = 0u;
-                               return {};
-                             },
+                                 -> void { _result = 0u; },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> unsigned int {
+                                 -> void {
                                if (x == _args.d_a0) {
                                  _stack.push_back(_Call1{1u});
                                  _stack.push_back(_Enter{_args.d_a1});
                                } else {
                                  _stack.push_back(_Enter{_args.d_a1});
                                }
-                               return {};
                              }},
                          l->v());
                    },

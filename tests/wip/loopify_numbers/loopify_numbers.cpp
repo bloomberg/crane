@@ -1224,12 +1224,9 @@ __attribute__((pure)) unsigned int LoopifyNumbers::sum_even_indices_fuel(
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> unsigned int {
-                          _result = 0u;
-                          return {};
-                        },
+                            -> void { _result = 0u; },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> unsigned int {
+                            -> void {
                           {
                             const std::shared_ptr<List<unsigned int>> &_inl_l =
                                 _args.d_a1;
@@ -1241,20 +1238,15 @@ __attribute__((pure)) unsigned int LoopifyNumbers::sum_even_indices_fuel(
                               std::visit(
                                   Overloaded{
                                       [&](const typename List<unsigned int>::Nil
-                                              _args) -> unsigned int {
-                                        _result = 0u;
-                                        return {};
-                                      },
-                                      [&](const typename List<unsigned int>::
-                                              Cons _args) -> unsigned int {
+                                              _args) -> void { _result = 0u; },
+                                      [&](const typename List<
+                                          unsigned int>::Cons _args) -> void {
                                         _stack.push_back(_Call1{_args.d_a0});
                                         _stack.push_back(_Enter{_args.d_a1, f});
-                                        return {};
                                       }},
                                   _inl_l->v());
                             }
                           }
-                          return {};
                         }},
                     l->v());
               }

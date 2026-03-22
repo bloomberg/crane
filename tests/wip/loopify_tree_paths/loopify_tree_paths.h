@@ -90,27 +90,24 @@ public:
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       std::visit(
-          Overloaded{[&](_Enter _f) {
-                       const List *_self = _f._self;
-                       std::shared_ptr<List<t_A>> m = _f.m;
-                       std::visit(
-                           Overloaded{[&](const typename List<t_A>::Nil _args)
-                                          -> std::shared_ptr<List<t_A>> {
-                                        _result = m;
-                                        return {};
-                                      },
-                                      [&](const typename List<t_A>::Cons _args)
-                                          -> std::shared_ptr<List<t_A>> {
-                                        _stack.push_back(_Call1{_args.d_a0});
-                                        _stack.push_back(
-                                            _Enter{m.get(), _args.d_a1});
-                                        return {};
-                                      }},
-                           _self->v());
-                     },
-                     [&](_Call1 _f) {
-                       _result = List<t_A>::ctor::Cons_(_f._s0, _result);
-                     }},
+          Overloaded{
+              [&](_Enter _f) {
+                const List *_self = _f._self;
+                std::shared_ptr<List<t_A>> m = _f.m;
+                std::visit(
+                    Overloaded{
+                        [&](const typename List<t_A>::Nil _args) -> void {
+                          _result = m;
+                        },
+                        [&](const typename List<t_A>::Cons _args) -> void {
+                          _stack.push_back(_Call1{_args.d_a0});
+                          _stack.push_back(_Enter{m.get(), _args.d_a1});
+                        }},
+                    _self->v());
+              },
+              [&](_Call1 _f) {
+                _result = List<t_A>::ctor::Cons_(_f._s0, _result);
+              }},
           _frame);
     }
     return _result;
@@ -206,16 +203,14 @@ struct LoopifyTreePaths {
               [&](_Enter _f) {
                 const std::shared_ptr<tree> t = _f.t;
                 std::visit(
-                    Overloaded{[&](const typename tree::Leaf _args) -> T1 {
+                    Overloaded{[&](const typename tree::Leaf _args) -> void {
                                  _result = f;
-                                 return {};
                                },
-                               [&](const typename tree::Node _args) -> T1 {
+                               [&](const typename tree::Node _args) -> void {
                                  _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
                                                          _args.d_a1,
                                                          _args.d_a0});
                                  _stack.push_back(_Enter{_args.d_a2});
-                                 return {};
                                }},
                     t->v());
               },
@@ -265,16 +260,14 @@ struct LoopifyTreePaths {
               [&](_Enter _f) {
                 const std::shared_ptr<tree> t = _f.t;
                 std::visit(
-                    Overloaded{[&](const typename tree::Leaf _args) -> T1 {
+                    Overloaded{[&](const typename tree::Leaf _args) -> void {
                                  _result = f;
-                                 return {};
                                },
-                               [&](const typename tree::Node _args) -> T1 {
+                               [&](const typename tree::Node _args) -> void {
                                  _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
                                                          _args.d_a1,
                                                          _args.d_a0});
                                  _stack.push_back(_Enter{_args.d_a2});
-                                 return {};
                                }},
                     t->v());
               },
@@ -386,15 +379,13 @@ struct LoopifyTreePaths {
                 const std::shared_ptr<bool_tree> b = _f.b;
                 std::visit(
                     Overloaded{
-                        [&](const typename bool_tree::BLeaf _args) -> T1 {
+                        [&](const typename bool_tree::BLeaf _args) -> void {
                           _result = f(_args.d_a0);
-                          return {};
                         },
-                        [&](const typename bool_tree::BNode _args) -> T1 {
+                        [&](const typename bool_tree::BNode _args) -> void {
                           _stack.push_back(
                               _Call1{_args.d_a0, _args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
-                          return {};
                         }},
                     b->v());
               },
@@ -445,15 +436,13 @@ struct LoopifyTreePaths {
                 const std::shared_ptr<bool_tree> b = _f.b;
                 std::visit(
                     Overloaded{
-                        [&](const typename bool_tree::BLeaf _args) -> T1 {
+                        [&](const typename bool_tree::BLeaf _args) -> void {
                           _result = f(_args.d_a0);
-                          return {};
                         },
-                        [&](const typename bool_tree::BNode _args) -> T1 {
+                        [&](const typename bool_tree::BNode _args) -> void {
                           _stack.push_back(
                               _Call1{_args.d_a0, _args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
-                          return {};
                         }},
                     b->v());
               },
@@ -497,14 +486,12 @@ struct LoopifyTreePaths {
                 const std::shared_ptr<bool_tree> t = _f.t;
                 std::visit(
                     Overloaded{
-                        [&](const typename bool_tree::BLeaf _args) -> bool {
+                        [&](const typename bool_tree::BLeaf _args) -> void {
                           _result = p(_args.d_a0);
-                          return {};
                         },
-                        [&](const typename bool_tree::BNode _args) -> bool {
+                        [&](const typename bool_tree::BNode _args) -> void {
                           _stack.push_back(_Call1{_args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
-                          return {};
                         }},
                     t->v());
               },
@@ -546,14 +533,12 @@ struct LoopifyTreePaths {
                 const std::shared_ptr<bool_tree> t = _f.t;
                 std::visit(
                     Overloaded{
-                        [&](const typename bool_tree::BLeaf _args) -> bool {
+                        [&](const typename bool_tree::BLeaf _args) -> void {
                           _result = p(_args.d_a0);
-                          return {};
                         },
-                        [&](const typename bool_tree::BNode _args) -> bool {
+                        [&](const typename bool_tree::BNode _args) -> void {
                           _stack.push_back(_Call1{_args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
-                          return {};
                         }},
                     t->v());
               },

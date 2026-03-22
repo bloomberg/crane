@@ -37,35 +37,29 @@ LoopifySearchOpt::lis(const std::shared_ptr<List<unsigned int>> &l) {
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename List<unsigned int>::Nil
-                                        _args0)
-                                    -> std::shared_ptr<List<unsigned int>> {
+                                        _args0) -> void {
                                   _result = List<unsigned int>::ctor::Cons_(
                                       _args.d_a0,
                                       List<unsigned int>::ctor::Nil_());
-                                  return {};
                                 },
                                 [&](const typename List<unsigned int>::Cons
-                                        _args0)
-                                    -> std::shared_ptr<List<unsigned int>> {
+                                        _args0) -> void {
                                   if (_args.d_a0 < _args0.d_a0) {
                                     _stack.push_back(_Call1{_args.d_a0});
                                     _stack.push_back(_Enter{_args.d_a1});
                                   } else {
                                     _stack.push_back(_Enter{_args.d_a1});
                                   }
-                                  return {};
                                 }},
                             _args.d_a1->v());
-                        return {};
                       }},
                   l->v());
             },
@@ -222,13 +216,10 @@ __attribute__((pure)) unsigned int LoopifySearchOpt::knapsack_fuel(
                     Overloaded{
                         [&](const typename List<
                             std::pair<unsigned int, unsigned int>>::Nil _args)
-                            -> unsigned int {
-                          _result = 0u;
-                          return {};
-                        },
+                            -> void { _result = 0u; },
                         [&](const typename List<
                             std::pair<unsigned int, unsigned int>>::Cons _args)
-                            -> unsigned int {
+                            -> void {
                           unsigned int weight = _args.d_a0.first;
                           unsigned int value = _args.d_a0.second;
                           if (capacity < weight) {
@@ -244,7 +235,6 @@ __attribute__((pure)) unsigned int LoopifySearchOpt::knapsack_fuel(
                                              : (capacity - weight))),
                                        fuel_});
                           }
-                          return {};
                         }},
                     items->v());
               }
@@ -305,12 +295,9 @@ __attribute__((pure)) bool LoopifySearchOpt::subset_sum_fuel(
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> bool {
-                          _result = target == 0u;
-                          return {};
-                        },
+                            -> void { _result = target == 0u; },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> bool {
+                            -> void {
                           if (target < _args.d_a0) {
                             _stack.push_back(_Enter{_args.d_a1, target, fuel_});
                           } else {
@@ -322,7 +309,6 @@ __attribute__((pure)) bool LoopifySearchOpt::subset_sum_fuel(
                                              : (target - _args.d_a0))),
                                        fuel_});
                           }
-                          return {};
                         }},
                     l->v());
               }
@@ -366,15 +352,11 @@ LoopifySearchOpt::majority(const std::shared_ptr<List<unsigned int>> &l) {
                      std::visit(
                          Overloaded{
                              [&](const typename List<unsigned int>::Nil _args)
-                                 -> std::pair<unsigned int, unsigned int> {
-                               _result = std::make_pair(0u, 0u);
-                               return {};
-                             },
+                                 -> void { _result = std::make_pair(0u, 0u); },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::pair<unsigned int, unsigned int> {
+                                 -> void {
                                _stack.push_back(_Call1{_args});
                                _stack.push_back(_Enter{_args.d_a1});
-                               return {};
                              }},
                          l->v());
                    },
@@ -527,21 +509,17 @@ __attribute__((pure)) bool LoopifySearchOpt::binary_search_fuel(
                                       Overloaded{
                                           [&](const typename List<
                                               unsigned int>::Nil _args3)
-                                              -> std::shared_ptr<
-                                                  List<unsigned int>> {
+                                              -> void {
                                             _result = List<
                                                 unsigned int>::ctor::Nil_();
-                                            return {};
                                           },
                                           [&](const typename List<
                                               unsigned int>::Cons _args3)
-                                              -> std::shared_ptr<
-                                                  List<unsigned int>> {
+                                              -> void {
                                             _stack.push_back(
                                                 _Call1{_args3.d_a0});
                                             _stack.push_back(
                                                 _Enter{_args3.d_a1, n_});
-                                            return {};
                                           }},
                                       xs->v());
                                 }

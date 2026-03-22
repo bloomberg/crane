@@ -93,23 +93,21 @@ struct LoopifyOption {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       std::visit(
-          Overloaded{[&](_Enter _f) {
-                       const std::shared_ptr<list<T1>> l = _f.l;
-                       std::visit(
-                           Overloaded{
-                               [&](const typename list<T1>::Nil _args) -> T2 {
-                                 _result = f;
-                                 return {};
-                               },
-                               [&](const typename list<T1>::Cons _args) -> T2 {
-                                 _stack.push_back(
-                                     _Call1{_args.d_a1, _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a1});
-                                 return {};
-                               }},
-                           l->v());
-                     },
-                     [&](_Call1 _f) { _result = f0(_f._s1, _f._s0, _result); }},
+          Overloaded{
+              [&](_Enter _f) {
+                const std::shared_ptr<list<T1>> l = _f.l;
+                std::visit(
+                    Overloaded{
+                        [&](const typename list<T1>::Nil _args) -> void {
+                          _result = f;
+                        },
+                        [&](const typename list<T1>::Cons _args) -> void {
+                          _stack.push_back(_Call1{_args.d_a1, _args.d_a0});
+                          _stack.push_back(_Enter{_args.d_a1});
+                        }},
+                    l->v());
+              },
+              [&](_Call1 _f) { _result = f0(_f._s1, _f._s0, _result); }},
           _frame);
     }
     return _result;
@@ -135,23 +133,21 @@ struct LoopifyOption {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       std::visit(
-          Overloaded{[&](_Enter _f) {
-                       const std::shared_ptr<list<T1>> l = _f.l;
-                       std::visit(
-                           Overloaded{
-                               [&](const typename list<T1>::Nil _args) -> T2 {
-                                 _result = f;
-                                 return {};
-                               },
-                               [&](const typename list<T1>::Cons _args) -> T2 {
-                                 _stack.push_back(
-                                     _Call1{_args.d_a1, _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a1});
-                                 return {};
-                               }},
-                           l->v());
-                     },
-                     [&](_Call1 _f) { _result = f0(_f._s1, _f._s0, _result); }},
+          Overloaded{
+              [&](_Enter _f) {
+                const std::shared_ptr<list<T1>> l = _f.l;
+                std::visit(
+                    Overloaded{
+                        [&](const typename list<T1>::Nil _args) -> void {
+                          _result = f;
+                        },
+                        [&](const typename list<T1>::Cons _args) -> void {
+                          _stack.push_back(_Call1{_args.d_a1, _args.d_a0});
+                          _stack.push_back(_Enter{_args.d_a1});
+                        }},
+                    l->v());
+              },
+              [&](_Call1 _f) { _result = f0(_f._s1, _f._s0, _result); }},
           _frame);
     }
     return _result;
@@ -268,30 +264,28 @@ struct LoopifyOption {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       std::visit(
-          Overloaded{[&](_Enter _f) {
-                       const std::shared_ptr<list<T1>> l = _f.l;
-                       std::visit(
-                           Overloaded{[&](const typename list<T1>::Nil _args)
-                                          -> std::shared_ptr<list<T2>> {
-                                        _result = list<T2>::ctor::Nil_();
-                                        return {};
-                                      },
-                                      [&](const typename list<T1>::Cons _args)
-                                          -> std::shared_ptr<list<T2>> {
-                                        if (f(_args.d_a0).has_value()) {
-                                          T2 y = *f(_args.d_a0);
-                                          _stack.push_back(_Call1{y});
-                                          _stack.push_back(_Enter{_args.d_a1});
-                                        } else {
-                                          _stack.push_back(_Enter{_args.d_a1});
-                                        }
-                                        return {};
-                                      }},
-                           l->v());
-                     },
-                     [&](_Call1 _f) {
-                       _result = list<T2>::ctor::Cons_(_f._s0, _result);
-                     }},
+          Overloaded{
+              [&](_Enter _f) {
+                const std::shared_ptr<list<T1>> l = _f.l;
+                std::visit(
+                    Overloaded{
+                        [&](const typename list<T1>::Nil _args) -> void {
+                          _result = list<T2>::ctor::Nil_();
+                        },
+                        [&](const typename list<T1>::Cons _args) -> void {
+                          if (f(_args.d_a0).has_value()) {
+                            T2 y = *f(_args.d_a0);
+                            _stack.push_back(_Call1{y});
+                            _stack.push_back(_Enter{_args.d_a1});
+                          } else {
+                            _stack.push_back(_Enter{_args.d_a1});
+                          }
+                        }},
+                    l->v());
+              },
+              [&](_Call1 _f) {
+                _result = list<T2>::ctor::Cons_(_f._s0, _result);
+              }},
           _frame);
     }
     return _result;

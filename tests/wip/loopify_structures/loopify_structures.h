@@ -90,27 +90,24 @@ public:
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       std::visit(
-          Overloaded{[&](_Enter _f) {
-                       const List *_self = _f._self;
-                       std::shared_ptr<List<t_A>> m = _f.m;
-                       std::visit(
-                           Overloaded{[&](const typename List<t_A>::Nil _args)
-                                          -> std::shared_ptr<List<t_A>> {
-                                        _result = m;
-                                        return {};
-                                      },
-                                      [&](const typename List<t_A>::Cons _args)
-                                          -> std::shared_ptr<List<t_A>> {
-                                        _stack.push_back(_Call1{_args.d_a0});
-                                        _stack.push_back(
-                                            _Enter{m.get(), _args.d_a1});
-                                        return {};
-                                      }},
-                           _self->v());
-                     },
-                     [&](_Call1 _f) {
-                       _result = List<t_A>::ctor::Cons_(_f._s0, _result);
-                     }},
+          Overloaded{
+              [&](_Enter _f) {
+                const List *_self = _f._self;
+                std::shared_ptr<List<t_A>> m = _f.m;
+                std::visit(
+                    Overloaded{
+                        [&](const typename List<t_A>::Nil _args) -> void {
+                          _result = m;
+                        },
+                        [&](const typename List<t_A>::Cons _args) -> void {
+                          _stack.push_back(_Call1{_args.d_a0});
+                          _stack.push_back(_Enter{m.get(), _args.d_a1});
+                        }},
+                    _self->v());
+              },
+              [&](_Call1 _f) {
+                _result = List<t_A>::ctor::Cons_(_f._s0, _result);
+              }},
           _frame);
     }
     return _result;
@@ -339,43 +336,41 @@ struct LoopifyStructures {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       std::visit(
-          Overloaded{[&](_Enter _f) {
-                       const std::shared_ptr<quadtree> q = _f.q;
-                       std::visit(
-                           Overloaded{
-                               [&](const typename quadtree::QLeaf _args) -> T1 {
-                                 _result = f(_args.d_a0);
-                                 return {};
-                               },
-                               [&](const typename quadtree::Quad _args) -> T1 {
-                                 _stack.push_back(_Call1{_args.d_a2, _args.d_a1,
-                                                         _args.d_a0, _args.d_a3,
-                                                         _args.d_a2, _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a3});
-                                 return {};
-                               }},
-                           q->v());
-                     },
-                     [&](_Call1 _f) {
-                       _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
-                                               _f._s4, _f._s5, _f._s6});
-                       _stack.push_back(_Enter{_f._s0});
-                     },
-                     [&](_Call2 _f) {
-                       _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
-                                               _f._s4, _f._s5, _f._s6});
-                       _stack.push_back(_Enter{_f._s1});
-                     },
-                     [&](_Call3 _f) {
-                       _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
-                                               _f._s4, _f._s5, _f._s6});
-                       _stack.push_back(_Enter{_f._s2});
-                     },
-                     [&](_Call4 _f) {
-                       _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4,
-                                    _f._s1, _f._s3, _f._s0);
-                     }},
+          Overloaded{
+              [&](_Enter _f) {
+                const std::shared_ptr<quadtree> q = _f.q;
+                std::visit(
+                    Overloaded{
+                        [&](const typename quadtree::QLeaf _args) -> void {
+                          _result = f(_args.d_a0);
+                        },
+                        [&](const typename quadtree::Quad _args) -> void {
+                          _stack.push_back(_Call1{
+                              _args.d_a2, _args.d_a1, _args.d_a0, _args.d_a3,
+                              _args.d_a2, _args.d_a1, _args.d_a0});
+                          _stack.push_back(_Enter{_args.d_a3});
+                        }},
+                    q->v());
+              },
+              [&](_Call1 _f) {
+                _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4,
+                                        _f._s5, _f._s6});
+                _stack.push_back(_Enter{_f._s0});
+              },
+              [&](_Call2 _f) {
+                _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4,
+                                        _f._s5, _f._s6});
+                _stack.push_back(_Enter{_f._s1});
+              },
+              [&](_Call3 _f) {
+                _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3, _f._s4,
+                                        _f._s5, _f._s6});
+                _stack.push_back(_Enter{_f._s2});
+              },
+              [&](_Call4 _f) {
+                _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
+                             _f._s3, _f._s0);
+              }},
           _frame);
     }
     return _result;
@@ -439,43 +434,41 @@ struct LoopifyStructures {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       std::visit(
-          Overloaded{[&](_Enter _f) {
-                       const std::shared_ptr<quadtree> q = _f.q;
-                       std::visit(
-                           Overloaded{
-                               [&](const typename quadtree::QLeaf _args) -> T1 {
-                                 _result = f(_args.d_a0);
-                                 return {};
-                               },
-                               [&](const typename quadtree::Quad _args) -> T1 {
-                                 _stack.push_back(_Call1{_args.d_a2, _args.d_a1,
-                                                         _args.d_a0, _args.d_a3,
-                                                         _args.d_a2, _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a3});
-                                 return {};
-                               }},
-                           q->v());
-                     },
-                     [&](_Call1 _f) {
-                       _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
-                                               _f._s4, _f._s5, _f._s6});
-                       _stack.push_back(_Enter{_f._s0});
-                     },
-                     [&](_Call2 _f) {
-                       _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
-                                               _f._s4, _f._s5, _f._s6});
-                       _stack.push_back(_Enter{_f._s1});
-                     },
-                     [&](_Call3 _f) {
-                       _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
-                                               _f._s4, _f._s5, _f._s6});
-                       _stack.push_back(_Enter{_f._s2});
-                     },
-                     [&](_Call4 _f) {
-                       _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4,
-                                    _f._s1, _f._s3, _f._s0);
-                     }},
+          Overloaded{
+              [&](_Enter _f) {
+                const std::shared_ptr<quadtree> q = _f.q;
+                std::visit(
+                    Overloaded{
+                        [&](const typename quadtree::QLeaf _args) -> void {
+                          _result = f(_args.d_a0);
+                        },
+                        [&](const typename quadtree::Quad _args) -> void {
+                          _stack.push_back(_Call1{
+                              _args.d_a2, _args.d_a1, _args.d_a0, _args.d_a3,
+                              _args.d_a2, _args.d_a1, _args.d_a0});
+                          _stack.push_back(_Enter{_args.d_a3});
+                        }},
+                    q->v());
+              },
+              [&](_Call1 _f) {
+                _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4,
+                                        _f._s5, _f._s6});
+                _stack.push_back(_Enter{_f._s0});
+              },
+              [&](_Call2 _f) {
+                _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4,
+                                        _f._s5, _f._s6});
+                _stack.push_back(_Enter{_f._s1});
+              },
+              [&](_Call3 _f) {
+                _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3, _f._s4,
+                                        _f._s5, _f._s6});
+                _stack.push_back(_Enter{_f._s2});
+              },
+              [&](_Call4 _f) {
+                _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
+                             _f._s3, _f._s0);
+              }},
           _frame);
     }
     return _result;
@@ -532,19 +525,15 @@ struct LoopifyStructures {
               [&](_Enter _f) {
                 const std::shared_ptr<quadtree> t = _f.t;
                 std::visit(
-                    Overloaded{[&](const typename quadtree::QLeaf _args)
-                                   -> std::shared_ptr<quadtree> {
-                                 _result =
-                                     quadtree::ctor::QLeaf_(f(_args.d_a0));
-                                 return {};
-                               },
-                               [&](const typename quadtree::Quad _args)
-                                   -> std::shared_ptr<quadtree> {
-                                 _stack.push_back(_Call1{_args.d_a2, _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a3});
-                                 return {};
-                               }},
+                    Overloaded{
+                        [&](const typename quadtree::QLeaf _args) -> void {
+                          _result = quadtree::ctor::QLeaf_(f(_args.d_a0));
+                        },
+                        [&](const typename quadtree::Quad _args) -> void {
+                          _stack.push_back(
+                              _Call1{_args.d_a2, _args.d_a1, _args.d_a0});
+                          _stack.push_back(_Enter{_args.d_a3});
+                        }},
                     t->v());
               },
               [&](_Call1 _f) {
@@ -620,12 +609,11 @@ struct LoopifyStructures {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           _result = List<unsigned int>::ctor::Nil_();
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           if (f(_args.d_a0).has_value()) {
                             unsigned int y = *f(_args.d_a0);
                             _stack.push_back(_Call1{y});
@@ -633,7 +621,6 @@ struct LoopifyStructures {
                           } else {
                             _stack.push_back(_Enter{_args.d_a1});
                           }
-                          return {};
                         }},
                     l->v());
               },
@@ -672,19 +659,17 @@ struct LoopifyStructures {
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           _result = List<unsigned int>::ctor::Nil_();
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           if (p(_args.d_a0)) {
                             _stack.push_back(_Call1{f(_args.d_a0)});
                             _stack.push_back(_Enter{_args.d_a1});
                           } else {
                             _stack.push_back(_Enter{_args.d_a1});
                           }
-                          return {};
                         }},
                     l->v());
               },
@@ -792,16 +777,14 @@ struct LoopifyStructures {
               [&](_Enter _f) {
                 const std::shared_ptr<ltree> l = _f.l;
                 std::visit(
-                    Overloaded{[&](const typename ltree::LLeaf _args) -> T1 {
+                    Overloaded{[&](const typename ltree::LLeaf _args) -> void {
                                  _result = f(_args.d_a0);
-                                 return {};
                                },
-                               [&](const typename ltree::LNode _args) -> T1 {
+                               [&](const typename ltree::LNode _args) -> void {
                                  _stack.push_back(_Call1{_args.d_a1, _args.d_a2,
                                                          _args.d_a1,
                                                          _args.d_a0});
                                  _stack.push_back(_Enter{_args.d_a2});
-                                 return {};
                                }},
                     l->v());
               },
@@ -852,16 +835,14 @@ struct LoopifyStructures {
               [&](_Enter _f) {
                 const std::shared_ptr<ltree> l = _f.l;
                 std::visit(
-                    Overloaded{[&](const typename ltree::LLeaf _args) -> T1 {
+                    Overloaded{[&](const typename ltree::LLeaf _args) -> void {
                                  _result = f(_args.d_a0);
-                                 return {};
                                },
-                               [&](const typename ltree::LNode _args) -> T1 {
+                               [&](const typename ltree::LNode _args) -> void {
                                  _stack.push_back(_Call1{_args.d_a1, _args.d_a2,
                                                          _args.d_a1,
                                                          _args.d_a0});
                                  _stack.push_back(_Enter{_args.d_a2});
-                                 return {};
                                }},
                     l->v());
               },

@@ -55,16 +55,12 @@ __attribute__((pure)) unsigned int LoopifyTreeVariants::ternary_sum(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyTreeVariants::ternary::TLeaf
-                              _args) -> unsigned int {
-                        _result = 0u;
-                        return {};
-                      },
+                              _args) -> void { _result = 0u; },
                       [&](const typename LoopifyTreeVariants::ternary::TNode
-                              _args) -> unsigned int {
+                              _args) -> void {
                         _stack.push_back(
                             _Call1{_args.d_a2, _args.d_a0, _args.d_a1});
                         _stack.push_back(_Enter{_args.d_a3});
-                        return {};
                       }},
                   t->v());
             },
@@ -122,15 +118,11 @@ __attribute__((pure)) unsigned int LoopifyTreeVariants::ternary_count(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyTreeVariants::ternary::TLeaf
-                              _args) -> unsigned int {
-                        _result = 0u;
-                        return {};
-                      },
+                              _args) -> void { _result = 0u; },
                       [&](const typename LoopifyTreeVariants::ternary::TNode
-                              _args) -> unsigned int {
+                              _args) -> void {
                         _stack.push_back(_Call1{_args.d_a2, _args.d_a0, 1u});
                         _stack.push_back(_Enter{_args.d_a3});
-                        return {};
                       }},
                   t->v());
             },
@@ -194,16 +186,12 @@ __attribute__((pure)) unsigned int LoopifyTreeVariants::quad_sum(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyTreeVariants::quadtree::QLeaf
-                              _args) -> unsigned int {
-                        _result = _args.d_a0;
-                        return {};
-                      },
+                              _args) -> void { _result = _args.d_a0; },
                       [&](const typename LoopifyTreeVariants::quadtree::Quad
-                              _args) -> unsigned int {
+                              _args) -> void {
                         _stack.push_back(
                             _Call1{_args.d_a2, _args.d_a1, _args.d_a0});
                         _stack.push_back(_Enter{_args.d_a3});
-                        return {};
                       }},
                   t->v());
             },
@@ -257,15 +245,11 @@ __attribute__((pure)) unsigned int LoopifyTreeVariants::leaf_tree_sum(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyTreeVariants::leaf_tree::LLeaf
-                              _args) -> unsigned int {
-                        _result = _args.d_a0;
-                        return {};
-                      },
+                              _args) -> void { _result = _args.d_a0; },
                       [&](const typename LoopifyTreeVariants::leaf_tree::LNode
-                              _args) -> unsigned int {
+                              _args) -> void {
                         _stack.push_back(_Call1{_args.d_a0});
                         _stack.push_back(_Enter{_args.d_a1});
-                        return {};
                       }},
                   t->v());
             },
@@ -307,15 +291,11 @@ __attribute__((pure)) unsigned int LoopifyTreeVariants::leaf_tree_max(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyTreeVariants::leaf_tree::LLeaf
-                              _args) -> unsigned int {
-                        _result = _args.d_a0;
-                        return {};
-                      },
+                              _args) -> void { _result = _args.d_a0; },
                       [&](const typename LoopifyTreeVariants::leaf_tree::LNode
-                              _args) -> unsigned int {
+                              _args) -> void {
                         _stack.push_back(_Call1{_args});
                         _stack.push_back(_Enter{_args.d_a0});
-                        return {};
                       }},
                   t->v());
             },

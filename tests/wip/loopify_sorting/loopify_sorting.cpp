@@ -41,13 +41,12 @@ LoopifySorting::insert(const unsigned int x,
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Cons_(
                             std::move(x), List<unsigned int>::ctor::Nil_());
-                        return {};
                       },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         if (x <= _args.d_a0) {
                           _result = List<unsigned int>::ctor::Cons_(
                               std::move(x), std::move(l));
@@ -55,7 +54,6 @@ LoopifySorting::insert(const unsigned int x,
                           _stack.push_back(_Call1{_args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1, std::move(x)});
                         }
-                        return {};
                       }},
                   l->v());
             },
@@ -91,15 +89,13 @@ LoopifySorting::insertion_sort(const std::shared_ptr<List<unsigned int>> &l) {
                      std::visit(
                          Overloaded{
                              [&](const typename List<unsigned int>::Nil _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _result = List<unsigned int>::ctor::Nil_();
-                               return {};
                              },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _stack.push_back(_Call1{_args.d_a0});
                                _stack.push_back(_Enter{_args.d_a1});
-                               return {};
                              }},
                          l->v());
                    },
@@ -149,23 +145,15 @@ LoopifySorting::merge_fuel(const unsigned int fuel,
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<List<unsigned int>> {
-                          _result = std::move(l2);
-                          return {};
-                        },
+                            -> void { _result = std::move(l2); },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           std::visit(
                               Overloaded{
                                   [&](const typename List<unsigned int>::Nil
-                                          _args0)
-                                      -> std::shared_ptr<List<unsigned int>> {
-                                    _result = l1;
-                                    return {};
-                                  },
+                                          _args0) -> void { _result = l1; },
                                   [&](const typename List<unsigned int>::Cons
-                                          _args0)
-                                      -> std::shared_ptr<List<unsigned int>> {
+                                          _args0) -> void {
                                     if (_args.d_a0 <= _args0.d_a0) {
                                       _stack.push_back(_Call1{_args.d_a0});
                                       _stack.push_back(_Enter{std::move(l2),
@@ -176,10 +164,8 @@ LoopifySorting::merge_fuel(const unsigned int fuel,
                                       _stack.push_back(_Enter{_args0.d_a1, l1,
                                                               std::move(f)});
                                     }
-                                    return {};
                                   }},
                               l2->v());
-                          return {};
                         }},
                     l1->v());
               }
@@ -238,33 +224,25 @@ LoopifySorting::merge_sort_fuel(const unsigned int fuel,
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           _result = List<unsigned int>::ctor::Nil_();
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           std::visit(
                               Overloaded{
                                   [&](const typename List<unsigned int>::Nil
-                                          _args0)
-                                      -> std::shared_ptr<List<unsigned int>> {
-                                    _result = l;
-                                    return {};
-                                  },
+                                          _args0) -> void { _result = l; },
                                   [&](const typename List<unsigned int>::Cons
-                                          _args0)
-                                      -> std::shared_ptr<List<unsigned int>> {
+                                          _args0) -> void {
                                     std::shared_ptr<List<unsigned int>> l1 =
                                         split<unsigned int>(l).first;
                                     std::shared_ptr<List<unsigned int>> l2 =
                                         split<unsigned int>(l).second;
                                     _stack.push_back(_Call1{l1, f});
                                     _stack.push_back(_Enter{l2, f});
-                                    return {};
                                   }},
                               _args.d_a1->v());
-                          return {};
                         }},
                     l->v());
               }
@@ -307,41 +285,36 @@ LoopifySorting::partition(const unsigned int pivot,
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     std::visit(
-        Overloaded{
-            [&](_Enter _f) {
-              const std::shared_ptr<List<unsigned int>> l = _f.l;
-              std::visit(
-                  Overloaded{
-                      [&](const typename List<unsigned int>::Nil _args)
-                          -> std::pair<std::shared_ptr<List<unsigned int>>,
-                                       std::shared_ptr<List<unsigned int>>> {
-                        _result =
-                            std::make_pair(List<unsigned int>::ctor::Nil_(),
-                                           List<unsigned int>::ctor::Nil_());
-                        return {};
-                      },
-                      [&](const typename List<unsigned int>::Cons _args)
-                          -> std::pair<std::shared_ptr<List<unsigned int>>,
-                                       std::shared_ptr<List<unsigned int>>> {
-                        _stack.push_back(_Call1{pivot, _args});
-                        _stack.push_back(_Enter{_args.d_a1});
-                        return {};
-                      }},
-                  l->v());
-            },
-            [&](_Call1 _f) {
-              const unsigned int pivot = _f._s0;
-              const typename List<unsigned int>::Cons _args = _f._s1;
-              std::shared_ptr<List<unsigned int>> lo = _result.first;
-              std::shared_ptr<List<unsigned int>> hi = _result.second;
-              if (_args.d_a0 <= pivot) {
-                _result = std::make_pair(
-                    List<unsigned int>::ctor::Cons_(_args.d_a0, lo), hi);
-              } else {
-                _result = std::make_pair(
-                    lo, List<unsigned int>::ctor::Cons_(_args.d_a0, hi));
-              }
-            }},
+        Overloaded{[&](_Enter _f) {
+                     const std::shared_ptr<List<unsigned int>> l = _f.l;
+                     std::visit(
+                         Overloaded{
+                             [&](const typename List<unsigned int>::Nil _args)
+                                 -> void {
+                               _result = std::make_pair(
+                                   List<unsigned int>::ctor::Nil_(),
+                                   List<unsigned int>::ctor::Nil_());
+                             },
+                             [&](const typename List<unsigned int>::Cons _args)
+                                 -> void {
+                               _stack.push_back(_Call1{pivot, _args});
+                               _stack.push_back(_Enter{_args.d_a1});
+                             }},
+                         l->v());
+                   },
+                   [&](_Call1 _f) {
+                     const unsigned int pivot = _f._s0;
+                     const typename List<unsigned int>::Cons _args = _f._s1;
+                     std::shared_ptr<List<unsigned int>> lo = _result.first;
+                     std::shared_ptr<List<unsigned int>> hi = _result.second;
+                     if (_args.d_a0 <= pivot) {
+                       _result = std::make_pair(
+                           List<unsigned int>::ctor::Cons_(_args.d_a0, lo), hi);
+                     } else {
+                       _result = std::make_pair(
+                           lo, List<unsigned int>::ctor::Cons_(_args.d_a0, hi));
+                     }
+                   }},
         _frame);
   }
   return _result;
@@ -387,19 +360,17 @@ LoopifySorting::quicksort_fuel(const unsigned int fuel,
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           _result = List<unsigned int>::ctor::Nil_();
-                          return {};
                         },
                         [&](const typename List<unsigned int>::Cons _args)
-                            -> std::shared_ptr<List<unsigned int>> {
+                            -> void {
                           std::shared_ptr<List<unsigned int>> lo =
                               partition(_args.d_a0, _args.d_a1).first;
                           std::shared_ptr<List<unsigned int>> hi =
                               partition(_args.d_a0, _args.d_a1).second;
                           _stack.push_back(_Call1{lo, f, _args.d_a0});
                           _stack.push_back(_Enter{hi, f});
-                          return {};
                         }},
                     l->v());
               }
@@ -489,35 +460,29 @@ std::shared_ptr<List<unsigned int>> LoopifySorting::remove_duplicates(
               std::visit(
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         _result = List<unsigned int>::ctor::Nil_();
-                        return {};
                       },
                       [&](const typename List<unsigned int>::Cons _args)
-                          -> std::shared_ptr<List<unsigned int>> {
+                          -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename List<unsigned int>::Nil
-                                        _args0)
-                                    -> std::shared_ptr<List<unsigned int>> {
+                                        _args0) -> void {
                                   _result = List<unsigned int>::ctor::Cons_(
                                       _args.d_a0,
                                       List<unsigned int>::ctor::Nil_());
-                                  return {};
                                 },
                                 [&](const typename List<unsigned int>::Cons
-                                        _args0)
-                                    -> std::shared_ptr<List<unsigned int>> {
+                                        _args0) -> void {
                                   if (_args.d_a0 == _args0.d_a0) {
                                     _stack.push_back(_Enter{_args.d_a1});
                                   } else {
                                     _stack.push_back(_Call1{_args.d_a0});
                                     _stack.push_back(_Enter{_args.d_a1});
                                   }
-                                  return {};
                                 }},
                             _args.d_a1->v());
-                        return {};
                       }},
                   l->v());
             },
@@ -564,12 +529,11 @@ LoopifySorting::uniq_sorted_aux(const unsigned int prev, const bool seen,
                      std::visit(
                          Overloaded{
                              [&](const typename List<unsigned int>::Nil _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                _result = List<unsigned int>::ctor::Nil_();
-                               return {};
                              },
                              [&](const typename List<unsigned int>::Cons _args)
-                                 -> std::shared_ptr<List<unsigned int>> {
+                                 -> void {
                                if (seen) {
                                  if (prev == _args.d_a0) {
                                    _stack.push_back(
@@ -584,7 +548,6 @@ LoopifySorting::uniq_sorted_aux(const unsigned int prev, const bool seen,
                                  _stack.push_back(
                                      _Enter{_args.d_a1, true, _args.d_a0});
                                }
-                               return {};
                              }},
                          l->v());
                    },
