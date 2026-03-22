@@ -308,9 +308,14 @@ let rec collect_expr (check : call_checker) expr =
    |CPPfloat _
    |CPPrequires _ -> []
 
+(** Collect recursive call sites from a list of statements.
+    Delegates to {!collect_stmt} for each statement. *)
 and collect_stmts check ~in_visitor stmts =
   List.concat_map (collect_stmt check ~in_visitor) stmts
 
+(** Collect recursive call sites from a single statement. Handles
+    [Sreturn], [Sif], [Scustom_case], [Sswitch], and nested visit lambdas.
+    When [~in_visitor:true], return-position calls are treated as tail calls. *)
 and collect_stmt check ~in_visitor = function
   | Sreturn (Some e) ->
     ( match check e with
@@ -433,6 +438,17 @@ let rec is_reuse_optimization_cond = function
     String.equal (Id.to_string id) "use_count"
   | _ -> false
 
+(** Apply reuse-optimization bypass to a rewritten [Sif].
+    If [cond] is a use-count guard and the then-branch still contains
+    un-decomposed recursive calls while the else-branch is clean,
+    drops the then-branch entirely and returns only the else-branch. *)
+let rewrite_if_with_reuse_bypass check cond rw_then rw_else =
+  if is_reuse_optimization_cond cond
+     && count_calls_stmts check rw_then > 0
+     && count_calls_stmts check rw_else = 0
+  then rw_else
+  else [Sif (cond, rw_then, rw_else)]
+
 (** Classify a function body's recursion pattern. Collects all recursive call
     sites and checks whether they are all in tail position, some non-tail, or
     none at all. *)
@@ -474,6 +490,27 @@ let find_varying_params check params body =
 (** Filter a list keeping only elements at positions where [mask] is [true]. *)
 let filter_by_mask mask lst = List.filteri (fun i _ -> List.nth mask i) lst
 
+(** Build a [std::visit(Overloaded\{...\}, scrut)] expression. *)
+let make_visit_expr scrut lambdas =
+  CPPfun_call (CPPvisit, [scrut; CPPoverloaded lambdas])
+
+(** Wrap a [std::visit] dispatch into a single-statement list. *)
+let make_visit_stmt scrut lambdas =
+  [Sexpr (make_visit_expr scrut lambdas)]
+
+(** Rewrite each lambda body in a visitor and set its return type.
+    Non-lambda expressions are passed through unchanged.
+    @param ret_ty   New return type for each lambda
+    @param rewrite  [lparams -> body -> new_body] transformation *)
+let map_visit_lambdas ~ret_ty ~rewrite lambdas =
+  List.map
+    (fun lambda ->
+      match lambda with
+      | CPPlambda (lparams, _ret_ty, body, _capture) ->
+        CPPlambda (lparams, ret_ty, rewrite lparams body, false)
+      | e -> e)
+    lambdas
+
 (** {2 This→_self substitution for method loopification} *)
 
 (** Replace [CPPthis] with [CPPvar self_id] throughout an expression. *)
@@ -483,6 +520,7 @@ let rec this_to_self_expr (self_id : Id.t) (e : cpp_expr) : cpp_expr =
   | _ ->
     map_expr (this_to_self_expr self_id) (this_to_self_stmt self_id) Fun.id e
 
+(** Replace [CPPthis] with [CPPvar self_id] throughout a statement. *)
 and this_to_self_stmt (self_id : Id.t) (s : cpp_stmt) : cpp_stmt =
   map_stmt (this_to_self_expr self_id) (this_to_self_stmt self_id) Fun.id s
 
@@ -502,6 +540,8 @@ let rec subst_expr (subs : (Id.t * Id.t) list) e =
   in
   map_expr (subst_expr subs) (subst_stmt subs) (fun t -> t) e'
 
+(** Substitute variable names in a statement using a mapping
+    [(old_id, new_id)]. Statement-level companion of {!subst_expr}. *)
 and subst_stmt subs s =
   map_stmt (subst_expr subs) (subst_stmt subs) (fun t -> t) s
 
@@ -527,6 +567,8 @@ and subst_stmt subs s =
       return _result;
     ]} *)
 
+(** Create a shadow variable name for tail-recursion loop variables.
+    Prefixes [id] with [_loop_], avoiding C++'s reserved double-underscore. *)
 let shadow_name (id : Id.t) : Id.t =
   let s = Id.to_string id in
   (* Avoid double underscores (reserved in C++): _loop_ + _self → _loop_self *)
@@ -550,6 +592,17 @@ let rec strip_ref_and_const_type = function
   | Tref t -> strip_ref_and_const_type t
   | Tmod (TMconst, t) -> strip_ref_and_const_type t
   | t -> t
+
+(** Assign [expr] to the [_result] accumulator variable.
+    Generates the statement list [[\[_result = expr;\]]]. *)
+let assign_result expr =
+  [Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_result"), expr))]
+
+(** Assign [expr] to [_result] and set [_continue = false] to exit
+    the tail-recursion while loop.  Used only in tail-recursion rewriting. *)
+let assign_result_and_stop expr =
+  [ Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_result"), expr));
+    Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_continue"), CPPbool false)) ]
 
 (** Generate temp-based parameter updates to avoid read-after-write hazards. For
     a recursive call like [f b (a mod b)], we must evaluate all argument
@@ -628,24 +681,15 @@ let rec rewrite_lambda_return check varying shadow_params = function
               lambdas ->
     let rw = rewrite_lambda_return check varying shadow_params in
     let new_lambdas =
-      List.map
-        (fun lambda ->
-          match lambda with
-          | CPPlambda (lparams, _ret_ty, body, _capture) ->
-            CPPlambda (lparams, None, List.concat_map rw body, false)
-          | e -> e )
-        lambdas
+      map_visit_lambdas ~ret_ty:None
+        ~rewrite:(fun _ body -> List.concat_map rw body) lambdas
     in
-    [Sexpr (CPPfun_call (CPPvisit, [scrut; CPPoverloaded new_lambdas]))]
+    make_visit_stmt scrut new_lambdas
   | Sreturn (Some e) ->
     ( match check e with
     | Some cs ->
       make_shadow_updates shadow_params (filter_by_mask varying cs.cs_args)
-    | None ->
-      [
-        Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_result"), e));
-        Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_continue"), CPPbool false));
-      ] )
+    | None -> assign_result_and_stop e )
   | Sif (cond, then_br, else_br) ->
     let rw = rewrite_lambda_return check varying shadow_params in
     [Sif (cond, List.concat_map rw then_br, List.concat_map rw else_br)]
@@ -703,17 +747,10 @@ let rec rewrite_visit_stmt check varying shadow_params = function
             | e -> e )
           lambdas
       in
-      let visit_expr =
-        CPPfun_call (CPPvisit, [scrut; CPPoverloaded new_lambdas])
-      in
-      Sexpr visit_expr
+      Sexpr (make_visit_expr scrut new_lambdas)
     | _ ->
       (* Direct base return — assign _result and stop loop *)
-      Sblock
-        [
-          Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_result"), e));
-          Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_continue"), CPPbool false));
-        ] )
+      Sblock (assign_result_and_stop e) )
   | Sif (cond, then_br, else_br) ->
     let rw = rewrite_visit_stmt check varying shadow_params in
     Sif (cond, List.map rw then_br, List.map rw else_br)
@@ -1340,6 +1377,11 @@ let type_env_of_lambda_params (params : (cpp_type * Id.t option) list) :
       | None -> None )
     params
 
+(** Combine lambda parameter types, body declarations, and outer env
+    into a single type environment. *)
+let build_lambda_env lparams body env =
+  type_env_of_lambda_params lparams @ collect_type_env body @ env
+
 (** Look up a variable's type in the environment. *)
 let lookup_var_type env id = List.assoc_opt id env
 
@@ -1427,6 +1469,8 @@ let rec free_vars_expr = function
     List.filter (fun v -> not (List.exists (Id.equal v) bound)) body_fv
   | _ -> []
 
+(** Collect free variables from a single statement. Statement-level companion
+    of {!free_vars_expr}; recurses into branches and sub-expressions. *)
 and free_vars_stmt = function
   | Sreturn (Some e) -> free_vars_expr e
   | Sreturn None -> []
@@ -1529,8 +1573,7 @@ let collect_visit_free_vars lambdas =
 
 (** Rewrite a Scustom_case branch's returns to assign to _result instead. *)
 let rec rewrite_returns_to_result = function
-  | Sreturn (Some e) ->
-    [Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_result"), e))]
+  | Sreturn (Some e) -> assign_result e
   | Sif (c, t, f) ->
     [
       Sif
@@ -1694,36 +1737,6 @@ let make_call_frame_name (counter : int ref) : string =
 let make_enter_frame (args : cpp_expr list) : cpp_expr =
   CPPstruct_id (Id.of_string "_Enter", [], args)
 
-(** Construct a [_Call{name}] frame expression with the given saved values.
-
-    Generates [_Call{name}\{saved1, saved2, ...\}] as a [CPPstruct_id] expression.
-
-    @param name The frame name (e.g., ["_Call0"], ["_Call1"])
-    @param saved_exprs The values to save in the Call frame (non-recursive arguments,
-                       context needed for the continuation)
-    @return A [CPPstruct_id] expression representing the frame instance *)
-let make_call_frame (name : string) (saved_exprs : cpp_expr list) : cpp_expr =
-  CPPstruct_id (Id.of_string name, [], saved_exprs)
-
-(** Push an [_Enter] frame onto the stack.
-
-    Generates [_stack.push_back(_Enter\{args\})].
-
-    @param args The arguments for the Enter frame
-    @return A [Sexpr] statement that pushes the frame *)
-let push_enter_frame (args : cpp_expr list) : cpp_stmt =
-  make_stack_push (make_enter_frame args)
-
-(** Push a [_Call] frame onto the stack.
-
-    Generates [_stack.push_back(_Call{name}\{saved_exprs\})].
-
-    @param name The Call frame name
-    @param saved_exprs The saved expressions for the Call frame
-    @return A [Sexpr] statement that pushes the frame *)
-let push_call_frame (name : string) (saved_exprs : cpp_expr list) : cpp_stmt =
-  make_stack_push (make_call_frame name saved_exprs)
-
 (** Batch-infer types for a list of saved expressions.
 
     @param tparams Template parameters context
@@ -1733,28 +1746,13 @@ let push_call_frame (name : string) (saved_exprs : cpp_expr list) : cpp_stmt =
 let infer_saved_types tparams env exprs =
   List.map (infer_saved_type tparams env) exprs
 
-(** Create a [call_frame_info] record with standard fields.
-
-    @param name The frame name (e.g., ["_Call0"])
-    @param saved_exprs The expressions saved in this frame
-    @param saved_types The types of the saved expressions
-    @param env The type environment at frame creation
-    @param handler The handler body for this frame (statements to execute when popped)
-    @return A [call_frame_info] record *)
-let create_frame_info ~name ~saved_exprs ~saved_types ~env ~handler : call_frame_info =
-  { cf_name = name;
-    cf_saved_types = saved_types;
-    cf_saved_exprs = saved_exprs;
-    cf_env = env;
-    cf_handler = handler }
-
 (** Build a decompose_single_call handler body: reads saved values from [_f._sN]
     and _result, reconstructs the expression. *)
 let build_decompose_handler (d : decomposed) n_saved =
   let saved_vars = frame_fields n_saved in
   let result_var = CPPvar (Id.of_string "_result") in
   let rebuilt = d.d_rebuild saved_vars result_var in
-  [Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_result"), rebuilt))]
+  assign_result rebuilt
 
 (** Build a Scustom_case scrutinee handler body: reads saved variables from
     frame, then dispatches on _result. [rewrite_body] is a function to rewrite
@@ -2085,7 +2083,7 @@ let gen_chained_call_frames
     (acd : all_calls_decomp) =
   let n_calls = List.length acd.acd_calls in
   let n_saved = List.length acd.acd_saved in
-  let saved_types = List.map (infer_saved_type tparams env) acd.acd_saved in
+  let saved_types = infer_saved_types tparams env acd.acd_saved in
   let rec gen_frames call_idx =
     if call_idx = n_calls - 1 then (
       let call_name = make_call_frame_name call_counter in
@@ -2101,12 +2099,10 @@ let gen_chained_call_frames
         let saved_vars = frame_fields ~offset:n_partials n_saved in
         let all_results = partials @ [CPPvar (Id.of_string "_result")] in
         let combined = acd.acd_combine saved_vars all_results in
-        [Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_result"), combined))]
+        assign_result combined
       in
-      frames_ref :=
-        !frames_ref
-        @ [create_frame_info ~name:call_name ~saved_exprs:all_saved_exprs
-             ~saved_types:all_saved_types ~env ~handler];
+      register_frame frames_ref ~name:call_name ~saved_exprs:all_saved_exprs
+        ~saved_types:all_saved_types ~env ~handler;
       call_name )
     else
       let call_name = make_call_frame_name call_counter in
@@ -2163,17 +2159,9 @@ let gen_chained_call_frames
           make_stack_push (CPPstruct_id (Id.of_string "_Enter", [], next_args));
         ]
       in
-      frames_ref :=
-        !frames_ref
-        @ [
-            {
-              cf_name = call_name;
-              cf_saved_types = all_saved_types;
-              cf_saved_exprs = all_saved_exprs;
-              cf_env = env;
-              cf_handler = handler;
-            };
-          ];
+      register_frame frames_ref ~name:call_name
+        ~saved_types:all_saved_types ~saved_exprs:all_saved_exprs ~env
+        ~handler;
       call_name
   in
   let first_call_name = gen_frames 0 in
@@ -2289,41 +2277,17 @@ let rec rewrite_enter_lambda_return
             lambda_fvs
         in
         let new_lambdas =
-          List.map
-            (fun lambda ->
-              match lambda with
-              | CPPlambda (lparams, _lret_ty, body, _capture) ->
-                let lenv =
-                  type_env_of_lambda_params lparams
-                  @ collect_type_env body @ env
-                in
-                let new_body =
-                  rewrite_enter_stmts
-                    check varying tparams lenv ret_ty pp_type
-                    call_counter frames_ref varying_param_types body
-                in
-                CPPlambda (lparams, Some Tvoid, new_body, false)
-              | e -> e )
+          map_visit_lambdas ~ret_ty:(Some Tvoid)
+            ~rewrite:(fun lparams body ->
+              let lenv = build_lambda_env lparams body env in
+              rewrite_enter_stmts check varying tparams lenv ret_ty pp_type
+                call_counter frames_ref varying_param_types body)
             lambdas
         in
-        bindings
-        @ [
-            Sexpr
-              (CPPfun_call (CPPvisit, [rebuilt_scrut; CPPoverloaded new_lambdas])
-              );
-          ]
+        bindings @ [Sexpr (make_visit_expr rebuilt_scrut new_lambdas)]
       in
-      frames_ref :=
-        !frames_ref
-        @ [
-            {
-              cf_name = call_name;
-              cf_saved_types = all_types;
-              cf_saved_exprs = all_saved;
-              cf_env = env;
-              cf_handler = handler;
-            };
-          ];
+      register_frame frames_ref ~name:call_name ~saved_types:all_types
+        ~saved_exprs:all_saved ~env ~handler;
       [
         make_stack_push (CPPstruct_id (Id.of_string call_name, [], all_saved));
         make_stack_push
@@ -2332,13 +2296,7 @@ let rec rewrite_enter_lambda_return
       ]
     | None ->
       (* Cannot decompose scrutinee — execute inline *)
-      [
-        Sexpr
-          (CPPbinop
-             ( "=",
-               CPPvar (Id.of_string "_result"),
-               CPPfun_call (CPPvisit, [scrut; CPPoverloaded lambdas]) ) );
-      ] )
+      assign_result (make_visit_expr scrut lambdas) )
   | Sreturn (Some (CPPfun_call (CPPvisit, [scrut; CPPoverloaded lambdas])))
     when count_calls_expr check scrut = 0
          && List.exists
@@ -2350,31 +2308,14 @@ let rec rewrite_enter_lambda_return
               lambdas ->
     (* Lower nested visit — recurse into each lambda body *)
     let new_lambdas =
-      List.map
-        (fun lambda ->
-          match lambda with
-          | CPPlambda (lparams, _lret_ty, body, _capture) ->
-            let lenv =
-              type_env_of_lambda_params lparams @ collect_type_env body @ env
-            in
-            let new_body =
-              rewrite_enter_stmts
-                check
-                varying
-                tparams
-                lenv
-                ret_ty
-                pp_type
-                call_counter
-                frames_ref
-                varying_param_types
-                body
-            in
-            CPPlambda (lparams, Some Tvoid, new_body, false)
-          | e -> e )
+      map_visit_lambdas ~ret_ty:(Some Tvoid)
+        ~rewrite:(fun lparams body ->
+          let lenv = build_lambda_env lparams body env in
+          rewrite_enter_stmts check varying tparams lenv ret_ty pp_type
+            call_counter frames_ref varying_param_types body)
         lambdas
     in
-    [Sexpr (CPPfun_call (CPPvisit, [scrut; CPPoverloaded new_lambdas]))]
+    make_visit_stmt scrut new_lambdas
   | Sreturn (Some e) ->
     let n_calls = count_calls_expr check e in
     if n_calls = 0 then
@@ -2399,11 +2340,7 @@ let rec rewrite_enter_lambda_return
                       | s -> s )
                     body
                 in
-                let lenv =
-                  type_env_of_lambda_params lparams
-                  @ collect_type_env extended_body
-                  @ env
-                in
+                let lenv = build_lambda_env lparams extended_body env in
                 let new_body =
                   rewrite_enter_stmts
                     check
@@ -2421,7 +2358,7 @@ let rec rewrite_enter_lambda_return
               | e -> e )
             lambdas
         in
-        [Sexpr (CPPfun_call (CPPvisit, [scrut; CPPoverloaded new_lambdas]))]
+        make_visit_stmt scrut new_lambdas
       | None ->
       (* Check for IIFE containing recursive calls *)
       match find_inner_iife check e with
@@ -2452,7 +2389,7 @@ let rec rewrite_enter_lambda_return
         new_body
       | None ->
         (* True base case — no recursive calls anywhere *)
-        [Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_result"), e))]
+        assign_result e
     else if n_calls = 1 then
       match
         decompose_single_call check e
@@ -2473,18 +2410,14 @@ let rec rewrite_enter_lambda_return
           let n_saved = List.length d.d_saved in
           let saved_types = infer_saved_types tparams env d.d_saved in
           let final_handler = build_decompose_handler d n_saved in
-          frames_ref :=
-            !frames_ref
-            @ [create_frame_info ~name:final_call_name ~saved_exprs:d.d_saved
-                 ~saved_types ~env ~handler:final_handler];
+          register_frame frames_ref ~name:final_call_name ~saved_types
+            ~saved_exprs:d.d_saved ~env ~handler:final_handler;
           (* Create intermediate Call frame that will push the final Call frame
              after getting _result *)
           let other_saved = List.filteri (fun i _ -> i <> idx) d.d_saved in
-          let inter_id = !call_counter in
-          call_counter := inter_id + 1;
-          let inter_call_name = "_Call" ^ string_of_int inter_id in
+          let inter_call_name = make_call_frame_name call_counter in
           let inter_saved_types =
-            List.map (infer_saved_type tparams env) other_saved
+            infer_saved_types tparams env other_saved
           in
           let n_other = List.length other_saved in
           let inter_handler =
@@ -2513,17 +2446,9 @@ let rec rewrite_enter_lambda_return
             in
             [push_final; push_enter]
           in
-          frames_ref :=
-            !frames_ref
-            @ [
-                {
-                  cf_name = inter_call_name;
-                  cf_saved_types = inter_saved_types;
-                  cf_saved_exprs = other_saved;
-                  cf_env = env;
-                  cf_handler = inter_handler;
-                };
-              ];
+          register_frame frames_ref ~name:inter_call_name
+            ~saved_types:inter_saved_types ~saved_exprs:other_saved ~env
+            ~handler:inter_handler;
           [
             make_stack_push
               (CPPstruct_id (Id.of_string inter_call_name, [], other_saved));
@@ -2535,23 +2460,12 @@ let rec rewrite_enter_lambda_return
           ]
         | [] ->
           (* No recursive calls in saved expressions — original path *)
-          let id = !call_counter in
-          call_counter := id + 1;
-          let call_name = "_Call" ^ string_of_int id in
+          let call_name = make_call_frame_name call_counter in
           let n_saved = List.length d.d_saved in
-          let saved_types = List.map (infer_saved_type tparams env) d.d_saved in
+          let saved_types = infer_saved_types tparams env d.d_saved in
           let handler = build_decompose_handler d n_saved in
-          frames_ref :=
-            !frames_ref
-            @ [
-                {
-                  cf_name = call_name;
-                  cf_saved_types = saved_types;
-                  cf_saved_exprs = d.d_saved;
-                  cf_env = env;
-                  cf_handler = handler;
-                };
-              ];
+          register_frame frames_ref ~name:call_name ~saved_types
+            ~saved_exprs:d.d_saved ~env ~handler;
           let push_call =
             make_stack_push
               (CPPstruct_id (Id.of_string call_name, [], d.d_saved))
@@ -2594,11 +2508,9 @@ let rec rewrite_enter_lambda_return
               |> List.filter (fun (i, _) -> i <> idx)
             in
             let non_rec_args = List.map snd non_rec_info in
-            let call_id = !call_counter in
-            call_counter := call_id + 1;
-            let call_name = "_Call" ^ string_of_int call_id in
+            let call_name = make_call_frame_name call_counter in
             let saved_types =
-              List.map (infer_saved_type tparams env) non_rec_args
+              infer_saved_types tparams env non_rec_args
             in
             let n_saved = List.length non_rec_args in
             let handler =
@@ -2622,17 +2534,8 @@ let rec rewrite_enter_lambda_return
                        filter_by_mask varying outer_args ) );
               ]
             in
-            frames_ref :=
-              !frames_ref
-              @ [
-                  {
-                    cf_name = call_name;
-                    cf_saved_types = saved_types;
-                    cf_saved_exprs = non_rec_args;
-                    cf_env = env;
-                    cf_handler = handler;
-                  };
-                ];
+            register_frame frames_ref ~name:call_name ~saved_types
+              ~saved_exprs:non_rec_args ~env ~handler;
             ( match check rec_arg with
             | Some inner_cs ->
               [
@@ -2647,11 +2550,9 @@ let rec rewrite_enter_lambda_return
             | None ->
             match decompose_single_call check rec_arg with
             | Some d ->
-              let inner_call_id = !call_counter in
-              call_counter := inner_call_id + 1;
-              let inner_call_name = "_Call" ^ string_of_int inner_call_id in
+              let inner_call_name = make_call_frame_name call_counter in
               let inner_saved_types =
-                List.map (infer_saved_type tparams env) d.d_saved
+                infer_saved_types tparams env d.d_saved
               in
               let inner_n = List.length d.d_saved in
               let inner_handler =
@@ -2664,17 +2565,9 @@ let rec rewrite_enter_lambda_return
                     (CPPbinop ("=", CPPvar (Id.of_string "_result"), rebuilt));
                 ]
               in
-              frames_ref :=
-                !frames_ref
-                @ [
-                    {
-                      cf_name = inner_call_name;
-                      cf_saved_types = inner_saved_types;
-                      cf_saved_exprs = d.d_saved;
-                      cf_env = env;
-                      cf_handler = inner_handler;
-                    };
-                  ];
+              register_frame frames_ref ~name:inner_call_name
+                ~saved_types:inner_saved_types ~saved_exprs:d.d_saved ~env
+                ~handler:inner_handler;
               [
                 make_stack_push
                   (CPPstruct_id (Id.of_string call_name, [], non_rec_args));
@@ -2688,13 +2581,13 @@ let rec rewrite_enter_lambda_return
               ]
             | None ->
               (* Cannot decompose — execute inline *)
-              [Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_result"), e))] )
+              assign_result e )
           | _ ->
             (* Multiple nested calls or complex pattern — execute inline *)
-            [Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_result"), e))] )
+            assign_result e )
       | None ->
         (* Unhandled — execute inline *)
-        [Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_result"), e))]
+        assign_result e
     else (
       (* Multiple recursive calls — try double decomposition *)
         match
@@ -2705,19 +2598,15 @@ let rec rewrite_enter_lambda_return
            _Enter{first_args} 2. _Call1 handler: save _result as left, push
            _Call2{left, dd_saved} + _Enter{second_args} 3. _Call2 handler:
            _result = combine(dd_saved_vars, left, _result) *)
-        let id1 = !call_counter in
-        call_counter := id1 + 1;
-        let id2 = !call_counter in
-        call_counter := id2 + 1;
-        let call1_name = "_Call" ^ string_of_int id1 in
-        let call2_name = "_Call" ^ string_of_int id2 in
+        let call1_name = make_call_frame_name call_counter in
+        let call2_name = make_call_frame_name call_counter in
         let n_dd_saved = List.length dd.dd_saved in
         (* _Call2 saves: left_result (ret_ty) + dd_saved *)
         let call2_saved_exprs =
           CPPvar (Id.of_string "_result") :: dd.dd_saved
         in
         let call2_saved_types =
-          ret_ty :: List.map (infer_saved_type tparams env) dd.dd_saved
+          ret_ty :: infer_saved_types tparams env dd.dd_saved
         in
         let call2_handler =
           let left = frame_field 0 in
@@ -2727,24 +2616,16 @@ let rec rewrite_enter_lambda_return
           let combined =
             dd.dd_combine saved_vars left (CPPvar (Id.of_string "_result"))
           in
-          [Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_result"), combined))]
+          assign_result combined
         in
-        frames_ref :=
-          !frames_ref
-          @ [
-              {
-                cf_name = call2_name;
-                cf_saved_types = call2_saved_types;
-                cf_saved_exprs = call2_saved_exprs;
-                cf_env = env;
-                cf_handler = call2_handler;
-              };
-            ];
+        register_frame frames_ref ~name:call2_name
+          ~saved_types:call2_saved_types ~saved_exprs:call2_saved_exprs ~env
+          ~handler:call2_handler;
         (* _Call1 saves: second_args (varying-filtered) + dd_saved *)
         let second_varying = filter_by_mask varying dd.dd_second_args in
         let call1_saved_exprs = second_varying @ dd.dd_saved in
         let call1_saved_types =
-          List.map (infer_saved_type tparams env) call1_saved_exprs
+          infer_saved_types tparams env call1_saved_exprs
         in
         let n_second = List.length second_varying in
         let call1_handler =
@@ -2760,17 +2641,9 @@ let rec rewrite_enter_lambda_return
               (CPPstruct_id (Id.of_string "_Enter", [], second_args));
           ]
         in
-        frames_ref :=
-          !frames_ref
-          @ [
-              {
-                cf_name = call1_name;
-                cf_saved_types = call1_saved_types;
-                cf_saved_exprs = call1_saved_exprs;
-                cf_env = env;
-                cf_handler = call1_handler;
-              };
-            ];
+        register_frame frames_ref ~name:call1_name
+          ~saved_types:call1_saved_types ~saved_exprs:call1_saved_exprs ~env
+          ~handler:call1_handler;
         [
           make_stack_push
             (CPPstruct_id (Id.of_string call1_name, [], call1_saved_exprs));
@@ -2797,7 +2670,7 @@ let rec rewrite_enter_lambda_return
           acd
       | _ ->
         (* Cannot decompose — execute inline *)
-        [Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_result"), e))] )
+        assign_result e )
   | Sif (cond, then_br, else_br) when count_calls_expr check cond >= 1 ->
     (* Recursive calls in condition — lift them into assignments before the
        if *)
@@ -2831,29 +2704,14 @@ let rec rewrite_enter_lambda_return
     in
     let rw_then = rw_stmts then_br in
     let rw_else = rw_stmts else_br in
-    (* When the reuse optimization (use_count==1 fast-path) generates
-       Sassign_field statements with recursive calls that we cannot
-       decompose, the rewritten then-branch still contains calls.
-       In that case, drop the reuse branch and keep only the properly
-       loopified else-branch.  We only do this for Sif guards that are
-       actually reuse-optimization checks (use_count()==1), not for
-       general conditionals. *)
-    if is_reuse_optimization_cond cond
-       && count_calls_stmts check rw_then > 0
-       && count_calls_stmts check rw_else = 0
-    then
-      rw_else
-    else
-      [Sif (cond, rw_then, rw_else)]
+    rewrite_if_with_reuse_bypass check cond rw_then rw_else
   | Scustom_case (ty, scrut, tyargs, branches, err) ->
     ( match check scrut with
     | Some cs ->
-      let id = !call_counter in
-      call_counter := id + 1;
-      let call_name = "_Call" ^ string_of_int id in
+      let call_name = make_call_frame_name call_counter in
       let unique_vars = collect_branch_free_vars branches in
       let saved_exprs = List.map (fun id -> CPPvar id) unique_vars in
-      let saved_types = List.map (infer_saved_type tparams env) saved_exprs in
+      let saved_types = infer_saved_types tparams env saved_exprs in
       let rw_handler =
         rewrite_enter_lambda_return
           check
@@ -2876,17 +2734,8 @@ let rec rewrite_enter_lambda_return
           branches
           err
       in
-      frames_ref :=
-        !frames_ref
-        @ [
-            {
-              cf_name = call_name;
-              cf_saved_types = saved_types;
-              cf_saved_exprs = saved_exprs;
-              cf_env = env;
-              cf_handler = handler;
-            };
-          ];
+      register_frame frames_ref ~name:call_name ~saved_types
+        ~saved_exprs ~env ~handler;
       let push_call =
         make_stack_push (CPPstruct_id (Id.of_string call_name, [], saved_exprs))
       in
@@ -2965,21 +2814,10 @@ let rec rewrite_enter_lambda_return
       with
       | Some cs ->
         (* Direct call: id = f(args) *)
-        let call_id = !call_counter in
-        call_counter := call_id + 1;
-        let call_name = "_Call" ^ string_of_int call_id in
+        let call_name = make_call_frame_name call_counter in
         let handler = [Sasgn (id, ty_opt, CPPvar (Id.of_string "_result"))] in
-        frames_ref :=
-          !frames_ref
-          @ [
-              {
-                cf_name = call_name;
-                cf_saved_types = [];
-                cf_saved_exprs = [];
-                cf_env = env;
-                cf_handler = handler;
-              };
-            ];
+        register_frame frames_ref ~name:call_name ~saved_types:[]
+          ~saved_exprs:[] ~env ~handler;
         let push_call =
           make_stack_push (CPPstruct_id (Id.of_string call_name, [], []))
         in
@@ -2992,11 +2830,9 @@ let rec rewrite_enter_lambda_return
       | None ->
       match decompose_single_call check e with
       | Some d ->
-        let call_id = !call_counter in
-        call_counter := call_id + 1;
-        let call_name = "_Call" ^ string_of_int call_id in
+        let call_name = make_call_frame_name call_counter in
         let n_saved = List.length d.d_saved in
-        let saved_types = List.map (infer_saved_type tparams env) d.d_saved in
+        let saved_types = infer_saved_types tparams env d.d_saved in
         let handler =
           let result_bindings = frame_fields n_saved in
           let rebuilt =
@@ -3004,17 +2840,8 @@ let rec rewrite_enter_lambda_return
           in
           [Sasgn (id, ty_opt, rebuilt)]
         in
-        frames_ref :=
-          !frames_ref
-          @ [
-              {
-                cf_name = call_name;
-                cf_saved_types = saved_types;
-                cf_saved_exprs = d.d_saved;
-                cf_env = env;
-                cf_handler = handler;
-              };
-            ];
+        register_frame frames_ref ~name:call_name ~saved_types
+          ~saved_exprs:d.d_saved ~env ~handler;
         let push_call =
           make_stack_push (CPPstruct_id (Id.of_string call_name, [], d.d_saved))
         in
@@ -3034,19 +2861,15 @@ let rec rewrite_enter_lambda_return
           decompose_double_call check e
         with
       | Some dd ->
-        let id1 = !call_counter in
-        call_counter := id1 + 1;
-        let id2 = !call_counter in
-        call_counter := id2 + 1;
-        let call1_name = "_Call" ^ string_of_int id1 in
-        let call2_name = "_Call" ^ string_of_int id2 in
+        let call1_name = make_call_frame_name call_counter in
+        let call2_name = make_call_frame_name call_counter in
         let n_dd_saved = List.length dd.dd_saved in
         (* _Call2: combine left and right results *)
         let call2_saved_exprs =
           CPPvar (Id.of_string "_result") :: dd.dd_saved
         in
         let call2_saved_types =
-          ret_ty :: List.map (infer_saved_type tparams env) dd.dd_saved
+          ret_ty :: infer_saved_types tparams env dd.dd_saved
         in
         let call2_handler =
           let left = frame_field 0 in
@@ -3058,22 +2881,14 @@ let rec rewrite_enter_lambda_return
           in
           [Sasgn (id, ty_opt, combined)]
         in
-        frames_ref :=
-          !frames_ref
-          @ [
-              {
-                cf_name = call2_name;
-                cf_saved_types = call2_saved_types;
-                cf_saved_exprs = call2_saved_exprs;
-                cf_env = env;
-                cf_handler = call2_handler;
-              };
-            ];
+        register_frame frames_ref ~name:call2_name
+          ~saved_types:call2_saved_types ~saved_exprs:call2_saved_exprs ~env
+          ~handler:call2_handler;
         (* _Call1: save left result, push second call *)
         let second_varying = filter_by_mask varying dd.dd_second_args in
         let call1_saved_exprs = second_varying @ dd.dd_saved in
         let call1_saved_types =
-          List.map (infer_saved_type tparams env) call1_saved_exprs
+          infer_saved_types tparams env call1_saved_exprs
         in
         let n_second = List.length second_varying in
         let call1_handler =
@@ -3089,17 +2904,9 @@ let rec rewrite_enter_lambda_return
               (CPPstruct_id (Id.of_string "_Enter", [], second_args));
           ]
         in
-        frames_ref :=
-          !frames_ref
-          @ [
-              {
-                cf_name = call1_name;
-                cf_saved_types = call1_saved_types;
-                cf_saved_exprs = call1_saved_exprs;
-                cf_env = env;
-                cf_handler = call1_handler;
-              };
-            ];
+        register_frame frames_ref ~name:call1_name
+          ~saved_types:call1_saved_types ~saved_exprs:call1_saved_exprs ~env
+          ~handler:call1_handler;
         [
           make_stack_push
             (CPPstruct_id (Id.of_string call1_name, [], call1_saved_exprs));
@@ -3209,7 +3016,7 @@ and rewrite_enter_stmts
     let make_cont_handler ~offset ~assign_expr ~saved ~types ~enter_args =
       let cont_vars = filter_cont_vars ~exclude_id:id rest_free in
       let cont_saved = List.map (fun cid -> CPPvar cid) cont_vars in
-      let cont_types = List.map (infer_saved_type tparams env) cont_saved in
+      let cont_types = infer_saved_types tparams env cont_saved in
       let call_name = make_call_frame_name call_counter in
       let bindings = make_cont_bindings ~offset cont_vars cont_types in
       let rest_env = make_cont_env cont_vars cont_types env in
@@ -3243,7 +3050,7 @@ and rewrite_enter_stmts
       | Some d ->
         (* Decomposed call: id = rebuild(saved, f(rec_args)) *)
         let n_d = List.length d.d_saved in
-        let d_types = List.map (infer_saved_type tparams env) d.d_saved in
+        let d_types = infer_saved_types tparams env d.d_saved in
         let rebuilt =
           d.d_rebuild (frame_fields n_d) (CPPvar (Id.of_string "_result"))
         in
@@ -3262,7 +3069,7 @@ and rewrite_enter_stmts
       | Some dd ->
         let cont_vars = filter_cont_vars ~exclude_id:id rest_free in
         let cont_saved = List.map (fun cid -> CPPvar cid) cont_vars in
-        let cont_types = List.map (infer_saved_type tparams env) cont_saved in
+        let cont_types = infer_saved_types tparams env cont_saved in
         let n_cont = List.length cont_vars in
         let n_dd_saved = List.length dd.dd_saved in
         let call2_name = make_call_frame_name call_counter in
@@ -3272,7 +3079,7 @@ and rewrite_enter_stmts
           (CPPvar (Id.of_string "_result") :: dd.dd_saved) @ cont_saved
         in
         let call2_saved_types =
-          (ret_ty :: List.map (infer_saved_type tparams env) dd.dd_saved)
+          (ret_ty :: infer_saved_types tparams env dd.dd_saved)
           @ cont_types
         in
         let call2_handler =
@@ -3299,7 +3106,7 @@ and rewrite_enter_stmts
         let second_varying = filter_by_mask varying dd.dd_second_args in
         let call1_saved_exprs = second_varying @ dd.dd_saved @ cont_saved in
         let call1_saved_types =
-          List.map (infer_saved_type tparams env) (second_varying @ dd.dd_saved)
+          infer_saved_types tparams env (second_varying @ dd.dd_saved)
           @ cont_types
         in
         let n_second = List.length second_varying in
@@ -3333,7 +3140,7 @@ and rewrite_enter_stmts
       | Some acd when List.length acd.acd_calls >= 2 ->
         let cont_vars = filter_cont_vars ~exclude_id:id rest_free in
         let cont_saved = List.map (fun cid -> CPPvar cid) cont_vars in
-        let cont_types = List.map (infer_saved_type tparams env) cont_saved in
+        let cont_types = infer_saved_types tparams env cont_saved in
         let n_orig_calls = List.length acd.acd_calls in
         let n_orig_saved = List.length acd.acd_saved in
         let extended_acd = {acd with acd_saved = acd.acd_saved @ cont_saved} in
@@ -3478,19 +3285,12 @@ let rec rewrite_multi_enter check varying = function
               lambdas ->
     (* Lower nested visit — recurse into each lambda body *)
     let new_lambdas =
-      List.map
-        (fun lambda ->
-          match lambda with
-          | CPPlambda (lparams, _lret_ty, body, _capture) ->
-            CPPlambda
-              ( lparams,
-                Some Tvoid,
-                List.concat_map (rewrite_multi_enter check varying) body,
-                false )
-          | e -> e )
+      map_visit_lambdas ~ret_ty:(Some Tvoid)
+        ~rewrite:(fun _ body ->
+          List.concat_map (rewrite_multi_enter check varying) body)
         lambdas
     in
-    [Sexpr (CPPfun_call (CPPvisit, [scrut; CPPoverloaded new_lambdas]))]
+    make_visit_stmt scrut new_lambdas
   | Sreturn (Some e) ->
     let n_calls = count_calls_expr check e in
     if n_calls = 0 then
@@ -3522,7 +3322,7 @@ let rec rewrite_multi_enter check varying = function
               | e -> e )
             lambdas
         in
-        [Sexpr (CPPfun_call (CPPvisit, [scrut; CPPoverloaded new_lambdas]))]
+        make_visit_stmt scrut new_lambdas
       | None ->
       match find_inner_iife check e with
       | Some (iife_body, _iife_ret_ty, rebuild) ->
@@ -3600,16 +3400,7 @@ let rec rewrite_multi_enter check varying = function
     let rw_else =
       List.concat_map (rewrite_multi_enter check varying) else_br
     in
-    (* Drop reuse-optimization branch if it still contains recursive calls
-       that could not be decomposed (e.g., Sassign_field with recursive RHS).
-       Only applies to reuse guards (use_count()==1 checks). *)
-    if is_reuse_optimization_cond cond
-       && count_calls_stmts check rw_then > 0
-       && count_calls_stmts check rw_else = 0
-    then
-      rw_else
-    else
-      [Sif (cond, rw_then, rw_else)]
+    rewrite_if_with_reuse_bypass check cond rw_then rw_else
   | Sblock stmts ->
     [Sblock (List.concat_map (rewrite_multi_enter check varying) stmts)]
   | Scustom_case (ty, scrut, tyargs, branches, err) ->
@@ -3642,6 +3433,8 @@ let rec rewrite_multi_enter check varying = function
 let rec find_combine_op check stmts =
   List.find_map (find_combine_op_stmt check) stmts
 
+(** Search a single statement for a double-call return and extract its
+    combining operation. Statement-level companion of {!find_combine_op}. *)
 and find_combine_op_stmt check = function
   | Sreturn (Some e) ->
     if count_calls_expr check e >= 2 then
@@ -3822,9 +3615,7 @@ let transform_multi check _pp_type params ret_ty body =
       (CPPmember (CPPvar (Id.of_string "_f"), Id.of_string "_left"))
       (CPPvar (Id.of_string "_result"))
   in
-  let combine_body =
-    [Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_result"), combine_expr))]
-  in
+  let combine_body = assign_result combine_expr in
   let combine_lambda = make_frame_lambda "_Combine" combine_body in
   (* Build visit expression and loop *)
   let visit_expr =
@@ -4004,6 +3795,8 @@ let transform_nontail check pp_type _pp_expr tparams params ret_ty body =
     all branches, lambdas, and sub-expressions. *)
 let rec body_has_expr pred stmts = List.exists (stmt_has_expr pred) stmts
 
+(** Check if a single statement contains an expression satisfying [pred].
+    Statement-level companion of {!body_has_expr}. *)
 and stmt_has_expr pred = function
   | Sreturn (Some e) -> expr_has pred e
   | Sreturn None -> false
@@ -4026,6 +3819,8 @@ and stmt_has_expr pred = function
   | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _ | Susing _ | Sdecl_init _
   | Scontinue -> false
 
+(** Check if an expression or any of its sub-expressions satisfies [pred].
+    Expression-level companion of {!body_has_expr}. *)
 and expr_has pred = function
   | e when pred e -> true
   | CPPfun_call (f, args) -> expr_has pred f || List.exists (expr_has pred) args
@@ -4585,6 +4380,9 @@ let transform_field ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
 let rec inline_id_in_stmts target_id target_params target_body stmts =
   List.concat_map (inline_id_in_stmt target_id target_params target_body) stmts
 
+(** Inline a function body into a single statement. Handles tail calls
+    (direct substitution) and recurses into branches. Statement-level
+    companion of {!inline_id_in_stmts}. *)
 and inline_id_in_stmt target_id target_params target_body stmt =
   match stmt with
   | Sreturn (Some (CPPfun_call (CPPvar id, args))) when Id.equal id target_id ->
@@ -4626,6 +4424,9 @@ and inline_id_in_stmt target_id target_params target_body stmt =
     [Sblock (inline_id_in_stmts target_id target_params target_body stmts)]
   | _ -> [stmt]
 
+(** Inline a function body into an expression. Non-tail calls are wrapped
+    in an immediately-invoked lambda (IIFE). Expression-level companion
+    of {!inline_id_in_stmts}. *)
 and inline_id_in_expr target_id target_params target_body expr =
   match expr with
   | CPPfun_call (CPPvar id, args) when Id.equal id target_id ->
