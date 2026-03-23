@@ -106,7 +106,7 @@ struct Monadic {
       T1 a = *ma;
       return f(a);
     } else {
-      return std::nullopt;
+      return std::optional<T2>();
     }
   }
 
@@ -175,9 +175,10 @@ struct Monadic {
             return std::make_optional<unsigned int>((x + 1u));
           });
   static inline const std::optional<unsigned int> test_bind_none =
-      option_bind<unsigned int, unsigned int>(std::nullopt, [](unsigned int x) {
-        return std::make_optional<unsigned int>((x + 1u));
-      });
+      option_bind<unsigned int, unsigned int>(
+          std::optional<unsigned int>(), [](unsigned int x) {
+            return std::make_optional<unsigned int>((x + 1u));
+          });
   static inline const std::optional<unsigned int> test_safe_div_ok =
       safe_div(10u, 3u);
   static inline const std::optional<unsigned int> test_safe_div_zero =

@@ -26,7 +26,8 @@ FunctorComp::Stack::pop(const std::shared_ptr<List<unsigned int>> &s) {
           [](const typename List<unsigned int>::Nil _args)
               -> std::optional<std::pair<unsigned int,
                                          std::shared_ptr<List<unsigned int>>>> {
-            return std::nullopt;
+            return std::optional<
+                std::pair<unsigned int, std::shared_ptr<List<unsigned int>>>>();
           },
           [](const typename List<unsigned int>::Cons _args)
               -> std::optional<std::pair<unsigned int,
@@ -75,7 +76,10 @@ FunctorComp::Queue::pop(const std::pair<std::shared_ptr<List<unsigned int>>,
                             unsigned int,
                             std::pair<std::shared_ptr<List<unsigned int>>,
                                       std::shared_ptr<List<unsigned int>>>>> {
-                      return std::nullopt;
+                      return std::optional<std::pair<
+                          unsigned int,
+                          std::pair<std::shared_ptr<List<unsigned int>>,
+                                    std::shared_ptr<List<unsigned int>>>>>();
                     },
                     [](const typename List<unsigned int>::Cons _args0)
                         -> std::optional<std::pair<

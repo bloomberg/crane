@@ -461,7 +461,7 @@ struct LoopifyPredicates {
     bool _continue = true;
     while (_continue) {
       std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
-                              _result = std::nullopt;
+                              _result = std::optional<unsigned int>();
                               _continue = false;
                             },
                             [&](const typename List<unsigned int>::Cons _args) {

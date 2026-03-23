@@ -162,7 +162,7 @@ struct LoopifyOption {
     bool _continue = true;
     while (_continue) {
       std::visit(Overloaded{[&](const typename list<T1>::Nil _args) {
-                              _result = std::nullopt;
+                              _result = std::optional<T1>();
                               _continue = false;
                             },
                             [&](const typename list<T1>::Cons _args) {
@@ -188,7 +188,7 @@ struct LoopifyOption {
     while (_continue) {
       std::visit(
           Overloaded{[&](const typename list<T1>::Nil _args) {
-                       _result = std::nullopt;
+                       _result = std::optional<T1>();
                        _continue = false;
                      },
                      [&](const typename list<T1>::Cons _args) {
@@ -219,7 +219,7 @@ struct LoopifyOption {
     while (_continue) {
       std::visit(
           Overloaded{[&](const typename list<T1>::Nil _args) {
-                       _result = std::nullopt;
+                       _result = std::optional<T1>();
                        _continue = false;
                      },
                      [&](const typename list<T1>::Cons _args) {
@@ -302,7 +302,7 @@ struct LoopifyOption {
     bool _continue = true;
     while (_continue) {
       std::visit(Overloaded{[&](const typename list<T1>::Nil _args) {
-                              _result = std::nullopt;
+                              _result = std::optional<unsigned int>();
                               _continue = false;
                             },
                             [&](const typename list<T1>::Cons _args) {

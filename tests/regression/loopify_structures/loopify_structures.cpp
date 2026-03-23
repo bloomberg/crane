@@ -507,7 +507,7 @@ LoopifyStructures::find_first_some(
     std::visit(
         Overloaded{
             [&](const typename List<std::optional<unsigned int>>::Nil _args) {
-              _result = std::nullopt;
+              _result = std::optional<unsigned int>();
               _continue = false;
             },
             [&](const typename List<std::optional<unsigned int>>::Cons _args) {

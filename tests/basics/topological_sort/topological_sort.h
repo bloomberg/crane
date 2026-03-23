@@ -105,7 +105,7 @@ public:
     return std::visit(
         Overloaded{
             [](const typename List<t_A>::Nil _args) -> std::optional<t_A> {
-              return std::nullopt;
+              return std::optional<t_A>();
             },
             [&](const typename List<t_A>::Cons _args) -> std::optional<t_A> {
               if (f(_args.d_a0)) {
@@ -422,7 +422,7 @@ struct TopologicalSort {
     return std::visit(
         Overloaded{[](const typename List<
                        std::pair<T1, std::shared_ptr<List<T1>>>>::Nil _args)
-                       -> std::optional<T1> { return std::nullopt; },
+                       -> std::optional<T1> { return std::optional<T1>(); },
                    [&](const typename List<
                        std::pair<T1, std::shared_ptr<List<T1>>>>::Cons _args)
                        -> std::optional<T1> {

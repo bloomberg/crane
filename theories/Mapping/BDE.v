@@ -11,7 +11,7 @@ From Crane Require Export Mapping.Shared.
 Crane Extract Inductive option =>
   "bsl::optional<%t0>"
   [ "bsl::make_optional<%t0>(%a0)"
-    "bsl::nullopt" ]
+    "bsl::optional<%t0>()" ]
   "if (%scrut.has_value()) { %t0 %b0a0 = *%scrut; %br0 } else { %br1 }"
   From "bsl_optional.h" "bsl_memory.h".
 

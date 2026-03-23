@@ -802,7 +802,8 @@ CoalitionBidHonorTraceCase::coalition_lead_commander(
                  CoalitionBidHonorTraceCase::CoalitionMember>>::Nil _args)
               -> std::optional<
                   std::shared_ptr<CoalitionBidHonorTraceCase::Commander>> {
-            return std::nullopt;
+            return std::optional<
+                std::shared_ptr<CoalitionBidHonorTraceCase::Commander>>();
           },
           [](const typename List<std::shared_ptr<
                  CoalitionBidHonorTraceCase::CoalitionMember>>::Cons _args)
@@ -830,7 +831,8 @@ CoalitionBidHonorTraceCase::coalition_to_bid(
         std::make_shared<CoalitionBidHonorTraceCase::ForceBid>(
             ForceBid{coalition_force(c), std::move(side), cmd}));
   } else {
-    return std::nullopt;
+    return std::optional<
+        std::shared_ptr<CoalitionBidHonorTraceCase::ForceBid>>();
   }
 }
 
@@ -1259,19 +1261,22 @@ CoalitionBidHonorTraceCase::get_side_commander(
                  _args)
               -> std::optional<
                   std::shared_ptr<CoalitionBidHonorTraceCase::Commander>> {
-            return std::nullopt;
+            return std::optional<
+                std::shared_ptr<CoalitionBidHonorTraceCase::Commander>>();
           },
           [](const typename CoalitionBidHonorTraceCase::BatchallPhase::
                  PhaseChallenged _args)
               -> std::optional<
                   std::shared_ptr<CoalitionBidHonorTraceCase::Commander>> {
-            return std::nullopt;
+            return std::optional<
+                std::shared_ptr<CoalitionBidHonorTraceCase::Commander>>();
           },
           [](const typename CoalitionBidHonorTraceCase::BatchallPhase::
                  PhaseResponded _args)
               -> std::optional<
                   std::shared_ptr<CoalitionBidHonorTraceCase::Commander>> {
-            return std::nullopt;
+            return std::optional<
+                std::shared_ptr<CoalitionBidHonorTraceCase::Commander>>();
           },
           [&](const typename CoalitionBidHonorTraceCase::BatchallPhase::
                   PhaseBidding _args)
@@ -1296,19 +1301,22 @@ CoalitionBidHonorTraceCase::get_side_commander(
                  PhaseAgreed _args)
               -> std::optional<
                   std::shared_ptr<CoalitionBidHonorTraceCase::Commander>> {
-            return std::nullopt;
+            return std::optional<
+                std::shared_ptr<CoalitionBidHonorTraceCase::Commander>>();
           },
           [](const typename CoalitionBidHonorTraceCase::BatchallPhase::
                  PhaseRefused _args)
               -> std::optional<
                   std::shared_ptr<CoalitionBidHonorTraceCase::Commander>> {
-            return std::nullopt;
+            return std::optional<
+                std::shared_ptr<CoalitionBidHonorTraceCase::Commander>>();
           },
           [](const typename CoalitionBidHonorTraceCase::BatchallPhase::
                  PhaseAborted _args)
               -> std::optional<
                   std::shared_ptr<CoalitionBidHonorTraceCase::Commander>> {
-            return std::nullopt;
+            return std::optional<
+                std::shared_ptr<CoalitionBidHonorTraceCase::Commander>>();
           }},
       phase->v());
 }
@@ -1340,7 +1348,8 @@ CoalitionBidHonorTraceCase::action_actor_in_phase(
                  ActRefuse _args)
               -> std::optional<
                   std::shared_ptr<CoalitionBidHonorTraceCase::Commander>> {
-            return std::nullopt;
+            return std::optional<
+                std::shared_ptr<CoalitionBidHonorTraceCase::Commander>>();
           },
           [](const typename CoalitionBidHonorTraceCase::ProtocolAction::ActBid
                  _args)
@@ -1354,19 +1363,22 @@ CoalitionBidHonorTraceCase::action_actor_in_phase(
                  ActCoalitionBid _args)
               -> std::optional<
                   std::shared_ptr<CoalitionBidHonorTraceCase::Commander>> {
-            return std::nullopt;
+            return std::optional<
+                std::shared_ptr<CoalitionBidHonorTraceCase::Commander>>();
           },
           [](const typename CoalitionBidHonorTraceCase::ProtocolAction::ActPass
                  _args)
               -> std::optional<
                   std::shared_ptr<CoalitionBidHonorTraceCase::Commander>> {
-            return std::nullopt;
+            return std::optional<
+                std::shared_ptr<CoalitionBidHonorTraceCase::Commander>>();
           },
           [](const typename CoalitionBidHonorTraceCase::ProtocolAction::ActClose
                  _args)
               -> std::optional<
                   std::shared_ptr<CoalitionBidHonorTraceCase::Commander>> {
-            return std::nullopt;
+            return std::optional<
+                std::shared_ptr<CoalitionBidHonorTraceCase::Commander>>();
           },
           [&](const typename CoalitionBidHonorTraceCase::ProtocolAction::
                   ActWithdraw _args)

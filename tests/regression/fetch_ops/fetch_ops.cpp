@@ -53,18 +53,19 @@ __attribute__((pure)) std::optional<std::pair<unsigned int, unsigned int>>
 FetchOps::fetch_window(const std::shared_ptr<List<unsigned int>> &rom_data,
                        const unsigned int addr) {
   return std::visit(
-      Overloaded{[](const typename List<unsigned int>::Nil _args)
-                     -> std::optional<std::pair<unsigned int, unsigned int>> {
-                   return std::nullopt;
-                 },
-                 [&](const typename List<unsigned int>::Cons _args)
-                     -> std::optional<std::pair<unsigned int, unsigned int>> {
-                   return std::visit(
-                       Overloaded{
-                           [](const typename List<unsigned int>::Nil _args0)
+      Overloaded{
+          [](const typename List<unsigned int>::Nil _args)
+              -> std::optional<std::pair<unsigned int, unsigned int>> {
+            return std::optional<std::pair<unsigned int, unsigned int>>();
+          },
+          [&](const typename List<unsigned int>::Cons _args)
+              -> std::optional<std::pair<unsigned int, unsigned int>> {
+            return std::visit(
+                Overloaded{[](const typename List<unsigned int>::Nil _args0)
                                -> std::optional<
                                    std::pair<unsigned int, unsigned int>> {
-                             return std::nullopt;
+                             return std::optional<
+                                 std::pair<unsigned int, unsigned int>>();
                            },
                            [&](const typename List<unsigned int>::Cons _args0)
                                -> std::optional<
@@ -74,7 +75,7 @@ FetchOps::fetch_window(const std::shared_ptr<List<unsigned int>> &rom_data,
                                  std::make_pair(_args.d_a0,
                                                 (std::move(addr) + 2u)));
                            }},
-                       _args.d_a1->v());
-                 }},
+                _args.d_a1->v());
+          }},
       drop<unsigned int>(addr, rom_data)->v());
 }

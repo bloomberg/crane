@@ -1342,18 +1342,18 @@ struct ValidatedPumpDeliveryTraceCase {
           PrecisionParams{100u, 500u, std::make_shared<Mg_dL>(Mg_dL{100u}),
                           240u, InsulinType::e_INSULIN_HUMALOG});
   static inline const std::shared_ptr<PrecisionInput> standard_input =
-      std::make_shared<PrecisionInput>(
-          PrecisionInput{std::make_shared<Grams>(Grams{60u}),
-                         std::make_shared<Mg_dL>(Mg_dL{150u}), 0u,
-                         List<std::shared_ptr<BolusEvent>>::ctor::Nil_(),
-                         ActivityState::e_ACTIVITY_NORMAL, false,
-                         FaultStatus::ctor::Fault_None_(), std::nullopt});
+      std::make_shared<PrecisionInput>(PrecisionInput{
+          std::make_shared<Grams>(Grams{60u}),
+          std::make_shared<Mg_dL>(Mg_dL{150u}), 0u,
+          List<std::shared_ptr<BolusEvent>>::ctor::Nil_(),
+          ActivityState::e_ACTIVITY_NORMAL, false,
+          FaultStatus::ctor::Fault_None_(), std::optional<unsigned int>()});
   static inline const std::shared_ptr<MmolPrecisionInput> mmol_input =
-      std::make_shared<MmolPrecisionInput>(
-          MmolPrecisionInput{std::make_shared<Grams>(Grams{60u}), 83u, 0u,
-                             List<std::shared_ptr<BolusEvent>>::ctor::Nil_(),
-                             ActivityState::e_ACTIVITY_NORMAL, false,
-                             FaultStatus::ctor::Fault_None_(), std::nullopt});
+      std::make_shared<MmolPrecisionInput>(MmolPrecisionInput{
+          std::make_shared<Grams>(Grams{60u}), 83u, 0u,
+          List<std::shared_ptr<BolusEvent>>::ctor::Nil_(),
+          ActivityState::e_ACTIVITY_NORMAL, false,
+          FaultStatus::ctor::Fault_None_(), std::optional<unsigned int>()});
   static inline const std::shared_ptr<PrecisionInput> high_iob_input =
       std::make_shared<PrecisionInput>(PrecisionInput{
           std::make_shared<Grams>(Grams{0u}),
@@ -1364,7 +1364,7 @@ struct ValidatedPumpDeliveryTraceCase {
                   std::make_shared<BolusEvent>(BolusEvent{100u, 80u}),
                   List<std::shared_ptr<BolusEvent>>::ctor::Nil_())),
           ActivityState::e_ACTIVITY_NORMAL, false,
-          FaultStatus::ctor::Fault_None_(), std::nullopt});
+          FaultStatus::ctor::Fault_None_(), std::optional<unsigned int>()});
   static inline const std::shared_ptr<PrecisionInput> tdd_exceeded_input =
       std::make_shared<PrecisionInput>(PrecisionInput{
           std::make_shared<Grams>(Grams{60u}),
@@ -1387,7 +1387,8 @@ struct ValidatedPumpDeliveryTraceCase {
               std::make_shared<BolusEvent>(BolusEvent{40u, 100u}),
               List<std::shared_ptr<BolusEvent>>::ctor::Nil_()),
           ActivityState::e_ACTIVITY_NORMAL, false,
-          FaultStatus::ctor::Fault_Occlusion_(), std::nullopt});
+          FaultStatus::ctor::Fault_Occlusion_(),
+          std::optional<unsigned int>()});
   static inline const std::shared_ptr<PrecisionInput> battery_low_input =
       std::make_shared<PrecisionInput>(PrecisionInput{
           std::make_shared<Grams>(Grams{60u}),
@@ -1396,7 +1397,8 @@ struct ValidatedPumpDeliveryTraceCase {
               std::make_shared<BolusEvent>(BolusEvent{40u, 100u}),
               List<std::shared_ptr<BolusEvent>>::ctor::Nil_()),
           ActivityState::e_ACTIVITY_NORMAL, false,
-          FaultStatus::ctor::Fault_BatteryLow_(), std::nullopt});
+          FaultStatus::ctor::Fault_BatteryLow_(),
+          std::optional<unsigned int>()});
   static inline const std::shared_ptr<PrecisionInput> pediatric_capped_input =
       std::make_shared<PrecisionInput>(
           PrecisionInput{std::make_shared<Grams>(Grams{200u}),

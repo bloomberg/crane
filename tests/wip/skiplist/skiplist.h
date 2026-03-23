@@ -64,10 +64,10 @@ template <typename K, typename V> struct SkipList {
         V v = stm::readTVar<V>(node->value);
         return std::make_optional<V>(v);
       } else {
-        return std::nullopt;
+        return std::optional<V>();
       }
     } else {
-      return std::nullopt;
+      return std::optional<V>();
     }
   }
 
@@ -150,7 +150,7 @@ template <typename K, typename V> struct SkipList {
       V v = stm::readTVar<V>(node->value);
       return std::make_optional<std::pair<K, V>>(std::make_pair(node->key, v));
     } else {
-      return std::nullopt;
+      return std::optional<std::pair<K, V>>();
     }
   }
 
@@ -198,7 +198,7 @@ template <typename K, typename V> struct SkipList {
       V v = stm::readTVar<V>(node->value);
       return std::make_optional<std::pair<K, V>>(std::make_pair(node->key, v));
     } else {
-      return std::nullopt;
+      return std::optional<std::pair<K, V>>();
     }
   }
 
@@ -628,7 +628,7 @@ template <typename K, typename V> struct SkipList {
                const std::shared_ptr<SkipNode<T1, T2>> curr,
                const std::shared_ptr<SkipNode<T1, T2>> _x, const T1 target) {
     if (fuel <= 0) {
-      return std::nullopt;
+      return std::optional<std::shared_ptr<SkipNode<T1, T2>>>();
     } else {
       unsigned int fuel_ = fuel - 1;
       std::optional<std::shared_ptr<SkipNode<T1, T2>>> nextOpt = ptr_to_opt(
@@ -642,7 +642,7 @@ template <typename K, typename V> struct SkipList {
               eqK, fuel_, next0, curr, target);
         }
       } else {
-        return std::nullopt;
+        return std::optional<std::shared_ptr<SkipNode<T1, T2>>>();
       }
     }
   }
@@ -675,7 +675,8 @@ template <typename K, typename V> struct SkipList {
           SkipList<int, int>::e_SUCCESS,
           std::make_optional<std::shared_ptr<SkipNode<T1, T2>>>(node));
     } else {
-      return std::make_pair(SkipList<int, int>::e_NOT_FOUND, std::nullopt);
+      return std::make_pair(SkipList<int, int>::e_NOT_FOUND,
+                            std::optional<std::shared_ptr<SkipNode<T1, T2>>>());
     }
   }
 

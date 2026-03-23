@@ -207,7 +207,7 @@ struct Typeclasses {
       numOption<numNat, unsigned int>::to_nat(
           std::make_optional<unsigned int>(5u));
   static inline const unsigned int test_option_none =
-      numOption<numNat, unsigned int>::to_nat(std::nullopt);
+      numOption<numNat, unsigned int>::to_nat(std::optional<unsigned int>());
   static inline const unsigned int test_list =
       numList<numNat, unsigned int>::to_nat(List<unsigned int>::ctor::Cons_(
           1u, List<unsigned int>::ctor::Cons_(

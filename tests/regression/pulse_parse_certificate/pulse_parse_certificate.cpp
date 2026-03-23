@@ -13,30 +13,34 @@
 
 __attribute__((pure)) std::optional<unsigned int>
 PulseParseCertificateCase::first_true(const std::shared_ptr<List<bool>> &xs) {
-  return std::visit(
-      Overloaded{[](const typename List<bool>::Nil _args)
-                     -> std::optional<unsigned int> { return std::nullopt; },
-                 [](const typename List<bool>::Cons _args)
-                     -> std::optional<unsigned int> {
-                   if (_args.d_a0) {
-                     return std::make_optional<unsigned int>(0u);
-                   } else {
-                     if (first_true(_args.d_a1).has_value()) {
-                       unsigned int idx = *first_true(_args.d_a1);
-                       return std::make_optional<unsigned int>((idx + 1));
-                     } else {
-                       return std::nullopt;
-                     }
-                   }
-                 }},
-      xs->v());
+  return std::visit(Overloaded{[](const typename List<bool>::Nil _args)
+                                   -> std::optional<unsigned int> {
+                                 return std::optional<unsigned int>();
+                               },
+                               [](const typename List<bool>::Cons _args)
+                                   -> std::optional<unsigned int> {
+                                 if (_args.d_a0) {
+                                   return std::make_optional<unsigned int>(0u);
+                                 } else {
+                                   if (first_true(_args.d_a1).has_value()) {
+                                     unsigned int idx = *first_true(_args.d_a1);
+                                     return std::make_optional<unsigned int>(
+                                         (idx + 1));
+                                   } else {
+                                     return std::optional<unsigned int>();
+                                   }
+                                 }
+                               }},
+                    xs->v());
 }
 
 __attribute__((pure)) std::optional<unsigned int>
 PulseParseCertificateCase::last_true(const std::shared_ptr<List<bool>> &xs) {
   return std::visit(
       Overloaded{[](const typename List<bool>::Nil _args)
-                     -> std::optional<unsigned int> { return std::nullopt; },
+                     -> std::optional<unsigned int> {
+                   return std::optional<unsigned int>();
+                 },
                  [](const typename List<bool>::Cons _args)
                      -> std::optional<unsigned int> {
                    if (last_true(_args.d_a1).has_value()) {
@@ -46,7 +50,7 @@ PulseParseCertificateCase::last_true(const std::shared_ptr<List<bool>> &xs) {
                      if (_args.d_a0) {
                        return std::make_optional<unsigned int>(0u);
                      } else {
-                       return std::nullopt;
+                       return std::optional<unsigned int>();
                      }
                    }
                  }},

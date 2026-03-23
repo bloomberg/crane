@@ -50,7 +50,8 @@ DisassembleOps::disassemble1(const std::shared_ptr<List<unsigned int>> &rom,
           [](const typename List<unsigned int>::Nil _args)
               -> std::optional<std::pair<
                   std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
-            return std::nullopt;
+            return std::optional<std::pair<
+                std::shared_ptr<DisassembleOps::instruction>, unsigned int>>();
           },
           [&](const typename List<unsigned int>::Cons _args)
               -> std::optional<std::pair<
@@ -59,7 +60,11 @@ DisassembleOps::disassemble1(const std::shared_ptr<List<unsigned int>> &rom,
                 Overloaded{[](const typename List<unsigned int>::Nil _args0)
                                -> std::optional<std::pair<
                                    std::shared_ptr<DisassembleOps::instruction>,
-                                   unsigned int>> { return std::nullopt; },
+                                   unsigned int>> {
+                             return std::optional<std::pair<
+                                 std::shared_ptr<DisassembleOps::instruction>,
+                                 unsigned int>>();
+                           },
                            [&](const typename List<unsigned int>::Cons _args0)
                                -> std::optional<std::pair<
                                    std::shared_ptr<DisassembleOps::instruction>,
@@ -94,7 +99,8 @@ DisassembleOps::disassemble2(const std::shared_ptr<List<unsigned int>> &rom,
           [](const typename List<unsigned int>::Nil _args)
               -> std::optional<std::pair<
                   std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
-            return std::nullopt;
+            return std::optional<std::pair<
+                std::shared_ptr<DisassembleOps::instruction>, unsigned int>>();
           },
           [&](const typename List<unsigned int>::Cons _args)
               -> std::optional<std::pair<
@@ -103,7 +109,11 @@ DisassembleOps::disassemble2(const std::shared_ptr<List<unsigned int>> &rom,
                 Overloaded{[](const typename List<unsigned int>::Nil _args0)
                                -> std::optional<std::pair<
                                    std::shared_ptr<DisassembleOps::instruction>,
-                                   unsigned int>> { return std::nullopt; },
+                                   unsigned int>> {
+                             return std::optional<std::pair<
+                                 std::shared_ptr<DisassembleOps::instruction>,
+                                 unsigned int>>();
+                           },
                            [&](const typename List<unsigned int>::Cons _args0)
                                -> std::optional<std::pair<
                                    std::shared_ptr<DisassembleOps::instruction>,
@@ -138,7 +148,8 @@ DisassembleOps::disassemble3(const std::shared_ptr<List<unsigned int>> &rom,
           [](const typename List<unsigned int>::Nil _args)
               -> std::optional<std::pair<
                   std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
-            return std::nullopt;
+            return std::optional<std::pair<
+                std::shared_ptr<DisassembleOps::instruction>, unsigned int>>();
           },
           [&](const typename List<unsigned int>::Cons _args)
               -> std::optional<std::pair<
@@ -147,7 +158,11 @@ DisassembleOps::disassemble3(const std::shared_ptr<List<unsigned int>> &rom,
                 Overloaded{[](const typename List<unsigned int>::Nil _args0)
                                -> std::optional<std::pair<
                                    std::shared_ptr<DisassembleOps::instruction>,
-                                   unsigned int>> { return std::nullopt; },
+                                   unsigned int>> {
+                             return std::optional<std::pair<
+                                 std::shared_ptr<DisassembleOps::instruction>,
+                                 unsigned int>>();
+                           },
                            [&](const typename List<unsigned int>::Cons _args0)
                                -> std::optional<std::pair<
                                    std::shared_ptr<DisassembleOps::instruction>,
@@ -182,7 +197,8 @@ DisassembleOps::disassemble4(const std::shared_ptr<List<unsigned int>> &rom,
           [](const typename List<unsigned int>::Nil _args)
               -> std::optional<std::pair<
                   std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
-            return std::nullopt;
+            return std::optional<std::pair<
+                std::shared_ptr<DisassembleOps::instruction>, unsigned int>>();
           },
           [&](const typename List<unsigned int>::Cons _args)
               -> std::optional<std::pair<
@@ -191,7 +207,11 @@ DisassembleOps::disassemble4(const std::shared_ptr<List<unsigned int>> &rom,
                 Overloaded{[](const typename List<unsigned int>::Nil _args0)
                                -> std::optional<std::pair<
                                    std::shared_ptr<DisassembleOps::instruction>,
-                                   unsigned int>> { return std::nullopt; },
+                                   unsigned int>> {
+                             return std::optional<std::pair<
+                                 std::shared_ptr<DisassembleOps::instruction>,
+                                 unsigned int>>();
+                           },
                            [&](const typename List<unsigned int>::Cons _args0)
                                -> std::optional<std::pair<
                                    std::shared_ptr<DisassembleOps::instruction>,

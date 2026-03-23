@@ -168,7 +168,7 @@ template <typename K, typename V> struct CHT {
     return bsl::visit(
         bdlf::Overloaded{
             [](const typename List<bsl::pair<T1, T2>>::Nil _args)
-                -> bsl::optional<T2> { return bsl::nullopt; },
+                -> bsl::optional<T2> { return bsl::optional<T2>(); },
             [&](const typename List<bsl::pair<T1, T2>>::Cons _args)
                 -> bsl::optional<T2> {
               T1 k_ = _args.d_a0.first;
@@ -219,7 +219,7 @@ template <typename K, typename V> struct CHT {
             [&](const typename List<bsl::pair<T1, T2>>::Nil _args)
                 -> bsl::pair<bsl::optional<T2>,
                              bsl::shared_ptr<List<bsl::pair<T1, T2>>>> {
-              return bsl::make_pair(bsl::nullopt, bsl::move(xs));
+              return bsl::make_pair(bsl::optional<T2>(), bsl::move(xs));
             },
             [&](const typename List<bsl::pair<T1, T2>>::Cons _args)
                 -> bsl::pair<bsl::optional<T2>,

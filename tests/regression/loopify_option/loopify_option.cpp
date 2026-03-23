@@ -25,7 +25,7 @@ __attribute__((pure)) std::optional<unsigned int> LoopifyOption::lookup_opt(
     std::visit(
         Overloaded{[&](const typename LoopifyOption::list<
                        std::pair<unsigned int, unsigned int>>::Nil _args) {
-                     _result = std::nullopt;
+                     _result = std::optional<unsigned int>();
                      _continue = false;
                    },
                    [&](const typename LoopifyOption::list<

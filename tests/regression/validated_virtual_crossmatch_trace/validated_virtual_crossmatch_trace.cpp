@@ -628,7 +628,8 @@ ValidatedVirtualCrossmatchTraceCase::create_safe_transfusion_order(
         ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder>>(
         std::move(order));
   } else {
-    return std::nullopt;
+    return std::optional<std::shared_ptr<
+        ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder>>();
   }
 }
 

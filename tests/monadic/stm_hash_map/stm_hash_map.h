@@ -184,7 +184,7 @@ template <typename K, typename V> struct CHT {
                const std::shared_ptr<List<std::pair<T1, T2>>> &xs) {
     return std::visit(
         Overloaded{[](const typename List<std::pair<T1, T2>>::Nil _args)
-                       -> std::optional<T2> { return std::nullopt; },
+                       -> std::optional<T2> { return std::optional<T2>(); },
                    [&](const typename List<std::pair<T1, T2>>::Cons _args)
                        -> std::optional<T2> {
                      T1 k_ = _args.d_a0.first;
@@ -236,7 +236,7 @@ template <typename K, typename V> struct CHT {
         Overloaded{[&](const typename List<std::pair<T1, T2>>::Nil _args)
                        -> std::pair<std::optional<T2>,
                                     std::shared_ptr<List<std::pair<T1, T2>>>> {
-                     return std::make_pair(std::nullopt, std::move(xs));
+                     return std::make_pair(std::optional<T2>(), std::move(xs));
                    },
                    [&](const typename List<std::pair<T1, T2>>::Cons _args)
                        -> std::pair<std::optional<T2>,

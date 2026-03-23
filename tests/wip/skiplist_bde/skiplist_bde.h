@@ -65,10 +65,10 @@ template <typename K, typename V> struct SkipList {
         V v = stm::readTVar<V>(node->value);
         return bsl::make_optional<V>(v);
       } else {
-        return bsl::nullopt;
+        return bsl::optional<V>();
       }
     } else {
-      return bsl::nullopt;
+      return bsl::optional<V>();
     }
   }
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
@@ -154,7 +154,7 @@ template <typename K, typename V> struct SkipList {
       V v = stm::readTVar<V>(node->value);
       return bsl::make_optional<bsl::pair<K, V>>(bsl::make_pair(node->key, v));
     } else {
-      return bsl::nullopt;
+      return bsl::optional<bsl::pair<K, V>>();
     }
   }
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
@@ -197,7 +197,7 @@ template <typename K, typename V> struct SkipList {
       V v = stm::readTVar<V>(node->value);
       return bsl::make_optional<bsl::pair<K, V>>(bsl::make_pair(node->key, v));
     } else {
-      return bsl::nullopt;
+      return bsl::optional<bsl::pair<K, V>>();
     }
   }
   __attribute__((pure)) unsigned int removeAll() const {
@@ -609,7 +609,7 @@ template <typename K, typename V> struct SkipList {
                const bsl::shared_ptr<SkipNode<T1, T2>> curr,
                const bsl::shared_ptr<SkipNode<T1, T2>> _x, const T1 target) {
     if (fuel <= 0) {
-      return bsl::nullopt;
+      return bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>();
     } else {
       unsigned int fuel_ = fuel - 1;
       bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> nextOpt = ptr_to_opt(
@@ -623,7 +623,7 @@ template <typename K, typename V> struct SkipList {
               eqK, fuel_, next0, curr, target);
         }
       } else {
-        return bsl::nullopt;
+        return bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>();
       }
     }
   }
@@ -652,7 +652,8 @@ template <typename K, typename V> struct SkipList {
           SkipList<int, int>::e_SUCCESS,
           bsl::make_optional<bsl::shared_ptr<SkipNode<T1, T2>>>(node));
     } else {
-      return bsl::make_pair(SkipList<int, int>::e_NOT_FOUND, bsl::nullopt);
+      return bsl::make_pair(SkipList<int, int>::e_NOT_FOUND,
+                            bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>());
     }
   }
   template <typename T1, typename T2>

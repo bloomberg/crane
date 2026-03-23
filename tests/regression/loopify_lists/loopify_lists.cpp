@@ -2647,7 +2647,7 @@ __attribute__((pure)) std::optional<unsigned int> LoopifyLists::elem_at(
     std::visit(
         Overloaded{
             [&](const typename LoopifyLists::list<unsigned int>::Nil _args) {
-              _result = std::nullopt;
+              _result = std::optional<unsigned int>();
               _continue = false;
             },
             [&](const typename LoopifyLists::list<unsigned int>::Cons _args) {

@@ -9,7 +9,7 @@ From Crane Require Export Mapping.Shared.
 Crane Extract Inductive option =>
   "std::optional<%t0>"
   [ "std::make_optional<%t0>(%a0)"
-    "std::nullopt" ]
+    "std::optional<%t0>()" ]
   "if (%scrut.has_value()) { %t0 %b0a0 = *%scrut; %br0 } else { %br1 }"
   From "optional" "memory".
 

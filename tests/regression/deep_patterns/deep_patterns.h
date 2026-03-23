@@ -405,7 +405,8 @@ struct DeepPatterns {
               std::make_optional<unsigned int>(42u))));
   static inline const unsigned int test_deep_none = deep_option(
       std::make_optional<std::optional<std::optional<unsigned int>>>(
-          std::make_optional<std::optional<unsigned int>>(std::nullopt)));
+          std::make_optional<std::optional<unsigned int>>(
+              std::optional<unsigned int>())));
   static inline const unsigned int test_deep_pair =
       deep_pair(std::make_pair(std::make_pair(1u, 2u), std::make_pair(3u, 4u)));
   static inline const unsigned int test_shape_3 =

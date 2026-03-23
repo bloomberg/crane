@@ -250,7 +250,7 @@ struct LoopifyPolymorphic {
     while (_continue) {
       std::visit(
           Overloaded{[&](const typename List<T1>::Nil _args) {
-                       _result = std::nullopt;
+                       _result = std::optional<T1>();
                        _continue = false;
                      },
                      [&](const typename List<T1>::Cons _args) {
@@ -359,7 +359,7 @@ struct LoopifyPolymorphic {
     while (_continue) {
       std::visit(
           Overloaded{[&](const typename List<T1>::Nil _args) {
-                       _result = std::nullopt;
+                       _result = std::optional<T1>();
                        _continue = false;
                      },
                      [&](const typename List<T1>::Cons _args) {

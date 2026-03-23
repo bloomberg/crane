@@ -815,7 +815,7 @@ ValidatedPumpDeliveryTraceCase::prec_result_twentieths(
           },
           [](const typename ValidatedPumpDeliveryTraceCase::PrecisionResult::
                  PrecError _args) -> std::optional<unsigned int> {
-            return std::nullopt;
+            return std::optional<unsigned int>();
           }},
       r->v());
 }
@@ -907,7 +907,7 @@ ValidatedPumpDeliveryTraceCase::final_delivery(
           },
           [](const typename ValidatedPumpDeliveryTraceCase::PrecisionResult::
                  PrecError _args) -> std::optional<unsigned int> {
-            return std::nullopt;
+            return std::optional<unsigned int>();
           }},
       result->v());
 }

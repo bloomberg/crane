@@ -23,7 +23,8 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 struct Option {
   static inline const std::optional<unsigned int> some_val =
       std::make_optional<unsigned int>(5u);
-  static inline const std::optional<unsigned int> none_val = std::nullopt;
+  static inline const std::optional<unsigned int> none_val =
+      std::optional<unsigned int>();
   __attribute__((pure)) static unsigned int
   get_or_default(const std::optional<unsigned int> o,
                  const unsigned int default0);
@@ -31,7 +32,8 @@ struct Option {
       std::make_optional<std::optional<unsigned int>>(
           std::make_optional<unsigned int>(3u));
   static inline const std::optional<std::optional<unsigned int>> nested_none =
-      std::make_optional<std::optional<unsigned int>>(std::nullopt);
+      std::make_optional<std::optional<unsigned int>>(
+          std::optional<unsigned int>());
   __attribute__((pure)) static std::optional<unsigned int>
   safe_pred(const unsigned int n);
   __attribute__((pure)) static std::optional<unsigned int>
@@ -45,7 +47,7 @@ struct Option {
       std::function<T2(T1)> g = *f;
       return std::make_optional<T2>(g(x));
     } else {
-      return std::nullopt;
+      return std::optional<T2>();
     }
   }
 

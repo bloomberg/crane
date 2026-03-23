@@ -100,7 +100,7 @@ public:
     return bsl::visit(
         bdlf::Overloaded{
             [](const typename List<t_A>::Nil _args) -> bsl::optional<t_A> {
-              return bsl::nullopt;
+              return bsl::optional<t_A>();
             },
             [&](const typename List<t_A>::Cons _args) -> bsl::optional<t_A> {
               if (f(_args.d_a0)) {
@@ -401,8 +401,9 @@ struct TopologicalSort {
       bsl::shared_ptr<List<bsl::pair<T1, bsl::shared_ptr<List<T1>>>>> graph0) {
     return bsl::visit(
         bdlf::Overloaded{
-            [](const typename List<bsl::pair<T1, bsl::shared_ptr<List<T1>>>>::
-                   Nil _args) -> bsl::optional<T1> { return bsl::nullopt; },
+            [](const typename List<
+                bsl::pair<T1, bsl::shared_ptr<List<T1>>>>::Nil _args)
+                -> bsl::optional<T1> { return bsl::optional<T1>(); },
             [&](const typename List<bsl::pair<T1, bsl::shared_ptr<List<T1>>>>::
                     Cons _args) -> bsl::optional<T1> {
               T1 e = _args.d_a0.first;

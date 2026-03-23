@@ -26,7 +26,9 @@ JumpTargets::jump_target_collection(
             return std::make_optional<unsigned int>(_args.d_a0);
           },
           [](const typename JumpTargets::instr_collection::NOP_coll _args)
-              -> std::optional<unsigned int> { return std::nullopt; }},
+              -> std::optional<unsigned int> {
+            return std::optional<unsigned int>();
+          }},
       i->v());
 }
 
@@ -73,7 +75,9 @@ JumpTargets::jump_target_region(
                    return std::make_optional<unsigned int>(_args.d_a0);
                  },
                  [](const typename JumpTargets::instr_region::NOP_reg _args)
-                     -> std::optional<unsigned int> { return std::nullopt; }},
+                     -> std::optional<unsigned int> {
+                   return std::optional<unsigned int>();
+                 }},
       i->v());
 }
 
@@ -100,7 +104,9 @@ JumpTargets::jump_target_jms(const std::shared_ptr<JumpTargets::instr_jms> &i) {
                    return std::make_optional<unsigned int>(_args.d_a0);
                  },
                  [](const typename JumpTargets::instr_jms::NOP_jms _args)
-                     -> std::optional<unsigned int> { return std::nullopt; }},
+                     -> std::optional<unsigned int> {
+                   return std::optional<unsigned int>();
+                 }},
       i->v());
 }
 
@@ -126,7 +132,9 @@ JumpTargets::jump_target_jun(const std::shared_ptr<JumpTargets::instr_jun> &i) {
                    return std::make_optional<unsigned int>(_args.d_a0);
                  },
                  [](const typename JumpTargets::instr_jun::NOP_jun _args)
-                     -> std::optional<unsigned int> { return std::nullopt; }},
+                     -> std::optional<unsigned int> {
+                   return std::optional<unsigned int>();
+                 }},
       i->v());
 }
 

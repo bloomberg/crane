@@ -167,7 +167,8 @@ struct RecRecord {
           std::make_optional<std::shared_ptr<RNode>>(std::make_shared<RNode>(
               RNode{2u,
                     std::make_optional<std::shared_ptr<RNode>>(
-                        std::make_shared<RNode>(RNode{3u, std::nullopt}))}))});
+                        std::make_shared<RNode>(RNode{
+                            3u, std::optional<std::shared_ptr<RNode>>()}))}))});
   static inline const unsigned int test_rnode_depth = rnode_depth(test_rnode);
   static inline const std::shared_ptr<Employee> test_emp =
       std::make_shared<Employee>(Employee{42u, 7u});

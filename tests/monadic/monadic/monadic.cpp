@@ -15,7 +15,7 @@
 __attribute__((pure)) std::optional<unsigned int>
 Monadic::safe_div(const unsigned int n, const unsigned int m) {
   if (m <= 0) {
-    return std::nullopt;
+    return std::optional<unsigned int>();
   } else {
     unsigned int m_ = m - 1;
     return std::make_optional<unsigned int>(Nat::div(n, (m_ + 1)));
@@ -25,7 +25,7 @@ Monadic::safe_div(const unsigned int n, const unsigned int m) {
 __attribute__((pure)) std::optional<unsigned int>
 Monadic::safe_sub(const unsigned int n, const unsigned int m) {
   if (n < m) {
-    return std::nullopt;
+    return std::optional<unsigned int>();
   } else {
     return std::make_optional<unsigned int>(
         (((std::move(n) - std::move(m)) > std::move(n)

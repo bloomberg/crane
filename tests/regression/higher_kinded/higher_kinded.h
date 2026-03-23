@@ -166,7 +166,7 @@ struct HigherKinded {
       T1 x = *o;
       return std::make_optional<T2>(f(x));
     } else {
-      return std::nullopt;
+      return std::optional<T2>();
     }
   }
 

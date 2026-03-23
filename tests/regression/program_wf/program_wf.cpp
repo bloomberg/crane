@@ -23,6 +23,8 @@ ProgramWf::jump_target(const std::shared_ptr<ProgramWf::instruction> &i) {
                    return std::make_optional<unsigned int>(_args.d_a0);
                  },
                  [](const typename ProgramWf::instruction::NOP _args)
-                     -> std::optional<unsigned int> { return std::nullopt; }},
+                     -> std::optional<unsigned int> {
+                   return std::optional<unsigned int>();
+                 }},
       i->v());
 }

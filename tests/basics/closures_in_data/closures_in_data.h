@@ -172,8 +172,8 @@ struct ClosuresInData {
       maybe_apply(std::make_optional<std::function<unsigned int(unsigned int)>>(
                       [](unsigned int x) { return (x + 1); }),
                   41u);
-  static inline const unsigned int test_maybe_none =
-      maybe_apply(std::nullopt, 42u);
+  static inline const unsigned int test_maybe_none = maybe_apply(
+      std::optional<std::function<unsigned int(unsigned int)>>(), 42u);
 };
 
 #endif // INCLUDED_CLOSURES_IN_DATA

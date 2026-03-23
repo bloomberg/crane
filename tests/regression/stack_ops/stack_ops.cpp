@@ -16,19 +16,19 @@ __attribute__((pure))
 std::pair<std::optional<unsigned int>, std::shared_ptr<StackOps::state_basic>>
 StackOps::pop_stack(std::shared_ptr<StackOps::state_basic> s) {
   return std::visit(
-      Overloaded{[&](const typename List<unsigned int>::Nil _args)
-                     -> std::pair<std::optional<unsigned int>,
-                                  std::shared_ptr<StackOps::state_basic>> {
-                   return std::make_pair(std::nullopt, std::move(s));
-                 },
-                 [](const typename List<unsigned int>::Cons _args)
-                     -> std::pair<std::optional<unsigned int>,
-                                  std::shared_ptr<StackOps::state_basic>> {
-                   return std::make_pair(
-                       std::make_optional<unsigned int>(_args.d_a0),
-                       std::make_shared<StackOps::state_basic>(
-                           state_basic{_args.d_a1}));
-                 }},
+      Overloaded{
+          [&](const typename List<unsigned int>::Nil _args)
+              -> std::pair<std::optional<unsigned int>,
+                           std::shared_ptr<StackOps::state_basic>> {
+            return std::make_pair(std::optional<unsigned int>(), std::move(s));
+          },
+          [](const typename List<unsigned int>::Cons _args)
+              -> std::pair<std::optional<unsigned int>,
+                           std::shared_ptr<StackOps::state_basic>> {
+            return std::make_pair(std::make_optional<unsigned int>(_args.d_a0),
+                                  std::make_shared<StackOps::state_basic>(
+                                      state_basic{_args.d_a1}));
+          }},
       s->stack_basic->v());
 }
 
@@ -59,7 +59,8 @@ StackOps::pop_stack_acc(std::shared_ptr<StackOps::state_with_acc> s) {
       Overloaded{[&](const typename List<unsigned int>::Nil _args)
                      -> std::pair<std::optional<unsigned int>,
                                   std::shared_ptr<StackOps::state_with_acc>> {
-                   return std::make_pair(std::nullopt, std::move(s));
+                   return std::make_pair(std::optional<unsigned int>(),
+                                         std::move(s));
                  },
                  [&](const typename List<unsigned int>::Cons _args)
                      -> std::pair<std::optional<unsigned int>,

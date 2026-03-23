@@ -469,7 +469,9 @@ __attribute__((pure)) std::optional<BinomialHeap::key> BinomialHeap::find_max(
   return std::visit(
       Overloaded{
           [](const typename List<std::shared_ptr<BinomialHeap::tree>>::Nil
-                 _args) -> std::optional<unsigned int> { return std::nullopt; },
+                 _args) -> std::optional<unsigned int> {
+            return std::optional<unsigned int>();
+          },
           [](const typename List<std::shared_ptr<BinomialHeap::tree>>::Cons
                  _args) -> std::optional<unsigned int> {
             return std::visit(
@@ -600,7 +602,9 @@ BinomialHeap::delete_max(
                   std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>>>>(
         std::make_pair(m, join(p_, q_, tree::ctor::Leaf_())));
   } else {
-    return std::nullopt;
+    return std::optional<std::pair<
+        unsigned int,
+        std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>>>>();
   }
 }
 

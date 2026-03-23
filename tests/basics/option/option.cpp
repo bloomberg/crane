@@ -25,7 +25,7 @@ Option::get_or_default(const std::optional<unsigned int> o,
 __attribute__((pure)) std::optional<unsigned int>
 Option::safe_pred(const unsigned int n) {
   if (n <= 0) {
-    return std::nullopt;
+    return std::optional<unsigned int>();
   } else {
     unsigned int m = n - 1;
     return std::make_optional<unsigned int>(m);

@@ -28,7 +28,8 @@ Tokenizer::next_token(const std::basic_string_view<char> input,
       -> std::pair<std::optional<std::basic_string_view<char>>,
                    std::basic_string_view<char>> {
     if (s.length() == int64_t(0)) {
-      return std::make_pair(std::nullopt, std::string_view(nullptr, 0));
+      return std::make_pair(std::optional<std::basic_string_view<char>>(),
+                            std::string_view(nullptr, 0));
     } else {
       if (fuel <= 0) {
         return std::make_pair(

@@ -234,7 +234,8 @@ LoopifyTreePaths::find_path_sum(
                               std::shared_ptr<List<unsigned int>>>(
                               List<unsigned int>::ctor::Nil_());
                         } else {
-                          _result = std::nullopt;
+                          _result = std::optional<
+                              std::shared_ptr<List<unsigned int>>>();
                         }
                       },
                       [&](const typename LoopifyTreePaths::tree::Node _args)
@@ -269,7 +270,7 @@ LoopifyTreePaths::find_path_sum(
                         List<unsigned int>::ctor::Cons_(_args.d_a1,
                                                         std::move(path)));
               } else {
-                _result = std::nullopt;
+                _result = std::optional<std::shared_ptr<List<unsigned int>>>();
               }
             }},
         _frame);

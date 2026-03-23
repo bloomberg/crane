@@ -88,7 +88,7 @@ PendantSumtreeRoundtripCase::list_to_vector_opt(
             },
             [](const typename List<std::shared_ptr<T>>::Cons0 _args)
                 -> std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>> {
-              return std::nullopt;
+              return std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>>();
             }},
         xs->v());
   } else {
@@ -97,7 +97,7 @@ PendantSumtreeRoundtripCase::list_to_vector_opt(
         Overloaded{
             [](const typename List<std::shared_ptr<T>>::Nil0 _args0)
                 -> std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>> {
-              return std::nullopt;
+              return std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>>();
             },
             [&](const typename List<std::shared_ptr<T>>::Cons0 _args0)
                 -> std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>> {
@@ -108,7 +108,7 @@ PendantSumtreeRoundtripCase::list_to_vector_opt(
                     std::shared_ptr<T0<std::shared_ptr<T>>>>(
                     T0<std::shared_ptr<T>>::ctor::Cons_(_args0.d_a0, n_, v));
               } else {
-                return std::nullopt;
+                return std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>>();
               }
             }},
         xs->v());
@@ -161,10 +161,12 @@ PendantSumtreeRoundtripCase::decode_multi(
                     List<std::shared_ptr<T0<std::shared_ptr<T>>>>::ctor::Cons0_(
                         v, vs));
               } else {
-                return std::nullopt;
+                return std::optional<std::shared_ptr<
+                    List<std::shared_ptr<T0<std::shared_ptr<T>>>>>>();
               }
             } else {
-              return std::nullopt;
+              return std::optional<std::shared_ptr<
+                  List<std::shared_ptr<T0<std::shared_ptr<T>>>>>>();
             }
           },
           std::make_optional<
@@ -197,7 +199,7 @@ PendantSumtreeRoundtripCase::pendant_digits(
             [](const typename List<
                 std::shared_ptr<T0<std::shared_ptr<T>>>>::Nil0 _args)
                 -> std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>> {
-              return std::nullopt;
+              return std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>>();
             },
             [](const typename List<
                 std::shared_ptr<T0<std::shared_ptr<T>>>>::Cons0 _args)
@@ -216,13 +218,14 @@ PendantSumtreeRoundtripCase::pendant_digits(
                              T0<std::shared_ptr<T>>>>::Cons0 _args0)
                           -> std::optional<
                               std::shared_ptr<T0<std::shared_ptr<T>>>> {
-                        return std::nullopt;
+                        return std::optional<
+                            std::shared_ptr<T0<std::shared_ptr<T>>>>();
                       }},
                   _args.d_a1->v());
             }},
         std::move(l)->v());
   } else {
-    return std::nullopt;
+    return std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>>();
   }
 }
 
@@ -294,10 +297,10 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::group_sums_validb(
                       unsigned int a = *acc;
                       return std::make_optional<unsigned int>((v + a));
                     } else {
-                      return std::nullopt;
+                      return std::optional<unsigned int>();
                     }
                   } else {
-                    return std::nullopt;
+                    return std::optional<unsigned int>();
                   }
                 },
                 std::make_optional<unsigned int>(0u));
@@ -450,10 +453,10 @@ PendantSumtreeRoundtripCase::sumtree_leaf_total(
             unsigned int a = *acc;
             return std::make_optional<unsigned int>((v + a));
           } else {
-            return std::nullopt;
+            return std::optional<unsigned int>();
           }
         } else {
-          return std::nullopt;
+          return std::optional<unsigned int>();
         }
       },
       std::make_optional<unsigned int>(0u));

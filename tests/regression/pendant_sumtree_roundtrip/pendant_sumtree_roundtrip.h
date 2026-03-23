@@ -774,7 +774,7 @@ Datatypes::option_map(F0 &&f, const std::optional<T1> o) {
     T1 a = *o;
     return std::make_optional<T2>(f(a));
   } else {
-    return std::nullopt;
+    return std::optional<T2>();
   }
 }
 
