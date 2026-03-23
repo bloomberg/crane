@@ -55,17 +55,6 @@
   (alias runtest)
   (deps double_opposite_witnesses.t.exe)
   (action (run ./double_opposite_witnesses.t.exe))))
-
-(subdir opposite_property_transfer_trace
- (rule
-  (targets opposite_property_transfer_trace.t.exe)
-  (deps OppositePropertyTransferTrace.vo opposite_property_transfer_trace.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} opposite_property_transfer_trace.t.exe opposite_property_transfer_trace.cpp opposite_property_transfer_trace.t.cpp)))
- (rule
-  (alias runtest)
-  (deps opposite_property_transfer_trace.t.exe)
-  (action (run ./opposite_property_transfer_trace.t.exe))))
 (subdir dim10_tower_proof_chain
  (rule
   (targets dim10_tower_proof_chain.t.exe)
@@ -86,16 +75,6 @@
   (alias runtest)
   (deps historical_event_safety_trace.t.exe)
   (action (run ./historical_event_safety_trace.t.exe))))
-(subdir pendant_sumtree_roundtrip
- (rule
-  (targets pendant_sumtree_roundtrip.t.exe)
-  (deps PendantSumtreeRoundtrip.vo pendant_sumtree_roundtrip.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} pendant_sumtree_roundtrip.t.exe pendant_sumtree_roundtrip.cpp pendant_sumtree_roundtrip.t.cpp)))
- (rule
-  (alias runtest)
-  (deps pendant_sumtree_roundtrip.t.exe)
-  (action (run ./pendant_sumtree_roundtrip.t.exe))))
 (subdir epoch_cell_glyph_trace
  (rule
   (targets epoch_cell_glyph_trace.t.exe)

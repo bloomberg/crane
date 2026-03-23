@@ -599,6 +599,7 @@ let rec pp_cpp_type par vl t =
     | Ttodo -> str "auto"
     | Tunknown -> str "UNKNOWN"
     | Tany -> str "std::any"
+    | Tauto -> str "auto"
     | Tdecltype e ->
       (* Print decltype(expr) where expr has been rewritten by
          rewrite_field_access_for_decltype to use std::declval. *)
@@ -1292,7 +1293,7 @@ and pp_cpp_stmt env args = function
     transitively call axiom stubs that throw std::logic_error. *)
 and is_pure_return_type = function
   | Tshared_ptr _ | Tunique_ptr _ -> false
-  | Tvoid | Tvar _ | Tany | Ttodo | Tunknown -> false
+  | Tvoid | Tvar _ | Tany | Tauto | Ttodo | Tunknown -> false
   | Tglob (r, _, _) when is_axiom_type_ref r -> false
   | Tmod (_, t) | Tref t | Tptr t -> is_pure_return_type t
   | _ -> true
@@ -1301,7 +1302,7 @@ and is_pure_return_type = function
     and unknown types are not concrete - we can't cast to them. *)
 and is_concrete_cpp_type = function
   | Tvar _ -> false
-  | Tunknown | Ttodo | Tany -> false
+  | Tunknown | Ttodo | Tany | Tauto -> false
   | Tmod (_, inner) -> is_concrete_cpp_type inner
   | _ -> true
 

@@ -271,7 +271,7 @@ struct FunctionVernac {
             MapsTo<T1, unsigned int> F1,
             MapsTo<T1, unsigned int, unsigned int, T1> F2>
   static T1 div2_rec(F0 &&_x0, F1 &&_x1, F2 &&_x2, const unsigned int _x3) {
-    return div2_rect(_x0, _x1, _x2, _x3);
+    return div2_rect<T1>(_x0, _x1, _x2, _x3);
   }
 
   static std::shared_ptr<R_div2> R_div2_correct(const unsigned int n,
@@ -431,7 +431,7 @@ struct FunctionVernac {
                 F1>
   static T1 list_sum_rec(F0 &&_x0, F1 &&_x1,
                          const std::shared_ptr<List<unsigned int>> &_x2) {
-    return list_sum_rect(_x0, _x1, _x2);
+    return list_sum_rect<T1>(_x0, _x1, _x2);
   }
 
   static std::shared_ptr<R_list_sum>

@@ -16,6 +16,40 @@ open Util
 (** Placeholder exception for unimplemented features *)
 exception TODO
 
+(** Safe version of [List.firstn] that returns [min(n, length lst)] elements
+    instead of raising [Failure "firstn"] when [n > length lst].
+
+    This is a critical safety wrapper for type argument extraction. When
+    [make_tyargs] in extraction.ml produces a type argument list that's
+    shorter than expected (e.g., due to Tdummy Ktype erasure or failed type
+    extraction), attempting to take the first N elements with [List.firstn]
+    would crash with [Failure "firstn"].
+
+    The shorter-than-expected list can occur when:
+    - Type constructors are erased in fallback logic (Tdummy Ktype)
+    - Higher-kinded type parameters fail extraction
+    - Universe polymorphism causes extraction failures
+
+    By using [safe_firstn], we gracefully handle these cases by taking as
+    many elements as are available, up to the requested count. This allows
+    the translation to proceed with partial type information rather than
+    crashing during extraction.
+
+    Example:
+    - [safe_firstn 3 [a; b]] returns [[a; b]] (not [Failure "firstn"])
+    - [safe_firstn 2 [a; b; c; d]] returns [[a; b]]
+
+    @param n   Number of elements to take from the list (must be >= 0)
+    @param lst Input list
+    @return Prefix of [lst] with length [min(n, length lst)] *)
+let safe_firstn n lst =
+  let rec aux n lst acc =
+    match n, lst with
+    | 0, _ | _, [] -> List.rev acc
+    | n, hd::tl -> aux (n-1) tl (hd::acc)
+  in
+  aux n lst []
+
 (** Mutable context tracking inductives defined in the current module scope.
     When set, references to these inductives won't be wrapped in Tnamespace, so
     they appear as sibling types rather than outer-namespace-qualified types. *)
@@ -275,13 +309,91 @@ let rec has_tany_in_type = function
   | Tunique_ptr t -> has_tany_in_type t
   | _ -> false
 
-(** If any type arg is erased (Tany or dummy_type), drop ALL explicit type args
-    and let the C++ compiler deduce everything. We must drop ALL args (not just
-    the erased ones) because C++ template arguments are positional: removing
-    only the erased slots would shift the remaining args into the wrong
-    positions, causing type mismatches. Dropping all args is safe because C++
-    can deduce them from the call-site argument types. *)
+(** Check if a C++ type is the [dummy_prop] marker from proof erasure.
+
+    In the extraction pipeline, [Tdummy Kprop] in the ML AST gets converted
+    to [Tglob(VarRef "dummy_prop", [], [])] in the C++ AST by
+    [convert_ml_type_to_cpp_type]. This marker occupies Kill Kprop positions
+    to maintain positional alignment during type argument processing, but it
+    has no corresponding C++ template parameter.
+
+    These markers must be stripped before the "all or nothing" erased type
+    check in [filter_erased_type_args]. If we don't strip them first, their
+    presence would trigger the erasure of all type arguments (since [dummy_prop]
+    is technically an "erased" type), even when the other type arguments are
+    concrete and should be preserved.
+
+    Example:
+    - ML type args: [[Tglob nat; Tdummy Kprop; Tglob bool]]
+    - After conversion: [[Tglob nat; Tglob dummy_prop; Tglob bool]]
+    - After stripping dummy_prop: [[Tglob nat; Tglob bool]]
+    - After filtering: [[Tglob nat; Tglob bool]] (preserved)
+
+    Without stripping dummy_prop first:
+    - Would see [Tglob dummy_prop] as erased → drop all args → [[]]
+
+    @param t C++ type to check
+    @return [true] if [t] is the dummy_prop marker, [false] otherwise *)
+let is_cpp_dummy_prop = function
+  | Minicpp.Tglob (GlobRef.VarRef id, [], _) ->
+    Id.to_string id = "dummy_prop"
+  | _ -> false
+
+(** Filter erased type arguments from a template argument list using a
+    two-phase approach: proof erasure stripping followed by all-or-nothing
+    type erasure.
+
+    Phase 1: Strip proof-erasure markers ([dummy_prop] from [Tdummy Kprop]).
+    These are positional placeholders in the ML AST that have no C++ analog.
+    They must be removed before checking for erased types, otherwise their
+    presence would trigger full erasure of concrete type arguments.
+
+    Phase 2: Apply the "all or nothing" rule for erased types.
+    If ANY remaining type argument is erased (marked as [Tany] or [dummy_type]
+    / [dummy_implicit]), drop ALL type arguments and return [[]]  .
+
+    The "all or nothing" rule is required because C++ template arguments are
+    positional. If we kept some type args and dropped others, the remaining
+    args would shift into the wrong parameter positions, causing type mismatches.
+
+    Dropping all args is safe because C++ template argument deduction can
+    infer type arguments from value arguments at the call site. For example:
+    - [std::make_optional(5u)] deduces [std::optional<unsigned int>]
+    - [std::vector v{1, 2, 3}] deduces [std::vector<int>]
+
+    This function is called at multiple points in the translation pipeline:
+    - [gen_expr] (MLglob case): filter type args before emitting C++ call
+    - [gen_expr_custom_cons]: filter before applying custom syntax template
+    - [eta_fun]: filter when generating eta-expanded function wrappers
+    - [gen_decl_for_pp]: filter when generating type declarations
+
+    Example scenarios:
+
+    1. Concrete types (no erasure):
+       Input: [[Tglob nat; Tglob bool]]
+       Output: [[Tglob nat; Tglob bool]]
+
+    2. Proof in middle (strip but keep others):
+       Input: [[Tglob nat; Tglob dummy_prop; Tglob bool]]
+       After phase 1: [[Tglob nat; Tglob bool]]
+       Output: [[Tglob nat; Tglob bool]]
+
+    3. Erased type in middle (drop all):
+       Input: [[Tglob nat; Tglob dummy_type; Tglob bool]]
+       After phase 1: [[Tglob nat; Tglob dummy_type; Tglob bool]]
+       After phase 2: [[]] (erased)
+
+    4. Only proofs (drop all):
+       Input: [[Tglob dummy_prop; Tglob dummy_prop]]
+       After phase 1: [[]]
+       Output: [[]]
+
+    @param tys List of C++ types (template arguments)
+    @return Filtered list: either all concrete types or empty list *)
 let filter_erased_type_args tys =
+  (* Phase 1: Strip proof-erasure markers *)
+  let tys = List.filter (fun t -> not (is_cpp_dummy_prop t)) tys in
+  (* Phase 2: Apply all-or-nothing rule for erased types *)
   if List.exists is_erased_type tys then [] else tys
 
 (** Recursively check whether a C++ type tree contains erased HKT markers (Tany
@@ -834,7 +946,7 @@ let rec convert_ml_type_to_cpp_type
         | Some num_param_vars ->
           (* Only keep the first num_param_vars type args - the rest are
              indices *)
-          List.firstn num_param_vars ts
+          safe_firstn num_param_vars ts
         | None ->
           (* Fallback: if tvars is non-empty and this is a local reference, use
              tvars length *)
@@ -845,7 +957,7 @@ let rec convert_ml_type_to_cpp_type
                  !local_inductives
           in
           if is_local && tvars <> [] then
-            List.firstn (List.length tvars) ts
+            safe_firstn (List.length tvars) ts
           else
             ts )
         (* Keep all if we can't determine *)
@@ -911,16 +1023,94 @@ let rec convert_ml_type_to_cpp_type
    false *)
 
 (** Convert ML type arguments to C++ template parameters, applying type
-    simplification. *)
+    simplification and handling out-of-scope type variables.
+
+    This function maps a list of ML types to C++ types for use in template
+    argument lists. It performs two key transformations:
+
+    1. Type simplification via [type_simpl] to normalize ML types
+    2. Conversion to C++ types via [convert_ml_type_to_cpp_type]
+    3. Detection and erasure of unbound type variables
+
+    The [tvars] parameter specifies the type variables in scope (as a list of
+    typename declarations in the current C++ context). When a [Tvar] appears
+    with [None] for its binding and [tvars] is non-empty, this indicates the
+    type variable index is out of scope — it references a typename that doesn't
+    exist in the current C++ context.
+
+    Out-of-scope type variables are marked as [dummy_type], which triggers
+    [filter_erased_type_args] to drop the entire type argument list. This is
+    safer than emitting invalid C++ like [template<typename T> ... U] where
+    [U] is undefined.
+
+    Example scenario where this occurs:
+    - ML function with type scheme [forall A B, A -> B -> option A]
+    - Partial application instantiates [A] but leaves [B] polymorphic
+    - C++ code generator enters context with only [typename A]
+    - Type arg list includes [Tvar 2] for [B]
+    - [convert_ml_type_to_cpp_type] returns [Tvar(2, None)] (no binding)
+    - We mark it [dummy_type] to trigger erasure
+
+    @param env   Translation environment (unused in current implementation)
+    @param tvars Type variables in scope (C++ typename parameters)
+    @param tys   ML type arguments to convert
+    @return List of C++ types, with out-of-scope Tvars marked as dummy_type *)
 and build_template_params env tvars tys =
   List.map
     (fun ty ->
-      convert_ml_type_to_cpp_type env Refset'.empty tvars (type_simpl ty) )
+      (* Simplify and convert the ML type to C++ *)
+      let t =
+        convert_ml_type_to_cpp_type env Refset'.empty tvars (type_simpl ty)
+      in
+      (* Check for unbound type variables *)
+      match t with
+      | Tvar (_, None) when tvars <> [] ->
+        (* Type variable has no binding, but we're in a context with typename
+           params. This means the Tvar index exceeds the scope of tvars.
+           Mark as dummy_type to trigger full erasure via filter_erased_type_args.
+           Using the unbound Tvar would generate invalid C++ references. *)
+        Tglob (GlobRef.VarRef (Id.of_string "dummy_type"), [], [])
+      | _ ->
+        (* Type is either bound, or we're in an untyped context (tvars = []).
+           Keep the type as-is. *)
+        t )
     tys
 
-(** Generate code for a custom-extracted constructor application *)
+(** Generate code for a custom-extracted constructor application.
+
+    Custom-extracted constructors have user-defined C++ syntax (registered via
+    [Crane Extract Constant]) that may include type argument placeholders like
+    [%t0], [%t1], etc. This function builds the C++ expression by:
+    1. Filtering the ML type argument list to keep only type parameters
+       (dropping index arguments that don't correspond to C++ template params)
+    2. Converting ML types to C++ types via [build_template_params]
+    3. Filtering erased types (Tdummy Ktype → dummy_type) to avoid passing
+       empty or partial template argument lists to custom syntax
+    4. Wrapping in [mk_cppglob] to apply the custom syntax template
+
+    The filtering is critical because custom syntax strings expect concrete
+    type arguments for their placeholders. If we pass an empty or erased
+    type arg list, the custom syntax renderer in cpp_print.ml will raise
+    an anomaly ("Custom syntax: unbound type argument").
+
+    Example:
+    - ML: [MLcons(Tglob(option, [Tglob(nat)]), cons_ctor, [5])]
+    - Custom syntax: [(Datatypes.option, 0) := "std::optional<%t0>"]
+    - After filtering: [std::optional<unsigned int>]
+    - Generated C++: [std::make_optional<unsigned int>(5u)]
+
+    Note: This only handles custom constructors. Regular (non-custom) inductives
+    follow a different code path via the main [gen_expr] MLcons case.
+
+    @param env Translation environment (contains type context)
+    @param ty  ML type of the constructor application (contains type args)
+    @param r   Constructor reference (must be custom-extracted)
+    @param ts  ML expression arguments (converted to C++ recursively)
+    @return C++ expression applying custom syntax with type/value arguments *)
 and gen_expr_custom_cons env (ty : ml_type) r ts =
+  (* Convert value arguments to C++ expressions *)
   let args = List.rev_map (gen_expr env) ts in
+  (* Helper to wrap expression in function call syntax if it has arguments *)
   let app x =
     match args with
     | [] -> x
@@ -928,18 +1118,55 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
   in
   match ty with
   | Miniml.Tglob (n, tys, _) ->
-    (* Filter out index type args - only keep parameters *)
+    (* Step 1: Filter out index type args - only keep parameters.
+
+       Inductive types distinguish between parameters (uniform across all
+       constructors, e.g., the [A] in [list A]) and indices (may vary,
+       e.g., the [n] in [vec A n]). In C++, only parameters become template
+       arguments; indices are encoded in types or runtime values.
+
+       We use [get_ind_num_param_vars_opt] to find the parameter count and
+       [safe_firstn] to extract them. [safe_firstn] handles cases where the
+       type arg list is shorter than expected (e.g., due to Tdummy Ktype
+       erasure in make_tyargs). *)
     let tys =
       match n with
       | GlobRef.IndRef (kn, _) ->
         ( match Table.get_ind_num_param_vars_opt kn with
-        | Some num_param_vars -> List.firstn num_param_vars tys
-        | None -> tys )
-      | _ -> tys
+        | Some num_param_vars ->
+          (* Take first num_param_vars elements, or fewer if list is short *)
+          safe_firstn num_param_vars tys
+        | None ->
+          (* Not in table - keep all type args *)
+          tys )
+      | _ ->
+        (* Not an inductive ref - keep all type args *)
+        tys
     in
+    (* Step 2: Convert ML types to C++ types *)
     let temps = build_template_params env [] tys in
+    (* Step 3: Filter erased type args (dummy_type from Tdummy Ktype).
+
+       Custom syntax requires concrete type arguments. If any type arg is
+       erased (e.g., from a failed extraction or HKT type constructor), we
+       must drop ALL type args to avoid misalignment.
+
+       [filter_erased_type_args] implements the "all or nothing" rule:
+       - If no erased types: keep all type args
+       - If any erased type: drop all type args (return [])
+
+       When all args are dropped, the custom syntax in cpp_print.ml will
+       either use default template arguments or the renderer will deduce
+       them from context. For example, [std::make_optional(5u)] deduces
+       [std::optional<unsigned int>] from the argument type. *)
+    let temps = filter_erased_type_args temps in
+    (* Step 4: Apply custom syntax template with filtered type args *)
     app (mk_cppglob r temps)
-  | _ -> app (mk_cppglob r [])
+  | _ ->
+    (* Type is not a Tglob - no type args to pass.
+       This case is rare for custom constructors, which typically have
+       Tglob types. Fall back to bare constructor reference. *)
+    app (mk_cppglob r [])
 
 (** Try to fold a Peano numeral chain (nested constructors) into an integer *)
 and try_fold_numeral info expr =
@@ -1396,7 +1623,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
               match n with
               | GlobRef.IndRef (kn, _) ->
                 ( match Table.get_ind_num_param_vars_opt kn with
-                | Some num_param_vars -> List.firstn num_param_vars tys_orig
+                | Some num_param_vars -> safe_firstn num_param_vars tys_orig
                 | None -> tys_orig )
               | _ -> tys_orig
             in
@@ -1470,7 +1697,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
             match n with
             | GlobRef.IndRef (kn, _) ->
               ( match Table.get_ind_num_param_vars_opt kn with
-              | Some num_param_vars -> List.firstn num_param_vars tys
+              | Some num_param_vars -> safe_firstn num_param_vars tys
               | None -> tys )
             | _ -> tys
           in
@@ -1557,7 +1784,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
             match n with
             | GlobRef.IndRef (kn, _) ->
               ( match Table.get_ind_num_param_vars_opt kn with
-              | Some num_param_vars -> List.firstn num_param_vars tys
+              | Some num_param_vars -> safe_firstn num_param_vars tys
               | None -> tys )
             | _ -> tys
           in
@@ -2209,7 +2436,7 @@ and eta_fun env f args =
     in
     let n_args = List.length args in
     if n_args > n_value_dom && n_value_dom > 0 then
-      let primary = List.rev (List.firstn n_value_dom args) in
+      let primary = List.rev (safe_firstn n_value_dom args) in
       let excess = List.rev (List.skipn n_value_dom args) in
       CPPfun_call (CPPfun_call (gen_expr env f, primary), excess)
     else
@@ -2239,7 +2466,7 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body sname =
         match r with
         | GlobRef.IndRef (kn, _) ->
           ( match Table.get_ind_num_param_vars_opt kn with
-          | Some num_param_vars -> List.firstn num_param_vars tys
+          | Some num_param_vars -> safe_firstn num_param_vars tys
           | None -> tys )
         | _ -> tys
       in
@@ -4692,7 +4919,7 @@ let gen_dfun n b dom cod ty temps =
     if List.length all_ids > n_type_dom then
       let n_excess = List.length all_ids - n_type_dom in
       let kept_ids = List.skipn n_excess all_ids in
-      let excess_ids = List.firstn n_excess all_ids in
+      let excess_ids = safe_firstn n_excess all_ids in
       (kept_ids, named_lams excess_ids inner_b)
     else
       (all_ids, inner_b)
@@ -4714,7 +4941,7 @@ let gen_dfun n b dom cod ty temps =
      parameters to get wrong types. *)
   let get_missing d a =
     let n_missing = max 0 (List.length d - List.length a) in
-    List.firstn n_missing d
+    safe_firstn n_missing d
   in
   let missing_types = get_missing mldom ids in
   let n_miss = List.length missing_types in

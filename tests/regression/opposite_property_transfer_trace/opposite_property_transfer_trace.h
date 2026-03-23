@@ -105,7 +105,7 @@ struct OppositePropertyTransferTraceCase {
       F0 &&h_dual, F1 &&h_theorem, const std::shared_ptr<PreStableCategory> &pS,
       const std::shared_ptr<RightStableWitness> &h_right,
       const std::shared_ptr<Triangle2Witness> &h_tri2) {
-    return theorem_doubling_principle_correct(
+    return theorem_doubling_principle_correct<T1, T2>(
         h_dual, h_theorem, pS, right_stable_gives_opposite_left(pS, h_right),
         [&](void) {
           std::pair<std::function<std::shared_ptr<Triangle2Witness>(
@@ -134,9 +134,10 @@ struct OppositePropertyTransferTraceCase {
   static inline const satisfies_triangle_2 sample_triangle2 =
       std::make_shared<Triangle2Witness>(Triangle2Witness{8u, 16u});
   static inline const std::shared_ptr<RightProperty> sample_right_property =
-      theorem_doubling_principle_final(dual_property_equiv,
-                                       sample_left_property, sample_category,
-                                       sample_right_stable, sample_triangle2);
+      theorem_doubling_principle_final<std::shared_ptr<LeftProperty>,
+                                       std::shared_ptr<RightProperty>>(
+          dual_property_equiv, sample_left_property, sample_category,
+          sample_right_stable, sample_triangle2);
   static inline const unsigned int sample_opposite_tag =
       opposite_prestable_category(sample_category)->ps_tag;
   static inline const unsigned int sample_opposite_loop_value =

@@ -111,6 +111,8 @@ type cpp_type =
   | Ttodo  (** Placeholder during development *)
   | Tunknown  (** Type inference failed *)
   | Tany  (** std::any for type-erased storage of existentials *)
+  | Tauto
+      (** auto for phantom tvar positions where C++ cannot deduce the type *)
   | Tdecltype of cpp_expr  (** decltype(expr) for deduced types *)
 
 (** Type metavariable for unification. *)

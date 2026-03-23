@@ -111,6 +111,7 @@ type cpp_type =
   | Ttodo
   | Tunknown
   | Tany (* std::any - for type-erased storage of existential types *)
+  | Tauto (* auto - for phantom tvar positions where C++ cannot deduce the type *)
   | Tdecltype of cpp_expr (* decltype(expr) *)
 
 (** C++ type meta-variable for unification. *)
@@ -296,7 +297,7 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   | Tnamespace (r, t) -> Tnamespace (r, map_cpp_type f t)
   | Tqualified (t, id) -> Tqualified (map_cpp_type f t, id)
   | Tdecltype _ -> ty (* decltype wraps CPPraw, no sub-types to map *)
-  | Tvar _ | Tvoid | Ttodo | Tunknown | Tany -> ty
+  | Tvar _ | Tvoid | Ttodo | Tunknown | Tany | Tauto -> ty
 
 (** [map_expr fe fs ft e] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural

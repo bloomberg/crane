@@ -466,6 +466,19 @@ let mark_higher_order_projection r =
 
 let is_higher_order_projection r = Refset'.mem r !higher_order_projections
 
+(** {2 Phantom type variables table} *)
+
+let phantom_tvars : (int list) Refmap'.t ref = ref Refmap'.empty
+
+let init_phantom_tvars () = phantom_tvars := Refmap'.empty
+
+let set_phantom_tvars r indices = phantom_tvars := Refmap'.add r indices !phantom_tvars
+
+let get_phantom_tvars r =
+  match Refmap'.find_opt r !phantom_tvars with
+  | Some indices -> indices
+  | None -> []
+
 (** {2 Table of used axioms} *)
 
 let info_axioms = ref Refset'.empty
@@ -1980,6 +1993,7 @@ let reset_tables () =
   init_promoted_type_vars ();
   init_instance_promoted_types ();
   init_higher_order_projections ();
+  init_phantom_tvars ();
   init_axioms ();
   init_opaques ();
   reset_modfile ();

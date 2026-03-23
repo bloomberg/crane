@@ -400,7 +400,7 @@ struct Equations {
                            const std::pair<unsigned int, unsigned int> _x5,
                            const unsigned int _x6,
                            const std::shared_ptr<gcd_graph> &_x7) {
-    return gcd_graph_mut(_x0, _x1, _x2, _x3, _x4, _x5, _x6, _x7);
+    return gcd_graph_mut<T1, T2>(_x0, _x1, _x2, _x3, _x4, _x5, _x6, _x7);
   }
 
   static std::shared_ptr<gcd_graph>
@@ -439,7 +439,7 @@ struct Equations {
   static std::any
   FunctionalElimination_gcd(F0 &&_x0, F1 &&_x1, F2 &&_x2, F3 &&_x3,
                             const std::pair<unsigned int, unsigned int> _x4) {
-    return gcd_elim(_x0, _x1, _x2, _x3, _x4);
+    return gcd_elim<F0>(_x0, _x1, _x2, _x3, _x4);
   }
 
   struct FunctionalInduction_gcd {
@@ -768,7 +768,8 @@ struct Equations {
                            F4 &&_x4, const unsigned int _x5,
                            const unsigned int _x6,
                            const std::shared_ptr<collatz_steps_graph> &_x7) {
-    return collatz_steps_graph_mut(_x0, _x1, _x2, _x3, _x4, _x5, _x6, _x7);
+    return collatz_steps_graph_mut<T1, T2>(_x0, _x1, _x2, _x3, _x4, _x5, _x6,
+                                           _x7);
   }
 
   static std::shared_ptr<collatz_steps_graph>
@@ -796,7 +797,7 @@ struct Equations {
                                                       const std::any _x1,
                                                       F2 &&_x2, F3 &&_x3,
                                                       const unsigned int _x4) {
-    return collatz_steps_elim(_x0, _x1, _x2, _x3, _x4);
+    return collatz_steps_elim<F2>(_x0, _x1, _x2, _x3, _x4);
   }
 
   struct FunctionalInduction_collatz_steps {

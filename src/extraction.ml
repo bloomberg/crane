@@ -396,7 +396,7 @@ let fake_match_projection env p =
 
 (** {1 Extraction of a type} *)
 
-(* [extract_type env db c args] is used to produce an ML type from the coq term
+(* [extract_type env db c args] is used to produce an ML type from the Rocq term
    [(c args)], which is supposed to be a Rocq type. *)
 
 (* [db] is a context for translating Rocq [Rel] into ML type [Tvar]. *)
@@ -1104,20 +1104,261 @@ and make_mlargs env sg e s args typs =
 
 (** Builds type argument list, filtering by signature. Extracts concrete ML
     types for type parameters, emitting Tdummy Ktype for HKT failures to
-    preserve positional consistency. *)
-and make_tyargs env sg _mle args typs ~orig_typs =
+    preserve positional consistency.
+
+    This function processes three parallel lists (args, typs, orig_typs) in
+    lockstep to build the ML type argument list for a function application.
+    At Kill positions (marked Tdummy in typs or orig_typs), we attempt to
+    extract the concrete type. When extraction fails, fallback logic determines
+    whether to preserve the term as a Tglob or erase it as Tdummy Ktype.
+
+    The fallback classification is critical for C++ code generation:
+    - Kprop (proof) positions: always emit Tdummy Kprop (erased, no C++ analog)
+    - Ktype positions with Ind terms: preserve or erase based on semantic check
+    - Ktype positions with Rel terms: preserve as Tvar if genuine type parameter
+    - Other Ktype positions: conservatively erase as Tdummy Ktype
+
+    See docs/kprop_ktype_conflict_detailed.md for detailed analysis of the
+    classification problem and solutions.
+
+    @param env  Rocq environment for type checking and lookup
+    @param sg   Evar map for term operations and reduction
+    @param mle  ML environment (unused in current implementation)
+    @param args Actual Rocq terms being passed as arguments
+    @param typs Inferred ML types after unification (may contain Tdummy)
+    @param orig_typs Original schema types from function signature
+    @return List of ML types for the type arguments *)
+and make_tyargs env sg mle args typs ~orig_typs =
   let db =
     List.rev (List.mapi (fun i _ -> i + 1) env.env_rel_context.env_rel_ctx)
   in
+  let is_kprop = function Tdummy Kprop -> true | _ -> false in
+  let is_tdummy = function Tdummy _ -> true | _ -> false in
+  (* Recursive helper that processes args/typs/orig_typs in parallel.
+
+     The function walks three lists in lockstep:
+      - [args]: Rocq terms being passed as arguments
+      - [typs]: ML types after unification (may contain Tdummy)
+      - [orig_typs]: Original schema types from function signature
+
+      At each position, we determine whether it's a Kill position (Tdummy in
+      typs or orig_typs) or a Keep position. Kill positions are type parameters
+      that may need special handling. Keep positions are value arguments that
+      we skip.
+
+      Returns an ML type list with the same length as the number of Kill
+      positions in the input. This maintains positional correspondence between
+      type arguments in the ML AST and C++ template parameters. *)
   let rec f = function
-    | [], [], [] -> []
-    | a :: la, Tdummy _ :: lt, _ :: lo (* unified type is Tdummy *)
-     |a :: la, _ :: lt, Tdummy _ :: lo ->
-      (* original schema type was Tdummy *)
+    | [], [], [] ->
+      (* Base case: all lists exhausted simultaneously (well-formed input) *)
+      []
+    | _a :: la, t :: lt, o :: lo when is_kprop t || is_kprop o ->
+      (* Kill Kprop position - proof parameter.
+
+         Proofs are always erased in extraction. We emit [Tdummy Kprop] to
+         maintain positional alignment in the ML AST. Later, during C++ type
+         conversion, [Tdummy Kprop] becomes [Tglob(VarRef "dummy_prop")],
+         which [filter_erased_type_args] strips out before the all-or-nothing
+         erasure check.
+
+         We don't examine the term [a] because proofs are unconditionally
+         erased regardless of their content. The term might be a proof of
+         [P], an axiom, a lemma, etc. - all are erased.
+
+         Example:
+         - Function schema: [forall (A : Type) (H : A = A), ...]
+         - [A] is Keep Ktype, [H] is Kill Kprop
+         - Result: [[extract_type A; Tdummy Kprop]] *)
+      Tdummy Kprop :: f (la, lt, lo)
+    | a :: la, t :: lt, o :: lo when is_tdummy t || is_tdummy o ->
+      (* Kill Ktype position — this is a type parameter slot.
+
+         We first attempt to extract the term as a concrete ML type via
+         [extract_type]. This succeeds for most well-formed type arguments
+         like [option nat], [list A], [Tree T], etc.
+
+         When [extract_type] fails (exception thrown), we enter fallback
+         classification based on the term's syntactic form. The fallback
+         determines whether to preserve type information (Tglob/Tvar) or
+         erase it (Tdummy Ktype).
+
+         Fallback cases:
+         - Ind: inductive/record type constructor → classify by semantics
+         - Rel: de Bruijn index referencing a type parameter → classify by sort
+         - Other: conservatively erase as Tdummy Ktype
+
+         The fallback preserves positional consistency: we always emit exactly
+         one ML type for each type argument position, even if it's Tdummy. *)
       ( try extract_type env sg db 0 a [] :: f (la, lt, lo)
-        with _ -> Tdummy Ktype :: f (la, lt, lo) )
-    | _ :: la, _ :: lt, _ :: lo -> f (la, lt, lo) (* value param: skip *)
-    | _ -> []
+        with _ ->
+          let fallback =
+            match EConstr.kind sg (whd_betaiotazeta env sg a) with
+            | Ind ((kn, i), _) ->
+              (* Inductive or Record type constructor (possibly unapplied).
+
+                 Examples:
+                 - [option] (custom-extracted to std::optional)
+                 - [list] (custom-extracted to std::vector)
+                 - [Tree] (user-defined inductive)
+                 - [LeftProperty] (user-defined record)
+
+                 The key question: Can we reference this type's C++ name
+                 bare (without template arguments) in a template argument list?
+
+                 Two conditions must both hold for the bare name to be valid:
+
+                 1. NOT custom-extracted: Custom-extracted types like
+                    [option] → [std::optional<%t0>] have no standalone C++ name;
+                    they only exist via custom syntax that requires template args.
+
+                 2. No C++ template parameters: If the Rocq inductive has type
+                    parameters that become C++ [typename] params (e.g.,
+                    [Tree : Type -> Type] → [template<typename t_A> struct Tree]),
+                    then [Tree] alone is an incomplete type in C++.
+
+                 Only non-custom, non-template inductives can be preserved.
+                 These are inductives whose Rocq parameters are all erased
+                 values (not types), so the C++ struct has no template params.
+
+                 Examples:
+                 - [option : Type -> Type] → custom → erase
+                 - [Tree : Type -> Type] → non-custom, 1 template param → erase
+                 - [LeftProperty : PreStableCategory -> Set] →
+                   non-custom, 0 template params (PS is a value, erased) → preserve
+
+                 The [Tglob] with empty type args list preserves the type
+                 constructor name for explicit C++ template argument lists at
+                 call sites, which is needed when C++ cannot deduce the type
+                 from value arguments alone. *)
+              let ind_ref = GlobRef.IndRef (kn, i) in
+              (* Check whether this inductive has C++ template parameters.
+                 If it does, bare use (e.g. [Tree] without [<T>]) is invalid
+                 in C++, so we must erase it. If it has no template params
+                 (e.g. [LeftProperty] — its Rocq parameter [PS : PreStableCategory]
+                 is a value, not a type, so it's erased and the C++ struct is
+                 non-template), the bare name is a valid C++ type. *)
+              let has_cpp_template_params =
+                match Table.get_ind_num_param_vars_opt kn with
+                | Some n -> n > 0
+                | None -> false
+              in
+              if Table.is_custom ind_ref || has_cpp_template_params then
+                (* Custom syntax needs template args, or the C++ struct is
+                   templated — bare name is invalid. Erase so that
+                   [filter_erased_type_args] drops all type args and lets
+                   C++ template argument deduction handle it. *)
+                Tdummy Ktype
+              else
+                (* Non-custom, non-template struct — bare C++ name is valid.
+                   Preserve as [Tglob] so it appears in explicit template
+                   argument lists at call sites (needed when C++ can't
+                   deduce the type from value arguments alone). *)
+                Tglob (ind_ref, [], [])
+            | Rel n ->
+              (* De Bruijn index referencing a bound variable (parameter or local).
+
+                 Rels at Kill Ktype positions typically represent type parameters
+                 from outer scopes. We need to determine if the Rel denotes:
+                 1. A genuine type parameter (preserve as Tvar)
+                 2. A proof parameter or value (erase as Tdummy Ktype)
+
+                 The classification uses [returns_type_sort] to check if the Rel's
+                 Rocq type ultimately reduces to a Type/Set sort. This handles both:
+                 - Simple type params: [A : Type] → type is [Type] (Sort) → preserve
+                 - Higher-kinded type params: [F : Type -> Type] → type is [Type -> Type]
+                   but the codomain is [Type] (Sort) → preserve
+                 - Proof params: [H : P] where [P : Prop] → type is [P], which is
+                   Prop (Sort), but we filter by sort family → erase
+                 - Value params: [n : nat] → type is [nat], not a Sort → erase
+
+                 The [returns_type_sort] helper recursively strips Prod constructors
+                 to find the ultimate codomain sort. For example:
+                 - [Type] → Sort → check family (InType → true)
+                 - [Type -> Type] → Prod → recurse → Sort → true
+                 - [Type -> Prop] → Prod → recurse → Sort (InProp) → false
+                 - [nat] → not Sort/Prod → false
+
+                 If the Rel is a type parameter, we map its de Bruijn index [n]
+                 to an ML type variable index via the [db] list (which reverses
+                 and renumbers the environment). If the mapping succeeds, emit
+                 [Tvar n'], else [Tdummy Ktype].
+
+                 If the Rel is not a type parameter (proof or value), erase it. *)
+              (* Helper: Check if a Rocq type [c] ultimately returns a Type/Set sort.
+
+                 This recursively strips Prod constructors to examine the codomain.
+                  Returns [true] if the final codomain is a Type/Set sort, [false]
+                  if Prop/SProp or not a sort at all.
+
+                  Examples:
+                  - [Type] → true
+                  - [Type -> Type] → true (codomain is Type)
+                  - [Type -> Prop] → false (codomain is Prop)
+                  - [nat] → false (not a sort)
+
+                  @param c Rocq type to examine (in Constr form, not EConstr)
+                  @return [true] if codomain is Type/Set, [false] otherwise *)
+              let rec returns_type_sort c =
+                match Constr.kind c with
+                | Sort s ->
+                  (* Found a sort - check its family *)
+                  ( match Sorts.family s with
+                    | Sorts.InType | Sorts.InSet | Sorts.InQSort ->
+                      (* Type universe, Set, or QSort - informative type param *)
+                      true
+                    | Sorts.InProp | Sorts.InSProp ->
+                      (* Prop or SProp - proof, should be erased *)
+                      false )
+                | Prod (_, _, body) ->
+                  (* Function type - recurse into codomain.
+                     For [Type -> Type], this strips the domain and examines
+                     the final [Type] codomain. *)
+                  returns_type_sort body
+                | _ ->
+                  (* Other cases (App, Var, Const, etc.) - not a type parameter.
+                     This includes value types like [nat], [list nat], etc. *)
+                  false
+              in
+              let is_type_param =
+                try
+                  (* Look up the Rel's declaration in the environment *)
+                  let decl = Environ.lookup_rel n env in
+                  (* Extract its Rocq type and check if it returns Type/Set *)
+                  returns_type_sort
+                    (Context.Rel.Declaration.get_type decl)
+                with _ ->
+                  (* Lookup failed (out of bounds, etc.) - conservatively erase *)
+                  false
+              in
+              if is_type_param then
+                (* Map de Bruijn index to ML type variable index via db list.
+                   The db list is a reverse-indexed map from Rel indices to
+                   ML Tvar indices, built from env_rel_context. *)
+                let n' =
+                  if n <= List.length db then List.nth db (n - 1) else 0
+                in
+                (* If mapping succeeded (n' > 0), emit Tvar; else erase *)
+                if n' > 0 then Tvar n' else Tdummy Ktype
+              else
+                (* Not a type parameter - erase *)
+                Tdummy Ktype
+            | _ ->
+              (* Other term forms (App, Lambda, Let, Case, Fix, CoFix, Proj, etc.)
+                 at Kill Ktype positions. These are rare and typically indicate
+                 unusual higher-order type manipulation. Conservatively erase. *)
+              Tdummy Ktype
+          in
+          fallback :: f (la, lt, lo) )
+    | _a :: la, _t :: lt, _o :: lo ->
+      (* Non-Kill position - this is a value argument, not a type argument.
+         Skip it and continue processing the remaining lists. *)
+      f (la, lt, lo)
+    | _ ->
+      (* List length mismatch or all lists exhausted.
+         This terminates the recursion. In a well-formed extraction, all three
+         lists should have the same length and reach [] simultaneously. *)
+      []
   in
   f (args, List.map type_simpl typs, orig_typs)
 
