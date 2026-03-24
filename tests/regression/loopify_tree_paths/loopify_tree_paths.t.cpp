@@ -52,7 +52,7 @@ using BTree = LoopifyTreePaths::bool_tree;
 int main() {
   // paths
   auto leaf = Tree::ctor::Leaf_();
-  auto paths_leaf = LoopifyTreePaths::paths(leaf);
+  auto paths_leaf = leaf->paths();
   {
     auto vv = to_vecs(paths_leaf);
     // Leaf should give one empty path: [[]]
@@ -62,7 +62,7 @@ int main() {
 
   auto tree1 = Tree::ctor::Node_(leaf, 1u, leaf);
   {
-    auto vv = to_vecs(LoopifyTreePaths::paths(tree1));
+    auto vv = to_vecs(tree1->paths());
     // Node(Leaf, 1, Leaf) -> [[1], [1]]
     ASSERT(vv.size() == 2u);
     ASSERT((vv[0] == std::vector<unsigned int>{1u}));
@@ -73,11 +73,11 @@ int main() {
   auto right = Tree::ctor::Node_(leaf, 3u, leaf);
   auto tree2 = Tree::ctor::Node_(left, 1u, right);
   {
-    auto vv = to_vecs(LoopifyTreePaths::paths(tree2));
+    auto vv = to_vecs(tree2->paths());
     ASSERT(vv.size() == 4u);
     ASSERT((vv[0] == std::vector<unsigned int>{1u, 2u}));
-    ASSERT((vv[1] == std::vector<unsigned int>{1u, 3u}));
-    ASSERT((vv[2] == std::vector<unsigned int>{1u, 2u}));
+    ASSERT((vv[1] == std::vector<unsigned int>{1u, 2u}));
+    ASSERT((vv[2] == std::vector<unsigned int>{1u, 3u}));
     ASSERT((vv[3] == std::vector<unsigned int>{1u, 3u}));
   }
 
@@ -87,14 +87,14 @@ int main() {
   auto leaf_odd = BTree::ctor::BLeaf_(3u);
   auto leaf_even = BTree::ctor::BLeaf_(4u);
 
-  ASSERT(LoopifyTreePaths::or_search(is_even, leaf_odd) == false);
-  ASSERT(LoopifyTreePaths::or_search(is_even, leaf_even) == true);
+  ASSERT(leaf_odd->or_search(is_even) == false);
+  ASSERT(leaf_even->or_search(is_even) == true);
 
   auto btree = BTree::ctor::BNode_(leaf_odd, leaf_even);
-  ASSERT(LoopifyTreePaths::or_search(is_even, btree) == true);
+  ASSERT(btree->or_search(is_even) == true);
 
   auto all_odd = BTree::ctor::BNode_(leaf_odd, leaf_odd);
-  ASSERT(LoopifyTreePaths::or_search(is_even, all_odd) == false);
+  ASSERT(all_odd->or_search(is_even) == false);
 
   // and_search
   auto is_positive = [](unsigned int x) { return x > 0u; };
@@ -103,48 +103,48 @@ int main() {
   auto bleaf2 = BTree::ctor::BLeaf_(2u);
   auto bleaf0 = BTree::ctor::BLeaf_(0u);
 
-  ASSERT(LoopifyTreePaths::and_search(is_positive, bleaf1) == true);
-  ASSERT(LoopifyTreePaths::and_search(is_positive, bleaf0) == false);
+  ASSERT(bleaf1->and_search(is_positive) == true);
+  ASSERT(bleaf0->and_search(is_positive) == false);
 
   auto all_pos = BTree::ctor::BNode_(bleaf1, bleaf2);
-  ASSERT(LoopifyTreePaths::and_search(is_positive, all_pos) == true);
+  ASSERT(all_pos->and_search(is_positive) == true);
 
   auto has_zero = BTree::ctor::BNode_(bleaf1, bleaf0);
-  ASSERT(LoopifyTreePaths::and_search(is_positive, has_zero) == false);
+  ASSERT(has_zero->and_search(is_positive) == false);
 
   // count_paths_sum
-  ASSERT(LoopifyTreePaths::count_paths_sum(0u, leaf) == 1u);
-  ASSERT(LoopifyTreePaths::count_paths_sum(5u, leaf) == 0u);
+  ASSERT(leaf->count_paths_sum(0u) == 1u);
+  ASSERT(leaf->count_paths_sum(5u) == 0u);
 
   auto tree3 = Tree::ctor::Node_(leaf, 5u, leaf);
-  ASSERT(LoopifyTreePaths::count_paths_sum(5u, tree3) == 2u);
+  ASSERT(tree3->count_paths_sum(5u) == 2u);
 
   auto left1 = Tree::ctor::Node_(leaf, 2u, leaf);
   auto right1 = Tree::ctor::Node_(leaf, 3u, leaf);
   auto tree4 = Tree::ctor::Node_(left1, 1u, right1);
-  ASSERT(LoopifyTreePaths::count_paths_sum(3u, tree4) == 2u);
-  ASSERT(LoopifyTreePaths::count_paths_sum(4u, tree4) == 2u);
+  ASSERT(tree4->count_paths_sum(3u) == 2u);
+  ASSERT(tree4->count_paths_sum(4u) == 2u);
 
   // max_path_sum
-  ASSERT(LoopifyTreePaths::max_path_sum(leaf) == 0u);
+  ASSERT(leaf->max_path_sum() == 0u);
 
   auto tree5 = Tree::ctor::Node_(leaf, 5u, leaf);
-  ASSERT(LoopifyTreePaths::max_path_sum(tree5) == 5u);
+  ASSERT(tree5->max_path_sum() == 5u);
 
   auto left2 = Tree::ctor::Node_(leaf, 2u, leaf);
   auto right2 = Tree::ctor::Node_(leaf, 8u, leaf);
   auto tree6 = Tree::ctor::Node_(left2, 3u, right2);
-  ASSERT(LoopifyTreePaths::max_path_sum(tree6) == 11u);  // 3 + 8
+  ASSERT(tree6->max_path_sum() == 11u);  // 3 + 8
 
   // flatten_paths
   {
-    auto v = to_vec(LoopifyTreePaths::flatten_paths(leaf));
+    auto v = to_vec(leaf->flatten_paths());
     ASSERT(v.empty());
   }
 
   auto tree7 = Tree::ctor::Node_(leaf, 5u, leaf);
   {
-    auto v = to_vec(LoopifyTreePaths::flatten_paths(tree7));
+    auto v = to_vec(tree7->flatten_paths());
     ASSERT((v == std::vector<unsigned int>{5u}));
   }
 
@@ -152,7 +152,7 @@ int main() {
   auto right3 = Tree::ctor::Node_(leaf, 3u, leaf);
   auto tree8 = Tree::ctor::Node_(left3, 1u, right3);
   {
-    auto v = to_vec(LoopifyTreePaths::flatten_paths(tree8));
+    auto v = to_vec(tree8->flatten_paths());
     ASSERT((v == std::vector<unsigned int>{1u, 2u, 3u}));
   }
 

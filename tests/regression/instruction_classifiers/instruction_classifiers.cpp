@@ -12,65 +12,6 @@
 #include <utility>
 #include <variant>
 
-__attribute__((pure)) bool InstructionClassifiers::writes_acc(
-    const std::shared_ptr<InstructionClassifiers::instr_acc> &i) {
-  return std::visit(
-      Overloaded{
-          [](const typename InstructionClassifiers::instr_acc::LDM _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::LD _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::ADD _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::SUB _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::INC _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::XCH _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::BBL _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::SBM _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::RDM _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::RDR _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::ADM _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::RD0 _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::RD1 _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::RD2 _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::RD3 _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::CLB _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::CMA _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::IAC _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::DAC _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::RAL _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::RAR _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::TCC _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::TCS _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::DAA _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::KBP _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_acc::NOP_acc _args)
-              -> bool { return false; }},
-      i->v());
-}
-
 __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_acc(
     const std::shared_ptr<
         List<std::shared_ptr<InstructionClassifiers::instr_acc>>> &prog) {
@@ -83,7 +24,7 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_acc(
               std::shared_ptr<InstructionClassifiers::instr_acc>>::Cons _args)
               -> unsigned int {
             return ([&](void) {
-              if (writes_acc(_args.d_a0)) {
+              if (_args.d_a0->writes_acc()) {
                 return 1u;
               } else {
                 return 0u;
@@ -91,29 +32,6 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_acc(
             }() + count_writes_acc(_args.d_a1));
           }},
       prog->v());
-}
-
-__attribute__((pure)) bool InstructionClassifiers::writes_ram(
-    const std::shared_ptr<InstructionClassifiers::instr_ram> &i) {
-  return std::visit(
-      Overloaded{
-          [](const typename InstructionClassifiers::instr_ram::WRM _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_ram::WMP _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_ram::WR0 _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_ram::WR1 _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_ram::WR2 _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_ram::WR3 _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_ram::NOP_ram _args)
-              -> bool { return false; },
-          [](const typename InstructionClassifiers::instr_ram::ADD_ram _args)
-              -> bool { return false; }},
-      i->v());
 }
 
 __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_ram(
@@ -128,7 +46,7 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_ram(
               std::shared_ptr<InstructionClassifiers::instr_ram>>::Cons _args)
               -> unsigned int {
             return ([&](void) {
-              if (writes_ram(_args.d_a0)) {
+              if (_args.d_a0->writes_ram()) {
                 return 1u;
               } else {
                 return 0u;
@@ -136,27 +54,6 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_ram(
             }() + count_writes_ram(_args.d_a1));
           }},
       prog->v());
-}
-
-__attribute__((pure)) bool InstructionClassifiers::writes_regs(
-    const std::shared_ptr<InstructionClassifiers::instr_regs> &i) {
-  return std::visit(
-      Overloaded{
-          [](const typename InstructionClassifiers::instr_regs::XCH_regs _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_regs::INC_regs _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_regs::FIM _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_regs::FIN _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_regs::ISZ _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_regs::NOP_regs _args)
-              -> bool { return false; },
-          [](const typename InstructionClassifiers::instr_regs::ADD_regs _args)
-              -> bool { return false; }},
-      i->v());
 }
 
 __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_regs(
@@ -171,7 +68,7 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_regs(
               std::shared_ptr<InstructionClassifiers::instr_regs>>::Cons _args)
               -> unsigned int {
             return ([&](void) {
-              if (writes_regs(_args.d_a0)) {
+              if (_args.d_a0->writes_regs()) {
                 return 1u;
               } else {
                 return 0u;
@@ -179,29 +76,6 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_regs(
             }() + count_writes_regs(_args.d_a1));
           }},
       prog->v());
-}
-
-__attribute__((pure)) bool InstructionClassifiers::is_jump(
-    const std::shared_ptr<InstructionClassifiers::instr_jump> &i) {
-  return std::visit(
-      Overloaded{
-          [](const typename InstructionClassifiers::instr_jump::JCN _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_jump::JUN _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_jump::JMS _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_jump::JIN _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_jump::BBL_jump _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_jump::ISZ_jump _args)
-              -> bool { return true; },
-          [](const typename InstructionClassifiers::instr_jump::ADD_jump _args)
-              -> bool { return false; },
-          [](const typename InstructionClassifiers::instr_jump::NOP_jump _args)
-              -> bool { return false; }},
-      i->v());
 }
 
 __attribute__((pure)) unsigned int InstructionClassifiers::count_jumps(
@@ -216,7 +90,7 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_jumps(
               std::shared_ptr<InstructionClassifiers::instr_jump>>::Cons _args)
               -> unsigned int {
             return ([&](void) {
-              if (is_jump(_args.d_a0)) {
+              if (_args.d_a0->is_jump()) {
                 return 1u;
               } else {
                 return 0u;

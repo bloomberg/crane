@@ -143,24 +143,6 @@ ValidatedPumpDeliveryTraceCase::icr_activity_modifier(
   }();
 }
 
-__attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::fault_blocks_bolus(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::FaultStatus> &f) {
-  return std::visit(
-      Overloaded{[](const typename ValidatedPumpDeliveryTraceCase::FaultStatus::
-                        Fault_None _args) -> bool { return false; },
-                 [](const typename ValidatedPumpDeliveryTraceCase::FaultStatus::
-                        Fault_Occlusion _args) -> bool { return true; },
-                 [](const typename ValidatedPumpDeliveryTraceCase::FaultStatus::
-                        Fault_LowReservoir _args) -> bool {
-                   return PeanoNat::ltb(_args.d_a0, 10u);
-                 },
-                 [](const typename ValidatedPumpDeliveryTraceCase::FaultStatus::
-                        Fault_BatteryLow _args) -> bool { return false; },
-                 [](const typename ValidatedPumpDeliveryTraceCase::FaultStatus::
-                        Fault_Unknown _args) -> bool { return true; }},
-      f->v());
-}
-
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Minutes
 ValidatedPumpDeliveryTraceCase::peak_time(
     const ValidatedPumpDeliveryTraceCase::InsulinType itype,
@@ -703,7 +685,7 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
             if (bolus_too_soon(input->pi_now, input->pi_bolus_history)) {
               return PrecisionResult::ctor::PrecError_(prec_error_stacking);
             } else {
-              if (fault_blocks_bolus(input->pi_fault)) {
+              if (input->pi_fault->fault_blocks_bolus()) {
                 return PrecisionResult::ctor::PrecError_(prec_error_fault);
               } else {
                 if (PeanoNat::ltb(input->pi_current_bg->mg_dL_val, BG_HYPO)) {
@@ -821,18 +803,6 @@ ValidatedPumpDeliveryTraceCase::prec_result_twentieths(
 }
 
 __attribute__((pure)) unsigned int
-ValidatedPumpDeliveryTraceCase::precision_result_code(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionResult> &r) {
-  return std::visit(
-      Overloaded{
-          [](const typename ValidatedPumpDeliveryTraceCase::PrecisionResult::
-                 PrecOK _args) -> unsigned int { return 0u; },
-          [](const typename ValidatedPumpDeliveryTraceCase::PrecisionResult::
-                 PrecError _args) -> unsigned int { return _args.d_a0; }},
-      r->v());
-}
-
-__attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::mmol_tenths_to_mg_dL(
     const unsigned int mmol_tenths) {
   return PeanoNat::div((mmol_tenths * 18u), 10u);
@@ -944,17 +914,6 @@ ValidatedPumpDeliveryTraceCase::option_nat_default(
   } else {
     return std::move(d);
   }
-}
-
-__attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::result_modified(
-    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionResult> &r) {
-  return std::visit(
-      Overloaded{
-          [](const typename ValidatedPumpDeliveryTraceCase::PrecisionResult::
-                 PrecOK _args) -> bool { return _args.d_a1; },
-          [](const typename ValidatedPumpDeliveryTraceCase::PrecisionResult::
-                 PrecError _args) -> bool { return false; }},
-      r->v());
 }
 
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::pump_accepts_result(

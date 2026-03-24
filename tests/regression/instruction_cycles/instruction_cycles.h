@@ -147,38 +147,65 @@ struct InstructionCycles {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) unsigned int
+    cycles_jcn(const std::shared_ptr<state1> &s) const {
+      return std::visit(
+          Overloaded{
+              [&](const typename instruction1::JCN1 _args) -> unsigned int {
+                unsigned int c1 = Nat::div(_args.d_a0, 8u);
+                unsigned int c2 = (Nat::div(_args.d_a0, 4u) % 2u);
+                unsigned int c3 = (Nat::div(_args.d_a0, 2u) % 2u);
+                unsigned int c4 = (_args.d_a0 % 2u);
+                bool base_cond = ((s->acc1 == 0u && std::move(c2) == 1u) ||
+                                  ((s->carry1 && std::move(c3) == 1u) ||
+                                   (!(s->test_pin1) && std::move(c4) == 1u)));
+                bool jump;
+                if (std::move(c1) == 1u) {
+                  jump = !(std::move(base_cond));
+                } else {
+                  jump = std::move(base_cond);
+                }
+                if (std::move(jump)) {
+                  return 16u;
+                } else {
+                  return 8u;
+                }
+              },
+              [](const typename instruction1::NOP1 _args) -> unsigned int {
+                return 8u;
+              }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
+    T1 instruction1_rec(F0 &&f, const T1 f0) const {
+      return std::visit(
+          Overloaded{[&](const typename instruction1::JCN1 _args) -> T1 {
+                       return f(_args.d_a0, _args.d_a1);
+                     },
+                     [&](const typename instruction1::NOP1 _args) -> T1 {
+                       return f0;
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
+    T1 instruction1_rect(F0 &&f, const T1 f0) const {
+      return std::visit(
+          Overloaded{[&](const typename instruction1::JCN1 _args) -> T1 {
+                       return f(_args.d_a0, _args.d_a1);
+                     },
+                     [&](const typename instruction1::NOP1 _args) -> T1 {
+                       return f0;
+                     }},
+          this->v());
+    }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
-  static T1 instruction1_rect(F0 &&f, const T1 f0,
-                              const std::shared_ptr<instruction1> &i) {
-    return std::visit(
-        Overloaded{
-            [&](const typename instruction1::JCN1 _args) -> T1 {
-              return f(_args.d_a0, _args.d_a1);
-            },
-            [&](const typename instruction1::NOP1 _args) -> T1 { return f0; }},
-        i->v());
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
-  static T1 instruction1_rec(F0 &&f, const T1 f0,
-                             const std::shared_ptr<instruction1> &i) {
-    return std::visit(
-        Overloaded{
-            [&](const typename instruction1::JCN1 _args) -> T1 {
-              return f(_args.d_a0, _args.d_a1);
-            },
-            [&](const typename instruction1::NOP1 _args) -> T1 { return f0; }},
-        i->v());
-  }
-
-  __attribute__((pure)) static unsigned int
-  cycles_jcn(const std::shared_ptr<state1> &s,
-             const std::shared_ptr<instruction1> &i);
   static inline const unsigned int test_cycles_jcn_not_taken =
-      cycles_jcn(std::make_shared<state1>(state1{1u, false, true}),
-                 instruction1::ctor::JCN1_(4u, 7u));
+      instruction1::ctor::JCN1_(4u, 7u)->cycles_jcn(
+          std::make_shared<state1>(state1{1u, false, true}));
 
   struct instruction2 {
     // TYPES
@@ -226,31 +253,31 @@ struct InstructionCycles {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0>
+    T1 instruction2_rec(F0 &&f, const T1 f0) const {
+      return std::visit(
+          Overloaded{[&](const typename instruction2::JMS2 _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename instruction2::NOP2 _args) -> T1 {
+                       return f0;
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0>
+    T1 instruction2_rect(F0 &&f, const T1 f0) const {
+      return std::visit(
+          Overloaded{[&](const typename instruction2::JMS2 _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename instruction2::NOP2 _args) -> T1 {
+                       return f0;
+                     }},
+          this->v());
+    }
   };
-
-  template <typename T1, MapsTo<T1, unsigned int> F0>
-  static T1 instruction2_rect(F0 &&f, const T1 f0,
-                              const std::shared_ptr<instruction2> &i) {
-    return std::visit(
-        Overloaded{
-            [&](const typename instruction2::JMS2 _args) -> T1 {
-              return f(_args.d_a0);
-            },
-            [&](const typename instruction2::NOP2 _args) -> T1 { return f0; }},
-        i->v());
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F0>
-  static T1 instruction2_rec(F0 &&f, const T1 f0,
-                             const std::shared_ptr<instruction2> &i) {
-    return std::visit(
-        Overloaded{
-            [&](const typename instruction2::JMS2 _args) -> T1 {
-              return f(_args.d_a0);
-            },
-            [&](const typename instruction2::NOP2 _args) -> T1 { return f0; }},
-        i->v());
-  }
 
   struct state2 {
     unsigned int acc2;
@@ -546,6 +573,31 @@ struct InstructionCycles {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) unsigned int
+    cycles_sum(const std::shared_ptr<state5> &s) const {
+      return std::visit(
+          Overloaded{
+              [](const typename instruction5::NOP5 _args) -> unsigned int {
+                return 8u;
+              },
+              [&](const typename instruction5::JCN5 _args) -> unsigned int {
+                if (Nat::div(_args.d_a0, 8u) == 1u) {
+                  return 16u;
+                } else {
+                  if ((s->acc5 == 0u &&
+                       (Nat::div(_args.d_a0, 4u) % 2u) == 1u)) {
+                    return 16u;
+                  } else {
+                    return 8u;
+                  }
+                }
+              },
+              [](const typename instruction5::INC5 _args) -> unsigned int {
+                return 8u;
+              }},
+          this->v());
+    }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1,
@@ -580,9 +632,6 @@ struct InstructionCycles {
         i->v());
   }
 
-  __attribute__((pure)) static unsigned int
-  cycles_sum(const std::shared_ptr<state5> &s,
-             const std::shared_ptr<instruction5> &i);
   static std::shared_ptr<state5>
   execute5(std::shared_ptr<state5> s, const std::shared_ptr<instruction5> &i);
   __attribute__((pure)) static unsigned int program_cycles5(

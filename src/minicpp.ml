@@ -262,6 +262,7 @@ and method_field = {
   mf_body : cpp_stmt list;
   mf_is_const : bool;
   mf_is_static : bool;
+  mf_this_pos : int;
 }
 
 (** C++ type schema. The integer is the number of variables in the schema. *)

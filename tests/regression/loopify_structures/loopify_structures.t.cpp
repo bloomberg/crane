@@ -27,16 +27,16 @@ int main() {
       elem1, NestedList::ctor::Cons_(elem2, NestedList::ctor::Nil_()));
   auto nested = LoopifyStructures::nested::ctor::NList_(inner_list);
 
-  ASSERT(LoopifyStructures::nested_sum(nested) == 8u); // 5 + 3
+  ASSERT(nested->nested_sum() == 8u); // 5 + 3
 
   auto elem_only = LoopifyStructures::nested::ctor::Elem_(10u);
-  ASSERT(LoopifyStructures::nested_sum(elem_only) == 10u);
+  ASSERT(elem_only->nested_sum() == 10u);
 
   // Test nested_depth
-  ASSERT(LoopifyStructures::nested_depth(nested) >= 0u);
+  ASSERT(nested->nested_depth() >= 0u);
 
   // Test nested_flatten
-  auto flattened = LoopifyStructures::nested_flatten(nested);
+  auto flattened = nested->nested_flatten();
   ASSERT(flattened != nullptr);
 
   // Test quadtree
@@ -47,16 +47,16 @@ int main() {
   auto quad =
       LoopifyStructures::quadtree::ctor::Quad_(leaf1, leaf2, leaf3, leaf4);
 
-  ASSERT(LoopifyStructures::quad_sum(quad) == 10u); // 1+2+3+4
+  ASSERT(quad->quad_sum() == 10u); // 1+2+3+4
 
   // Test quad_depth
-  ASSERT(LoopifyStructures::quad_depth(leaf1) == 0u);
-  ASSERT(LoopifyStructures::quad_depth(quad) == 1u);
+  ASSERT(leaf1->quad_depth() == 0u);
+  ASSERT(quad->quad_depth() == 1u);
 
   // Test quad_map
   auto doubled =
-      LoopifyStructures::quad_map([](unsigned int x) { return x * 2; }, quad);
-  ASSERT(LoopifyStructures::quad_sum(doubled) == 20u); // 2+4+6+8
+      quad->quad_map([](unsigned int x) { return x * 2; });
+  ASSERT(doubled->quad_sum() == 20u); // 2+4+6+8
 
   std::cout << "All structure tests passed!\n";
   return testStatus;

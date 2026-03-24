@@ -89,49 +89,84 @@ struct WhereClause {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) unsigned int expr_size() const {
+      return std::visit(
+          Overloaded{
+              [](const typename Expr::Num _args) -> unsigned int { return 1u; },
+              [](const typename Expr::Plus _args) -> unsigned int {
+                return ((1u + _args.d_a0->expr_size()) +
+                        _args.d_a1->expr_size());
+              },
+              [](const typename Expr::Times _args) -> unsigned int {
+                return ((1u + _args.d_a0->expr_size()) +
+                        _args.d_a1->expr_size());
+              }},
+          this->v());
+    }
+
+    __attribute__((pure)) unsigned int eval() const {
+      return std::visit(
+          Overloaded{[](const typename Expr::Num _args) -> unsigned int {
+                       return _args.d_a0;
+                     },
+                     [](const typename Expr::Plus _args) -> unsigned int {
+                       return (_args.d_a0->eval() + _args.d_a1->eval());
+                     },
+                     [](const typename Expr::Times _args) -> unsigned int {
+                       return (_args.d_a0->eval() * _args.d_a1->eval());
+                     }},
+          this->v());
+    }
+
+    template <
+        typename T1, MapsTo<T1, unsigned int> F0,
+        MapsTo<T1, std::shared_ptr<Expr>, T1, std::shared_ptr<Expr>, T1> F1,
+        MapsTo<T1, std::shared_ptr<Expr>, T1, std::shared_ptr<Expr>, T1> F2>
+    T1 Expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
+      return std::visit(
+          Overloaded{[&](const typename Expr::Num _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename Expr::Plus _args) -> T1 {
+                       return f0(_args.d_a0,
+                                 _args.d_a0->template Expr_rec<T1>(f, f0, f1),
+                                 _args.d_a1,
+                                 _args.d_a1->template Expr_rec<T1>(f, f0, f1));
+                     },
+                     [&](const typename Expr::Times _args) -> T1 {
+                       return f1(_args.d_a0,
+                                 _args.d_a0->template Expr_rec<T1>(f, f0, f1),
+                                 _args.d_a1,
+                                 _args.d_a1->template Expr_rec<T1>(f, f0, f1));
+                     }},
+          this->v());
+    }
+
+    template <
+        typename T1, MapsTo<T1, unsigned int> F0,
+        MapsTo<T1, std::shared_ptr<Expr>, T1, std::shared_ptr<Expr>, T1> F1,
+        MapsTo<T1, std::shared_ptr<Expr>, T1, std::shared_ptr<Expr>, T1> F2>
+    T1 Expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
+      return std::visit(
+          Overloaded{[&](const typename Expr::Num _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename Expr::Plus _args) -> T1 {
+                       return f0(_args.d_a0,
+                                 _args.d_a0->template Expr_rect<T1>(f, f0, f1),
+                                 _args.d_a1,
+                                 _args.d_a1->template Expr_rect<T1>(f, f0, f1));
+                     },
+                     [&](const typename Expr::Times _args) -> T1 {
+                       return f1(_args.d_a0,
+                                 _args.d_a0->template Expr_rect<T1>(f, f0, f1),
+                                 _args.d_a1,
+                                 _args.d_a1->template Expr_rect<T1>(f, f0, f1));
+                     }},
+          this->v());
+    }
   };
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, std::shared_ptr<Expr>, T1, std::shared_ptr<Expr>, T1> F1,
-            MapsTo<T1, std::shared_ptr<Expr>, T1, std::shared_ptr<Expr>, T1> F2>
-  static T1 Expr_rect(F0 &&f, F1 &&f0, F2 &&f1,
-                      const std::shared_ptr<Expr> &e) {
-    return std::visit(
-        Overloaded{
-            [&](const typename Expr::Num _args) -> T1 { return f(_args.d_a0); },
-            [&](const typename Expr::Plus _args) -> T1 {
-              return f0(_args.d_a0, Expr_rect<T1>(f, f0, f1, _args.d_a0),
-                        _args.d_a1, Expr_rect<T1>(f, f0, f1, _args.d_a1));
-            },
-            [&](const typename Expr::Times _args) -> T1 {
-              return f1(_args.d_a0, Expr_rect<T1>(f, f0, f1, _args.d_a0),
-                        _args.d_a1, Expr_rect<T1>(f, f0, f1, _args.d_a1));
-            }},
-        e->v());
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, std::shared_ptr<Expr>, T1, std::shared_ptr<Expr>, T1> F1,
-            MapsTo<T1, std::shared_ptr<Expr>, T1, std::shared_ptr<Expr>, T1> F2>
-  static T1 Expr_rec(F0 &&f, F1 &&f0, F2 &&f1, const std::shared_ptr<Expr> &e) {
-    return std::visit(
-        Overloaded{
-            [&](const typename Expr::Num _args) -> T1 { return f(_args.d_a0); },
-            [&](const typename Expr::Plus _args) -> T1 {
-              return f0(_args.d_a0, Expr_rec<T1>(f, f0, f1, _args.d_a0),
-                        _args.d_a1, Expr_rec<T1>(f, f0, f1, _args.d_a1));
-            },
-            [&](const typename Expr::Times _args) -> T1 {
-              return f1(_args.d_a0, Expr_rec<T1>(f, f0, f1, _args.d_a0),
-                        _args.d_a1, Expr_rec<T1>(f, f0, f1, _args.d_a1));
-            }},
-        e->v());
-  }
-
-  __attribute__((pure)) static unsigned int
-  eval(const std::shared_ptr<Expr> &e);
-  __attribute__((pure)) static unsigned int
-  expr_size(const std::shared_ptr<Expr> &e);
 
   struct BExpr {
     // TYPES
@@ -227,6 +262,23 @@ struct WhereClause {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) bool beval() const {
+      return std::visit(
+          Overloaded{
+              [](const typename BExpr::BTrue _args) -> bool { return true; },
+              [](const typename BExpr::BFalse _args) -> bool { return false; },
+              [](const typename BExpr::BAnd _args) -> bool {
+                return (_args.d_a0->beval() && _args.d_a1->beval());
+              },
+              [](const typename BExpr::BOr _args) -> bool {
+                return (_args.d_a0->beval() || _args.d_a1->beval());
+              },
+              [](const typename BExpr::BNot _args) -> bool {
+                return !(_args.d_a0->beval());
+              }},
+          this->v());
+    }
   };
 
   template <
@@ -286,8 +338,6 @@ struct WhereClause {
                    }},
         b->v());
   }
-
-  __attribute__((pure)) static bool beval(const std::shared_ptr<BExpr> &e);
 
   struct AExpr {
     // TYPES
@@ -361,75 +411,101 @@ struct WhereClause {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) unsigned int aeval() const {
+      return std::visit(
+          Overloaded{[](const typename AExpr::ANum _args) -> unsigned int {
+                       return _args.d_a0;
+                     },
+                     [](const typename AExpr::APlus _args) -> unsigned int {
+                       return (_args.d_a0->aeval() + _args.d_a1->aeval());
+                     },
+                     [](const typename AExpr::AIf _args) -> unsigned int {
+                       if (_args.d_a0->beval()) {
+                         return _args.d_a1->aeval();
+                       } else {
+                         return _args.d_a2->aeval();
+                       }
+                     }},
+          this->v());
+    }
+
+    template <
+        typename T1, MapsTo<T1, unsigned int> F0,
+        MapsTo<T1, std::shared_ptr<AExpr>, T1, std::shared_ptr<AExpr>, T1> F1,
+        MapsTo<T1, std::shared_ptr<BExpr>, std::shared_ptr<AExpr>, T1,
+               std::shared_ptr<AExpr>, T1>
+            F2>
+    T1 AExpr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
+      return std::visit(
+          Overloaded{[&](const typename AExpr::ANum _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename AExpr::APlus _args) -> T1 {
+                       return f0(_args.d_a0,
+                                 _args.d_a0->template AExpr_rec<T1>(f, f0, f1),
+                                 _args.d_a1,
+                                 _args.d_a1->template AExpr_rec<T1>(f, f0, f1));
+                     },
+                     [&](const typename AExpr::AIf _args) -> T1 {
+                       return f1(_args.d_a0, _args.d_a1,
+                                 _args.d_a1->template AExpr_rec<T1>(f, f0, f1),
+                                 _args.d_a2,
+                                 _args.d_a2->template AExpr_rec<T1>(f, f0, f1));
+                     }},
+          this->v());
+    }
+
+    template <
+        typename T1, MapsTo<T1, unsigned int> F0,
+        MapsTo<T1, std::shared_ptr<AExpr>, T1, std::shared_ptr<AExpr>, T1> F1,
+        MapsTo<T1, std::shared_ptr<BExpr>, std::shared_ptr<AExpr>, T1,
+               std::shared_ptr<AExpr>, T1>
+            F2>
+    T1 AExpr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
+      return std::visit(
+          Overloaded{
+              [&](const typename AExpr::ANum _args) -> T1 {
+                return f(_args.d_a0);
+              },
+              [&](const typename AExpr::APlus _args) -> T1 {
+                return f0(
+                    _args.d_a0, _args.d_a0->template AExpr_rect<T1>(f, f0, f1),
+                    _args.d_a1, _args.d_a1->template AExpr_rect<T1>(f, f0, f1));
+              },
+              [&](const typename AExpr::AIf _args) -> T1 {
+                return f1(_args.d_a0, _args.d_a1,
+                          _args.d_a1->template AExpr_rect<T1>(f, f0, f1),
+                          _args.d_a2,
+                          _args.d_a2->template AExpr_rect<T1>(f, f0, f1));
+              }},
+          this->v());
+    }
   };
 
-  template <
-      typename T1, MapsTo<T1, unsigned int> F0,
-      MapsTo<T1, std::shared_ptr<AExpr>, T1, std::shared_ptr<AExpr>, T1> F1,
-      MapsTo<T1, std::shared_ptr<BExpr>, std::shared_ptr<AExpr>, T1,
-             std::shared_ptr<AExpr>, T1>
-          F2>
-  static T1 AExpr_rect(F0 &&f, F1 &&f0, F2 &&f1,
-                       const std::shared_ptr<AExpr> &a) {
-    return std::visit(
-        Overloaded{
-            [&](const typename AExpr::ANum _args) -> T1 {
-              return f(_args.d_a0);
-            },
-            [&](const typename AExpr::APlus _args) -> T1 {
-              return f0(_args.d_a0, AExpr_rect<T1>(f, f0, f1, _args.d_a0),
-                        _args.d_a1, AExpr_rect<T1>(f, f0, f1, _args.d_a1));
-            },
-            [&](const typename AExpr::AIf _args) -> T1 {
-              return f1(_args.d_a0, _args.d_a1,
-                        AExpr_rect<T1>(f, f0, f1, _args.d_a1), _args.d_a2,
-                        AExpr_rect<T1>(f, f0, f1, _args.d_a2));
-            }},
-        a->v());
-  }
-
-  template <
-      typename T1, MapsTo<T1, unsigned int> F0,
-      MapsTo<T1, std::shared_ptr<AExpr>, T1, std::shared_ptr<AExpr>, T1> F1,
-      MapsTo<T1, std::shared_ptr<BExpr>, std::shared_ptr<AExpr>, T1,
-             std::shared_ptr<AExpr>, T1>
-          F2>
-  static T1 AExpr_rec(F0 &&f, F1 &&f0, F2 &&f1,
-                      const std::shared_ptr<AExpr> &a) {
-    return std::visit(
-        Overloaded{[&](const typename AExpr::ANum _args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename AExpr::APlus _args) -> T1 {
-                     return f0(_args.d_a0, AExpr_rec<T1>(f, f0, f1, _args.d_a0),
-                               _args.d_a1,
-                               AExpr_rec<T1>(f, f0, f1, _args.d_a1));
-                   },
-                   [&](const typename AExpr::AIf _args) -> T1 {
-                     return f1(_args.d_a0, _args.d_a1,
-                               AExpr_rec<T1>(f, f0, f1, _args.d_a1), _args.d_a2,
-                               AExpr_rec<T1>(f, f0, f1, _args.d_a2));
-                   }},
-        a->v());
-  }
-
-  __attribute__((pure)) static unsigned int
-  aeval(const std::shared_ptr<AExpr> &e);
   static inline const unsigned int test_eval_plus =
-      eval(Expr::ctor::Plus_(Expr::ctor::Num_(3u), Expr::ctor::Num_(4u)));
+      Expr::ctor::Plus_(Expr::ctor::Num_(3u), Expr::ctor::Num_(4u))->eval();
   static inline const unsigned int test_eval_times =
-      eval(Expr::ctor::Times_(Expr::ctor::Num_(5u), Expr::ctor::Num_(6u)));
-  static inline const unsigned int test_eval_nested = eval(Expr::ctor::Plus_(
-      Expr::ctor::Times_(Expr::ctor::Num_(2u), Expr::ctor::Num_(3u)),
-      Expr::ctor::Num_(1u)));
-  static inline const unsigned int test_size = expr_size(Expr::ctor::Plus_(
-      Expr::ctor::Times_(Expr::ctor::Num_(2u), Expr::ctor::Num_(3u)),
-      Expr::ctor::Num_(1u)));
-  static inline const bool test_beval = beval(BExpr::ctor::BAnd_(
-      BExpr::ctor::BTrue_(), BExpr::ctor::BNot_(BExpr::ctor::BFalse_())));
-  static inline const unsigned int test_aeval = aeval(AExpr::ctor::AIf_(
-      BExpr::ctor::BAnd_(BExpr::ctor::BTrue_(), BExpr::ctor::BTrue_()),
-      AExpr::ctor::ANum_(10u), AExpr::ctor::ANum_(20u)));
+      Expr::ctor::Times_(Expr::ctor::Num_(5u), Expr::ctor::Num_(6u))->eval();
+  static inline const unsigned int test_eval_nested =
+      Expr::ctor::Plus_(
+          Expr::ctor::Times_(Expr::ctor::Num_(2u), Expr::ctor::Num_(3u)),
+          Expr::ctor::Num_(1u))
+          ->eval();
+  static inline const unsigned int test_size =
+      Expr::ctor::Plus_(
+          Expr::ctor::Times_(Expr::ctor::Num_(2u), Expr::ctor::Num_(3u)),
+          Expr::ctor::Num_(1u))
+          ->expr_size();
+  static inline const bool test_beval =
+      BExpr::ctor::BAnd_(BExpr::ctor::BTrue_(),
+                         BExpr::ctor::BNot_(BExpr::ctor::BFalse_()))
+          ->beval();
+  static inline const unsigned int test_aeval =
+      AExpr::ctor::AIf_(
+          BExpr::ctor::BAnd_(BExpr::ctor::BTrue_(), BExpr::ctor::BTrue_()),
+          AExpr::ctor::ANum_(10u), AExpr::ctor::ANum_(20u))
+          ->aeval();
 };
 
 #endif // INCLUDED_WHERE_CLAUSE

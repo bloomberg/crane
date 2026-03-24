@@ -74,17 +74,15 @@ public:
     std::shared_ptr<List<t_A>> _head{};
     std::shared_ptr<List<t_A>> _last{};
     const List *_loop_self = this;
-    std::shared_ptr<List<t_A>> _loop_m = m;
     bool _continue = true;
     while (_continue) {
       std::visit(
           Overloaded{
               [&](const typename List<t_A>::Nil _args) {
                 if (_last) {
-                  std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =
-                      _loop_m;
+                  std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
                 } else {
-                  _head = _loop_m;
+                  _head = m;
                 }
                 _continue = false;
               },
@@ -97,10 +95,7 @@ public:
                   _head = _cell;
                 }
                 _last = _cell;
-                List *_next_self = _loop_m.get();
-                std::shared_ptr<List<t_A>> _next_m = _args.d_a1;
-                _loop_self = std::move(_next_self);
-                _loop_m = std::move(_next_m);
+                _loop_self = _args.d_a1.get();
               }},
           _loop_self->v());
     }
@@ -161,6 +156,314 @@ struct LoopifyTreePaths {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    std::shared_ptr<List<unsigned int>> flatten_paths() const {
+      const tree *_self = this;
+
+      struct _Enter {
+        const tree *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename tree::Node &>().d_a0.get()) _s0;
+        decltype(std::declval<const typename tree::Node &>().d_a1) _s1;
+      };
+
+      struct _Call2 {
+        std::shared_ptr<List<unsigned int>> _s0;
+        decltype(std::declval<const typename tree::Node &>().d_a1) _s1;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      std::shared_ptr<List<unsigned int>> _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{[&](_Enter _f) {
+                         const tree *_self = _f._self;
+                         std::visit(
+                             Overloaded{
+                                 [&](const typename tree::Leaf _args) -> void {
+                                   _result = List<unsigned int>::ctor::Nil_();
+                                 },
+                                 [&](const typename tree::Node _args) -> void {
+                                   _stack.push_back(
+                                       _Call1{_args.d_a0.get(), _args.d_a1});
+                                   _stack.push_back(_Enter{_args.d_a2.get()});
+                                 }},
+                             _self->v());
+                       },
+                       [&](_Call1 _f) {
+                         _stack.push_back(_Call2{_result, _f._s1});
+                         _stack.push_back(_Enter{_f._s0});
+                       },
+                       [&](_Call2 _f) {
+                         _result = List<unsigned int>::ctor::Cons_(
+                             _f._s1, _result->app(_f._s0));
+                       }},
+            _frame);
+      }
+      return _result;
+    }
+
+    __attribute__((pure)) unsigned int max_path_sum() const {
+      const tree *_self = this;
+
+      struct _Enter {
+        const tree *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename tree::Node &>().d_a0.get()) _s0;
+        decltype(std::declval<const typename tree::Node &>().d_a1) _s1;
+      };
+
+      struct _Call2 {
+        unsigned int _s0;
+        decltype(std::declval<const typename tree::Node &>().d_a1) _s1;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{[&](_Enter _f) {
+                         const tree *_self = _f._self;
+                         std::visit(
+                             Overloaded{
+                                 [&](const typename tree::Leaf _args) -> void {
+                                   _result = 0u;
+                                 },
+                                 [&](const typename tree::Node _args) -> void {
+                                   _stack.push_back(
+                                       _Call1{_args.d_a0.get(), _args.d_a1});
+                                   _stack.push_back(_Enter{_args.d_a2.get()});
+                                 }},
+                             _self->v());
+                       },
+                       [&](_Call1 _f) {
+                         _stack.push_back(_Call2{_result, _f._s1});
+                         _stack.push_back(_Enter{_f._s0});
+                       },
+                       [&](_Call2 _f) {
+                         _result = (_f._s1 + std::max(_result, _f._s0));
+                       }},
+            _frame);
+      }
+      return _result;
+    }
+
+    __attribute__((pure)) std::optional<std::shared_ptr<List<unsigned int>>>
+    find_path_sum(const unsigned int acc, const unsigned int target) const {
+      const tree *_self = this;
+
+      struct _Enter {
+        const tree *_self;
+        const unsigned int acc;
+      };
+
+      struct _Call1 {
+        const typename tree::Node _s0;
+        const unsigned int _s1;
+        unsigned int _s2;
+      };
+
+      struct _Call2 {
+        const typename tree::Node _s0;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      std::optional<std::shared_ptr<List<unsigned int>>> _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self, acc});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const tree *_self = _f._self;
+                  const unsigned int acc = _f.acc;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename tree::Leaf _args) -> void {
+                            if (acc == target) {
+                              _result = std::make_optional<
+                                  std::shared_ptr<List<unsigned int>>>(
+                                  List<unsigned int>::ctor::Nil_());
+                            } else {
+                              _result = std::optional<
+                                  std::shared_ptr<List<unsigned int>>>();
+                            }
+                          },
+                          [&](const typename tree::Node _args) -> void {
+                            unsigned int new_acc = (acc + _args.d_a1);
+                            _stack.push_back(_Call1{_args, target, new_acc});
+                            _stack.push_back(_Enter{_args.d_a0.get(), new_acc});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  const typename tree::Node _args = _f._s0;
+                  const unsigned int target = _f._s1;
+                  unsigned int new_acc = _f._s2;
+                  if (_result.has_value()) {
+                    std::shared_ptr<List<unsigned int>> path = *_result;
+                    _result =
+                        std::make_optional<std::shared_ptr<List<unsigned int>>>(
+                            List<unsigned int>::ctor::Cons_(_args.d_a1,
+                                                            std::move(path)));
+                  } else {
+                    _stack.push_back(_Call2{_args});
+                    _stack.push_back(_Enter{_args.d_a2.get(), new_acc});
+                  }
+                },
+                [&](_Call2 _f) {
+                  const typename tree::Node _args = _f._s0;
+                  if (_result.has_value()) {
+                    std::shared_ptr<List<unsigned int>> path = *_result;
+                    _result =
+                        std::make_optional<std::shared_ptr<List<unsigned int>>>(
+                            List<unsigned int>::ctor::Cons_(_args.d_a1,
+                                                            std::move(path)));
+                  } else {
+                    _result =
+                        std::optional<std::shared_ptr<List<unsigned int>>>();
+                  }
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    __attribute__((pure)) unsigned int
+    count_paths_sum(const unsigned int target) const {
+      return this->count_paths_sum_aux(0u, target);
+    }
+
+    __attribute__((pure)) unsigned int
+    count_paths_sum_aux(const unsigned int acc,
+                        const unsigned int target) const {
+      const tree *_self = this;
+
+      struct _Enter {
+        const tree *_self;
+        const unsigned int acc;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename tree::Node &>().d_a0.get()) _s0;
+        unsigned int _s1;
+      };
+
+      struct _Call2 {
+        unsigned int _s0;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self, acc});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const tree *_self = _f._self;
+                  const unsigned int acc = _f.acc;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename tree::Leaf _args) -> void {
+                            if (acc == target) {
+                              _result = 1u;
+                            } else {
+                              _result = 0u;
+                            }
+                          },
+                          [&](const typename tree::Node _args) -> void {
+                            unsigned int new_acc = (acc + _args.d_a1);
+                            _stack.push_back(_Call1{_args.d_a0.get(), new_acc});
+                            _stack.push_back(_Enter{_args.d_a2.get(), new_acc});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result});
+                  _stack.push_back(_Enter{_f._s0, _f._s1});
+                },
+                [&](_Call2 _f) { _result = (_result + _f._s0); }},
+            _frame);
+      }
+      return _result;
+    }
+
+    std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> paths() const {
+      const tree *_self = this;
+
+      struct _Enter {
+        const tree *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename tree::Node &>().d_a0.get()) _s0;
+        decltype(std::declval<const typename tree::Node &>().d_a1) _s1;
+        decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
+      };
+
+      struct _Call2 {
+        std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _s0;
+        decltype(std::declval<const typename tree::Node &>().d_a1) _s1;
+        decltype(std::declval<const typename tree::Node &>().d_a1) _s2;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const tree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename tree::Leaf _args) -> void {
+                            _result =
+                                List<std::shared_ptr<List<unsigned int>>>::
+                                    ctor::Cons_(
+                                        List<unsigned int>::ctor::Nil_(),
+                                        List<std::shared_ptr<
+                                            List<unsigned int>>>::ctor::Nil_());
+                          },
+                          [&](const typename tree::Node _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0.get(),
+                                                    _args.d_a1, _args.d_a1});
+                            _stack.push_back(_Enter{_args.d_a2.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _result =
+                      map_cons(_f._s2, _result)->app(map_cons(_f._s1, _f._s0));
+                }},
+            _frame);
+      }
+      return _result;
+    }
   };
 
   template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
@@ -280,8 +583,6 @@ struct LoopifyTreePaths {
   static std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> map_cons(
       const unsigned int x,
       const std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> &ll);
-  static std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
-  paths(const std::shared_ptr<tree> &t);
 
   struct bool_tree {
     // TYPES
@@ -336,230 +637,223 @@ struct LoopifyTreePaths {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <MapsTo<bool, unsigned int> F0>
+    __attribute__((pure)) bool and_search(F0 &&p) const {
+      const bool_tree *_self = this;
+
+      struct _Enter {
+        const bool_tree *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename bool_tree::BNode &>()
+                     .d_a0.get()) _s0;
+      };
+
+      struct _Call2 {
+        bool _s0;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      bool _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const bool_tree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename bool_tree::BLeaf _args) -> void {
+                            _result = p(_args.d_a0);
+                          },
+                          [&](const typename bool_tree::BNode _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0.get()});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) { _result = (_result && _f._s0); }},
+            _frame);
+      }
+      return _result;
+    }
+
+    template <MapsTo<bool, unsigned int> F0>
+    __attribute__((pure)) bool or_search(F0 &&p) const {
+      const bool_tree *_self = this;
+
+      struct _Enter {
+        const bool_tree *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename bool_tree::BNode &>()
+                     .d_a0.get()) _s0;
+      };
+
+      struct _Call2 {
+        bool _s0;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      bool _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const bool_tree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename bool_tree::BLeaf _args) -> void {
+                            _result = p(_args.d_a0);
+                          },
+                          [&](const typename bool_tree::BNode _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0.get()});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) { _result = (_result || _f._s0); }},
+            _frame);
+      }
+      return _result;
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, std::shared_ptr<bool_tree>, T1,
+                     std::shared_ptr<bool_tree>, T1>
+                  F1>
+    T1 bool_tree_rec(F0 &&f, F1 &&f0) const {
+      const bool_tree *_self = this;
+
+      struct _Enter {
+        const bool_tree *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename bool_tree::BNode &>()
+                     .d_a0.get()) _s0;
+        decltype(std::declval<const typename bool_tree::BNode &>().d_a1) _s1;
+        decltype(std::declval<const typename bool_tree::BNode &>().d_a0) _s2;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        decltype(std::declval<const typename bool_tree::BNode &>().d_a1) _s1;
+        decltype(std::declval<const typename bool_tree::BNode &>().d_a0) _s2;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const bool_tree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename bool_tree::BLeaf _args) -> void {
+                            _result = f(_args.d_a0);
+                          },
+                          [&](const typename bool_tree::BNode _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0.get(),
+                                                    _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _result = f0(_f._s2, _result, _f._s1, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, std::shared_ptr<bool_tree>, T1,
+                     std::shared_ptr<bool_tree>, T1>
+                  F1>
+    T1 bool_tree_rect(F0 &&f, F1 &&f0) const {
+      const bool_tree *_self = this;
+
+      struct _Enter {
+        const bool_tree *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename bool_tree::BNode &>()
+                     .d_a0.get()) _s0;
+        decltype(std::declval<const typename bool_tree::BNode &>().d_a1) _s1;
+        decltype(std::declval<const typename bool_tree::BNode &>().d_a0) _s2;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        decltype(std::declval<const typename bool_tree::BNode &>().d_a1) _s1;
+        decltype(std::declval<const typename bool_tree::BNode &>().d_a0) _s2;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const bool_tree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename bool_tree::BLeaf _args) -> void {
+                            _result = f(_args.d_a0);
+                          },
+                          [&](const typename bool_tree::BNode _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0.get(),
+                                                    _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _result = f0(_f._s2, _result, _f._s1, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
   };
-
-  template <
-      typename T1, MapsTo<T1, unsigned int> F0,
-      MapsTo<T1, std::shared_ptr<bool_tree>, T1, std::shared_ptr<bool_tree>, T1>
-          F1>
-  static T1 bool_tree_rect(F0 &&f, F1 &&f0,
-                           const std::shared_ptr<bool_tree> &b) {
-    struct _Enter {
-      const std::shared_ptr<bool_tree> b;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename bool_tree::BNode &>().d_a0) _s0;
-      decltype(std::declval<const typename bool_tree::BNode &>().d_a1) _s1;
-      decltype(std::declval<const typename bool_tree::BNode &>().d_a0) _s2;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      decltype(std::declval<const typename bool_tree::BNode &>().d_a1) _s1;
-      decltype(std::declval<const typename bool_tree::BNode &>().d_a0) _s2;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{b});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<bool_tree> b = _f.b;
-                std::visit(
-                    Overloaded{
-                        [&](const typename bool_tree::BLeaf _args) -> void {
-                          _result = f(_args.d_a0);
-                        },
-                        [&](const typename bool_tree::BNode _args) -> void {
-                          _stack.push_back(
-                              _Call1{_args.d_a0, _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
-                        }},
-                    b->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = f0(_f._s2, _result, _f._s1, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
-  template <
-      typename T1, MapsTo<T1, unsigned int> F0,
-      MapsTo<T1, std::shared_ptr<bool_tree>, T1, std::shared_ptr<bool_tree>, T1>
-          F1>
-  static T1 bool_tree_rec(F0 &&f, F1 &&f0,
-                          const std::shared_ptr<bool_tree> &b) {
-    struct _Enter {
-      const std::shared_ptr<bool_tree> b;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename bool_tree::BNode &>().d_a0) _s0;
-      decltype(std::declval<const typename bool_tree::BNode &>().d_a1) _s1;
-      decltype(std::declval<const typename bool_tree::BNode &>().d_a0) _s2;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      decltype(std::declval<const typename bool_tree::BNode &>().d_a1) _s1;
-      decltype(std::declval<const typename bool_tree::BNode &>().d_a0) _s2;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{b});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<bool_tree> b = _f.b;
-                std::visit(
-                    Overloaded{
-                        [&](const typename bool_tree::BLeaf _args) -> void {
-                          _result = f(_args.d_a0);
-                        },
-                        [&](const typename bool_tree::BNode _args) -> void {
-                          _stack.push_back(
-                              _Call1{_args.d_a0, _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
-                        }},
-                    b->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = f0(_f._s2, _result, _f._s1, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
-  template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static bool
-  or_search(F0 &&p, const std::shared_ptr<bool_tree> &t) {
-    struct _Enter {
-      const std::shared_ptr<bool_tree> t;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename bool_tree::BNode &>().d_a0) _s0;
-    };
-
-    struct _Call2 {
-      bool _s0;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    bool _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<bool_tree> t = _f.t;
-                std::visit(
-                    Overloaded{
-                        [&](const typename bool_tree::BLeaf _args) -> void {
-                          _result = p(_args.d_a0);
-                        },
-                        [&](const typename bool_tree::BNode _args) -> void {
-                          _stack.push_back(_Call1{_args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
-                        }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) { _result = (_result || _f._s0); }},
-          _frame);
-    }
-    return _result;
-  }
-
-  template <MapsTo<bool, unsigned int> F0>
-  __attribute__((pure)) static bool
-  and_search(F0 &&p, const std::shared_ptr<bool_tree> &t) {
-    struct _Enter {
-      const std::shared_ptr<bool_tree> t;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename bool_tree::BNode &>().d_a0) _s0;
-    };
-
-    struct _Call2 {
-      bool _s0;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    bool _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<bool_tree> t = _f.t;
-                std::visit(
-                    Overloaded{
-                        [&](const typename bool_tree::BLeaf _args) -> void {
-                          _result = p(_args.d_a0);
-                        },
-                        [&](const typename bool_tree::BNode _args) -> void {
-                          _stack.push_back(_Call1{_args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
-                        }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) { _result = (_result && _f._s0); }},
-          _frame);
-    }
-    return _result;
-  }
-
-  __attribute__((pure)) static unsigned int
-  count_paths_sum_aux(const unsigned int acc, const unsigned int target,
-                      const std::shared_ptr<tree> &t);
-  __attribute__((pure)) static unsigned int
-  count_paths_sum(const unsigned int target, const std::shared_ptr<tree> &t);
-  __attribute__((
-      pure)) static std::optional<std::shared_ptr<List<unsigned int>>>
-  find_path_sum(const unsigned int acc, const unsigned int target,
-                const std::shared_ptr<tree> &t);
-  __attribute__((pure)) static unsigned int
-  max_path_sum(const std::shared_ptr<tree> &t);
-
-  static std::shared_ptr<List<unsigned int>>
-  flatten_paths(const std::shared_ptr<tree> &t);
 };
 
 #endif // INCLUDED_LOOPIFY_TREE_PATHS

@@ -150,44 +150,60 @@ struct JumpTargets {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) std::optional<unsigned int>
+    jump_target_collection() const {
+      return std::visit(
+          Overloaded{[](const typename instr_collection::JUN_coll _args)
+                         -> std::optional<unsigned int> {
+                       return std::make_optional<unsigned int>(_args.d_a0);
+                     },
+                     [](const typename instr_collection::JMS_coll _args)
+                         -> std::optional<unsigned int> {
+                       return std::make_optional<unsigned int>(_args.d_a0);
+                     },
+                     [](const typename instr_collection::NOP_coll _args)
+                         -> std::optional<unsigned int> {
+                       return std::optional<unsigned int>();
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, unsigned int> F1>
+    T1 instr_collection_rec(F0 &&f, F1 &&f0, const T1 f1) const {
+      return std::visit(
+          Overloaded{
+              [&](const typename instr_collection::JUN_coll _args) -> T1 {
+                return f(_args.d_a0);
+              },
+              [&](const typename instr_collection::JMS_coll _args) -> T1 {
+                return f0(_args.d_a0);
+              },
+              [&](const typename instr_collection::NOP_coll _args) -> T1 {
+                return f1;
+              }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, unsigned int> F1>
+    T1 instr_collection_rect(F0 &&f, F1 &&f0, const T1 f1) const {
+      return std::visit(
+          Overloaded{
+              [&](const typename instr_collection::JUN_coll _args) -> T1 {
+                return f(_args.d_a0);
+              },
+              [&](const typename instr_collection::JMS_coll _args) -> T1 {
+                return f0(_args.d_a0);
+              },
+              [&](const typename instr_collection::NOP_coll _args) -> T1 {
+                return f1;
+              }},
+          this->v());
+    }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1>
-  static T1 instr_collection_rect(F0 &&f, F1 &&f0, const T1 f1,
-                                  const std::shared_ptr<instr_collection> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instr_collection::JUN_coll _args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename instr_collection::JMS_coll _args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename instr_collection::NOP_coll _args) -> T1 {
-                     return f1;
-                   }},
-        i->v());
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1>
-  static T1 instr_collection_rec(F0 &&f, F1 &&f0, const T1 f1,
-                                 const std::shared_ptr<instr_collection> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instr_collection::JUN_coll _args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename instr_collection::JMS_coll _args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename instr_collection::NOP_coll _args) -> T1 {
-                     return f1;
-                   }},
-        i->v());
-  }
-
-  __attribute__((pure)) static std::optional<unsigned int>
-  jump_target_collection(const std::shared_ptr<instr_collection> &i);
   static std::shared_ptr<List<unsigned int>> collect_targets(
       const std::shared_ptr<List<std::shared_ptr<instr_collection>>> &prog);
   static inline const unsigned int test_collection =
@@ -264,41 +280,57 @@ struct JumpTargets {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) std::optional<unsigned int>
+    jump_target_region() const {
+      return std::visit(
+          Overloaded{[](const typename instr_region::JUN_reg _args)
+                         -> std::optional<unsigned int> {
+                       return std::make_optional<unsigned int>(_args.d_a0);
+                     },
+                     [](const typename instr_region::JMS_reg _args)
+                         -> std::optional<unsigned int> {
+                       return std::make_optional<unsigned int>(_args.d_a0);
+                     },
+                     [](const typename instr_region::NOP_reg _args)
+                         -> std::optional<unsigned int> {
+                       return std::optional<unsigned int>();
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, unsigned int> F1>
+    T1 instr_region_rec(F0 &&f, F1 &&f0, const T1 f1) const {
+      return std::visit(
+          Overloaded{[&](const typename instr_region::JUN_reg _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename instr_region::JMS_reg _args) -> T1 {
+                       return f0(_args.d_a0);
+                     },
+                     [&](const typename instr_region::NOP_reg _args) -> T1 {
+                       return f1;
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, unsigned int> F1>
+    T1 instr_region_rect(F0 &&f, F1 &&f0, const T1 f1) const {
+      return std::visit(
+          Overloaded{[&](const typename instr_region::JUN_reg _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename instr_region::JMS_reg _args) -> T1 {
+                       return f0(_args.d_a0);
+                     },
+                     [&](const typename instr_region::NOP_reg _args) -> T1 {
+                       return f1;
+                     }},
+          this->v());
+    }
   };
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1>
-  static T1 instr_region_rect(F0 &&f, F1 &&f0, const T1 f1,
-                              const std::shared_ptr<instr_region> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instr_region::JUN_reg _args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename instr_region::JMS_reg _args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename instr_region::NOP_reg _args) -> T1 {
-                     return f1;
-                   }},
-        i->v());
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1>
-  static T1 instr_region_rec(F0 &&f, F1 &&f0, const T1 f1,
-                             const std::shared_ptr<instr_region> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instr_region::JUN_reg _args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename instr_region::JMS_reg _args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename instr_region::NOP_reg _args) -> T1 {
-                     return f1;
-                   }},
-        i->v());
-  }
 
   struct layout {
     unsigned int base_;
@@ -307,8 +339,6 @@ struct JumpTargets {
 
   __attribute__((pure)) static bool
   addr_in_region(const unsigned int addr, const std::shared_ptr<layout> &l);
-  __attribute__((pure)) static std::optional<unsigned int>
-  jump_target_region(const std::shared_ptr<instr_region> &i);
   __attribute__((pure)) static bool
   in_layout(const std::shared_ptr<layout> &l,
             const std::shared_ptr<instr_region> &i);
@@ -376,46 +406,61 @@ struct JumpTargets {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) std::optional<unsigned int> jump_target_jms() const {
+      return std::visit(
+          Overloaded{[](const typename instr_jms::JUN_jms _args)
+                         -> std::optional<unsigned int> {
+                       return std::make_optional<unsigned int>(_args.d_a0);
+                     },
+                     [](const typename instr_jms::JMS_jms _args)
+                         -> std::optional<unsigned int> {
+                       return std::make_optional<unsigned int>(_args.d_a0);
+                     },
+                     [](const typename instr_jms::NOP_jms _args)
+                         -> std::optional<unsigned int> {
+                       return std::optional<unsigned int>();
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, unsigned int> F1>
+    T1 instr_jms_rec(F0 &&f, F1 &&f0, const T1 f1) const {
+      return std::visit(
+          Overloaded{[&](const typename instr_jms::JUN_jms _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename instr_jms::JMS_jms _args) -> T1 {
+                       return f0(_args.d_a0);
+                     },
+                     [&](const typename instr_jms::NOP_jms _args) -> T1 {
+                       return f1;
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, unsigned int> F1>
+    T1 instr_jms_rect(F0 &&f, F1 &&f0, const T1 f1) const {
+      return std::visit(
+          Overloaded{[&](const typename instr_jms::JUN_jms _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename instr_jms::JMS_jms _args) -> T1 {
+                       return f0(_args.d_a0);
+                     },
+                     [&](const typename instr_jms::NOP_jms _args) -> T1 {
+                       return f1;
+                     }},
+          this->v());
+    }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1>
-  static T1 instr_jms_rect(F0 &&f, F1 &&f0, const T1 f1,
-                           const std::shared_ptr<instr_jms> &i) {
-    return std::visit(
-        Overloaded{
-            [&](const typename instr_jms::JUN_jms _args) -> T1 {
-              return f(_args.d_a0);
-            },
-            [&](const typename instr_jms::JMS_jms _args) -> T1 {
-              return f0(_args.d_a0);
-            },
-            [&](const typename instr_jms::NOP_jms _args) -> T1 { return f1; }},
-        i->v());
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1>
-  static T1 instr_jms_rec(F0 &&f, F1 &&f0, const T1 f1,
-                          const std::shared_ptr<instr_jms> &i) {
-    return std::visit(
-        Overloaded{
-            [&](const typename instr_jms::JUN_jms _args) -> T1 {
-              return f(_args.d_a0);
-            },
-            [&](const typename instr_jms::JMS_jms _args) -> T1 {
-              return f0(_args.d_a0);
-            },
-            [&](const typename instr_jms::NOP_jms _args) -> T1 { return f1; }},
-        i->v());
-  }
-
-  __attribute__((pure)) static std::optional<unsigned int>
-  jump_target_jms(const std::shared_ptr<instr_jms> &i);
   __attribute__((pure)) static unsigned int
   option_nat_or_zero(const std::optional<unsigned int> o);
   static inline const unsigned int test_jms =
-      option_nat_or_zero(jump_target_jms(instr_jms::ctor::JMS_jms_(144u)));
+      option_nat_or_zero(instr_jms::ctor::JMS_jms_(144u)->jump_target_jms());
 
   struct instr_jun {
     // TYPES
@@ -477,46 +522,61 @@ struct JumpTargets {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) std::optional<unsigned int> jump_target_jun() const {
+      return std::visit(
+          Overloaded{[](const typename instr_jun::JUN_jun _args)
+                         -> std::optional<unsigned int> {
+                       return std::make_optional<unsigned int>(_args.d_a0);
+                     },
+                     [](const typename instr_jun::JMS_jun _args)
+                         -> std::optional<unsigned int> {
+                       return std::make_optional<unsigned int>(_args.d_a0);
+                     },
+                     [](const typename instr_jun::NOP_jun _args)
+                         -> std::optional<unsigned int> {
+                       return std::optional<unsigned int>();
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, unsigned int> F1>
+    T1 instr_jun_rec(F0 &&f, F1 &&f0, const T1 f1) const {
+      return std::visit(
+          Overloaded{[&](const typename instr_jun::JUN_jun _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename instr_jun::JMS_jun _args) -> T1 {
+                       return f0(_args.d_a0);
+                     },
+                     [&](const typename instr_jun::NOP_jun _args) -> T1 {
+                       return f1;
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, unsigned int> F1>
+    T1 instr_jun_rect(F0 &&f, F1 &&f0, const T1 f1) const {
+      return std::visit(
+          Overloaded{[&](const typename instr_jun::JUN_jun _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename instr_jun::JMS_jun _args) -> T1 {
+                       return f0(_args.d_a0);
+                     },
+                     [&](const typename instr_jun::NOP_jun _args) -> T1 {
+                       return f1;
+                     }},
+          this->v());
+    }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1>
-  static T1 instr_jun_rect(F0 &&f, F1 &&f0, const T1 f1,
-                           const std::shared_ptr<instr_jun> &i) {
-    return std::visit(
-        Overloaded{
-            [&](const typename instr_jun::JUN_jun _args) -> T1 {
-              return f(_args.d_a0);
-            },
-            [&](const typename instr_jun::JMS_jun _args) -> T1 {
-              return f0(_args.d_a0);
-            },
-            [&](const typename instr_jun::NOP_jun _args) -> T1 { return f1; }},
-        i->v());
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1>
-  static T1 instr_jun_rec(F0 &&f, F1 &&f0, const T1 f1,
-                          const std::shared_ptr<instr_jun> &i) {
-    return std::visit(
-        Overloaded{
-            [&](const typename instr_jun::JUN_jun _args) -> T1 {
-              return f(_args.d_a0);
-            },
-            [&](const typename instr_jun::JMS_jun _args) -> T1 {
-              return f0(_args.d_a0);
-            },
-            [&](const typename instr_jun::NOP_jun _args) -> T1 { return f1; }},
-        i->v());
-  }
-
-  __attribute__((pure)) static std::optional<unsigned int>
-  jump_target_jun(const std::shared_ptr<instr_jun> &i);
   __attribute__((pure)) static unsigned int
   target_default(const std::optional<unsigned int> o);
   static inline const unsigned int test_jun =
-      target_default(jump_target_jun(instr_jun::ctor::JUN_jun_(511u)));
+      target_default(instr_jun::ctor::JUN_jun_(511u)->jump_target_jun());
   static inline const std::pair<
       std::pair<std::pair<unsigned int, bool>, unsigned int>, unsigned int>
       t = std::make_pair(

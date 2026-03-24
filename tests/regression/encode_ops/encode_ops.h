@@ -254,6 +254,62 @@ struct EncodeOps {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) std::pair<unsigned int, unsigned int>
+    encode1() const {
+      return std::visit(
+          Overloaded{[](const typename instruction1::CLB _args)
+                         -> std::pair<unsigned int, unsigned int> {
+                       return std::make_pair(240u, 0u);
+                     },
+                     [](const typename instruction1::CMC _args)
+                         -> std::pair<unsigned int, unsigned int> {
+                       return std::make_pair(243u, 0u);
+                     },
+                     [](const typename instruction1::DAA _args)
+                         -> std::pair<unsigned int, unsigned int> {
+                       return std::make_pair(251u, 0u);
+                     },
+                     [](const typename instruction1::FIM _args)
+                         -> std::pair<unsigned int, unsigned int> {
+                       return std::make_pair(
+                           (32u +
+                            (((_args.d_a0 - (_args.d_a0 % 2u)) > _args.d_a0
+                                  ? 0
+                                  : (_args.d_a0 - (_args.d_a0 % 2u))))),
+                           (_args.d_a1 % 256u));
+                     },
+                     [](const typename instruction1::JUN _args)
+                         -> std::pair<unsigned int, unsigned int> {
+                       return std::make_pair((64u + Nat::div(_args.d_a0, 256u)),
+                                             (_args.d_a0 % 256u));
+                     },
+                     [](const typename instruction1::LDM1 _args)
+                         -> std::pair<unsigned int, unsigned int> {
+                       return std::make_pair((208u + (_args.d_a0 % 16u)), 0u);
+                     },
+                     [](const typename instruction1::NOP1 _args)
+                         -> std::pair<unsigned int, unsigned int> {
+                       return std::make_pair(0u, 0u);
+                     },
+                     [](const typename instruction1::RDM _args)
+                         -> std::pair<unsigned int, unsigned int> {
+                       return std::make_pair(233u, 0u);
+                     },
+                     [](const typename instruction1::TCS _args)
+                         -> std::pair<unsigned int, unsigned int> {
+                       return std::make_pair(249u, 0u);
+                     },
+                     [](const typename instruction1::WPM _args)
+                         -> std::pair<unsigned int, unsigned int> {
+                       return std::make_pair(227u, 0u);
+                     },
+                     [](const typename instruction1::WR0 _args)
+                         -> std::pair<unsigned int, unsigned int> {
+                       return std::make_pair(228u, 0u);
+                     }},
+          this->v());
+    }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, unsigned int> F3,
@@ -312,22 +368,20 @@ struct EncodeOps {
         i->v());
   }
 
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  encode1(const std::shared_ptr<instruction1> &i);
   __attribute__((pure)) static bool
   pair_in_range(const std::pair<unsigned int, unsigned int> p);
   static inline const bool test_encode_bytes_in_range =
-      ((((((((((pair_in_range(encode1(instruction1::ctor::CLB_())) &&
-                pair_in_range(encode1(instruction1::ctor::CMC_()))) &&
-               pair_in_range(encode1(instruction1::ctor::DAA_()))) &&
-              pair_in_range(encode1(instruction1::ctor::FIM_(14u, 255u)))) &&
-             pair_in_range(encode1(instruction1::ctor::JUN_(4095u)))) &&
-            pair_in_range(encode1(instruction1::ctor::LDM1_(15u)))) &&
-           pair_in_range(encode1(instruction1::ctor::NOP1_()))) &&
-          pair_in_range(encode1(instruction1::ctor::RDM_()))) &&
-         pair_in_range(encode1(instruction1::ctor::TCS_()))) &&
-        pair_in_range(encode1(instruction1::ctor::WPM_()))) &&
-       pair_in_range(encode1(instruction1::ctor::WR0_())));
+      ((((((((((pair_in_range(instruction1::ctor::CLB_()->encode1()) &&
+                pair_in_range(instruction1::ctor::CMC_()->encode1())) &&
+               pair_in_range(instruction1::ctor::DAA_()->encode1())) &&
+              pair_in_range(instruction1::ctor::FIM_(14u, 255u)->encode1())) &&
+             pair_in_range(instruction1::ctor::JUN_(4095u)->encode1())) &&
+            pair_in_range(instruction1::ctor::LDM1_(15u)->encode1())) &&
+           pair_in_range(instruction1::ctor::NOP1_()->encode1())) &&
+          pair_in_range(instruction1::ctor::RDM_()->encode1())) &&
+         pair_in_range(instruction1::ctor::TCS_()->encode1())) &&
+        pair_in_range(instruction1::ctor::WPM_()->encode1())) &&
+       pair_in_range(instruction1::ctor::WR0_()->encode1()));
 
   struct instruction2 {
     // TYPES
@@ -375,6 +429,20 @@ struct EncodeOps {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) std::pair<unsigned int, unsigned int>
+    encode2() const {
+      return std::visit(
+          Overloaded{[](const typename instruction2::NOP2 _args)
+                         -> std::pair<unsigned int, unsigned int> {
+                       return std::make_pair(0u, 0u);
+                     },
+                     [](const typename instruction2::LDM2 _args)
+                         -> std::pair<unsigned int, unsigned int> {
+                       return std::make_pair(13u, (_args.d_a0 % 16u));
+                     }},
+          this->v());
+    }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
@@ -401,8 +469,6 @@ struct EncodeOps {
         i->v());
   }
 
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  encode2(const std::shared_ptr<instruction2> &i);
   static std::shared_ptr<List<unsigned int>> encode_list2(
       const std::shared_ptr<List<std::shared_ptr<instruction2>>> &prog);
   static inline const unsigned int test_encode_list_byte_count =
@@ -462,6 +528,21 @@ struct EncodeOps {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) std::pair<unsigned int, unsigned int>
+    encode3() const {
+      return std::visit(
+          Overloaded{[](const typename instruction3::NOP3 _args)
+                         -> std::pair<unsigned int, unsigned int> {
+                       return std::make_pair(0u, 0u);
+                     },
+                     [](const typename instruction3::LDM3 _args)
+                         -> std::pair<unsigned int, unsigned int> {
+                       return std::make_pair(((13u * 16u) + (_args.d_a0 % 16u)),
+                                             0u);
+                     }},
+          this->v());
+    }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F1>
@@ -488,8 +569,6 @@ struct EncodeOps {
         i->v());
   }
 
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  encode3(const std::shared_ptr<instruction3> &i);
   static std::shared_ptr<List<unsigned int>> encode_list3(
       const std::shared_ptr<List<std::shared_ptr<instruction3>>> &prog);
   static inline const unsigned int test_instruction_byte_stream_encode =

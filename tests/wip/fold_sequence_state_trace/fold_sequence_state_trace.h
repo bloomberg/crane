@@ -823,27 +823,33 @@ struct FoldSequenceStateTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    std::shared_ptr<Line> fold_line() const {
+      return std::visit(
+          Overloaded{[](const typename Fold::Fold_line_ctor _args)
+                         -> std::shared_ptr<Line> { return _args.d_a0; }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, std::shared_ptr<Line>> F0>
+    T1 Fold_rec(F0 &&f) const {
+      return std::visit(
+          Overloaded{[&](const typename Fold::Fold_line_ctor _args) -> T1 {
+            return f(_args.d_a0);
+          }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, std::shared_ptr<Line>> F0>
+    T1 Fold_rect(F0 &&f) const {
+      return std::visit(
+          Overloaded{[&](const typename Fold::Fold_line_ctor _args) -> T1 {
+            return f(_args.d_a0);
+          }},
+          this->v());
+    }
   };
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<Line>> F0>
-  static T1 Fold_rect(F0 &&f, const std::shared_ptr<Fold> &f0) {
-    return std::visit(
-        Overloaded{[&](const typename Fold::Fold_line_ctor _args) -> T1 {
-          return f(_args.d_a0);
-        }},
-        f0->v());
-  }
-
-  template <typename T1, MapsTo<T1, std::shared_ptr<Line>> F0>
-  static T1 Fold_rec(F0 &&f, const std::shared_ptr<Fold> &f0) {
-    return std::visit(
-        Overloaded{[&](const typename Fold::Fold_line_ctor _args) -> T1 {
-          return f(_args.d_a0);
-        }},
-        f0->v());
-  }
-
-  static std::shared_ptr<Line> fold_line(const std::shared_ptr<Fold> &f);
   static inline const std::shared_ptr<Line> line_xaxis = std::make_shared<Line>(
       Line{IZR(Z::ctor::Z0_()), IZR(Z::ctor::Zpos_(Positive::ctor::XH_())),
            IZR(Z::ctor::Z0_())});
@@ -943,6 +949,23 @@ struct FoldSequenceStateTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    std::shared_ptr<Line> execute_fold_step() const {
+      return std::visit(
+          Overloaded{[](const typename FoldStep::FS_O1 _args)
+                         -> std::shared_ptr<Line> {
+                       return fold_O1(_args.d_a0, _args.d_a1)->fold_line();
+                     },
+                     [](const typename FoldStep::FS_O2 _args)
+                         -> std::shared_ptr<Line> {
+                       return fold_O2(_args.d_a0, _args.d_a1)->fold_line();
+                     },
+                     [](const typename FoldStep::FS_O4 _args)
+                         -> std::shared_ptr<Line> {
+                       return fold_O4(_args.d_a0, _args.d_a1)->fold_line();
+                     }},
+          this->v());
+    }
   };
 
   template <typename T1,
@@ -996,8 +1019,6 @@ struct FoldSequenceStateTraceCase {
   }
 
   using FoldSequence = std::shared_ptr<List<std::shared_ptr<FoldStep>>>;
-  static std::shared_ptr<Line>
-  execute_fold_step(const std::shared_ptr<FoldStep> &step);
 
   struct ConstructionState {
     std::shared_ptr<List<Point>> state_points;

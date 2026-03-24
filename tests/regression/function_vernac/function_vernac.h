@@ -197,53 +197,51 @@ struct FunctionVernac {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, unsigned int> F1,
+              MapsTo<T1, unsigned int, unsigned int, unsigned int,
+                     std::shared_ptr<R_div2>, T1>
+                  F2>
+    T1 R_div2_rec(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int _x,
+                  const unsigned int _x0) const {
+      return std::visit(
+          Overloaded{[&](const typename R_div2::R_div2_0 _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename R_div2::R_div2_1 _args) -> T1 {
+                       return f0(_args.d_a0);
+                     },
+                     [&](const typename R_div2::R_div2_2 _args) -> T1 {
+                       return f1(_args.d_a0, _args.d_a1, _args.d_a2, _args.d_a3,
+                                 _args.d_a3->template R_div2_rec<T1>(
+                                     f, f0, f1, _args.d_a1, _args.d_a2));
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, unsigned int> F1,
+              MapsTo<T1, unsigned int, unsigned int, unsigned int,
+                     std::shared_ptr<R_div2>, T1>
+                  F2>
+    T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int _x,
+                   const unsigned int _x0) const {
+      return std::visit(
+          Overloaded{[&](const typename R_div2::R_div2_0 _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename R_div2::R_div2_1 _args) -> T1 {
+                       return f0(_args.d_a0);
+                     },
+                     [&](const typename R_div2::R_div2_2 _args) -> T1 {
+                       return f1(_args.d_a0, _args.d_a1, _args.d_a2, _args.d_a3,
+                                 _args.d_a3->template R_div2_rect<T1>(
+                                     f, f0, f1, _args.d_a1, _args.d_a2));
+                     }},
+          this->v());
+    }
   };
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1,
-            MapsTo<T1, unsigned int, unsigned int, unsigned int,
-                   std::shared_ptr<R_div2>, T1>
-                F2>
-  static T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int _x,
-                        const unsigned int _x0,
-                        const std::shared_ptr<R_div2> &r) {
-    return std::visit(
-        Overloaded{[&](const typename R_div2::R_div2_0 _args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename R_div2::R_div2_1 _args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename R_div2::R_div2_2 _args) -> T1 {
-                     return f1(_args.d_a0, _args.d_a1, _args.d_a2, _args.d_a3,
-                               R_div2_rect<T1>(f, f0, f1, _args.d_a1,
-                                               _args.d_a2, _args.d_a3));
-                   }},
-        r->v());
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1,
-            MapsTo<T1, unsigned int, unsigned int, unsigned int,
-                   std::shared_ptr<R_div2>, T1>
-                F2>
-  static T1 R_div2_rec(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int _x,
-                       const unsigned int _x0,
-                       const std::shared_ptr<R_div2> &r) {
-    return std::visit(
-        Overloaded{[&](const typename R_div2::R_div2_0 _args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename R_div2::R_div2_1 _args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename R_div2::R_div2_2 _args) -> T1 {
-                     return f1(_args.d_a0, _args.d_a1, _args.d_a2, _args.d_a3,
-                               R_div2_rec<T1>(f, f0, f1, _args.d_a1, _args.d_a2,
-                                              _args.d_a3));
-                   }},
-        r->v());
-  }
 
   template <typename T1, MapsTo<T1, unsigned int> F0,
             MapsTo<T1, unsigned int> F1,
@@ -359,50 +357,49 @@ struct FunctionVernac {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <typename T1, MapsTo<T1, std::shared_ptr<List<unsigned int>>> F0,
+              MapsTo<T1, std::shared_ptr<List<unsigned int>>, unsigned int,
+                     std::shared_ptr<List<unsigned int>>, unsigned int,
+                     std::shared_ptr<R_list_sum>, T1>
+                  F1>
+    T1 R_list_sum_rec(F0 &&f, F1 &&f0,
+                      const std::shared_ptr<List<unsigned int>> &_x,
+                      const unsigned int _x0) const {
+      return std::visit(
+          Overloaded{[&](const typename R_list_sum::R_list_sum_0 _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename R_list_sum::R_list_sum_1 _args) -> T1 {
+                       return f0(_args.d_a0, _args.d_a1, _args.d_a2, _args.d_a3,
+                                 _args.d_a4,
+                                 _args.d_a4->template R_list_sum_rec<T1>(
+                                     f, f0, _args.d_a2, _args.d_a3));
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, std::shared_ptr<List<unsigned int>>> F0,
+              MapsTo<T1, std::shared_ptr<List<unsigned int>>, unsigned int,
+                     std::shared_ptr<List<unsigned int>>, unsigned int,
+                     std::shared_ptr<R_list_sum>, T1>
+                  F1>
+    T1 R_list_sum_rect(F0 &&f, F1 &&f0,
+                       const std::shared_ptr<List<unsigned int>> &_x,
+                       const unsigned int _x0) const {
+      return std::visit(
+          Overloaded{[&](const typename R_list_sum::R_list_sum_0 _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename R_list_sum::R_list_sum_1 _args) -> T1 {
+                       return f0(_args.d_a0, _args.d_a1, _args.d_a2, _args.d_a3,
+                                 _args.d_a4,
+                                 _args.d_a4->template R_list_sum_rect<T1>(
+                                     f, f0, _args.d_a2, _args.d_a3));
+                     }},
+          this->v());
+    }
   };
-
-  template <typename T1, MapsTo<T1, std::shared_ptr<List<unsigned int>>> F0,
-            MapsTo<T1, std::shared_ptr<List<unsigned int>>, unsigned int,
-                   std::shared_ptr<List<unsigned int>>, unsigned int,
-                   std::shared_ptr<R_list_sum>, T1>
-                F1>
-  static T1 R_list_sum_rect(F0 &&f, F1 &&f0,
-                            const std::shared_ptr<List<unsigned int>> &_x,
-                            const unsigned int _x0,
-                            const std::shared_ptr<R_list_sum> &r) {
-    return std::visit(
-        Overloaded{[&](const typename R_list_sum::R_list_sum_0 _args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename R_list_sum::R_list_sum_1 _args) -> T1 {
-                     return f0(_args.d_a0, _args.d_a1, _args.d_a2, _args.d_a3,
-                               _args.d_a4,
-                               R_list_sum_rect<T1>(f, f0, _args.d_a2,
-                                                   _args.d_a3, _args.d_a4));
-                   }},
-        r->v());
-  }
-
-  template <typename T1, MapsTo<T1, std::shared_ptr<List<unsigned int>>> F0,
-            MapsTo<T1, std::shared_ptr<List<unsigned int>>, unsigned int,
-                   std::shared_ptr<List<unsigned int>>, unsigned int,
-                   std::shared_ptr<R_list_sum>, T1>
-                F1>
-  static T1
-  R_list_sum_rec(F0 &&f, F1 &&f0, const std::shared_ptr<List<unsigned int>> &_x,
-                 const unsigned int _x0, const std::shared_ptr<R_list_sum> &r) {
-    return std::visit(
-        Overloaded{[&](const typename R_list_sum::R_list_sum_0 _args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename R_list_sum::R_list_sum_1 _args) -> T1 {
-                     return f0(_args.d_a0, _args.d_a1, _args.d_a2, _args.d_a3,
-                               _args.d_a4,
-                               R_list_sum_rec<T1>(f, f0, _args.d_a2, _args.d_a3,
-                                                  _args.d_a4));
-                   }},
-        r->v());
-  }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<List<unsigned int>>> F0,
             MapsTo<T1, std::shared_ptr<List<unsigned int>>, unsigned int,

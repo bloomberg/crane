@@ -218,6 +218,83 @@ let find_epon_arg_pos epon_ref ty =
   in
   aux 0 ty
 
+(** {2 Multi-inductive heuristic helpers} *)
+
+(** Find all non-typeclass, non-custom, non-enum, non-mutual inductives in a
+    module's declarations.  Returns a list of [GlobRef.t] for each eligible
+    inductive packet. *)
+let find_all_module_inductives decls =
+  List.concat_map (fun (_l, se) ->
+    match se with
+    | SEdecl (Dind (kn, ind)) ->
+      let is_mutual = Array.length ind.ind_packets > 1 in
+      List.init (Array.length ind.ind_packets) (fun i ->
+        let p = ind.ind_packets.(i) in
+        let ind_ref = GlobRef.IndRef (kn, i) in
+        if is_custom ind_ref || is_mutual then None
+        else match ind.ind_kind with
+          | TypeClass _ -> None
+          | Record _ -> None     (* Records have their own eponymous merging *)
+          | Coinductive -> None  (* Coinductives use lazy eval, methods
+                                    would capture this in closures *)
+          | _ ->
+            if Table.is_enum_inductive ind_ref then None
+            else if Array.length p.ip_types = 0 then None
+                   (* Empty types have no constructors — can't instantiate *)
+            else Some ind_ref
+      ) |> List.filter_map Fun.id
+    | _ -> []
+  ) decls
+
+(** Count how many times [ind_ref] appears in a type expression. *)
+let rec count_type_occurrences ind_ref ty =
+  match ty with
+  | Miniml.Tglob (r, args, _) ->
+    (if Environ.QGlobRef.equal Environ.empty_env r ind_ref then 1 else 0)
+    + List.fold_left (fun acc a -> acc + count_type_occurrences ind_ref a) 0 args
+  | Miniml.Tarr (t1, t2) ->
+    count_type_occurrences ind_ref t1 + count_type_occurrences ind_ref t2
+  | Miniml.Tmeta { contents = Some t } -> count_type_occurrences ind_ref t
+  | _ -> 0
+
+(** Find the 0-based position of the first input argument matching [ind_ref].
+    Returns [None] if [ind_ref] does not appear in any argument position. *)
+let find_first_input_pos ind_ref ty =
+  let rec aux pos = function
+    | Miniml.Tarr (arg, rest) ->
+      if count_type_occurrences ind_ref arg > 0 then Some pos
+      else aux (pos + 1) rest
+    | _ -> None
+  in
+  aux 0 ty
+
+(** Given a list of candidate inductives and a function type, pick the best
+    inductive to host this function as a method.
+
+    Heuristic: most type-signature occurrences wins.  Tiebreak: earliest
+    input-argument position.  Returns [None] if no inductive appears. *)
+let find_best_inductive ind_refs ty =
+  let scored = List.filter_map (fun ind_ref ->
+    let count = count_type_occurrences ind_ref ty in
+    if count = 0 then None
+    else
+      let input_pos = match find_first_input_pos ind_ref ty with
+        | Some p -> p
+        | None -> max_int  (* appears only in return type *)
+      in
+      Some (ind_ref, count, input_pos)
+  ) ind_refs in
+  match scored with
+  | [] -> None
+  | _ ->
+    let best = List.fold_left (fun ((_, c1, p1) as a) ((_, c2, p2) as b) ->
+      if c2 > c1 then b
+      else if c2 = c1 && p2 < p1 then b
+      else a
+    ) (List.hd scored) (List.tl scored) in
+    let (ind_ref, _, _) = best in
+    Some ind_ref
+
 (** {2 Internal: registration helpers} *)
 
 (** Add a method entry to the hashtable. [returns_any] is initialized to [false]
@@ -363,6 +440,110 @@ let register_methods_for_epon
         | _ -> () )
       decls
 
+(** Register methods for ALL inductives in a module, assigning each function
+    to its best-matching inductive based on type-signature occurrences.
+
+    Unlike [register_methods_for_epon] which only considers one target inductive,
+    this function considers all non-typeclass, non-custom inductives in the module
+    and uses [find_best_inductive] to pick the best one for each function. *)
+let register_methods_for_all_inductives tbl cands ind_refs decls =
+  (* Collect type aliases (Dtype) defined in this module. Methods on nested
+     inductives can't reference these because the type alias may not be
+     visible from inside the inductive's struct definition. *)
+  let module_type_aliases =
+    List.filter_map (fun (_l, se) ->
+      match se with
+      | SEdecl (Dtype (r, _, _)) -> Some r
+      | _ -> None
+    ) decls
+  in
+  (* Collect forward-reference sets for each inductive *)
+  let forward_sets = List.map (fun ind_ref ->
+    let fwd = ref [] in
+    let seen = ref false in
+    List.iter (fun (_l, se) ->
+      match se with
+      | SEdecl (Dind (kn, ind)) ->
+        Array.iteri (fun j _p ->
+          let r = GlobRef.IndRef (kn, j) in
+          if Environ.QGlobRef.equal Environ.empty_env r ind_ref then
+            seen := true
+          else if !seen then
+            fwd := r :: !fwd
+        ) ind.ind_packets
+      | _ -> ()
+    ) decls;
+    (ind_ref, !fwd)
+  ) ind_refs in
+  let find_forward_refs ind_ref =
+    List.find_map (fun (r, fwd) ->
+      if Environ.QGlobRef.equal Environ.empty_env r ind_ref then Some fwd
+      else None
+    ) forward_sets
+  in
+  (* Check if a type references any excluded refs: forward inductives
+     relative to [ind_ref], or module type aliases. *)
+  let refs_excluded_for ind_ref ty =
+    let fwd_refs = match find_forward_refs ind_ref with
+      | Some l -> l | None -> []
+    in
+    let excluded = module_type_aliases @ fwd_refs in
+    let rec check = function
+      | Miniml.Tglob (r, args, _) ->
+        List.exists (Environ.QGlobRef.equal Environ.empty_env r) excluded
+        || List.exists check args
+      | Miniml.Tarr (t1, t2) -> check t1 || check t2
+      | Miniml.Tmeta { contents = Some t } -> check t
+      | _ -> false
+    in check ty
+  in
+  let add_candidate ind_ref r body ty pos ind_tvar_positions =
+    register_into tbl r ind_ref pos ~ind_tvar_positions;
+    let existing = match Hashtbl.find_opt cands ind_ref with
+      | Some l -> l | None -> []
+    in
+    Hashtbl.replace cands ind_ref (existing @ [(r, body, ty, pos)])
+  in
+  (* Check if the inductive argument at position [pos] in [ty] uses concrete
+     type parameters. Functions specialized to e.g. [tree nat] instead of
+     [tree A] can't safely become methods because the loopification's decltype
+     inference doesn't handle concrete type substitutions inside template
+     structs. *)
+  let has_concrete_type_args best_ref ty =
+    let rec find_arg pos = function
+      | Miniml.Tarr (Miniml.Tglob (r, tvar_args, _), _rest)
+        when Environ.QGlobRef.equal Environ.empty_env r best_ref ->
+        (* Check if any type arg is concrete (not Tvar/Tvar') *)
+        tvar_args <> [] &&
+        List.exists (fun t ->
+          match t with Miniml.Tvar _ | Miniml.Tvar' _ -> false | _ -> true
+        ) tvar_args
+      | Miniml.Tarr (_, rest) -> find_arg (pos + 1) rest
+      | _ -> false
+    in
+    find_arg 0 ty
+  in
+  let process_func r body ty =
+    match find_best_inductive ind_refs ty with
+    | None -> ()
+    | Some best_ref ->
+      if refs_excluded_for best_ref ty then ()
+      else if has_concrete_type_args best_ref ty then ()
+      else
+        match find_epon_arg_pos best_ref ty with
+        | Some (pos, ind_tvar_positions) ->
+          if body_safe_for_method body then
+            add_candidate best_ref r body ty pos ind_tvar_positions
+        | None -> ()
+  in
+  List.iter (fun (_l, se) ->
+    match se with
+    | SEdecl (Dterm (r, body, ty)) -> process_func r body ty
+    | SEdecl (Dfix (rv, defs, typs)) ->
+      Array.iteri (fun i r -> process_func r defs.(i) typs.(i)) rv
+    | _ -> ()
+  ) decls
+
 (** {2 Pre-registration pass} *)
 
 (** Pre-register all methods from the entire structure before code generation.
@@ -451,24 +632,29 @@ let rec pre_register_methods_from_structure
                   ind'.ind_packets
               | _ -> () )
             inner_sel;
-          (* Check for an eponymous inductive inside this module. E.g. module
-             [List] contains inductive [list]. *)
+          (* Find ALL module-local inductives for method assignment. *)
+          let all_ind_refs = find_all_module_inductives inner_sel in
           let module_name_str = Label.to_string l in
-          ( match find_eponymous_inductive module_name_str inner_sel with
-          | Some epon_ref ->
-            (* Register methods from within the module. *)
-            register_methods_for_epon tbl cands epon_ref inner_sel;
-            (* Also register cross-module methods: functions in parent
-               declarations whose module name starts with the eponymous type
-               name. *)
-            register_methods_for_epon
-              tbl
-              cands
-              ~cross_module:true
-              ~wrapper_module_name:(Some module_name_str)
-              epon_ref
-              parent_decls
-          | None -> () );
+          if List.length all_ind_refs > 1 then
+            (* Multiple inductives: use heuristic assignment *)
+            register_methods_for_all_inductives tbl cands all_ind_refs inner_sel
+          else (
+            (* Single or no inductive: use existing eponymous logic *)
+            match find_eponymous_inductive module_name_str inner_sel with
+            | Some epon_ref ->
+              (* Register methods from within the module. *)
+              register_methods_for_epon tbl cands epon_ref inner_sel;
+              (* Also register cross-module methods: functions in parent
+                 declarations whose module name starts with the eponymous type
+                 name. *)
+              register_methods_for_epon
+                tbl
+                cands
+                ~cross_module:true
+                ~wrapper_module_name:(Some module_name_str)
+                epon_ref
+                parent_decls
+            | None -> () );
           (* Recurse into the module's contents. Accumulate current-level
              declarations into [parent_decls] for nested modules. *)
           pre_register_methods_from_structure

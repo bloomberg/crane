@@ -12,37 +12,6 @@
 #include <utility>
 #include <variant>
 
-__attribute__((pure)) unsigned int InstructionCycles::cycles_jcn(
-    const std::shared_ptr<InstructionCycles::state1> &s,
-    const std::shared_ptr<InstructionCycles::instruction1> &i) {
-  return std::visit(
-      Overloaded{[&](const typename InstructionCycles::instruction1::JCN1 _args)
-                     -> unsigned int {
-                   unsigned int c1 = Nat::div(_args.d_a0, 8u);
-                   unsigned int c2 = (Nat::div(_args.d_a0, 4u) % 2u);
-                   unsigned int c3 = (Nat::div(_args.d_a0, 2u) % 2u);
-                   unsigned int c4 = (_args.d_a0 % 2u);
-                   bool base_cond =
-                       ((s->acc1 == 0u && std::move(c2) == 1u) ||
-                        ((s->carry1 && std::move(c3) == 1u) ||
-                         (!(s->test_pin1) && std::move(c4) == 1u)));
-                   bool jump;
-                   if (std::move(c1) == 1u) {
-                     jump = !(std::move(base_cond));
-                   } else {
-                     jump = std::move(base_cond);
-                   }
-                   if (std::move(jump)) {
-                     return 16u;
-                   } else {
-                     return 8u;
-                   }
-                 },
-                 [](const typename InstructionCycles::instruction1::NOP1 _args)
-                     -> unsigned int { return 8u; }},
-      i->v());
-}
-
 __attribute__((pure)) unsigned int InstructionCycles::cycles_jms(
     const std::shared_ptr<InstructionCycles::state2> &_x,
     const std::shared_ptr<InstructionCycles::instruction2> &i) {
@@ -124,30 +93,6 @@ InstructionCycles::cycles_max(const InstructionCycles::Instr4 i) {
   }();
 }
 
-__attribute__((pure)) unsigned int InstructionCycles::cycles_sum(
-    const std::shared_ptr<InstructionCycles::state5> &s,
-    const std::shared_ptr<InstructionCycles::instruction5> &i) {
-  return std::visit(
-      Overloaded{[](const typename InstructionCycles::instruction5::NOP5 _args)
-                     -> unsigned int { return 8u; },
-                 [&](const typename InstructionCycles::instruction5::JCN5 _args)
-                     -> unsigned int {
-                   if (Nat::div(_args.d_a0, 8u) == 1u) {
-                     return 16u;
-                   } else {
-                     if ((s->acc5 == 0u &&
-                          (Nat::div(_args.d_a0, 4u) % 2u) == 1u)) {
-                       return 16u;
-                     } else {
-                       return 8u;
-                     }
-                   }
-                 },
-                 [](const typename InstructionCycles::instruction5::INC5 _args)
-                     -> unsigned int { return 8u; }},
-      i->v());
-}
-
 std::shared_ptr<InstructionCycles::state5> InstructionCycles::execute5(
     std::shared_ptr<InstructionCycles::state5> s,
     const std::shared_ptr<InstructionCycles::instruction5> &i) {
@@ -180,7 +125,7 @@ __attribute__((pure)) unsigned int InstructionCycles::program_cycles5(
           [&](const typename List<
               std::shared_ptr<InstructionCycles::instruction5>>::Cons _args)
               -> unsigned int {
-            return (cycles_sum(s, _args.d_a0) +
+            return (_args.d_a0->cycles_sum(s) +
                     program_cycles5(execute5(s, _args.d_a0), _args.d_a1));
           }},
       prog->v());

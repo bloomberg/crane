@@ -271,6 +271,12 @@ and method_field = {
   mf_body : cpp_stmt list;  (** Method body *)
   mf_is_const : bool;  (** True if const method *)
   mf_is_static : bool;  (** True if static method *)
+  mf_this_pos : int;
+      (** Original 0-based position of the [this] argument in the extracted
+          function's parameter list. Recursive calls in the method body still
+          use the original argument order, so the loopification checker needs
+          this to extract the receiver from [CPPglob] calls correctly.
+          For most eponymous methods this is [0]. *)
 }
 
 (** {2 Type schemas} *)

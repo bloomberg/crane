@@ -186,6 +186,7 @@ let fn_checker (fn_refs : (GlobRef.t * cpp_type list) list) : call_checker =
 let method_checker
     ~(n_params : int)
     ~(has_self_param : bool)
+    ~(this_pos : int)
     (method_name : Id.t) : call_checker =
  fun e ->
    match e with
@@ -197,8 +198,32 @@ let method_checker
      else
        Some {cs_args = args; cs_is_tail = false}
    | CPPfun_call (CPPvar id, args) when Id.equal id method_name ->
-     (* Static method calls appear as plain function calls *)
-     Some {cs_args = args; cs_is_tail = false}
+     (* Fixpoint recursive calls appear as CPPvar calls. CPPfun_call stores
+        args reversed; reverse to normal order before extracting this_pos. *)
+     let args_normal = List.rev args in
+     if has_self_param && List.length args_normal > n_params then
+       let extract_at pos lst =
+         let rec aux i acc = function
+           | [] -> (None, List.rev acc)
+           | x :: rest ->
+             if i = pos then (Some x, List.rev_append acc rest)
+             else aux (i + 1) (x :: acc) rest
+         in
+         aux 0 [] lst
+       in
+       let self_arg, rest = extract_at this_pos args_normal in
+       ( match self_arg with
+       | Some recv ->
+         let recv_ptr =
+           CPPfun_call (CPPmember (recv, Id.of_string "get"), [])
+         in
+         Some {cs_args = recv_ptr :: rest; cs_is_tail = false}
+       | None -> Some {cs_args = args_normal; cs_is_tail = false} )
+     else if (not has_self_param) && List.length args_normal > n_params then
+       Some {cs_args = List.filteri (fun i _ -> i <> this_pos) args_normal;
+             cs_is_tail = false}
+     else
+       Some {cs_args = args_normal; cs_is_tail = false}
    | CPPfun_call (CPPglob (r, _, _), args) ->
      let label =
        match r with
@@ -208,30 +233,35 @@ let method_checker
        | GlobRef.VarRef v -> v
      in
      if Id.equal label method_name then
+       (* CPPfun_call stores args in reverse order (see translation.ml).
+          Reverse to get normal order before position-based extraction. *)
+       let args_normal = List.rev args in
        if has_self_param then
-         (* Include receiver (converted to raw pointer via .get()) as first arg.
-            The CPPglob call has the receiver as args[0]. *)
-           match
-             args
-           with
-         | recv :: rest ->
+         let extract_at pos lst =
+           let rec aux i acc = function
+             | [] -> (None, List.rev acc)
+             | x :: rest ->
+               if i = pos then (Some x, List.rev_append acc rest)
+               else aux (i + 1) (x :: acc) rest
+           in
+           aux 0 [] lst
+         in
+         let self_arg, rest = extract_at this_pos args_normal in
+         ( match self_arg with
+         | Some recv ->
            let recv_ptr =
              CPPfun_call (CPPmember (recv, Id.of_string "get"), [])
            in
            Some {cs_args = recv_ptr :: rest; cs_is_tail = false}
-         | [] -> Some {cs_args = args; cs_is_tail = false}
-       else (* Strip receiver if present to align with mf_params *)
-         let args =
-           if List.length args > n_params then
-             match
-               args
-             with
-             | _ :: rest -> rest
-             | [] -> []
+         | None -> Some {cs_args = args_normal; cs_is_tail = false} )
+       else (* Strip receiver at [this_pos] to align with mf_params *)
+         let args_stripped =
+           if List.length args_normal > n_params then
+             List.filteri (fun i _ -> i <> this_pos) args_normal
            else
-             args
+             args_normal
          in
-         Some {cs_args = args; cs_is_tail = false}
+         Some {cs_args = args_stripped; cs_is_tail = false}
      else
        None
    | _ -> None
@@ -2005,6 +2035,18 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
       | Some (Tfun (_, cod)) -> cod
       | _ -> Tunknown )
     | CPPfun_call (CPPglob _, _) -> Tunknown
+    | CPPfun_call (CPPmember (inner, id), [])
+      when String.equal (Id.to_string id) "get" ->
+      (* shared_ptr::get() returns a raw pointer.  Infer from the inner
+         expression: if it's a shared_ptr<T>, .get() returns T*.  We use
+         Tunknown and rely on decltype, but at least make sure infer doesn't
+         fail silently.  For method self-conversion, the inner expression
+         is a constructor field — infer its type and strip shared_ptr. *)
+      let inner_ty = infer_saved_type tparams env inner in
+      ( match inner_ty with
+      | Tptr t -> Tptr t  (* already a pointer *)
+      | Tshared_ptr t -> Tptr t  (* shared_ptr<T> → T* *)
+      | _ -> Tunknown )
     | _ -> Tunknown
   in
   result
@@ -4864,7 +4906,8 @@ let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body =
     @return An [Fmethod] field with the loopified body *)
 let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
   let n_params = List.length mf.mf_params in
-  let basic_check = method_checker ~n_params ~has_self_param:false mf.mf_name in
+  let this_pos = mf.mf_this_pos in
+  let basic_check = method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_name in
   match classify basic_check mf.mf_body with
   | No_recursion -> Fmethod mf
   | (Tail_recursion | Nontail_recursion) as kind ->
@@ -4876,7 +4919,7 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
     let body_with_self = List.map (this_to_self_stmt self_id) mf.mf_body in
     let self_param = (self_id, self_ty) in
     let augmented_params = self_param :: mf.mf_params in
-    let self_check = method_checker ~n_params ~has_self_param:true mf.mf_name in
+    let self_check = method_checker ~n_params ~has_self_param:true ~this_pos mf.mf_name in
     let body', needs_init_self =
       match kind with
       | Tail_recursion ->

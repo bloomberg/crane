@@ -413,7 +413,9 @@ let pp_cpp_ind_header kn ind =
                  declarations *)
               find_methods_for_inductive ind_ref
             | _ ->
-              (* Inside a module, non-eponymous inductives don't get methods *)
+              (* Inside a module, non-eponymous inductives: the registry
+                 lookup below handles these with proper forward-ref
+                 filtering. *)
               []
           in
           (* Also include method candidates from the registry (e.g., Nat::add

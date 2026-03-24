@@ -75,17 +75,15 @@ public:
     std::shared_ptr<List<t_A>> _head{};
     std::shared_ptr<List<t_A>> _last{};
     const List *_loop_self = this;
-    std::shared_ptr<List<t_A>> _loop_m = m;
     bool _continue = true;
     while (_continue) {
       std::visit(
           Overloaded{
               [&](const typename List<t_A>::Nil _args) {
                 if (_last) {
-                  std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =
-                      _loop_m;
+                  std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
                 } else {
-                  _head = _loop_m;
+                  _head = m;
                 }
                 _continue = false;
               },
@@ -98,10 +96,7 @@ public:
                   _head = _cell;
                 }
                 _last = _cell;
-                List *_next_self = _loop_m.get();
-                std::shared_ptr<List<t_A>> _next_m = _args.d_a1;
-                _loop_self = std::move(_next_self);
-                _loop_m = std::move(_next_m);
+                _loop_self = _args.d_a1.get();
               }},
           _loop_self->v());
     }

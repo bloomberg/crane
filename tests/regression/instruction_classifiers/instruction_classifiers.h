@@ -421,124 +421,158 @@ struct InstructionClassifiers {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) bool writes_acc() const {
+      return std::visit(
+          Overloaded{
+              [](const typename instr_acc::LDM _args) -> bool { return true; },
+              [](const typename instr_acc::LD _args) -> bool { return true; },
+              [](const typename instr_acc::ADD _args) -> bool { return true; },
+              [](const typename instr_acc::SUB _args) -> bool { return true; },
+              [](const typename instr_acc::INC _args) -> bool { return true; },
+              [](const typename instr_acc::XCH _args) -> bool { return true; },
+              [](const typename instr_acc::BBL _args) -> bool { return true; },
+              [](const typename instr_acc::SBM _args) -> bool { return true; },
+              [](const typename instr_acc::RDM _args) -> bool { return true; },
+              [](const typename instr_acc::RDR _args) -> bool { return true; },
+              [](const typename instr_acc::ADM _args) -> bool { return true; },
+              [](const typename instr_acc::RD0 _args) -> bool { return true; },
+              [](const typename instr_acc::RD1 _args) -> bool { return true; },
+              [](const typename instr_acc::RD2 _args) -> bool { return true; },
+              [](const typename instr_acc::RD3 _args) -> bool { return true; },
+              [](const typename instr_acc::CLB _args) -> bool { return true; },
+              [](const typename instr_acc::CMA _args) -> bool { return true; },
+              [](const typename instr_acc::IAC _args) -> bool { return true; },
+              [](const typename instr_acc::DAC _args) -> bool { return true; },
+              [](const typename instr_acc::RAL _args) -> bool { return true; },
+              [](const typename instr_acc::RAR _args) -> bool { return true; },
+              [](const typename instr_acc::TCC _args) -> bool { return true; },
+              [](const typename instr_acc::TCS _args) -> bool { return true; },
+              [](const typename instr_acc::DAA _args) -> bool { return true; },
+              [](const typename instr_acc::KBP _args) -> bool { return true; },
+              [](const typename instr_acc::NOP_acc _args) -> bool {
+                return false;
+              }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2,
+              MapsTo<T1, unsigned int> F3, MapsTo<T1, unsigned int> F4,
+              MapsTo<T1, unsigned int> F5, MapsTo<T1, unsigned int> F6>
+    T1 instr_acc_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
+                     F6 &&f5, const T1 f6, const T1 f7, const T1 f8,
+                     const T1 f9, const T1 f10, const T1 f11, const T1 f12,
+                     const T1 f13, const T1 f14, const T1 f15, const T1 f16,
+                     const T1 f17, const T1 f18, const T1 f19, const T1 f20,
+                     const T1 f21, const T1 f22, const T1 f23,
+                     const T1 f24) const {
+      return std::visit(
+          Overloaded{
+              [&](const typename instr_acc::LDM _args) -> T1 {
+                return f(_args.d_a0);
+              },
+              [&](const typename instr_acc::LD _args) -> T1 {
+                return f0(_args.d_a0);
+              },
+              [&](const typename instr_acc::ADD _args) -> T1 {
+                return f1(_args.d_a0);
+              },
+              [&](const typename instr_acc::SUB _args) -> T1 {
+                return f2(_args.d_a0);
+              },
+              [&](const typename instr_acc::INC _args) -> T1 {
+                return f3(_args.d_a0);
+              },
+              [&](const typename instr_acc::XCH _args) -> T1 {
+                return f4(_args.d_a0);
+              },
+              [&](const typename instr_acc::BBL _args) -> T1 {
+                return f5(_args.d_a0);
+              },
+              [&](const typename instr_acc::SBM _args) -> T1 { return f6; },
+              [&](const typename instr_acc::RDM _args) -> T1 { return f7; },
+              [&](const typename instr_acc::RDR _args) -> T1 { return f8; },
+              [&](const typename instr_acc::ADM _args) -> T1 { return f9; },
+              [&](const typename instr_acc::RD0 _args) -> T1 { return f10; },
+              [&](const typename instr_acc::RD1 _args) -> T1 { return f11; },
+              [&](const typename instr_acc::RD2 _args) -> T1 { return f12; },
+              [&](const typename instr_acc::RD3 _args) -> T1 { return f13; },
+              [&](const typename instr_acc::CLB _args) -> T1 { return f14; },
+              [&](const typename instr_acc::CMA _args) -> T1 { return f15; },
+              [&](const typename instr_acc::IAC _args) -> T1 { return f16; },
+              [&](const typename instr_acc::DAC _args) -> T1 { return f17; },
+              [&](const typename instr_acc::RAL _args) -> T1 { return f18; },
+              [&](const typename instr_acc::RAR _args) -> T1 { return f19; },
+              [&](const typename instr_acc::TCC _args) -> T1 { return f20; },
+              [&](const typename instr_acc::TCS _args) -> T1 { return f21; },
+              [&](const typename instr_acc::DAA _args) -> T1 { return f22; },
+              [&](const typename instr_acc::KBP _args) -> T1 { return f23; },
+              [&](const typename instr_acc::NOP_acc _args) -> T1 {
+                return f24;
+              }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2,
+              MapsTo<T1, unsigned int> F3, MapsTo<T1, unsigned int> F4,
+              MapsTo<T1, unsigned int> F5, MapsTo<T1, unsigned int> F6>
+    T1 instr_acc_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
+                      F6 &&f5, const T1 f6, const T1 f7, const T1 f8,
+                      const T1 f9, const T1 f10, const T1 f11, const T1 f12,
+                      const T1 f13, const T1 f14, const T1 f15, const T1 f16,
+                      const T1 f17, const T1 f18, const T1 f19, const T1 f20,
+                      const T1 f21, const T1 f22, const T1 f23,
+                      const T1 f24) const {
+      return std::visit(
+          Overloaded{
+              [&](const typename instr_acc::LDM _args) -> T1 {
+                return f(_args.d_a0);
+              },
+              [&](const typename instr_acc::LD _args) -> T1 {
+                return f0(_args.d_a0);
+              },
+              [&](const typename instr_acc::ADD _args) -> T1 {
+                return f1(_args.d_a0);
+              },
+              [&](const typename instr_acc::SUB _args) -> T1 {
+                return f2(_args.d_a0);
+              },
+              [&](const typename instr_acc::INC _args) -> T1 {
+                return f3(_args.d_a0);
+              },
+              [&](const typename instr_acc::XCH _args) -> T1 {
+                return f4(_args.d_a0);
+              },
+              [&](const typename instr_acc::BBL _args) -> T1 {
+                return f5(_args.d_a0);
+              },
+              [&](const typename instr_acc::SBM _args) -> T1 { return f6; },
+              [&](const typename instr_acc::RDM _args) -> T1 { return f7; },
+              [&](const typename instr_acc::RDR _args) -> T1 { return f8; },
+              [&](const typename instr_acc::ADM _args) -> T1 { return f9; },
+              [&](const typename instr_acc::RD0 _args) -> T1 { return f10; },
+              [&](const typename instr_acc::RD1 _args) -> T1 { return f11; },
+              [&](const typename instr_acc::RD2 _args) -> T1 { return f12; },
+              [&](const typename instr_acc::RD3 _args) -> T1 { return f13; },
+              [&](const typename instr_acc::CLB _args) -> T1 { return f14; },
+              [&](const typename instr_acc::CMA _args) -> T1 { return f15; },
+              [&](const typename instr_acc::IAC _args) -> T1 { return f16; },
+              [&](const typename instr_acc::DAC _args) -> T1 { return f17; },
+              [&](const typename instr_acc::RAL _args) -> T1 { return f18; },
+              [&](const typename instr_acc::RAR _args) -> T1 { return f19; },
+              [&](const typename instr_acc::TCC _args) -> T1 { return f20; },
+              [&](const typename instr_acc::TCS _args) -> T1 { return f21; },
+              [&](const typename instr_acc::DAA _args) -> T1 { return f22; },
+              [&](const typename instr_acc::KBP _args) -> T1 { return f23; },
+              [&](const typename instr_acc::NOP_acc _args) -> T1 {
+                return f24;
+              }},
+          this->v());
+    }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2,
-            MapsTo<T1, unsigned int> F3, MapsTo<T1, unsigned int> F4,
-            MapsTo<T1, unsigned int> F5, MapsTo<T1, unsigned int> F6>
-  static T1 instr_acc_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
-                           F6 &&f5, const T1 f6, const T1 f7, const T1 f8,
-                           const T1 f9, const T1 f10, const T1 f11,
-                           const T1 f12, const T1 f13, const T1 f14,
-                           const T1 f15, const T1 f16, const T1 f17,
-                           const T1 f18, const T1 f19, const T1 f20,
-                           const T1 f21, const T1 f22, const T1 f23,
-                           const T1 f24, const std::shared_ptr<instr_acc> &i) {
-    return std::visit(
-        Overloaded{
-            [&](const typename instr_acc::LDM _args) -> T1 {
-              return f(_args.d_a0);
-            },
-            [&](const typename instr_acc::LD _args) -> T1 {
-              return f0(_args.d_a0);
-            },
-            [&](const typename instr_acc::ADD _args) -> T1 {
-              return f1(_args.d_a0);
-            },
-            [&](const typename instr_acc::SUB _args) -> T1 {
-              return f2(_args.d_a0);
-            },
-            [&](const typename instr_acc::INC _args) -> T1 {
-              return f3(_args.d_a0);
-            },
-            [&](const typename instr_acc::XCH _args) -> T1 {
-              return f4(_args.d_a0);
-            },
-            [&](const typename instr_acc::BBL _args) -> T1 {
-              return f5(_args.d_a0);
-            },
-            [&](const typename instr_acc::SBM _args) -> T1 { return f6; },
-            [&](const typename instr_acc::RDM _args) -> T1 { return f7; },
-            [&](const typename instr_acc::RDR _args) -> T1 { return f8; },
-            [&](const typename instr_acc::ADM _args) -> T1 { return f9; },
-            [&](const typename instr_acc::RD0 _args) -> T1 { return f10; },
-            [&](const typename instr_acc::RD1 _args) -> T1 { return f11; },
-            [&](const typename instr_acc::RD2 _args) -> T1 { return f12; },
-            [&](const typename instr_acc::RD3 _args) -> T1 { return f13; },
-            [&](const typename instr_acc::CLB _args) -> T1 { return f14; },
-            [&](const typename instr_acc::CMA _args) -> T1 { return f15; },
-            [&](const typename instr_acc::IAC _args) -> T1 { return f16; },
-            [&](const typename instr_acc::DAC _args) -> T1 { return f17; },
-            [&](const typename instr_acc::RAL _args) -> T1 { return f18; },
-            [&](const typename instr_acc::RAR _args) -> T1 { return f19; },
-            [&](const typename instr_acc::TCC _args) -> T1 { return f20; },
-            [&](const typename instr_acc::TCS _args) -> T1 { return f21; },
-            [&](const typename instr_acc::DAA _args) -> T1 { return f22; },
-            [&](const typename instr_acc::KBP _args) -> T1 { return f23; },
-            [&](const typename instr_acc::NOP_acc _args) -> T1 { return f24; }},
-        i->v());
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2,
-            MapsTo<T1, unsigned int> F3, MapsTo<T1, unsigned int> F4,
-            MapsTo<T1, unsigned int> F5, MapsTo<T1, unsigned int> F6>
-  static T1 instr_acc_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
-                          F6 &&f5, const T1 f6, const T1 f7, const T1 f8,
-                          const T1 f9, const T1 f10, const T1 f11, const T1 f12,
-                          const T1 f13, const T1 f14, const T1 f15,
-                          const T1 f16, const T1 f17, const T1 f18,
-                          const T1 f19, const T1 f20, const T1 f21,
-                          const T1 f22, const T1 f23, const T1 f24,
-                          const std::shared_ptr<instr_acc> &i) {
-    return std::visit(
-        Overloaded{
-            [&](const typename instr_acc::LDM _args) -> T1 {
-              return f(_args.d_a0);
-            },
-            [&](const typename instr_acc::LD _args) -> T1 {
-              return f0(_args.d_a0);
-            },
-            [&](const typename instr_acc::ADD _args) -> T1 {
-              return f1(_args.d_a0);
-            },
-            [&](const typename instr_acc::SUB _args) -> T1 {
-              return f2(_args.d_a0);
-            },
-            [&](const typename instr_acc::INC _args) -> T1 {
-              return f3(_args.d_a0);
-            },
-            [&](const typename instr_acc::XCH _args) -> T1 {
-              return f4(_args.d_a0);
-            },
-            [&](const typename instr_acc::BBL _args) -> T1 {
-              return f5(_args.d_a0);
-            },
-            [&](const typename instr_acc::SBM _args) -> T1 { return f6; },
-            [&](const typename instr_acc::RDM _args) -> T1 { return f7; },
-            [&](const typename instr_acc::RDR _args) -> T1 { return f8; },
-            [&](const typename instr_acc::ADM _args) -> T1 { return f9; },
-            [&](const typename instr_acc::RD0 _args) -> T1 { return f10; },
-            [&](const typename instr_acc::RD1 _args) -> T1 { return f11; },
-            [&](const typename instr_acc::RD2 _args) -> T1 { return f12; },
-            [&](const typename instr_acc::RD3 _args) -> T1 { return f13; },
-            [&](const typename instr_acc::CLB _args) -> T1 { return f14; },
-            [&](const typename instr_acc::CMA _args) -> T1 { return f15; },
-            [&](const typename instr_acc::IAC _args) -> T1 { return f16; },
-            [&](const typename instr_acc::DAC _args) -> T1 { return f17; },
-            [&](const typename instr_acc::RAL _args) -> T1 { return f18; },
-            [&](const typename instr_acc::RAR _args) -> T1 { return f19; },
-            [&](const typename instr_acc::TCC _args) -> T1 { return f20; },
-            [&](const typename instr_acc::TCS _args) -> T1 { return f21; },
-            [&](const typename instr_acc::DAA _args) -> T1 { return f22; },
-            [&](const typename instr_acc::KBP _args) -> T1 { return f23; },
-            [&](const typename instr_acc::NOP_acc _args) -> T1 { return f24; }},
-        i->v());
-  }
-
-  __attribute__((pure)) static bool
-  writes_acc(const std::shared_ptr<instr_acc> &i);
   __attribute__((pure)) static unsigned int count_writes_acc(
       const std::shared_ptr<List<std::shared_ptr<instr_acc>>> &prog);
   static inline const unsigned int test_writes_acc =
@@ -676,6 +710,24 @@ struct InstructionClassifiers {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) bool writes_ram() const {
+      return std::visit(
+          Overloaded{
+              [](const typename instr_ram::WRM _args) -> bool { return true; },
+              [](const typename instr_ram::WMP _args) -> bool { return true; },
+              [](const typename instr_ram::WR0 _args) -> bool { return true; },
+              [](const typename instr_ram::WR1 _args) -> bool { return true; },
+              [](const typename instr_ram::WR2 _args) -> bool { return true; },
+              [](const typename instr_ram::WR3 _args) -> bool { return true; },
+              [](const typename instr_ram::NOP_ram _args) -> bool {
+                return false;
+              },
+              [](const typename instr_ram::ADD_ram _args) -> bool {
+                return false;
+              }},
+          this->v());
+    }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F7>
@@ -716,8 +768,6 @@ struct InstructionClassifiers {
         i->v());
   }
 
-  __attribute__((pure)) static bool
-  writes_ram(const std::shared_ptr<instr_ram> &i);
   __attribute__((pure)) static unsigned int count_writes_ram(
       const std::shared_ptr<List<std::shared_ptr<instr_ram>>> &prog);
   static inline const unsigned int test_writes_ram =
@@ -859,72 +909,91 @@ struct InstructionClassifiers {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) bool writes_regs() const {
+      return std::visit(
+          Overloaded{
+              [](const typename instr_regs::XCH_regs _args) -> bool {
+                return true;
+              },
+              [](const typename instr_regs::INC_regs _args) -> bool {
+                return true;
+              },
+              [](const typename instr_regs::FIM _args) -> bool { return true; },
+              [](const typename instr_regs::FIN _args) -> bool { return true; },
+              [](const typename instr_regs::ISZ _args) -> bool { return true; },
+              [](const typename instr_regs::NOP_regs _args) -> bool {
+                return false;
+              },
+              [](const typename instr_regs::ADD_regs _args) -> bool {
+                return false;
+              }},
+          this->v());
+    }
+
+    template <
+        typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, unsigned int> F1,
+        MapsTo<T1, unsigned int, unsigned int> F2, MapsTo<T1, unsigned int> F3,
+        MapsTo<T1, unsigned int, unsigned int> F4, MapsTo<T1, unsigned int> F6>
+    T1 instr_regs_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, const T1 f4,
+                      F6 &&f5) const {
+      return std::visit(
+          Overloaded{[&](const typename instr_regs::XCH_regs _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename instr_regs::INC_regs _args) -> T1 {
+                       return f0(_args.d_a0);
+                     },
+                     [&](const typename instr_regs::FIM _args) -> T1 {
+                       return f1(_args.d_a0, _args.d_a1);
+                     },
+                     [&](const typename instr_regs::FIN _args) -> T1 {
+                       return f2(_args.d_a0);
+                     },
+                     [&](const typename instr_regs::ISZ _args) -> T1 {
+                       return f3(_args.d_a0, _args.d_a1);
+                     },
+                     [&](const typename instr_regs::NOP_regs _args) -> T1 {
+                       return f4;
+                     },
+                     [&](const typename instr_regs::ADD_regs _args) -> T1 {
+                       return f5(_args.d_a0);
+                     }},
+          this->v());
+    }
+
+    template <
+        typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, unsigned int> F1,
+        MapsTo<T1, unsigned int, unsigned int> F2, MapsTo<T1, unsigned int> F3,
+        MapsTo<T1, unsigned int, unsigned int> F4, MapsTo<T1, unsigned int> F6>
+    T1 instr_regs_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, const T1 f4,
+                       F6 &&f5) const {
+      return std::visit(
+          Overloaded{[&](const typename instr_regs::XCH_regs _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename instr_regs::INC_regs _args) -> T1 {
+                       return f0(_args.d_a0);
+                     },
+                     [&](const typename instr_regs::FIM _args) -> T1 {
+                       return f1(_args.d_a0, _args.d_a1);
+                     },
+                     [&](const typename instr_regs::FIN _args) -> T1 {
+                       return f2(_args.d_a0);
+                     },
+                     [&](const typename instr_regs::ISZ _args) -> T1 {
+                       return f3(_args.d_a0, _args.d_a1);
+                     },
+                     [&](const typename instr_regs::NOP_regs _args) -> T1 {
+                       return f4;
+                     },
+                     [&](const typename instr_regs::ADD_regs _args) -> T1 {
+                       return f5(_args.d_a0);
+                     }},
+          this->v());
+    }
   };
 
-  template <
-      typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, unsigned int> F1,
-      MapsTo<T1, unsigned int, unsigned int> F2, MapsTo<T1, unsigned int> F3,
-      MapsTo<T1, unsigned int, unsigned int> F4, MapsTo<T1, unsigned int> F6>
-  static T1 instr_regs_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                            const T1 f4, F6 &&f5,
-                            const std::shared_ptr<instr_regs> &i) {
-    return std::visit(
-        Overloaded{
-            [&](const typename instr_regs::XCH_regs _args) -> T1 {
-              return f(_args.d_a0);
-            },
-            [&](const typename instr_regs::INC_regs _args) -> T1 {
-              return f0(_args.d_a0);
-            },
-            [&](const typename instr_regs::FIM _args) -> T1 {
-              return f1(_args.d_a0, _args.d_a1);
-            },
-            [&](const typename instr_regs::FIN _args) -> T1 {
-              return f2(_args.d_a0);
-            },
-            [&](const typename instr_regs::ISZ _args) -> T1 {
-              return f3(_args.d_a0, _args.d_a1);
-            },
-            [&](const typename instr_regs::NOP_regs _args) -> T1 { return f4; },
-            [&](const typename instr_regs::ADD_regs _args) -> T1 {
-              return f5(_args.d_a0);
-            }},
-        i->v());
-  }
-
-  template <
-      typename T1, MapsTo<T1, unsigned int> F0, MapsTo<T1, unsigned int> F1,
-      MapsTo<T1, unsigned int, unsigned int> F2, MapsTo<T1, unsigned int> F3,
-      MapsTo<T1, unsigned int, unsigned int> F4, MapsTo<T1, unsigned int> F6>
-  static T1 instr_regs_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                           const T1 f4, F6 &&f5,
-                           const std::shared_ptr<instr_regs> &i) {
-    return std::visit(
-        Overloaded{
-            [&](const typename instr_regs::XCH_regs _args) -> T1 {
-              return f(_args.d_a0);
-            },
-            [&](const typename instr_regs::INC_regs _args) -> T1 {
-              return f0(_args.d_a0);
-            },
-            [&](const typename instr_regs::FIM _args) -> T1 {
-              return f1(_args.d_a0, _args.d_a1);
-            },
-            [&](const typename instr_regs::FIN _args) -> T1 {
-              return f2(_args.d_a0);
-            },
-            [&](const typename instr_regs::ISZ _args) -> T1 {
-              return f3(_args.d_a0, _args.d_a1);
-            },
-            [&](const typename instr_regs::NOP_regs _args) -> T1 { return f4; },
-            [&](const typename instr_regs::ADD_regs _args) -> T1 {
-              return f5(_args.d_a0);
-            }},
-        i->v());
-  }
-
-  __attribute__((pure)) static bool
-  writes_regs(const std::shared_ptr<instr_regs> &i);
   __attribute__((pure)) static unsigned int count_writes_regs(
       const std::shared_ptr<List<std::shared_ptr<instr_regs>>> &prog);
   static inline const unsigned int test_writes_regs =
@@ -1077,82 +1146,100 @@ struct InstructionClassifiers {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) bool is_jump() const {
+      return std::visit(
+          Overloaded{
+              [](const typename instr_jump::JCN _args) -> bool { return true; },
+              [](const typename instr_jump::JUN _args) -> bool { return true; },
+              [](const typename instr_jump::JMS _args) -> bool { return true; },
+              [](const typename instr_jump::JIN _args) -> bool { return true; },
+              [](const typename instr_jump::BBL_jump _args) -> bool {
+                return true;
+              },
+              [](const typename instr_jump::ISZ_jump _args) -> bool {
+                return true;
+              },
+              [](const typename instr_jump::ADD_jump _args) -> bool {
+                return false;
+              },
+              [](const typename instr_jump::NOP_jump _args) -> bool {
+                return false;
+              }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
+              MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2,
+              MapsTo<T1, unsigned int> F3, MapsTo<T1, unsigned int> F4,
+              MapsTo<T1, unsigned int, unsigned int> F5,
+              MapsTo<T1, unsigned int> F6>
+    T1 instr_jump_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
+                      F6 &&f5, const T1 f6) const {
+      return std::visit(
+          Overloaded{[&](const typename instr_jump::JCN _args) -> T1 {
+                       return f(_args.d_a0, _args.d_a1);
+                     },
+                     [&](const typename instr_jump::JUN _args) -> T1 {
+                       return f0(_args.d_a0);
+                     },
+                     [&](const typename instr_jump::JMS _args) -> T1 {
+                       return f1(_args.d_a0);
+                     },
+                     [&](const typename instr_jump::JIN _args) -> T1 {
+                       return f2(_args.d_a0);
+                     },
+                     [&](const typename instr_jump::BBL_jump _args) -> T1 {
+                       return f3(_args.d_a0);
+                     },
+                     [&](const typename instr_jump::ISZ_jump _args) -> T1 {
+                       return f4(_args.d_a0, _args.d_a1);
+                     },
+                     [&](const typename instr_jump::ADD_jump _args) -> T1 {
+                       return f5(_args.d_a0);
+                     },
+                     [&](const typename instr_jump::NOP_jump _args) -> T1 {
+                       return f6;
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
+              MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2,
+              MapsTo<T1, unsigned int> F3, MapsTo<T1, unsigned int> F4,
+              MapsTo<T1, unsigned int, unsigned int> F5,
+              MapsTo<T1, unsigned int> F6>
+    T1 instr_jump_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
+                       F6 &&f5, const T1 f6) const {
+      return std::visit(
+          Overloaded{[&](const typename instr_jump::JCN _args) -> T1 {
+                       return f(_args.d_a0, _args.d_a1);
+                     },
+                     [&](const typename instr_jump::JUN _args) -> T1 {
+                       return f0(_args.d_a0);
+                     },
+                     [&](const typename instr_jump::JMS _args) -> T1 {
+                       return f1(_args.d_a0);
+                     },
+                     [&](const typename instr_jump::JIN _args) -> T1 {
+                       return f2(_args.d_a0);
+                     },
+                     [&](const typename instr_jump::BBL_jump _args) -> T1 {
+                       return f3(_args.d_a0);
+                     },
+                     [&](const typename instr_jump::ISZ_jump _args) -> T1 {
+                       return f4(_args.d_a0, _args.d_a1);
+                     },
+                     [&](const typename instr_jump::ADD_jump _args) -> T1 {
+                       return f5(_args.d_a0);
+                     },
+                     [&](const typename instr_jump::NOP_jump _args) -> T1 {
+                       return f6;
+                     }},
+          this->v());
+    }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2,
-            MapsTo<T1, unsigned int> F3, MapsTo<T1, unsigned int> F4,
-            MapsTo<T1, unsigned int, unsigned int> F5,
-            MapsTo<T1, unsigned int> F6>
-  static T1 instr_jump_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
-                            F6 &&f5, const T1 f6,
-                            const std::shared_ptr<instr_jump> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instr_jump::JCN _args) -> T1 {
-                     return f(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename instr_jump::JUN _args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename instr_jump::JMS _args) -> T1 {
-                     return f1(_args.d_a0);
-                   },
-                   [&](const typename instr_jump::JIN _args) -> T1 {
-                     return f2(_args.d_a0);
-                   },
-                   [&](const typename instr_jump::BBL_jump _args) -> T1 {
-                     return f3(_args.d_a0);
-                   },
-                   [&](const typename instr_jump::ISZ_jump _args) -> T1 {
-                     return f4(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename instr_jump::ADD_jump _args) -> T1 {
-                     return f5(_args.d_a0);
-                   },
-                   [&](const typename instr_jump::NOP_jump _args) -> T1 {
-                     return f6;
-                   }},
-        i->v());
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2,
-            MapsTo<T1, unsigned int> F3, MapsTo<T1, unsigned int> F4,
-            MapsTo<T1, unsigned int, unsigned int> F5,
-            MapsTo<T1, unsigned int> F6>
-  static T1 instr_jump_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
-                           F6 &&f5, const T1 f6,
-                           const std::shared_ptr<instr_jump> &i) {
-    return std::visit(
-        Overloaded{[&](const typename instr_jump::JCN _args) -> T1 {
-                     return f(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename instr_jump::JUN _args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename instr_jump::JMS _args) -> T1 {
-                     return f1(_args.d_a0);
-                   },
-                   [&](const typename instr_jump::JIN _args) -> T1 {
-                     return f2(_args.d_a0);
-                   },
-                   [&](const typename instr_jump::BBL_jump _args) -> T1 {
-                     return f3(_args.d_a0);
-                   },
-                   [&](const typename instr_jump::ISZ_jump _args) -> T1 {
-                     return f4(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename instr_jump::ADD_jump _args) -> T1 {
-                     return f5(_args.d_a0);
-                   },
-                   [&](const typename instr_jump::NOP_jump _args) -> T1 {
-                     return f6;
-                   }},
-        i->v());
-  }
-
-  __attribute__((pure)) static bool
-  is_jump(const std::shared_ptr<instr_jump> &i);
   __attribute__((pure)) static unsigned int
   count_jumps(const std::shared_ptr<List<std::shared_ptr<instr_jump>>> &prog);
   static inline const unsigned int test_jump_classifier =

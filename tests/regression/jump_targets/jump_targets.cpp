@@ -12,26 +12,6 @@
 #include <utility>
 #include <variant>
 
-__attribute__((pure)) std::optional<unsigned int>
-JumpTargets::jump_target_collection(
-    const std::shared_ptr<JumpTargets::instr_collection> &i) {
-  return std::visit(
-      Overloaded{
-          [](const typename JumpTargets::instr_collection::JUN_coll _args)
-              -> std::optional<unsigned int> {
-            return std::make_optional<unsigned int>(_args.d_a0);
-          },
-          [](const typename JumpTargets::instr_collection::JMS_coll _args)
-              -> std::optional<unsigned int> {
-            return std::make_optional<unsigned int>(_args.d_a0);
-          },
-          [](const typename JumpTargets::instr_collection::NOP_coll _args)
-              -> std::optional<unsigned int> {
-            return std::optional<unsigned int>();
-          }},
-      i->v());
-}
-
 std::shared_ptr<List<unsigned int>> JumpTargets::collect_targets(
     const std::shared_ptr<List<std::shared_ptr<JumpTargets::instr_collection>>>
         &prog) {
@@ -45,8 +25,8 @@ std::shared_ptr<List<unsigned int>> JumpTargets::collect_targets(
           [](const typename List<
               std::shared_ptr<JumpTargets::instr_collection>>::Cons _args)
               -> std::shared_ptr<List<unsigned int>> {
-            if (jump_target_collection(_args.d_a0).has_value()) {
-              unsigned int a = *jump_target_collection(_args.d_a0);
+            if (_args.d_a0->jump_target_collection().has_value()) {
+              unsigned int a = *_args.d_a0->jump_target_collection();
               return List<unsigned int>::ctor::Cons_(
                   a, collect_targets(_args.d_a1));
             } else {
@@ -62,52 +42,15 @@ JumpTargets::addr_in_region(const unsigned int addr,
   return (l->base_ <= addr && addr < (l->base_ + l->code_));
 }
 
-__attribute__((pure)) std::optional<unsigned int>
-JumpTargets::jump_target_region(
-    const std::shared_ptr<JumpTargets::instr_region> &i) {
-  return std::visit(
-      Overloaded{[](const typename JumpTargets::instr_region::JUN_reg _args)
-                     -> std::optional<unsigned int> {
-                   return std::make_optional<unsigned int>(_args.d_a0);
-                 },
-                 [](const typename JumpTargets::instr_region::JMS_reg _args)
-                     -> std::optional<unsigned int> {
-                   return std::make_optional<unsigned int>(_args.d_a0);
-                 },
-                 [](const typename JumpTargets::instr_region::NOP_reg _args)
-                     -> std::optional<unsigned int> {
-                   return std::optional<unsigned int>();
-                 }},
-      i->v());
-}
-
 __attribute__((pure)) bool
 JumpTargets::in_layout(const std::shared_ptr<JumpTargets::layout> &l,
                        const std::shared_ptr<JumpTargets::instr_region> &i) {
-  if (jump_target_region(i).has_value()) {
-    unsigned int a = *jump_target_region(i);
+  if (i->jump_target_region().has_value()) {
+    unsigned int a = *i->jump_target_region();
     return addr_in_region(a, l);
   } else {
     return true;
   }
-}
-
-__attribute__((pure)) std::optional<unsigned int>
-JumpTargets::jump_target_jms(const std::shared_ptr<JumpTargets::instr_jms> &i) {
-  return std::visit(
-      Overloaded{[](const typename JumpTargets::instr_jms::JUN_jms _args)
-                     -> std::optional<unsigned int> {
-                   return std::make_optional<unsigned int>(_args.d_a0);
-                 },
-                 [](const typename JumpTargets::instr_jms::JMS_jms _args)
-                     -> std::optional<unsigned int> {
-                   return std::make_optional<unsigned int>(_args.d_a0);
-                 },
-                 [](const typename JumpTargets::instr_jms::NOP_jms _args)
-                     -> std::optional<unsigned int> {
-                   return std::optional<unsigned int>();
-                 }},
-      i->v());
 }
 
 __attribute__((pure)) unsigned int
@@ -118,24 +61,6 @@ JumpTargets::option_nat_or_zero(const std::optional<unsigned int> o) {
   } else {
     return 0u;
   }
-}
-
-__attribute__((pure)) std::optional<unsigned int>
-JumpTargets::jump_target_jun(const std::shared_ptr<JumpTargets::instr_jun> &i) {
-  return std::visit(
-      Overloaded{[](const typename JumpTargets::instr_jun::JUN_jun _args)
-                     -> std::optional<unsigned int> {
-                   return std::make_optional<unsigned int>(_args.d_a0);
-                 },
-                 [](const typename JumpTargets::instr_jun::JMS_jun _args)
-                     -> std::optional<unsigned int> {
-                   return std::make_optional<unsigned int>(_args.d_a0);
-                 },
-                 [](const typename JumpTargets::instr_jun::NOP_jun _args)
-                     -> std::optional<unsigned int> {
-                   return std::optional<unsigned int>();
-                 }},
-      i->v());
 }
 
 __attribute__((pure)) unsigned int

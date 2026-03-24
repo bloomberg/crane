@@ -55,32 +55,31 @@ struct PolyInductive {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    t_A punbox() const {
+      return std::visit(
+          Overloaded{[](const typename pbox<t_A>::PBox _args) -> t_A {
+            return _args.d_a0;
+          }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, t_A> F0> T1 pbox_rec(F0 &&f) const {
+      return std::visit(
+          Overloaded{[&](const typename pbox<t_A>::PBox _args) -> T1 {
+            return f(_args.d_a0);
+          }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, t_A> F0> T1 pbox_rect(F0 &&f) const {
+      return std::visit(
+          Overloaded{[&](const typename pbox<t_A>::PBox _args) -> T1 {
+            return f(_args.d_a0);
+          }},
+          this->v());
+    }
   };
-
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  static T2 pbox_rect(F0 &&f, const std::shared_ptr<pbox<T1>> &p) {
-    return std::visit(
-        Overloaded{[&](const typename pbox<T1>::PBox _args) -> T2 {
-          return f(_args.d_a0);
-        }},
-        p->v());
-  }
-
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  static T2 pbox_rec(F0 &&f, const std::shared_ptr<pbox<T1>> &p) {
-    return std::visit(
-        Overloaded{[&](const typename pbox<T1>::PBox _args) -> T2 {
-          return f(_args.d_a0);
-        }},
-        p->v());
-  }
-
-  template <typename T1> static T1 punbox(const std::shared_ptr<pbox<T1>> &b) {
-    return std::visit(Overloaded{[](const typename pbox<T1>::PBox _args) -> T1 {
-                        return _args.d_a0;
-                      }},
-                      b->v());
-  }
 
   template <typename t_A, typename t_B> struct ppair {
     // TYPES
@@ -119,43 +118,40 @@ struct PolyInductive {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    t_B psnd() const {
+      return std::visit(
+          Overloaded{[](const typename ppair<t_A, t_B>::PPair _args) -> t_B {
+            return _args.d_a1;
+          }},
+          this->v());
+    }
+
+    t_A pfst() const {
+      return std::visit(
+          Overloaded{[](const typename ppair<t_A, t_B>::PPair _args) -> t_A {
+            return _args.d_a0;
+          }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, t_A, t_B> F0> T1 ppair_rec(F0 &&f) const {
+      return std::visit(
+          Overloaded{[&](const typename ppair<t_A, t_B>::PPair _args) -> T1 {
+            return f(_args.d_a0, _args.d_a1);
+          }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, t_A, t_B> F0>
+    T1 ppair_rect(F0 &&f) const {
+      return std::visit(
+          Overloaded{[&](const typename ppair<t_A, t_B>::PPair _args) -> T1 {
+            return f(_args.d_a0, _args.d_a1);
+          }},
+          this->v());
+    }
   };
-
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
-  static T3 ppair_rect(F0 &&f, const std::shared_ptr<ppair<T1, T2>> &p) {
-    return std::visit(
-        Overloaded{[&](const typename ppair<T1, T2>::PPair _args) -> T3 {
-          return f(_args.d_a0, _args.d_a1);
-        }},
-        p->v());
-  }
-
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
-  static T3 ppair_rec(F0 &&f, const std::shared_ptr<ppair<T1, T2>> &p) {
-    return std::visit(
-        Overloaded{[&](const typename ppair<T1, T2>::PPair _args) -> T3 {
-          return f(_args.d_a0, _args.d_a1);
-        }},
-        p->v());
-  }
-
-  template <typename T1, typename T2>
-  static T1 pfst(const std::shared_ptr<ppair<T1, T2>> &p) {
-    return std::visit(
-        Overloaded{[](const typename ppair<T1, T2>::PPair _args) -> T1 {
-          return _args.d_a0;
-        }},
-        p->v());
-  }
-
-  template <typename T1, typename T2>
-  static T2 psnd(const std::shared_ptr<ppair<T1, T2>> &p) {
-    return std::visit(
-        Overloaded{[](const typename ppair<T1, T2>::PPair _args) -> T2 {
-          return _args.d_a1;
-        }},
-        p->v());
-  }
 
   template <typename t_A> struct pmaybe {
     // TYPES
@@ -203,6 +199,20 @@ struct PolyInductive {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <typename T1, MapsTo<T1, t_A> F0>
+    std::shared_ptr<pmaybe<T1>> pmaybe_map(F0 &&f) const {
+      return std::visit(
+          Overloaded{[](const typename pmaybe<t_A>::PNothing _args)
+                         -> std::shared_ptr<pmaybe<T1>> {
+                       return pmaybe<T1>::ctor::PNothing_();
+                     },
+                     [&](const typename pmaybe<t_A>::PJust _args)
+                         -> std::shared_ptr<pmaybe<T1>> {
+                       return pmaybe<T1>::ctor::PJust_(f(_args.d_a0));
+                     }},
+          this->v());
+    }
   };
 
   template <typename T1, typename T2, MapsTo<T2, T1> F1>
@@ -227,21 +237,6 @@ struct PolyInductive {
               return f0(_args.d_a0);
             }},
         p->v());
-  }
-
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  static std::shared_ptr<pmaybe<T2>>
-  pmaybe_map(F0 &&f, const std::shared_ptr<pmaybe<T1>> &m) {
-    return std::visit(Overloaded{[](const typename pmaybe<T1>::PNothing _args)
-                                     -> std::shared_ptr<pmaybe<T2>> {
-                                   return pmaybe<T2>::ctor::PNothing_();
-                                 },
-                                 [&](const typename pmaybe<T1>::PJust _args)
-                                     -> std::shared_ptr<pmaybe<T2>> {
-                                   return pmaybe<T2>::ctor::PJust_(
-                                       f(_args.d_a0));
-                                 }},
-                      m->v());
   }
 
   template <typename T1>
@@ -308,77 +303,78 @@ struct PolyInductive {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) unsigned int ptree_size() const {
+      return std::visit(
+          Overloaded{
+              [](const typename ptree<t_A>::PLeaf _args) -> unsigned int {
+                return 1u;
+              },
+              [](const typename ptree<t_A>::PNode _args) -> unsigned int {
+                return ((_args.d_a0->ptree_size() + _args.d_a1->ptree_size()) +
+                        1);
+              }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, t_A> F0,
+              MapsTo<T1, std::shared_ptr<ptree<t_A>>, T1,
+                     std::shared_ptr<ptree<t_A>>, T1>
+                  F1>
+    T1 ptree_rec(F0 &&f, F1 &&f0) const {
+      return std::visit(
+          Overloaded{[&](const typename ptree<t_A>::PLeaf _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename ptree<t_A>::PNode _args) -> T1 {
+                       return f0(_args.d_a0,
+                                 _args.d_a0->template ptree_rec<T1>(f, f0),
+                                 _args.d_a1,
+                                 _args.d_a1->template ptree_rec<T1>(f, f0));
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, t_A> F0,
+              MapsTo<T1, std::shared_ptr<ptree<t_A>>, T1,
+                     std::shared_ptr<ptree<t_A>>, T1>
+                  F1>
+    T1 ptree_rect(F0 &&f, F1 &&f0) const {
+      return std::visit(
+          Overloaded{[&](const typename ptree<t_A>::PLeaf _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename ptree<t_A>::PNode _args) -> T1 {
+                       return f0(_args.d_a0,
+                                 _args.d_a0->template ptree_rect<T1>(f, f0),
+                                 _args.d_a1,
+                                 _args.d_a1->template ptree_rect<T1>(f, f0));
+                     }},
+          this->v());
+    }
   };
 
-  template <
-      typename T1, typename T2, MapsTo<T2, T1> F0,
-      MapsTo<T2, std::shared_ptr<ptree<T1>>, T2, std::shared_ptr<ptree<T1>>, T2>
-          F1>
-  static T2 ptree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<ptree<T1>> &p) {
-    return std::visit(
-        Overloaded{[&](const typename ptree<T1>::PLeaf _args) -> T2 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename ptree<T1>::PNode _args) -> T2 {
-                     return f0(
-                         _args.d_a0, ptree_rect<T1, T2>(f, f0, _args.d_a0),
-                         _args.d_a1, ptree_rect<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        p->v());
-  }
-
-  template <
-      typename T1, typename T2, MapsTo<T2, T1> F0,
-      MapsTo<T2, std::shared_ptr<ptree<T1>>, T2, std::shared_ptr<ptree<T1>>, T2>
-          F1>
-  static T2 ptree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<ptree<T1>> &p) {
-    return std::visit(
-        Overloaded{[&](const typename ptree<T1>::PLeaf _args) -> T2 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename ptree<T1>::PNode _args) -> T2 {
-                     return f0(_args.d_a0, ptree_rec<T1, T2>(f, f0, _args.d_a0),
-                               _args.d_a1,
-                               ptree_rec<T1, T2>(f, f0, _args.d_a1));
-                   }},
-        p->v());
-  }
-
-  template <typename T1>
-  __attribute__((pure)) static unsigned int
-  ptree_size(const std::shared_ptr<ptree<T1>> &t) {
-    return std::visit(
-        Overloaded{[](const typename ptree<T1>::PLeaf _args) -> unsigned int {
-                     return 1u;
-                   },
-                   [](const typename ptree<T1>::PNode _args) -> unsigned int {
-                     return ((ptree_size<T1>(_args.d_a0) +
-                              ptree_size<T1>(_args.d_a1)) +
-                             1);
-                   }},
-        t->v());
-  }
-
   static inline const unsigned int test_pbox =
-      punbox<unsigned int>(pbox<unsigned int>::ctor::PBox_(42u));
-  static inline const unsigned int test_ppair_fst = pfst<unsigned int, bool>(
-      ppair<unsigned int, bool>::ctor::PPair_(7u, true));
-  static inline const bool test_ppair_snd = psnd<unsigned int, bool>(
-      ppair<unsigned int, bool>::ctor::PPair_(7u, true));
+      pbox<unsigned int>::ctor::PBox_(42u)->punbox();
+  static inline const unsigned int test_ppair_fst =
+      ppair<unsigned int, bool>::ctor::PPair_(7u, true)->pfst();
+  static inline const bool test_ppair_snd =
+      ppair<unsigned int, bool>::ctor::PPair_(7u, true)->psnd();
   static inline const unsigned int test_pjust =
       pmaybe_default<unsigned int>(0u, pmaybe<unsigned int>::ctor::PJust_(99u));
   static inline const unsigned int test_pnothing =
       pmaybe_default<unsigned int>(0u, pmaybe<unsigned int>::ctor::PNothing_());
   static inline const unsigned int test_pmap = pmaybe_default<unsigned int>(
-      0u, pmaybe_map<unsigned int, unsigned int>(
-              [](unsigned int x) { return (x + 1); },
-              pmaybe<unsigned int>::ctor::PJust_(5u)));
+      0u,
+      pmaybe<unsigned int>::ctor::PJust_(5u)->template pmaybe_map<unsigned int>(
+          [](unsigned int x) { return (x + 1); }));
   static inline const unsigned int test_ptree =
-      ptree_size<unsigned int>(ptree<unsigned int>::ctor::PNode_(
+      ptree<unsigned int>::ctor::PNode_(
           ptree<unsigned int>::ctor::PLeaf_(1u),
           ptree<unsigned int>::ctor::PNode_(
               ptree<unsigned int>::ctor::PLeaf_(2u),
-              ptree<unsigned int>::ctor::PLeaf_(3u))));
+              ptree<unsigned int>::ctor::PLeaf_(3u)))
+          ->ptree_size();
 };
 
 #endif // INCLUDED_POLY_INDUCTIVE

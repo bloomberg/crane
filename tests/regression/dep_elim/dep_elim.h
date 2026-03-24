@@ -123,38 +123,43 @@ struct DepElim {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) unsigned int fin_to_nat(const unsigned int _x) const {
+      return std::visit(
+          Overloaded{
+              [](const typename fin::FZ _args) -> unsigned int { return 0u; },
+              [](const typename fin::FS _args) -> unsigned int {
+                return (_args.d_a1->fin_to_nat(_args.d_a0) + 1);
+              }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, unsigned int, std::shared_ptr<fin>, T1> F1>
+    T1 fin_rec(F0 &&f, F1 &&f0, const unsigned int _x) const {
+      return std::visit(
+          Overloaded{
+              [&](const typename fin::FZ _args) -> T1 { return f(_args.d_a0); },
+              [&](const typename fin::FS _args) -> T1 {
+                return f0(_args.d_a0, _args.d_a1,
+                          _args.d_a1->template fin_rec<T1>(f, f0, _args.d_a0));
+              }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, unsigned int, std::shared_ptr<fin>, T1> F1>
+    T1 fin_rect(F0 &&f, F1 &&f0, const unsigned int _x) const {
+      return std::visit(
+          Overloaded{
+              [&](const typename fin::FZ _args) -> T1 { return f(_args.d_a0); },
+              [&](const typename fin::FS _args) -> T1 {
+                return f0(_args.d_a0, _args.d_a1,
+                          _args.d_a1->template fin_rect<T1>(f, f0, _args.d_a0));
+              }},
+          this->v());
+    }
   };
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int, std::shared_ptr<fin>, T1> F1>
-  static T1 fin_rect(F0 &&f, F1 &&f0, const unsigned int _x,
-                     const std::shared_ptr<fin> &f1) {
-    return std::visit(
-        Overloaded{
-            [&](const typename fin::FZ _args) -> T1 { return f(_args.d_a0); },
-            [&](const typename fin::FS _args) -> T1 {
-              return f0(_args.d_a0, _args.d_a1,
-                        fin_rect<T1>(f, f0, _args.d_a0, _args.d_a1));
-            }},
-        f1->v());
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int, std::shared_ptr<fin>, T1> F1>
-  static T1 fin_rec(F0 &&f, F1 &&f0, const unsigned int _x,
-                    const std::shared_ptr<fin> &f1) {
-    return std::visit(
-        Overloaded{
-            [&](const typename fin::FZ _args) -> T1 { return f(_args.d_a0); },
-            [&](const typename fin::FS _args) -> T1 {
-              return f0(_args.d_a0, _args.d_a1,
-                        fin_rec<T1>(f, f0, _args.d_a0, _args.d_a1));
-            }},
-        f1->v());
-  }
-
-  __attribute__((pure)) static unsigned int
-  fin_to_nat(const unsigned int _x, const std::shared_ptr<fin> &f);
 
   template <typename t_A> struct vec {
     // TYPES
@@ -206,6 +211,58 @@ struct DepElim {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    std::shared_ptr<vec<t_A>> vec_tail(const unsigned int _x) const {
+      return std::visit(
+          Overloaded{[](const typename vec<t_A>::Vnil _args)
+                         -> std::shared_ptr<vec<t_A>> {
+                       throw std::logic_error("unreachable");
+                     },
+                     [](const typename vec<t_A>::Vcons _args)
+                         -> std::shared_ptr<vec<t_A>> { return _args.d_a2; }},
+          this->v());
+    }
+
+    t_A vec_head(const unsigned int _x) const {
+      return std::visit(
+          Overloaded{[](const typename vec<t_A>::Vnil _args) -> t_A {
+                       throw std::logic_error("unreachable");
+                     },
+                     [](const typename vec<t_A>::Vcons _args) -> t_A {
+                       return _args.d_a1;
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, t_A> F1>
+    std::shared_ptr<vec<T1>> vec_map(const unsigned int _x, F1 &&f) const {
+      return std::visit(
+          Overloaded{[](const typename vec<t_A>::Vnil _args)
+                         -> std::shared_ptr<vec<T1>> {
+                       return vec<T1>::ctor::Vnil_();
+                     },
+                     [&](const typename vec<t_A>::Vcons _args)
+                         -> std::shared_ptr<vec<T1>> {
+                       return vec<T1>::ctor::Vcons_(
+                           _args.d_a0, f(_args.d_a1),
+                           _args.d_a2->template vec_map<T1>(_args.d_a0, f));
+                     }},
+          this->v());
+    }
+
+    std::shared_ptr<List<t_A>> vec_to_list(const unsigned int _x) const {
+      return std::visit(Overloaded{[](const typename vec<t_A>::Vnil _args)
+                                       -> std::shared_ptr<List<t_A>> {
+                                     return List<t_A>::ctor::Nil_();
+                                   },
+                                   [](const typename vec<t_A>::Vcons _args)
+                                       -> std::shared_ptr<List<t_A>> {
+                                     return List<t_A>::ctor::Cons_(
+                                         _args.d_a1,
+                                         _args.d_a2->vec_to_list(_args.d_a0));
+                                   }},
+                        this->v());
+    }
   };
 
   template <typename T1, typename T2,
@@ -231,63 +288,6 @@ struct DepElim {
                      return f0(_args.d_a0, _args.d_a1, _args.d_a2,
                                vec_rec<T1, T2>(f, f0, _args.d_a0, _args.d_a2));
                    }},
-        v->v());
-  }
-
-  template <typename T1>
-  static std::shared_ptr<List<T1>>
-  vec_to_list(const unsigned int _x, const std::shared_ptr<vec<T1>> &v) {
-    return std::visit(Overloaded{[](const typename vec<T1>::Vnil _args)
-                                     -> std::shared_ptr<List<T1>> {
-                                   return List<T1>::ctor::Nil_();
-                                 },
-                                 [](const typename vec<T1>::Vcons _args)
-                                     -> std::shared_ptr<List<T1>> {
-                                   return List<T1>::ctor::Cons_(
-                                       _args.d_a1,
-                                       vec_to_list<T1>(_args.d_a0, _args.d_a2));
-                                 }},
-                      v->v());
-  }
-
-  template <typename T1, typename T2, MapsTo<T2, T1> F1>
-  static std::shared_ptr<vec<T2>> vec_map(const unsigned int _x, F1 &&f,
-                                          const std::shared_ptr<vec<T1>> &v) {
-    return std::visit(
-        Overloaded{
-            [](const typename vec<T1>::Vnil _args) -> std::shared_ptr<vec<T2>> {
-              return vec<T2>::ctor::Vnil_();
-            },
-            [&](const typename vec<T1>::Vcons _args)
-                -> std::shared_ptr<vec<T2>> {
-              return vec<T2>::ctor::Vcons_(
-                  _args.d_a0, f(_args.d_a1),
-                  vec_map<T1, T2>(_args.d_a0, f, _args.d_a2));
-            }},
-        v->v());
-  }
-
-  template <typename T1>
-  static T1 vec_head(const unsigned int _x, const std::shared_ptr<vec<T1>> &v) {
-    return std::visit(Overloaded{[](const typename vec<T1>::Vnil _args) -> T1 {
-                                   throw std::logic_error("unreachable");
-                                 },
-                                 [](const typename vec<T1>::Vcons _args) -> T1 {
-                                   return _args.d_a1;
-                                 }},
-                      v->v());
-  }
-
-  template <typename T1>
-  static std::shared_ptr<vec<T1>> vec_tail(const unsigned int _x,
-                                           const std::shared_ptr<vec<T1>> &v) {
-    return std::visit(
-        Overloaded{
-            [](const typename vec<T1>::Vnil _args) -> std::shared_ptr<vec<T1>> {
-              throw std::logic_error("unreachable");
-            },
-            [](const typename vec<T1>::Vcons _args)
-                -> std::shared_ptr<vec<T1>> { return _args.d_a2; }},
         v->v());
   }
 
@@ -337,38 +337,46 @@ struct DepElim {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) unsigned int get_present() const {
+      return std::visit(
+          Overloaded{[](const typename avail::Present _args) -> unsigned int {
+                       return _args.d_a0;
+                     },
+                     [](const typename avail::Absent _args) -> unsigned int {
+                       throw std::logic_error("unreachable");
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0>
+    T1 avail_rec(F0 &&f, const T1 f0, const bool _x) const {
+      return std::visit(
+          Overloaded{
+              [&](const typename avail::Present _args) -> T1 {
+                return f(_args.d_a0);
+              },
+              [&](const typename avail::Absent _args) -> T1 { return f0; }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0>
+    T1 avail_rect(F0 &&f, const T1 f0, const bool _x) const {
+      return std::visit(
+          Overloaded{
+              [&](const typename avail::Present _args) -> T1 {
+                return f(_args.d_a0);
+              },
+              [&](const typename avail::Absent _args) -> T1 { return f0; }},
+          this->v());
+    }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0>
-  static T1 avail_rect(F0 &&f, const T1 f0, const bool _x,
-                       const std::shared_ptr<avail> &a) {
-    return std::visit(
-        Overloaded{
-            [&](const typename avail::Present _args) -> T1 {
-              return f(_args.d_a0);
-            },
-            [&](const typename avail::Absent _args) -> T1 { return f0; }},
-        a->v());
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F0>
-  static T1 avail_rec(F0 &&f, const T1 f0, const bool _x,
-                      const std::shared_ptr<avail> &a) {
-    return std::visit(
-        Overloaded{
-            [&](const typename avail::Present _args) -> T1 {
-              return f(_args.d_a0);
-            },
-            [&](const typename avail::Absent _args) -> T1 { return f0; }},
-        a->v());
-  }
-
-  __attribute__((pure)) static unsigned int
-  get_present(const std::shared_ptr<avail> &a);
   static inline const unsigned int test_fin0 =
-      fin_to_nat(3u, fin::ctor::FZ_(2u));
-  static inline const unsigned int test_fin2 = fin_to_nat(
-      3u, fin::ctor::FS_(2u, fin::ctor::FS_(1u, fin::ctor::FZ_(0u))));
+      fin::ctor::FZ_(2u)->fin_to_nat(3u);
+  static inline const unsigned int test_fin2 =
+      fin::ctor::FS_(2u, fin::ctor::FS_(1u, fin::ctor::FZ_(0u)))
+          ->fin_to_nat(3u);
   static inline const std::shared_ptr<vec<unsigned int>> my_vec =
       vec<unsigned int>::ctor::Vcons_(
           2u, 10u,
@@ -377,17 +385,17 @@ struct DepElim {
               vec<unsigned int>::ctor::Vcons_(
                   0u, 30u, vec<unsigned int>::ctor::Vnil_())));
   static inline const std::shared_ptr<List<unsigned int>> test_vec_list =
-      vec_to_list<unsigned int>(3u, my_vec);
-  static inline const unsigned int test_vec_head =
-      vec_head<unsigned int>(2u, my_vec);
+      my_vec->vec_to_list(3u);
+  static inline const unsigned int test_vec_head = my_vec->vec_head(2u);
   static inline const std::shared_ptr<List<unsigned int>> test_vec_tail_list =
-      vec_to_list<unsigned int>(2u, vec_tail<unsigned int>(2u, my_vec));
+      my_vec->vec_tail(2u)->vec_to_list(2u);
   static inline const std::shared_ptr<List<unsigned int>> test_vec_map =
-      vec_to_list<unsigned int>(
-          3u, vec_map<unsigned int, unsigned int>(
-                  3u, [](unsigned int n) { return (n + 1u); }, my_vec));
+      my_vec
+          ->template vec_map<unsigned int>(
+              3u, [](unsigned int n) { return (n + 1u); })
+          ->vec_to_list(3u);
   static inline const unsigned int test_present =
-      get_present(avail::ctor::Present_(42u));
+      avail::ctor::Present_(42u)->get_present();
 };
 
 #endif // INCLUDED_DEP_ELIM

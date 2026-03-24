@@ -58,25 +58,23 @@ struct BenchLetIn {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <typename T1, MapsTo<T1, t_A, t_B> F0> T1 pair_rec(F0 &&f) const {
+      return std::visit(
+          Overloaded{[&](const typename pair<t_A, t_B>::Pair0 _args) -> T1 {
+            return f(_args.d_a0, _args.d_a1);
+          }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, t_A, t_B> F0> T1 pair_rect(F0 &&f) const {
+      return std::visit(
+          Overloaded{[&](const typename pair<t_A, t_B>::Pair0 _args) -> T1 {
+            return f(_args.d_a0, _args.d_a1);
+          }},
+          this->v());
+    }
   };
-
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
-  static T3 pair_rect(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
-    return std::visit(
-        Overloaded{[&](const typename pair<T1, T2>::Pair0 _args) -> T3 {
-          return f(_args.d_a0, _args.d_a1);
-        }},
-        p->v());
-  }
-
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
-  static T3 pair_rec(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
-    return std::visit(
-        Overloaded{[&](const typename pair<T1, T2>::Pair0 _args) -> T3 {
-          return f(_args.d_a0, _args.d_a1);
-        }},
-        p->v());
-  }
 
   __attribute__((pure)) static unsigned int swap_snd(const unsigned int a,
                                                      const unsigned int b);
@@ -128,27 +126,27 @@ struct BenchLetIn {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <typename T1, MapsTo<T1, t_A, t_B, t_C> F0>
+    T1 triple_rec(F0 &&f) const {
+      return std::visit(
+          Overloaded{
+              [&](const typename triple<t_A, t_B, t_C>::Triple0 _args) -> T1 {
+                return f(_args.d_a0, _args.d_a1, _args.d_a2);
+              }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, t_A, t_B, t_C> F0>
+    T1 triple_rect(F0 &&f) const {
+      return std::visit(
+          Overloaded{
+              [&](const typename triple<t_A, t_B, t_C>::Triple0 _args) -> T1 {
+                return f(_args.d_a0, _args.d_a1, _args.d_a2);
+              }},
+          this->v());
+    }
   };
-
-  template <typename T1, typename T2, typename T3, typename T4,
-            MapsTo<T4, T1, T2, T3> F0>
-  static T4 triple_rect(F0 &&f, const std::shared_ptr<triple<T1, T2, T3>> &t) {
-    return std::visit(
-        Overloaded{[&](const typename triple<T1, T2, T3>::Triple0 _args) -> T4 {
-          return f(_args.d_a0, _args.d_a1, _args.d_a2);
-        }},
-        t->v());
-  }
-
-  template <typename T1, typename T2, typename T3, typename T4,
-            MapsTo<T4, T1, T2, T3> F0>
-  static T4 triple_rec(F0 &&f, const std::shared_ptr<triple<T1, T2, T3>> &t) {
-    return std::visit(
-        Overloaded{[&](const typename triple<T1, T2, T3>::Triple0 _args) -> T4 {
-          return f(_args.d_a0, _args.d_a1, _args.d_a2);
-        }},
-        t->v());
-  }
 
   __attribute__((pure)) static unsigned int
   mid3(const unsigned int a, const unsigned int b, const unsigned int c);

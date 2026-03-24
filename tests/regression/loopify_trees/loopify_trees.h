@@ -75,17 +75,15 @@ public:
     std::shared_ptr<List<t_A>> _head{};
     std::shared_ptr<List<t_A>> _last{};
     const List *_loop_self = this;
-    std::shared_ptr<List<t_A>> _loop_m = m;
     bool _continue = true;
     while (_continue) {
       std::visit(
           Overloaded{
               [&](const typename List<t_A>::Nil _args) {
                 if (_last) {
-                  std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =
-                      _loop_m;
+                  std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
                 } else {
-                  _head = _loop_m;
+                  _head = m;
                 }
                 _continue = false;
               },
@@ -98,10 +96,7 @@ public:
                   _head = _cell;
                 }
                 _last = _cell;
-                List *_next_self = _loop_m.get();
-                std::shared_ptr<List<t_A>> _next_m = _args.d_a1;
-                _loop_self = std::move(_next_self);
-                _loop_m = std::move(_next_m);
+                _loop_self = _args.d_a1.get();
               }},
           _loop_self->v());
     }
@@ -163,6 +158,466 @@ struct LoopifyTrees {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    /// tree_map f t applies f to all values in tree.
+    template <typename T1, MapsTo<T1, t_A> F0>
+    std::shared_ptr<tree<T1>> tree_map(F0 &&f) const {
+      const tree *_self = this;
+
+      struct _Enter {
+        const tree *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename tree<t_A>::Node &>()
+                     .d_a0.get()) _s0;
+        decltype(std::declval<F0 &>()(
+            std::declval<const typename tree<t_A>::Node &>().d_a1)) _s1;
+      };
+
+      struct _Call2 {
+        std::shared_ptr<tree<T1>> _s0;
+        decltype(std::declval<F0 &>()(
+            std::declval<const typename tree<t_A>::Node &>().d_a1)) _s1;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      std::shared_ptr<tree<T1>> _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const tree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename tree<t_A>::Leaf _args) -> void {
+                            _result = tree<T1>::ctor::Leaf_();
+                          },
+                          [&](const typename tree<t_A>::Node _args) -> void {
+                            _stack.push_back(
+                                _Call1{_args.d_a0.get(), f(_args.d_a1)});
+                            _stack.push_back(_Enter{_args.d_a2.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _result = tree<T1>::ctor::Node_(_result, _f._s1, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    /// mirror_equal t1 t2 checks if t1 and t2 are mirror images.
+    __attribute__((pure)) bool
+    mirror_equal(const std::shared_ptr<tree<t_A>> &t2) const {
+      const tree *_self = this;
+
+      struct _Enter {
+        const tree *_self;
+        const std::shared_ptr<tree<t_A>> t2;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename tree<t_A>::Node &>()
+                     .d_a0.get()) _s0;
+        decltype(std::declval<const typename tree<t_A>::Node &>().d_a2) _s1;
+        decltype(true) _s2;
+      };
+
+      struct _Call2 {
+        bool _s0;
+        decltype(true) _s1;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      bool _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self, t2});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const tree *_self = _f._self;
+                  const std::shared_ptr<tree<t_A>> t2 = _f.t2;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename tree<t_A>::Leaf _args) -> void {
+                            _result = std::visit(
+                                Overloaded{
+                                    [](const typename tree<t_A>::Leaf _args0)
+                                        -> bool { return true; },
+                                    [](const typename tree<t_A>::Node _args0)
+                                        -> bool { return false; }},
+                                t2->v());
+                          },
+                          [&](const typename tree<t_A>::Node _args) -> void {
+                            std::visit(
+                                Overloaded{
+                                    [&](const typename tree<t_A>::Leaf _args0)
+                                        -> void { _result = false; },
+                                    [&](const typename tree<t_A>::Node _args0)
+                                        -> void {
+                                      _stack.push_back(_Call1{
+                                          _args.d_a0.get(), _args0.d_a2, true});
+                                      _stack.push_back(_Enter{_args.d_a2.get(),
+                                                              _args0.d_a0});
+                                    }},
+                                t2->v());
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s2});
+                  _stack.push_back(_Enter{_f._s0, _f._s1});
+                },
+                [&](_Call2 _f) { _result = ((_result && _f._s0) && _f._s1); }},
+            _frame);
+      }
+      return _result;
+    }
+
+    /// tree_to_list inorder traversal.
+    std::shared_ptr<List<t_A>> tree_to_list() const {
+      const tree *_self = this;
+
+      struct _Enter {
+        const tree *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename tree<t_A>::Node &>()
+                     .d_a0.get()) _s0;
+        decltype(std::declval<const typename tree<t_A>::Node &>().d_a1) _s1;
+      };
+
+      struct _Call2 {
+        std::shared_ptr<List<t_A>> _s0;
+        decltype(std::declval<const typename tree<t_A>::Node &>().d_a1) _s1;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      std::shared_ptr<List<t_A>> _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const tree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename tree<t_A>::Leaf _args) -> void {
+                            _result = List<t_A>::ctor::Nil_();
+                          },
+                          [&](const typename tree<t_A>::Node _args) -> void {
+                            _stack.push_back(
+                                _Call1{_args.d_a0.get(), _args.d_a1});
+                            _stack.push_back(_Enter{_args.d_a2.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _result =
+                      _result->app(List<t_A>::ctor::Cons_(_f._s1, _f._s0));
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    /// count_leaves counts leaf nodes.
+    __attribute__((pure)) unsigned int count_leaves() const {
+      const tree *_self = this;
+
+      struct _Enter {
+        const tree *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename tree<t_A>::Node &>()
+                     .d_a0.get()) _s0;
+      };
+
+      struct _Call2 {
+        unsigned int _s0;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const tree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename tree<t_A>::Leaf _args) -> void {
+                            _result = 1u;
+                          },
+                          [&](const typename tree<t_A>::Node _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0.get()});
+                            _stack.push_back(_Enter{_args.d_a2.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) { _result = (_result + _f._s0); }},
+            _frame);
+      }
+      return _result;
+    }
+
+    /// same_shape tests structural equality.
+    template <typename T1>
+    __attribute__((pure)) bool
+    same_shape(const std::shared_ptr<tree<T1>> &t2) const {
+      const tree *_self = this;
+
+      struct _Enter {
+        const tree *_self;
+        const std::shared_ptr<tree<T1>> t2;
+      };
+
+      struct _Call1 {
+        const typename tree<T1>::Node _s0;
+        const typename tree<t_A>::Node _s1;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1>;
+      bool _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self, t2});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const tree *_self = _f._self;
+                  const std::shared_ptr<tree<T1>> t2 = _f.t2;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename tree<t_A>::Leaf _args) -> void {
+                            _result = std::visit(
+                                Overloaded{
+                                    [](const typename tree<T1>::Leaf _args0)
+                                        -> bool { return true; },
+                                    [](const typename tree<T1>::Node _args0)
+                                        -> bool { return false; }},
+                                t2->v());
+                          },
+                          [&](const typename tree<t_A>::Node _args) -> void {
+                            std::visit(
+                                Overloaded{
+                                    [&](const typename tree<T1>::Leaf _args0)
+                                        -> void { _result = false; },
+                                    [&](const typename tree<T1>::Node _args0)
+                                        -> void {
+                                      _stack.push_back(_Call1{_args0, _args});
+                                      _stack.push_back(_Enter{_args.d_a0.get(),
+                                                              _args0.d_a0});
+                                    }},
+                                t2->v());
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  const typename tree<T1>::Node _args0 = _f._s0;
+                  const typename tree<t_A>::Node _args = _f._s1;
+                  if (_result) {
+                    _stack.push_back(_Enter{_args.d_a2.get(), _args0.d_a2});
+                  } else {
+                    _result = false;
+                  }
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    std::shared_ptr<tree<t_A>> mirror() const {
+      const tree *_self = this;
+
+      struct _Enter {
+        const tree *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename tree<t_A>::Node &>()
+                     .d_a2.get()) _s0;
+        decltype(std::declval<const typename tree<t_A>::Node &>().d_a1) _s1;
+      };
+
+      struct _Call2 {
+        std::shared_ptr<tree<t_A>> _s0;
+        decltype(std::declval<const typename tree<t_A>::Node &>().d_a1) _s1;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      std::shared_ptr<tree<t_A>> _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const tree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename tree<t_A>::Leaf _args) -> void {
+                            _result = tree<t_A>::ctor::Leaf_();
+                          },
+                          [&](const typename tree<t_A>::Node _args) -> void {
+                            _stack.push_back(
+                                _Call1{_args.d_a2.get(), _args.d_a1});
+                            _stack.push_back(_Enter{_args.d_a0.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _result = tree<t_A>::ctor::Node_(_result, _f._s1, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    __attribute__((pure)) unsigned int tree_size() const {
+      const tree *_self = this;
+
+      struct _Enter {
+        const tree *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename tree<t_A>::Node &>()
+                     .d_a0.get()) _s0;
+      };
+
+      struct _Call2 {
+        unsigned int _s0;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const tree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename tree<t_A>::Leaf _args) -> void {
+                            _result = 0u;
+                          },
+                          [&](const typename tree<t_A>::Node _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0.get()});
+                            _stack.push_back(_Enter{_args.d_a2.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) { _result = ((_result + _f._s0) + 1); }},
+            _frame);
+      }
+      return _result;
+    }
+
+    __attribute__((pure)) unsigned int tree_height() const {
+      const tree *_self = this;
+
+      struct _Enter {
+        const tree *_self;
+      };
+
+      struct _Call1 {
+        const typename tree<t_A>::Node _s0;
+      };
+
+      struct _Call2 {
+        unsigned int _s0;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const tree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename tree<t_A>::Leaf _args) -> void {
+                            _result = 0u;
+                          },
+                          [&](const typename tree<t_A>::Node _args) -> void {
+                            _stack.push_back(_Call1{_args});
+                            _stack.push_back(_Enter{_args.d_a0.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  const typename tree<t_A>::Node _args = _f._s0;
+                  unsigned int lh = _result;
+                  _stack.push_back(_Call2{lh});
+                  _stack.push_back(_Enter{_args.d_a2.get()});
+                },
+                [&](_Call2 _f) {
+                  unsigned int lh = _f._s0;
+                  unsigned int rh = _result;
+                  _result = ([&](void) {
+                    if (lh <= rh) {
+                      return std::move(rh);
+                    } else {
+                      return std::move(lh);
+                    }
+                  }() + 1);
+                }},
+            _frame);
+      }
+      return _result;
+    }
   };
 
   template <typename T1, typename T2,
@@ -284,228 +739,7 @@ struct LoopifyTrees {
   __attribute__((pure)) static unsigned int
   tree_sum(const std::shared_ptr<tree<unsigned int>> &t);
 
-  template <typename T1>
-  __attribute__((pure)) static unsigned int
-  tree_height(const std::shared_ptr<tree<T1>> &t) {
-    struct _Enter {
-      const std::shared_ptr<tree<T1>> t;
-    };
-
-    struct _Call1 {
-      const typename tree<T1>::Node _s0;
-    };
-
-    struct _Call2 {
-      unsigned int _s0;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    unsigned int _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree<T1>> t = _f.t;
-                std::visit(
-                    Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
-                          _result = 0u;
-                        },
-                        [&](const typename tree<T1>::Node _args) -> void {
-                          _stack.push_back(_Call1{_args});
-                          _stack.push_back(_Enter{_args.d_a0});
-                        }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                const typename tree<T1>::Node _args = _f._s0;
-                unsigned int lh = _result;
-                _stack.push_back(_Call2{lh});
-                _stack.push_back(_Enter{_args.d_a2});
-              },
-              [&](_Call2 _f) {
-                unsigned int lh = _f._s0;
-                unsigned int rh = _result;
-                _result = ([&](void) {
-                  if (lh <= rh) {
-                    return std::move(rh);
-                  } else {
-                    return std::move(lh);
-                  }
-                }() + 1);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
-  template <typename T1>
-  __attribute__((pure)) static unsigned int
-  tree_size(const std::shared_ptr<tree<T1>> &t) {
-    struct _Enter {
-      const std::shared_ptr<tree<T1>> t;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a0) _s0;
-    };
-
-    struct _Call2 {
-      unsigned int _s0;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    unsigned int _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree<T1>> t = _f.t;
-                std::visit(
-                    Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
-                          _result = 0u;
-                        },
-                        [&](const typename tree<T1>::Node _args) -> void {
-                          _stack.push_back(_Call1{_args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a2});
-                        }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) { _result = ((_result + _f._s0) + 1); }},
-          _frame);
-    }
-    return _result;
-  }
-
-  template <typename T1>
-  static std::shared_ptr<tree<T1>> mirror(const std::shared_ptr<tree<T1>> &t) {
-    struct _Enter {
-      const std::shared_ptr<tree<T1>> t;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a2) _s0;
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a1) _s1;
-    };
-
-    struct _Call2 {
-      std::shared_ptr<tree<T1>> _s0;
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a1) _s1;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    std::shared_ptr<tree<T1>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree<T1>> t = _f.t;
-                std::visit(
-                    Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
-                          _result = tree<T1>::ctor::Leaf_();
-                        },
-                        [&](const typename tree<T1>::Node _args) -> void {
-                          _stack.push_back(_Call1{_args.d_a2, _args.d_a1});
-                          _stack.push_back(_Enter{_args.d_a0});
-                        }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = tree<T1>::ctor::Node_(_result, _f._s1, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  } /// same_shape tests structural equality.
-
-  template <typename T1, typename T2>
-  __attribute__((pure)) static bool
-  same_shape(const std::shared_ptr<tree<T1>> &t1,
-             const std::shared_ptr<tree<T2>> &t2) {
-    struct _Enter {
-      const std::shared_ptr<tree<T2>> t2;
-      const std::shared_ptr<tree<T1>> t1;
-    };
-
-    struct _Call1 {
-      const typename tree<T2>::Node _s0;
-      const typename tree<T1>::Node _s1;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1>;
-    bool _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t2, t1});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree<T2>> t2 = _f.t2;
-                const std::shared_ptr<tree<T1>> t1 = _f.t1;
-                std::visit(
-                    Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
-                          _result = std::visit(
-                              Overloaded{
-                                  [](const typename tree<T2>::Leaf _args0)
-                                      -> bool { return true; },
-                                  [](const typename tree<T2>::Node _args0)
-                                      -> bool { return false; }},
-                              t2->v());
-                        },
-                        [&](const typename tree<T1>::Node _args) -> void {
-                          std::visit(
-                              Overloaded{
-                                  [&](const typename tree<T2>::Leaf _args0)
-                                      -> void { _result = false; },
-                                  [&](const typename tree<T2>::Node _args0)
-                                      -> void {
-                                    _stack.push_back(_Call1{_args0, _args});
-                                    _stack.push_back(
-                                        _Enter{_args0.d_a0, _args.d_a0});
-                                  }},
-                              t2->v());
-                        }},
-                    t1->v());
-              },
-              [&](_Call1 _f) {
-                const typename tree<T2>::Node _args0 = _f._s0;
-                const typename tree<T1>::Node _args = _f._s1;
-                if (_result) {
-                  _stack.push_back(_Enter{_args0.d_a2, _args.d_a2});
-                } else {
-                  _result = false;
-                }
-              }},
-          _frame);
-    }
-    return _result;
-  } /// leftmost/rightmost finds edge values.
-
+  /// leftmost/rightmost finds edge values.
   template <typename T1>
   static T1 leftmost(const T1 default0, const std::shared_ptr<tree<T1>> &t) {
     T1 _result;
@@ -560,53 +794,6 @@ struct LoopifyTrees {
           _loop_t->v());
     }
     return _result;
-  } /// count_leaves counts leaf nodes.
-
-  template <typename T1>
-  __attribute__((pure)) static unsigned int
-  count_leaves(const std::shared_ptr<tree<T1>> &t) {
-    struct _Enter {
-      const std::shared_ptr<tree<T1>> t;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a0) _s0;
-    };
-
-    struct _Call2 {
-      unsigned int _s0;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    unsigned int _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree<T1>> t = _f.t;
-                std::visit(
-                    Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
-                          _result = 1u;
-                        },
-                        [&](const typename tree<T1>::Node _args) -> void {
-                          _stack.push_back(_Call1{_args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a2});
-                        }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) { _result = (_result + _f._s0); }},
-          _frame);
-    }
-    return _result;
   }
 
   /// leaf_sum sums only leaf values.
@@ -616,59 +803,6 @@ struct LoopifyTrees {
   static std::shared_ptr<tree<unsigned int>>
   insert_bst(const unsigned int x,
              const std::shared_ptr<tree<unsigned int>> &t);
-
-  /// tree_to_list inorder traversal.
-  template <typename T1>
-  static std::shared_ptr<List<T1>>
-  tree_to_list(const std::shared_ptr<tree<T1>> &t) {
-    struct _Enter {
-      const std::shared_ptr<tree<T1>> t;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a0) _s0;
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a1) _s1;
-    };
-
-    struct _Call2 {
-      std::shared_ptr<List<T1>> _s0;
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a1) _s1;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    std::shared_ptr<List<T1>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree<T1>> t = _f.t;
-                std::visit(
-                    Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
-                          _result = List<T1>::ctor::Nil_();
-                        },
-                        [&](const typename tree<T1>::Node _args) -> void {
-                          _stack.push_back(_Call1{_args.d_a0, _args.d_a1});
-                          _stack.push_back(_Enter{_args.d_a2});
-                        }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = _result->app(List<T1>::ctor::Cons_(_f._s1, _f._s0));
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
   /// count_paths t n counts root-to-leaf paths that sum to n.
   __attribute__((pure)) static unsigned int
   count_paths(const std::shared_ptr<tree<unsigned int>> &t,
@@ -732,6 +866,154 @@ struct LoopifyTrees {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) unsigned int ternary_depth() const {
+      const ternary *_self = this;
+
+      struct _Enter {
+        const ternary *_self;
+      };
+
+      struct _Call1 {
+        const typename ternary::TNode _s0;
+      };
+
+      struct _Call2 {
+        const typename ternary::TNode _s0;
+        unsigned int _s1;
+      };
+
+      struct _Call3 {
+        unsigned int _s0;
+        unsigned int _s1;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const ternary *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename ternary::TLeaf _args) -> void {
+                            _result = 0u;
+                          },
+                          [&](const typename ternary::TNode _args) -> void {
+                            _stack.push_back(_Call1{_args});
+                            _stack.push_back(_Enter{_args.d_a0.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  const typename ternary::TNode _args = _f._s0;
+                  unsigned int d1 = _result;
+                  _stack.push_back(_Call2{_args, d1});
+                  _stack.push_back(_Enter{_args.d_a1.get()});
+                },
+                [&](_Call2 _f) {
+                  const typename ternary::TNode _args = _f._s0;
+                  unsigned int d1 = _f._s1;
+                  unsigned int d2 = _result;
+                  _stack.push_back(_Call3{d1, d2});
+                  _stack.push_back(_Enter{_args.d_a2.get()});
+                },
+                [&](_Call3 _f) {
+                  unsigned int d1 = _f._s0;
+                  unsigned int d2 = _f._s1;
+                  unsigned int d3 = _result;
+                  _result = ([&](void) {
+                    if ([&](void) {
+                          if (d1 <= d2) {
+                            return std::move(d2);
+                          } else {
+                            return std::move(d1);
+                          }
+                        }() <= d3) {
+                      return std::move(d3);
+                    } else {
+                      if (d1 <= d2) {
+                        return std::move(d2);
+                      } else {
+                        return std::move(d1);
+                      }
+                    }
+                  }() + 1);
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    __attribute__((pure)) unsigned int ternary_sum() const {
+      const ternary *_self = this;
+
+      struct _Enter {
+        const ternary *_self;
+      };
+
+      struct _Call1 {
+        const ternary *_s0;
+        const ternary *_s1;
+        decltype(std::declval<const typename ternary::TNode &>().d_a3) _s2;
+      };
+
+      struct _Call2 {
+        unsigned int _s0;
+        const ternary *_s1;
+        decltype(std::declval<const typename ternary::TNode &>().d_a3) _s2;
+      };
+
+      struct _Call3 {
+        unsigned int _s0;
+        unsigned int _s1;
+        decltype(std::declval<const typename ternary::TNode &>().d_a3) _s2;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const ternary *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename ternary::TLeaf _args) -> void {
+                            _result = 0u;
+                          },
+                          [&](const typename ternary::TNode _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a1.get(),
+                                                    _args.d_a0.get(),
+                                                    _args.d_a3});
+                            _stack.push_back(_Enter{_args.d_a2.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _stack.push_back(_Call3{_f._s0, _result, _f._s2});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call3 _f) {
+                  _result = (_f._s2 + (_result + (_f._s1 + _f._s0)));
+                }},
+            _frame);
+      }
+      return _result;
+    }
   };
 
   template <typename T1,
@@ -894,12 +1176,7 @@ struct LoopifyTrees {
     return _result;
   }
 
-  __attribute__((pure)) static unsigned int
-  ternary_sum(const std::shared_ptr<ternary> &t);
-  __attribute__((pure)) static unsigned int
-  ternary_depth(const std::shared_ptr<ternary>
-                    &t); /// Rose tree: a tree with variable number of children.
-
+  /// Rose tree: a tree with variable number of children.
   struct rose {
     // TYPES
     struct RNode {
@@ -939,36 +1216,74 @@ struct LoopifyTrees {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    /// rose_depth t computes the depth of a rose tree.
+    __attribute__((pure)) unsigned int rose_depth() const {
+      return std::visit(
+          Overloaded{[](const typename rose::RNode _args) -> unsigned int {
+            return (depth_rose_list_fuel(1000u, _args.d_a1) + 1);
+          }},
+          this->v());
+    }
+
+    /// rose_flatten t flattens a rose tree to a list (pre-order).
+    std::shared_ptr<List<unsigned int>> rose_flatten() const {
+      return std::visit(Overloaded{[](const typename rose::RNode _args)
+                                       -> std::shared_ptr<List<unsigned int>> {
+                          return List<unsigned int>::ctor::Cons_(
+                              _args.d_a0,
+                              flatten_rose_list_fuel(1000u, _args.d_a1));
+                        }},
+                        this->v());
+    }
+
+    /// rose_map f t applies f to all values in a rose tree.
+    template <MapsTo<unsigned int, unsigned int> F0>
+    std::shared_ptr<rose> rose_map(F0 &&f) const {
+      return std::visit(
+          Overloaded{
+              [&](const typename rose::RNode _args) -> std::shared_ptr<rose> {
+                return rose::ctor::RNode_(
+                    f(_args.d_a0), map_rose_list_fuel(1000u, f, _args.d_a1));
+              }},
+          this->v());
+    }
+
+    /// rose_sum t sums all values in a rose tree.
+    __attribute__((pure)) unsigned int rose_sum() const {
+      return std::visit(
+          Overloaded{[](const typename rose::RNode _args) -> unsigned int {
+            return (_args.d_a0 + sum_rose_list_fuel(1000u, _args.d_a1));
+          }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int,
+                                  std::shared_ptr<List<std::shared_ptr<rose>>>>
+                               F0>
+    T1 rose_rec(F0 &&f) const {
+      return std::visit(Overloaded{[&](const typename rose::RNode _args) -> T1 {
+                          return f(_args.d_a0, _args.d_a1);
+                        }},
+                        this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int,
+                                  std::shared_ptr<List<std::shared_ptr<rose>>>>
+                               F0>
+    T1 rose_rect(F0 &&f) const {
+      return std::visit(Overloaded{[&](const typename rose::RNode _args) -> T1 {
+                          return f(_args.d_a0, _args.d_a1);
+                        }},
+                        this->v());
+    }
   };
-
-  template <
-      typename T1,
-      MapsTo<T1, unsigned int, std::shared_ptr<List<std::shared_ptr<rose>>>> F0>
-  static T1 rose_rect(F0 &&f, const std::shared_ptr<rose> &r) {
-    return std::visit(Overloaded{[&](const typename rose::RNode _args) -> T1 {
-                        return f(_args.d_a0, _args.d_a1);
-                      }},
-                      r->v());
-  }
-
-  template <
-      typename T1,
-      MapsTo<T1, unsigned int, std::shared_ptr<List<std::shared_ptr<rose>>>> F0>
-  static T1 rose_rec(F0 &&f, const std::shared_ptr<rose> &r) {
-    return std::visit(Overloaded{[&](const typename rose::RNode _args) -> T1 {
-                        return f(_args.d_a0, _args.d_a1);
-                      }},
-                      r->v());
-  }
 
   /// Helper: sum all values in a list of rose trees (processes both tree and
   /// list levels in one recursive function to enable full loopification).
   __attribute__((pure)) static unsigned int
   sum_rose_list_fuel(const unsigned int fuel,
                      const std::shared_ptr<List<std::shared_ptr<rose>>> &cs);
-  /// rose_sum t sums all values in a rose tree.
-  __attribute__((pure)) static unsigned int
-  rose_sum(const std::shared_ptr<rose> &t);
 
   /// Helper: map function over all values in a list of rose trees.
   template <MapsTo<unsigned int, unsigned int> F1>
@@ -1041,33 +1356,14 @@ struct LoopifyTrees {
     return _result;
   }
 
-  /// rose_map f t applies f to all values in a rose tree.
-  template <MapsTo<unsigned int, unsigned int> F0>
-  static std::shared_ptr<rose> rose_map(F0 &&f,
-                                        const std::shared_ptr<rose> &t) {
-    return std::visit(
-        Overloaded{
-            [&](const typename rose::RNode _args) -> std::shared_ptr<rose> {
-              return rose::ctor::RNode_(
-                  f(_args.d_a0), map_rose_list_fuel(1000u, f, _args.d_a1));
-            }},
-        t->v());
-  }
-
   /// Helper: flatten a list of rose trees to a flat list of nats.
   static std::shared_ptr<List<unsigned int>> flatten_rose_list_fuel(
       const unsigned int fuel,
       const std::shared_ptr<List<std::shared_ptr<rose>>> &cs);
-  /// rose_flatten t flattens a rose tree to a list (pre-order).
-  static std::shared_ptr<List<unsigned int>>
-  rose_flatten(const std::shared_ptr<rose> &t);
   /// Helper: compute maximum depth among a list of rose trees.
   __attribute__((pure)) static unsigned int
   depth_rose_list_fuel(const unsigned int fuel,
                        const std::shared_ptr<List<std::shared_ptr<rose>>> &cs);
-  /// rose_depth t computes the depth of a rose tree.
-  __attribute__((pure)) static unsigned int
-  rose_depth(const std::shared_ptr<rose> &t);
   /// tree_max t1 t2 element-wise maximum of two trees.
   static std::shared_ptr<tree<unsigned int>>
   tree_max(std::shared_ptr<tree<unsigned int>> t1,
@@ -1089,129 +1385,6 @@ struct LoopifyTrees {
   /// count_nodes t returns tuple (node_count, sum_of_values).
   __attribute__((pure)) static std::pair<unsigned int, unsigned int>
   count_nodes(const std::shared_ptr<tree<unsigned int>> &t);
-
-  /// mirror_equal t1 t2 checks if t1 and t2 are mirror images.
-  template <typename T1>
-  __attribute__((pure)) static bool
-  mirror_equal(const std::shared_ptr<tree<T1>> &t1,
-               const std::shared_ptr<tree<T1>> &t2) {
-    struct _Enter {
-      const std::shared_ptr<tree<T1>> t2;
-      const std::shared_ptr<tree<T1>> t1;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a2) _s0;
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a0) _s1;
-      decltype(true) _s2;
-    };
-
-    struct _Call2 {
-      bool _s0;
-      decltype(true) _s1;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    bool _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t2, t1});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree<T1>> t2 = _f.t2;
-                const std::shared_ptr<tree<T1>> t1 = _f.t1;
-                std::visit(
-                    Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
-                          _result = std::visit(
-                              Overloaded{
-                                  [](const typename tree<T1>::Leaf _args0)
-                                      -> bool { return true; },
-                                  [](const typename tree<T1>::Node _args0)
-                                      -> bool { return false; }},
-                              t2->v());
-                        },
-                        [&](const typename tree<T1>::Node _args) -> void {
-                          std::visit(
-                              Overloaded{
-                                  [&](const typename tree<T1>::Leaf _args0)
-                                      -> void { _result = false; },
-                                  [&](const typename tree<T1>::Node _args0)
-                                      -> void {
-                                    _stack.push_back(
-                                        _Call1{_args0.d_a2, _args.d_a0, true});
-                                    _stack.push_back(
-                                        _Enter{_args0.d_a0, _args.d_a2});
-                                  }},
-                              t2->v());
-                        }},
-                    t1->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s2});
-                _stack.push_back(_Enter{_f._s0, _f._s1});
-              },
-              [&](_Call2 _f) { _result = ((_result && _f._s0) && _f._s1); }},
-          _frame);
-    }
-    return _result;
-  }
-
-  /// tree_map f t applies f to all values in tree.
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  static std::shared_ptr<tree<T2>>
-  tree_map(F0 &&f, const std::shared_ptr<tree<T1>> &t) {
-    struct _Enter {
-      const std::shared_ptr<tree<T1>> t;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename tree<T1>::Node &>().d_a0) _s0;
-      T2 _s1;
-    };
-
-    struct _Call2 {
-      std::shared_ptr<tree<T2>> _s0;
-      T2 _s1;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    std::shared_ptr<tree<T2>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<tree<T1>> t = _f.t;
-                std::visit(
-                    Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
-                          _result = tree<T2>::ctor::Leaf_();
-                        },
-                        [&](const typename tree<T1>::Node _args) -> void {
-                          _stack.push_back(_Call1{_args.d_a0, f(_args.d_a1)});
-                          _stack.push_back(_Enter{_args.d_a2});
-                        }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = tree<T2>::ctor::Node_(_result, _f._s1, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
   /// Helper: append two lists of lists.
   static std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
   append_list_lists(
@@ -1349,215 +1522,367 @@ struct LoopifyTrees {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    /// quad_depth t computes depth of quadtree.
+    __attribute__((pure)) unsigned int quad_depth() const {
+      const quadtree *_self = this;
+
+      struct _Enter {
+        const quadtree *_self;
+      };
+
+      struct _Call1 {
+        const quadtree *_s0;
+        const quadtree *_s1;
+        const quadtree *_s2;
+      };
+
+      struct _Call2 {
+        unsigned int _s0;
+        const quadtree *_s1;
+        const quadtree *_s2;
+      };
+
+      struct _Call3 {
+        unsigned int _s0;
+        unsigned int _s1;
+        const quadtree *_s2;
+      };
+
+      struct _Call4 {
+        unsigned int _s0;
+        unsigned int _s1;
+        unsigned int _s2;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const quadtree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename quadtree::QLeaf _args) -> void {
+                            _result = 0u;
+                          },
+                          [&](const typename quadtree::Quad _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a2.get(),
+                                                    _args.d_a1.get(),
+                                                    _args.d_a0.get()});
+                            _stack.push_back(_Enter{_args.d_a3.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _stack.push_back(_Call3{_f._s0, _result, _f._s2});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call3 _f) {
+                  _stack.push_back(_Call4{_f._s0, _f._s1, _result});
+                  _stack.push_back(_Enter{_f._s2});
+                },
+                [&](_Call4 _f) {
+                  _result = (max4_impl(_result, _f._s2, _f._s1, _f._s0) + 1);
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    /// quad_sum t sums all values in a quadtree.
+    __attribute__((pure)) unsigned int quad_sum() const {
+      const quadtree *_self = this;
+
+      struct _Enter {
+        const quadtree *_self;
+      };
+
+      struct _Call1 {
+        const quadtree *_s0;
+        const quadtree *_s1;
+        const quadtree *_s2;
+      };
+
+      struct _Call2 {
+        unsigned int _s0;
+        const quadtree *_s1;
+        const quadtree *_s2;
+      };
+
+      struct _Call3 {
+        unsigned int _s0;
+        unsigned int _s1;
+        const quadtree *_s2;
+      };
+
+      struct _Call4 {
+        unsigned int _s0;
+        unsigned int _s1;
+        unsigned int _s2;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const quadtree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename quadtree::QLeaf _args) -> void {
+                            _result = _args.d_a0;
+                          },
+                          [&](const typename quadtree::Quad _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a2.get(),
+                                                    _args.d_a1.get(),
+                                                    _args.d_a0.get()});
+                            _stack.push_back(_Enter{_args.d_a3.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _stack.push_back(_Call3{_f._s0, _result, _f._s2});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call3 _f) {
+                  _stack.push_back(_Call4{_f._s0, _f._s1, _result});
+                  _stack.push_back(_Enter{_f._s2});
+                },
+                [&](_Call4 _f) {
+                  _result = (_result + (_f._s2 + (_f._s1 + _f._s0)));
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    template <
+        typename T1, MapsTo<T1, unsigned int> F0,
+        MapsTo<T1, std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1,
+               std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1>
+            F1>
+    T1 quadtree_rec(F0 &&f, F1 &&f0) const {
+      const quadtree *_self = this;
+
+      struct _Enter {
+        const quadtree *_self;
+      };
+
+      struct _Call1 {
+        const quadtree *_s0;
+        const quadtree *_s1;
+        const quadtree *_s2;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        const quadtree *_s1;
+        const quadtree *_s2;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+      };
+
+      struct _Call3 {
+        T1 _s0;
+        T1 _s1;
+        const quadtree *_s2;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+      };
+
+      struct _Call4 {
+        T1 _s0;
+        T1 _s1;
+        T1 _s2;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const quadtree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename quadtree::QLeaf _args) -> void {
+                            _result = f(_args.d_a0);
+                          },
+                          [&](const typename quadtree::Quad _args) -> void {
+                            _stack.push_back(
+                                _Call1{_args.d_a2.get(), _args.d_a1.get(),
+                                       _args.d_a0.get(), _args.d_a3, _args.d_a2,
+                                       _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a3.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
+                                          _f._s4, _f._s5, _f._s6});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
+                                          _f._s4, _f._s5, _f._s6});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call3 _f) {
+                  _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
+                                          _f._s4, _f._s5, _f._s6});
+                  _stack.push_back(_Enter{_f._s2});
+                },
+                [&](_Call4 _f) {
+                  _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
+                               _f._s3, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    template <
+        typename T1, MapsTo<T1, unsigned int> F0,
+        MapsTo<T1, std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1,
+               std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1>
+            F1>
+    T1 quadtree_rect(F0 &&f, F1 &&f0) const {
+      const quadtree *_self = this;
+
+      struct _Enter {
+        const quadtree *_self;
+      };
+
+      struct _Call1 {
+        const quadtree *_s0;
+        const quadtree *_s1;
+        const quadtree *_s2;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        const quadtree *_s1;
+        const quadtree *_s2;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+      };
+
+      struct _Call3 {
+        T1 _s0;
+        T1 _s1;
+        const quadtree *_s2;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+      };
+
+      struct _Call4 {
+        T1 _s0;
+        T1 _s1;
+        T1 _s2;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const quadtree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename quadtree::QLeaf _args) -> void {
+                            _result = f(_args.d_a0);
+                          },
+                          [&](const typename quadtree::Quad _args) -> void {
+                            _stack.push_back(
+                                _Call1{_args.d_a2.get(), _args.d_a1.get(),
+                                       _args.d_a0.get(), _args.d_a3, _args.d_a2,
+                                       _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a3.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
+                                          _f._s4, _f._s5, _f._s6});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
+                                          _f._s4, _f._s5, _f._s6});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call3 _f) {
+                  _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
+                                          _f._s4, _f._s5, _f._s6});
+                  _stack.push_back(_Enter{_f._s2});
+                },
+                [&](_Call4 _f) {
+                  _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
+                               _f._s3, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
   };
 
-  template <
-      typename T1, MapsTo<T1, unsigned int> F0,
-      MapsTo<T1, std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1,
-             std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1>
-          F1>
-  static T1 quadtree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<quadtree> &q) {
-    struct _Enter {
-      const std::shared_ptr<quadtree> q;
-    };
-
-    struct _Call1 {
-      const std::shared_ptr<quadtree> _s0;
-      const std::shared_ptr<quadtree> _s1;
-      const std::shared_ptr<quadtree> _s2;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      const std::shared_ptr<quadtree> _s1;
-      const std::shared_ptr<quadtree> _s2;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
-    };
-
-    struct _Call3 {
-      T1 _s0;
-      T1 _s1;
-      const std::shared_ptr<quadtree> _s2;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
-    };
-
-    struct _Call4 {
-      T1 _s0;
-      T1 _s1;
-      T1 _s2;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{q});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<quadtree> q = _f.q;
-                std::visit(
-                    Overloaded{
-                        [&](const typename quadtree::QLeaf _args) -> void {
-                          _result = f(_args.d_a0);
-                        },
-                        [&](const typename quadtree::Quad _args) -> void {
-                          _stack.push_back(_Call1{
-                              _args.d_a2, _args.d_a1, _args.d_a0, _args.d_a3,
-                              _args.d_a2, _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a3});
-                        }},
-                    q->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4,
-                                        _f._s5, _f._s6});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4,
-                                        _f._s5, _f._s6});
-                _stack.push_back(_Enter{_f._s1});
-              },
-              [&](_Call3 _f) {
-                _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3, _f._s4,
-                                        _f._s5, _f._s6});
-                _stack.push_back(_Enter{_f._s2});
-              },
-              [&](_Call4 _f) {
-                _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
-                             _f._s3, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
-  template <
-      typename T1, MapsTo<T1, unsigned int> F0,
-      MapsTo<T1, std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1,
-             std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1>
-          F1>
-  static T1 quadtree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<quadtree> &q) {
-    struct _Enter {
-      const std::shared_ptr<quadtree> q;
-    };
-
-    struct _Call1 {
-      const std::shared_ptr<quadtree> _s0;
-      const std::shared_ptr<quadtree> _s1;
-      const std::shared_ptr<quadtree> _s2;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      const std::shared_ptr<quadtree> _s1;
-      const std::shared_ptr<quadtree> _s2;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
-    };
-
-    struct _Call3 {
-      T1 _s0;
-      T1 _s1;
-      const std::shared_ptr<quadtree> _s2;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
-    };
-
-    struct _Call4 {
-      T1 _s0;
-      T1 _s1;
-      T1 _s2;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{q});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<quadtree> q = _f.q;
-                std::visit(
-                    Overloaded{
-                        [&](const typename quadtree::QLeaf _args) -> void {
-                          _result = f(_args.d_a0);
-                        },
-                        [&](const typename quadtree::Quad _args) -> void {
-                          _stack.push_back(_Call1{
-                              _args.d_a2, _args.d_a1, _args.d_a0, _args.d_a3,
-                              _args.d_a2, _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a3});
-                        }},
-                    q->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4,
-                                        _f._s5, _f._s6});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4,
-                                        _f._s5, _f._s6});
-                _stack.push_back(_Enter{_f._s1});
-              },
-              [&](_Call3 _f) {
-                _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3, _f._s4,
-                                        _f._s5, _f._s6});
-                _stack.push_back(_Enter{_f._s2});
-              },
-              [&](_Call4 _f) {
-                _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
-                             _f._s3, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
-  /// quad_sum t sums all values in a quadtree.
-  __attribute__((pure)) static unsigned int
-  quad_sum(const std::shared_ptr<quadtree> &t);
   /// Helper: max of 4 values using nested max.
   __attribute__((pure)) static unsigned int max4_impl(const unsigned int a,
                                                       const unsigned int b,
                                                       const unsigned int c,
                                                       const unsigned int d);
-  /// quad_depth t computes depth of quadtree.
-  __attribute__((pure)) static unsigned int
-  quad_depth(const std::shared_ptr<quadtree> &t);
 
   /// Simple binary tree with values only at leaves.
   struct simple_tree {
@@ -1613,129 +1938,243 @@ struct LoopifyTrees {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    /// count_paths_simple t n counts paths with sum n (simpler variant).
+    __attribute__((pure)) unsigned int
+    count_paths_simple(const unsigned int n) const {
+      const simple_tree *_self = this;
+
+      struct _Enter {
+        const simple_tree *_self;
+        const unsigned int n;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename simple_tree::SNode &>()
+                     .d_a0.get()) _s0;
+        decltype((((std::declval<const unsigned int &>() - 1u) >
+                           std::declval<const unsigned int &>()
+                       ? 0
+                       : (std::declval<const unsigned int &>() - 1u)))) _s1;
+      };
+
+      struct _Call2 {
+        unsigned int _s0;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self, n});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const simple_tree *_self = _f._self;
+                  const unsigned int n = _f.n;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename simple_tree::SLeaf _args) -> void {
+                            if (_args.d_a0 == n) {
+                              _result = 1u;
+                            } else {
+                              _result = 0u;
+                            }
+                          },
+                          [&](const typename simple_tree::SNode _args) -> void {
+                            if (n <= 0u) {
+                              _result = 0u;
+                            } else {
+                              _stack.push_back(
+                                  _Call1{_args.d_a0.get(),
+                                         (((n - 1u) > n ? 0 : (n - 1u)))});
+                              _stack.push_back(
+                                  _Enter{_args.d_a1.get(),
+                                         (((n - 1u) > n ? 0 : (n - 1u)))});
+                            }
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result});
+                  _stack.push_back(_Enter{_f._s0, _f._s1});
+                },
+                [&](_Call2 _f) { _result = (_result + _f._s0); }},
+            _frame);
+      }
+      return _result;
+    }
+
+    /// simple_tree_sum t sums all leaf values.
+    __attribute__((pure)) unsigned int simple_tree_sum() const {
+      const simple_tree *_self = this;
+
+      struct _Enter {
+        const simple_tree *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename simple_tree::SNode &>()
+                     .d_a0.get()) _s0;
+      };
+
+      struct _Call2 {
+        unsigned int _s0;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const simple_tree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename simple_tree::SLeaf _args) -> void {
+                            _result = _args.d_a0;
+                          },
+                          [&](const typename simple_tree::SNode _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0.get()});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) { _result = (_result + _f._s0); }},
+            _frame);
+      }
+      return _result;
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, std::shared_ptr<simple_tree>, T1,
+                     std::shared_ptr<simple_tree>, T1>
+                  F1>
+    T1 simple_tree_rec(F0 &&f, F1 &&f0) const {
+      const simple_tree *_self = this;
+
+      struct _Enter {
+        const simple_tree *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename simple_tree::SNode &>()
+                     .d_a0.get()) _s0;
+        decltype(std::declval<const typename simple_tree::SNode &>().d_a1) _s1;
+        decltype(std::declval<const typename simple_tree::SNode &>().d_a0) _s2;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        decltype(std::declval<const typename simple_tree::SNode &>().d_a1) _s1;
+        decltype(std::declval<const typename simple_tree::SNode &>().d_a0) _s2;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const simple_tree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename simple_tree::SLeaf _args) -> void {
+                            _result = f(_args.d_a0);
+                          },
+                          [&](const typename simple_tree::SNode _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0.get(),
+                                                    _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _result = f0(_f._s2, _result, _f._s1, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, std::shared_ptr<simple_tree>, T1,
+                     std::shared_ptr<simple_tree>, T1>
+                  F1>
+    T1 simple_tree_rect(F0 &&f, F1 &&f0) const {
+      const simple_tree *_self = this;
+
+      struct _Enter {
+        const simple_tree *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename simple_tree::SNode &>()
+                     .d_a0.get()) _s0;
+        decltype(std::declval<const typename simple_tree::SNode &>().d_a1) _s1;
+        decltype(std::declval<const typename simple_tree::SNode &>().d_a0) _s2;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        decltype(std::declval<const typename simple_tree::SNode &>().d_a1) _s1;
+        decltype(std::declval<const typename simple_tree::SNode &>().d_a0) _s2;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const simple_tree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename simple_tree::SLeaf _args) -> void {
+                            _result = f(_args.d_a0);
+                          },
+                          [&](const typename simple_tree::SNode _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0.get(),
+                                                    _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _result = f0(_f._s2, _result, _f._s1, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, std::shared_ptr<simple_tree>, T1,
-                   std::shared_ptr<simple_tree>, T1>
-                F1>
-  static T1 simple_tree_rect(F0 &&f, F1 &&f0,
-                             const std::shared_ptr<simple_tree> &s) {
-    struct _Enter {
-      const std::shared_ptr<simple_tree> s;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename simple_tree::SNode &>().d_a0) _s0;
-      decltype(std::declval<const typename simple_tree::SNode &>().d_a1) _s1;
-      decltype(std::declval<const typename simple_tree::SNode &>().d_a0) _s2;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      decltype(std::declval<const typename simple_tree::SNode &>().d_a1) _s1;
-      decltype(std::declval<const typename simple_tree::SNode &>().d_a0) _s2;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{s});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<simple_tree> s = _f.s;
-                std::visit(
-                    Overloaded{
-                        [&](const typename simple_tree::SLeaf _args) -> void {
-                          _result = f(_args.d_a0);
-                        },
-                        [&](const typename simple_tree::SNode _args) -> void {
-                          _stack.push_back(
-                              _Call1{_args.d_a0, _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
-                        }},
-                    s->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = f0(_f._s2, _result, _f._s1, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, std::shared_ptr<simple_tree>, T1,
-                   std::shared_ptr<simple_tree>, T1>
-                F1>
-  static T1 simple_tree_rec(F0 &&f, F1 &&f0,
-                            const std::shared_ptr<simple_tree> &s) {
-    struct _Enter {
-      const std::shared_ptr<simple_tree> s;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename simple_tree::SNode &>().d_a0) _s0;
-      decltype(std::declval<const typename simple_tree::SNode &>().d_a1) _s1;
-      decltype(std::declval<const typename simple_tree::SNode &>().d_a0) _s2;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      decltype(std::declval<const typename simple_tree::SNode &>().d_a1) _s1;
-      decltype(std::declval<const typename simple_tree::SNode &>().d_a0) _s2;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{s});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<simple_tree> s = _f.s;
-                std::visit(
-                    Overloaded{
-                        [&](const typename simple_tree::SLeaf _args) -> void {
-                          _result = f(_args.d_a0);
-                        },
-                        [&](const typename simple_tree::SNode _args) -> void {
-                          _stack.push_back(
-                              _Call1{_args.d_a0, _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
-                        }},
-                    s->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = f0(_f._s2, _result, _f._s1, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
-  /// simple_tree_sum t sums all leaf values.
-  __attribute__((pure)) static unsigned int
-  simple_tree_sum(const std::shared_ptr<simple_tree> &t);
-  /// count_paths_simple t n counts paths with sum n (simpler variant).
-  __attribute__((pure)) static unsigned int
-  count_paths_simple(const std::shared_ptr<simple_tree> &t,
-                     const unsigned int n);
   /// Helper: compute minimum of three values.
   __attribute__((pure)) static unsigned int
   min3(const unsigned int a, const unsigned int b, const unsigned int c);

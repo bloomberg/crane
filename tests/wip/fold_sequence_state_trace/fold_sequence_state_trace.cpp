@@ -1498,18 +1498,6 @@ std::shared_ptr<Sumor<bool>> total_order_T(const RbaseSymbolsImpl::R r1,
 }
 
 std::shared_ptr<FoldSequenceStateTraceCase::Line>
-FoldSequenceStateTraceCase::fold_line(
-    const std::shared_ptr<FoldSequenceStateTraceCase::Fold> &f) {
-  return std::visit(
-      Overloaded{
-          [](const typename FoldSequenceStateTraceCase::Fold::Fold_line_ctor
-                 _args) -> std::shared_ptr<FoldSequenceStateTraceCase::Line> {
-            return _args.d_a0;
-          }},
-      f->v());
-}
-
-std::shared_ptr<FoldSequenceStateTraceCase::Line>
 FoldSequenceStateTraceCase::line_through(
     const std::pair<RbaseSymbolsImpl::R, RbaseSymbolsImpl::R> p1,
     const std::pair<RbaseSymbolsImpl::R, RbaseSymbolsImpl::R> p2) {
@@ -1606,32 +1594,12 @@ FoldSequenceStateTraceCase::fold_O4(
   return Fold::ctor::Fold_line_ctor_(perp_through(std::move(p), std::move(l)));
 }
 
-std::shared_ptr<FoldSequenceStateTraceCase::Line>
-FoldSequenceStateTraceCase::execute_fold_step(
-    const std::shared_ptr<FoldSequenceStateTraceCase::FoldStep> &step) {
-  return std::visit(
-      Overloaded{
-          [](const typename FoldSequenceStateTraceCase::FoldStep::FS_O1 _args)
-              -> std::shared_ptr<FoldSequenceStateTraceCase::Line> {
-            return fold_line(fold_O1(_args.d_a0, _args.d_a1));
-          },
-          [](const typename FoldSequenceStateTraceCase::FoldStep::FS_O2 _args)
-              -> std::shared_ptr<FoldSequenceStateTraceCase::Line> {
-            return fold_line(fold_O2(_args.d_a0, _args.d_a1));
-          },
-          [](const typename FoldSequenceStateTraceCase::FoldStep::FS_O4 _args)
-              -> std::shared_ptr<FoldSequenceStateTraceCase::Line> {
-            return fold_line(fold_O4(_args.d_a0, _args.d_a1));
-          }},
-      step->v());
-}
-
 std::shared_ptr<FoldSequenceStateTraceCase::ConstructionState>
 FoldSequenceStateTraceCase::add_fold_to_state(
     std::shared_ptr<FoldSequenceStateTraceCase::ConstructionState> st,
     const std::shared_ptr<FoldSequenceStateTraceCase::FoldStep> &step) {
   std::shared_ptr<FoldSequenceStateTraceCase::Line> new_line =
-      execute_fold_step(step);
+      step->execute_fold_step();
   return std::make_shared<FoldSequenceStateTraceCase::ConstructionState>(
       ConstructionState{
           st->state_points,

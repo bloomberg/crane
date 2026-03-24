@@ -179,6 +179,12 @@ val body_safe_for_method : Miniml.ml_ast -> bool
     These helpers are also used by [cpp.ml] during rendering when it needs to
     detect eponymous types in modules being processed. *)
 
+(** Find all non-typeclass, non-custom, non-enum, non-mutual inductives in a
+    module's declarations.  Returns a list of [GlobRef.t] for each eligible
+    inductive packet. *)
+val find_all_module_inductives :
+  Miniml.ml_module_structure -> GlobRef.t list
+
 (** Find the eponymous inductive in a module's declaration list.
 
     An inductive is "eponymous" when its lowercase name matches the lowercase

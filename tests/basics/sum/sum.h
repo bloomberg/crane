@@ -73,35 +73,70 @@ struct Sum {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <typename T1, MapsTo<T1, t_B> F0>
+    std::shared_ptr<either<t_A, T1>> map_right(F0 &&f) const {
+      return std::visit(
+          Overloaded{[](const typename either<t_A, t_B>::Left _args)
+                         -> std::shared_ptr<either<t_A, T1>> {
+                       return either<t_A, T1>::ctor::Left_(_args.d_a0);
+                     },
+                     [&](const typename either<t_A, t_B>::Right _args)
+                         -> std::shared_ptr<either<t_A, T1>> {
+                       return either<t_A, T1>::ctor::Right_(f(_args.d_a0));
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, t_A> F0>
+    std::shared_ptr<either<T1, t_B>> map_left(F0 &&f) const {
+      return std::visit(
+          Overloaded{[&](const typename either<t_A, t_B>::Left _args)
+                         -> std::shared_ptr<either<T1, t_B>> {
+                       return either<T1, t_B>::ctor::Left_(f(_args.d_a0));
+                     },
+                     [](const typename either<t_A, t_B>::Right _args)
+                         -> std::shared_ptr<either<T1, t_B>> {
+                       return either<T1, t_B>::ctor::Right_(_args.d_a0);
+                     }},
+          this->v());
+    }
+
+    __attribute__((pure)) bool is_left() const {
+      return std::visit(
+          Overloaded{[](const typename either<t_A, t_B>::Left _args) -> bool {
+                       return true;
+                     },
+                     [](const typename either<t_A, t_B>::Right _args) -> bool {
+                       return false;
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1>
+    T1 either_rec(F0 &&f, F1 &&f0) const {
+      return std::visit(
+          Overloaded{[&](const typename either<t_A, t_B>::Left _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename either<t_A, t_B>::Right _args) -> T1 {
+                       return f0(_args.d_a0);
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1>
+    T1 either_rect(F0 &&f, F1 &&f0) const {
+      return std::visit(
+          Overloaded{[&](const typename either<t_A, t_B>::Left _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename either<t_A, t_B>::Right _args) -> T1 {
+                       return f0(_args.d_a0);
+                     }},
+          this->v());
+    }
   };
-
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1> F0,
-            MapsTo<T3, T2> F1>
-  static T3 either_rect(F0 &&f, F1 &&f0,
-                        const std::shared_ptr<either<T1, T2>> &e) {
-    return std::visit(
-        Overloaded{[&](const typename either<T1, T2>::Left _args) -> T3 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename either<T1, T2>::Right _args) -> T3 {
-                     return f0(_args.d_a0);
-                   }},
-        e->v());
-  }
-
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1> F0,
-            MapsTo<T3, T2> F1>
-  static T3 either_rec(F0 &&f, F1 &&f0,
-                       const std::shared_ptr<either<T1, T2>> &e) {
-    return std::visit(
-        Overloaded{[&](const typename either<T1, T2>::Left _args) -> T3 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename either<T1, T2>::Right _args) -> T3 {
-                     return f0(_args.d_a0);
-                   }},
-        e->v());
-  }
 
   static inline const std::shared_ptr<either<unsigned int, bool>> left_val =
       either<unsigned int, bool>::ctor::Left_(5u);
@@ -109,49 +144,6 @@ struct Sum {
       either<unsigned int, bool>::ctor::Right_(true);
   __attribute__((pure)) static unsigned int
   either_to_nat(const std::shared_ptr<either<unsigned int, unsigned int>> &e);
-
-  template <typename T1, typename T2>
-  __attribute__((pure)) static bool
-  is_left(const std::shared_ptr<either<T1, T2>> &e) {
-    return std::visit(
-        Overloaded{[](const typename either<T1, T2>::Left _args) -> bool {
-                     return true;
-                   },
-                   [](const typename either<T1, T2>::Right _args) -> bool {
-                     return false;
-                   }},
-        e->v());
-  }
-
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1> F0>
-  static std::shared_ptr<either<T3, T2>>
-  map_left(F0 &&f, const std::shared_ptr<either<T1, T2>> &e) {
-    return std::visit(
-        Overloaded{[&](const typename either<T1, T2>::Left _args)
-                       -> std::shared_ptr<either<T3, T2>> {
-                     return either<T3, T2>::ctor::Left_(f(_args.d_a0));
-                   },
-                   [](const typename either<T1, T2>::Right _args)
-                       -> std::shared_ptr<either<T3, T2>> {
-                     return either<T3, T2>::ctor::Right_(_args.d_a0);
-                   }},
-        e->v());
-  }
-
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T2> F0>
-  static std::shared_ptr<either<T1, T3>>
-  map_right(F0 &&f, const std::shared_ptr<either<T1, T2>> &e) {
-    return std::visit(
-        Overloaded{[](const typename either<T1, T2>::Left _args)
-                       -> std::shared_ptr<either<T1, T3>> {
-                     return either<T1, T3>::ctor::Left_(_args.d_a0);
-                   },
-                   [&](const typename either<T1, T2>::Right _args)
-                       -> std::shared_ptr<either<T1, T3>> {
-                     return either<T1, T3>::ctor::Right_(f(_args.d_a0));
-                   }},
-        e->v());
-  }
 
   template <typename t_A, typename t_B, typename t_C> struct triple {
     // TYPES
@@ -221,47 +213,47 @@ struct Sum {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1,
+              MapsTo<T1, t_C> F2>
+    T1 triple_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
+      return std::visit(
+          Overloaded{
+              [&](const typename triple<t_A, t_B, t_C>::First _args) -> T1 {
+                return f(_args.d_a0);
+              },
+              [&](const typename triple<t_A, t_B, t_C>::Second _args) -> T1 {
+                return f0(_args.d_a0);
+              },
+              [&](const typename triple<t_A, t_B, t_C>::Third _args) -> T1 {
+                return f1(_args.d_a0);
+              }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1,
+              MapsTo<T1, t_C> F2>
+    T1 triple_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
+      return std::visit(
+          Overloaded{
+              [&](const typename triple<t_A, t_B, t_C>::First _args) -> T1 {
+                return f(_args.d_a0);
+              },
+              [&](const typename triple<t_A, t_B, t_C>::Second _args) -> T1 {
+                return f0(_args.d_a0);
+              },
+              [&](const typename triple<t_A, t_B, t_C>::Third _args) -> T1 {
+                return f1(_args.d_a0);
+              }},
+          this->v());
+    }
   };
-
-  template <typename T1, typename T2, typename T3, typename T4,
-            MapsTo<T4, T1> F0, MapsTo<T4, T2> F1, MapsTo<T4, T3> F2>
-  static T4 triple_rect(F0 &&f, F1 &&f0, F2 &&f1,
-                        const std::shared_ptr<triple<T1, T2, T3>> &t) {
-    return std::visit(
-        Overloaded{[&](const typename triple<T1, T2, T3>::First _args) -> T4 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename triple<T1, T2, T3>::Second _args) -> T4 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename triple<T1, T2, T3>::Third _args) -> T4 {
-                     return f1(_args.d_a0);
-                   }},
-        t->v());
-  }
-
-  template <typename T1, typename T2, typename T3, typename T4,
-            MapsTo<T4, T1> F0, MapsTo<T4, T2> F1, MapsTo<T4, T3> F2>
-  static T4 triple_rec(F0 &&f, F1 &&f0, F2 &&f1,
-                       const std::shared_ptr<triple<T1, T2, T3>> &t) {
-    return std::visit(
-        Overloaded{[&](const typename triple<T1, T2, T3>::First _args) -> T4 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename triple<T1, T2, T3>::Second _args) -> T4 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename triple<T1, T2, T3>::Third _args) -> T4 {
-                     return f1(_args.d_a0);
-                   }},
-        t->v());
-  }
 
   static inline const std::shared_ptr<triple<unsigned int, bool, unsigned int>>
       triple_test =
           triple<unsigned int, bool, unsigned int>::ctor::Second_(true);
-  static inline const bool test_left = is_left<unsigned int, bool>(left_val);
-  static inline const bool test_right = is_left<unsigned int, bool>(right_val);
+  static inline const bool test_left = left_val->is_left();
+  static inline const bool test_right = right_val->is_left();
   static inline const unsigned int test_either =
       either_to_nat(either<unsigned int, unsigned int>::ctor::Left_(3u));
 };

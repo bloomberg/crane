@@ -39,42 +39,42 @@ int main() {
       Expr::ctor::Mul_(Expr::ctor::Val_(2u), Expr::ctor::Val_(3u)));
 
   // eval(Add(Val(1), Mul(Val(2), Val(3)))) = 1 + 2*3 = 7
-  ASSERT(LoopifyExpr::eval(e) == 7u);
+  ASSERT(e->eval() == 7u);
 
   // depth(Add(Val(1), Mul(Val(2), Val(3)))) = 1 + max(0, 1+max(0,0)) = 2
-  ASSERT(LoopifyExpr::depth(e) == 2u);
+  ASSERT(e->depth() == 2u);
 
   // count_vals = 3
-  ASSERT(LoopifyExpr::count_vals(e) == 3u);
+  ASSERT(e->count_vals() == 3u);
 
   // Test Succ
   auto succ_e = Expr::ctor::Succ_(Expr::ctor::Val_(5u));
-  ASSERT(LoopifyExpr::eval(succ_e) == 6u);
-  ASSERT(LoopifyExpr::depth(succ_e) == 1u);
+  ASSERT(succ_e->eval() == 6u);
+  ASSERT(succ_e->depth() == 1u);
 
   // Test size: Add(Val(1), Mul(Val(2), Val(3))) = 1 + 1 + (1 + 1 + 1) = 5
-  ASSERT(LoopifyExpr::size(e) == 5u);
+  ASSERT(e->size() == 5u);
 
   // Test simplify: Add(Val(0), Val(5)) => Val(5)
   auto add_zero = Expr::ctor::Add_(Expr::ctor::Val_(0u), Expr::ctor::Val_(5u));
-  auto simplified = LoopifyExpr::simplify(add_zero);
-  ASSERT(LoopifyExpr::eval(simplified) == 5u);
+  auto simplified = add_zero->simplify();
+  ASSERT(simplified->eval() == 5u);
   // Should be just Val(5), so size=1
-  ASSERT(LoopifyExpr::size(simplified) == 1u);
+  ASSERT(simplified->size() == 1u);
 
   // Test simplify: Mul(Val(1), Add(Val(2), Val(3))) => Add(Val(2), Val(3))
   auto mul_one = Expr::ctor::Mul_(
       Expr::ctor::Val_(1u),
       Expr::ctor::Add_(Expr::ctor::Val_(2u), Expr::ctor::Val_(3u)));
-  auto simplified2 = LoopifyExpr::simplify(mul_one);
-  ASSERT(LoopifyExpr::eval(simplified2) == 5u);
-  ASSERT(LoopifyExpr::size(simplified2) == 3u); // Add(Val(2), Val(3))
+  auto simplified2 = mul_one->simplify();
+  ASSERT(simplified2->eval() == 5u);
+  ASSERT(simplified2->size() == 3u); // Add(Val(2), Val(3))
 
   // Test simplify: Mul(Val(0), big_expr) => Val(0)
   auto mul_zero = Expr::ctor::Mul_(Expr::ctor::Val_(0u), e);
-  auto simplified3 = LoopifyExpr::simplify(mul_zero);
-  ASSERT(LoopifyExpr::eval(simplified3) == 0u);
-  ASSERT(LoopifyExpr::size(simplified3) == 1u);
+  auto simplified3 = mul_zero->simplify();
+  ASSERT(simplified3->eval() == 0u);
+  ASSERT(simplified3->size() == 1u);
 
   return testStatus;
 }

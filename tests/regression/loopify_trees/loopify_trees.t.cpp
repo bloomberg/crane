@@ -24,22 +24,22 @@ int main() {
   auto t2 = Tree::ctor::Node_(leaf, 3u, leaf);
   auto tree_val = Tree::ctor::Node_(t1, 2u, t2);
 
-  // Test unique tree functions
+  // Test tree functions (methods on tree)
   ASSERT(LoopifyTrees::tree_sum(tree_val) == 10u);
-  ASSERT(LoopifyTrees::tree_height(tree_val) == 2u);
-  ASSERT(LoopifyTrees::tree_size(tree_val) == 3u);
+  ASSERT(tree_val->tree_height() == 2u);
+  ASSERT(tree_val->tree_size() == 3u);
   ASSERT(LoopifyTrees::leftmost(0u, tree_val) == 5u);
   ASSERT(LoopifyTrees::rightmost(0u, tree_val) == 3u);
-  ASSERT(LoopifyTrees::count_leaves(tree_val) == 4u);
+  ASSERT(tree_val->count_leaves() == 4u);
   ASSERT(LoopifyTrees::leaf_sum(tree_val) == 8u);
   ASSERT(LoopifyTrees::sum_of_max_branches(tree_val) > 0u);
 
   // Test mirror
-  auto mirrored = LoopifyTrees::mirror(tree_val);
+  auto mirrored = tree_val->mirror();
   ASSERT(mirrored != nullptr);
 
   // Test same_shape
-  ASSERT(LoopifyTrees::same_shape(tree_val, tree_val));
+  ASSERT(tree_val->same_shape(tree_val));
 
   // Test insert_bst
   auto bst = LoopifyTrees::insert_bst(4u, tree_val);
@@ -55,16 +55,16 @@ int main() {
       rose_leaf1, RoseList::ctor::Cons_(rose_leaf2, RoseList::ctor::Nil_()));
   auto rose_tree = LoopifyTrees::rose::ctor::RNode_(10u, rose_children);
 
-  ASSERT(LoopifyTrees::rose_sum(rose_tree) == 18u); // 10 + 5 + 3
+  ASSERT(rose_tree->rose_sum() == 18u); // 10 + 5 + 3
 
   auto rose_doubled =
-      LoopifyTrees::rose_map([](unsigned int x) { return x * 2; }, rose_tree);
+      rose_tree->rose_map([](unsigned int x) { return x * 2; });
   ASSERT(rose_doubled != nullptr);
 
-  auto rose_flat = LoopifyTrees::rose_flatten(rose_tree);
+  auto rose_flat = rose_tree->rose_flatten();
   ASSERT(rose_flat != nullptr);
 
-  ASSERT(LoopifyTrees::rose_depth(rose_tree) == 2u);
+  ASSERT(rose_tree->rose_depth() == 2u);
 
   // Test tree_max
   auto max_tree = LoopifyTrees::tree_max(t1, t2);

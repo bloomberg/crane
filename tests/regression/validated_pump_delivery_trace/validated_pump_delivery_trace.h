@@ -818,6 +818,27 @@ struct ValidatedPumpDeliveryTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) bool fault_blocks_bolus() const {
+      return std::visit(
+          Overloaded{
+              [](const typename FaultStatus::Fault_None _args) -> bool {
+                return false;
+              },
+              [](const typename FaultStatus::Fault_Occlusion _args) -> bool {
+                return true;
+              },
+              [](const typename FaultStatus::Fault_LowReservoir _args) -> bool {
+                return PeanoNat::ltb(_args.d_a0, 10u);
+              },
+              [](const typename FaultStatus::Fault_BatteryLow _args) -> bool {
+                return false;
+              },
+              [](const typename FaultStatus::Fault_Unknown _args) -> bool {
+                return true;
+              }},
+          this->v());
+    }
   };
 
   template <typename T1, MapsTo<T1, unsigned int> F2>
@@ -867,9 +888,6 @@ struct ValidatedPumpDeliveryTraceCase {
             }},
         f4->v());
   }
-
-  __attribute__((pure)) static bool
-  fault_blocks_bolus(const std::shared_ptr<FaultStatus> &f);
   enum class InsulinType {
     e_INSULIN_HUMALOG,
     e_INSULIN_ASPART,
@@ -1183,6 +1201,25 @@ struct ValidatedPumpDeliveryTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) bool result_modified() const {
+      return std::visit(
+          Overloaded{[](const typename PrecisionResult::PrecOK _args) -> bool {
+                       return _args.d_a1;
+                     },
+                     [](const typename PrecisionResult::PrecError _args)
+                         -> bool { return false; }},
+          this->v());
+    }
+
+    __attribute__((pure)) unsigned int precision_result_code() const {
+      return std::visit(
+          Overloaded{[](const typename PrecisionResult::PrecOK _args)
+                         -> unsigned int { return 0u; },
+                     [](const typename PrecisionResult::PrecError _args)
+                         -> unsigned int { return _args.d_a0; }},
+          this->v());
+    }
   };
 
   template <typename T1, MapsTo<T1, unsigned int, bool> F0,
@@ -1233,8 +1270,6 @@ struct ValidatedPumpDeliveryTraceCase {
                             const std::shared_ptr<PrecisionParams> &params);
   __attribute__((pure)) static std::optional<Insulin_twentieth>
   prec_result_twentieths(const std::shared_ptr<PrecisionResult> &r);
-  __attribute__((pure)) static unsigned int
-  precision_result_code(const std::shared_ptr<PrecisionResult> &r);
 
   struct MmolPrecisionInput {
     Carbs_g mpi_carbs_g;
@@ -1328,8 +1363,6 @@ struct ValidatedPumpDeliveryTraceCase {
   __attribute__((pure)) static unsigned int
   option_nat_default(const std::optional<unsigned int> x, const unsigned int d);
   __attribute__((pure)) static bool
-  result_modified(const std::shared_ptr<PrecisionResult> &r);
-  __attribute__((pure)) static bool
   pump_accepts_result(const std::shared_ptr<PumpState> &pump,
                       const RoundingMode mode,
                       const std::shared_ptr<PrecisionResult> &r);
@@ -1420,8 +1453,9 @@ struct ValidatedPumpDeliveryTraceCase {
   static inline const std::shared_ptr<PrecisionResult> pediatric_result =
       validated_precision_bolus(pediatric_capped_input, witness_prec_params);
   static inline const unsigned int standard_result_code =
-      precision_result_code(standard_result);
-  static inline const bool standard_modified = result_modified(standard_result);
+      standard_result->precision_result_code();
+  static inline const bool standard_modified =
+      standard_result->result_modified();
   static inline const unsigned int standard_final_delivery_half =
       option_nat_default(
           final_delivery(RoundingMode::e_ROUNDHALF, standard_result), 0u);
@@ -1431,31 +1465,34 @@ struct ValidatedPumpDeliveryTraceCase {
       pump_reservoir_after_result(standard_pump, RoundingMode::e_ROUNDHALF,
                                   standard_result);
   static inline const unsigned int mmol_result_code =
-      precision_result_code(mmol_result);
+      mmol_result->precision_result_code();
   static inline const unsigned int mmol_final_delivery_tenth =
       option_nat_default(
           final_delivery(RoundingMode::e_ROUNDTENTH, mmol_result), 0u);
-  static inline const unsigned int high_iob_error_code = precision_result_code(
-      validated_precision_bolus(high_iob_input, witness_prec_params));
-  static inline const unsigned int tdd_error_code = precision_result_code(
-      validated_precision_bolus(tdd_exceeded_input, witness_prec_params));
-  static inline const unsigned int occlusion_error_code = precision_result_code(
-      validated_precision_bolus(occlusion_input, witness_prec_params));
+  static inline const unsigned int high_iob_error_code =
+      validated_precision_bolus(high_iob_input, witness_prec_params)
+          ->precision_result_code();
+  static inline const unsigned int tdd_error_code =
+      validated_precision_bolus(tdd_exceeded_input, witness_prec_params)
+          ->precision_result_code();
+  static inline const unsigned int occlusion_error_code =
+      validated_precision_bolus(occlusion_input, witness_prec_params)
+          ->precision_result_code();
   static inline const unsigned int battery_low_result_code =
-      precision_result_code(battery_low_result);
+      battery_low_result->precision_result_code();
   static inline const bool battery_low_pump_denied = !(pump_accepts_result(
       low_battery_pump, RoundingMode::e_ROUNDHALF, battery_low_result));
   static inline const unsigned int pediatric_result_code =
-      precision_result_code(pediatric_result);
+      pediatric_result->precision_result_code();
   static inline const bool pediatric_modified =
-      result_modified(pediatric_result);
+      pediatric_result->result_modified();
   static inline const unsigned int pediatric_final_delivery =
       option_nat_default(
           final_delivery(RoundingMode::e_ROUNDTWENTIETH, pediatric_result), 0u);
   static inline const bool low_reservoir_blocks =
-      fault_blocks_bolus(FaultStatus::ctor::Fault_LowReservoir_(5u));
+      FaultStatus::ctor::Fault_LowReservoir_(5u)->fault_blocks_bolus();
   static inline const bool unknown_fault_blocks =
-      fault_blocks_bolus(FaultStatus::ctor::Fault_Unknown_());
+      FaultStatus::ctor::Fault_Unknown_()->fault_blocks_bolus();
 };
 
 #endif // INCLUDED_VALIDATED_PUMP_DELIVERY_TRACE

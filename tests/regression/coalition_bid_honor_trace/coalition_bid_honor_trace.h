@@ -771,33 +771,31 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
+              MapsTo<T1, unsigned int> F1>
+    T1 Location_rec(F0 &&f, F1 &&f0) const {
+      return std::visit(
+          Overloaded{[&](const typename Location::LocPlanetSurface _args)
+                         -> T1 { return f(_args.d_a0, _args.d_a1); },
+                     [&](const typename Location::LocEnclave _args) -> T1 {
+                       return f0(_args.d_a0);
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
+              MapsTo<T1, unsigned int> F1>
+    T1 Location_rect(F0 &&f, F1 &&f0) const {
+      return std::visit(
+          Overloaded{[&](const typename Location::LocPlanetSurface _args)
+                         -> T1 { return f(_args.d_a0, _args.d_a1); },
+                     [&](const typename Location::LocEnclave _args) -> T1 {
+                       return f0(_args.d_a0);
+                     }},
+          this->v());
+    }
   };
-
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1>
-  static T1 Location_rect(F0 &&f, F1 &&f0, const std::shared_ptr<Location> &l) {
-    return std::visit(
-        Overloaded{[&](const typename Location::LocPlanetSurface _args) -> T1 {
-                     return f(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename Location::LocEnclave _args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        l->v());
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1>
-  static T1 Location_rec(F0 &&f, F1 &&f0, const std::shared_ptr<Location> &l) {
-    return std::visit(
-        Overloaded{[&](const typename Location::LocPlanetSurface _args) -> T1 {
-                     return f(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename Location::LocEnclave _args) -> T1 {
-                     return f0(_args.d_a0);
-                   }},
-        l->v());
-  }
 
   struct BattleContext {
     bool ctx_hegira_allowed;
@@ -1391,6 +1389,208 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    __attribute__((pure)) std::optional<std::shared_ptr<Commander>>
+    action_actor_in_phase(const std::shared_ptr<ProtocolAction> &action) const {
+      return std::visit(
+          Overloaded{[](const typename ProtocolAction::ActChallenge _args)
+                         -> std::optional<std::shared_ptr<Commander>> {
+                       return std::make_optional<std::shared_ptr<Commander>>(
+                           _args.d_a0->chal_challenger);
+                     },
+                     [](const typename ProtocolAction::ActRespond _args)
+                         -> std::optional<std::shared_ptr<Commander>> {
+                       return std::make_optional<std::shared_ptr<Commander>>(
+                           _args.d_a0->resp_defender);
+                     },
+                     [](const typename ProtocolAction::ActRefuse _args)
+                         -> std::optional<std::shared_ptr<Commander>> {
+                       return std::optional<std::shared_ptr<Commander>>();
+                     },
+                     [](const typename ProtocolAction::ActBid _args)
+                         -> std::optional<std::shared_ptr<Commander>> {
+                       return std::make_optional<std::shared_ptr<Commander>>(
+                           _args.d_a0->bid_commander);
+                     },
+                     [](const typename ProtocolAction::ActCoalitionBid _args)
+                         -> std::optional<std::shared_ptr<Commander>> {
+                       return std::optional<std::shared_ptr<Commander>>();
+                     },
+                     [](const typename ProtocolAction::ActPass _args)
+                         -> std::optional<std::shared_ptr<Commander>> {
+                       return std::optional<std::shared_ptr<Commander>>();
+                     },
+                     [](const typename ProtocolAction::ActClose _args)
+                         -> std::optional<std::shared_ptr<Commander>> {
+                       return std::optional<std::shared_ptr<Commander>>();
+                     },
+                     [&](const typename ProtocolAction::ActWithdraw _args)
+                         -> std::optional<std::shared_ptr<Commander>> {
+                       return this->get_side_commander(_args.d_a0);
+                     },
+                     [&](const typename ProtocolAction::ActBreakBid _args)
+                         -> std::optional<std::shared_ptr<Commander>> {
+                       return this->get_side_commander(_args.d_a0);
+                     }},
+          action->v());
+    }
+
+    __attribute__((pure)) std::optional<std::shared_ptr<Commander>>
+    get_side_commander(const Side side) const {
+      return std::visit(
+          Overloaded{
+              [](const typename BatchallPhase::PhaseIdle _args)
+                  -> std::optional<std::shared_ptr<Commander>> {
+                return std::optional<std::shared_ptr<Commander>>();
+              },
+              [](const typename BatchallPhase::PhaseChallenged _args)
+                  -> std::optional<std::shared_ptr<Commander>> {
+                return std::optional<std::shared_ptr<Commander>>();
+              },
+              [](const typename BatchallPhase::PhaseResponded _args)
+                  -> std::optional<std::shared_ptr<Commander>> {
+                return std::optional<std::shared_ptr<Commander>>();
+              },
+              [&](const typename BatchallPhase::PhaseBidding _args)
+                  -> std::optional<std::shared_ptr<Commander>> {
+                return [&](void) {
+                  switch (side) {
+                  case Side::e_ATTACKER: {
+                    return std::make_optional<std::shared_ptr<Commander>>(
+                        _args.d_a2->bid_commander);
+                  }
+                  case Side::e_DEFENDER: {
+                    return std::make_optional<std::shared_ptr<Commander>>(
+                        _args.d_a3->bid_commander);
+                  }
+                  }
+                }();
+              },
+              [](const typename BatchallPhase::PhaseAgreed _args)
+                  -> std::optional<std::shared_ptr<Commander>> {
+                return std::optional<std::shared_ptr<Commander>>();
+              },
+              [](const typename BatchallPhase::PhaseRefused _args)
+                  -> std::optional<std::shared_ptr<Commander>> {
+                return std::optional<std::shared_ptr<Commander>>();
+              },
+              [](const typename BatchallPhase::PhaseAborted _args)
+                  -> std::optional<std::shared_ptr<Commander>> {
+                return std::optional<std::shared_ptr<Commander>>();
+              }},
+          this->v());
+    }
+
+    __attribute__((pure)) unsigned int get_bidding_measure() const {
+      return std::visit(
+          Overloaded{[](const typename BatchallPhase::PhaseIdle _args)
+                         -> unsigned int { return 0u; },
+                     [](const typename BatchallPhase::PhaseChallenged _args)
+                         -> unsigned int { return 0u; },
+                     [](const typename BatchallPhase::PhaseResponded _args)
+                         -> unsigned int { return 0u; },
+                     [](const typename BatchallPhase::PhaseBidding _args)
+                         -> unsigned int {
+                       return ((bid_metrics(_args.d_a2)->fm_total_ecr +
+                                bid_metrics(_args.d_a3)->fm_total_ecr) +
+                               [&](void) {
+                                 switch (_args.d_a7) {
+                                 case ReadyStatus::e_NEITHERREADY: {
+                                   return 2u;
+                                 }
+                                 case ReadyStatus::e_ATTACKERREADY: {
+                                   return 1u;
+                                 }
+                                 case ReadyStatus::e_DEFENDERREADY: {
+                                   return 1u;
+                                 }
+                                 case ReadyStatus::e_BOTHREADY: {
+                                   return 0u;
+                                 }
+                                 }
+                               }());
+                     },
+                     [](const typename BatchallPhase::PhaseAgreed _args)
+                         -> unsigned int { return 0u; },
+                     [](const typename BatchallPhase::PhaseRefused _args)
+                         -> unsigned int { return 0u; },
+                     [](const typename BatchallPhase::PhaseAborted _args)
+                         -> unsigned int { return 0u; }},
+          this->v());
+    }
+
+    __attribute__((pure)) unsigned int phase_depth() const {
+      return std::visit(
+          Overloaded{[](const typename BatchallPhase::PhaseIdle _args)
+                         -> unsigned int { return 4u; },
+                     [](const typename BatchallPhase::PhaseChallenged _args)
+                         -> unsigned int { return 3u; },
+                     [](const typename BatchallPhase::PhaseResponded _args)
+                         -> unsigned int { return 2u; },
+                     [](const typename BatchallPhase::PhaseBidding _args)
+                         -> unsigned int { return 1u; },
+                     [](const typename BatchallPhase::PhaseAgreed _args)
+                         -> unsigned int { return 0u; },
+                     [](const typename BatchallPhase::PhaseRefused _args)
+                         -> unsigned int { return 0u; },
+                     [](const typename BatchallPhase::PhaseAborted _args)
+                         -> unsigned int { return 0u; }},
+          this->v());
+    }
+
+    __attribute__((pure)) bool is_bidding() const {
+      return std::visit(
+          Overloaded{
+              [](const typename BatchallPhase::PhaseIdle _args) -> bool {
+                return false;
+              },
+              [](const typename BatchallPhase::PhaseChallenged _args) -> bool {
+                return false;
+              },
+              [](const typename BatchallPhase::PhaseResponded _args) -> bool {
+                return false;
+              },
+              [](const typename BatchallPhase::PhaseBidding _args) -> bool {
+                return true;
+              },
+              [](const typename BatchallPhase::PhaseAgreed _args) -> bool {
+                return false;
+              },
+              [](const typename BatchallPhase::PhaseRefused _args) -> bool {
+                return false;
+              },
+              [](const typename BatchallPhase::PhaseAborted _args) -> bool {
+                return false;
+              }},
+          this->v());
+    }
+
+    __attribute__((pure)) bool is_terminal() const {
+      return std::visit(
+          Overloaded{
+              [](const typename BatchallPhase::PhaseIdle _args) -> bool {
+                return false;
+              },
+              [](const typename BatchallPhase::PhaseChallenged _args) -> bool {
+                return false;
+              },
+              [](const typename BatchallPhase::PhaseResponded _args) -> bool {
+                return false;
+              },
+              [](const typename BatchallPhase::PhaseBidding _args) -> bool {
+                return false;
+              },
+              [](const typename BatchallPhase::PhaseAgreed _args) -> bool {
+                return true;
+              },
+              [](const typename BatchallPhase::PhaseRefused _args) -> bool {
+                return true;
+              },
+              [](const typename BatchallPhase::PhaseAborted _args) -> bool {
+                return true;
+              }},
+          this->v());
+    }
   };
 
   template <
@@ -1497,14 +1697,6 @@ struct CoalitionBidHonorTraceCase {
         b->v());
   }
 
-  __attribute__((pure)) static bool
-  is_terminal(const std::shared_ptr<BatchallPhase> &phase);
-  __attribute__((pure)) static bool
-  is_bidding(const std::shared_ptr<BatchallPhase> &phase);
-  __attribute__((pure)) static unsigned int
-  phase_depth(const std::shared_ptr<BatchallPhase> &phase);
-  __attribute__((pure)) static unsigned int
-  get_bidding_measure(const std::shared_ptr<BatchallPhase> &phase);
   using Honor = std::shared_ptr<Z>;
   using HonorEntry = std::pair<unsigned int, Honor>;
   using HonorLedger = std::shared_ptr<List<HonorEntry>>;
@@ -1524,12 +1716,6 @@ struct CoalitionBidHonorTraceCase {
   refusal_honor_delta(const std::shared_ptr<RefusalReason> &r);
   __attribute__((pure)) static Honor
   protocol_honor_delta(const std::shared_ptr<ProtocolAction> &action);
-  __attribute__((pure)) static std::optional<std::shared_ptr<Commander>>
-  get_side_commander(const std::shared_ptr<BatchallPhase> &phase,
-                     const Side side);
-  __attribute__((pure)) static std::optional<std::shared_ptr<Commander>>
-  action_actor_in_phase(const std::shared_ptr<BatchallPhase> &phase,
-                        const std::shared_ptr<ProtocolAction> &action);
 
   struct BatchallState {
     std::shared_ptr<BatchallPhase> bs_phase;
@@ -1717,15 +1903,15 @@ struct CoalitionBidHonorTraceCase {
       !(is_ready(clear_ready(ReadyStatus::e_BOTHREADY, Side::e_ATTACKER),
                  Side::e_ATTACKER));
   static inline const bool sample_phase_is_bidding =
-      is_bidding(phase_after_initial_bid);
-  static inline const bool sample_agreed_terminal = is_terminal(phase_agreed);
+      phase_after_initial_bid->is_bidding();
+  static inline const bool sample_agreed_terminal = phase_agreed->is_terminal();
   static inline const unsigned int sample_phase_depth_before_close =
-      phase_depth(phase_after_initial_bid);
+      phase_after_initial_bid->phase_depth();
   static inline const unsigned int sample_phase_depth_after_close =
-      phase_depth(phase_agreed);
+      phase_agreed->phase_depth();
   static inline const bool sample_bidding_measure_reduced =
-      PeanoNat::ltb(get_bidding_measure(phase_after_coalition_bid),
-                    get_bidding_measure(phase_after_initial_bid));
+      PeanoNat::ltb(phase_after_coalition_bid->get_bidding_measure(),
+                    phase_after_initial_bid->get_bidding_measure());
   static inline const Honor sample_challenge_honor =
       ledger_lookup(sample_challenge_honor_ledger, malthus->cmd_id);
   static inline const Honor sample_break_bid_honor =
@@ -1737,13 +1923,13 @@ struct CoalitionBidHonorTraceCase {
                   Z::ctor::Zneg_(Positive::ctor::XO_(Positive::ctor::XI_(
                       Positive::ctor::XO_(Positive::ctor::XH_())))));
   static inline const unsigned int sample_break_bid_actor_id = [](void) {
-    if (action_actor_in_phase(
-            phase_after_initial_bid,
-            ProtocolAction::ctor::ActBreakBid_(Side::e_ATTACKER))
+    if (phase_after_initial_bid
+            ->action_actor_in_phase(
+                ProtocolAction::ctor::ActBreakBid_(Side::e_ATTACKER))
             .has_value()) {
-      std::shared_ptr<Commander> cmd = *action_actor_in_phase(
-          phase_after_initial_bid,
-          ProtocolAction::ctor::ActBreakBid_(Side::e_ATTACKER));
+      std::shared_ptr<Commander> cmd =
+          *phase_after_initial_bid->action_actor_in_phase(
+              ProtocolAction::ctor::ActBreakBid_(Side::e_ATTACKER));
       return cmd->cmd_id;
     } else {
       return 0u;

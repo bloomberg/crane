@@ -176,289 +176,1282 @@ struct LoopifyExpr {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    /// simplify e performs algebraic simplification:
+    /// Add(x, Val 0) = x, Add(Val 0, x) = x,
+    /// Mul(x, Val 1) = x, Mul(Val 1, x) = x,
+    /// Mul(_, Val 0) = Val 0, Mul(Val 0, _) = Val 0.
+    std::shared_ptr<expr> simplify() const {
+      const expr *_self = this;
+
+      struct _Enter {
+        const expr *_self;
+      };
+
+      struct _Call1 {};
+
+      struct _Call10 {
+        std::shared_ptr<expr> _s0;
+      };
+
+      struct _Call11 {
+        std::shared_ptr<expr> _s0;
+      };
+
+      struct _Call12 {
+        std::shared_ptr<expr> _s0;
+      };
+
+      struct _Call13 {
+        std::shared_ptr<expr> _s0;
+      };
+
+      struct _Call14 {
+        const expr *_s0;
+        const expr *_s1;
+      };
+
+      struct _Call15 {
+        std::shared_ptr<expr> _s0;
+        const expr *_s1;
+      };
+
+      struct _Call16 {
+        std::shared_ptr<expr> _s0;
+        std::shared_ptr<expr> _s1;
+      };
+
+      struct _Call2 {
+        const typename expr::Add _s0;
+      };
+
+      struct _Call3 {
+        std::shared_ptr<expr> _s0;
+      };
+
+      struct _Call4 {
+        std::shared_ptr<expr> _s0;
+      };
+
+      struct _Call5 {
+        std::shared_ptr<expr> _s0;
+      };
+
+      struct _Call6 {
+        std::shared_ptr<expr> _s0;
+      };
+
+      struct _Call7 {
+        std::shared_ptr<expr> _s0;
+      };
+
+      struct _Call8 {
+        const typename expr::Mul _s0;
+      };
+
+      struct _Call9 {
+        const typename expr::Val _s0;
+      };
+
+      using _Frame =
+          std::variant<_Enter, _Call1, _Call10, _Call11, _Call12, _Call13,
+                       _Call14, _Call15, _Call16, _Call2, _Call3, _Call4,
+                       _Call5, _Call6, _Call7, _Call8, _Call9>;
+      std::shared_ptr<expr> _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const expr *_self = _f._self;
+                  std::visit(
+                      Overloaded{[&](const typename expr::Val _args) -> void {
+                                   _result = expr::ctor::Val_(_args.d_a0);
+                                 },
+                                 [&](const typename expr::Succ _args) -> void {
+                                   _stack.push_back(_Call1{});
+                                   _stack.push_back(_Enter{_args.d_a0.get()});
+                                 },
+                                 [&](const typename expr::Add _args) -> void {
+                                   _stack.push_back(_Call2{_args});
+                                   _stack.push_back(_Enter{_args.d_a0.get()});
+                                 },
+                                 [&](const typename expr::Mul _args) -> void {
+                                   _stack.push_back(_Call8{_args});
+                                   _stack.push_back(_Enter{_args.d_a0.get()});
+                                 },
+                                 [&](const typename expr::Cond _args) -> void {
+                                   _stack.push_back(_Call14{_args.d_a1.get(),
+                                                            _args.d_a0.get()});
+                                   _stack.push_back(_Enter{_args.d_a2.get()});
+                                 }},
+                      _self->v());
+                },
+                [&](_Call1 _f) { _result = expr::ctor::Succ_(_result); },
+                [&](_Call10 _f) {
+                  std::shared_ptr<expr> s1 = _f._s0;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename expr::Val _args1) -> void {
+                            if (_args1.d_a0 <= 0) {
+                              _result = expr::ctor::Val_(0u);
+                            } else {
+                              unsigned int _x = _args1.d_a0 - 1;
+                              if (std::move(_args1.d_a0) == 1u) {
+                                _result = s1;
+                              } else {
+                                _result = expr::ctor::Mul_(
+                                    s1,
+                                    expr::ctor::Val_(std::move(_args1.d_a0)));
+                              }
+                            }
+                          },
+                          [&](const typename expr::Succ _args1) -> void {
+                            _result = expr::ctor::Mul_(
+                                std::move(s1), expr::ctor::Succ_(_args1.d_a0));
+                          },
+                          [&](const typename expr::Add _args1) -> void {
+                            _result = expr::ctor::Mul_(
+                                std::move(s1),
+                                expr::ctor::Add_(_args1.d_a0, _args1.d_a1));
+                          },
+                          [&](const typename expr::Mul _args1) -> void {
+                            _result = expr::ctor::Mul_(
+                                std::move(s1),
+                                expr::ctor::Mul_(_args1.d_a0, _args1.d_a1));
+                          },
+                          [&](const typename expr::Cond _args1) -> void {
+                            _result = expr::ctor::Mul_(
+                                std::move(s1),
+                                expr::ctor::Cond_(_args1.d_a0, _args1.d_a1,
+                                                  _args1.d_a2));
+                          }},
+                      _result->v());
+                },
+                [&](_Call11 _f) {
+                  std::shared_ptr<expr> s1 = _f._s0;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename expr::Val _args1) -> void {
+                            if (_args1.d_a0 <= 0) {
+                              _result = expr::ctor::Val_(0u);
+                            } else {
+                              unsigned int _x = _args1.d_a0 - 1;
+                              if (std::move(_args1.d_a0) == 1u) {
+                                _result = s1;
+                              } else {
+                                _result = expr::ctor::Mul_(
+                                    s1,
+                                    expr::ctor::Val_(std::move(_args1.d_a0)));
+                              }
+                            }
+                          },
+                          [&](const typename expr::Succ _args1) -> void {
+                            _result = expr::ctor::Mul_(
+                                std::move(s1), expr::ctor::Succ_(_args1.d_a0));
+                          },
+                          [&](const typename expr::Add _args1) -> void {
+                            _result = expr::ctor::Mul_(
+                                std::move(s1),
+                                expr::ctor::Add_(_args1.d_a0, _args1.d_a1));
+                          },
+                          [&](const typename expr::Mul _args1) -> void {
+                            _result = expr::ctor::Mul_(
+                                std::move(s1),
+                                expr::ctor::Mul_(_args1.d_a0, _args1.d_a1));
+                          },
+                          [&](const typename expr::Cond _args1) -> void {
+                            _result = expr::ctor::Mul_(
+                                std::move(s1),
+                                expr::ctor::Cond_(_args1.d_a0, _args1.d_a1,
+                                                  _args1.d_a2));
+                          }},
+                      _result->v());
+                },
+                [&](_Call12 _f) {
+                  std::shared_ptr<expr> s1 = _f._s0;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename expr::Val _args1) -> void {
+                            if (_args1.d_a0 <= 0) {
+                              _result = expr::ctor::Val_(0u);
+                            } else {
+                              unsigned int _x = _args1.d_a0 - 1;
+                              if (std::move(_args1.d_a0) == 1u) {
+                                _result = s1;
+                              } else {
+                                _result = expr::ctor::Mul_(
+                                    s1,
+                                    expr::ctor::Val_(std::move(_args1.d_a0)));
+                              }
+                            }
+                          },
+                          [&](const typename expr::Succ _args1) -> void {
+                            _result = expr::ctor::Mul_(
+                                std::move(s1), expr::ctor::Succ_(_args1.d_a0));
+                          },
+                          [&](const typename expr::Add _args1) -> void {
+                            _result = expr::ctor::Mul_(
+                                std::move(s1),
+                                expr::ctor::Add_(_args1.d_a0, _args1.d_a1));
+                          },
+                          [&](const typename expr::Mul _args1) -> void {
+                            _result = expr::ctor::Mul_(
+                                std::move(s1),
+                                expr::ctor::Mul_(_args1.d_a0, _args1.d_a1));
+                          },
+                          [&](const typename expr::Cond _args1) -> void {
+                            _result = expr::ctor::Mul_(
+                                std::move(s1),
+                                expr::ctor::Cond_(_args1.d_a0, _args1.d_a1,
+                                                  _args1.d_a2));
+                          }},
+                      _result->v());
+                },
+                [&](_Call13 _f) {
+                  std::shared_ptr<expr> s1 = _f._s0;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename expr::Val _args1) -> void {
+                            if (_args1.d_a0 <= 0) {
+                              _result = expr::ctor::Val_(0u);
+                            } else {
+                              unsigned int _x = _args1.d_a0 - 1;
+                              if (std::move(_args1.d_a0) == 1u) {
+                                _result = s1;
+                              } else {
+                                _result = expr::ctor::Mul_(
+                                    s1,
+                                    expr::ctor::Val_(std::move(_args1.d_a0)));
+                              }
+                            }
+                          },
+                          [&](const typename expr::Succ _args1) -> void {
+                            _result = expr::ctor::Mul_(
+                                std::move(s1), expr::ctor::Succ_(_args1.d_a0));
+                          },
+                          [&](const typename expr::Add _args1) -> void {
+                            _result = expr::ctor::Mul_(
+                                std::move(s1),
+                                expr::ctor::Add_(_args1.d_a0, _args1.d_a1));
+                          },
+                          [&](const typename expr::Mul _args1) -> void {
+                            _result = expr::ctor::Mul_(
+                                std::move(s1),
+                                expr::ctor::Mul_(_args1.d_a0, _args1.d_a1));
+                          },
+                          [&](const typename expr::Cond _args1) -> void {
+                            _result = expr::ctor::Mul_(
+                                std::move(s1),
+                                expr::ctor::Cond_(_args1.d_a0, _args1.d_a1,
+                                                  _args1.d_a2));
+                          }},
+                      _result->v());
+                },
+                [&](_Call14 _f) {
+                  _stack.push_back(_Call15{_result, _f._s1});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call15 _f) {
+                  _stack.push_back(_Call16{_f._s0, _result});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call16 _f) {
+                  _result = expr::ctor::Cond_(_result, _f._s1, _f._s0);
+                },
+                [&](_Call2 _f) {
+                  const typename expr::Add _args = _f._s0;
+                  std::visit(
+                      Overloaded{[&](const typename expr::Val _args0) -> void {
+                                   if (_args0.d_a0 <= 0) {
+                                     _stack.push_back(_Enter{_args.d_a1.get()});
+                                   } else {
+                                     unsigned int n0 = _args0.d_a0 - 1;
+                                     std::shared_ptr<expr> s1 =
+                                         expr::ctor::Val_((n0 + 1));
+                                     _stack.push_back(_Call3{s1});
+                                     _stack.push_back(_Enter{_args.d_a1.get()});
+                                   }
+                                 },
+                                 [&](const typename expr::Succ _args0) -> void {
+                                   std::shared_ptr<expr> s1 =
+                                       expr::ctor::Succ_(_args0.d_a0);
+                                   _stack.push_back(_Call4{s1});
+                                   _stack.push_back(_Enter{_args.d_a1.get()});
+                                 },
+                                 [&](const typename expr::Add _args0) -> void {
+                                   std::shared_ptr<expr> s1 = expr::ctor::Add_(
+                                       _args0.d_a0, _args0.d_a1);
+                                   _stack.push_back(_Call5{s1});
+                                   _stack.push_back(_Enter{_args.d_a1.get()});
+                                 },
+                                 [&](const typename expr::Mul _args0) -> void {
+                                   std::shared_ptr<expr> s1 = expr::ctor::Mul_(
+                                       _args0.d_a0, _args0.d_a1);
+                                   _stack.push_back(_Call6{s1});
+                                   _stack.push_back(_Enter{_args.d_a1.get()});
+                                 },
+                                 [&](const typename expr::Cond _args0) -> void {
+                                   std::shared_ptr<expr> s1 = expr::ctor::Cond_(
+                                       _args0.d_a0, _args0.d_a1, _args0.d_a2);
+                                   _stack.push_back(_Call7{s1});
+                                   _stack.push_back(_Enter{_args.d_a1.get()});
+                                 }},
+                      _result->v());
+                },
+                [&](_Call3 _f) {
+                  std::shared_ptr<expr> s1 = _f._s0;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename expr::Val _args1) -> void {
+                            if (_args1.d_a0 <= 0) {
+                              _result = std::move(s1);
+                            } else {
+                              unsigned int n2 = _args1.d_a0 - 1;
+                              _result = expr::ctor::Add_(
+                                  s1, expr::ctor::Val_((n2 + 1)));
+                            }
+                          },
+                          [&](const typename expr::Succ _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1), expr::ctor::Succ_(_args1.d_a0));
+                          },
+                          [&](const typename expr::Add _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1),
+                                expr::ctor::Add_(_args1.d_a0, _args1.d_a1));
+                          },
+                          [&](const typename expr::Mul _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1),
+                                expr::ctor::Mul_(_args1.d_a0, _args1.d_a1));
+                          },
+                          [&](const typename expr::Cond _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1),
+                                expr::ctor::Cond_(_args1.d_a0, _args1.d_a1,
+                                                  _args1.d_a2));
+                          }},
+                      _result->v());
+                },
+                [&](_Call4 _f) {
+                  std::shared_ptr<expr> s1 = _f._s0;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename expr::Val _args1) -> void {
+                            if (_args1.d_a0 <= 0) {
+                              _result = std::move(s1);
+                            } else {
+                              unsigned int n0 = _args1.d_a0 - 1;
+                              _result = expr::ctor::Add_(
+                                  s1, expr::ctor::Val_((n0 + 1)));
+                            }
+                          },
+                          [&](const typename expr::Succ _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1), expr::ctor::Succ_(_args1.d_a0));
+                          },
+                          [&](const typename expr::Add _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1),
+                                expr::ctor::Add_(_args1.d_a0, _args1.d_a1));
+                          },
+                          [&](const typename expr::Mul _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1),
+                                expr::ctor::Mul_(_args1.d_a0, _args1.d_a1));
+                          },
+                          [&](const typename expr::Cond _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1),
+                                expr::ctor::Cond_(_args1.d_a0, _args1.d_a1,
+                                                  _args1.d_a2));
+                          }},
+                      _result->v());
+                },
+                [&](_Call5 _f) {
+                  std::shared_ptr<expr> s1 = _f._s0;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename expr::Val _args1) -> void {
+                            if (_args1.d_a0 <= 0) {
+                              _result = std::move(s1);
+                            } else {
+                              unsigned int n0 = _args1.d_a0 - 1;
+                              _result = expr::ctor::Add_(
+                                  s1, expr::ctor::Val_((n0 + 1)));
+                            }
+                          },
+                          [&](const typename expr::Succ _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1), expr::ctor::Succ_(_args1.d_a0));
+                          },
+                          [&](const typename expr::Add _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1),
+                                expr::ctor::Add_(_args1.d_a0, _args1.d_a1));
+                          },
+                          [&](const typename expr::Mul _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1),
+                                expr::ctor::Mul_(_args1.d_a0, _args1.d_a1));
+                          },
+                          [&](const typename expr::Cond _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1),
+                                expr::ctor::Cond_(_args1.d_a0, _args1.d_a1,
+                                                  _args1.d_a2));
+                          }},
+                      _result->v());
+                },
+                [&](_Call6 _f) {
+                  std::shared_ptr<expr> s1 = _f._s0;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename expr::Val _args1) -> void {
+                            if (_args1.d_a0 <= 0) {
+                              _result = std::move(s1);
+                            } else {
+                              unsigned int n0 = _args1.d_a0 - 1;
+                              _result = expr::ctor::Add_(
+                                  s1, expr::ctor::Val_((n0 + 1)));
+                            }
+                          },
+                          [&](const typename expr::Succ _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1), expr::ctor::Succ_(_args1.d_a0));
+                          },
+                          [&](const typename expr::Add _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1),
+                                expr::ctor::Add_(_args1.d_a0, _args1.d_a1));
+                          },
+                          [&](const typename expr::Mul _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1),
+                                expr::ctor::Mul_(_args1.d_a0, _args1.d_a1));
+                          },
+                          [&](const typename expr::Cond _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1),
+                                expr::ctor::Cond_(_args1.d_a0, _args1.d_a1,
+                                                  _args1.d_a2));
+                          }},
+                      _result->v());
+                },
+                [&](_Call7 _f) {
+                  std::shared_ptr<expr> s1 = _f._s0;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename expr::Val _args1) -> void {
+                            if (_args1.d_a0 <= 0) {
+                              _result = std::move(s1);
+                            } else {
+                              unsigned int n0 = _args1.d_a0 - 1;
+                              _result = expr::ctor::Add_(
+                                  s1, expr::ctor::Val_((n0 + 1)));
+                            }
+                          },
+                          [&](const typename expr::Succ _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1), expr::ctor::Succ_(_args1.d_a0));
+                          },
+                          [&](const typename expr::Add _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1),
+                                expr::ctor::Add_(_args1.d_a0, _args1.d_a1));
+                          },
+                          [&](const typename expr::Mul _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1),
+                                expr::ctor::Mul_(_args1.d_a0, _args1.d_a1));
+                          },
+                          [&](const typename expr::Cond _args1) -> void {
+                            _result = expr::ctor::Add_(
+                                std::move(s1),
+                                expr::ctor::Cond_(_args1.d_a0, _args1.d_a1,
+                                                  _args1.d_a2));
+                          }},
+                      _result->v());
+                },
+                [&](_Call8 _f) {
+                  const typename expr::Mul _args = _f._s0;
+                  std::visit(
+                      Overloaded{[&](const typename expr::Val _args0) -> void {
+                                   if (_args0.d_a0 <= 0) {
+                                     _result = expr::ctor::Val_(0u);
+                                   } else {
+                                     unsigned int _x = _args0.d_a0 - 1;
+                                     _stack.push_back(_Call9{_args0});
+                                     _stack.push_back(_Enter{_args.d_a1.get()});
+                                   }
+                                 },
+                                 [&](const typename expr::Succ _args0) -> void {
+                                   std::shared_ptr<expr> s1 =
+                                       expr::ctor::Succ_(_args0.d_a0);
+                                   _stack.push_back(_Call10{s1});
+                                   _stack.push_back(_Enter{_args.d_a1.get()});
+                                 },
+                                 [&](const typename expr::Add _args0) -> void {
+                                   std::shared_ptr<expr> s1 = expr::ctor::Add_(
+                                       _args0.d_a0, _args0.d_a1);
+                                   _stack.push_back(_Call11{s1});
+                                   _stack.push_back(_Enter{_args.d_a1.get()});
+                                 },
+                                 [&](const typename expr::Mul _args0) -> void {
+                                   std::shared_ptr<expr> s1 = expr::ctor::Mul_(
+                                       _args0.d_a0, _args0.d_a1);
+                                   _stack.push_back(_Call12{s1});
+                                   _stack.push_back(_Enter{_args.d_a1.get()});
+                                 },
+                                 [&](const typename expr::Cond _args0) -> void {
+                                   std::shared_ptr<expr> s1 = expr::ctor::Cond_(
+                                       _args0.d_a0, _args0.d_a1, _args0.d_a2);
+                                   _stack.push_back(_Call13{s1});
+                                   _stack.push_back(_Enter{_args.d_a1.get()});
+                                 }},
+                      _result->v());
+                },
+                [&](_Call9 _f) {
+                  const typename expr::Val _args0 = _f._s0;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename expr::Val _args1) -> void {
+                            if (_args1.d_a0 <= 0) {
+                              _result = expr::ctor::Val_(0u);
+                            } else {
+                              unsigned int n1 = _args1.d_a0 - 1;
+                              std::shared_ptr<expr> s2 =
+                                  expr::ctor::Val_((n1 + 1));
+                              if (_args0.d_a0 == 1u) {
+                                _result = std::move(s2);
+                              } else {
+                                _result = expr::ctor::Mul_(
+                                    expr::ctor::Val_(_args0.d_a0),
+                                    std::move(s2));
+                              }
+                            }
+                          },
+                          [&](const typename expr::Succ _args1) -> void {
+                            std::shared_ptr<expr> s2 =
+                                expr::ctor::Succ_(_args1.d_a0);
+                            if (_args0.d_a0 == 1u) {
+                              _result = std::move(s2);
+                            } else {
+                              _result = expr::ctor::Mul_(
+                                  expr::ctor::Val_(_args0.d_a0), std::move(s2));
+                            }
+                          },
+                          [&](const typename expr::Add _args1) -> void {
+                            std::shared_ptr<expr> s2 =
+                                expr::ctor::Add_(_args1.d_a0, _args1.d_a1);
+                            if (_args0.d_a0 == 1u) {
+                              _result = std::move(s2);
+                            } else {
+                              _result = expr::ctor::Mul_(
+                                  expr::ctor::Val_(_args0.d_a0), std::move(s2));
+                            }
+                          },
+                          [&](const typename expr::Mul _args1) -> void {
+                            std::shared_ptr<expr> s2 =
+                                expr::ctor::Mul_(_args1.d_a0, _args1.d_a1);
+                            if (_args0.d_a0 == 1u) {
+                              _result = std::move(s2);
+                            } else {
+                              _result = expr::ctor::Mul_(
+                                  expr::ctor::Val_(_args0.d_a0), std::move(s2));
+                            }
+                          },
+                          [&](const typename expr::Cond _args1) -> void {
+                            std::shared_ptr<expr> s2 = expr::ctor::Cond_(
+                                _args1.d_a0, _args1.d_a1, _args1.d_a2);
+                            if (_args0.d_a0 == 1u) {
+                              _result = std::move(s2);
+                            } else {
+                              _result = expr::ctor::Mul_(
+                                  expr::ctor::Val_(_args0.d_a0), std::move(s2));
+                            }
+                          }},
+                      _result->v());
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    /// size e counts total number of nodes.
+    __attribute__((pure)) unsigned int size() const {
+      const expr *_self = this;
+
+      struct _Enter {
+        const expr *_self;
+      };
+
+      struct _Call1 {};
+
+      struct _Call2 {
+        decltype(std::declval<const typename expr::Add &>().d_a0.get()) _s0;
+      };
+
+      struct _Call3 {
+        unsigned int _s0;
+      };
+
+      struct _Call4 {
+        decltype(std::declval<const typename expr::Mul &>().d_a0.get()) _s0;
+      };
+
+      struct _Call5 {
+        unsigned int _s0;
+      };
+
+      struct _Call6 {
+        const expr *_s0;
+        const expr *_s1;
+      };
+
+      struct _Call7 {
+        unsigned int _s0;
+        const expr *_s1;
+      };
+
+      struct _Call8 {
+        unsigned int _s0;
+        unsigned int _s1;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4,
+                                  _Call5, _Call6, _Call7, _Call8>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{[&](_Enter _f) {
+                         const expr *_self = _f._self;
+                         std::visit(
+                             Overloaded{
+                                 [&](const typename expr::Val _args) -> void {
+                                   _result = 1u;
+                                 },
+                                 [&](const typename expr::Succ _args) -> void {
+                                   _stack.push_back(_Call1{});
+                                   _stack.push_back(_Enter{_args.d_a0.get()});
+                                 },
+                                 [&](const typename expr::Add _args) -> void {
+                                   _stack.push_back(_Call2{_args.d_a0.get()});
+                                   _stack.push_back(_Enter{_args.d_a1.get()});
+                                 },
+                                 [&](const typename expr::Mul _args) -> void {
+                                   _stack.push_back(_Call4{_args.d_a0.get()});
+                                   _stack.push_back(_Enter{_args.d_a1.get()});
+                                 },
+                                 [&](const typename expr::Cond _args) -> void {
+                                   _stack.push_back(_Call6{_args.d_a1.get(),
+                                                           _args.d_a0.get()});
+                                   _stack.push_back(_Enter{_args.d_a2.get()});
+                                 }},
+                             _self->v());
+                       },
+                       [&](_Call1 _f) { _result = (_result + 1); },
+                       [&](_Call2 _f) {
+                         _stack.push_back(_Call3{_result});
+                         _stack.push_back(_Enter{_f._s0});
+                       },
+                       [&](_Call3 _f) { _result = ((_result + _f._s0) + 1); },
+                       [&](_Call4 _f) {
+                         _stack.push_back(_Call5{_result});
+                         _stack.push_back(_Enter{_f._s0});
+                       },
+                       [&](_Call5 _f) { _result = ((_result + _f._s0) + 1); },
+                       [&](_Call6 _f) {
+                         _stack.push_back(_Call7{_result, _f._s1});
+                         _stack.push_back(_Enter{_f._s0});
+                       },
+                       [&](_Call7 _f) {
+                         _stack.push_back(_Call8{_f._s0, _result});
+                         _stack.push_back(_Enter{_f._s1});
+                       },
+                       [&](_Call8 _f) {
+                         _result = ((_result + (_f._s1 + _f._s0)) + 1);
+                       }},
+            _frame);
+      }
+      return _result;
+    }
+
+    /// count_vals e counts the number of Val nodes.
+    __attribute__((pure)) unsigned int count_vals() const {
+      const expr *_self = this;
+
+      struct _Enter {
+        const expr *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename expr::Add &>().d_a0.get()) _s0;
+      };
+
+      struct _Call2 {
+        unsigned int _s0;
+      };
+
+      struct _Call3 {
+        decltype(std::declval<const typename expr::Mul &>().d_a0.get()) _s0;
+      };
+
+      struct _Call4 {
+        unsigned int _s0;
+      };
+
+      struct _Call5 {
+        const expr *_s0;
+        const expr *_s1;
+      };
+
+      struct _Call6 {
+        unsigned int _s0;
+        const expr *_s1;
+      };
+
+      struct _Call7 {
+        unsigned int _s0;
+        unsigned int _s1;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4,
+                                  _Call5, _Call6, _Call7>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const expr *_self = _f._self;
+                  std::visit(
+                      Overloaded{[&](const typename expr::Val _args) -> void {
+                                   _result = 1u;
+                                 },
+                                 [&](const typename expr::Succ _args) -> void {
+                                   _stack.push_back(_Enter{_args.d_a0.get()});
+                                 },
+                                 [&](const typename expr::Add _args) -> void {
+                                   _stack.push_back(_Call1{_args.d_a0.get()});
+                                   _stack.push_back(_Enter{_args.d_a1.get()});
+                                 },
+                                 [&](const typename expr::Mul _args) -> void {
+                                   _stack.push_back(_Call3{_args.d_a0.get()});
+                                   _stack.push_back(_Enter{_args.d_a1.get()});
+                                 },
+                                 [&](const typename expr::Cond _args) -> void {
+                                   _stack.push_back(_Call5{_args.d_a1.get(),
+                                                           _args.d_a0.get()});
+                                   _stack.push_back(_Enter{_args.d_a2.get()});
+                                 }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) { _result = (_result + _f._s0); },
+                [&](_Call3 _f) {
+                  _stack.push_back(_Call4{_result});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call4 _f) { _result = (_result + _f._s0); },
+                [&](_Call5 _f) {
+                  _stack.push_back(_Call6{_result, _f._s1});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call6 _f) {
+                  _stack.push_back(_Call7{_f._s0, _result});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call7 _f) { _result = (_result + (_f._s1 + _f._s0)); }},
+            _frame);
+      }
+      return _result;
+    }
+
+    /// depth e computes expression depth.
+    __attribute__((pure)) unsigned int depth() const {
+      const expr *_self = this;
+
+      struct _Enter {
+        const expr *_self;
+      };
+
+      struct _Call1 {};
+
+      struct _Call2 {
+        decltype(std::declval<const typename expr::Add &>().d_a0.get()) _s0;
+      };
+
+      struct _Call3 {
+        unsigned int _s0;
+      };
+
+      struct _Call4 {
+        decltype(std::declval<const typename expr::Mul &>().d_a0.get()) _s0;
+      };
+
+      struct _Call5 {
+        unsigned int _s0;
+      };
+
+      struct _Call6 {
+        const expr *_s0;
+        const expr *_s1;
+      };
+
+      struct _Call7 {
+        unsigned int _s0;
+        const expr *_s1;
+      };
+
+      struct _Call8 {
+        unsigned int _s0;
+        unsigned int _s1;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4,
+                                  _Call5, _Call6, _Call7, _Call8>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const expr *_self = _f._self;
+                  std::visit(
+                      Overloaded{[&](const typename expr::Val _args) -> void {
+                                   _result = 0u;
+                                 },
+                                 [&](const typename expr::Succ _args) -> void {
+                                   _stack.push_back(_Call1{});
+                                   _stack.push_back(_Enter{_args.d_a0.get()});
+                                 },
+                                 [&](const typename expr::Add _args) -> void {
+                                   _stack.push_back(_Call2{_args.d_a0.get()});
+                                   _stack.push_back(_Enter{_args.d_a1.get()});
+                                 },
+                                 [&](const typename expr::Mul _args) -> void {
+                                   _stack.push_back(_Call4{_args.d_a0.get()});
+                                   _stack.push_back(_Enter{_args.d_a1.get()});
+                                 },
+                                 [&](const typename expr::Cond _args) -> void {
+                                   _stack.push_back(_Call6{_args.d_a1.get(),
+                                                           _args.d_a0.get()});
+                                   _stack.push_back(_Enter{_args.d_a2.get()});
+                                 }},
+                      _self->v());
+                },
+                [&](_Call1 _f) { _result = (_result + 1); },
+                [&](_Call2 _f) {
+                  _stack.push_back(_Call3{_result});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call3 _f) { _result = (std::max(_result, _f._s0) + 1); },
+                [&](_Call4 _f) {
+                  _stack.push_back(_Call5{_result});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call5 _f) { _result = (std::max(_result, _f._s0) + 1); },
+                [&](_Call6 _f) {
+                  _stack.push_back(_Call7{_result, _f._s1});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call7 _f) {
+                  _stack.push_back(_Call8{_f._s0, _result});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call8 _f) {
+                  _result = (std::max(_result, std::max(_f._s1, _f._s0)) + 1);
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    /// eval e evaluates an expression. Multi-constructor recursion.
+    __attribute__((pure)) unsigned int eval() const {
+      const expr *_self = this;
+
+      struct _Enter {
+        const expr *_self;
+      };
+
+      struct _Call1 {};
+
+      struct _Call2 {
+        decltype(std::declval<const typename expr::Add &>().d_a0.get()) _s0;
+      };
+
+      struct _Call3 {
+        unsigned int _s0;
+      };
+
+      struct _Call4 {
+        decltype(std::declval<const typename expr::Mul &>().d_a0.get()) _s0;
+      };
+
+      struct _Call5 {
+        unsigned int _s0;
+      };
+
+      struct _Call6 {
+        const typename expr::Cond _s0;
+      };
+
+      using _Frame =
+          std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5, _Call6>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{[&](_Enter _f) {
+                         const expr *_self = _f._self;
+                         std::visit(
+                             Overloaded{
+                                 [&](const typename expr::Val _args) -> void {
+                                   _result = _args.d_a0;
+                                 },
+                                 [&](const typename expr::Succ _args) -> void {
+                                   _stack.push_back(_Call1{});
+                                   _stack.push_back(_Enter{_args.d_a0.get()});
+                                 },
+                                 [&](const typename expr::Add _args) -> void {
+                                   _stack.push_back(_Call2{_args.d_a0.get()});
+                                   _stack.push_back(_Enter{_args.d_a1.get()});
+                                 },
+                                 [&](const typename expr::Mul _args) -> void {
+                                   _stack.push_back(_Call4{_args.d_a0.get()});
+                                   _stack.push_back(_Enter{_args.d_a1.get()});
+                                 },
+                                 [&](const typename expr::Cond _args) -> void {
+                                   _stack.push_back(_Call6{_args});
+                                   _stack.push_back(_Enter{_args.d_a0.get()});
+                                 }},
+                             _self->v());
+                       },
+                       [&](_Call1 _f) { _result = (_result + 1); },
+                       [&](_Call2 _f) {
+                         _stack.push_back(_Call3{_result});
+                         _stack.push_back(_Enter{_f._s0});
+                       },
+                       [&](_Call3 _f) { _result = (_result + _f._s0); },
+                       [&](_Call4 _f) {
+                         _stack.push_back(_Call5{_result});
+                         _stack.push_back(_Enter{_f._s0});
+                       },
+                       [&](_Call5 _f) { _result = (_result * _f._s0); },
+                       [&](_Call6 _f) {
+                         const typename expr::Cond _args = _f._s0;
+                         unsigned int _cond0 = _result;
+                         if (0u < _cond0) {
+                           _stack.push_back(_Enter{_args.d_a1.get()});
+                         } else {
+                           _stack.push_back(_Enter{_args.d_a2.get()});
+                         }
+                       }},
+            _frame);
+      }
+      return _result;
+    }
+
+    template <
+        typename T1, MapsTo<T1, unsigned int> F0,
+        MapsTo<T1, std::shared_ptr<expr>, T1> F1,
+        MapsTo<T1, std::shared_ptr<expr>, T1, std::shared_ptr<expr>, T1> F2,
+        MapsTo<T1, std::shared_ptr<expr>, T1, std::shared_ptr<expr>, T1> F3,
+        MapsTo<T1, std::shared_ptr<expr>, T1, std::shared_ptr<expr>, T1,
+               std::shared_ptr<expr>, T1>
+            F4>
+    T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
+      const expr *_self = this;
+
+      struct _Enter {
+        const expr *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename expr::Succ &>().d_a0) _s0;
+      };
+
+      struct _Call2 {
+        decltype(std::declval<const typename expr::Add &>().d_a0.get()) _s0;
+        decltype(std::declval<const typename expr::Add &>().d_a1) _s1;
+        decltype(std::declval<const typename expr::Add &>().d_a0) _s2;
+      };
+
+      struct _Call3 {
+        T1 _s0;
+        decltype(std::declval<const typename expr::Add &>().d_a1) _s1;
+        decltype(std::declval<const typename expr::Add &>().d_a0) _s2;
+      };
+
+      struct _Call4 {
+        decltype(std::declval<const typename expr::Mul &>().d_a0.get()) _s0;
+        decltype(std::declval<const typename expr::Mul &>().d_a1) _s1;
+        decltype(std::declval<const typename expr::Mul &>().d_a0) _s2;
+      };
+
+      struct _Call5 {
+        T1 _s0;
+        decltype(std::declval<const typename expr::Mul &>().d_a1) _s1;
+        decltype(std::declval<const typename expr::Mul &>().d_a0) _s2;
+      };
+
+      struct _Call6 {
+        const expr *_s0;
+        const expr *_s1;
+        decltype(std::declval<const typename expr::Cond &>().d_a2) _s2;
+        decltype(std::declval<const typename expr::Cond &>().d_a1) _s3;
+        decltype(std::declval<const typename expr::Cond &>().d_a0) _s4;
+      };
+
+      struct _Call7 {
+        T1 _s0;
+        const expr *_s1;
+        decltype(std::declval<const typename expr::Cond &>().d_a2) _s2;
+        decltype(std::declval<const typename expr::Cond &>().d_a1) _s3;
+        decltype(std::declval<const typename expr::Cond &>().d_a0) _s4;
+      };
+
+      struct _Call8 {
+        T1 _s0;
+        T1 _s1;
+        decltype(std::declval<const typename expr::Cond &>().d_a2) _s2;
+        decltype(std::declval<const typename expr::Cond &>().d_a1) _s3;
+        decltype(std::declval<const typename expr::Cond &>().d_a0) _s4;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4,
+                                  _Call5, _Call6, _Call7, _Call8>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const expr *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename expr::Val _args) -> void {
+                            _result = f(_args.d_a0);
+                          },
+                          [&](const typename expr::Succ _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a0.get()});
+                          },
+                          [&](const typename expr::Add _args) -> void {
+                            _stack.push_back(_Call2{_args.d_a0.get(),
+                                                    _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename expr::Mul _args) -> void {
+                            _stack.push_back(_Call4{_args.d_a0.get(),
+                                                    _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename expr::Cond _args) -> void {
+                            _stack.push_back(
+                                _Call6{_args.d_a1.get(), _args.d_a0.get(),
+                                       _args.d_a2, _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a2.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) { _result = f0(_f._s0, _result); },
+                [&](_Call2 _f) {
+                  _stack.push_back(_Call3{_result, _f._s1, _f._s2});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call3 _f) {
+                  _result = f1(_f._s2, _result, _f._s1, _f._s0);
+                },
+                [&](_Call4 _f) {
+                  _stack.push_back(_Call5{_result, _f._s1, _f._s2});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call5 _f) {
+                  _result = f2(_f._s2, _result, _f._s1, _f._s0);
+                },
+                [&](_Call6 _f) {
+                  _stack.push_back(
+                      _Call7{_result, _f._s1, _f._s2, _f._s3, _f._s4});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call7 _f) {
+                  _stack.push_back(
+                      _Call8{_f._s0, _result, _f._s2, _f._s3, _f._s4});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call8 _f) {
+                  _result = f3(_f._s4, _result, _f._s3, _f._s1, _f._s2, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    template <
+        typename T1, MapsTo<T1, unsigned int> F0,
+        MapsTo<T1, std::shared_ptr<expr>, T1> F1,
+        MapsTo<T1, std::shared_ptr<expr>, T1, std::shared_ptr<expr>, T1> F2,
+        MapsTo<T1, std::shared_ptr<expr>, T1, std::shared_ptr<expr>, T1> F3,
+        MapsTo<T1, std::shared_ptr<expr>, T1, std::shared_ptr<expr>, T1,
+               std::shared_ptr<expr>, T1>
+            F4>
+    T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
+      const expr *_self = this;
+
+      struct _Enter {
+        const expr *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename expr::Succ &>().d_a0) _s0;
+      };
+
+      struct _Call2 {
+        decltype(std::declval<const typename expr::Add &>().d_a0.get()) _s0;
+        decltype(std::declval<const typename expr::Add &>().d_a1) _s1;
+        decltype(std::declval<const typename expr::Add &>().d_a0) _s2;
+      };
+
+      struct _Call3 {
+        T1 _s0;
+        decltype(std::declval<const typename expr::Add &>().d_a1) _s1;
+        decltype(std::declval<const typename expr::Add &>().d_a0) _s2;
+      };
+
+      struct _Call4 {
+        decltype(std::declval<const typename expr::Mul &>().d_a0.get()) _s0;
+        decltype(std::declval<const typename expr::Mul &>().d_a1) _s1;
+        decltype(std::declval<const typename expr::Mul &>().d_a0) _s2;
+      };
+
+      struct _Call5 {
+        T1 _s0;
+        decltype(std::declval<const typename expr::Mul &>().d_a1) _s1;
+        decltype(std::declval<const typename expr::Mul &>().d_a0) _s2;
+      };
+
+      struct _Call6 {
+        const expr *_s0;
+        const expr *_s1;
+        decltype(std::declval<const typename expr::Cond &>().d_a2) _s2;
+        decltype(std::declval<const typename expr::Cond &>().d_a1) _s3;
+        decltype(std::declval<const typename expr::Cond &>().d_a0) _s4;
+      };
+
+      struct _Call7 {
+        T1 _s0;
+        const expr *_s1;
+        decltype(std::declval<const typename expr::Cond &>().d_a2) _s2;
+        decltype(std::declval<const typename expr::Cond &>().d_a1) _s3;
+        decltype(std::declval<const typename expr::Cond &>().d_a0) _s4;
+      };
+
+      struct _Call8 {
+        T1 _s0;
+        T1 _s1;
+        decltype(std::declval<const typename expr::Cond &>().d_a2) _s2;
+        decltype(std::declval<const typename expr::Cond &>().d_a1) _s3;
+        decltype(std::declval<const typename expr::Cond &>().d_a0) _s4;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4,
+                                  _Call5, _Call6, _Call7, _Call8>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const expr *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename expr::Val _args) -> void {
+                            _result = f(_args.d_a0);
+                          },
+                          [&](const typename expr::Succ _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a0.get()});
+                          },
+                          [&](const typename expr::Add _args) -> void {
+                            _stack.push_back(_Call2{_args.d_a0.get(),
+                                                    _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename expr::Mul _args) -> void {
+                            _stack.push_back(_Call4{_args.d_a0.get(),
+                                                    _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename expr::Cond _args) -> void {
+                            _stack.push_back(
+                                _Call6{_args.d_a1.get(), _args.d_a0.get(),
+                                       _args.d_a2, _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a2.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) { _result = f0(_f._s0, _result); },
+                [&](_Call2 _f) {
+                  _stack.push_back(_Call3{_result, _f._s1, _f._s2});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call3 _f) {
+                  _result = f1(_f._s2, _result, _f._s1, _f._s0);
+                },
+                [&](_Call4 _f) {
+                  _stack.push_back(_Call5{_result, _f._s1, _f._s2});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call5 _f) {
+                  _result = f2(_f._s2, _result, _f._s1, _f._s0);
+                },
+                [&](_Call6 _f) {
+                  _stack.push_back(
+                      _Call7{_result, _f._s1, _f._s2, _f._s3, _f._s4});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call7 _f) {
+                  _stack.push_back(
+                      _Call8{_f._s0, _result, _f._s2, _f._s3, _f._s4});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call8 _f) {
+                  _result = f3(_f._s4, _result, _f._s3, _f._s1, _f._s2, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
   };
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, std::shared_ptr<expr>, T1> F1,
-            MapsTo<T1, std::shared_ptr<expr>, T1, std::shared_ptr<expr>, T1> F2,
-            MapsTo<T1, std::shared_ptr<expr>, T1, std::shared_ptr<expr>, T1> F3,
-            MapsTo<T1, std::shared_ptr<expr>, T1, std::shared_ptr<expr>, T1,
-                   std::shared_ptr<expr>, T1>
-                F4>
-  static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                      const std::shared_ptr<expr> &e) {
-    struct _Enter {
-      const std::shared_ptr<expr> e;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename expr::Succ &>().d_a0) _s0;
-    };
-
-    struct _Call2 {
-      decltype(std::declval<const typename expr::Add &>().d_a0) _s0;
-      decltype(std::declval<const typename expr::Add &>().d_a1) _s1;
-      decltype(std::declval<const typename expr::Add &>().d_a0) _s2;
-    };
-
-    struct _Call3 {
-      T1 _s0;
-      decltype(std::declval<const typename expr::Add &>().d_a1) _s1;
-      decltype(std::declval<const typename expr::Add &>().d_a0) _s2;
-    };
-
-    struct _Call4 {
-      decltype(std::declval<const typename expr::Mul &>().d_a0) _s0;
-      decltype(std::declval<const typename expr::Mul &>().d_a1) _s1;
-      decltype(std::declval<const typename expr::Mul &>().d_a0) _s2;
-    };
-
-    struct _Call5 {
-      T1 _s0;
-      decltype(std::declval<const typename expr::Mul &>().d_a1) _s1;
-      decltype(std::declval<const typename expr::Mul &>().d_a0) _s2;
-    };
-
-    struct _Call6 {
-      const std::shared_ptr<expr> _s0;
-      const std::shared_ptr<expr> _s1;
-      decltype(std::declval<const typename expr::Cond &>().d_a2) _s2;
-      decltype(std::declval<const typename expr::Cond &>().d_a1) _s3;
-      decltype(std::declval<const typename expr::Cond &>().d_a0) _s4;
-    };
-
-    struct _Call7 {
-      T1 _s0;
-      const std::shared_ptr<expr> _s1;
-      decltype(std::declval<const typename expr::Cond &>().d_a2) _s2;
-      decltype(std::declval<const typename expr::Cond &>().d_a1) _s3;
-      decltype(std::declval<const typename expr::Cond &>().d_a0) _s4;
-    };
-
-    struct _Call8 {
-      T1 _s0;
-      T1 _s1;
-      decltype(std::declval<const typename expr::Cond &>().d_a2) _s2;
-      decltype(std::declval<const typename expr::Cond &>().d_a1) _s3;
-      decltype(std::declval<const typename expr::Cond &>().d_a0) _s4;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5,
-                                _Call6, _Call7, _Call8>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{e});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<expr> e = _f.e;
-                std::visit(
-                    Overloaded{[&](const typename expr::Val _args) -> void {
-                                 _result = f(_args.d_a0);
-                               },
-                               [&](const typename expr::Succ _args) -> void {
-                                 _stack.push_back(_Call1{_args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a0});
-                               },
-                               [&](const typename expr::Add _args) -> void {
-                                 _stack.push_back(_Call2{_args.d_a0, _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a1});
-                               },
-                               [&](const typename expr::Mul _args) -> void {
-                                 _stack.push_back(_Call4{_args.d_a0, _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a1});
-                               },
-                               [&](const typename expr::Cond _args) -> void {
-                                 _stack.push_back(_Call6{_args.d_a1, _args.d_a0,
-                                                         _args.d_a2, _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a2});
-                               }},
-                    e->v());
-              },
-              [&](_Call1 _f) { _result = f0(_f._s0, _result); },
-              [&](_Call2 _f) {
-                _stack.push_back(_Call3{_result, _f._s1, _f._s2});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call3 _f) { _result = f1(_f._s2, _result, _f._s1, _f._s0); },
-              [&](_Call4 _f) {
-                _stack.push_back(_Call5{_result, _f._s1, _f._s2});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call5 _f) { _result = f2(_f._s2, _result, _f._s1, _f._s0); },
-              [&](_Call6 _f) {
-                _stack.push_back(
-                    _Call7{_result, _f._s1, _f._s2, _f._s3, _f._s4});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call7 _f) {
-                _stack.push_back(
-                    _Call8{_f._s0, _result, _f._s2, _f._s3, _f._s4});
-                _stack.push_back(_Enter{_f._s1});
-              },
-              [&](_Call8 _f) {
-                _result = f3(_f._s4, _result, _f._s3, _f._s1, _f._s2, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, std::shared_ptr<expr>, T1> F1,
-            MapsTo<T1, std::shared_ptr<expr>, T1, std::shared_ptr<expr>, T1> F2,
-            MapsTo<T1, std::shared_ptr<expr>, T1, std::shared_ptr<expr>, T1> F3,
-            MapsTo<T1, std::shared_ptr<expr>, T1, std::shared_ptr<expr>, T1,
-                   std::shared_ptr<expr>, T1>
-                F4>
-  static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                     const std::shared_ptr<expr> &e) {
-    struct _Enter {
-      const std::shared_ptr<expr> e;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename expr::Succ &>().d_a0) _s0;
-    };
-
-    struct _Call2 {
-      decltype(std::declval<const typename expr::Add &>().d_a0) _s0;
-      decltype(std::declval<const typename expr::Add &>().d_a1) _s1;
-      decltype(std::declval<const typename expr::Add &>().d_a0) _s2;
-    };
-
-    struct _Call3 {
-      T1 _s0;
-      decltype(std::declval<const typename expr::Add &>().d_a1) _s1;
-      decltype(std::declval<const typename expr::Add &>().d_a0) _s2;
-    };
-
-    struct _Call4 {
-      decltype(std::declval<const typename expr::Mul &>().d_a0) _s0;
-      decltype(std::declval<const typename expr::Mul &>().d_a1) _s1;
-      decltype(std::declval<const typename expr::Mul &>().d_a0) _s2;
-    };
-
-    struct _Call5 {
-      T1 _s0;
-      decltype(std::declval<const typename expr::Mul &>().d_a1) _s1;
-      decltype(std::declval<const typename expr::Mul &>().d_a0) _s2;
-    };
-
-    struct _Call6 {
-      const std::shared_ptr<expr> _s0;
-      const std::shared_ptr<expr> _s1;
-      decltype(std::declval<const typename expr::Cond &>().d_a2) _s2;
-      decltype(std::declval<const typename expr::Cond &>().d_a1) _s3;
-      decltype(std::declval<const typename expr::Cond &>().d_a0) _s4;
-    };
-
-    struct _Call7 {
-      T1 _s0;
-      const std::shared_ptr<expr> _s1;
-      decltype(std::declval<const typename expr::Cond &>().d_a2) _s2;
-      decltype(std::declval<const typename expr::Cond &>().d_a1) _s3;
-      decltype(std::declval<const typename expr::Cond &>().d_a0) _s4;
-    };
-
-    struct _Call8 {
-      T1 _s0;
-      T1 _s1;
-      decltype(std::declval<const typename expr::Cond &>().d_a2) _s2;
-      decltype(std::declval<const typename expr::Cond &>().d_a1) _s3;
-      decltype(std::declval<const typename expr::Cond &>().d_a0) _s4;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5,
-                                _Call6, _Call7, _Call8>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{e});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<expr> e = _f.e;
-                std::visit(
-                    Overloaded{[&](const typename expr::Val _args) -> void {
-                                 _result = f(_args.d_a0);
-                               },
-                               [&](const typename expr::Succ _args) -> void {
-                                 _stack.push_back(_Call1{_args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a0});
-                               },
-                               [&](const typename expr::Add _args) -> void {
-                                 _stack.push_back(_Call2{_args.d_a0, _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a1});
-                               },
-                               [&](const typename expr::Mul _args) -> void {
-                                 _stack.push_back(_Call4{_args.d_a0, _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a1});
-                               },
-                               [&](const typename expr::Cond _args) -> void {
-                                 _stack.push_back(_Call6{_args.d_a1, _args.d_a0,
-                                                         _args.d_a2, _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a2});
-                               }},
-                    e->v());
-              },
-              [&](_Call1 _f) { _result = f0(_f._s0, _result); },
-              [&](_Call2 _f) {
-                _stack.push_back(_Call3{_result, _f._s1, _f._s2});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call3 _f) { _result = f1(_f._s2, _result, _f._s1, _f._s0); },
-              [&](_Call4 _f) {
-                _stack.push_back(_Call5{_result, _f._s1, _f._s2});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call5 _f) { _result = f2(_f._s2, _result, _f._s1, _f._s0); },
-              [&](_Call6 _f) {
-                _stack.push_back(
-                    _Call7{_result, _f._s1, _f._s2, _f._s3, _f._s4});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call7 _f) {
-                _stack.push_back(
-                    _Call8{_f._s0, _result, _f._s2, _f._s3, _f._s4});
-                _stack.push_back(_Enter{_f._s1});
-              },
-              [&](_Call8 _f) {
-                _result = f3(_f._s4, _result, _f._s3, _f._s1, _f._s2, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
-  /// eval e evaluates an expression. Multi-constructor recursion.
-  __attribute__((pure)) static unsigned int
-  eval(const std::shared_ptr<expr> &e);
-  /// depth e computes expression depth.
-  __attribute__((pure)) static unsigned int
-  depth(const std::shared_ptr<expr> &e);
-  /// count_vals e counts the number of Val nodes.
-  __attribute__((pure)) static unsigned int
-  count_vals(const std::shared_ptr<expr> &e);
-  /// size e counts total number of nodes.
-  __attribute__((pure)) static unsigned int
-  size(const std::shared_ptr<expr> &e);
-  /// simplify e performs algebraic simplification:
-  /// Add(x, Val 0) = x, Add(Val 0, x) = x,
-  /// Mul(x, Val 1) = x, Mul(Val 1, x) = x,
-  /// Mul(_, Val 0) = Val 0, Mul(Val 0, _) = Val 0.
-  static std::shared_ptr<expr> simplify(const std::shared_ptr<expr> &e);
 
   /// Alternative expression type for testing different evaluation strategy.
   struct simple_expr {
@@ -536,218 +1529,368 @@ struct LoopifyExpr {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    /// depth_simple e computes depth of simple expression tree.
+    __attribute__((pure)) unsigned int depth_simple() const {
+      const simple_expr *_self = this;
+
+      struct _Enter {
+        const simple_expr *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename simple_expr::Plus &>()
+                     .d_a0.get()) _s0;
+      };
+
+      struct _Call2 {
+        unsigned int _s0;
+      };
+
+      struct _Call3 {
+        const simple_expr *_s0;
+        const simple_expr *_s1;
+      };
+
+      struct _Call4 {
+        unsigned int _s0;
+        const simple_expr *_s1;
+      };
+
+      struct _Call5 {
+        unsigned int _s0;
+        unsigned int _s1;
+      };
+
+      using _Frame =
+          std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const simple_expr *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename simple_expr::Lit _args) -> void {
+                            _result = 0u;
+                          },
+                          [&](const typename simple_expr::Plus _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0.get()});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename simple_expr::IfPos _args) -> void {
+                            _stack.push_back(
+                                _Call3{_args.d_a1.get(), _args.d_a0.get()});
+                            _stack.push_back(_Enter{_args.d_a2.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) { _result = (std::max(_result, _f._s0) + 1); },
+                [&](_Call3 _f) {
+                  _stack.push_back(_Call4{_result, _f._s1});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call4 _f) {
+                  _stack.push_back(_Call5{_f._s0, _result});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call5 _f) {
+                  _result = (std::max(_result, std::max(_f._s1, _f._s0)) + 1);
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    /// eval_simple e evaluates simple expression with positive test.
+    __attribute__((pure)) unsigned int eval_simple() const {
+      const simple_expr *_self = this;
+
+      struct _Enter {
+        const simple_expr *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename simple_expr::Plus &>()
+                     .d_a0.get()) _s0;
+      };
+
+      struct _Call2 {
+        unsigned int _s0;
+      };
+
+      struct _Call3 {
+        const typename simple_expr::IfPos _s0;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const simple_expr *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename simple_expr::Lit _args) -> void {
+                            _result = _args.d_a0;
+                          },
+                          [&](const typename simple_expr::Plus _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0.get()});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename simple_expr::IfPos _args) -> void {
+                            _stack.push_back(_Call3{_args});
+                            _stack.push_back(_Enter{_args.d_a0.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) { _result = (_result + _f._s0); },
+                [&](_Call3 _f) {
+                  const typename simple_expr::IfPos _args = _f._s0;
+                  unsigned int _cond0 = _result;
+                  if (0u < _cond0) {
+                    _stack.push_back(_Enter{_args.d_a1.get()});
+                  } else {
+                    _stack.push_back(_Enter{_args.d_a2.get()});
+                  }
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, std::shared_ptr<simple_expr>, T1,
+                     std::shared_ptr<simple_expr>, T1>
+                  F1,
+              MapsTo<T1, std::shared_ptr<simple_expr>, T1,
+                     std::shared_ptr<simple_expr>, T1,
+                     std::shared_ptr<simple_expr>, T1>
+                  F2>
+    T1 simple_expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
+      const simple_expr *_self = this;
+
+      struct _Enter {
+        const simple_expr *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename simple_expr::Plus &>()
+                     .d_a0.get()) _s0;
+        decltype(std::declval<const typename simple_expr::Plus &>().d_a1) _s1;
+        decltype(std::declval<const typename simple_expr::Plus &>().d_a0) _s2;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        decltype(std::declval<const typename simple_expr::Plus &>().d_a1) _s1;
+        decltype(std::declval<const typename simple_expr::Plus &>().d_a0) _s2;
+      };
+
+      struct _Call3 {
+        const simple_expr *_s0;
+        const simple_expr *_s1;
+        decltype(std::declval<const typename simple_expr::IfPos &>().d_a2) _s2;
+        decltype(std::declval<const typename simple_expr::IfPos &>().d_a1) _s3;
+        decltype(std::declval<const typename simple_expr::IfPos &>().d_a0) _s4;
+      };
+
+      struct _Call4 {
+        T1 _s0;
+        const simple_expr *_s1;
+        decltype(std::declval<const typename simple_expr::IfPos &>().d_a2) _s2;
+        decltype(std::declval<const typename simple_expr::IfPos &>().d_a1) _s3;
+        decltype(std::declval<const typename simple_expr::IfPos &>().d_a0) _s4;
+      };
+
+      struct _Call5 {
+        T1 _s0;
+        T1 _s1;
+        decltype(std::declval<const typename simple_expr::IfPos &>().d_a2) _s2;
+        decltype(std::declval<const typename simple_expr::IfPos &>().d_a1) _s3;
+        decltype(std::declval<const typename simple_expr::IfPos &>().d_a0) _s4;
+      };
+
+      using _Frame =
+          std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const simple_expr *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename simple_expr::Lit _args) -> void {
+                            _result = f(_args.d_a0);
+                          },
+                          [&](const typename simple_expr::Plus _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0.get(),
+                                                    _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename simple_expr::IfPos _args) -> void {
+                            _stack.push_back(
+                                _Call3{_args.d_a1.get(), _args.d_a0.get(),
+                                       _args.d_a2, _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a2.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _result = f0(_f._s2, _result, _f._s1, _f._s0);
+                },
+                [&](_Call3 _f) {
+                  _stack.push_back(
+                      _Call4{_result, _f._s1, _f._s2, _f._s3, _f._s4});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call4 _f) {
+                  _stack.push_back(
+                      _Call5{_f._s0, _result, _f._s2, _f._s3, _f._s4});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call5 _f) {
+                  _result = f1(_f._s4, _result, _f._s3, _f._s1, _f._s2, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, std::shared_ptr<simple_expr>, T1,
+                     std::shared_ptr<simple_expr>, T1>
+                  F1,
+              MapsTo<T1, std::shared_ptr<simple_expr>, T1,
+                     std::shared_ptr<simple_expr>, T1,
+                     std::shared_ptr<simple_expr>, T1>
+                  F2>
+    T1 simple_expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
+      const simple_expr *_self = this;
+
+      struct _Enter {
+        const simple_expr *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename simple_expr::Plus &>()
+                     .d_a0.get()) _s0;
+        decltype(std::declval<const typename simple_expr::Plus &>().d_a1) _s1;
+        decltype(std::declval<const typename simple_expr::Plus &>().d_a0) _s2;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        decltype(std::declval<const typename simple_expr::Plus &>().d_a1) _s1;
+        decltype(std::declval<const typename simple_expr::Plus &>().d_a0) _s2;
+      };
+
+      struct _Call3 {
+        const simple_expr *_s0;
+        const simple_expr *_s1;
+        decltype(std::declval<const typename simple_expr::IfPos &>().d_a2) _s2;
+        decltype(std::declval<const typename simple_expr::IfPos &>().d_a1) _s3;
+        decltype(std::declval<const typename simple_expr::IfPos &>().d_a0) _s4;
+      };
+
+      struct _Call4 {
+        T1 _s0;
+        const simple_expr *_s1;
+        decltype(std::declval<const typename simple_expr::IfPos &>().d_a2) _s2;
+        decltype(std::declval<const typename simple_expr::IfPos &>().d_a1) _s3;
+        decltype(std::declval<const typename simple_expr::IfPos &>().d_a0) _s4;
+      };
+
+      struct _Call5 {
+        T1 _s0;
+        T1 _s1;
+        decltype(std::declval<const typename simple_expr::IfPos &>().d_a2) _s2;
+        decltype(std::declval<const typename simple_expr::IfPos &>().d_a1) _s3;
+        decltype(std::declval<const typename simple_expr::IfPos &>().d_a0) _s4;
+      };
+
+      using _Frame =
+          std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const simple_expr *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename simple_expr::Lit _args) -> void {
+                            _result = f(_args.d_a0);
+                          },
+                          [&](const typename simple_expr::Plus _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0.get(),
+                                                    _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename simple_expr::IfPos _args) -> void {
+                            _stack.push_back(
+                                _Call3{_args.d_a1.get(), _args.d_a0.get(),
+                                       _args.d_a2, _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a2.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _result = f0(_f._s2, _result, _f._s1, _f._s0);
+                },
+                [&](_Call3 _f) {
+                  _stack.push_back(
+                      _Call4{_result, _f._s1, _f._s2, _f._s3, _f._s4});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call4 _f) {
+                  _stack.push_back(
+                      _Call5{_f._s0, _result, _f._s2, _f._s3, _f._s4});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call5 _f) {
+                  _result = f1(_f._s4, _result, _f._s3, _f._s1, _f._s2, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
   };
-
-  template <
-      typename T1, MapsTo<T1, unsigned int> F0,
-      MapsTo<T1, std::shared_ptr<simple_expr>, T1, std::shared_ptr<simple_expr>,
-             T1>
-          F1,
-      MapsTo<T1, std::shared_ptr<simple_expr>, T1, std::shared_ptr<simple_expr>,
-             T1, std::shared_ptr<simple_expr>, T1>
-          F2>
-  static T1 simple_expr_rect(F0 &&f, F1 &&f0, F2 &&f1,
-                             const std::shared_ptr<simple_expr> &s) {
-    struct _Enter {
-      const std::shared_ptr<simple_expr> s;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename simple_expr::Plus &>().d_a0) _s0;
-      decltype(std::declval<const typename simple_expr::Plus &>().d_a1) _s1;
-      decltype(std::declval<const typename simple_expr::Plus &>().d_a0) _s2;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      decltype(std::declval<const typename simple_expr::Plus &>().d_a1) _s1;
-      decltype(std::declval<const typename simple_expr::Plus &>().d_a0) _s2;
-    };
-
-    struct _Call3 {
-      const std::shared_ptr<simple_expr> _s0;
-      const std::shared_ptr<simple_expr> _s1;
-      decltype(std::declval<const typename simple_expr::IfPos &>().d_a2) _s2;
-      decltype(std::declval<const typename simple_expr::IfPos &>().d_a1) _s3;
-      decltype(std::declval<const typename simple_expr::IfPos &>().d_a0) _s4;
-    };
-
-    struct _Call4 {
-      T1 _s0;
-      const std::shared_ptr<simple_expr> _s1;
-      decltype(std::declval<const typename simple_expr::IfPos &>().d_a2) _s2;
-      decltype(std::declval<const typename simple_expr::IfPos &>().d_a1) _s3;
-      decltype(std::declval<const typename simple_expr::IfPos &>().d_a0) _s4;
-    };
-
-    struct _Call5 {
-      T1 _s0;
-      T1 _s1;
-      decltype(std::declval<const typename simple_expr::IfPos &>().d_a2) _s2;
-      decltype(std::declval<const typename simple_expr::IfPos &>().d_a1) _s3;
-      decltype(std::declval<const typename simple_expr::IfPos &>().d_a0) _s4;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{s});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<simple_expr> s = _f.s;
-                std::visit(
-                    Overloaded{
-                        [&](const typename simple_expr::Lit _args) -> void {
-                          _result = f(_args.d_a0);
-                        },
-                        [&](const typename simple_expr::Plus _args) -> void {
-                          _stack.push_back(
-                              _Call1{_args.d_a0, _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
-                        },
-                        [&](const typename simple_expr::IfPos _args) -> void {
-                          _stack.push_back(_Call3{_args.d_a1, _args.d_a0,
-                                                  _args.d_a2, _args.d_a1,
-                                                  _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a2});
-                        }},
-                    s->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) { _result = f0(_f._s2, _result, _f._s1, _f._s0); },
-              [&](_Call3 _f) {
-                _stack.push_back(
-                    _Call4{_result, _f._s1, _f._s2, _f._s3, _f._s4});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call4 _f) {
-                _stack.push_back(
-                    _Call5{_f._s0, _result, _f._s2, _f._s3, _f._s4});
-                _stack.push_back(_Enter{_f._s1});
-              },
-              [&](_Call5 _f) {
-                _result = f1(_f._s4, _result, _f._s3, _f._s1, _f._s2, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
-  template <
-      typename T1, MapsTo<T1, unsigned int> F0,
-      MapsTo<T1, std::shared_ptr<simple_expr>, T1, std::shared_ptr<simple_expr>,
-             T1>
-          F1,
-      MapsTo<T1, std::shared_ptr<simple_expr>, T1, std::shared_ptr<simple_expr>,
-             T1, std::shared_ptr<simple_expr>, T1>
-          F2>
-  static T1 simple_expr_rec(F0 &&f, F1 &&f0, F2 &&f1,
-                            const std::shared_ptr<simple_expr> &s) {
-    struct _Enter {
-      const std::shared_ptr<simple_expr> s;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename simple_expr::Plus &>().d_a0) _s0;
-      decltype(std::declval<const typename simple_expr::Plus &>().d_a1) _s1;
-      decltype(std::declval<const typename simple_expr::Plus &>().d_a0) _s2;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      decltype(std::declval<const typename simple_expr::Plus &>().d_a1) _s1;
-      decltype(std::declval<const typename simple_expr::Plus &>().d_a0) _s2;
-    };
-
-    struct _Call3 {
-      const std::shared_ptr<simple_expr> _s0;
-      const std::shared_ptr<simple_expr> _s1;
-      decltype(std::declval<const typename simple_expr::IfPos &>().d_a2) _s2;
-      decltype(std::declval<const typename simple_expr::IfPos &>().d_a1) _s3;
-      decltype(std::declval<const typename simple_expr::IfPos &>().d_a0) _s4;
-    };
-
-    struct _Call4 {
-      T1 _s0;
-      const std::shared_ptr<simple_expr> _s1;
-      decltype(std::declval<const typename simple_expr::IfPos &>().d_a2) _s2;
-      decltype(std::declval<const typename simple_expr::IfPos &>().d_a1) _s3;
-      decltype(std::declval<const typename simple_expr::IfPos &>().d_a0) _s4;
-    };
-
-    struct _Call5 {
-      T1 _s0;
-      T1 _s1;
-      decltype(std::declval<const typename simple_expr::IfPos &>().d_a2) _s2;
-      decltype(std::declval<const typename simple_expr::IfPos &>().d_a1) _s3;
-      decltype(std::declval<const typename simple_expr::IfPos &>().d_a0) _s4;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{s});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<simple_expr> s = _f.s;
-                std::visit(
-                    Overloaded{
-                        [&](const typename simple_expr::Lit _args) -> void {
-                          _result = f(_args.d_a0);
-                        },
-                        [&](const typename simple_expr::Plus _args) -> void {
-                          _stack.push_back(
-                              _Call1{_args.d_a0, _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
-                        },
-                        [&](const typename simple_expr::IfPos _args) -> void {
-                          _stack.push_back(_Call3{_args.d_a1, _args.d_a0,
-                                                  _args.d_a2, _args.d_a1,
-                                                  _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a2});
-                        }},
-                    s->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) { _result = f0(_f._s2, _result, _f._s1, _f._s0); },
-              [&](_Call3 _f) {
-                _stack.push_back(
-                    _Call4{_result, _f._s1, _f._s2, _f._s3, _f._s4});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call4 _f) {
-                _stack.push_back(
-                    _Call5{_f._s0, _result, _f._s2, _f._s3, _f._s4});
-                _stack.push_back(_Enter{_f._s1});
-              },
-              [&](_Call5 _f) {
-                _result = f1(_f._s4, _result, _f._s3, _f._s1, _f._s2, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
-  /// eval_simple e evaluates simple expression with positive test.
-  __attribute__((pure)) static unsigned int
-  eval_simple(const std::shared_ptr<simple_expr> &e);
-  /// depth_simple e computes depth of simple expression tree.
-  __attribute__((pure)) static unsigned int
-  depth_simple(const std::shared_ptr<simple_expr> &e);
 
   /// Shape type demonstrating or-pattern matching.
   struct shape {
@@ -812,41 +1955,39 @@ struct LoopifyExpr {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2>
+    T1 shape_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
+      return std::visit(
+          Overloaded{[&](const typename shape::Circle _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename shape::Square _args) -> T1 {
+                       return f0(_args.d_a0);
+                     },
+                     [&](const typename shape::Triangle _args) -> T1 {
+                       return f1(_args.d_a0);
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2>
+    T1 shape_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
+      return std::visit(
+          Overloaded{[&](const typename shape::Circle _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename shape::Square _args) -> T1 {
+                       return f0(_args.d_a0);
+                     },
+                     [&](const typename shape::Triangle _args) -> T1 {
+                       return f1(_args.d_a0);
+                     }},
+          this->v());
+    }
   };
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2>
-  static T1 shape_rect(F0 &&f, F1 &&f0, F2 &&f1,
-                       const std::shared_ptr<shape> &s) {
-    return std::visit(
-        Overloaded{[&](const typename shape::Circle _args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename shape::Square _args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename shape::Triangle _args) -> T1 {
-                     return f1(_args.d_a0);
-                   }},
-        s->v());
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1, MapsTo<T1, unsigned int> F2>
-  static T1 shape_rec(F0 &&f, F1 &&f0, F2 &&f1,
-                      const std::shared_ptr<shape> &s) {
-    return std::visit(
-        Overloaded{[&](const typename shape::Circle _args) -> T1 {
-                     return f(_args.d_a0);
-                   },
-                   [&](const typename shape::Square _args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename shape::Triangle _args) -> T1 {
-                     return f1(_args.d_a0);
-                   }},
-        s->v());
-  }
 
   /// sum_shapes l sums values from shapes using unified pattern.
   /// Tests or-pattern style matching in Coq.
@@ -934,217 +2075,368 @@ struct LoopifyExpr {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    /// depth_cond e computes depth of conditional expression tree.
+    __attribute__((pure)) unsigned int depth_cond() const {
+      const cond_expr *_self = this;
+
+      struct _Enter {
+        const cond_expr *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename cond_expr::CPlus &>()
+                     .d_a0.get()) _s0;
+      };
+
+      struct _Call2 {
+        unsigned int _s0;
+      };
+
+      struct _Call3 {
+        const cond_expr *_s0;
+        const cond_expr *_s1;
+      };
+
+      struct _Call4 {
+        unsigned int _s0;
+        const cond_expr *_s1;
+      };
+
+      struct _Call5 {
+        unsigned int _s0;
+        unsigned int _s1;
+      };
+
+      using _Frame =
+          std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const cond_expr *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename cond_expr::CLit _args) -> void {
+                            _result = 0u;
+                          },
+                          [&](const typename cond_expr::CPlus _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0.get()});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename cond_expr::CCond _args) -> void {
+                            _stack.push_back(
+                                _Call3{_args.d_a1.get(), _args.d_a0.get()});
+                            _stack.push_back(_Enter{_args.d_a2.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) { _result = (std::max(_result, _f._s0) + 1); },
+                [&](_Call3 _f) {
+                  _stack.push_back(_Call4{_result, _f._s1});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call4 _f) {
+                  _stack.push_back(_Call5{_f._s0, _result});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call5 _f) {
+                  _result = (std::max(_result, std::max(_f._s1, _f._s0)) + 1);
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    /// eval_cond e evaluates conditional expression.
+    __attribute__((pure)) unsigned int eval_cond() const {
+      const cond_expr *_self = this;
+
+      struct _Enter {
+        const cond_expr *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename cond_expr::CPlus &>()
+                     .d_a0.get()) _s0;
+      };
+
+      struct _Call2 {
+        unsigned int _s0;
+      };
+
+      struct _Call3 {
+        const typename cond_expr::CCond _s0;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const cond_expr *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename cond_expr::CLit _args) -> void {
+                            _result = _args.d_a0;
+                          },
+                          [&](const typename cond_expr::CPlus _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0.get()});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename cond_expr::CCond _args) -> void {
+                            _stack.push_back(_Call3{_args});
+                            _stack.push_back(_Enter{_args.d_a0.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) { _result = (_result + _f._s0); },
+                [&](_Call3 _f) {
+                  const typename cond_expr::CCond _args = _f._s0;
+                  unsigned int _cond0 = _result;
+                  if (0u < _cond0) {
+                    _stack.push_back(_Enter{_args.d_a1.get()});
+                  } else {
+                    _stack.push_back(_Enter{_args.d_a2.get()});
+                  }
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    template <
+        typename T1, MapsTo<T1, unsigned int> F0,
+        MapsTo<T1, std::shared_ptr<cond_expr>, T1, std::shared_ptr<cond_expr>,
+               T1>
+            F1,
+        MapsTo<T1, std::shared_ptr<cond_expr>, T1, std::shared_ptr<cond_expr>,
+               T1, std::shared_ptr<cond_expr>, T1>
+            F2>
+    T1 cond_expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
+      const cond_expr *_self = this;
+
+      struct _Enter {
+        const cond_expr *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename cond_expr::CPlus &>()
+                     .d_a0.get()) _s0;
+        decltype(std::declval<const typename cond_expr::CPlus &>().d_a1) _s1;
+        decltype(std::declval<const typename cond_expr::CPlus &>().d_a0) _s2;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        decltype(std::declval<const typename cond_expr::CPlus &>().d_a1) _s1;
+        decltype(std::declval<const typename cond_expr::CPlus &>().d_a0) _s2;
+      };
+
+      struct _Call3 {
+        const cond_expr *_s0;
+        const cond_expr *_s1;
+        decltype(std::declval<const typename cond_expr::CCond &>().d_a2) _s2;
+        decltype(std::declval<const typename cond_expr::CCond &>().d_a1) _s3;
+        decltype(std::declval<const typename cond_expr::CCond &>().d_a0) _s4;
+      };
+
+      struct _Call4 {
+        T1 _s0;
+        const cond_expr *_s1;
+        decltype(std::declval<const typename cond_expr::CCond &>().d_a2) _s2;
+        decltype(std::declval<const typename cond_expr::CCond &>().d_a1) _s3;
+        decltype(std::declval<const typename cond_expr::CCond &>().d_a0) _s4;
+      };
+
+      struct _Call5 {
+        T1 _s0;
+        T1 _s1;
+        decltype(std::declval<const typename cond_expr::CCond &>().d_a2) _s2;
+        decltype(std::declval<const typename cond_expr::CCond &>().d_a1) _s3;
+        decltype(std::declval<const typename cond_expr::CCond &>().d_a0) _s4;
+      };
+
+      using _Frame =
+          std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const cond_expr *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename cond_expr::CLit _args) -> void {
+                            _result = f(_args.d_a0);
+                          },
+                          [&](const typename cond_expr::CPlus _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0.get(),
+                                                    _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename cond_expr::CCond _args) -> void {
+                            _stack.push_back(
+                                _Call3{_args.d_a1.get(), _args.d_a0.get(),
+                                       _args.d_a2, _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a2.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _result = f0(_f._s2, _result, _f._s1, _f._s0);
+                },
+                [&](_Call3 _f) {
+                  _stack.push_back(
+                      _Call4{_result, _f._s1, _f._s2, _f._s3, _f._s4});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call4 _f) {
+                  _stack.push_back(
+                      _Call5{_f._s0, _result, _f._s2, _f._s3, _f._s4});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call5 _f) {
+                  _result = f1(_f._s4, _result, _f._s3, _f._s1, _f._s2, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    template <
+        typename T1, MapsTo<T1, unsigned int> F0,
+        MapsTo<T1, std::shared_ptr<cond_expr>, T1, std::shared_ptr<cond_expr>,
+               T1>
+            F1,
+        MapsTo<T1, std::shared_ptr<cond_expr>, T1, std::shared_ptr<cond_expr>,
+               T1, std::shared_ptr<cond_expr>, T1>
+            F2>
+    T1 cond_expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
+      const cond_expr *_self = this;
+
+      struct _Enter {
+        const cond_expr *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename cond_expr::CPlus &>()
+                     .d_a0.get()) _s0;
+        decltype(std::declval<const typename cond_expr::CPlus &>().d_a1) _s1;
+        decltype(std::declval<const typename cond_expr::CPlus &>().d_a0) _s2;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        decltype(std::declval<const typename cond_expr::CPlus &>().d_a1) _s1;
+        decltype(std::declval<const typename cond_expr::CPlus &>().d_a0) _s2;
+      };
+
+      struct _Call3 {
+        const cond_expr *_s0;
+        const cond_expr *_s1;
+        decltype(std::declval<const typename cond_expr::CCond &>().d_a2) _s2;
+        decltype(std::declval<const typename cond_expr::CCond &>().d_a1) _s3;
+        decltype(std::declval<const typename cond_expr::CCond &>().d_a0) _s4;
+      };
+
+      struct _Call4 {
+        T1 _s0;
+        const cond_expr *_s1;
+        decltype(std::declval<const typename cond_expr::CCond &>().d_a2) _s2;
+        decltype(std::declval<const typename cond_expr::CCond &>().d_a1) _s3;
+        decltype(std::declval<const typename cond_expr::CCond &>().d_a0) _s4;
+      };
+
+      struct _Call5 {
+        T1 _s0;
+        T1 _s1;
+        decltype(std::declval<const typename cond_expr::CCond &>().d_a2) _s2;
+        decltype(std::declval<const typename cond_expr::CCond &>().d_a1) _s3;
+        decltype(std::declval<const typename cond_expr::CCond &>().d_a0) _s4;
+      };
+
+      using _Frame =
+          std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const cond_expr *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename cond_expr::CLit _args) -> void {
+                            _result = f(_args.d_a0);
+                          },
+                          [&](const typename cond_expr::CPlus _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a0.get(),
+                                                    _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a1.get()});
+                          },
+                          [&](const typename cond_expr::CCond _args) -> void {
+                            _stack.push_back(
+                                _Call3{_args.d_a1.get(), _args.d_a0.get(),
+                                       _args.d_a2, _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a2.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _result = f0(_f._s2, _result, _f._s1, _f._s0);
+                },
+                [&](_Call3 _f) {
+                  _stack.push_back(
+                      _Call4{_result, _f._s1, _f._s2, _f._s3, _f._s4});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call4 _f) {
+                  _stack.push_back(
+                      _Call5{_f._s0, _result, _f._s2, _f._s3, _f._s4});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call5 _f) {
+                  _result = f1(_f._s4, _result, _f._s3, _f._s1, _f._s2, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
   };
-
-  template <
-      typename T1, MapsTo<T1, unsigned int> F0,
-      MapsTo<T1, std::shared_ptr<cond_expr>, T1, std::shared_ptr<cond_expr>, T1>
-          F1,
-      MapsTo<T1, std::shared_ptr<cond_expr>, T1, std::shared_ptr<cond_expr>, T1,
-             std::shared_ptr<cond_expr>, T1>
-          F2>
-  static T1 cond_expr_rect(F0 &&f, F1 &&f0, F2 &&f1,
-                           const std::shared_ptr<cond_expr> &c) {
-    struct _Enter {
-      const std::shared_ptr<cond_expr> c;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename cond_expr::CPlus &>().d_a0) _s0;
-      decltype(std::declval<const typename cond_expr::CPlus &>().d_a1) _s1;
-      decltype(std::declval<const typename cond_expr::CPlus &>().d_a0) _s2;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      decltype(std::declval<const typename cond_expr::CPlus &>().d_a1) _s1;
-      decltype(std::declval<const typename cond_expr::CPlus &>().d_a0) _s2;
-    };
-
-    struct _Call3 {
-      const std::shared_ptr<cond_expr> _s0;
-      const std::shared_ptr<cond_expr> _s1;
-      decltype(std::declval<const typename cond_expr::CCond &>().d_a2) _s2;
-      decltype(std::declval<const typename cond_expr::CCond &>().d_a1) _s3;
-      decltype(std::declval<const typename cond_expr::CCond &>().d_a0) _s4;
-    };
-
-    struct _Call4 {
-      T1 _s0;
-      const std::shared_ptr<cond_expr> _s1;
-      decltype(std::declval<const typename cond_expr::CCond &>().d_a2) _s2;
-      decltype(std::declval<const typename cond_expr::CCond &>().d_a1) _s3;
-      decltype(std::declval<const typename cond_expr::CCond &>().d_a0) _s4;
-    };
-
-    struct _Call5 {
-      T1 _s0;
-      T1 _s1;
-      decltype(std::declval<const typename cond_expr::CCond &>().d_a2) _s2;
-      decltype(std::declval<const typename cond_expr::CCond &>().d_a1) _s3;
-      decltype(std::declval<const typename cond_expr::CCond &>().d_a0) _s4;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{c});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<cond_expr> c = _f.c;
-                std::visit(
-                    Overloaded{
-                        [&](const typename cond_expr::CLit _args) -> void {
-                          _result = f(_args.d_a0);
-                        },
-                        [&](const typename cond_expr::CPlus _args) -> void {
-                          _stack.push_back(
-                              _Call1{_args.d_a0, _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
-                        },
-                        [&](const typename cond_expr::CCond _args) -> void {
-                          _stack.push_back(_Call3{_args.d_a1, _args.d_a0,
-                                                  _args.d_a2, _args.d_a1,
-                                                  _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a2});
-                        }},
-                    c->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) { _result = f0(_f._s2, _result, _f._s1, _f._s0); },
-              [&](_Call3 _f) {
-                _stack.push_back(
-                    _Call4{_result, _f._s1, _f._s2, _f._s3, _f._s4});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call4 _f) {
-                _stack.push_back(
-                    _Call5{_f._s0, _result, _f._s2, _f._s3, _f._s4});
-                _stack.push_back(_Enter{_f._s1});
-              },
-              [&](_Call5 _f) {
-                _result = f1(_f._s4, _result, _f._s3, _f._s1, _f._s2, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
-  template <
-      typename T1, MapsTo<T1, unsigned int> F0,
-      MapsTo<T1, std::shared_ptr<cond_expr>, T1, std::shared_ptr<cond_expr>, T1>
-          F1,
-      MapsTo<T1, std::shared_ptr<cond_expr>, T1, std::shared_ptr<cond_expr>, T1,
-             std::shared_ptr<cond_expr>, T1>
-          F2>
-  static T1 cond_expr_rec(F0 &&f, F1 &&f0, F2 &&f1,
-                          const std::shared_ptr<cond_expr> &c) {
-    struct _Enter {
-      const std::shared_ptr<cond_expr> c;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename cond_expr::CPlus &>().d_a0) _s0;
-      decltype(std::declval<const typename cond_expr::CPlus &>().d_a1) _s1;
-      decltype(std::declval<const typename cond_expr::CPlus &>().d_a0) _s2;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      decltype(std::declval<const typename cond_expr::CPlus &>().d_a1) _s1;
-      decltype(std::declval<const typename cond_expr::CPlus &>().d_a0) _s2;
-    };
-
-    struct _Call3 {
-      const std::shared_ptr<cond_expr> _s0;
-      const std::shared_ptr<cond_expr> _s1;
-      decltype(std::declval<const typename cond_expr::CCond &>().d_a2) _s2;
-      decltype(std::declval<const typename cond_expr::CCond &>().d_a1) _s3;
-      decltype(std::declval<const typename cond_expr::CCond &>().d_a0) _s4;
-    };
-
-    struct _Call4 {
-      T1 _s0;
-      const std::shared_ptr<cond_expr> _s1;
-      decltype(std::declval<const typename cond_expr::CCond &>().d_a2) _s2;
-      decltype(std::declval<const typename cond_expr::CCond &>().d_a1) _s3;
-      decltype(std::declval<const typename cond_expr::CCond &>().d_a0) _s4;
-    };
-
-    struct _Call5 {
-      T1 _s0;
-      T1 _s1;
-      decltype(std::declval<const typename cond_expr::CCond &>().d_a2) _s2;
-      decltype(std::declval<const typename cond_expr::CCond &>().d_a1) _s3;
-      decltype(std::declval<const typename cond_expr::CCond &>().d_a0) _s4;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4, _Call5>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{c});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<cond_expr> c = _f.c;
-                std::visit(
-                    Overloaded{
-                        [&](const typename cond_expr::CLit _args) -> void {
-                          _result = f(_args.d_a0);
-                        },
-                        [&](const typename cond_expr::CPlus _args) -> void {
-                          _stack.push_back(
-                              _Call1{_args.d_a0, _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1});
-                        },
-                        [&](const typename cond_expr::CCond _args) -> void {
-                          _stack.push_back(_Call3{_args.d_a1, _args.d_a0,
-                                                  _args.d_a2, _args.d_a1,
-                                                  _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a2});
-                        }},
-                    c->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) { _result = f0(_f._s2, _result, _f._s1, _f._s0); },
-              [&](_Call3 _f) {
-                _stack.push_back(
-                    _Call4{_result, _f._s1, _f._s2, _f._s3, _f._s4});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call4 _f) {
-                _stack.push_back(
-                    _Call5{_f._s0, _result, _f._s2, _f._s3, _f._s4});
-                _stack.push_back(_Enter{_f._s1});
-              },
-              [&](_Call5 _f) {
-                _result = f1(_f._s4, _result, _f._s3, _f._s1, _f._s2, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
-  /// eval_cond e evaluates conditional expression.
-  __attribute__((pure)) static unsigned int
-  eval_cond(const std::shared_ptr<cond_expr> &e);
-
-  /// depth_cond e computes depth of conditional expression tree.
-  __attribute__((pure)) static unsigned int
-  depth_cond(const std::shared_ptr<cond_expr> &e);
 };
 
 #endif // INCLUDED_LOOPIFY_EXPR

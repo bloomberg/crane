@@ -431,54 +431,51 @@ struct Levenshtein {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <typename T1,
+              MapsTo<T1, std::shared_ptr<Ascii>, std::shared_ptr<String>> F0,
+              MapsTo<T1, std::shared_ptr<Ascii>, std::shared_ptr<String>> F1,
+              MapsTo<T1, std::shared_ptr<Ascii>, std::shared_ptr<Ascii>,
+                     std::shared_ptr<String>>
+                  F2>
+    T1 edit_rec(F0 &&f, F1 &&f0, F2 &&f1, const std::shared_ptr<String> &_x,
+                const std::shared_ptr<String> &_x0) const {
+      return std::visit(
+          Overloaded{[&](const typename edit::Insertion _args) -> T1 {
+                       return f(_args.d_a0, _args.d_a1);
+                     },
+                     [&](const typename edit::Deletion _args) -> T1 {
+                       return f0(_args.d_a0, _args.d_a1);
+                     },
+                     [&](const typename edit::Update _args) -> T1 {
+                       return f1(_args.d_a0, _args.d_a1, _args.d_a2);
+                     }},
+          this->v());
+    }
+
+    template <typename T1,
+              MapsTo<T1, std::shared_ptr<Ascii>, std::shared_ptr<String>> F0,
+              MapsTo<T1, std::shared_ptr<Ascii>, std::shared_ptr<String>> F1,
+              MapsTo<T1, std::shared_ptr<Ascii>, std::shared_ptr<Ascii>,
+                     std::shared_ptr<String>>
+                  F2>
+    T1 edit_rect(F0 &&f, F1 &&f0, F2 &&f1, const std::shared_ptr<String> &_x,
+                 const std::shared_ptr<String> &_x0) const {
+      return std::visit(
+          Overloaded{[&](const typename edit::Insertion _args) -> T1 {
+                       return f(_args.d_a0, _args.d_a1);
+                     },
+                     [&](const typename edit::Deletion _args) -> T1 {
+                       return f0(_args.d_a0, _args.d_a1);
+                     },
+                     [&](const typename edit::Update _args) -> T1 {
+                       return f1(_args.d_a0, _args.d_a1, _args.d_a2);
+                     }},
+          this->v());
+    }
   };
 
-  template <typename T1,
-            MapsTo<T1, std::shared_ptr<Ascii>, std::shared_ptr<String>> F0,
-            MapsTo<T1, std::shared_ptr<Ascii>, std::shared_ptr<String>> F1,
-            MapsTo<T1, std::shared_ptr<Ascii>, std::shared_ptr<Ascii>,
-                   std::shared_ptr<String>>
-                F2>
-  static T1 edit_rect(F0 &&f, F1 &&f0, F2 &&f1,
-                      const std::shared_ptr<String> &_x,
-                      const std::shared_ptr<String> &_x0,
-                      const std::shared_ptr<edit> &e) {
-    return std::visit(
-        Overloaded{[&](const typename edit::Insertion _args) -> T1 {
-                     return f(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename edit::Deletion _args) -> T1 {
-                     return f0(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename edit::Update _args) -> T1 {
-                     return f1(_args.d_a0, _args.d_a1, _args.d_a2);
-                   }},
-        e->v());
-  }
-
-  template <typename T1,
-            MapsTo<T1, std::shared_ptr<Ascii>, std::shared_ptr<String>> F0,
-            MapsTo<T1, std::shared_ptr<Ascii>, std::shared_ptr<String>> F1,
-            MapsTo<T1, std::shared_ptr<Ascii>, std::shared_ptr<Ascii>,
-                   std::shared_ptr<String>>
-                F2>
-  static T1
-  edit_rec(F0 &&f, F1 &&f0, F2 &&f1, const std::shared_ptr<String> &_x,
-           const std::shared_ptr<String> &_x0, const std::shared_ptr<edit> &e) {
-    return std::visit(
-        Overloaded{[&](const typename edit::Insertion _args) -> T1 {
-                     return f(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename edit::Deletion _args) -> T1 {
-                     return f0(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename edit::Update _args) -> T1 {
-                     return f1(_args.d_a0, _args.d_a1, _args.d_a2);
-                   }},
-        e->v());
-  }
-
-  struct chain {
+  struct chain : public std::enable_shared_from_this<chain> {
     // TYPES
     struct Empty {};
 
@@ -564,6 +561,86 @@ struct Levenshtein {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    std::shared_ptr<chain> aux_eq_char(const std::shared_ptr<String> &_x,
+                                       const std::shared_ptr<String> &_x0,
+                                       const std::shared_ptr<Ascii> &_x1,
+                                       std::shared_ptr<String> xs,
+                                       std::shared_ptr<Ascii> y,
+                                       std::shared_ptr<String> ys,
+                                       std::shared_ptr<Nat> n) const {
+      return chain::ctor::Skip_(
+          y, xs, ys, n,
+          std::const_pointer_cast<chain>(this->shared_from_this()));
+    }
+
+    std::shared_ptr<chain> aux_update(const std::shared_ptr<String> &_x,
+                                      const std::shared_ptr<String> &_x0,
+                                      const std::shared_ptr<Ascii> &x,
+                                      const std::shared_ptr<String> &xs,
+                                      const std::shared_ptr<Ascii> &y,
+                                      const std::shared_ptr<String> &ys,
+                                      const std::shared_ptr<Nat> &n) const {
+      return std::const_pointer_cast<chain>(this->shared_from_this())
+          ->update_chain(x, y, xs, ys, n);
+    }
+
+    std::shared_ptr<chain> aux_delete(const std::shared_ptr<String> &_x,
+                                      const std::shared_ptr<String> &_x0,
+                                      const std::shared_ptr<Ascii> &x,
+                                      const std::shared_ptr<String> &xs,
+                                      std::shared_ptr<Ascii> y,
+                                      std::shared_ptr<String> ys,
+                                      const std::shared_ptr<Nat> &n) const {
+      return std::const_pointer_cast<chain>(this->shared_from_this())
+          ->delete_chain(x, xs, String::ctor::String0_(y, ys), n);
+    }
+
+    std::shared_ptr<chain> aux_insert(const std::shared_ptr<String> &_x,
+                                      const std::shared_ptr<String> &_x0,
+                                      std::shared_ptr<Ascii> x,
+                                      std::shared_ptr<String> xs,
+                                      const std::shared_ptr<Ascii> &y,
+                                      const std::shared_ptr<String> &ys,
+                                      const std::shared_ptr<Nat> &n) const {
+      return std::const_pointer_cast<chain>(this->shared_from_this())
+          ->insert_chain(y, String::ctor::String0_(x, xs), ys, n);
+    }
+
+    std::shared_ptr<chain> update_chain(std::shared_ptr<Ascii> c,
+                                        std::shared_ptr<Ascii> c_,
+                                        std::shared_ptr<String> s1,
+                                        std::shared_ptr<String> s2,
+                                        std::shared_ptr<Nat> n) const {
+      return chain::ctor::Change_(
+          String::ctor::String0_(c, s1), String::ctor::String0_(c_, s1),
+          String::ctor::String0_(c_, s2), n, edit::ctor::Update_(c, c_, s1),
+          chain::ctor::Skip_(
+              c_, s1, s2, n,
+              std::const_pointer_cast<chain>(this->shared_from_this())));
+    }
+
+    std::shared_ptr<chain> delete_chain(std::shared_ptr<Ascii> c,
+                                        std::shared_ptr<String> s1,
+                                        std::shared_ptr<String> s2,
+                                        std::shared_ptr<Nat> n) const {
+      return chain::ctor::Change_(
+          String::ctor::String0_(c, s1), s1, s2, n,
+          edit::ctor::Deletion_(c, s1),
+          std::const_pointer_cast<chain>(this->shared_from_this()));
+    }
+
+    std::shared_ptr<chain> insert_chain(std::shared_ptr<Ascii> c,
+                                        std::shared_ptr<String> s1,
+                                        std::shared_ptr<String> s2,
+                                        std::shared_ptr<Nat> n) const {
+      return chain::ctor::Change_(
+          s1, String::ctor::String0_(c, s1), String::ctor::String0_(c, s2), n,
+          edit::ctor::Insertion_(c, s1),
+          chain::ctor::Skip_(
+              c, s1, s2, n,
+              std::const_pointer_cast<chain>(this->shared_from_this())));
+    }
   };
 
   template <typename T1,
@@ -627,11 +704,6 @@ struct Levenshtein {
   }
 
   static std::shared_ptr<chain> same_chain(const std::shared_ptr<String> &s);
-  static std::shared_ptr<chain> insert_chain(std::shared_ptr<Ascii> c,
-                                             std::shared_ptr<String> s1,
-                                             std::shared_ptr<String> s2,
-                                             std::shared_ptr<Nat> n,
-                                             std::shared_ptr<chain> c0);
 
   template <typename T1>
   static T1 _inserts_chain_F(const std::shared_ptr<String> &s) {
@@ -652,44 +724,11 @@ struct Levenshtein {
                 const std::shared_ptr<String> &s2);
   static std::shared_ptr<chain>
   inserts_chain_empty(const std::shared_ptr<String> &s);
-  static std::shared_ptr<chain> delete_chain(std::shared_ptr<Ascii> c,
-                                             std::shared_ptr<String> s1,
-                                             std::shared_ptr<String> s2,
-                                             std::shared_ptr<Nat> n,
-                                             std::shared_ptr<chain> c0);
   static std::shared_ptr<chain>
   deletes_chain(const std::shared_ptr<String> &s1,
                 const std::shared_ptr<String> &s2);
   static std::shared_ptr<chain>
   deletes_chain_empty(const std::shared_ptr<String> &s);
-  static std::shared_ptr<chain>
-  update_chain(std::shared_ptr<Ascii> c, std::shared_ptr<Ascii> c_,
-               std::shared_ptr<String> s1, std::shared_ptr<String> s2,
-               std::shared_ptr<Nat> n, std::shared_ptr<chain> c0);
-  static std::shared_ptr<chain>
-  aux_insert(const std::shared_ptr<String> &_x,
-             const std::shared_ptr<String> &_x0, std::shared_ptr<Ascii> x,
-             std::shared_ptr<String> xs, const std::shared_ptr<Ascii> &y,
-             const std::shared_ptr<String> &ys, const std::shared_ptr<Nat> &n,
-             const std::shared_ptr<chain> &r1);
-  static std::shared_ptr<chain>
-  aux_delete(const std::shared_ptr<String> &_x,
-             const std::shared_ptr<String> &_x0,
-             const std::shared_ptr<Ascii> &x, const std::shared_ptr<String> &xs,
-             std::shared_ptr<Ascii> y, std::shared_ptr<String> ys,
-             const std::shared_ptr<Nat> &n, const std::shared_ptr<chain> &r2);
-  static std::shared_ptr<chain>
-  aux_update(const std::shared_ptr<String> &_x,
-             const std::shared_ptr<String> &_x0,
-             const std::shared_ptr<Ascii> &x, const std::shared_ptr<String> &xs,
-             const std::shared_ptr<Ascii> &y, const std::shared_ptr<String> &ys,
-             const std::shared_ptr<Nat> &n, const std::shared_ptr<chain> &r3);
-  static std::shared_ptr<chain>
-  aux_eq_char(const std::shared_ptr<String> &_x,
-              const std::shared_ptr<String> &_x0,
-              const std::shared_ptr<Ascii> &_x1, std::shared_ptr<String> xs,
-              std::shared_ptr<Ascii> y, std::shared_ptr<String> ys,
-              std::shared_ptr<Nat> n, std::shared_ptr<chain> c);
   static std::shared_ptr<chain>
   aux_both_empty(const std::shared_ptr<String> &_x,
                  const std::shared_ptr<String> &_x0);

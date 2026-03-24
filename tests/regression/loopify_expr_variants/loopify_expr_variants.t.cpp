@@ -48,115 +48,115 @@ int main() {
   auto lit3 = LE::cond_expr::ctor::Lit_(3);
   auto lit0 = LE::cond_expr::ctor::Lit_(0);
 
-  ASSERT(LE::eval_cond(lit5) == 5);
+  ASSERT(lit5->eval_cond() == 5);
 
   auto sum = LE::cond_expr::ctor::Add_(lit5, lit3);
-  ASSERT(LE::eval_cond(sum) == 8);
+  ASSERT(sum->eval_cond() == 8);
 
   auto cond_true = LE::cond_expr::ctor::Cond_(lit5, lit3, lit0);
-  ASSERT(LE::eval_cond(cond_true) == 3);
+  ASSERT(cond_true->eval_cond() == 3);
 
   auto cond_false = LE::cond_expr::ctor::Cond_(lit0, lit5, lit3);
-  ASSERT(LE::eval_cond(cond_false) == 3);
+  ASSERT(cond_false->eval_cond() == 3);
 
   // size_cond
   auto lit = LE::cond_expr::ctor::Lit_(5);
-  ASSERT(LE::size_cond(lit) == 1);
+  ASSERT(lit->size_cond() == 1);
 
   auto sum1 = LE::cond_expr::ctor::Add_(lit, lit);
-  ASSERT(LE::size_cond(sum1) == 3);
+  ASSERT(sum1->size_cond() == 3);
 
   auto cond = LE::cond_expr::ctor::Cond_(lit, lit, lit);
-  ASSERT(LE::size_cond(cond) == 4);
+  ASSERT(cond->size_cond() == 4);
 
   // eval_arith
   auto n5 = LE::arith_expr::ctor::ANum_(5);
   auto n3 = LE::arith_expr::ctor::ANum_(3);
   auto n0 = LE::arith_expr::ctor::ANum_(0);
 
-  ASSERT(LE::eval_arith(n5) == 5);
+  ASSERT(n5->eval_arith() == 5);
 
   auto sum2 = LE::arith_expr::ctor::AAdd_(n5, n3);
-  ASSERT(LE::eval_arith(sum2) == 8);
+  ASSERT(sum2->eval_arith() == 8);
 
   auto mul = LE::arith_expr::ctor::AMul_(n5, n3);
-  ASSERT(LE::eval_arith(mul) == 15);
+  ASSERT(mul->eval_arith() == 15);
 
   auto div = LE::arith_expr::ctor::ADiv_(n5, n3);
-  ASSERT(LE::eval_arith(div) == 1);
+  ASSERT(div->eval_arith() == 1);
 
   auto div_zero = LE::arith_expr::ctor::ADiv_(n5, n0);
-  ASSERT(LE::eval_arith(div_zero) == 0);
+  ASSERT(div_zero->eval_arith() == 0);
 
   // count_ops
   auto num = LE::arith_expr::ctor::ANum_(5);
-  ASSERT(LE::count_ops(num) == 0);
+  ASSERT(num->count_ops() == 0);
 
   auto add = LE::arith_expr::ctor::AAdd_(num, num);
-  ASSERT(LE::count_ops(add) == 1);
+  ASSERT(add->count_ops() == 1);
 
   auto mul1 = LE::arith_expr::ctor::AMul_(num, num);
   auto complex = LE::arith_expr::ctor::AAdd_(add, mul1);
-  ASSERT(LE::count_ops(complex) == 3);
+  ASSERT(complex->count_ops() == 3);
 
   // eval_bool
   auto t = LE::bool_expr::ctor::BTrue_();
   auto f = LE::bool_expr::ctor::BFalse_();
 
-  ASSERT(LE::eval_bool(t) == true);
-  ASSERT(LE::eval_bool(f) == false);
+  ASSERT(t->eval_bool() == true);
+  ASSERT(f->eval_bool() == false);
 
   auto and_expr = LE::bool_expr::ctor::BAnd_(t, f);
-  ASSERT(LE::eval_bool(and_expr) == false);
+  ASSERT(and_expr->eval_bool() == false);
 
   auto or_expr = LE::bool_expr::ctor::BOr_(t, f);
-  ASSERT(LE::eval_bool(or_expr) == true);
+  ASSERT(or_expr->eval_bool() == true);
 
   auto not_expr = LE::bool_expr::ctor::BNot_(f);
-  ASSERT(LE::eval_bool(not_expr) == true);
+  ASSERT(not_expr->eval_bool() == true);
 
   // simplify_bool
   // And with false => false
   auto and_f = LE::bool_expr::ctor::BAnd_(t, f);
-  ASSERT(LE::eval_bool(LE::simplify_bool(and_f)) == false);
+  ASSERT(and_f->simplify_bool()->eval_bool() == false);
 
   // Or with true => true
   auto or_t = LE::bool_expr::ctor::BOr_(t, f);
-  ASSERT(LE::eval_bool(LE::simplify_bool(or_t)) == true);
+  ASSERT(or_t->simplify_bool()->eval_bool() == true);
 
   // Not(Not(x)) => x (via double negation)
   auto not_not_t = LE::bool_expr::ctor::BNot_(LE::bool_expr::ctor::BNot_(t));
-  ASSERT(LE::eval_bool(LE::simplify_bool(not_not_t)) == true);
+  ASSERT(not_not_t->simplify_bool()->eval_bool() == true);
 
   // eval_list
   auto nil = LE::list_expr::ctor::LNil_();
-  ASSERT(list_empty(LE::eval_list(nil)));
+  ASSERT(list_empty(nil->eval_list()));
 
   auto cons = LE::list_expr::ctor::LCons_(1,
     LE::list_expr::ctor::LCons_(2,
       LE::list_expr::ctor::LCons_(3, nil)));
-  ASSERT(list_eq(LE::eval_list(cons), {1, 2, 3}));
+  ASSERT(list_eq(cons->eval_list(), {1, 2, 3}));
 
   auto rep = LE::list_expr::ctor::LReplicate_(3, 5);
-  ASSERT(list_eq(LE::eval_list(rep), {5, 5, 5}));
+  ASSERT(list_eq(rep->eval_list(), {5, 5, 5}));
 
   auto l1 = LE::list_expr::ctor::LCons_(1, nil);
   auto l2 = LE::list_expr::ctor::LCons_(2, nil);
   auto app = LE::list_expr::ctor::LAppend_(l1, l2);
-  ASSERT(list_eq(LE::eval_list(app), {1, 2}));
+  ASSERT(list_eq(app->eval_list(), {1, 2}));
 
   // list_expr_size
-  ASSERT(LE::list_expr_size(nil) == 1);
+  ASSERT(nil->list_expr_size() == 1);
 
   auto cons1 = LE::list_expr::ctor::LCons_(1,
     LE::list_expr::ctor::LCons_(2, nil));
-  ASSERT(LE::list_expr_size(cons1) == 3);
+  ASSERT(cons1->list_expr_size() == 3);
 
   auto rep1 = LE::list_expr::ctor::LReplicate_(10, 5);
-  ASSERT(LE::list_expr_size(rep1) == 1);
+  ASSERT(rep1->list_expr_size() == 1);
 
   auto app1 = LE::list_expr::ctor::LAppend_(cons1, nil);
-  ASSERT(LE::list_expr_size(app1) == 5);
+  ASSERT(app1->list_expr_size() == 5);
 
   if (testStatus > 0) {
     std::cerr << "Error: " << testStatus << " test(s) failed." << std::endl;

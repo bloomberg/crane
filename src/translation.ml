@@ -4616,6 +4616,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                   mf_body = body_stmts;
                   mf_is_const = false;
                   mf_is_static = true;
+                  mf_this_pos = 0;
                 },
               VPublic,
               SNoTag )
@@ -6443,6 +6444,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
         mf_body = stmts;
         mf_is_const = true;
         mf_is_static = false;
+        mf_this_pos = this_pos;
       },
     VPublic,
     SNoTag )
@@ -6797,6 +6799,7 @@ let gen_ind_header_v2
                   ];
                 mf_is_const = true;
                 mf_is_static = false;
+                mf_this_pos = 0;
               },
             VPublic,
             SAccessors )
@@ -6811,6 +6814,7 @@ let gen_ind_header_v2
                 mf_body = [Sreturn (Some (CPPvar (Id.of_string "d_v_")))];
                 mf_is_const = true;
                 mf_is_static = false;
+                mf_this_pos = 0;
               },
             VPublic,
             SAccessors )
@@ -6833,6 +6837,7 @@ let gen_ind_header_v2
                   mf_body = [Sreturn (Some (CPPvar (Id.of_string "d_v_")))];
                   mf_is_const = false;
                   mf_is_static = false;
+                  mf_this_pos = 0;
                 },
               VPublic,
               SManipulators );

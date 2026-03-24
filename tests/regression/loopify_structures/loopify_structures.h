@@ -74,17 +74,15 @@ public:
     std::shared_ptr<List<t_A>> _head{};
     std::shared_ptr<List<t_A>> _last{};
     const List *_loop_self = this;
-    std::shared_ptr<List<t_A>> _loop_m = m;
     bool _continue = true;
     while (_continue) {
       std::visit(
           Overloaded{
               [&](const typename List<t_A>::Nil _args) {
                 if (_last) {
-                  std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =
-                      _loop_m;
+                  std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
                 } else {
-                  _head = _loop_m;
+                  _head = m;
                 }
                 _continue = false;
               },
@@ -97,10 +95,7 @@ public:
                   _head = _cell;
                 }
                 _last = _cell;
-                List *_next_self = _loop_m.get();
-                std::shared_ptr<List<t_A>> _next_m = _args.d_a1;
-                _loop_self = std::move(_next_self);
-                _loop_m = std::move(_next_m);
+                _loop_self = _args.d_a1.get();
               }},
           _loop_self->v());
     }
@@ -161,54 +156,86 @@ struct LoopifyStructures {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    /// nested_flatten n flattens to a regular list.
+    std::shared_ptr<List<unsigned int>> nested_flatten() const {
+      return std::visit(
+          Overloaded{[](const typename nested::Elem _args)
+                         -> std::shared_ptr<List<unsigned int>> {
+                       return List<unsigned int>::ctor::Cons_(
+                           _args.d_a0, List<unsigned int>::ctor::Nil_());
+                     },
+                     [](const typename nested::NList _args)
+                         -> std::shared_ptr<List<unsigned int>> {
+                       return flatten_nested_list_fuel(1000u, _args.d_a0);
+                     }},
+          this->v());
+    }
+
+    /// nested_depth n computes maximum nesting depth.
+    __attribute__((pure)) unsigned int nested_depth() const {
+      return std::visit(
+          Overloaded{[](const typename nested::Elem _args) -> unsigned int {
+                       return 0u;
+                     },
+                     [](const typename nested::NList _args) -> unsigned int {
+                       return (depth_nested_list_fuel(1000u, _args.d_a0) + 1);
+                     }},
+          this->v());
+    }
+
+    /// nested_sum n sums all elements in a nested structure.
+    __attribute__((pure)) unsigned int nested_sum() const {
+      return std::visit(
+          Overloaded{[](const typename nested::Elem _args) -> unsigned int {
+                       return _args.d_a0;
+                     },
+                     [](const typename nested::NList _args) -> unsigned int {
+                       return sum_nested_list_fuel(1000u, _args.d_a0);
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, std::shared_ptr<List<std::shared_ptr<nested>>>> F1>
+    T1 nested_rec(F0 &&f, F1 &&f0) const {
+      return std::visit(
+          Overloaded{[&](const typename nested::Elem _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename nested::NList _args) -> T1 {
+                       return f0(_args.d_a0);
+                     }},
+          this->v());
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, std::shared_ptr<List<std::shared_ptr<nested>>>> F1>
+    T1 nested_rect(F0 &&f, F1 &&f0) const {
+      return std::visit(
+          Overloaded{[&](const typename nested::Elem _args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename nested::NList _args) -> T1 {
+                       return f0(_args.d_a0);
+                     }},
+          this->v());
+    }
   };
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, std::shared_ptr<List<std::shared_ptr<nested>>>> F1>
-  static T1 nested_rect(F0 &&f, F1 &&f0, const std::shared_ptr<nested> &n) {
-    return std::visit(Overloaded{[&](const typename nested::Elem _args) -> T1 {
-                                   return f(_args.d_a0);
-                                 },
-                                 [&](const typename nested::NList _args) -> T1 {
-                                   return f0(_args.d_a0);
-                                 }},
-                      n->v());
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, std::shared_ptr<List<std::shared_ptr<nested>>>> F1>
-  static T1 nested_rec(F0 &&f, F1 &&f0, const std::shared_ptr<nested> &n) {
-    return std::visit(Overloaded{[&](const typename nested::Elem _args) -> T1 {
-                                   return f(_args.d_a0);
-                                 },
-                                 [&](const typename nested::NList _args) -> T1 {
-                                   return f0(_args.d_a0);
-                                 }},
-                      n->v());
-  }
 
   /// Helper: sum all elements in a list of nested structures.
   /// Handles both tree and list levels in one function for full loopification.
   __attribute__((pure)) static unsigned int
   sum_nested_list_fuel(const unsigned int fuel,
                        const std::shared_ptr<List<std::shared_ptr<nested>>> &l);
-  /// nested_sum n sums all elements in a nested structure.
-  __attribute__((pure)) static unsigned int
-  nested_sum(const std::shared_ptr<nested> &n);
   /// Helper: compute max depth among a list of nested structures.
   __attribute__((pure)) static unsigned int depth_nested_list_fuel(
       const unsigned int fuel,
       const std::shared_ptr<List<std::shared_ptr<nested>>> &l);
-  /// nested_depth n computes maximum nesting depth.
-  __attribute__((pure)) static unsigned int
-  nested_depth(const std::shared_ptr<nested> &n);
   /// Helper: flatten a list of nested structures to a flat list of nats.
   static std::shared_ptr<List<unsigned int>> flatten_nested_list_fuel(
       const unsigned int fuel,
       const std::shared_ptr<List<std::shared_ptr<nested>>> &l);
-  /// nested_flatten n flattens to a regular list.
-  static std::shared_ptr<List<unsigned int>>
-  nested_flatten(const std::shared_ptr<nested> &n);
 
   /// Quadtree: leaf or 4-way branch.
   struct quadtree {
@@ -270,286 +297,474 @@ struct LoopifyStructures {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    /// quad_map f t applies function to all leaves.
+    template <MapsTo<unsigned int, unsigned int> F0>
+    std::shared_ptr<quadtree> quad_map(F0 &&f) const {
+      const quadtree *_self = this;
+
+      struct _Enter {
+        const quadtree *_self;
+      };
+
+      struct _Call1 {
+        const quadtree *_s0;
+        const quadtree *_s1;
+        const quadtree *_s2;
+      };
+
+      struct _Call2 {
+        std::shared_ptr<quadtree> _s0;
+        const quadtree *_s1;
+        const quadtree *_s2;
+      };
+
+      struct _Call3 {
+        std::shared_ptr<quadtree> _s0;
+        std::shared_ptr<quadtree> _s1;
+        const quadtree *_s2;
+      };
+
+      struct _Call4 {
+        std::shared_ptr<quadtree> _s0;
+        std::shared_ptr<quadtree> _s1;
+        std::shared_ptr<quadtree> _s2;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
+      std::shared_ptr<quadtree> _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const quadtree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename quadtree::QLeaf _args) -> void {
+                            _result = quadtree::ctor::QLeaf_(f(_args.d_a0));
+                          },
+                          [&](const typename quadtree::Quad _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a2.get(),
+                                                    _args.d_a1.get(),
+                                                    _args.d_a0.get()});
+                            _stack.push_back(_Enter{_args.d_a3.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _stack.push_back(_Call3{_f._s0, _result, _f._s2});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call3 _f) {
+                  _stack.push_back(_Call4{_f._s0, _f._s1, _result});
+                  _stack.push_back(_Enter{_f._s2});
+                },
+                [&](_Call4 _f) {
+                  _result =
+                      quadtree::ctor::Quad_(_result, _f._s2, _f._s1, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    /// quad_depth t computes quadtree depth.
+    __attribute__((pure)) unsigned int quad_depth() const {
+      const quadtree *_self = this;
+
+      struct _Enter {
+        const quadtree *_self;
+      };
+
+      struct _Call1 {
+        const typename quadtree::Quad _s0;
+      };
+
+      struct _Call2 {
+        const typename quadtree::Quad _s0;
+        unsigned int _s1;
+      };
+
+      struct _Call3 {
+        const typename quadtree::Quad _s0;
+        unsigned int _s1;
+        unsigned int _s2;
+      };
+
+      struct _Call4 {
+        unsigned int _s0;
+        unsigned int _s1;
+        unsigned int _s2;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const quadtree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename quadtree::QLeaf _args) -> void {
+                            _result = 0u;
+                          },
+                          [&](const typename quadtree::Quad _args) -> void {
+                            _stack.push_back(_Call1{_args});
+                            _stack.push_back(_Enter{_args.d_a0.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  const typename quadtree::Quad _args = _f._s0;
+                  unsigned int d1 = _result;
+                  _stack.push_back(_Call2{_args, d1});
+                  _stack.push_back(_Enter{_args.d_a1.get()});
+                },
+                [&](_Call2 _f) {
+                  const typename quadtree::Quad _args = _f._s0;
+                  unsigned int d1 = _f._s1;
+                  unsigned int d2 = _result;
+                  _stack.push_back(_Call3{_args, d1, d2});
+                  _stack.push_back(_Enter{_args.d_a2.get()});
+                },
+                [&](_Call3 _f) {
+                  const typename quadtree::Quad _args = _f._s0;
+                  unsigned int d1 = _f._s1;
+                  unsigned int d2 = _f._s2;
+                  unsigned int d3 = _result;
+                  _stack.push_back(_Call4{d1, d2, d3});
+                  _stack.push_back(_Enter{_args.d_a3.get()});
+                },
+                [&](_Call4 _f) {
+                  unsigned int d1 = _f._s0;
+                  unsigned int d2 = _f._s1;
+                  unsigned int d3 = _f._s2;
+                  unsigned int d4 = _result;
+                  _result = ([&](void) {
+                    if ([&](void) {
+                          if (d1 <= d2) {
+                            return std::move(d2);
+                          } else {
+                            return std::move(d1);
+                          }
+                        }() <=
+                        [&](void) {
+                          if (d3 <= d4) {
+                            return std::move(d4);
+                          } else {
+                            return std::move(d3);
+                          }
+                        }()) {
+                      if (d3 <= d4) {
+                        return std::move(d4);
+                      } else {
+                        return std::move(d3);
+                      }
+                    } else {
+                      if (d1 <= d2) {
+                        return std::move(d2);
+                      } else {
+                        return std::move(d1);
+                      }
+                    }
+                  }() + 1);
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    /// quad_sum t sums all values in quadtree.
+    __attribute__((pure)) unsigned int quad_sum() const {
+      const quadtree *_self = this;
+
+      struct _Enter {
+        const quadtree *_self;
+      };
+
+      struct _Call1 {
+        const quadtree *_s0;
+        const quadtree *_s1;
+        const quadtree *_s2;
+      };
+
+      struct _Call2 {
+        unsigned int _s0;
+        const quadtree *_s1;
+        const quadtree *_s2;
+      };
+
+      struct _Call3 {
+        unsigned int _s0;
+        unsigned int _s1;
+        const quadtree *_s2;
+      };
+
+      struct _Call4 {
+        unsigned int _s0;
+        unsigned int _s1;
+        unsigned int _s2;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
+      unsigned int _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const quadtree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename quadtree::QLeaf _args) -> void {
+                            _result = _args.d_a0;
+                          },
+                          [&](const typename quadtree::Quad _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a2.get(),
+                                                    _args.d_a1.get(),
+                                                    _args.d_a0.get()});
+                            _stack.push_back(_Enter{_args.d_a3.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _stack.push_back(_Call3{_f._s0, _result, _f._s2});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call3 _f) {
+                  _stack.push_back(_Call4{_f._s0, _f._s1, _result});
+                  _stack.push_back(_Enter{_f._s2});
+                },
+                [&](_Call4 _f) {
+                  _result = (_result + (_f._s2 + (_f._s1 + _f._s0)));
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    template <
+        typename T1, MapsTo<T1, unsigned int> F0,
+        MapsTo<T1, std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1,
+               std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1>
+            F1>
+    T1 quadtree_rec(F0 &&f, F1 &&f0) const {
+      const quadtree *_self = this;
+
+      struct _Enter {
+        const quadtree *_self;
+      };
+
+      struct _Call1 {
+        const quadtree *_s0;
+        const quadtree *_s1;
+        const quadtree *_s2;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        const quadtree *_s1;
+        const quadtree *_s2;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+      };
+
+      struct _Call3 {
+        T1 _s0;
+        T1 _s1;
+        const quadtree *_s2;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+      };
+
+      struct _Call4 {
+        T1 _s0;
+        T1 _s1;
+        T1 _s2;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const quadtree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename quadtree::QLeaf _args) -> void {
+                            _result = f(_args.d_a0);
+                          },
+                          [&](const typename quadtree::Quad _args) -> void {
+                            _stack.push_back(
+                                _Call1{_args.d_a2.get(), _args.d_a1.get(),
+                                       _args.d_a0.get(), _args.d_a3, _args.d_a2,
+                                       _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a3.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
+                                          _f._s4, _f._s5, _f._s6});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
+                                          _f._s4, _f._s5, _f._s6});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call3 _f) {
+                  _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
+                                          _f._s4, _f._s5, _f._s6});
+                  _stack.push_back(_Enter{_f._s2});
+                },
+                [&](_Call4 _f) {
+                  _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
+                               _f._s3, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    template <
+        typename T1, MapsTo<T1, unsigned int> F0,
+        MapsTo<T1, std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1,
+               std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1>
+            F1>
+    T1 quadtree_rect(F0 &&f, F1 &&f0) const {
+      const quadtree *_self = this;
+
+      struct _Enter {
+        const quadtree *_self;
+      };
+
+      struct _Call1 {
+        const quadtree *_s0;
+        const quadtree *_s1;
+        const quadtree *_s2;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        const quadtree *_s1;
+        const quadtree *_s2;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+      };
+
+      struct _Call3 {
+        T1 _s0;
+        T1 _s1;
+        const quadtree *_s2;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+      };
+
+      struct _Call4 {
+        T1 _s0;
+        T1 _s1;
+        T1 _s2;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
+        decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const quadtree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename quadtree::QLeaf _args) -> void {
+                            _result = f(_args.d_a0);
+                          },
+                          [&](const typename quadtree::Quad _args) -> void {
+                            _stack.push_back(
+                                _Call1{_args.d_a2.get(), _args.d_a1.get(),
+                                       _args.d_a0.get(), _args.d_a3, _args.d_a2,
+                                       _args.d_a1, _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a3.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3,
+                                          _f._s4, _f._s5, _f._s6});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3,
+                                          _f._s4, _f._s5, _f._s6});
+                  _stack.push_back(_Enter{_f._s1});
+                },
+                [&](_Call3 _f) {
+                  _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3,
+                                          _f._s4, _f._s5, _f._s6});
+                  _stack.push_back(_Enter{_f._s2});
+                },
+                [&](_Call4 _f) {
+                  _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
+                               _f._s3, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
   };
-
-  template <
-      typename T1, MapsTo<T1, unsigned int> F0,
-      MapsTo<T1, std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1,
-             std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1>
-          F1>
-  static T1 quadtree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<quadtree> &q) {
-    struct _Enter {
-      const std::shared_ptr<quadtree> q;
-    };
-
-    struct _Call1 {
-      const std::shared_ptr<quadtree> _s0;
-      const std::shared_ptr<quadtree> _s1;
-      const std::shared_ptr<quadtree> _s2;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      const std::shared_ptr<quadtree> _s1;
-      const std::shared_ptr<quadtree> _s2;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
-    };
-
-    struct _Call3 {
-      T1 _s0;
-      T1 _s1;
-      const std::shared_ptr<quadtree> _s2;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
-    };
-
-    struct _Call4 {
-      T1 _s0;
-      T1 _s1;
-      T1 _s2;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{q});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<quadtree> q = _f.q;
-                std::visit(
-                    Overloaded{
-                        [&](const typename quadtree::QLeaf _args) -> void {
-                          _result = f(_args.d_a0);
-                        },
-                        [&](const typename quadtree::Quad _args) -> void {
-                          _stack.push_back(_Call1{
-                              _args.d_a2, _args.d_a1, _args.d_a0, _args.d_a3,
-                              _args.d_a2, _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a3});
-                        }},
-                    q->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4,
-                                        _f._s5, _f._s6});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4,
-                                        _f._s5, _f._s6});
-                _stack.push_back(_Enter{_f._s1});
-              },
-              [&](_Call3 _f) {
-                _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3, _f._s4,
-                                        _f._s5, _f._s6});
-                _stack.push_back(_Enter{_f._s2});
-              },
-              [&](_Call4 _f) {
-                _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
-                             _f._s3, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
-  template <
-      typename T1, MapsTo<T1, unsigned int> F0,
-      MapsTo<T1, std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1,
-             std::shared_ptr<quadtree>, T1, std::shared_ptr<quadtree>, T1>
-          F1>
-  static T1 quadtree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<quadtree> &q) {
-    struct _Enter {
-      const std::shared_ptr<quadtree> q;
-    };
-
-    struct _Call1 {
-      const std::shared_ptr<quadtree> _s0;
-      const std::shared_ptr<quadtree> _s1;
-      const std::shared_ptr<quadtree> _s2;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      const std::shared_ptr<quadtree> _s1;
-      const std::shared_ptr<quadtree> _s2;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
-    };
-
-    struct _Call3 {
-      T1 _s0;
-      T1 _s1;
-      const std::shared_ptr<quadtree> _s2;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
-    };
-
-    struct _Call4 {
-      T1 _s0;
-      T1 _s1;
-      T1 _s2;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a3) _s3;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a2) _s4;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a1) _s5;
-      decltype(std::declval<const typename quadtree::Quad &>().d_a0) _s6;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{q});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<quadtree> q = _f.q;
-                std::visit(
-                    Overloaded{
-                        [&](const typename quadtree::QLeaf _args) -> void {
-                          _result = f(_args.d_a0);
-                        },
-                        [&](const typename quadtree::Quad _args) -> void {
-                          _stack.push_back(_Call1{
-                              _args.d_a2, _args.d_a1, _args.d_a0, _args.d_a3,
-                              _args.d_a2, _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a3});
-                        }},
-                    q->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3, _f._s4,
-                                        _f._s5, _f._s6});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _stack.push_back(_Call3{_f._s0, _result, _f._s2, _f._s3, _f._s4,
-                                        _f._s5, _f._s6});
-                _stack.push_back(_Enter{_f._s1});
-              },
-              [&](_Call3 _f) {
-                _stack.push_back(_Call4{_f._s0, _f._s1, _result, _f._s3, _f._s4,
-                                        _f._s5, _f._s6});
-                _stack.push_back(_Enter{_f._s2});
-              },
-              [&](_Call4 _f) {
-                _result = f0(_f._s6, _result, _f._s5, _f._s2, _f._s4, _f._s1,
-                             _f._s3, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
-  /// quad_sum t sums all values in quadtree.
-  __attribute__((pure)) static unsigned int
-  quad_sum(const std::shared_ptr<quadtree> &t);
-  /// quad_depth t computes quadtree depth.
-  __attribute__((pure)) static unsigned int
-  quad_depth(const std::shared_ptr<quadtree> &t);
-
-  /// quad_map f t applies function to all leaves.
-  template <MapsTo<unsigned int, unsigned int> F0>
-  static std::shared_ptr<quadtree>
-  quad_map(F0 &&f, const std::shared_ptr<quadtree> &t) {
-    struct _Enter {
-      const std::shared_ptr<quadtree> t;
-    };
-
-    struct _Call1 {
-      const std::shared_ptr<quadtree> _s0;
-      const std::shared_ptr<quadtree> _s1;
-      const std::shared_ptr<quadtree> _s2;
-    };
-
-    struct _Call2 {
-      std::shared_ptr<quadtree> _s0;
-      const std::shared_ptr<quadtree> _s1;
-      const std::shared_ptr<quadtree> _s2;
-    };
-
-    struct _Call3 {
-      std::shared_ptr<quadtree> _s0;
-      std::shared_ptr<quadtree> _s1;
-      const std::shared_ptr<quadtree> _s2;
-    };
-
-    struct _Call4 {
-      std::shared_ptr<quadtree> _s0;
-      std::shared_ptr<quadtree> _s1;
-      std::shared_ptr<quadtree> _s2;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
-    std::shared_ptr<quadtree> _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<quadtree> t = _f.t;
-                std::visit(
-                    Overloaded{
-                        [&](const typename quadtree::QLeaf _args) -> void {
-                          _result = quadtree::ctor::QLeaf_(f(_args.d_a0));
-                        },
-                        [&](const typename quadtree::Quad _args) -> void {
-                          _stack.push_back(
-                              _Call1{_args.d_a2, _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a3});
-                        }},
-                    t->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _stack.push_back(_Call3{_f._s0, _result, _f._s2});
-                _stack.push_back(_Enter{_f._s1});
-              },
-              [&](_Call3 _f) {
-                _stack.push_back(_Call4{_f._s0, _f._s1, _result});
-                _stack.push_back(_Enter{_f._s2});
-              },
-              [&](_Call4 _f) {
-                _result =
-                    quadtree::ctor::Quad_(_result, _f._s2, _f._s1, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
 
   /// find_opt p l finds first element satisfying predicate, returns option.
   template <MapsTo<bool, unsigned int> F0>
@@ -719,123 +934,129 @@ struct LoopifyStructures {
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const { return d_v_; }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, unsigned int, std::shared_ptr<ltree>, T1,
+                     std::shared_ptr<ltree>, T1>
+                  F1>
+    T1 ltree_rec(F0 &&f, F1 &&f0) const {
+      const ltree *_self = this;
+
+      struct _Enter {
+        const ltree *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename ltree::LNode &>().d_a1.get()) _s0;
+        decltype(std::declval<const typename ltree::LNode &>().d_a2) _s1;
+        decltype(std::declval<const typename ltree::LNode &>().d_a1) _s2;
+        decltype(std::declval<const typename ltree::LNode &>().d_a0) _s3;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        decltype(std::declval<const typename ltree::LNode &>().d_a2) _s1;
+        decltype(std::declval<const typename ltree::LNode &>().d_a1) _s2;
+        decltype(std::declval<const typename ltree::LNode &>().d_a0) _s3;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const ltree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename ltree::LLeaf _args) -> void {
+                            _result = f(_args.d_a0);
+                          },
+                          [&](const typename ltree::LNode _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a1.get(),
+                                                    _args.d_a2, _args.d_a1,
+                                                    _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a2.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _result = f0(_f._s3, _f._s2, _result, _f._s1, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
+
+    template <typename T1, MapsTo<T1, unsigned int> F0,
+              MapsTo<T1, unsigned int, std::shared_ptr<ltree>, T1,
+                     std::shared_ptr<ltree>, T1>
+                  F1>
+    T1 ltree_rect(F0 &&f, F1 &&f0) const {
+      const ltree *_self = this;
+
+      struct _Enter {
+        const ltree *_self;
+      };
+
+      struct _Call1 {
+        decltype(std::declval<const typename ltree::LNode &>().d_a1.get()) _s0;
+        decltype(std::declval<const typename ltree::LNode &>().d_a2) _s1;
+        decltype(std::declval<const typename ltree::LNode &>().d_a1) _s2;
+        decltype(std::declval<const typename ltree::LNode &>().d_a0) _s3;
+      };
+
+      struct _Call2 {
+        T1 _s0;
+        decltype(std::declval<const typename ltree::LNode &>().d_a2) _s1;
+        decltype(std::declval<const typename ltree::LNode &>().d_a1) _s2;
+        decltype(std::declval<const typename ltree::LNode &>().d_a0) _s3;
+      };
+
+      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      T1 _result{};
+      std::vector<_Frame> _stack;
+      _stack.push_back(_Enter{_self});
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        std::visit(
+            Overloaded{
+                [&](_Enter _f) {
+                  const ltree *_self = _f._self;
+                  std::visit(
+                      Overloaded{
+                          [&](const typename ltree::LLeaf _args) -> void {
+                            _result = f(_args.d_a0);
+                          },
+                          [&](const typename ltree::LNode _args) -> void {
+                            _stack.push_back(_Call1{_args.d_a1.get(),
+                                                    _args.d_a2, _args.d_a1,
+                                                    _args.d_a0});
+                            _stack.push_back(_Enter{_args.d_a2.get()});
+                          }},
+                      _self->v());
+                },
+                [&](_Call1 _f) {
+                  _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+                  _stack.push_back(_Enter{_f._s0});
+                },
+                [&](_Call2 _f) {
+                  _result = f0(_f._s3, _f._s2, _result, _f._s1, _f._s0);
+                }},
+            _frame);
+      }
+      return _result;
+    }
   };
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int, std::shared_ptr<ltree>, T1,
-                   std::shared_ptr<ltree>, T1>
-                F1>
-  static T1 ltree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<ltree> &l) {
-    struct _Enter {
-      const std::shared_ptr<ltree> l;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename ltree::LNode &>().d_a1) _s0;
-      decltype(std::declval<const typename ltree::LNode &>().d_a2) _s1;
-      decltype(std::declval<const typename ltree::LNode &>().d_a1) _s2;
-      decltype(std::declval<const typename ltree::LNode &>().d_a0) _s3;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      decltype(std::declval<const typename ltree::LNode &>().d_a2) _s1;
-      decltype(std::declval<const typename ltree::LNode &>().d_a1) _s2;
-      decltype(std::declval<const typename ltree::LNode &>().d_a0) _s3;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<ltree> l = _f.l;
-                std::visit(
-                    Overloaded{[&](const typename ltree::LLeaf _args) -> void {
-                                 _result = f(_args.d_a0);
-                               },
-                               [&](const typename ltree::LNode _args) -> void {
-                                 _stack.push_back(_Call1{_args.d_a1, _args.d_a2,
-                                                         _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a2});
-                               }},
-                    l->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = f0(_f._s3, _f._s2, _result, _f._s1, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
-
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int, std::shared_ptr<ltree>, T1,
-                   std::shared_ptr<ltree>, T1>
-                F1>
-  static T1 ltree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<ltree> &l) {
-    struct _Enter {
-      const std::shared_ptr<ltree> l;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename ltree::LNode &>().d_a1) _s0;
-      decltype(std::declval<const typename ltree::LNode &>().d_a2) _s1;
-      decltype(std::declval<const typename ltree::LNode &>().d_a1) _s2;
-      decltype(std::declval<const typename ltree::LNode &>().d_a0) _s3;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      decltype(std::declval<const typename ltree::LNode &>().d_a2) _s1;
-      decltype(std::declval<const typename ltree::LNode &>().d_a1) _s2;
-      decltype(std::declval<const typename ltree::LNode &>().d_a0) _s3;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<ltree> l = _f.l;
-                std::visit(
-                    Overloaded{[&](const typename ltree::LLeaf _args) -> void {
-                                 _result = f(_args.d_a0);
-                               },
-                               [&](const typename ltree::LNode _args) -> void {
-                                 _stack.push_back(_Call1{_args.d_a1, _args.d_a2,
-                                                         _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a2});
-                               }},
-                    l->v());
-              },
-              [&](_Call1 _f) {
-                _stack.push_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-                _stack.push_back(_Enter{_f._s0});
-              },
-              [&](_Call2 _f) {
-                _result = f0(_f._s3, _f._s2, _result, _f._s1, _f._s0);
-              }},
-          _frame);
-    }
-    return _result;
-  }
 
   /// ltree_max t1 t2 element-wise max of two leaf-trees.
   static std::shared_ptr<ltree> ltree_max(std::shared_ptr<ltree> t1,
