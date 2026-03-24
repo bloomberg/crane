@@ -929,11 +929,12 @@ type decomposed = {
 
 (** {3 Tail Modulo Cons (TMC)}
 
-    When a non-tail recursive call appears as a direct argument to a constructor
-    factory (e.g., [Cons_(x, RECURSE(xs))]), the function can be optimized using
-    destination-passing style: allocate the constructor cell immediately with a
-    [nullptr] hole in the recursive position, then fill the hole on the next
-    iteration.  This achieves O(1) extra space instead of O(n) frame stack.
+    When a non-tail recursive call appears nested inside one or more constructor
+    factories (e.g., [Cons_(x, RECURSE(xs))] or
+    [Cons_(x, Cons_(x, RECURSE(xs)))]), the function can be optimized using
+    destination-passing style: allocate the constructor cells immediately with
+    [nullptr] holes, link them together, then fill the innermost hole on the
+    next iteration.  This achieves O(1) extra space instead of O(n) frame stack.
 
     See Bour, Clément, Scherer 2021 — "Tail Modulo Cons". *)
 
@@ -1386,7 +1387,7 @@ let has_triple_call_expr check body = has_n_call_expr 3 check body
 (** {3 TMC detection}
 
     Analyze function bodies to detect the Tail-Modulo-Cons pattern:
-    non-tail recursive calls that are direct arguments to constructor factories. *)
+    non-tail recursive calls nested inside one or more constructor factories. *)
 
 (** Test whether an expression is a constructor factory call, i.e.,
     [Type::ctor::Ctor_(args)].  Returns [(type_expr, ctor_name, args)] where
@@ -1545,10 +1546,7 @@ let try_tmc_classify check body =
     let first = List.hd branches in
     (* All branches must use the same innermost constructor and recursive
        field — the innermost cell determines _head/_last type and patching. *)
-    let inner br =
-      let cells = br.tmc_cells in
-      List.nth cells (List.length cells - 1)
-    in
+    let inner br = List.rev br.tmc_cells |> List.hd in
     let first_inner = inner first in
     let all_same =
       List.for_all
@@ -1571,38 +1569,50 @@ let try_tmc_classify check body =
 (** {3 TMC transformation}
 
     Converts non-tail recursive functions where the recursive call is wrapped
-    in a single constructor (e.g., [cons x (f xs)]) into iterative loops that
-    build the result top-down using destination-passing style.
+    in one or more constructors (e.g., [cons x (f xs)] or
+    [cons x (cons x (f xs))]) into iterative loops that build the result
+    top-down using destination-passing style.
 
     Instead of an O(n) frame stack, TMC uses O(1) extra space by allocating
-    each constructor cell immediately with a [nullptr] hole, then filling
-    the hole on the next iteration.
+    constructor cells immediately with [nullptr] holes, linking nested cells
+    together, then filling the innermost hole on the next iteration.
 
+    Single-cell example ([cons x (f xs)]):
     {[
-      shared_ptr<list<T>> _head\{\};    // final result
-      shared_ptr<list<T>> _last\{\};    // last cell (its tail is the hole)
-      auto _loop_x = x;
-      bool _continue = true;
-      while (_continue) \{
-        visit(Overloaded\{
-          [&](Nil _args) -> void \{
-            <patch _last or _head with base_val>
-            _continue = false;
-          \},
-          [&](Cons _args) -> void \{
-            auto _cell = list<T>::ctor::Cons_(_args.d_a0, nullptr);
-            <patch _last or _head with _cell>
-            _last = _cell;
-            _loop_x = _args.d_a1;
-          \}
-        \}, _loop_x->v());
-      \}
-      return _head;
+      auto _cell = Cons_(x, nullptr);
+      <patch _head/_last with _cell>
+      _last = _cell;
+    ]}
+
+    Nested-cell example ([cons x (cons x (f xs))]):
+    {[
+      auto _cell  = Cons_(x, nullptr);   // outer
+      auto _cell1 = Cons_(x, nullptr);   // inner
+      _cell.tail  = _cell1;              // link
+      <patch _head/_last with _cell>
+      _last = _cell1;                    // advance to innermost
     ]} *)
+
+(** Generate [std::get<typename Type::Ctor>(ptr->v_mut()).d_aN = val] — the
+    statement that patches the recursive field of a TMC cell.
+
+    The field index accounts for the reversed AST argument order
+    (see translation.ml:1776): AST index [rec_field_idx] maps to struct field
+    [d_a{n_args - 1 - rec_field_idx}]. *)
+let patch_cell_field pp_expr ~type_expr ~ctor_name ~n_args ~rec_field_idx
+    ptr val_expr =
+  let field_idx = n_args - 1 - rec_field_idx in
+  let field_id = Id.of_string ("d_a" ^ string_of_int field_idx) in
+  let type_str = pp_expr type_expr in
+  let get_expr =
+    CPPraw ("std::get<typename " ^ type_str ^ "::" ^ ctor_name ^ ">")
+  in
+  let v_mut = CPPmethod_call (ptr, Id.of_string "v_mut", []) in
+  Sassign_field (CPPfun_call (get_expr, [v_mut]), field_id, val_expr)
 
 (** Generate the if/else that links a value into the TMC chain.  On the first
     iteration, assigns to [_head]; on subsequent iterations, patches the
-    recursive field of the last allocated cell.
+    recursive field of the last allocated cell via {!patch_cell_field}.
 
     {[
       if (_last) \{
@@ -1610,27 +1620,16 @@ let try_tmc_classify check body =
       \} else \{
         _head = val;
       \}
-    ]}
-
-    @param pp_expr Expression pretty-printer (for rendering the type in
-                   [std::get])
-    @param ti TMC info (constructor name, type expression, field index) *)
+    ]} *)
 let patch_tmc_dest pp_expr ti val_expr =
   let tmc_last = CPPvar (Id.of_string "_last") in
   let tmc_head = Id.of_string "_head" in
-  (* AST stores constructor args in reversed order (see translation.ml:1776).
-     AST index i corresponds to struct field d_a{n-1-i}. *)
-  let field_idx = ti.ti_n_args - 1 - ti.ti_rec_field_idx in
-  let field_id = Id.of_string ("d_a" ^ string_of_int field_idx) in
-  (* std::get<typename Type::Ctor>(_last->v_mut()).field = val *)
-  let type_str = pp_expr ti.ti_type_expr in
-  let get_expr =
-    CPPraw ("std::get<typename " ^ type_str ^
-            "::" ^ ti.ti_ctor_name ^ ">")
+  let patch_field =
+    patch_cell_field pp_expr
+      ~type_expr:ti.ti_type_expr ~ctor_name:ti.ti_ctor_name
+      ~n_args:ti.ti_n_args ~rec_field_idx:ti.ti_rec_field_idx
+      tmc_last val_expr
   in
-  let v_mut_call = CPPmethod_call (tmc_last, Id.of_string "v_mut", []) in
-  let get_call = CPPfun_call (get_expr, [v_mut_call]) in
-  let patch_field = Sassign_field (get_call, field_id, val_expr) in
   let assign_head = Sexpr (CPPbinop ("=", CPPvar tmc_head, val_expr)) in
   [Sif (tmc_last, [patch_field], [assign_head])]
 
@@ -1652,8 +1651,9 @@ let build_cell_call cell =
   CPPfun_call (cell.tca_factory, args)
 
 (** Generate statements for a TMC branch with possibly nested constructor cells.
-    Allocates all cells with [nullptr] holes, links them together, patches the
-    destination with the outermost cell, and sets [_last] to the innermost.
+    Allocates all cells with [nullptr] holes, links consecutive pairs via
+    {!patch_cell_field}, patches the destination with the outermost cell, and
+    sets [_last] to the innermost.
 
     For a single cell (v1 behaviour), emits the same code as before.
     For nested cells (e.g., [cons x (cons x (RECURSE xs))]), emits:
@@ -1666,7 +1666,6 @@ let build_cell_call cell =
       <shadow updates>
     ]} *)
 let build_tmc_branch_stmts pp_expr ti br varying shadow_params =
-  let n_cells = List.length br.tmc_cells in
   (* Generate unique cell names: _cell, _cell1, _cell2, ... *)
   let cell_names =
     List.mapi
@@ -1680,38 +1679,24 @@ let build_tmc_branch_stmts pp_expr ti br varying shadow_params =
       (fun cell_id cell -> Sasgn (cell_id, Some Tauto, build_cell_call cell))
       cell_names br.tmc_cells
   in
-  (* 2. Link cells: outer.rec_field = inner (for each consecutive pair) *)
-  let link_stmts =
-    if n_cells <= 1 then []
-    else
-      List.init (n_cells - 1) (fun i ->
-        let outer_cell = List.nth br.tmc_cells i in
-        let outer_id = List.nth cell_names i in
-        let inner_id = List.nth cell_names (i + 1) in
-        (* AST index → struct field: d_a{n-1-i} *)
-        let field_idx =
-          outer_cell.tca_n_args - 1 - outer_cell.tca_rec_field_idx
-        in
-        let field_id = Id.of_string ("d_a" ^ string_of_int field_idx) in
-        let type_str = pp_expr outer_cell.tca_type_expr in
-        let get_expr =
-          CPPraw
-            ("std::get<typename " ^ type_str ^ "::" ^ outer_cell.tca_ctor_name
-           ^ ">")
-        in
-        let v_mut =
-          CPPmethod_call (CPPvar outer_id, Id.of_string "v_mut", [])
-        in
-        Sassign_field (CPPfun_call (get_expr, [v_mut]), field_id,
-                       CPPvar inner_id))
+  (* 2. Link consecutive cells: outer.rec_field = inner *)
+  let rec link_cells cells names =
+    match cells, names with
+    | cell :: rest_cells, outer_name :: (inner_name :: _ as rest_names) ->
+      patch_cell_field pp_expr
+        ~type_expr:cell.tca_type_expr ~ctor_name:cell.tca_ctor_name
+        ~n_args:cell.tca_n_args ~rec_field_idx:cell.tca_rec_field_idx
+        (CPPvar outer_name) (CPPvar inner_name)
+      :: link_cells rest_cells rest_names
+    | _ -> []
   in
+  let link_stmts = link_cells br.tmc_cells cell_names in
   (* 3. Patch destination with outermost cell *)
-  let outermost = CPPvar (List.hd cell_names) in
-  let patch = patch_tmc_dest pp_expr ti outermost in
+  let patch = patch_tmc_dest pp_expr ti (CPPvar (List.hd cell_names)) in
   (* 4. Update _last to innermost cell *)
-  let innermost = CPPvar (List.nth cell_names (n_cells - 1)) in
   let update_last =
-    Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_last"), innermost))
+    Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_last"),
+                     CPPvar (List.rev cell_names |> List.hd)))
   in
   (* 5. Shadow variable updates *)
   let shadow_updates =
