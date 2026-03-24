@@ -219,142 +219,152 @@ struct LoopifyPairs {
   static std::shared_ptr<list<std::pair<T1, T2>>>
   zip(const std::shared_ptr<list<T1>> &l1,
       const std::shared_ptr<list<T2>> &l2) {
-    struct _Enter {
-      const std::shared_ptr<list<T2>> l2;
-      const std::shared_ptr<list<T1>> l1;
-    };
-
-    struct _Call1 {
-      decltype(std::make_pair(
-          std::declval<const typename list<T1>::Cons &>().d_a0,
-          std::declval<const typename list<T2>::Cons &>().d_a0)) _s0;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1>;
-    std::shared_ptr<list<std::pair<T1, T2>>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l2, l1});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
+    std::shared_ptr<list<std::pair<T1, T2>>> _head{};
+    std::shared_ptr<list<std::pair<T1, T2>>> _last{};
+    std::shared_ptr<list<T2>> _loop_l2 = l2;
+    std::shared_ptr<list<T1>> _loop_l1 = l1;
+    bool _continue = true;
+    while (_continue) {
       std::visit(
           Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<list<T2>> l2 = _f.l2;
-                const std::shared_ptr<list<T1>> l1 = _f.l1;
+              [&](const typename list<T1>::Nil _args) {
+                if (_last) {
+                  std::get<typename list<std::pair<T1, T2>>::Cons>(
+                      _last->v_mut())
+                      .d_a1 = list<std::pair<T1, T2>>::ctor::Nil_();
+                } else {
+                  _head = list<std::pair<T1, T2>>::ctor::Nil_();
+                }
+                _continue = false;
+              },
+              [&](const typename list<T1>::Cons _args) {
                 std::visit(
                     Overloaded{
-                        [&](const typename list<T1>::Nil _args) -> void {
-                          _result = list<std::pair<T1, T2>>::ctor::Nil_();
+                        [&](const typename list<T2>::Nil _args0) {
+                          if (_last) {
+                            std::get<typename list<std::pair<T1, T2>>::Cons>(
+                                _last->v_mut())
+                                .d_a1 = list<std::pair<T1, T2>>::ctor::Nil_();
+                          } else {
+                            _head = list<std::pair<T1, T2>>::ctor::Nil_();
+                          }
+                          _continue = false;
                         },
-                        [&](const typename list<T1>::Cons _args) -> void {
-                          std::visit(
-                              Overloaded{
-                                  [&](const typename list<T2>::Nil _args0)
-                                      -> void {
-                                    _result =
-                                        list<std::pair<T1, T2>>::ctor::Nil_();
-                                  },
-                                  [&](const typename list<T2>::Cons _args0)
-                                      -> void {
-                                    _stack.push_back(_Call1{std::make_pair(
-                                        _args.d_a0, _args0.d_a0)});
-                                    _stack.push_back(
-                                        _Enter{_args0.d_a1, _args.d_a1});
-                                  }},
-                              l2->v());
+                        [&](const typename list<T2>::Cons _args0) {
+                          auto _cell = list<std::pair<T1, T2>>::ctor::Cons_(
+                              std::make_pair(_args.d_a0, _args0.d_a0), nullptr);
+                          if (_last) {
+                            std::get<typename list<std::pair<T1, T2>>::Cons>(
+                                _last->v_mut())
+                                .d_a1 = _cell;
+                          } else {
+                            _head = _cell;
+                          }
+                          _last = _cell;
+                          std::shared_ptr<list<T2>> _next_l2 = _args0.d_a1;
+                          std::shared_ptr<list<T1>> _next_l1 = _args.d_a1;
+                          _loop_l2 = std::move(_next_l2);
+                          _loop_l1 = std::move(_next_l1);
                         }},
-                    l1->v());
-              },
-              [&](_Call1 _f) {
-                _result = list<std::pair<T1, T2>>::ctor::Cons_(_f._s0, _result);
+                    _loop_l2->v());
               }},
-          _frame);
+          _loop_l1->v());
     }
-    return _result;
+    return _head;
   } /// zip3 combines three lists.
 
   template <typename T1, typename T2, typename T3>
   static std::shared_ptr<list<std::pair<T1, std::pair<T2, T3>>>>
   zip3(const std::shared_ptr<list<T1>> &l1, const std::shared_ptr<list<T2>> &l2,
        const std::shared_ptr<list<T3>> &l3) {
-    struct _Enter {
-      const std::shared_ptr<list<T3>> l3;
-      const std::shared_ptr<list<T2>> l2;
-      const std::shared_ptr<list<T1>> l1;
-    };
-
-    struct _Call1 {
-      decltype(std::make_pair(
-          std::declval<const typename list<T1>::Cons &>().d_a0,
-          std::make_pair(
-              std::declval<const typename list<T2>::Cons &>().d_a0,
-              std::declval<const typename list<T3>::Cons &>().d_a0))) _s0;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1>;
-    std::shared_ptr<list<std::pair<T1, std::pair<T2, T3>>>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l3, l2, l1});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
+    std::shared_ptr<list<std::pair<T1, std::pair<T2, T3>>>> _head{};
+    std::shared_ptr<list<std::pair<T1, std::pair<T2, T3>>>> _last{};
+    std::shared_ptr<list<T3>> _loop_l3 = l3;
+    std::shared_ptr<list<T2>> _loop_l2 = l2;
+    std::shared_ptr<list<T1>> _loop_l1 = l1;
+    bool _continue = true;
+    while (_continue) {
       std::visit(
           Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<list<T3>> l3 = _f.l3;
-                const std::shared_ptr<list<T2>> l2 = _f.l2;
-                const std::shared_ptr<list<T1>> l1 = _f.l1;
+              [&](const typename list<T1>::Nil _args) {
+                if (_last) {
+                  std::get<
+                      typename list<std::pair<T1, std::pair<T2, T3>>>::Cons>(
+                      _last->v_mut())
+                      .d_a1 =
+                      list<std::pair<T1, std::pair<T2, T3>>>::ctor::Nil_();
+                } else {
+                  _head = list<std::pair<T1, std::pair<T2, T3>>>::ctor::Nil_();
+                }
+                _continue = false;
+              },
+              [&](const typename list<T1>::Cons _args) {
                 std::visit(
                     Overloaded{
-                        [&](const typename list<T1>::Nil _args) -> void {
-                          _result = list<
-                              std::pair<T1, std::pair<T2, T3>>>::ctor::Nil_();
+                        [&](const typename list<T2>::Nil _args0) {
+                          if (_last) {
+                            std::get<typename list<
+                                std::pair<T1, std::pair<T2, T3>>>::Cons>(
+                                _last->v_mut())
+                                .d_a1 = list<
+                                std::pair<T1, std::pair<T2, T3>>>::ctor::Nil_();
+                          } else {
+                            _head = list<
+                                std::pair<T1, std::pair<T2, T3>>>::ctor::Nil_();
+                          }
+                          _continue = false;
                         },
-                        [&](const typename list<T1>::Cons _args) -> void {
+                        [&](const typename list<T2>::Cons _args0) {
                           std::visit(
                               Overloaded{
-                                  [&](const typename list<T2>::Nil _args0)
-                                      -> void {
-                                    _result =
-                                        list<std::pair<T1, std::pair<T2, T3>>>::
-                                            ctor::Nil_();
+                                  [&](const typename list<T3>::Nil _args1) {
+                                    if (_last) {
+                                      std::get<typename list<std::pair<
+                                          T1, std::pair<T2, T3>>>::Cons>(
+                                          _last->v_mut())
+                                          .d_a1 = list<std::pair<
+                                          T1, std::pair<T2, T3>>>::ctor::Nil_();
+                                    } else {
+                                      _head = list<std::pair<
+                                          T1, std::pair<T2, T3>>>::ctor::Nil_();
+                                    }
+                                    _continue = false;
                                   },
-                                  [&](const typename list<T2>::Cons _args0)
-                                      -> void {
-                                    std::visit(
-                                        Overloaded{
-                                            [&](const typename list<T3>::Nil
-                                                    _args1) -> void {
-                                              _result = list<std::pair<
-                                                  T1, std::pair<T2, T3>>>::
-                                                  ctor::Nil_();
-                                            },
-                                            [&](const typename list<T3>::Cons
-                                                    _args1) -> void {
-                                              _stack.push_back(
-                                                  _Call1{std::make_pair(
-                                                      _args.d_a0,
-                                                      std::make_pair(
-                                                          _args0.d_a0,
-                                                          _args1.d_a0))});
-                                              _stack.push_back(_Enter{
-                                                  _args1.d_a1, _args0.d_a1,
-                                                  _args.d_a1});
-                                            }},
-                                        l3->v());
+                                  [&](const typename list<T3>::Cons _args1) {
+                                    auto _cell =
+                                        list<std::pair<T1, std::pair<T2, T3>>>::
+                                            ctor::Cons_(std::make_pair(
+                                                            _args.d_a0,
+                                                            std::make_pair(
+                                                                _args0.d_a0,
+                                                                _args1.d_a0)),
+                                                        nullptr);
+                                    if (_last) {
+                                      std::get<typename list<std::pair<
+                                          T1, std::pair<T2, T3>>>::Cons>(
+                                          _last->v_mut())
+                                          .d_a1 = _cell;
+                                    } else {
+                                      _head = _cell;
+                                    }
+                                    _last = _cell;
+                                    std::shared_ptr<list<T3>> _next_l3 =
+                                        _args1.d_a1;
+                                    std::shared_ptr<list<T2>> _next_l2 =
+                                        _args0.d_a1;
+                                    std::shared_ptr<list<T1>> _next_l1 =
+                                        _args.d_a1;
+                                    _loop_l3 = std::move(_next_l3);
+                                    _loop_l2 = std::move(_next_l2);
+                                    _loop_l1 = std::move(_next_l1);
                                   }},
-                              l2->v());
+                              _loop_l3->v());
                         }},
-                    l1->v());
-              },
-              [&](_Call1 _f) {
-                _result = list<std::pair<T1, std::pair<T2, T3>>>::ctor::Cons_(
-                    _f._s0, _result);
+                    _loop_l2->v());
               }},
-          _frame);
+          _loop_l1->v());
     }
-    return _result;
+    return _head;
   } /// split_at n l splits at position n.
 
   template <typename T1>

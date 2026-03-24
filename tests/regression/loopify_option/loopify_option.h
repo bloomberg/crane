@@ -248,47 +248,41 @@ struct LoopifyOption {
   template <typename T1, typename T2, MapsTo<std::optional<T2>, T1> F0>
   static std::shared_ptr<list<T2>> map_opt(F0 &&f,
                                            const std::shared_ptr<list<T1>> &l) {
-    struct _Enter {
-      const std::shared_ptr<list<T1>> l;
-    };
-
-    struct _Call1 {
-      T2 _s0;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1>;
-    std::shared_ptr<list<T2>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
+    std::shared_ptr<list<T2>> _head{};
+    std::shared_ptr<list<T2>> _last{};
+    std::shared_ptr<list<T1>> _loop_l = l;
+    bool _continue = true;
+    while (_continue) {
       std::visit(
           Overloaded{
-              [&](_Enter _f) {
-                const std::shared_ptr<list<T1>> l = _f.l;
-                std::visit(
-                    Overloaded{
-                        [&](const typename list<T1>::Nil _args) -> void {
-                          _result = list<T2>::ctor::Nil_();
-                        },
-                        [&](const typename list<T1>::Cons _args) -> void {
-                          if (f(_args.d_a0).has_value()) {
-                            T2 y = *f(_args.d_a0);
-                            _stack.push_back(_Call1{y});
-                            _stack.push_back(_Enter{_args.d_a1});
-                          } else {
-                            _stack.push_back(_Enter{_args.d_a1});
-                          }
-                        }},
-                    l->v());
+              [&](const typename list<T1>::Nil _args) {
+                if (_last) {
+                  std::get<typename list<T2>::Cons>(_last->v_mut()).d_a1 =
+                      list<T2>::ctor::Nil_();
+                } else {
+                  _head = list<T2>::ctor::Nil_();
+                }
+                _continue = false;
               },
-              [&](_Call1 _f) {
-                _result = list<T2>::ctor::Cons_(_f._s0, _result);
+              [&](const typename list<T1>::Cons _args) {
+                if (f(_args.d_a0).has_value()) {
+                  T2 y = *f(_args.d_a0);
+                  auto _cell = list<T2>::ctor::Cons_(y, nullptr);
+                  if (_last) {
+                    std::get<typename list<T2>::Cons>(_last->v_mut()).d_a1 =
+                        _cell;
+                  } else {
+                    _head = _cell;
+                  }
+                  _last = _cell;
+                  _loop_l = _args.d_a1;
+                } else {
+                  _loop_l = _args.d_a1;
+                }
               }},
-          _frame);
+          _loop_l->v());
     }
-    return _result;
+    return _head;
   }
 
   /// find_index p l returns the index of the first match, or None.

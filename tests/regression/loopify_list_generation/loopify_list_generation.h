@@ -72,46 +72,40 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
-    const List *_self = this;
-
-    struct _Enter {
-      const List *_self;
-      std::shared_ptr<List<t_A>> m;
-    };
-
-    struct _Call1 {
-      decltype(std::declval<const typename List<t_A>::Cons &>().d_a0) _s0;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1>;
-    std::shared_ptr<List<t_A>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{_self, m});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
+    std::shared_ptr<List<t_A>> _head{};
+    std::shared_ptr<List<t_A>> _last{};
+    const List *_loop_self = this;
+    std::shared_ptr<List<t_A>> _loop_m = m;
+    bool _continue = true;
+    while (_continue) {
       std::visit(
           Overloaded{
-              [&](_Enter _f) {
-                const List *_self = _f._self;
-                std::shared_ptr<List<t_A>> m = _f.m;
-                std::visit(
-                    Overloaded{
-                        [&](const typename List<t_A>::Nil _args) -> void {
-                          _result = m;
-                        },
-                        [&](const typename List<t_A>::Cons _args) -> void {
-                          _stack.push_back(_Call1{_args.d_a0});
-                          _stack.push_back(_Enter{m.get(), _args.d_a1});
-                        }},
-                    _self->v());
+              [&](const typename List<t_A>::Nil _args) {
+                if (_last) {
+                  std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =
+                      _loop_m;
+                } else {
+                  _head = _loop_m;
+                }
+                _continue = false;
               },
-              [&](_Call1 _f) {
-                _result = List<t_A>::ctor::Cons_(_f._s0, _result);
+              [&](const typename List<t_A>::Cons _args) {
+                auto _cell = List<t_A>::ctor::Cons_(_args.d_a0, nullptr);
+                if (_last) {
+                  std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =
+                      _cell;
+                } else {
+                  _head = _cell;
+                }
+                _last = _cell;
+                List *_next_self = _loop_m.get();
+                std::shared_ptr<List<t_A>> _next_m = _args.d_a1;
+                _loop_self = std::move(_next_self);
+                _loop_m = std::move(_next_m);
               }},
-          _frame);
+          _loop_self->v());
     }
-    return _result;
+    return _head;
   }
 };
 

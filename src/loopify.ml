@@ -927,6 +927,57 @@ type decomposed = {
           the recursive call's result. *)
 }
 
+(** {3 Tail Modulo Cons (TMC)}
+
+    When a non-tail recursive call appears as a direct argument to a constructor
+    factory (e.g., [Cons_(x, RECURSE(xs))]), the function can be optimized using
+    destination-passing style: allocate the constructor cell immediately with a
+    [nullptr] hole in the recursive position, then fill the hole on the next
+    iteration.  This achieves O(1) extra space instead of O(n) frame stack.
+
+    See Bour, Clément, Scherer 2021 — "Tail Modulo Cons". *)
+
+(** One constructor cell allocation in a (possibly nested) TMC chain.
+    For [cons x (cons x (stutter xs))], the outer [cons x _] and inner
+    [cons x _] are each represented by one [tmc_cell_alloc]. *)
+type tmc_cell_alloc = {
+  tca_factory : cpp_expr;
+      (** Constructor factory function, e.g., [list<T>::ctor::Cons_] *)
+  tca_type_expr : cpp_expr;
+      (** The type expression before [::ctor], e.g., [list<T>] *)
+  tca_ctor_name : string;
+      (** Constructor name without trailing underscore, e.g., ["Cons"] *)
+  tca_rec_field_idx : int;
+      (** Index of the recursive argument in the constructor args *)
+  tca_non_rec_args : (int * cpp_expr) list;
+      (** [(index, expr)] for non-recursive arguments *)
+  tca_n_args : int;
+      (** Total number of constructor arguments *)
+}
+
+(** Information about a single TMC-eligible branch: a return expression of the
+    form [CtorFactory(... CtorFactory(non_rec_args, RECURSE(rec_args)) ...)].
+    The cell list is outermost-first, innermost-last. *)
+type tmc_branch_info = {
+  tmc_cells : tmc_cell_alloc list;
+      (** Constructor cells, outermost first, innermost last *)
+  tmc_rec_args : cpp_expr list;
+      (** Arguments to the innermost recursive call *)
+}
+
+(** Summary of TMC analysis for a whole function.  All TMC branches must use the
+    same constructor and recursive field.  Computed by {!try_tmc_classify}. *)
+type tmc_info = {
+  ti_ctor_name : string;
+      (** Constructor name shared by all TMC branches *)
+  ti_rec_field_idx : int;
+      (** Recursive field index shared by all TMC branches *)
+  ti_type_expr : cpp_expr;
+      (** Type expression for [std::get<typename Type::Ctor>] *)
+  ti_n_args : int;
+      (** Total number of constructor arguments *)
+}
+
 (** Try to decompose an expression with exactly one recursive call. Returns
     [Some decomposed] if successful, [None] otherwise.
 
@@ -1331,6 +1382,538 @@ and decompose_double_call check expr =
 
 (** Check whether any return has 3+ recursive calls (triple-recursion). *)
 let has_triple_call_expr check body = has_n_call_expr 3 check body
+
+(** {3 TMC detection}
+
+    Analyze function bodies to detect the Tail-Modulo-Cons pattern:
+    non-tail recursive calls that are direct arguments to constructor factories. *)
+
+(** Test whether an expression is a constructor factory call, i.e.,
+    [Type::ctor::Ctor_(args)].  Returns [(type_expr, ctor_name, args)] where
+    [type_expr] is the base type (e.g., [list<T>]), [ctor_name] is the
+    constructor name without trailing underscore (e.g., ["Cons"]), and [args]
+    are the constructor arguments.
+
+    Constructor factory names always end with ['_']. *)
+let is_ctor_factory_call = function
+  | CPPfun_call
+      ( CPPqualified (CPPqualified (type_expr, ctor_id), factory_id),
+        args ) ->
+    let ctor_s = Id.to_string ctor_id in
+    let factory_s = Id.to_string factory_id in
+    if ctor_s = "ctor"
+       && String.length factory_s > 1
+       && factory_s.[String.length factory_s - 1] = '_'
+    then
+      let ctor_name =
+        String.sub factory_s 0 (String.length factory_s - 1)
+      in
+      Some (type_expr, ctor_name, args)
+    else None
+  | _ -> None
+
+(** Try to decompose a return expression as a TMC-eligible branch.  Handles
+    both single-level ([cons x (RECURSE xs)]) and nested constructors
+    ([cons x (cons x (RECURSE xs))]).  Strip [CPPmove] wrapping before checking.
+
+    @return [Some tmc_branch_info] with a chain of cells, outermost first *)
+let rec try_tmc_decompose check expr =
+  let expr' = match expr with CPPmove e -> e | e -> e in
+  match is_ctor_factory_call expr' with
+  | None -> None
+  | Some (type_expr, ctor_name, args) ->
+    let n_args = List.length args in
+    let indexed = List.mapi (fun i a -> (i, a)) args in
+    let non_rec_of idx =
+      List.filter_map
+        (fun (i, a) -> if i <> idx then Some (i, a) else None)
+        indexed
+    in
+    let make_cell idx = {
+      tca_factory =
+        CPPqualified
+          (CPPqualified (type_expr, Id.of_string "ctor"),
+           Id.of_string (ctor_name ^ "_"));
+      tca_type_expr = type_expr;
+      tca_ctor_name = ctor_name;
+      tca_rec_field_idx = idx;
+      tca_non_rec_args = non_rec_of idx;
+      tca_n_args = n_args;
+    } in
+    (* Find which args are direct recursive calls *)
+    let direct =
+      List.filter_map
+        (fun (i, a) ->
+          match check a with Some cs -> Some (i, cs) | None -> None)
+        indexed
+    in
+    ( match direct with
+    | [(idx, cs)] ->
+      (* Single direct recursive call — innermost cell *)
+      Some { tmc_cells = [make_cell idx]; tmc_rec_args = cs.cs_args }
+    | [] ->
+      (* No direct call — look for a nested constructor wrapping a call *)
+      let nested =
+        List.filter_map
+          (fun (i, a) ->
+            if count_calls_expr check a = 1 then Some (i, a) else None)
+          indexed
+      in
+      ( match nested with
+      | [(idx, nested_expr)] ->
+        ( match try_tmc_decompose check nested_expr with
+        | Some inner ->
+          Some { tmc_cells = make_cell idx :: inner.tmc_cells;
+                 tmc_rec_args = inner.tmc_rec_args }
+        | None -> None )
+      | _ -> None )
+    | _ -> None (* Multiple direct calls — not TMC *) )
+
+(** Classify an entire function body for TMC eligibility.  Walks all return
+    positions (including inside [std::visit] lambda bodies) and checks that:
+    - Every return is either a tail call, a base case (0 recursive calls), or a
+      TMC-eligible constructor wrapping
+    - All TMC branches use the {e same} constructor name and recursive field
+
+    @return [Some tmc_info] if the function is TMC-eligible *)
+let try_tmc_classify check body =
+  let tmc_branches = ref [] in
+  let compatible = ref true in
+  (* Scan a single return expression *)
+  let scan_return_expr e =
+    if not !compatible then ()
+    else
+      match check e with
+      | Some _ -> () (* tail call — compatible *)
+      | None ->
+        let n = count_calls_expr check e in
+        if n = 0 then () (* base case *)
+        else if n = 1 then (
+          match try_tmc_decompose check e with
+          | Some br -> tmc_branches := br :: !tmc_branches
+          | None -> compatible := false )
+        else compatible := false
+  in
+  (* Scan returns inside a lambda body (may contain nested visits) *)
+  let rec scan_lambda_body stmts =
+    List.iter scan_lambda_stmt stmts
+  and scan_lambda_stmt = function
+    | Sreturn (Some (CPPfun_call (CPPvisit, [scrut; CPPoverloaded lambdas])))
+      when count_calls_expr check scrut = 0 ->
+      List.iter
+        (fun lambda ->
+          match lambda with
+          | CPPlambda (_, _, body, _) -> scan_lambda_body body
+          | _ -> () )
+        lambdas
+    | Sreturn (Some e) -> scan_return_expr e
+    | Sif (_, then_br, else_br) ->
+      scan_lambda_body then_br;
+      scan_lambda_body else_br
+    | Scustom_case (_, _, _, branches, _) ->
+      List.iter (fun (_, _, body) -> scan_lambda_body body) branches
+    | Sswitch (_, _, branches) ->
+      List.iter (fun (_, body) -> scan_lambda_body body) branches
+    | Sblock stmts -> scan_lambda_body stmts
+    | _ -> ()
+  in
+  (* Scan top-level statements *)
+  let rec scan_stmt = function
+    | Sreturn (Some (CPPfun_call (CPPvisit, [scrut; CPPoverloaded lambdas])))
+      when count_calls_expr check scrut = 0 ->
+      List.iter
+        (fun lambda ->
+          match lambda with
+          | CPPlambda (_, _, body, _) -> scan_lambda_body body
+          | _ -> () )
+        lambdas
+    | Sreturn (Some e) -> scan_return_expr e
+    | Sif (_, then_br, else_br) ->
+      List.iter scan_stmt then_br;
+      List.iter scan_stmt else_br
+    | Scustom_case (_, _, _, branches, _) ->
+      List.iter (fun (_, _, body) -> List.iter scan_stmt body) branches
+    | Sswitch (_, _, branches) ->
+      List.iter (fun (_, body) -> List.iter scan_stmt body) branches
+    | Sblock stmts -> List.iter scan_stmt stmts
+    | _ -> ()
+  in
+  List.iter scan_stmt body;
+  if not !compatible || !tmc_branches = [] then None
+  else
+    let branches = !tmc_branches in
+    let first = List.hd branches in
+    (* All branches must use the same innermost constructor and recursive
+       field — the innermost cell determines _head/_last type and patching. *)
+    let inner br =
+      let cells = br.tmc_cells in
+      List.nth cells (List.length cells - 1)
+    in
+    let first_inner = inner first in
+    let all_same =
+      List.for_all
+        (fun br ->
+          let i = inner br in
+          i.tca_ctor_name = first_inner.tca_ctor_name
+          && i.tca_rec_field_idx = first_inner.tca_rec_field_idx )
+        branches
+    in
+    if all_same then
+      Some
+        {
+          ti_ctor_name = first_inner.tca_ctor_name;
+          ti_rec_field_idx = first_inner.tca_rec_field_idx;
+          ti_type_expr = first_inner.tca_type_expr;
+          ti_n_args = first_inner.tca_n_args;
+        }
+    else None
+
+(** {3 TMC transformation}
+
+    Converts non-tail recursive functions where the recursive call is wrapped
+    in a single constructor (e.g., [cons x (f xs)]) into iterative loops that
+    build the result top-down using destination-passing style.
+
+    Instead of an O(n) frame stack, TMC uses O(1) extra space by allocating
+    each constructor cell immediately with a [nullptr] hole, then filling
+    the hole on the next iteration.
+
+    {[
+      shared_ptr<list<T>> _head\{\};    // final result
+      shared_ptr<list<T>> _last\{\};    // last cell (its tail is the hole)
+      auto _loop_x = x;
+      bool _continue = true;
+      while (_continue) \{
+        visit(Overloaded\{
+          [&](Nil _args) -> void \{
+            <patch _last or _head with base_val>
+            _continue = false;
+          \},
+          [&](Cons _args) -> void \{
+            auto _cell = list<T>::ctor::Cons_(_args.d_a0, nullptr);
+            <patch _last or _head with _cell>
+            _last = _cell;
+            _loop_x = _args.d_a1;
+          \}
+        \}, _loop_x->v());
+      \}
+      return _head;
+    ]} *)
+
+(** Generate the if/else that links a value into the TMC chain.  On the first
+    iteration, assigns to [_head]; on subsequent iterations, patches the
+    recursive field of the last allocated cell.
+
+    {[
+      if (_last) \{
+        std::get<typename Type::Ctor>(_last->v_mut()).d_aN = val;
+      \} else \{
+        _head = val;
+      \}
+    ]}
+
+    @param pp_expr Expression pretty-printer (for rendering the type in
+                   [std::get])
+    @param ti TMC info (constructor name, type expression, field index) *)
+let patch_tmc_dest pp_expr ti val_expr =
+  let tmc_last = CPPvar (Id.of_string "_last") in
+  let tmc_head = Id.of_string "_head" in
+  (* AST stores constructor args in reversed order (see translation.ml:1776).
+     AST index i corresponds to struct field d_a{n-1-i}. *)
+  let field_idx = ti.ti_n_args - 1 - ti.ti_rec_field_idx in
+  let field_id = Id.of_string ("d_a" ^ string_of_int field_idx) in
+  (* std::get<typename Type::Ctor>(_last->v_mut()).field = val *)
+  let type_str = pp_expr ti.ti_type_expr in
+  let get_expr =
+    CPPraw ("std::get<typename " ^ type_str ^
+            "::" ^ ti.ti_ctor_name ^ ">")
+  in
+  let v_mut_call = CPPmethod_call (tmc_last, Id.of_string "v_mut", []) in
+  let get_call = CPPfun_call (get_expr, [v_mut_call]) in
+  let patch_field = Sassign_field (get_call, field_id, val_expr) in
+  let assign_head = Sexpr (CPPbinop ("=", CPPvar tmc_head, val_expr)) in
+  [Sif (tmc_last, [patch_field], [assign_head])]
+
+(** Build a constructor factory call with [nullptr] at the recursive argument
+    position.
+
+    @param cell A single TMC cell allocation descriptor *)
+let build_cell_call cell =
+  let args =
+    List.init cell.tca_n_args (fun i ->
+      if i = cell.tca_rec_field_idx then CPPraw "nullptr"
+      else
+        match List.assoc_opt i cell.tca_non_rec_args with
+        | Some e -> e
+        | None ->
+          (* This shouldn't happen if the analysis is correct *)
+          CPPraw "std::any{}" )
+  in
+  CPPfun_call (cell.tca_factory, args)
+
+(** Generate statements for a TMC branch with possibly nested constructor cells.
+    Allocates all cells with [nullptr] holes, links them together, patches the
+    destination with the outermost cell, and sets [_last] to the innermost.
+
+    For a single cell (v1 behaviour), emits the same code as before.
+    For nested cells (e.g., [cons x (cons x (RECURSE xs))]), emits:
+    {[
+      auto _cell  = Cons_(x, nullptr);    // outer
+      auto _cell1 = Cons_(x, nullptr);    // inner
+      outer.tail = _cell1;                // link
+      <patch _head/_last with _cell>      // destination
+      _last = _cell1;                     // advance
+      <shadow updates>
+    ]} *)
+let build_tmc_branch_stmts pp_expr ti br varying shadow_params =
+  let n_cells = List.length br.tmc_cells in
+  (* Generate unique cell names: _cell, _cell1, _cell2, ... *)
+  let cell_names =
+    List.mapi
+      (fun i _ ->
+        Id.of_string (if i = 0 then "_cell" else "_cell" ^ string_of_int i))
+      br.tmc_cells
+  in
+  (* 1. Allocate all cells with nullptr holes *)
+  let cell_decls =
+    List.map2
+      (fun cell_id cell -> Sasgn (cell_id, Some Tauto, build_cell_call cell))
+      cell_names br.tmc_cells
+  in
+  (* 2. Link cells: outer.rec_field = inner (for each consecutive pair) *)
+  let link_stmts =
+    if n_cells <= 1 then []
+    else
+      List.init (n_cells - 1) (fun i ->
+        let outer_cell = List.nth br.tmc_cells i in
+        let outer_id = List.nth cell_names i in
+        let inner_id = List.nth cell_names (i + 1) in
+        (* AST index → struct field: d_a{n-1-i} *)
+        let field_idx =
+          outer_cell.tca_n_args - 1 - outer_cell.tca_rec_field_idx
+        in
+        let field_id = Id.of_string ("d_a" ^ string_of_int field_idx) in
+        let type_str = pp_expr outer_cell.tca_type_expr in
+        let get_expr =
+          CPPraw
+            ("std::get<typename " ^ type_str ^ "::" ^ outer_cell.tca_ctor_name
+           ^ ">")
+        in
+        let v_mut =
+          CPPmethod_call (CPPvar outer_id, Id.of_string "v_mut", [])
+        in
+        Sassign_field (CPPfun_call (get_expr, [v_mut]), field_id,
+                       CPPvar inner_id))
+  in
+  (* 3. Patch destination with outermost cell *)
+  let outermost = CPPvar (List.hd cell_names) in
+  let patch = patch_tmc_dest pp_expr ti outermost in
+  (* 4. Update _last to innermost cell *)
+  let innermost = CPPvar (List.nth cell_names (n_cells - 1)) in
+  let update_last =
+    Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_last"), innermost))
+  in
+  (* 5. Shadow variable updates *)
+  let shadow_updates =
+    make_shadow_updates shadow_params (filter_by_mask varying br.tmc_rec_args)
+  in
+  cell_decls @ link_stmts @ patch @ [update_last] @ shadow_updates
+
+(** Rewrite return statements inside a TMC visitor lambda body.
+
+    {b Base cases} (no recursive calls): patch the destination with the base
+    value and set [_continue = false].
+
+    {b Tail calls}: update shadow variables (same as tail recursion).
+
+    {b TMC branches}: allocate a cell with a hole, patch the destination,
+    update [_last], and update shadow variables. *)
+let rec rewrite_tmc_lambda_return check pp_expr ti varying shadow_params =
+  function
+  | Sreturn (Some (CPPfun_call (CPPvisit, [scrut; CPPoverloaded lambdas])))
+    when count_calls_expr check scrut = 0
+         && List.exists
+              (fun lambda ->
+                match lambda with
+                | CPPlambda (_, _, body, _) ->
+                  collect_stmts check ~in_visitor:true body <> []
+                | _ -> false )
+              lambdas ->
+    let rw = rewrite_tmc_lambda_return check pp_expr ti varying shadow_params in
+    let new_lambdas =
+      map_visit_lambdas ~ret_ty:None
+        ~rewrite:(fun _ body -> List.concat_map rw body)
+        lambdas
+    in
+    make_visit_stmt scrut new_lambdas
+  | Sreturn (Some e) ->
+    ( match check e with
+    | Some cs ->
+      (* Tail call — just update shadow variables *)
+      make_shadow_updates shadow_params (filter_by_mask varying cs.cs_args)
+    | None ->
+      let n = count_calls_expr check e in
+      if n = 0 then
+        (* Base case — patch destination and stop *)
+        patch_tmc_dest pp_expr ti e
+        @ [Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_continue"),
+                             CPPbool false))]
+      else
+        (* TMC branch — allocate cell(s) with holes, patch, continue *)
+        match try_tmc_decompose check e with
+        | Some br ->
+          build_tmc_branch_stmts pp_expr ti br varying shadow_params
+        | None ->
+          (* Shouldn't happen if try_tmc_classify was correct, but fallback *)
+          [Sreturn (Some e)] )
+  | Sif (cond, then_br, else_br) ->
+    let rw = rewrite_tmc_lambda_return check pp_expr ti varying shadow_params in
+    rewrite_if_with_reuse_bypass check cond
+      (List.concat_map rw then_br)
+      (List.concat_map rw else_br)
+  | Scustom_case (ty, scrut, tyargs, branches, err) ->
+    let rw = rewrite_tmc_lambda_return check pp_expr ti varying shadow_params in
+    [
+      Scustom_case
+        ( ty,
+          scrut,
+          tyargs,
+          List.map
+            (fun (ps, ret_ty, body) -> (ps, ret_ty, List.concat_map rw body))
+            branches,
+          err );
+    ]
+  | Sblock stmts ->
+    let rw = rewrite_tmc_lambda_return check pp_expr ti varying shadow_params in
+    [Sblock (List.concat_map rw stmts)]
+  | s -> [s]
+
+(** Rewrite a top-level statement for TMC.  Handles [std::visit] returns and
+    direct returns at the statement level. *)
+let rec rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params = function
+  | Sreturn (Some e) ->
+    ( match check e with
+    | Some cs ->
+      (* Direct tail call *)
+      let assigns =
+        make_shadow_updates shadow_params (filter_by_mask varying cs.cs_args)
+      in
+      Sblock (assigns @ [Scontinue])
+    | None ->
+    match e with
+    | CPPfun_call (CPPvisit, [scrut; CPPoverloaded lambdas]) ->
+      let new_lambdas =
+        map_visit_lambdas ~ret_ty:None
+          ~rewrite:(fun _ body ->
+            List.concat_map
+              (rewrite_tmc_lambda_return check pp_expr ti varying shadow_params)
+              body )
+          lambdas
+      in
+      Sexpr (make_visit_expr scrut new_lambdas)
+    | _ ->
+      (* Direct base return *)
+      let n = count_calls_expr check e in
+      if n = 0 then
+        Sblock
+          (patch_tmc_dest pp_expr ti e
+           @ [Sexpr (CPPbinop ("=", CPPvar (Id.of_string "_continue"),
+                                CPPbool false))])
+      else
+        (* TMC branch at top level *)
+        match try_tmc_decompose check e with
+        | Some br ->
+          Sblock (build_tmc_branch_stmts pp_expr ti br varying shadow_params
+                  @ [Scontinue])
+        | None -> Sreturn (Some e) )
+  | Sif (cond, then_br, else_br) ->
+    let rw = rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params in
+    Sif (cond, List.map rw then_br, List.map rw else_br)
+  | Sswitch (scrut, r, branches) ->
+    let rw = rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params in
+    Sswitch
+      (scrut, r, List.map (fun (id, body) -> (id, List.map rw body)) branches)
+  | Scustom_case (ty, scrut, tyargs, branches, err) ->
+    let rw = rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params in
+    Scustom_case
+      ( ty,
+        scrut,
+        tyargs,
+        List.map
+          (fun (ps, ret_ty, body) -> (ps, ret_ty, List.map rw body))
+          branches,
+        err )
+  | Sblock stmts ->
+    let rw = rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params in
+    Sblock (List.map rw stmts)
+  | s -> s
+
+(** Transform a TMC-eligible function body into a [while] loop with
+    destination-passing style.
+
+    @param param_inits Optional custom initializers for shadow variables
+    @param check Call checker for identifying recursive calls
+    @param pp_expr Expression pretty-printer (for rendering types in std::get)
+    @param ti TMC info from {!try_tmc_classify}
+    @param params Function parameters
+    @param ret_ty Return type
+    @param body Function body
+    @return Transformed body with TMC while loop *)
+let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
+  let varying = find_varying_params check params body in
+  let varying_params = filter_by_mask varying params in
+  let shadow_params =
+    List.map (fun (id, ty) -> (shadow_name id, ty)) varying_params
+  in
+  let subs =
+    List.map2 (fun (id, _) (sid, _) -> (id, sid)) varying_params shadow_params
+  in
+  (* Declare _head and _last with the return type, value-initialized *)
+  let head_decl = Sdecl_init (Id.of_string "_head", ret_ty) in
+  let last_decl = Sdecl_init (Id.of_string "_last", ret_ty) in
+  (* Shadow variable declarations.
+     For pointer params with custom inits (e.g., _self = this in methods), only
+     strip references but keep const — const T* must stay const to match this.
+     For other params (typically const shared_ptr<T>&), strip both ref and const
+     so the shadow variable becomes a mutable shared_ptr<T>. *)
+  let shadow_decls =
+    List.map2
+      (fun (orig_id, ty) (shadow_id, _) ->
+        let has_custom_init = List.mem_assoc orig_id param_inits in
+        let init_expr =
+          match List.assoc_opt orig_id param_inits with
+          | Some custom -> custom
+          | None -> CPPvar orig_id
+        in
+        let shadow_ty =
+          if has_custom_init then strip_ref_type ty
+          else strip_ref_and_const_type ty
+        in
+        Sasgn (shadow_id, Some shadow_ty, init_expr) )
+      varying_params
+      shadow_params
+  in
+  (* Substitute param references in body *)
+  let body' = List.map (subst_stmt subs) body in
+  (* Rewrite body for TMC *)
+  let body'' =
+    List.map
+      (rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params)
+      body'
+  in
+  let continue_decl =
+    Sasgn
+      ( Id.of_string "_continue",
+        Some (Tvar (0, Some (Id.of_string "bool"))),
+        CPPbool true )
+  in
+  [head_decl; last_decl]
+  @ shadow_decls
+  @ [
+      continue_decl;
+      Swhile (CPPvar (Id.of_string "_continue"), body'');
+      Sreturn (Some (CPPvar (Id.of_string "_head")));
+    ]
 
 (** {3 Frame-based non-tail recursion helpers} *)
 
@@ -4254,11 +4837,16 @@ let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body =
     | No_recursion -> body
     | Tail_recursion -> transform_tail check pp_type params ret_ty body
     | Nontail_recursion ->
-      if has_multi_call_expr check body && not (has_triple_call_expr check body)
-      then
-        transform_multi check pp_type params ret_ty body
-      else
-        transform_nontail check pp_type pp_expr tparams params ret_ty body
+      ( match try_tmc_classify check body with
+      | Some ti ->
+        transform_tmc check pp_expr ti params ret_ty body
+      | None ->
+        if has_multi_call_expr check body
+           && not (has_triple_call_expr check body)
+        then
+          transform_multi check pp_type params ret_ty body
+        else
+          transform_nontail check pp_type pp_expr tparams params ret_ty body )
   in
   (* Post-pass: loopify any self-recursive std::function lambdas *)
   let body = loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body in
@@ -4304,52 +4892,64 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
     let self_param = (self_id, self_ty) in
     let augmented_params = self_param :: mf.mf_params in
     let self_check = method_checker ~n_params ~has_self_param:true mf.mf_name in
-    let body' =
+    let body', needs_init_self =
       match kind with
       | Tail_recursion ->
         (* For tail recursion, initialize the shadow variable directly from
            [this] instead of going through an intermediate [_self = this]
            decl. *)
-        transform_tail
-          ~param_inits:[(self_id, CPPthis)]
-          self_check
-          pp_type
-          augmented_params
-          mf.mf_ret_type
-          body_with_self
+        ( transform_tail
+            ~param_inits:[(self_id, CPPthis)]
+            self_check
+            pp_type
+            augmented_params
+            mf.mf_ret_type
+            body_with_self,
+          false )
       | Nontail_recursion ->
-        (* For nontail recursion, we need [_self = this] because the _Enter
-           frame initialization uses the param name [_self] directly. *)
-        if
-          has_multi_call_expr self_check body_with_self
-          && not (has_triple_call_expr self_check body_with_self)
-        then
-          transform_multi
-            self_check
-            pp_type
-            augmented_params
-            mf.mf_ret_type
-            body_with_self
-        else
-          transform_nontail
-            self_check
-            pp_type
-            pp_expr
-            tparams
-            augmented_params
-            mf.mf_ret_type
-            body_with_self
+        ( match try_tmc_classify self_check body_with_self with
+        | Some ti ->
+          (* TMC: initialize shadow variable directly from [this],
+             same as tail recursion — no [_self = this] line needed. *)
+          ( transform_tmc
+              ~param_inits:[(self_id, CPPthis)]
+              self_check
+              pp_expr
+              ti
+              augmented_params
+              mf.mf_ret_type
+              body_with_self,
+            false )
+        | None ->
+          (* Non-TMC nontail: we need [_self = this] because the _Enter
+             frame initialization uses the param name [_self] directly. *)
+          ( ( if
+                has_multi_call_expr self_check body_with_self
+                && not (has_triple_call_expr self_check body_with_self)
+              then
+                transform_multi
+                  self_check
+                  pp_type
+                  augmented_params
+                  mf.mf_ret_type
+                  body_with_self
+              else
+                transform_nontail
+                  self_check
+                  pp_type
+                  pp_expr
+                  tparams
+                  augmented_params
+                  mf.mf_ret_type
+                  body_with_self ),
+            true ) )
       | No_recursion -> assert false
     in
-    ( match kind with
-    | Tail_recursion ->
-      (* No init line needed — shadow initialized directly from [this] *)
-      Fmethod {mf with mf_body = body'}
-    | Nontail_recursion ->
-      (* Prepend [_self = this] initialization for nontail recursion. *)
+    if needs_init_self then
       let init_self = Sasgn (self_id, Some self_ty, CPPthis) in
       Fmethod {mf with mf_body = init_self :: body'}
-    | No_recursion -> assert false )
+    else
+      Fmethod {mf with mf_body = body'}
 
 (** Transform a single struct field, loopifying it if it is a method.
 

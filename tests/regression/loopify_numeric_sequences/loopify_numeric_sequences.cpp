@@ -71,58 +71,74 @@ LoopifyNumericSequences::collatz_length(const unsigned int n) {
 std::shared_ptr<List<unsigned int>>
 LoopifyNumericSequences::collatz_sequence_fuel(const unsigned int fuel,
                                                const unsigned int n) {
-  struct _Enter {
-    const unsigned int n;
-    const unsigned int fuel;
-  };
-
-  struct _Call1 {
-    const unsigned int _s0;
-  };
-
-  struct _Call2 {
-    const unsigned int _s0;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
-  std::shared_ptr<List<unsigned int>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n, fuel});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    std::visit(
-        Overloaded{
-            [&](_Enter _f) {
-              const unsigned int n = _f.n;
-              const unsigned int fuel = _f.fuel;
-              if (fuel <= 0) {
-                _result = List<unsigned int>::ctor::Nil_();
-              } else {
-                unsigned int fuel_ = fuel - 1;
-                if (n <= 1u) {
-                  _result = List<unsigned int>::ctor::Cons_(
-                      1u, List<unsigned int>::ctor::Nil_());
-                } else {
-                  if ((n % 2u) == 0u) {
-                    _stack.push_back(_Call1{n});
-                    _stack.push_back(_Enter{Nat::div(n, 2u), std::move(fuel_)});
-                  } else {
-                    _stack.push_back(_Call2{n});
-                    _stack.push_back(_Enter{((3u * n) + 1u), std::move(fuel_)});
-                  }
-                }
-              }
-            },
-            [&](_Call1 _f) {
-              _result = List<unsigned int>::ctor::Cons_(_f._s0, _result);
-            },
-            [&](_Call2 _f) {
-              _result = List<unsigned int>::ctor::Cons_(_f._s0, _result);
-            }},
-        _frame);
+  std::shared_ptr<List<unsigned int>> _head{};
+  std::shared_ptr<List<unsigned int>> _last{};
+  unsigned int _loop_n = n;
+  unsigned int _loop_fuel = fuel;
+  bool _continue = true;
+  while (_continue) {
+    if (_loop_fuel <= 0) {
+      {
+        if (_last) {
+          std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+              List<unsigned int>::ctor::Nil_();
+        } else {
+          _head = List<unsigned int>::ctor::Nil_();
+        }
+        _continue = false;
+      }
+    } else {
+      unsigned int fuel_ = _loop_fuel - 1;
+      if (_loop_n <= 1u) {
+        {
+          if (_last) {
+            std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+                List<unsigned int>::ctor::Cons_(
+                    1u, List<unsigned int>::ctor::Nil_());
+          } else {
+            _head = List<unsigned int>::ctor::Cons_(
+                1u, List<unsigned int>::ctor::Nil_());
+          }
+          _continue = false;
+        }
+      } else {
+        if ((_loop_n % 2u) == 0u) {
+          {
+            auto _cell = List<unsigned int>::ctor::Cons_(_loop_n, nullptr);
+            if (_last) {
+              std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+                  _cell;
+            } else {
+              _head = _cell;
+            }
+            _last = _cell;
+            unsigned int _next_n = Nat::div(_loop_n, 2u);
+            unsigned int _next_fuel = std::move(fuel_);
+            _loop_n = std::move(_next_n);
+            _loop_fuel = std::move(_next_fuel);
+            continue;
+          }
+        } else {
+          {
+            auto _cell = List<unsigned int>::ctor::Cons_(_loop_n, nullptr);
+            if (_last) {
+              std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+                  _cell;
+            } else {
+              _head = _cell;
+            }
+            _last = _cell;
+            unsigned int _next_n = ((3u * _loop_n) + 1u);
+            unsigned int _next_fuel = std::move(fuel_);
+            _loop_n = std::move(_next_n);
+            _loop_fuel = std::move(_next_fuel);
+            continue;
+          }
+        }
+      }
+    }
   }
-  return _result;
+  return _head;
 }
 
 std::shared_ptr<List<unsigned int>>

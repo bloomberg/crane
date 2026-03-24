@@ -887,61 +887,49 @@ LoopifyTrees::tree_max(std::shared_ptr<LoopifyTrees::tree<unsigned int>> t1,
 std::shared_ptr<List<unsigned int>> LoopifyTrees::extract_tree_values(
     const std::shared_ptr<
         List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>> &ts) {
-  struct _Enter {
-    const std::shared_ptr<
-        List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
-        ts;
-  };
-
-  struct _Call1 {
-    decltype(std::declval<
-                 const typename LoopifyTrees::tree<unsigned int>::Node &>()
-                 .d_a1) _s0;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1>;
-  std::shared_ptr<List<unsigned int>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{ts});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
+  std::shared_ptr<List<unsigned int>> _head{};
+  std::shared_ptr<List<unsigned int>> _last{};
+  std::shared_ptr<List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
+      _loop_ts = ts;
+  bool _continue = true;
+  while (_continue) {
     std::visit(
         Overloaded{
-            [&](_Enter _f) {
-              const std::shared_ptr<
-                  List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
-                  ts = _f.ts;
+            [&](const typename List<
+                std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::Nil _args) {
+              if (_last) {
+                std::get<typename List<unsigned int>::Cons>(_last->v_mut())
+                    .d_a1 = List<unsigned int>::ctor::Nil_();
+              } else {
+                _head = List<unsigned int>::ctor::Nil_();
+              }
+              _continue = false;
+            },
+            [&](const typename List<std::shared_ptr<
+                    LoopifyTrees::tree<unsigned int>>>::Cons _args) {
               std::visit(
                   Overloaded{
-                      [&](const typename List<std::shared_ptr<
-                              LoopifyTrees::tree<unsigned int>>>::Nil _args)
-                          -> void {
-                        _result = List<unsigned int>::ctor::Nil_();
-                      },
-                      [&](const typename List<std::shared_ptr<
-                              LoopifyTrees::tree<unsigned int>>>::Cons _args)
-                          -> void {
-                        std::visit(
-                            Overloaded{[&](const typename LoopifyTrees::tree<
-                                           unsigned int>::Leaf _args0) -> void {
-                                         _stack.push_back(_Enter{_args.d_a1});
-                                       },
-                                       [&](const typename LoopifyTrees::tree<
-                                           unsigned int>::Node _args0) -> void {
-                                         _stack.push_back(_Call1{_args0.d_a1});
-                                         _stack.push_back(_Enter{_args.d_a1});
-                                       }},
-                            _args.d_a0->v());
+                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf
+                              _args0) { _loop_ts = _args.d_a1; },
+                      [&](const typename LoopifyTrees::tree<unsigned int>::Node
+                              _args0) {
+                        auto _cell = List<unsigned int>::ctor::Cons_(
+                            _args0.d_a1, nullptr);
+                        if (_last) {
+                          std::get<typename List<unsigned int>::Cons>(
+                              _last->v_mut())
+                              .d_a1 = _cell;
+                        } else {
+                          _head = _cell;
+                        }
+                        _last = _cell;
+                        _loop_ts = _args.d_a1;
                       }},
-                  ts->v());
-            },
-            [&](_Call1 _f) {
-              _result = List<unsigned int>::ctor::Cons_(_f._s0, _result);
+                  _args.d_a0->v());
             }},
-        _frame);
+        _loop_ts->v());
   }
-  return _result;
+  return _head;
 }
 
 /// Helper: extract children from trees.
@@ -949,72 +937,64 @@ std::shared_ptr<List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
 LoopifyTrees::extract_tree_children(
     const std::shared_ptr<
         List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>> &ts) {
-  struct _Enter {
-    const std::shared_ptr<
-        List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
-        ts;
-  };
-
-  struct _Call1 {
-    decltype(std::declval<
-                 const typename LoopifyTrees::tree<unsigned int>::Node &>()
-                 .d_a0) _s0;
-    decltype(std::declval<
-                 const typename LoopifyTrees::tree<unsigned int>::Node &>()
-                 .d_a2) _s1;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
-      _result{};
-  std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{ts});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
+      _head{};
+  std::shared_ptr<List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
+      _last{};
+  std::shared_ptr<List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
+      _loop_ts = ts;
+  bool _continue = true;
+  while (_continue) {
     std::visit(
         Overloaded{
-            [&](_Enter _f) {
-              const std::shared_ptr<
-                  List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
-                  ts = _f.ts;
+            [&](const typename List<
+                std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::Nil _args) {
+              if (_last) {
+                std::get<typename List<
+                    std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::Cons>(
+                    _last->v_mut())
+                    .d_a1 =
+                    List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::
+                        ctor::Nil_();
+              } else {
+                _head =
+                    List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::
+                        ctor::Nil_();
+              }
+              _continue = false;
+            },
+            [&](const typename List<std::shared_ptr<
+                    LoopifyTrees::tree<unsigned int>>>::Cons _args) {
               std::visit(
                   Overloaded{
-                      [&](const typename List<std::shared_ptr<
-                              LoopifyTrees::tree<unsigned int>>>::Nil _args)
-                          -> void {
-                        _result = List<std::shared_ptr<
-                            LoopifyTrees::tree<unsigned int>>>::ctor::Nil_();
-                      },
-                      [&](const typename List<std::shared_ptr<
-                              LoopifyTrees::tree<unsigned int>>>::Cons _args)
-                          -> void {
-                        std::visit(
-                            Overloaded{[&](const typename LoopifyTrees::tree<
-                                           unsigned int>::Leaf _args0) -> void {
-                                         _stack.push_back(_Enter{_args.d_a1});
-                                       },
-                                       [&](const typename LoopifyTrees::tree<
-                                           unsigned int>::Node _args0) -> void {
-                                         _stack.push_back(
-                                             _Call1{_args0.d_a0, _args0.d_a2});
-                                         _stack.push_back(_Enter{_args.d_a1});
-                                       }},
-                            _args.d_a0->v());
+                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf
+                              _args0) { _loop_ts = _args.d_a1; },
+                      [&](const typename LoopifyTrees::tree<unsigned int>::Node
+                              _args0) {
+                        auto _cell = List<std::shared_ptr<LoopifyTrees::tree<
+                            unsigned int>>>::ctor::Cons_(_args0.d_a0, nullptr);
+                        auto _cell1 = List<std::shared_ptr<LoopifyTrees::tree<
+                            unsigned int>>>::ctor::Cons_(_args0.d_a2, nullptr);
+                        std::get<typename List<std::shared_ptr<
+                            LoopifyTrees::tree<unsigned int>>>::Cons>(
+                            _cell->v_mut())
+                            .d_a1 = _cell1;
+                        if (_last) {
+                          std::get<typename List<std::shared_ptr<
+                              LoopifyTrees::tree<unsigned int>>>::Cons>(
+                              _last->v_mut())
+                              .d_a1 = _cell;
+                        } else {
+                          _head = _cell;
+                        }
+                        _last = _cell1;
+                        _loop_ts = _args.d_a1;
                       }},
-                  ts->v());
-            },
-            [&](_Call1 _f) {
-              _result =
-                  List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::
-                      ctor::Cons_(
-                          _f._s0,
-                          List<std::shared_ptr<LoopifyTrees::tree<
-                              unsigned int>>>::ctor::Cons_(_f._s1, _result));
+                  _args.d_a0->v());
             }},
-        _frame);
+        _loop_ts->v());
   }
-  return _result;
+  return _head;
 }
 
 /// tree_levels t returns list of lists, one per level (breadth-first).
@@ -1023,63 +1003,70 @@ LoopifyTrees::tree_levels_fuel(
     const unsigned int fuel,
     const std::shared_ptr<
         List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>> &trees) {
-  struct _Enter {
-    const std::shared_ptr<
-        List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
-        trees;
-    const unsigned int fuel;
-  };
-
-  struct _Call1 {
-    std::shared_ptr<List<unsigned int>> _s0;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1>;
-  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{trees, fuel});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    std::visit(
-        Overloaded{
-            [&](_Enter _f) {
-              const std::shared_ptr<
-                  List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
-                  trees = _f.trees;
-              const unsigned int fuel = _f.fuel;
-              if (fuel <= 0) {
-                _result =
-                    List<std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
-              } else {
-                unsigned int f = fuel - 1;
-                std::shared_ptr<List<unsigned int>> values =
-                    extract_tree_values(trees);
-                std::visit(
-                    Overloaded{
-                        [&](const typename List<unsigned int>::Nil _args)
-                            -> void {
-                          _result = List<std::shared_ptr<List<unsigned int>>>::
-                              ctor::Nil_();
-                        },
-                        [&](const typename List<unsigned int>::Cons _args)
-                            -> void {
-                          std::shared_ptr<List<std::shared_ptr<
-                              LoopifyTrees::tree<unsigned int>>>>
-                              children = extract_tree_children(trees);
-                          _stack.push_back(_Call1{std::move(values)});
-                          _stack.push_back(_Enter{std::move(children), f});
-                        }},
-                    values->v());
-              }
-            },
-            [&](_Call1 _f) {
-              _result = List<std::shared_ptr<List<unsigned int>>>::ctor::Cons_(
-                  _f._s0, _result);
-            }},
-        _frame);
+  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _head{};
+  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _last{};
+  std::shared_ptr<List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
+      _loop_trees = trees;
+  unsigned int _loop_fuel = fuel;
+  bool _continue = true;
+  while (_continue) {
+    if (_loop_fuel <= 0) {
+      {
+        if (_last) {
+          std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+              _last->v_mut())
+              .d_a1 = List<std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
+        } else {
+          _head = List<std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
+        }
+        _continue = false;
+      }
+    } else {
+      unsigned int f = _loop_fuel - 1;
+      std::shared_ptr<List<unsigned int>> values =
+          extract_tree_values(_loop_trees);
+      std::visit(
+          Overloaded{
+              [&](const typename List<unsigned int>::Nil _args) {
+                if (_last) {
+                  std::get<
+                      typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+                      _last->v_mut())
+                      .d_a1 =
+                      List<std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
+                } else {
+                  _head =
+                      List<std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
+                }
+                _continue = false;
+              },
+              [&](const typename List<unsigned int>::Cons _args) {
+                std::shared_ptr<
+                    List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
+                    children = extract_tree_children(_loop_trees);
+                auto _cell =
+                    List<std::shared_ptr<List<unsigned int>>>::ctor::Cons_(
+                        std::move(values), nullptr);
+                if (_last) {
+                  std::get<
+                      typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+                      _last->v_mut())
+                      .d_a1 = _cell;
+                } else {
+                  _head = _cell;
+                }
+                _last = _cell;
+                std::shared_ptr<
+                    List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
+                    _next_trees = std::move(children);
+                unsigned int _next_fuel = f;
+                _loop_trees = std::move(_next_trees);
+                _loop_fuel = std::move(_next_fuel);
+              }},
+          values->v());
+    }
   }
-  return _result;
+  return _head;
 }
 
 std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
@@ -1162,51 +1149,50 @@ std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
 LoopifyTrees::append_list_lists(
     const std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> &l1,
     std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> l2) {
-  struct _Enter {
-    std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> l2;
-    const std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> l1;
-  };
-
-  struct _Call1 {
-    decltype(std::declval<const typename List<
-                 std::shared_ptr<List<unsigned int>>>::Cons &>()
-                 .d_a0) _s0;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1>;
-  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l2, l1});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
+  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _head{};
+  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _last{};
+  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _loop_l2 = l2;
+  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _loop_l1 = l1;
+  bool _continue = true;
+  while (_continue) {
     std::visit(
         Overloaded{
-            [&](_Enter _f) {
-              std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> l2 =
-                  _f.l2;
-              const std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
-                  l1 = _f.l1;
-              std::visit(
-                  Overloaded{
-                      [&](const typename List<
-                          std::shared_ptr<List<unsigned int>>>::Nil _args)
-                          -> void { _result = std::move(l2); },
-                      [&](const typename List<
-                          std::shared_ptr<List<unsigned int>>>::Cons _args)
-                          -> void {
-                        _stack.push_back(_Call1{_args.d_a0});
-                        _stack.push_back(_Enter{std::move(l2), _args.d_a1});
-                      }},
-                  l1->v());
+            [&](const typename List<std::shared_ptr<List<unsigned int>>>::Nil
+                    _args) {
+              if (_last) {
+                std::get<
+                    typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+                    _last->v_mut())
+                    .d_a1 = std::move(_loop_l2);
+              } else {
+                _head = std::move(_loop_l2);
+              }
+              _continue = false;
             },
-            [&](_Call1 _f) {
-              _result = List<std::shared_ptr<List<unsigned int>>>::ctor::Cons_(
-                  _f._s0, _result);
+            [&](const typename List<std::shared_ptr<List<unsigned int>>>::Cons
+                    _args) {
+              auto _cell =
+                  List<std::shared_ptr<List<unsigned int>>>::ctor::Cons_(
+                      _args.d_a0, nullptr);
+              if (_last) {
+                std::get<
+                    typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+                    _last->v_mut())
+                    .d_a1 = _cell;
+              } else {
+                _head = _cell;
+              }
+              _last = _cell;
+              std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
+                  _next_l2 = std::move(_loop_l2);
+              std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
+                  _next_l1 = _args.d_a1;
+              _loop_l2 = std::move(_next_l2);
+              _loop_l1 = std::move(_next_l1);
             }},
-        _frame);
+        _loop_l1->v());
   }
-  return _result;
+  return _head;
 }
 
 /// Helper: prepend value to all lists in a list of lists.
@@ -1214,54 +1200,45 @@ std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
 LoopifyTrees::map_cons_to_all(
     const unsigned int x,
     const std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> &lsts) {
-  struct _Enter {
-    const std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> lsts;
-  };
-
-  struct _Call1 {
-    decltype(List<unsigned int>::ctor::Cons_(
-        std::declval<const unsigned int &>(),
-        std::declval<
-            const typename List<std::shared_ptr<List<unsigned int>>>::Cons &>()
-            .d_a0)) _s0;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1>;
-  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{lsts});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
+  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _head{};
+  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _last{};
+  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _loop_lsts = lsts;
+  bool _continue = true;
+  while (_continue) {
     std::visit(
         Overloaded{
-            [&](_Enter _f) {
-              const std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
-                  lsts = _f.lsts;
-              std::visit(
-                  Overloaded{
-                      [&](const typename List<
-                          std::shared_ptr<List<unsigned int>>>::Nil _args)
-                          -> void {
-                        _result = List<
-                            std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
-                      },
-                      [&](const typename List<
-                          std::shared_ptr<List<unsigned int>>>::Cons _args)
-                          -> void {
-                        _stack.push_back(_Call1{
-                            List<unsigned int>::ctor::Cons_(x, _args.d_a0)});
-                        _stack.push_back(_Enter{_args.d_a1});
-                      }},
-                  lsts->v());
+            [&](const typename List<std::shared_ptr<List<unsigned int>>>::Nil
+                    _args) {
+              if (_last) {
+                std::get<
+                    typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+                    _last->v_mut())
+                    .d_a1 =
+                    List<std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
+              } else {
+                _head = List<std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
+              }
+              _continue = false;
             },
-            [&](_Call1 _f) {
-              _result = List<std::shared_ptr<List<unsigned int>>>::ctor::Cons_(
-                  _f._s0, _result);
+            [&](const typename List<std::shared_ptr<List<unsigned int>>>::Cons
+                    _args) {
+              auto _cell =
+                  List<std::shared_ptr<List<unsigned int>>>::ctor::Cons_(
+                      List<unsigned int>::ctor::Cons_(x, _args.d_a0), nullptr);
+              if (_last) {
+                std::get<
+                    typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
+                    _last->v_mut())
+                    .d_a1 = _cell;
+              } else {
+                _head = _cell;
+              }
+              _last = _cell;
+              _loop_lsts = _args.d_a1;
             }},
-        _frame);
+        _loop_lsts->v());
   }
-  return _result;
+  return _head;
 }
 
 /// paths t returns all root-to-leaf paths in tree.
@@ -1399,54 +1376,57 @@ std::shared_ptr<List<unsigned int>> LoopifyTrees::collect_unsorted(
 std::shared_ptr<List<unsigned int>>
 LoopifyTrees::insert_sorted(const unsigned int x,
                             const std::shared_ptr<List<unsigned int>> &l) {
-  struct _Enter {
-    const std::shared_ptr<List<unsigned int>> l;
-    const unsigned int x;
-  };
-
-  struct _Call1 {
-    decltype(std::declval<const typename List<unsigned int>::Cons &>()
-                 .d_a0) _s0;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1>;
-  std::shared_ptr<List<unsigned int>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, x});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
+  std::shared_ptr<List<unsigned int>> _head{};
+  std::shared_ptr<List<unsigned int>> _last{};
+  std::shared_ptr<List<unsigned int>> _loop_l = l;
+  unsigned int _loop_x = x;
+  bool _continue = true;
+  while (_continue) {
     std::visit(
         Overloaded{
-            [&](_Enter _f) {
-              const std::shared_ptr<List<unsigned int>> l = _f.l;
-              const unsigned int x = _f.x;
-              std::visit(
-                  Overloaded{
-                      [&](const typename List<unsigned int>::Nil _args)
-                          -> void {
-                        _result = List<unsigned int>::ctor::Cons_(
-                            std::move(x), List<unsigned int>::ctor::Nil_());
-                      },
-                      [&](const typename List<unsigned int>::Cons _args)
-                          -> void {
-                        if (x <= _args.d_a0) {
-                          _result = List<unsigned int>::ctor::Cons_(
-                              std::move(x), List<unsigned int>::ctor::Cons_(
-                                                _args.d_a0, _args.d_a1));
-                        } else {
-                          _stack.push_back(_Call1{_args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a1, std::move(x)});
-                        }
-                      }},
-                  l->v());
+            [&](const typename List<unsigned int>::Nil _args) {
+              if (_last) {
+                std::get<typename List<unsigned int>::Cons>(_last->v_mut())
+                    .d_a1 = List<unsigned int>::ctor::Cons_(
+                    std::move(_loop_x), List<unsigned int>::ctor::Nil_());
+              } else {
+                _head = List<unsigned int>::ctor::Cons_(
+                    std::move(_loop_x), List<unsigned int>::ctor::Nil_());
+              }
+              _continue = false;
             },
-            [&](_Call1 _f) {
-              _result = List<unsigned int>::ctor::Cons_(_f._s0, _result);
+            [&](const typename List<unsigned int>::Cons _args) {
+              if (_loop_x <= _args.d_a0) {
+                if (_last) {
+                  std::get<typename List<unsigned int>::Cons>(_last->v_mut())
+                      .d_a1 = List<unsigned int>::ctor::Cons_(
+                      std::move(_loop_x),
+                      List<unsigned int>::ctor::Cons_(_args.d_a0, _args.d_a1));
+                } else {
+                  _head = List<unsigned int>::ctor::Cons_(
+                      std::move(_loop_x),
+                      List<unsigned int>::ctor::Cons_(_args.d_a0, _args.d_a1));
+                }
+                _continue = false;
+              } else {
+                auto _cell =
+                    List<unsigned int>::ctor::Cons_(_args.d_a0, nullptr);
+                if (_last) {
+                  std::get<typename List<unsigned int>::Cons>(_last->v_mut())
+                      .d_a1 = _cell;
+                } else {
+                  _head = _cell;
+                }
+                _last = _cell;
+                std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
+                unsigned int _next_x = std::move(_loop_x);
+                _loop_l = std::move(_next_l);
+                _loop_x = std::move(_next_x);
+              }
             }},
-        _frame);
+        _loop_l->v());
   }
-  return _result;
+  return _head;
 }
 
 std::shared_ptr<List<unsigned int>>
