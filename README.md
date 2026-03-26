@@ -1,6 +1,6 @@
 # Crane
 
-<img src="./website/assets/logo.png" width="120px" height="120px">
+<img src="./docs/assets/logo.png" width="120px" height="120px">
 
 ## Menu
 
@@ -84,13 +84,6 @@ dune build
 # Run tests (builds them first if needed)
 dune runtest
 ```
-
-Tests are organized into four categories:
-- `tests/basics/` — Core functionality tests
-- `tests/monadic/` — Monadic/effectful code tests
-- `tests/regression/` — Regression tests for previously fixed bugs
-- `tests/wip/` — Work-in-progress tests for known unsupported features
-
 Tests are **not** built by `make build` to keep development builds fast—use `make test` or `dune runtest` to build and run them.
 
 ### BDE Tests (Optional)
