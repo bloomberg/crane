@@ -9,7 +9,7 @@
 (package
  (name rocq-crane)
  (depends
-   (ocaml (>= 4.10.0))
+   (ocaml (>= 4.14.0))
    (coq (>= "9.0~"))
    (rocq-core (>= "9.0~"))
    (rocq-stdlib (>= "9.0~"))
