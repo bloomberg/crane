@@ -23,15 +23,15 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 template <typename I, typename t_A>
 concept Eq = requires(t_A a0, t_A a1) {
-  { I::eqb(a1, a0) } -> std::convertible_to<bool>;
-  { I::neqb(a1, a0) } -> std::convertible_to<bool>;
+  { I::eqb(a0, a1) } -> std::convertible_to<bool>;
+  { I::neqb(a0, a1) } -> std::convertible_to<bool>;
 };
 template <typename I, typename t_A>
 concept Ord = requires(t_A a0, t_A a1) {
-  { I::lt(a1, a0) } -> std::convertible_to<bool>;
-  { I::le(a1, a0) } -> std::convertible_to<bool>;
-  { I::gt(a1, a0) } -> std::convertible_to<bool>;
-  { I::ge(a1, a0) } -> std::convertible_to<bool>;
+  { I::lt(a0, a1) } -> std::convertible_to<bool>;
+  { I::le(a0, a1) } -> std::convertible_to<bool>;
+  { I::gt(a0, a1) } -> std::convertible_to<bool>;
+  { I::ge(a0, a1) } -> std::convertible_to<bool>;
 };
 template <typename I, typename t_A>
 concept Show = requires(t_A a0) {

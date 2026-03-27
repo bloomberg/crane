@@ -229,6 +229,8 @@ and cpp_expr =
   | CPPint of int  (** Integer literal *)
   | CPPbrace_init  (** Empty brace initialization: {} *)
   | CPPunop of string * cpp_expr  (** Unary operator: !expr, -expr, etc. *)
+  | CPPany_cast of cpp_type * cpp_expr
+      (** std::any_cast<T>(expr) — recovers typed value from std::any *)
 
 (** Alias for constraint expressions in requires clauses. *)
 and cpp_constraint = cpp_expr

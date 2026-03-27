@@ -44,17 +44,6 @@
   (alias runtest)
   (deps unsound_axioms.t.exe)
   (action (run ./unsound_axioms.t.exe))))
-
-(subdir double_opposite_witnesses
- (rule
-  (targets double_opposite_witnesses.t.exe)
-  (deps DoubleOppositeWitnesses.vo double_opposite_witnesses.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} double_opposite_witnesses.t.exe double_opposite_witnesses.cpp double_opposite_witnesses.t.cpp)))
- (rule
-  (alias runtest)
-  (deps double_opposite_witnesses.t.exe)
-  (action (run ./double_opposite_witnesses.t.exe))))
 (subdir dim10_tower_proof_chain
  (rule
   (targets dim10_tower_proof_chain.t.exe)

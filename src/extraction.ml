@@ -459,8 +459,33 @@ let rec extract_type env sg db j c args =
     ( match flag_of_type env sg typ with
     | Logic, _ -> assert false (* Cf. logical cases above *)
     | Info, TypeScheme ->
-      let mlt = extract_type_app env sg db (r, type_sign env sg typ) args in
-      mlt
+      (* For promoted type var projections (e.g., Obj, Hom) applied to
+         concrete arguments, try full reduction with whd_all.  This resolves
+         expressions like Obj(base_category(toy_prestable)) → nat, which
+         whd_betaiotazeta cannot reduce because it lacks delta. *)
+      if lang () == Cpp && args <> [] && Table.is_promoted_type_var r then
+        let full = EConstr.applist (EConstr.mkConstU (kn, u), args) in
+        let reduced =
+          try whd_all env sg full
+          with e when CErrors.noncritical e -> full
+        in
+        let is_stuck =
+          match EConstr.kind sg reduced with
+          | Const (kn', _) -> Constant.CanOrd.equal kn kn'
+          | App (f, _) -> (
+            match EConstr.kind sg f with
+            | Const (kn', _) -> Constant.CanOrd.equal kn kn'
+            | _ -> false )
+          | Case _ -> true
+          | _ -> false
+        in
+        if is_stuck then
+          extract_type_app env sg db (r, type_sign env sg typ) args
+        else
+          extract_type env sg db 0 reduced []
+      else
+        let mlt = extract_type_app env sg db (r, type_sign env sg typ) args in
+        mlt
     | Info, Default ->
     (* Not an ML type, for example [(c:forall X, X->X) Type nat] *)
     match (lookup_constant kn env).const_body with
@@ -689,16 +714,35 @@ and extract_really_ind env kn mib =
             let field_names =
               List.skipn mib.mind_nparams (names_prod mip_i.mind_user_lc.(0))
             in
-            (* Identify which fields have Sort Type/Set as their Rocq type *)
             let promoted_info =
               List.mapi
                 (fun idx prod_decl ->
                   let prod_ty = Context.Rel.Declaration.get_type prod_decl in
-                  match Constr.kind prod_ty with
-                  | Sort s when not (Sorts.is_prop s) ->
-                    (* This field is a Sort Type/Set — promote it. prod_decl is
-                       at position (nfields-1-idx) because prods lists fields in
-                       reverse order. *)
+                  (* A field should be promoted if its Rocq type is:
+                     (a) a Sort (Type/Set) — the field carries a type, or
+                     (b) a TypeClass-classified inductive — the field
+                         carries a typeclass dictionary that becomes a
+                         concept-constrained template parameter in C++. *)
+                  let is_typeclass_ind t =
+                    match Constr.kind t with
+                    | Ind ((mind, i), _) ->
+                      Table.is_typeclass (GlobRef.IndRef (mind, i))
+                    | App (f, _) -> (
+                      match Constr.kind f with
+                      | Ind ((mind, i), _) ->
+                        Table.is_typeclass (GlobRef.IndRef (mind, i))
+                      | _ -> false )
+                    | _ -> false
+                  in
+                  let should_promote =
+                    ( match Constr.kind prod_ty with
+                    | Sort s when not (Sorts.is_prop s) -> true
+                    | _ -> false )
+                    || is_typeclass_ind prod_ty
+                  in
+                  if should_promote then
+                    (* prod_decl is at position (nfields-1-idx) because
+                       prods lists fields in reverse order. *)
                     let field_idx = nfields - 1 - idx in
                     let pos = ndecls + 1 + field_idx in
                     let tv = !next_tvar in
@@ -713,7 +757,8 @@ and extract_really_ind env kn mib =
                         anon_tvar_id field_idx
                     in
                     Some (pos, tv, field_idx, var_name)
-                  | _ -> None )
+                  else
+                    None )
                 prods
             in
             let promoted_entries = List.filter_map Fun.id promoted_info in
@@ -749,6 +794,36 @@ and extract_really_ind env kn mib =
                       add_promoted_type_var (GlobRef.ConstRef knp) var_name
                     | _ -> () )
                 promoted_entries;
+              (* Register non-promoted type-valued fields as erased type
+                 constants.  These are dependent type families like
+                 [Hom : Obj -> Obj -> Type] whose type ends in Sort after
+                 stripping Prod wrappers, but that weren't promoted because
+                 they have term-level arguments. *)
+              let promoted_field_indices =
+                List.map (fun (_, _, fi, _) -> fi) promoted_entries
+              in
+              let rec type_ends_in_sort t =
+                match Constr.kind t with
+                | Sort s -> not (Sorts.is_prop s)
+                | Prod (_, _, body) -> type_ends_in_sort body
+                | _ -> false
+              in
+              List.iteri
+                (fun idx prod_decl ->
+                  let field_idx = nfields - 1 - idx in
+                  if not (List.mem field_idx promoted_field_indices) then
+                    let prod_ty =
+                      Context.Rel.Declaration.get_type prod_decl
+                    in
+                    if type_ends_in_sort prod_ty then
+                      if field_idx < List.length field_names then
+                        let fn = List.nth field_names field_idx in
+                        match fn.binder_name with
+                        | Name id ->
+                          let knp = Constant.make2 mp (Label.of_id id) in
+                          add_erased_type_const (GlobRef.ConstRef knp)
+                        | _ -> () )
+                prods;
               p.ip_vars <- p.ip_vars @ promoted_var_names;
               (merged, promoted_var_names) )
           else
@@ -810,10 +885,29 @@ and extract_really_ind env kn mib =
       (* Check if this is a type class registered in the Rocq typeclasses
          database *)
       let is_class = Option.has_some (Typeclasses.class_info r) in
-      (* Check if promotion already happened during the second pass. If ip_vars
-         has more entries than ip_sign Keep count, then Sort-typed fields were
-         promoted to type variables during initial extraction. In that case,
-         classify as TypeClass (for C++ concept generation). *)
+      (* Detect "promotion": Type-valued record fields that must become type
+         parameters in C++ concepts rather than struct fields.
+
+         During the second extraction pass, Sort-typed fields (e.g., [m_carrier : Type])
+         are added to [ip_vars] but NOT kept in [ip_sign] (they're not concrete
+         values that can be stored in a struct). If [ip_vars] has more entries
+         than the [Keep] count in [ip_sign], some fields were promoted.
+
+         Example:
+           Record Monoid := {
+             m_carrier : Type;        (* promoted: Type-valued *)
+             m_op : m_carrier -> ...  (* not promoted: function *)
+           }.
+
+         After promotion:
+           - nb_sign_keeps = 0 (no regular fields kept)
+           - ip_vars = ["m_carrier"] (1 promoted field)
+           - has_promoted = true → classify as TypeClass for concept generation
+
+         Without promotion, [m_carrier] would be a struct field of type "Type",
+         which doesn't exist in C++. Instead, it becomes:
+           template <typename I>
+           concept Monoid = requires { typename I::m_carrier; ... }; *)
       let nb_sign_keeps =
         List.length (List.filter (fun x -> x == Keep) p.ip_sign)
       in

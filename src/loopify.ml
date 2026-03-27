@@ -333,6 +333,7 @@ let rec collect_expr (check : call_checker) expr =
    |CPPint _
    |CPPbrace_init
    |CPPunop _
+   |CPPany_cast _
    |CPPstring _
    |CPPuint _
    |CPPfloat _

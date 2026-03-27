@@ -223,6 +223,8 @@ and cpp_expr =
   | CPPint of int (* integer literal *)
   | CPPbrace_init (* {} — empty brace initialization *)
   | CPPunop of string * cpp_expr (* unary operator: !expr, -expr, etc. *)
+  | CPPany_cast of cpp_type * cpp_expr
+    (* std::any_cast<T>(expr) — recovers a typed value from std::any *)
 
 (** A C++ constraint expression (used in requires clauses). *)
 and cpp_constraint = cpp_expr
@@ -359,6 +361,7 @@ let map_expr
   | CPPint _ -> e
   | CPPbrace_init -> e
   | CPPunop (op, e') -> CPPunop (op, fe e')
+  | CPPany_cast (ty, e') -> CPPany_cast (ft ty, fe e')
 
 (** [map_stmt fe fs ft s] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural

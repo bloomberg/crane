@@ -74,12 +74,12 @@ public:
 template <typename I>
 concept Magma = requires(typename I::carrier a0, typename I::carrier a1) {
   typename I::carrier;
-  { I::op(a1, a0) } -> std::convertible_to<typename I::carrier>;
+  { I::op(a0, a1) } -> std::convertible_to<typename I::carrier>;
 };
 template <typename I>
 concept Monoid = requires(typename I::m_carrier a0, typename I::m_carrier a1) {
   typename I::m_carrier;
-  { I::m_op(a1, a0) } -> std::convertible_to<typename I::m_carrier>;
+  { I::m_op(a0, a1) } -> std::convertible_to<typename I::m_carrier>;
 } && requires {
   { I::m_id() } -> std::convertible_to<typename I::m_carrier>;
 } || requires {
@@ -137,28 +137,28 @@ struct DepRecord {
 
   static_assert(Monoid<nat_mul_monoid>);
 
-  template <typename _tcI0, typename m_carrier>
-  static m_carrier mfold(const std::shared_ptr<List<m_carrier>> &l) {
+  template <Monoid _tcI0>
+  __attribute__((pure)) static typename _tcI0::m_carrier
+  mfold(const std::shared_ptr<List<typename _tcI0::m_carrier>> &l) {
     return std::visit(
         Overloaded{
-            [&](const typename List<m_carrier>::Nil _args) -> m_carrier {
-              return _tcI0::m_id();
-            },
-            [&](const typename List<m_carrier>::Cons _args) -> m_carrier {
-              return _tcI0::m_op(_args.d_a0,
-                                 mfold<_tcI0, m_carrier>(_args.d_a1));
+            [&](const typename List<typename _tcI0::m_carrier>::Nil _args) ->
+            typename _tcI0::m_carrier { return _tcI0::m_id(); },
+            [&](const typename List<typename _tcI0::m_carrier>::Cons _args) ->
+            typename _tcI0::m_carrier {
+              return _tcI0::m_op(_args.d_a0, mfold<_tcI0>(_args.d_a1));
             }},
         l->v());
   }
 
   static inline const unsigned int test_fold_add =
-      mfold<nat_monoid, unsigned int>(List<unsigned int>::ctor::Cons_(
+      mfold<nat_monoid>(List<unsigned int>::ctor::Cons_(
           1u, List<unsigned int>::ctor::Cons_(
                   2u, List<unsigned int>::ctor::Cons_(
                           3u, List<unsigned int>::ctor::Cons_(
                                   4u, List<unsigned int>::ctor::Nil_())))));
   static inline const unsigned int test_fold_mul =
-      mfold<nat_mul_monoid, unsigned int>(List<unsigned int>::ctor::Cons_(
+      mfold<nat_mul_monoid>(List<unsigned int>::ctor::Cons_(
           2u, List<unsigned int>::ctor::Cons_(
                   3u, List<unsigned int>::ctor::Cons_(
                           4u, List<unsigned int>::ctor::Nil_()))));

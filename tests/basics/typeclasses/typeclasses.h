@@ -78,11 +78,11 @@ concept Numeric = requires(t_A a0) {
 };
 template <typename I, typename t_A>
 concept Eq = requires(t_A a0, t_A a1) {
-  { I::eqb(a1, a0) } -> std::convertible_to<bool>;
+  { I::eqb(a0, a1) } -> std::convertible_to<bool>;
 };
 template <typename I, typename t_A>
 concept Ord = requires(t_A a0, t_A a1) {
-  { I::leb(a1, a0) } -> std::convertible_to<bool>;
+  { I::leb(a0, a1) } -> std::convertible_to<bool>;
 };
 
 struct Typeclasses {

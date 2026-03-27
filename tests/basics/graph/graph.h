@@ -144,7 +144,7 @@ public:
 /// Decidable equality via a boolean function eqb.
 template <typename I, typename t_A>
 concept Eq = requires(t_A a0, t_A a1) {
-  { I::eqb(a1, a0) } -> std::convertible_to<bool>;
+  { I::eqb(a0, a1) } -> std::convertible_to<bool>;
 };
 /// A graph abstraction parameterized by a container type G and
 /// node type A. Provides operations for building and querying
@@ -153,11 +153,11 @@ template <typename I, typename t_G, typename t_A>
 concept Graph = requires(t_G a0, t_A a1) {
   typename I::edge;
   { I::empty() } -> std::convertible_to<t_G>;
-  { I::add_node(a1, a0) } -> std::convertible_to<t_G>;
-  { I::add_edge(a1, a0) } -> std::convertible_to<t_G>;
+  { I::add_node(a0, a1) } -> std::convertible_to<t_G>;
+  { I::add_edge(a0, a1) } -> std::convertible_to<t_G>;
   { I::nodes(a0) } -> std::convertible_to<std::shared_ptr<List<t_A>>>;
   {
-    I::edges(a1, a0)
+    I::edges(a0, a1)
   } -> std::convertible_to<std::shared_ptr<List<typename I::edge>>>;
 };
 

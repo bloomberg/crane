@@ -425,16 +425,84 @@ let projection_info r = GlobRef.Map.find r !projs
 
 (* Table of promoted type variables from dependent records. Maps a ConstRef
    (erased carrier projection) to its variable name (Id.t). *)
+(** {2 Promoted Type Variables}
+
+    "Promotion" refers to the extraction transformation that converts
+    Type-valued record fields into C++ concept type requirements.
+
+    {b Example}: Consider this Coq record type:
+    {[
+      Record Monoid := {
+        m_carrier : Type;
+        m_op : m_carrier -> m_carrier -> m_carrier;
+        m_id : m_carrier
+      }.
+    ]}
+
+    During extraction:
+    - The [Monoid] record type becomes a C++ concept
+    - The [m_carrier] field cannot exist as a struct field (C++ has no "Type" type)
+    - Instead, [m_carrier] is "promoted" from a field to a type requirement:
+      {[ template <typename I>
+         concept Monoid = requires {
+           typename I::m_carrier;  // ← promoted field
+           ...
+         }; ]}
+
+    At usage sites, Crane must distinguish promoted fields from regular fields:
+    {[
+      Fixpoint mfold (M : Monoid) (l : list (m_carrier M)) : m_carrier M
+      (* m_carrier M is a TYPE reference, not a field access *)
+    ]}
+
+    becomes:
+    {[
+      template <Monoid _tcI0>
+      static typename _tcI0::m_carrier mfold(
+        const std::shared_ptr<List<typename _tcI0::m_carrier>> &l)
+      (* ^^^^^^^^^^^^^^^^^^^^^^^ qualified type, not _tcI0->m_carrier *)
+    ]}
+
+    This table tracks which record fields were promoted so that usage sites
+    can generate correct C++ type qualifications instead of field accesses. *)
+
 let promoted_type_vars = ref (GlobRef.Map.empty : Names.Id.t GlobRef.Map.t)
 
 let init_promoted_type_vars () = promoted_type_vars := GlobRef.Map.empty
 
+(** Register a record field as having been promoted from a value-level field
+    to a type-level parameter during concept generation.
+
+    @param r The GlobRef of the field projection (e.g., [DepRecord.m_carrier])
+    @param name The field name as an identifier (e.g., ["m_carrier"]) *)
 let add_promoted_type_var r name =
   promoted_type_vars := GlobRef.Map.add r name !promoted_type_vars
 
+(** Check if a GlobRef refers to a promoted type variable (i.e., a record field
+    that became a type requirement in a C++ concept rather than remaining a
+    struct field). *)
 let is_promoted_type_var r = GlobRef.Map.mem r !promoted_type_vars
 
+(** Retrieve the name of a promoted type variable if it exists. *)
 let promoted_type_var_name r = GlobRef.Map.find_opt r !promoted_type_vars
+
+(* Table of erased type constants — non-promoted type-valued record fields
+   like [Hom : Obj -> Obj -> Type] in [PreCategory].  These are dependent
+   type families whose C++ representation is [std::any] because the extraction
+   cannot resolve them statically.  Distinguished from promoted type vars
+   (simple [Type]-valued fields like [Obj]) and concrete type aliases
+   (standalone definitions like [Force := list Unit]). *)
+let erased_type_consts = ref Refset'.empty
+
+let init_erased_type_consts () = erased_type_consts := Refset'.empty
+
+(** Register a record field as an erased type constant (dependent type family
+    that becomes [std::any] in C++). *)
+let add_erased_type_const r =
+  erased_type_consts := Refset'.add r !erased_type_consts
+
+(** Check if a GlobRef refers to an erased type constant. *)
+let is_erased_type_const r = Refset'.mem r !erased_type_consts
 
 (* Table of promoted type bindings for typeclass instances. Maps an instance
    ConstRef (e.g., nat_magma) to its promoted type variable bindings [(carrier,
@@ -1991,6 +2059,7 @@ let reset_tables () =
   init_recursors ();
   init_projs ();
   init_promoted_type_vars ();
+  init_erased_type_consts ();
   init_instance_promoted_types ();
   init_higher_order_projections ();
   init_phantom_tvars ();

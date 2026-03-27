@@ -809,23 +809,23 @@ concept ConstructiveReals = requires(typename I::CRcarrier a0,
   {
     I::CRltLinear()
   } -> std::convertible_to<isLinearOrder<typename I::CRcarrier, std::any>>;
-  { I::CRltEpsilon(a2, a1, a0) } -> std::convertible_to<std::any>;
+  { I::CRltEpsilon(a0, a1, a2) } -> std::convertible_to<std::any>;
   {
-    I::CRltDisjunctEpsilon(a4, a3, a2, a1, a0)
+    I::CRltDisjunctEpsilon(a0, a1, a2, a3, a4)
   } -> std::convertible_to<std::shared_ptr<Sum<std::any, std::any>>>;
   { I::CR_of_Q(a0) } -> std::convertible_to<typename I::CRcarrier>;
-  { I::CR_of_Q_lt(a2, a1, a0) } -> std::convertible_to<std::any>;
-  { I::CRplus(a1, a0) } -> std::convertible_to<typename I::CRcarrier>;
+  { I::CR_of_Q_lt(a0, a1, a2) } -> std::convertible_to<std::any>;
+  { I::CRplus(a0, a1) } -> std::convertible_to<typename I::CRcarrier>;
   { I::CRopp(a0) } -> std::convertible_to<typename I::CRcarrier>;
-  { I::CRmult(a1, a0) } -> std::convertible_to<typename I::CRcarrier>;
+  { I::CRmult(a0, a1) } -> std::convertible_to<typename I::CRcarrier>;
   { I::CRzero_lt_one() } -> std::convertible_to<std::any>;
-  { I::CRplus_lt_compat_l(a3, a2, a1, a0) } -> std::convertible_to<std::any>;
-  { I::CRplus_lt_reg_l(a3, a2, a1, a0) } -> std::convertible_to<std::any>;
-  { I::CRmult_lt_0_compat(a3, a2, a1, a0) } -> std::convertible_to<std::any>;
-  { I::CRinv(a1, a0) } -> std::convertible_to<typename I::CRcarrier>;
-  { I::CRinv_0_lt_compat(a2, a1, a0) } -> std::convertible_to<std::any>;
+  { I::CRplus_lt_compat_l(a0, a1, a2, a3) } -> std::convertible_to<std::any>;
+  { I::CRplus_lt_reg_l(a0, a1, a2, a3) } -> std::convertible_to<std::any>;
+  { I::CRmult_lt_0_compat(a0, a1, a2, a3) } -> std::convertible_to<std::any>;
+  { I::CRinv(a0, a1) } -> std::convertible_to<typename I::CRcarrier>;
+  { I::CRinv_0_lt_compat(a0, a1, a2) } -> std::convertible_to<std::any>;
   {
-    I::CR_Q_dense(a2, a1, a0)
+    I::CR_Q_dense(a0, a1, a2)
   } -> std::convertible_to<
       std::shared_ptr<SigT<std::shared_ptr<Q>, std::pair<std::any, std::any>>>>;
   {
@@ -834,7 +834,7 @@ concept ConstructiveReals = requires(typename I::CRcarrier a0,
       std::shared_ptr<SigT<std::shared_ptr<Positive>, std::any>>>;
   { I::CRabs(a0) } -> std::convertible_to<typename I::CRcarrier>;
   {
-    I::CR_complete(a1, a0)
+    I::CR_complete(a0, a1)
   } -> std::convertible_to<std::shared_ptr<SigT<
       typename I::CRcarrier, std::function<std::shared_ptr<Sig<unsigned int>>(
                                  std::shared_ptr<Positive>)>>>>;
@@ -1281,29 +1281,30 @@ struct ConstructiveRcomplete {
 };
 
 struct ConstructiveLUB {
-  template <typename _tcI0, typename CRcarrier>
+  template <ConstructiveReals _tcI0>
   __attribute__((pure)) static bool
-  is_upper_bound_dec(const CRcarrier _x, const sig_forall_dec_T _x0,
+  is_upper_bound_dec(const typename _tcI0::CRcarrier _x,
+                     const sig_forall_dec_T _x0,
                      const sig_not_dec_T sig_not_dec0);
-  template <typename _tcI0>
+  template <ConstructiveReals _tcI0>
   static std::shared_ptr<Sig<unsigned int>>
   is_upper_bound_epsilon(const sig_forall_dec_T lpo,
                          const sig_not_dec_T sig_not_dec0);
-  template <typename _tcI0>
+  template <ConstructiveReals _tcI0>
   static std::shared_ptr<Sig<unsigned int>>
   is_upper_bound_not_epsilon(const sig_forall_dec_T lpo,
                              const sig_not_dec_T sig_not_dec0);
-  template <typename _tcI0, typename CRcarrier>
-  static std::shared_ptr<Sig<CRcarrier>>
+  template <ConstructiveReals _tcI0>
+  static std::shared_ptr<Sig<typename _tcI0::CRcarrier>>
   is_upper_bound_glb(const sig_not_dec_T sig_not_dec0,
                      const sig_forall_dec_T lpo);
-  template <typename _tcI0, typename CRcarrier>
-  static std::shared_ptr<Sig<CRcarrier>>
+  template <ConstructiveReals _tcI0>
+  static std::shared_ptr<Sig<typename _tcI0::CRcarrier>>
   sig_lub(const sig_forall_dec_T sig_forall_dec0,
           const sig_not_dec_T sig_not_dec0);
-  template <typename _tcI0, typename CRcarrier>
-  static std::shared_ptr<Sig<CRcarrier>> CR_sig_lub(const sig_forall_dec_T _x1,
-                                                    const sig_not_dec_T _x2);
+  template <ConstructiveReals _tcI0>
+  static std::shared_ptr<Sig<typename _tcI0::CRcarrier>>
+  CR_sig_lub(const sig_forall_dec_T _x1, const sig_not_dec_T _x2);
 };
 
 struct RIneq {
@@ -1660,9 +1661,10 @@ _x0);
            ConstructiveExtra::Z_inj_nat, ConstructiveExtra::Z_inj_nat_rev, x);
      }
 
-     template <typename _tcI0, typename CRcarrier>
+     template <ConstructiveReals _tcI0>
      __attribute__((pure)) bool ConstructiveLUB::is_upper_bound_dec(
-         const CRcarrier _x, const ConstructiveLUB::sig_forall_dec_T _x0,
+         const typename _tcI0::CRcarrier _x,
+         const ConstructiveLUB::sig_forall_dec_T _x0,
          const ConstructiveLUB::sig_not_dec_T sig_not_dec0) {
        bool s = sig_not_dec0();
        if (std::move(s)) {
@@ -1672,7 +1674,7 @@ _x0);
        }
      }
 
-     template <typename _tcI0>
+     template <ConstructiveReals _tcI0>
      std::shared_ptr<Sig<unsigned int>> ConstructiveLUB::is_upper_bound_epsilon(
          const ConstructiveLUB::sig_forall_dec_T lpo,
          const ConstructiveLUB::sig_not_dec_T sig_not_dec0) {
@@ -1686,7 +1688,7 @@ _x0);
                });
      }
 
-     template <typename _tcI0>
+     template <ConstructiveReals _tcI0>
      std::shared_ptr<Sig<unsigned int>>
      ConstructiveLUB::is_upper_bound_not_epsilon(
          const ConstructiveLUB::sig_forall_dec_T lpo,
@@ -1706,8 +1708,9 @@ _x0);
                });
      }
 
-     template <typename _tcI0, typename CRcarrier>
-     std::shared_ptr<Sig<CRcarrier>> ConstructiveLUB::is_upper_bound_glb(
+     template <ConstructiveReals _tcI0>
+     std::shared_ptr<Sig<typename _tcI0::CRcarrier>>
+     ConstructiveLUB::is_upper_bound_glb(
          const ConstructiveLUB::sig_not_dec_T sig_not_dec0,
          const ConstructiveLUB::sig_forall_dec_T lpo) {
        std::shared_ptr<Sig<unsigned int>> s =
@@ -1715,71 +1718,77 @@ _x0);
                lpo, sig_not_dec0);
        return std::visit(
            Overloaded{[&](const typename Sig<unsigned int>::Exist _args)
-                          -> std::shared_ptr<Sig<CRcarrier>> {
+                          -> std::shared_ptr<Sig<typename _tcI0::CRcarrier>> {
              std::shared_ptr<Sig<unsigned int>> s0 =
                  ConstructiveLUB::template is_upper_bound_not_epsilon<_tcI0>(
                      lpo, sig_not_dec0);
              return std::visit(
-                 Overloaded{[&](const typename Sig<unsigned int>::Exist _args0)
-                                -> std::shared_ptr<Sig<CRcarrier>> {
-                   std::function<bool(std::shared_ptr<Q>)> h =
-                       [=](std::shared_ptr<Q> q) mutable {
-                         return ConstructiveLUB::template is_upper_bound_dec<
-                             _tcI0>(_tcI0::CR_of_Q(q), lpo, sig_not_dec0);
-                       };
-                   std::shared_ptr<Sig<CRcarrier>> s1 = [](const auto &_x) {
-                     return _x->glb_dec_Q();
-                   }();
-                   return [&](void) {
-                     if (std::move(s1).use_count() == 1 &&
-                         std::move(s1)->v().index() == 0) {
-                       auto &_rf = std::get<0>(std::move(s1)->v_mut());
-                       CRcarrier x1 = std::move(_rf.d_a0);
-                       _rf.d_a0 = std::move(x1);
-                       return std::move(s1);
-                     } else {
-                       return std::visit(
-                           Overloaded{
-                               [](const typename Sig<CRcarrier>::Exist _args1)
-                                   -> std::shared_ptr<Sig<CRcarrier>> {
-                                 return Sig<CRcarrier>::ctor::Exist_(
-                                     _args1.d_a0);
-                               }},
-                           std::move(s1)->v());
-                     }
-                   }();
-                 }},
+                 Overloaded{
+                     [&](const typename Sig<unsigned int>::Exist _args0)
+                         -> std::shared_ptr<Sig<typename _tcI0::CRcarrier>> {
+                       std::function<bool(std::shared_ptr<Q>)> h =
+                           [=](std::shared_ptr<Q> q) mutable {
+                             return ConstructiveLUB::
+                                 template is_upper_bound_dec<_tcI0>(
+                                     _tcI0::CR_of_Q(q), lpo, sig_not_dec0);
+                           };
+                       std::shared_ptr<Sig<typename _tcI0::CRcarrier>> s1 =
+                           [](const auto &_x) { return _x->glb_dec_Q(); }();
+                       return [&](void) {
+                         if (std::move(s1).use_count() == 1 &&
+                             std::move(s1)->v().index() == 0) {
+                           auto &_rf = std::get<0>(std::move(s1)->v_mut());
+                           typename _tcI0::CRcarrier x1 = std::move(_rf.d_a0);
+                           _rf.d_a0 = std::move(x1);
+                           return std::move(s1);
+                         } else {
+                           return std::visit(
+                               Overloaded{
+                                   [](const typename Sig<
+                                       typename _tcI0::CRcarrier>::Exist _args1)
+                                       -> std::shared_ptr<
+                                           Sig<typename _tcI0::CRcarrier>> {
+                                     return Sig<typename _tcI0::CRcarrier>::
+                                         ctor::Exist_(_args1.d_a0);
+                                   }},
+                               std::move(s1)->v());
+                         }
+                       }();
+                     }},
                  std::move(s0)->v());
            }},
            std::move(s)->v());
      }
 
-     template <typename _tcI0, typename CRcarrier>
-     std::shared_ptr<Sig<CRcarrier>> ConstructiveLUB::sig_lub(
+     template <ConstructiveReals _tcI0>
+     std::shared_ptr<Sig<typename _tcI0::CRcarrier>> ConstructiveLUB::sig_lub(
          const ConstructiveLUB::sig_forall_dec_T sig_forall_dec0,
          const ConstructiveLUB::sig_not_dec_T sig_not_dec0) {
-       std::shared_ptr<Sig<CRcarrier>> s =
+       std::shared_ptr<Sig<typename _tcI0::CRcarrier>> s =
            ConstructiveLUB::template is_upper_bound_glb<_tcI0>(sig_not_dec0,
                                                                sig_forall_dec0);
        return [&](void) {
          if (std::move(s).use_count() == 1 && std::move(s)->v().index() == 0) {
            auto &_rf = std::get<0>(std::move(s)->v_mut());
-           CRcarrier x = std::move(_rf.d_a0);
+           typename _tcI0::CRcarrier x = std::move(_rf.d_a0);
            _rf.d_a0 = std::move(x);
            return std::move(s);
          } else {
            return std::visit(
-               Overloaded{[](const typename Sig<CRcarrier>::Exist _args)
-                              -> std::shared_ptr<Sig<CRcarrier>> {
-                 return Sig<CRcarrier>::ctor::Exist_(_args.d_a0);
-               }},
+               Overloaded{
+                   [](const typename Sig<typename _tcI0::CRcarrier>::Exist
+                          _args)
+                       -> std::shared_ptr<Sig<typename _tcI0::CRcarrier>> {
+                     return Sig<typename _tcI0::CRcarrier>::ctor::Exist_(
+                         _args.d_a0);
+                   }},
                std::move(s)->v());
          }
        }();
      }
 
-     template <typename _tcI0, typename CRcarrier>
-     std::shared_ptr<Sig<CRcarrier>>
+     template <ConstructiveReals _tcI0>
+     std::shared_ptr<Sig<typename _tcI0::CRcarrier>>
      ConstructiveLUB::CR_sig_lub(const ConstructiveLUB::sig_forall_dec_T _x1,
                                  const ConstructiveLUB::sig_not_dec_T _x2) {
        return ConstructiveLUB::template sig_lub<_tcI0>(_x1, _x2);

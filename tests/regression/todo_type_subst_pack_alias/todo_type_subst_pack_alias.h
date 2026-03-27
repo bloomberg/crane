@@ -33,15 +33,17 @@ concept Pack = requires(typename I::carrier a0) {
 struct TodoTypeSubstPackAlias {
   using carrier = std::any;
 
-  template <typename _tcI0, typename carrier>
-  static carrier step_of(const carrier _x0) {
+  template <Pack _tcI0>
+  __attribute__((pure)) static typename _tcI0::carrier
+  step_of(const typename _tcI0::carrier _x0) {
     return _tcI0::step(_x0);
   }
 
-  template <typename _tcI0, typename carrier> static carrier run_twice() {
-    std::function<carrier(carrier)> alias = [](carrier _x0) -> carrier {
-      return step_of<_tcI0>(_x0);
-    };
+  template <Pack _tcI0>
+  __attribute__((pure)) static typename _tcI0::carrier run_twice() {
+    std::function<typename _tcI0::carrier(typename _tcI0::carrier)> alias =
+        [](typename _tcI0::carrier _x0) ->
+        typename _tcI0::carrier { return step_of<_tcI0>(_x0); };
     return alias(alias(_tcI0::seed()));
   }
 
@@ -56,8 +58,7 @@ struct TodoTypeSubstPackAlias {
   };
 
   static_assert(Pack<nat_pack>);
-  static inline const unsigned int test_value =
-      run_twice<nat_pack, unsigned int>();
+  static inline const unsigned int test_value = run_twice<nat_pack>();
 };
 
 #endif // INCLUDED_TODO_TYPE_SUBST_PACK_ALIAS

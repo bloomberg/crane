@@ -103,6 +103,21 @@ type translation_ctx = {
   mutable move_suppress_tail : bool;
   mutable move_n_params : int;
   mutable match_param_counter : int;
+  (* PROMOTED TYPE VARIABLES: Fields that were "promoted" from record values
+     to type parameters during concept generation (see table.ml for details).
+
+     [promoted_var_map] maps promoted field names to their C++ qualified types:
+       Example: "m_carrier" ↦ Tqualified(Tvar "_tcI0", "m_carrier")
+                prints as: typename _tcI0::m_carrier
+
+     Set by [gen_dfun] when generating template functions with typeclass params.
+     Used by [convert_ml_type_to_cpp_type] to resolve [Tvar(1000, name)] markers. *)
+  mutable promoted_var_map : (Id.t * cpp_type) list;
+  (* Context flag: are we inside a constructor expression (module-level static
+     initializer)? When true, promoted type vars that can't be resolved via
+     [promoted_var_map] fall back to [Tany] (std::any) instead of keeping
+     [Tvar(1000, name)] markers, because module-level aliases apply. *)
+  mutable in_constructor_expr : bool;
 }
 
 let tctx =
@@ -120,6 +135,8 @@ let tctx =
     move_suppress_tail = false;
     move_n_params = 0;
     match_param_counter = 0;
+    promoted_var_map = [];
+    in_constructor_expr = false;
   }
 
 (** Accessor wrappers — thin layer over tctx fields. *)
@@ -819,7 +836,11 @@ let rec has_unnamed_tvar (ty : cpp_type) : bool =
 
 (** Check if a C++ type is Tany or contains an unnamed Tvar (which becomes
     Tany). This is used to identify methods that return std::any due to type
-    erasure in indexed inductives. *)
+    erasure in indexed inductives.  Also recognizes [Tglob(ConstRef c)] for
+    non-custom, non-promoted constants — these are dependent type families
+    (e.g. [Hom : Obj -> Obj -> Type]) whose C++ representation is [std::any].
+    The extraction inlines type aliases, so surviving ConstRef types in C++
+    types are genuinely unresolvable dependent type families. *)
 let rec type_is_erased (ty : cpp_type) : bool =
   match ty with
   | Tany -> true
@@ -893,6 +914,62 @@ let wrap_param_by_ownership ?(is_owned = false) cpp_ty =
   | Tshared_ptr _ | Tunique_ptr _ -> Tref (Tmod (TMconst, cpp_ty))
   | _ -> Tmod (TMconst, cpp_ty)
 
+(** Check if the return type of an ML function type is erased — i.e., it
+    becomes [std::any] in C++.  This covers three cases:
+    - Promoted type vars (erased carrier projections like [Obj C]).
+    - [Tunknown] arising from dependent type families.
+    - Erased type constants — non-promoted type-valued record fields
+      (e.g. [Hom : Obj -> Obj -> Type] in [PreCategory]) registered during
+      extraction via {!Table.add_erased_type_const}. *)
+let rec ml_return_type_is_erased = function
+  | Miniml.Tarr (_, ret) -> ml_return_type_is_erased ret
+  | Miniml.Tmeta { contents = Some t } -> ml_return_type_is_erased t
+  | Miniml.Tglob (g, _, _) when Table.is_promoted_type_var g -> true
+  | Miniml.Tglob (g, _, _) when Table.is_erased_type_const g -> true
+  | Miniml.Tunknown -> true
+  | _ -> false
+
+(** Check if an ML expression is (or starts with) a record field projection
+    whose projected field returns a promoted type var (erased to [std::any] in
+    C++).  This detects the gap between Coq-level types and C++ types that
+    arises when a record like [Functor] uses erased carriers ([Obj = std::any])
+    in its field types.
+
+    For example, [object_of forward_functor 7] is an [MLapp] wrapping an
+    [MLcase] record projection.  The projected field [object_of] has ML type
+    [carrier → carrier] whose return type [carrier] is a promoted var.  The
+    Coq type says the result is [nat = unsigned int], but the C++ expression
+    [forward_functor->object_of(7u)] actually returns [std::any]. *)
+let rec ml_body_returns_erased_field = function
+  | Miniml.MLapp (f, _) -> ml_body_returns_erased_field f
+  | MLmagic f -> ml_body_returns_erased_field f
+  | MLcase (typ, _, pv) when Array.length pv = 1 ->
+    let ids, _, _, proj_body = pv.(0) in
+    let n = List.length ids in
+    let proj_idx =
+      match proj_body with
+      | MLrel i when i >= 1 && i <= n -> Some (n - i)
+      | MLmagic (MLrel i) when i >= 1 && i <= n -> Some (n - i)
+      | MLapp (MLrel i, _) when i >= 1 && i <= n -> Some (n - i)
+      | MLapp (MLmagic (MLrel i), _) when i >= 1 && i <= n -> Some (n - i)
+      | _ -> None
+    in
+    ( match proj_idx with
+    | Some idx -> (
+      match typ with
+      | Tglob (r, _, _) ->
+        let all_field_types = Table.record_field_types r in
+        let non_erased =
+          List.filter (fun t -> not (Mlutil.isTdummy t)) all_field_types
+        in
+        ( try
+            let field_ty = List.nth non_erased idx in
+            ml_return_type_is_erased field_ty
+          with _ -> false )
+      | _ -> false )
+    | None -> false )
+  | _ -> false
+
 (** Convert ML type to C++ type. Handles custom types, inductives, type
     variables, and erased parameters. env: variable environment; ns: set of
     local references; tvars: type variable names *)
@@ -920,11 +997,43 @@ let rec convert_ml_type_to_cpp_type
       | Tfun (l, t) -> Tfun (t1c :: l, t)
       | _ -> Tfun (t1c :: [], t2c) )
   | Tglob (g, _, _) when is_void g -> Tvoid
-  (* Erased carrier projections from promoted dependent records: Convert
-     Tglob(m_carrier, []) to Tvar with the promoted var name. *)
+  (* PROMOTED TYPE VARIABLES: Handle references to record fields that were
+     "promoted" from value-level fields to type-level parameters.
+
+     A "promoted" field is a Type-valued record field (e.g., [m_carrier : Type]
+     in [Record Monoid]) that became a C++ concept type requirement instead of
+     a struct field. At usage sites, references to these fields must be treated
+     as TYPES, not values.
+
+     Example:
+       Coq: [mfold (M : Monoid) (l : list (m_carrier M))]
+            Here [m_carrier M] is a TYPE (the carrier type of the monoid M)
+
+       C++: [template <Monoid _tcI0> ... List<typename _tcI0::m_carrier> ...]
+            Must qualify as a type, not access as a field: NOT _tcI0->m_carrier
+
+     Three contexts for promoted type vars:
+     1. Inside template functions with typeclass params: [promoted_var_map] is
+        populated, resolve to qualified types like [typename _tcI0::m_carrier]
+     2. Module-level (constructor expressions): Use module aliases ([std::any])
+     3. No context: Mark with [Tvar(1000, ...)] for later resolution *)
   | Tglob (g, ts, _) when Table.is_promoted_type_var g ->
     ( match Table.promoted_type_var_name g with
-    | Some var_id -> Tvar (1000, Some var_id)
+    | Some var_id ->
+      (match
+        List.find_opt
+          (fun (n, _) -> Id.equal n var_id)
+          tctx.promoted_var_map
+      with
+      | Some (_, resolved) -> resolved
+      | None ->
+        (* No resolution found.  When the constructor-expression flag is set,
+           all promoted vars become [Tany] (= std::any) because module-level
+           type aliases are always std::any and non-Type promoted vars (like
+           [base_category]) have no alias at all.  Otherwise keep the marker
+           for concept generation and signature printing. *)
+        if tctx.in_constructor_expr then Tany
+        else Tvar (1000, Some var_id) )
     | None -> Tany )
   | Tglob (g, ts, args) when is_custom g ->
     Tglob
@@ -1108,6 +1217,36 @@ and build_template_params env tvars tys =
     @param ts  ML expression arguments (converted to C++ recursively)
     @return C++ expression applying custom syntax with type/value arguments *)
 and gen_expr_custom_cons env (ty : ml_type) r ts =
+  (* PROMOTED TYPE VARIABLES in constructor expressions: Use module-level
+     aliases (std::any) instead of template-qualified types.
+
+     Inside a template function taking a typeclass parameter, promoted type vars
+     normally resolve via [promoted_var_map]:
+       [m_carrier] ↦ [typename _tcI0::m_carrier]
+
+     But constructor expressions are NOT in template scope — they're module-level
+     static initializers:
+       static inline const Functor forward_functor = ...;
+
+     Here, there's no [_tcI0] to qualify. Instead, promoted vars use the
+     module-level [using] declaration:
+       using Obj = std::any;
+       using Hom = std::any;
+
+     So [object_of forward_functor 7] becomes:
+       forward_functor->object_of(7u)  // returns std::any
+       std::any_cast<unsigned int>(...)  // cast to concrete type
+
+     Setting [in_constructor_expr] makes unresolvable promoted vars (those
+     NOT in [promoted_var_map]) fall back to [Tany] = [std::any].
+
+     We do NOT clear [promoted_var_map] here: inside template functions,
+     promoted vars must resolve to qualified types (e.g., typename _tcI0::Obj)
+     so that constructor type args match the function's declared return type.
+     At module level, [promoted_var_map] is already empty, so the
+     [in_constructor_expr] fallback handles it naturally. *)
+  let saved_in_ctor = tctx.in_constructor_expr in
+  tctx.in_constructor_expr <- true;
   (* Convert value arguments to C++ expressions *)
   let args = List.rev_map (gen_expr env) ts in
   (* Helper to wrap expression in function call syntax if it has arguments *)
@@ -1116,57 +1255,61 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
     | [] -> x
     | _ -> CPPfun_call (x, args)
   in
-  match ty with
-  | Miniml.Tglob (n, tys, _) ->
-    (* Step 1: Filter out index type args - only keep parameters.
+  let result =
+    match ty with
+    | Miniml.Tglob (n, tys, _) ->
+      (* Step 1: Filter out index type args - only keep parameters.
 
-       Inductive types distinguish between parameters (uniform across all
-       constructors, e.g., the [A] in [list A]) and indices (may vary,
-       e.g., the [n] in [vec A n]). In C++, only parameters become template
-       arguments; indices are encoded in types or runtime values.
+         Inductive types distinguish between parameters (uniform across all
+         constructors, e.g., the [A] in [list A]) and indices (may vary,
+         e.g., the [n] in [vec A n]). In C++, only parameters become template
+         arguments; indices are encoded in types or runtime values.
 
-       We use [get_ind_num_param_vars_opt] to find the parameter count and
-       [safe_firstn] to extract them. [safe_firstn] handles cases where the
-       type arg list is shorter than expected (e.g., due to Tdummy Ktype
-       erasure in make_tyargs). *)
-    let tys =
-      match n with
-      | GlobRef.IndRef (kn, _) ->
-        ( match Table.get_ind_num_param_vars_opt kn with
-        | Some num_param_vars ->
-          (* Take first num_param_vars elements, or fewer if list is short *)
-          safe_firstn num_param_vars tys
-        | None ->
-          (* Not in table - keep all type args *)
-          tys )
-      | _ ->
-        (* Not an inductive ref - keep all type args *)
-        tys
-    in
-    (* Step 2: Convert ML types to C++ types *)
-    let temps = build_template_params env [] tys in
-    (* Step 3: Filter erased type args (dummy_type from Tdummy Ktype).
+         We use [get_ind_num_param_vars_opt] to find the parameter count and
+         [safe_firstn] to extract them. [safe_firstn] handles cases where the
+         type arg list is shorter than expected (e.g., due to Tdummy Ktype
+         erasure in make_tyargs). *)
+      let tys =
+        match n with
+        | GlobRef.IndRef (kn, _) ->
+          ( match Table.get_ind_num_param_vars_opt kn with
+          | Some num_param_vars ->
+            (* Take first num_param_vars elements, or fewer if list is short *)
+            safe_firstn num_param_vars tys
+          | None ->
+            (* Not in table - keep all type args *)
+            tys )
+        | _ ->
+          (* Not an inductive ref - keep all type args *)
+          tys
+      in
+      (* Step 2: Convert ML types to C++ types *)
+      let temps = build_template_params env [] tys in
+      (* Step 3: Filter erased type args (dummy_type from Tdummy Ktype).
 
-       Custom syntax requires concrete type arguments. If any type arg is
-       erased (e.g., from a failed extraction or HKT type constructor), we
-       must drop ALL type args to avoid misalignment.
+         Custom syntax requires concrete type arguments. If any type arg is
+         erased (e.g., from a failed extraction or HKT type constructor), we
+         must drop ALL type args to avoid misalignment.
 
-       [filter_erased_type_args] implements the "all or nothing" rule:
-       - If no erased types: keep all type args
-       - If any erased type: drop all type args (return [])
+         [filter_erased_type_args] implements the "all or nothing" rule:
+         - If no erased types: keep all type args
+         - If any erased type: drop all type args (return [])
 
-       When all args are dropped, the custom syntax in cpp_print.ml will
-       either use default template arguments or the renderer will deduce
-       them from context. For example, [std::make_optional(5u)] deduces
-       [std::optional<unsigned int>] from the argument type. *)
-    let temps = filter_erased_type_args temps in
-    (* Step 4: Apply custom syntax template with filtered type args *)
-    app (mk_cppglob r temps)
-  | _ ->
-    (* Type is not a Tglob - no type args to pass.
-       This case is rare for custom constructors, which typically have
-       Tglob types. Fall back to bare constructor reference. *)
-    app (mk_cppglob r [])
+         When all args are dropped, the custom syntax in cpp_print.ml will
+         either use default template arguments or the renderer will deduce
+         them from context. For example, [std::make_optional(5u)] deduces
+         [std::optional<unsigned int>] from the argument type. *)
+      let temps = filter_erased_type_args temps in
+      (* Step 4: Apply custom syntax template with filtered type args *)
+      app (mk_cppglob r temps)
+    | _ ->
+      (* Type is not a Tglob - no type args to pass.
+         This case is rare for custom constructors, which typically have
+         Tglob types. Fall back to bare constructor reference. *)
+      app (mk_cppglob r [])
+  in
+  tctx.in_constructor_expr <- saved_in_ctor;
+  result
 
 (** Try to fold a Peano numeral chain (nested constructors) into an integer *)
 and try_fold_numeral info expr =
@@ -1196,9 +1339,20 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     in
     (* Phase 2: move on last use. Emit std::move if: (1) the variable is dead
        after this point, (2) it's an owned variable (not borrowed), and (3) this
-       is its only occurrence in the current RHS expression. *)
+       is its only occurrence in the current RHS expression.
+       Never move typeclass template parameters (_tcI0, _tcI1, ...) — they
+       are type references in the concept paradigm, not owned values. Wrapping
+       them in std::move produces invalid C++ like [std::move(_tcI0)::method()]. *)
+    let is_tc_param =
+      match var_expr with
+      | CPPvar id ->
+        let s = Id.to_string id in
+        String.length s >= 4 && String.sub s 0 4 = "_tcI"
+      | _ -> false
+    in
     if
-      Escape.IntSet.mem i tctx.move_dead_after
+      (not is_tc_param)
+      && Escape.IntSet.mem i tctx.move_dead_after
       && Escape.IntSet.mem i tctx.move_owned_vars
     then
       CPPmove var_expr
@@ -1601,8 +1755,21 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     in
     CPPenum_val (ind_ref, ctor_name)
   | MLcons (ty, r, ts) ->
+    (* Setting [in_constructor_expr] makes unresolvable promoted vars (those
+       NOT in [promoted_var_map]) fall back to [Tany] = [std::any].
+
+       For non-record constructors (fds = []), we keep [promoted_var_map] so
+       that template type annotations (e.g., SigT<..., Path<typename
+       _tcI0::Obj>>) match the function's declared return type.
+
+       For record constructors (fds != []), we clear [promoted_var_map]
+       because record structs use erased types (std::any) for promoted fields,
+       so lambda parameters assigned to record fields must also use std::any. *)
+    let saved_promoted_cons = tctx.promoted_var_map in
+    let saved_in_ctor_cons = tctx.in_constructor_expr in
+    tctx.in_constructor_expr <- true;
     let fds = record_fields_of_type ty in
-    ( match fds with
+    let cons_result = match fds with
     | [] ->
       (* Propagate resolved types to nested list constructors before code
          generation. For List<nat> constructors like cons(1, cons(2, nil)), this
@@ -1775,7 +1942,10 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       in
       gen_ctor_call (List.rev_map gen_ctor_arg ts_updated)
     | _ ->
-      (* Records - keep using make_shared pattern for now *)
+      (* Records: clear [promoted_var_map] because record structs use erased
+         types (std::any) for promoted fields.  Lambda parameters assigned to
+         record fields must use std::any to match the field types. *)
+      tctx.promoted_var_map <- [];
       let nstempmod args =
         match ty with
         | Tglob (n, tys, _) ->
@@ -1796,7 +1966,11 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
             (Pp.str
                "gen_expr: non-record MLcons with matching type expected Tglob" )
       in
-      nstempmod (List.map (gen_expr env) ts) )
+      nstempmod (List.map (gen_expr env) ts)
+    in
+    tctx.promoted_var_map <- saved_promoted_cons;
+    tctx.in_constructor_expr <- saved_in_ctor_cons;
+    cons_result
   | MLcase (typ, t, pv) when is_custom_match pv ->
     let cexp = gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv in
     CPPfun_call (CPPlambda ([], None, [cexp], false), [])
@@ -2010,6 +2184,33 @@ and eta_fun env f args =
       (* Parameterized instance application, e.g. numList A H. Check if r's
          return type (after stripping Tarr) is a typeclass type. *)
       ref_returns_typeclass r
+    | MLcase (case_ty, _scrutinee, branches) when Array.length branches = 1 ->
+      (* Single-branch case = record field projection.  If the projected
+         field's type is itself a typeclass, this is a typeclass instance
+         arg — e.g., [base_category(PS)] projects a [PreCategory]-typed
+         field from a [PreStableCategory] record.
+         Look up the record's field types from the case type rather than
+         relying on branch binding types (which may be Tunknown). *)
+      let (binds, _, _, br_body) = branches.(0) in
+      ( match br_body with
+      | MLrel j when j >= 1 && j <= List.length binds ->
+        let idx = List.length binds - j in
+        (* Try to get the field type from the record definition *)
+        let field_is_tc =
+          match case_ty with
+          | Tglob (r, _, _) when Table.is_typeclass r ->
+            let field_types = Table.record_field_types r in
+            let non_dummy =
+              List.filter (fun t -> not (Mlutil.isTdummy t)) field_types
+            in
+            ( try
+                let fty = List.nth non_dummy idx in
+                Table.is_typeclass_type fty
+              with _ -> false )
+          | _ -> false
+        in
+        field_is_tc
+      | _ -> false )
     | _ -> false
   in
   match f with
@@ -2086,6 +2287,37 @@ and eta_fun env f args =
             inner_args
         in
         Tglob (r, build_template_params env [] ts @ template_args, [])
+      | MLcase (_, scrutinee, branches)
+        when Array.length branches = 1 ->
+        (* Record field projection — e.g., [base_category(PS)].
+           Resolve to [Tqualified(scrutinee_type, field_name)]. *)
+        let (binds, _, _, br_body) = branches.(0) in
+        let base_ty = ml_arg_to_template_type scrutinee in
+        ( match br_body with
+        | MLrel j when j >= 1 && j <= List.length binds ->
+          let idx = List.length binds - j in
+          let (field_id, _) = List.nth binds idx in
+          ( match field_id with
+          | Id name | Tmp name -> Tqualified (base_ty, name)
+          | Dummy -> Tany )
+        | _ -> Tany )
+      | MLapp (f, args) ->
+        (* Parameterized instance application with non-glob head.
+           Resolve head, then add arg types. *)
+        let head_ty = ml_arg_to_template_type f in
+        let arg_tys =
+          List.filter_map
+            (fun arg ->
+              match arg with
+              | MLdummy _ -> None
+              | _ -> ( try Some (ml_arg_to_template_type arg)
+                        with _ -> None ) )
+            args
+        in
+        ( match head_ty with
+        | Tglob (r, existing, es) ->
+          Tglob (r, existing @ arg_tys, es)
+        | _ -> head_ty )
       | MLdummy _ -> Tany (* Should not happen at top level, but be safe *)
       | _ ->
         CErrors.anomaly
@@ -2107,12 +2339,37 @@ and eta_fun env f args =
           | _ -> true )
         regular_ml_args
     in
-    (* Generate regular args as expressions *)
-    let args = List.map (gen_expr env) regular_ml_args in
-    let ty = find_type id in
-    let ty = try type_subst_list tys ty with _ -> ty in
-    (* TODO : make less hacky; do a type_subst that can't fail *)
+    (* Compute the function's ML type after type arg substitution, to detect
+       arguments that return std::any (from erased record fields like
+       Functor::object_of) but where the parameter expects a concrete type
+       (e.g., unsigned int after resolving a promoted type var). *)
+    let fn_ml_ty = find_type id in
+    let fn_ml_ty_subst = try type_subst_list tys fn_ml_ty with _ -> fn_ml_ty in
+    let fn_param_ml_tys =
+      let rec collect = function
+        | Miniml.Tarr (t, rest) ->
+          (match resolve_tmeta t with Miniml.Tdummy _ -> collect rest | t -> t :: collect rest)
+        | _ -> []
+      in
+      collect fn_ml_ty_subst
+    in
+    (* Generate regular args, wrapping with CPPany_cast when the argument
+       returns std::any (through an erased record field) but the function's
+       parameter type is concrete (not a promoted type var). *)
     let tvars = get_current_type_vars () in
+    let args = List.mapi (fun i ml_arg ->
+      let expr = gen_expr env ml_arg in
+      match List.nth_opt fn_param_ml_tys i with
+      | Some param_ty
+        when ml_body_returns_erased_field ml_arg
+             && not (match param_ty with
+                     | Miniml.Tglob (g, _, _) -> Table.is_promoted_type_var g
+                     | _ -> false) ->
+        let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars param_ty in
+        CPPany_cast (cpp_ty, expr)
+      | _ -> expr
+    ) regular_ml_args in
+    let ty = fn_ml_ty_subst in
     let ty = convert_ml_type_to_cpp_type env Refset'.empty tvars ty in
     (* Combine: instance types first, then regular type args. If any regular
        type arg is Tany or a dummy type glob (from erased params), drop ALL
@@ -2208,66 +2465,12 @@ and eta_fun env f args =
       else
         filtered
     in
-    (* When regular_type_args is empty but the callee's C++ type contains
-       promoted type vars (Tvar(1000, Some name) — from record field types like
-       Pack.carrier), resolve them via the typeclass instances' promoted type
-       bindings. Without this, calls like run_twice<nat_pack>() miss the carrier
-       template argument. *)
-    let promoted_type_args =
-      if regular_type_args = [] && typeclass_ml_args <> [] then
-        (* Collect promoted type var names from the C++ function type *)
-        let rec collect_promoted_names acc = function
-          | Tvar (1000, Some name) ->
-            if List.exists (fun n -> Id.equal n name) acc then
-              acc
-            else
-              acc @ [name]
-          | Tfun (dom, cod) ->
-            let acc = List.fold_left collect_promoted_names acc dom in
-            collect_promoted_names acc cod
-          | Tmod (_, t) | Tshared_ptr t | Tunique_ptr t | Tref t ->
-            collect_promoted_names acc t
-          | Tglob (_, ts, _) | Tvariant ts ->
-            List.fold_left collect_promoted_names acc ts
-          | _ -> acc
-        in
-        let promoted_names = collect_promoted_names [] ty in
-        if promoted_names <> [] then
-          (* Build substitution map from typeclass instances *)
-          let subst_map =
-            List.concat_map
-              (fun tc_arg ->
-                match tc_arg with
-                | MLglob (r, _) ->
-                  let bindings = Table.get_instance_promoted_types r in
-                  List.map
-                    (fun (var_name, ml_ty) ->
-                      let cpp_ty =
-                        convert_ml_type_to_cpp_type
-                          env
-                          Refset'.empty
-                          tvars
-                          ml_ty
-                      in
-                      (var_name, cpp_ty) )
-                    bindings
-                | _ -> [] )
-              typeclass_ml_args
-          in
-          (* Resolve each promoted name to its concrete type *)
-          List.filter_map
-            (fun name ->
-              match
-                List.find_opt (fun (vid, _) -> Id.equal vid name) subst_map
-              with
-              | Some (_, concrete) -> Some concrete
-              | None -> None )
-            promoted_names
-        else
-          []
-      else
-        []
-    in
+    (* Promoted type vars ([Tvar(1000, Some name)]) are no longer separate
+       template parameters — they're resolved through typeclass instance
+       access (e.g. [typename _tcI0::Obj]) by [gen_dfun]'s promoted var
+       resolution.  No additional template type arguments are needed at
+       call sites. *)
+    let promoted_type_args = [] in
     let all_type_args =
       typeclass_type_args @ regular_type_args @ promoted_type_args
     in
@@ -2292,13 +2495,19 @@ and eta_fun env f args =
     let wrap_excess base =
       if excess_args = [] then
         base
-      else
+      else (
         (* A [Tglob] codomain indicates a type alias (e.g. [State S A]) that may
            expand to a function type — chained calls are valid. A [Tvar]
            codomain (e.g. [T1] in [div2_rect]) signals a polymorphic return
            where excess args come from proof-certificate terms; these are never
-           called at runtime so we emit an abort placeholder. *)
-        let ret_is_alias =
+           called at runtime so we emit an abort placeholder.
+
+           Exception: inlined custom constants (e.g. [fst], [snd]) may have a
+           polymorphic return type that is instantiated to a function type at
+           the call site. Their excess args are valid chained calls. *)
+        let ret_is_chainable =
+          is_inline_custom id
+          ||
           match find_type_opt id with
           | Some ml_ty ->
             ( match ml_codomain ml_ty with
@@ -2306,10 +2515,10 @@ and eta_fun env f args =
             | _ -> false )
           | None -> false
         in
-        if ret_is_alias then
+        if ret_is_chainable then
           CPPfun_call (base, List.rev (List.map (gen_expr env) excess_args))
         else
-          CPPabort "untranslatable curried proof term"
+          CPPabort "untranslatable curried proof term" )
     in
     let primary_result =
       match ty with
@@ -2327,7 +2536,15 @@ and eta_fun env f args =
             dom
         in
         let missing_args = get_eta_args dom args in
-        if missing_args == [] then
+        (* When excess args exist (from the ML-level arity split above), do
+           NOT eta-expand even if the flattened C++ type has more domain
+           elements than ML args.  The mismatch occurs when the callee's
+           return type is itself a function type (e.g. [fst] returning
+           [Obj -> Path<Obj>]): convert_ml_type_to_cpp_type merges the
+           return-type arrows into the domain, inflating [dom_len] beyond the
+           ML-level arity.  The excess args will be chained by [wrap_excess]
+           below. *)
+        if missing_args == [] || excess_args <> [] then
           if id_is_typeclass_instance && args = [] then
             (* Typeclass instance with no regular args — return as a type
                reference *)
@@ -4130,12 +4347,68 @@ let gen_typeclass_cpp name fields ind =
       (fun var_id -> Tqualified (Tvar (0, Some inst_id), var_id))
       promoted_vars
   in
-  (* Substitute promoted Tvars with Tqualified(I, name) in cpp_type trees. After
-     conversion, promoted vars appear as Tvar(_, Some name) where name is in
-     promoted_vars. Replace them with typename I::name. *)
+  (* Compute method_list first — needed by nested_promoted_map below. *)
+  let non_dummy_types =
+    List.filter (fun t -> not (Mlutil.isTdummy t)) ind.ip_types.(0)
+  in
+  let method_list =
+    ( try List.combine fields non_dummy_types
+      with _ ->
+        List.map (fun f -> (f, Miniml.Tunknown)) fields )
+  in
+  (* Build a mapping for promoted vars from nested typeclasses.
+
+     When a promoted field has typeclass type (e.g., [base_category :
+     PreCategory]), the nested typeclass's own promoted vars (e.g., [Obj])
+     may appear in other fields' types (e.g., [zero_object : Obj
+     base_category]).  During extraction, these become [Tvar(1000, Some
+     "Obj")] — indistinguishable from a direct promoted var of the current
+     typeclass.
+
+     We build a mapping [Obj → typename I::base_category::Obj] so that
+     [subst_promoted_in_cpp_type] can resolve them correctly through the
+     promoted field rather than leaving a dangling bare [Obj]. *)
+  let nested_promoted_map =
+    List.concat_map
+      (fun (field_opt, field_ty) ->
+        match (field_opt, field_ty) with
+        | Some _field_ref, Miniml.Tglob (r, _, _) when Table.is_typeclass r ->
+          let field_name_str = Common.pp_global_name Term _field_ref in
+          let field_id = Id.of_string field_name_str in
+          if List.exists (Id.equal field_id) promoted_vars then
+            let nested_ip_vars = Table.get_ind_ip_vars r in
+            let nested_nb_keeps = Table.get_ind_nb_sign_keeps r in
+            let nested_promoted =
+              List.filteri (fun i _ -> i >= nested_nb_keeps) nested_ip_vars
+            in
+            List.map
+              (fun nested_var ->
+                ( nested_var,
+                  Tqualified
+                    (Tqualified (Tvar (0, Some inst_id), field_id), nested_var)
+                ) )
+              nested_promoted
+          else
+            []
+        | _ -> [] )
+      method_list
+  in
+  (* Substitute promoted Tvars with [Tqualified(I, name)] in cpp_type trees.
+     After conversion, promoted vars appear as [Tvar(_, Some name)] where
+     name is in [promoted_vars].  Replace with [typename I::name].
+     Also handles nested promoted vars from typeclass-typed promoted fields
+     via [nested_promoted_map] — e.g., [Obj] from [PreCategory] becomes
+     [typename I::base_category::Obj] when [base_category] is a promoted
+     [PreCategory]-typed field. *)
   let rec subst_promoted_in_cpp_type = function
     | Tvar (_, Some vname) when List.exists (Id.equal vname) promoted_vars ->
       Tqualified (Tvar (0, Some inst_id), vname)
+    | Tvar (_, Some vname) -> (
+      match
+        List.find_opt (fun (n, _) -> Id.equal n vname) nested_promoted_map
+      with
+      | Some (_, replacement) -> replacement
+      | None -> Tvar (0, Some vname) )
     | Tfun (args, ret) ->
       Tfun
         ( List.map subst_promoted_in_cpp_type args,
@@ -4151,23 +4424,6 @@ let gen_typeclass_cpp name fields ind =
     | Tmod (m, t) -> Tmod (m, subst_promoted_in_cpp_type t)
     | t -> t
   in
-  (* Generate requires clauses for each method. Filter out Tdummy entries from
-     ip_types — these are erased fields (e.g., carrier : Type in a promoted
-     dependent record) that don't appear in the fields list (select_fields
-     already skips them). *)
-  let non_dummy_types =
-    List.filter (fun t -> not (Mlutil.isTdummy t)) ind.ip_types.(0)
-  in
-  if List.length fields <> List.length non_dummy_types then
-    Feedback.msg_debug
-      Pp.(
-        str "gen_typeclass_cpp: fields="
-        ++ int (List.length fields)
-        ++ str " non_dummy_types="
-        ++ int (List.length non_dummy_types)
-        ++ str " ip_types.(0)="
-        ++ int (List.length ind.ip_types.(0)) );
-  let method_list = List.combine fields non_dummy_types in
   (* Check if a type is a bare promoted Tvar — a Tvar whose index is beyond the
      real type parameters. This indicates the field's type is entirely
      determined by a promoted associated type, so we can't decompose it into
@@ -4178,6 +4434,14 @@ let gen_typeclass_cpp name fields ind =
     | Miniml.Tvar n -> n > nb_sign_keeps
     | _ -> false
   in
+  (* Check if a field type is a typeclass-typed promoted field.  Such
+     fields become [typename I::field] requirements (already in type_reqs)
+     and should NOT generate method requirements in the concept body. *)
+  let is_typeclass_field_type ty =
+    match ty with
+    | Miniml.Tglob (r, _, _) -> Table.is_typeclass r
+    | _ -> false
+  in
   (* Generate a single method requirement. Returns either: - `Normal (params,
      (call, constraint))` for regular methods - `Disjunctive expr` for fields
      whose type is a bare promoted Tvar *)
@@ -4186,7 +4450,14 @@ let gen_typeclass_cpp name fields ind =
     | None -> None (* Anonymous field, skip *)
     | Some field_ref ->
       let method_name = Common.pp_global_name Term field_ref in
-      if is_bare_promoted_tvar field_ty then
+      if is_typeclass_field_type field_ty then
+        (* TypeClass-typed field — skip method requirement.  The field
+           is promoted and already has a [typename I::field;] type
+           requirement in [type_reqs].  Adding a method requirement
+           would try to use the concept name as a concrete type
+           (e.g., [std::shared_ptr<PreCategory>]) which is invalid. *)
+        None
+      else if is_bare_promoted_tvar field_ty then
         (* Field type is a bare promoted Tvar (e.g., fun_ind_prf :
            fun_ind_prf_ty). The concrete type could be a plain value or a
            function with any arity. Generate a disjunctive concept requirement:
@@ -4242,8 +4513,10 @@ let gen_typeclass_cpp name fields ind =
               (arg_cpp, Id.of_string ("a" ^ string_of_int j)) )
             args
         in
-        (* Method call: I::method_name(a0, a1, ...) *)
-        let call_args = List.map (fun (_, id) -> CPPvar id) params in
+        (* Method call: I::method_name(a0, a1, ...).  CPPfun_call stores
+           args reversed (the printer applies List.rev when rendering),
+           so we pre-reverse to get the correct printed order. *)
+        let call_args = List.rev_map (fun (_, id) -> CPPvar id) params in
         let call =
           CPPfun_call
             (CPPqualified (CPPvar inst_id, Id.of_string method_name), call_args)
@@ -4346,14 +4619,28 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           tc_acc
           ((id_of_mlid ml_id, lam_ty) :: lam_acc)
       else if Table.is_typeclass_type arg_ty then
-        (* Typeclass constraint — becomes a template typename for the
-           instance *)
+        (* Typeclass constraint — becomes a concept-constrained template
+           parameter.  E.g., [PreCategory _tcI0] instead of [typename
+           _tcI0], so the compiler enforces concept satisfaction. *)
         let instance_name = tc_instance_id tc_idx in
+        let tt =
+          match arg_ty with
+          | Tglob (r, _, _) ->
+            (* Only use inline concept constraint for unary concepts.
+               A concept is unary iff it has no kept type variables
+               (nb_sign_keeps = 0), so its only template param is I.
+               Multi-parameter concepts like [Numeric<I, t_A>] cannot
+               use inline syntax because the remaining type args aren't
+               available at the template-param declaration site. *)
+            let nb_keeps = Table.get_ind_nb_sign_keeps r in
+            if nb_keeps = 0 then TTconcept r else TTtypename
+          | _ -> TTtypename
+        in
         strip_outer_layers
           rest_ty
           rest_body
           (tc_idx + 1)
-          ((TTtypename, instance_name) :: tc_acc)
+          ((tt, instance_name) :: tc_acc)
           ((instance_name, lam_ty) :: lam_acc)
       else (* Not a type param or typeclass — stop stripping *)
         (ty, body, List.rev tc_acc, List.rev lam_acc)
@@ -4460,6 +4747,18 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         match field_ref with
         | None -> None (* Anonymous field, skip *)
         | Some method_ref ->
+          (* Skip typeclass-typed fields — they are promoted and handled
+             by [using] declarations, not methods.  E.g., [base_category :
+             PreCategory] becomes [using base_category = ...;], not a
+             static method returning the typeclass. *)
+          let is_tc_field =
+            match field_ml_ty with
+            | Miniml.Tglob (r, _, _) -> Table.is_typeclass r
+            | _ -> false
+          in
+          if is_tc_field then
+            None
+          else
           let method_name =
             Id.of_string (Common.pp_global_name Term method_ref)
           in
@@ -4591,16 +4890,34 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                 let ml_vars =
                   List.rev_map (fun (name, ml_ty, _) -> (name, ml_ty)) params
                 in
-                let env = snd (push_vars' ml_vars base_env) in
+                let renamed_eta, env = push_vars' ml_vars base_env in
                 let stmts =
                   gen_stmts env (fun x -> Sreturn (Some x)) call_expr
                 in
+                (* Sync param names with push_vars' output (lowercased
+                   and uniquified) so signatures match bodies.  ml_vars
+                   was built via List.rev_map, so renamed_eta is in
+                   reversed order — reverse back to align with params. *)
                 let cpp_params =
-                  List.map (fun (name, _, cpp_ty) -> (name, cpp_ty)) params
+                  List.map2
+                    (fun (new_name, _) (_, cpp_ty) -> (new_name, cpp_ty))
+                    (List.rev renamed_eta)
+                    (List.map (fun (name, _, cpp_ty) -> (name, cpp_ty)) params)
                 in
                 (cpp_params, method_ret_ty, stmts)
-            else (* Normal case: we have lambdas *)
-              let env = snd (push_vars' (List.rev ml_params) base_env) in
+            else
+              (* Normal case: we have lambdas.  push_vars' lowercases
+                 and uniquifies names for the de Bruijn environment;
+                 sync cpp_params so the method signature matches. *)
+              let renamed_ml, env =
+                push_vars' (List.rev ml_params) base_env
+              in
+              let cpp_params =
+                List.map2
+                  (fun (new_name, _) (_, cpp_ty) -> (new_name, cpp_ty))
+                  (List.rev renamed_ml)
+                  cpp_params
+              in
               let stmts =
                 gen_stmts env (fun x -> Sreturn (Some x)) inner_body
               in
@@ -4628,18 +4945,107 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         else (* Fallback: pair fields with Tunknown if lengths don't match *)
           List.map (fun f -> (f, Miniml.Tunknown)) fields
       in
-      if List.length fields_with_types <> List.length method_bodies then
-        Feedback.msg_debug
-          Pp.(
-            str "gen_instance_struct: fields_with_types="
-            ++ int (List.length fields_with_types)
-            ++ str " method_bodies="
-            ++ int (List.length method_bodies) );
       let method_pairs = List.combine fields_with_types method_bodies in
       let methods =
         List.filter_map
           (fun ((fld, fty), body) -> gen_method (fld, fty) body)
           method_pairs
+      in
+      (* Generate [using] declarations for promoted typeclass-typed fields
+         from the constructor body.  For such fields, the constructor arg
+         is a value expression (e.g., [MLglob nat_category] or
+         [MLapp(opposite_category, [MLproj(...)])]) that must be
+         translated to a C++ TYPE expression (e.g., [nat_category] or
+         [opposite_category<typename _tcI0::base_category>]).
+
+         This function interprets an ML expression at the type level:
+         - [MLglob r] → named type [Tglob(r, ...)]
+         - [MLapp(MLglob r, args)] → template type with type args
+         - [MLrel i] → template parameter reference [Tvar(0, Some name)]
+         - [MLmagic e] → strip magic wrapper *)
+      let rec ml_expr_to_cpp_type body =
+        match body with
+        | MLglob (r, _) -> Tglob (r, [], [])
+        | MLapp (MLglob (r, _), args) ->
+          let type_args = List.filter_map ml_expr_to_cpp_type_opt args in
+          Tglob (r, type_args, [])
+        | MLapp (f, args) -> (
+          match ml_expr_to_cpp_type f with
+          | Tglob (r, existing, es) ->
+            let type_args = List.filter_map ml_expr_to_cpp_type_opt args in
+            Tglob (r, existing @ type_args, es)
+          | other -> other )
+        | MLrel i -> (
+          try
+            let name = get_db_name i base_env in
+            Tvar (0, Some name)
+          with Failure _ -> Tany )
+        | MLmagic e -> ml_expr_to_cpp_type e
+        | MLcase (_, scrutinee, branches)
+          when Array.length branches = 1 ->
+          (* Single-branch case = record field projection.  The branch
+             destructures the record into named bindings and selects one
+             via [MLrel].  Translate into [Tqualified(scrutinee, field)]. *)
+          let (binds, _, _, br_body) = branches.(0) in
+          let base_ty = ml_expr_to_cpp_type scrutinee in
+          ( match br_body with
+          | MLrel j when j >= 1 && j <= List.length binds ->
+            (* de Bruijn: 1 = last binding, n = first binding *)
+            let idx = List.length binds - j in
+            let (field_id, _) = List.nth binds idx in
+            ( match field_id with
+            | Id name | Tmp name -> Tqualified (base_ty, name)
+            | Dummy -> Tany )
+          | _ ->
+            (* Non-trivial body — recurse with extended environment *)
+            ml_expr_to_cpp_type br_body )
+        | _ -> Tany
+      and ml_expr_to_cpp_type_opt body =
+        match ml_expr_to_cpp_type body with
+        | Tany -> None
+        | t -> Some t
+      in
+      (* Check if an ML expression is a parameterized reference whose
+         typeclass arguments have been erased — e.g.,
+         [MLapp(MLglob opposite_category, [MLdummy Ktype])].  Such
+         references produce incomplete [Tglob(r, [], [])] that can't
+         be used as using declarations. *)
+      let tc_promoted_usings =
+        if List.length fields_with_types = List.length method_bodies then
+          List.filter_map
+            (fun ((fld, fty), body) ->
+              match (fld, fty) with
+              | Some field_ref, Miniml.Tglob (r, _, _)
+                when Table.is_typeclass r ->
+                let has_erased_tc_args =
+                  match body with
+                  | MLapp (_, args) ->
+                    List.exists
+                      (function MLdummy _ -> true | _ -> false)
+                      args
+                  | _ -> false
+                in
+                if has_erased_tc_args then
+                  (* Parameterized reference with erased typeclass args.
+                     Fall through to let forwarded_usings handle this
+                     field. *)
+                  None
+                else
+                  let field_name_str =
+                    Common.pp_global_name Term field_ref
+                  in
+                  let field_id = Id.of_string field_name_str in
+                  let cpp_ty = ml_expr_to_cpp_type body in
+                  if cpp_ty = Tany then None
+                  else
+                    Some
+                      ( Fnested_using (field_id, cpp_ty),
+                        VPublic,
+                        SNoTag )
+              | _ -> None )
+            (List.combine fields_with_types method_bodies)
+        else
+          []
       in
       (* Restore type variable context *)
       tctx.current_outer_function_name <- saved_outer_name;
@@ -4659,36 +5065,178 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         else
           []
       in
-      let using_fields =
-        if List.length promoted_vars = List.length promoted_concrete_types then
-          List.map2
-            (fun var_name concrete_ml_ty ->
-              let concrete_cpp_ty =
-                convert_ml_type_to_cpp_type
-                  base_env
-                  Refset'.empty
-                  type_var_names
-                  concrete_ml_ty
+      (* Is [cpp_ty] a self-referential promoted-var reference (e.g.,
+         [Tvar(_, Some "Obj")] where "Obj" is a promoted var)?  Such
+         types are useless: [using Obj = Obj;] would just alias the
+         enclosing scope, not the template parameter's type. *)
+      let is_self_referential_promoted var_name cpp_ty =
+        match cpp_ty with
+        | Tvar (_, Some id) when Id.equal id var_name -> true
+        | _ -> false
+      in
+      (* For each concept-constrained template parameter, forward its
+         promoted type aliases into this struct.  E.g., if [_tcI0]
+         satisfies [PreCategory] which has promoted [Obj], generate
+         [using Obj = typename _tcI0::Obj;]. *)
+      let forwarded_usings =
+        List.concat_map
+          (fun (tt, tc_name) ->
+            match tt with
+            | TTconcept class_ref_tc ->
+              let tc_ip_vars = Table.get_ind_ip_vars class_ref_tc in
+              let tc_nb_keeps = Table.get_ind_nb_sign_keeps class_ref_tc in
+              let tc_promoted =
+                List.filteri (fun i _ -> i >= tc_nb_keeps) tc_ip_vars
               in
-              (Fnested_using (var_name, concrete_cpp_ty), VPublic, SNoTag) )
-            promoted_vars
-            promoted_concrete_types
-        else
-          []
+              List.map
+                (fun var_name ->
+                  let qualified_ty =
+                    Tqualified (Tvar (0, Some tc_name), var_name)
+                  in
+                  ( Fnested_using (var_name, qualified_ty),
+                    VPublic,
+                    SNoTag ) )
+                tc_promoted
+            | _ -> [] )
+          template_params
+      in
+      (* Collect names already covered by TC-promoted usings (from
+         constructor body).  These take priority over forwarded usings
+         because they carry the computed type expression rather than
+         a simple forward from the template parameter. *)
+      let tc_promoted_names =
+        List.filter_map
+          (fun (f, _, _) ->
+            match f with
+            | Fnested_using (id, _) -> Some id
+            | _ -> None )
+          tc_promoted_usings
+      in
+      (* Remove forwarded usings that are superseded by TC-promoted usings *)
+      let forwarded_usings =
+        List.filter
+          (fun (f, _, _) ->
+            match f with
+            | Fnested_using (id, _) ->
+              not (List.exists (Id.equal id) tc_promoted_names)
+            | _ -> true )
+          forwarded_usings
+      in
+      (* Collect names already covered by forwarded usings. *)
+      let forwarded_names =
+        List.filter_map
+          (fun (f, _, _) ->
+            match f with
+            | Fnested_using (id, _) -> Some id
+            | _ -> None )
+          forwarded_usings
+      in
+      (* Generate [using VarName = ConcreteType;] for each promoted
+         variable that has a known, non-self-referential concrete type
+         and is not already covered by a forwarded using.  Use
+         zip-up-to-minimum so that partially-extractable Records
+         still get declarations for the extractable promoted vars. *)
+      let concrete_usings =
+        let n =
+          min (List.length promoted_vars) (List.length promoted_concrete_types)
+        in
+        List.init n (fun i ->
+            let var_name = List.nth promoted_vars i in
+            let concrete_ml_ty = List.nth promoted_concrete_types i in
+            let concrete_cpp_ty =
+              convert_ml_type_to_cpp_type
+                base_env
+                Refset'.empty
+                type_var_names
+                concrete_ml_ty
+            in
+            (var_name, concrete_cpp_ty) )
+        |> List.filter_map (fun (var_name, concrete_cpp_ty) ->
+               if
+                 List.exists (Id.equal var_name) tc_promoted_names
+                 || List.exists (Id.equal var_name) forwarded_names
+                 || is_self_referential_promoted var_name concrete_cpp_ty
+               then
+                 None
+               else
+                 Some
+                   ( Fnested_using (var_name, concrete_cpp_ty),
+                     VPublic,
+                     SNoTag ) )
       in
       (* Exclude promoted type args from the returned list (used for
          static_assert) *)
       let non_promoted_type_args =
         List.filteri (fun i _ -> i < nb_sign_keeps_for_promoted) type_args
       in
-      if methods = [] && using_fields = [] then
+      (* Generate nested promoted-var usings.  When a using aliases a
+         typeclass-typed field (e.g., [using base_category = nat_category;]),
+         we must also forward the promoted vars of that typeclass so that
+         method return types resolve correctly.  E.g., if [base_category]
+         satisfies [PreCategory] with promoted [Obj], generate
+         [using Obj = typename base_category::Obj;]. *)
+      let direct_usings =
+        tc_promoted_usings @ forwarded_usings @ concrete_usings
+      in
+      let direct_names =
+        List.filter_map
+          (fun (f, _, _) ->
+            match f with Fnested_using (id, _) -> Some id | _ -> None)
+          direct_usings
+      in
+      let nested_promoted_usings =
+        List.concat_map
+          (fun (f, _, _) ->
+            match f with
+            | Fnested_using (using_name, _using_ty) ->
+              (* Find this field's ML type in the typeclass definition *)
+              let field_ml_ty =
+                List.find_map
+                  (fun (fld_opt, fml_ty) ->
+                    match fld_opt with
+                    | Some fld_ref ->
+                      let fld_name_str =
+                        Common.pp_global_name Term fld_ref
+                      in
+                      if String.equal fld_name_str (Id.to_string using_name)
+                      then Some fml_ty
+                      else None
+                    | None -> None)
+                  fields_with_types
+              in
+              ( match field_ml_ty with
+              | Some (Miniml.Tglob (tc_ref, _, _))
+                when Table.is_typeclass tc_ref ->
+                let nested_ip = Table.get_ind_ip_vars tc_ref in
+                let nested_nk = Table.get_ind_nb_sign_keeps tc_ref in
+                let nested_promoted =
+                  List.filteri (fun i _ -> i >= nested_nk) nested_ip
+                in
+                List.filter_map
+                  (fun v ->
+                    if List.exists (Id.equal v) direct_names then None
+                    else
+                      Some
+                        ( Fnested_using
+                            ( v,
+                              Tqualified
+                                (Tvar (0, Some using_name), v) ),
+                          VPublic,
+                          SNoTag ))
+                  nested_promoted
+              | _ -> [] )
+            | _ -> [])
+          direct_usings
+      in
+      let all_usings = direct_usings @ nested_promoted_usings in
+      if methods = [] && all_usings = [] then
         (None, Some class_ref, non_promoted_type_args)
       else
         let decl =
           Dstruct
             {
               ds_ref = name;
-              ds_fields = using_fields @ methods;
+              ds_fields = all_usings @ methods;
               ds_tparams = template_params;
               ds_constraint = None;
               ds_needs_shared_from_this = false;
@@ -4712,6 +5260,12 @@ let get_tvars_indexed t =
     | Some n -> n
   in
   let rec aux l = function
+    | Tvar (1000, _) ->
+      (* Promoted type var marker from a Record-turned-TypeClass.  These
+         represent projected type members (e.g., [Obj] from [PreCategory])
+         and must be resolved through typeclass instance access — not as
+         standalone template parameters. *)
+      l
     | Tvar (i, n) ->
       if List.exists (fun (x, _) -> i == x) l then
         l
@@ -5065,7 +5619,12 @@ let gen_dfun n b dom cod ty temps =
           let i = !typeclass_counter in
           typeclass_counter := i + 1;
           let instance_name = tc_instance_id i in
-          (* Build template param info *)
+          (* Build template param info.  Use [TTconcept] for unary
+             concepts (nb_sign_keeps = 0) so the C++ compiler enforces
+             concept satisfaction, e.g. [PreCategory _tcI0] instead of
+             [typename _tcI0]. Multi-parameter concepts cannot use inline
+             syntax because extra type args aren't available at the
+             template-param declaration site. *)
           let temp_info =
             match ty with
             | Miniml.Tglob (class_ref, type_args, _) ->
@@ -5079,7 +5638,11 @@ let gen_dfun n b dom cod ty temps =
                       t )
                   type_args
               in
-              ( TTtypename,
+              let tt =
+                let nb_keeps = Table.get_ind_nb_sign_keeps class_ref in
+                if nb_keeps = 0 then TTconcept class_ref else TTtypename
+              in
+              ( tt,
                 instance_name,
                 Some (class_ref, type_arg_cpp),
                 remove_prime_id (id_of_mlid ml_id) )
@@ -5098,6 +5661,123 @@ let gen_dfun n b dom cod ty temps =
       all_params
   in
   let typeclass_temps = List.rev !typeclass_temps in
+  (* Build a substitution map for PROMOTED TYPE VARIABLES: fields that were
+     promoted from record values to type parameters during concept generation.
+
+     When a function takes a typeclass parameter, references to that typeclass's
+     promoted fields must be qualified as types (typename _tcI0::field), not
+     accessed as values (_tcI0->field).
+
+     Example:
+       Coq function:
+         Fixpoint mfold (M : Monoid) (l : list (m_carrier M)) : m_carrier M
+
+       Extraction intermediate form:
+         ML type has [Tglob(m_carrier, [])] ← marked as promoted type var
+         Converts to [Tvar(1000, Some "m_carrier")] ← needs resolution
+
+       This map provides the resolution:
+         "m_carrier" ↦ Tqualified(Tvar(0, Some "_tcI0"), "m_carrier")
+         Which prints as: typename _tcI0::m_carrier
+
+     For nested typeclasses (e.g., PreStableCategory has a base_category : PreCategory),
+     promoted vars are doubly qualified:
+       "Obj" ↦ typename _tcI0::base_category::Obj
+
+     The map is applied by [resolve_promoted_in_type] to substitute all
+     [Tvar(1000, ...)] markers with their qualified forms. *)
+  let promoted_var_resolutions =
+    List.concat_map (fun (_tt, tc_name, class_info, _) ->
+      match class_info with
+      | Some (class_ref, _) ->
+        let ip_vars = Table.get_ind_ip_vars class_ref in
+        let nb_keeps = Table.get_ind_nb_sign_keeps class_ref in
+        let promoted = List.filteri (fun i _ -> i >= nb_keeps) ip_vars in
+        (* Direct promoted vars: Var → typename _tcI0::Var *)
+        let direct =
+          List.map (fun var_name ->
+            (var_name, Tqualified (Tvar (0, Some tc_name), var_name))
+          ) promoted
+        in
+        (* Nested promoted vars from TC-typed fields:
+           Var → typename _tcI0::field::Var *)
+        let method_list =
+          let fields = Table.get_record_fields class_ref in
+          let field_types = Table.record_field_types class_ref in
+          let non_dummy =
+            List.filter (fun t -> not (Mlutil.isTdummy t)) field_types
+          in
+          if List.length fields = List.length non_dummy then
+            List.combine fields non_dummy
+          else []
+        in
+        let nested =
+          List.concat_map (fun (field_opt, field_ty) ->
+            match (field_opt, field_ty) with
+            | Some field_ref, Miniml.Tglob (r, _, _)
+              when Table.is_typeclass r ->
+              let field_name_str = Common.pp_global_name Term field_ref in
+              let field_id = Id.of_string field_name_str in
+              if List.exists (Id.equal field_id) promoted then
+                let n_ip = Table.get_ind_ip_vars r in
+                let n_nk = Table.get_ind_nb_sign_keeps r in
+                let n_promoted =
+                  List.filteri (fun i _ -> i >= n_nk) n_ip
+                in
+                List.filter_map (fun nested_var ->
+                  (* Skip if already directly mapped (direct takes priority) *)
+                  if List.exists (Id.equal nested_var) promoted then None
+                  else
+                    Some (nested_var,
+                      Tqualified
+                        (Tqualified (Tvar (0, Some tc_name), field_id),
+                         nested_var))
+                ) n_promoted
+              else []
+            | _ -> []
+          ) method_list
+        in
+        direct @ nested
+      | None -> []
+    ) typeclass_temps
+  in
+  (* Substitute promoted type var markers [Tvar(1000, Some name)] with their
+     qualified resolutions throughout a C++ type tree. *)
+  let rec resolve_promoted_in_type ty =
+    match ty with
+    | Tvar (1000, Some name) -> (
+      match List.find_opt
+              (fun (n, _) -> Id.equal n name)
+              promoted_var_resolutions with
+      | Some (_, resolved) -> resolved
+      | None -> ty )
+    | Tglob (r, tys, es) ->
+      Tglob (r, List.map resolve_promoted_in_type tys, es)
+    | Tfun (doms, cod) ->
+      Tfun (List.map resolve_promoted_in_type doms,
+            resolve_promoted_in_type cod)
+    | Tmod (m, t) -> Tmod (m, resolve_promoted_in_type t)
+    | Tref t -> Tref (resolve_promoted_in_type t)
+    | Tshared_ptr t -> Tshared_ptr (resolve_promoted_in_type t)
+    | Tunique_ptr t -> Tunique_ptr (resolve_promoted_in_type t)
+    | Tvariant ts -> Tvariant (List.map resolve_promoted_in_type ts)
+    | Tqualified (b, id) -> Tqualified (resolve_promoted_in_type b, id)
+    | Tnamespace (r, t) -> Tnamespace (r, resolve_promoted_in_type t)
+    | Tid (id, ts) -> Tid (id, List.map resolve_promoted_in_type ts)
+    | Tptr t -> Tptr (resolve_promoted_in_type t)
+    | _ -> ty
+  in
+  (* Apply promoted var resolution to domain and codomain types *)
+  let dom =
+    if promoted_var_resolutions <> [] then
+      List.map resolve_promoted_in_type dom
+    else dom
+  in
+  let cod =
+    if promoted_var_resolutions <> [] then
+      resolve_promoted_in_type cod
+    else cod
+  in
   (* Push params into environment for de Bruijn lookup during body generation.
      collect_lams returns params in reverse order (innermost first), so MLrel 1
      refers to the last param in the list.
@@ -5141,6 +5821,11 @@ let gen_dfun n b dom cod ty temps =
     List.map
       (fun (x, ty, owned) ->
         let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty [] ty in
+        let cpp_ty =
+          if promoted_var_resolutions <> [] then
+            resolve_promoted_in_type cpp_ty
+          else cpp_ty
+        in
         let wrapped = wrap_param_by_ownership ~is_owned:owned cpp_ty in
         (x, wrapped) )
       ids_with_owned
@@ -5261,6 +5946,11 @@ let gen_dfun n b dom cod ty temps =
   in
   set_current_type_vars type_var_ids;
   set_current_param_types all_ids;
+  (* Activate promoted var resolution for body generation — types like
+     [Tvar(1000, Some "Obj")] in type annotations will be resolved to
+     qualified access through the typeclass instance chain. *)
+  let saved_promoted_var_map = tctx.promoted_var_map in
+  tctx.promoted_var_map <- promoted_var_resolutions;
   (* Set the outer function name so inner fixpoints can generate lifted names *)
   let saved_outer_name = tctx.current_outer_function_name in
   tctx.current_outer_function_name <- Some (Common.pp_global_name Term n);
@@ -5429,6 +6119,7 @@ let gen_dfun n b dom cod ty temps =
   in
   tctx.current_cpp_return_type <- saved_return_type;
   tctx.current_outer_function_name <- saved_outer_name;
+  tctx.promoted_var_map <- saved_promoted_var_map;
   match temps with
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)
@@ -5466,20 +6157,28 @@ let gen_sfun n b dom cod temps =
   (* For already-converted C++ types in dom, wrap shared_ptr with const ref *)
   let args =
     List.mapi
-      (fun i ty ->
+      (fun _i ty ->
         let wrapped = wrap_param_by_ownership ty in
         (None, wrapped) )
       dom
   in
-  let inner =
-    if
-      List.length args
-      > List.length ids (* TODO: find/fix bug so we don't need this *)
-    then
-      Dfundecl ([(n, [])], cod, List.rev args, false)
+  (* Merge parameter names from [ids] (body lambdas) with resolved types
+     from [dom] (function signature).  [ids] carries the correct parameter
+     names but may have unresolved promoted type vars (e.g. bare [m_carrier]
+     instead of [typename _tcI0::m_carrier]).  [dom] carries fully-resolved
+     types from the outer gen_dfun but lacks parameter names.  When lengths
+     match, zip names from [ids] with types from [args] to get both. *)
+  let params =
+    if List.length args = List.length ids then
+      List.map2
+        (fun (name, _) (_, ty) -> (name, ty))
+        ids args
+    else if List.length args > List.length ids then
+      List.rev args
     else
-      Dfundecl ([(n, [])], cod, ids, false)
+      ids
   in
+  let inner = Dfundecl ([(n, [])], cod, params, false) in
   match temps with
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)
@@ -5503,6 +6202,56 @@ let erased_proj_tvar_map (class_ref : GlobRef.t) : (GlobRef.t * int) list =
           (ConstRef knp, n_promoted - i) )
         promoted_vars
   | _ -> []
+
+(** Expand TC-typed carrier refs to their nested Type-valued promoted vars.
+
+    When a typeclass has a promoted field whose ML type is itself a typeclass
+    (e.g., [base_category : PreCategory] in [PreStableCategory]),
+    [erased_proj_tvar_map] returns a reference to the TC-typed field (e.g.,
+    [ConstRef base_category]).  Using that directly in [rewrite_ml_ast_types]
+    produces the wrong C++ type — [typename _tcI0::base_category] instead of
+    [typename _tcI0::base_category::Obj].
+
+    This function replaces TC-typed carrier refs with the Type-valued promoted
+    vars of the nested typeclass.  Expansion is recursive: if the nested TC
+    itself has TC-typed promoted vars, they are expanded further.
+
+    @param class_ref  The containing typeclass (e.g., [PreStableCategory])
+    @param carrier_refs  The list from [erased_proj_tvar_map] *)
+let rec expand_tc_typed_carriers
+    (class_ref : GlobRef.t)
+    (carrier_refs : (GlobRef.t * int) list)
+    : (GlobRef.t * int) list =
+  let fields = Table.get_record_fields class_ref in
+  let field_types = Table.record_field_types class_ref in
+  let non_dummy =
+    List.filter (fun t -> not (Mlutil.isTdummy t)) field_types
+  in
+  if List.length fields <> List.length non_dummy then
+    carrier_refs
+  else
+    let field_type_pairs = List.combine fields non_dummy in
+    let expanded =
+      List.concat_map (fun (ref, idx) ->
+        let ref_name = Common.pp_global_name Common.Term ref in
+        match List.find_opt (fun (fopt, _) ->
+          match fopt with
+          | Some fr -> Common.pp_global_name Common.Term fr = ref_name
+          | None -> false
+        ) field_type_pairs with
+        | Some (_, Miniml.Tglob (r, _, _)) when Table.is_typeclass r ->
+          (* TC-typed carrier — expand to the nested TC's promoted vars *)
+          let nested = erased_proj_tvar_map r in
+          if nested = [] then [(ref, idx)]
+          else expand_tc_typed_carriers r nested
+        | _ -> [(ref, idx)]
+      ) carrier_refs
+    in
+    (* Sort by ascending tvar index so the first-declared field (lowest
+       index) comes first.  [erased_proj_tvar_map] assigns index
+       [n_promoted - i], so field 0 gets index 1 (lowest).  This matters
+       because [rewrite_ml_ast_types] uses [List.hd] to pick the carrier. *)
+    List.sort (fun (_, i1) (_, i2) -> compare i1 i2) expanded
 
 (** Replace Tglob references to erased projections with Tvar' in an ML type. *)
 let rec replace_erased_proj_refs
@@ -5666,6 +6415,18 @@ let gen_decl n b ty =
 (** Generate C++ declaration with pretty-printing adjustments *)
 let gen_decl_for_pp n b ty =
   let carrier_refs = get_erased_proj_map_from_type ty in
+  (* Expand TC-typed carrier refs: when a carrier ref points to a
+     typeclass-typed promoted field (e.g., base_category : PreCategory),
+     replace it with the nested TC's Type-valued promoted vars (e.g., Obj).
+     This ensures rewrite_ml_ast_types replaces Tunknown with the actual
+     type-level field rather than the struct-level typeclass field. *)
+  let carrier_refs =
+    match ty with
+    | Miniml.Tarr (Miniml.Tglob (class_ref, _, _), _)
+      when Table.is_typeclass class_ref ->
+      expand_tc_typed_carriers class_ref carrier_refs
+    | _ -> carrier_refs
+  in
   let b = rewrite_ml_ast_types carrier_refs b in
   let cty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
   let tvars = get_tvars cty in
@@ -5835,9 +6596,35 @@ let gen_spec n b ty =
        the missing type parameter. *)
     let saved_return_type = tctx.current_cpp_return_type in
     tctx.current_cpp_return_type <- Some ty;
-    let b = gen_expr (empty_env ()) b in
+    (* Strip MLmagic wrapper and track whether a type coercion from std::any
+       is needed.  MLmagic wraps expressions when the extraction detects a
+       type mismatch (e.g. Obj = std::any vs nat = unsigned int). *)
+    let has_magic, inner_body =
+      match b with
+      | MLmagic inner -> (true, inner)
+      | _ -> (false, b)
+    in
+    let b_expr = gen_expr (empty_env ()) inner_body in
     tctx.current_cpp_return_type <- saved_return_type;
-    let inner = Dasgn (n, Tmod (TMconst, ty), b) in
+    (* Wrap with std::any_cast when the C++ expression returns std::any but the
+       declared type is concrete.  Two detection paths:
+       (a) MLmagic — the extraction explicitly flagged a type coercion.
+       (b) Record field projection — the field's return type is a promoted
+           type var (erased to std::any) but Coq's type system sees the
+           concrete type, so no MLmagic is generated. *)
+    let is_concrete_target =
+      match ty with
+      | Tany | Tvar _ | Tunknown | Tvoid | Ttodo | Tauto -> false
+      | _ -> true
+    in
+    let needs_any_cast =
+      is_concrete_target
+      && (has_magic || ml_body_returns_erased_field inner_body)
+    in
+    let b_expr =
+      if needs_any_cast then CPPany_cast (ty, b_expr) else b_expr
+    in
+    let inner = Dasgn (n, Tmod (TMconst, ty), b_expr) in
     ( match temps with
     | [] -> (inner, empty_env ())
     | l -> (Dtemplate (l, None, inner), empty_env ()) )

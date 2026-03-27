@@ -2489,3 +2489,14 @@
   (alias runtest)
   (deps loopify_tmc.t.exe)
   (action (run ./loopify_tmc.t.exe))))
+
+(subdir double_opposite_witnesses
+ (rule
+  (targets double_opposite_witnesses.t.exe)
+  (deps DoubleOppositeWitnesses.vo double_opposite_witnesses.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} double_opposite_witnesses.t.exe double_opposite_witnesses.cpp double_opposite_witnesses.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps double_opposite_witnesses.t.exe)
+  (action (run ./double_opposite_witnesses.t.exe))))

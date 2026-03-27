@@ -281,6 +281,12 @@ val is_promoted_type_var : GlobRef.t -> bool
 (** Get promoted type variable name if exists. *)
 val promoted_type_var_name : GlobRef.t -> Names.Id.t option
 
+(** Register an erased type constant (non-promoted type-valued record field). *)
+val add_erased_type_const : GlobRef.t -> unit
+
+(** Check if reference is an erased type constant. *)
+val is_erased_type_const : GlobRef.t -> bool
+
 (** Add instance promoted types. *)
 val add_instance_promoted_types :
   GlobRef.t -> (Names.Id.t * Miniml.ml_type) list -> unit

@@ -146,6 +146,7 @@ let rec lambda_needs_capture
      |CPPint _
      |CPPbrace_init
      |CPPunop _ -> (refs, decls)
+    | CPPany_cast (_, e) -> collect_from_expr (refs, decls) e
   and collect_from_stmt (refs, decls) stmt =
     match stmt with
     | Sreturn None -> (refs, decls)
@@ -257,6 +258,7 @@ and expr_contains_capturing_lambda (e : Minicpp.cpp_expr) : bool =
    |CPPint _
    |CPPbrace_init
    |CPPunop _ -> false
+  | CPPany_cast (_, e') -> expr_contains_capturing_lambda e'
 
 and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
   let open Minicpp in
@@ -410,12 +412,40 @@ let parse_custom_numbered_binders esc1 esc2 f s =
 let print_cpp_type_var vl i =
   try pp_tvar (List.nth vl (pred i)) with Failure _ -> str "T" ++ int i
 
+(** Set of parameter IDs whose C++ type is [Tany] (std::any) in the
+    current method being printed.  Set before printing a method body,
+    cleared after. *)
+let current_any_typed_params : Id.Set.t ref = ref Id.Set.empty
+
 (** Pretty-print a MiniCpp type as C++ source. [par] controls whether
     parentheses are added around the result. [vl] is the list of type variable
     names for de Bruijn lookup. *)
 let rec pp_cpp_type par vl t =
   let rec pp_rec par = function
     | Tvar (i, None) -> print_cpp_type_var vl i
+    | Tvar (1000, Some id) ->
+      (* PROMOTED TYPE VARIABLES: Record fields that were promoted from value-level
+         to type-level during concept generation (e.g., [m_carrier] from [Monoid],
+         [Obj]/[Hom] from [PreCategory]).
+
+         These Type-valued fields cannot exist as struct members in C++, so they
+         become type requirements in concepts and "using" declarations in structs.
+
+         The special index 1000 distinguishes promoted vars from:
+         - Regular type params: Tvar(0/1/2, Some name) from generic functions
+         - Local loopification types: Tvar(0, Some "_Frame") from loop transforms
+
+         Context-dependent rendering:
+         - Inside struct (header): "Obj" → resolves via [using Obj = std::any;]
+         - Outside struct (.cpp file): "Obj" → "StructName::Obj" (qualified access)
+
+         Example:
+           In struct:  using Obj = std::any;
+           In .cpp:    DepRecord::Obj my_var = ...;  *)
+      ( match render_ctx.rc_struct_name with
+      | Some struct_name when not render_ctx.rc_in_struct ->
+        struct_name ++ str "::" ++ Id.print id
+      | _ -> Id.print id )
     | Tvar (_, Some id) -> Id.print id
     (* Tid for local type references (e.g., nested structs inside modules).
        These don't need GlobRef qualification, just simple Id references. Can be
@@ -574,24 +604,29 @@ let rec pp_cpp_type par vl t =
         (* Fallback: generic namespace-qualified type *)
         str "typename " ++ name ++ str "::" ++ pp_rec false t )
     | Tqualified (base_ty, nested_id) ->
-      (* DESIGN: Template-dependent type access like 'typename M::Key::t'. C++
-         templates require 'typename' to access nested types from dependent base
-         types. *)
-      let base_str =
-        match base_ty with
+      (* DESIGN: Template-dependent type access like 'typename M::Key::t'.
+         C++ templates require 'typename' to access nested types from
+         dependent base types.  Nested Tqualified chains (e.g.,
+         [Tqualified(Tqualified(Tvar I, base_category), Obj)]) are flattened
+         so only a single leading [typename] is emitted — writing
+         [typename typename I::base_category::Obj] is invalid C++. *)
+      let rec pp_qualified_chain ty =
+        match ty with
+        | Tqualified (inner_ty, id) ->
+          pp_qualified_chain inner_ty ++ str "::" ++ Id.print id
         | Tglob (r, _, _) ->
           let type_name_str = str_global Type r in
           if is_qualified_name type_name_str then
-            pp_rec false base_ty
+            pp_rec false ty
           else
             let ns_name, needs_ns = inductive_name_info_cached r in
             if needs_ns && not (is_merged_inductive_cached r) then
-              ns_name ++ str "::" ++ pp_rec false base_ty
+              ns_name ++ str "::" ++ pp_rec false ty
             else
-              pp_rec false base_ty
-        | _ -> pp_rec false base_ty
+              pp_rec false ty
+        | _ -> pp_rec false ty
       in
-      str "typename " ++ base_str ++ str "::" ++ Id.print nested_id
+      str "typename " ++ pp_qualified_chain base_ty ++ str "::" ++ Id.print nested_id
     | Tvariant tys -> std_angle "variant" (pp_list (pp_rec false) tys)
     | Tshared_ptr t -> cpp_angle (sn ()).shared_ptr (pp_rec false t)
     | Tunique_ptr t -> cpp_angle (sn ()).unique_ptr (pp_rec false t)
@@ -1127,6 +1162,13 @@ and pp_cpp_expr env args t =
   | CPPint n -> str (string_of_int n)
   | CPPbrace_init -> str "{}"
   | CPPunop (op, e) -> str op ++ pp_cpp_expr env args e
+  | CPPany_cast (ty, e) ->
+    str (sn ()).any_cast
+    ++ str "<"
+    ++ pp_cpp_type false [] ty
+    ++ str ">("
+    ++ pp_cpp_expr env args e
+    ++ str ")"
 
 (** Pretty-print a MiniCpp statement as C++ source. *)
 and pp_cpp_stmt env args = function
@@ -1310,10 +1352,20 @@ and expr_is_any_returning_method = function
   | CPPmethod_call (CPPglob (n, _, _), _, _) -> method_returns_any n
   | CPPfun_call (CPPglob (n, _, _), _) when lookup_method_this_pos n <> None ->
     method_returns_any n
+  | CPPfun_call (CPPget' (_, n), _) -> method_returns_any n
+  | _ -> false
+
+(** Check if an expression is a variable (possibly wrapped in [CPPmove])
+    whose type is [std::any] — tracked via {!current_any_typed_params}. *)
+and expr_is_any_typed_param = function
+  | CPPvar id -> Id.Set.mem id !current_any_typed_params
+  | CPPmove e -> expr_is_any_typed_param e
   | _ -> false
 
 and wrap_any_cast_if_needed expr expr_printed expected_ty vl =
-  if expr_is_any_returning_method expr && is_concrete_cpp_type expected_ty then
+  if (expr_is_any_returning_method expr || expr_is_any_typed_param expr)
+     && is_concrete_cpp_type expected_ty
+  then
     str (sn ()).any_cast
     ++ str "<"
     ++ pp_cpp_type false vl expected_ty
@@ -1497,7 +1549,14 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     in
     let const_s = if mf_is_const then str " const" else mt () in
     let static_s = if mf_is_static then str "static " else mt () in
+    let saved_any_params = !current_any_typed_params in
+    current_any_typed_params :=
+      List.fold_left
+        (fun acc (id, ty) ->
+          match ty with Tany -> Id.Set.add id acc | _ -> acc)
+        Id.Set.empty mf_params;
     let body_s = pp_list_stmt (pp_cpp_stmt env []) mf_body in
+    current_any_typed_params := saved_any_params;
     let template_s =
       match mf_tparams with
       | [] -> mt ()
@@ -1726,7 +1785,7 @@ let rec pp_cpp_decl env decl = pp_cpp_decl_raw env (maybe_loopify decl)
 and pp_cpp_decl_raw env = function
   | Dtemplate (temps, cstr, Dasgn (id, ty, e)) when render_ctx.rc_in_struct ->
     let args = pp_list pp_template_param temps in
-    let expr_pp = pp_cpp_expr env [] e in
+    let expr_pp = wrap_any_cast_if_needed e (pp_cpp_expr env [] e) ty [] in
     h (str "template <" ++ args ++ str ">")
     ++ ( match cstr with
     | None -> fnl ()
@@ -2050,7 +2109,7 @@ and pp_cpp_decl_raw env = function
         ++ str "(\""
         ++ str msg
         ++ str "\"); })()"
-      | _ -> pp_cpp_expr env [] e
+      | _ -> wrap_any_cast_if_needed e (pp_cpp_expr env [] e) ty []
     in
     if render_ctx.rc_in_template then
       (* Inside template: use Meyers singleton to avoid static init order
