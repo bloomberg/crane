@@ -1272,8 +1272,20 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
      [in_constructor_expr] fallback handles it naturally. *)
   let saved_in_ctor = tctx.in_constructor_expr in
   tctx.in_constructor_expr <- true;
-  (* Convert value arguments to C++ expressions *)
-  let args = List.rev_map (gen_expr env) ts in
+  (* Convert value arguments to C++ expressions.
+
+     Erased proof/type arguments ([MLdummy]) produce [std::any{}] rather
+     than [CPPabort]: the corresponding C++ parameter type is [std::any]
+     (all erased types map to [std::any]), and custom constructors like
+     [std::make_pair] are evaluated eagerly so a throw would crash at
+     runtime.  This mirrors the [gen_ctor_arg] in the [MLcons] case of
+     {!gen_expr}. *)
+  let gen_ctor_arg e =
+    match e with
+    | MLdummy _ -> CPPraw "std::any{}"
+    | _ -> gen_expr env e
+  in
+  let args = List.rev_map gen_ctor_arg ts in
   (* Helper to wrap expression in function call syntax if it has arguments *)
   let app x =
     match args with
@@ -1953,10 +1965,12 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
           let fname = factory_name_of_ctor ctor_struct in
           CPPfun_call (CPPqualified (mk_cppglob r [], Id.of_string fname), args)
       in
-      (* Note: CPPfun_call reverses args when printing, so we reverse here. For
-         MLdummy constructor args (erased prop/type values), generate std::any{}
-         instead of the default CPPabort throw expression, since the
-         corresponding parameter type is std::any and throw has type void. *)
+      (* [CPPfun_call] stores args reversed; [List.rev_map] compensates.
+         Erased proof/type args ([MLdummy]) produce [std::any{}] — the
+         corresponding C++ parameter type is [std::any] and [CPPabort]
+         would throw at runtime.  The same pattern is used in
+         {!gen_expr_custom_cons} for inline-extracted constructors
+         (e.g., [std::make_pair]). *)
       let gen_ctor_arg e =
         match e with
         | MLdummy _ -> CPPraw "std::any{}"
@@ -2166,7 +2180,15 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     let def = gen_expr env def in
     CPPparray (elems, def)
   | MLmagic t -> gen_expr env t
-  | MLdummy _ -> CPPabort "unreachable"
+  | MLdummy _ ->
+    (* Erased proof or type argument.  [CPPabort] is safe here because this
+       case only fires in dead code positions (absurd match branches).
+       Evaluated positions — constructor args and custom-constructor args —
+       are handled before reaching this point: see [gen_ctor_arg] in the
+       [MLcons] case and in {!gen_expr_custom_cons}, which produce
+       [std::any{}] instead.  The reuse optimization in {!gen_cpp_case}
+       skips [MLdummy] fields entirely. *)
+    CPPabort "unreachable"
   | MLexn msg ->
     (* Unreachable/absurd case - e.g., match on empty type *)
     CPPabort msg
@@ -3055,15 +3077,29 @@ and gen_cpp_case (typ : ml_type) t env pv =
         (* shouldn't happen for reuse candidates *)
       in
       let prefix_stmts, body_env = gen_prefix_and_tail env' body in
-      (* 5. Compute new field values and assign them back: _rf._aN =
-         <new_value>; *)
+      (* 5. Compute new field values and assign them back:
+             [_rf.d_aN = <new_value>;]
+
+         Erased proof/type fields ([MLdummy]) are skipped: their value is
+         semantically irrelevant (the C++ type is [std::any]) and the field
+         already holds a valid [std::any] from the original construction.
+         Calling [gen_expr] on [MLdummy] would produce [CPPabort] which
+         throws at runtime — incorrect for reuse paths that ARE executed.
+         [MLmagic(MLdummy _)] is also caught since the extraction
+         sometimes wraps dummy values in [MLmagic] for type coercion. *)
       let assign_stmts =
-        List.mapi
-          (fun i tail_arg ->
-            let field_id = field_param_id i in
-            let new_val = gen_expr body_env tail_arg in
-            Sassign_field (CPPvar (Id.of_string "_rf"), field_id, new_val) )
-          tail_args
+        List.filter_map
+          (fun (i, tail_arg) ->
+            match tail_arg with
+            | MLdummy _ -> None
+            | MLmagic (MLdummy _) -> None
+            | _ ->
+              let field_id = field_param_id i in
+              let new_val = gen_expr body_env tail_arg in
+              Some
+                (Sassign_field
+                   (CPPvar (Id.of_string "_rf"), field_id, new_val) ) )
+          (List.mapi (fun i a -> (i, a)) tail_args)
       in
       (* 6. Return the original scrutinee (reusing the memory cell) *)
       let return_scrut = Sreturn (Some scrut_expr) in

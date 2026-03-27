@@ -124,10 +124,6 @@ struct Dim10TowerProofChainCase {
               auto &_rf = std::get<0>(std::move(s)->v_mut());
               unsigned int x = std::move(_rf.d_a0);
               _rf.d_a0 = x;
-              _rf.d_a1 = ([]() -> std::any {
-                throw std::logic_error("unreachable");
-                return std::any{};
-              })();
               return std::move(s);
             } else {
               return std::visit(
@@ -154,10 +150,6 @@ struct Dim10TowerProofChainCase {
               auto &_rf = std::get<0>(std::move(s)->v_mut());
               unsigned int x = std::move(_rf.d_a0);
               _rf.d_a0 = x;
-              _rf.d_a1 = ([]() -> std::any {
-                throw std::logic_error("unreachable");
-                return std::any{};
-              })();
               return std::move(s);
             } else {
               return std::visit(

@@ -140,10 +140,6 @@ Dim10TowerProofChainCase::graded_goodwillie_layers_stabilize(
       auto &_rf = std::get<0>(std::move(e)->v_mut());
       unsigned int x = std::move(_rf.d_a0);
       _rf.d_a0 = x;
-      _rf.d_a1 = ([]() -> std::any {
-        throw std::logic_error("unreachable");
-        return std::any{};
-      })();
       return std::move(e);
     } else {
       return std::visit(
@@ -172,12 +168,9 @@ std::pair<std::pair<std::pair<Dim10TowerProofChainCase::IsIntegerValued,
 Dim10TowerProofChainCase::graded_complete_proof_chain(
     const unsigned int base_dim) {
   return std::make_pair(
-      std::make_pair(std::make_pair(([]() -> std::any {
-                                      throw std::logic_error("unreachable");
-                                      return std::any{};
-                                    })(),
-                                    D_n_measure_eventually_zero(base_dim)),
-                     graded_goodwillie_layers_stabilize(base_dim)),
+      std::make_pair(
+          std::make_pair(std::any{}, D_n_measure_eventually_zero(base_dim)),
+          graded_goodwillie_layers_stabilize(base_dim)),
       graded_goodwillie_P_stabilizes(base_dim));
 }
 

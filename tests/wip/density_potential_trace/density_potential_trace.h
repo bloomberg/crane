@@ -1024,11 +1024,7 @@ struct ConstructiveRcomplete {
   static inline const isLinearOrder<std::shared_ptr<CReal>, CRealLt>
       CRealLtIsLinear = []() {
         return std::make_pair(
-            std::make_pair(([]() -> std::any {
-                             throw std::logic_error("unreachable");
-                             return std::any{};
-                           })(),
-                           this->CReal_lt_trans()),
+            std::make_pair(std::any{}, this->CReal_lt_trans()),
             [](std::shared_ptr<CReal> x, std::shared_ptr<CReal> y,
                std::shared_ptr<CReal> z,
                std::shared_ptr<Sig<std::shared_ptr<Z>>> x0) {

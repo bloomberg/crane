@@ -2500,3 +2500,14 @@
   (alias runtest)
   (deps double_opposite_witnesses.t.exe)
   (action (run ./double_opposite_witnesses.t.exe))))
+
+(subdir dim10_tower_proof_chain
+ (rule
+  (targets dim10_tower_proof_chain.t.exe)
+  (deps Dim10TowerProofChain.vo dim10_tower_proof_chain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dim10_tower_proof_chain.t.exe dim10_tower_proof_chain.cpp dim10_tower_proof_chain.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dim10_tower_proof_chain.t.exe)
+  (action (run ./dim10_tower_proof_chain.t.exe))))
