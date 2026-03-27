@@ -12,8 +12,7 @@
 #include <variant>
 
 __attribute__((pure)) std::shared_ptr<Nat> TodoMonadicGlobalAlias::base() {
-  return Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(
-      Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_())))))));
+  return Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))));
 }
 
 __attribute__((pure)) std::shared_ptr<Nat> TodoMonadicGlobalAlias::alias() {
@@ -22,5 +21,5 @@ __attribute__((pure)) std::shared_ptr<Nat> TodoMonadicGlobalAlias::alias() {
 
 __attribute__((pure)) std::shared_ptr<Nat> TodoMonadicGlobalAlias::rebound() {
   std::shared_ptr<Nat> x = base();
-  return Nat::ctor::S_(x);
+  return Nat::s(x);
 }

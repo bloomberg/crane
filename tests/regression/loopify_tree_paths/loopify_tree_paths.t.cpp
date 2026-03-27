@@ -51,7 +51,7 @@ using BTree = LoopifyTreePaths::bool_tree;
 
 int main() {
   // paths
-  auto leaf = Tree::ctor::Leaf_();
+  auto leaf = Tree::leaf();
   auto paths_leaf = leaf->paths();
   {
     auto vv = to_vecs(paths_leaf);
@@ -60,7 +60,7 @@ int main() {
     ASSERT(vv[0].empty());
   }
 
-  auto tree1 = Tree::ctor::Node_(leaf, 1u, leaf);
+  auto tree1 = Tree::node(leaf, 1u, leaf);
   {
     auto vv = to_vecs(tree1->paths());
     // Node(Leaf, 1, Leaf) -> [[1], [1]]
@@ -69,9 +69,9 @@ int main() {
     ASSERT((vv[1] == std::vector<unsigned int>{1u}));
   }
 
-  auto left = Tree::ctor::Node_(leaf, 2u, leaf);
-  auto right = Tree::ctor::Node_(leaf, 3u, leaf);
-  auto tree2 = Tree::ctor::Node_(left, 1u, right);
+  auto left = Tree::node(leaf, 2u, leaf);
+  auto right = Tree::node(leaf, 3u, leaf);
+  auto tree2 = Tree::node(left, 1u, right);
   {
     auto vv = to_vecs(tree2->paths());
     ASSERT(vv.size() == 4u);
@@ -84,56 +84,56 @@ int main() {
   // or_search
   auto is_even = [](unsigned int x) { return x % 2 == 0; };
 
-  auto leaf_odd = BTree::ctor::BLeaf_(3u);
-  auto leaf_even = BTree::ctor::BLeaf_(4u);
+  auto leaf_odd = BTree::bleaf(3u);
+  auto leaf_even = BTree::bleaf(4u);
 
   ASSERT(leaf_odd->or_search(is_even) == false);
   ASSERT(leaf_even->or_search(is_even) == true);
 
-  auto btree = BTree::ctor::BNode_(leaf_odd, leaf_even);
+  auto btree = BTree::bnode(leaf_odd, leaf_even);
   ASSERT(btree->or_search(is_even) == true);
 
-  auto all_odd = BTree::ctor::BNode_(leaf_odd, leaf_odd);
+  auto all_odd = BTree::bnode(leaf_odd, leaf_odd);
   ASSERT(all_odd->or_search(is_even) == false);
 
   // and_search
   auto is_positive = [](unsigned int x) { return x > 0u; };
 
-  auto bleaf1 = BTree::ctor::BLeaf_(1u);
-  auto bleaf2 = BTree::ctor::BLeaf_(2u);
-  auto bleaf0 = BTree::ctor::BLeaf_(0u);
+  auto bleaf1 = BTree::bleaf(1u);
+  auto bleaf2 = BTree::bleaf(2u);
+  auto bleaf0 = BTree::bleaf(0u);
 
   ASSERT(bleaf1->and_search(is_positive) == true);
   ASSERT(bleaf0->and_search(is_positive) == false);
 
-  auto all_pos = BTree::ctor::BNode_(bleaf1, bleaf2);
+  auto all_pos = BTree::bnode(bleaf1, bleaf2);
   ASSERT(all_pos->and_search(is_positive) == true);
 
-  auto has_zero = BTree::ctor::BNode_(bleaf1, bleaf0);
+  auto has_zero = BTree::bnode(bleaf1, bleaf0);
   ASSERT(has_zero->and_search(is_positive) == false);
 
   // count_paths_sum
   ASSERT(leaf->count_paths_sum(0u) == 1u);
   ASSERT(leaf->count_paths_sum(5u) == 0u);
 
-  auto tree3 = Tree::ctor::Node_(leaf, 5u, leaf);
+  auto tree3 = Tree::node(leaf, 5u, leaf);
   ASSERT(tree3->count_paths_sum(5u) == 2u);
 
-  auto left1 = Tree::ctor::Node_(leaf, 2u, leaf);
-  auto right1 = Tree::ctor::Node_(leaf, 3u, leaf);
-  auto tree4 = Tree::ctor::Node_(left1, 1u, right1);
+  auto left1 = Tree::node(leaf, 2u, leaf);
+  auto right1 = Tree::node(leaf, 3u, leaf);
+  auto tree4 = Tree::node(left1, 1u, right1);
   ASSERT(tree4->count_paths_sum(3u) == 2u);
   ASSERT(tree4->count_paths_sum(4u) == 2u);
 
   // max_path_sum
   ASSERT(leaf->max_path_sum() == 0u);
 
-  auto tree5 = Tree::ctor::Node_(leaf, 5u, leaf);
+  auto tree5 = Tree::node(leaf, 5u, leaf);
   ASSERT(tree5->max_path_sum() == 5u);
 
-  auto left2 = Tree::ctor::Node_(leaf, 2u, leaf);
-  auto right2 = Tree::ctor::Node_(leaf, 8u, leaf);
-  auto tree6 = Tree::ctor::Node_(left2, 3u, right2);
+  auto left2 = Tree::node(leaf, 2u, leaf);
+  auto right2 = Tree::node(leaf, 8u, leaf);
+  auto tree6 = Tree::node(left2, 3u, right2);
   ASSERT(tree6->max_path_sum() == 11u);  // 3 + 8
 
   // flatten_paths
@@ -142,15 +142,15 @@ int main() {
     ASSERT(v.empty());
   }
 
-  auto tree7 = Tree::ctor::Node_(leaf, 5u, leaf);
+  auto tree7 = Tree::node(leaf, 5u, leaf);
   {
     auto v = to_vec(tree7->flatten_paths());
     ASSERT((v == std::vector<unsigned int>{5u}));
   }
 
-  auto left3 = Tree::ctor::Node_(leaf, 2u, leaf);
-  auto right3 = Tree::ctor::Node_(leaf, 3u, leaf);
-  auto tree8 = Tree::ctor::Node_(left3, 1u, right3);
+  auto left3 = Tree::node(leaf, 2u, leaf);
+  auto right3 = Tree::node(leaf, 3u, leaf);
+  auto tree8 = Tree::node(left3, 1u, right3);
   {
     auto v = to_vec(tree8->flatten_paths());
     ASSERT((v == std::vector<unsigned int>{1u, 2u, 3u}));

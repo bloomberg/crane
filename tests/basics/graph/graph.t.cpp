@@ -36,12 +36,12 @@ int main() {
   ASSERT(test_int_eq == true);
 
   // Test that test_eq works with explicit type class instance
-  auto five_a = Nat::ctor::S_(Nat::ctor::S_(
-      Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_())))));
-  auto five_b = Nat::ctor::S_(Nat::ctor::S_(
-      Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_())))));
-  auto six = Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(
-      Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_()))))));
+  auto five_a = Nat::s(Nat::s(
+      Nat::s(Nat::s(Nat::s(Nat::o())))));
+  auto five_b = Nat::s(Nat::s(
+      Nat::s(Nat::s(Nat::s(Nat::o())))));
+  auto six = Nat::s(Nat::s(Nat::s(
+      Nat::s(Nat::s(Nat::s(Nat::o()))))));
 
   bool result = test_eq<NatEq, std::shared_ptr<Nat>>(five_a, five_b);
   ASSERT(result == true);

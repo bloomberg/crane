@@ -61,16 +61,15 @@ std::shared_ptr<List<unsigned int>> LoopifyAdvancedPatterns::as_guard(
             [&](const typename List<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::ctor::Nil_();
+                    .d_a1 = List<unsigned int>::nil();
               } else {
-                _head = List<unsigned int>::ctor::Nil_();
+                _head = List<unsigned int>::nil();
               }
               _continue = false;
             },
             [&](const typename List<unsigned int>::Cons _args) {
               if (3u < len_impl(_loop_l)) {
-                auto _cell =
-                    List<unsigned int>::ctor::Cons_(_args.d_a0, nullptr);
+                auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = _cell;
@@ -330,9 +329,9 @@ std::shared_ptr<List<unsigned int>> LoopifyAdvancedPatterns::cons_computed(
             [&](const typename List<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::ctor::Nil_();
+                    .d_a1 = List<unsigned int>::nil();
               } else {
-                _head = List<unsigned int>::ctor::Nil_();
+                _head = List<unsigned int>::nil();
               }
               _continue = false;
             },
@@ -343,7 +342,7 @@ std::shared_ptr<List<unsigned int>> LoopifyAdvancedPatterns::cons_computed(
               } else {
                 next_n = _loop_n;
               }
-              auto _cell = List<unsigned int>::ctor::Cons_(_args.d_a0, nullptr);
+              auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = _cell;
@@ -517,9 +516,9 @@ std::shared_ptr<List<unsigned int>> LoopifyAdvancedPatterns::replace_at(
             [&](const typename List<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::ctor::Nil_();
+                    .d_a1 = List<unsigned int>::nil();
               } else {
-                _head = List<unsigned int>::ctor::Nil_();
+                _head = List<unsigned int>::nil();
               }
               _continue = false;
             },
@@ -527,16 +526,15 @@ std::shared_ptr<List<unsigned int>> LoopifyAdvancedPatterns::replace_at(
               if (_loop_idx == 0u) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                      .d_a1 = List<unsigned int>::ctor::Cons_(
-                      std::move(_loop_value), _args.d_a1);
+                      .d_a1 = List<unsigned int>::cons(std::move(_loop_value),
+                                                       _args.d_a1);
                 } else {
-                  _head = List<unsigned int>::ctor::Cons_(
-                      std::move(_loop_value), _args.d_a1);
+                  _head = List<unsigned int>::cons(std::move(_loop_value),
+                                                   _args.d_a1);
                 }
                 _continue = false;
               } else {
-                auto _cell =
-                    List<unsigned int>::ctor::Cons_(_args.d_a0, nullptr);
+                auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = _cell;

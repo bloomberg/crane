@@ -18,23 +18,23 @@ void aSsErT(bool condition, const char *message, int line) {
 
 int main() {
   // Ternary tree
-  auto tleaf = LoopifyTreeVariants::ternary::ctor::TLeaf_();
-  auto tnode = LoopifyTreeVariants::ternary::ctor::TNode_(tleaf, 5u, tleaf, tleaf);
+  auto tleaf = LoopifyTreeVariants::ternary::tleaf();
+  auto tnode = LoopifyTreeVariants::ternary::tnode(tleaf, 5u, tleaf, tleaf);
   ASSERT(tnode->ternary_sum() == 5u);
   ASSERT(tnode->ternary_count() == 1u);
 
   // Quad tree
-  auto qleaf1 = LoopifyTreeVariants::quadtree::ctor::QLeaf_(1u);
-  auto qleaf2 = LoopifyTreeVariants::quadtree::ctor::QLeaf_(2u);
-  auto qleaf3 = LoopifyTreeVariants::quadtree::ctor::QLeaf_(3u);
-  auto qleaf4 = LoopifyTreeVariants::quadtree::ctor::QLeaf_(4u);
-  auto quad = LoopifyTreeVariants::quadtree::ctor::Quad_(qleaf1, qleaf2, qleaf3, qleaf4);
+  auto qleaf1 = LoopifyTreeVariants::quadtree::qleaf(1u);
+  auto qleaf2 = LoopifyTreeVariants::quadtree::qleaf(2u);
+  auto qleaf3 = LoopifyTreeVariants::quadtree::qleaf(3u);
+  auto qleaf4 = LoopifyTreeVariants::quadtree::qleaf(4u);
+  auto quad = LoopifyTreeVariants::quadtree::quad(qleaf1, qleaf2, qleaf3, qleaf4);
   ASSERT(quad->quad_sum() == 10u);
 
   // Leaf tree
-  auto lleaf1 = LoopifyTreeVariants::leaf_tree::ctor::LLeaf_(10u);
-  auto lleaf2 = LoopifyTreeVariants::leaf_tree::ctor::LLeaf_(20u);
-  auto ltree = LoopifyTreeVariants::leaf_tree::ctor::LNode_(lleaf1, lleaf2);
+  auto lleaf1 = LoopifyTreeVariants::leaf_tree::lleaf(10u);
+  auto lleaf2 = LoopifyTreeVariants::leaf_tree::lleaf(20u);
+  auto ltree = LoopifyTreeVariants::leaf_tree::lnode(lleaf1, lleaf2);
   ASSERT(ltree->leaf_tree_sum() == 30u);
   ASSERT(ltree->leaf_tree_max() == 20u);
 

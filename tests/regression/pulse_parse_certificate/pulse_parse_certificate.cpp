@@ -62,15 +62,15 @@ PulseParseCertificateCase::trace_to_runs(
     const std::shared_ptr<List<bool>> &xs) {
   return std::visit(Overloaded{[](const typename List<bool>::Nil _args)
                                    -> std::shared_ptr<List<unsigned int>> {
-                                 return List<unsigned int>::ctor::Nil_();
+                                 return List<unsigned int>::nil();
                                },
                                [](const typename List<bool>::Cons _args)
                                    -> std::shared_ptr<List<unsigned int>> {
                                  if (_args.d_a0) {
-                                   return List<unsigned int>::ctor::Cons_(
+                                   return List<unsigned int>::cons(
                                        2u, trace_to_runs(_args.d_a1));
                                  } else {
-                                   return List<unsigned int>::ctor::Cons_(
+                                   return List<unsigned int>::cons(
                                        1u, trace_to_runs(_args.d_a1));
                                  }
                                }},

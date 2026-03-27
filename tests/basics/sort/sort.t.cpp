@@ -56,9 +56,9 @@ list_to_vector(const std::shared_ptr<List<unsigned int>> &l) {
 // Helper to create a list from a vector
 std::shared_ptr<List<unsigned int>>
 vector_to_list(const std::vector<unsigned int> &vec) {
-  auto result = List<unsigned int>::ctor::Nil_();
+  auto result = List<unsigned int>::nil();
   for (auto it = vec.rbegin(); it != vec.rend(); ++it) {
-    result = List<unsigned int>::ctor::Cons_(*it, result);
+    result = List<unsigned int>::cons(*it, result);
   }
   return result;
 }
@@ -70,7 +70,7 @@ void test_sort(const std::string &name, SortFn sortFn) {
 
   // Empty list
   {
-    auto empty = List<unsigned int>::ctor::Nil_();
+    auto empty = List<unsigned int>::nil();
     auto result = sortFn(empty);
     auto sorted_list = std::get<0>(result->v()).d_a0;
     auto vec = list_to_vector(sorted_list);
@@ -80,7 +80,7 @@ void test_sort(const std::string &name, SortFn sortFn) {
   // Single element
   {
     auto single =
-        List<unsigned int>::ctor::Cons_(5, List<unsigned int>::ctor::Nil_());
+        List<unsigned int>::cons(5, List<unsigned int>::nil());
     auto result = sortFn(single);
     auto sorted_list = std::get<0>(result->v()).d_a0;
     auto vec = list_to_vector(sorted_list);

@@ -81,9 +81,9 @@ LoopifyNumericSequences::collatz_sequence_fuel(const unsigned int fuel,
       {
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::ctor::Nil_();
+              List<unsigned int>::nil();
         } else {
-          _head = List<unsigned int>::ctor::Nil_();
+          _head = List<unsigned int>::nil();
         }
         _continue = false;
       }
@@ -93,18 +93,16 @@ LoopifyNumericSequences::collatz_sequence_fuel(const unsigned int fuel,
         {
           if (_last) {
             std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                List<unsigned int>::ctor::Cons_(
-                    1u, List<unsigned int>::ctor::Nil_());
+                List<unsigned int>::cons(1u, List<unsigned int>::nil());
           } else {
-            _head = List<unsigned int>::ctor::Cons_(
-                1u, List<unsigned int>::ctor::Nil_());
+            _head = List<unsigned int>::cons(1u, List<unsigned int>::nil());
           }
           _continue = false;
         }
       } else {
         if ((_loop_n % 2u) == 0u) {
           {
-            auto _cell = List<unsigned int>::ctor::Cons_(_loop_n, nullptr);
+            auto _cell = List<unsigned int>::cons(_loop_n, nullptr);
             if (_last) {
               std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
                   _cell;
@@ -120,7 +118,7 @@ LoopifyNumericSequences::collatz_sequence_fuel(const unsigned int fuel,
           }
         } else {
           {
-            auto _cell = List<unsigned int>::ctor::Cons_(_loop_n, nullptr);
+            auto _cell = List<unsigned int>::cons(_loop_n, nullptr);
             if (_last) {
               std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
                   _cell;

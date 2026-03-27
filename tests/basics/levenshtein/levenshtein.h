@@ -36,32 +36,31 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Nat(O _v) : d_v_(std::move(_v)) {}
 
   explicit Nat(S _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Nat> o() { return std::make_shared<Nat>(O{}); }
 
-    static std::shared_ptr<Nat> O_() {
-      return std::shared_ptr<Nat>(new Nat(O{}));
-    }
+  static std::shared_ptr<Nat> s(const std::shared_ptr<Nat> &a0) {
+    return std::make_shared<Nat>(S{a0});
+  }
 
-    static std::shared_ptr<Nat> S_(const std::shared_ptr<Nat> &a0) {
-      return std::shared_ptr<Nat>(new Nat(S{a0}));
-    }
+  static std::shared_ptr<Nat> s(std::shared_ptr<Nat> &&a0) {
+    return std::make_shared<Nat>(S{std::move(a0)});
+  }
 
-    static std::unique_ptr<Nat> O_uptr() {
-      return std::unique_ptr<Nat>(new Nat(O{}));
-    }
+  static std::unique_ptr<Nat> o_uptr() { return std::make_unique<Nat>(O{}); }
 
-    static std::unique_ptr<Nat> S_uptr(const std::shared_ptr<Nat> &a0) {
-      return std::unique_ptr<Nat>(new Nat(S{a0}));
-    }
-  };
+  static std::unique_ptr<Nat> s_uptr(const std::shared_ptr<Nat> &a0) {
+    return std::make_unique<Nat>(S{a0});
+  }
+
+  static std::unique_ptr<Nat> s_uptr(std::shared_ptr<Nat> &&a0) {
+    return std::make_unique<Nat>(S{std::move(a0)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -100,24 +99,19 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit SigT(ExistT _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<SigT<t_A, t_P>> existt(t_A a0, t_P a1) {
+    return std::make_shared<SigT<t_A, t_P>>(
+        ExistT{std::move(a0), std::move(a1)});
+  }
 
-    static std::shared_ptr<SigT<t_A, t_P>> ExistT_(t_A a0, t_P a1) {
-      return std::shared_ptr<SigT<t_A, t_P>>(
-          new SigT<t_A, t_P>(ExistT{a0, a1}));
-    }
-
-    static std::unique_ptr<SigT<t_A, t_P>> ExistT_uptr(t_A a0, t_P a1) {
-      return std::unique_ptr<SigT<t_A, t_P>>(
-          new SigT<t_A, t_P>(ExistT{a0, a1}));
-    }
-  };
+  static std::unique_ptr<SigT<t_A, t_P>> existt_uptr(t_A a0, t_P a1) {
+    return std::make_unique<SigT<t_A, t_P>>(
+        ExistT{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -158,28 +152,24 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Ascii(Ascii0 _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Ascii> ascii0(Bool0 a0, Bool0 a1, Bool0 a2, Bool0 a3,
+                                       Bool0 a4, Bool0 a5, Bool0 a6, Bool0 a7) {
+    return std::make_shared<Ascii>(
+        Ascii0{std::move(a0), std::move(a1), std::move(a2), std::move(a3),
+               std::move(a4), std::move(a5), std::move(a6), std::move(a7)});
+  }
 
-    static std::shared_ptr<Ascii> Ascii0_(Bool0 a0, Bool0 a1, Bool0 a2,
-                                          Bool0 a3, Bool0 a4, Bool0 a5,
-                                          Bool0 a6, Bool0 a7) {
-      return std::shared_ptr<Ascii>(
-          new Ascii(Ascii0{a0, a1, a2, a3, a4, a5, a6, a7}));
-    }
-
-    static std::unique_ptr<Ascii> Ascii0_uptr(Bool0 a0, Bool0 a1, Bool0 a2,
-                                              Bool0 a3, Bool0 a4, Bool0 a5,
-                                              Bool0 a6, Bool0 a7) {
-      return std::unique_ptr<Ascii>(
-          new Ascii(Ascii0{a0, a1, a2, a3, a4, a5, a6, a7}));
-    }
-  };
+  static std::unique_ptr<Ascii> ascii0_uptr(Bool0 a0, Bool0 a1, Bool0 a2,
+                                            Bool0 a3, Bool0 a4, Bool0 a5,
+                                            Bool0 a6, Bool0 a7) {
+    return std::make_unique<Ascii>(
+        Ascii0{std::move(a0), std::move(a1), std::move(a2), std::move(a3),
+               std::move(a4), std::move(a5), std::move(a6), std::move(a7)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -292,35 +282,40 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit String(EmptyString _v) : d_v_(std::move(_v)) {}
 
   explicit String(String0 _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<String> emptystring() {
+    return std::make_shared<String>(EmptyString{});
+  }
 
-    static std::shared_ptr<String> EmptyString_() {
-      return std::shared_ptr<String>(new String(EmptyString{}));
-    }
+  static std::shared_ptr<String> string0(const std::shared_ptr<Ascii> &a0,
+                                         const std::shared_ptr<String> &a1) {
+    return std::make_shared<String>(String0{a0, a1});
+  }
 
-    static std::shared_ptr<String> String0_(const std::shared_ptr<Ascii> &a0,
-                                            const std::shared_ptr<String> &a1) {
-      return std::shared_ptr<String>(new String(String0{a0, a1}));
-    }
+  static std::shared_ptr<String> string0(std::shared_ptr<Ascii> &&a0,
+                                         std::shared_ptr<String> &&a1) {
+    return std::make_shared<String>(String0{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<String> EmptyString_uptr() {
-      return std::unique_ptr<String>(new String(EmptyString{}));
-    }
+  static std::unique_ptr<String> emptystring_uptr() {
+    return std::make_unique<String>(EmptyString{});
+  }
 
-    static std::unique_ptr<String>
-    String0_uptr(const std::shared_ptr<Ascii> &a0,
-                 const std::shared_ptr<String> &a1) {
-      return std::unique_ptr<String>(new String(String0{a0, a1}));
-    }
-  };
+  static std::unique_ptr<String>
+  string0_uptr(const std::shared_ptr<Ascii> &a0,
+               const std::shared_ptr<String> &a1) {
+    return std::make_unique<String>(String0{a0, a1});
+  }
+
+  static std::unique_ptr<String> string0_uptr(std::shared_ptr<Ascii> &&a0,
+                                              std::shared_ptr<String> &&a1) {
+    return std::make_unique<String>(String0{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -333,7 +328,7 @@ public:
                                      -> std::shared_ptr<String> { return s2; },
                                  [&](const typename String::String0 _args)
                                      -> std::shared_ptr<String> {
-                                   return String::ctor::String0_(
+                                   return String::string0(
                                        _args.d_a0, _args.d_a1->append(s2));
                                  }},
                       this->v());
@@ -343,9 +338,9 @@ public:
     return std::visit(
         Overloaded{
             [](const typename String::EmptyString _args)
-                -> std::shared_ptr<Nat> { return Nat::ctor::O_(); },
+                -> std::shared_ptr<Nat> { return Nat::o(); },
             [](const typename String::String0 _args) -> std::shared_ptr<Nat> {
-              return Nat::ctor::S_(_args.d_a1->length());
+              return Nat::s(_args.d_a1->length());
             }},
         this->v());
   }
@@ -376,6 +371,7 @@ struct Levenshtein {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit edit(Insertion _v) : d_v_(std::move(_v)) {}
 
@@ -383,48 +379,74 @@ struct Levenshtein {
 
     explicit edit(Update _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<edit> insertion(const std::shared_ptr<Ascii> &a0,
+                                           const std::shared_ptr<String> &a1) {
+      return std::make_shared<edit>(Insertion{a0, a1});
+    }
 
-      static std::shared_ptr<edit>
-      Insertion_(const std::shared_ptr<Ascii> &a0,
-                 const std::shared_ptr<String> &a1) {
-        return std::shared_ptr<edit>(new edit(Insertion{a0, a1}));
-      }
+    static std::shared_ptr<edit> insertion(std::shared_ptr<Ascii> &&a0,
+                                           std::shared_ptr<String> &&a1) {
+      return std::make_shared<edit>(Insertion{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<edit>
-      Deletion_(const std::shared_ptr<Ascii> &a0,
-                const std::shared_ptr<String> &a1) {
-        return std::shared_ptr<edit>(new edit(Deletion{a0, a1}));
-      }
+    static std::shared_ptr<edit> deletion(const std::shared_ptr<Ascii> &a0,
+                                          const std::shared_ptr<String> &a1) {
+      return std::make_shared<edit>(Deletion{a0, a1});
+    }
 
-      static std::shared_ptr<edit> Update_(const std::shared_ptr<Ascii> &a0,
-                                           const std::shared_ptr<Ascii> &a1,
-                                           const std::shared_ptr<String> &a2) {
-        return std::shared_ptr<edit>(new edit(Update{a0, a1, a2}));
-      }
+    static std::shared_ptr<edit> deletion(std::shared_ptr<Ascii> &&a0,
+                                          std::shared_ptr<String> &&a1) {
+      return std::make_shared<edit>(Deletion{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<edit>
-      Insertion_uptr(const std::shared_ptr<Ascii> &a0,
-                     const std::shared_ptr<String> &a1) {
-        return std::unique_ptr<edit>(new edit(Insertion{a0, a1}));
-      }
+    static std::shared_ptr<edit> update(const std::shared_ptr<Ascii> &a0,
+                                        const std::shared_ptr<Ascii> &a1,
+                                        const std::shared_ptr<String> &a2) {
+      return std::make_shared<edit>(Update{a0, a1, a2});
+    }
 
-      static std::unique_ptr<edit>
-      Deletion_uptr(const std::shared_ptr<Ascii> &a0,
-                    const std::shared_ptr<String> &a1) {
-        return std::unique_ptr<edit>(new edit(Deletion{a0, a1}));
-      }
+    static std::shared_ptr<edit> update(std::shared_ptr<Ascii> &&a0,
+                                        std::shared_ptr<Ascii> &&a1,
+                                        std::shared_ptr<String> &&a2) {
+      return std::make_shared<edit>(
+          Update{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
-      static std::unique_ptr<edit>
-      Update_uptr(const std::shared_ptr<Ascii> &a0,
-                  const std::shared_ptr<Ascii> &a1,
-                  const std::shared_ptr<String> &a2) {
-        return std::unique_ptr<edit>(new edit(Update{a0, a1, a2}));
-      }
-    };
+    static std::unique_ptr<edit>
+    insertion_uptr(const std::shared_ptr<Ascii> &a0,
+                   const std::shared_ptr<String> &a1) {
+      return std::make_unique<edit>(Insertion{a0, a1});
+    }
+
+    static std::unique_ptr<edit> insertion_uptr(std::shared_ptr<Ascii> &&a0,
+                                                std::shared_ptr<String> &&a1) {
+      return std::make_unique<edit>(Insertion{std::move(a0), std::move(a1)});
+    }
+
+    static std::unique_ptr<edit>
+    deletion_uptr(const std::shared_ptr<Ascii> &a0,
+                  const std::shared_ptr<String> &a1) {
+      return std::make_unique<edit>(Deletion{a0, a1});
+    }
+
+    static std::unique_ptr<edit> deletion_uptr(std::shared_ptr<Ascii> &&a0,
+                                               std::shared_ptr<String> &&a1) {
+      return std::make_unique<edit>(Deletion{std::move(a0), std::move(a1)});
+    }
+
+    static std::unique_ptr<edit>
+    update_uptr(const std::shared_ptr<Ascii> &a0,
+                const std::shared_ptr<Ascii> &a1,
+                const std::shared_ptr<String> &a2) {
+      return std::make_unique<edit>(Update{a0, a1, a2});
+    }
+
+    static std::unique_ptr<edit> update_uptr(std::shared_ptr<Ascii> &&a0,
+                                             std::shared_ptr<Ascii> &&a1,
+                                             std::shared_ptr<String> &&a2) {
+      return std::make_unique<edit>(
+          Update{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -502,6 +524,7 @@ struct Levenshtein {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit chain(Empty _v) : d_v_(std::move(_v)) {}
 
@@ -509,52 +532,81 @@ struct Levenshtein {
 
     explicit chain(Change _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<chain> empty() {
+      return std::make_shared<chain>(Empty{});
+    }
 
-      static std::shared_ptr<chain> Empty_() {
-        return std::shared_ptr<chain>(new chain(Empty{}));
-      }
+    static std::shared_ptr<chain> skip(const std::shared_ptr<Ascii> &a0,
+                                       const std::shared_ptr<String> &a1,
+                                       const std::shared_ptr<String> &a2,
+                                       const std::shared_ptr<Nat> &a3,
+                                       const std::shared_ptr<chain> &a4) {
+      return std::make_shared<chain>(Skip{a0, a1, a2, a3, a4});
+    }
 
-      static std::shared_ptr<chain> Skip_(const std::shared_ptr<Ascii> &a0,
-                                          const std::shared_ptr<String> &a1,
-                                          const std::shared_ptr<String> &a2,
-                                          const std::shared_ptr<Nat> &a3,
-                                          const std::shared_ptr<chain> &a4) {
-        return std::shared_ptr<chain>(new chain(Skip{a0, a1, a2, a3, a4}));
-      }
+    static std::shared_ptr<chain> skip(std::shared_ptr<Ascii> &&a0,
+                                       std::shared_ptr<String> &&a1,
+                                       std::shared_ptr<String> &&a2,
+                                       std::shared_ptr<Nat> &&a3,
+                                       std::shared_ptr<chain> &&a4) {
+      return std::make_shared<chain>(Skip{std::move(a0), std::move(a1),
+                                          std::move(a2), std::move(a3),
+                                          std::move(a4)});
+    }
 
-      static std::shared_ptr<chain> Change_(const std::shared_ptr<String> &a0,
+    static std::shared_ptr<chain>
+    change(const std::shared_ptr<String> &a0, const std::shared_ptr<String> &a1,
+           const std::shared_ptr<String> &a2, const std::shared_ptr<Nat> &a3,
+           const std::shared_ptr<edit> &a4, const std::shared_ptr<chain> &a5) {
+      return std::make_shared<chain>(Change{a0, a1, a2, a3, a4, a5});
+    }
+
+    static std::shared_ptr<chain>
+    change(std::shared_ptr<String> &&a0, std::shared_ptr<String> &&a1,
+           std::shared_ptr<String> &&a2, std::shared_ptr<Nat> &&a3,
+           std::shared_ptr<edit> &&a4, std::shared_ptr<chain> &&a5) {
+      return std::make_shared<chain>(Change{std::move(a0), std::move(a1),
+                                            std::move(a2), std::move(a3),
+                                            std::move(a4), std::move(a5)});
+    }
+
+    static std::unique_ptr<chain> empty_uptr() {
+      return std::make_unique<chain>(Empty{});
+    }
+
+    static std::unique_ptr<chain> skip_uptr(const std::shared_ptr<Ascii> &a0,
                                             const std::shared_ptr<String> &a1,
                                             const std::shared_ptr<String> &a2,
                                             const std::shared_ptr<Nat> &a3,
-                                            const std::shared_ptr<edit> &a4,
-                                            const std::shared_ptr<chain> &a5) {
-        return std::shared_ptr<chain>(
-            new chain(Change{a0, a1, a2, a3, a4, a5}));
-      }
+                                            const std::shared_ptr<chain> &a4) {
+      return std::make_unique<chain>(Skip{a0, a1, a2, a3, a4});
+    }
 
-      static std::unique_ptr<chain> Empty_uptr() {
-        return std::unique_ptr<chain>(new chain(Empty{}));
-      }
+    static std::unique_ptr<chain> skip_uptr(std::shared_ptr<Ascii> &&a0,
+                                            std::shared_ptr<String> &&a1,
+                                            std::shared_ptr<String> &&a2,
+                                            std::shared_ptr<Nat> &&a3,
+                                            std::shared_ptr<chain> &&a4) {
+      return std::make_unique<chain>(Skip{std::move(a0), std::move(a1),
+                                          std::move(a2), std::move(a3),
+                                          std::move(a4)});
+    }
 
-      static std::unique_ptr<chain> Skip_uptr(
-          const std::shared_ptr<Ascii> &a0, const std::shared_ptr<String> &a1,
-          const std::shared_ptr<String> &a2, const std::shared_ptr<Nat> &a3,
-          const std::shared_ptr<chain> &a4) {
-        return std::unique_ptr<chain>(new chain(Skip{a0, a1, a2, a3, a4}));
-      }
+    static std::unique_ptr<chain> change_uptr(
+        const std::shared_ptr<String> &a0, const std::shared_ptr<String> &a1,
+        const std::shared_ptr<String> &a2, const std::shared_ptr<Nat> &a3,
+        const std::shared_ptr<edit> &a4, const std::shared_ptr<chain> &a5) {
+      return std::make_unique<chain>(Change{a0, a1, a2, a3, a4, a5});
+    }
 
-      static std::unique_ptr<chain> Change_uptr(
-          const std::shared_ptr<String> &a0, const std::shared_ptr<String> &a1,
-          const std::shared_ptr<String> &a2, const std::shared_ptr<Nat> &a3,
-          const std::shared_ptr<edit> &a4, const std::shared_ptr<chain> &a5) {
-        return std::unique_ptr<chain>(
-            new chain(Change{a0, a1, a2, a3, a4, a5}));
-      }
-    };
+    static std::unique_ptr<chain>
+    change_uptr(std::shared_ptr<String> &&a0, std::shared_ptr<String> &&a1,
+                std::shared_ptr<String> &&a2, std::shared_ptr<Nat> &&a3,
+                std::shared_ptr<edit> &&a4, std::shared_ptr<chain> &&a5) {
+      return std::make_unique<chain>(Change{std::move(a0), std::move(a1),
+                                            std::move(a2), std::move(a3),
+                                            std::move(a4), std::move(a5)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -569,7 +621,7 @@ struct Levenshtein {
                                        std::shared_ptr<Ascii> y,
                                        std::shared_ptr<String> ys,
                                        std::shared_ptr<Nat> n) const {
-      return chain::ctor::Skip_(
+      return chain::skip(
           y, xs, ys, n,
           std::const_pointer_cast<chain>(this->shared_from_this()));
     }
@@ -593,7 +645,7 @@ struct Levenshtein {
                                       std::shared_ptr<String> ys,
                                       const std::shared_ptr<Nat> &n) const {
       return std::const_pointer_cast<chain>(this->shared_from_this())
-          ->delete_chain(x, xs, String::ctor::String0_(y, ys), n);
+          ->delete_chain(x, xs, String::string0(y, ys), n);
     }
 
     std::shared_ptr<chain> aux_insert(const std::shared_ptr<String> &_x,
@@ -604,7 +656,7 @@ struct Levenshtein {
                                       const std::shared_ptr<String> &ys,
                                       const std::shared_ptr<Nat> &n) const {
       return std::const_pointer_cast<chain>(this->shared_from_this())
-          ->insert_chain(y, String::ctor::String0_(x, xs), ys, n);
+          ->insert_chain(y, String::string0(x, xs), ys, n);
     }
 
     std::shared_ptr<chain> update_chain(std::shared_ptr<Ascii> c,
@@ -612,21 +664,19 @@ struct Levenshtein {
                                         std::shared_ptr<String> s1,
                                         std::shared_ptr<String> s2,
                                         std::shared_ptr<Nat> n) const {
-      return chain::ctor::Change_(
-          String::ctor::String0_(c, s1), String::ctor::String0_(c_, s1),
-          String::ctor::String0_(c_, s2), n, edit::ctor::Update_(c, c_, s1),
-          chain::ctor::Skip_(
-              c_, s1, s2, n,
-              std::const_pointer_cast<chain>(this->shared_from_this())));
+      return chain::change(String::string0(c, s1), String::string0(c_, s1),
+                           String::string0(c_, s2), n, edit::update(c, c_, s1),
+                           chain::skip(c_, s1, s2, n,
+                                       std::const_pointer_cast<chain>(
+                                           this->shared_from_this())));
     }
 
     std::shared_ptr<chain> delete_chain(std::shared_ptr<Ascii> c,
                                         std::shared_ptr<String> s1,
                                         std::shared_ptr<String> s2,
                                         std::shared_ptr<Nat> n) const {
-      return chain::ctor::Change_(
-          String::ctor::String0_(c, s1), s1, s2, n,
-          edit::ctor::Deletion_(c, s1),
+      return chain::change(
+          String::string0(c, s1), s1, s2, n, edit::deletion(c, s1),
           std::const_pointer_cast<chain>(this->shared_from_this()));
     }
 
@@ -634,12 +684,11 @@ struct Levenshtein {
                                         std::shared_ptr<String> s1,
                                         std::shared_ptr<String> s2,
                                         std::shared_ptr<Nat> n) const {
-      return chain::ctor::Change_(
-          s1, String::ctor::String0_(c, s1), String::ctor::String0_(c, s2), n,
-          edit::ctor::Insertion_(c, s1),
-          chain::ctor::Skip_(
-              c, s1, s2, n,
-              std::const_pointer_cast<chain>(this->shared_from_this())));
+      return chain::change(s1, String::string0(c, s1), String::string0(c, s2),
+                           n, edit::insertion(c, s1),
+                           chain::skip(c, s1, s2, n,
+                                       std::const_pointer_cast<chain>(
+                                           this->shared_from_this())));
     }
   };
 
@@ -709,12 +758,12 @@ struct Levenshtein {
   static T1 _inserts_chain_F(const std::shared_ptr<String> &s) {
     return std::visit(
         Overloaded{[](const typename String::EmptyString _args0) -> T1 {
-                     return chain::ctor::Empty_();
+                     return chain::empty();
                    },
                    [](const typename String::String0 _args0) -> T1 {
-                     return chain::ctor::Skip_(
-                         _args0.d_a0, _args0.d_a1, _args0.d_a1, Nat::ctor::O_(),
-                         _inserts_chain_F<T1>(_args0.d_a1));
+                     return chain::skip(_args0.d_a0, _args0.d_a1, _args0.d_a1,
+                                        Nat::o(),
+                                        _inserts_chain_F<T1>(_args0.d_a1));
                    }},
         s->v());
   }

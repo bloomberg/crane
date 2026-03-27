@@ -14,8 +14,7 @@
 
 std::shared_ptr<NestedInd::rose<unsigned int>>
 NestedInd::leaf(const unsigned int n) {
-  return rose<unsigned int>::ctor::Node_(
+  return rose<unsigned int>::node(
       std::move(n),
-      custom_list<
-          std::shared_ptr<NestedInd::rose<unsigned int>>>::ctor::Cnil_());
+      custom_list<std::shared_ptr<NestedInd::rose<unsigned int>>>::cnil());
 }

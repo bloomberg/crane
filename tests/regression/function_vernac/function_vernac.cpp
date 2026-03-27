@@ -14,16 +14,16 @@
 std::shared_ptr<Sig<unsigned int>>
 FunctionVernac::div2_terminate(const unsigned int n) {
   if (n <= 0) {
-    return Sig<unsigned int>::ctor::Exist_(0u);
+    return Sig<unsigned int>::exist(0u);
   } else {
     unsigned int n0 = n - 1;
     if (n0 <= 0) {
-      return Sig<unsigned int>::ctor::Exist_(0u);
+      return Sig<unsigned int>::exist(0u);
     } else {
       unsigned int n1 = n0 - 1;
       return std::visit(
           Overloaded{[](const typename Sig<unsigned int>::Exist _args) -> auto {
-            return Sig<unsigned int>::ctor::Exist_((_args.d_a0 + 1));
+            return Sig<unsigned int>::exist((_args.d_a0 + 1));
           }},
           div2_terminate(n1)->v());
     }
@@ -44,21 +44,20 @@ FunctionVernac::R_div2_correct(const unsigned int n, const unsigned int _res) {
 std::shared_ptr<Sig<unsigned int>> FunctionVernac::list_sum_terminate(
     const std::shared_ptr<List<unsigned int>> &l) {
   return std::visit(
-      Overloaded{[](const typename List<unsigned int>::Nil _args)
-                     -> std::shared_ptr<Sig<unsigned int>> {
-                   return Sig<unsigned int>::ctor::Exist_(0u);
-                 },
-                 [](const typename List<unsigned int>::Cons _args)
-                     -> std::shared_ptr<Sig<unsigned int>> {
-                   return std::visit(
-                       Overloaded{
-                           [&](const typename Sig<unsigned int>::Exist _args0)
+      Overloaded{
+          [](const typename List<unsigned int>::Nil _args)
+              -> std::shared_ptr<Sig<unsigned int>> {
+            return Sig<unsigned int>::exist(0u);
+          },
+          [](const typename List<unsigned int>::Cons _args)
+              -> std::shared_ptr<Sig<unsigned int>> {
+            return std::visit(
+                Overloaded{[&](const typename Sig<unsigned int>::Exist _args0)
                                -> auto {
-                             return Sig<unsigned int>::ctor::Exist_(
-                                 (_args.d_a0 + _args0.d_a0));
-                           }},
-                       list_sum_terminate(_args.d_a1)->v());
-                 }},
+                  return Sig<unsigned int>::exist((_args.d_a0 + _args0.d_a0));
+                }},
+                list_sum_terminate(_args.d_a1)->v());
+          }},
       l->v());
 }
 

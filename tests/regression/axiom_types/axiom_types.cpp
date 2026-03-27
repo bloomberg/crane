@@ -41,7 +41,7 @@ AxiomTypes::MysteryType AxiomTypes::extract_axiom_field(
 
 std::shared_ptr<AxiomTypes::AxiomInductive>
 AxiomTypes::use_axiom_inductive(const Unit _x) {
-  return AxiomInductive::ctor::AxConstr2_(mystery_value());
+  return AxiomInductive::axconstr2(mystery_value());
 }
 
 AxiomTypes::MysteryType
@@ -55,10 +55,10 @@ AxiomTypes::MysteryType AxiomTypes::nested_axiom(const Unit _x) {
 
 std::shared_ptr<AxiomTypes::list<AxiomTypes::MysteryType>>
 AxiomTypes::axiom_list(const Unit _x) {
-  return list<AxiomTypes::MysteryType>::ctor::Cons_(
-      mystery_value(), list<AxiomTypes::MysteryType>::ctor::Cons_(
+  return list<AxiomTypes::MysteryType>::cons(
+      mystery_value(), list<AxiomTypes::MysteryType>::cons(
                            mystery_function(mystery_value()),
-                           list<AxiomTypes::MysteryType>::ctor::Nil_()));
+                           list<AxiomTypes::MysteryType>::nil()));
 }
 
 AxiomTypes::MysteryType AxiomTypes::use_poly_axiom(const Unit _x) {

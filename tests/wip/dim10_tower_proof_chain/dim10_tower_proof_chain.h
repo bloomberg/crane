@@ -36,24 +36,19 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit SigT(ExistT _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<SigT<t_A, t_P>> existt(t_A a0, t_P a1) {
+    return std::make_shared<SigT<t_A, t_P>>(
+        ExistT{std::move(a0), std::move(a1)});
+  }
 
-    static std::shared_ptr<SigT<t_A, t_P>> ExistT_(t_A a0, t_P a1) {
-      return std::shared_ptr<SigT<t_A, t_P>>(
-          new SigT<t_A, t_P>(ExistT{a0, a1}));
-    }
-
-    static std::unique_ptr<SigT<t_A, t_P>> ExistT_uptr(t_A a0, t_P a1) {
-      return std::unique_ptr<SigT<t_A, t_P>>(
-          new SigT<t_A, t_P>(ExistT{a0, a1}));
-    }
-  };
+  static std::unique_ptr<SigT<t_A, t_P>> existt_uptr(t_A a0, t_P a1) {
+    return std::make_unique<SigT<t_A, t_P>>(
+        ExistT{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -140,8 +135,8 @@ struct Dim10TowerProofChainCase {
                       [](const typename SigT<unsigned int, std::any>::ExistT
                              _args)
                           -> std::shared_ptr<SigT<unsigned int, std::any>> {
-                        return SigT<unsigned int, std::any>::ctor::ExistT_(
-                            _args.d_a0, std::any{});
+                        return SigT<unsigned int, std::any>::existt(_args.d_a0,
+                                                                    std::any{});
                       }},
                   std::move(s)->v());
             }
@@ -170,8 +165,8 @@ struct Dim10TowerProofChainCase {
                       [](const typename SigT<unsigned int, std::any>::ExistT
                              _args)
                           -> std::shared_ptr<SigT<unsigned int, std::any>> {
-                        return SigT<unsigned int, std::any>::ctor::ExistT_(
-                            _args.d_a0, std::any{});
+                        return SigT<unsigned int, std::any>::existt(_args.d_a0,
+                                                                    std::any{});
                       }},
                   std::move(s)->v());
             }

@@ -65,34 +65,39 @@ struct TypeApp {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit list(Nil _v) : d_v_(std::move(_v)) {}
 
     explicit list(Cons _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<list<t_A>> nil() {
+      return std::make_shared<list<t_A>>(Nil{});
+    }
 
-      static std::shared_ptr<list<t_A>> Nil_() {
-        return std::shared_ptr<list<t_A>>(new list<t_A>(Nil{}));
-      }
+    static std::shared_ptr<list<t_A>>
+    cons(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
+      return std::make_shared<list<t_A>>(Cons{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<list<t_A>>
-      Cons_(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
-        return std::shared_ptr<list<t_A>>(new list<t_A>(Cons{a0, a1}));
-      }
+    static std::shared_ptr<list<t_A>> cons(t_A a0,
+                                           std::shared_ptr<list<t_A>> &&a1) {
+      return std::make_shared<list<t_A>>(Cons{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<list<t_A>> Nil_uptr() {
-        return std::unique_ptr<list<t_A>>(new list<t_A>(Nil{}));
-      }
+    static std::unique_ptr<list<t_A>> nil_uptr() {
+      return std::make_unique<list<t_A>>(Nil{});
+    }
 
-      static std::unique_ptr<list<t_A>>
-      Cons_uptr(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
-        return std::unique_ptr<list<t_A>>(new list<t_A>(Cons{a0, a1}));
-      }
-    };
+    static std::unique_ptr<list<t_A>>
+    cons_uptr(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
+      return std::make_unique<list<t_A>>(Cons{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<list<t_A>>
+    cons_uptr(t_A a0, std::shared_ptr<list<t_A>> &&a1) {
+      return std::make_unique<list<t_A>>(Cons{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -129,30 +134,28 @@ struct TypeApp {
   static std::shared_ptr<list<T2>> map(F0 &&f,
                                        const std::shared_ptr<list<T1>> &l) {
     return std::visit(
-        Overloaded{
-            [](const typename list<T1>::Nil _args)
-                -> std::shared_ptr<list<T2>> { return list<T2>::ctor::Nil_(); },
-            [&](const typename list<T1>::Cons _args)
-                -> std::shared_ptr<list<T2>> {
-              return list<T2>::ctor::Cons_(f(_args.d_a0),
+        Overloaded{[](const typename list<T1>::Nil _args)
+                       -> std::shared_ptr<list<T2>> { return list<T2>::nil(); },
+                   [&](const typename list<T1>::Cons _args)
+                       -> std::shared_ptr<list<T2>> {
+                     return list<T2>::cons(f(_args.d_a0),
                                            map<T1, T2>(f, _args.d_a1));
-            }},
+                   }},
         l->v());
   }
 
   static inline const std::shared_ptr<list<unsigned int>> test_map =
       map<unsigned int, unsigned int>(
           [](unsigned int x) { return (x + 1u); },
-          list<unsigned int>::ctor::Cons_(
-              1u, list<unsigned int>::ctor::Cons_(
-                      2u, list<unsigned int>::ctor::Cons_(
-                              3u, list<unsigned int>::ctor::Nil_()))));
+          list<unsigned int>::cons(
+              1u, list<unsigned int>::cons(
+                      2u, list<unsigned int>::cons(
+                              3u, list<unsigned int>::nil()))));
   static std::shared_ptr<list<unsigned int>>
   map_succ(const std::shared_ptr<list<unsigned int>> &_x0);
   static inline const std::shared_ptr<list<unsigned int>> test_map_succ =
-      map_succ(list<unsigned int>::ctor::Cons_(
-          5u, list<unsigned int>::ctor::Cons_(
-                  6u, list<unsigned int>::ctor::Nil_())));
+      map_succ(list<unsigned int>::cons(
+          5u, list<unsigned int>::cons(6u, list<unsigned int>::nil())));
 
   template <typename T1, MapsTo<T1, T1> F0>
   static T1 twice(F0 &&f, const T1 x) {

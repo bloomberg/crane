@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -88,7 +93,7 @@ public:
                 _continue = false;
               },
               [&](const typename List<t_A>::Cons _args) {
-                auto _cell = List<t_A>::ctor::Cons_(_args.d_a0, nullptr);
+                auto _cell = List<t_A>::cons(_args.d_a0, nullptr);
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =
                       _cell;
@@ -141,6 +146,7 @@ struct LoopifyExprVariants {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit cond_expr(Lit _v) : d_v_(std::move(_v)) {}
 
@@ -148,45 +154,63 @@ struct LoopifyExprVariants {
 
     explicit cond_expr(Cond _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<cond_expr> lit(unsigned int a0) {
+      return std::make_shared<cond_expr>(Lit{std::move(a0)});
+    }
 
-      static std::shared_ptr<cond_expr> Lit_(unsigned int a0) {
-        return std::shared_ptr<cond_expr>(new cond_expr(Lit{a0}));
-      }
+    static std::shared_ptr<cond_expr>
+    add(const std::shared_ptr<cond_expr> &a0,
+        const std::shared_ptr<cond_expr> &a1) {
+      return std::make_shared<cond_expr>(Add{a0, a1});
+    }
 
-      static std::shared_ptr<cond_expr>
-      Add_(const std::shared_ptr<cond_expr> &a0,
-           const std::shared_ptr<cond_expr> &a1) {
-        return std::shared_ptr<cond_expr>(new cond_expr(Add{a0, a1}));
-      }
+    static std::shared_ptr<cond_expr> add(std::shared_ptr<cond_expr> &&a0,
+                                          std::shared_ptr<cond_expr> &&a1) {
+      return std::make_shared<cond_expr>(Add{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<cond_expr>
-      Cond_(const std::shared_ptr<cond_expr> &a0,
-            const std::shared_ptr<cond_expr> &a1,
-            const std::shared_ptr<cond_expr> &a2) {
-        return std::shared_ptr<cond_expr>(new cond_expr(Cond{a0, a1, a2}));
-      }
+    static std::shared_ptr<cond_expr>
+    cond(const std::shared_ptr<cond_expr> &a0,
+         const std::shared_ptr<cond_expr> &a1,
+         const std::shared_ptr<cond_expr> &a2) {
+      return std::make_shared<cond_expr>(Cond{a0, a1, a2});
+    }
 
-      static std::unique_ptr<cond_expr> Lit_uptr(unsigned int a0) {
-        return std::unique_ptr<cond_expr>(new cond_expr(Lit{a0}));
-      }
+    static std::shared_ptr<cond_expr> cond(std::shared_ptr<cond_expr> &&a0,
+                                           std::shared_ptr<cond_expr> &&a1,
+                                           std::shared_ptr<cond_expr> &&a2) {
+      return std::make_shared<cond_expr>(
+          Cond{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
-      static std::unique_ptr<cond_expr>
-      Add_uptr(const std::shared_ptr<cond_expr> &a0,
-               const std::shared_ptr<cond_expr> &a1) {
-        return std::unique_ptr<cond_expr>(new cond_expr(Add{a0, a1}));
-      }
+    static std::unique_ptr<cond_expr> lit_uptr(unsigned int a0) {
+      return std::make_unique<cond_expr>(Lit{std::move(a0)});
+    }
 
-      static std::unique_ptr<cond_expr>
-      Cond_uptr(const std::shared_ptr<cond_expr> &a0,
-                const std::shared_ptr<cond_expr> &a1,
-                const std::shared_ptr<cond_expr> &a2) {
-        return std::unique_ptr<cond_expr>(new cond_expr(Cond{a0, a1, a2}));
-      }
-    };
+    static std::unique_ptr<cond_expr>
+    add_uptr(const std::shared_ptr<cond_expr> &a0,
+             const std::shared_ptr<cond_expr> &a1) {
+      return std::make_unique<cond_expr>(Add{a0, a1});
+    }
+
+    static std::unique_ptr<cond_expr>
+    add_uptr(std::shared_ptr<cond_expr> &&a0, std::shared_ptr<cond_expr> &&a1) {
+      return std::make_unique<cond_expr>(Add{std::move(a0), std::move(a1)});
+    }
+
+    static std::unique_ptr<cond_expr>
+    cond_uptr(const std::shared_ptr<cond_expr> &a0,
+              const std::shared_ptr<cond_expr> &a1,
+              const std::shared_ptr<cond_expr> &a2) {
+      return std::make_unique<cond_expr>(Cond{a0, a1, a2});
+    }
+
+    static std::unique_ptr<cond_expr>
+    cond_uptr(std::shared_ptr<cond_expr> &&a0, std::shared_ptr<cond_expr> &&a1,
+              std::shared_ptr<cond_expr> &&a2) {
+      return std::make_unique<cond_expr>(
+          Cond{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -586,6 +610,7 @@ struct LoopifyExprVariants {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit arith_expr(ANum _v) : d_v_(std::move(_v)) {}
 
@@ -595,55 +620,82 @@ struct LoopifyExprVariants {
 
     explicit arith_expr(ADiv _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<arith_expr> anum(unsigned int a0) {
+      return std::make_shared<arith_expr>(ANum{std::move(a0)});
+    }
 
-      static std::shared_ptr<arith_expr> ANum_(unsigned int a0) {
-        return std::shared_ptr<arith_expr>(new arith_expr(ANum{a0}));
-      }
+    static std::shared_ptr<arith_expr>
+    aadd(const std::shared_ptr<arith_expr> &a0,
+         const std::shared_ptr<arith_expr> &a1) {
+      return std::make_shared<arith_expr>(AAdd{a0, a1});
+    }
 
-      static std::shared_ptr<arith_expr>
-      AAdd_(const std::shared_ptr<arith_expr> &a0,
-            const std::shared_ptr<arith_expr> &a1) {
-        return std::shared_ptr<arith_expr>(new arith_expr(AAdd{a0, a1}));
-      }
+    static std::shared_ptr<arith_expr> aadd(std::shared_ptr<arith_expr> &&a0,
+                                            std::shared_ptr<arith_expr> &&a1) {
+      return std::make_shared<arith_expr>(AAdd{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<arith_expr>
-      AMul_(const std::shared_ptr<arith_expr> &a0,
-            const std::shared_ptr<arith_expr> &a1) {
-        return std::shared_ptr<arith_expr>(new arith_expr(AMul{a0, a1}));
-      }
+    static std::shared_ptr<arith_expr>
+    amul(const std::shared_ptr<arith_expr> &a0,
+         const std::shared_ptr<arith_expr> &a1) {
+      return std::make_shared<arith_expr>(AMul{a0, a1});
+    }
 
-      static std::shared_ptr<arith_expr>
-      ADiv_(const std::shared_ptr<arith_expr> &a0,
-            const std::shared_ptr<arith_expr> &a1) {
-        return std::shared_ptr<arith_expr>(new arith_expr(ADiv{a0, a1}));
-      }
+    static std::shared_ptr<arith_expr> amul(std::shared_ptr<arith_expr> &&a0,
+                                            std::shared_ptr<arith_expr> &&a1) {
+      return std::make_shared<arith_expr>(AMul{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<arith_expr> ANum_uptr(unsigned int a0) {
-        return std::unique_ptr<arith_expr>(new arith_expr(ANum{a0}));
-      }
+    static std::shared_ptr<arith_expr>
+    adiv(const std::shared_ptr<arith_expr> &a0,
+         const std::shared_ptr<arith_expr> &a1) {
+      return std::make_shared<arith_expr>(ADiv{a0, a1});
+    }
 
-      static std::unique_ptr<arith_expr>
-      AAdd_uptr(const std::shared_ptr<arith_expr> &a0,
-                const std::shared_ptr<arith_expr> &a1) {
-        return std::unique_ptr<arith_expr>(new arith_expr(AAdd{a0, a1}));
-      }
+    static std::shared_ptr<arith_expr> adiv(std::shared_ptr<arith_expr> &&a0,
+                                            std::shared_ptr<arith_expr> &&a1) {
+      return std::make_shared<arith_expr>(ADiv{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<arith_expr>
-      AMul_uptr(const std::shared_ptr<arith_expr> &a0,
-                const std::shared_ptr<arith_expr> &a1) {
-        return std::unique_ptr<arith_expr>(new arith_expr(AMul{a0, a1}));
-      }
+    static std::unique_ptr<arith_expr> anum_uptr(unsigned int a0) {
+      return std::make_unique<arith_expr>(ANum{std::move(a0)});
+    }
 
-      static std::unique_ptr<arith_expr>
-      ADiv_uptr(const std::shared_ptr<arith_expr> &a0,
-                const std::shared_ptr<arith_expr> &a1) {
-        return std::unique_ptr<arith_expr>(new arith_expr(ADiv{a0, a1}));
-      }
-    };
+    static std::unique_ptr<arith_expr>
+    aadd_uptr(const std::shared_ptr<arith_expr> &a0,
+              const std::shared_ptr<arith_expr> &a1) {
+      return std::make_unique<arith_expr>(AAdd{a0, a1});
+    }
+
+    static std::unique_ptr<arith_expr>
+    aadd_uptr(std::shared_ptr<arith_expr> &&a0,
+              std::shared_ptr<arith_expr> &&a1) {
+      return std::make_unique<arith_expr>(AAdd{std::move(a0), std::move(a1)});
+    }
+
+    static std::unique_ptr<arith_expr>
+    amul_uptr(const std::shared_ptr<arith_expr> &a0,
+              const std::shared_ptr<arith_expr> &a1) {
+      return std::make_unique<arith_expr>(AMul{a0, a1});
+    }
+
+    static std::unique_ptr<arith_expr>
+    amul_uptr(std::shared_ptr<arith_expr> &&a0,
+              std::shared_ptr<arith_expr> &&a1) {
+      return std::make_unique<arith_expr>(AMul{std::move(a0), std::move(a1)});
+    }
+
+    static std::unique_ptr<arith_expr>
+    adiv_uptr(const std::shared_ptr<arith_expr> &a0,
+              const std::shared_ptr<arith_expr> &a1) {
+      return std::make_unique<arith_expr>(ADiv{a0, a1});
+    }
+
+    static std::unique_ptr<arith_expr>
+    adiv_uptr(std::shared_ptr<arith_expr> &&a0,
+              std::shared_ptr<arith_expr> &&a1) {
+      return std::make_unique<arith_expr>(ADiv{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -1091,6 +1143,7 @@ struct LoopifyExprVariants {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit bool_expr(BTrue _v) : d_v_(std::move(_v)) {}
 
@@ -1102,61 +1155,85 @@ struct LoopifyExprVariants {
 
     explicit bool_expr(BNot _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<bool_expr> btrue() {
+      return std::make_shared<bool_expr>(BTrue{});
+    }
 
-      static std::shared_ptr<bool_expr> BTrue_() {
-        return std::shared_ptr<bool_expr>(new bool_expr(BTrue{}));
-      }
+    static std::shared_ptr<bool_expr> bfalse() {
+      return std::make_shared<bool_expr>(BFalse{});
+    }
 
-      static std::shared_ptr<bool_expr> BFalse_() {
-        return std::shared_ptr<bool_expr>(new bool_expr(BFalse{}));
-      }
+    static std::shared_ptr<bool_expr>
+    band(const std::shared_ptr<bool_expr> &a0,
+         const std::shared_ptr<bool_expr> &a1) {
+      return std::make_shared<bool_expr>(BAnd{a0, a1});
+    }
 
-      static std::shared_ptr<bool_expr>
-      BAnd_(const std::shared_ptr<bool_expr> &a0,
-            const std::shared_ptr<bool_expr> &a1) {
-        return std::shared_ptr<bool_expr>(new bool_expr(BAnd{a0, a1}));
-      }
+    static std::shared_ptr<bool_expr> band(std::shared_ptr<bool_expr> &&a0,
+                                           std::shared_ptr<bool_expr> &&a1) {
+      return std::make_shared<bool_expr>(BAnd{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<bool_expr>
-      BOr_(const std::shared_ptr<bool_expr> &a0,
-           const std::shared_ptr<bool_expr> &a1) {
-        return std::shared_ptr<bool_expr>(new bool_expr(BOr{a0, a1}));
-      }
+    static std::shared_ptr<bool_expr>
+    bor(const std::shared_ptr<bool_expr> &a0,
+        const std::shared_ptr<bool_expr> &a1) {
+      return std::make_shared<bool_expr>(BOr{a0, a1});
+    }
 
-      static std::shared_ptr<bool_expr>
-      BNot_(const std::shared_ptr<bool_expr> &a0) {
-        return std::shared_ptr<bool_expr>(new bool_expr(BNot{a0}));
-      }
+    static std::shared_ptr<bool_expr> bor(std::shared_ptr<bool_expr> &&a0,
+                                          std::shared_ptr<bool_expr> &&a1) {
+      return std::make_shared<bool_expr>(BOr{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<bool_expr> BTrue_uptr() {
-        return std::unique_ptr<bool_expr>(new bool_expr(BTrue{}));
-      }
+    static std::shared_ptr<bool_expr>
+    bnot(const std::shared_ptr<bool_expr> &a0) {
+      return std::make_shared<bool_expr>(BNot{a0});
+    }
 
-      static std::unique_ptr<bool_expr> BFalse_uptr() {
-        return std::unique_ptr<bool_expr>(new bool_expr(BFalse{}));
-      }
+    static std::shared_ptr<bool_expr> bnot(std::shared_ptr<bool_expr> &&a0) {
+      return std::make_shared<bool_expr>(BNot{std::move(a0)});
+    }
 
-      static std::unique_ptr<bool_expr>
-      BAnd_uptr(const std::shared_ptr<bool_expr> &a0,
-                const std::shared_ptr<bool_expr> &a1) {
-        return std::unique_ptr<bool_expr>(new bool_expr(BAnd{a0, a1}));
-      }
+    static std::unique_ptr<bool_expr> btrue_uptr() {
+      return std::make_unique<bool_expr>(BTrue{});
+    }
 
-      static std::unique_ptr<bool_expr>
-      BOr_uptr(const std::shared_ptr<bool_expr> &a0,
-               const std::shared_ptr<bool_expr> &a1) {
-        return std::unique_ptr<bool_expr>(new bool_expr(BOr{a0, a1}));
-      }
+    static std::unique_ptr<bool_expr> bfalse_uptr() {
+      return std::make_unique<bool_expr>(BFalse{});
+    }
 
-      static std::unique_ptr<bool_expr>
-      BNot_uptr(const std::shared_ptr<bool_expr> &a0) {
-        return std::unique_ptr<bool_expr>(new bool_expr(BNot{a0}));
-      }
-    };
+    static std::unique_ptr<bool_expr>
+    band_uptr(const std::shared_ptr<bool_expr> &a0,
+              const std::shared_ptr<bool_expr> &a1) {
+      return std::make_unique<bool_expr>(BAnd{a0, a1});
+    }
+
+    static std::unique_ptr<bool_expr>
+    band_uptr(std::shared_ptr<bool_expr> &&a0,
+              std::shared_ptr<bool_expr> &&a1) {
+      return std::make_unique<bool_expr>(BAnd{std::move(a0), std::move(a1)});
+    }
+
+    static std::unique_ptr<bool_expr>
+    bor_uptr(const std::shared_ptr<bool_expr> &a0,
+             const std::shared_ptr<bool_expr> &a1) {
+      return std::make_unique<bool_expr>(BOr{a0, a1});
+    }
+
+    static std::unique_ptr<bool_expr>
+    bor_uptr(std::shared_ptr<bool_expr> &&a0, std::shared_ptr<bool_expr> &&a1) {
+      return std::make_unique<bool_expr>(BOr{std::move(a0), std::move(a1)});
+    }
+
+    static std::unique_ptr<bool_expr>
+    bnot_uptr(const std::shared_ptr<bool_expr> &a0) {
+      return std::make_unique<bool_expr>(BNot{a0});
+    }
+
+    static std::unique_ptr<bool_expr>
+    bnot_uptr(std::shared_ptr<bool_expr> &&a0) {
+      return std::make_unique<bool_expr>(BNot{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -1225,10 +1302,10 @@ struct LoopifyExprVariants {
                   std::visit(
                       Overloaded{
                           [&](const typename bool_expr::BTrue _args) -> void {
-                            _result = bool_expr::ctor::BTrue_();
+                            _result = bool_expr::btrue();
                           },
                           [&](const typename bool_expr::BFalse _args) -> void {
-                            _result = bool_expr::ctor::BFalse_();
+                            _result = bool_expr::bfalse();
                           },
                           [&](const typename bool_expr::BAnd _args) -> void {
                             _stack.push_back(_Call1{_args});
@@ -1253,24 +1330,23 @@ struct LoopifyExprVariants {
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename bool_expr::BFalse _args0) -> void {
-                            _result = bool_expr::ctor::BFalse_();
+                            _result = bool_expr::bfalse();
                           },
                           [&](const typename bool_expr::BAnd _args0) -> void {
                             std::shared_ptr<bool_expr> a_ =
-                                bool_expr::ctor::BAnd_(_args0.d_a0,
-                                                       _args0.d_a1);
+                                bool_expr::band(_args0.d_a0, _args0.d_a1);
                             _stack.push_back(_Call3{a_});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename bool_expr::BOr _args0) -> void {
                             std::shared_ptr<bool_expr> a_ =
-                                bool_expr::ctor::BOr_(_args0.d_a0, _args0.d_a1);
+                                bool_expr::bor(_args0.d_a0, _args0.d_a1);
                             _stack.push_back(_Call4{a_});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename bool_expr::BNot _args0) -> void {
                             std::shared_ptr<bool_expr> a_ =
-                                bool_expr::ctor::BNot_(_args0.d_a0);
+                                bool_expr::bnot(_args0.d_a0);
                             _stack.push_back(_Call5{a_});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           }},
@@ -1281,25 +1357,24 @@ struct LoopifyExprVariants {
                   std::visit(
                       Overloaded{
                           [&](const typename bool_expr::BTrue _args1) -> void {
-                            _result = bool_expr::ctor::BTrue_();
+                            _result = bool_expr::btrue();
                           },
                           [&](const typename bool_expr::BFalse _args1) -> void {
                             _result = std::move(a_);
                           },
                           [&](const typename bool_expr::BAnd _args1) -> void {
-                            _result = bool_expr::ctor::BOr_(
-                                std::move(a_), bool_expr::ctor::BAnd_(
-                                                   _args1.d_a0, _args1.d_a1));
+                            _result = bool_expr::bor(
+                                std::move(a_),
+                                bool_expr::band(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BOr _args1) -> void {
-                            _result = bool_expr::ctor::BOr_(
-                                std::move(a_), bool_expr::ctor::BOr_(
-                                                   _args1.d_a0, _args1.d_a1));
+                            _result = bool_expr::bor(
+                                std::move(a_),
+                                bool_expr::bor(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BNot _args1) -> void {
-                            _result = bool_expr::ctor::BOr_(
-                                std::move(a_),
-                                bool_expr::ctor::BNot_(_args1.d_a0));
+                            _result = bool_expr::bor(
+                                std::move(a_), bool_expr::bnot(_args1.d_a0));
                           }},
                       _result->v());
                 },
@@ -1307,24 +1382,22 @@ struct LoopifyExprVariants {
                   std::visit(
                       Overloaded{
                           [&](const typename bool_expr::BTrue _args0) -> void {
-                            _result = bool_expr::ctor::BFalse_();
+                            _result = bool_expr::bfalse();
                           },
                           [&](const typename bool_expr::BFalse _args0) -> void {
-                            _result = bool_expr::ctor::BTrue_();
+                            _result = bool_expr::btrue();
                           },
                           [&](const typename bool_expr::BAnd _args0) -> void {
-                            _result =
-                                bool_expr::ctor::BNot_(bool_expr::ctor::BAnd_(
-                                    _args0.d_a0, _args0.d_a1));
+                            _result = bool_expr::bnot(
+                                bool_expr::band(_args0.d_a0, _args0.d_a1));
                           },
                           [&](const typename bool_expr::BOr _args0) -> void {
-                            _result =
-                                bool_expr::ctor::BNot_(bool_expr::ctor::BOr_(
-                                    _args0.d_a0, _args0.d_a1));
+                            _result = bool_expr::bnot(
+                                bool_expr::bor(_args0.d_a0, _args0.d_a1));
                           },
                           [&](const typename bool_expr::BNot _args0) -> void {
-                            _result = bool_expr::ctor::BNot_(
-                                bool_expr::ctor::BNot_(_args0.d_a0));
+                            _result =
+                                bool_expr::bnot(bool_expr::bnot(_args0.d_a0));
                           }},
                       _result->v());
                 },
@@ -1332,21 +1405,19 @@ struct LoopifyExprVariants {
                   std::visit(
                       Overloaded{
                           [&](const typename bool_expr::BTrue _args1) -> void {
-                            _result = bool_expr::ctor::BTrue_();
+                            _result = bool_expr::btrue();
                           },
                           [&](const typename bool_expr::BFalse _args1) -> void {
-                            _result = bool_expr::ctor::BFalse_();
+                            _result = bool_expr::bfalse();
                           },
                           [&](const typename bool_expr::BAnd _args1) -> void {
-                            _result = bool_expr::ctor::BAnd_(_args1.d_a0,
-                                                             _args1.d_a1);
+                            _result = bool_expr::band(_args1.d_a0, _args1.d_a1);
                           },
                           [&](const typename bool_expr::BOr _args1) -> void {
-                            _result =
-                                bool_expr::ctor::BOr_(_args1.d_a0, _args1.d_a1);
+                            _result = bool_expr::bor(_args1.d_a0, _args1.d_a1);
                           },
                           [&](const typename bool_expr::BNot _args1) -> void {
-                            _result = bool_expr::ctor::BNot_(_args1.d_a0);
+                            _result = bool_expr::bnot(_args1.d_a0);
                           }},
                       _result->v());
                 },
@@ -1358,22 +1429,21 @@ struct LoopifyExprVariants {
                             _result = std::move(a_);
                           },
                           [&](const typename bool_expr::BFalse _args1) -> void {
-                            _result = bool_expr::ctor::BFalse_();
+                            _result = bool_expr::bfalse();
                           },
                           [&](const typename bool_expr::BAnd _args1) -> void {
-                            _result = bool_expr::ctor::BAnd_(
-                                std::move(a_), bool_expr::ctor::BAnd_(
-                                                   _args1.d_a0, _args1.d_a1));
+                            _result = bool_expr::band(
+                                std::move(a_),
+                                bool_expr::band(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BOr _args1) -> void {
-                            _result = bool_expr::ctor::BAnd_(
-                                std::move(a_), bool_expr::ctor::BOr_(
-                                                   _args1.d_a0, _args1.d_a1));
+                            _result = bool_expr::band(
+                                std::move(a_),
+                                bool_expr::bor(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BNot _args1) -> void {
-                            _result = bool_expr::ctor::BAnd_(
-                                std::move(a_),
-                                bool_expr::ctor::BNot_(_args1.d_a0));
+                            _result = bool_expr::band(
+                                std::move(a_), bool_expr::bnot(_args1.d_a0));
                           }},
                       _result->v());
                 },
@@ -1385,22 +1455,21 @@ struct LoopifyExprVariants {
                             _result = std::move(a_);
                           },
                           [&](const typename bool_expr::BFalse _args1) -> void {
-                            _result = bool_expr::ctor::BFalse_();
+                            _result = bool_expr::bfalse();
                           },
                           [&](const typename bool_expr::BAnd _args1) -> void {
-                            _result = bool_expr::ctor::BAnd_(
-                                std::move(a_), bool_expr::ctor::BAnd_(
-                                                   _args1.d_a0, _args1.d_a1));
+                            _result = bool_expr::band(
+                                std::move(a_),
+                                bool_expr::band(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BOr _args1) -> void {
-                            _result = bool_expr::ctor::BAnd_(
-                                std::move(a_), bool_expr::ctor::BOr_(
-                                                   _args1.d_a0, _args1.d_a1));
+                            _result = bool_expr::band(
+                                std::move(a_),
+                                bool_expr::bor(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BNot _args1) -> void {
-                            _result = bool_expr::ctor::BAnd_(
-                                std::move(a_),
-                                bool_expr::ctor::BNot_(_args1.d_a0));
+                            _result = bool_expr::band(
+                                std::move(a_), bool_expr::bnot(_args1.d_a0));
                           }},
                       _result->v());
                 },
@@ -1412,22 +1481,21 @@ struct LoopifyExprVariants {
                             _result = std::move(a_);
                           },
                           [&](const typename bool_expr::BFalse _args1) -> void {
-                            _result = bool_expr::ctor::BFalse_();
+                            _result = bool_expr::bfalse();
                           },
                           [&](const typename bool_expr::BAnd _args1) -> void {
-                            _result = bool_expr::ctor::BAnd_(
-                                std::move(a_), bool_expr::ctor::BAnd_(
-                                                   _args1.d_a0, _args1.d_a1));
+                            _result = bool_expr::band(
+                                std::move(a_),
+                                bool_expr::band(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BOr _args1) -> void {
-                            _result = bool_expr::ctor::BAnd_(
-                                std::move(a_), bool_expr::ctor::BOr_(
-                                                   _args1.d_a0, _args1.d_a1));
+                            _result = bool_expr::band(
+                                std::move(a_),
+                                bool_expr::bor(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BNot _args1) -> void {
-                            _result = bool_expr::ctor::BAnd_(
-                                std::move(a_),
-                                bool_expr::ctor::BNot_(_args1.d_a0));
+                            _result = bool_expr::band(
+                                std::move(a_), bool_expr::bnot(_args1.d_a0));
                           }},
                       _result->v());
                 },
@@ -1436,7 +1504,7 @@ struct LoopifyExprVariants {
                   std::visit(
                       Overloaded{
                           [&](const typename bool_expr::BTrue _args0) -> void {
-                            _result = bool_expr::ctor::BTrue_();
+                            _result = bool_expr::btrue();
                           },
                           [&](const typename bool_expr::BFalse _args0) -> void {
                             _stack.push_back(_Call7{});
@@ -1444,20 +1512,19 @@ struct LoopifyExprVariants {
                           },
                           [&](const typename bool_expr::BAnd _args0) -> void {
                             std::shared_ptr<bool_expr> a_ =
-                                bool_expr::ctor::BAnd_(_args0.d_a0,
-                                                       _args0.d_a1);
+                                bool_expr::band(_args0.d_a0, _args0.d_a1);
                             _stack.push_back(_Call8{a_});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename bool_expr::BOr _args0) -> void {
                             std::shared_ptr<bool_expr> a_ =
-                                bool_expr::ctor::BOr_(_args0.d_a0, _args0.d_a1);
+                                bool_expr::bor(_args0.d_a0, _args0.d_a1);
                             _stack.push_back(_Call9{a_});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
                           [&](const typename bool_expr::BNot _args0) -> void {
                             std::shared_ptr<bool_expr> a_ =
-                                bool_expr::ctor::BNot_(_args0.d_a0);
+                                bool_expr::bnot(_args0.d_a0);
                             _stack.push_back(_Call10{a_});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           }},
@@ -1467,21 +1534,19 @@ struct LoopifyExprVariants {
                   std::visit(
                       Overloaded{
                           [&](const typename bool_expr::BTrue _args1) -> void {
-                            _result = bool_expr::ctor::BTrue_();
+                            _result = bool_expr::btrue();
                           },
                           [&](const typename bool_expr::BFalse _args1) -> void {
-                            _result = bool_expr::ctor::BFalse_();
+                            _result = bool_expr::bfalse();
                           },
                           [&](const typename bool_expr::BAnd _args1) -> void {
-                            _result = bool_expr::ctor::BAnd_(_args1.d_a0,
-                                                             _args1.d_a1);
+                            _result = bool_expr::band(_args1.d_a0, _args1.d_a1);
                           },
                           [&](const typename bool_expr::BOr _args1) -> void {
-                            _result =
-                                bool_expr::ctor::BOr_(_args1.d_a0, _args1.d_a1);
+                            _result = bool_expr::bor(_args1.d_a0, _args1.d_a1);
                           },
                           [&](const typename bool_expr::BNot _args1) -> void {
-                            _result = bool_expr::ctor::BNot_(_args1.d_a0);
+                            _result = bool_expr::bnot(_args1.d_a0);
                           }},
                       _result->v());
                 },
@@ -1490,25 +1555,24 @@ struct LoopifyExprVariants {
                   std::visit(
                       Overloaded{
                           [&](const typename bool_expr::BTrue _args1) -> void {
-                            _result = bool_expr::ctor::BTrue_();
+                            _result = bool_expr::btrue();
                           },
                           [&](const typename bool_expr::BFalse _args1) -> void {
                             _result = std::move(a_);
                           },
                           [&](const typename bool_expr::BAnd _args1) -> void {
-                            _result = bool_expr::ctor::BOr_(
-                                std::move(a_), bool_expr::ctor::BAnd_(
-                                                   _args1.d_a0, _args1.d_a1));
+                            _result = bool_expr::bor(
+                                std::move(a_),
+                                bool_expr::band(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BOr _args1) -> void {
-                            _result = bool_expr::ctor::BOr_(
-                                std::move(a_), bool_expr::ctor::BOr_(
-                                                   _args1.d_a0, _args1.d_a1));
+                            _result = bool_expr::bor(
+                                std::move(a_),
+                                bool_expr::bor(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BNot _args1) -> void {
-                            _result = bool_expr::ctor::BOr_(
-                                std::move(a_),
-                                bool_expr::ctor::BNot_(_args1.d_a0));
+                            _result = bool_expr::bor(
+                                std::move(a_), bool_expr::bnot(_args1.d_a0));
                           }},
                       _result->v());
                 },
@@ -1517,25 +1581,24 @@ struct LoopifyExprVariants {
                   std::visit(
                       Overloaded{
                           [&](const typename bool_expr::BTrue _args1) -> void {
-                            _result = bool_expr::ctor::BTrue_();
+                            _result = bool_expr::btrue();
                           },
                           [&](const typename bool_expr::BFalse _args1) -> void {
                             _result = std::move(a_);
                           },
                           [&](const typename bool_expr::BAnd _args1) -> void {
-                            _result = bool_expr::ctor::BOr_(
-                                std::move(a_), bool_expr::ctor::BAnd_(
-                                                   _args1.d_a0, _args1.d_a1));
+                            _result = bool_expr::bor(
+                                std::move(a_),
+                                bool_expr::band(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BOr _args1) -> void {
-                            _result = bool_expr::ctor::BOr_(
-                                std::move(a_), bool_expr::ctor::BOr_(
-                                                   _args1.d_a0, _args1.d_a1));
+                            _result = bool_expr::bor(
+                                std::move(a_),
+                                bool_expr::bor(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BNot _args1) -> void {
-                            _result = bool_expr::ctor::BOr_(
-                                std::move(a_),
-                                bool_expr::ctor::BNot_(_args1.d_a0));
+                            _result = bool_expr::bor(
+                                std::move(a_), bool_expr::bnot(_args1.d_a0));
                           }},
                       _result->v());
                 }},
@@ -1831,6 +1894,7 @@ struct LoopifyExprVariants {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit list_expr(LNil _v) : d_v_(std::move(_v)) {}
 
@@ -1840,51 +1904,68 @@ struct LoopifyExprVariants {
 
     explicit list_expr(LReplicate _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<list_expr> lnil() {
+      return std::make_shared<list_expr>(LNil{});
+    }
 
-      static std::shared_ptr<list_expr> LNil_() {
-        return std::shared_ptr<list_expr>(new list_expr(LNil{}));
-      }
+    static std::shared_ptr<list_expr>
+    lcons(unsigned int a0, const std::shared_ptr<list_expr> &a1) {
+      return std::make_shared<list_expr>(LCons{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<list_expr>
-      LCons_(unsigned int a0, const std::shared_ptr<list_expr> &a1) {
-        return std::shared_ptr<list_expr>(new list_expr(LCons{a0, a1}));
-      }
+    static std::shared_ptr<list_expr> lcons(unsigned int a0,
+                                            std::shared_ptr<list_expr> &&a1) {
+      return std::make_shared<list_expr>(LCons{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<list_expr>
-      LAppend_(const std::shared_ptr<list_expr> &a0,
-               const std::shared_ptr<list_expr> &a1) {
-        return std::shared_ptr<list_expr>(new list_expr(LAppend{a0, a1}));
-      }
+    static std::shared_ptr<list_expr>
+    lappend(const std::shared_ptr<list_expr> &a0,
+            const std::shared_ptr<list_expr> &a1) {
+      return std::make_shared<list_expr>(LAppend{a0, a1});
+    }
 
-      static std::shared_ptr<list_expr> LReplicate_(unsigned int a0,
-                                                    unsigned int a1) {
-        return std::shared_ptr<list_expr>(new list_expr(LReplicate{a0, a1}));
-      }
+    static std::shared_ptr<list_expr> lappend(std::shared_ptr<list_expr> &&a0,
+                                              std::shared_ptr<list_expr> &&a1) {
+      return std::make_shared<list_expr>(LAppend{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<list_expr> LNil_uptr() {
-        return std::unique_ptr<list_expr>(new list_expr(LNil{}));
-      }
+    static std::shared_ptr<list_expr> lreplicate(unsigned int a0,
+                                                 unsigned int a1) {
+      return std::make_shared<list_expr>(
+          LReplicate{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<list_expr>
-      LCons_uptr(unsigned int a0, const std::shared_ptr<list_expr> &a1) {
-        return std::unique_ptr<list_expr>(new list_expr(LCons{a0, a1}));
-      }
+    static std::unique_ptr<list_expr> lnil_uptr() {
+      return std::make_unique<list_expr>(LNil{});
+    }
 
-      static std::unique_ptr<list_expr>
-      LAppend_uptr(const std::shared_ptr<list_expr> &a0,
-                   const std::shared_ptr<list_expr> &a1) {
-        return std::unique_ptr<list_expr>(new list_expr(LAppend{a0, a1}));
-      }
+    static std::unique_ptr<list_expr>
+    lcons_uptr(unsigned int a0, const std::shared_ptr<list_expr> &a1) {
+      return std::make_unique<list_expr>(LCons{std::move(a0), a1});
+    }
 
-      static std::unique_ptr<list_expr> LReplicate_uptr(unsigned int a0,
-                                                        unsigned int a1) {
-        return std::unique_ptr<list_expr>(new list_expr(LReplicate{a0, a1}));
-      }
-    };
+    static std::unique_ptr<list_expr>
+    lcons_uptr(unsigned int a0, std::shared_ptr<list_expr> &&a1) {
+      return std::make_unique<list_expr>(LCons{std::move(a0), std::move(a1)});
+    }
+
+    static std::unique_ptr<list_expr>
+    lappend_uptr(const std::shared_ptr<list_expr> &a0,
+                 const std::shared_ptr<list_expr> &a1) {
+      return std::make_unique<list_expr>(LAppend{a0, a1});
+    }
+
+    static std::unique_ptr<list_expr>
+    lappend_uptr(std::shared_ptr<list_expr> &&a0,
+                 std::shared_ptr<list_expr> &&a1) {
+      return std::make_unique<list_expr>(LAppend{std::move(a0), std::move(a1)});
+    }
+
+    static std::unique_ptr<list_expr> lreplicate_uptr(unsigned int a0,
+                                                      unsigned int a1) {
+      return std::make_unique<list_expr>(
+          LReplicate{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -1987,7 +2068,7 @@ struct LoopifyExprVariants {
                   std::visit(
                       Overloaded{
                           [&](const typename list_expr::LNil _args) -> void {
-                            _result = List<unsigned int>::ctor::Nil_();
+                            _result = List<unsigned int>::nil();
                           },
                           [&](const typename list_expr::LCons _args) -> void {
                             _stack.push_back(_Call1{_args.d_a0});
@@ -2005,7 +2086,7 @@ struct LoopifyExprVariants {
                       _self->v());
                 },
                 [&](_Call1 _f) {
-                  _result = List<unsigned int>::ctor::Cons_(_f._s0, _result);
+                  _result = List<unsigned int>::cons(_f._s0, _result);
                 },
                 [&](_Call2 _f) {
                   _stack.push_back(_Call3{_result});
@@ -2170,16 +2251,16 @@ std::shared_ptr<List<T1>> ListDef::repeat(const T1 x, const unsigned int n) {
       {
         if (_last) {
           std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 =
-              List<T1>::ctor::Nil_();
+              List<T1>::nil();
         } else {
-          _head = List<T1>::ctor::Nil_();
+          _head = List<T1>::nil();
         }
         _continue = false;
       }
     } else {
       unsigned int k = _loop_n - 1;
       {
-        auto _cell = List<T1>::ctor::Cons_(x, nullptr);
+        auto _cell = List<T1>::cons(x, nullptr);
         if (_last) {
           std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 = _cell;
         } else {

@@ -36,34 +36,28 @@ struct CountLoopTestTarget {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit instruction(ISZ _v) : d_v_(std::move(_v)) {}
 
     explicit instruction(NOP _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<instruction> isz(unsigned int a0, unsigned int a1) {
+      return std::make_shared<instruction>(ISZ{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<instruction> ISZ_(unsigned int a0,
-                                               unsigned int a1) {
-        return std::shared_ptr<instruction>(new instruction(ISZ{a0, a1}));
-      }
+    static std::shared_ptr<instruction> nop() {
+      return std::make_shared<instruction>(NOP{});
+    }
 
-      static std::shared_ptr<instruction> NOP_() {
-        return std::shared_ptr<instruction>(new instruction(NOP{}));
-      }
+    static std::unique_ptr<instruction> isz_uptr(unsigned int a0,
+                                                 unsigned int a1) {
+      return std::make_unique<instruction>(ISZ{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<instruction> ISZ_uptr(unsigned int a0,
-                                                   unsigned int a1) {
-        return std::unique_ptr<instruction>(new instruction(ISZ{a0, a1}));
-      }
-
-      static std::unique_ptr<instruction> NOP_uptr() {
-        return std::unique_ptr<instruction>(new instruction(NOP{}));
-      }
-    };
+    static std::unique_ptr<instruction> nop_uptr() {
+      return std::make_unique<instruction>(NOP{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

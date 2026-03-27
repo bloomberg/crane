@@ -49,7 +49,7 @@ __attribute__((pure)) void stmtest::stm_enqueue(
     const unsigned int x) {
   std::shared_ptr<List<unsigned int>> xs = q->read();
   return q->write(std::move(xs)->app(
-      List<unsigned int>::ctor::Cons_(x, List<unsigned int>::ctor::Nil_())));
+      List<unsigned int>::cons(x, List<unsigned int>::nil())));
 }
 
 __attribute__((pure)) unsigned int stmtest::stm_dequeue(
@@ -77,7 +77,7 @@ __attribute__((pure)) unsigned int
 stmtest::stm_queue_roundtrip(const unsigned int x) {
   std::shared_ptr<stm::TVar<std::shared_ptr<List<unsigned int>>>> q =
       stm::newTVar<std::shared_ptr<List<unsigned int>>>(
-          List<unsigned int>::ctor::Nil_());
+          List<unsigned int>::nil());
   stm_enqueue(q, x);
   return stm_dequeue(q);
 }
@@ -90,7 +90,7 @@ stmtest::io_queue_roundtrip(const unsigned int x) {
 __attribute__((pure)) unsigned int stmtest::stm_orElse_retry_example() {
   std::shared_ptr<stm::TVar<std::shared_ptr<List<unsigned int>>>> q =
       stm::newTVar<std::shared_ptr<List<unsigned int>>>(
-          List<unsigned int>::ctor::Nil_());
+          List<unsigned int>::nil());
   return stm::orElse<unsigned int>(stm_dequeue(q), 42u);
 }
 

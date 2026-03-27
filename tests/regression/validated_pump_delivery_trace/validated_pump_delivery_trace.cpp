@@ -446,13 +446,13 @@ ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
     const unsigned int iob_twentieths, const unsigned int cob_grams,
     const unsigned int isf_tenths, const unsigned int proposed) {
   if (PeanoNat::eqb(isf_tenths, 0u)) {
-    return SuspendDecision::ctor::Suspend_Withhold_();
+    return SuspendDecision::suspend_withhold();
   } else {
     unsigned int total_insulin = (iob_twentieths + proposed);
     unsigned int pred = predicted_eventual_bg_tenths(
         cfg, current_bg, std::move(total_insulin), cob_grams, isf_tenths);
     if (PeanoNat::ltb(pred, BG_LEVEL2_HYPO)) {
-      return SuspendDecision::ctor::Suspend_Withhold_();
+      return SuspendDecision::suspend_withhold();
     } else {
       if (PeanoNat::ltb(std::move(pred), cfg->cfg_suspend_threshold_mg_dl)) {
         unsigned int rise_from_cob = conservative_cob_rise(cfg, cob_grams);
@@ -478,16 +478,16 @@ ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
         unsigned int safe_insulin =
             PeanoNat::div((std::move(safe_drop) * 200u), isf_tenths);
         if (PeanoNat::leb(std::move(safe_insulin), iob_twentieths)) {
-          return SuspendDecision::ctor::Suspend_Withhold_();
+          return SuspendDecision::suspend_withhold();
         } else {
-          return SuspendDecision::ctor::Suspend_Reduce_(
+          return SuspendDecision::suspend_reduce(
               (((std::move(safe_insulin) - std::move(iob_twentieths)) >
                         std::move(safe_insulin)
                     ? 0
                     : (std::move(safe_insulin) - std::move(iob_twentieths)))));
         }
       } else {
-        return SuspendDecision::ctor::Suspend_None_();
+        return SuspendDecision::suspend_none();
       }
     }
   }
@@ -596,9 +596,8 @@ ValidatedPumpDeliveryTraceCase::calculate_precision_bolus(
 __attribute__((pure)) bool
 ValidatedPumpDeliveryTraceCase::time_reasonable(const unsigned int now) {
   return PeanoNat::leb(
-      now, Nat::of_num_uint(Uint1::ctor::UIntDecimal_(
-               Uint::ctor::D5_(Uint::ctor::D2_(Uint::ctor::D5_(Uint::ctor::D6_(
-                   Uint::ctor::D0_(Uint::ctor::D0_(Uint::ctor::Nil_())))))))));
+      now, Nat::of_num_uint(Uint1::uintdecimal(Uint::d5(Uint::d2(
+               Uint::d5(Uint::d6(Uint::d0(Uint::d0(Uint::nil())))))))));
 }
 
 __attribute__((pure)) bool
@@ -666,38 +665,36 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionParams>
         &params) {
   if (!(prec_params_valid(params))) {
-    return PrecisionResult::ctor::PrecError_(prec_error_invalid_params);
+    return PrecisionResult::precerror(prec_error_invalid_params);
   } else {
     if (!((bg_in_meter_range(input->pi_current_bg) &&
            carbs_reasonable(input->pi_carbs_g)))) {
-      return PrecisionResult::ctor::PrecError_(prec_error_invalid_input);
+      return PrecisionResult::precerror(prec_error_invalid_input);
     } else {
       if (!(time_reasonable(input->pi_now))) {
-        return PrecisionResult::ctor::PrecError_(prec_error_invalid_time);
+        return PrecisionResult::precerror(prec_error_invalid_time);
       } else {
         if (!(history_valid(input->pi_now, input->pi_bolus_history))) {
-          return PrecisionResult::ctor::PrecError_(prec_error_invalid_history);
+          return PrecisionResult::precerror(prec_error_invalid_history);
         } else {
           if (!(history_extraction_safe(input->pi_bolus_history))) {
-            return PrecisionResult::ctor::PrecError_(
-                prec_error_extraction_unsafe);
+            return PrecisionResult::precerror(prec_error_extraction_unsafe);
           } else {
             if (bolus_too_soon(input->pi_now, input->pi_bolus_history)) {
-              return PrecisionResult::ctor::PrecError_(prec_error_stacking);
+              return PrecisionResult::precerror(prec_error_stacking);
             } else {
               if (input->pi_fault->fault_blocks_bolus()) {
-                return PrecisionResult::ctor::PrecError_(prec_error_fault);
+                return PrecisionResult::precerror(prec_error_fault);
               } else {
                 if (PeanoNat::ltb(input->pi_current_bg->mg_dL_val, BG_HYPO)) {
-                  return PrecisionResult::ctor::PrecError_(prec_error_hypo);
+                  return PrecisionResult::precerror(prec_error_hypo);
                 } else {
                   unsigned int iob = total_bilinear_iob(
                       input->pi_now, input->pi_bolus_history, params->prec_dia,
                       params->prec_insulin_type);
                   if ((iob_dangerously_high(iob) &&
                        PeanoNat::eqb(input->pi_carbs_g->grams_val, 0u))) {
-                    return PrecisionResult::ctor::PrecError_(
-                        prec_error_iob_high);
+                    return PrecisionResult::precerror(prec_error_iob_high);
                   } else {
                     unsigned int tdd_current =
                         input->pi_bolus_history->template fold_left<
@@ -727,7 +724,7 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                       tdd_limit = 5000u;
                     }
                     if (PeanoNat::leb(tdd_limit, tdd_current)) {
-                      return PrecisionResult::ctor::PrecError_(
+                      return PrecisionResult::precerror(
                           prec_error_tdd_exceeded);
                     } else {
                       unsigned int raw =
@@ -771,8 +768,8 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                       }
                       bool was_modified =
                           !(PeanoNat::eqb(std::move(raw), capped));
-                      return PrecisionResult::ctor::PrecOK_(
-                          std::move(capped), std::move(was_modified));
+                      return PrecisionResult::precok(std::move(capped),
+                                                     std::move(was_modified));
                     }
                   }
                 }

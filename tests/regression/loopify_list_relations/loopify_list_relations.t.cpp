@@ -19,10 +19,10 @@ void aSsErT(bool condition, const char *message, int line) {
 using UIntList = List<unsigned int>;
 
 int main() {
-  auto nil = UIntList::ctor::Nil_();
-  auto l3 = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(3u, nil)));
-  auto l5 = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(
-    3u, UIntList::ctor::Cons_(4u, UIntList::ctor::Cons_(5u, nil)))));
+  auto nil = UIntList::nil();
+  auto l3 = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(3u, nil)));
+  auto l5 = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(
+    3u, UIntList::cons(4u, UIntList::cons(5u, nil)))));
 
   // is_prefix_of
   ASSERT(LoopifyListRelations::is_prefix_of(nil, l5) == true);
@@ -30,11 +30,11 @@ int main() {
   ASSERT(LoopifyListRelations::is_prefix_of(l5, l3) == false);
 
   // is_suffix_of
-  auto suffix = UIntList::ctor::Cons_(4u, UIntList::ctor::Cons_(5u, nil));
+  auto suffix = UIntList::cons(4u, UIntList::cons(5u, nil));
   ASSERT(LoopifyListRelations::is_suffix_of(suffix, l5) == true);
 
   // is_infix_of
-  auto infix = UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(3u, nil));
+  auto infix = UIntList::cons(2u, UIntList::cons(3u, nil));
   ASSERT(LoopifyListRelations::is_infix_of(infix, l5) == true);
 
   // list_eq

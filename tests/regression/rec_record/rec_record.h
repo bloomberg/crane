@@ -36,34 +36,39 @@ struct RecRecord {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit rlist(Rnil _v) : d_v_(std::move(_v)) {}
 
     explicit rlist(Rcons _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<rlist<t_A>> rnil() {
+      return std::make_shared<rlist<t_A>>(Rnil{});
+    }
 
-      static std::shared_ptr<rlist<t_A>> Rnil_() {
-        return std::shared_ptr<rlist<t_A>>(new rlist<t_A>(Rnil{}));
-      }
+    static std::shared_ptr<rlist<t_A>>
+    rcons(t_A a0, const std::shared_ptr<rlist<t_A>> &a1) {
+      return std::make_shared<rlist<t_A>>(Rcons{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<rlist<t_A>>
-      Rcons_(t_A a0, const std::shared_ptr<rlist<t_A>> &a1) {
-        return std::shared_ptr<rlist<t_A>>(new rlist<t_A>(Rcons{a0, a1}));
-      }
+    static std::shared_ptr<rlist<t_A>> rcons(t_A a0,
+                                             std::shared_ptr<rlist<t_A>> &&a1) {
+      return std::make_shared<rlist<t_A>>(Rcons{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<rlist<t_A>> Rnil_uptr() {
-        return std::unique_ptr<rlist<t_A>>(new rlist<t_A>(Rnil{}));
-      }
+    static std::unique_ptr<rlist<t_A>> rnil_uptr() {
+      return std::make_unique<rlist<t_A>>(Rnil{});
+    }
 
-      static std::unique_ptr<rlist<t_A>>
-      Rcons_uptr(t_A a0, const std::shared_ptr<rlist<t_A>> &a1) {
-        return std::unique_ptr<rlist<t_A>>(new rlist<t_A>(Rcons{a0, a1}));
-      }
-    };
+    static std::unique_ptr<rlist<t_A>>
+    rcons_uptr(t_A a0, const std::shared_ptr<rlist<t_A>> &a1) {
+      return std::make_unique<rlist<t_A>>(Rcons{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<rlist<t_A>>
+    rcons_uptr(t_A a0, std::shared_ptr<rlist<t_A>> &&a1) {
+      return std::make_unique<rlist<t_A>>(Rcons{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -154,10 +159,10 @@ struct RecRecord {
   __attribute__((pure)) static unsigned int
   rnode_depth(const std::shared_ptr<RNode> &r);
   static inline const std::shared_ptr<rlist<unsigned int>> test_rlist =
-      rlist<unsigned int>::ctor::Rcons_(
-          1u, rlist<unsigned int>::ctor::Rcons_(
-                  2u, rlist<unsigned int>::ctor::Rcons_(
-                          3u, rlist<unsigned int>::ctor::Rnil_())));
+      rlist<unsigned int>::rcons(
+          1u,
+          rlist<unsigned int>::rcons(
+              2u, rlist<unsigned int>::rcons(3u, rlist<unsigned int>::rnil())));
   static inline const unsigned int test_rlist_len =
       rlist_length<unsigned int>(test_rlist);
   static inline const unsigned int test_rlist_sum = rlist_sum(test_rlist);

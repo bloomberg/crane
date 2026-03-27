@@ -55,9 +55,9 @@ std::vector<T> list_to_vector(const std::shared_ptr<List<T>> &l) {
 // Helper to create a list from a vector
 template <typename T>
 std::shared_ptr<List<T>> vector_to_list(const std::vector<T> &vec) {
-  auto result = List<T>::ctor::Nil_();
+  auto result = List<T>::nil();
   for (auto it = vec.rbegin(); it != vec.rend(); ++it) {
-    result = List<T>::ctor::Cons_(*it, result);
+    result = List<T>::cons(*it, result);
   }
   return result;
 }
@@ -88,8 +88,8 @@ list_to_pairs(const std::shared_ptr<List<std::shared_ptr<Prod<A, B>>>> &l) {
 int main() {
   // Test 1: Zip empty lists
   {
-    auto empty_a = List<unsigned int>::ctor::Nil_();
-    auto empty_b = List<unsigned int>::ctor::Nil_();
+    auto empty_a = List<unsigned int>::nil();
+    auto empty_b = List<unsigned int>::nil();
     auto result = better_zip<unsigned int, unsigned int>(empty_a, empty_b);
     auto vec = list_to_pairs<unsigned int, unsigned int>(result);
     ASSERT(vec.size() == 0);
@@ -99,9 +99,9 @@ int main() {
   // Test 2: Zip single elements
   {
     auto a =
-        List<unsigned int>::ctor::Cons_(1, List<unsigned int>::ctor::Nil_());
+        List<unsigned int>::cons(1, List<unsigned int>::nil());
     auto b =
-        List<unsigned int>::ctor::Cons_(2, List<unsigned int>::ctor::Nil_());
+        List<unsigned int>::cons(2, List<unsigned int>::nil());
     auto result = better_zip<unsigned int, unsigned int>(a, b);
     auto vec = list_to_pairs<unsigned int, unsigned int>(result);
     ASSERT(vec.size() == 1);

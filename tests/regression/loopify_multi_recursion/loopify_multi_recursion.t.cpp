@@ -43,27 +43,27 @@ int main() {
   ASSERT(LMR::bool_and_chain(4) == 1);
 
   // quad_count_leaves
-  auto leaf1 = quadtree::ctor::QLeaf_(1);
-  auto leaf2 = quadtree::ctor::QLeaf_(2);
-  auto leaf3 = quadtree::ctor::QLeaf_(3);
-  auto leaf4 = quadtree::ctor::QLeaf_(4);
+  auto leaf1 = quadtree::qleaf(1);
+  auto leaf2 = quadtree::qleaf(2);
+  auto leaf3 = quadtree::qleaf(3);
+  auto leaf4 = quadtree::qleaf(4);
 
   ASSERT(LMR::quad_count_leaves(leaf1) == 1);
 
-  auto quad = quadtree::ctor::QQuad_(leaf1, leaf2, leaf3, leaf4);
+  auto quad = quadtree::qquad(leaf1, leaf2, leaf3, leaf4);
   ASSERT(LMR::quad_count_leaves(quad) == 4);
 
-  auto nested = quadtree::ctor::QQuad_(quad, leaf1, leaf2, leaf3);
+  auto nested = quadtree::qquad(quad, leaf1, leaf2, leaf3);
   ASSERT(LMR::quad_count_leaves(nested) == 7);
 
   // quad_depth
-  auto leaf = quadtree::ctor::QLeaf_(1);
+  auto leaf = quadtree::qleaf(1);
   ASSERT(LMR::quad_depth(leaf) == 0);
 
-  auto quad1 = quadtree::ctor::QQuad_(leaf, leaf, leaf, leaf);
+  auto quad1 = quadtree::qquad(leaf, leaf, leaf, leaf);
   ASSERT(LMR::quad_depth(quad1) == 1);
 
-  auto nested1 = quadtree::ctor::QQuad_(quad1, leaf, leaf, quad1);
+  auto nested1 = quadtree::qquad(quad1, leaf, leaf, quad1);
   ASSERT(LMR::quad_depth(nested1) == 2);
 
   // hofstadter_q

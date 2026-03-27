@@ -35,34 +35,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -171,32 +176,27 @@ struct RecordErasedProofFieldsCase {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit StoredTag(TagPrimary _v) : d_v_(std::move(_v)) {}
 
     explicit StoredTag(TagSecondary _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<StoredTag> tagprimary(ItemKind a0) {
+      return std::make_shared<StoredTag>(TagPrimary{std::move(a0)});
+    }
 
-      static std::shared_ptr<StoredTag> TagPrimary_(ItemKind a0) {
-        return std::shared_ptr<StoredTag>(new StoredTag(TagPrimary{a0}));
-      }
+    static std::shared_ptr<StoredTag> tagsecondary(ItemKind a0) {
+      return std::make_shared<StoredTag>(TagSecondary{std::move(a0)});
+    }
 
-      static std::shared_ptr<StoredTag> TagSecondary_(ItemKind a0) {
-        return std::shared_ptr<StoredTag>(new StoredTag(TagSecondary{a0}));
-      }
+    static std::unique_ptr<StoredTag> tagprimary_uptr(ItemKind a0) {
+      return std::make_unique<StoredTag>(TagPrimary{std::move(a0)});
+    }
 
-      static std::unique_ptr<StoredTag> TagPrimary_uptr(ItemKind a0) {
-        return std::unique_ptr<StoredTag>(new StoredTag(TagPrimary{a0}));
-      }
-
-      static std::unique_ptr<StoredTag> TagSecondary_uptr(ItemKind a0) {
-        return std::unique_ptr<StoredTag>(new StoredTag(TagSecondary{a0}));
-      }
-    };
+    static std::unique_ptr<StoredTag> tagsecondary_uptr(ItemKind a0) {
+      return std::make_unique<StoredTag>(TagSecondary{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -286,7 +286,7 @@ struct RecordErasedProofFieldsCase {
   static inline const std::shared_ptr<PrimaryRecord> sample_primary_record =
       std::make_shared<PrimaryRecord>(
           PrimaryRecord{ItemKind::e_KINDC, ItemKind::e_KINDE,
-                        StoredTag::ctor::TagPrimary_(ItemKind::e_KINDC)});
+                        StoredTag::tagprimary(ItemKind::e_KINDC)});
   static inline const std::shared_ptr<ErasedProofRecord>
       sample_erased_proof_record = std::make_shared<ErasedProofRecord>(
           ErasedProofRecord{TraceBucket::e_BUCKETC});

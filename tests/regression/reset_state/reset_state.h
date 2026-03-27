@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -128,22 +133,19 @@ struct ResetState {
   static std::shared_ptr<state_full>
   reset_state_full(std::shared_ptr<state_full> s);
   static inline const unsigned int memory_preserve_test = [](void) {
-    std::unique_ptr<state_full> s = std::make_unique<state_full>(
-        state_full{9u,
-                   List<unsigned int>::ctor::Cons_(
-                       1u, List<unsigned int>::ctor::Cons_(
-                               2u, List<unsigned int>::ctor::Nil_())),
-                   true, 55u,
-                   List<unsigned int>::ctor::Cons_(
-                       8u, List<unsigned int>::ctor::Cons_(
-                               7u, List<unsigned int>::ctor::Nil_())),
-                   List<unsigned int>::ctor::Cons_(
-                       3u, List<unsigned int>::ctor::Cons_(
-                               4u, List<unsigned int>::ctor::Cons_(
-                                       5u, List<unsigned int>::ctor::Nil_()))),
-                   List<unsigned int>::ctor::Cons_(
-                       10u, List<unsigned int>::ctor::Cons_(
-                                11u, List<unsigned int>::ctor::Nil_()))});
+    std::unique_ptr<state_full> s = std::make_unique<state_full>(state_full{
+        9u,
+        List<unsigned int>::cons(
+            1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())),
+        true, 55u,
+        List<unsigned int>::cons(
+            8u, List<unsigned int>::cons(7u, List<unsigned int>::nil())),
+        List<unsigned int>::cons(
+            3u,
+            List<unsigned int>::cons(
+                4u, List<unsigned int>::cons(5u, List<unsigned int>::nil()))),
+        List<unsigned int>::cons(
+            10u, List<unsigned int>::cons(11u, List<unsigned int>::nil()))});
     std::shared_ptr<state_full> s_ = reset_state_full(std::move(s));
     return (((s_->acc + s_->ram_sys->nth(1u, 0u)) + s_->rom->nth(0u, 0u)) +
             s_->stack->length());
@@ -153,15 +155,13 @@ struct ResetState {
   static inline const unsigned int pc_clear_test =
       reset_state_minimal(
           std::make_shared<state_minimal>(state_minimal{
-              List<unsigned int>::ctor::Cons_(
-                  1u, List<unsigned int>::ctor::Cons_(
-                          2u, List<unsigned int>::ctor::Nil_())),
+              List<unsigned int>::cons(
+                  1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())),
               true, 99u,
-              List<unsigned int>::ctor::Cons_(3u,
-                                              List<unsigned int>::ctor::Nil_()),
-              List<unsigned int>::ctor::Cons_(
-                  4u, List<unsigned int>::ctor::Cons_(
-                          5u, List<unsigned int>::ctor::Nil_()))}))
+              List<unsigned int>::cons(3u, List<unsigned int>::nil()),
+              List<unsigned int>::cons(
+                  4u,
+                  List<unsigned int>::cons(5u, List<unsigned int>::nil()))}))
           ->pc_minimal;
   static inline const std::pair<unsigned int, unsigned int> t =
       std::make_pair(memory_preserve_test, pc_clear_test);

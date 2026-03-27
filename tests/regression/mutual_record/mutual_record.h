@@ -35,34 +35,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -88,28 +93,35 @@ struct MutualRecord {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit department(Mk_department _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<department>
+    mk_department(unsigned int a0,
+                  const std::shared_ptr<List<std::shared_ptr<employee>>> &a1) {
+      return std::make_shared<department>(Mk_department{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<department> Mk_department_(
-          unsigned int a0,
-          const std::shared_ptr<List<std::shared_ptr<employee>>> &a1) {
-        return std::shared_ptr<department>(
-            new department(Mk_department{a0, a1}));
-      }
+    static std::shared_ptr<department>
+    mk_department(unsigned int a0,
+                  std::shared_ptr<List<std::shared_ptr<employee>>> &&a1) {
+      return std::make_shared<department>(
+          Mk_department{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<department> Mk_department_uptr(
-          unsigned int a0,
-          const std::shared_ptr<List<std::shared_ptr<employee>>> &a1) {
-        return std::unique_ptr<department>(
-            new department(Mk_department{a0, a1}));
-      }
-    };
+    static std::unique_ptr<department> mk_department_uptr(
+        unsigned int a0,
+        const std::shared_ptr<List<std::shared_ptr<employee>>> &a1) {
+      return std::make_unique<department>(Mk_department{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<department>
+    mk_department_uptr(unsigned int a0,
+                       std::shared_ptr<List<std::shared_ptr<employee>>> &&a1) {
+      return std::make_unique<department>(
+          Mk_department{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -131,24 +143,21 @@ struct MutualRecord {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit employee(Mk_employee _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<employee> mk_employee(unsigned int a0,
+                                                 unsigned int a1) {
+      return std::make_shared<employee>(
+          Mk_employee{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<employee> Mk_employee_(unsigned int a0,
-                                                    unsigned int a1) {
-        return std::shared_ptr<employee>(new employee(Mk_employee{a0, a1}));
-      }
-
-      static std::unique_ptr<employee> Mk_employee_uptr(unsigned int a0,
-                                                        unsigned int a1) {
-        return std::unique_ptr<employee>(new employee(Mk_employee{a0, a1}));
-      }
-    };
+    static std::unique_ptr<employee> mk_employee_uptr(unsigned int a0,
+                                                      unsigned int a1) {
+      return std::make_unique<employee>(
+          Mk_employee{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -216,20 +225,19 @@ struct MutualRecord {
   __attribute__((pure)) static unsigned int
   emp_list_count(const std::shared_ptr<List<std::shared_ptr<employee>>> &l);
   static inline const std::shared_ptr<employee> emp1 =
-      employee::ctor::Mk_employee_(1u, 50u);
+      employee::mk_employee(1u, 50u);
   static inline const std::shared_ptr<employee> emp2 =
-      employee::ctor::Mk_employee_(2u, 60u);
+      employee::mk_employee(2u, 60u);
   static inline const std::shared_ptr<employee> emp3 =
-      employee::ctor::Mk_employee_(3u, 70u);
+      employee::mk_employee(3u, 70u);
   static inline const std::shared_ptr<department> test_dept =
-      department::ctor::Mk_department_(
+      department::mk_department(
           100u,
-          List<std::shared_ptr<employee>>::ctor::Cons_(
+          List<std::shared_ptr<employee>>::cons(
               emp1,
-              List<std::shared_ptr<employee>>::ctor::Cons_(
-                  emp2,
-                  List<std::shared_ptr<employee>>::ctor::Cons_(
-                      emp3, List<std::shared_ptr<employee>>::ctor::Nil_()))));
+              List<std::shared_ptr<employee>>::cons(
+                  emp2, List<std::shared_ptr<employee>>::cons(
+                            emp3, List<std::shared_ptr<employee>>::nil()))));
   static inline const unsigned int test_total_salary =
       dept_total_salary(test_dept);
   static inline const unsigned int test_dept_count = dept_count(test_dept);

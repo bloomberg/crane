@@ -1421,27 +1421,31 @@ let has_triple_call_expr check body = has_n_call_expr 3 check body
     non-tail recursive calls nested inside one or more constructor factories. *)
 
 (** Test whether an expression is a constructor factory call, i.e.,
-    [Type::ctor::Ctor_(args)].  Returns [(type_expr, ctor_name, args)] where
-    [type_expr] is the base type (e.g., [list<T>]), [ctor_name] is the
-    constructor name without trailing underscore (e.g., ["Cons"]), and [args]
-    are the constructor arguments.
+    [Type::cons(args)].  Returns [(type_expr, ctor_name, factory_name, args)]
+    where [type_expr] is the base type (e.g., [list<T>]), [ctor_name] is the
+    constructor struct name (e.g., ["Cons"]), [factory_name] is the factory
+    method name (e.g., ["cons"]), and [args] are the constructor arguments.
 
-    Constructor factory names always end with ['_']. *)
+    Factory calls are the only use of [CPPfun_call(CPPqualified(...), ...)]
+    in the MiniCpp AST.  The struct name is the capitalized factory name. *)
 let is_ctor_factory_call = function
-  | CPPfun_call
-      ( CPPqualified (CPPqualified (type_expr, ctor_id), factory_id),
-        args ) ->
-    let ctor_s = Id.to_string ctor_id in
+  | CPPfun_call (CPPqualified (type_expr, factory_id), args) ->
     let factory_s = Id.to_string factory_id in
-    if ctor_s = "ctor"
-       && String.length factory_s > 1
-       && factory_s.[String.length factory_s - 1] = '_'
-    then
-      let ctor_name =
-        String.sub factory_s 0 (String.length factory_s - 1)
+    (* Skip _uptr variants — TMC only works with shared_ptr factories *)
+    let n = String.length factory_s in
+    if n > 5 && String.sub factory_s (n - 5) 5 = "_uptr" then None
+    (* Skip built-in accessors and other non-factory qualified calls *)
+    else if factory_s = "v" || factory_s = "v_mut" || factory_s = "lazy_"
+    then None
+    else
+      (* Strip trailing underscore (collision escape) before capitalizing *)
+      let base =
+        if n > 0 && factory_s.[n - 1] = '_' then
+          String.sub factory_s 0 (n - 1)
+        else factory_s
       in
-      Some (type_expr, ctor_name, args)
-    else None
+      let struct_name = String.capitalize_ascii base in
+      Some (type_expr, struct_name, factory_s, args)
   | _ -> None
 
 (** Try to decompose a return expression as a TMC-eligible branch.  Handles
@@ -1453,7 +1457,7 @@ let rec try_tmc_decompose check expr =
   let expr' = match expr with CPPmove e -> e | e -> e in
   match is_ctor_factory_call expr' with
   | None -> None
-  | Some (type_expr, ctor_name, args) ->
+  | Some (type_expr, ctor_name, factory_s, args) ->
     let n_args = List.length args in
     let indexed = List.mapi (fun i a -> (i, a)) args in
     let non_rec_of idx =
@@ -1463,9 +1467,7 @@ let rec try_tmc_decompose check expr =
     in
     let make_cell idx = {
       tca_factory =
-        CPPqualified
-          (CPPqualified (type_expr, Id.of_string "ctor"),
-           Id.of_string (ctor_name ^ "_"));
+        CPPqualified (type_expr, Id.of_string factory_s);
       tca_type_expr = type_expr;
       tca_ctor_name = ctor_name;
       tca_rec_field_idx = idx;

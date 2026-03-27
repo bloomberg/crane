@@ -56,6 +56,7 @@ struct LargeMutual {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit stmt(SAssign _v) : d_v_(std::move(_v)) {}
 
@@ -67,62 +68,99 @@ struct LargeMutual {
 
     explicit stmt(SSkip _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<stmt> sassign(unsigned int a0,
+                                         const std::shared_ptr<expr> &a1) {
+      return std::make_shared<stmt>(SAssign{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<stmt> SAssign_(unsigned int a0,
-                                            const std::shared_ptr<expr> &a1) {
-        return std::shared_ptr<stmt>(new stmt(SAssign{a0, a1}));
-      }
+    static std::shared_ptr<stmt> sassign(unsigned int a0,
+                                         std::shared_ptr<expr> &&a1) {
+      return std::make_shared<stmt>(SAssign{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<stmt> SSeq_(const std::shared_ptr<stmt> &a0,
-                                         const std::shared_ptr<stmt> &a1) {
-        return std::shared_ptr<stmt>(new stmt(SSeq{a0, a1}));
-      }
+    static std::shared_ptr<stmt> sseq(const std::shared_ptr<stmt> &a0,
+                                      const std::shared_ptr<stmt> &a1) {
+      return std::make_shared<stmt>(SSeq{a0, a1});
+    }
 
-      static std::shared_ptr<stmt> SIf_(const std::shared_ptr<bexpr> &a0,
-                                        const std::shared_ptr<stmt> &a1,
-                                        const std::shared_ptr<stmt> &a2) {
-        return std::shared_ptr<stmt>(new stmt(SIf{a0, a1, a2}));
-      }
+    static std::shared_ptr<stmt> sseq(std::shared_ptr<stmt> &&a0,
+                                      std::shared_ptr<stmt> &&a1) {
+      return std::make_shared<stmt>(SSeq{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<stmt> SWhile_(const std::shared_ptr<bexpr> &a0,
+    static std::shared_ptr<stmt> sif(const std::shared_ptr<bexpr> &a0,
+                                     const std::shared_ptr<stmt> &a1,
+                                     const std::shared_ptr<stmt> &a2) {
+      return std::make_shared<stmt>(SIf{a0, a1, a2});
+    }
+
+    static std::shared_ptr<stmt> sif(std::shared_ptr<bexpr> &&a0,
+                                     std::shared_ptr<stmt> &&a1,
+                                     std::shared_ptr<stmt> &&a2) {
+      return std::make_shared<stmt>(
+          SIf{std::move(a0), std::move(a1), std::move(a2)});
+    }
+
+    static std::shared_ptr<stmt> swhile(const std::shared_ptr<bexpr> &a0,
+                                        const std::shared_ptr<stmt> &a1) {
+      return std::make_shared<stmt>(SWhile{a0, a1});
+    }
+
+    static std::shared_ptr<stmt> swhile(std::shared_ptr<bexpr> &&a0,
+                                        std::shared_ptr<stmt> &&a1) {
+      return std::make_shared<stmt>(SWhile{std::move(a0), std::move(a1)});
+    }
+
+    static std::shared_ptr<stmt> sskip() {
+      return std::make_shared<stmt>(SSkip{});
+    }
+
+    static std::unique_ptr<stmt> sassign_uptr(unsigned int a0,
+                                              const std::shared_ptr<expr> &a1) {
+      return std::make_unique<stmt>(SAssign{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<stmt> sassign_uptr(unsigned int a0,
+                                              std::shared_ptr<expr> &&a1) {
+      return std::make_unique<stmt>(SAssign{std::move(a0), std::move(a1)});
+    }
+
+    static std::unique_ptr<stmt> sseq_uptr(const std::shared_ptr<stmt> &a0,
                                            const std::shared_ptr<stmt> &a1) {
-        return std::shared_ptr<stmt>(new stmt(SWhile{a0, a1}));
-      }
+      return std::make_unique<stmt>(SSeq{a0, a1});
+    }
 
-      static std::shared_ptr<stmt> SSkip_() {
-        return std::shared_ptr<stmt>(new stmt(SSkip{}));
-      }
+    static std::unique_ptr<stmt> sseq_uptr(std::shared_ptr<stmt> &&a0,
+                                           std::shared_ptr<stmt> &&a1) {
+      return std::make_unique<stmt>(SSeq{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<stmt>
-      SAssign_uptr(unsigned int a0, const std::shared_ptr<expr> &a1) {
-        return std::unique_ptr<stmt>(new stmt(SAssign{a0, a1}));
-      }
+    static std::unique_ptr<stmt> sif_uptr(const std::shared_ptr<bexpr> &a0,
+                                          const std::shared_ptr<stmt> &a1,
+                                          const std::shared_ptr<stmt> &a2) {
+      return std::make_unique<stmt>(SIf{a0, a1, a2});
+    }
 
-      static std::unique_ptr<stmt> SSeq_uptr(const std::shared_ptr<stmt> &a0,
+    static std::unique_ptr<stmt> sif_uptr(std::shared_ptr<bexpr> &&a0,
+                                          std::shared_ptr<stmt> &&a1,
+                                          std::shared_ptr<stmt> &&a2) {
+      return std::make_unique<stmt>(
+          SIf{std::move(a0), std::move(a1), std::move(a2)});
+    }
+
+    static std::unique_ptr<stmt> swhile_uptr(const std::shared_ptr<bexpr> &a0,
                                              const std::shared_ptr<stmt> &a1) {
-        return std::unique_ptr<stmt>(new stmt(SSeq{a0, a1}));
-      }
+      return std::make_unique<stmt>(SWhile{a0, a1});
+    }
 
-      static std::unique_ptr<stmt> SIf_uptr(const std::shared_ptr<bexpr> &a0,
-                                            const std::shared_ptr<stmt> &a1,
-                                            const std::shared_ptr<stmt> &a2) {
-        return std::unique_ptr<stmt>(new stmt(SIf{a0, a1, a2}));
-      }
+    static std::unique_ptr<stmt> swhile_uptr(std::shared_ptr<bexpr> &&a0,
+                                             std::shared_ptr<stmt> &&a1) {
+      return std::make_unique<stmt>(SWhile{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<stmt>
-      SWhile_uptr(const std::shared_ptr<bexpr> &a0,
-                  const std::shared_ptr<stmt> &a1) {
-        return std::unique_ptr<stmt>(new stmt(SWhile{a0, a1}));
-      }
-
-      static std::unique_ptr<stmt> SSkip_uptr() {
-        return std::unique_ptr<stmt>(new stmt(SSkip{}));
-      }
-    };
+    static std::unique_ptr<stmt> sskip_uptr() {
+      return std::make_unique<stmt>(SSkip{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -163,6 +201,7 @@ struct LargeMutual {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit expr(ENum _v) : d_v_(std::move(_v)) {}
 
@@ -174,59 +213,87 @@ struct LargeMutual {
 
     explicit expr(ECond _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<expr> ENum_(unsigned int a0) {
+      return std::make_shared<expr>(ENum{std::move(a0)});
+    }
 
-      static std::shared_ptr<expr> ENum_(unsigned int a0) {
-        return std::shared_ptr<expr>(new expr(ENum{a0}));
-      }
+    static std::shared_ptr<expr> evar(unsigned int a0) {
+      return std::make_shared<expr>(EVar{std::move(a0)});
+    }
 
-      static std::shared_ptr<expr> EVar_(unsigned int a0) {
-        return std::shared_ptr<expr>(new expr(EVar{a0}));
-      }
+    static std::shared_ptr<expr> eadd(const std::shared_ptr<expr> &a0,
+                                      const std::shared_ptr<expr> &a1) {
+      return std::make_shared<expr>(EAdd{a0, a1});
+    }
 
-      static std::shared_ptr<expr> EAdd_(const std::shared_ptr<expr> &a0,
-                                         const std::shared_ptr<expr> &a1) {
-        return std::shared_ptr<expr>(new expr(EAdd{a0, a1}));
-      }
+    static std::shared_ptr<expr> eadd(std::shared_ptr<expr> &&a0,
+                                      std::shared_ptr<expr> &&a1) {
+      return std::make_shared<expr>(EAdd{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<expr> EMul_(const std::shared_ptr<expr> &a0,
-                                         const std::shared_ptr<expr> &a1) {
-        return std::shared_ptr<expr>(new expr(EMul{a0, a1}));
-      }
+    static std::shared_ptr<expr> emul(const std::shared_ptr<expr> &a0,
+                                      const std::shared_ptr<expr> &a1) {
+      return std::make_shared<expr>(EMul{a0, a1});
+    }
 
-      static std::shared_ptr<expr> ECond_(const std::shared_ptr<bexpr> &a0,
-                                          const std::shared_ptr<expr> &a1,
-                                          const std::shared_ptr<expr> &a2) {
-        return std::shared_ptr<expr>(new expr(ECond{a0, a1, a2}));
-      }
+    static std::shared_ptr<expr> emul(std::shared_ptr<expr> &&a0,
+                                      std::shared_ptr<expr> &&a1) {
+      return std::make_shared<expr>(EMul{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<expr> ENum_uptr(unsigned int a0) {
-        return std::unique_ptr<expr>(new expr(ENum{a0}));
-      }
+    static std::shared_ptr<expr> econd(const std::shared_ptr<bexpr> &a0,
+                                       const std::shared_ptr<expr> &a1,
+                                       const std::shared_ptr<expr> &a2) {
+      return std::make_shared<expr>(ECond{a0, a1, a2});
+    }
 
-      static std::unique_ptr<expr> EVar_uptr(unsigned int a0) {
-        return std::unique_ptr<expr>(new expr(EVar{a0}));
-      }
+    static std::shared_ptr<expr> econd(std::shared_ptr<bexpr> &&a0,
+                                       std::shared_ptr<expr> &&a1,
+                                       std::shared_ptr<expr> &&a2) {
+      return std::make_shared<expr>(
+          ECond{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
-      static std::unique_ptr<expr> EAdd_uptr(const std::shared_ptr<expr> &a0,
-                                             const std::shared_ptr<expr> &a1) {
-        return std::unique_ptr<expr>(new expr(EAdd{a0, a1}));
-      }
+    static std::unique_ptr<expr> ENum_uptr(unsigned int a0) {
+      return std::make_unique<expr>(ENum{std::move(a0)});
+    }
 
-      static std::unique_ptr<expr> EMul_uptr(const std::shared_ptr<expr> &a0,
-                                             const std::shared_ptr<expr> &a1) {
-        return std::unique_ptr<expr>(new expr(EMul{a0, a1}));
-      }
+    static std::unique_ptr<expr> evar_uptr(unsigned int a0) {
+      return std::make_unique<expr>(EVar{std::move(a0)});
+    }
 
-      static std::unique_ptr<expr> ECond_uptr(const std::shared_ptr<bexpr> &a0,
-                                              const std::shared_ptr<expr> &a1,
-                                              const std::shared_ptr<expr> &a2) {
-        return std::unique_ptr<expr>(new expr(ECond{a0, a1, a2}));
-      }
-    };
+    static std::unique_ptr<expr> eadd_uptr(const std::shared_ptr<expr> &a0,
+                                           const std::shared_ptr<expr> &a1) {
+      return std::make_unique<expr>(EAdd{a0, a1});
+    }
+
+    static std::unique_ptr<expr> eadd_uptr(std::shared_ptr<expr> &&a0,
+                                           std::shared_ptr<expr> &&a1) {
+      return std::make_unique<expr>(EAdd{std::move(a0), std::move(a1)});
+    }
+
+    static std::unique_ptr<expr> emul_uptr(const std::shared_ptr<expr> &a0,
+                                           const std::shared_ptr<expr> &a1) {
+      return std::make_unique<expr>(EMul{a0, a1});
+    }
+
+    static std::unique_ptr<expr> emul_uptr(std::shared_ptr<expr> &&a0,
+                                           std::shared_ptr<expr> &&a1) {
+      return std::make_unique<expr>(EMul{std::move(a0), std::move(a1)});
+    }
+
+    static std::unique_ptr<expr> econd_uptr(const std::shared_ptr<bexpr> &a0,
+                                            const std::shared_ptr<expr> &a1,
+                                            const std::shared_ptr<expr> &a2) {
+      return std::make_unique<expr>(ECond{a0, a1, a2});
+    }
+
+    static std::unique_ptr<expr> econd_uptr(std::shared_ptr<bexpr> &&a0,
+                                            std::shared_ptr<expr> &&a1,
+                                            std::shared_ptr<expr> &&a2) {
+      return std::make_unique<expr>(
+          ECond{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -271,6 +338,7 @@ struct LargeMutual {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit bexpr(BTrue _v) : d_v_(std::move(_v)) {}
 
@@ -286,77 +354,117 @@ struct LargeMutual {
 
     explicit bexpr(BNot _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<bexpr> btrue() {
+      return std::make_shared<bexpr>(BTrue{});
+    }
 
-      static std::shared_ptr<bexpr> BTrue_() {
-        return std::shared_ptr<bexpr>(new bexpr(BTrue{}));
-      }
+    static std::shared_ptr<bexpr> bfalse() {
+      return std::make_shared<bexpr>(BFalse{});
+    }
 
-      static std::shared_ptr<bexpr> BFalse_() {
-        return std::shared_ptr<bexpr>(new bexpr(BFalse{}));
-      }
+    static std::shared_ptr<bexpr> beq(const std::shared_ptr<expr> &a0,
+                                      const std::shared_ptr<expr> &a1) {
+      return std::make_shared<bexpr>(BEq{a0, a1});
+    }
 
-      static std::shared_ptr<bexpr> BEq_(const std::shared_ptr<expr> &a0,
-                                         const std::shared_ptr<expr> &a1) {
-        return std::shared_ptr<bexpr>(new bexpr(BEq{a0, a1}));
-      }
+    static std::shared_ptr<bexpr> beq(std::shared_ptr<expr> &&a0,
+                                      std::shared_ptr<expr> &&a1) {
+      return std::make_shared<bexpr>(BEq{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<bexpr> BLt_(const std::shared_ptr<expr> &a0,
-                                         const std::shared_ptr<expr> &a1) {
-        return std::shared_ptr<bexpr>(new bexpr(BLt{a0, a1}));
-      }
+    static std::shared_ptr<bexpr> blt(const std::shared_ptr<expr> &a0,
+                                      const std::shared_ptr<expr> &a1) {
+      return std::make_shared<bexpr>(BLt{a0, a1});
+    }
 
-      static std::shared_ptr<bexpr> BAnd_(const std::shared_ptr<bexpr> &a0,
-                                          const std::shared_ptr<bexpr> &a1) {
-        return std::shared_ptr<bexpr>(new bexpr(BAnd{a0, a1}));
-      }
+    static std::shared_ptr<bexpr> blt(std::shared_ptr<expr> &&a0,
+                                      std::shared_ptr<expr> &&a1) {
+      return std::make_shared<bexpr>(BLt{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<bexpr> BOr_(const std::shared_ptr<bexpr> &a0,
-                                         const std::shared_ptr<bexpr> &a1) {
-        return std::shared_ptr<bexpr>(new bexpr(BOr{a0, a1}));
-      }
+    static std::shared_ptr<bexpr> band(const std::shared_ptr<bexpr> &a0,
+                                       const std::shared_ptr<bexpr> &a1) {
+      return std::make_shared<bexpr>(BAnd{a0, a1});
+    }
 
-      static std::shared_ptr<bexpr> BNot_(const std::shared_ptr<bexpr> &a0) {
-        return std::shared_ptr<bexpr>(new bexpr(BNot{a0}));
-      }
+    static std::shared_ptr<bexpr> band(std::shared_ptr<bexpr> &&a0,
+                                       std::shared_ptr<bexpr> &&a1) {
+      return std::make_shared<bexpr>(BAnd{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<bexpr> BTrue_uptr() {
-        return std::unique_ptr<bexpr>(new bexpr(BTrue{}));
-      }
+    static std::shared_ptr<bexpr> bor(const std::shared_ptr<bexpr> &a0,
+                                      const std::shared_ptr<bexpr> &a1) {
+      return std::make_shared<bexpr>(BOr{a0, a1});
+    }
 
-      static std::unique_ptr<bexpr> BFalse_uptr() {
-        return std::unique_ptr<bexpr>(new bexpr(BFalse{}));
-      }
+    static std::shared_ptr<bexpr> bor(std::shared_ptr<bexpr> &&a0,
+                                      std::shared_ptr<bexpr> &&a1) {
+      return std::make_shared<bexpr>(BOr{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<bexpr> BEq_uptr(const std::shared_ptr<expr> &a0,
-                                             const std::shared_ptr<expr> &a1) {
-        return std::unique_ptr<bexpr>(new bexpr(BEq{a0, a1}));
-      }
+    static std::shared_ptr<bexpr> bnot(const std::shared_ptr<bexpr> &a0) {
+      return std::make_shared<bexpr>(BNot{a0});
+    }
 
-      static std::unique_ptr<bexpr> BLt_uptr(const std::shared_ptr<expr> &a0,
-                                             const std::shared_ptr<expr> &a1) {
-        return std::unique_ptr<bexpr>(new bexpr(BLt{a0, a1}));
-      }
+    static std::shared_ptr<bexpr> bnot(std::shared_ptr<bexpr> &&a0) {
+      return std::make_shared<bexpr>(BNot{std::move(a0)});
+    }
 
-      static std::unique_ptr<bexpr>
-      BAnd_uptr(const std::shared_ptr<bexpr> &a0,
-                const std::shared_ptr<bexpr> &a1) {
-        return std::unique_ptr<bexpr>(new bexpr(BAnd{a0, a1}));
-      }
+    static std::unique_ptr<bexpr> btrue_uptr() {
+      return std::make_unique<bexpr>(BTrue{});
+    }
 
-      static std::unique_ptr<bexpr> BOr_uptr(const std::shared_ptr<bexpr> &a0,
-                                             const std::shared_ptr<bexpr> &a1) {
-        return std::unique_ptr<bexpr>(new bexpr(BOr{a0, a1}));
-      }
+    static std::unique_ptr<bexpr> bfalse_uptr() {
+      return std::make_unique<bexpr>(BFalse{});
+    }
 
-      static std::unique_ptr<bexpr>
-      BNot_uptr(const std::shared_ptr<bexpr> &a0) {
-        return std::unique_ptr<bexpr>(new bexpr(BNot{a0}));
-      }
-    };
+    static std::unique_ptr<bexpr> beq_uptr(const std::shared_ptr<expr> &a0,
+                                           const std::shared_ptr<expr> &a1) {
+      return std::make_unique<bexpr>(BEq{a0, a1});
+    }
+
+    static std::unique_ptr<bexpr> beq_uptr(std::shared_ptr<expr> &&a0,
+                                           std::shared_ptr<expr> &&a1) {
+      return std::make_unique<bexpr>(BEq{std::move(a0), std::move(a1)});
+    }
+
+    static std::unique_ptr<bexpr> blt_uptr(const std::shared_ptr<expr> &a0,
+                                           const std::shared_ptr<expr> &a1) {
+      return std::make_unique<bexpr>(BLt{a0, a1});
+    }
+
+    static std::unique_ptr<bexpr> blt_uptr(std::shared_ptr<expr> &&a0,
+                                           std::shared_ptr<expr> &&a1) {
+      return std::make_unique<bexpr>(BLt{std::move(a0), std::move(a1)});
+    }
+
+    static std::unique_ptr<bexpr> band_uptr(const std::shared_ptr<bexpr> &a0,
+                                            const std::shared_ptr<bexpr> &a1) {
+      return std::make_unique<bexpr>(BAnd{a0, a1});
+    }
+
+    static std::unique_ptr<bexpr> band_uptr(std::shared_ptr<bexpr> &&a0,
+                                            std::shared_ptr<bexpr> &&a1) {
+      return std::make_unique<bexpr>(BAnd{std::move(a0), std::move(a1)});
+    }
+
+    static std::unique_ptr<bexpr> bor_uptr(const std::shared_ptr<bexpr> &a0,
+                                           const std::shared_ptr<bexpr> &a1) {
+      return std::make_unique<bexpr>(BOr{a0, a1});
+    }
+
+    static std::unique_ptr<bexpr> bor_uptr(std::shared_ptr<bexpr> &&a0,
+                                           std::shared_ptr<bexpr> &&a1) {
+      return std::make_unique<bexpr>(BOr{std::move(a0), std::move(a1)});
+    }
+
+    static std::unique_ptr<bexpr> bnot_uptr(const std::shared_ptr<bexpr> &a0) {
+      return std::make_unique<bexpr>(BNot{a0});
+    }
+
+    static std::unique_ptr<bexpr> bnot_uptr(std::shared_ptr<bexpr> &&a0) {
+      return std::make_unique<bexpr>(BNot{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -581,18 +689,15 @@ struct LargeMutual {
   bexpr_size(const std::shared_ptr<bexpr> &b);
   __attribute__((pure)) static unsigned int
   stmt_size(const std::shared_ptr<stmt> &s);
-  static inline const std::shared_ptr<expr> test_expr = expr::ctor::EAdd_(
-      expr::ctor::ENum_(1u),
-      expr::ctor::EMul_(expr::ctor::ENum_(2u), expr::ctor::ENum_(3u)));
-  static inline const std::shared_ptr<bexpr> test_bexpr = bexpr::ctor::BAnd_(
-      bexpr::ctor::BEq_(expr::ctor::EVar_(0u), expr::ctor::ENum_(5u)),
-      bexpr::ctor::BLt_(expr::ctor::EVar_(1u), expr::ctor::ENum_(10u)));
-  static inline const std::shared_ptr<stmt> test_stmt = stmt::ctor::SSeq_(
-      stmt::ctor::SAssign_(0u, expr::ctor::ENum_(42u)),
-      stmt::ctor::SIf_(
-          bexpr::ctor::BEq_(expr::ctor::EVar_(0u), expr::ctor::ENum_(42u)),
-          stmt::ctor::SSkip_(),
-          stmt::ctor::SAssign_(0u, expr::ctor::ENum_(0u))));
+  static inline const std::shared_ptr<expr> test_expr =
+      expr::eadd(expr::ENum_(1u), expr::emul(expr::ENum_(2u), expr::ENum_(3u)));
+  static inline const std::shared_ptr<bexpr> test_bexpr =
+      bexpr::band(bexpr::beq(expr::evar(0u), expr::ENum_(5u)),
+                  bexpr::blt(expr::evar(1u), expr::ENum_(10u)));
+  static inline const std::shared_ptr<stmt> test_stmt =
+      stmt::sseq(stmt::sassign(0u, expr::ENum_(42u)),
+                 stmt::sif(bexpr::beq(expr::evar(0u), expr::ENum_(42u)),
+                           stmt::sskip(), stmt::sassign(0u, expr::ENum_(0u))));
   static inline const unsigned int test_expr_size = expr_size(test_expr);
   static inline const unsigned int test_bexpr_size = bexpr_size(test_bexpr);
   static inline const unsigned int test_stmt_size = stmt_size(test_stmt);

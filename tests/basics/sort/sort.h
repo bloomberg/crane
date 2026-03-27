@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -95,22 +100,17 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Sig(Exist _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Sig<t_A>> exist(t_A a0) {
+    return std::make_shared<Sig<t_A>>(Exist{std::move(a0)});
+  }
 
-    static std::shared_ptr<Sig<t_A>> Exist_(t_A a0) {
-      return std::shared_ptr<Sig<t_A>>(new Sig<t_A>(Exist{a0}));
-    }
-
-    static std::unique_ptr<Sig<t_A>> Exist_uptr(t_A a0) {
-      return std::unique_ptr<Sig<t_A>>(new Sig<t_A>(Exist{a0}));
-    }
-  };
+  static std::unique_ptr<Sig<t_A>> exist_uptr(t_A a0) {
+    return std::make_unique<Sig<t_A>>(Exist{std::move(a0)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -160,8 +160,7 @@ struct Sort {
         Overloaded{[](const typename List<T1>::Nil _args)
                        -> std::pair<std::shared_ptr<List<T1>>,
                                     std::shared_ptr<List<T1>>> {
-                     return std::make_pair(List<T1>::ctor::Nil_(),
-                                           List<T1>::ctor::Nil_());
+                     return std::make_pair(List<T1>::nil(), List<T1>::nil());
                    },
                    [](const typename List<T1>::Cons _args)
                        -> std::pair<std::shared_ptr<List<T1>>,
@@ -172,9 +171,8 @@ struct Sort {
                                  -> std::pair<std::shared_ptr<List<T1>>,
                                               std::shared_ptr<List<T1>>> {
                                return std::make_pair(
-                                   List<T1>::ctor::Cons_(
-                                       _args.d_a0, List<T1>::ctor::Nil_()),
-                                   List<T1>::ctor::Nil_());
+                                   List<T1>::cons(_args.d_a0, List<T1>::nil()),
+                                   List<T1>::nil());
                              },
                              [&](const typename List<T1>::Cons _args0)
                                  -> std::pair<std::shared_ptr<List<T1>>,
@@ -184,8 +182,8 @@ struct Sort {
                                std::shared_ptr<List<T1>> ls2 =
                                    split<T1>(_args0.d_a1).second;
                                return std::make_pair(
-                                   List<T1>::ctor::Cons_(_args.d_a0, ls1),
-                                   List<T1>::ctor::Cons_(_args0.d_a0, ls2));
+                                   List<T1>::cons(_args.d_a0, ls1),
+                                   List<T1>::cons(_args0.d_a0, ls2));
                              }},
                          _args.d_a1->v());
                    }},
@@ -228,27 +226,25 @@ struct Sort {
   split_pivot(F0 &&le_dec0, const T1 pivot,
               const std::shared_ptr<List<T1>> &l) {
     return std::visit(
-        Overloaded{[](const typename List<T1>::Nil _args)
-                       -> std::pair<std::shared_ptr<List<T1>>,
-                                    std::shared_ptr<List<T1>>> {
-                     return std::make_pair(List<T1>::ctor::Nil_(),
-                                           List<T1>::ctor::Nil_());
-                   },
-                   [&](const typename List<T1>::Cons _args)
-                       -> std::pair<std::shared_ptr<List<T1>>,
-                                    std::shared_ptr<List<T1>>> {
-                     std::shared_ptr<List<T1>> l1 =
-                         split_pivot<T1>(le_dec0, pivot, _args.d_a1).first;
-                     std::shared_ptr<List<T1>> l2 =
-                         split_pivot<T1>(le_dec0, pivot, _args.d_a1).second;
-                     if (le_dec0(_args.d_a0, pivot)) {
-                       return std::make_pair(
-                           List<T1>::ctor::Cons_(_args.d_a0, l1), l2);
-                     } else {
-                       return std::make_pair(
-                           l1, List<T1>::ctor::Cons_(_args.d_a0, l2));
-                     }
-                   }},
+        Overloaded{
+            [](const typename List<T1>::Nil _args)
+                -> std::pair<std::shared_ptr<List<T1>>,
+                             std::shared_ptr<List<T1>>> {
+              return std::make_pair(List<T1>::nil(), List<T1>::nil());
+            },
+            [&](const typename List<T1>::Cons _args)
+                -> std::pair<std::shared_ptr<List<T1>>,
+                             std::shared_ptr<List<T1>>> {
+              std::shared_ptr<List<T1>> l1 =
+                  split_pivot<T1>(le_dec0, pivot, _args.d_a1).first;
+              std::shared_ptr<List<T1>> l2 =
+                  split_pivot<T1>(le_dec0, pivot, _args.d_a1).second;
+              if (le_dec0(_args.d_a0, pivot)) {
+                return std::make_pair(List<T1>::cons(_args.d_a0, l1), l2);
+              } else {
+                return std::make_pair(l1, List<T1>::cons(_args.d_a0, l2));
+              }
+            }},
         l->v());
   }
 

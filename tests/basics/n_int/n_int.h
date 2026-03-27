@@ -44,6 +44,7 @@ struct Pos {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit mask(IsNul _v) : d_v_(std::move(_v)) {}
 
@@ -51,35 +52,29 @@ struct Pos {
 
     explicit mask(IsNeg _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<mask> isnul() {
+      return std::make_shared<mask>(IsNul{});
+    }
 
-      static std::shared_ptr<mask> IsNul_() {
-        return std::shared_ptr<mask>(new mask(IsNul{}));
-      }
+    static std::shared_ptr<mask> ispos(unsigned int a0) {
+      return std::make_shared<mask>(IsPos{std::move(a0)});
+    }
 
-      static std::shared_ptr<mask> IsPos_(unsigned int a0) {
-        return std::shared_ptr<mask>(new mask(IsPos{a0}));
-      }
+    static std::shared_ptr<mask> isneg() {
+      return std::make_shared<mask>(IsNeg{});
+    }
 
-      static std::shared_ptr<mask> IsNeg_() {
-        return std::shared_ptr<mask>(new mask(IsNeg{}));
-      }
+    static std::unique_ptr<mask> isnul_uptr() {
+      return std::make_unique<mask>(IsNul{});
+    }
 
-      static std::unique_ptr<mask> IsNul_uptr() {
-        return std::unique_ptr<mask>(new mask(IsNul{}));
-      }
+    static std::unique_ptr<mask> ispos_uptr(unsigned int a0) {
+      return std::make_unique<mask>(IsPos{std::move(a0)});
+    }
 
-      static std::unique_ptr<mask> IsPos_uptr(unsigned int a0) {
-        return std::unique_ptr<mask>(new mask(IsPos{a0}));
-      }
-
-      static std::unique_ptr<mask> IsNeg_uptr() {
-        return std::unique_ptr<mask>(new mask(IsNeg{}));
-      }
-    };
+    static std::unique_ptr<mask> isneg_uptr() {
+      return std::make_unique<mask>(IsNeg{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

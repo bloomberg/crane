@@ -37,34 +37,39 @@ struct LoopifyOption {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit list(Nil _v) : d_v_(std::move(_v)) {}
 
     explicit list(Cons _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<list<t_A>> nil() {
+      return std::make_shared<list<t_A>>(Nil{});
+    }
 
-      static std::shared_ptr<list<t_A>> Nil_() {
-        return std::shared_ptr<list<t_A>>(new list<t_A>(Nil{}));
-      }
+    static std::shared_ptr<list<t_A>>
+    cons(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
+      return std::make_shared<list<t_A>>(Cons{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<list<t_A>>
-      Cons_(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
-        return std::shared_ptr<list<t_A>>(new list<t_A>(Cons{a0, a1}));
-      }
+    static std::shared_ptr<list<t_A>> cons(t_A a0,
+                                           std::shared_ptr<list<t_A>> &&a1) {
+      return std::make_shared<list<t_A>>(Cons{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<list<t_A>> Nil_uptr() {
-        return std::unique_ptr<list<t_A>>(new list<t_A>(Nil{}));
-      }
+    static std::unique_ptr<list<t_A>> nil_uptr() {
+      return std::make_unique<list<t_A>>(Nil{});
+    }
 
-      static std::unique_ptr<list<t_A>>
-      Cons_uptr(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
-        return std::unique_ptr<list<t_A>>(new list<t_A>(Cons{a0, a1}));
-      }
-    };
+    static std::unique_ptr<list<t_A>>
+    cons_uptr(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
+      return std::make_unique<list<t_A>>(Cons{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<list<t_A>>
+    cons_uptr(t_A a0, std::shared_ptr<list<t_A>> &&a1) {
+      return std::make_unique<list<t_A>>(Cons{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -258,16 +263,16 @@ struct LoopifyOption {
               [&](const typename list<T1>::Nil _args) {
                 if (_last) {
                   std::get<typename list<T2>::Cons>(_last->v_mut()).d_a1 =
-                      list<T2>::ctor::Nil_();
+                      list<T2>::nil();
                 } else {
-                  _head = list<T2>::ctor::Nil_();
+                  _head = list<T2>::nil();
                 }
                 _continue = false;
               },
               [&](const typename list<T1>::Cons _args) {
                 if (f(_args.d_a0).has_value()) {
                   T2 y = *f(_args.d_a0);
-                  auto _cell = list<T2>::ctor::Cons_(y, nullptr);
+                  auto _cell = list<T2>::cons(y, nullptr);
                   if (_last) {
                     std::get<typename list<T2>::Cons>(_last->v_mut()).d_a1 =
                         _cell;

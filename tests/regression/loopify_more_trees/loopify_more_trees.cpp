@@ -44,7 +44,7 @@ LoopifyMoreTrees::mirror(const std::shared_ptr<LoopifyMoreTrees::tree> &t) {
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyMoreTrees::tree::Leaf _args)
-                          -> void { _result = tree::ctor::Leaf_(); },
+                          -> void { _result = tree::leaf(); },
                       [&](const typename LoopifyMoreTrees::tree::Node _args)
                           -> void {
                         _stack.push_back(_Call1{_args.d_a2, _args.d_a1});
@@ -56,9 +56,7 @@ LoopifyMoreTrees::mirror(const std::shared_ptr<LoopifyMoreTrees::tree> &t) {
               _stack.push_back(_Call2{_result, _f._s1});
               _stack.push_back(_Enter{_f._s0});
             },
-            [&](_Call2 _f) {
-              _result = tree::ctor::Node_(_result, _f._s1, _f._s0);
-            }},
+            [&](_Call2 _f) { _result = tree::node(_result, _f._s1, _f._s0); }},
         _frame);
   }
   return _result;
@@ -143,16 +141,16 @@ std::shared_ptr<List<unsigned int>> LoopifyMoreTrees::tree_to_list(
   struct _Call1 {
     decltype(std::declval<const typename LoopifyMoreTrees::tree::Node &>()
                  .d_a0) _s0;
-    decltype(List<unsigned int>::ctor::Cons_(
+    decltype(List<unsigned int>::cons(
         std::declval<const typename LoopifyMoreTrees::tree::Node &>().d_a1,
-        List<unsigned int>::ctor::Nil_())) _s1;
+        List<unsigned int>::nil())) _s1;
   };
 
   struct _Call2 {
     std::shared_ptr<List<unsigned int>> _s0;
-    decltype(List<unsigned int>::ctor::Cons_(
+    decltype(List<unsigned int>::cons(
         std::declval<const typename LoopifyMoreTrees::tree::Node &>().d_a1,
-        List<unsigned int>::ctor::Nil_())) _s1;
+        List<unsigned int>::nil())) _s1;
   };
 
   using _Frame = std::variant<_Enter, _Call1, _Call2>;
@@ -169,15 +167,13 @@ std::shared_ptr<List<unsigned int>> LoopifyMoreTrees::tree_to_list(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyMoreTrees::tree::Leaf _args)
-                          -> void {
-                        _result = List<unsigned int>::ctor::Nil_();
-                      },
+                          -> void { _result = List<unsigned int>::nil(); },
                       [&](const typename LoopifyMoreTrees::tree::Node _args)
                           -> void {
-                        _stack.push_back(_Call1{
-                            _args.d_a0,
-                            List<unsigned int>::ctor::Cons_(
-                                _args.d_a1, List<unsigned int>::ctor::Nil_())});
+                        _stack.push_back(
+                            _Call1{_args.d_a0,
+                                   List<unsigned int>::cons(
+                                       _args.d_a1, List<unsigned int>::nil())});
                         _stack.push_back(_Enter{_args.d_a2});
                       }},
                   t->v());
@@ -313,9 +309,7 @@ LoopifyMoreTrees::tree_max(std::shared_ptr<LoopifyMoreTrees::tree> t1,
               _stack.push_back(_Call2{_result, _f._s2});
               _stack.push_back(_Enter{_f._s0, _f._s1});
             },
-            [&](_Call2 _f) {
-              _result = tree::ctor::Node_(_result, _f._s1, _f._s0);
-            }},
+            [&](_Call2 _f) { _result = tree::node(_result, _f._s1, _f._s0); }},
         _frame);
   }
   return _result;
@@ -410,9 +404,8 @@ LoopifyMoreTrees::insert_bst(const unsigned int x,
                   Overloaded{
                       [&](const typename LoopifyMoreTrees::tree::Leaf _args)
                           -> void {
-                        _result =
-                            tree::ctor::Node_(tree::ctor::Leaf_(), std::move(x),
-                                              tree::ctor::Leaf_());
+                        _result = tree::node(tree::leaf(), std::move(x),
+                                             tree::leaf());
                       },
                       [&](const typename LoopifyMoreTrees::tree::Node _args)
                           -> void {
@@ -426,12 +419,8 @@ LoopifyMoreTrees::insert_bst(const unsigned int x,
                       }},
                   t->v());
             },
-            [&](_Call1 _f) {
-              _result = tree::ctor::Node_(_result, _f._s1, _f._s0);
-            },
-            [&](_Call2 _f) {
-              _result = tree::ctor::Node_(_f._s1, _f._s0, _result);
-            }},
+            [&](_Call1 _f) { _result = tree::node(_result, _f._s1, _f._s0); },
+            [&](_Call2 _f) { _result = tree::node(_f._s1, _f._s0, _result); }},
         _frame);
   }
   return _result;
@@ -461,7 +450,7 @@ LoopifyMoreTrees::build_bst(const std::shared_ptr<List<unsigned int>> &l) {
                      std::visit(
                          Overloaded{
                              [&](const typename List<unsigned int>::Nil _args)
-                                 -> void { _result = tree::ctor::Leaf_(); },
+                                 -> void { _result = tree::leaf(); },
                              [&](const typename List<unsigned int>::Cons _args)
                                  -> void {
                                _stack.push_back(_Call1{_args.d_a0});
@@ -496,7 +485,7 @@ LoopifyMoreTrees::append_lists(const std::shared_ptr<List<unsigned int>> &l1,
               _continue = false;
             },
             [&](const typename List<unsigned int>::Cons _args) {
-              auto _cell = List<unsigned int>::ctor::Cons_(_args.d_a0, nullptr);
+              auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = _cell;
@@ -543,9 +532,7 @@ std::shared_ptr<List<unsigned int>> LoopifyMoreTrees::flatten(
                   Overloaded{
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Nil _args)
-                          -> void {
-                        _result = List<unsigned int>::ctor::Nil_();
-                      },
+                          -> void { _result = List<unsigned int>::nil(); },
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Cons _args)
                           -> void {
@@ -576,18 +563,16 @@ LoopifyMoreTrees::map_tree_to_list(
                 std::get<
                     typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
                     _last->v_mut())
-                    .d_a1 =
-                    List<std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
+                    .d_a1 = List<std::shared_ptr<List<unsigned int>>>::nil();
               } else {
-                _head = List<std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
+                _head = List<std::shared_ptr<List<unsigned int>>>::nil();
               }
               _continue = false;
             },
             [&](const typename List<
                 std::shared_ptr<LoopifyMoreTrees::tree>>::Cons _args) {
-              auto _cell =
-                  List<std::shared_ptr<List<unsigned int>>>::ctor::Cons_(
-                      tree_to_list(_args.d_a0), nullptr);
+              auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
+                  tree_to_list(_args.d_a0), nullptr);
               if (_last) {
                 std::get<
                     typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
@@ -612,16 +597,16 @@ LoopifyMoreTrees::tree_children(
           [](const typename LoopifyMoreTrees::tree::Leaf _args)
               -> std::shared_ptr<
                   List<std::shared_ptr<LoopifyMoreTrees::tree>>> {
-            return List<std::shared_ptr<LoopifyMoreTrees::tree>>::ctor::Nil_();
+            return List<std::shared_ptr<LoopifyMoreTrees::tree>>::nil();
           },
           [](const typename LoopifyMoreTrees::tree::Node _args)
               -> std::shared_ptr<
                   List<std::shared_ptr<LoopifyMoreTrees::tree>>> {
-            return List<std::shared_ptr<LoopifyMoreTrees::tree>>::ctor::Cons_(
+            return List<std::shared_ptr<LoopifyMoreTrees::tree>>::cons(
                 _args.d_a0,
-                List<std::shared_ptr<LoopifyMoreTrees::tree>>::ctor::Cons_(
-                    _args.d_a2, List<std::shared_ptr<LoopifyMoreTrees::tree>>::
-                                    ctor::Nil_()));
+                List<std::shared_ptr<LoopifyMoreTrees::tree>>::cons(
+                    _args.d_a2,
+                    List<std::shared_ptr<LoopifyMoreTrees::tree>>::nil()));
           }},
       t->v());
 }
@@ -652,9 +637,8 @@ LoopifyMoreTrees::append_trees(
             },
             [&](const typename List<
                 std::shared_ptr<LoopifyMoreTrees::tree>>::Cons _args) {
-              auto _cell =
-                  List<std::shared_ptr<LoopifyMoreTrees::tree>>::ctor::Cons_(
-                      _args.d_a0, nullptr);
+              auto _cell = List<std::shared_ptr<LoopifyMoreTrees::tree>>::cons(
+                  _args.d_a0, nullptr);
               if (_last) {
                 std::get<typename List<
                     std::shared_ptr<LoopifyMoreTrees::tree>>::Cons>(
@@ -708,9 +692,8 @@ LoopifyMoreTrees::concat_map_children(
                       [&](const typename List<
                           std::shared_ptr<LoopifyMoreTrees::tree>>::Nil _args)
                           -> void {
-                        _result =
-                            List<std::shared_ptr<LoopifyMoreTrees::tree>>::
-                                ctor::Nil_();
+                        _result = List<
+                            std::shared_ptr<LoopifyMoreTrees::tree>>::nil();
                       },
                       [&](const typename List<
                           std::shared_ptr<LoopifyMoreTrees::tree>>::Cons _args)
@@ -743,9 +726,9 @@ LoopifyMoreTrees::tree_levels_fuel(
         if (_last) {
           std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
               _last->v_mut())
-              .d_a1 = List<std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
+              .d_a1 = List<std::shared_ptr<List<unsigned int>>>::nil();
         } else {
-          _head = List<std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
+          _head = List<std::shared_ptr<List<unsigned int>>>::nil();
         }
         _continue = false;
       }
@@ -759,11 +742,9 @@ LoopifyMoreTrees::tree_levels_fuel(
                   std::get<
                       typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
                       _last->v_mut())
-                      .d_a1 =
-                      List<std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
+                      .d_a1 = List<std::shared_ptr<List<unsigned int>>>::nil();
                 } else {
-                  _head =
-                      List<std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
+                  _head = List<std::shared_ptr<List<unsigned int>>>::nil();
                 }
                 _continue = false;
               },
@@ -773,9 +754,8 @@ LoopifyMoreTrees::tree_levels_fuel(
                     flatten(map_tree_to_list(_loop_level));
                 std::shared_ptr<List<std::shared_ptr<LoopifyMoreTrees::tree>>>
                     next = concat_map_children(_loop_level);
-                auto _cell =
-                    List<std::shared_ptr<List<unsigned int>>>::ctor::Cons_(
-                        std::move(values), nullptr);
+                auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
+                    std::move(values), nullptr);
                 if (_last) {
                   std::get<
                       typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
@@ -800,7 +780,7 @@ LoopifyMoreTrees::tree_levels_fuel(
 std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
 LoopifyMoreTrees::tree_levels(std::shared_ptr<LoopifyMoreTrees::tree> t) {
   return tree_levels_fuel(
-      100u, List<std::shared_ptr<LoopifyMoreTrees::tree>>::ctor::Cons_(
-                std::move(t),
-                List<std::shared_ptr<LoopifyMoreTrees::tree>>::ctor::Nil_()));
+      100u,
+      List<std::shared_ptr<LoopifyMoreTrees::tree>>::cons(
+          std::move(t), List<std::shared_ptr<LoopifyMoreTrees::tree>>::nil()));
 }

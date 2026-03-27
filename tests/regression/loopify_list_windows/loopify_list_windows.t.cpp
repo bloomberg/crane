@@ -21,10 +21,10 @@ using UIntPairList = List<std::pair<unsigned int, unsigned int>>;
 using ListOfLists = List<std::shared_ptr<UIntList>>;
 
 int main() {
-  auto nil = UIntList::ctor::Nil_();
-  auto l3 = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(3u, nil)));
-  auto l5 = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(
-    3u, UIntList::ctor::Cons_(4u, UIntList::ctor::Cons_(5u, nil)))));
+  auto nil = UIntList::nil();
+  auto l3 = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(3u, nil)));
+  auto l5 = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(
+    3u, UIntList::cons(4u, UIntList::cons(5u, nil)))));
 
   // differences
   auto diffs = LoopifyListWindows::differences(l5);
@@ -58,8 +58,8 @@ int main() {
   ASSERT(chnks != nullptr);
 
   // group
-  auto l_dups = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(
-    2u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(3u, nil))))));
+  auto l_dups = UIntList::cons(1u, UIntList::cons(1u, UIntList::cons(
+    2u, UIntList::cons(2u, UIntList::cons(2u, UIntList::cons(3u, nil))))));
   auto grouped = LoopifyListWindows::group(l_dups);
   ASSERT(grouped != nullptr);
 

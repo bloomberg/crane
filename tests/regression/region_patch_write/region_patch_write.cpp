@@ -19,7 +19,7 @@ RegionPatchWrite::update_region(const std::shared_ptr<List<unsigned int>> &rom,
       Overloaded{
           [](const typename List<unsigned int>::Nil _args)
               -> std::shared_ptr<List<unsigned int>> {
-            return List<unsigned int>::ctor::Nil_();
+            return List<unsigned int>::nil();
           },
           [&](const typename List<unsigned int>::Cons _args)
               -> std::shared_ptr<List<unsigned int>> {
@@ -39,12 +39,12 @@ RegionPatchWrite::update_region(const std::shared_ptr<List<unsigned int>> &rom,
                       Overloaded{
                           [&](const typename List<unsigned int>::Nil _args0)
                               -> std::shared_ptr<List<unsigned int>> {
-                            return List<unsigned int>::ctor::Cons_(_args.d_a0,
-                                                                   _args.d_a1);
+                            return List<unsigned int>::cons(_args.d_a0,
+                                                            _args.d_a1);
                           },
                           [&](const typename List<unsigned int>::Cons _args0)
                               -> std::shared_ptr<List<unsigned int>> {
-                            return List<unsigned int>::ctor::Cons_(
+                            return List<unsigned int>::cons(
                                 _args0.d_a0,
                                 update_region(_args.d_a1, 0u, _args0.d_a1));
                           }},
@@ -53,7 +53,7 @@ RegionPatchWrite::update_region(const std::shared_ptr<List<unsigned int>> &rom,
               }();
             } else {
               unsigned int n = base - 1;
-              return List<unsigned int>::ctor::Cons_(
+              return List<unsigned int>::cons(
                   std::move(_args.d_a0), update_region(_args.d_a1, n, bytes));
             }
           }},

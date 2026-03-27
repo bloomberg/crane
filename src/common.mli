@@ -180,6 +180,9 @@ val reset_renaming_tables : reset_kind -> unit
 (** Set the set of reserved keywords for the target language. *)
 val set_keywords : Id.Set.t -> unit
 
+(** Get the set of reserved keywords for the target language. *)
+val get_keywords : unit -> Id.Set.t
+
 (** Special hack for constants of type Ascii.ascii : if an
     [Extract Inductive ascii => char] has been declared, then the constants are
     directly turned into chars *)

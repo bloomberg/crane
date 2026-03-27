@@ -26,10 +26,10 @@ using ListOfLists = List<std::shared_ptr<UIntList>>;
 
 // Helper: build a List from initializer list
 std::shared_ptr<UIntList> make_list(std::initializer_list<unsigned int> vals) {
-  auto result = UIntList::ctor::Nil_();
+  auto result = UIntList::nil();
   std::vector<unsigned int> v(vals);
   for (auto it = v.rbegin(); it != v.rend(); ++it) {
-    result = UIntList::ctor::Cons_(*it, result);
+    result = UIntList::cons(*it, result);
   }
   return result;
 }
@@ -67,10 +67,10 @@ to_pair_vec(const std::shared_ptr<PairList> &l) {
 // initializer lists
 std::shared_ptr<ListOfLists>
 make_list_of_lists(std::initializer_list<std::initializer_list<unsigned int>> vals) {
-  auto result = ListOfLists::ctor::Nil_();
+  auto result = ListOfLists::nil();
   std::vector<std::initializer_list<unsigned int>> v(vals);
   for (auto it = v.rbegin(); it != v.rend(); ++it) {
-    result = ListOfLists::ctor::Cons_(make_list(*it), result);
+    result = ListOfLists::cons(make_list(*it), result);
   }
   return result;
 }
@@ -132,7 +132,7 @@ int main() {
 
   // flat_map (uses ++ internally, loopification may affect results)
   auto double_list = [](unsigned int x) -> std::shared_ptr<UIntList> {
-    return UIntList::ctor::Cons_(x, UIntList::ctor::Cons_(x, UIntList::ctor::Nil_()));
+    return UIntList::cons(x, UIntList::cons(x, UIntList::nil()));
   };
   ASSERT(LoopifyAdvancedLists::flat_map(double_list, make_list({})) != nullptr);
 

@@ -36,7 +36,7 @@ std::shared_ptr<List<unsigned int>> LetFix::local_flatten(
       Overloaded{
           [](const typename List<std::shared_ptr<List<unsigned int>>>::Nil
                  _args) -> std::shared_ptr<List<unsigned int>> {
-            return List<unsigned int>::ctor::Nil_();
+            return List<unsigned int>::nil();
           },
           [](const typename List<std::shared_ptr<List<unsigned int>>>::Cons
                  _args) -> std::shared_ptr<List<unsigned int>> {
@@ -52,7 +52,7 @@ std::shared_ptr<List<unsigned int>> LetFix::local_flatten(
                              },
                              [&](const typename List<unsigned int>::Cons _args0)
                                  -> std::shared_ptr<List<unsigned int>> {
-                               return List<unsigned int>::ctor::Cons_(
+                               return List<unsigned int>::cons(
                                    _args0.d_a0, inner(_args0.d_a1));
                              }},
                   ys->v());

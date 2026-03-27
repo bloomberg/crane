@@ -89,8 +89,7 @@ Dim10TowerProofChainCase::layer_measure(const unsigned int base_dim,
 __attribute__((pure)) Dim10TowerProofChainCase::EventuallyZero
 Dim10TowerProofChainCase::layer_measure_eventually_zero(
     const unsigned int base_dim) {
-  return SigT<unsigned int, std::any>::ctor::ExistT_(std::move(base_dim),
-                                                     std::any{});
+  return SigT<unsigned int, std::any>::existt(std::move(base_dim), std::any{});
 }
 
 std::shared_ptr<Dim10TowerProofChainCase::GradedObj>
@@ -151,8 +150,8 @@ Dim10TowerProofChainCase::graded_goodwillie_layers_stabilize(
           Overloaded{
               [](const typename SigT<unsigned int, std::any>::ExistT _args)
                   -> std::shared_ptr<SigT<unsigned int, std::any>> {
-                return SigT<unsigned int, std::any>::ctor::ExistT_(_args.d_a0,
-                                                                   std::any{});
+                return SigT<unsigned int, std::any>::existt(_args.d_a0,
+                                                            std::any{});
               }},
           std::move(e)->v());
     }
@@ -162,8 +161,7 @@ Dim10TowerProofChainCase::graded_goodwillie_layers_stabilize(
 std::shared_ptr<SigT<unsigned int, std::any>>
 Dim10TowerProofChainCase::graded_goodwillie_P_stabilizes(
     const unsigned int base_dim) {
-  return SigT<unsigned int, std::any>::ctor::ExistT_(std::move(base_dim),
-                                                     std::any{});
+  return SigT<unsigned int, std::any>::existt(std::move(base_dim), std::any{});
 }
 
 __attribute__((pure))

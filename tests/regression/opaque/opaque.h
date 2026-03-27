@@ -32,22 +32,17 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Sig(Exist _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Sig<t_A>> exist(t_A a0) {
+    return std::make_shared<Sig<t_A>>(Exist{std::move(a0)});
+  }
 
-    static std::shared_ptr<Sig<t_A>> Exist_(t_A a0) {
-      return std::shared_ptr<Sig<t_A>>(new Sig<t_A>(Exist{a0}));
-    }
-
-    static std::unique_ptr<Sig<t_A>> Exist_uptr(t_A a0) {
-      return std::unique_ptr<Sig<t_A>>(new Sig<t_A>(Exist{a0}));
-    }
-  };
+  static std::unique_ptr<Sig<t_A>> exist_uptr(t_A a0) {
+    return std::make_unique<Sig<t_A>>(Exist{std::move(a0)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }

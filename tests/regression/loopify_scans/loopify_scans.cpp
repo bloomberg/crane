@@ -26,16 +26,16 @@ LoopifyScans::scanl(const unsigned int acc,
             [&](const typename List<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::ctor::Cons_(
-                    std::move(_loop_acc), List<unsigned int>::ctor::Nil_());
+                    .d_a1 = List<unsigned int>::cons(std::move(_loop_acc),
+                                                     List<unsigned int>::nil());
               } else {
-                _head = List<unsigned int>::ctor::Cons_(
-                    std::move(_loop_acc), List<unsigned int>::ctor::Nil_());
+                _head = List<unsigned int>::cons(std::move(_loop_acc),
+                                                 List<unsigned int>::nil());
               }
               _continue = false;
             },
             [&](const typename List<unsigned int>::Cons _args) {
-              auto _cell = List<unsigned int>::ctor::Cons_(_loop_acc, nullptr);
+              auto _cell = List<unsigned int>::cons(_loop_acc, nullptr);
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = _cell;
@@ -67,16 +67,16 @@ LoopifyScans::scanl_mult(const unsigned int acc,
             [&](const typename List<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::ctor::Cons_(
-                    std::move(_loop_acc), List<unsigned int>::ctor::Nil_());
+                    .d_a1 = List<unsigned int>::cons(std::move(_loop_acc),
+                                                     List<unsigned int>::nil());
               } else {
-                _head = List<unsigned int>::ctor::Cons_(
-                    std::move(_loop_acc), List<unsigned int>::ctor::Nil_());
+                _head = List<unsigned int>::cons(std::move(_loop_acc),
+                                                 List<unsigned int>::nil());
               }
               _continue = false;
             },
             [&](const typename List<unsigned int>::Cons _args) {
-              auto _cell = List<unsigned int>::ctor::Cons_(_loop_acc, nullptr);
+              auto _cell = List<unsigned int>::cons(_loop_acc, nullptr);
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = _cell;
@@ -108,11 +108,11 @@ LoopifyScans::running_max(const unsigned int current,
             [&](const typename List<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::ctor::Cons_(
-                    std::move(_loop_current), List<unsigned int>::ctor::Nil_());
+                    .d_a1 = List<unsigned int>::cons(std::move(_loop_current),
+                                                     List<unsigned int>::nil());
               } else {
-                _head = List<unsigned int>::ctor::Cons_(
-                    std::move(_loop_current), List<unsigned int>::ctor::Nil_());
+                _head = List<unsigned int>::cons(std::move(_loop_current),
+                                                 List<unsigned int>::nil());
               }
               _continue = false;
             },
@@ -123,8 +123,8 @@ LoopifyScans::running_max(const unsigned int current,
               } else {
                 new_max = _loop_current;
               }
-              auto _cell = List<unsigned int>::ctor::Cons_(
-                  std::move(_loop_current), nullptr);
+              auto _cell =
+                  List<unsigned int>::cons(std::move(_loop_current), nullptr);
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = _cell;
@@ -156,11 +156,11 @@ LoopifyScans::running_min(const unsigned int current,
             [&](const typename List<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::ctor::Cons_(
-                    std::move(_loop_current), List<unsigned int>::ctor::Nil_());
+                    .d_a1 = List<unsigned int>::cons(std::move(_loop_current),
+                                                     List<unsigned int>::nil());
               } else {
-                _head = List<unsigned int>::ctor::Cons_(
-                    std::move(_loop_current), List<unsigned int>::ctor::Nil_());
+                _head = List<unsigned int>::cons(std::move(_loop_current),
+                                                 List<unsigned int>::nil());
               }
               _continue = false;
             },
@@ -171,8 +171,8 @@ LoopifyScans::running_min(const unsigned int current,
               } else {
                 new_min = _loop_current;
               }
-              auto _cell = List<unsigned int>::ctor::Cons_(
-                  std::move(_loop_current), nullptr);
+              auto _cell =
+                  List<unsigned int>::cons(std::move(_loop_current), nullptr);
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = _cell;
@@ -204,9 +204,9 @@ LoopifyScans::pairwise_diff(const unsigned int prev,
             [&](const typename List<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::ctor::Nil_();
+                    .d_a1 = List<unsigned int>::nil();
               } else {
-                _head = List<unsigned int>::ctor::Nil_();
+                _head = List<unsigned int>::nil();
               }
               _continue = false;
             },
@@ -231,8 +231,7 @@ LoopifyScans::pairwise_diff(const unsigned int prev,
                   diff = sub;
                 }
               }
-              auto _cell =
-                  List<unsigned int>::ctor::Cons_(std::move(diff), nullptr);
+              auto _cell = List<unsigned int>::cons(std::move(diff), nullptr);
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = _cell;
@@ -264,18 +263,17 @@ LoopifyScans::accumulate_if_even(const unsigned int acc,
             [&](const typename List<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::ctor::Cons_(
-                    std::move(_loop_acc), List<unsigned int>::ctor::Nil_());
+                    .d_a1 = List<unsigned int>::cons(std::move(_loop_acc),
+                                                     List<unsigned int>::nil());
               } else {
-                _head = List<unsigned int>::ctor::Cons_(
-                    std::move(_loop_acc), List<unsigned int>::ctor::Nil_());
+                _head = List<unsigned int>::cons(std::move(_loop_acc),
+                                                 List<unsigned int>::nil());
               }
               _continue = false;
             },
             [&](const typename List<unsigned int>::Cons _args) {
               if ((_args.d_a0 % 2u) == 0u) {
-                auto _cell =
-                    List<unsigned int>::ctor::Cons_(_loop_acc, nullptr);
+                auto _cell = List<unsigned int>::cons(_loop_acc, nullptr);
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = _cell;
@@ -288,8 +286,7 @@ LoopifyScans::accumulate_if_even(const unsigned int acc,
                 _loop_l = std::move(_next_l);
                 _loop_acc = std::move(_next_acc);
               } else {
-                auto _cell =
-                    List<unsigned int>::ctor::Cons_(_loop_acc, nullptr);
+                auto _cell = List<unsigned int>::cons(_loop_acc, nullptr);
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = _cell;

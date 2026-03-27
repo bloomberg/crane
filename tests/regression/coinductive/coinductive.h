@@ -35,6 +35,7 @@ struct Coinductive {
     // DATA
     crane::lazy<variant_t> d_lazyV_;
 
+  public:
     // CREATORS
     explicit stream(Cons _v)
         : d_lazyV_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
@@ -42,30 +43,34 @@ struct Coinductive {
     explicit stream(std::function<variant_t()> _thunk)
         : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<stream> cons(unsigned int a0,
+                                        const std::shared_ptr<stream> &a1) {
+      return std::make_shared<stream>(Cons{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<stream> Cons_(unsigned int a0,
-                                           const std::shared_ptr<stream> &a1) {
-        return std::shared_ptr<stream>(new stream(Cons{a0, a1}));
-      }
+    static std::shared_ptr<stream> cons(unsigned int a0,
+                                        std::shared_ptr<stream> &&a1) {
+      return std::make_shared<stream>(Cons{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<stream>
-      Cons_uptr(unsigned int a0, const std::shared_ptr<stream> &a1) {
-        return std::unique_ptr<stream>(new stream(Cons{a0, a1}));
-      }
+    static std::unique_ptr<stream>
+    cons_uptr(unsigned int a0, const std::shared_ptr<stream> &a1) {
+      return std::make_unique<stream>(Cons{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<stream>
-      lazy_(std::function<std::shared_ptr<stream>()> thunk) {
-        return std::shared_ptr<stream>(new stream(
-            std::function<variant_t()>([=](void) mutable -> variant_t {
-              std::shared_ptr<stream> _tmp = thunk();
-              return _tmp->v();
-            })));
-      }
-    };
+    static std::unique_ptr<stream> cons_uptr(unsigned int a0,
+                                             std::shared_ptr<stream> &&a1) {
+      return std::make_unique<stream>(Cons{std::move(a0), std::move(a1)});
+    }
+
+    static std::shared_ptr<stream>
+    lazy_(std::function<std::shared_ptr<stream>()> thunk) {
+      return std::make_shared<stream>(
+          std::function<variant_t()>([=](void) mutable -> variant_t {
+            std::shared_ptr<stream> _tmp = thunk();
+            return _tmp->v();
+          }));
+    }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const {
@@ -82,11 +87,11 @@ struct Coinductive {
   template <MapsTo<unsigned int, unsigned int> F0>
   static std::shared_ptr<stream> smap(F0 &&f,
                                       const std::shared_ptr<stream> &s) {
-    return stream::ctor::lazy_([=](void) mutable -> std::shared_ptr<stream> {
+    return stream::lazy_([=](void) mutable -> std::shared_ptr<stream> {
       return std::visit(Overloaded{[&](const typename stream::Cons _args)
                                        -> std::shared_ptr<stream> {
-                          return stream::ctor::Cons_(f(_args.d_a0),
-                                                     smap(f, _args.d_a1));
+                          return stream::cons(f(_args.d_a0),
+                                              smap(f, _args.d_a1));
                         }},
                         s->v());
     });
@@ -117,6 +122,7 @@ struct Coinductive {
     // DATA
     crane::lazy<variant_t> d_lazyV_;
 
+  public:
     // CREATORS
     explicit tree(Leaf _v)
         : d_lazyV_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
@@ -127,40 +133,48 @@ struct Coinductive {
     explicit tree(std::function<variant_t()> _thunk)
         : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<tree> leaf(unsigned int a0) {
+      return std::make_shared<tree>(Leaf{std::move(a0)});
+    }
 
-      static std::shared_ptr<tree> Leaf_(unsigned int a0) {
-        return std::shared_ptr<tree>(new tree(Leaf{a0}));
-      }
+    static std::shared_ptr<tree> node(unsigned int a0,
+                                      const std::shared_ptr<tree> &a1,
+                                      const std::shared_ptr<tree> &a2) {
+      return std::make_shared<tree>(Node{std::move(a0), a1, a2});
+    }
 
-      static std::shared_ptr<tree> Node_(unsigned int a0,
-                                         const std::shared_ptr<tree> &a1,
-                                         const std::shared_ptr<tree> &a2) {
-        return std::shared_ptr<tree>(new tree(Node{a0, a1, a2}));
-      }
+    static std::shared_ptr<tree> node(unsigned int a0,
+                                      std::shared_ptr<tree> &&a1,
+                                      std::shared_ptr<tree> &&a2) {
+      return std::make_shared<tree>(
+          Node{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
-      static std::unique_ptr<tree> Leaf_uptr(unsigned int a0) {
-        return std::unique_ptr<tree>(new tree(Leaf{a0}));
-      }
+    static std::unique_ptr<tree> leaf_uptr(unsigned int a0) {
+      return std::make_unique<tree>(Leaf{std::move(a0)});
+    }
 
-      static std::unique_ptr<tree> Node_uptr(unsigned int a0,
-                                             const std::shared_ptr<tree> &a1,
-                                             const std::shared_ptr<tree> &a2) {
-        return std::unique_ptr<tree>(new tree(Node{a0, a1, a2}));
-      }
+    static std::unique_ptr<tree> node_uptr(unsigned int a0,
+                                           const std::shared_ptr<tree> &a1,
+                                           const std::shared_ptr<tree> &a2) {
+      return std::make_unique<tree>(Node{std::move(a0), a1, a2});
+    }
 
-      static std::shared_ptr<tree>
-      lazy_(std::function<std::shared_ptr<tree>()> thunk) {
-        return std::shared_ptr<tree>(
-            new tree(std::function<variant_t()>([=](void) mutable -> variant_t {
-              std::shared_ptr<tree> _tmp = thunk();
-              return _tmp->v();
-            })));
-      }
-    };
+    static std::unique_ptr<tree> node_uptr(unsigned int a0,
+                                           std::shared_ptr<tree> &&a1,
+                                           std::shared_ptr<tree> &&a2) {
+      return std::make_unique<tree>(
+          Node{std::move(a0), std::move(a1), std::move(a2)});
+    }
+
+    static std::shared_ptr<tree>
+    lazy_(std::function<std::shared_ptr<tree>()> thunk) {
+      return std::make_shared<tree>(
+          std::function<variant_t()>([=](void) mutable -> variant_t {
+            std::shared_ptr<tree> _tmp = thunk();
+            return _tmp->v();
+          }));
+    }
 
     // ACCESSORS
     __attribute__((pure)) const variant_t &v() const {

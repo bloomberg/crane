@@ -15,7 +15,7 @@
 std::shared_ptr<ResetState::state_full>
 ResetState::reset_state_full(std::shared_ptr<ResetState::state_full> s) {
   return std::make_shared<ResetState::state_full>(
-      state_full{0u, s->regs_full, false, 0u, List<unsigned int>::ctor::Nil_(),
+      state_full{0u, s->regs_full, false, 0u, List<unsigned int>::nil(),
                  s->ram_sys, s->rom});
 }
 

@@ -25,8 +25,8 @@ int main() {
   using List = ::List<unsigned int>;
 
   // Test alternate_sum
-  auto lst = List::ctor::Cons_(
-      1u, List::ctor::Cons_(2u, List::ctor::Cons_(3u, List::ctor::Nil_())));
+  auto lst = List::cons(
+      1u, List::cons(2u, List::cons(3u, List::nil())));
   auto alt = LoopifySequences::alternate_sum(1u, 0u, lst);
   ASSERT(alt == 3u); // 0 + 1 - 2 + 3 = 3 (saturating sub: 1-2=0, then 0+3=3)
 
@@ -48,11 +48,11 @@ int main() {
   // Test intercalate
   using ListList = ::List<
       std::shared_ptr<::List<unsigned int>>>;
-  auto l1 = List::ctor::Cons_(1u, List::ctor::Cons_(2u, List::ctor::Nil_()));
-  auto l2 = List::ctor::Cons_(3u, List::ctor::Cons_(4u, List::ctor::Nil_()));
-  auto sep = List::ctor::Cons_(0u, List::ctor::Nil_());
-  auto lists = ListList::ctor::Cons_(
-      l1, ListList::ctor::Cons_(l2, ListList::ctor::Nil_()));
+  auto l1 = List::cons(1u, List::cons(2u, List::nil()));
+  auto l2 = List::cons(3u, List::cons(4u, List::nil()));
+  auto sep = List::cons(0u, List::nil());
+  auto lists = ListList::cons(
+      l1, ListList::cons(l2, ListList::nil()));
   auto inter = LoopifySequences::intercalate(sep, lists);
   ASSERT(inter != nullptr);
 

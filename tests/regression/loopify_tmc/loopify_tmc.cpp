@@ -26,9 +26,9 @@ LoopifyTmc::range(const unsigned int lo, const unsigned int hi) {
       {
         if (_last) {
           std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              list<unsigned int>::ctor::Nil_();
+              list<unsigned int>::nil();
         } else {
-          _head = list<unsigned int>::ctor::Nil_();
+          _head = list<unsigned int>::nil();
         }
         _continue = false;
       }
@@ -36,7 +36,7 @@ LoopifyTmc::range(const unsigned int lo, const unsigned int hi) {
       unsigned int hi_ = _loop_hi - 1;
       if (lo <= hi_) {
         {
-          auto _cell = list<unsigned int>::ctor::Cons_(hi_, nullptr);
+          auto _cell = list<unsigned int>::cons(hi_, nullptr);
           if (_last) {
             std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
                 _cell;
@@ -51,9 +51,9 @@ LoopifyTmc::range(const unsigned int lo, const unsigned int hi) {
         {
           if (_last) {
             std::get<typename list<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                list<unsigned int>::ctor::Nil_();
+                list<unsigned int>::nil();
           } else {
-            _head = list<unsigned int>::ctor::Nil_();
+            _head = list<unsigned int>::nil();
           }
           _continue = false;
         }
@@ -78,15 +78,15 @@ std::shared_ptr<LoopifyTmc::list<unsigned int>> LoopifyTmc::prefix_sums(
             [&](const typename LoopifyTmc::list<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename list<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = list<unsigned int>::ctor::Nil_();
+                    .d_a1 = list<unsigned int>::nil();
               } else {
-                _head = list<unsigned int>::ctor::Nil_();
+                _head = list<unsigned int>::nil();
               }
               _continue = false;
             },
             [&](const typename LoopifyTmc::list<unsigned int>::Cons _args) {
               unsigned int s = (_loop_acc + _args.d_a0);
-              auto _cell = list<unsigned int>::ctor::Cons_(s, nullptr);
+              auto _cell = list<unsigned int>::cons(s, nullptr);
               if (_last) {
                 std::get<typename list<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = _cell;

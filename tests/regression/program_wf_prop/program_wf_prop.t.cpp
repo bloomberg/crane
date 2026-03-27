@@ -6,9 +6,9 @@
 
 int main() {
   auto jt =
-      ProgramWfProp::jump_target(ProgramWfProp::instruction::ctor::JUN_(100u));
+      ProgramWfProp::jump_target(ProgramWfProp::instruction::jun(100u));
   assert(jt.has_value() && *jt == 100u);
-  assert(!ProgramWfProp::jump_target(ProgramWfProp::instruction::ctor::NOP_())
+  assert(!ProgramWfProp::jump_target(ProgramWfProp::instruction::nop())
               .has_value());
   return 0;
 }

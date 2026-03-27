@@ -105,9 +105,9 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::lookup_all(
                     _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::ctor::Nil_();
+                    .d_a1 = List<unsigned int>::nil();
               } else {
-                _head = List<unsigned int>::ctor::Nil_();
+                _head = List<unsigned int>::nil();
               }
               _continue = false;
             },
@@ -116,7 +116,7 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::lookup_all(
               unsigned int k = _args.d_a0.first;
               unsigned int v = _args.d_a0.second;
               if (key == k) {
-                auto _cell = List<unsigned int>::ctor::Cons_(v, nullptr);
+                auto _cell = List<unsigned int>::cons(v, nullptr);
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = _cell;
@@ -176,16 +176,16 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::catMaybes(
             [&](const typename List<std::optional<unsigned int>>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::ctor::Nil_();
+                    .d_a1 = List<unsigned int>::nil();
               } else {
-                _head = List<unsigned int>::ctor::Nil_();
+                _head = List<unsigned int>::nil();
               }
               _continue = false;
             },
             [&](const typename List<std::optional<unsigned int>>::Cons _args) {
               if (_args.d_a0.has_value()) {
                 unsigned int x = *_args.d_a0;
-                auto _cell = List<unsigned int>::ctor::Cons_(x, nullptr);
+                auto _cell = List<unsigned int>::cons(x, nullptr);
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = _cell;

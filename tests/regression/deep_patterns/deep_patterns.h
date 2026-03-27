@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -111,33 +116,35 @@ struct DeepPatterns {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit outer(OLeft _v) : d_v_(std::move(_v)) {}
 
     explicit outer(ORight _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<outer> oleft(const std::shared_ptr<inner> &a0) {
+      return std::make_shared<outer>(OLeft{a0});
+    }
 
-      static std::shared_ptr<outer> OLeft_(const std::shared_ptr<inner> &a0) {
-        return std::shared_ptr<outer>(new outer(OLeft{a0}));
-      }
+    static std::shared_ptr<outer> oleft(std::shared_ptr<inner> &&a0) {
+      return std::make_shared<outer>(OLeft{std::move(a0)});
+    }
 
-      static std::shared_ptr<outer> ORight_(unsigned int a0) {
-        return std::shared_ptr<outer>(new outer(ORight{a0}));
-      }
+    static std::shared_ptr<outer> oright(unsigned int a0) {
+      return std::make_shared<outer>(ORight{std::move(a0)});
+    }
 
-      static std::unique_ptr<outer>
-      OLeft_uptr(const std::shared_ptr<inner> &a0) {
-        return std::unique_ptr<outer>(new outer(OLeft{a0}));
-      }
+    static std::unique_ptr<outer> oleft_uptr(const std::shared_ptr<inner> &a0) {
+      return std::make_unique<outer>(OLeft{a0});
+    }
 
-      static std::unique_ptr<outer> ORight_uptr(unsigned int a0) {
-        return std::unique_ptr<outer>(new outer(ORight{a0}));
-      }
-    };
+    static std::unique_ptr<outer> oleft_uptr(std::shared_ptr<inner> &&a0) {
+      return std::make_unique<outer>(OLeft{std::move(a0)});
+    }
+
+    static std::unique_ptr<outer> oright_uptr(unsigned int a0) {
+      return std::make_unique<outer>(ORight{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -162,32 +169,27 @@ struct DeepPatterns {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit inner(ILeft _v) : d_v_(std::move(_v)) {}
 
     explicit inner(IRight _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<inner> ileft(unsigned int a0) {
+      return std::make_shared<inner>(ILeft{std::move(a0)});
+    }
 
-      static std::shared_ptr<inner> ILeft_(unsigned int a0) {
-        return std::shared_ptr<inner>(new inner(ILeft{a0}));
-      }
+    static std::shared_ptr<inner> iright(bool a0) {
+      return std::make_shared<inner>(IRight{std::move(a0)});
+    }
 
-      static std::shared_ptr<inner> IRight_(bool a0) {
-        return std::shared_ptr<inner>(new inner(IRight{a0}));
-      }
+    static std::unique_ptr<inner> ileft_uptr(unsigned int a0) {
+      return std::make_unique<inner>(ILeft{std::move(a0)});
+    }
 
-      static std::unique_ptr<inner> ILeft_uptr(unsigned int a0) {
-        return std::unique_ptr<inner>(new inner(ILeft{a0}));
-      }
-
-      static std::unique_ptr<inner> IRight_uptr(bool a0) {
-        return std::unique_ptr<inner>(new inner(IRight{a0}));
-      }
-    };
+    static std::unique_ptr<inner> iright_uptr(bool a0) {
+      return std::make_unique<inner>(IRight{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -264,24 +266,19 @@ struct DeepPatterns {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit pair(Pair0 _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<pair<t_A, t_B>> pair0(t_A a0, t_B a1) {
+      return std::make_shared<pair<t_A, t_B>>(
+          Pair0{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<pair<t_A, t_B>> Pair0_(t_A a0, t_B a1) {
-        return std::shared_ptr<pair<t_A, t_B>>(
-            new pair<t_A, t_B>(Pair0{a0, a1}));
-      }
-
-      static std::unique_ptr<pair<t_A, t_B>> Pair0_uptr(t_A a0, t_B a1) {
-        return std::unique_ptr<pair<t_A, t_B>>(
-            new pair<t_A, t_B>(Pair0{a0, a1}));
-      }
-    };
+    static std::unique_ptr<pair<t_A, t_B>> pair0_uptr(t_A a0, t_B a1) {
+      return std::make_unique<pair<t_A, t_B>>(
+          Pair0{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -321,34 +318,39 @@ struct DeepPatterns {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit mylist(Nil _v) : d_v_(std::move(_v)) {}
 
     explicit mylist(Cons _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<mylist<t_A>> nil() {
+      return std::make_shared<mylist<t_A>>(Nil{});
+    }
 
-      static std::shared_ptr<mylist<t_A>> Nil_() {
-        return std::shared_ptr<mylist<t_A>>(new mylist<t_A>(Nil{}));
-      }
+    static std::shared_ptr<mylist<t_A>>
+    cons(t_A a0, const std::shared_ptr<mylist<t_A>> &a1) {
+      return std::make_shared<mylist<t_A>>(Cons{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<mylist<t_A>>
-      Cons_(t_A a0, const std::shared_ptr<mylist<t_A>> &a1) {
-        return std::shared_ptr<mylist<t_A>>(new mylist<t_A>(Cons{a0, a1}));
-      }
+    static std::shared_ptr<mylist<t_A>>
+    cons(t_A a0, std::shared_ptr<mylist<t_A>> &&a1) {
+      return std::make_shared<mylist<t_A>>(Cons{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<mylist<t_A>> Nil_uptr() {
-        return std::unique_ptr<mylist<t_A>>(new mylist<t_A>(Nil{}));
-      }
+    static std::unique_ptr<mylist<t_A>> nil_uptr() {
+      return std::make_unique<mylist<t_A>>(Nil{});
+    }
 
-      static std::unique_ptr<mylist<t_A>>
-      Cons_uptr(t_A a0, const std::shared_ptr<mylist<t_A>> &a1) {
-        return std::unique_ptr<mylist<t_A>>(new mylist<t_A>(Cons{a0, a1}));
-      }
-    };
+    static std::unique_ptr<mylist<t_A>>
+    cons_uptr(t_A a0, const std::shared_ptr<mylist<t_A>> &a1) {
+      return std::make_unique<mylist<t_A>>(Cons{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<mylist<t_A>>
+    cons_uptr(t_A a0, std::shared_ptr<mylist<t_A>> &&a1) {
+      return std::make_unique<mylist<t_A>>(Cons{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -408,61 +410,53 @@ struct DeepPatterns {
   static inline const unsigned int test_deep_pair =
       deep_pair(std::make_pair(std::make_pair(1u, 2u), std::make_pair(3u, 4u)));
   static inline const unsigned int test_shape_3 =
-      list_shape(List<unsigned int>::ctor::Cons_(
-          10u, List<unsigned int>::ctor::Cons_(
-                   20u, List<unsigned int>::ctor::Cons_(
-                            30u, List<unsigned int>::ctor::Nil_()))));
+      list_shape(List<unsigned int>::cons(
+          10u,
+          List<unsigned int>::cons(
+              20u, List<unsigned int>::cons(30u, List<unsigned int>::nil()))));
   static inline const unsigned int test_shape_long =
-      list_shape(List<unsigned int>::ctor::Cons_(
+      list_shape(List<unsigned int>::cons(
           1u,
-          List<unsigned int>::ctor::Cons_(
+          List<unsigned int>::cons(
               2u,
-              List<unsigned int>::ctor::Cons_(
-                  3u,
-                  List<unsigned int>::ctor::Cons_(
-                      4u,
-                      List<unsigned int>::ctor::Cons_(
-                          5u, List<unsigned int>::ctor::Cons_(
-                                  6u, List<unsigned int>::ctor::Nil_())))))));
+              List<unsigned int>::cons(
+                  3u, List<unsigned int>::cons(
+                          4u, List<unsigned int>::cons(
+                                  5u, List<unsigned int>::cons(
+                                          6u, List<unsigned int>::nil())))))));
   static inline const unsigned int test_deep_sum =
-      deep_sum(outer::ctor::OLeft_(inner::ctor::ILeft_(77u)));
+      deep_sum(outer::oleft(inner::ileft(77u)));
   static inline const unsigned int test_complex = complex_match(
       std::make_optional<
           std::pair<unsigned int, std::shared_ptr<List<unsigned int>>>>(
           std::make_pair(
-              5u,
-              List<unsigned int>::ctor::Cons_(
-                  10u, List<unsigned int>::ctor::Cons_(
-                           20u, List<unsigned int>::ctor::Cons_(
-                                    30u, List<unsigned int>::ctor::Nil_()))))));
+              5u, List<unsigned int>::cons(
+                      10u, List<unsigned int>::cons(
+                               20u, List<unsigned int>::cons(
+                                        30u, List<unsigned int>::nil()))))));
   static inline const unsigned int test_guarded =
       guarded_match(std::make_pair(3u, 7u));
   static inline const unsigned int test_pair_list = match_pair_list(
-      mylist<std::shared_ptr<pair<unsigned int, unsigned int>>>::ctor::Cons_(
-          pair<unsigned int, unsigned int>::ctor::Pair0_(5u, 3u),
-          mylist<std::shared_ptr<pair<unsigned int, unsigned int>>>::ctor::
-              Nil_()));
+      mylist<std::shared_ptr<pair<unsigned int, unsigned int>>>::cons(
+          pair<unsigned int, unsigned int>::pair0(5u, 3u),
+          mylist<std::shared_ptr<pair<unsigned int, unsigned int>>>::nil()));
   static inline const unsigned int test_two_one =
-      match_two(mylist<unsigned int>::ctor::Cons_(
-          7u, mylist<unsigned int>::ctor::Nil_()));
+      match_two(mylist<unsigned int>::cons(7u, mylist<unsigned int>::nil()));
   static inline const unsigned int test_two_many =
-      match_two(mylist<unsigned int>::ctor::Cons_(
-          7u, mylist<unsigned int>::ctor::Cons_(
-                  8u, mylist<unsigned int>::ctor::Nil_())));
+      match_two(mylist<unsigned int>::cons(
+          7u, mylist<unsigned int>::cons(8u, mylist<unsigned int>::nil())));
   static inline const unsigned int test_triple = match_triple(
       mylist<std::shared_ptr<mylist<std::shared_ptr<mylist<unsigned int>>>>>::
-          ctor::Cons_(
-              mylist<std::shared_ptr<mylist<unsigned int>>>::ctor::Cons_(
-                  mylist<unsigned int>::ctor::Cons_(
-                      9u, mylist<unsigned int>::ctor::Nil_()),
-                  mylist<std::shared_ptr<mylist<unsigned int>>>::ctor::Nil_()),
-              mylist<std::shared_ptr<mylist<
-                  std::shared_ptr<mylist<unsigned int>>>>>::ctor::Nil_()));
-  static inline const unsigned int test_wildcard = deep_wildcard(
-      pair<std::shared_ptr<pair<unsigned int, unsigned int>>,
-           std::shared_ptr<pair<unsigned int, unsigned int>>>::ctor::
-          Pair0_(pair<unsigned int, unsigned int>::ctor::Pair0_(1u, 2u),
-                 pair<unsigned int, unsigned int>::ctor::Pair0_(3u, 4u)));
+          cons(mylist<std::shared_ptr<mylist<unsigned int>>>::cons(
+                   mylist<unsigned int>::cons(9u, mylist<unsigned int>::nil()),
+                   mylist<std::shared_ptr<mylist<unsigned int>>>::nil()),
+               mylist<std::shared_ptr<
+                   mylist<std::shared_ptr<mylist<unsigned int>>>>>::nil()));
+  static inline const unsigned int test_wildcard =
+      deep_wildcard(pair<std::shared_ptr<pair<unsigned int, unsigned int>>,
+                         std::shared_ptr<pair<unsigned int, unsigned int>>>::
+                        pair0(pair<unsigned int, unsigned int>::pair0(1u, 2u),
+                              pair<unsigned int, unsigned int>::pair0(3u, 4u)));
   static inline const unsigned int t =
       ((((((((((((test_deep_some + test_deep_none) + test_deep_pair) +
                 test_shape_3) +

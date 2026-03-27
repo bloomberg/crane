@@ -19,9 +19,9 @@ void aSsErT(bool condition, const char *message, int line) {
 using UIntList = List<unsigned int>;
 
 int main() {
-  auto nil = UIntList::ctor::Nil_();
-  auto l5 = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(
-    3u, UIntList::ctor::Cons_(4u, UIntList::ctor::Cons_(5u, nil)))));
+  auto nil = UIntList::nil();
+  auto l5 = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(
+    3u, UIntList::cons(4u, UIntList::cons(5u, nil)))));
 
   // find_even
   auto fe = LoopifyOptionMaybe::find_even(l5);
@@ -33,15 +33,15 @@ int main() {
 
   // lookup
   using PairList = List<std::pair<unsigned int, unsigned int>>;
-  auto pair_nil = PairList::ctor::Nil_();
-  auto pairs = PairList::ctor::Cons_(std::make_pair(1u, 10u),
-    PairList::ctor::Cons_(std::make_pair(2u, 20u), pair_nil));
+  auto pair_nil = PairList::nil();
+  auto pairs = PairList::cons(std::make_pair(1u, 10u),
+    PairList::cons(std::make_pair(2u, 20u), pair_nil));
   auto found = LoopifyOptionMaybe::lookup(2u, pairs);
   ASSERT(found && *found == 20u);
 
   // lookup_all
-  auto pairs_dup = PairList::ctor::Cons_(std::make_pair(1u, 10u),
-    PairList::ctor::Cons_(std::make_pair(1u, 11u), pair_nil));
+  auto pairs_dup = PairList::cons(std::make_pair(1u, 10u),
+    PairList::cons(std::make_pair(1u, 11u), pair_nil));
   auto all_vals = LoopifyOptionMaybe::lookup_all(1u, pairs_dup);
   ASSERT(all_vals != nullptr);
 
@@ -55,10 +55,10 @@ int main() {
 
   // catMaybes
   using OptList = List<std::optional<unsigned int>>;
-  auto opt_nil = OptList::ctor::Nil_();
-  auto opts = OptList::ctor::Cons_(std::make_optional(1u),
-    OptList::ctor::Cons_(std::optional<unsigned int>(),
-      OptList::ctor::Cons_(std::make_optional(3u), opt_nil)));
+  auto opt_nil = OptList::nil();
+  auto opts = OptList::cons(std::make_optional(1u),
+    OptList::cons(std::optional<unsigned int>(),
+      OptList::cons(std::make_optional(3u), opt_nil)));
   auto catted = LoopifyOptionMaybe::catMaybes(opts);
   ASSERT(catted != nullptr);
 

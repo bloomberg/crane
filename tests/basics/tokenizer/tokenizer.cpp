@@ -81,7 +81,7 @@ Tokenizer::list_tokens(const std::basic_string_view<char> input,
   aux = [&](unsigned int fuel, std::basic_string_view<char> rest)
       -> std::shared_ptr<List<std::basic_string_view<char>>> {
     if (fuel <= 0) {
-      return List<std::basic_string_view<char>>::ctor::Nil_();
+      return List<std::basic_string_view<char>>::nil();
     } else {
       unsigned int fuel_ = fuel - 1;
       std::pair<std::optional<std::basic_string_view<char>>,
@@ -89,10 +89,10 @@ Tokenizer::list_tokens(const std::basic_string_view<char> input,
           t = next_token(rest, soft, hard);
       if (t.first.has_value()) {
         std::basic_string_view<char> t_ = *t.first;
-        return List<std::basic_string_view<char>>::ctor::Cons_(
-            std::move(t_), aux(fuel_, t.second));
+        return List<std::basic_string_view<char>>::cons(std::move(t_),
+                                                        aux(fuel_, t.second));
       } else {
-        return List<std::basic_string_view<char>>::ctor::Nil_();
+        return List<std::basic_string_view<char>>::nil();
       }
     }
   };

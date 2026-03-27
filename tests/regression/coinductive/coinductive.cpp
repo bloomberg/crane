@@ -12,16 +12,16 @@
 #include <variant>
 
 std::shared_ptr<Coinductive::stream> Coinductive::zeros() {
-  return stream::ctor::lazy_([](void) -> std::shared_ptr<Coinductive::stream> {
-    return stream::ctor::Cons_(0u, zeros());
+  return stream::lazy_([](void) -> std::shared_ptr<Coinductive::stream> {
+    return stream::cons(0u, zeros());
   });
 }
 
 std::shared_ptr<Coinductive::stream>
 Coinductive::count_from(const unsigned int n) {
-  return stream::ctor::lazy_(
+  return stream::lazy_(
       [=](void) mutable -> std::shared_ptr<Coinductive::stream> {
-        return stream::ctor::Cons_(n, count_from((n + 1)));
+        return stream::cons(n, count_from((n + 1)));
       });
 }
 
@@ -35,7 +35,7 @@ Coinductive::hd(const std::shared_ptr<Coinductive::stream> &s) {
 
 std::shared_ptr<Coinductive::stream>
 Coinductive::tl(const std::shared_ptr<Coinductive::stream> &s) {
-  return stream::ctor::lazy_(
+  return stream::lazy_(
       [=](void) mutable -> std::shared_ptr<Coinductive::stream> {
         return std::visit(
             Overloaded{[](const typename Coinductive::stream::Cons _args)
@@ -49,13 +49,12 @@ Coinductive::tl(const std::shared_ptr<Coinductive::stream> &s) {
 std::shared_ptr<Coinductive::stream>
 Coinductive::interleave(const std::shared_ptr<Coinductive::stream> &s1,
                         std::shared_ptr<Coinductive::stream> s2) {
-  return stream::ctor::lazy_(
+  return stream::lazy_(
       [=](void) mutable -> std::shared_ptr<Coinductive::stream> {
         return std::visit(
             Overloaded{[&](const typename Coinductive::stream::Cons _args)
                            -> std::shared_ptr<Coinductive::stream> {
-              return stream::ctor::Cons_(_args.d_a0,
-                                         interleave(s2, _args.d_a1));
+              return stream::cons(_args.d_a0, interleave(s2, _args.d_a1));
             }},
             s1->v());
       });
@@ -63,9 +62,7 @@ Coinductive::interleave(const std::shared_ptr<Coinductive::stream> &s1,
 
 std::shared_ptr<Coinductive::tree>
 Coinductive::infinite_tree(const unsigned int n) {
-  return tree::ctor::lazy_(
-      [=](void) mutable -> std::shared_ptr<Coinductive::tree> {
-        return tree::ctor::Node_(n, infinite_tree((n + 1u)),
-                                 infinite_tree((n + 2u)));
-      });
+  return tree::lazy_([=](void) mutable -> std::shared_ptr<Coinductive::tree> {
+    return tree::node(n, infinite_tree((n + 1u)), infinite_tree((n + 2u)));
+  });
 }

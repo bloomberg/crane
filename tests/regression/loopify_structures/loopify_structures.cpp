@@ -227,7 +227,7 @@ std::shared_ptr<List<unsigned int>> LoopifyStructures::flatten_nested_list_fuel(
                   l = _f.l;
               const unsigned int fuel = _f.fuel;
               if (fuel <= 0) {
-                _result = List<unsigned int>::ctor::Nil_();
+                _result = List<unsigned int>::nil();
               } else {
                 unsigned int f = fuel - 1;
                 std::visit(
@@ -235,7 +235,7 @@ std::shared_ptr<List<unsigned int>> LoopifyStructures::flatten_nested_list_fuel(
                         [&](const typename List<
                             std::shared_ptr<LoopifyStructures::nested>>::Nil
                                 _args) -> void {
-                          _result = List<unsigned int>::ctor::Nil_();
+                          _result = List<unsigned int>::nil();
                         },
                         [&](const typename List<
                             std::shared_ptr<LoopifyStructures::nested>>::Cons
@@ -258,7 +258,7 @@ std::shared_ptr<List<unsigned int>> LoopifyStructures::flatten_nested_list_fuel(
               }
             },
             [&](_Call1 _f) {
-              _result = List<unsigned int>::ctor::Cons_(_f._s0, _result);
+              _result = List<unsigned int>::cons(_f._s0, _result);
             },
             [&](_Call2 _f) {
               _stack.push_back(_Call3{_result});
@@ -355,7 +355,7 @@ LoopifyStructures::ltree_max(std::shared_ptr<LoopifyStructures::ltree> t1,
                                             ltree::LLeaf _args0)
                                         -> std::shared_ptr<
                                             LoopifyStructures::ltree> {
-                                      return ltree::ctor::LLeaf_([&](void) {
+                                      return ltree::lleaf([&](void) {
                                         if (_args.d_a0 <= _args0.d_a0) {
                                           return _args0.d_a0;
                                         } else {
@@ -403,7 +403,7 @@ LoopifyStructures::ltree_max(std::shared_ptr<LoopifyStructures::ltree> t1,
               _stack.push_back(_Enter{_f._s0, _f._s1});
             },
             [&](_Call2 _f) {
-              _result = ltree::ctor::LNode_(_f._s1, _result, _f._s0);
+              _result = ltree::lnode(_f._s1, _result, _f._s0);
             }},
         _frame);
   }

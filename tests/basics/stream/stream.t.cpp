@@ -54,8 +54,8 @@ std::vector<A> list_to_vec(const std::shared_ptr<List<A>> &l) {
 
 std::shared_ptr<Nat> int_to_nat(int x) {
   if (x <= 0)
-    return Nat::ctor::O_();
-  return Nat::ctor::S_(int_to_nat(x - 1));
+    return Nat::o();
+  return Nat::s(int_to_nat(x - 1));
 }
 
 using NatStream = Stream<std::shared_ptr<Nat>>;

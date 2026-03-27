@@ -36,51 +36,51 @@ int main() {
 
   // Test 1: Simple natural number literal
   // eval (ENat 42) = 42
-  auto e1 = Expr::ctor::ENat_(42);
+  auto e1 = Expr::enat(42);
   auto r1 = e1->eval(Ty::e_TNAT);
   ASSERT(std::any_cast<unsigned int>(r1) == 42);
   std::cout << "Test 1 passed: ENat 42 evaluates to 42\n";
 
   // Test 2: Simple boolean literal
   // eval (EBool true) = true
-  auto e2 = Expr::ctor::EBool_(true);
+  auto e2 = Expr::ebool(true);
   auto r2 = e2->eval(Ty::e_TBOOL);
   ASSERT(std::any_cast<bool>(r2) == true);
   std::cout << "Test 2 passed: EBool true evaluates to true\n";
 
   // Test 3: Addition
   // eval (EAdd (ENat 10) (ENat 32)) = 42
-  auto e3 = Expr::ctor::EAdd_(Expr::ctor::ENat_(10), Expr::ctor::ENat_(32));
+  auto e3 = Expr::eadd(Expr::enat(10), Expr::enat(32));
   auto r3 = e3->eval(Ty::e_TNAT);
   ASSERT(std::any_cast<unsigned int>(r3) == 42);
   std::cout << "Test 3 passed: 10 + 32 = 42\n";
 
   // Test 4: Equality (true case)
   // eval (EEq (ENat 5) (ENat 5)) = true
-  auto e4 = Expr::ctor::EEq_(Expr::ctor::ENat_(5), Expr::ctor::ENat_(5));
+  auto e4 = Expr::eeq(Expr::enat(5), Expr::enat(5));
   auto r4 = e4->eval(Ty::e_TBOOL);
   ASSERT(std::any_cast<bool>(r4) == true);
   std::cout << "Test 4 passed: 5 == 5 is true\n";
 
   // Test 5: Equality (false case)
   // eval (EEq (ENat 3) (ENat 7)) = false
-  auto e5 = Expr::ctor::EEq_(Expr::ctor::ENat_(3), Expr::ctor::ENat_(7));
+  auto e5 = Expr::eeq(Expr::enat(3), Expr::enat(7));
   auto r5 = e5->eval(Ty::e_TBOOL);
   ASSERT(std::any_cast<bool>(r5) == false);
   std::cout << "Test 5 passed: 3 == 7 is false\n";
 
   // Test 6: If-then-else (true branch)
   // eval (EIf TNat (EBool true) (ENat 100) (ENat 200)) = 100
-  auto e6 = Expr::ctor::EIf_(Ty::e_TNAT, Expr::ctor::EBool_(true),
-                             Expr::ctor::ENat_(100), Expr::ctor::ENat_(200));
+  auto e6 = Expr::eif(Ty::e_TNAT, Expr::ebool(true),
+                             Expr::enat(100), Expr::enat(200));
   auto r6 = e6->eval(Ty::e_TNAT);
   ASSERT(std::any_cast<unsigned int>(r6) == 100);
   std::cout << "Test 6 passed: if true then 100 else 200 = 100\n";
 
   // Test 7: If-then-else (false branch)
   // eval (EIf TNat (EBool false) (ENat 100) (ENat 200)) = 200
-  auto e7 = Expr::ctor::EIf_(Ty::e_TNAT, Expr::ctor::EBool_(false),
-                             Expr::ctor::ENat_(100), Expr::ctor::ENat_(200));
+  auto e7 = Expr::eif(Ty::e_TNAT, Expr::ebool(false),
+                             Expr::enat(100), Expr::enat(200));
   auto r7 = e7->eval(Ty::e_TNAT);
   ASSERT(std::any_cast<unsigned int>(r7) == 200);
   std::cout << "Test 7 passed: if false then 100 else 200 = 200\n";
@@ -89,11 +89,11 @@ int main() {
   // eval (EIf TNat (EEq (EAdd (ENat 2) (ENat 3)) (ENat 5)) (ENat 42) (ENat 0))
   // = 42
   auto e8 =
-      Expr::ctor::EIf_(Ty::e_TNAT,
-                       Expr::ctor::EEq_(Expr::ctor::EAdd_(Expr::ctor::ENat_(2),
-                                                          Expr::ctor::ENat_(3)),
-                                        Expr::ctor::ENat_(5)),
-                       Expr::ctor::ENat_(42), Expr::ctor::ENat_(0));
+      Expr::eif(Ty::e_TNAT,
+                       Expr::eeq(Expr::eadd(Expr::enat(2),
+                                                          Expr::enat(3)),
+                                        Expr::enat(5)),
+                       Expr::enat(42), Expr::enat(0));
   auto r8 = e8->eval(Ty::e_TNAT);
   ASSERT(std::any_cast<unsigned int>(r8) == 42);
   std::cout << "Test 8 passed: if (2 + 3 == 5) then 42 else 0 = 42\n";
@@ -101,8 +101,8 @@ int main() {
   // Test 9: Nested conditionals
   // eval (EIf TBool (EBool true) (EBool false) (EBool true)) = false
   auto e9 =
-      Expr::ctor::EIf_(Ty::e_TBOOL, Expr::ctor::EBool_(true),
-                       Expr::ctor::EBool_(false), Expr::ctor::EBool_(true));
+      Expr::eif(Ty::e_TBOOL, Expr::ebool(true),
+                       Expr::ebool(false), Expr::ebool(true));
   auto r9 = e9->eval(Ty::e_TBOOL);
   ASSERT(std::any_cast<bool>(r9) == false);
   std::cout << "Test 9 passed: if true then false else true = false\n";

@@ -21,9 +21,9 @@ __attribute__((pure)) unsigned int StepFetchDecodeExec::fetch_byte(
 std::shared_ptr<StepFetchDecodeExec::instruction>
 StepFetchDecodeExec::decode(const unsigned int b1, const unsigned int b2) {
   if ((b1 % 2u) == 0u) {
-    return instruction::ctor::NOP_();
+    return instruction::nop();
   } else {
-    return instruction::ctor::ADD_ACC_((std::move(b2) % 16u));
+    return instruction::add_acc((std::move(b2) % 16u));
   }
 }
 

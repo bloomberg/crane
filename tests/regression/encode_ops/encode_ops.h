@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -130,6 +135,7 @@ struct EncodeOps {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit instruction1(CLB _v) : d_v_(std::move(_v)) {}
 
@@ -153,101 +159,94 @@ struct EncodeOps {
 
     explicit instruction1(WR0 _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<instruction1> clb() {
+      return std::make_shared<instruction1>(CLB{});
+    }
 
-      static std::shared_ptr<instruction1> CLB_() {
-        return std::shared_ptr<instruction1>(new instruction1(CLB{}));
-      }
+    static std::shared_ptr<instruction1> cmc() {
+      return std::make_shared<instruction1>(CMC{});
+    }
 
-      static std::shared_ptr<instruction1> CMC_() {
-        return std::shared_ptr<instruction1>(new instruction1(CMC{}));
-      }
+    static std::shared_ptr<instruction1> daa() {
+      return std::make_shared<instruction1>(DAA{});
+    }
 
-      static std::shared_ptr<instruction1> DAA_() {
-        return std::shared_ptr<instruction1>(new instruction1(DAA{}));
-      }
+    static std::shared_ptr<instruction1> fim(unsigned int a0, unsigned int a1) {
+      return std::make_shared<instruction1>(FIM{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<instruction1> FIM_(unsigned int a0,
-                                                unsigned int a1) {
-        return std::shared_ptr<instruction1>(new instruction1(FIM{a0, a1}));
-      }
+    static std::shared_ptr<instruction1> jun(unsigned int a0) {
+      return std::make_shared<instruction1>(JUN{std::move(a0)});
+    }
 
-      static std::shared_ptr<instruction1> JUN_(unsigned int a0) {
-        return std::shared_ptr<instruction1>(new instruction1(JUN{a0}));
-      }
+    static std::shared_ptr<instruction1> ldm1(unsigned int a0) {
+      return std::make_shared<instruction1>(LDM1{std::move(a0)});
+    }
 
-      static std::shared_ptr<instruction1> LDM1_(unsigned int a0) {
-        return std::shared_ptr<instruction1>(new instruction1(LDM1{a0}));
-      }
+    static std::shared_ptr<instruction1> nop1() {
+      return std::make_shared<instruction1>(NOP1{});
+    }
 
-      static std::shared_ptr<instruction1> NOP1_() {
-        return std::shared_ptr<instruction1>(new instruction1(NOP1{}));
-      }
+    static std::shared_ptr<instruction1> rdm() {
+      return std::make_shared<instruction1>(RDM{});
+    }
 
-      static std::shared_ptr<instruction1> RDM_() {
-        return std::shared_ptr<instruction1>(new instruction1(RDM{}));
-      }
+    static std::shared_ptr<instruction1> tcs() {
+      return std::make_shared<instruction1>(TCS{});
+    }
 
-      static std::shared_ptr<instruction1> TCS_() {
-        return std::shared_ptr<instruction1>(new instruction1(TCS{}));
-      }
+    static std::shared_ptr<instruction1> wpm() {
+      return std::make_shared<instruction1>(WPM{});
+    }
 
-      static std::shared_ptr<instruction1> WPM_() {
-        return std::shared_ptr<instruction1>(new instruction1(WPM{}));
-      }
+    static std::shared_ptr<instruction1> wr0() {
+      return std::make_shared<instruction1>(WR0{});
+    }
 
-      static std::shared_ptr<instruction1> WR0_() {
-        return std::shared_ptr<instruction1>(new instruction1(WR0{}));
-      }
+    static std::unique_ptr<instruction1> clb_uptr() {
+      return std::make_unique<instruction1>(CLB{});
+    }
 
-      static std::unique_ptr<instruction1> CLB_uptr() {
-        return std::unique_ptr<instruction1>(new instruction1(CLB{}));
-      }
+    static std::unique_ptr<instruction1> cmc_uptr() {
+      return std::make_unique<instruction1>(CMC{});
+    }
 
-      static std::unique_ptr<instruction1> CMC_uptr() {
-        return std::unique_ptr<instruction1>(new instruction1(CMC{}));
-      }
+    static std::unique_ptr<instruction1> daa_uptr() {
+      return std::make_unique<instruction1>(DAA{});
+    }
 
-      static std::unique_ptr<instruction1> DAA_uptr() {
-        return std::unique_ptr<instruction1>(new instruction1(DAA{}));
-      }
+    static std::unique_ptr<instruction1> fim_uptr(unsigned int a0,
+                                                  unsigned int a1) {
+      return std::make_unique<instruction1>(FIM{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<instruction1> FIM_uptr(unsigned int a0,
-                                                    unsigned int a1) {
-        return std::unique_ptr<instruction1>(new instruction1(FIM{a0, a1}));
-      }
+    static std::unique_ptr<instruction1> jun_uptr(unsigned int a0) {
+      return std::make_unique<instruction1>(JUN{std::move(a0)});
+    }
 
-      static std::unique_ptr<instruction1> JUN_uptr(unsigned int a0) {
-        return std::unique_ptr<instruction1>(new instruction1(JUN{a0}));
-      }
+    static std::unique_ptr<instruction1> ldm1_uptr(unsigned int a0) {
+      return std::make_unique<instruction1>(LDM1{std::move(a0)});
+    }
 
-      static std::unique_ptr<instruction1> LDM1_uptr(unsigned int a0) {
-        return std::unique_ptr<instruction1>(new instruction1(LDM1{a0}));
-      }
+    static std::unique_ptr<instruction1> nop1_uptr() {
+      return std::make_unique<instruction1>(NOP1{});
+    }
 
-      static std::unique_ptr<instruction1> NOP1_uptr() {
-        return std::unique_ptr<instruction1>(new instruction1(NOP1{}));
-      }
+    static std::unique_ptr<instruction1> rdm_uptr() {
+      return std::make_unique<instruction1>(RDM{});
+    }
 
-      static std::unique_ptr<instruction1> RDM_uptr() {
-        return std::unique_ptr<instruction1>(new instruction1(RDM{}));
-      }
+    static std::unique_ptr<instruction1> tcs_uptr() {
+      return std::make_unique<instruction1>(TCS{});
+    }
 
-      static std::unique_ptr<instruction1> TCS_uptr() {
-        return std::unique_ptr<instruction1>(new instruction1(TCS{}));
-      }
+    static std::unique_ptr<instruction1> wpm_uptr() {
+      return std::make_unique<instruction1>(WPM{});
+    }
 
-      static std::unique_ptr<instruction1> WPM_uptr() {
-        return std::unique_ptr<instruction1>(new instruction1(WPM{}));
-      }
-
-      static std::unique_ptr<instruction1> WR0_uptr() {
-        return std::unique_ptr<instruction1>(new instruction1(WR0{}));
-      }
-    };
+    static std::unique_ptr<instruction1> wr0_uptr() {
+      return std::make_unique<instruction1>(WR0{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -371,17 +370,17 @@ struct EncodeOps {
   __attribute__((pure)) static bool
   pair_in_range(const std::pair<unsigned int, unsigned int> p);
   static inline const bool test_encode_bytes_in_range =
-      ((((((((((pair_in_range(instruction1::ctor::CLB_()->encode1()) &&
-                pair_in_range(instruction1::ctor::CMC_()->encode1())) &&
-               pair_in_range(instruction1::ctor::DAA_()->encode1())) &&
-              pair_in_range(instruction1::ctor::FIM_(14u, 255u)->encode1())) &&
-             pair_in_range(instruction1::ctor::JUN_(4095u)->encode1())) &&
-            pair_in_range(instruction1::ctor::LDM1_(15u)->encode1())) &&
-           pair_in_range(instruction1::ctor::NOP1_()->encode1())) &&
-          pair_in_range(instruction1::ctor::RDM_()->encode1())) &&
-         pair_in_range(instruction1::ctor::TCS_()->encode1())) &&
-        pair_in_range(instruction1::ctor::WPM_()->encode1())) &&
-       pair_in_range(instruction1::ctor::WR0_()->encode1()));
+      ((((((((((pair_in_range(instruction1::clb()->encode1()) &&
+                pair_in_range(instruction1::cmc()->encode1())) &&
+               pair_in_range(instruction1::daa()->encode1())) &&
+              pair_in_range(instruction1::fim(14u, 255u)->encode1())) &&
+             pair_in_range(instruction1::jun(4095u)->encode1())) &&
+            pair_in_range(instruction1::ldm1(15u)->encode1())) &&
+           pair_in_range(instruction1::nop1()->encode1())) &&
+          pair_in_range(instruction1::rdm()->encode1())) &&
+         pair_in_range(instruction1::tcs()->encode1())) &&
+        pair_in_range(instruction1::wpm()->encode1())) &&
+       pair_in_range(instruction1::wr0()->encode1()));
 
   struct instruction2 {
     // TYPES
@@ -397,32 +396,27 @@ struct EncodeOps {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit instruction2(NOP2 _v) : d_v_(std::move(_v)) {}
 
     explicit instruction2(LDM2 _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<instruction2> nop2() {
+      return std::make_shared<instruction2>(NOP2{});
+    }
 
-      static std::shared_ptr<instruction2> NOP2_() {
-        return std::shared_ptr<instruction2>(new instruction2(NOP2{}));
-      }
+    static std::shared_ptr<instruction2> ldm2(unsigned int a0) {
+      return std::make_shared<instruction2>(LDM2{std::move(a0)});
+    }
 
-      static std::shared_ptr<instruction2> LDM2_(unsigned int a0) {
-        return std::shared_ptr<instruction2>(new instruction2(LDM2{a0}));
-      }
+    static std::unique_ptr<instruction2> nop2_uptr() {
+      return std::make_unique<instruction2>(NOP2{});
+    }
 
-      static std::unique_ptr<instruction2> NOP2_uptr() {
-        return std::unique_ptr<instruction2>(new instruction2(NOP2{}));
-      }
-
-      static std::unique_ptr<instruction2> LDM2_uptr(unsigned int a0) {
-        return std::unique_ptr<instruction2>(new instruction2(LDM2{a0}));
-      }
-    };
+    static std::unique_ptr<instruction2> ldm2_uptr(unsigned int a0) {
+      return std::make_unique<instruction2>(LDM2{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -472,14 +466,13 @@ struct EncodeOps {
   static std::shared_ptr<List<unsigned int>> encode_list2(
       const std::shared_ptr<List<std::shared_ptr<instruction2>>> &prog);
   static inline const unsigned int test_encode_list_byte_count =
-      encode_list2(
-          List<std::shared_ptr<instruction2>>::ctor::Cons_(
-              instruction2::ctor::NOP2_(),
-              List<std::shared_ptr<instruction2>>::ctor::Cons_(
-                  instruction2::ctor::LDM2_(5u),
-                  List<std::shared_ptr<instruction2>>::ctor::Cons_(
-                      instruction2::ctor::NOP2_(),
-                      List<std::shared_ptr<instruction2>>::ctor::Nil_()))))
+      encode_list2(List<std::shared_ptr<instruction2>>::cons(
+                       instruction2::nop2(),
+                       List<std::shared_ptr<instruction2>>::cons(
+                           instruction2::ldm2(5u),
+                           List<std::shared_ptr<instruction2>>::cons(
+                               instruction2::nop2(),
+                               List<std::shared_ptr<instruction2>>::nil()))))
           ->length();
 
   struct instruction3 {
@@ -496,32 +489,27 @@ struct EncodeOps {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit instruction3(NOP3 _v) : d_v_(std::move(_v)) {}
 
     explicit instruction3(LDM3 _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<instruction3> nop3() {
+      return std::make_shared<instruction3>(NOP3{});
+    }
 
-      static std::shared_ptr<instruction3> NOP3_() {
-        return std::shared_ptr<instruction3>(new instruction3(NOP3{}));
-      }
+    static std::shared_ptr<instruction3> ldm3(unsigned int a0) {
+      return std::make_shared<instruction3>(LDM3{std::move(a0)});
+    }
 
-      static std::shared_ptr<instruction3> LDM3_(unsigned int a0) {
-        return std::shared_ptr<instruction3>(new instruction3(LDM3{a0}));
-      }
+    static std::unique_ptr<instruction3> nop3_uptr() {
+      return std::make_unique<instruction3>(NOP3{});
+    }
 
-      static std::unique_ptr<instruction3> NOP3_uptr() {
-        return std::unique_ptr<instruction3>(new instruction3(NOP3{}));
-      }
-
-      static std::unique_ptr<instruction3> LDM3_uptr(unsigned int a0) {
-        return std::unique_ptr<instruction3>(new instruction3(LDM3{a0}));
-      }
-    };
+    static std::unique_ptr<instruction3> ldm3_uptr(unsigned int a0) {
+      return std::make_unique<instruction3>(LDM3{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -572,14 +560,13 @@ struct EncodeOps {
   static std::shared_ptr<List<unsigned int>> encode_list3(
       const std::shared_ptr<List<std::shared_ptr<instruction3>>> &prog);
   static inline const unsigned int test_instruction_byte_stream_encode =
-      encode_list3(
-          List<std::shared_ptr<instruction3>>::ctor::Cons_(
-              instruction3::ctor::NOP3_(),
-              List<std::shared_ptr<instruction3>>::ctor::Cons_(
-                  instruction3::ctor::LDM3_(3u),
-                  List<std::shared_ptr<instruction3>>::ctor::Cons_(
-                      instruction3::ctor::LDM3_(12u),
-                      List<std::shared_ptr<instruction3>>::ctor::Nil_()))))
+      encode_list3(List<std::shared_ptr<instruction3>>::cons(
+                       instruction3::nop3(),
+                       List<std::shared_ptr<instruction3>>::cons(
+                           instruction3::ldm3(3u),
+                           List<std::shared_ptr<instruction3>>::cons(
+                               instruction3::ldm3(12u),
+                               List<std::shared_ptr<instruction3>>::nil()))))
           ->length();
   static inline const std::pair<std::pair<bool, unsigned int>, unsigned int> t =
       std::make_pair(std::make_pair(test_encode_bytes_in_range,

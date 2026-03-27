@@ -35,34 +35,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -93,6 +98,7 @@ struct InstructionSequenceExec {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit instruction(NOP_ _v) : d_v_(std::move(_v)) {}
 
@@ -100,35 +106,29 @@ struct InstructionSequenceExec {
 
     explicit instruction(ADD_ACC _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<instruction> nop_() {
+      return std::make_shared<instruction>(NOP_{});
+    }
 
-      static std::shared_ptr<instruction> NOP__() {
-        return std::shared_ptr<instruction>(new instruction(NOP_{}));
-      }
+    static std::shared_ptr<instruction> inc_pc() {
+      return std::make_shared<instruction>(INC_PC{});
+    }
 
-      static std::shared_ptr<instruction> INC_PC_() {
-        return std::shared_ptr<instruction>(new instruction(INC_PC{}));
-      }
+    static std::shared_ptr<instruction> add_acc(unsigned int a0) {
+      return std::make_shared<instruction>(ADD_ACC{std::move(a0)});
+    }
 
-      static std::shared_ptr<instruction> ADD_ACC_(unsigned int a0) {
-        return std::shared_ptr<instruction>(new instruction(ADD_ACC{a0}));
-      }
+    static std::unique_ptr<instruction> nop__uptr() {
+      return std::make_unique<instruction>(NOP_{});
+    }
 
-      static std::unique_ptr<instruction> NOP__uptr() {
-        return std::unique_ptr<instruction>(new instruction(NOP_{}));
-      }
+    static std::unique_ptr<instruction> inc_pc_uptr() {
+      return std::make_unique<instruction>(INC_PC{});
+    }
 
-      static std::unique_ptr<instruction> INC_PC_uptr() {
-        return std::unique_ptr<instruction>(new instruction(INC_PC{}));
-      }
-
-      static std::unique_ptr<instruction> ADD_ACC_uptr(unsigned int a0) {
-        return std::unique_ptr<instruction>(new instruction(ADD_ACC{a0}));
-      }
-    };
+    static std::unique_ptr<instruction> add_acc_uptr(unsigned int a0) {
+      return std::make_unique<instruction>(ADD_ACC{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -171,15 +171,15 @@ struct InstructionSequenceExec {
   static inline const std::shared_ptr<state> sample =
       std::make_shared<state>(state{0u, 1u});
   static inline const unsigned int t = [](void) {
-    std::shared_ptr<state> s_ = exec_program(
-        List<std::shared_ptr<instruction>>::ctor::Cons_(
-            instruction::ctor::INC_PC_(),
-            List<std::shared_ptr<instruction>>::ctor::Cons_(
-                instruction::ctor::ADD_ACC_(2u),
-                List<std::shared_ptr<instruction>>::ctor::Cons_(
-                    instruction::ctor::INC_PC_(),
-                    List<std::shared_ptr<instruction>>::ctor::Nil_()))),
-        sample);
+    std::shared_ptr<state> s_ =
+        exec_program(List<std::shared_ptr<instruction>>::cons(
+                         instruction::inc_pc(),
+                         List<std::shared_ptr<instruction>>::cons(
+                             instruction::add_acc(2u),
+                             List<std::shared_ptr<instruction>>::cons(
+                                 instruction::inc_pc(),
+                                 List<std::shared_ptr<instruction>>::nil()))),
+                     sample);
     return (s_->pc_ + s_->acc_);
   }();
 };

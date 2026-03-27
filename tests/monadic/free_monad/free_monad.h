@@ -46,6 +46,7 @@ struct FreeMonad {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit IO(Pure _v) : d_v_(std::move(_v)) {}
 
@@ -55,47 +56,53 @@ struct FreeMonad {
 
     explicit IO(Print _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<IO> pure(std::any a0) {
+      return std::make_shared<IO>(Pure{std::move(a0)});
+    }
 
-      static std::shared_ptr<IO> Pure_(std::any a0) {
-        return std::shared_ptr<IO>(new IO(Pure{a0}));
-      }
+    static std::shared_ptr<IO>
+    bind(const std::shared_ptr<IO> &a0,
+         std::function<std::shared_ptr<IO>(std::any)> a1) {
+      return std::make_shared<IO>(Bind{a0, std::move(a1)});
+    }
 
-      static std::shared_ptr<IO>
-      Bind_(const std::shared_ptr<IO> &a0,
-            std::function<std::shared_ptr<IO>(std::any)> a1) {
-        return std::shared_ptr<IO>(new IO(Bind{a0, a1}));
-      }
+    static std::shared_ptr<IO>
+    bind(std::shared_ptr<IO> &&a0,
+         std::function<std::shared_ptr<IO>(std::any)> a1) {
+      return std::make_shared<IO>(Bind{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<IO> Get_line_() {
-        return std::shared_ptr<IO>(new IO(Get_line{}));
-      }
+    static std::shared_ptr<IO> get_line() {
+      return std::make_shared<IO>(Get_line{});
+    }
 
-      static std::shared_ptr<IO> Print_(std::string a0) {
-        return std::shared_ptr<IO>(new IO(Print{a0}));
-      }
+    static std::shared_ptr<IO> print(std::string a0) {
+      return std::make_shared<IO>(Print{std::move(a0)});
+    }
 
-      static std::unique_ptr<IO> Pure_uptr(std::any a0) {
-        return std::unique_ptr<IO>(new IO(Pure{a0}));
-      }
+    static std::unique_ptr<IO> pure_uptr(std::any a0) {
+      return std::make_unique<IO>(Pure{std::move(a0)});
+    }
 
-      static std::unique_ptr<IO>
-      Bind_uptr(const std::shared_ptr<IO> &a0,
-                std::function<std::shared_ptr<IO>(std::any)> a1) {
-        return std::unique_ptr<IO>(new IO(Bind{a0, a1}));
-      }
+    static std::unique_ptr<IO>
+    bind_uptr(const std::shared_ptr<IO> &a0,
+              std::function<std::shared_ptr<IO>(std::any)> a1) {
+      return std::make_unique<IO>(Bind{a0, std::move(a1)});
+    }
 
-      static std::unique_ptr<IO> Get_line_uptr() {
-        return std::unique_ptr<IO>(new IO(Get_line{}));
-      }
+    static std::unique_ptr<IO>
+    bind_uptr(std::shared_ptr<IO> &&a0,
+              std::function<std::shared_ptr<IO>(std::any)> a1) {
+      return std::make_unique<IO>(Bind{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<IO> Print_uptr(std::string a0) {
-        return std::unique_ptr<IO>(new IO(Print{a0}));
-      }
-    };
+    static std::unique_ptr<IO> get_line_uptr() {
+      return std::make_unique<IO>(Get_line{});
+    }
+
+    static std::unique_ptr<IO> print_uptr(std::string a0) {
+      return std::make_unique<IO>(Print{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -142,7 +149,7 @@ struct FreeMonad {
         i->v());
   }
 
-  static inline const std::shared_ptr<IO> test = IO::ctor::Pure_(Unit::e_TT);
+  static inline const std::shared_ptr<IO> test = IO::pure(Unit::e_TT);
 };
 
 #endif // INCLUDED_FREE_MONAD

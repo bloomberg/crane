@@ -176,9 +176,9 @@ std::shared_ptr<List<unsigned int>> LoopifyListAccess::lookup_all(
                     _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::ctor::Nil_();
+                    .d_a1 = List<unsigned int>::nil();
               } else {
-                _head = List<unsigned int>::ctor::Nil_();
+                _head = List<unsigned int>::nil();
               }
               _continue = false;
             },
@@ -187,7 +187,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListAccess::lookup_all(
               unsigned int k = _args.d_a0.first;
               unsigned int v = _args.d_a0.second;
               if (k == key) {
-                auto _cell = List<unsigned int>::ctor::Cons_(v, nullptr);
+                auto _cell = List<unsigned int>::cons(v, nullptr);
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = _cell;

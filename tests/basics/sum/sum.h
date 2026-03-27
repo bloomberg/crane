@@ -37,36 +37,27 @@ struct Sum {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit either(Left _v) : d_v_(std::move(_v)) {}
 
     explicit either(Right _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<either<t_A, t_B>> left(t_A a0) {
+      return std::make_shared<either<t_A, t_B>>(Left{std::move(a0)});
+    }
 
-      static std::shared_ptr<either<t_A, t_B>> Left_(t_A a0) {
-        return std::shared_ptr<either<t_A, t_B>>(
-            new either<t_A, t_B>(Left{a0}));
-      }
+    static std::shared_ptr<either<t_A, t_B>> right(t_B a0) {
+      return std::make_shared<either<t_A, t_B>>(Right{std::move(a0)});
+    }
 
-      static std::shared_ptr<either<t_A, t_B>> Right_(t_B a0) {
-        return std::shared_ptr<either<t_A, t_B>>(
-            new either<t_A, t_B>(Right{a0}));
-      }
+    static std::unique_ptr<either<t_A, t_B>> left_uptr(t_A a0) {
+      return std::make_unique<either<t_A, t_B>>(Left{std::move(a0)});
+    }
 
-      static std::unique_ptr<either<t_A, t_B>> Left_uptr(t_A a0) {
-        return std::unique_ptr<either<t_A, t_B>>(
-            new either<t_A, t_B>(Left{a0}));
-      }
-
-      static std::unique_ptr<either<t_A, t_B>> Right_uptr(t_B a0) {
-        return std::unique_ptr<either<t_A, t_B>>(
-            new either<t_A, t_B>(Right{a0}));
-      }
-    };
+    static std::unique_ptr<either<t_A, t_B>> right_uptr(t_B a0) {
+      return std::make_unique<either<t_A, t_B>>(Right{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -79,11 +70,11 @@ struct Sum {
       return std::visit(
           Overloaded{[](const typename either<t_A, t_B>::Left _args)
                          -> std::shared_ptr<either<t_A, T1>> {
-                       return either<t_A, T1>::ctor::Left_(_args.d_a0);
+                       return either<t_A, T1>::left(_args.d_a0);
                      },
                      [&](const typename either<t_A, t_B>::Right _args)
                          -> std::shared_ptr<either<t_A, T1>> {
-                       return either<t_A, T1>::ctor::Right_(f(_args.d_a0));
+                       return either<t_A, T1>::right(f(_args.d_a0));
                      }},
           this->v());
     }
@@ -93,11 +84,11 @@ struct Sum {
       return std::visit(
           Overloaded{[&](const typename either<t_A, t_B>::Left _args)
                          -> std::shared_ptr<either<T1, t_B>> {
-                       return either<T1, t_B>::ctor::Left_(f(_args.d_a0));
+                       return either<T1, t_B>::left(f(_args.d_a0));
                      },
                      [](const typename either<t_A, t_B>::Right _args)
                          -> std::shared_ptr<either<T1, t_B>> {
-                       return either<T1, t_B>::ctor::Right_(_args.d_a0);
+                       return either<T1, t_B>::right(_args.d_a0);
                      }},
           this->v());
     }
@@ -139,9 +130,9 @@ struct Sum {
   };
 
   static inline const std::shared_ptr<either<unsigned int, bool>> left_val =
-      either<unsigned int, bool>::ctor::Left_(5u);
+      either<unsigned int, bool>::left(5u);
   static inline const std::shared_ptr<either<unsigned int, bool>> right_val =
-      either<unsigned int, bool>::ctor::Right_(true);
+      either<unsigned int, bool>::right(true);
   __attribute__((pure)) static unsigned int
   either_to_nat(const std::shared_ptr<either<unsigned int, unsigned int>> &e);
 
@@ -165,6 +156,7 @@ struct Sum {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit triple(First _v) : d_v_(std::move(_v)) {}
 
@@ -172,41 +164,29 @@ struct Sum {
 
     explicit triple(Third _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<triple<t_A, t_B, t_C>> first(t_A a0) {
+      return std::make_shared<triple<t_A, t_B, t_C>>(First{std::move(a0)});
+    }
 
-      static std::shared_ptr<triple<t_A, t_B, t_C>> First_(t_A a0) {
-        return std::shared_ptr<triple<t_A, t_B, t_C>>(
-            new triple<t_A, t_B, t_C>(First{a0}));
-      }
+    static std::shared_ptr<triple<t_A, t_B, t_C>> second(t_B a0) {
+      return std::make_shared<triple<t_A, t_B, t_C>>(Second{std::move(a0)});
+    }
 
-      static std::shared_ptr<triple<t_A, t_B, t_C>> Second_(t_B a0) {
-        return std::shared_ptr<triple<t_A, t_B, t_C>>(
-            new triple<t_A, t_B, t_C>(Second{a0}));
-      }
+    static std::shared_ptr<triple<t_A, t_B, t_C>> third(t_C a0) {
+      return std::make_shared<triple<t_A, t_B, t_C>>(Third{std::move(a0)});
+    }
 
-      static std::shared_ptr<triple<t_A, t_B, t_C>> Third_(t_C a0) {
-        return std::shared_ptr<triple<t_A, t_B, t_C>>(
-            new triple<t_A, t_B, t_C>(Third{a0}));
-      }
+    static std::unique_ptr<triple<t_A, t_B, t_C>> first_uptr(t_A a0) {
+      return std::make_unique<triple<t_A, t_B, t_C>>(First{std::move(a0)});
+    }
 
-      static std::unique_ptr<triple<t_A, t_B, t_C>> First_uptr(t_A a0) {
-        return std::unique_ptr<triple<t_A, t_B, t_C>>(
-            new triple<t_A, t_B, t_C>(First{a0}));
-      }
+    static std::unique_ptr<triple<t_A, t_B, t_C>> second_uptr(t_B a0) {
+      return std::make_unique<triple<t_A, t_B, t_C>>(Second{std::move(a0)});
+    }
 
-      static std::unique_ptr<triple<t_A, t_B, t_C>> Second_uptr(t_B a0) {
-        return std::unique_ptr<triple<t_A, t_B, t_C>>(
-            new triple<t_A, t_B, t_C>(Second{a0}));
-      }
-
-      static std::unique_ptr<triple<t_A, t_B, t_C>> Third_uptr(t_C a0) {
-        return std::unique_ptr<triple<t_A, t_B, t_C>>(
-            new triple<t_A, t_B, t_C>(Third{a0}));
-      }
-    };
+    static std::unique_ptr<triple<t_A, t_B, t_C>> third_uptr(t_C a0) {
+      return std::make_unique<triple<t_A, t_B, t_C>>(Third{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -250,12 +230,11 @@ struct Sum {
   };
 
   static inline const std::shared_ptr<triple<unsigned int, bool, unsigned int>>
-      triple_test =
-          triple<unsigned int, bool, unsigned int>::ctor::Second_(true);
+      triple_test = triple<unsigned int, bool, unsigned int>::second(true);
   static inline const bool test_left = left_val->is_left();
   static inline const bool test_right = right_val->is_left();
   static inline const unsigned int test_either =
-      either_to_nat(either<unsigned int, unsigned int>::ctor::Left_(3u));
+      either_to_nat(either<unsigned int, unsigned int>::left(3u));
 };
 
 #endif // INCLUDED_SUM

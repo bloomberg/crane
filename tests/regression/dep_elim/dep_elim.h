@@ -35,34 +35,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -89,34 +94,38 @@ struct DepElim {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit fin(FZ _v) : d_v_(std::move(_v)) {}
 
     explicit fin(FS _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<fin> fz(unsigned int a0) {
+      return std::make_shared<fin>(FZ{std::move(a0)});
+    }
 
-      static std::shared_ptr<fin> FZ_(unsigned int a0) {
-        return std::shared_ptr<fin>(new fin(FZ{a0}));
-      }
+    static std::shared_ptr<fin> fs(unsigned int a0,
+                                   const std::shared_ptr<fin> &a1) {
+      return std::make_shared<fin>(FS{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<fin> FS_(unsigned int a0,
-                                      const std::shared_ptr<fin> &a1) {
-        return std::shared_ptr<fin>(new fin(FS{a0, a1}));
-      }
+    static std::shared_ptr<fin> fs(unsigned int a0, std::shared_ptr<fin> &&a1) {
+      return std::make_shared<fin>(FS{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<fin> FZ_uptr(unsigned int a0) {
-        return std::unique_ptr<fin>(new fin(FZ{a0}));
-      }
+    static std::unique_ptr<fin> fz_uptr(unsigned int a0) {
+      return std::make_unique<fin>(FZ{std::move(a0)});
+    }
 
-      static std::unique_ptr<fin> FS_uptr(unsigned int a0,
-                                          const std::shared_ptr<fin> &a1) {
-        return std::unique_ptr<fin>(new fin(FS{a0, a1}));
-      }
-    };
+    static std::unique_ptr<fin> fs_uptr(unsigned int a0,
+                                        const std::shared_ptr<fin> &a1) {
+      return std::make_unique<fin>(FS{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<fin> fs_uptr(unsigned int a0,
+                                        std::shared_ptr<fin> &&a1) {
+      return std::make_unique<fin>(FS{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -177,34 +186,43 @@ struct DepElim {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit vec(Vnil _v) : d_v_(std::move(_v)) {}
 
     explicit vec(Vcons _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<vec<t_A>> vnil() {
+      return std::make_shared<vec<t_A>>(Vnil{});
+    }
 
-      static std::shared_ptr<vec<t_A>> Vnil_() {
-        return std::shared_ptr<vec<t_A>>(new vec<t_A>(Vnil{}));
-      }
+    static std::shared_ptr<vec<t_A>>
+    vcons(unsigned int a0, t_A a1, const std::shared_ptr<vec<t_A>> &a2) {
+      return std::make_shared<vec<t_A>>(
+          Vcons{std::move(a0), std::move(a1), a2});
+    }
 
-      static std::shared_ptr<vec<t_A>>
-      Vcons_(unsigned int a0, t_A a1, const std::shared_ptr<vec<t_A>> &a2) {
-        return std::shared_ptr<vec<t_A>>(new vec<t_A>(Vcons{a0, a1, a2}));
-      }
+    static std::shared_ptr<vec<t_A>> vcons(unsigned int a0, t_A a1,
+                                           std::shared_ptr<vec<t_A>> &&a2) {
+      return std::make_shared<vec<t_A>>(
+          Vcons{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
-      static std::unique_ptr<vec<t_A>> Vnil_uptr() {
-        return std::unique_ptr<vec<t_A>>(new vec<t_A>(Vnil{}));
-      }
+    static std::unique_ptr<vec<t_A>> vnil_uptr() {
+      return std::make_unique<vec<t_A>>(Vnil{});
+    }
 
-      static std::unique_ptr<vec<t_A>>
-      Vcons_uptr(unsigned int a0, t_A a1, const std::shared_ptr<vec<t_A>> &a2) {
-        return std::unique_ptr<vec<t_A>>(new vec<t_A>(Vcons{a0, a1, a2}));
-      }
-    };
+    static std::unique_ptr<vec<t_A>>
+    vcons_uptr(unsigned int a0, t_A a1, const std::shared_ptr<vec<t_A>> &a2) {
+      return std::make_unique<vec<t_A>>(
+          Vcons{std::move(a0), std::move(a1), a2});
+    }
+
+    static std::unique_ptr<vec<t_A>>
+    vcons_uptr(unsigned int a0, t_A a1, std::shared_ptr<vec<t_A>> &&a2) {
+      return std::make_unique<vec<t_A>>(
+          Vcons{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -237,31 +255,29 @@ struct DepElim {
     template <typename T1, MapsTo<T1, t_A> F1>
     std::shared_ptr<vec<T1>> vec_map(const unsigned int _x, F1 &&f) const {
       return std::visit(
-          Overloaded{[](const typename vec<t_A>::Vnil _args)
-                         -> std::shared_ptr<vec<T1>> {
-                       return vec<T1>::ctor::Vnil_();
-                     },
-                     [&](const typename vec<t_A>::Vcons _args)
-                         -> std::shared_ptr<vec<T1>> {
-                       return vec<T1>::ctor::Vcons_(
-                           _args.d_a0, f(_args.d_a1),
-                           _args.d_a2->template vec_map<T1>(_args.d_a0, f));
-                     }},
+          Overloaded{
+              [](const typename vec<t_A>::Vnil _args)
+                  -> std::shared_ptr<vec<T1>> { return vec<T1>::vnil(); },
+              [&](const typename vec<t_A>::Vcons _args)
+                  -> std::shared_ptr<vec<T1>> {
+                return vec<T1>::vcons(
+                    _args.d_a0, f(_args.d_a1),
+                    _args.d_a2->template vec_map<T1>(_args.d_a0, f));
+              }},
           this->v());
     }
 
     std::shared_ptr<List<t_A>> vec_to_list(const unsigned int _x) const {
-      return std::visit(Overloaded{[](const typename vec<t_A>::Vnil _args)
-                                       -> std::shared_ptr<List<t_A>> {
-                                     return List<t_A>::ctor::Nil_();
-                                   },
-                                   [](const typename vec<t_A>::Vcons _args)
-                                       -> std::shared_ptr<List<t_A>> {
-                                     return List<t_A>::ctor::Cons_(
-                                         _args.d_a1,
-                                         _args.d_a2->vec_to_list(_args.d_a0));
-                                   }},
-                        this->v());
+      return std::visit(
+          Overloaded{
+              [](const typename vec<t_A>::Vnil _args)
+                  -> std::shared_ptr<List<t_A>> { return List<t_A>::nil(); },
+              [](const typename vec<t_A>::Vcons _args)
+                  -> std::shared_ptr<List<t_A>> {
+                return List<t_A>::cons(_args.d_a1,
+                                       _args.d_a2->vec_to_list(_args.d_a0));
+              }},
+          this->v());
     }
   };
 
@@ -305,32 +321,27 @@ struct DepElim {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit avail(Present _v) : d_v_(std::move(_v)) {}
 
     explicit avail(Absent _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<avail> present(unsigned int a0) {
+      return std::make_shared<avail>(Present{std::move(a0)});
+    }
 
-      static std::shared_ptr<avail> Present_(unsigned int a0) {
-        return std::shared_ptr<avail>(new avail(Present{a0}));
-      }
+    static std::shared_ptr<avail> absent() {
+      return std::make_shared<avail>(Absent{});
+    }
 
-      static std::shared_ptr<avail> Absent_() {
-        return std::shared_ptr<avail>(new avail(Absent{}));
-      }
+    static std::unique_ptr<avail> present_uptr(unsigned int a0) {
+      return std::make_unique<avail>(Present{std::move(a0)});
+    }
 
-      static std::unique_ptr<avail> Present_uptr(unsigned int a0) {
-        return std::unique_ptr<avail>(new avail(Present{a0}));
-      }
-
-      static std::unique_ptr<avail> Absent_uptr() {
-        return std::unique_ptr<avail>(new avail(Absent{}));
-      }
-    };
+    static std::unique_ptr<avail> absent_uptr() {
+      return std::make_unique<avail>(Absent{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -372,18 +383,15 @@ struct DepElim {
     }
   };
 
-  static inline const unsigned int test_fin0 =
-      fin::ctor::FZ_(2u)->fin_to_nat(3u);
+  static inline const unsigned int test_fin0 = fin::fz(2u)->fin_to_nat(3u);
   static inline const unsigned int test_fin2 =
-      fin::ctor::FS_(2u, fin::ctor::FS_(1u, fin::ctor::FZ_(0u)))
-          ->fin_to_nat(3u);
+      fin::fs(2u, fin::fs(1u, fin::fz(0u)))->fin_to_nat(3u);
   static inline const std::shared_ptr<vec<unsigned int>> my_vec =
-      vec<unsigned int>::ctor::Vcons_(
+      vec<unsigned int>::vcons(
           2u, 10u,
-          vec<unsigned int>::ctor::Vcons_(
+          vec<unsigned int>::vcons(
               1u, 20u,
-              vec<unsigned int>::ctor::Vcons_(
-                  0u, 30u, vec<unsigned int>::ctor::Vnil_())));
+              vec<unsigned int>::vcons(0u, 30u, vec<unsigned int>::vnil())));
   static inline const std::shared_ptr<List<unsigned int>> test_vec_list =
       my_vec->vec_to_list(3u);
   static inline const unsigned int test_vec_head = my_vec->vec_head(2u);
@@ -395,7 +403,7 @@ struct DepElim {
               3u, [](unsigned int n) { return (n + 1u); })
           ->vec_to_list(3u);
   static inline const unsigned int test_present =
-      avail::ctor::Present_(42u)->get_present();
+      avail::present(42u)->get_present();
 };
 
 #endif // INCLUDED_DEP_ELIM

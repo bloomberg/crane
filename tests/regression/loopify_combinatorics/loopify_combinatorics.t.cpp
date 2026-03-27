@@ -20,13 +20,13 @@ int main() {
   using List = ::List<unsigned int>;
 
   // Test remove
-  auto l = List::ctor::Cons_(
-      1u, List::ctor::Cons_(2u, List::ctor::Cons_(3u, List::ctor::Nil_())));
+  auto l = List::cons(
+      1u, List::cons(2u, List::cons(3u, List::nil())));
   auto removed = LoopifyCombinatorics::remove(2u, l);
   ASSERT(removed != nullptr);
 
   // Test permutations (small list)
-  auto small = List::ctor::Cons_(1u, List::ctor::Cons_(2u, List::ctor::Nil_()));
+  auto small = List::cons(1u, List::cons(2u, List::nil()));
   auto perms = LoopifyCombinatorics::permutations(small);
   ASSERT(perms != nullptr);
 
@@ -35,8 +35,8 @@ int main() {
   ASSERT(subseqs != nullptr);
 
   // Test cartesian
-  auto l1 = List::ctor::Cons_(1u, List::ctor::Cons_(2u, List::ctor::Nil_()));
-  auto l2 = List::ctor::Cons_(3u, List::ctor::Cons_(4u, List::ctor::Nil_()));
+  auto l1 = List::cons(1u, List::cons(2u, List::nil()));
+  auto l2 = List::cons(3u, List::cons(4u, List::nil()));
   auto cart = LoopifyCombinatorics::cartesian(l1, l2);
   ASSERT(cart != nullptr);
 

@@ -84,7 +84,7 @@ PendantSumtreeRoundtripCase::list_to_vector_opt(
                 -> std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>> {
               return std::make_optional<
                   std::shared_ptr<T0<std::shared_ptr<T>>>>(
-                  T0<std::shared_ptr<T>>::ctor::Nil_());
+                  T0<std::shared_ptr<T>>::nil());
             },
             [](const typename List<std::shared_ptr<T>>::Cons0 _args)
                 -> std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>> {
@@ -106,7 +106,7 @@ PendantSumtreeRoundtripCase::list_to_vector_opt(
                     *list_to_vector_opt(n_, _args0.d_a1);
                 return std::make_optional<
                     std::shared_ptr<T0<std::shared_ptr<T>>>>(
-                    T0<std::shared_ptr<T>>::ctor::Cons_(_args0.d_a0, n_, v));
+                    T0<std::shared_ptr<T>>::cons(_args0.d_a0, n_, v));
               } else {
                 return std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>>();
               }
@@ -158,8 +158,8 @@ PendantSumtreeRoundtripCase::decode_multi(
                     vs = *acc;
                 return std::make_optional<std::shared_ptr<
                     List<std::shared_ptr<T0<std::shared_ptr<T>>>>>>(
-                    List<std::shared_ptr<T0<std::shared_ptr<T>>>>::ctor::Cons0_(
-                        v, vs));
+                    List<std::shared_ptr<T0<std::shared_ptr<T>>>>::cons0(v,
+                                                                         vs));
               } else {
                 return std::optional<std::shared_ptr<
                     List<std::shared_ptr<T0<std::shared_ptr<T>>>>>>();
@@ -171,7 +171,7 @@ PendantSumtreeRoundtripCase::decode_multi(
           },
           std::make_optional<
               std::shared_ptr<List<std::shared_ptr<T0<std::shared_ptr<T>>>>>>(
-              List<std::shared_ptr<T0<std::shared_ptr<T>>>>::ctor::Nil0_()));
+              List<std::shared_ptr<T0<std::shared_ptr<T>>>>::nil0()));
 }
 
 __attribute__((pure))
@@ -181,19 +181,17 @@ PendantSumtreeRoundtripCase::pendant_digits(
     std::shared_ptr<PendantSumtreeRoundtripCase::CertifiedPendant> p) {
   if (decode_multi(
           n, encode_multi(
-                 n, List<std::shared_ptr<T0<std::shared_ptr<T>>>>::ctor::Cons0_(
+                 n, List<std::shared_ptr<T0<std::shared_ptr<T>>>>::cons0(
                         p->cp_digits,
-                        List<std::shared_ptr<T0<std::shared_ptr<T>>>>::ctor::
-                            Nil0_())))
+                        List<std::shared_ptr<T0<std::shared_ptr<T>>>>::nil0())))
           .has_value()) {
     std::shared_ptr<List<std::shared_ptr<T0<std::shared_ptr<T>>>>> l =
         *decode_multi(
             n,
             encode_multi(
-                n, List<std::shared_ptr<T0<std::shared_ptr<T>>>>::ctor::Cons0_(
+                n, List<std::shared_ptr<T0<std::shared_ptr<T>>>>::cons0(
                        p->cp_digits,
-                       List<std::shared_ptr<T0<std::shared_ptr<T>>>>::ctor::
-                           Nil0_())));
+                       List<std::shared_ptr<T0<std::shared_ptr<T>>>>::nil0())));
     return std::visit(
         Overloaded{
             [](const typename List<
@@ -252,7 +250,7 @@ PendantSumtreeRoundtripCase::ledger_values(
                  unsigned int, std::shared_ptr<PendantSumtreeRoundtripCase::
                                                    CertifiedPendant>>>>::Nil0
                  _args) -> std::shared_ptr<List<std::optional<unsigned int>>> {
-            return List<std::optional<unsigned int>>::ctor::Nil0_();
+            return List<std::optional<unsigned int>>::nil0();
           },
           [](const typename List<std::shared_ptr<SigT<
                  unsigned int, std::shared_ptr<PendantSumtreeRoundtripCase::
@@ -265,7 +263,7 @@ PendantSumtreeRoundtripCase::ledger_values(
                         std::shared_ptr<PendantSumtreeRoundtripCase::
                                             CertifiedPendant>>::ExistT _args0)
                         -> std::shared_ptr<List<std::optional<unsigned int>>> {
-                      return List<std::optional<unsigned int>>::ctor::Cons0_(
+                      return List<std::optional<unsigned int>>::cons0(
                           pendant_value(_args0.d_a0, _args0.d_a1),
                           ledger_values(_args.d_a1));
                     }},
@@ -345,11 +343,10 @@ PendantSumtreeRoundtripCase::sumtree_leaves(
               -> std::shared_ptr<List<std::shared_ptr<
                   PendantSumtreeRoundtripCase::CertifiedPendant>>> {
             return List<std::shared_ptr<
-                PendantSumtreeRoundtripCase::CertifiedPendant>>::ctor::
-                Cons0_(
-                    _args.d_a0,
-                    List<std::shared_ptr<PendantSumtreeRoundtripCase::
-                                             CertifiedPendant>>::ctor::Nil0_());
+                PendantSumtreeRoundtripCase::CertifiedPendant>>::
+                cons0(_args.d_a0,
+                      List<std::shared_ptr<PendantSumtreeRoundtripCase::
+                                               CertifiedPendant>>::nil0());
           },
           [&](const typename PendantSumtreeRoundtripCase::SumTree::SumNode
                   _args)
@@ -521,20 +518,20 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::option_nat_is_some(
 
 std::shared_ptr<T0<PendantSumtreeRoundtripCase::digit>>
 PendantSumtreeRoundtripCase::digit_vec1(std::shared_ptr<T> a) {
-  return T0<std::shared_ptr<T>>::ctor::Cons_(
-      std::move(a), 0u, T0<std::shared_ptr<T>>::ctor::Nil_());
+  return T0<std::shared_ptr<T>>::cons(std::move(a), 0u,
+                                      T0<std::shared_ptr<T>>::nil());
 }
 
 std::shared_ptr<T0<PendantSumtreeRoundtripCase::digit>>
 PendantSumtreeRoundtripCase::digit_vec3(std::shared_ptr<T> a,
                                         std::shared_ptr<T> b,
                                         std::shared_ptr<T> c) {
-  return T0<std::shared_ptr<T>>::ctor::Cons_(
+  return T0<std::shared_ptr<T>>::cons(
       std::move(a), 2u,
-      T0<std::shared_ptr<T>>::ctor::Cons_(
+      T0<std::shared_ptr<T>>::cons(
           std::move(b), 1u,
-          T0<std::shared_ptr<T>>::ctor::Cons_(
-              std::move(c), 0u, T0<std::shared_ptr<T>>::ctor::Nil_())));
+          T0<std::shared_ptr<T>>::cons(std::move(c), 0u,
+                                       T0<std::shared_ptr<T>>::nil())));
 }
 
 std::shared_ptr<T> Fin::of_nat_lt(const unsigned int p, const unsigned int n) {
@@ -543,10 +540,10 @@ std::shared_ptr<T> Fin::of_nat_lt(const unsigned int p, const unsigned int n) {
   } else {
     unsigned int n_ = n - 1;
     if (p <= 0) {
-      return T::ctor::F1_(n_);
+      return T::f1(n_);
     } else {
       unsigned int p_ = p - 1;
-      return T::ctor::FS_(n_, Fin::of_nat_lt(p_, n_));
+      return T::fs(n_, Fin::of_nat_lt(p_, n_));
     }
   }
 }

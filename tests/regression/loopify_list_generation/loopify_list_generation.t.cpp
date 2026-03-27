@@ -24,8 +24,8 @@ int main() {
   ASSERT(rep != nullptr);
 
   // stutter
-  auto nil = UIntList::ctor::Nil_();
-  auto l3 = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(3u, nil)));
+  auto nil = UIntList::nil();
+  auto l3 = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(3u, nil)));
   auto stuttered = LoopifyListGeneration::stutter(l3);
   ASSERT(stuttered != nullptr);
 
@@ -39,9 +39,9 @@ int main() {
 
   // replicate_list
   using PairList = List<std::pair<unsigned int, unsigned int>>;
-  auto pair_nil = PairList::ctor::Nil_();
-  auto pairs = PairList::ctor::Cons_(std::make_pair(3u, 5u),
-    PairList::ctor::Cons_(std::make_pair(2u, 7u), pair_nil));
+  auto pair_nil = PairList::nil();
+  auto pairs = PairList::cons(std::make_pair(3u, 5u),
+    PairList::cons(std::make_pair(2u, 7u), pair_nil));
   auto rep_list = LoopifyListGeneration::replicate_list(pairs);
   ASSERT(rep_list != nullptr);
 

@@ -50,8 +50,8 @@ GetPairBoundProp::set_pair(const std::shared_ptr<GetPairBoundProp::state> &s,
 std::shared_ptr<List<unsigned int>>
 GetPairBoundProp::push_return(std::shared_ptr<GetPairBoundProp::state> s,
                               const unsigned int ret) {
-  return List<unsigned int>::ctor::Cons_((std::move(ret) % 4096u),
-                                         std::move(s)->ex_stack)
+  return List<unsigned int>::cons((std::move(ret) % 4096u),
+                                  std::move(s)->ex_stack)
       ->firstn(2u);
 }
 

@@ -34,24 +34,19 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit SigT(ExistT _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<SigT<t_A, t_P>> existt(t_A a0, t_P a1) {
+    return std::make_shared<SigT<t_A, t_P>>(
+        ExistT{std::move(a0), std::move(a1)});
+  }
 
-    static std::shared_ptr<SigT<t_A, t_P>> ExistT_(t_A a0, t_P a1) {
-      return std::shared_ptr<SigT<t_A, t_P>>(
-          new SigT<t_A, t_P>(ExistT{a0, a1}));
-    }
-
-    static std::unique_ptr<SigT<t_A, t_P>> ExistT_uptr(t_A a0, t_P a1) {
-      return std::unique_ptr<SigT<t_A, t_P>>(
-          new SigT<t_A, t_P>(ExistT{a0, a1}));
-    }
-  };
+  static std::unique_ptr<SigT<t_A, t_P>> existt_uptr(t_A a0, t_P a1) {
+    return std::make_unique<SigT<t_A, t_P>>(
+        ExistT{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -101,22 +96,17 @@ struct DoubleOppositeWitnessesCase {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit Path(Path_refl _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<Path<t_A>> path_refl() {
+      return std::make_shared<Path<t_A>>(Path_refl{});
+    }
 
-      static std::shared_ptr<Path<t_A>> Path_refl_() {
-        return std::shared_ptr<Path<t_A>>(new Path<t_A>(Path_refl{}));
-      }
-
-      static std::unique_ptr<Path<t_A>> Path_refl_uptr() {
-        return std::unique_ptr<Path<t_A>>(new Path<t_A>(Path_refl{}));
-      }
-    };
+    static std::unique_ptr<Path<t_A>> path_refl_uptr() {
+      return std::make_unique<Path<t_A>>(Path_refl{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -249,7 +239,7 @@ struct DoubleOppositeWitnessesCase {
                               std::function<std::shared_ptr<
                                   Path<typename _tcI0::base_category::Obj>>(
                                   typename _tcI0::base_category::Obj)>>>>>::
-        ctor::ExistT_(
+        existt(
             into_double_opposite_functor<typename _tcI0::base_category>(),
             SigT<std::shared_ptr<Functor>,
                  std::pair<std::function<std::shared_ptr<
@@ -257,18 +247,19 @@ struct DoubleOppositeWitnessesCase {
                                typename _tcI0::base_category::Obj)>,
                            std::function<std::shared_ptr<
                                Path<typename _tcI0::base_category::Obj>>(
-                               typename _tcI0::base_category::Obj)>>>::ctor::
-                ExistT_(out_of_double_opposite_functor<
-                            typename _tcI0::base_category>(),
-                        std::make_pair(
-                            [](typename _tcI0::base_category::Obj _x) {
-                              return Path<typename _tcI0::base_category::Obj>::
-                                  ctor::Path_refl_();
-                            },
-                            [](typename _tcI0::base_category::Obj _x) {
-                              return Path<typename _tcI0::base_category::Obj>::
-                                  ctor::Path_refl_();
-                            })));
+                               typename _tcI0::base_category::Obj)>>>::
+                existt(
+                    out_of_double_opposite_functor<
+                        typename _tcI0::base_category>(),
+                    std::make_pair(
+                        [](typename _tcI0::base_category::Obj _x) {
+                          return Path<
+                              typename _tcI0::base_category::Obj>::path_refl();
+                        },
+                        [](typename _tcI0::base_category::Obj _x) {
+                          return Path<
+                              typename _tcI0::base_category::Obj>::path_refl();
+                        })));
   }
 
   static inline const std::shared_ptr<SigT<

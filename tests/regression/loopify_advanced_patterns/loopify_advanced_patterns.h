@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -112,6 +117,7 @@ struct LoopifyAdvancedPatterns {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit shape(Circle _v) : d_v_(std::move(_v)) {}
 
@@ -119,35 +125,29 @@ struct LoopifyAdvancedPatterns {
 
     explicit shape(Triangle _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<shape> circle(unsigned int a0) {
+      return std::make_shared<shape>(Circle{std::move(a0)});
+    }
 
-      static std::shared_ptr<shape> Circle_(unsigned int a0) {
-        return std::shared_ptr<shape>(new shape(Circle{a0}));
-      }
+    static std::shared_ptr<shape> square(unsigned int a0) {
+      return std::make_shared<shape>(Square{std::move(a0)});
+    }
 
-      static std::shared_ptr<shape> Square_(unsigned int a0) {
-        return std::shared_ptr<shape>(new shape(Square{a0}));
-      }
+    static std::shared_ptr<shape> triangle(unsigned int a0) {
+      return std::make_shared<shape>(Triangle{std::move(a0)});
+    }
 
-      static std::shared_ptr<shape> Triangle_(unsigned int a0) {
-        return std::shared_ptr<shape>(new shape(Triangle{a0}));
-      }
+    static std::unique_ptr<shape> circle_uptr(unsigned int a0) {
+      return std::make_unique<shape>(Circle{std::move(a0)});
+    }
 
-      static std::unique_ptr<shape> Circle_uptr(unsigned int a0) {
-        return std::unique_ptr<shape>(new shape(Circle{a0}));
-      }
+    static std::unique_ptr<shape> square_uptr(unsigned int a0) {
+      return std::make_unique<shape>(Square{std::move(a0)});
+    }
 
-      static std::unique_ptr<shape> Square_uptr(unsigned int a0) {
-        return std::unique_ptr<shape>(new shape(Square{a0}));
-      }
-
-      static std::unique_ptr<shape> Triangle_uptr(unsigned int a0) {
-        return std::unique_ptr<shape>(new shape(Triangle{a0}));
-      }
-    };
+    static std::unique_ptr<shape> triangle_uptr(unsigned int a0) {
+      return std::make_unique<shape>(Triangle{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

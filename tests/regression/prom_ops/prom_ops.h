@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -122,27 +127,25 @@ struct PromOps {
     if (n <= 0) {
       return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
                                        -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::ctor::Nil_();
+                                     return List<T1>::nil();
                                    },
                                    [&](const typename List<T1>::Cons _args)
                                        -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::ctor::Cons_(x,
-                                                                  _args.d_a1);
+                                     return List<T1>::cons(x, _args.d_a1);
                                    }},
                         l->v());
     } else {
       unsigned int n_ = n - 1;
-      return std::visit(Overloaded{[](const typename List<T1>::Nil _args0)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::ctor::Nil_();
-                                   },
-                                   [&](const typename List<T1>::Cons _args0)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::ctor::Cons_(
-                                         _args0.d_a0,
-                                         update_nth<T1>(n_, x, _args0.d_a1));
-                                   }},
-                        l->v());
+      return std::visit(
+          Overloaded{
+              [](const typename List<T1>::Nil _args0)
+                  -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
+              [&](const typename List<T1>::Cons _args0)
+                  -> std::shared_ptr<List<T1>> {
+                return List<T1>::cons(_args0.d_a0,
+                                      update_nth<T1>(n_, x, _args0.d_a1));
+              }},
+          l->v());
     }
   }
 
@@ -194,18 +197,13 @@ struct PromOps {
     return [](void) {
       std::unique_ptr<state3> s = std::make_unique<state3>(state3{
           1u,
-          List<unsigned int>::ctor::Cons_(
-              2u, List<unsigned int>::ctor::Cons_(
-                      3u, List<unsigned int>::ctor::Nil_())),
-          false, 4u,
-          List<unsigned int>::ctor::Cons_(5u, List<unsigned int>::ctor::Nil_()),
-          List<unsigned int>::ctor::Cons_(6u, List<unsigned int>::ctor::Nil_()),
-          0u, 0u,
-          List<unsigned int>::ctor::Cons_(7u, List<unsigned int>::ctor::Nil_()),
-          0u,
-          List<unsigned int>::ctor::Cons_(
-              8u, List<unsigned int>::ctor::Cons_(
-                      9u, List<unsigned int>::ctor::Nil_())),
+          List<unsigned int>::cons(
+              2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())),
+          false, 4u, List<unsigned int>::cons(5u, List<unsigned int>::nil()),
+          List<unsigned int>::cons(6u, List<unsigned int>::nil()), 0u, 0u,
+          List<unsigned int>::cons(7u, List<unsigned int>::nil()), 0u,
+          List<unsigned int>::cons(
+              8u, List<unsigned int>::cons(9u, List<unsigned int>::nil())),
           true, 0u, 0u, false});
       std::shared_ptr<state3> s_ =
           set_prom_params3(std::move(s), 21u, 144u, true);
@@ -224,18 +222,13 @@ struct PromOps {
     return [](void) {
       std::unique_ptr<state3> s = std::make_unique<state3>(state3{
           1u,
-          List<unsigned int>::ctor::Cons_(
-              2u, List<unsigned int>::ctor::Cons_(
-                      3u, List<unsigned int>::ctor::Nil_())),
-          false, 4u,
-          List<unsigned int>::ctor::Cons_(5u, List<unsigned int>::ctor::Nil_()),
-          List<unsigned int>::ctor::Cons_(6u, List<unsigned int>::ctor::Nil_()),
-          0u, 0u,
-          List<unsigned int>::ctor::Cons_(7u, List<unsigned int>::ctor::Nil_()),
-          0u,
-          List<unsigned int>::ctor::Cons_(
-              8u, List<unsigned int>::ctor::Cons_(
-                      9u, List<unsigned int>::ctor::Nil_())),
+          List<unsigned int>::cons(
+              2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())),
+          false, 4u, List<unsigned int>::cons(5u, List<unsigned int>::nil()),
+          List<unsigned int>::cons(6u, List<unsigned int>::nil()), 0u, 0u,
+          List<unsigned int>::cons(7u, List<unsigned int>::nil()), 0u,
+          List<unsigned int>::cons(
+              8u, List<unsigned int>::cons(9u, List<unsigned int>::nil())),
           true, 0u, 0u, false});
       std::shared_ptr<state3> s_ =
           set_prom_params3(std::move(s), 21u, 144u, true);
@@ -266,16 +259,15 @@ struct PromOps {
                                                   const bool enable);
   static inline const unsigned int test5 = []() {
     return [](void) {
-      std::unique_ptr<state5> s = std::make_unique<state5>(
-          state5{3u,
-                 List<unsigned int>::ctor::Cons_(
-                     1u, List<unsigned int>::ctor::Cons_(
-                             2u, List<unsigned int>::ctor::Nil_())),
-                 List<unsigned int>::ctor::Cons_(
-                     9u, List<unsigned int>::ctor::Cons_(
-                             8u, List<unsigned int>::ctor::Cons_(
-                                     7u, List<unsigned int>::ctor::Nil_()))),
-                 0u, 0u, false});
+      std::unique_ptr<state5> s = std::make_unique<state5>(state5{
+          3u,
+          List<unsigned int>::cons(
+              1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())),
+          List<unsigned int>::cons(
+              9u,
+              List<unsigned int>::cons(
+                  8u, List<unsigned int>::cons(7u, List<unsigned int>::nil()))),
+          0u, 0u, false});
       std::shared_ptr<state5> s_ =
           set_prom_params5(std::move(s), 23u, 77u, true);
       return ((s_->acc5 + s_->prom_addr5) + [&](void) {
@@ -301,12 +293,11 @@ struct PromOps {
                                                   const bool enable);
   static inline const std::shared_ptr<state6> sample6 =
       std::make_shared<state6>(state6{
-          List<unsigned int>::ctor::Cons_(
-              10u,
-              List<unsigned int>::ctor::Cons_(
-                  11u, List<unsigned int>::ctor::Cons_(
-                           12u, List<unsigned int>::ctor::Cons_(
-                                    13u, List<unsigned int>::ctor::Nil_())))),
+          List<unsigned int>::cons(
+              10u, List<unsigned int>::cons(
+                       11u, List<unsigned int>::cons(
+                                12u, List<unsigned int>::cons(
+                                         13u, List<unsigned int>::nil())))),
           0u, 0u, false});
   static inline const bool test6 =
       Bool::eqb(set_prom_params6(sample6, 2u, 99u, true)->prom_enable6, true);
@@ -324,16 +315,16 @@ struct PromOps {
                                                   const unsigned int data,
                                                   const bool enable);
   static inline const std::shared_ptr<state7> sample7 =
-      std::make_shared<state7>(
-          state7{List<unsigned int>::ctor::Cons_(
-                     1u, List<unsigned int>::ctor::Cons_(
-                             2u, List<unsigned int>::ctor::Cons_(
-                                     3u, List<unsigned int>::ctor::Nil_()))),
-                 List<unsigned int>::ctor::Cons_(
-                     9u, List<unsigned int>::ctor::Cons_(
-                             8u, List<unsigned int>::ctor::Cons_(
-                                     7u, List<unsigned int>::ctor::Nil_()))),
-                 0u, 0u, false});
+      std::make_shared<state7>(state7{
+          List<unsigned int>::cons(
+              1u,
+              List<unsigned int>::cons(
+                  2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))),
+          List<unsigned int>::cons(
+              9u,
+              List<unsigned int>::cons(
+                  8u, List<unsigned int>::cons(7u, List<unsigned int>::nil()))),
+          0u, 0u, false});
   static inline const bool test7 = nat_list_eqb(
       set_prom_params7(sample7, 12u, 99u, true)->ram_sys7, sample7->ram_sys7);
 
@@ -350,15 +341,14 @@ struct PromOps {
                                                   const unsigned int data,
                                                   const bool enable);
   static inline const std::shared_ptr<state8> sample8 =
-      std::make_shared<state8>(
-          state8{List<unsigned int>::ctor::Cons_(
-                     1u, List<unsigned int>::ctor::Cons_(
-                             2u, List<unsigned int>::ctor::Cons_(
-                                     3u, List<unsigned int>::ctor::Nil_()))),
-                 List<unsigned int>::ctor::Cons_(
-                     9u, List<unsigned int>::ctor::Cons_(
-                             8u, List<unsigned int>::ctor::Nil_())),
-                 0u, 0u, false});
+      std::make_shared<state8>(state8{
+          List<unsigned int>::cons(
+              1u,
+              List<unsigned int>::cons(
+                  2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))),
+          List<unsigned int>::cons(
+              9u, List<unsigned int>::cons(8u, List<unsigned int>::nil())),
+          0u, 0u, false});
   static inline const bool test8 = nat_list_eqb(
       set_prom_params8(sample8, 12u, 99u, true)->regs8, sample8->regs8);
 
@@ -375,12 +365,11 @@ struct PromOps {
                                                   const bool enable);
   static inline const std::shared_ptr<state9> sample9 =
       std::make_shared<state9>(state9{
-          List<unsigned int>::ctor::Cons_(
-              10u,
-              List<unsigned int>::ctor::Cons_(
-                  11u, List<unsigned int>::ctor::Cons_(
-                           12u, List<unsigned int>::ctor::Cons_(
-                                    13u, List<unsigned int>::ctor::Nil_())))),
+          List<unsigned int>::cons(
+              10u, List<unsigned int>::cons(
+                       11u, List<unsigned int>::cons(
+                                12u, List<unsigned int>::cons(
+                                         13u, List<unsigned int>::nil())))),
           0u, 0u, false});
   static inline const bool test9 =
       set_prom_params9(sample9, 12u, 99u, true)->rom9->length() ==
@@ -405,41 +394,40 @@ struct PromOps {
                                                     const unsigned int data,
                                                     const bool enable);
   static std::shared_ptr<state10> execute_wpm10(std::shared_ptr<state10> s);
-  static inline const std::shared_ptr<state10> sample10 = std::make_shared<
-      state10>(state10{
-      List<unsigned int>::ctor::Cons_(
-          1u, List<unsigned int>::ctor::Cons_(
-                  2u, List<unsigned int>::ctor::Cons_(
-                          3u, List<unsigned int>::ctor::Cons_(
-                                  4u, List<unsigned int>::ctor::Nil_())))),
-      List<unsigned int>::ctor::Cons_(
-          10u,
-          List<unsigned int>::ctor::Cons_(
-              11u,
-              List<unsigned int>::ctor::Cons_(
-                  12u,
-                  List<unsigned int>::ctor::Cons_(
-                      13u,
-                      List<unsigned int>::ctor::Cons_(
-                          14u,
-                          List<unsigned int>::ctor::Cons_(
-                              15u,
-                              List<unsigned int>::ctor::Cons_(
-                                  16u,
-                                  List<unsigned int>::ctor::Cons_(
-                                      17u,
-                                      List<unsigned int>::ctor::Nil_())))))))),
-      7u, 1025u,
-      List<unsigned int>::ctor::Cons_(
-          7u, List<unsigned int>::ctor::Cons_(
-                  9u, List<unsigned int>::ctor::Nil_())),
-      2u,
-      List<unsigned int>::ctor::Cons_(
-          3u, List<unsigned int>::ctor::Cons_(
-                  4u, List<unsigned int>::ctor::Cons_(
-                          5u, List<unsigned int>::ctor::Cons_(
-                                  6u, List<unsigned int>::ctor::Nil_())))),
-      5u, 0u, 0u, false});
+  static inline const std::shared_ptr<state10> sample10 =
+      std::make_shared<state10>(state10{
+          List<unsigned int>::cons(
+              1u, List<unsigned int>::cons(
+                      2u, List<unsigned int>::cons(
+                              3u, List<unsigned int>::cons(
+                                      4u, List<unsigned int>::nil())))),
+          List<unsigned int>::cons(
+              10u,
+              List<unsigned int>::cons(
+                  11u,
+                  List<unsigned int>::cons(
+                      12u,
+                      List<unsigned int>::cons(
+                          13u,
+                          List<unsigned int>::cons(
+                              14u,
+                              List<unsigned int>::cons(
+                                  15u,
+                                  List<unsigned int>::cons(
+                                      16u,
+                                      List<unsigned int>::cons(
+                                          17u,
+                                          List<unsigned int>::nil())))))))),
+          7u, 1025u,
+          List<unsigned int>::cons(
+              7u, List<unsigned int>::cons(9u, List<unsigned int>::nil())),
+          2u,
+          List<unsigned int>::cons(
+              3u, List<unsigned int>::cons(
+                      4u, List<unsigned int>::cons(
+                              5u, List<unsigned int>::cons(
+                                      6u, List<unsigned int>::nil())))),
+          5u, 0u, 0u, false});
   static inline const bool check_pc_bound = [](void) {
     std::shared_ptr<state10> after =
         execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
@@ -509,12 +497,12 @@ struct PromOps {
 
   static std::shared_ptr<state11> execute_wpm11(std::shared_ptr<state11> s);
   static inline const std::shared_ptr<state11> sample11 =
-      std::make_shared<state11>(
-          state11{List<unsigned int>::ctor::Cons_(
-                      0u, List<unsigned int>::ctor::Cons_(
-                              0u, List<unsigned int>::ctor::Cons_(
-                                      0u, List<unsigned int>::ctor::Nil_()))),
-                  1u, 9u, true});
+      std::make_shared<state11>(state11{
+          List<unsigned int>::cons(
+              0u,
+              List<unsigned int>::cons(
+                  0u, List<unsigned int>::cons(0u, List<unsigned int>::nil()))),
+          1u, 9u, true});
   static inline const unsigned int test11 =
       execute_wpm11(sample11)->rom11->nth(1u, 0u);
   static inline const std::pair<

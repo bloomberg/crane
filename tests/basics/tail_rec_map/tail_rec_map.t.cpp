@@ -54,9 +54,9 @@ std::vector<T> list_to_vector(const std::shared_ptr<List<T>> &l) {
 // Helper to create a list from a vector
 template <typename T>
 std::shared_ptr<List<T>> vector_to_list(const std::vector<T> &vec) {
-  auto result = List<T>::ctor::Nil_();
+  auto result = List<T>::nil();
   for (auto it = vec.rbegin(); it != vec.rend(); ++it) {
-    result = List<T>::ctor::Cons_(*it, result);
+    result = List<T>::cons(*it, result);
   }
   return result;
 }
@@ -64,7 +64,7 @@ std::shared_ptr<List<T>> vector_to_list(const std::vector<T> &vec) {
 int main() {
   // Test 1: Map over empty list
   {
-    auto empty = List<unsigned int>::ctor::Nil_();
+    auto empty = List<unsigned int>::nil();
     auto result = better_map<unsigned int, unsigned int>(
         [](unsigned int x) { return x + 1; }, empty);
     auto vec = list_to_vector(result);
@@ -75,7 +75,7 @@ int main() {
   // Test 2: Map increment over single element
   {
     auto single =
-        List<unsigned int>::ctor::Cons_(42, List<unsigned int>::ctor::Nil_());
+        List<unsigned int>::cons(42, List<unsigned int>::nil());
     auto result = better_map<unsigned int, unsigned int>(
         [](unsigned int x) { return x + 1; }, single);
     auto vec = list_to_vector(result);

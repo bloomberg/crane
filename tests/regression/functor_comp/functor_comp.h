@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -84,15 +89,14 @@ public:
 
   std::shared_ptr<List<t_A>> rev() const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil _args)
-                       -> std::shared_ptr<List<t_A>> {
-                     return List<t_A>::ctor::Nil_();
-                   },
-                   [](const typename List<t_A>::Cons _args)
-                       -> std::shared_ptr<List<t_A>> {
-                     return _args.d_a1->rev()->app(List<t_A>::ctor::Cons_(
-                         _args.d_a0, List<t_A>::ctor::Nil_()));
-                   }},
+        Overloaded{
+            [](const typename List<t_A>::Nil _args)
+                -> std::shared_ptr<List<t_A>> { return List<t_A>::nil(); },
+            [](const typename List<t_A>::Cons _args)
+                -> std::shared_ptr<List<t_A>> {
+              return _args.d_a1->rev()->app(
+                  List<t_A>::cons(_args.d_a0, List<t_A>::nil()));
+            }},
         this->v());
   }
 
@@ -113,8 +117,7 @@ public:
                        -> std::shared_ptr<List<t_A>> { return m; },
                    [&](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {
-                     return List<t_A>::ctor::Cons_(_args.d_a0,
-                                                   _args.d_a1->app(m));
+                     return List<t_A>::cons(_args.d_a0, _args.d_a1->app(m));
                    }},
         this->v());
   }
@@ -142,7 +145,7 @@ concept CONTAINER = requires {
 struct FunctorComp {
   struct Stack {
     using t = std::shared_ptr<List<unsigned int>>;
-    static inline const t empty = List<unsigned int>::ctor::Nil_();
+    static inline const t empty = List<unsigned int>::nil();
     __attribute__((pure)) static t push(const unsigned int x,
                                         std::shared_ptr<List<unsigned int>> s);
     __attribute__((pure)) static std::optional<std::pair<unsigned int, t>>
@@ -153,8 +156,8 @@ struct FunctorComp {
   struct Queue {
     using t = std::pair<std::shared_ptr<List<unsigned int>>,
                         std::shared_ptr<List<unsigned int>>>;
-    static inline const t empty = std::make_pair(
-        List<unsigned int>::ctor::Nil_(), List<unsigned int>::ctor::Nil_());
+    static inline const t empty =
+        std::make_pair(List<unsigned int>::nil(), List<unsigned int>::nil());
     __attribute__((pure)) static t
     push(const unsigned int x,
          const std::pair<std::shared_ptr<List<unsigned int>>,
@@ -192,14 +195,13 @@ struct FunctorComp {
             std::pair<unsigned int, typename C::t> p = *C::pop(c0);
             unsigned int x = p.first;
             typename C::t c_ = p.second;
-            return go(f, List<unsigned int>::ctor::Cons_(std::move(x), acc),
-                      c_);
+            return go(f, List<unsigned int>::cons(std::move(x), acc), c_);
           } else {
             return acc->rev();
           }
         }
       };
-      return go(C::size(c), List<unsigned int>::ctor::Nil_(), c);
+      return go(C::size(c), List<unsigned int>::nil(), c);
     }
   };
 
@@ -207,31 +209,31 @@ struct FunctorComp {
   using QueueOps = ContainerOps<Queue>;
   static inline const std::shared_ptr<List<unsigned int>> test_stack =
       StackOps::to_list(StackOps::push_list(
-          List<unsigned int>::ctor::Cons_(
-              1u, List<unsigned int>::ctor::Cons_(
-                      2u, List<unsigned int>::ctor::Cons_(
-                              3u, List<unsigned int>::ctor::Nil_()))),
+          List<unsigned int>::cons(
+              1u,
+              List<unsigned int>::cons(
+                  2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))),
           Stack::empty));
   static inline const std::shared_ptr<List<unsigned int>> test_queue =
       QueueOps::to_list(QueueOps::push_list(
-          List<unsigned int>::ctor::Cons_(
-              1u, List<unsigned int>::ctor::Cons_(
-                      2u, List<unsigned int>::ctor::Cons_(
-                              3u, List<unsigned int>::ctor::Nil_()))),
+          List<unsigned int>::cons(
+              1u,
+              List<unsigned int>::cons(
+                  2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))),
           Queue::empty));
   static inline const unsigned int test_stack_size =
       Stack::size(StackOps::push_list(
-          List<unsigned int>::ctor::Cons_(
-              10u, List<unsigned int>::ctor::Cons_(
-                       20u, List<unsigned int>::ctor::Cons_(
-                                30u, List<unsigned int>::ctor::Nil_()))),
+          List<unsigned int>::cons(
+              10u, List<unsigned int>::cons(
+                       20u, List<unsigned int>::cons(
+                                30u, List<unsigned int>::nil()))),
           Stack::empty));
   static inline const unsigned int test_queue_size =
       Queue::size(QueueOps::push_list(
-          List<unsigned int>::ctor::Cons_(
-              10u, List<unsigned int>::ctor::Cons_(
-                       20u, List<unsigned int>::ctor::Cons_(
-                                30u, List<unsigned int>::ctor::Nil_()))),
+          List<unsigned int>::cons(
+              10u, List<unsigned int>::cons(
+                       20u, List<unsigned int>::cons(
+                                30u, List<unsigned int>::nil()))),
           Queue::empty));
 };
 

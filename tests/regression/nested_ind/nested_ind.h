@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -77,8 +82,7 @@ public:
                        -> std::shared_ptr<List<t_A>> { return m; },
                    [&](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {
-                     return List<t_A>::ctor::Cons_(_args.d_a0,
-                                                   _args.d_a1->app(m));
+                     return List<t_A>::cons(_args.d_a0, _args.d_a1->app(m));
                    }},
         this->v());
   }
@@ -100,36 +104,41 @@ struct NestedInd {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit custom_list(Cnil _v) : d_v_(std::move(_v)) {}
 
     explicit custom_list(Ccons _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<custom_list<t_A>> cnil() {
+      return std::make_shared<custom_list<t_A>>(Cnil{});
+    }
 
-      static std::shared_ptr<custom_list<t_A>> Cnil_() {
-        return std::shared_ptr<custom_list<t_A>>(new custom_list<t_A>(Cnil{}));
-      }
+    static std::shared_ptr<custom_list<t_A>>
+    ccons(t_A a0, const std::shared_ptr<custom_list<t_A>> &a1) {
+      return std::make_shared<custom_list<t_A>>(Ccons{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<custom_list<t_A>>
-      Ccons_(t_A a0, const std::shared_ptr<custom_list<t_A>> &a1) {
-        return std::shared_ptr<custom_list<t_A>>(
-            new custom_list<t_A>(Ccons{a0, a1}));
-      }
+    static std::shared_ptr<custom_list<t_A>>
+    ccons(t_A a0, std::shared_ptr<custom_list<t_A>> &&a1) {
+      return std::make_shared<custom_list<t_A>>(
+          Ccons{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<custom_list<t_A>> Cnil_uptr() {
-        return std::unique_ptr<custom_list<t_A>>(new custom_list<t_A>(Cnil{}));
-      }
+    static std::unique_ptr<custom_list<t_A>> cnil_uptr() {
+      return std::make_unique<custom_list<t_A>>(Cnil{});
+    }
 
-      static std::unique_ptr<custom_list<t_A>>
-      Ccons_uptr(t_A a0, const std::shared_ptr<custom_list<t_A>> &a1) {
-        return std::unique_ptr<custom_list<t_A>>(
-            new custom_list<t_A>(Ccons{a0, a1}));
-      }
-    };
+    static std::unique_ptr<custom_list<t_A>>
+    ccons_uptr(t_A a0, const std::shared_ptr<custom_list<t_A>> &a1) {
+      return std::make_unique<custom_list<t_A>>(Ccons{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<custom_list<t_A>>
+    ccons_uptr(t_A a0, std::shared_ptr<custom_list<t_A>> &&a1) {
+      return std::make_unique<custom_list<t_A>>(
+          Ccons{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -191,26 +200,33 @@ struct NestedInd {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit rose(Node _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<rose<t_A>>
+    node(t_A a0,
+         const std::shared_ptr<custom_list<std::shared_ptr<rose<t_A>>>> &a1) {
+      return std::make_shared<rose<t_A>>(Node{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<rose<t_A>> Node_(
-          t_A a0,
-          const std::shared_ptr<custom_list<std::shared_ptr<rose<t_A>>>> &a1) {
-        return std::shared_ptr<rose<t_A>>(new rose<t_A>(Node{a0, a1}));
-      }
+    static std::shared_ptr<rose<t_A>>
+    node(t_A a0,
+         std::shared_ptr<custom_list<std::shared_ptr<rose<t_A>>>> &&a1) {
+      return std::make_shared<rose<t_A>>(Node{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<rose<t_A>> Node_uptr(
-          t_A a0,
-          const std::shared_ptr<custom_list<std::shared_ptr<rose<t_A>>>> &a1) {
-        return std::unique_ptr<rose<t_A>>(new rose<t_A>(Node{a0, a1}));
-      }
-    };
+    static std::unique_ptr<rose<t_A>> node_uptr(
+        t_A a0,
+        const std::shared_ptr<custom_list<std::shared_ptr<rose<t_A>>>> &a1) {
+      return std::make_unique<rose<t_A>>(Node{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<rose<t_A>>
+    node_uptr(t_A a0,
+              std::shared_ptr<custom_list<std::shared_ptr<rose<t_A>>>> &&a1) {
+      return std::make_unique<rose<t_A>>(Node{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -261,23 +277,21 @@ struct NestedInd {
 
   static std::shared_ptr<rose<unsigned int>> leaf(const unsigned int n);
   static inline const std::shared_ptr<rose<unsigned int>> small_tree =
-      rose<unsigned int>::ctor::Node_(
+      rose<unsigned int>::node(
           1u,
-          custom_list<std::shared_ptr<rose<unsigned int>>>::ctor::Ccons_(
+          custom_list<std::shared_ptr<rose<unsigned int>>>::ccons(
               leaf(2u),
-              custom_list<std::shared_ptr<rose<unsigned int>>>::ctor::Ccons_(
+              custom_list<std::shared_ptr<rose<unsigned int>>>::ccons(
                   leaf(3u),
-                  custom_list<
-                      std::shared_ptr<rose<unsigned int>>>::ctor::Cnil_())));
+                  custom_list<std::shared_ptr<rose<unsigned int>>>::cnil())));
   static inline const std::shared_ptr<rose<unsigned int>> bigger_tree =
-      rose<unsigned int>::ctor::Node_(
+      rose<unsigned int>::node(
           1u,
-          custom_list<std::shared_ptr<rose<unsigned int>>>::ctor::Ccons_(
+          custom_list<std::shared_ptr<rose<unsigned int>>>::ccons(
               small_tree,
-              custom_list<std::shared_ptr<rose<unsigned int>>>::ctor::Ccons_(
+              custom_list<std::shared_ptr<rose<unsigned int>>>::ccons(
                   leaf(4u),
-                  custom_list<
-                      std::shared_ptr<rose<unsigned int>>>::ctor::Cnil_())));
+                  custom_list<std::shared_ptr<rose<unsigned int>>>::cnil())));
   static inline const unsigned int test_root_leaf = leaf(5u)->root();
   static inline const unsigned int test_root_small = small_tree->root();
   static inline const unsigned int test_children_leaf =
@@ -307,6 +321,7 @@ struct NestedInd {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit expr(Lit _v) : d_v_(std::move(_v)) {}
 
@@ -314,39 +329,53 @@ struct NestedInd {
 
     explicit expr(Mul _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<expr> lit(unsigned int a0) {
+      return std::make_shared<expr>(Lit{std::move(a0)});
+    }
 
-      static std::shared_ptr<expr> Lit_(unsigned int a0) {
-        return std::shared_ptr<expr>(new expr(Lit{a0}));
-      }
+    static std::shared_ptr<expr>
+    add(const std::shared_ptr<List<std::shared_ptr<expr>>> &a0) {
+      return std::make_shared<expr>(Add{a0});
+    }
 
-      static std::shared_ptr<expr>
-      Add_(const std::shared_ptr<List<std::shared_ptr<expr>>> &a0) {
-        return std::shared_ptr<expr>(new expr(Add{a0}));
-      }
+    static std::shared_ptr<expr>
+    add(std::shared_ptr<List<std::shared_ptr<expr>>> &&a0) {
+      return std::make_shared<expr>(Add{std::move(a0)});
+    }
 
-      static std::shared_ptr<expr>
-      Mul_(const std::shared_ptr<List<std::shared_ptr<expr>>> &a0) {
-        return std::shared_ptr<expr>(new expr(Mul{a0}));
-      }
+    static std::shared_ptr<expr>
+    mul(const std::shared_ptr<List<std::shared_ptr<expr>>> &a0) {
+      return std::make_shared<expr>(Mul{a0});
+    }
 
-      static std::unique_ptr<expr> Lit_uptr(unsigned int a0) {
-        return std::unique_ptr<expr>(new expr(Lit{a0}));
-      }
+    static std::shared_ptr<expr>
+    mul(std::shared_ptr<List<std::shared_ptr<expr>>> &&a0) {
+      return std::make_shared<expr>(Mul{std::move(a0)});
+    }
 
-      static std::unique_ptr<expr>
-      Add_uptr(const std::shared_ptr<List<std::shared_ptr<expr>>> &a0) {
-        return std::unique_ptr<expr>(new expr(Add{a0}));
-      }
+    static std::unique_ptr<expr> lit_uptr(unsigned int a0) {
+      return std::make_unique<expr>(Lit{std::move(a0)});
+    }
 
-      static std::unique_ptr<expr>
-      Mul_uptr(const std::shared_ptr<List<std::shared_ptr<expr>>> &a0) {
-        return std::unique_ptr<expr>(new expr(Mul{a0}));
-      }
-    };
+    static std::unique_ptr<expr>
+    add_uptr(const std::shared_ptr<List<std::shared_ptr<expr>>> &a0) {
+      return std::make_unique<expr>(Add{a0});
+    }
+
+    static std::unique_ptr<expr>
+    add_uptr(std::shared_ptr<List<std::shared_ptr<expr>>> &&a0) {
+      return std::make_unique<expr>(Add{std::move(a0)});
+    }
+
+    static std::unique_ptr<expr>
+    mul_uptr(const std::shared_ptr<List<std::shared_ptr<expr>>> &a0) {
+      return std::make_unique<expr>(Mul{a0});
+    }
+
+    static std::unique_ptr<expr>
+    mul_uptr(std::shared_ptr<List<std::shared_ptr<expr>>> &&a0) {
+      return std::make_unique<expr>(Mul{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -359,10 +388,10 @@ struct NestedInd {
       return std::visit(
           Overloaded{
               [&](const typename expr::Lit _args) -> std::shared_ptr<expr> {
-                return expr::ctor::Lit_(f(_args.d_a0));
+                return expr::lit(f(_args.d_a0));
               },
               [&](const typename expr::Add _args) -> std::shared_ptr<expr> {
-                return expr::ctor::Add_([&](void) {
+                return expr::add([&](void) {
                   std::function<std::shared_ptr<List<std::shared_ptr<expr>>>(
                       std::shared_ptr<List<std::shared_ptr<expr>>>)>
                       aux;
@@ -374,13 +403,13 @@ struct NestedInd {
                                    _args)
                                 -> std::shared_ptr<
                                     List<std::shared_ptr<expr>>> {
-                              return List<std::shared_ptr<expr>>::ctor::Nil_();
+                              return List<std::shared_ptr<expr>>::nil();
                             },
                             [&](const typename List<std::shared_ptr<expr>>::Cons
                                     _args)
                                 -> std::shared_ptr<
                                     List<std::shared_ptr<expr>>> {
-                              return List<std::shared_ptr<expr>>::ctor::Cons_(
+                              return List<std::shared_ptr<expr>>::cons(
                                   _args.d_a0->lit_map(f), aux(_args.d_a1));
                             }},
                         l->v());
@@ -389,7 +418,7 @@ struct NestedInd {
                 }());
               },
               [&](const typename expr::Mul _args) -> std::shared_ptr<expr> {
-                return expr::ctor::Mul_([&](void) {
+                return expr::mul([&](void) {
                   std::function<std::shared_ptr<List<std::shared_ptr<expr>>>(
                       std::shared_ptr<List<std::shared_ptr<expr>>>)>
                       aux;
@@ -401,13 +430,13 @@ struct NestedInd {
                                    _args)
                                 -> std::shared_ptr<
                                     List<std::shared_ptr<expr>>> {
-                              return List<std::shared_ptr<expr>>::ctor::Nil_();
+                              return List<std::shared_ptr<expr>>::nil();
                             },
                             [&](const typename List<std::shared_ptr<expr>>::Cons
                                     _args)
                                 -> std::shared_ptr<
                                     List<std::shared_ptr<expr>>> {
-                              return List<std::shared_ptr<expr>>::ctor::Cons_(
+                              return List<std::shared_ptr<expr>>::cons(
                                   _args.d_a0->lit_map(f), aux(_args.d_a1));
                             }},
                         l->v());
@@ -423,8 +452,8 @@ struct NestedInd {
           Overloaded{
               [](const typename expr::Lit _args)
                   -> std::shared_ptr<List<unsigned int>> {
-                return List<unsigned int>::ctor::Cons_(
-                    _args.d_a0, List<unsigned int>::ctor::Nil_());
+                return List<unsigned int>::cons(_args.d_a0,
+                                                List<unsigned int>::nil());
               },
               [](const typename expr::Add _args)
                   -> std::shared_ptr<List<unsigned int>> {
@@ -438,7 +467,7 @@ struct NestedInd {
                           [](const typename List<std::shared_ptr<expr>>::Nil
                                  _args0)
                               -> std::shared_ptr<List<unsigned int>> {
-                            return List<unsigned int>::ctor::Nil_();
+                            return List<unsigned int>::nil();
                           },
                           [&](const typename List<std::shared_ptr<expr>>::Cons
                                   _args0)
@@ -462,7 +491,7 @@ struct NestedInd {
                           [](const typename List<std::shared_ptr<expr>>::Nil
                                  _args0)
                               -> std::shared_ptr<List<unsigned int>> {
-                            return List<unsigned int>::ctor::Nil_();
+                            return List<unsigned int>::nil();
                           },
                           [&](const typename List<std::shared_ptr<expr>>::Cons
                                   _args0)
@@ -655,35 +684,31 @@ struct NestedInd {
   };
 
   static inline const std::shared_ptr<expr> test_add =
-      expr::ctor::Add_(List<std::shared_ptr<expr>>::ctor::Cons_(
-          expr::ctor::Lit_(1u),
-          List<std::shared_ptr<expr>>::ctor::Cons_(
-              expr::ctor::Lit_(2u),
-              List<std::shared_ptr<expr>>::ctor::Cons_(
-                  expr::ctor::Lit_(3u),
-                  List<std::shared_ptr<expr>>::ctor::Nil_()))));
+      expr::add(List<std::shared_ptr<expr>>::cons(
+          expr::lit(1u),
+          List<std::shared_ptr<expr>>::cons(
+              expr::lit(2u),
+              List<std::shared_ptr<expr>>::cons(
+                  expr::lit(3u), List<std::shared_ptr<expr>>::nil()))));
   static inline const std::shared_ptr<expr> test_mul =
-      expr::ctor::Mul_(List<std::shared_ptr<expr>>::ctor::Cons_(
-          expr::ctor::Lit_(2u),
-          List<std::shared_ptr<expr>>::ctor::Cons_(
-              expr::ctor::Lit_(3u),
-              List<std::shared_ptr<expr>>::ctor::Cons_(
-                  expr::ctor::Lit_(4u),
-                  List<std::shared_ptr<expr>>::ctor::Nil_()))));
+      expr::mul(List<std::shared_ptr<expr>>::cons(
+          expr::lit(2u),
+          List<std::shared_ptr<expr>>::cons(
+              expr::lit(3u),
+              List<std::shared_ptr<expr>>::cons(
+                  expr::lit(4u), List<std::shared_ptr<expr>>::nil()))));
   static inline const std::shared_ptr<expr> test_nested =
-      expr::ctor::Mul_(List<std::shared_ptr<expr>>::ctor::Cons_(
-          expr::ctor::Add_(List<std::shared_ptr<expr>>::ctor::Cons_(
-              expr::ctor::Lit_(1u),
-              List<std::shared_ptr<expr>>::ctor::Cons_(
-                  expr::ctor::Lit_(2u),
-                  List<std::shared_ptr<expr>>::ctor::Nil_()))),
-          List<std::shared_ptr<expr>>::ctor::Cons_(
-              expr::ctor::Add_(List<std::shared_ptr<expr>>::ctor::Cons_(
-                  expr::ctor::Lit_(3u),
-                  List<std::shared_ptr<expr>>::ctor::Cons_(
-                      expr::ctor::Lit_(4u),
-                      List<std::shared_ptr<expr>>::ctor::Nil_()))),
-              List<std::shared_ptr<expr>>::ctor::Nil_())));
+      expr::mul(List<std::shared_ptr<expr>>::cons(
+          expr::add(List<std::shared_ptr<expr>>::cons(
+              expr::lit(1u),
+              List<std::shared_ptr<expr>>::cons(
+                  expr::lit(2u), List<std::shared_ptr<expr>>::nil()))),
+          List<std::shared_ptr<expr>>::cons(
+              expr::add(List<std::shared_ptr<expr>>::cons(
+                  expr::lit(3u),
+                  List<std::shared_ptr<expr>>::cons(
+                      expr::lit(4u), List<std::shared_ptr<expr>>::nil()))),
+              List<std::shared_ptr<expr>>::nil())));
   static inline const unsigned int test_eval_add = test_add->eval();
   static inline const unsigned int test_eval_mul = test_mul->eval();
   static inline const unsigned int test_eval_nested = test_nested->eval();

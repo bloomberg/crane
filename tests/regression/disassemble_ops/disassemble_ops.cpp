@@ -15,9 +15,9 @@
 std::shared_ptr<DisassembleOps::instruction>
 DisassembleOps::decode1(const unsigned int b1, const unsigned int b2) {
   if ((b1 % 2u) == 0u) {
-    return instruction::ctor::NOP2_();
+    return instruction::nop2();
   } else {
-    return instruction::ctor::LDM2_((std::move(b2) % 16u));
+    return instruction::ldm2((std::move(b2) % 16u));
   }
 }
 
@@ -31,7 +31,7 @@ DisassembleOps::drop_(const unsigned int n,
     return std::visit(
         Overloaded{[](const typename List<unsigned int>::Nil _args)
                        -> std::shared_ptr<List<unsigned int>> {
-                     return List<unsigned int>::ctor::Nil_();
+                     return List<unsigned int>::nil();
                    },
                    [&](const typename List<unsigned int>::Cons _args)
                        -> std::shared_ptr<List<unsigned int>> {
@@ -84,9 +84,9 @@ DisassembleOps::disassemble1(const std::shared_ptr<List<unsigned int>> &rom,
 std::shared_ptr<DisassembleOps::instruction>
 DisassembleOps::decode2(const unsigned int b1, const unsigned int b2) {
   if (b1 == 0u) {
-    return instruction::ctor::NOP_();
+    return instruction::nop();
   } else {
-    return instruction::ctor::LDM_((std::move(b2) % 16u));
+    return instruction::ldm((std::move(b2) % 16u));
   }
 }
 
@@ -133,9 +133,9 @@ DisassembleOps::disassemble2(const std::shared_ptr<List<unsigned int>> &rom,
 std::shared_ptr<DisassembleOps::instruction>
 DisassembleOps::decode3(const unsigned int b1, const unsigned int b2) {
   if (b1 == 0u) {
-    return instruction::ctor::NOP_();
+    return instruction::nop();
   } else {
-    return instruction::ctor::LDM_((std::move(b2) % 16u));
+    return instruction::ldm((std::move(b2) % 16u));
   }
 }
 
@@ -182,9 +182,9 @@ DisassembleOps::disassemble3(const std::shared_ptr<List<unsigned int>> &rom,
 std::shared_ptr<DisassembleOps::instruction>
 DisassembleOps::decode4(const unsigned int b1, const unsigned int b2) {
   if (b1 == 0u) {
-    return instruction::ctor::NOP_();
+    return instruction::nop();
   } else {
-    return instruction::ctor::LDM_((std::move(b2) % 16u));
+    return instruction::ldm((std::move(b2) % 16u));
   }
 }
 

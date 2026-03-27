@@ -33,22 +33,17 @@ struct PolyInductive {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit pbox(PBox _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<pbox<t_A>> PBox_(t_A a0) {
+      return std::make_shared<pbox<t_A>>(PBox{std::move(a0)});
+    }
 
-      static std::shared_ptr<pbox<t_A>> PBox_(t_A a0) {
-        return std::shared_ptr<pbox<t_A>>(new pbox<t_A>(PBox{a0}));
-      }
-
-      static std::unique_ptr<pbox<t_A>> PBox_uptr(t_A a0) {
-        return std::unique_ptr<pbox<t_A>>(new pbox<t_A>(PBox{a0}));
-      }
-    };
+    static std::unique_ptr<pbox<t_A>> PBox_uptr(t_A a0) {
+      return std::make_unique<pbox<t_A>>(PBox{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -94,24 +89,19 @@ struct PolyInductive {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit ppair(PPair _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<ppair<t_A, t_B>> PPair_(t_A a0, t_B a1) {
+      return std::make_shared<ppair<t_A, t_B>>(
+          PPair{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<ppair<t_A, t_B>> PPair_(t_A a0, t_B a1) {
-        return std::shared_ptr<ppair<t_A, t_B>>(
-            new ppair<t_A, t_B>(PPair{a0, a1}));
-      }
-
-      static std::unique_ptr<ppair<t_A, t_B>> PPair_uptr(t_A a0, t_B a1) {
-        return std::unique_ptr<ppair<t_A, t_B>>(
-            new ppair<t_A, t_B>(PPair{a0, a1}));
-      }
-    };
+    static std::unique_ptr<ppair<t_A, t_B>> PPair_uptr(t_A a0, t_B a1) {
+      return std::make_unique<ppair<t_A, t_B>>(
+          PPair{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -167,32 +157,27 @@ struct PolyInductive {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit pmaybe(PNothing _v) : d_v_(std::move(_v)) {}
 
     explicit pmaybe(PJust _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<pmaybe<t_A>> pnothing() {
+      return std::make_shared<pmaybe<t_A>>(PNothing{});
+    }
 
-      static std::shared_ptr<pmaybe<t_A>> PNothing_() {
-        return std::shared_ptr<pmaybe<t_A>>(new pmaybe<t_A>(PNothing{}));
-      }
+    static std::shared_ptr<pmaybe<t_A>> pjust(t_A a0) {
+      return std::make_shared<pmaybe<t_A>>(PJust{std::move(a0)});
+    }
 
-      static std::shared_ptr<pmaybe<t_A>> PJust_(t_A a0) {
-        return std::shared_ptr<pmaybe<t_A>>(new pmaybe<t_A>(PJust{a0}));
-      }
+    static std::unique_ptr<pmaybe<t_A>> pnothing_uptr() {
+      return std::make_unique<pmaybe<t_A>>(PNothing{});
+    }
 
-      static std::unique_ptr<pmaybe<t_A>> PNothing_uptr() {
-        return std::unique_ptr<pmaybe<t_A>>(new pmaybe<t_A>(PNothing{}));
-      }
-
-      static std::unique_ptr<pmaybe<t_A>> PJust_uptr(t_A a0) {
-        return std::unique_ptr<pmaybe<t_A>>(new pmaybe<t_A>(PJust{a0}));
-      }
-    };
+    static std::unique_ptr<pmaybe<t_A>> pjust_uptr(t_A a0) {
+      return std::make_unique<pmaybe<t_A>>(PJust{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -205,11 +190,11 @@ struct PolyInductive {
       return std::visit(
           Overloaded{[](const typename pmaybe<t_A>::PNothing _args)
                          -> std::shared_ptr<pmaybe<T1>> {
-                       return pmaybe<T1>::ctor::PNothing_();
+                       return pmaybe<T1>::pnothing();
                      },
                      [&](const typename pmaybe<t_A>::PJust _args)
                          -> std::shared_ptr<pmaybe<T1>> {
-                       return pmaybe<T1>::ctor::PJust_(f(_args.d_a0));
+                       return pmaybe<T1>::pjust(f(_args.d_a0));
                      }},
           this->v());
     }
@@ -267,36 +252,42 @@ struct PolyInductive {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit ptree(PLeaf _v) : d_v_(std::move(_v)) {}
 
     explicit ptree(PNode _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<ptree<t_A>> pleaf(t_A a0) {
+      return std::make_shared<ptree<t_A>>(PLeaf{std::move(a0)});
+    }
 
-      static std::shared_ptr<ptree<t_A>> PLeaf_(t_A a0) {
-        return std::shared_ptr<ptree<t_A>>(new ptree<t_A>(PLeaf{a0}));
-      }
+    static std::shared_ptr<ptree<t_A>>
+    pnode(const std::shared_ptr<ptree<t_A>> &a0,
+          const std::shared_ptr<ptree<t_A>> &a1) {
+      return std::make_shared<ptree<t_A>>(PNode{a0, a1});
+    }
 
-      static std::shared_ptr<ptree<t_A>>
-      PNode_(const std::shared_ptr<ptree<t_A>> &a0,
-             const std::shared_ptr<ptree<t_A>> &a1) {
-        return std::shared_ptr<ptree<t_A>>(new ptree<t_A>(PNode{a0, a1}));
-      }
+    static std::shared_ptr<ptree<t_A>> pnode(std::shared_ptr<ptree<t_A>> &&a0,
+                                             std::shared_ptr<ptree<t_A>> &&a1) {
+      return std::make_shared<ptree<t_A>>(PNode{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<ptree<t_A>> PLeaf_uptr(t_A a0) {
-        return std::unique_ptr<ptree<t_A>>(new ptree<t_A>(PLeaf{a0}));
-      }
+    static std::unique_ptr<ptree<t_A>> pleaf_uptr(t_A a0) {
+      return std::make_unique<ptree<t_A>>(PLeaf{std::move(a0)});
+    }
 
-      static std::unique_ptr<ptree<t_A>>
-      PNode_uptr(const std::shared_ptr<ptree<t_A>> &a0,
-                 const std::shared_ptr<ptree<t_A>> &a1) {
-        return std::unique_ptr<ptree<t_A>>(new ptree<t_A>(PNode{a0, a1}));
-      }
-    };
+    static std::unique_ptr<ptree<t_A>>
+    pnode_uptr(const std::shared_ptr<ptree<t_A>> &a0,
+               const std::shared_ptr<ptree<t_A>> &a1) {
+      return std::make_unique<ptree<t_A>>(PNode{a0, a1});
+    }
+
+    static std::unique_ptr<ptree<t_A>>
+    pnode_uptr(std::shared_ptr<ptree<t_A>> &&a0,
+               std::shared_ptr<ptree<t_A>> &&a1) {
+      return std::make_unique<ptree<t_A>>(PNode{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -355,25 +346,23 @@ struct PolyInductive {
   };
 
   static inline const unsigned int test_pbox =
-      pbox<unsigned int>::ctor::PBox_(42u)->punbox();
+      pbox<unsigned int>::PBox_(42u)->punbox();
   static inline const unsigned int test_ppair_fst =
-      ppair<unsigned int, bool>::ctor::PPair_(7u, true)->pfst();
+      ppair<unsigned int, bool>::PPair_(7u, true)->pfst();
   static inline const bool test_ppair_snd =
-      ppair<unsigned int, bool>::ctor::PPair_(7u, true)->psnd();
+      ppair<unsigned int, bool>::PPair_(7u, true)->psnd();
   static inline const unsigned int test_pjust =
-      pmaybe_default<unsigned int>(0u, pmaybe<unsigned int>::ctor::PJust_(99u));
+      pmaybe_default<unsigned int>(0u, pmaybe<unsigned int>::pjust(99u));
   static inline const unsigned int test_pnothing =
-      pmaybe_default<unsigned int>(0u, pmaybe<unsigned int>::ctor::PNothing_());
+      pmaybe_default<unsigned int>(0u, pmaybe<unsigned int>::pnothing());
   static inline const unsigned int test_pmap = pmaybe_default<unsigned int>(
-      0u,
-      pmaybe<unsigned int>::ctor::PJust_(5u)->template pmaybe_map<unsigned int>(
-          [](unsigned int x) { return (x + 1); }));
+      0u, pmaybe<unsigned int>::pjust(5u)->template pmaybe_map<unsigned int>(
+              [](unsigned int x) { return (x + 1); }));
   static inline const unsigned int test_ptree =
-      ptree<unsigned int>::ctor::PNode_(
-          ptree<unsigned int>::ctor::PLeaf_(1u),
-          ptree<unsigned int>::ctor::PNode_(
-              ptree<unsigned int>::ctor::PLeaf_(2u),
-              ptree<unsigned int>::ctor::PLeaf_(3u)))
+      ptree<unsigned int>::pnode(
+          ptree<unsigned int>::pleaf(1u),
+          ptree<unsigned int>::pnode(ptree<unsigned int>::pleaf(2u),
+                                     ptree<unsigned int>::pleaf(3u)))
           ->ptree_size();
 };
 

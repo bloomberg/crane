@@ -19,15 +19,15 @@ void aSsErT(bool condition, const char *message, int line) {
 using UIntList = List<unsigned int>;
 
 int main() {
-  auto nil = UIntList::ctor::Nil_();
-  auto l5 = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(
-    3u, UIntList::ctor::Cons_(4u, UIntList::ctor::Cons_(5u, nil)))));
+  auto nil = UIntList::nil();
+  auto l5 = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(
+    3u, UIntList::cons(4u, UIntList::cons(5u, nil)))));
 
   // unzip
   using PairList = List<std::pair<unsigned int, unsigned int>>;
-  auto pair_nil = PairList::ctor::Nil_();
-  auto pairs = PairList::ctor::Cons_(std::make_pair(1u, 10u),
-    PairList::ctor::Cons_(std::make_pair(2u, 20u), pair_nil));
+  auto pair_nil = PairList::nil();
+  auto pairs = PairList::cons(std::make_pair(1u, 10u),
+    PairList::cons(std::make_pair(2u, 20u), pair_nil));
   auto unzipped = LoopifyListPairing::unzip(pairs);
   ASSERT(unzipped.first != nullptr && unzipped.second != nullptr);
 
@@ -40,7 +40,7 @@ int main() {
   ASSERT(partitioned.first != nullptr && partitioned.second != nullptr);
 
   // zip_longest
-  auto l3 = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(3u, nil)));
+  auto l3 = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(3u, nil)));
   auto zipped = LoopifyListPairing::zip_longest(l3, l5, 0u);
   ASSERT(zipped != nullptr);
 

@@ -20,15 +20,14 @@ std::shared_ptr<List<unsigned int>> JumpTargets::collect_targets(
           [](const typename List<
               std::shared_ptr<JumpTargets::instr_collection>>::Nil _args)
               -> std::shared_ptr<List<unsigned int>> {
-            return List<unsigned int>::ctor::Nil_();
+            return List<unsigned int>::nil();
           },
           [](const typename List<
               std::shared_ptr<JumpTargets::instr_collection>>::Cons _args)
               -> std::shared_ptr<List<unsigned int>> {
             if (_args.d_a0->jump_target_collection().has_value()) {
               unsigned int a = *_args.d_a0->jump_target_collection();
-              return List<unsigned int>::ctor::Cons_(
-                  a, collect_targets(_args.d_a1));
+              return List<unsigned int>::cons(a, collect_targets(_args.d_a1));
             } else {
               return collect_targets(_args.d_a1);
             }

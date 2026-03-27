@@ -16,13 +16,13 @@ std::shared_ptr<Positive> Pos::succ(const std::shared_ptr<Positive> &x) {
   return std::visit(
       Overloaded{
           [](const typename Positive::XI _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XO_(succ(_args.d_a0));
+            return Positive::xo(succ(_args.d_a0));
           },
           [](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XI_(_args.d_a0);
+            return Positive::xi(_args.d_a0);
           },
           [](const typename Positive::XH _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XO_(Positive::ctor::XH_());
+            return Positive::xo(Positive::xh());
           }},
       x->v());
 }
@@ -35,52 +35,50 @@ std::shared_ptr<Positive> Pos::add(const std::shared_ptr<Positive> &x,
             return std::visit(
                 Overloaded{[&](const typename Positive::XI _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(
+                             return Positive::xo(
                                  add_carry(_args.d_a0, _args0.d_a0));
                            },
                            [&](const typename Positive::XO _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(
-                                 add(_args.d_a0, _args0.d_a0));
+                             return Positive::xi(add(_args.d_a0, _args0.d_a0));
                            },
                            [&](const typename Positive::XH _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(succ(_args.d_a0));
+                             return Positive::xo(succ(_args.d_a0));
                            }},
                 y->v());
           },
           [&](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
             return std::visit(
-                Overloaded{
-                    [&](const typename Positive::XI _args0)
-                        -> std::shared_ptr<Positive> {
-                      return Positive::ctor::XI_(add(_args.d_a0, _args0.d_a0));
-                    },
-                    [&](const typename Positive::XO _args0)
-                        -> std::shared_ptr<Positive> {
-                      return Positive::ctor::XO_(add(_args.d_a0, _args0.d_a0));
-                    },
-                    [&](const typename Positive::XH _args0)
-                        -> std::shared_ptr<Positive> {
-                      return Positive::ctor::XI_(_args.d_a0);
-                    }},
+                Overloaded{[&](const typename Positive::XI _args0)
+                               -> std::shared_ptr<Positive> {
+                             return Positive::xi(add(_args.d_a0, _args0.d_a0));
+                           },
+                           [&](const typename Positive::XO _args0)
+                               -> std::shared_ptr<Positive> {
+                             return Positive::xo(add(_args.d_a0, _args0.d_a0));
+                           },
+                           [&](const typename Positive::XH _args0)
+                               -> std::shared_ptr<Positive> {
+                             return Positive::xi(_args.d_a0);
+                           }},
                 y->v());
           },
           [&](const typename Positive::XH _args) -> std::shared_ptr<Positive> {
-            return std::visit(
-                Overloaded{[](const typename Positive::XI _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(succ(_args0.d_a0));
-                           },
-                           [](const typename Positive::XO _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(_args0.d_a0);
-                           },
-                           [](const typename Positive::XH _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(Positive::ctor::XH_());
-                           }},
-                y->v());
+            return std::visit(Overloaded{[](const typename Positive::XI _args0)
+                                             -> std::shared_ptr<Positive> {
+                                           return Positive::xo(
+                                               succ(_args0.d_a0));
+                                         },
+                                         [](const typename Positive::XO _args0)
+                                             -> std::shared_ptr<Positive> {
+                                           return Positive::xi(_args0.d_a0);
+                                         },
+                                         [](const typename Positive::XH _args0)
+                                             -> std::shared_ptr<Positive> {
+                                           return Positive::xo(Positive::xh());
+                                         }},
+                              y->v());
           }},
       x->v());
 }
@@ -91,37 +89,35 @@ std::shared_ptr<Positive> Pos::add_carry(const std::shared_ptr<Positive> &x,
       Overloaded{
           [&](const typename Positive::XI _args) -> std::shared_ptr<Positive> {
             return std::visit(
-                Overloaded{[&](const typename Positive::XI _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(
-                                 add_carry(_args.d_a0, _args0.d_a0));
-                           },
-                           [&](const typename Positive::XO _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(
-                                 add_carry(_args.d_a0, _args0.d_a0));
-                           },
-                           [&](const typename Positive::XH _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(succ(_args.d_a0));
-                           }},
+                Overloaded{
+                    [&](const typename Positive::XI _args0)
+                        -> std::shared_ptr<Positive> {
+                      return Positive::xi(add_carry(_args.d_a0, _args0.d_a0));
+                    },
+                    [&](const typename Positive::XO _args0)
+                        -> std::shared_ptr<Positive> {
+                      return Positive::xo(add_carry(_args.d_a0, _args0.d_a0));
+                    },
+                    [&](const typename Positive::XH _args0)
+                        -> std::shared_ptr<Positive> {
+                      return Positive::xi(succ(_args.d_a0));
+                    }},
                 y->v());
           },
           [&](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
             return std::visit(
                 Overloaded{[&](const typename Positive::XI _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(
+                             return Positive::xo(
                                  add_carry(_args.d_a0, _args0.d_a0));
                            },
                            [&](const typename Positive::XO _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(
-                                 add(_args.d_a0, _args0.d_a0));
+                             return Positive::xi(add(_args.d_a0, _args0.d_a0));
                            },
                            [&](const typename Positive::XH _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(succ(_args.d_a0));
+                             return Positive::xo(succ(_args.d_a0));
                            }},
                 y->v());
           },
@@ -129,15 +125,15 @@ std::shared_ptr<Positive> Pos::add_carry(const std::shared_ptr<Positive> &x,
             return std::visit(
                 Overloaded{[](const typename Positive::XI _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(succ(_args0.d_a0));
+                             return Positive::xi(succ(_args0.d_a0));
                            },
                            [](const typename Positive::XO _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(succ(_args0.d_a0));
+                             return Positive::xo(succ(_args0.d_a0));
                            },
                            [](const typename Positive::XH _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(Positive::ctor::XH_());
+                             return Positive::xi(Positive::xh());
                            }},
                 y->v());
           }},
@@ -148,13 +144,13 @@ std::shared_ptr<Positive> Pos::pred_double(const std::shared_ptr<Positive> &x) {
   return std::visit(
       Overloaded{
           [](const typename Positive::XI _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XI_(Positive::ctor::XO_(_args.d_a0));
+            return Positive::xi(Positive::xo(_args.d_a0));
           },
           [](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XI_(pred_double(_args.d_a0));
+            return Positive::xi(pred_double(_args.d_a0));
           },
           [](const typename Positive::XH _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XH_();
+            return Positive::xh();
           }},
       x->v());
 }
@@ -164,10 +160,10 @@ std::shared_ptr<Positive> Pos::mul(const std::shared_ptr<Positive> &x,
   return std::visit(
       Overloaded{
           [&](const typename Positive::XI _args) -> std::shared_ptr<Positive> {
-            return add(y, Positive::ctor::XO_(mul(_args.d_a0, y)));
+            return add(y, Positive::xo(mul(_args.d_a0, y)));
           },
           [&](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XO_(mul(_args.d_a0, std::move(y)));
+            return Positive::xo(mul(_args.d_a0, std::move(y)));
           },
           [&](const typename Positive::XH _args) -> std::shared_ptr<Positive> {
             return std::move(y);
@@ -291,13 +287,13 @@ Pos::to_nat(const std::shared_ptr<Positive> &x) {
 std::shared_ptr<Z> BinInt::double_(const std::shared_ptr<Z> &x) {
   return std::visit(
       Overloaded{[](const typename Z::Z0 _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Z0_();
+                   return Z::z0();
                  },
                  [](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(Positive::ctor::XO_(_args.d_a0));
+                   return Z::zpos(Positive::xo(_args.d_a0));
                  },
                  [](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zneg_(Positive::ctor::XO_(_args.d_a0));
+                   return Z::zneg(Positive::xo(_args.d_a0));
                  }},
       x->v());
 }
@@ -305,13 +301,13 @@ std::shared_ptr<Z> BinInt::double_(const std::shared_ptr<Z> &x) {
 std::shared_ptr<Z> BinInt::succ_double(const std::shared_ptr<Z> &x) {
   return std::visit(
       Overloaded{[](const typename Z::Z0 _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(Positive::ctor::XH_());
+                   return Z::zpos(Positive::xh());
                  },
                  [](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(Positive::ctor::XI_(_args.d_a0));
+                   return Z::zpos(Positive::xi(_args.d_a0));
                  },
                  [](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zneg_(Pos::pred_double(_args.d_a0));
+                   return Z::zneg(Pos::pred_double(_args.d_a0));
                  }},
       x->v());
 }
@@ -319,13 +315,13 @@ std::shared_ptr<Z> BinInt::succ_double(const std::shared_ptr<Z> &x) {
 std::shared_ptr<Z> BinInt::pred_double(const std::shared_ptr<Z> &x) {
   return std::visit(
       Overloaded{[](const typename Z::Z0 _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zneg_(Positive::ctor::XH_());
+                   return Z::zneg(Positive::xh());
                  },
                  [](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(Pos::pred_double(_args.d_a0));
+                   return Z::zpos(Pos::pred_double(_args.d_a0));
                  },
                  [](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zneg_(Positive::ctor::XI_(_args.d_a0));
+                   return Z::zneg(Positive::xi(_args.d_a0));
                  }},
       x->v());
 }
@@ -348,8 +344,7 @@ std::shared_ptr<Z> BinInt::pos_sub(const std::shared_ptr<Positive> &x,
                            },
                            [&](const typename Positive::XH _args0)
                                -> std::shared_ptr<Z> {
-                             return Z::ctor::Zpos_(
-                                 Positive::ctor::XO_(_args.d_a0));
+                             return Z::zpos(Positive::xo(_args.d_a0));
                            }},
                 y->v());
           },
@@ -367,24 +362,22 @@ std::shared_ptr<Z> BinInt::pos_sub(const std::shared_ptr<Positive> &x,
                            },
                            [&](const typename Positive::XH _args0)
                                -> std::shared_ptr<Z> {
-                             return Z::ctor::Zpos_(
-                                 Pos::pred_double(_args.d_a0));
+                             return Z::zpos(Pos::pred_double(_args.d_a0));
                            }},
                 y->v());
           },
           [&](const typename Positive::XH _args) -> std::shared_ptr<Z> {
             return std::visit(
-                Overloaded{
-                    [](const typename Positive::XI _args0)
-                        -> std::shared_ptr<Z> {
-                      return Z::ctor::Zneg_(Positive::ctor::XO_(_args0.d_a0));
-                    },
-                    [](const typename Positive::XO _args0)
-                        -> std::shared_ptr<Z> {
-                      return Z::ctor::Zneg_(Pos::pred_double(_args0.d_a0));
-                    },
-                    [](const typename Positive::XH _args0)
-                        -> std::shared_ptr<Z> { return Z::ctor::Z0_(); }},
+                Overloaded{[](const typename Positive::XI _args0)
+                               -> std::shared_ptr<Z> {
+                             return Z::zneg(Positive::xo(_args0.d_a0));
+                           },
+                           [](const typename Positive::XO _args0)
+                               -> std::shared_ptr<Z> {
+                             return Z::zneg(Pos::pred_double(_args0.d_a0));
+                           },
+                           [](const typename Positive::XH _args0)
+                               -> std::shared_ptr<Z> { return Z::z0(); }},
                 y->v());
           }},
       x->v());
@@ -412,8 +405,7 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
                         },
                         [&](const typename Z::Zpos _args0)
                             -> std::shared_ptr<Z> {
-                          return Z::ctor::Zpos_(
-                              Pos::add(_args.d_a0, _args0.d_a0));
+                          return Z::zpos(Pos::add(_args.d_a0, _args0.d_a0));
                         },
                         [&](const typename Z::Zneg _args0)
                             -> std::shared_ptr<Z> {
@@ -443,8 +435,7 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
                         },
                         [&](const typename Z::Zneg _args0)
                             -> std::shared_ptr<Z> {
-                          return Z::ctor::Zneg_(
-                              Pos::add(_args.d_a0, _args0.d_a0));
+                          return Z::zneg(Pos::add(_args.d_a0, _args0.d_a0));
                         }},
                     std::move(y)->v());
               }
@@ -456,13 +447,13 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
 std::shared_ptr<Z> BinInt::opp(const std::shared_ptr<Z> &x) {
   return std::visit(
       Overloaded{[](const typename Z::Z0 _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Z0_();
+                   return Z::z0();
                  },
                  [](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zneg_(_args.d_a0);
+                   return Z::zneg(_args.d_a0);
                  },
                  [](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(_args.d_a0);
+                   return Z::zpos(_args.d_a0);
                  }},
       x->v());
 }
@@ -477,19 +468,19 @@ std::shared_ptr<Z> BinInt::mul(const std::shared_ptr<Z> &x,
   return std::visit(
       Overloaded{
           [](const typename Z::Z0 _args) -> std::shared_ptr<Z> {
-            return Z::ctor::Z0_();
+            return Z::z0();
           },
           [&](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
             return std::visit(
                 Overloaded{
                     [](const typename Z::Z0 _args0) -> std::shared_ptr<Z> {
-                      return Z::ctor::Z0_();
+                      return Z::z0();
                     },
                     [&](const typename Z::Zpos _args0) -> std::shared_ptr<Z> {
-                      return Z::ctor::Zpos_(Pos::mul(_args.d_a0, _args0.d_a0));
+                      return Z::zpos(Pos::mul(_args.d_a0, _args0.d_a0));
                     },
                     [&](const typename Z::Zneg _args0) -> std::shared_ptr<Z> {
-                      return Z::ctor::Zneg_(Pos::mul(_args.d_a0, _args0.d_a0));
+                      return Z::zneg(Pos::mul(_args.d_a0, _args0.d_a0));
                     }},
                 y->v());
           },
@@ -497,13 +488,13 @@ std::shared_ptr<Z> BinInt::mul(const std::shared_ptr<Z> &x,
             return std::visit(
                 Overloaded{
                     [](const typename Z::Z0 _args0) -> std::shared_ptr<Z> {
-                      return Z::ctor::Z0_();
+                      return Z::z0();
                     },
                     [&](const typename Z::Zpos _args0) -> std::shared_ptr<Z> {
-                      return Z::ctor::Zneg_(Pos::mul(_args.d_a0, _args0.d_a0));
+                      return Z::zneg(Pos::mul(_args.d_a0, _args0.d_a0));
                     },
                     [&](const typename Z::Zneg _args0) -> std::shared_ptr<Z> {
-                      return Z::ctor::Zpos_(Pos::mul(_args.d_a0, _args0.d_a0));
+                      return Z::zpos(Pos::mul(_args.d_a0, _args0.d_a0));
                     }},
                 y->v());
           }},
@@ -650,22 +641,18 @@ BinInt::pos_div_eucl(const std::shared_ptr<Positive> &a, std::shared_ptr<Z> b) {
             std::shared_ptr<Z> q = BinInt::pos_div_eucl(_args.d_a0, b).first;
             std::shared_ptr<Z> r = BinInt::pos_div_eucl(_args.d_a0, b).second;
             std::shared_ptr<Z> r_ = BinInt::add(
-                BinInt::mul(
-                    Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XH_())),
-                    r),
-                Z::ctor::Zpos_(Positive::ctor::XH_()));
+                BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), r),
+                Z::zpos(Positive::xh()));
             if (BinInt::ltb(r_, b)) {
               return std::make_pair(
-                  BinInt::mul(Z::ctor::Zpos_(
-                                  Positive::ctor::XO_(Positive::ctor::XH_())),
+                  BinInt::mul(Z::zpos(Positive::xo(Positive::xh())),
                               std::move(q)),
                   std::move(r_));
             } else {
               return std::make_pair(
-                  BinInt::add(BinInt::mul(Z::ctor::Zpos_(Positive::ctor::XO_(
-                                              Positive::ctor::XH_())),
+                  BinInt::add(BinInt::mul(Z::zpos(Positive::xo(Positive::xh())),
                                           std::move(q)),
-                              Z::ctor::Zpos_(Positive::ctor::XH_())),
+                              Z::zpos(Positive::xh())),
                   BinInt::sub(std::move(r_), b));
             }
           },
@@ -673,33 +660,28 @@ BinInt::pos_div_eucl(const std::shared_ptr<Positive> &a, std::shared_ptr<Z> b) {
               -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
             std::shared_ptr<Z> q = BinInt::pos_div_eucl(_args.d_a0, b).first;
             std::shared_ptr<Z> r = BinInt::pos_div_eucl(_args.d_a0, b).second;
-            std::shared_ptr<Z> r_ = BinInt::mul(
-                Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XH_())), r);
+            std::shared_ptr<Z> r_ =
+                BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), r);
             if (BinInt::ltb(r_, b)) {
               return std::make_pair(
-                  BinInt::mul(Z::ctor::Zpos_(
-                                  Positive::ctor::XO_(Positive::ctor::XH_())),
+                  BinInt::mul(Z::zpos(Positive::xo(Positive::xh())),
                               std::move(q)),
                   std::move(r_));
             } else {
               return std::make_pair(
-                  BinInt::add(BinInt::mul(Z::ctor::Zpos_(Positive::ctor::XO_(
-                                              Positive::ctor::XH_())),
+                  BinInt::add(BinInt::mul(Z::zpos(Positive::xo(Positive::xh())),
                                           std::move(q)),
-                              Z::ctor::Zpos_(Positive::ctor::XH_())),
+                              Z::zpos(Positive::xh())),
                   BinInt::sub(std::move(r_), b));
             }
           },
           [&](const typename Positive::XH _args)
               -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
-            if (BinInt::leb(
-                    Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XH_())),
-                    std::move(b))) {
-              return std::make_pair(Z::ctor::Z0_(),
-                                    Z::ctor::Zpos_(Positive::ctor::XH_()));
+            if (BinInt::leb(Z::zpos(Positive::xo(Positive::xh())),
+                            std::move(b))) {
+              return std::make_pair(Z::z0(), Z::zpos(Positive::xh()));
             } else {
-              return std::make_pair(Z::ctor::Zpos_(Positive::ctor::XH_()),
-                                    Z::ctor::Z0_());
+              return std::make_pair(Z::zpos(Positive::xh()), Z::z0());
             }
           }},
       a->v());
@@ -711,7 +693,7 @@ BinInt::div_eucl(std::shared_ptr<Z> a, std::shared_ptr<Z> b) {
       Overloaded{
           [](const typename Z::Z0 _args)
               -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
-            return std::make_pair(Z::ctor::Z0_(), Z::ctor::Z0_());
+            return std::make_pair(Z::z0(), Z::z0());
           },
           [&](const typename Z::Zpos _args)
               -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
@@ -719,7 +701,7 @@ BinInt::div_eucl(std::shared_ptr<Z> a, std::shared_ptr<Z> b) {
                 Overloaded{
                     [&](const typename Z::Z0 _args0)
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
-                      return std::make_pair(Z::ctor::Z0_(), std::move(a));
+                      return std::make_pair(Z::z0(), std::move(a));
                     },
                     [&](const typename Z::Zpos _args0)
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
@@ -728,27 +710,24 @@ BinInt::div_eucl(std::shared_ptr<Z> a, std::shared_ptr<Z> b) {
                     [&](const typename Z::Zneg _args0)
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
                       std::shared_ptr<Z> q =
-                          BinInt::pos_div_eucl(_args.d_a0,
-                                               Z::ctor::Zpos_(_args0.d_a0))
+                          BinInt::pos_div_eucl(_args.d_a0, Z::zpos(_args0.d_a0))
                               .first;
                       std::shared_ptr<Z> r =
-                          BinInt::pos_div_eucl(_args.d_a0,
-                                               Z::ctor::Zpos_(_args0.d_a0))
+                          BinInt::pos_div_eucl(_args.d_a0, Z::zpos(_args0.d_a0))
                               .second;
                       return std::visit(
                           Overloaded{[&](const typename Z::Z0 _args1)
                                          -> std::pair<std::shared_ptr<Z>,
                                                       std::shared_ptr<Z>> {
                                        return std::make_pair(BinInt::opp(q),
-                                                             Z::ctor::Z0_());
+                                                             Z::z0());
                                      },
                                      [&](const typename Z::Zpos _args1)
                                          -> std::pair<std::shared_ptr<Z>,
                                                       std::shared_ptr<Z>> {
                                        return std::make_pair(
                                            BinInt::opp(BinInt::add(
-                                               q, Z::ctor::Zpos_(
-                                                      Positive::ctor::XH_()))),
+                                               q, Z::zpos(Positive::xh()))),
                                            BinInt::add(b, r));
                                      },
                                      [&](const typename Z::Zneg _args1)
@@ -756,8 +735,7 @@ BinInt::div_eucl(std::shared_ptr<Z> a, std::shared_ptr<Z> b) {
                                                       std::shared_ptr<Z>> {
                                        return std::make_pair(
                                            BinInt::opp(BinInt::add(
-                                               q, Z::ctor::Zpos_(
-                                                      Positive::ctor::XH_()))),
+                                               q, Z::zpos(Positive::xh()))),
                                            BinInt::add(b, r));
                                      }},
                           r->v());
@@ -770,7 +748,7 @@ BinInt::div_eucl(std::shared_ptr<Z> a, std::shared_ptr<Z> b) {
                 Overloaded{
                     [&](const typename Z::Z0 _args0)
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
-                      return std::make_pair(Z::ctor::Z0_(), std::move(a));
+                      return std::make_pair(Z::z0(), std::move(a));
                     },
                     [&](const typename Z::Zpos _args0)
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
@@ -783,15 +761,14 @@ BinInt::div_eucl(std::shared_ptr<Z> a, std::shared_ptr<Z> b) {
                                          -> std::pair<std::shared_ptr<Z>,
                                                       std::shared_ptr<Z>> {
                                        return std::make_pair(BinInt::opp(q),
-                                                             Z::ctor::Z0_());
+                                                             Z::z0());
                                      },
                                      [&](const typename Z::Zpos _args1)
                                          -> std::pair<std::shared_ptr<Z>,
                                                       std::shared_ptr<Z>> {
                                        return std::make_pair(
                                            BinInt::opp(BinInt::add(
-                                               q, Z::ctor::Zpos_(
-                                                      Positive::ctor::XH_()))),
+                                               q, Z::zpos(Positive::xh()))),
                                            BinInt::sub(b, r));
                                      },
                                      [&](const typename Z::Zneg _args1)
@@ -799,8 +776,7 @@ BinInt::div_eucl(std::shared_ptr<Z> a, std::shared_ptr<Z> b) {
                                                       std::shared_ptr<Z>> {
                                        return std::make_pair(
                                            BinInt::opp(BinInt::add(
-                                               q, Z::ctor::Zpos_(
-                                                      Positive::ctor::XH_()))),
+                                               q, Z::zpos(Positive::xh()))),
                                            BinInt::sub(b, r));
                                      }},
                           r->v());
@@ -808,12 +784,10 @@ BinInt::div_eucl(std::shared_ptr<Z> a, std::shared_ptr<Z> b) {
                     [&](const typename Z::Zneg _args0)
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
                       std::shared_ptr<Z> q =
-                          BinInt::pos_div_eucl(_args.d_a0,
-                                               Z::ctor::Zpos_(_args0.d_a0))
+                          BinInt::pos_div_eucl(_args.d_a0, Z::zpos(_args0.d_a0))
                               .first;
                       std::shared_ptr<Z> r =
-                          BinInt::pos_div_eucl(_args.d_a0,
-                                               Z::ctor::Zpos_(_args0.d_a0))
+                          BinInt::pos_div_eucl(_args.d_a0, Z::zpos(_args0.d_a0))
                               .second;
                       return std::make_pair(q, BinInt::opp(r));
                     }},
@@ -839,13 +813,13 @@ std::shared_ptr<Z> BinInt::modulo(const std::shared_ptr<Z> &a,
 std::shared_ptr<Z> BinInt::abs(const std::shared_ptr<Z> &z) {
   return std::visit(
       Overloaded{[](const typename Z::Z0 _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Z0_();
+                   return Z::z0();
                  },
                  [](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(_args.d_a0);
+                   return Z::zpos(_args.d_a0);
                  },
                  [](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(_args.d_a0);
+                   return Z::zpos(_args.d_a0);
                  }},
       z->v());
 }
@@ -874,38 +848,27 @@ __attribute__((pure)) EpochCellGlyphTraceCase::LunarPhase
 EpochCellGlyphTraceCase::phase_from_angle(const std::shared_ptr<Z> &angle_deg) {
   std::shared_ptr<Z> wrapped = BinInt::modulo(
       angle_deg,
-      Z::ctor::Zpos_(Positive::ctor::XO_(
-          Positive::ctor::XO_(Positive::ctor::XO_(Positive::ctor::XI_(
-              Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XI_(
-                  Positive::ctor::XO_(Positive::ctor::XH_()))))))))));
+      Z::zpos(Positive::xo(Positive::xo(Positive::xo(Positive::xi(Positive::xo(
+          Positive::xi(Positive::xi(Positive::xo(Positive::xh()))))))))));
   if (BinInt::ltb(wrapped,
-                  Z::ctor::Zpos_(Positive::ctor::XI_(Positive::ctor::XO_(
-                      Positive::ctor::XI_(Positive::ctor::XI_(
-                          Positive::ctor::XO_(Positive::ctor::XH_())))))))) {
+                  Z::zpos(Positive::xi(Positive::xo(Positive::xi(
+                      Positive::xi(Positive::xo(Positive::xh())))))))) {
     return LunarPhase::e_NEWMOON;
   } else {
-    if (BinInt::ltb(
-            wrapped,
-            Z::ctor::Zpos_(
-                Positive::ctor::XI_(Positive::ctor::XI_(Positive::ctor::XI_(
-                    Positive::ctor::XO_(Positive::ctor::XO_(Positive::ctor::XO_(
-                        Positive::ctor::XO_(Positive::ctor::XH_())))))))))) {
+    if (BinInt::ltb(wrapped, Z::zpos(Positive::xi(Positive::xi(Positive::xi(
+                                 Positive::xo(Positive::xo(Positive::xo(
+                                     Positive::xo(Positive::xh())))))))))) {
       return LunarPhase::e_FIRSTQUARTER;
     } else {
-      if (BinInt::ltb(
-              wrapped,
-              Z::ctor::Zpos_(Positive::ctor::XI_(
-                  Positive::ctor::XO_(Positive::ctor::XO_(Positive::ctor::XO_(
-                      Positive::ctor::XO_(Positive::ctor::XI_(
-                          Positive::ctor::XI_(Positive::ctor::XH_())))))))))) {
+      if (BinInt::ltb(wrapped, Z::zpos(Positive::xi(Positive::xo(Positive::xo(
+                                   Positive::xo(Positive::xo(Positive::xi(
+                                       Positive::xi(Positive::xh())))))))))) {
         return LunarPhase::e_FULLMOON;
       } else {
         if (BinInt::ltb(std::move(wrapped),
-                        Z::ctor::Zpos_(Positive::ctor::XI_(Positive::ctor::XI_(
-                            Positive::ctor::XO_(Positive::ctor::XI_(
-                                Positive::ctor::XI_(Positive::ctor::XI_(
-                                    Positive::ctor::XO_(Positive::ctor::XO_(
-                                        Positive::ctor::XH_()))))))))))) {
+                        Z::zpos(Positive::xi(Positive::xi(Positive::xo(
+                            Positive::xi(Positive::xi(Positive::xi(Positive::xo(
+                                Positive::xo(Positive::xh()))))))))))) {
           return LunarPhase::e_LASTQUARTER;
         } else {
           return LunarPhase::e_NEWMOON;
@@ -961,23 +924,20 @@ __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::zodiac_code(
 
 __attribute__((pure)) bool EpochCellGlyphTraceCase::eclipse_possible_at_dial(
     const std::shared_ptr<Z> &dial_pos) {
-  if (BinInt::eqb(dial_pos, Z::ctor::Zpos_(Positive::ctor::XH_()))) {
+  if (BinInt::eqb(dial_pos, Z::zpos(Positive::xh()))) {
     return true;
   } else {
     if (BinInt::eqb(dial_pos,
-                    Z::ctor::Zpos_(Positive::ctor::XO_(
-                        Positive::ctor::XI_(Positive::ctor::XH_()))))) {
+                    Z::zpos(Positive::xo(Positive::xi(Positive::xh()))))) {
       return true;
     } else {
-      if (BinInt::eqb(dial_pos,
-                      Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XO_(
-                          Positive::ctor::XI_(Positive::ctor::XH_())))))) {
+      if (BinInt::eqb(dial_pos, Z::zpos(Positive::xo(Positive::xo(
+                                    Positive::xi(Positive::xh())))))) {
         return true;
       } else {
         if (BinInt::eqb(dial_pos,
-                        Z::ctor::Zpos_(Positive::ctor::XI_(Positive::ctor::XO_(
-                            Positive::ctor::XO_(Positive::ctor::XO_(
-                                Positive::ctor::XH_()))))))) {
+                        Z::zpos(Positive::xi(Positive::xo(
+                            Positive::xo(Positive::xo(Positive::xh()))))))) {
           return true;
         } else {
           return false;
@@ -990,27 +950,21 @@ __attribute__((pure)) bool EpochCellGlyphTraceCase::eclipse_possible_at_dial(
 std::shared_ptr<EpochCellGlyphTraceCase::MechanismState>
 EpochCellGlyphTraceCase::step(
     std::shared_ptr<EpochCellGlyphTraceCase::MechanismState> s) {
-  return std::make_shared<EpochCellGlyphTraceCase::MechanismState>(
-      MechanismState{
-          BinInt::add(s->crank_position, Z::ctor::Zpos_(Positive::ctor::XH_())),
-          BinInt::modulo(BinInt::add(s->metonic_dial,
-                                     Z::ctor::Zpos_(Positive::ctor::XH_())),
-                         metonic_modulus),
-          BinInt::modulo(
-              BinInt::add(s->saros_dial, Z::ctor::Zpos_(Positive::ctor::XH_())),
-              saros_modulus),
-          BinInt::modulo(BinInt::add(s->callippic_dial,
-                                     Z::ctor::Zpos_(Positive::ctor::XH_())),
-                         callippic_modulus),
-          BinInt::modulo(BinInt::add(s->exeligmos_dial,
-                                     Z::ctor::Zpos_(Positive::ctor::XH_())),
-                         exeligmos_modulus),
-          BinInt::modulo(
-              BinInt::add(s->games_dial, Z::ctor::Zpos_(Positive::ctor::XH_())),
-              games_modulus),
-          BinInt::modulo(BinInt::add(s->zodiac_position,
-                                     Z::ctor::Zpos_(Positive::ctor::XH_())),
-                         zodiac_modulus)});
+  return std::make_shared<
+      EpochCellGlyphTraceCase::MechanismState>(MechanismState{
+      BinInt::add(s->crank_position, Z::zpos(Positive::xh())),
+      BinInt::modulo(BinInt::add(s->metonic_dial, Z::zpos(Positive::xh())),
+                     metonic_modulus),
+      BinInt::modulo(BinInt::add(s->saros_dial, Z::zpos(Positive::xh())),
+                     saros_modulus),
+      BinInt::modulo(BinInt::add(s->callippic_dial, Z::zpos(Positive::xh())),
+                     callippic_modulus),
+      BinInt::modulo(BinInt::add(s->exeligmos_dial, Z::zpos(Positive::xh())),
+                     exeligmos_modulus),
+      BinInt::modulo(BinInt::add(s->games_dial, Z::zpos(Positive::xh())),
+                     games_modulus),
+      BinInt::modulo(BinInt::add(s->zodiac_position, Z::zpos(Positive::xh())),
+                     zodiac_modulus)});
 }
 
 std::shared_ptr<EpochCellGlyphTraceCase::MechanismState>
@@ -1018,37 +972,31 @@ EpochCellGlyphTraceCase::step_reverse(
     std::shared_ptr<EpochCellGlyphTraceCase::MechanismState> s) {
   return std::make_shared<EpochCellGlyphTraceCase::MechanismState>(
       MechanismState{
-          BinInt::sub(s->crank_position, Z::ctor::Zpos_(Positive::ctor::XH_())),
+          BinInt::sub(s->crank_position, Z::zpos(Positive::xh())),
           BinInt::modulo(
-              BinInt::add(BinInt::sub(s->metonic_dial,
-                                      Z::ctor::Zpos_(Positive::ctor::XH_())),
+              BinInt::add(BinInt::sub(s->metonic_dial, Z::zpos(Positive::xh())),
                           metonic_modulus),
               metonic_modulus),
           BinInt::modulo(
-              BinInt::add(BinInt::sub(s->saros_dial,
-                                      Z::ctor::Zpos_(Positive::ctor::XH_())),
+              BinInt::add(BinInt::sub(s->saros_dial, Z::zpos(Positive::xh())),
                           saros_modulus),
               saros_modulus),
+          BinInt::modulo(BinInt::add(BinInt::sub(s->callippic_dial,
+                                                 Z::zpos(Positive::xh())),
+                                     callippic_modulus),
+                         callippic_modulus),
+          BinInt::modulo(BinInt::add(BinInt::sub(s->exeligmos_dial,
+                                                 Z::zpos(Positive::xh())),
+                                     exeligmos_modulus),
+                         exeligmos_modulus),
           BinInt::modulo(
-              BinInt::add(BinInt::sub(s->callippic_dial,
-                                      Z::ctor::Zpos_(Positive::ctor::XH_())),
-                          callippic_modulus),
-              callippic_modulus),
-          BinInt::modulo(
-              BinInt::add(BinInt::sub(s->exeligmos_dial,
-                                      Z::ctor::Zpos_(Positive::ctor::XH_())),
-                          exeligmos_modulus),
-              exeligmos_modulus),
-          BinInt::modulo(
-              BinInt::add(BinInt::sub(s->games_dial,
-                                      Z::ctor::Zpos_(Positive::ctor::XH_())),
+              BinInt::add(BinInt::sub(s->games_dial, Z::zpos(Positive::xh())),
                           games_modulus),
               games_modulus),
-          BinInt::modulo(
-              BinInt::add(BinInt::sub(s->zodiac_position,
-                                      Z::ctor::Zpos_(Positive::ctor::XH_())),
-                          zodiac_modulus),
-              zodiac_modulus)});
+          BinInt::modulo(BinInt::add(BinInt::sub(s->zodiac_position,
+                                                 Z::zpos(Positive::xh())),
+                                     zodiac_modulus),
+                         zodiac_modulus)});
 }
 
 std::shared_ptr<EpochCellGlyphTraceCase::MechanismState>
@@ -1073,16 +1021,12 @@ __attribute__((pure)) EpochCellGlyphTraceCase::LunarPhase
 EpochCellGlyphTraceCase::predict_moon_phase_from_state(
     const std::shared_ptr<EpochCellGlyphTraceCase::MechanismState> &s) {
   std::shared_ptr<Z> phase_angle = BinInt::div(
-      BinInt::mul(
-          s->metonic_dial,
-          Z::ctor::Zpos_(Positive::ctor::XO_(
-              Positive::ctor::XO_(Positive::ctor::XO_(Positive::ctor::XI_(
-                  Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XI_(
-                      Positive::ctor::XO_(Positive::ctor::XH_())))))))))),
-      Z::ctor::Zpos_(
-          Positive::ctor::XI_(Positive::ctor::XI_(Positive::ctor::XO_(
-              Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XI_(
-                  Positive::ctor::XI_(Positive::ctor::XH_())))))))));
+      BinInt::mul(s->metonic_dial,
+                  Z::zpos(Positive::xo(Positive::xo(
+                      Positive::xo(Positive::xi(Positive::xo(Positive::xi(
+                          Positive::xi(Positive::xo(Positive::xh())))))))))),
+      Z::zpos(Positive::xi(Positive::xi(Positive::xo(Positive::xi(
+          Positive::xo(Positive::xi(Positive::xi(Positive::xh())))))))));
   return phase_from_angle(std::move(phase_angle));
 }
 
@@ -1090,9 +1034,8 @@ std::shared_ptr<Z> EpochCellGlyphTraceCase::predict_olympiad_year(
     const std::shared_ptr<EpochCellGlyphTraceCase::MechanismState> &s) {
   return BinInt::add(
       BinInt::modulo(s->games_dial,
-                     Z::ctor::Zpos_(Positive::ctor::XO_(
-                         Positive::ctor::XO_(Positive::ctor::XH_())))),
-      Z::ctor::Zpos_(Positive::ctor::XH_()));
+                     Z::zpos(Positive::xo(Positive::xo(Positive::xh())))),
+      Z::zpos(Positive::xh()));
 }
 
 __attribute__((pure)) EpochCellGlyphTraceCase::ZodiacSign
@@ -1100,99 +1043,69 @@ EpochCellGlyphTraceCase::predict_zodiac_sign(
     const std::shared_ptr<EpochCellGlyphTraceCase::MechanismState> &s) {
   std::shared_ptr<Z> deg = BinInt::modulo(
       s->zodiac_position,
-      Z::ctor::Zpos_(Positive::ctor::XO_(
-          Positive::ctor::XO_(Positive::ctor::XO_(Positive::ctor::XI_(
-              Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XI_(
-                  Positive::ctor::XO_(Positive::ctor::XH_()))))))))));
-  if (BinInt::ltb(deg, Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XI_(
-                           Positive::ctor::XI_(Positive::ctor::XI_(
-                               Positive::ctor::XH_()))))))) {
+      Z::zpos(Positive::xo(Positive::xo(Positive::xo(Positive::xi(Positive::xo(
+          Positive::xi(Positive::xi(Positive::xo(Positive::xh()))))))))));
+  if (BinInt::ltb(deg, Z::zpos(Positive::xo(Positive::xi(
+                           Positive::xi(Positive::xi(Positive::xh()))))))) {
     return ZodiacSign::e_ARIES;
   } else {
-    if (BinInt::ltb(deg,
-                    Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XO_(
-                        Positive::ctor::XI_(Positive::ctor::XI_(
-                            Positive::ctor::XI_(Positive::ctor::XH_())))))))) {
+    if (BinInt::ltb(deg, Z::zpos(Positive::xo(Positive::xo(Positive::xi(
+                             Positive::xi(Positive::xi(Positive::xh())))))))) {
       return ZodiacSign::e_TAURUS;
     } else {
       if (BinInt::ltb(
-              deg,
-              Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XI_(
-                  Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XI_(
-                      Positive::ctor::XO_(Positive::ctor::XH_()))))))))) {
+              deg, Z::zpos(Positive::xo(Positive::xi(Positive::xo(Positive::xi(
+                       Positive::xi(Positive::xo(Positive::xh()))))))))) {
         return ZodiacSign::e_GEMINI;
       } else {
         if (BinInt::ltb(
                 deg,
-                Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XO_(
-                    Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XI_(
-                        Positive::ctor::XI_(Positive::ctor::XH_()))))))))) {
+                Z::zpos(Positive::xo(Positive::xo(Positive::xo(Positive::xi(
+                    Positive::xi(Positive::xi(Positive::xh()))))))))) {
           return ZodiacSign::e_CANCER;
         } else {
-          if (BinInt::ltb(deg,
-                          Z::ctor::Zpos_(Positive::ctor::XO_(
-                              Positive::ctor::XI_(Positive::ctor::XI_(
-                                  Positive::ctor::XO_(Positive::ctor::XI_(
-                                      Positive::ctor::XO_(Positive::ctor::XO_(
-                                          Positive::ctor::XH_())))))))))) {
+          if (BinInt::ltb(deg, Z::zpos(Positive::xo(Positive::xi(Positive::xi(
+                                   Positive::xo(Positive::xi(Positive::xo(
+                                       Positive::xo(Positive::xh())))))))))) {
             return ZodiacSign::e_LEO;
           } else {
-            if (BinInt::ltb(deg,
-                            Z::ctor::Zpos_(Positive::ctor::XO_(
-                                Positive::ctor::XO_(Positive::ctor::XI_(
-                                    Positive::ctor::XO_(Positive::ctor::XI_(
-                                        Positive::ctor::XI_(Positive::ctor::XO_(
-                                            Positive::ctor::XH_())))))))))) {
+            if (BinInt::ltb(deg, Z::zpos(Positive::xo(Positive::xo(Positive::xi(
+                                     Positive::xo(Positive::xi(Positive::xi(
+                                         Positive::xo(Positive::xh())))))))))) {
               return ZodiacSign::e_VIRGO;
             } else {
-              if (BinInt::ltb(
-                      deg, Z::ctor::Zpos_(Positive::ctor::XO_(
-                               Positive::ctor::XI_(Positive::ctor::XO_(
-                                   Positive::ctor::XO_(Positive::ctor::XI_(
-                                       Positive::ctor::XO_(Positive::ctor::XI_(
-                                           Positive::ctor::XH_())))))))))) {
+              if (BinInt::ltb(deg,
+                              Z::zpos(Positive::xo(Positive::xi(Positive::xo(
+                                  Positive::xo(Positive::xi(Positive::xo(
+                                      Positive::xi(Positive::xh())))))))))) {
                 return ZodiacSign::e_LIBRA;
               } else {
-                if (BinInt::ltb(
-                        deg,
-                        Z::ctor::Zpos_(Positive::ctor::XO_(
-                            Positive::ctor::XO_(Positive::ctor::XO_(
-                                Positive::ctor::XO_(Positive::ctor::XI_(
-                                    Positive::ctor::XI_(Positive::ctor::XI_(
-                                        Positive::ctor::XH_())))))))))) {
+                if (BinInt::ltb(deg,
+                                Z::zpos(Positive::xo(Positive::xo(Positive::xo(
+                                    Positive::xo(Positive::xi(Positive::xi(
+                                        Positive::xi(Positive::xh())))))))))) {
                   return ZodiacSign::e_SCORPIO;
                 } else {
                   if (BinInt::ltb(
-                          deg,
-                          Z::ctor::Zpos_(Positive::ctor::XO_(
-                              Positive::ctor::XI_(Positive::ctor::XI_(
-                                  Positive::ctor::XI_(Positive::ctor::XO_(
-                                      Positive::ctor::XO_(Positive::ctor::XO_(
-                                          Positive::ctor::XO_(
-                                              Positive::ctor::XH_()))))))))))) {
+                          deg, Z::zpos(Positive::xo(Positive::xi(
+                                   Positive::xi(Positive::xi(Positive::xo(
+                                       Positive::xo(Positive::xo(Positive::xo(
+                                           Positive::xh()))))))))))) {
                     return ZodiacSign::e_SAGITTARIUS;
                   } else {
                     if (BinInt::ltb(
-                            deg,
-                            Z::ctor::Zpos_(Positive::ctor::XO_(
-                                Positive::ctor::XO_(Positive::ctor::XI_(
-                                    Positive::ctor::XI_(Positive::ctor::XO_(
-                                        Positive::ctor::XI_(Positive::ctor::XO_(
-                                            Positive::ctor::XO_(
-                                                Positive::ctor::
-                                                    XH_()))))))))))) {
+                            deg, Z::zpos(Positive::xo(Positive::xo(
+                                     Positive::xi(Positive::xi(Positive::xo(
+                                         Positive::xi(Positive::xo(Positive::xo(
+                                             Positive::xh()))))))))))) {
                       return ZodiacSign::e_CAPRICORN;
                     } else {
                       if (BinInt::ltb(
                               std::move(deg),
-                              Z::ctor::Zpos_(Positive::ctor::XO_(
-                                  Positive::ctor::XI_(Positive::ctor::XO_(
-                                      Positive::ctor::XI_(Positive::ctor::XO_(
-                                          Positive::ctor::XO_(
-                                              Positive::ctor::XI_(
-                                                  Positive::ctor::XO_(
-                                                      Positive::ctor::
-                                                          XH_()))))))))))) {
+                              Z::zpos(Positive::xo(Positive::xi(
+                                  Positive::xo(Positive::xi(Positive::xo(
+                                      Positive::xo(Positive::xi(Positive::xo(
+                                          Positive::xh()))))))))))) {
                         return ZodiacSign::e_AQUARIUS;
                       } else {
                         return ZodiacSign::e_PISCES;
@@ -1372,22 +1285,19 @@ __attribute__((pure)) bool EpochCellGlyphTraceCase::category_matches_glyph(
 
 __attribute__((pure)) EpochCellGlyphTraceCase::DialGlyph
 EpochCellGlyphTraceCase::glyph_at_cell(const std::shared_ptr<Z> &cell) {
-  if (BinInt::eqb(cell, Z::ctor::Z0_())) {
+  if (BinInt::eqb(cell, Z::z0())) {
     return DialGlyph::e_GLYPH_SIGMATOTAL;
   } else {
-    if (BinInt::eqb(cell, Z::ctor::Zpos_(Positive::ctor::XO_(
-                              Positive::ctor::XI_(Positive::ctor::XH_()))))) {
+    if (BinInt::eqb(cell,
+                    Z::zpos(Positive::xo(Positive::xi(Positive::xh()))))) {
       return DialGlyph::e_GLYPH_SIGMA;
     } else {
-      if (BinInt::eqb(cell,
-                      Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XO_(
-                          Positive::ctor::XI_(Positive::ctor::XH_())))))) {
+      if (BinInt::eqb(cell, Z::zpos(Positive::xo(
+                                Positive::xo(Positive::xi(Positive::xh())))))) {
         return DialGlyph::e_GLYPH_ETA;
       } else {
-        if (BinInt::eqb(
-                cell, Z::ctor::Zpos_(Positive::ctor::XI_(
-                          Positive::ctor::XO_(Positive::ctor::XO_(
-                              Positive::ctor::XO_(Positive::ctor::XH_()))))))) {
+        if (BinInt::eqb(cell, Z::zpos(Positive::xi(Positive::xo(Positive::xo(
+                                  Positive::xo(Positive::xh()))))))) {
           return DialGlyph::e_GLYPH_SIGMA;
         } else {
           return DialGlyph::e_GLYPH_EMPTY;
@@ -1507,9 +1417,8 @@ std::shared_ptr<Z> EpochCellGlyphTraceCase::months_from_epoch(
   std::shared_ptr<Z> year_diff = BinInt::sub(epoch_year, eclipse_year);
   std::shared_ptr<Z> month_diff = BinInt::sub(eclipse_month, epoch_month);
   return BinInt::add(
-      BinInt::mul(std::move(year_diff),
-                  Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XO_(
-                      Positive::ctor::XI_(Positive::ctor::XH_()))))),
+      BinInt::mul(std::move(year_diff), Z::zpos(Positive::xo(Positive::xo(
+                                            Positive::xi(Positive::xh()))))),
       std::move(month_diff));
 }
 
@@ -1520,20 +1429,16 @@ std::shared_ptr<Z> EpochCellGlyphTraceCase::saros_cell(
       months_from_epoch(epoch_year, e->he_year, epoch_month, e->he_month);
   return BinInt::modulo(
       std::move(months),
-      Z::ctor::Zpos_(
-          Positive::ctor::XI_(Positive::ctor::XI_(Positive::ctor::XI_(
-              Positive::ctor::XI_(Positive::ctor::XI_(Positive::ctor::XO_(
-                  Positive::ctor::XI_(Positive::ctor::XH_())))))))));
+      Z::zpos(Positive::xi(Positive::xi(Positive::xi(Positive::xi(
+          Positive::xi(Positive::xo(Positive::xi(Positive::xh())))))))));
 }
 
 std::shared_ptr<Z> EpochCellGlyphTraceCase::saros_dial_at_month(
     const std::shared_ptr<Z> &start_cell, const std::shared_ptr<Z> &months) {
   return BinInt::modulo(
       BinInt::add(start_cell, months),
-      Z::ctor::Zpos_(
-          Positive::ctor::XI_(Positive::ctor::XI_(Positive::ctor::XI_(
-              Positive::ctor::XI_(Positive::ctor::XI_(Positive::ctor::XO_(
-                  Positive::ctor::XI_(Positive::ctor::XH_())))))))));
+      Z::zpos(Positive::xi(Positive::xi(Positive::xi(Positive::xi(
+          Positive::xi(Positive::xo(Positive::xi(Positive::xh())))))))));
 }
 
 std::shared_ptr<EpochCellGlyphTraceCase::EpochReading>

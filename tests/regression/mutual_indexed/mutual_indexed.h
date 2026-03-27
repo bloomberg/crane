@@ -40,36 +40,45 @@ struct MutualIndexed {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit EvenTree(ELeaf _v) : d_v_(std::move(_v)) {}
 
     explicit EvenTree(ENode _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<EvenTree> eleaf() {
+      return std::make_shared<EvenTree>(ELeaf{});
+    }
 
-      static std::shared_ptr<EvenTree> ELeaf_() {
-        return std::shared_ptr<EvenTree>(new EvenTree(ELeaf{}));
-      }
+    static std::shared_ptr<EvenTree> enode(unsigned int a0, unsigned int a1,
+                                           const std::shared_ptr<OddTree> &a2) {
+      return std::make_shared<EvenTree>(
+          ENode{std::move(a0), std::move(a1), a2});
+    }
 
-      static std::shared_ptr<EvenTree>
-      ENode_(unsigned int a0, unsigned int a1,
-             const std::shared_ptr<OddTree> &a2) {
-        return std::shared_ptr<EvenTree>(new EvenTree(ENode{a0, a1, a2}));
-      }
+    static std::shared_ptr<EvenTree> enode(unsigned int a0, unsigned int a1,
+                                           std::shared_ptr<OddTree> &&a2) {
+      return std::make_shared<EvenTree>(
+          ENode{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
-      static std::unique_ptr<EvenTree> ELeaf_uptr() {
-        return std::unique_ptr<EvenTree>(new EvenTree(ELeaf{}));
-      }
+    static std::unique_ptr<EvenTree> eleaf_uptr() {
+      return std::make_unique<EvenTree>(ELeaf{});
+    }
 
-      static std::unique_ptr<EvenTree>
-      ENode_uptr(unsigned int a0, unsigned int a1,
-                 const std::shared_ptr<OddTree> &a2) {
-        return std::unique_ptr<EvenTree>(new EvenTree(ENode{a0, a1, a2}));
-      }
-    };
+    static std::unique_ptr<EvenTree>
+    enode_uptr(unsigned int a0, unsigned int a1,
+               const std::shared_ptr<OddTree> &a2) {
+      return std::make_unique<EvenTree>(
+          ENode{std::move(a0), std::move(a1), a2});
+    }
+
+    static std::unique_ptr<EvenTree> enode_uptr(unsigned int a0,
+                                                unsigned int a1,
+                                                std::shared_ptr<OddTree> &&a2) {
+      return std::make_unique<EvenTree>(
+          ENode{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -92,26 +101,32 @@ struct MutualIndexed {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit OddTree(ONode _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<OddTree> onode(unsigned int a0, unsigned int a1,
+                                          const std::shared_ptr<EvenTree> &a2) {
+      return std::make_shared<OddTree>(ONode{std::move(a0), std::move(a1), a2});
+    }
 
-      static std::shared_ptr<OddTree>
-      ONode_(unsigned int a0, unsigned int a1,
-             const std::shared_ptr<EvenTree> &a2) {
-        return std::shared_ptr<OddTree>(new OddTree(ONode{a0, a1, a2}));
-      }
+    static std::shared_ptr<OddTree> onode(unsigned int a0, unsigned int a1,
+                                          std::shared_ptr<EvenTree> &&a2) {
+      return std::make_shared<OddTree>(
+          ONode{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
-      static std::unique_ptr<OddTree>
-      ONode_uptr(unsigned int a0, unsigned int a1,
-                 const std::shared_ptr<EvenTree> &a2) {
-        return std::unique_ptr<OddTree>(new OddTree(ONode{a0, a1, a2}));
-      }
-    };
+    static std::unique_ptr<OddTree>
+    onode_uptr(unsigned int a0, unsigned int a1,
+               const std::shared_ptr<EvenTree> &a2) {
+      return std::make_unique<OddTree>(ONode{std::move(a0), std::move(a1), a2});
+    }
+
+    static std::unique_ptr<OddTree> onode_uptr(unsigned int a0, unsigned int a1,
+                                               std::shared_ptr<EvenTree> &&a2) {
+      return std::make_unique<OddTree>(
+          ONode{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -174,11 +189,11 @@ struct MutualIndexed {
   even_val(const unsigned int _x, const std::shared_ptr<EvenTree> &t);
   __attribute__((pure)) static unsigned int
   odd_val(const unsigned int _x, const std::shared_ptr<OddTree> &t);
-  static inline const std::shared_ptr<EvenTree> leaf = EvenTree::ctor::ELeaf_();
+  static inline const std::shared_ptr<EvenTree> leaf = EvenTree::eleaf();
   static inline const std::shared_ptr<OddTree> tree1 =
-      OddTree::ctor::ONode_(0u, 10u, EvenTree::ctor::ELeaf_());
-  static inline const std::shared_ptr<EvenTree> tree2 = EvenTree::ctor::ENode_(
-      1u, 20u, OddTree::ctor::ONode_(0u, 10u, EvenTree::ctor::ELeaf_()));
+      OddTree::onode(0u, 10u, EvenTree::eleaf());
+  static inline const std::shared_ptr<EvenTree> tree2 =
+      EvenTree::enode(1u, 20u, OddTree::onode(0u, 10u, EvenTree::eleaf()));
   static inline const unsigned int test_leaf_val = even_val(0u, leaf);
   static inline const unsigned int test_tree1_val = odd_val(1u, tree1);
   static inline const unsigned int test_tree2_val = even_val(2u, tree2);

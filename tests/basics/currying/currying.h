@@ -41,24 +41,19 @@ struct Currying {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit pair(Pair0 _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<pair<t_A, t_B>> pair0(t_A a0, t_B a1) {
+      return std::make_shared<pair<t_A, t_B>>(
+          Pair0{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<pair<t_A, t_B>> Pair0_(t_A a0, t_B a1) {
-        return std::shared_ptr<pair<t_A, t_B>>(
-            new pair<t_A, t_B>(Pair0{a0, a1}));
-      }
-
-      static std::unique_ptr<pair<t_A, t_B>> Pair0_uptr(t_A a0, t_B a1) {
-        return std::unique_ptr<pair<t_A, t_B>>(
-            new pair<t_A, t_B>(Pair0{a0, a1}));
-      }
-    };
+    static std::unique_ptr<pair<t_A, t_B>> pair0_uptr(t_A a0, t_B a1) {
+      return std::make_unique<pair<t_A, t_B>>(
+          Pair0{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -88,7 +83,7 @@ struct Currying {
   template <typename T1, typename T2, typename T3,
             MapsTo<T3, std::shared_ptr<pair<T1, T2>>> F0>
   static T3 curry(F0 &&f, const T1 a, const T2 b) {
-    return f(pair<T1, T2>::ctor::Pair0_(a, b));
+    return f(pair<T1, T2>::pair0(a, b));
   }
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>

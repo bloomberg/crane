@@ -294,6 +294,10 @@ val ind_ty_ptr : GlobRef.t -> cpp_type list -> cpp_type
 (** Construct a unique_ptr type wrapping an inductive type. *)
 val ind_ty_uptr : GlobRef.t -> cpp_type list -> cpp_type
 
+(** Rvalue reference type [T&&].  Uses the double-{!Tref} encoding that the
+    pretty-printer already handles: [Tref(Tref(t))] prints as [t&&]. *)
+val rval_ref : cpp_type -> cpp_type
+
 (** {2 Generic AST traversal combinators}
 
     These enable writing AST transformations without manually matching every

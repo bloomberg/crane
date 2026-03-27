@@ -20,8 +20,8 @@ int main() {
   using List = ::List<unsigned int>;
 
   // Test sorting algorithms
-  auto unsorted = List::ctor::Cons_(
-      3u, List::ctor::Cons_(1u, List::ctor::Cons_(4u, List::ctor::Nil_())));
+  auto unsorted = List::cons(
+      3u, List::cons(1u, List::cons(4u, List::nil())));
 
   auto ins_sorted = LoopifySorting::insertion_sort(unsorted);
   ASSERT(ins_sorted != nullptr);
@@ -33,14 +33,14 @@ int main() {
   ASSERT(quick_sorted != nullptr);
 
   // Test is_sorted
-  auto sorted_list = List::ctor::Cons_(
-      1u, List::ctor::Cons_(2u, List::ctor::Cons_(3u, List::ctor::Nil_())));
+  auto sorted_list = List::cons(
+      1u, List::cons(2u, List::cons(3u, List::nil())));
   ASSERT(LoopifySorting::is_sorted(sorted_list));
   ASSERT(!LoopifySorting::is_sorted(unsorted));
 
   // Test remove_duplicates
-  auto dups = List::ctor::Cons_(
-      1u, List::ctor::Cons_(1u, List::ctor::Cons_(2u, List::ctor::Nil_())));
+  auto dups = List::cons(
+      1u, List::cons(1u, List::cons(2u, List::nil())));
   auto uniq = LoopifySorting::remove_duplicates(dups);
   ASSERT(uniq != nullptr);
 

@@ -90,6 +90,7 @@ struct NestedMod {
         // DATA
         variant_t d_v_;
 
+      public:
         // CREATORS
         explicit shape(Circle _v) : d_v_(std::move(_v)) {}
 
@@ -97,37 +98,33 @@ struct NestedMod {
 
         explicit shape(Triangle _v) : d_v_(std::move(_v)) {}
 
-      public:
-        // TYPES
-        struct ctor {
-          ctor() = delete;
+        static std::shared_ptr<shape> circle(unsigned int a0) {
+          return std::make_shared<shape>(Circle{std::move(a0)});
+        }
 
-          static std::shared_ptr<shape> Circle_(unsigned int a0) {
-            return std::shared_ptr<shape>(new shape(Circle{a0}));
-          }
+        static std::shared_ptr<shape> square(unsigned int a0) {
+          return std::make_shared<shape>(Square{std::move(a0)});
+        }
 
-          static std::shared_ptr<shape> Square_(unsigned int a0) {
-            return std::shared_ptr<shape>(new shape(Square{a0}));
-          }
+        static std::shared_ptr<shape> triangle(unsigned int a0, unsigned int a1,
+                                               unsigned int a2) {
+          return std::make_shared<shape>(
+              Triangle{std::move(a0), std::move(a1), std::move(a2)});
+        }
 
-          static std::shared_ptr<shape>
-          Triangle_(unsigned int a0, unsigned int a1, unsigned int a2) {
-            return std::shared_ptr<shape>(new shape(Triangle{a0, a1, a2}));
-          }
+        static std::unique_ptr<shape> circle_uptr(unsigned int a0) {
+          return std::make_unique<shape>(Circle{std::move(a0)});
+        }
 
-          static std::unique_ptr<shape> Circle_uptr(unsigned int a0) {
-            return std::unique_ptr<shape>(new shape(Circle{a0}));
-          }
+        static std::unique_ptr<shape> square_uptr(unsigned int a0) {
+          return std::make_unique<shape>(Square{std::move(a0)});
+        }
 
-          static std::unique_ptr<shape> Square_uptr(unsigned int a0) {
-            return std::unique_ptr<shape>(new shape(Square{a0}));
-          }
-
-          static std::unique_ptr<shape>
-          Triangle_uptr(unsigned int a0, unsigned int a1, unsigned int a2) {
-            return std::unique_ptr<shape>(new shape(Triangle{a0, a1, a2}));
-          }
-        };
+        static std::unique_ptr<shape>
+        triangle_uptr(unsigned int a0, unsigned int a1, unsigned int a2) {
+          return std::make_unique<shape>(
+              Triangle{std::move(a0), std::move(a1), std::move(a2)});
+        }
 
         // MANIPULATORS
         __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -182,7 +179,7 @@ struct NestedMod {
   };
 
   static inline const std::shared_ptr<Outer::Inner::shape> my_circle =
-      Outer::Inner::shape::ctor::Circle_(5u);
+      Outer::Inner::shape::circle(5u);
   static inline const Outer::Color my_color = Outer::Color::e_RED;
   static inline const unsigned int test_area = Outer::Inner::area(my_circle);
   static inline const unsigned int test_combined =

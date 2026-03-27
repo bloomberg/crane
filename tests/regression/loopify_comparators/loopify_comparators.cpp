@@ -138,9 +138,9 @@ LoopifyComparators::merge_by_fuel(const unsigned int fuel,
       {
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::ctor::Nil_();
+              List<unsigned int>::nil();
         } else {
-          _head = List<unsigned int>::ctor::Nil_();
+          _head = List<unsigned int>::nil();
         }
         _continue = false;
       }
@@ -172,8 +172,8 @@ LoopifyComparators::merge_by_fuel(const unsigned int fuel,
                         },
                         [&](const typename List<unsigned int>::Cons _args0) {
                           if (_args.d_a0 <= _args0.d_a0) {
-                            auto _cell = List<unsigned int>::ctor::Cons_(
-                                _args.d_a0, nullptr);
+                            auto _cell =
+                                List<unsigned int>::cons(_args.d_a0, nullptr);
                             if (_last) {
                               std::get<typename List<unsigned int>::Cons>(
                                   _last->v_mut())
@@ -191,8 +191,8 @@ LoopifyComparators::merge_by_fuel(const unsigned int fuel,
                             _loop_l1 = std::move(_next_l1);
                             _loop_fuel = std::move(_next_fuel);
                           } else {
-                            auto _cell = List<unsigned int>::ctor::Cons_(
-                                _args0.d_a0, nullptr);
+                            auto _cell =
+                                List<unsigned int>::cons(_args0.d_a0, nullptr);
                             if (_last) {
                               std::get<typename List<unsigned int>::Cons>(
                                   _last->v_mut())
@@ -238,11 +238,11 @@ LoopifyComparators::insert_sorted(const unsigned int x,
             [&](const typename List<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::ctor::Cons_(
-                    std::move(_loop_x), List<unsigned int>::ctor::Nil_());
+                    .d_a1 = List<unsigned int>::cons(std::move(_loop_x),
+                                                     List<unsigned int>::nil());
               } else {
-                _head = List<unsigned int>::ctor::Cons_(
-                    std::move(_loop_x), List<unsigned int>::ctor::Nil_());
+                _head = List<unsigned int>::cons(std::move(_loop_x),
+                                                 List<unsigned int>::nil());
               }
               _continue = false;
             },
@@ -250,16 +250,15 @@ LoopifyComparators::insert_sorted(const unsigned int x,
               if (_loop_x <= _args.d_a0) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                      .d_a1 = List<unsigned int>::ctor::Cons_(
-                      std::move(_loop_x), std::move(_loop_l));
+                      .d_a1 = List<unsigned int>::cons(std::move(_loop_x),
+                                                       std::move(_loop_l));
                 } else {
-                  _head = List<unsigned int>::ctor::Cons_(std::move(_loop_x),
-                                                          std::move(_loop_l));
+                  _head = List<unsigned int>::cons(std::move(_loop_x),
+                                                   std::move(_loop_l));
                 }
                 _continue = false;
               } else {
-                auto _cell =
-                    List<unsigned int>::ctor::Cons_(_args.d_a0, nullptr);
+                auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = _cell;
@@ -301,15 +300,14 @@ std::shared_ptr<List<unsigned int>> LoopifyComparators::insertion_sort(
             [&](_Enter _f) {
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
-                  Overloaded{[&](const typename List<unsigned int>::Nil _args)
-                                 -> void {
-                               _result = List<unsigned int>::ctor::Nil_();
-                             },
-                             [&](const typename List<unsigned int>::Cons _args)
-                                 -> void {
-                               _stack.push_back(_Call1{_args.d_a0});
-                               _stack.push_back(_Enter{_args.d_a1});
-                             }},
+                  Overloaded{
+                      [&](const typename List<unsigned int>::Nil _args)
+                          -> void { _result = List<unsigned int>::nil(); },
+                      [&](const typename List<unsigned int>::Cons _args)
+                          -> void {
+                        _stack.push_back(_Call1{_args.d_a0});
+                        _stack.push_back(_Enter{_args.d_a1});
+                      }},
                   l->v());
             },
             [&](_Call1 _f) { _result = insert_sorted(_f._s0, _result); }},
@@ -348,8 +346,8 @@ __attribute__((pure)) bool LoopifyComparators::is_sorted_fuel(
                         [&](const typename List<unsigned int>::Cons _args0) {
                           if (_args.d_a0 <= _args0.d_a0) {
                             std::shared_ptr<List<unsigned int>> _next_l =
-                                List<unsigned int>::ctor::Cons_(_args0.d_a0,
-                                                                _args0.d_a1);
+                                List<unsigned int>::cons(_args0.d_a0,
+                                                         _args0.d_a1);
                             unsigned int _next_fuel = fuel_;
                             _loop_l = std::move(_next_l);
                             _loop_fuel = std::move(_next_fuel);

@@ -57,36 +57,27 @@ struct EmptyMatch {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit either(Left _v) : d_v_(std::move(_v)) {}
 
     explicit either(Right _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<either<t_A, t_B>> left(t_A a0) {
+      return std::make_shared<either<t_A, t_B>>(Left{std::move(a0)});
+    }
 
-      static std::shared_ptr<either<t_A, t_B>> Left_(t_A a0) {
-        return std::shared_ptr<either<t_A, t_B>>(
-            new either<t_A, t_B>(Left{a0}));
-      }
+    static std::shared_ptr<either<t_A, t_B>> right(t_B a0) {
+      return std::make_shared<either<t_A, t_B>>(Right{std::move(a0)});
+    }
 
-      static std::shared_ptr<either<t_A, t_B>> Right_(t_B a0) {
-        return std::shared_ptr<either<t_A, t_B>>(
-            new either<t_A, t_B>(Right{a0}));
-      }
+    static std::unique_ptr<either<t_A, t_B>> left_uptr(t_A a0) {
+      return std::make_unique<either<t_A, t_B>>(Left{std::move(a0)});
+    }
 
-      static std::unique_ptr<either<t_A, t_B>> Left_uptr(t_A a0) {
-        return std::unique_ptr<either<t_A, t_B>>(
-            new either<t_A, t_B>(Left{a0}));
-      }
-
-      static std::unique_ptr<either<t_A, t_B>> Right_uptr(t_B a0) {
-        return std::unique_ptr<either<t_A, t_B>>(
-            new either<t_A, t_B>(Right{a0}));
-      }
-    };
+    static std::unique_ptr<either<t_A, t_B>> right_uptr(t_B a0) {
+      return std::make_unique<either<t_A, t_B>>(Right{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -137,8 +128,7 @@ struct EmptyMatch {
 
   static inline const std::shared_ptr<
       either<unsigned int, std::shared_ptr<empty>>>
-      test_either =
-          either<unsigned int, std::shared_ptr<empty>>::ctor::Left_(5u);
+      test_either = either<unsigned int, std::shared_ptr<empty>>::left(5u);
   static inline const unsigned int test_handle =
       handle_left<unsigned int>(test_either);
 

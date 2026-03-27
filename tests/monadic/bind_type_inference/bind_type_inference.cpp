@@ -43,7 +43,7 @@ __attribute__((pure)) int64_t BindTypeInference::test4() {
 }
 
 std::shared_ptr<List<int64_t>> BindTypeInference::intToList(const int64_t n) {
-  return List<int64_t>::ctor::Cons_(n, List<int64_t>::ctor::Nil_());
+  return List<int64_t>::cons(n, List<int64_t>::nil());
 }
 
 __attribute__((pure)) std::shared_ptr<List<int64_t>>

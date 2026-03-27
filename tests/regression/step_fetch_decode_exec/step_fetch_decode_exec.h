@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -110,32 +115,27 @@ struct StepFetchDecodeExec {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit instruction(NOP _v) : d_v_(std::move(_v)) {}
 
     explicit instruction(ADD_ACC _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<instruction> nop() {
+      return std::make_shared<instruction>(NOP{});
+    }
 
-      static std::shared_ptr<instruction> NOP_() {
-        return std::shared_ptr<instruction>(new instruction(NOP{}));
-      }
+    static std::shared_ptr<instruction> add_acc(unsigned int a0) {
+      return std::make_shared<instruction>(ADD_ACC{std::move(a0)});
+    }
 
-      static std::shared_ptr<instruction> ADD_ACC_(unsigned int a0) {
-        return std::shared_ptr<instruction>(new instruction(ADD_ACC{a0}));
-      }
+    static std::unique_ptr<instruction> nop_uptr() {
+      return std::make_unique<instruction>(NOP{});
+    }
 
-      static std::unique_ptr<instruction> NOP_uptr() {
-        return std::unique_ptr<instruction>(new instruction(NOP{}));
-      }
-
-      static std::unique_ptr<instruction> ADD_ACC_uptr(unsigned int a0) {
-        return std::unique_ptr<instruction>(new instruction(ADD_ACC{a0}));
-      }
-    };
+    static std::unique_ptr<instruction> add_acc_uptr(unsigned int a0) {
+      return std::make_unique<instruction>(ADD_ACC{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -184,10 +184,10 @@ struct StepFetchDecodeExec {
   static inline const unsigned int t = [](void) {
     std::shared_ptr<state> s1 = step(std::make_shared<state>(
         state{3u, 0u,
-              List<unsigned int>::ctor::Cons_(
-                  1u, List<unsigned int>::ctor::Cons_(
-                          6u, List<unsigned int>::ctor::Cons_(
-                                  0u, List<unsigned int>::ctor::Nil_())))}));
+              List<unsigned int>::cons(
+                  1u, List<unsigned int>::cons(
+                          6u, List<unsigned int>::cons(
+                                  0u, List<unsigned int>::nil())))}));
     return (s1->acc + s1->pc);
   }();
 };

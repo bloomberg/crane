@@ -52,36 +52,27 @@ struct AxiomTypes {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit AxiomInductive(AxConstr1 _v) : d_v_(std::move(_v)) {}
 
     explicit AxiomInductive(AxConstr2 _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<AxiomInductive> axconstr1(unsigned int a0) {
+      return std::make_shared<AxiomInductive>(AxConstr1{std::move(a0)});
+    }
 
-      static std::shared_ptr<AxiomInductive> AxConstr1_(unsigned int a0) {
-        return std::shared_ptr<AxiomInductive>(
-            new AxiomInductive(AxConstr1{a0}));
-      }
+    static std::shared_ptr<AxiomInductive> axconstr2(MysteryType a0) {
+      return std::make_shared<AxiomInductive>(AxConstr2{std::move(a0)});
+    }
 
-      static std::shared_ptr<AxiomInductive> AxConstr2_(MysteryType a0) {
-        return std::shared_ptr<AxiomInductive>(
-            new AxiomInductive(AxConstr2{a0}));
-      }
+    static std::unique_ptr<AxiomInductive> axconstr1_uptr(unsigned int a0) {
+      return std::make_unique<AxiomInductive>(AxConstr1{std::move(a0)});
+    }
 
-      static std::unique_ptr<AxiomInductive> AxConstr1_uptr(unsigned int a0) {
-        return std::unique_ptr<AxiomInductive>(
-            new AxiomInductive(AxConstr1{a0}));
-      }
-
-      static std::unique_ptr<AxiomInductive> AxConstr2_uptr(MysteryType a0) {
-        return std::unique_ptr<AxiomInductive>(
-            new AxiomInductive(AxConstr2{a0}));
-      }
-    };
+    static std::unique_ptr<AxiomInductive> axconstr2_uptr(MysteryType a0) {
+      return std::make_unique<AxiomInductive>(AxConstr2{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -137,34 +128,39 @@ struct AxiomTypes {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit list(Nil _v) : d_v_(std::move(_v)) {}
 
     explicit list(Cons _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<list<t_A>> nil() {
+      return std::make_shared<list<t_A>>(Nil{});
+    }
 
-      static std::shared_ptr<list<t_A>> Nil_() {
-        return std::shared_ptr<list<t_A>>(new list<t_A>(Nil{}));
-      }
+    static std::shared_ptr<list<t_A>>
+    cons(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
+      return std::make_shared<list<t_A>>(Cons{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<list<t_A>>
-      Cons_(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
-        return std::shared_ptr<list<t_A>>(new list<t_A>(Cons{a0, a1}));
-      }
+    static std::shared_ptr<list<t_A>> cons(t_A a0,
+                                           std::shared_ptr<list<t_A>> &&a1) {
+      return std::make_shared<list<t_A>>(Cons{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<list<t_A>> Nil_uptr() {
-        return std::unique_ptr<list<t_A>>(new list<t_A>(Nil{}));
-      }
+    static std::unique_ptr<list<t_A>> nil_uptr() {
+      return std::make_unique<list<t_A>>(Nil{});
+    }
 
-      static std::unique_ptr<list<t_A>>
-      Cons_uptr(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
-        return std::unique_ptr<list<t_A>>(new list<t_A>(Cons{a0, a1}));
-      }
-    };
+    static std::unique_ptr<list<t_A>>
+    cons_uptr(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
+      return std::make_unique<list<t_A>>(Cons{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<list<t_A>>
+    cons_uptr(t_A a0, std::shared_ptr<list<t_A>> &&a1) {
+      return std::make_unique<list<t_A>>(Cons{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

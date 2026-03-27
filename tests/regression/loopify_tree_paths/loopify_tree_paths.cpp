@@ -28,18 +28,16 @@ LoopifyTreePaths::map_cons(
                 std::get<
                     typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
                     _last->v_mut())
-                    .d_a1 =
-                    List<std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
+                    .d_a1 = List<std::shared_ptr<List<unsigned int>>>::nil();
               } else {
-                _head = List<std::shared_ptr<List<unsigned int>>>::ctor::Nil_();
+                _head = List<std::shared_ptr<List<unsigned int>>>::nil();
               }
               _continue = false;
             },
             [&](const typename List<std::shared_ptr<List<unsigned int>>>::Cons
                     _args) {
-              auto _cell =
-                  List<std::shared_ptr<List<unsigned int>>>::ctor::Cons_(
-                      List<unsigned int>::ctor::Cons_(x, _args.d_a0), nullptr);
+              auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
+                  List<unsigned int>::cons(x, _args.d_a0), nullptr);
               if (_last) {
                 std::get<
                     typename List<std::shared_ptr<List<unsigned int>>>::Cons>(

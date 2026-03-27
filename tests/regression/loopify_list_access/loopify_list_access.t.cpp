@@ -20,9 +20,9 @@ using UIntList = List<unsigned int>;
 using PairList = List<std::pair<unsigned int, unsigned int>>;
 
 int main() {
-  auto nil = UIntList::ctor::Nil_();
-  auto l5 = UIntList::ctor::Cons_(10u, UIntList::ctor::Cons_(20u, UIntList::ctor::Cons_(
-    30u, UIntList::ctor::Cons_(40u, UIntList::ctor::Cons_(50u, nil)))));
+  auto nil = UIntList::nil();
+  auto l5 = UIntList::cons(10u, UIntList::cons(20u, UIntList::cons(
+    30u, UIntList::cons(40u, UIntList::cons(50u, nil)))));
 
   // nth
   ASSERT(LoopifyListAccess::nth(0u, l5) == 10u);
@@ -44,17 +44,17 @@ int main() {
   ASSERT(LoopifyListAccess::member(99u, l5) == false);
 
   // lookup
-  auto pairs_nil = PairList::ctor::Nil_();
-  auto pairs = PairList::ctor::Cons_(std::make_pair(1u, 10u),
-    PairList::ctor::Cons_(std::make_pair(2u, 20u),
-    PairList::ctor::Cons_(std::make_pair(3u, 30u), pairs_nil)));
+  auto pairs_nil = PairList::nil();
+  auto pairs = PairList::cons(std::make_pair(1u, 10u),
+    PairList::cons(std::make_pair(2u, 20u),
+    PairList::cons(std::make_pair(3u, 30u), pairs_nil)));
   ASSERT(LoopifyListAccess::lookup(2u, pairs) == 20u);
   ASSERT(LoopifyListAccess::lookup(5u, pairs) == 0u);  // not found
 
   // lookup_all
-  auto pairs2 = PairList::ctor::Cons_(std::make_pair(1u, 10u),
-    PairList::ctor::Cons_(std::make_pair(2u, 20u),
-    PairList::ctor::Cons_(std::make_pair(1u, 11u), pairs_nil)));
+  auto pairs2 = PairList::cons(std::make_pair(1u, 10u),
+    PairList::cons(std::make_pair(2u, 20u),
+    PairList::cons(std::make_pair(1u, 11u), pairs_nil)));
   auto all_vals = LoopifyListAccess::lookup_all(1u, pairs2);
   ASSERT(all_vals != nullptr);
 
@@ -63,8 +63,8 @@ int main() {
   ASSERT(LoopifyListAccess::find(is_big, l5) == 40u);
 
   // count
-  auto l_dups = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(
-    1u, UIntList::ctor::Cons_(3u, UIntList::ctor::Cons_(1u, nil)))));
+  auto l_dups = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(
+    1u, UIntList::cons(3u, UIntList::cons(1u, nil)))));
   ASSERT(LoopifyListAccess::count(1u, l_dups) == 3u);
   ASSERT(LoopifyListAccess::count(2u, l_dups) == 1u);
 

@@ -276,6 +276,10 @@ let ind_ty_ptr id vars = Tshared_ptr (Tglob (id, vars, []))
 (** Construct a unique_ptr type wrapping an inductive type. *)
 let ind_ty_uptr id vars = Tunique_ptr (Tglob (id, vars, []))
 
+(** Rvalue reference type [T&&].  Uses the double-{!Tref} encoding that the
+    pretty-printer already handles: [Tref(Tref(t))] prints as [t&&]. *)
+let rval_ref ty = Tref (Tref ty)
+
 (** {2 Generic AST traversal combinators}
 
     These enable writing AST transformations without manually matching every

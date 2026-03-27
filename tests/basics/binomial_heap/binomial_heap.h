@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -91,36 +96,42 @@ struct BinomialHeap {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
     explicit tree(Leaf _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<tree> node(key a0, const std::shared_ptr<tree> &a1,
+                                      const std::shared_ptr<tree> &a2) {
+      return std::make_shared<tree>(Node{std::move(a0), a1, a2});
+    }
 
-      static std::shared_ptr<tree> Node_(key a0,
-                                         const std::shared_ptr<tree> &a1,
-                                         const std::shared_ptr<tree> &a2) {
-        return std::shared_ptr<tree>(new tree(Node{a0, a1, a2}));
-      }
+    static std::shared_ptr<tree> node(key a0, std::shared_ptr<tree> &&a1,
+                                      std::shared_ptr<tree> &&a2) {
+      return std::make_shared<tree>(
+          Node{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
-      static std::shared_ptr<tree> Leaf_() {
-        return std::shared_ptr<tree>(new tree(Leaf{}));
-      }
+    static std::shared_ptr<tree> leaf() {
+      return std::make_shared<tree>(Leaf{});
+    }
 
-      static std::unique_ptr<tree> Node_uptr(key a0,
-                                             const std::shared_ptr<tree> &a1,
-                                             const std::shared_ptr<tree> &a2) {
-        return std::unique_ptr<tree>(new tree(Node{a0, a1, a2}));
-      }
+    static std::unique_ptr<tree> node_uptr(key a0,
+                                           const std::shared_ptr<tree> &a1,
+                                           const std::shared_ptr<tree> &a2) {
+      return std::make_unique<tree>(Node{std::move(a0), a1, a2});
+    }
 
-      static std::unique_ptr<tree> Leaf_uptr() {
-        return std::unique_ptr<tree>(new tree(Leaf{}));
-      }
-    };
+    static std::unique_ptr<tree> node_uptr(key a0, std::shared_ptr<tree> &&a1,
+                                           std::shared_ptr<tree> &&a2) {
+      return std::make_unique<tree>(
+          Node{std::move(a0), std::move(a1), std::move(a2)});
+    }
+
+    static std::unique_ptr<tree> leaf_uptr() {
+      return std::make_unique<tree>(Leaf{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -158,8 +169,7 @@ struct BinomialHeap {
   }
 
   using priqueue = std::shared_ptr<List<std::shared_ptr<tree>>>;
-  static inline const priqueue empty =
-      List<std::shared_ptr<tree>>::ctor::Nil_();
+  static inline const priqueue empty = List<std::shared_ptr<tree>>::nil();
   static std::shared_ptr<tree> smash(const std::shared_ptr<tree> &t,
                                      const std::shared_ptr<tree> &u);
   static std::shared_ptr<List<std::shared_ptr<tree>>>
@@ -185,16 +195,15 @@ struct BinomialHeap {
                          std::shared_ptr<List<std::shared_ptr<tree>>>)>
                          f = [=](std::shared_ptr<List<std::shared_ptr<tree>>>
                                      q) mutable {
-                           return List<std::shared_ptr<tree>>::ctor::Cons_(
-                               tree::ctor::Node_(_args.d_a0, _args.d_a1,
-                                                 tree::ctor::Leaf_()),
+                           return List<std::shared_ptr<tree>>::cons(
+                               tree::node(_args.d_a0, _args.d_a1, tree::leaf()),
                                cont(q));
                          };
                      return unzip(_args.d_a2, f);
                    },
                    [&](const typename tree::Leaf _args)
                        -> std::shared_ptr<List<std::shared_ptr<tree>>> {
-                     return cont(List<std::shared_ptr<tree>>::ctor::Nil_());
+                     return cont(List<std::shared_ptr<tree>>::nil());
                    }},
         t->v());
   }
@@ -222,16 +231,13 @@ struct BinomialHeap {
   __attribute__((pure)) static key
   help(const std::shared_ptr<List<std::shared_ptr<tree>>> &c);
   static inline const key example1 = help(merge(
-      insert(5u,
-             insert(3u, insert(7u, List<std::shared_ptr<tree>>::ctor::Nil_()))),
-      insert(
-          3u,
-          insert(6u, insert(9u, List<std::shared_ptr<tree>>::ctor::Nil_())))));
+      insert(5u, insert(3u, insert(7u, List<std::shared_ptr<tree>>::nil()))),
+      insert(3u, insert(6u, insert(9u, List<std::shared_ptr<tree>>::nil())))));
   static inline const key example2 =
-      help(merge(insert_list(make_list(10u, List<unsigned int>::ctor::Nil_()),
-                             List<std::shared_ptr<tree>>::ctor::Nil_()),
-                 insert_list(make_list(11u, List<unsigned int>::ctor::Nil_()),
-                             List<std::shared_ptr<tree>>::ctor::Nil_())));
+      help(merge(insert_list(make_list(10u, List<unsigned int>::nil()),
+                             List<std::shared_ptr<tree>>::nil()),
+                 insert_list(make_list(11u, List<unsigned int>::nil()),
+                             List<std::shared_ptr<tree>>::nil())));
 };
 
 #endif // INCLUDED_BINOMIAL_HEAP

@@ -15,7 +15,7 @@
 std::shared_ptr<RamStateOps::state>
 RamStateOps::reset_state(std::shared_ptr<RamStateOps::state> s) {
   return std::make_shared<RamStateOps::state>(
-      state{s->state_regs, 0u, false, 0u, List<unsigned int>::ctor::Nil_(),
+      state{s->state_regs, 0u, false, 0u, List<unsigned int>::nil(),
             s->state_ram, default_sel, s->state_rom});
 }
 

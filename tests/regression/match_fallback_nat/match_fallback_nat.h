@@ -35,32 +35,27 @@ struct MatchFallbackNat {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit maybe_nat(SomeNat _v) : d_v_(std::move(_v)) {}
 
     explicit maybe_nat(NoneNat _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<maybe_nat> somenat(unsigned int a0) {
+      return std::make_shared<maybe_nat>(SomeNat{std::move(a0)});
+    }
 
-      static std::shared_ptr<maybe_nat> SomeNat_(unsigned int a0) {
-        return std::shared_ptr<maybe_nat>(new maybe_nat(SomeNat{a0}));
-      }
+    static std::shared_ptr<maybe_nat> nonenat() {
+      return std::make_shared<maybe_nat>(NoneNat{});
+    }
 
-      static std::shared_ptr<maybe_nat> NoneNat_() {
-        return std::shared_ptr<maybe_nat>(new maybe_nat(NoneNat{}));
-      }
+    static std::unique_ptr<maybe_nat> somenat_uptr(unsigned int a0) {
+      return std::make_unique<maybe_nat>(SomeNat{std::move(a0)});
+    }
 
-      static std::unique_ptr<maybe_nat> SomeNat_uptr(unsigned int a0) {
-        return std::unique_ptr<maybe_nat>(new maybe_nat(SomeNat{a0}));
-      }
-
-      static std::unique_ptr<maybe_nat> NoneNat_uptr() {
-        return std::unique_ptr<maybe_nat>(new maybe_nat(NoneNat{}));
-      }
-    };
+    static std::unique_ptr<maybe_nat> nonenat_uptr() {
+      return std::make_unique<maybe_nat>(NoneNat{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -97,8 +92,7 @@ struct MatchFallbackNat {
   fallback(const std::shared_ptr<maybe_nat> &x);
 
   static inline const unsigned int t =
-      (fallback(maybe_nat::ctor::NoneNat_()) +
-       fallback(maybe_nat::ctor::SomeNat_(7u)));
+      (fallback(maybe_nat::nonenat()) + fallback(maybe_nat::somenat(7u)));
 };
 
 #endif // INCLUDED_MATCH_FALLBACK_NAT

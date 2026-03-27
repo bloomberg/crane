@@ -51,42 +51,40 @@ __attribute__((pure)) unsigned int Pos::pred_N(const unsigned int x) {
 std::shared_ptr<Pos::mask>
 Pos::succ_double_mask(const std::shared_ptr<Pos::mask> &x) {
   return std::visit(
-      Overloaded{
-          [](const typename Pos::mask::IsNul _args)
-              -> std::shared_ptr<Pos::mask> { return mask::ctor::IsPos_(1u); },
-          [](const typename Pos::mask::IsPos _args)
-              -> std::shared_ptr<Pos::mask> {
-            return mask::ctor::IsPos_((2u * _args.d_a0 + 1u));
-          },
-          [](const typename Pos::mask::IsNeg _args)
-              -> std::shared_ptr<Pos::mask> { return mask::ctor::IsNeg_(); }},
+      Overloaded{[](const typename Pos::mask::IsNul _args)
+                     -> std::shared_ptr<Pos::mask> { return mask::ispos(1u); },
+                 [](const typename Pos::mask::IsPos _args)
+                     -> std::shared_ptr<Pos::mask> {
+                   return mask::ispos((2u * _args.d_a0 + 1u));
+                 },
+                 [](const typename Pos::mask::IsNeg _args)
+                     -> std::shared_ptr<Pos::mask> { return mask::isneg(); }},
       x->v());
 }
 
 std::shared_ptr<Pos::mask>
 Pos::double_mask(const std::shared_ptr<Pos::mask> &x) {
   return std::visit(
-      Overloaded{
-          [](const typename Pos::mask::IsNul _args)
-              -> std::shared_ptr<Pos::mask> { return mask::ctor::IsNul_(); },
-          [](const typename Pos::mask::IsPos _args)
-              -> std::shared_ptr<Pos::mask> {
-            return mask::ctor::IsPos_((2u * _args.d_a0));
-          },
-          [](const typename Pos::mask::IsNeg _args)
-              -> std::shared_ptr<Pos::mask> { return mask::ctor::IsNeg_(); }},
+      Overloaded{[](const typename Pos::mask::IsNul _args)
+                     -> std::shared_ptr<Pos::mask> { return mask::isnul(); },
+                 [](const typename Pos::mask::IsPos _args)
+                     -> std::shared_ptr<Pos::mask> {
+                   return mask::ispos((2u * _args.d_a0));
+                 },
+                 [](const typename Pos::mask::IsNeg _args)
+                     -> std::shared_ptr<Pos::mask> { return mask::isneg(); }},
       x->v());
 }
 
 std::shared_ptr<Pos::mask> Pos::double_pred_mask(const unsigned int x) {
   if (x == 1u) {
-    return mask::ctor::IsNul_();
+    return mask::isnul();
   } else if (x % 2u != 0u) {
     unsigned int p = (x - 1u) / 2u;
-    return mask::ctor::IsPos_((2u * (2u * p)));
+    return mask::ispos((2u * (2u * p)));
   } else {
     unsigned int p = x / 2u;
-    return mask::ctor::IsPos_((2u * pred_double(p)));
+    return mask::ispos((2u * pred_double(p)));
   }
 }
 
@@ -94,18 +92,18 @@ std::shared_ptr<Pos::mask> Pos::sub_mask(const unsigned int x,
                                          const unsigned int y) {
   if (x == 1u) {
     if (y == 1u) {
-      return mask::ctor::IsNul_();
+      return mask::isnul();
     } else if (y % 2u != 0u) {
       unsigned int _x = (y - 1u) / 2u;
-      return mask::ctor::IsNeg_();
+      return mask::isneg();
     } else {
       unsigned int _x = y / 2u;
-      return mask::ctor::IsNeg_();
+      return mask::isneg();
     }
   } else if (x % 2u != 0u) {
     unsigned int p = (x - 1u) / 2u;
     if (y == 1u) {
-      return mask::ctor::IsPos_((2u * p));
+      return mask::ispos((2u * p));
     } else if (y % 2u != 0u) {
       unsigned int q = (y - 1u) / 2u;
       return double_mask(sub_mask(p, q));
@@ -116,7 +114,7 @@ std::shared_ptr<Pos::mask> Pos::sub_mask(const unsigned int x,
   } else {
     unsigned int p = x / 2u;
     if (y == 1u) {
-      return mask::ctor::IsPos_(pred_double(p));
+      return mask::ispos(pred_double(p));
     } else if (y % 2u != 0u) {
       unsigned int q = (y - 1u) / 2u;
       return succ_double_mask(sub_mask_carry(p, q));
@@ -130,11 +128,11 @@ std::shared_ptr<Pos::mask> Pos::sub_mask(const unsigned int x,
 std::shared_ptr<Pos::mask> Pos::sub_mask_carry(const unsigned int x,
                                                const unsigned int y) {
   if (x == 1u) {
-    return mask::ctor::IsNeg_();
+    return mask::isneg();
   } else if (x % 2u != 0u) {
     unsigned int p = (x - 1u) / 2u;
     if (y == 1u) {
-      return mask::ctor::IsPos_(pred_double(p));
+      return mask::ispos(pred_double(p));
     } else if (y % 2u != 0u) {
       unsigned int q = (y - 1u) / 2u;
       return succ_double_mask(sub_mask_carry(p, q));

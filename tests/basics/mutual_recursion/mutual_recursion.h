@@ -42,34 +42,38 @@ struct MutualRecursion {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit tree(Leaf _v) : d_v_(std::move(_v)) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<tree<t_A>> leaf(t_A a0) {
+      return std::make_shared<tree<t_A>>(Leaf{std::move(a0)});
+    }
 
-      static std::shared_ptr<tree<t_A>> Leaf_(t_A a0) {
-        return std::shared_ptr<tree<t_A>>(new tree<t_A>(Leaf{a0}));
-      }
+    static std::shared_ptr<tree<t_A>>
+    node(const std::shared_ptr<forest<t_A>> &a0) {
+      return std::make_shared<tree<t_A>>(Node{a0});
+    }
 
-      static std::shared_ptr<tree<t_A>>
-      Node_(const std::shared_ptr<forest<t_A>> &a0) {
-        return std::shared_ptr<tree<t_A>>(new tree<t_A>(Node{a0}));
-      }
+    static std::shared_ptr<tree<t_A>> node(std::shared_ptr<forest<t_A>> &&a0) {
+      return std::make_shared<tree<t_A>>(Node{std::move(a0)});
+    }
 
-      static std::unique_ptr<tree<t_A>> Leaf_uptr(t_A a0) {
-        return std::unique_ptr<tree<t_A>>(new tree<t_A>(Leaf{a0}));
-      }
+    static std::unique_ptr<tree<t_A>> leaf_uptr(t_A a0) {
+      return std::make_unique<tree<t_A>>(Leaf{std::move(a0)});
+    }
 
-      static std::unique_ptr<tree<t_A>>
-      Node_uptr(const std::shared_ptr<forest<t_A>> &a0) {
-        return std::unique_ptr<tree<t_A>>(new tree<t_A>(Node{a0}));
-      }
-    };
+    static std::unique_ptr<tree<t_A>>
+    node_uptr(const std::shared_ptr<forest<t_A>> &a0) {
+      return std::make_unique<tree<t_A>>(Node{a0});
+    }
+
+    static std::unique_ptr<tree<t_A>>
+    node_uptr(std::shared_ptr<forest<t_A>> &&a0) {
+      return std::make_unique<tree<t_A>>(Node{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -93,36 +97,42 @@ struct MutualRecursion {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit forest(Empty _v) : d_v_(std::move(_v)) {}
 
     explicit forest(Trees _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<forest<t_A>> empty() {
+      return std::make_shared<forest<t_A>>(Empty{});
+    }
 
-      static std::shared_ptr<forest<t_A>> Empty_() {
-        return std::shared_ptr<forest<t_A>>(new forest<t_A>(Empty{}));
-      }
+    static std::shared_ptr<forest<t_A>>
+    trees(const std::shared_ptr<tree<t_A>> &a0,
+          const std::shared_ptr<forest<t_A>> &a1) {
+      return std::make_shared<forest<t_A>>(Trees{a0, a1});
+    }
 
-      static std::shared_ptr<forest<t_A>>
-      Trees_(const std::shared_ptr<tree<t_A>> &a0,
-             const std::shared_ptr<forest<t_A>> &a1) {
-        return std::shared_ptr<forest<t_A>>(new forest<t_A>(Trees{a0, a1}));
-      }
+    static std::shared_ptr<forest<t_A>>
+    trees(std::shared_ptr<tree<t_A>> &&a0, std::shared_ptr<forest<t_A>> &&a1) {
+      return std::make_shared<forest<t_A>>(Trees{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<forest<t_A>> Empty_uptr() {
-        return std::unique_ptr<forest<t_A>>(new forest<t_A>(Empty{}));
-      }
+    static std::unique_ptr<forest<t_A>> empty_uptr() {
+      return std::make_unique<forest<t_A>>(Empty{});
+    }
 
-      static std::unique_ptr<forest<t_A>>
-      Trees_uptr(const std::shared_ptr<tree<t_A>> &a0,
-                 const std::shared_ptr<forest<t_A>> &a1) {
-        return std::unique_ptr<forest<t_A>>(new forest<t_A>(Trees{a0, a1}));
-      }
-    };
+    static std::unique_ptr<forest<t_A>>
+    trees_uptr(const std::shared_ptr<tree<t_A>> &a0,
+               const std::shared_ptr<forest<t_A>> &a1) {
+      return std::make_unique<forest<t_A>>(Trees{a0, a1});
+    }
+
+    static std::unique_ptr<forest<t_A>>
+    trees_uptr(std::shared_ptr<tree<t_A>> &&a0,
+               std::shared_ptr<forest<t_A>> &&a1) {
+      return std::make_unique<forest<t_A>>(Trees{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -223,19 +233,16 @@ struct MutualRecursion {
   static inline const bool test_odd_3 = is_odd(3u);
   static inline const bool test_odd_4 = is_odd(4u);
   static inline const std::shared_ptr<tree<unsigned int>> simple_tree =
-      tree<unsigned int>::ctor::Node_(forest<unsigned int>::ctor::Trees_(
-          tree<unsigned int>::ctor::Leaf_(1u),
-          forest<unsigned int>::ctor::Trees_(
-              tree<unsigned int>::ctor::Leaf_(2u),
-              forest<unsigned int>::ctor::Empty_())));
+      tree<unsigned int>::node(forest<unsigned int>::trees(
+          tree<unsigned int>::leaf(1u),
+          forest<unsigned int>::trees(tree<unsigned int>::leaf(2u),
+                                      forest<unsigned int>::empty())));
   static inline const std::shared_ptr<tree<unsigned int>> nested_tree =
-      tree<unsigned int>::ctor::Node_(forest<unsigned int>::ctor::Trees_(
-          tree<unsigned int>::ctor::Node_(forest<unsigned int>::ctor::Trees_(
-              tree<unsigned int>::ctor::Leaf_(3u),
-              forest<unsigned int>::ctor::Empty_())),
-          forest<unsigned int>::ctor::Trees_(
-              tree<unsigned int>::ctor::Leaf_(4u),
-              forest<unsigned int>::ctor::Empty_())));
+      tree<unsigned int>::node(forest<unsigned int>::trees(
+          tree<unsigned int>::node(forest<unsigned int>::trees(
+              tree<unsigned int>::leaf(3u), forest<unsigned int>::empty())),
+          forest<unsigned int>::trees(tree<unsigned int>::leaf(4u),
+                                      forest<unsigned int>::empty())));
   static inline const unsigned int test_size_simple =
       tree_size<unsigned int>(simple_tree);
   static inline const unsigned int test_size_nested =

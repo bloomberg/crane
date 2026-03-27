@@ -19,8 +19,8 @@ void aSsErT(bool condition, const char *message, int line) {
 using UIntList = List<unsigned int>;
 
 int main() {
-  auto nil = UIntList::ctor::Nil_();
-  auto l3 = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(3u, nil)));
+  auto nil = UIntList::nil();
+  auto l3 = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(3u, nil)));
 
   // process_twice
   auto processed = LoopifySpecialRecursion::process_twice(l3);
@@ -45,14 +45,14 @@ int main() {
 
   // collect_sorted
   using tree = LoopifySpecialRecursion::tree;
-  auto leaf = tree::ctor::Leaf_();
-  auto t = tree::ctor::Node_(leaf, 5u, leaf);
+  auto leaf = tree::leaf();
+  auto t = tree::node(leaf, 5u, leaf);
   auto collected = LoopifySpecialRecursion::collect_sorted(t);
   ASSERT(collected != nullptr);
 
   // sum_odd_indices
-  auto l5 = UIntList::ctor::Cons_(10u, UIntList::ctor::Cons_(20u, UIntList::ctor::Cons_(
-    30u, UIntList::ctor::Cons_(40u, UIntList::ctor::Cons_(50u, nil)))));
+  auto l5 = UIntList::cons(10u, UIntList::cons(20u, UIntList::cons(
+    30u, UIntList::cons(40u, UIntList::cons(50u, nil)))));
   ASSERT(LoopifySpecialRecursion::sum_odd_indices(l5) == 60u);  // indices 1,3 -> 20+40
 
   // categorize_by
@@ -63,9 +63,9 @@ int main() {
   ASSERT(filtered != nullptr);
 
   // merge_levels
-  auto ll_nil = List<std::shared_ptr<UIntList>>::ctor::Nil_();
-  auto ll = List<std::shared_ptr<UIntList>>::ctor::Cons_(l3,
-    List<std::shared_ptr<UIntList>>::ctor::Cons_(l3, ll_nil));
+  auto ll_nil = List<std::shared_ptr<UIntList>>::nil();
+  auto ll = List<std::shared_ptr<UIntList>>::cons(l3,
+    List<std::shared_ptr<UIntList>>::cons(l3, ll_nil));
   auto merged = LoopifySpecialRecursion::merge_levels(ll);
   ASSERT(merged != nullptr);
 

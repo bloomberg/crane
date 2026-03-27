@@ -49,34 +49,38 @@ struct IndParam {
       // DATA
       variant_t d_v_;
 
+    public:
       // CREATORS
       explicit result(Ok _v) : d_v_(std::move(_v)) {}
 
       explicit result(Err _v) : d_v_(std::move(_v)) {}
 
-    public:
-      // TYPES
-      struct ctor {
-        ctor() = delete;
+      static std::shared_ptr<result>
+      ok(const std::shared_ptr<typename C::t> &a0) {
+        return std::make_shared<result>(Ok{a0});
+      }
 
-        static std::shared_ptr<result>
-        Ok_(const std::shared_ptr<typename C::t> &a0) {
-          return std::shared_ptr<result>(new result(Ok{a0}));
-        }
+      static std::shared_ptr<result> ok(std::shared_ptr<typename C::t> &&a0) {
+        return std::make_shared<result>(Ok{std::move(a0)});
+      }
 
-        static std::shared_ptr<result> Err_(unsigned int a0) {
-          return std::shared_ptr<result>(new result(Err{a0}));
-        }
+      static std::shared_ptr<result> err(unsigned int a0) {
+        return std::make_shared<result>(Err{std::move(a0)});
+      }
 
-        static std::unique_ptr<result>
-        Ok_uptr(const std::shared_ptr<typename C::t> &a0) {
-          return std::unique_ptr<result>(new result(Ok{a0}));
-        }
+      static std::unique_ptr<result>
+      ok_uptr(const std::shared_ptr<typename C::t> &a0) {
+        return std::make_unique<result>(Ok{a0});
+      }
 
-        static std::unique_ptr<result> Err_uptr(unsigned int a0) {
-          return std::unique_ptr<result>(new result(Err{a0}));
-        }
-      };
+      static std::unique_ptr<result>
+      ok_uptr(std::shared_ptr<typename C::t> &&a0) {
+        return std::make_unique<result>(Ok{std::move(a0)});
+      }
+
+      static std::unique_ptr<result> err_uptr(unsigned int a0) {
+        return std::make_unique<result>(Err{std::move(a0)});
+      }
 
       // MANIPULATORS
       __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -110,12 +114,12 @@ struct IndParam {
     }
 
     static std::shared_ptr<result> make_single(const typename C::elem e) {
-      return result::ctor::Ok_(C::t::ctor::Single_(e));
+      return result::ok(C::t::single(e));
     }
 
     static std::shared_ptr<result> make_pair(const typename C::elem e1,
                                              const typename C::elem e2) {
-      return result::ctor::Ok_(C::t::ctor::Pair_(e1, e2));
+      return result::ok(C::t::pair(e1, e2));
     }
 
     __attribute__((pure)) static unsigned int
@@ -131,13 +135,12 @@ struct IndParam {
     }
 
     static const std::shared_ptr<result> &empty_result() {
-      static const std::shared_ptr<result> v =
-          result::ctor::Ok_(C::t::ctor::Empty_());
+      static const std::shared_ptr<result> v = result::ok(C::t::empty());
       return v;
     }
 
     static const std::shared_ptr<result> &error_result() {
-      static const std::shared_ptr<result> v = result::ctor::Err_(404u);
+      static const std::shared_ptr<result> v = result::err(404u);
       return v;
     }
   };
@@ -164,6 +167,7 @@ struct IndParam {
       // DATA
       variant_t d_v_;
 
+    public:
       // CREATORS
       explicit t(Empty _v) : d_v_(std::move(_v)) {}
 
@@ -171,35 +175,27 @@ struct IndParam {
 
       explicit t(Pair _v) : d_v_(std::move(_v)) {}
 
-    public:
-      // TYPES
-      struct ctor {
-        ctor() = delete;
+      static std::shared_ptr<t> empty() { return std::make_shared<t>(Empty{}); }
 
-        static std::shared_ptr<t> Empty_() {
-          return std::shared_ptr<t>(new t(Empty{}));
-        }
+      static std::shared_ptr<t> single(elem a0) {
+        return std::make_shared<t>(Single{std::move(a0)});
+      }
 
-        static std::shared_ptr<t> Single_(elem a0) {
-          return std::shared_ptr<t>(new t(Single{a0}));
-        }
+      static std::shared_ptr<t> pair(elem a0, elem a1) {
+        return std::make_shared<t>(Pair{std::move(a0), std::move(a1)});
+      }
 
-        static std::shared_ptr<t> Pair_(elem a0, elem a1) {
-          return std::shared_ptr<t>(new t(Pair{a0, a1}));
-        }
+      static std::unique_ptr<t> empty_uptr() {
+        return std::make_unique<t>(Empty{});
+      }
 
-        static std::unique_ptr<t> Empty_uptr() {
-          return std::unique_ptr<t>(new t(Empty{}));
-        }
+      static std::unique_ptr<t> single_uptr(elem a0) {
+        return std::make_unique<t>(Single{std::move(a0)});
+      }
 
-        static std::unique_ptr<t> Single_uptr(elem a0) {
-          return std::unique_ptr<t>(new t(Single{a0}));
-        }
-
-        static std::unique_ptr<t> Pair_uptr(elem a0, elem a1) {
-          return std::unique_ptr<t>(new t(Pair{a0, a1}));
-        }
-      };
+      static std::unique_ptr<t> pair_uptr(elem a0, elem a1) {
+        return std::make_unique<t>(Pair{std::move(a0), std::move(a1)});
+      }
 
       // MANIPULATORS
       __attribute__((pure)) variant_t &v_mut() { return d_v_; }

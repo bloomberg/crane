@@ -81,32 +81,27 @@ struct InductiveInModule {
         // DATA
         variant_t d_v_;
 
+      public:
         // CREATORS
         explicit option(None _v) : d_v_(std::move(_v)) {}
 
         explicit option(Some _v) : d_v_(std::move(_v)) {}
 
-      public:
-        // TYPES
-        struct ctor {
-          ctor() = delete;
+        static std::shared_ptr<option<t_A>> none() {
+          return std::make_shared<option<t_A>>(None{});
+        }
 
-          static std::shared_ptr<option<t_A>> None_() {
-            return std::shared_ptr<option<t_A>>(new option<t_A>(None{}));
-          }
+        static std::shared_ptr<option<t_A>> some(t_A a0) {
+          return std::make_shared<option<t_A>>(Some{std::move(a0)});
+        }
 
-          static std::shared_ptr<option<t_A>> Some_(t_A a0) {
-            return std::shared_ptr<option<t_A>>(new option<t_A>(Some{a0}));
-          }
+        static std::unique_ptr<option<t_A>> none_uptr() {
+          return std::make_unique<option<t_A>>(None{});
+        }
 
-          static std::unique_ptr<option<t_A>> None_uptr() {
-            return std::unique_ptr<option<t_A>>(new option<t_A>(None{}));
-          }
-
-          static std::unique_ptr<option<t_A>> Some_uptr(t_A a0) {
-            return std::unique_ptr<option<t_A>>(new option<t_A>(Some{a0}));
-          }
-        };
+        static std::unique_ptr<option<t_A>> some_uptr(t_A a0) {
+          return std::make_unique<option<t_A>>(Some{std::move(a0)});
+        }
 
         // MANIPULATORS
         __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -155,7 +150,7 @@ struct InductiveInModule {
 
     static inline const unsigned int test_option =
         Middle::template get_or_default<unsigned int>(
-            42u, Middle::template option<unsigned int>::ctor::Some_(99u));
+            42u, Middle::template option<unsigned int>::some(99u));
   };
 
   static inline const unsigned int final_test = Outer::test_option;

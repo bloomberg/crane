@@ -47,32 +47,27 @@ template <Elem E> struct Container {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit maybe(Nothing _v) : d_v_(std::move(_v)) {}
 
     explicit maybe(Just _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<maybe> nothing() {
+      return std::make_shared<maybe>(Nothing{});
+    }
 
-      static std::shared_ptr<maybe> Nothing_() {
-        return std::shared_ptr<maybe>(new maybe(Nothing{}));
-      }
+    static std::shared_ptr<maybe> just(unsigned int a0) {
+      return std::make_shared<maybe>(Just{std::move(a0)});
+    }
 
-      static std::shared_ptr<maybe> Just_(unsigned int a0) {
-        return std::shared_ptr<maybe>(new maybe(Just{a0}));
-      }
+    static std::unique_ptr<maybe> nothing_uptr() {
+      return std::make_unique<maybe>(Nothing{});
+    }
 
-      static std::unique_ptr<maybe> Nothing_uptr() {
-        return std::unique_ptr<maybe>(new maybe(Nothing{}));
-      }
-
-      static std::unique_ptr<maybe> Just_uptr(unsigned int a0) {
-        return std::unique_ptr<maybe>(new maybe(Just{a0}));
-      }
-    };
+    static std::unique_ptr<maybe> just_uptr(unsigned int a0) {
+      return std::make_unique<maybe>(Just{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -116,35 +111,39 @@ template <Elem E> struct Container {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit mlist(MNil _v) : d_v_(std::move(_v)) {}
 
     explicit mlist(MCons _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<mlist> mnil() {
+      return std::make_shared<mlist>(MNil{});
+    }
 
-      static std::shared_ptr<mlist> MNil_() {
-        return std::shared_ptr<mlist>(new mlist(MNil{}));
-      }
+    static std::shared_ptr<mlist> mcons(const std::shared_ptr<maybe> &a0,
+                                        const std::shared_ptr<mlist> &a1) {
+      return std::make_shared<mlist>(MCons{a0, a1});
+    }
 
-      static std::shared_ptr<mlist> MCons_(const std::shared_ptr<maybe> &a0,
-                                           const std::shared_ptr<mlist> &a1) {
-        return std::shared_ptr<mlist>(new mlist(MCons{a0, a1}));
-      }
+    static std::shared_ptr<mlist> mcons(std::shared_ptr<maybe> &&a0,
+                                        std::shared_ptr<mlist> &&a1) {
+      return std::make_shared<mlist>(MCons{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<mlist> MNil_uptr() {
-        return std::unique_ptr<mlist>(new mlist(MNil{}));
-      }
+    static std::unique_ptr<mlist> mnil_uptr() {
+      return std::make_unique<mlist>(MNil{});
+    }
 
-      static std::unique_ptr<mlist>
-      MCons_uptr(const std::shared_ptr<maybe> &a0,
-                 const std::shared_ptr<mlist> &a1) {
-        return std::unique_ptr<mlist>(new mlist(MCons{a0, a1}));
-      }
-    };
+    static std::unique_ptr<mlist> mcons_uptr(const std::shared_ptr<maybe> &a0,
+                                             const std::shared_ptr<mlist> &a1) {
+      return std::make_unique<mlist>(MCons{a0, a1});
+    }
+
+    static std::unique_ptr<mlist> mcons_uptr(std::shared_ptr<maybe> &&a0,
+                                             std::shared_ptr<mlist> &&a1) {
+      return std::make_unique<mlist>(MCons{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -193,34 +192,43 @@ template <Elem E> struct Container {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit mtree(Leaf _v) : d_v_(std::move(_v)) {}
 
     explicit mtree(Node _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<mtree> leaf(const std::shared_ptr<maybe> &a0) {
+      return std::make_shared<mtree>(Leaf{a0});
+    }
 
-      static std::shared_ptr<mtree> Leaf_(const std::shared_ptr<maybe> &a0) {
-        return std::shared_ptr<mtree>(new mtree(Leaf{a0}));
-      }
+    static std::shared_ptr<mtree> leaf(std::shared_ptr<maybe> &&a0) {
+      return std::make_shared<mtree>(Leaf{std::move(a0)});
+    }
 
-      static std::shared_ptr<mtree> Node_(const std::shared_ptr<mlist> &a0) {
-        return std::shared_ptr<mtree>(new mtree(Node{a0}));
-      }
+    static std::shared_ptr<mtree> node(const std::shared_ptr<mlist> &a0) {
+      return std::make_shared<mtree>(Node{a0});
+    }
 
-      static std::unique_ptr<mtree>
-      Leaf_uptr(const std::shared_ptr<maybe> &a0) {
-        return std::unique_ptr<mtree>(new mtree(Leaf{a0}));
-      }
+    static std::shared_ptr<mtree> node(std::shared_ptr<mlist> &&a0) {
+      return std::make_shared<mtree>(Node{std::move(a0)});
+    }
 
-      static std::unique_ptr<mtree>
-      Node_uptr(const std::shared_ptr<mlist> &a0) {
-        return std::unique_ptr<mtree>(new mtree(Node{a0}));
-      }
-    };
+    static std::unique_ptr<mtree> leaf_uptr(const std::shared_ptr<maybe> &a0) {
+      return std::make_unique<mtree>(Leaf{a0});
+    }
+
+    static std::unique_ptr<mtree> leaf_uptr(std::shared_ptr<maybe> &&a0) {
+      return std::make_unique<mtree>(Leaf{std::move(a0)});
+    }
+
+    static std::unique_ptr<mtree> node_uptr(const std::shared_ptr<mlist> &a0) {
+      return std::make_unique<mtree>(Node{a0});
+    }
+
+    static std::unique_ptr<mtree> node_uptr(std::shared_ptr<mlist> &&a0) {
+      return std::make_unique<mtree>(Node{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -290,24 +298,23 @@ template <Elem E> struct Container {
   }
 
   static const std::shared_ptr<maybe> &empty_maybe() {
-    static const std::shared_ptr<maybe> v = maybe::ctor::Nothing_();
+    static const std::shared_ptr<maybe> v = maybe::nothing();
     return v;
   }
 
   static const std::shared_ptr<maybe> &some_val() {
-    static const std::shared_ptr<maybe> v = maybe::ctor::Just_(42u);
+    static const std::shared_ptr<maybe> v = maybe::just(42u);
     return v;
   }
 
   static const std::shared_ptr<mlist> &sample_list() {
-    static const std::shared_ptr<mlist> v = mlist::ctor::MCons_(
-        maybe::ctor::Just_(42u),
-        mlist::ctor::MCons_(maybe::ctor::Nothing_(), mlist::ctor::MNil_()));
+    static const std::shared_ptr<mlist> v = mlist::mcons(
+        maybe::just(42u), mlist::mcons(maybe::nothing(), mlist::mnil()));
     return v;
   }
 
   static const std::shared_ptr<mtree> &sample_tree() {
-    static const std::shared_ptr<mtree> v = mtree::ctor::Node_(sample_list());
+    static const std::shared_ptr<mtree> v = mtree::node(sample_list());
     return v;
   }
 };

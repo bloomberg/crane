@@ -19,16 +19,16 @@ void aSsErT(bool condition, const char *message, int line) {
 int main() {
   using List = LoopifyPairs::list<unsigned int>;
 
-  auto l = List::ctor::Cons_(
-      1u, List::ctor::Cons_(2u, List::ctor::Cons_(3u, List::ctor::Nil_())));
+  auto l = List::cons(
+      1u, List::cons(2u, List::cons(3u, List::nil())));
 
   // Test unique pair operations
   auto gt1 = [](unsigned int x) { return x > 1; };
   auto partitioned = LoopifyPairs::partition(gt1, l);
   ASSERT(partitioned.first != nullptr);
 
-  auto l2 = List::ctor::Cons_(
-      4u, List::ctor::Cons_(5u, List::ctor::Cons_(6u, List::ctor::Nil_())));
+  auto l2 = List::cons(
+      4u, List::cons(5u, List::cons(6u, List::nil())));
   auto zipped = LoopifyPairs::zip(l, l2);
   ASSERT(zipped != nullptr);
 

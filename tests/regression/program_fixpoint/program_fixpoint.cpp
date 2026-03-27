@@ -26,9 +26,9 @@ std::shared_ptr<List<unsigned int>> ProgFix::interleave_func(
             y = Sig<
                 std::shared_ptr<SigT<std::shared_ptr<List<unsigned int>>,
                                      std::shared_ptr<List<unsigned int>>>>>::
-                ctor::Exist_uptr(SigT<std::shared_ptr<List<unsigned int>>,
-                                      std::shared_ptr<List<unsigned int>>>::
-                                     ctor::ExistT_(l3, l4));
+                exist_uptr(
+                    SigT<std::shared_ptr<List<unsigned int>>,
+                         std::shared_ptr<List<unsigned int>>>::existt(l3, l4));
         return interleave_func(std::visit(
             Overloaded{
                 [](const typename Sig<std::shared_ptr<
@@ -57,7 +57,7 @@ std::shared_ptr<List<unsigned int>> ProgFix::interleave_func(
                      },
                      [&](const typename List<unsigned int>::Cons _args)
                          -> std::shared_ptr<List<unsigned int>> {
-                       return List<unsigned int>::ctor::Cons_(
+                       return List<unsigned int>::cons(
                            _args.d_a0, interleave0(std::move(l2), _args.d_a1));
                      }},
           std::move(l1)->v());
@@ -70,6 +70,6 @@ ProgFix::interleave(std::shared_ptr<List<unsigned int>> l1,
                     std::shared_ptr<List<unsigned int>> l2) {
   return interleave_func(
       SigT<std::shared_ptr<List<unsigned int>>,
-           std::shared_ptr<List<unsigned int>>>::ctor::ExistT_(std::move(l1),
-                                                               std::move(l2)));
+           std::shared_ptr<List<unsigned int>>>::existt(std::move(l1),
+                                                        std::move(l2)));
 }

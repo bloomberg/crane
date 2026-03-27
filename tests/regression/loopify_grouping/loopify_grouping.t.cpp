@@ -19,11 +19,11 @@ void aSsErT(bool condition, const char *message, int line) {
 using UIntList = List<unsigned int>;
 
 int main() {
-  auto nil = UIntList::ctor::Nil_();
-  auto l_sorted = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(
-    2u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(3u, nil)))));
-  auto l_dups = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(
-    1u, UIntList::ctor::Cons_(3u, UIntList::ctor::Cons_(2u, nil)))));
+  auto nil = UIntList::nil();
+  auto l_sorted = UIntList::cons(1u, UIntList::cons(1u, UIntList::cons(
+    2u, UIntList::cons(2u, UIntList::cons(3u, nil)))));
+  auto l_dups = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(
+    1u, UIntList::cons(3u, UIntList::cons(2u, nil)))));
 
   // group
   auto grouped = LoopifyGrouping::group(l_sorted);
@@ -42,8 +42,8 @@ int main() {
   ASSERT(removed != nullptr);
 
   // partition3
-  auto l5 = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(5u, UIntList::ctor::Cons_(
-    3u, UIntList::ctor::Cons_(7u, UIntList::ctor::Cons_(3u, nil)))));
+  auto l5 = UIntList::cons(1u, UIntList::cons(5u, UIntList::cons(
+    3u, UIntList::cons(7u, UIntList::cons(3u, nil)))));
   auto partitioned = LoopifyGrouping::partition3(3u, l5);
   ASSERT(partitioned.first.first != nullptr && partitioned.first.second != nullptr && partitioned.second != nullptr);
 

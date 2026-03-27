@@ -36,13 +36,13 @@ int main() {
   using PList = LoopifyOption::list<std::pair<unsigned int, unsigned int>>;
 
   // Build [1, 2, 3, 4, 5]
-  auto l5 = List::ctor::Cons_(
-      1u, List::ctor::Cons_(
-              2u, List::ctor::Cons_(
-                      3u, List::ctor::Cons_(
-                              4u, List::ctor::Cons_(5u, List::ctor::Nil_())))));
+  auto l5 = List::cons(
+      1u, List::cons(
+              2u, List::cons(
+                      3u, List::cons(
+                              4u, List::cons(5u, List::nil())))));
 
-  auto empty = List::ctor::Nil_();
+  auto empty = List::nil();
 
   // Test find_opt
   auto gt3 = [](unsigned int x) -> bool { return x > 3; };
@@ -64,7 +64,7 @@ int main() {
   ASSERT(*last5 == 5u);
 
   auto last1 =
-      LoopifyOption::last_opt(List::ctor::Cons_(42u, List::ctor::Nil_()));
+      LoopifyOption::last_opt(List::cons(42u, List::nil()));
   ASSERT(last1.has_value());
   ASSERT(*last1 == 42u);
 
@@ -85,11 +85,11 @@ int main() {
   ASSERT(!n_oob.has_value());
 
   // Test lookup_opt
-  auto assoc = PList::ctor::Cons_(
+  auto assoc = PList::cons(
       std::make_pair(1u, 10u),
-      PList::ctor::Cons_(
+      PList::cons(
           std::make_pair(2u, 20u),
-          PList::ctor::Cons_(std::make_pair(3u, 30u), PList::ctor::Nil_())));
+          PList::cons(std::make_pair(3u, 30u), PList::nil())));
 
   auto lk2 = LoopifyOption::lookup_opt(2u, assoc);
   ASSERT(lk2.has_value() && *lk2 == 20u);

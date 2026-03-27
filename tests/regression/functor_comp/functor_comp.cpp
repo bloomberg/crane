@@ -15,7 +15,7 @@
 __attribute__((pure)) FunctorComp::Stack::t
 FunctorComp::Stack::push(const unsigned int x,
                          std::shared_ptr<List<unsigned int>> s) {
-  return List<unsigned int>::ctor::Cons_(std::move(x), std::move(s));
+  return List<unsigned int>::cons(std::move(x), std::move(s));
 }
 
 __attribute__((pure))
@@ -51,8 +51,7 @@ FunctorComp::Queue::push(const unsigned int x,
                              q) {
   std::shared_ptr<List<unsigned int>> front = q.first;
   std::shared_ptr<List<unsigned int>> back = q.second;
-  return std::make_pair(std::move(front),
-                        List<unsigned int>::ctor::Cons_(x, back));
+  return std::make_pair(std::move(front), List<unsigned int>::cons(x, back));
 }
 
 __attribute__((pure))
@@ -92,9 +91,8 @@ FunctorComp::Queue::pop(const std::pair<std::shared_ptr<List<unsigned int>>,
                                     std::shared_ptr<List<unsigned int>>>>>(
                           std::make_pair(
                               _args0.d_a0,
-                              std::make_pair(
-                                  _args0.d_a1,
-                                  List<unsigned int>::ctor::Nil_())));
+                              std::make_pair(_args0.d_a1,
+                                             List<unsigned int>::nil())));
                     }},
                 back->rev()->v());
           },

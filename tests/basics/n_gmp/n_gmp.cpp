@@ -52,62 +52,60 @@ __attribute__((pure)) mpz_class Pos::pred_N(const mpz_class x) {
 std::shared_ptr<Pos::mask>
 Pos::succ_double_mask(const std::shared_ptr<Pos::mask> &x) {
   return std::visit(
-      Overloaded{
-          [](const typename Pos::mask::IsNul _args)
-              -> std::shared_ptr<Pos::mask> {
-            return mask::ctor::IsPos_(mpz_class(1));
-          },
-          [](const typename Pos::mask::IsPos _args)
-              -> std::shared_ptr<Pos::mask> {
-            return mask::ctor::IsPos_((2 * _args.d_a0 + 1));
-          },
-          [](const typename Pos::mask::IsNeg _args)
-              -> std::shared_ptr<Pos::mask> { return mask::ctor::IsNeg_(); }},
+      Overloaded{[](const typename Pos::mask::IsNul _args)
+                     -> std::shared_ptr<Pos::mask> {
+                   return mask::ispos(mpz_class(1));
+                 },
+                 [](const typename Pos::mask::IsPos _args)
+                     -> std::shared_ptr<Pos::mask> {
+                   return mask::ispos((2 * _args.d_a0 + 1));
+                 },
+                 [](const typename Pos::mask::IsNeg _args)
+                     -> std::shared_ptr<Pos::mask> { return mask::isneg(); }},
       x->v());
 }
 
 std::shared_ptr<Pos::mask>
 Pos::double_mask(const std::shared_ptr<Pos::mask> &x) {
   return std::visit(
-      Overloaded{
-          [](const typename Pos::mask::IsNul _args)
-              -> std::shared_ptr<Pos::mask> { return mask::ctor::IsNul_(); },
-          [](const typename Pos::mask::IsPos _args)
-              -> std::shared_ptr<Pos::mask> {
-            return mask::ctor::IsPos_((2 * _args.d_a0));
-          },
-          [](const typename Pos::mask::IsNeg _args)
-              -> std::shared_ptr<Pos::mask> { return mask::ctor::IsNeg_(); }},
+      Overloaded{[](const typename Pos::mask::IsNul _args)
+                     -> std::shared_ptr<Pos::mask> { return mask::isnul(); },
+                 [](const typename Pos::mask::IsPos _args)
+                     -> std::shared_ptr<Pos::mask> {
+                   return mask::ispos((2 * _args.d_a0));
+                 },
+                 [](const typename Pos::mask::IsNeg _args)
+                     -> std::shared_ptr<Pos::mask> { return mask::isneg(); }},
       x->v());
 }
 
 std::shared_ptr<Pos::mask> Pos::double_pred_mask(const mpz_class x) {
   if (x == 1) {
-    return mask::ctor::IsNul_();
+    return mask::isnul();
   } else if (x % 2 != 0) {
     mpz_class p = (x - 1) / 2;
-    return mask::ctor::IsPos_((2 * (2 * p)));
+    return mask::ispos((2 * (2 * p)));
   } else {
     mpz_class p = x / 2;
-    return mask::ctor::IsPos_((2 * pred_double(p)));
+    return mask::ispos((2 * pred_double(p)));
   }
 }
 
 std::shared_ptr<Pos::mask> Pos::sub_mask(const mpz_class x, const mpz_class y) {
   if (x == 1) {
     if (y == 1) {
-      return mask::ctor::IsNul_();
+      return mask::isnul();
     } else if (y % 2 != 0) {
       mpz_class _x = (y - 1) / 2;
-      return mask::ctor::IsNeg_();
+      return mask::isneg();
     } else {
       mpz_class _x = y / 2;
-      return mask::ctor::IsNeg_();
+      return mask::isneg();
     }
   } else if (x % 2 != 0) {
     mpz_class p = (x - 1) / 2;
     if (y == 1) {
-      return mask::ctor::IsPos_((2 * p));
+      return mask::ispos((2 * p));
     } else if (y % 2 != 0) {
       mpz_class q = (y - 1) / 2;
       return double_mask(sub_mask(p, q));
@@ -118,7 +116,7 @@ std::shared_ptr<Pos::mask> Pos::sub_mask(const mpz_class x, const mpz_class y) {
   } else {
     mpz_class p = x / 2;
     if (y == 1) {
-      return mask::ctor::IsPos_(pred_double(p));
+      return mask::ispos(pred_double(p));
     } else if (y % 2 != 0) {
       mpz_class q = (y - 1) / 2;
       return succ_double_mask(sub_mask_carry(p, q));
@@ -132,11 +130,11 @@ std::shared_ptr<Pos::mask> Pos::sub_mask(const mpz_class x, const mpz_class y) {
 std::shared_ptr<Pos::mask> Pos::sub_mask_carry(const mpz_class x,
                                                const mpz_class y) {
   if (x == 1) {
-    return mask::ctor::IsNeg_();
+    return mask::isneg();
   } else if (x % 2 != 0) {
     mpz_class p = (x - 1) / 2;
     if (y == 1) {
-      return mask::ctor::IsPos_(pred_double(p));
+      return mask::ispos(pred_double(p));
     } else if (y % 2 != 0) {
       mpz_class q = (y - 1) / 2;
       return succ_double_mask(sub_mask_carry(p, q));

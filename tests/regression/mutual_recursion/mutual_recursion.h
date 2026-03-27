@@ -55,6 +55,7 @@ struct MutualRecursion {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit expr(Val _v) : d_v_(std::move(_v)) {}
 
@@ -62,41 +63,59 @@ struct MutualRecursion {
 
     explicit expr(UnOp _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<expr> val(unsigned int a0) {
+      return std::make_shared<expr>(Val{std::move(a0)});
+    }
 
-      static std::shared_ptr<expr> Val_(unsigned int a0) {
-        return std::shared_ptr<expr>(new expr(Val{a0}));
-      }
+    static std::shared_ptr<expr> binop(unsigned int a0,
+                                       const std::shared_ptr<expr> &a1,
+                                       const std::shared_ptr<expr> &a2) {
+      return std::make_shared<expr>(BinOp{std::move(a0), a1, a2});
+    }
 
-      static std::shared_ptr<expr> BinOp_(unsigned int a0,
-                                          const std::shared_ptr<expr> &a1,
-                                          const std::shared_ptr<expr> &a2) {
-        return std::shared_ptr<expr>(new expr(BinOp{a0, a1, a2}));
-      }
+    static std::shared_ptr<expr> binop(unsigned int a0,
+                                       std::shared_ptr<expr> &&a1,
+                                       std::shared_ptr<expr> &&a2) {
+      return std::make_shared<expr>(
+          BinOp{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
-      static std::shared_ptr<expr> UnOp_(unsigned int a0,
-                                         const std::shared_ptr<expr> &a1) {
-        return std::shared_ptr<expr>(new expr(UnOp{a0, a1}));
-      }
+    static std::shared_ptr<expr> unop(unsigned int a0,
+                                      const std::shared_ptr<expr> &a1) {
+      return std::make_shared<expr>(UnOp{std::move(a0), a1});
+    }
 
-      static std::unique_ptr<expr> Val_uptr(unsigned int a0) {
-        return std::unique_ptr<expr>(new expr(Val{a0}));
-      }
+    static std::shared_ptr<expr> unop(unsigned int a0,
+                                      std::shared_ptr<expr> &&a1) {
+      return std::make_shared<expr>(UnOp{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<expr> BinOp_uptr(unsigned int a0,
-                                              const std::shared_ptr<expr> &a1,
-                                              const std::shared_ptr<expr> &a2) {
-        return std::unique_ptr<expr>(new expr(BinOp{a0, a1, a2}));
-      }
+    static std::unique_ptr<expr> val_uptr(unsigned int a0) {
+      return std::make_unique<expr>(Val{std::move(a0)});
+    }
 
-      static std::unique_ptr<expr> UnOp_uptr(unsigned int a0,
-                                             const std::shared_ptr<expr> &a1) {
-        return std::unique_ptr<expr>(new expr(UnOp{a0, a1}));
-      }
-    };
+    static std::unique_ptr<expr> binop_uptr(unsigned int a0,
+                                            const std::shared_ptr<expr> &a1,
+                                            const std::shared_ptr<expr> &a2) {
+      return std::make_unique<expr>(BinOp{std::move(a0), a1, a2});
+    }
+
+    static std::unique_ptr<expr> binop_uptr(unsigned int a0,
+                                            std::shared_ptr<expr> &&a1,
+                                            std::shared_ptr<expr> &&a2) {
+      return std::make_unique<expr>(
+          BinOp{std::move(a0), std::move(a1), std::move(a2)});
+    }
+
+    static std::unique_ptr<expr> unop_uptr(unsigned int a0,
+                                           const std::shared_ptr<expr> &a1) {
+      return std::make_unique<expr>(UnOp{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<expr> unop_uptr(unsigned int a0,
+                                           std::shared_ptr<expr> &&a1) {
+      return std::make_unique<expr>(UnOp{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -155,8 +174,8 @@ struct MutualRecursion {
   __attribute__((pure)) static unsigned int f3(const unsigned int n);
   static inline const bool test_even = even(10u);
   static inline const unsigned int test_sum = sum_even_indices(5u, 0u);
-  static inline const unsigned int test_eval = eval_expr(
-      expr::ctor::BinOp_(0u, expr::ctor::Val_(5u), expr::ctor::Val_(10u)));
+  static inline const unsigned int test_eval =
+      eval_expr(expr::binop(0u, expr::val(5u), expr::val(10u)));
 };
 
 #endif // INCLUDED_MUTUAL_RECURSION

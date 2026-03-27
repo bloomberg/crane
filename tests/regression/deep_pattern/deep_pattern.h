@@ -38,34 +38,39 @@ struct DeepPattern {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit tree(Leaf _v) : d_v_(std::move(_v)) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<tree> leaf(unsigned int a0) {
+      return std::make_shared<tree>(Leaf{std::move(a0)});
+    }
 
-      static std::shared_ptr<tree> Leaf_(unsigned int a0) {
-        return std::shared_ptr<tree>(new tree(Leaf{a0}));
-      }
+    static std::shared_ptr<tree> node(const std::shared_ptr<tree> &a0,
+                                      const std::shared_ptr<tree> &a1) {
+      return std::make_shared<tree>(Node{a0, a1});
+    }
 
-      static std::shared_ptr<tree> Node_(const std::shared_ptr<tree> &a0,
-                                         const std::shared_ptr<tree> &a1) {
-        return std::shared_ptr<tree>(new tree(Node{a0, a1}));
-      }
+    static std::shared_ptr<tree> node(std::shared_ptr<tree> &&a0,
+                                      std::shared_ptr<tree> &&a1) {
+      return std::make_shared<tree>(Node{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<tree> Leaf_uptr(unsigned int a0) {
-        return std::unique_ptr<tree>(new tree(Leaf{a0}));
-      }
+    static std::unique_ptr<tree> leaf_uptr(unsigned int a0) {
+      return std::make_unique<tree>(Leaf{std::move(a0)});
+    }
 
-      static std::unique_ptr<tree> Node_uptr(const std::shared_ptr<tree> &a0,
-                                             const std::shared_ptr<tree> &a1) {
-        return std::unique_ptr<tree>(new tree(Node{a0, a1}));
-      }
-    };
+    static std::unique_ptr<tree> node_uptr(const std::shared_ptr<tree> &a0,
+                                           const std::shared_ptr<tree> &a1) {
+      return std::make_unique<tree>(Node{a0, a1});
+    }
+
+    static std::unique_ptr<tree> node_uptr(std::shared_ptr<tree> &&a0,
+                                           std::shared_ptr<tree> &&a1) {
+      return std::make_unique<tree>(Node{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -549,34 +554,39 @@ struct DeepPattern {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit list(Nil _v) : d_v_(std::move(_v)) {}
 
     explicit list(Cons _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<list<t_A>> nil() {
+      return std::make_shared<list<t_A>>(Nil{});
+    }
 
-      static std::shared_ptr<list<t_A>> Nil_() {
-        return std::shared_ptr<list<t_A>>(new list<t_A>(Nil{}));
-      }
+    static std::shared_ptr<list<t_A>>
+    cons(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
+      return std::make_shared<list<t_A>>(Cons{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<list<t_A>>
-      Cons_(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
-        return std::shared_ptr<list<t_A>>(new list<t_A>(Cons{a0, a1}));
-      }
+    static std::shared_ptr<list<t_A>> cons(t_A a0,
+                                           std::shared_ptr<list<t_A>> &&a1) {
+      return std::make_shared<list<t_A>>(Cons{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<list<t_A>> Nil_uptr() {
-        return std::unique_ptr<list<t_A>>(new list<t_A>(Nil{}));
-      }
+    static std::unique_ptr<list<t_A>> nil_uptr() {
+      return std::make_unique<list<t_A>>(Nil{});
+    }
 
-      static std::unique_ptr<list<t_A>>
-      Cons_uptr(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
-        return std::unique_ptr<list<t_A>>(new list<t_A>(Cons{a0, a1}));
-      }
-    };
+    static std::unique_ptr<list<t_A>>
+    cons_uptr(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
+      return std::make_unique<list<t_A>>(Cons{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<list<t_A>>
+    cons_uptr(t_A a0, std::shared_ptr<list<t_A>> &&a1) {
+      return std::make_unique<list<t_A>>(Cons{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -613,10 +623,9 @@ struct DeepPattern {
   list_deep_match(const std::shared_ptr<list<std::shared_ptr<tree>>> &l);
   static std::shared_ptr<tree> as_pattern_test(std::shared_ptr<tree> t);
   static inline const unsigned int test1 =
-      tree::ctor::Node_(tree::ctor::Leaf_(1u), tree::ctor::Leaf_(2u))
-          ->deep_match();
+      tree::node(tree::leaf(1u), tree::leaf(2u))->deep_match();
   static inline const unsigned int test2 =
-      tree::ctor::Leaf_(5u)->multi_constructor(tree::ctor::Leaf_(10u));
+      tree::leaf(5u)->multi_constructor(tree::leaf(10u));
 };
 
 #endif // INCLUDED_DEEP_PATTERN

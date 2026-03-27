@@ -186,9 +186,8 @@ RecordCaseBody::list_in_body(const std::shared_ptr<RecordCaseBody::Rec> &r) {
     unsigned int a = r->f1;
     unsigned int b = r->f2;
     unsigned int c = r->f3;
-    return sum_list(list<unsigned int>::ctor::Cons_(
-        a, list<unsigned int>::ctor::Cons_(
-               b, list<unsigned int>::ctor::Cons_(
-                      c, list<unsigned int>::ctor::Nil_()))));
+    return sum_list(list<unsigned int>::cons(
+        a, list<unsigned int>::cons(
+               b, list<unsigned int>::cons(c, list<unsigned int>::nil()))));
   }();
 }

@@ -41,24 +41,19 @@ struct UnitType {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit pair(Pair0 _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<pair<t_A, t_B>> pair0(t_A a0, t_B a1) {
+      return std::make_shared<pair<t_A, t_B>>(
+          Pair0{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<pair<t_A, t_B>> Pair0_(t_A a0, t_B a1) {
-        return std::shared_ptr<pair<t_A, t_B>>(
-            new pair<t_A, t_B>(Pair0{a0, a1}));
-      }
-
-      static std::unique_ptr<pair<t_A, t_B>> Pair0_uptr(t_A a0, t_B a1) {
-        return std::unique_ptr<pair<t_A, t_B>>(
-            new pair<t_A, t_B>(Pair0{a0, a1}));
-      }
-    };
+    static std::unique_ptr<pair<t_A, t_B>> pair0_uptr(t_A a0, t_B a1) {
+      return std::make_unique<pair<t_A, t_B>>(
+          Pair0{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -86,9 +81,9 @@ struct UnitType {
   }
 
   static inline const std::shared_ptr<pair<unsigned int, Unit>> pair_with_unit =
-      pair<unsigned int, Unit>::ctor::Pair0_(3u, Unit::e_TT);
+      pair<unsigned int, Unit>::pair0(3u, Unit::e_TT);
   static inline const std::shared_ptr<pair<Unit, Unit>> unit_pair =
-      pair<Unit, Unit>::ctor::Pair0_(Unit::e_TT, Unit::e_TT);
+      pair<Unit, Unit>::pair0(Unit::e_TT, Unit::e_TT);
   __attribute__((pure)) static Unit unit_to_unit(const Unit u);
 
   template <typename T1, typename T2> static T2 seq(const T1 _x, const T2 b) {

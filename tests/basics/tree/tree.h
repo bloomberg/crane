@@ -36,32 +36,31 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Nat(O _v) : d_v_(std::move(_v)) {}
 
   explicit Nat(S _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Nat> o() { return std::make_shared<Nat>(O{}); }
 
-    static std::shared_ptr<Nat> O_() {
-      return std::shared_ptr<Nat>(new Nat(O{}));
-    }
+  static std::shared_ptr<Nat> s(const std::shared_ptr<Nat> &a0) {
+    return std::make_shared<Nat>(S{a0});
+  }
 
-    static std::shared_ptr<Nat> S_(const std::shared_ptr<Nat> &a0) {
-      return std::shared_ptr<Nat>(new Nat(S{a0}));
-    }
+  static std::shared_ptr<Nat> s(std::shared_ptr<Nat> &&a0) {
+    return std::make_shared<Nat>(S{std::move(a0)});
+  }
 
-    static std::unique_ptr<Nat> O_uptr() {
-      return std::unique_ptr<Nat>(new Nat(O{}));
-    }
+  static std::unique_ptr<Nat> o_uptr() { return std::make_unique<Nat>(O{}); }
 
-    static std::unique_ptr<Nat> S_uptr(const std::shared_ptr<Nat> &a0) {
-      return std::unique_ptr<Nat>(new Nat(S{a0}));
-    }
-  };
+  static std::unique_ptr<Nat> s_uptr(const std::shared_ptr<Nat> &a0) {
+    return std::make_unique<Nat>(S{a0});
+  }
+
+  static std::unique_ptr<Nat> s_uptr(std::shared_ptr<Nat> &&a0) {
+    return std::make_unique<Nat>(S{std::move(a0)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -83,7 +82,7 @@ public:
                                     },
                                     [&](const typename Nat::S _args0)
                                         -> std::shared_ptr<Nat> {
-                                      return Nat::ctor::S_(
+                                      return Nat::s(
                                           _args.d_a0->max(_args0.d_a0));
                                     }},
                          m->v());
@@ -97,7 +96,7 @@ public:
                      return m;
                    },
                    [&](const typename Nat::S _args) -> std::shared_ptr<Nat> {
-                     return Nat::ctor::S_(_args.d_a0->add(m));
+                     return Nat::s(_args.d_a0->add(m));
                    }},
         this->v());
   }
@@ -118,34 +117,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -159,8 +163,7 @@ public:
                        -> std::shared_ptr<List<t_A>> { return m; },
                    [&](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {
-                     return List<t_A>::ctor::Cons_(_args.d_a0,
-                                                   _args.d_a1->app(m));
+                     return List<t_A>::cons(_args.d_a0, _args.d_a1->app(m));
                    }},
         this->v());
   }
@@ -184,36 +187,45 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Tree(Leaf _v) : d_v_(std::move(_v)) {}
 
   explicit Tree(Node _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Tree<t_A>> leaf() {
+    return std::make_shared<Tree<t_A>>(Leaf{});
+  }
 
-    static std::shared_ptr<Tree<t_A>> Leaf_() {
-      return std::shared_ptr<Tree<t_A>>(new Tree<t_A>(Leaf{}));
-    }
+  static std::shared_ptr<Tree<t_A>> node(const std::shared_ptr<Tree<t_A>> &a0,
+                                         t_A a1,
+                                         const std::shared_ptr<Tree<t_A>> &a2) {
+    return std::make_shared<Tree<t_A>>(Node{a0, std::move(a1), a2});
+  }
 
-    static std::shared_ptr<Tree<t_A>>
-    Node_(const std::shared_ptr<Tree<t_A>> &a0, t_A a1,
-          const std::shared_ptr<Tree<t_A>> &a2) {
-      return std::shared_ptr<Tree<t_A>>(new Tree<t_A>(Node{a0, a1, a2}));
-    }
+  static std::shared_ptr<Tree<t_A>> node(std::shared_ptr<Tree<t_A>> &&a0,
+                                         t_A a1,
+                                         std::shared_ptr<Tree<t_A>> &&a2) {
+    return std::make_shared<Tree<t_A>>(
+        Node{std::move(a0), std::move(a1), std::move(a2)});
+  }
 
-    static std::unique_ptr<Tree<t_A>> Leaf_uptr() {
-      return std::unique_ptr<Tree<t_A>>(new Tree<t_A>(Leaf{}));
-    }
+  static std::unique_ptr<Tree<t_A>> leaf_uptr() {
+    return std::make_unique<Tree<t_A>>(Leaf{});
+  }
 
-    static std::unique_ptr<Tree<t_A>>
-    Node_uptr(const std::shared_ptr<Tree<t_A>> &a0, t_A a1,
-              const std::shared_ptr<Tree<t_A>> &a2) {
-      return std::unique_ptr<Tree<t_A>>(new Tree<t_A>(Node{a0, a1, a2}));
-    }
-  };
+  static std::unique_ptr<Tree<t_A>>
+  node_uptr(const std::shared_ptr<Tree<t_A>> &a0, t_A a1,
+            const std::shared_ptr<Tree<t_A>> &a2) {
+    return std::make_unique<Tree<t_A>>(Node{a0, std::move(a1), a2});
+  }
+
+  static std::unique_ptr<Tree<t_A>> node_uptr(std::shared_ptr<Tree<t_A>> &&a0,
+                                              t_A a1,
+                                              std::shared_ptr<Tree<t_A>> &&a2) {
+    return std::make_unique<Tree<t_A>>(
+        Node{std::move(a0), std::move(a1), std::move(a2)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -268,10 +280,10 @@ public:
     return std::visit(
         Overloaded{
             [](const typename Tree<t_A>::Leaf _args) -> std::shared_ptr<Nat> {
-              return Nat::ctor::S_(Nat::ctor::O_());
+              return Nat::s(Nat::o());
             },
             [](const typename Tree<t_A>::Node _args) -> std::shared_ptr<Nat> {
-              return Nat::ctor::S_(Nat::ctor::O_())
+              return Nat::s(Nat::o())
                   ->add(_args.d_a0->size())
                   ->add(_args.d_a2->size());
             }},
@@ -283,28 +295,27 @@ public:
     return std::visit(
         Overloaded{
             [](const typename Tree<t_A>::Leaf _args) -> std::shared_ptr<Nat> {
-              return Nat::ctor::S_(Nat::ctor::O_());
+              return Nat::s(Nat::o());
             },
             [](const typename Tree<t_A>::Node _args) -> std::shared_ptr<Nat> {
-              return Nat::ctor::S_(Nat::ctor::O_())
-                  ->add(_args.d_a0->height()->max(_args.d_a2->height()));
+              return Nat::s(Nat::o())->add(
+                  _args.d_a0->height()->max(_args.d_a2->height()));
             }},
         this->v());
   }
 
   /// Collect all values in t into a list via in-order traversal.
   std::shared_ptr<List<t_A>> flatten() const {
-    return std::visit(Overloaded{[](const typename Tree<t_A>::Leaf _args)
-                                     -> std::shared_ptr<List<t_A>> {
-                                   return List<t_A>::ctor::Nil_();
-                                 },
-                                 [](const typename Tree<t_A>::Node _args)
-                                     -> std::shared_ptr<List<t_A>> {
-                                   return _args.d_a0->flatten()->app(
-                                       List<t_A>::ctor::Cons_(
-                                           _args.d_a1, _args.d_a2->flatten()));
-                                 }},
-                      this->v());
+    return std::visit(
+        Overloaded{
+            [](const typename Tree<t_A>::Leaf _args)
+                -> std::shared_ptr<List<t_A>> { return List<t_A>::nil(); },
+            [](const typename Tree<t_A>::Node _args)
+                -> std::shared_ptr<List<t_A>> {
+              return _args.d_a0->flatten()->app(
+                  List<t_A>::cons(_args.d_a1, _args.d_a2->flatten()));
+            }},
+        this->v());
   }
 
   /// Merge two trees t1 and t2 element-wise using combine.
@@ -318,13 +329,13 @@ public:
                      return std::visit(
                          Overloaded{[](const typename Tree<t_A>::Leaf _args0)
                                         -> std::shared_ptr<Tree<t_A>> {
-                                      return Tree<t_A>::ctor::Leaf_();
+                                      return Tree<t_A>::leaf();
                                     },
                                     [](const typename Tree<t_A>::Node _args0)
                                         -> std::shared_ptr<Tree<t_A>> {
-                                      return Tree<t_A>::ctor::Node_(
-                                          Tree<t_A>::ctor::Leaf_(), _args0.d_a1,
-                                          Tree<t_A>::ctor::Leaf_());
+                                      return Tree<t_A>::node(Tree<t_A>::leaf(),
+                                                             _args0.d_a1,
+                                                             Tree<t_A>::leaf());
                                     }},
                          t2->v());
                    },
@@ -334,13 +345,13 @@ public:
                          Overloaded{
                              [&](const typename Tree<t_A>::Leaf _args0)
                                  -> std::shared_ptr<Tree<t_A>> {
-                               return Tree<t_A>::ctor::Node_(
-                                   Tree<t_A>::ctor::Leaf_(), _args.d_a1,
-                                   Tree<t_A>::ctor::Leaf_());
+                               return Tree<t_A>::node(Tree<t_A>::leaf(),
+                                                      _args.d_a1,
+                                                      Tree<t_A>::leaf());
                              },
                              [&](const typename Tree<t_A>::Node _args0)
                                  -> std::shared_ptr<Tree<t_A>> {
-                               return Tree<t_A>::ctor::Node_(
+                               return Tree<t_A>::node(
                                    _args.d_a0->merge(combine, _args0.d_a0),
                                    combine(_args.d_a1, _args0.d_a1),
                                    _args.d_a2->merge(combine, _args0.d_a2));
@@ -352,29 +363,27 @@ public:
 
   static const std::shared_ptr<Tree<std::shared_ptr<Nat>>> &tree1() {
     static const std::shared_ptr<Tree<std::shared_ptr<Nat>>> v =
-        Tree<std::shared_ptr<Nat>>::ctor::Node_(
-            Tree<std::shared_ptr<Nat>>::ctor::Node_(
-                Tree<std::shared_ptr<Nat>>::ctor::Leaf_(),
-                Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_()))),
-                Tree<std::shared_ptr<Nat>>::ctor::Node_(
-                    Tree<std::shared_ptr<Nat>>::ctor::Leaf_(),
-                    Nat::ctor::S_(
-                        Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(
-                            Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_()))))))),
-                    Tree<std::shared_ptr<Nat>>::ctor::Leaf_())),
-            Nat::ctor::S_(Nat::ctor::O_()),
-            Tree<std::shared_ptr<Nat>>::ctor::Node_(
-                Tree<std::shared_ptr<Nat>>::ctor::Leaf_(),
-                Nat::ctor::S_(Nat::ctor::S_(
-                    Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_())))),
-                Tree<std::shared_ptr<Nat>>::ctor::Node_(
-                    Tree<std::shared_ptr<Nat>>::ctor::Node_(
-                        Tree<std::shared_ptr<Nat>>::ctor::Leaf_(),
-                        Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(
-                            Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_())))))),
-                        Tree<std::shared_ptr<Nat>>::ctor::Leaf_()),
-                    Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_())),
-                    Tree<std::shared_ptr<Nat>>::ctor::Leaf_())));
+        Tree<std::shared_ptr<Nat>>::node(
+            Tree<std::shared_ptr<Nat>>::node(
+                Tree<std::shared_ptr<Nat>>::leaf(),
+                Nat::s(Nat::s(Nat::s(Nat::o()))),
+                Tree<std::shared_ptr<Nat>>::node(
+                    Tree<std::shared_ptr<Nat>>::leaf(),
+                    Nat::s(Nat::s(
+                        Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))),
+                    Tree<std::shared_ptr<Nat>>::leaf())),
+            Nat::s(Nat::o()),
+            Tree<std::shared_ptr<Nat>>::node(
+                Tree<std::shared_ptr<Nat>>::leaf(),
+                Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))),
+                Tree<std::shared_ptr<Nat>>::node(
+                    Tree<std::shared_ptr<Nat>>::node(
+                        Tree<std::shared_ptr<Nat>>::leaf(),
+                        Nat::s(
+                            Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
+                        Tree<std::shared_ptr<Nat>>::leaf()),
+                    Nat::s(Nat::s(Nat::o())),
+                    Tree<std::shared_ptr<Nat>>::leaf())));
     return v;
   }
 };

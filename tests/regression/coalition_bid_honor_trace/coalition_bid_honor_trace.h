@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -98,7 +103,7 @@ public:
     return std::visit(
         Overloaded{
             [](const typename List<t_A>::Nil _args)
-                -> std::shared_ptr<List<T1>> { return List<T1>::ctor::Nil_(); },
+                -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
             [&](const typename List<t_A>::Cons _args)
                 -> std::shared_ptr<List<T1>> {
               return f(_args.d_a0)->app(_args.d_a1->template flat_map<T1>(f));
@@ -132,14 +137,13 @@ public:
   template <typename T1, MapsTo<T1, t_A> F0>
   std::shared_ptr<List<T1>> map(F0 &&f) const {
     return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil _args)
-                -> std::shared_ptr<List<T1>> { return List<T1>::ctor::Nil_(); },
-            [&](const typename List<t_A>::Cons _args)
-                -> std::shared_ptr<List<T1>> {
-              return List<T1>::ctor::Cons_(f(_args.d_a0),
+        Overloaded{[](const typename List<t_A>::Nil _args)
+                       -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
+                   [&](const typename List<t_A>::Cons _args)
+                       -> std::shared_ptr<List<T1>> {
+                     return List<T1>::cons(f(_args.d_a0),
                                            _args.d_a1->template map<T1>(f));
-            }},
+                   }},
         this->v());
   }
 
@@ -160,8 +164,7 @@ public:
                        -> std::shared_ptr<List<t_A>> { return m; },
                    [&](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {
-                     return List<t_A>::ctor::Cons_(_args.d_a0,
-                                                   _args.d_a1->app(m));
+                     return List<t_A>::cons(_args.d_a0, _args.d_a1->app(m));
                    }},
         this->v());
   }
@@ -199,6 +202,7 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Positive(XI _v) : d_v_(std::move(_v)) {}
 
@@ -206,37 +210,47 @@ private:
 
   explicit Positive(XH _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Positive> xi(const std::shared_ptr<Positive> &a0) {
+    return std::make_shared<Positive>(XI{a0});
+  }
 
-    static std::shared_ptr<Positive> XI_(const std::shared_ptr<Positive> &a0) {
-      return std::shared_ptr<Positive>(new Positive(XI{a0}));
-    }
+  static std::shared_ptr<Positive> xi(std::shared_ptr<Positive> &&a0) {
+    return std::make_shared<Positive>(XI{std::move(a0)});
+  }
 
-    static std::shared_ptr<Positive> XO_(const std::shared_ptr<Positive> &a0) {
-      return std::shared_ptr<Positive>(new Positive(XO{a0}));
-    }
+  static std::shared_ptr<Positive> xo(const std::shared_ptr<Positive> &a0) {
+    return std::make_shared<Positive>(XO{a0});
+  }
 
-    static std::shared_ptr<Positive> XH_() {
-      return std::shared_ptr<Positive>(new Positive(XH{}));
-    }
+  static std::shared_ptr<Positive> xo(std::shared_ptr<Positive> &&a0) {
+    return std::make_shared<Positive>(XO{std::move(a0)});
+  }
 
-    static std::unique_ptr<Positive>
-    XI_uptr(const std::shared_ptr<Positive> &a0) {
-      return std::unique_ptr<Positive>(new Positive(XI{a0}));
-    }
+  static std::shared_ptr<Positive> xh() {
+    return std::make_shared<Positive>(XH{});
+  }
 
-    static std::unique_ptr<Positive>
-    XO_uptr(const std::shared_ptr<Positive> &a0) {
-      return std::unique_ptr<Positive>(new Positive(XO{a0}));
-    }
+  static std::unique_ptr<Positive>
+  xi_uptr(const std::shared_ptr<Positive> &a0) {
+    return std::make_unique<Positive>(XI{a0});
+  }
 
-    static std::unique_ptr<Positive> XH_uptr() {
-      return std::unique_ptr<Positive>(new Positive(XH{}));
-    }
-  };
+  static std::unique_ptr<Positive> xi_uptr(std::shared_ptr<Positive> &&a0) {
+    return std::make_unique<Positive>(XI{std::move(a0)});
+  }
+
+  static std::unique_ptr<Positive>
+  xo_uptr(const std::shared_ptr<Positive> &a0) {
+    return std::make_unique<Positive>(XO{a0});
+  }
+
+  static std::unique_ptr<Positive> xo_uptr(std::shared_ptr<Positive> &&a0) {
+    return std::make_unique<Positive>(XO{std::move(a0)});
+  }
+
+  static std::unique_ptr<Positive> xh_uptr() {
+    return std::make_unique<Positive>(XH{});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -263,6 +277,7 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Z(Z0 _v) : d_v_(std::move(_v)) {}
 
@@ -270,33 +285,41 @@ private:
 
   explicit Z(Zneg _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Z> z0() { return std::make_shared<Z>(Z0{}); }
 
-    static std::shared_ptr<Z> Z0_() { return std::shared_ptr<Z>(new Z(Z0{})); }
+  static std::shared_ptr<Z> zpos(const std::shared_ptr<Positive> &a0) {
+    return std::make_shared<Z>(Zpos{a0});
+  }
 
-    static std::shared_ptr<Z> Zpos_(const std::shared_ptr<Positive> &a0) {
-      return std::shared_ptr<Z>(new Z(Zpos{a0}));
-    }
+  static std::shared_ptr<Z> zpos(std::shared_ptr<Positive> &&a0) {
+    return std::make_shared<Z>(Zpos{std::move(a0)});
+  }
 
-    static std::shared_ptr<Z> Zneg_(const std::shared_ptr<Positive> &a0) {
-      return std::shared_ptr<Z>(new Z(Zneg{a0}));
-    }
+  static std::shared_ptr<Z> zneg(const std::shared_ptr<Positive> &a0) {
+    return std::make_shared<Z>(Zneg{a0});
+  }
 
-    static std::unique_ptr<Z> Z0_uptr() {
-      return std::unique_ptr<Z>(new Z(Z0{}));
-    }
+  static std::shared_ptr<Z> zneg(std::shared_ptr<Positive> &&a0) {
+    return std::make_shared<Z>(Zneg{std::move(a0)});
+  }
 
-    static std::unique_ptr<Z> Zpos_uptr(const std::shared_ptr<Positive> &a0) {
-      return std::unique_ptr<Z>(new Z(Zpos{a0}));
-    }
+  static std::unique_ptr<Z> z0_uptr() { return std::make_unique<Z>(Z0{}); }
 
-    static std::unique_ptr<Z> Zneg_uptr(const std::shared_ptr<Positive> &a0) {
-      return std::unique_ptr<Z>(new Z(Zneg{a0}));
-    }
-  };
+  static std::unique_ptr<Z> zpos_uptr(const std::shared_ptr<Positive> &a0) {
+    return std::make_unique<Z>(Zpos{a0});
+  }
+
+  static std::unique_ptr<Z> zpos_uptr(std::shared_ptr<Positive> &&a0) {
+    return std::make_unique<Z>(Zpos{std::move(a0)});
+  }
+
+  static std::unique_ptr<Z> zneg_uptr(const std::shared_ptr<Positive> &a0) {
+    return std::make_unique<Z>(Zneg{a0});
+  }
+
+  static std::unique_ptr<Z> zneg_uptr(std::shared_ptr<Positive> &&a0) {
+    return std::make_unique<Z>(Zneg{std::move(a0)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -662,32 +685,27 @@ struct CoalitionBidHonorTraceCase {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit Prize(PrizeHonor _v) : d_v_(std::move(_v)) {}
 
     explicit Prize(PrizeEnclave _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<Prize> prizehonor() {
+      return std::make_shared<Prize>(PrizeHonor{});
+    }
 
-      static std::shared_ptr<Prize> PrizeHonor_() {
-        return std::shared_ptr<Prize>(new Prize(PrizeHonor{}));
-      }
+    static std::shared_ptr<Prize> prizeenclave(unsigned int a0) {
+      return std::make_shared<Prize>(PrizeEnclave{std::move(a0)});
+    }
 
-      static std::shared_ptr<Prize> PrizeEnclave_(unsigned int a0) {
-        return std::shared_ptr<Prize>(new Prize(PrizeEnclave{a0}));
-      }
+    static std::unique_ptr<Prize> prizehonor_uptr() {
+      return std::make_unique<Prize>(PrizeHonor{});
+    }
 
-      static std::unique_ptr<Prize> PrizeHonor_uptr() {
-        return std::unique_ptr<Prize>(new Prize(PrizeHonor{}));
-      }
-
-      static std::unique_ptr<Prize> PrizeEnclave_uptr(unsigned int a0) {
-        return std::unique_ptr<Prize>(new Prize(PrizeEnclave{a0}));
-      }
-    };
+    static std::unique_ptr<Prize> prizeenclave_uptr(unsigned int a0) {
+      return std::make_unique<Prize>(PrizeEnclave{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -735,36 +753,31 @@ struct CoalitionBidHonorTraceCase {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit Location(LocPlanetSurface _v) : d_v_(std::move(_v)) {}
 
     explicit Location(LocEnclave _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<Location> locplanetsurface(unsigned int a0,
+                                                      unsigned int a1) {
+      return std::make_shared<Location>(
+          LocPlanetSurface{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<Location> LocPlanetSurface_(unsigned int a0,
-                                                         unsigned int a1) {
-        return std::shared_ptr<Location>(
-            new Location(LocPlanetSurface{a0, a1}));
-      }
+    static std::shared_ptr<Location> locenclave(unsigned int a0) {
+      return std::make_shared<Location>(LocEnclave{std::move(a0)});
+    }
 
-      static std::shared_ptr<Location> LocEnclave_(unsigned int a0) {
-        return std::shared_ptr<Location>(new Location(LocEnclave{a0}));
-      }
+    static std::unique_ptr<Location> locplanetsurface_uptr(unsigned int a0,
+                                                           unsigned int a1) {
+      return std::make_unique<Location>(
+          LocPlanetSurface{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<Location> LocPlanetSurface_uptr(unsigned int a0,
-                                                             unsigned int a1) {
-        return std::unique_ptr<Location>(
-            new Location(LocPlanetSurface{a0, a1}));
-      }
-
-      static std::unique_ptr<Location> LocEnclave_uptr(unsigned int a0) {
-        return std::unique_ptr<Location>(new Location(LocEnclave{a0}));
-      }
-    };
+    static std::unique_ptr<Location> locenclave_uptr(unsigned int a0) {
+      return std::make_unique<Location>(LocEnclave{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -836,36 +849,27 @@ struct CoalitionBidHonorTraceCase {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit RefusalReason(RefusalInsufficientRank _v) : d_v_(std::move(_v)) {}
 
     explicit RefusalReason(RefusalOther _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<RefusalReason> refusalinsufficientrank() {
+      return std::make_shared<RefusalReason>(RefusalInsufficientRank{});
+    }
 
-      static std::shared_ptr<RefusalReason> RefusalInsufficientRank_() {
-        return std::shared_ptr<RefusalReason>(
-            new RefusalReason(RefusalInsufficientRank{}));
-      }
+    static std::shared_ptr<RefusalReason> refusalother(unsigned int a0) {
+      return std::make_shared<RefusalReason>(RefusalOther{std::move(a0)});
+    }
 
-      static std::shared_ptr<RefusalReason> RefusalOther_(unsigned int a0) {
-        return std::shared_ptr<RefusalReason>(
-            new RefusalReason(RefusalOther{a0}));
-      }
+    static std::unique_ptr<RefusalReason> refusalinsufficientrank_uptr() {
+      return std::make_unique<RefusalReason>(RefusalInsufficientRank{});
+    }
 
-      static std::unique_ptr<RefusalReason> RefusalInsufficientRank_uptr() {
-        return std::unique_ptr<RefusalReason>(
-            new RefusalReason(RefusalInsufficientRank{}));
-      }
-
-      static std::unique_ptr<RefusalReason> RefusalOther_uptr(unsigned int a0) {
-        return std::unique_ptr<RefusalReason>(
-            new RefusalReason(RefusalOther{a0}));
-      }
-    };
+    static std::unique_ptr<RefusalReason> refusalother_uptr(unsigned int a0) {
+      return std::make_unique<RefusalReason>(RefusalOther{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -944,6 +948,7 @@ struct CoalitionBidHonorTraceCase {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit ProtocolAction(ActChallenge _v) : d_v_(std::move(_v)) {}
 
@@ -963,105 +968,137 @@ struct CoalitionBidHonorTraceCase {
 
     explicit ProtocolAction(ActBreakBid _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<ProtocolAction>
+    actchallenge(const std::shared_ptr<BatchallChallenge> &a0) {
+      return std::make_shared<ProtocolAction>(ActChallenge{a0});
+    }
 
-      static std::shared_ptr<ProtocolAction>
-      ActChallenge_(const std::shared_ptr<BatchallChallenge> &a0) {
-        return std::shared_ptr<ProtocolAction>(
-            new ProtocolAction(ActChallenge{a0}));
-      }
+    static std::shared_ptr<ProtocolAction>
+    actchallenge(std::shared_ptr<BatchallChallenge> &&a0) {
+      return std::make_shared<ProtocolAction>(ActChallenge{std::move(a0)});
+    }
 
-      static std::shared_ptr<ProtocolAction>
-      ActRespond_(const std::shared_ptr<BatchallResponse> &a0) {
-        return std::shared_ptr<ProtocolAction>(
-            new ProtocolAction(ActRespond{a0}));
-      }
+    static std::shared_ptr<ProtocolAction>
+    actrespond(const std::shared_ptr<BatchallResponse> &a0) {
+      return std::make_shared<ProtocolAction>(ActRespond{a0});
+    }
 
-      static std::shared_ptr<ProtocolAction>
-      ActRefuse_(const std::shared_ptr<RefusalReason> &a0) {
-        return std::shared_ptr<ProtocolAction>(
-            new ProtocolAction(ActRefuse{a0}));
-      }
+    static std::shared_ptr<ProtocolAction>
+    actrespond(std::shared_ptr<BatchallResponse> &&a0) {
+      return std::make_shared<ProtocolAction>(ActRespond{std::move(a0)});
+    }
 
-      static std::shared_ptr<ProtocolAction>
-      ActBid_(const std::shared_ptr<ForceBid> &a0) {
-        return std::shared_ptr<ProtocolAction>(new ProtocolAction(ActBid{a0}));
-      }
+    static std::shared_ptr<ProtocolAction>
+    actrefuse(const std::shared_ptr<RefusalReason> &a0) {
+      return std::make_shared<ProtocolAction>(ActRefuse{a0});
+    }
 
-      static std::shared_ptr<ProtocolAction>
-      ActCoalitionBid_(const std::shared_ptr<CoalitionMemberBid> &a0) {
-        return std::shared_ptr<ProtocolAction>(
-            new ProtocolAction(ActCoalitionBid{a0}));
-      }
+    static std::shared_ptr<ProtocolAction>
+    actrefuse(std::shared_ptr<RefusalReason> &&a0) {
+      return std::make_shared<ProtocolAction>(ActRefuse{std::move(a0)});
+    }
 
-      static std::shared_ptr<ProtocolAction> ActPass_(Side a0) {
-        return std::shared_ptr<ProtocolAction>(new ProtocolAction(ActPass{a0}));
-      }
+    static std::shared_ptr<ProtocolAction>
+    actbid(const std::shared_ptr<ForceBid> &a0) {
+      return std::make_shared<ProtocolAction>(ActBid{a0});
+    }
 
-      static std::shared_ptr<ProtocolAction> ActClose_() {
-        return std::shared_ptr<ProtocolAction>(new ProtocolAction(ActClose{}));
-      }
+    static std::shared_ptr<ProtocolAction>
+    actbid(std::shared_ptr<ForceBid> &&a0) {
+      return std::make_shared<ProtocolAction>(ActBid{std::move(a0)});
+    }
 
-      static std::shared_ptr<ProtocolAction> ActWithdraw_(Side a0) {
-        return std::shared_ptr<ProtocolAction>(
-            new ProtocolAction(ActWithdraw{a0}));
-      }
+    static std::shared_ptr<ProtocolAction>
+    actcoalitionbid(const std::shared_ptr<CoalitionMemberBid> &a0) {
+      return std::make_shared<ProtocolAction>(ActCoalitionBid{a0});
+    }
 
-      static std::shared_ptr<ProtocolAction> ActBreakBid_(Side a0) {
-        return std::shared_ptr<ProtocolAction>(
-            new ProtocolAction(ActBreakBid{a0}));
-      }
+    static std::shared_ptr<ProtocolAction>
+    actcoalitionbid(std::shared_ptr<CoalitionMemberBid> &&a0) {
+      return std::make_shared<ProtocolAction>(ActCoalitionBid{std::move(a0)});
+    }
 
-      static std::unique_ptr<ProtocolAction>
-      ActChallenge_uptr(const std::shared_ptr<BatchallChallenge> &a0) {
-        return std::unique_ptr<ProtocolAction>(
-            new ProtocolAction(ActChallenge{a0}));
-      }
+    static std::shared_ptr<ProtocolAction> actpass(Side a0) {
+      return std::make_shared<ProtocolAction>(ActPass{std::move(a0)});
+    }
 
-      static std::unique_ptr<ProtocolAction>
-      ActRespond_uptr(const std::shared_ptr<BatchallResponse> &a0) {
-        return std::unique_ptr<ProtocolAction>(
-            new ProtocolAction(ActRespond{a0}));
-      }
+    static std::shared_ptr<ProtocolAction> actclose() {
+      return std::make_shared<ProtocolAction>(ActClose{});
+    }
 
-      static std::unique_ptr<ProtocolAction>
-      ActRefuse_uptr(const std::shared_ptr<RefusalReason> &a0) {
-        return std::unique_ptr<ProtocolAction>(
-            new ProtocolAction(ActRefuse{a0}));
-      }
+    static std::shared_ptr<ProtocolAction> actwithdraw(Side a0) {
+      return std::make_shared<ProtocolAction>(ActWithdraw{std::move(a0)});
+    }
 
-      static std::unique_ptr<ProtocolAction>
-      ActBid_uptr(const std::shared_ptr<ForceBid> &a0) {
-        return std::unique_ptr<ProtocolAction>(new ProtocolAction(ActBid{a0}));
-      }
+    static std::shared_ptr<ProtocolAction> actbreakbid(Side a0) {
+      return std::make_shared<ProtocolAction>(ActBreakBid{std::move(a0)});
+    }
 
-      static std::unique_ptr<ProtocolAction>
-      ActCoalitionBid_uptr(const std::shared_ptr<CoalitionMemberBid> &a0) {
-        return std::unique_ptr<ProtocolAction>(
-            new ProtocolAction(ActCoalitionBid{a0}));
-      }
+    static std::unique_ptr<ProtocolAction>
+    actchallenge_uptr(const std::shared_ptr<BatchallChallenge> &a0) {
+      return std::make_unique<ProtocolAction>(ActChallenge{a0});
+    }
 
-      static std::unique_ptr<ProtocolAction> ActPass_uptr(Side a0) {
-        return std::unique_ptr<ProtocolAction>(new ProtocolAction(ActPass{a0}));
-      }
+    static std::unique_ptr<ProtocolAction>
+    actchallenge_uptr(std::shared_ptr<BatchallChallenge> &&a0) {
+      return std::make_unique<ProtocolAction>(ActChallenge{std::move(a0)});
+    }
 
-      static std::unique_ptr<ProtocolAction> ActClose_uptr() {
-        return std::unique_ptr<ProtocolAction>(new ProtocolAction(ActClose{}));
-      }
+    static std::unique_ptr<ProtocolAction>
+    actrespond_uptr(const std::shared_ptr<BatchallResponse> &a0) {
+      return std::make_unique<ProtocolAction>(ActRespond{a0});
+    }
 
-      static std::unique_ptr<ProtocolAction> ActWithdraw_uptr(Side a0) {
-        return std::unique_ptr<ProtocolAction>(
-            new ProtocolAction(ActWithdraw{a0}));
-      }
+    static std::unique_ptr<ProtocolAction>
+    actrespond_uptr(std::shared_ptr<BatchallResponse> &&a0) {
+      return std::make_unique<ProtocolAction>(ActRespond{std::move(a0)});
+    }
 
-      static std::unique_ptr<ProtocolAction> ActBreakBid_uptr(Side a0) {
-        return std::unique_ptr<ProtocolAction>(
-            new ProtocolAction(ActBreakBid{a0}));
-      }
-    };
+    static std::unique_ptr<ProtocolAction>
+    actrefuse_uptr(const std::shared_ptr<RefusalReason> &a0) {
+      return std::make_unique<ProtocolAction>(ActRefuse{a0});
+    }
+
+    static std::unique_ptr<ProtocolAction>
+    actrefuse_uptr(std::shared_ptr<RefusalReason> &&a0) {
+      return std::make_unique<ProtocolAction>(ActRefuse{std::move(a0)});
+    }
+
+    static std::unique_ptr<ProtocolAction>
+    actbid_uptr(const std::shared_ptr<ForceBid> &a0) {
+      return std::make_unique<ProtocolAction>(ActBid{a0});
+    }
+
+    static std::unique_ptr<ProtocolAction>
+    actbid_uptr(std::shared_ptr<ForceBid> &&a0) {
+      return std::make_unique<ProtocolAction>(ActBid{std::move(a0)});
+    }
+
+    static std::unique_ptr<ProtocolAction>
+    actcoalitionbid_uptr(const std::shared_ptr<CoalitionMemberBid> &a0) {
+      return std::make_unique<ProtocolAction>(ActCoalitionBid{a0});
+    }
+
+    static std::unique_ptr<ProtocolAction>
+    actcoalitionbid_uptr(std::shared_ptr<CoalitionMemberBid> &&a0) {
+      return std::make_unique<ProtocolAction>(ActCoalitionBid{std::move(a0)});
+    }
+
+    static std::unique_ptr<ProtocolAction> actpass_uptr(Side a0) {
+      return std::make_unique<ProtocolAction>(ActPass{std::move(a0)});
+    }
+
+    static std::unique_ptr<ProtocolAction> actclose_uptr() {
+      return std::make_unique<ProtocolAction>(ActClose{});
+    }
+
+    static std::unique_ptr<ProtocolAction> actwithdraw_uptr(Side a0) {
+      return std::make_unique<ProtocolAction>(ActWithdraw{std::move(a0)});
+    }
+
+    static std::unique_ptr<ProtocolAction> actbreakbid_uptr(Side a0) {
+      return std::make_unique<ProtocolAction>(ActBreakBid{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -1261,6 +1298,7 @@ struct CoalitionBidHonorTraceCase {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit BatchallPhase(PhaseIdle _v) : d_v_(std::move(_v)) {}
 
@@ -1276,113 +1314,183 @@ struct CoalitionBidHonorTraceCase {
 
     explicit BatchallPhase(PhaseAborted _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<BatchallPhase> phaseidle() {
+      return std::make_shared<BatchallPhase>(PhaseIdle{});
+    }
 
-      static std::shared_ptr<BatchallPhase> PhaseIdle_() {
-        return std::shared_ptr<BatchallPhase>(new BatchallPhase(PhaseIdle{}));
-      }
+    static std::shared_ptr<BatchallPhase>
+    phasechallenged(const std::shared_ptr<BatchallChallenge> &a0) {
+      return std::make_shared<BatchallPhase>(PhaseChallenged{a0});
+    }
 
-      static std::shared_ptr<BatchallPhase>
-      PhaseChallenged_(const std::shared_ptr<BatchallChallenge> &a0) {
-        return std::shared_ptr<BatchallPhase>(
-            new BatchallPhase(PhaseChallenged{a0}));
-      }
+    static std::shared_ptr<BatchallPhase>
+    phasechallenged(std::shared_ptr<BatchallChallenge> &&a0) {
+      return std::make_shared<BatchallPhase>(PhaseChallenged{std::move(a0)});
+    }
 
-      static std::shared_ptr<BatchallPhase>
-      PhaseResponded_(const std::shared_ptr<BatchallChallenge> &a0,
-                      const std::shared_ptr<BatchallResponse> &a1) {
-        return std::shared_ptr<BatchallPhase>(
-            new BatchallPhase(PhaseResponded{a0, a1}));
-      }
+    static std::shared_ptr<BatchallPhase>
+    phaseresponded(const std::shared_ptr<BatchallChallenge> &a0,
+                   const std::shared_ptr<BatchallResponse> &a1) {
+      return std::make_shared<BatchallPhase>(PhaseResponded{a0, a1});
+    }
 
-      static std::shared_ptr<BatchallPhase>
-      PhaseBidding_(const std::shared_ptr<BatchallChallenge> &a0,
-                    const std::shared_ptr<BatchallResponse> &a1,
-                    const std::shared_ptr<ForceBid> &a2,
-                    const std::shared_ptr<ForceBid> &a3, CoalitionState a4,
-                    CoalitionState a5,
-                    const std::shared_ptr<List<std::shared_ptr<ForceBid>>> &a6,
-                    ReadyStatus a7) {
-        return std::shared_ptr<BatchallPhase>(
-            new BatchallPhase(PhaseBidding{a0, a1, a2, a3, a4, a5, a6, a7}));
-      }
+    static std::shared_ptr<BatchallPhase>
+    phaseresponded(std::shared_ptr<BatchallChallenge> &&a0,
+                   std::shared_ptr<BatchallResponse> &&a1) {
+      return std::make_shared<BatchallPhase>(
+          PhaseResponded{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<BatchallPhase>
-      PhaseAgreed_(const std::shared_ptr<BatchallChallenge> &a0,
-                   const std::shared_ptr<BatchallResponse> &a1,
-                   const std::shared_ptr<ForceBid> &a2,
-                   const std::shared_ptr<ForceBid> &a3) {
-        return std::shared_ptr<BatchallPhase>(
-            new BatchallPhase(PhaseAgreed{a0, a1, a2, a3}));
-      }
+    static std::shared_ptr<BatchallPhase>
+    phasebidding(const std::shared_ptr<BatchallChallenge> &a0,
+                 const std::shared_ptr<BatchallResponse> &a1,
+                 const std::shared_ptr<ForceBid> &a2,
+                 const std::shared_ptr<ForceBid> &a3, CoalitionState a4,
+                 CoalitionState a5,
+                 const std::shared_ptr<List<std::shared_ptr<ForceBid>>> &a6,
+                 ReadyStatus a7) {
+      return std::make_shared<BatchallPhase>(PhaseBidding{
+          a0, a1, a2, a3, std::move(a4), std::move(a5), a6, std::move(a7)});
+    }
 
-      static std::shared_ptr<BatchallPhase>
-      PhaseRefused_(const std::shared_ptr<BatchallChallenge> &a0,
-                    const std::shared_ptr<RefusalReason> &a1) {
-        return std::shared_ptr<BatchallPhase>(
-            new BatchallPhase(PhaseRefused{a0, a1}));
-      }
+    static std::shared_ptr<BatchallPhase> phasebidding(
+        std::shared_ptr<BatchallChallenge> &&a0,
+        std::shared_ptr<BatchallResponse> &&a1, std::shared_ptr<ForceBid> &&a2,
+        std::shared_ptr<ForceBid> &&a3, CoalitionState a4, CoalitionState a5,
+        std::shared_ptr<List<std::shared_ptr<ForceBid>>> &&a6, ReadyStatus a7) {
+      return std::make_shared<BatchallPhase>(PhaseBidding{
+          std::move(a0), std::move(a1), std::move(a2), std::move(a3),
+          std::move(a4), std::move(a5), std::move(a6), std::move(a7)});
+    }
 
-      static std::shared_ptr<BatchallPhase>
-      PhaseAborted_(const std::shared_ptr<ProtocolAction> &a0) {
-        return std::shared_ptr<BatchallPhase>(
-            new BatchallPhase(PhaseAborted{a0}));
-      }
+    static std::shared_ptr<BatchallPhase>
+    phaseagreed(const std::shared_ptr<BatchallChallenge> &a0,
+                const std::shared_ptr<BatchallResponse> &a1,
+                const std::shared_ptr<ForceBid> &a2,
+                const std::shared_ptr<ForceBid> &a3) {
+      return std::make_shared<BatchallPhase>(PhaseAgreed{a0, a1, a2, a3});
+    }
 
-      static std::unique_ptr<BatchallPhase> PhaseIdle_uptr() {
-        return std::unique_ptr<BatchallPhase>(new BatchallPhase(PhaseIdle{}));
-      }
+    static std::shared_ptr<BatchallPhase>
+    phaseagreed(std::shared_ptr<BatchallChallenge> &&a0,
+                std::shared_ptr<BatchallResponse> &&a1,
+                std::shared_ptr<ForceBid> &&a2,
+                std::shared_ptr<ForceBid> &&a3) {
+      return std::make_shared<BatchallPhase>(PhaseAgreed{
+          std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
+    }
 
-      static std::unique_ptr<BatchallPhase>
-      PhaseChallenged_uptr(const std::shared_ptr<BatchallChallenge> &a0) {
-        return std::unique_ptr<BatchallPhase>(
-            new BatchallPhase(PhaseChallenged{a0}));
-      }
+    static std::shared_ptr<BatchallPhase>
+    phaserefused(const std::shared_ptr<BatchallChallenge> &a0,
+                 const std::shared_ptr<RefusalReason> &a1) {
+      return std::make_shared<BatchallPhase>(PhaseRefused{a0, a1});
+    }
 
-      static std::unique_ptr<BatchallPhase>
-      PhaseResponded_uptr(const std::shared_ptr<BatchallChallenge> &a0,
-                          const std::shared_ptr<BatchallResponse> &a1) {
-        return std::unique_ptr<BatchallPhase>(
-            new BatchallPhase(PhaseResponded{a0, a1}));
-      }
+    static std::shared_ptr<BatchallPhase>
+    phaserefused(std::shared_ptr<BatchallChallenge> &&a0,
+                 std::shared_ptr<RefusalReason> &&a1) {
+      return std::make_shared<BatchallPhase>(
+          PhaseRefused{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<BatchallPhase> PhaseBidding_uptr(
-          const std::shared_ptr<BatchallChallenge> &a0,
-          const std::shared_ptr<BatchallResponse> &a1,
-          const std::shared_ptr<ForceBid> &a2,
-          const std::shared_ptr<ForceBid> &a3, CoalitionState a4,
-          CoalitionState a5,
-          const std::shared_ptr<List<std::shared_ptr<ForceBid>>> &a6,
-          ReadyStatus a7) {
-        return std::unique_ptr<BatchallPhase>(
-            new BatchallPhase(PhaseBidding{a0, a1, a2, a3, a4, a5, a6, a7}));
-      }
+    static std::shared_ptr<BatchallPhase>
+    phaseaborted(const std::shared_ptr<ProtocolAction> &a0) {
+      return std::make_shared<BatchallPhase>(PhaseAborted{a0});
+    }
 
-      static std::unique_ptr<BatchallPhase>
-      PhaseAgreed_uptr(const std::shared_ptr<BatchallChallenge> &a0,
-                       const std::shared_ptr<BatchallResponse> &a1,
-                       const std::shared_ptr<ForceBid> &a2,
-                       const std::shared_ptr<ForceBid> &a3) {
-        return std::unique_ptr<BatchallPhase>(
-            new BatchallPhase(PhaseAgreed{a0, a1, a2, a3}));
-      }
+    static std::shared_ptr<BatchallPhase>
+    phaseaborted(std::shared_ptr<ProtocolAction> &&a0) {
+      return std::make_shared<BatchallPhase>(PhaseAborted{std::move(a0)});
+    }
 
-      static std::unique_ptr<BatchallPhase>
-      PhaseRefused_uptr(const std::shared_ptr<BatchallChallenge> &a0,
-                        const std::shared_ptr<RefusalReason> &a1) {
-        return std::unique_ptr<BatchallPhase>(
-            new BatchallPhase(PhaseRefused{a0, a1}));
-      }
+    static std::unique_ptr<BatchallPhase> phaseidle_uptr() {
+      return std::make_unique<BatchallPhase>(PhaseIdle{});
+    }
 
-      static std::unique_ptr<BatchallPhase>
-      PhaseAborted_uptr(const std::shared_ptr<ProtocolAction> &a0) {
-        return std::unique_ptr<BatchallPhase>(
-            new BatchallPhase(PhaseAborted{a0}));
-      }
-    };
+    static std::unique_ptr<BatchallPhase>
+    phasechallenged_uptr(const std::shared_ptr<BatchallChallenge> &a0) {
+      return std::make_unique<BatchallPhase>(PhaseChallenged{a0});
+    }
+
+    static std::unique_ptr<BatchallPhase>
+    phasechallenged_uptr(std::shared_ptr<BatchallChallenge> &&a0) {
+      return std::make_unique<BatchallPhase>(PhaseChallenged{std::move(a0)});
+    }
+
+    static std::unique_ptr<BatchallPhase>
+    phaseresponded_uptr(const std::shared_ptr<BatchallChallenge> &a0,
+                        const std::shared_ptr<BatchallResponse> &a1) {
+      return std::make_unique<BatchallPhase>(PhaseResponded{a0, a1});
+    }
+
+    static std::unique_ptr<BatchallPhase>
+    phaseresponded_uptr(std::shared_ptr<BatchallChallenge> &&a0,
+                        std::shared_ptr<BatchallResponse> &&a1) {
+      return std::make_unique<BatchallPhase>(
+          PhaseResponded{std::move(a0), std::move(a1)});
+    }
+
+    static std::unique_ptr<BatchallPhase> phasebidding_uptr(
+        const std::shared_ptr<BatchallChallenge> &a0,
+        const std::shared_ptr<BatchallResponse> &a1,
+        const std::shared_ptr<ForceBid> &a2,
+        const std::shared_ptr<ForceBid> &a3, CoalitionState a4,
+        CoalitionState a5,
+        const std::shared_ptr<List<std::shared_ptr<ForceBid>>> &a6,
+        ReadyStatus a7) {
+      return std::make_unique<BatchallPhase>(PhaseBidding{
+          a0, a1, a2, a3, std::move(a4), std::move(a5), a6, std::move(a7)});
+    }
+
+    static std::unique_ptr<BatchallPhase> phasebidding_uptr(
+        std::shared_ptr<BatchallChallenge> &&a0,
+        std::shared_ptr<BatchallResponse> &&a1, std::shared_ptr<ForceBid> &&a2,
+        std::shared_ptr<ForceBid> &&a3, CoalitionState a4, CoalitionState a5,
+        std::shared_ptr<List<std::shared_ptr<ForceBid>>> &&a6, ReadyStatus a7) {
+      return std::make_unique<BatchallPhase>(PhaseBidding{
+          std::move(a0), std::move(a1), std::move(a2), std::move(a3),
+          std::move(a4), std::move(a5), std::move(a6), std::move(a7)});
+    }
+
+    static std::unique_ptr<BatchallPhase>
+    phaseagreed_uptr(const std::shared_ptr<BatchallChallenge> &a0,
+                     const std::shared_ptr<BatchallResponse> &a1,
+                     const std::shared_ptr<ForceBid> &a2,
+                     const std::shared_ptr<ForceBid> &a3) {
+      return std::make_unique<BatchallPhase>(PhaseAgreed{a0, a1, a2, a3});
+    }
+
+    static std::unique_ptr<BatchallPhase>
+    phaseagreed_uptr(std::shared_ptr<BatchallChallenge> &&a0,
+                     std::shared_ptr<BatchallResponse> &&a1,
+                     std::shared_ptr<ForceBid> &&a2,
+                     std::shared_ptr<ForceBid> &&a3) {
+      return std::make_unique<BatchallPhase>(PhaseAgreed{
+          std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
+    }
+
+    static std::unique_ptr<BatchallPhase>
+    phaserefused_uptr(const std::shared_ptr<BatchallChallenge> &a0,
+                      const std::shared_ptr<RefusalReason> &a1) {
+      return std::make_unique<BatchallPhase>(PhaseRefused{a0, a1});
+    }
+
+    static std::unique_ptr<BatchallPhase>
+    phaserefused_uptr(std::shared_ptr<BatchallChallenge> &&a0,
+                      std::shared_ptr<RefusalReason> &&a1) {
+      return std::make_unique<BatchallPhase>(
+          PhaseRefused{std::move(a0), std::move(a1)});
+    }
+
+    static std::unique_ptr<BatchallPhase>
+    phaseaborted_uptr(const std::shared_ptr<ProtocolAction> &a0) {
+      return std::make_unique<BatchallPhase>(PhaseAborted{a0});
+    }
+
+    static std::unique_ptr<BatchallPhase>
+    phaseaborted_uptr(std::shared_ptr<ProtocolAction> &&a0) {
+      return std::make_unique<BatchallPhase>(PhaseAborted{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -1723,10 +1831,10 @@ struct CoalitionBidHonorTraceCase {
   };
 
   static inline const HonorLedger empty_ledger =
-      List<std::pair<unsigned int, std::shared_ptr<Z>>>::ctor::Nil_();
+      List<std::pair<unsigned int, std::shared_ptr<Z>>>::nil();
   static inline const std::shared_ptr<BatchallState> initial_state =
       std::make_shared<BatchallState>(
-          BatchallState{BatchallPhase::ctor::PhaseIdle_(), empty_ledger});
+          BatchallState{BatchallPhase::phaseidle(), empty_ledger});
   __attribute__((pure)) static HonorLedger
   apply_action_honor(const std::shared_ptr<BatchallState> &state,
                      const std::shared_ptr<ProtocolAction> &action);
@@ -1754,43 +1862,38 @@ struct CoalitionBidHonorTraceCase {
   static inline const std::shared_ptr<Unit> elementals = std::make_shared<Unit>(
       Unit{105u, UnitClass::e_ELEMENTAL, WeightClass::e_LIGHT, 5u, 3u, 4u,
            false, true});
-  static inline const Force falcon_trinary =
-      List<std::shared_ptr<Unit>>::ctor::Cons_(
-          direwolf,
-          List<std::shared_ptr<Unit>>::ctor::Cons_(
-              timberwolf,
-              List<std::shared_ptr<Unit>>::ctor::Cons_(
-                  summoner,
-                  List<std::shared_ptr<Unit>>::ctor::Cons_(
-                      mad_dog, List<std::shared_ptr<Unit>>::ctor::Nil_()))));
-  static inline const Force wolf_binary =
-      List<std::shared_ptr<Unit>>::ctor::Cons_(
-          timberwolf, List<std::shared_ptr<Unit>>::ctor::Cons_(
-                          summoner, List<std::shared_ptr<Unit>>::ctor::Nil_()));
-  static inline const Force bear_support =
-      List<std::shared_ptr<Unit>>::ctor::Cons_(
-          elementals,
-          List<std::shared_ptr<Unit>>::ctor::Cons_(
-              elementals, List<std::shared_ptr<Unit>>::ctor::Nil_()));
+  static inline const Force falcon_trinary = List<std::shared_ptr<Unit>>::cons(
+      direwolf,
+      List<std::shared_ptr<Unit>>::cons(
+          timberwolf,
+          List<std::shared_ptr<Unit>>::cons(
+              summoner, List<std::shared_ptr<Unit>>::cons(
+                            mad_dog, List<std::shared_ptr<Unit>>::nil()))));
+  static inline const Force wolf_binary = List<std::shared_ptr<Unit>>::cons(
+      timberwolf, List<std::shared_ptr<Unit>>::cons(
+                      summoner, List<std::shared_ptr<Unit>>::nil()));
+  static inline const Force bear_support = List<std::shared_ptr<Unit>>::cons(
+      elementals, List<std::shared_ptr<Unit>>::cons(
+                      elementals, List<std::shared_ptr<Unit>>::nil()));
   static inline const Coalition attacker_coalition =
-      List<std::shared_ptr<CoalitionMember>>::ctor::Cons_(
+      List<std::shared_ptr<CoalitionMember>>::cons(
           std::make_shared<CoalitionMember>(
               CoalitionMember{Clan::e_CLANJADEFALCON, malthus, falcon_trinary}),
-          List<std::shared_ptr<CoalitionMember>>::ctor::Cons_(
+          List<std::shared_ptr<CoalitionMember>>::cons(
               std::make_shared<CoalitionMember>(CoalitionMember{
                   Clan::e_CLANGHOSTBEAR, bear_ally, bear_support}),
-              List<std::shared_ptr<CoalitionMember>>::ctor::Nil_()));
+              List<std::shared_ptr<CoalitionMember>>::nil()));
   static inline const Coalition defender_coalition =
-      List<std::shared_ptr<CoalitionMember>>::ctor::Cons_(
+      List<std::shared_ptr<CoalitionMember>>::cons(
           std::make_shared<CoalitionMember>(
               CoalitionMember{Clan::e_CLANWOLF, radick, wolf_binary}),
-          List<std::shared_ptr<CoalitionMember>>::ctor::Nil_());
+          List<std::shared_ptr<CoalitionMember>>::nil());
   static inline const std::shared_ptr<BatchallChallenge> sample_challenge =
       std::make_shared<BatchallChallenge>(BatchallChallenge{
-          malthus, Clan::e_CLANJADEFALCON, Prize::ctor::PrizeEnclave_(42u),
+          malthus, Clan::e_CLANJADEFALCON, Prize::prizeenclave(42u),
           coalition_force(attacker_coalition),
-          Location::ctor::LocPlanetSurface_(7u, 3u),
-          TrialType::e_TRIALOFPOSSESSION, standard_possession_context});
+          Location::locplanetsurface(7u, 3u), TrialType::e_TRIALOFPOSSESSION,
+          standard_possession_context});
   static inline const std::shared_ptr<BatchallResponse> sample_response =
       std::make_shared<BatchallResponse>(BatchallResponse{
           radick, Clan::e_CLANWOLF, coalition_force(defender_coalition)});
@@ -1800,9 +1903,8 @@ struct CoalitionBidHonorTraceCase {
           *coalition_to_bid(attacker_coalition, Side::e_ATTACKER);
       return bid;
     } else {
-      return std::make_shared<ForceBid>(
-          ForceBid{List<std::shared_ptr<Unit>>::ctor::Nil_(), Side::e_ATTACKER,
-                   malthus});
+      return std::make_shared<ForceBid>(ForceBid{
+          List<std::shared_ptr<Unit>>::nil(), Side::e_ATTACKER, malthus});
     }
   }();
   static inline const std::shared_ptr<ForceBid> sample_defender_bid = [](void) {
@@ -1812,12 +1914,12 @@ struct CoalitionBidHonorTraceCase {
       return bid;
     } else {
       return std::make_shared<ForceBid>(ForceBid{
-          List<std::shared_ptr<Unit>>::ctor::Nil_(), Side::e_DEFENDER, radick});
+          List<std::shared_ptr<Unit>>::nil(), Side::e_DEFENDER, radick});
     }
   }();
   static inline const Force reduced_support_force =
-      List<std::shared_ptr<Unit>>::ctor::Cons_(
-          elementals, List<std::shared_ptr<Unit>>::ctor::Nil_());
+      List<std::shared_ptr<Unit>>::cons(elementals,
+                                        List<std::shared_ptr<Unit>>::nil());
   static inline const std::shared_ptr<CoalitionMemberBid>
       sample_coalition_member_bid = std::make_shared<CoalitionMemberBid>(
           CoalitionMemberBid{1u, reduced_support_force, Side::e_ATTACKER});
@@ -1836,7 +1938,7 @@ struct CoalitionBidHonorTraceCase {
         }
       }();
   static inline const std::shared_ptr<BatchallPhase> phase_after_initial_bid =
-      BatchallPhase::ctor::PhaseBidding_(
+      BatchallPhase::phasebidding(
           sample_challenge, sample_response, sample_attacker_bid,
           sample_defender_bid,
           std::make_optional<
@@ -1845,10 +1947,9 @@ struct CoalitionBidHonorTraceCase {
           std::make_optional<
               std::shared_ptr<List<std::shared_ptr<CoalitionMember>>>>(
               defender_coalition),
-          List<std::shared_ptr<ForceBid>>::ctor::Nil_(),
-          ReadyStatus::e_NEITHERREADY);
+          List<std::shared_ptr<ForceBid>>::nil(), ReadyStatus::e_NEITHERREADY);
   static inline const std::shared_ptr<BatchallPhase> phase_after_attacker_pass =
-      BatchallPhase::ctor::PhaseBidding_(
+      BatchallPhase::phasebidding(
           sample_challenge, sample_response, sample_attacker_bid,
           sample_defender_bid,
           std::make_optional<
@@ -1857,10 +1958,9 @@ struct CoalitionBidHonorTraceCase {
           std::make_optional<
               std::shared_ptr<List<std::shared_ptr<CoalitionMember>>>>(
               defender_coalition),
-          List<std::shared_ptr<ForceBid>>::ctor::Nil_(),
-          ReadyStatus::e_ATTACKERREADY);
+          List<std::shared_ptr<ForceBid>>::nil(), ReadyStatus::e_ATTACKERREADY);
   static inline const std::shared_ptr<BatchallPhase> phase_after_coalition_bid =
-      BatchallPhase::ctor::PhaseBidding_(
+      BatchallPhase::phasebidding(
           sample_challenge, sample_response, updated_attacker_bid,
           sample_defender_bid,
           std::make_optional<
@@ -1869,23 +1969,21 @@ struct CoalitionBidHonorTraceCase {
           std::make_optional<
               std::shared_ptr<List<std::shared_ptr<CoalitionMember>>>>(
               defender_coalition),
-          List<std::shared_ptr<ForceBid>>::ctor::Cons_(
-              sample_attacker_bid,
-              List<std::shared_ptr<ForceBid>>::ctor::Nil_()),
+          List<std::shared_ptr<ForceBid>>::cons(
+              sample_attacker_bid, List<std::shared_ptr<ForceBid>>::nil()),
           ReadyStatus::e_NEITHERREADY);
   static inline const std::shared_ptr<BatchallPhase> phase_agreed =
-      BatchallPhase::ctor::PhaseAgreed_(sample_challenge, sample_response,
-                                        updated_attacker_bid,
-                                        sample_defender_bid);
+      BatchallPhase::phaseagreed(sample_challenge, sample_response,
+                                 updated_attacker_bid, sample_defender_bid);
   static inline const std::shared_ptr<BatchallState> state_after_initial_bid =
       std::make_shared<BatchallState>(
           BatchallState{phase_after_initial_bid, empty_ledger});
   static inline const HonorLedger sample_challenge_honor_ledger =
       apply_action_honor(initial_state,
-                         ProtocolAction::ctor::ActChallenge_(sample_challenge));
+                         ProtocolAction::actchallenge(sample_challenge));
   static inline const HonorLedger sample_break_bid_honor_ledger =
       apply_action_honor(state_after_initial_bid,
-                         ProtocolAction::ctor::ActBreakBid_(Side::e_ATTACKER));
+                         ProtocolAction::actbreakbid(Side::e_ATTACKER));
   static inline const bool sample_challenger_may_issue =
       may_issue_batchall(malthus);
   static inline const bool sample_coalition_bid_is_valid =
@@ -1916,20 +2014,19 @@ struct CoalitionBidHonorTraceCase {
       ledger_lookup(sample_challenge_honor_ledger, malthus->cmd_id);
   static inline const Honor sample_break_bid_honor =
       ledger_lookup(sample_break_bid_honor_ledger, malthus->cmd_id);
-  static inline const bool sample_challenge_honor_is_one = BinInt::eqb(
-      sample_challenge_honor, Z::ctor::Zpos_(Positive::ctor::XH_()));
-  static inline const bool sample_break_bid_honor_is_minus_ten =
-      BinInt::eqb(sample_break_bid_honor,
-                  Z::ctor::Zneg_(Positive::ctor::XO_(Positive::ctor::XI_(
-                      Positive::ctor::XO_(Positive::ctor::XH_())))));
+  static inline const bool sample_challenge_honor_is_one =
+      BinInt::eqb(sample_challenge_honor, Z::zpos(Positive::xh()));
+  static inline const bool sample_break_bid_honor_is_minus_ten = BinInt::eqb(
+      sample_break_bid_honor,
+      Z::zneg(Positive::xo(Positive::xi(Positive::xo(Positive::xh())))));
   static inline const unsigned int sample_break_bid_actor_id = [](void) {
     if (phase_after_initial_bid
             ->action_actor_in_phase(
-                ProtocolAction::ctor::ActBreakBid_(Side::e_ATTACKER))
+                ProtocolAction::actbreakbid(Side::e_ATTACKER))
             .has_value()) {
       std::shared_ptr<Commander> cmd =
           *phase_after_initial_bid->action_actor_in_phase(
-              ProtocolAction::ctor::ActBreakBid_(Side::e_ATTACKER));
+              ProtocolAction::actbreakbid(Side::e_ATTACKER));
       return cmd->cmd_id;
     } else {
       return 0u;
@@ -1944,7 +2041,7 @@ struct CoalitionBidHonorTraceCase {
           std::make_optional<
               std::shared_ptr<List<std::shared_ptr<CoalitionMember>>>>(
               attacker_coalition),
-          List<std::shared_ptr<Unit>>::ctor::Nil_())
+          List<std::shared_ptr<Unit>>::nil())
           ->length();
 };
 

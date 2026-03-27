@@ -16,6 +16,31 @@ open Util
 (** Placeholder exception for unimplemented features *)
 exception TODO
 
+(** Compute the factory method name for a constructor.
+
+    Factory names are the lowercase of the constructor struct name (e.g.,
+    [Cons] → ["cons"]).  If the lowercased name collides with a C++ keyword
+    (reuses {!Cpp_state.keywords} via {!Common.get_keywords}) or with the
+    enclosing type's own name (which C++ treats as a constructor declaration),
+    the original PascalCase is kept with a trailing underscore (e.g.,
+    [Char] → ["Char_"]).
+
+    @param uptr      if [true], produces the unique_ptr variant
+                     (e.g., ["cons_uptr"], ["Char_uptr"])
+    @param type_name the enclosing inductive type's C++ name, for same-name
+                     collision detection (default [""])
+    @return the factory method name as a string *)
+let factory_name_of_ctor ?(uptr = false) ?(type_name = "") ctor_struct_name =
+  let lc = String.lowercase_ascii ctor_struct_name in
+  let collides =
+    Id.Set.mem (Id.of_string lc) (get_keywords ())
+    || lc = String.lowercase_ascii type_name
+  in
+  let stem = if collides then ctor_struct_name else lc in
+  if uptr then stem ^ "_uptr"
+  else if collides then stem ^ "_"
+  else stem
+
 (** Safe version of [List.firstn] that returns [min(n, length lst)] elements
     instead of raising [Failure "firstn"] when [n > length lst].
 
@@ -255,23 +280,23 @@ let shared_to_unique = function
 
 (** Swap shared_ptr construction to unique_ptr construction in a C++ expression.
     Handles three patterns: 1. shared_ptr<T>(expr) -> unique_ptr<T>(expr) 2.
-    make_shared<T>(args) -> make_unique<T>(args) 3. Type::ctor::Cons_(args) ->
-    Type::ctor::Cons_uptr(args) Redirects to the unique_ptr factory variant
-    generated in the struct. *)
+    make_shared<T>(args) -> make_unique<T>(args) 3. Type::factory(args) ->
+    Type::factory_uptr(args) for constructor factories. *)
 let shared_expr_to_unique = function
   | CPPshared_ptr_ctor (ty, e) -> CPPunique_ptr_ctor (ty, e)
   | CPPfun_call (CPPmk_shared ty, args) -> CPPfun_call (CPPmk_unique ty, args)
-  | CPPfun_call
-      (CPPqualified (CPPqualified (type_expr, ctor_id), factory_id), args)
-    when Names.Id.to_string ctor_id = "ctor" ->
+  | CPPfun_call (CPPqualified (type_expr, factory_id), args) ->
     let factory_str = Names.Id.to_string factory_id in
-    let uptr_name =
-      String.sub factory_str 0 (String.length factory_str - 1) ^ "_uptr"
+    (* For collision names like "Char_", strip trailing _ before adding _uptr *)
+    let base =
+      let n = String.length factory_str in
+      if n > 0 && factory_str.[n - 1] = '_' then
+        String.sub factory_str 0 (n - 1)
+      else factory_str
     in
+    let uptr_name = base ^ "_uptr" in
     CPPfun_call
-      ( CPPqualified
-          (CPPqualified (type_expr, ctor_id), Names.Id.of_string uptr_name),
-        args )
+      (CPPqualified (type_expr, Names.Id.of_string uptr_name), args)
   | e -> e
 
 (* ============================================================================
@@ -1910,26 +1935,23 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
           in
           let tvars = get_current_type_vars () in
           let temps = build_template_params env tvars tys in
-          (* Get the constructor base name (without module path) and add
-             underscore suffix *)
-          let ctor_name =
+          let ctor_struct =
             String.capitalize_ascii (Common.pp_global_name Type r)
           in
-          let factory_name = Id.of_string (ctor_name ^ "_") in
-          (* Build: Type<temps>::ctor::Factory_(args) *)
+          let ind_type_name = Common.pp_global_name Type n in
+          let fname =
+            factory_name_of_ctor ~type_name:ind_type_name ctor_struct
+          in
+          (* Build: Type<temps>::factory(args) *)
           let type_expr = mk_cppglob n temps in
-          let ctor_expr = CPPqualified (type_expr, Id.of_string "ctor") in
-          let factory_expr = CPPqualified (ctor_expr, factory_name) in
-          CPPfun_call (factory_expr, args)
+          CPPfun_call (CPPqualified (type_expr, Id.of_string fname), args)
         | _ ->
-          (* Fallback for non-Tglob types - shouldn't happen in practice *)
-          let ctor_name =
+          (* Fallback for non-Tglob types *)
+          let ctor_struct =
             String.capitalize_ascii (Common.pp_global_name Type r)
           in
-          let factory_name = Id.of_string (ctor_name ^ "_") in
-          let ctor_expr = CPPqualified (mk_cppglob r [], Id.of_string "ctor") in
-          let factory_expr = CPPqualified (ctor_expr, factory_name) in
-          CPPfun_call (factory_expr, args)
+          let fname = factory_name_of_ctor ctor_struct in
+          CPPfun_call (CPPqualified (mk_cppglob r [], Id.of_string fname), args)
       in
       (* Note: CPPfun_call reverses args when printing, so we reverse here. For
          MLdummy constructor args (erased prop/type values), generate std::any{}
@@ -5957,7 +5979,7 @@ let gen_dfun n b dom cod ty temps =
   (* Check if the return type is coinductive - if so, wrap body in lazy thunk *)
   let ml_ret = ml_return_type ty in
   let is_cofix_return = Table.is_coinductive_type ml_ret in
-  (* For cofixpoints, wrap the return expression in Type::ctor::lazy_([=]() ->
+  (* For cofixpoints, wrap the return expression in Type::lazy_([=]() ->
      ret_ty { ... }) *)
   let cofix_wrap x =
     if is_cofix_return then
@@ -5980,8 +6002,7 @@ let gen_dfun n b dom cod ty temps =
       in
       let lazy_factory =
         CPPqualified
-          ( CPPqualified (mk_cppglob coind_ref type_args, Id.of_string "ctor"),
-            Id.of_string "lazy_" )
+          (mk_cppglob coind_ref type_args, Id.of_string "lazy_")
       in
       let thunk = CPPlambda ([], Some ret_cpp, [Sreturn (Some x)], true) in
       Sreturn (Some (CPPfun_call (lazy_factory, [thunk])))
@@ -7145,8 +7166,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
       in
       let lazy_factory =
         CPPqualified
-          ( CPPqualified (mk_cppglob coind_ref type_args, Id.of_string "ctor"),
-            Id.of_string "lazy_" )
+          (mk_cppglob coind_ref type_args, Id.of_string "lazy_")
       in
       let thunk = CPPlambda ([], Some ret_cpp, [Sreturn (Some x)], true) in
       Sreturn (Some (CPPfun_call (lazy_factory, [thunk])))
@@ -7375,9 +7395,11 @@ let gen_ind_header_v2
           SData )
       in
 
-      (* 4. Private explicit constructors for each alternative *)
+      (* 4. Public explicit constructors for each alternative.
+         Public so that std::make_shared / std::make_unique can construct
+         instances directly (single allocation). *)
       (* Note: nested struct types don't need template args - they inherit from parent *)
-      let private_ctors =
+      let public_ctors =
         Array.to_list
           (Array.mapi
              (fun i c ->
@@ -7404,20 +7426,20 @@ let gen_ind_header_v2
                  in
                  let init_list = [(Id.of_string "d_lazyV_", init_expr)] in
                  ( Fconstructor ([(param_name, param_ty)], init_list, true),
-                   VPrivate,
+                   VPublic,
                    SCreators )
                else (* For inductive: v_(std::move(_v)) *)
                  let init_list =
                    [(Id.of_string "d_v_", CPPmove (CPPvar param_name))]
                  in
                  ( Fconstructor ([(param_name, param_ty)], init_list, true),
-                   VPrivate,
+                   VPublic,
                    SCreators ) )
              cnames )
       in
 
-      (* For coinductive types, add private constructor accepting
-         std::function<variant_t()> *)
+      (* For coinductive types, add public constructor accepting
+         std::function<variant_t()> (public so make_shared can access it) *)
       let lazy_ctor =
         if is_coinductive then
           let param_name = Id.of_string "_thunk" in
@@ -7431,20 +7453,43 @@ let gen_ind_header_v2
           let init_list = [(Id.of_string "d_lazyV_", init_expr)] in
           [
             ( Fconstructor ([(param_name, param_ty)], init_list, true),
-              VPrivate,
+              VPublic,
               SCreators );
           ]
         else
           []
       in
 
-      (* 5. Public ctor struct with factory methods. Each constructor gets two
-         factory variants: - Cons_(...) returning shared_ptr (standard, used by
-         default) - Cons_uptr(...) returning unique_ptr (used when escape
-         analysis proves safety) Both have identical parameters and live inside
-         the ctor struct, which has access to the private constructor. *)
+      (* 5. Static factory methods.  Each constructor gets two factory
+         variants as direct static members of the struct:
+         - cons(...) returning shared_ptr (standard, used by default)
+         - cons_uptr(...) returning unique_ptr (escape analysis)
+
+         Factory names are the lowercase of the constructor struct name
+         (e.g., Cons → cons).  If this collides with a C++ keyword or the
+         type's own name, the factory falls back to PascalCase with trailing
+         underscore (e.g., Char → Char_).  See {!factory_name_of_ctor}.
+
+         Move semantics: Value-type parameters use the "sink parameter"
+         idiom (passed by value, std::move'd into the struct initializer).
+
+         Overloads for pointer parameters: When a constructor has shared_ptr
+         or unique_ptr parameters, two overloads are generated:
+         - Lvalue overload: pointer params as const T& (cheap borrow)
+         - Rvalue overload: pointer params as T&& (avoids atomic refcount ops)
+
+         Uses std::make_shared / std::make_unique (single allocation)
+         since the variant constructors are public. *)
       let self_uty = ind_ty_uptr name ty_vars in
-      let mk_factory_method suffix ret_ty wrap_expr i tys_list =
+      let inner_ty = Tglob (name, ty_vars, []) in
+      let is_ptr_type = function
+        | Tshared_ptr _ | Tunique_ptr _ -> true
+        | _ -> false
+      in
+
+      let ind_type_name = Common.pp_global_name Type name in
+
+      let mk_factory_methods ~uptr ret_ty wrap_expr i tys_list =
         let c = cnames.(i) in
         let cname =
           match c with
@@ -7452,8 +7497,12 @@ let gen_ind_header_v2
             String.capitalize_ascii (Common.pp_global_name Type c)
           | _ -> ctor_fallback_name i
         in
-        let factory_name = Id.of_string (cname ^ suffix) in
-        let params =
+        let fname =
+          factory_name_of_ctor ~uptr ~type_name:ind_type_name cname
+        in
+        let factory_name = Id.of_string fname in
+        (* Convert ML types to C++ types *)
+        let cpp_tys =
           List.mapi
             (fun j ty ->
               let cpp_ty =
@@ -7466,40 +7515,64 @@ let gen_ind_header_v2
               let cpp_ty =
                 if vars = [] then tvar_erase_type cpp_ty else cpp_ty
               in
-              let wrapped =
-                match cpp_ty with
-                | Tshared_ptr _ | Tunique_ptr _ -> Tref (Tmod (TMconst, cpp_ty))
-                | _ -> cpp_ty
-              in
-              (Id.of_string ("a" ^ string_of_int j), wrapped) )
+              (j, cpp_ty) )
             tys_list
         in
-        let ctor_args =
-          List.mapi
-            (fun j _ -> CPPvar (Id.of_string ("a" ^ string_of_int j)))
-            tys_list
+        let has_ptr_params =
+          List.exists (fun (_, ty) -> is_ptr_type ty) cpp_tys
         in
-        let ctor_struct = CPPstruct_id (Id.of_string cname, [], ctor_args) in
-        let new_expr = CPPnew (Tglob (name, ty_vars, []), [ctor_struct]) in
-        let body = [Sreturn (Some (wrap_expr new_expr))] in
-        ( Ffundef (factory_name, Tmod (TMstatic, ret_ty), params, body),
-          VPublic,
-          SNoTag )
+        (* Build one overload.  When [move_ptrs] is true, pointer params
+           become [T&&] and are moved; otherwise they are [const T&]. *)
+        let build_overload ~move_ptrs =
+          let params =
+            List.map
+              (fun (j, cpp_ty) ->
+                let param_ty =
+                  if is_ptr_type cpp_ty then
+                    if move_ptrs then rval_ref cpp_ty
+                    else Tref (Tmod (TMconst, cpp_ty))
+                  else cpp_ty
+                in
+                (Id.of_string ("a" ^ string_of_int j), param_ty) )
+              cpp_tys
+          in
+          let ctor_args =
+            List.map
+              (fun (j, cpp_ty) ->
+                let var = CPPvar (Id.of_string ("a" ^ string_of_int j)) in
+                if is_ptr_type cpp_ty then
+                  if move_ptrs then CPPmove var else var
+                else CPPmove var )
+              cpp_tys
+          in
+          let ctor_struct =
+            CPPstruct_id (Id.of_string cname, [], ctor_args)
+          in
+          let body = [Sreturn (Some (wrap_expr ctor_struct))] in
+          ( Ffundef (factory_name, Tmod (TMstatic, ret_ty), params, body),
+            VPublic,
+            SCreators )
+        in
+        let lvalue_overload = build_overload ~move_ptrs:false in
+        if has_ptr_params then
+          [lvalue_overload; build_overload ~move_ptrs:true]
+        else [lvalue_overload]
       in
-      let inner_ty = Tglob (name, ty_vars, []) in
       let factory_methods =
-        Array.to_list
-          (Array.mapi
-             (mk_factory_method "_" self_ty (fun e ->
-                CPPshared_ptr_ctor (inner_ty, e) ) )
-             tys )
+        List.flatten
+          (Array.to_list
+             (Array.mapi
+                (mk_factory_methods ~uptr:false self_ty (fun s ->
+                   CPPfun_call (CPPmk_shared inner_ty, [s]) ) )
+                tys ) )
       in
       let uptr_factory_methods =
-        Array.to_list
-          (Array.mapi
-             (mk_factory_method "_uptr" self_uty (fun e ->
-                CPPunique_ptr_ctor (inner_ty, e) ) )
-             tys )
+        List.flatten
+          (Array.to_list
+             (Array.mapi
+                (mk_factory_methods ~uptr:true self_uty (fun s ->
+                   CPPfun_call (CPPmk_unique inner_ty, [s]) ) )
+                tys ) )
       in
 
       (* For coinductive types, add lazy_ factory method. lazy_ accepts
@@ -7528,38 +7601,23 @@ let gen_ind_header_v2
                 ],
                 true )
           in
-          let new_expr =
-            CPPnew
-              ( Tglob (name, ty_vars, []),
-                [
-                  CPPfun_call
-                    ( CPPvar (Id.of_string_soft "std::function<variant_t()>"),
-                      [adapter_lambda] );
-                ] )
+          let thunk_arg =
+            CPPfun_call
+              ( CPPvar (Id.of_string_soft "std::function<variant_t()>"),
+                [adapter_lambda] )
           in
-          let shared_ptr_expr =
-            CPPshared_ptr_ctor (Tglob (name, ty_vars, []), new_expr)
+          let make_shared_expr =
+            CPPfun_call
+              (CPPmk_shared (Tglob (name, ty_vars, [])), [thunk_arg])
           in
-          let body = [Sreturn (Some shared_ptr_expr)] in
+          let body = [Sreturn (Some make_shared_expr)] in
           [
             ( Ffundef (lazy_name, Tmod (TMstatic, self_ty), params, body),
               VPublic,
-              SNoTag );
+              SCreators );
           ]
         else
           []
-      in
-
-      (* Add deleted default constructor to ctor struct *)
-      let ctor_struct_fields =
-        ((Fdeleted_ctor, VPublic, SNoTag) :: factory_methods)
-        @ uptr_factory_methods
-        @ lazy_factory
-      in
-      let ctor_struct =
-        ( Fnested_struct (Id.of_string "ctor", ctor_struct_fields),
-          VPublic,
-          STypes )
       in
 
       (* Add public accessor for v_ to enable pattern matching from outside *)
@@ -7669,16 +7727,19 @@ let gen_ind_header_v2
       in
 
       (* BDE field ordering: public: constructor structs, variant_using (TYPES)
-         private: variant_member (DATA), private_ctors + lazy_ctor (CREATORS)
-         public: ctor_struct (TYPES), v_mut + manipulators (MANIPULATORS),
+         private: variant_member (DATA)
+         public: public_ctors + lazy_ctor + factory methods (CREATORS),
+         v_mut + manipulators (MANIPULATORS),
          v_accessor + const methods (ACCESSORS) *)
       let all_fields =
         constructor_structs
         @ [variant_using]
         @ [variant_member]
-        @ private_ctors
+        @ public_ctors
         @ lazy_ctor
-        @ [ctor_struct]
+        @ factory_methods
+        @ uptr_factory_methods
+        @ lazy_factory
         @ v_mut_accessor
         @ method_manipulators
         @ [v_accessor]

@@ -37,32 +37,27 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Sum(Inl _v) : d_v_(std::move(_v)) {}
 
   explicit Sum(Inr _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Sum<t_A, t_B>> inl(t_A a0) {
+    return std::make_shared<Sum<t_A, t_B>>(Inl{std::move(a0)});
+  }
 
-    static std::shared_ptr<Sum<t_A, t_B>> Inl_(t_A a0) {
-      return std::shared_ptr<Sum<t_A, t_B>>(new Sum<t_A, t_B>(Inl{a0}));
-    }
+  static std::shared_ptr<Sum<t_A, t_B>> inr(t_B a0) {
+    return std::make_shared<Sum<t_A, t_B>>(Inr{std::move(a0)});
+  }
 
-    static std::shared_ptr<Sum<t_A, t_B>> Inr_(t_B a0) {
-      return std::shared_ptr<Sum<t_A, t_B>>(new Sum<t_A, t_B>(Inr{a0}));
-    }
+  static std::unique_ptr<Sum<t_A, t_B>> inl_uptr(t_A a0) {
+    return std::make_unique<Sum<t_A, t_B>>(Inl{std::move(a0)});
+  }
 
-    static std::unique_ptr<Sum<t_A, t_B>> Inl_uptr(t_A a0) {
-      return std::unique_ptr<Sum<t_A, t_B>>(new Sum<t_A, t_B>(Inl{a0}));
-    }
-
-    static std::unique_ptr<Sum<t_A, t_B>> Inr_uptr(t_B a0) {
-      return std::unique_ptr<Sum<t_A, t_B>>(new Sum<t_A, t_B>(Inr{a0}));
-    }
-  };
+  static std::unique_ptr<Sum<t_A, t_B>> inr_uptr(t_B a0) {
+    return std::make_unique<Sum<t_A, t_B>>(Inr{std::move(a0)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -86,34 +81,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -146,22 +146,17 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Sig(Exist _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Sig<t_A>> exist(t_A a0) {
+    return std::make_shared<Sig<t_A>>(Exist{std::move(a0)});
+  }
 
-    static std::shared_ptr<Sig<t_A>> Exist_(t_A a0) {
-      return std::shared_ptr<Sig<t_A>>(new Sig<t_A>(Exist{a0}));
-    }
-
-    static std::unique_ptr<Sig<t_A>> Exist_uptr(t_A a0) {
-      return std::unique_ptr<Sig<t_A>>(new Sig<t_A>(Exist{a0}));
-    }
-  };
+  static std::unique_ptr<Sig<t_A>> exist_uptr(t_A a0) {
+    return std::make_unique<Sig<t_A>>(Exist{std::move(a0)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -184,32 +179,27 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Sumor(Inleft _v) : d_v_(std::move(_v)) {}
 
   explicit Sumor(Inright _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Sumor<t_A>> inleft(t_A a0) {
+    return std::make_shared<Sumor<t_A>>(Inleft{std::move(a0)});
+  }
 
-    static std::shared_ptr<Sumor<t_A>> Inleft_(t_A a0) {
-      return std::shared_ptr<Sumor<t_A>>(new Sumor<t_A>(Inleft{a0}));
-    }
+  static std::shared_ptr<Sumor<t_A>> inright() {
+    return std::make_shared<Sumor<t_A>>(Inright{});
+  }
 
-    static std::shared_ptr<Sumor<t_A>> Inright_() {
-      return std::shared_ptr<Sumor<t_A>>(new Sumor<t_A>(Inright{}));
-    }
+  static std::unique_ptr<Sumor<t_A>> inleft_uptr(t_A a0) {
+    return std::make_unique<Sumor<t_A>>(Inleft{std::move(a0)});
+  }
 
-    static std::unique_ptr<Sumor<t_A>> Inleft_uptr(t_A a0) {
-      return std::unique_ptr<Sumor<t_A>>(new Sumor<t_A>(Inleft{a0}));
-    }
-
-    static std::unique_ptr<Sumor<t_A>> Inright_uptr() {
-      return std::unique_ptr<Sumor<t_A>>(new Sumor<t_A>(Inright{}));
-    }
-  };
+  static std::unique_ptr<Sumor<t_A>> inright_uptr() {
+    return std::make_unique<Sumor<t_A>>(Inright{});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -247,6 +237,7 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Positive(XI _v) : d_v_(std::move(_v)) {}
 
@@ -254,37 +245,47 @@ private:
 
   explicit Positive(XH _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Positive> xi(const std::shared_ptr<Positive> &a0) {
+    return std::make_shared<Positive>(XI{a0});
+  }
 
-    static std::shared_ptr<Positive> XI_(const std::shared_ptr<Positive> &a0) {
-      return std::shared_ptr<Positive>(new Positive(XI{a0}));
-    }
+  static std::shared_ptr<Positive> xi(std::shared_ptr<Positive> &&a0) {
+    return std::make_shared<Positive>(XI{std::move(a0)});
+  }
 
-    static std::shared_ptr<Positive> XO_(const std::shared_ptr<Positive> &a0) {
-      return std::shared_ptr<Positive>(new Positive(XO{a0}));
-    }
+  static std::shared_ptr<Positive> xo(const std::shared_ptr<Positive> &a0) {
+    return std::make_shared<Positive>(XO{a0});
+  }
 
-    static std::shared_ptr<Positive> XH_() {
-      return std::shared_ptr<Positive>(new Positive(XH{}));
-    }
+  static std::shared_ptr<Positive> xo(std::shared_ptr<Positive> &&a0) {
+    return std::make_shared<Positive>(XO{std::move(a0)});
+  }
 
-    static std::unique_ptr<Positive>
-    XI_uptr(const std::shared_ptr<Positive> &a0) {
-      return std::unique_ptr<Positive>(new Positive(XI{a0}));
-    }
+  static std::shared_ptr<Positive> xh() {
+    return std::make_shared<Positive>(XH{});
+  }
 
-    static std::unique_ptr<Positive>
-    XO_uptr(const std::shared_ptr<Positive> &a0) {
-      return std::unique_ptr<Positive>(new Positive(XO{a0}));
-    }
+  static std::unique_ptr<Positive>
+  xi_uptr(const std::shared_ptr<Positive> &a0) {
+    return std::make_unique<Positive>(XI{a0});
+  }
 
-    static std::unique_ptr<Positive> XH_uptr() {
-      return std::unique_ptr<Positive>(new Positive(XH{}));
-    }
-  };
+  static std::unique_ptr<Positive> xi_uptr(std::shared_ptr<Positive> &&a0) {
+    return std::make_unique<Positive>(XI{std::move(a0)});
+  }
+
+  static std::unique_ptr<Positive>
+  xo_uptr(const std::shared_ptr<Positive> &a0) {
+    return std::make_unique<Positive>(XO{a0});
+  }
+
+  static std::unique_ptr<Positive> xo_uptr(std::shared_ptr<Positive> &&a0) {
+    return std::make_unique<Positive>(XO{std::move(a0)});
+  }
+
+  static std::unique_ptr<Positive> xh_uptr() {
+    return std::make_unique<Positive>(XH{});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -311,6 +312,7 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Z(Z0 _v) : d_v_(std::move(_v)) {}
 
@@ -318,33 +320,41 @@ private:
 
   explicit Z(Zneg _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Z> z0() { return std::make_shared<Z>(Z0{}); }
 
-    static std::shared_ptr<Z> Z0_() { return std::shared_ptr<Z>(new Z(Z0{})); }
+  static std::shared_ptr<Z> zpos(const std::shared_ptr<Positive> &a0) {
+    return std::make_shared<Z>(Zpos{a0});
+  }
 
-    static std::shared_ptr<Z> Zpos_(const std::shared_ptr<Positive> &a0) {
-      return std::shared_ptr<Z>(new Z(Zpos{a0}));
-    }
+  static std::shared_ptr<Z> zpos(std::shared_ptr<Positive> &&a0) {
+    return std::make_shared<Z>(Zpos{std::move(a0)});
+  }
 
-    static std::shared_ptr<Z> Zneg_(const std::shared_ptr<Positive> &a0) {
-      return std::shared_ptr<Z>(new Z(Zneg{a0}));
-    }
+  static std::shared_ptr<Z> zneg(const std::shared_ptr<Positive> &a0) {
+    return std::make_shared<Z>(Zneg{a0});
+  }
 
-    static std::unique_ptr<Z> Z0_uptr() {
-      return std::unique_ptr<Z>(new Z(Z0{}));
-    }
+  static std::shared_ptr<Z> zneg(std::shared_ptr<Positive> &&a0) {
+    return std::make_shared<Z>(Zneg{std::move(a0)});
+  }
 
-    static std::unique_ptr<Z> Zpos_uptr(const std::shared_ptr<Positive> &a0) {
-      return std::unique_ptr<Z>(new Z(Zpos{a0}));
-    }
+  static std::unique_ptr<Z> z0_uptr() { return std::make_unique<Z>(Z0{}); }
 
-    static std::unique_ptr<Z> Zneg_uptr(const std::shared_ptr<Positive> &a0) {
-      return std::unique_ptr<Z>(new Z(Zneg{a0}));
-    }
-  };
+  static std::unique_ptr<Z> zpos_uptr(const std::shared_ptr<Positive> &a0) {
+    return std::make_unique<Z>(Zpos{a0});
+  }
+
+  static std::unique_ptr<Z> zpos_uptr(std::shared_ptr<Positive> &&a0) {
+    return std::make_unique<Z>(Zpos{std::move(a0)});
+  }
+
+  static std::unique_ptr<Z> zneg_uptr(const std::shared_ptr<Positive> &a0) {
+    return std::make_unique<Z>(Zneg{a0});
+  }
+
+  static std::unique_ptr<Z> zneg_uptr(std::shared_ptr<Positive> &&a0) {
+    return std::make_unique<Z>(Zneg{std::move(a0)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -405,6 +415,7 @@ struct Pos {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit mask(IsNul0 _v) : d_v_(std::move(_v)) {}
 
@@ -412,37 +423,38 @@ struct Pos {
 
     explicit mask(IsNeg0 _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<mask> isnul0() {
+      return std::make_shared<mask>(IsNul0{});
+    }
 
-      static std::shared_ptr<mask> IsNul0_() {
-        return std::shared_ptr<mask>(new mask(IsNul0{}));
-      }
+    static std::shared_ptr<mask> ispos0(const std::shared_ptr<Positive> &a0) {
+      return std::make_shared<mask>(IsPos0{a0});
+    }
 
-      static std::shared_ptr<mask>
-      IsPos0_(const std::shared_ptr<Positive> &a0) {
-        return std::shared_ptr<mask>(new mask(IsPos0{a0}));
-      }
+    static std::shared_ptr<mask> ispos0(std::shared_ptr<Positive> &&a0) {
+      return std::make_shared<mask>(IsPos0{std::move(a0)});
+    }
 
-      static std::shared_ptr<mask> IsNeg0_() {
-        return std::shared_ptr<mask>(new mask(IsNeg0{}));
-      }
+    static std::shared_ptr<mask> isneg0() {
+      return std::make_shared<mask>(IsNeg0{});
+    }
 
-      static std::unique_ptr<mask> IsNul0_uptr() {
-        return std::unique_ptr<mask>(new mask(IsNul0{}));
-      }
+    static std::unique_ptr<mask> isnul0_uptr() {
+      return std::make_unique<mask>(IsNul0{});
+    }
 
-      static std::unique_ptr<mask>
-      IsPos0_uptr(const std::shared_ptr<Positive> &a0) {
-        return std::unique_ptr<mask>(new mask(IsPos0{a0}));
-      }
+    static std::unique_ptr<mask>
+    ispos0_uptr(const std::shared_ptr<Positive> &a0) {
+      return std::make_unique<mask>(IsPos0{a0});
+    }
 
-      static std::unique_ptr<mask> IsNeg0_uptr() {
-        return std::unique_ptr<mask>(new mask(IsNeg0{}));
-      }
-    };
+    static std::unique_ptr<mask> ispos0_uptr(std::shared_ptr<Positive> &&a0) {
+      return std::make_unique<mask>(IsPos0{std::move(a0)});
+    }
+
+    static std::unique_ptr<mask> isneg0_uptr() {
+      return std::make_unique<mask>(IsNeg0{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -504,6 +516,7 @@ struct Coq_Pos {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit mask(IsNul _v) : d_v_(std::move(_v)) {}
 
@@ -511,36 +524,38 @@ struct Coq_Pos {
 
     explicit mask(IsNeg _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<mask> isnul() {
+      return std::make_shared<mask>(IsNul{});
+    }
 
-      static std::shared_ptr<mask> IsNul_() {
-        return std::shared_ptr<mask>(new mask(IsNul{}));
-      }
+    static std::shared_ptr<mask> ispos(const std::shared_ptr<Positive> &a0) {
+      return std::make_shared<mask>(IsPos{a0});
+    }
 
-      static std::shared_ptr<mask> IsPos_(const std::shared_ptr<Positive> &a0) {
-        return std::shared_ptr<mask>(new mask(IsPos{a0}));
-      }
+    static std::shared_ptr<mask> ispos(std::shared_ptr<Positive> &&a0) {
+      return std::make_shared<mask>(IsPos{std::move(a0)});
+    }
 
-      static std::shared_ptr<mask> IsNeg_() {
-        return std::shared_ptr<mask>(new mask(IsNeg{}));
-      }
+    static std::shared_ptr<mask> isneg() {
+      return std::make_shared<mask>(IsNeg{});
+    }
 
-      static std::unique_ptr<mask> IsNul_uptr() {
-        return std::unique_ptr<mask>(new mask(IsNul{}));
-      }
+    static std::unique_ptr<mask> isnul_uptr() {
+      return std::make_unique<mask>(IsNul{});
+    }
 
-      static std::unique_ptr<mask>
-      IsPos_uptr(const std::shared_ptr<Positive> &a0) {
-        return std::unique_ptr<mask>(new mask(IsPos{a0}));
-      }
+    static std::unique_ptr<mask>
+    ispos_uptr(const std::shared_ptr<Positive> &a0) {
+      return std::make_unique<mask>(IsPos{a0});
+    }
 
-      static std::unique_ptr<mask> IsNeg_uptr() {
-        return std::unique_ptr<mask>(new mask(IsNeg{}));
-      }
-    };
+    static std::unique_ptr<mask> ispos_uptr(std::shared_ptr<Positive> &&a0) {
+      return std::make_unique<mask>(IsPos{std::move(a0)});
+    }
+
+    static std::unique_ptr<mask> isneg_uptr() {
+      return std::make_unique<mask>(IsNeg{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -701,10 +716,9 @@ struct RbaseSymbolsImpl {
   static inline const std::any Rquot2 =
       ([]() -> const std::any { throw std::logic_error("unreachable"); })();
   static inline const R R0 = Rabst(ConstructiveCauchyReals::inject_Q(
-      std::make_shared<Q>(Q{Z::ctor::Z0_(), Positive::ctor::XH_()})));
-  static inline const R R1 =
-      Rabst(ConstructiveCauchyReals::inject_Q(std::make_shared<Q>(
-          Q{Z::ctor::Zpos_(Positive::ctor::XH_()), Positive::ctor::XH_()})));
+      std::make_shared<Q>(Q{Z::z0(), Positive::xh()})));
+  static inline const R R1 = Rabst(ConstructiveCauchyReals::inject_Q(
+      std::make_shared<Q>(Q{Z::zpos(Positive::xh()), Positive::xh()})));
   __attribute__((pure)) static R
   Rplus(const std::shared_ptr<Sig<std::function<bool(std::shared_ptr<Q>)>>> &x,
         const std::shared_ptr<Sig<std::function<bool(std::shared_ptr<Q>)>>> &y);
@@ -799,24 +813,28 @@ struct FoldSequenceStateTraceCase {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit Fold(Fold_line_ctor _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<Fold>
+    fold_line_ctor(const std::shared_ptr<Line> &a0) {
+      return std::make_shared<Fold>(Fold_line_ctor{a0});
+    }
 
-      static std::shared_ptr<Fold>
-      Fold_line_ctor_(const std::shared_ptr<Line> &a0) {
-        return std::shared_ptr<Fold>(new Fold(Fold_line_ctor{a0}));
-      }
+    static std::shared_ptr<Fold> fold_line_ctor(std::shared_ptr<Line> &&a0) {
+      return std::make_shared<Fold>(Fold_line_ctor{std::move(a0)});
+    }
 
-      static std::unique_ptr<Fold>
-      Fold_line_ctor_uptr(const std::shared_ptr<Line> &a0) {
-        return std::unique_ptr<Fold>(new Fold(Fold_line_ctor{a0}));
-      }
-    };
+    static std::unique_ptr<Fold>
+    fold_line_ctor_uptr(const std::shared_ptr<Line> &a0) {
+      return std::make_unique<Fold>(Fold_line_ctor{a0});
+    }
+
+    static std::unique_ptr<Fold>
+    fold_line_ctor_uptr(std::shared_ptr<Line> &&a0) {
+      return std::make_unique<Fold>(Fold_line_ctor{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -851,18 +869,15 @@ struct FoldSequenceStateTraceCase {
   };
 
   static inline const std::shared_ptr<Line> line_xaxis = std::make_shared<Line>(
-      Line{IZR(Z::ctor::Z0_()), IZR(Z::ctor::Zpos_(Positive::ctor::XH_())),
-           IZR(Z::ctor::Z0_())});
-  static inline const std::shared_ptr<Line> line_yaxis =
-      std::make_shared<Line>(Line{IZR(Z::ctor::Zpos_(Positive::ctor::XH_())),
-                                  IZR(Z::ctor::Z0_()), IZR(Z::ctor::Z0_())});
+      Line{IZR(Z::z0()), IZR(Z::zpos(Positive::xh())), IZR(Z::z0())});
+  static inline const std::shared_ptr<Line> line_yaxis = std::make_shared<Line>(
+      Line{IZR(Z::zpos(Positive::xh())), IZR(Z::z0()), IZR(Z::z0())});
   static inline const Point point_O =
-      std::make_pair(IZR(Z::ctor::Z0_()), IZR(Z::ctor::Z0_()));
-  static inline const Point point_X = std::make_pair(
-      IZR(Z::ctor::Zpos_(Positive::ctor::XH_())), IZR(Z::ctor::Z0_()));
-  static inline const Point point_diag =
-      std::make_pair(IZR(Z::ctor::Zpos_(Positive::ctor::XH_())),
-                     IZR(Z::ctor::Zpos_(Positive::ctor::XH_())));
+      std::make_pair(IZR(Z::z0()), IZR(Z::z0()));
+  static inline const Point point_X =
+      std::make_pair(IZR(Z::zpos(Positive::xh())), IZR(Z::z0()));
+  static inline const Point point_diag = std::make_pair(
+      IZR(Z::zpos(Positive::xh())), IZR(Z::zpos(Positive::xh())));
   static std::shared_ptr<Line>
   line_through(const std::pair<RbaseSymbolsImpl::R, RbaseSymbolsImpl::R> p1,
                const std::pair<RbaseSymbolsImpl::R, RbaseSymbolsImpl::R> p2);
@@ -905,6 +920,7 @@ struct FoldSequenceStateTraceCase {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit FoldStep(FS_O1 _v) : d_v_(std::move(_v)) {}
 
@@ -912,37 +928,41 @@ struct FoldSequenceStateTraceCase {
 
     explicit FoldStep(FS_O4 _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<FoldStep> fs_o1(Point a0, Point a1) {
+      return std::make_shared<FoldStep>(FS_O1{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<FoldStep> FS_O1_(Point a0, Point a1) {
-        return std::shared_ptr<FoldStep>(new FoldStep(FS_O1{a0, a1}));
-      }
+    static std::shared_ptr<FoldStep> fs_o2(Point a0, Point a1) {
+      return std::make_shared<FoldStep>(FS_O2{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<FoldStep> FS_O2_(Point a0, Point a1) {
-        return std::shared_ptr<FoldStep>(new FoldStep(FS_O2{a0, a1}));
-      }
+    static std::shared_ptr<FoldStep> fs_o4(Point a0,
+                                           const std::shared_ptr<Line> &a1) {
+      return std::make_shared<FoldStep>(FS_O4{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<FoldStep> FS_O4_(Point a0,
-                                              const std::shared_ptr<Line> &a1) {
-        return std::shared_ptr<FoldStep>(new FoldStep(FS_O4{a0, a1}));
-      }
+    static std::shared_ptr<FoldStep> fs_o4(Point a0,
+                                           std::shared_ptr<Line> &&a1) {
+      return std::make_shared<FoldStep>(FS_O4{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<FoldStep> FS_O1_uptr(Point a0, Point a1) {
-        return std::unique_ptr<FoldStep>(new FoldStep(FS_O1{a0, a1}));
-      }
+    static std::unique_ptr<FoldStep> fs_o1_uptr(Point a0, Point a1) {
+      return std::make_unique<FoldStep>(FS_O1{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<FoldStep> FS_O2_uptr(Point a0, Point a1) {
-        return std::unique_ptr<FoldStep>(new FoldStep(FS_O2{a0, a1}));
-      }
+    static std::unique_ptr<FoldStep> fs_o2_uptr(Point a0, Point a1) {
+      return std::make_unique<FoldStep>(FS_O2{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<FoldStep>
-      FS_O4_uptr(Point a0, const std::shared_ptr<Line> &a1) {
-        return std::unique_ptr<FoldStep>(new FoldStep(FS_O4{a0, a1}));
-      }
-    };
+    static std::unique_ptr<FoldStep>
+    fs_o4_uptr(Point a0, const std::shared_ptr<Line> &a1) {
+      return std::make_unique<FoldStep>(FS_O4{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<FoldStep> fs_o4_uptr(Point a0,
+                                                std::shared_ptr<Line> &&a1) {
+      return std::make_unique<FoldStep>(FS_O4{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -1027,18 +1047,15 @@ struct FoldSequenceStateTraceCase {
 
   static inline const std::shared_ptr<ConstructionState> initial_state =
       std::make_shared<ConstructionState>(ConstructionState{
-          List<std::pair<RbaseSymbolsImpl::R, RbaseSymbolsImpl::R>>::ctor::
-              Cons_(
-                  point_O,
-                  List<std::pair<RbaseSymbolsImpl::R, RbaseSymbolsImpl::R>>::
-                      ctor::Cons_(
-                          point_X,
-                          List<std::pair<RbaseSymbolsImpl::R,
-                                         RbaseSymbolsImpl::R>>::ctor::Nil_())),
-          List<std::shared_ptr<Line>>::ctor::Cons_(
+          List<std::pair<RbaseSymbolsImpl::R, RbaseSymbolsImpl::R>>::cons(
+              point_O,
+              List<std::pair<RbaseSymbolsImpl::R, RbaseSymbolsImpl::R>>::cons(
+                  point_X, List<std::pair<RbaseSymbolsImpl::R,
+                                          RbaseSymbolsImpl::R>>::nil())),
+          List<std::shared_ptr<Line>>::cons(
               line_xaxis,
-              List<std::shared_ptr<Line>>::ctor::Cons_(
-                  line_yaxis, List<std::shared_ptr<Line>>::ctor::Nil_()))});
+              List<std::shared_ptr<Line>>::cons(
+                  line_yaxis, List<std::shared_ptr<Line>>::nil()))});
   static std::shared_ptr<ConstructionState>
   add_fold_to_state(std::shared_ptr<ConstructionState> st,
                     const std::shared_ptr<FoldStep> &step);
@@ -1046,13 +1063,13 @@ struct FoldSequenceStateTraceCase {
       std::shared_ptr<ConstructionState> st,
       const std::shared_ptr<List<std::shared_ptr<FoldStep>>> &seq0);
   static inline const FoldSequence sample_sequence =
-      List<std::shared_ptr<FoldStep>>::ctor::Cons_(
-          FoldStep::ctor::FS_O1_(point_O, point_diag),
-          List<std::shared_ptr<FoldStep>>::ctor::Cons_(
-              FoldStep::ctor::FS_O2_(point_O, point_X),
-              List<std::shared_ptr<FoldStep>>::ctor::Cons_(
-                  FoldStep::ctor::FS_O4_(point_diag, line_xaxis),
-                  List<std::shared_ptr<FoldStep>>::ctor::Nil_())));
+      List<std::shared_ptr<FoldStep>>::cons(
+          FoldStep::fs_o1(point_O, point_diag),
+          List<std::shared_ptr<FoldStep>>::cons(
+              FoldStep::fs_o2(point_O, point_X),
+              List<std::shared_ptr<FoldStep>>::cons(
+                  FoldStep::fs_o4(point_diag, line_xaxis),
+                  List<std::shared_ptr<FoldStep>>::nil())));
   static inline const std::shared_ptr<ConstructionState> sample_final_state =
       execute_sequence(initial_state, sample_sequence);
   __attribute__((pure)) static unsigned int line_count_after_sample_sequence(
@@ -1099,9 +1116,8 @@ std::shared_ptr<Sig<std::shared_ptr<Q>>>
 ClassicalDedekindReals::lowerCutBelow(F0 &&f) {
   std::shared_ptr<Sumor<std::shared_ptr<Sig<unsigned int>>>> s =
       ClassicalDedekindReals::sig_forall_dec([=](unsigned int n) mutable {
-        bool b =
-            f(std::make_shared<Q>(Q{BinInt::of_nat(n), Positive::ctor::XH_()})
-                  ->Qopp());
+        bool b = f(
+            std::make_shared<Q>(Q{BinInt::of_nat(n), Positive::xh()})->Qopp());
         if (b) {
           return false;
         } else {
@@ -1115,9 +1131,9 @@ ClassicalDedekindReals::lowerCutBelow(F0 &&f) {
             return std::visit(
                 Overloaded{[](const typename Sig<unsigned int>::Exist _args0)
                                -> std::shared_ptr<Sig<std::shared_ptr<Q>>> {
-                  return Sig<std::shared_ptr<Q>>::ctor::Exist_(
+                  return Sig<std::shared_ptr<Q>>::exist(
                       std::make_shared<Q>(
-                          Q{BinInt::of_nat(_args0.d_a0), Positive::ctor::XH_()})
+                          Q{BinInt::of_nat(_args0.d_a0), Positive::xh()})
                           ->Qopp());
                 }},
                 _args.d_a0->v());
@@ -1134,8 +1150,7 @@ std::shared_ptr<Sig<std::shared_ptr<Q>>>
 ClassicalDedekindReals::lowerCutAbove(F0 &&f) {
   std::shared_ptr<Sumor<std::shared_ptr<Sig<unsigned int>>>> s =
       ClassicalDedekindReals::sig_forall_dec([=](unsigned int n) mutable {
-        bool b =
-            f(std::make_shared<Q>(Q{BinInt::of_nat(n), Positive::ctor::XH_()}));
+        bool b = f(std::make_shared<Q>(Q{BinInt::of_nat(n), Positive::xh()}));
         if (b) {
           return true;
         } else {
@@ -1149,9 +1164,8 @@ ClassicalDedekindReals::lowerCutAbove(F0 &&f) {
             return std::visit(
                 Overloaded{[](const typename Sig<unsigned int>::Exist _args0)
                                -> std::shared_ptr<Sig<std::shared_ptr<Q>>> {
-                  return Sig<std::shared_ptr<Q>>::ctor::Exist_(
-                      std::make_shared<Q>(Q{BinInt::of_nat(_args0.d_a0),
-                                            Positive::ctor::XH_()}));
+                  return Sig<std::shared_ptr<Q>>::exist(std::make_shared<Q>(
+                      Q{BinInt::of_nat(_args0.d_a0), Positive::xh()}));
                 }},
                 _args.d_a0->v());
           },
@@ -1178,7 +1192,7 @@ ClassicalDedekindReals::DRealQlim_rec(F0 &&f, const unsigned int n,
               ->Qplus(std::make_shared<Q>(
                   Q{BinInt::of_nat(n0), Coq_Pos::of_nat((n + 1))})));
     if (std::move(b)) {
-      return Sig<std::shared_ptr<Q>>::ctor::Exist_(
+      return Sig<std::shared_ptr<Q>>::exist(
           std::visit(Overloaded{[](const typename Sig<std::shared_ptr<Q>>::Exist
                                        _args0) -> auto { return _args0.d_a0; }},
                      ClassicalDedekindReals::lowerCutBelow(f)->v())
@@ -1198,7 +1212,7 @@ ClassicalDedekindReals::DRealQlim_rec(F0 &&f, const unsigned int n,
               Overloaded{
                   [](const typename Sig<std::shared_ptr<Q>>::Exist _args1)
                       -> std::shared_ptr<Sig<std::shared_ptr<Q>>> {
-                    return Sig<std::shared_ptr<Q>>::ctor::Exist_(_args1.d_a0);
+                    return Sig<std::shared_ptr<Q>>::exist(_args1.d_a0);
                   }},
               std::move(s)->v());
         }

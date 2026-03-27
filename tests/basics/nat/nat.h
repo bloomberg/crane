@@ -35,32 +35,31 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Nat(O _v) : d_v_(std::move(_v)) {}
 
   explicit Nat(S _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Nat> o() { return std::make_shared<Nat>(O{}); }
 
-    static std::shared_ptr<Nat> O_() {
-      return std::shared_ptr<Nat>(new Nat(O{}));
-    }
+  static std::shared_ptr<Nat> s(const std::shared_ptr<Nat> &a0) {
+    return std::make_shared<Nat>(S{a0});
+  }
 
-    static std::shared_ptr<Nat> S_(const std::shared_ptr<Nat> &a0) {
-      return std::shared_ptr<Nat>(new Nat(S{a0}));
-    }
+  static std::shared_ptr<Nat> s(std::shared_ptr<Nat> &&a0) {
+    return std::make_shared<Nat>(S{std::move(a0)});
+  }
 
-    static std::unique_ptr<Nat> O_uptr() {
-      return std::unique_ptr<Nat>(new Nat(O{}));
-    }
+  static std::unique_ptr<Nat> o_uptr() { return std::make_unique<Nat>(O{}); }
 
-    static std::unique_ptr<Nat> S_uptr(const std::shared_ptr<Nat> &a0) {
-      return std::unique_ptr<Nat>(new Nat(S{a0}));
-    }
-  };
+  static std::unique_ptr<Nat> s_uptr(const std::shared_ptr<Nat> &a0) {
+    return std::make_unique<Nat>(S{a0});
+  }
+
+  static std::unique_ptr<Nat> s_uptr(std::shared_ptr<Nat> &&a0) {
+    return std::make_unique<Nat>(S{std::move(a0)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -107,7 +106,7 @@ public:
                      return n;
                    },
                    [&](const typename Nat::S _args) -> std::shared_ptr<Nat> {
-                     return Nat::ctor::S_(_args.d_a0->add(n));
+                     return Nat::s(_args.d_a0->add(n));
                    }},
         this->v());
   }

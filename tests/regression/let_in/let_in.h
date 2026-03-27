@@ -48,24 +48,19 @@ struct LetIn {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit pair(Pair0 _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<pair<t_A, t_B>> pair0(t_A a0, t_B a1) {
+      return std::make_shared<pair<t_A, t_B>>(
+          Pair0{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<pair<t_A, t_B>> Pair0_(t_A a0, t_B a1) {
-        return std::shared_ptr<pair<t_A, t_B>>(
-            new pair<t_A, t_B>(Pair0{a0, a1}));
-      }
-
-      static std::unique_ptr<pair<t_A, t_B>> Pair0_uptr(t_A a0, t_B a1) {
-        return std::unique_ptr<pair<t_A, t_B>>(
-            new pair<t_A, t_B>(Pair0{a0, a1}));
-      }
-    };
+    static std::unique_ptr<pair<t_A, t_B>> pair0_uptr(t_A a0, t_B a1) {
+      return std::make_unique<pair<t_A, t_B>>(
+          Pair0{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -94,7 +89,7 @@ struct LetIn {
 
   static inline const unsigned int let_destruct = [](void) {
     std::unique_ptr<pair<unsigned int, unsigned int>> p =
-        pair<unsigned int, unsigned int>::ctor::Pair0_uptr(3u, 4u);
+        pair<unsigned int, unsigned int>::pair0_uptr(3u, 4u);
     return std::visit(
         Overloaded{
             [](const typename pair<unsigned int, unsigned int>::Pair0 _args)

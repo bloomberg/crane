@@ -80,36 +80,44 @@ template <OrderedType K, BaseType V> struct MakeMap {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit tree(Empty _v) : d_v_(std::move(_v)) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<tree> empty() {
+      return std::make_shared<tree>(Empty{});
+    }
 
-      static std::shared_ptr<tree> Empty_() {
-        return std::shared_ptr<tree>(new tree(Empty{}));
-      }
+    static std::shared_ptr<tree> node(const std::shared_ptr<tree> &a0, key a1,
+                                      value a2,
+                                      const std::shared_ptr<tree> &a3) {
+      return std::make_shared<tree>(Node{a0, std::move(a1), std::move(a2), a3});
+    }
 
-      static std::shared_ptr<tree> Node_(const std::shared_ptr<tree> &a0,
-                                         key a1, value a2,
-                                         const std::shared_ptr<tree> &a3) {
-        return std::shared_ptr<tree>(new tree(Node{a0, a1, a2, a3}));
-      }
+    static std::shared_ptr<tree> node(std::shared_ptr<tree> &&a0, key a1,
+                                      value a2, std::shared_ptr<tree> &&a3) {
+      return std::make_shared<tree>(
+          Node{std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
+    }
 
-      static std::unique_ptr<tree> Empty_uptr() {
-        return std::unique_ptr<tree>(new tree(Empty{}));
-      }
+    static std::unique_ptr<tree> empty_uptr() {
+      return std::make_unique<tree>(Empty{});
+    }
 
-      static std::unique_ptr<tree> Node_uptr(const std::shared_ptr<tree> &a0,
-                                             key a1, value a2,
-                                             const std::shared_ptr<tree> &a3) {
-        return std::unique_ptr<tree>(new tree(Node{a0, a1, a2, a3}));
-      }
-    };
+    static std::unique_ptr<tree> node_uptr(const std::shared_ptr<tree> &a0,
+                                           key a1, value a2,
+                                           const std::shared_ptr<tree> &a3) {
+      return std::make_unique<tree>(Node{a0, std::move(a1), std::move(a2), a3});
+    }
+
+    static std::unique_ptr<tree> node_uptr(std::shared_ptr<tree> &&a0, key a1,
+                                           value a2,
+                                           std::shared_ptr<tree> &&a3) {
+      return std::make_unique<tree>(
+          Node{std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -121,7 +129,7 @@ template <OrderedType K, BaseType V> struct MakeMap {
   using t = std::shared_ptr<tree>;
 
   static const std::shared_ptr<tree> &empty() {
-    static const std::shared_ptr<tree> v = tree::ctor::Empty_();
+    static const std::shared_ptr<tree> v = tree::empty();
     return v;
   }
 
@@ -131,22 +139,21 @@ template <OrderedType K, BaseType V> struct MakeMap {
     return std::visit(
         Overloaded{
             [&](const typename tree::Empty _args) -> std::shared_ptr<tree> {
-              return tree::ctor::Node_(tree::ctor::Empty_(), k, v,
-                                       tree::ctor::Empty_());
+              return tree::node(tree::empty(), k, v, tree::empty());
             },
             [&](const typename tree::Node _args) -> std::shared_ptr<tree> {
               return [&](void) {
                 switch (K::compare(k, _args.d_a1)) {
                 case Comparison::e_EQ: {
-                  return tree::ctor::Node_(_args.d_a0, k, v, _args.d_a3);
+                  return tree::node(_args.d_a0, k, v, _args.d_a3);
                 }
                 case Comparison::e_LT: {
-                  return tree::ctor::Node_(add(k, v, _args.d_a0), _args.d_a1,
-                                           _args.d_a2, _args.d_a3);
+                  return tree::node(add(k, v, _args.d_a0), _args.d_a1,
+                                    _args.d_a2, _args.d_a3);
                 }
                 case Comparison::e_GT: {
-                  return tree::ctor::Node_(_args.d_a0, _args.d_a1, _args.d_a2,
-                                           add(k, v, _args.d_a3));
+                  return tree::node(_args.d_a0, _args.d_a1, _args.d_a2,
+                                    add(k, v, _args.d_a3));
                 }
                 }
               }();

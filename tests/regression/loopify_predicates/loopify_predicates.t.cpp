@@ -19,9 +19,9 @@ void aSsErT(bool condition, const char *message, int line) {
 using UIntList = List<unsigned int>;
 
 int main() {
-  auto nil = UIntList::ctor::Nil_();
-  auto l5 = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(
-    3u, UIntList::ctor::Cons_(4u, UIntList::ctor::Cons_(5u, nil)))));
+  auto nil = UIntList::nil();
+  auto l5 = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(
+    3u, UIntList::cons(4u, UIntList::cons(5u, nil)))));
 
   auto is_small = [](unsigned int x) { return x < 3; };
   auto is_even = [](unsigned int x) { return x % 2 == 0; };
@@ -53,7 +53,7 @@ int main() {
 
   // forall_pred
   ASSERT(LoopifyPredicates::forall_pred(is_small, nil) == true);
-  auto l_small = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, nil));
+  auto l_small = UIntList::cons(1u, UIntList::cons(2u, nil));
   ASSERT(LoopifyPredicates::forall_pred(is_small, l_small) == true);
   ASSERT(LoopifyPredicates::forall_pred(is_small, l5) == false);
 
@@ -74,8 +74,8 @@ int main() {
   ASSERT(deleted != nullptr);
 
   // remove_all
-  auto l_dups = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(
-    1u, UIntList::ctor::Cons_(3u, UIntList::ctor::Cons_(1u, nil)))));
+  auto l_dups = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(
+    1u, UIntList::cons(3u, UIntList::cons(1u, nil)))));
   auto removed = LoopifyPredicates::remove_all(1u, l_dups);
   ASSERT(removed != nullptr);
 

@@ -20,7 +20,7 @@ int main() {
   using List = ::List<unsigned int>;
 
   // Test cycle
-  auto l = List::ctor::Cons_(1u, List::ctor::Cons_(2u, List::ctor::Nil_()));
+  auto l = List::cons(1u, List::cons(2u, List::nil()));
   auto cycled = LoopifyGenerators::cycle(3u, l);
   ASSERT(cycled != nullptr);
 
@@ -30,18 +30,18 @@ int main() {
   ASSERT(iterated != nullptr);
 
   // Test zip_with
-  auto l1 = List::ctor::Cons_(
-      1u, List::ctor::Cons_(2u, List::ctor::Cons_(3u, List::ctor::Nil_())));
-  auto l2 = List::ctor::Cons_(
-      4u, List::ctor::Cons_(5u, List::ctor::Cons_(6u, List::ctor::Nil_())));
+  auto l1 = List::cons(
+      1u, List::cons(2u, List::cons(3u, List::nil())));
+  auto l2 = List::cons(
+      4u, List::cons(5u, List::cons(6u, List::nil())));
   auto add = [](unsigned int x, unsigned int y) { return x + y; };
   auto zipped = LoopifyGenerators::zip_with(add, l1, l2);
   ASSERT(zipped != nullptr);
 
   // Test zip_longest
-  auto l3 = List::ctor::Cons_(1u, List::ctor::Cons_(2u, List::ctor::Nil_()));
-  auto l4 = List::ctor::Cons_(
-      3u, List::ctor::Cons_(4u, List::ctor::Cons_(5u, List::ctor::Nil_())));
+  auto l3 = List::cons(1u, List::cons(2u, List::nil()));
+  auto l4 = List::cons(
+      3u, List::cons(4u, List::cons(5u, List::nil())));
   auto zipped_long = LoopifyGenerators::zip_longest(l3, l4, 0u);
   ASSERT(zipped_long != nullptr);
 

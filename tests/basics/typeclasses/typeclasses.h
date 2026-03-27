@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -209,16 +214,16 @@ struct Typeclasses {
   static inline const unsigned int test_option_none =
       numOption<numNat, unsigned int>::to_nat(std::optional<unsigned int>());
   static inline const unsigned int test_list =
-      numList<numNat, unsigned int>::to_nat(List<unsigned int>::ctor::Cons_(
-          1u, List<unsigned int>::ctor::Cons_(
-                  2u, List<unsigned int>::ctor::Cons_(
-                          3u, List<unsigned int>::ctor::Cons_(
-                                  4u, List<unsigned int>::ctor::Nil_())))));
+      numList<numNat, unsigned int>::to_nat(List<unsigned int>::cons(
+          1u, List<unsigned int>::cons(
+                  2u, List<unsigned int>::cons(
+                          3u, List<unsigned int>::cons(
+                                  4u, List<unsigned int>::nil())))));
   static inline const unsigned int test_sum =
-      numeric_sum<numNat, unsigned int>(List<unsigned int>::ctor::Cons_(
-          10u, List<unsigned int>::ctor::Cons_(
-                   20u, List<unsigned int>::ctor::Cons_(
-                            30u, List<unsigned int>::ctor::Nil_()))));
+      numeric_sum<numNat, unsigned int>(List<unsigned int>::cons(
+          10u,
+          List<unsigned int>::cons(
+              20u, List<unsigned int>::cons(30u, List<unsigned int>::nil()))));
   static inline const unsigned int test_double =
       numeric_double<numNat, unsigned int>(7u);
   static inline const std::pair<unsigned int, unsigned int> test_sort_pair =

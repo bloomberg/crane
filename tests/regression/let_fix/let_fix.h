@@ -35,34 +35,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -89,12 +94,12 @@ struct LetFix {
                   -> std::shared_ptr<List<T1>> { return std::move(acc); },
               [&](const typename List<T1>::Cons _args)
                   -> std::shared_ptr<List<T1>> {
-                return go(List<T1>::ctor::Cons_(_args.d_a0, std::move(acc)),
+                return go(List<T1>::cons(_args.d_a0, std::move(acc)),
                           _args.d_a1);
               }},
           xs->v());
     };
-    return go(List<T1>::ctor::Nil_(), l);
+    return go(List<T1>::nil(), l);
   }
 
   static std::shared_ptr<List<unsigned int>> local_flatten(
@@ -116,51 +121,47 @@ struct LetFix {
   }
 
   static inline const unsigned int test_sum =
-      local_sum(List<unsigned int>::ctor::Cons_(
-          1u,
-          List<unsigned int>::ctor::Cons_(
-              2u,
-              List<unsigned int>::ctor::Cons_(
-                  3u, List<unsigned int>::ctor::Cons_(
-                          4u, List<unsigned int>::ctor::Cons_(
-                                  5u, List<unsigned int>::ctor::Nil_()))))));
+      local_sum(List<unsigned int>::cons(
+          1u, List<unsigned int>::cons(
+                  2u, List<unsigned int>::cons(
+                          3u, List<unsigned int>::cons(
+                                  4u, List<unsigned int>::cons(
+                                          5u, List<unsigned int>::nil()))))));
   static inline const std::shared_ptr<List<unsigned int>> test_rev =
-      local_rev<unsigned int>(List<unsigned int>::ctor::Cons_(
-          1u, List<unsigned int>::ctor::Cons_(
-                  2u, List<unsigned int>::ctor::Cons_(
-                          3u, List<unsigned int>::ctor::Nil_()))));
+      local_rev<unsigned int>(List<unsigned int>::cons(
+          1u,
+          List<unsigned int>::cons(
+              2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))));
   static inline const std::shared_ptr<List<unsigned int>> test_flatten =
-      local_flatten(List<std::shared_ptr<List<unsigned int>>>::ctor::Cons_(
-          List<unsigned int>::ctor::Cons_(
-              1u, List<unsigned int>::ctor::Cons_(
-                      2u, List<unsigned int>::ctor::Nil_())),
-          List<std::shared_ptr<List<unsigned int>>>::ctor::Cons_(
-              List<unsigned int>::ctor::Cons_(3u,
-                                              List<unsigned int>::ctor::Nil_()),
-              List<std::shared_ptr<List<unsigned int>>>::ctor::Cons_(
-                  List<unsigned int>::ctor::Cons_(
-                      4u, List<unsigned int>::ctor::Cons_(
-                              5u, List<unsigned int>::ctor::Cons_(
-                                      6u, List<unsigned int>::ctor::Nil_()))),
-                  List<std::shared_ptr<List<unsigned int>>>::ctor::Nil_()))));
+      local_flatten(List<std::shared_ptr<List<unsigned int>>>::cons(
+          List<unsigned int>::cons(
+              1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())),
+          List<std::shared_ptr<List<unsigned int>>>::cons(
+              List<unsigned int>::cons(3u, List<unsigned int>::nil()),
+              List<std::shared_ptr<List<unsigned int>>>::cons(
+                  List<unsigned int>::cons(
+                      4u, List<unsigned int>::cons(
+                              5u, List<unsigned int>::cons(
+                                      6u, List<unsigned int>::nil()))),
+                  List<std::shared_ptr<List<unsigned int>>>::nil()))));
   static inline const bool test_mem_found = local_mem(
-      3u, List<unsigned int>::ctor::Cons_(
-              1u, List<unsigned int>::ctor::Cons_(
-                      2u, List<unsigned int>::ctor::Cons_(
-                              3u, List<unsigned int>::ctor::Cons_(
-                                      4u, List<unsigned int>::ctor::Nil_())))));
+      3u, List<unsigned int>::cons(
+              1u, List<unsigned int>::cons(
+                      2u, List<unsigned int>::cons(
+                              3u, List<unsigned int>::cons(
+                                      4u, List<unsigned int>::nil())))));
   static inline const bool test_mem_missing = local_mem(
-      9u, List<unsigned int>::ctor::Cons_(
-              1u, List<unsigned int>::ctor::Cons_(
-                      2u, List<unsigned int>::ctor::Cons_(
-                              3u, List<unsigned int>::ctor::Cons_(
-                                      4u, List<unsigned int>::ctor::Nil_())))));
+      9u, List<unsigned int>::cons(
+              1u, List<unsigned int>::cons(
+                      2u, List<unsigned int>::cons(
+                              3u, List<unsigned int>::cons(
+                                      4u, List<unsigned int>::nil())))));
   static inline const unsigned int test_length =
-      local_length<unsigned int>(List<unsigned int>::ctor::Cons_(
-          10u, List<unsigned int>::ctor::Cons_(
-                   20u, List<unsigned int>::ctor::Cons_(
-                            30u, List<unsigned int>::ctor::Cons_(
-                                     40u, List<unsigned int>::ctor::Nil_())))));
+      local_length<unsigned int>(List<unsigned int>::cons(
+          10u, List<unsigned int>::cons(
+                   20u, List<unsigned int>::cons(
+                            30u, List<unsigned int>::cons(
+                                     40u, List<unsigned int>::nil())))));
 };
 
 #endif // INCLUDED_LET_FIX

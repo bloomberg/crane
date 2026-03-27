@@ -81,8 +81,8 @@ StackOps::push_stack(const std::shared_ptr<StackOps::state_basic> &s,
           [&](const typename List<unsigned int>::Nil _args)
               -> std::shared_ptr<StackOps::state_basic> {
             return std::make_shared<StackOps::state_basic>(
-                state_basic{List<unsigned int>::ctor::Cons_(
-                    std::move(addr), List<unsigned int>::ctor::Nil_())});
+                state_basic{List<unsigned int>::cons(
+                    std::move(addr), List<unsigned int>::nil())});
           },
           [&](const typename List<unsigned int>::Cons _args)
               -> std::shared_ptr<StackOps::state_basic> {
@@ -91,11 +91,10 @@ StackOps::push_stack(const std::shared_ptr<StackOps::state_basic> &s,
                     [&](const typename List<unsigned int>::Nil _args0)
                         -> std::shared_ptr<StackOps::state_basic> {
                       return std::make_shared<StackOps::state_basic>(
-                          state_basic{List<unsigned int>::ctor::Cons_(
+                          state_basic{List<unsigned int>::cons(
                               std::move(addr),
-                              List<unsigned int>::ctor::Cons_(
-                                  _args.d_a0,
-                                  List<unsigned int>::ctor::Nil_()))});
+                              List<unsigned int>::cons(
+                                  _args.d_a0, List<unsigned int>::nil()))});
                     },
                     [&](const typename List<unsigned int>::Cons _args0)
                         -> std::shared_ptr<StackOps::state_basic> {
@@ -104,27 +103,25 @@ StackOps::push_stack(const std::shared_ptr<StackOps::state_basic> &s,
                               [&](const typename List<unsigned int>::Nil _args1)
                                   -> std::shared_ptr<StackOps::state_basic> {
                                 return std::make_shared<StackOps::state_basic>(
-                                    state_basic{List<unsigned int>::ctor::Cons_(
+                                    state_basic{List<unsigned int>::cons(
                                         std::move(addr),
-                                        List<unsigned int>::ctor::Cons_(
+                                        List<unsigned int>::cons(
                                             _args.d_a0,
-                                            List<unsigned int>::ctor::Cons_(
+                                            List<unsigned int>::cons(
                                                 _args0.d_a0,
-                                                List<unsigned int>::ctor::
-                                                    Nil_())))});
+                                                List<unsigned int>::nil())))});
                               },
                               [&](const typename List<unsigned int>::Cons
                                       _args1)
                                   -> std::shared_ptr<StackOps::state_basic> {
                                 return std::make_shared<StackOps::state_basic>(
-                                    state_basic{List<unsigned int>::ctor::Cons_(
+                                    state_basic{List<unsigned int>::cons(
                                         std::move(addr),
-                                        List<unsigned int>::ctor::Cons_(
+                                        List<unsigned int>::cons(
                                             _args.d_a0,
-                                            List<unsigned int>::ctor::Cons_(
+                                            List<unsigned int>::cons(
                                                 _args0.d_a0,
-                                                List<unsigned int>::ctor::
-                                                    Nil_())))});
+                                                List<unsigned int>::nil())))});
                               }},
                           _args0.d_a1->v());
                     }},
@@ -149,8 +146,7 @@ StackOps::push_stack_cap(const std::shared_ptr<StackOps::state_basic> &s,
       Overloaded{
           [&](const typename List<unsigned int>::Nil _args)
               -> std::shared_ptr<List<unsigned int>> {
-            return List<unsigned int>::ctor::Cons_(
-                addr, List<unsigned int>::ctor::Nil_());
+            return List<unsigned int>::cons(addr, List<unsigned int>::nil());
           },
           [&](const typename List<unsigned int>::Cons _args)
               -> std::shared_ptr<List<unsigned int>> {
@@ -158,10 +154,9 @@ StackOps::push_stack_cap(const std::shared_ptr<StackOps::state_basic> &s,
                 Overloaded{
                     [&](const typename List<unsigned int>::Nil _args0)
                         -> std::shared_ptr<List<unsigned int>> {
-                      return List<unsigned int>::ctor::Cons_(
-                          addr,
-                          List<unsigned int>::ctor::Cons_(
-                              _args.d_a0, List<unsigned int>::ctor::Nil_()));
+                      return List<unsigned int>::cons(
+                          addr, List<unsigned int>::cons(
+                                    _args.d_a0, List<unsigned int>::nil()));
                     },
                     [&](const typename List<unsigned int>::Cons _args0)
                         -> std::shared_ptr<List<unsigned int>> {
@@ -169,24 +164,22 @@ StackOps::push_stack_cap(const std::shared_ptr<StackOps::state_basic> &s,
                           Overloaded{
                               [&](const typename List<unsigned int>::Nil _args1)
                                   -> std::shared_ptr<List<unsigned int>> {
-                                return List<unsigned int>::ctor::Cons_(
-                                    addr,
-                                    List<unsigned int>::ctor::Cons_(
-                                        _args.d_a0,
-                                        List<unsigned int>::ctor::Cons_(
-                                            _args0.d_a0,
-                                            List<unsigned int>::ctor::Nil_())));
+                                return List<unsigned int>::cons(
+                                    addr, List<unsigned int>::cons(
+                                              _args.d_a0,
+                                              List<unsigned int>::cons(
+                                                  _args0.d_a0,
+                                                  List<unsigned int>::nil())));
                               },
                               [&](const typename List<unsigned int>::Cons
                                       _args1)
                                   -> std::shared_ptr<List<unsigned int>> {
-                                return List<unsigned int>::ctor::Cons_(
-                                    addr,
-                                    List<unsigned int>::ctor::Cons_(
-                                        _args.d_a0,
-                                        List<unsigned int>::ctor::Cons_(
-                                            _args0.d_a0,
-                                            List<unsigned int>::ctor::Nil_())));
+                                return List<unsigned int>::cons(
+                                    addr, List<unsigned int>::cons(
+                                              _args.d_a0,
+                                              List<unsigned int>::cons(
+                                                  _args0.d_a0,
+                                                  List<unsigned int>::nil())));
                               }},
                           _args0.d_a1->v());
                     }},

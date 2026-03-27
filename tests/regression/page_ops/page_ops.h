@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -118,32 +123,27 @@ struct PageOps {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit instruction(NOP _v) : d_v_(std::move(_v)) {}
 
     explicit instruction(LDM _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<instruction> nop() {
+      return std::make_shared<instruction>(NOP{});
+    }
 
-      static std::shared_ptr<instruction> NOP_() {
-        return std::shared_ptr<instruction>(new instruction(NOP{}));
-      }
+    static std::shared_ptr<instruction> ldm(unsigned int a0) {
+      return std::make_shared<instruction>(LDM{std::move(a0)});
+    }
 
-      static std::shared_ptr<instruction> LDM_(unsigned int a0) {
-        return std::shared_ptr<instruction>(new instruction(LDM{a0}));
-      }
+    static std::unique_ptr<instruction> nop_uptr() {
+      return std::make_unique<instruction>(NOP{});
+    }
 
-      static std::unique_ptr<instruction> NOP_uptr() {
-        return std::unique_ptr<instruction>(new instruction(NOP{}));
-      }
-
-      static std::unique_ptr<instruction> LDM_uptr(unsigned int a0) {
-        return std::unique_ptr<instruction>(new instruction(LDM{a0}));
-      }
-    };
+    static std::unique_ptr<instruction> ldm_uptr(unsigned int a0) {
+      return std::make_unique<instruction>(LDM{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -188,7 +188,7 @@ struct PageOps {
       unsigned int n_ = n - 1;
       return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
                                        -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::ctor::Nil_();
+                                     return List<T1>::nil();
                                    },
                                    [&](const typename List<T1>::Cons _args)
                                        -> std::shared_ptr<List<T1>> {
@@ -228,20 +228,19 @@ struct PageOps {
       pc_inc2(std::make_shared<state>(state{max_addr}));
   static inline const unsigned int test_disassemble_edge = [](void) {
     if (disassemble(
-            List<unsigned int>::ctor::Cons_(
-                0u,
-                List<unsigned int>::ctor::Cons_(
-                    7u, List<unsigned int>::ctor::Cons_(
-                            9u, List<unsigned int>::ctor::Cons_(
-                                    11u, List<unsigned int>::ctor::Nil_())))),
+            List<unsigned int>::cons(
+                0u, List<unsigned int>::cons(
+                        7u, List<unsigned int>::cons(
+                                9u, List<unsigned int>::cons(
+                                        11u, List<unsigned int>::nil())))),
             0u)
             .has_value()) {
       std::pair<std::shared_ptr<instruction>, unsigned int> p = *disassemble(
-          List<unsigned int>::ctor::Cons_(
-              0u, List<unsigned int>::ctor::Cons_(
-                      7u, List<unsigned int>::ctor::Cons_(
-                              9u, List<unsigned int>::ctor::Cons_(
-                                      11u, List<unsigned int>::ctor::Nil_())))),
+          List<unsigned int>::cons(
+              0u, List<unsigned int>::cons(
+                      7u, List<unsigned int>::cons(
+                              9u, List<unsigned int>::cons(
+                                      11u, List<unsigned int>::nil())))),
           0u);
       std::shared_ptr<instruction> _x = p.first;
       unsigned int next = p.second;

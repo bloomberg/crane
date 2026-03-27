@@ -82,13 +82,13 @@ std::shared_ptr<Positive> Pos::succ(const std::shared_ptr<Positive> &x) {
   return std::visit(
       Overloaded{
           [](const typename Positive::XI _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XO_(succ(_args.d_a0));
+            return Positive::xo(succ(_args.d_a0));
           },
           [](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XI_(_args.d_a0);
+            return Positive::xi(_args.d_a0);
           },
           [](const typename Positive::XH _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XO_(Positive::ctor::XH_());
+            return Positive::xo(Positive::xh());
           }},
       x->v());
 }
@@ -101,52 +101,50 @@ std::shared_ptr<Positive> Pos::add(const std::shared_ptr<Positive> &x,
             return std::visit(
                 Overloaded{[&](const typename Positive::XI _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(
+                             return Positive::xo(
                                  add_carry(_args.d_a0, _args0.d_a0));
                            },
                            [&](const typename Positive::XO _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(
-                                 add(_args.d_a0, _args0.d_a0));
+                             return Positive::xi(add(_args.d_a0, _args0.d_a0));
                            },
                            [&](const typename Positive::XH _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(succ(_args.d_a0));
+                             return Positive::xo(succ(_args.d_a0));
                            }},
                 y->v());
           },
           [&](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
             return std::visit(
-                Overloaded{
-                    [&](const typename Positive::XI _args0)
-                        -> std::shared_ptr<Positive> {
-                      return Positive::ctor::XI_(add(_args.d_a0, _args0.d_a0));
-                    },
-                    [&](const typename Positive::XO _args0)
-                        -> std::shared_ptr<Positive> {
-                      return Positive::ctor::XO_(add(_args.d_a0, _args0.d_a0));
-                    },
-                    [&](const typename Positive::XH _args0)
-                        -> std::shared_ptr<Positive> {
-                      return Positive::ctor::XI_(_args.d_a0);
-                    }},
+                Overloaded{[&](const typename Positive::XI _args0)
+                               -> std::shared_ptr<Positive> {
+                             return Positive::xi(add(_args.d_a0, _args0.d_a0));
+                           },
+                           [&](const typename Positive::XO _args0)
+                               -> std::shared_ptr<Positive> {
+                             return Positive::xo(add(_args.d_a0, _args0.d_a0));
+                           },
+                           [&](const typename Positive::XH _args0)
+                               -> std::shared_ptr<Positive> {
+                             return Positive::xi(_args.d_a0);
+                           }},
                 y->v());
           },
           [&](const typename Positive::XH _args) -> std::shared_ptr<Positive> {
-            return std::visit(
-                Overloaded{[](const typename Positive::XI _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(succ(_args0.d_a0));
-                           },
-                           [](const typename Positive::XO _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(_args0.d_a0);
-                           },
-                           [](const typename Positive::XH _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(Positive::ctor::XH_());
-                           }},
-                y->v());
+            return std::visit(Overloaded{[](const typename Positive::XI _args0)
+                                             -> std::shared_ptr<Positive> {
+                                           return Positive::xo(
+                                               succ(_args0.d_a0));
+                                         },
+                                         [](const typename Positive::XO _args0)
+                                             -> std::shared_ptr<Positive> {
+                                           return Positive::xi(_args0.d_a0);
+                                         },
+                                         [](const typename Positive::XH _args0)
+                                             -> std::shared_ptr<Positive> {
+                                           return Positive::xo(Positive::xh());
+                                         }},
+                              y->v());
           }},
       x->v());
 }
@@ -157,37 +155,35 @@ std::shared_ptr<Positive> Pos::add_carry(const std::shared_ptr<Positive> &x,
       Overloaded{
           [&](const typename Positive::XI _args) -> std::shared_ptr<Positive> {
             return std::visit(
-                Overloaded{[&](const typename Positive::XI _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(
-                                 add_carry(_args.d_a0, _args0.d_a0));
-                           },
-                           [&](const typename Positive::XO _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(
-                                 add_carry(_args.d_a0, _args0.d_a0));
-                           },
-                           [&](const typename Positive::XH _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(succ(_args.d_a0));
-                           }},
+                Overloaded{
+                    [&](const typename Positive::XI _args0)
+                        -> std::shared_ptr<Positive> {
+                      return Positive::xi(add_carry(_args.d_a0, _args0.d_a0));
+                    },
+                    [&](const typename Positive::XO _args0)
+                        -> std::shared_ptr<Positive> {
+                      return Positive::xo(add_carry(_args.d_a0, _args0.d_a0));
+                    },
+                    [&](const typename Positive::XH _args0)
+                        -> std::shared_ptr<Positive> {
+                      return Positive::xi(succ(_args.d_a0));
+                    }},
                 y->v());
           },
           [&](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
             return std::visit(
                 Overloaded{[&](const typename Positive::XI _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(
+                             return Positive::xo(
                                  add_carry(_args.d_a0, _args0.d_a0));
                            },
                            [&](const typename Positive::XO _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(
-                                 add(_args.d_a0, _args0.d_a0));
+                             return Positive::xi(add(_args.d_a0, _args0.d_a0));
                            },
                            [&](const typename Positive::XH _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(succ(_args.d_a0));
+                             return Positive::xo(succ(_args.d_a0));
                            }},
                 y->v());
           },
@@ -195,15 +191,15 @@ std::shared_ptr<Positive> Pos::add_carry(const std::shared_ptr<Positive> &x,
             return std::visit(
                 Overloaded{[](const typename Positive::XI _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(succ(_args0.d_a0));
+                             return Positive::xi(succ(_args0.d_a0));
                            },
                            [](const typename Positive::XO _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(succ(_args0.d_a0));
+                             return Positive::xo(succ(_args0.d_a0));
                            },
                            [](const typename Positive::XH _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(Positive::ctor::XH_());
+                             return Positive::xi(Positive::xh());
                            }},
                 y->v());
           }},
@@ -214,13 +210,13 @@ std::shared_ptr<Positive> Pos::pred_double(const std::shared_ptr<Positive> &x) {
   return std::visit(
       Overloaded{
           [](const typename Positive::XI _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XI_(Positive::ctor::XO_(_args.d_a0));
+            return Positive::xi(Positive::xo(_args.d_a0));
           },
           [](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XI_(pred_double(_args.d_a0));
+            return Positive::xi(pred_double(_args.d_a0));
           },
           [](const typename Positive::XH _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XH_();
+            return Positive::xh();
           }},
       x->v());
 }
@@ -274,13 +270,13 @@ __attribute__((pure)) bool Pos::eqb(const std::shared_ptr<Positive> &p,
 std::shared_ptr<Z> BinInt::double_(const std::shared_ptr<Z> &x) {
   return std::visit(
       Overloaded{[](const typename Z::Z0 _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Z0_();
+                   return Z::z0();
                  },
                  [](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(Positive::ctor::XO_(_args.d_a0));
+                   return Z::zpos(Positive::xo(_args.d_a0));
                  },
                  [](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zneg_(Positive::ctor::XO_(_args.d_a0));
+                   return Z::zneg(Positive::xo(_args.d_a0));
                  }},
       x->v());
 }
@@ -288,13 +284,13 @@ std::shared_ptr<Z> BinInt::double_(const std::shared_ptr<Z> &x) {
 std::shared_ptr<Z> BinInt::succ_double(const std::shared_ptr<Z> &x) {
   return std::visit(
       Overloaded{[](const typename Z::Z0 _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(Positive::ctor::XH_());
+                   return Z::zpos(Positive::xh());
                  },
                  [](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(Positive::ctor::XI_(_args.d_a0));
+                   return Z::zpos(Positive::xi(_args.d_a0));
                  },
                  [](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zneg_(Pos::pred_double(_args.d_a0));
+                   return Z::zneg(Pos::pred_double(_args.d_a0));
                  }},
       x->v());
 }
@@ -302,13 +298,13 @@ std::shared_ptr<Z> BinInt::succ_double(const std::shared_ptr<Z> &x) {
 std::shared_ptr<Z> BinInt::pred_double(const std::shared_ptr<Z> &x) {
   return std::visit(
       Overloaded{[](const typename Z::Z0 _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zneg_(Positive::ctor::XH_());
+                   return Z::zneg(Positive::xh());
                  },
                  [](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(Pos::pred_double(_args.d_a0));
+                   return Z::zpos(Pos::pred_double(_args.d_a0));
                  },
                  [](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zneg_(Positive::ctor::XI_(_args.d_a0));
+                   return Z::zneg(Positive::xi(_args.d_a0));
                  }},
       x->v());
 }
@@ -331,8 +327,7 @@ std::shared_ptr<Z> BinInt::pos_sub(const std::shared_ptr<Positive> &x,
                            },
                            [&](const typename Positive::XH _args0)
                                -> std::shared_ptr<Z> {
-                             return Z::ctor::Zpos_(
-                                 Positive::ctor::XO_(_args.d_a0));
+                             return Z::zpos(Positive::xo(_args.d_a0));
                            }},
                 y->v());
           },
@@ -350,24 +345,22 @@ std::shared_ptr<Z> BinInt::pos_sub(const std::shared_ptr<Positive> &x,
                            },
                            [&](const typename Positive::XH _args0)
                                -> std::shared_ptr<Z> {
-                             return Z::ctor::Zpos_(
-                                 Pos::pred_double(_args.d_a0));
+                             return Z::zpos(Pos::pred_double(_args.d_a0));
                            }},
                 y->v());
           },
           [&](const typename Positive::XH _args) -> std::shared_ptr<Z> {
             return std::visit(
-                Overloaded{
-                    [](const typename Positive::XI _args0)
-                        -> std::shared_ptr<Z> {
-                      return Z::ctor::Zneg_(Positive::ctor::XO_(_args0.d_a0));
-                    },
-                    [](const typename Positive::XO _args0)
-                        -> std::shared_ptr<Z> {
-                      return Z::ctor::Zneg_(Pos::pred_double(_args0.d_a0));
-                    },
-                    [](const typename Positive::XH _args0)
-                        -> std::shared_ptr<Z> { return Z::ctor::Z0_(); }},
+                Overloaded{[](const typename Positive::XI _args0)
+                               -> std::shared_ptr<Z> {
+                             return Z::zneg(Positive::xo(_args0.d_a0));
+                           },
+                           [](const typename Positive::XO _args0)
+                               -> std::shared_ptr<Z> {
+                             return Z::zneg(Pos::pred_double(_args0.d_a0));
+                           },
+                           [](const typename Positive::XH _args0)
+                               -> std::shared_ptr<Z> { return Z::z0(); }},
                 y->v());
           }},
       x->v());
@@ -395,8 +388,7 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
                         },
                         [&](const typename Z::Zpos _args0)
                             -> std::shared_ptr<Z> {
-                          return Z::ctor::Zpos_(
-                              Pos::add(_args.d_a0, _args0.d_a0));
+                          return Z::zpos(Pos::add(_args.d_a0, _args0.d_a0));
                         },
                         [&](const typename Z::Zneg _args0)
                             -> std::shared_ptr<Z> {
@@ -426,8 +418,7 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
                         },
                         [&](const typename Z::Zneg _args0)
                             -> std::shared_ptr<Z> {
-                          return Z::ctor::Zneg_(
-                              Pos::add(_args.d_a0, _args0.d_a0));
+                          return Z::zneg(Pos::add(_args.d_a0, _args0.d_a0));
                         }},
                     std::move(y)->v());
               }
@@ -758,7 +749,7 @@ CoalitionBidHonorTraceCase::update_coalition_force(
               -> std::shared_ptr<List<std::shared_ptr<
                   CoalitionBidHonorTraceCase::CoalitionMember>>> {
             return List<std::shared_ptr<
-                CoalitionBidHonorTraceCase::CoalitionMember>>::ctor::Nil_();
+                CoalitionBidHonorTraceCase::CoalitionMember>>::nil();
           },
           [&](const typename List<std::shared_ptr<
                   CoalitionBidHonorTraceCase::CoalitionMember>>::Cons _args)
@@ -766,19 +757,19 @@ CoalitionBidHonorTraceCase::update_coalition_force(
                   CoalitionBidHonorTraceCase::CoalitionMember>>> {
             if (idx <= 0) {
               return List<std::shared_ptr<
-                  CoalitionBidHonorTraceCase::CoalitionMember>>::ctor::
-                  Cons_(std::make_shared<
-                            CoalitionBidHonorTraceCase::CoalitionMember>(
-                            CoalitionMember{_args.d_a0->cm_clan,
-                                            _args.d_a0->cm_commander,
-                                            std::move(new_force)}),
-                        _args.d_a1);
+                  CoalitionBidHonorTraceCase::CoalitionMember>>::
+                  cons(std::make_shared<
+                           CoalitionBidHonorTraceCase::CoalitionMember>(
+                           CoalitionMember{_args.d_a0->cm_clan,
+                                           _args.d_a0->cm_commander,
+                                           std::move(new_force)}),
+                       _args.d_a1);
             } else {
               unsigned int n = idx - 1;
               return List<std::shared_ptr<
-                  CoalitionBidHonorTraceCase::CoalitionMember>>::ctor::
-                  Cons_(std::move(_args.d_a0),
-                        update_coalition_force(_args.d_a1, n, new_force));
+                  CoalitionBidHonorTraceCase::CoalitionMember>>::
+                  cons(std::move(_args.d_a0),
+                       update_coalition_force(_args.d_a1, n, new_force));
             }
           }},
       c->v());
@@ -851,19 +842,17 @@ CoalitionBidHonorTraceCase::valid_coalition_member_bid_b(
         List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>> &c,
     const std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMemberBid>
         &cbid) {
-  return (
-      PeanoNat::ltb(cbid->cmb_member_index, c->length()) &&
-      metrics_total_lt(
-          force_metrics(cbid->cmb_new_force),
-          force_metrics(
-              c->template map<CoalitionBidHonorTraceCase::Force>(
-                   [](std::shared_ptr<
-                       CoalitionBidHonorTraceCase::CoalitionMember>
-                          c0) { return c0->cm_force; })
-                  ->nth(
-                      cbid->cmb_member_index,
-                      List<std::shared_ptr<CoalitionBidHonorTraceCase::Unit>>::
-                          ctor::Nil_()))));
+  return (PeanoNat::ltb(cbid->cmb_member_index, c->length()) &&
+          metrics_total_lt(
+              force_metrics(cbid->cmb_new_force),
+              force_metrics(
+                  c->template map<CoalitionBidHonorTraceCase::Force>(
+                       [](std::shared_ptr<
+                           CoalitionBidHonorTraceCase::CoalitionMember>
+                              c0) { return c0->cm_force; })
+                      ->nth(cbid->cmb_member_index,
+                            List<std::shared_ptr<
+                                CoalitionBidHonorTraceCase::Unit>>::nil()))));
 }
 
 __attribute__((pure)) bool CoalitionBidHonorTraceCase::is_ready(
@@ -1028,7 +1017,7 @@ CoalitionBidHonorTraceCase::ledger_lookup(
   return std::visit(
       Overloaded{[](const typename List<
                      std::pair<unsigned int, std::shared_ptr<Z>>>::Nil _args)
-                     -> std::shared_ptr<Z> { return Z::ctor::Z0_(); },
+                     -> std::shared_ptr<Z> { return Z::z0(); },
                  [&](const typename List<
                      std::pair<unsigned int, std::shared_ptr<Z>>>::Cons _args)
                      -> std::shared_ptr<Z> {
@@ -1054,11 +1043,9 @@ CoalitionBidHonorTraceCase::ledger_update_by_id(
               std::pair<unsigned int, std::shared_ptr<Z>>>::Nil _args)
               -> std::shared_ptr<
                   List<std::pair<unsigned int, std::shared_ptr<Z>>>> {
-            return List<std::pair<unsigned int, std::shared_ptr<Z>>>::ctor::
-                Cons_(
-                    std::make_pair(std::move(warrior_id), std::move(new_honor)),
-                    List<std::pair<unsigned int,
-                                   std::shared_ptr<Z>>>::ctor::Nil_());
+            return List<std::pair<unsigned int, std::shared_ptr<Z>>>::cons(
+                std::make_pair(std::move(warrior_id), std::move(new_honor)),
+                List<std::pair<unsigned int, std::shared_ptr<Z>>>::nil());
           },
           [&](const typename List<
               std::pair<unsigned int, std::shared_ptr<Z>>>::Cons _args)
@@ -1067,13 +1054,13 @@ CoalitionBidHonorTraceCase::ledger_update_by_id(
             unsigned int id = _args.d_a0.first;
             std::shared_ptr<Z> honor = _args.d_a0.second;
             if (PeanoNat::eqb(id, warrior_id)) {
-              return List<std::pair<unsigned int, std::shared_ptr<Z>>>::ctor::
-                  Cons_(std::make_pair(id, new_honor), std::move(_args.d_a1));
+              return List<std::pair<unsigned int, std::shared_ptr<Z>>>::cons(
+                  std::make_pair(id, new_honor), std::move(_args.d_a1));
             } else {
-              return List<std::pair<unsigned int, std::shared_ptr<Z>>>::ctor::
-                  Cons_(std::make_pair(id, honor),
-                        ledger_update_by_id(std::move(_args.d_a1), warrior_id,
-                                            new_honor));
+              return List<std::pair<unsigned int, std::shared_ptr<Z>>>::cons(
+                  std::make_pair(id, honor),
+                  ledger_update_by_id(std::move(_args.d_a1), warrior_id,
+                                      new_honor));
             }
           }},
       ledger->v());
@@ -1096,11 +1083,11 @@ CoalitionBidHonorTraceCase::refusal_honor_delta(
   return std::visit(
       Overloaded{[](const typename CoalitionBidHonorTraceCase::RefusalReason::
                         RefusalInsufficientRank _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Z0_();
+                   return Z::z0();
                  },
                  [](const typename CoalitionBidHonorTraceCase::RefusalReason::
                         RefusalOther _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zneg_(Positive::ctor::XH_());
+                   return Z::zneg(Positive::xh());
                  }},
       r->v());
 }
@@ -1112,36 +1099,36 @@ CoalitionBidHonorTraceCase::protocol_honor_delta(
       Overloaded{
           [](const typename CoalitionBidHonorTraceCase::ProtocolAction::
                  ActChallenge _args) -> std::shared_ptr<Z> {
-            return Z::ctor::Zpos_(Positive::ctor::XH_());
+            return Z::zpos(Positive::xh());
           },
           [](const typename CoalitionBidHonorTraceCase::ProtocolAction::
                  ActRespond _args) -> std::shared_ptr<Z> {
-            return Z::ctor::Zpos_(Positive::ctor::XH_());
+            return Z::zpos(Positive::xh());
           },
           [](const typename CoalitionBidHonorTraceCase::ProtocolAction::
                  ActRefuse _args) -> std::shared_ptr<Z> {
             return refusal_honor_delta(_args.d_a0);
           },
           [](const typename CoalitionBidHonorTraceCase::ProtocolAction::ActBid
-                 _args) -> std::shared_ptr<Z> { return Z::ctor::Z0_(); },
+                 _args) -> std::shared_ptr<Z> { return Z::z0(); },
           [](const typename CoalitionBidHonorTraceCase::ProtocolAction::
                  ActCoalitionBid _args) -> std::shared_ptr<Z> {
-            return Z::ctor::Z0_();
+            return Z::z0();
           },
           [](const typename CoalitionBidHonorTraceCase::ProtocolAction::ActPass
-                 _args) -> std::shared_ptr<Z> { return Z::ctor::Z0_(); },
+                 _args) -> std::shared_ptr<Z> { return Z::z0(); },
           [](const typename CoalitionBidHonorTraceCase::ProtocolAction::ActClose
                  _args) -> std::shared_ptr<Z> {
-            return Z::ctor::Zpos_(Positive::ctor::XH_());
+            return Z::zpos(Positive::xh());
           },
           [](const typename CoalitionBidHonorTraceCase::ProtocolAction::
                  ActWithdraw _args) -> std::shared_ptr<Z> {
-            return Z::ctor::Zneg_(Positive::ctor::XO_(Positive::ctor::XH_()));
+            return Z::zneg(Positive::xo(Positive::xh()));
           },
           [](const typename CoalitionBidHonorTraceCase::ProtocolAction::
                  ActBreakBid _args) -> std::shared_ptr<Z> {
-            return Z::ctor::Zneg_(Positive::ctor::XO_(Positive::ctor::XI_(
-                Positive::ctor::XO_(Positive::ctor::XH_()))));
+            return Z::zneg(
+                Positive::xo(Positive::xi(Positive::xo(Positive::xh()))));
           }},
       action->v());
 }

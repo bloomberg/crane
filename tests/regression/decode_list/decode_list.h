@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -98,32 +103,27 @@ struct DecodeList {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit instruction(NOP _v) : d_v_(std::move(_v)) {}
 
     explicit instruction(LDM _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<instruction> nop() {
+      return std::make_shared<instruction>(NOP{});
+    }
 
-      static std::shared_ptr<instruction> NOP_() {
-        return std::shared_ptr<instruction>(new instruction(NOP{}));
-      }
+    static std::shared_ptr<instruction> ldm(unsigned int a0) {
+      return std::make_shared<instruction>(LDM{std::move(a0)});
+    }
 
-      static std::shared_ptr<instruction> LDM_(unsigned int a0) {
-        return std::shared_ptr<instruction>(new instruction(LDM{a0}));
-      }
+    static std::unique_ptr<instruction> nop_uptr() {
+      return std::make_unique<instruction>(NOP{});
+    }
 
-      static std::unique_ptr<instruction> NOP_uptr() {
-        return std::unique_ptr<instruction>(new instruction(NOP{}));
-      }
-
-      static std::unique_ptr<instruction> LDM_uptr(unsigned int a0) {
-        return std::unique_ptr<instruction>(new instruction(LDM{a0}));
-      }
-    };
+    static std::unique_ptr<instruction> ldm_uptr(unsigned int a0) {
+      return std::make_unique<instruction>(LDM{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -161,7 +161,7 @@ struct DecodeList {
   static std::shared_ptr<List<std::shared_ptr<instruction>>>
   decode_list(const std::shared_ptr<List<unsigned int>> &bytes);
   static inline const unsigned int t_empty =
-      decode_list(List<unsigned int>::ctor::Nil_())->length();
+      decode_list(List<unsigned int>::nil())->length();
   static inline const unsigned int t_odd_tail = []() {
     return std::visit(
         Overloaded{
@@ -187,25 +187,23 @@ struct DecodeList {
                           -> unsigned int { return 0u; }},
                   _args0.d_a0->v());
             }},
-        decode_list(
-            List<unsigned int>::ctor::Cons_(
-                0u, List<unsigned int>::ctor::Cons_(
-                        99u, List<unsigned int>::ctor::Cons_(
-                                 42u, List<unsigned int>::ctor::Nil_()))))
+        decode_list(List<unsigned int>::cons(
+                        0u, List<unsigned int>::cons(
+                                99u, List<unsigned int>::cons(
+                                         42u, List<unsigned int>::nil()))))
             ->v());
   }();
   static inline const unsigned int t_pair_count =
-      decode_list(
-          List<unsigned int>::ctor::Cons_(
-              0u, List<unsigned int>::ctor::Cons_(
-                      1u, List<unsigned int>::ctor::Cons_(
-                              2u, List<unsigned int>::ctor::Cons_(
-                                      3u, List<unsigned int>::ctor::Nil_())))))
+      decode_list(List<unsigned int>::cons(
+                      0u, List<unsigned int>::cons(
+                              1u, List<unsigned int>::cons(
+                                      2u, List<unsigned int>::cons(
+                                              3u, List<unsigned int>::nil())))))
           ->length();
   static inline const unsigned int t_single_pair =
-      decode_list(List<unsigned int>::ctor::Cons_(
-                      0u, List<unsigned int>::ctor::Cons_(
-                              7u, List<unsigned int>::ctor::Nil_())))
+      decode_list(
+          List<unsigned int>::cons(
+              0u, List<unsigned int>::cons(7u, List<unsigned int>::nil())))
           ->length();
 };
 

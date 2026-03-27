@@ -37,34 +37,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -79,7 +84,7 @@ public:
       unsigned int n0 = n - 1;
       return std::visit(Overloaded{[](const typename List<t_A>::Nil _args)
                                        -> std::shared_ptr<List<t_A>> {
-                                     return List<t_A>::ctor::Nil_();
+                                     return List<t_A>::nil();
                                    },
                                    [&](const typename List<t_A>::Cons _args)
                                        -> std::shared_ptr<List<t_A>> {
@@ -91,19 +96,18 @@ public:
 
   std::shared_ptr<List<t_A>> firstn(const unsigned int n) const {
     if (n <= 0) {
-      return List<t_A>::ctor::Nil_();
+      return List<t_A>::nil();
     } else {
       unsigned int n0 = n - 1;
-      return std::visit(Overloaded{[](const typename List<t_A>::Nil _args)
-                                       -> std::shared_ptr<List<t_A>> {
-                                     return List<t_A>::ctor::Nil_();
-                                   },
-                                   [&](const typename List<t_A>::Cons _args)
-                                       -> std::shared_ptr<List<t_A>> {
-                                     return List<t_A>::ctor::Cons_(
-                                         _args.d_a0, _args.d_a1->firstn(n0));
-                                   }},
-                        this->v());
+      return std::visit(
+          Overloaded{
+              [](const typename List<t_A>::Nil _args)
+                  -> std::shared_ptr<List<t_A>> { return List<t_A>::nil(); },
+              [&](const typename List<t_A>::Cons _args)
+                  -> std::shared_ptr<List<t_A>> {
+                return List<t_A>::cons(_args.d_a0, _args.d_a1->firstn(n0));
+              }},
+          this->v());
     }
   }
 
@@ -147,27 +151,25 @@ struct GetPairBoundProp {
     if (n <= 0) {
       return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
                                        -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::ctor::Nil_();
+                                     return List<T1>::nil();
                                    },
                                    [&](const typename List<T1>::Cons _args)
                                        -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::ctor::Cons_(x,
-                                                                  _args.d_a1);
+                                     return List<T1>::cons(x, _args.d_a1);
                                    }},
                         l->v());
     } else {
       unsigned int n_ = n - 1;
-      return std::visit(Overloaded{[](const typename List<T1>::Nil _args0)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::ctor::Nil_();
-                                   },
-                                   [&](const typename List<T1>::Cons _args0)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::ctor::Cons_(
-                                         _args0.d_a0,
-                                         update_nth<T1>(n_, x, _args0.d_a1));
-                                   }},
-                        l->v());
+      return std::visit(
+          Overloaded{
+              [](const typename List<T1>::Nil _args0)
+                  -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
+              [&](const typename List<T1>::Cons _args0)
+                  -> std::shared_ptr<List<T1>> {
+                return List<T1>::cons(_args0.d_a0,
+                                      update_nth<T1>(n_, x, _args0.d_a1));
+              }},
+          l->v());
     }
   }
 
@@ -297,6 +299,7 @@ struct GetPairBoundProp {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit instr(NOP _v) : d_v_(std::move(_v)) {}
 
@@ -356,243 +359,237 @@ struct GetPairBoundProp {
 
     explicit instr(BBL _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<instr> nop() {
+      return std::make_shared<instr>(NOP{});
+    }
 
-      static std::shared_ptr<instr> NOP_() {
-        return std::shared_ptr<instr>(new instr(NOP{}));
-      }
+    static std::shared_ptr<instr> ldm(unsigned int a0) {
+      return std::make_shared<instr>(LDM{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr> LDM_(unsigned int a0) {
-        return std::shared_ptr<instr>(new instr(LDM{a0}));
-      }
+    static std::shared_ptr<instr> ld(unsigned int a0) {
+      return std::make_shared<instr>(LD{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr> LD_(unsigned int a0) {
-        return std::shared_ptr<instr>(new instr(LD{a0}));
-      }
+    static std::shared_ptr<instr> xch(unsigned int a0) {
+      return std::make_shared<instr>(XCH{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr> XCH_(unsigned int a0) {
-        return std::shared_ptr<instr>(new instr(XCH{a0}));
-      }
+    static std::shared_ptr<instr> inc(unsigned int a0) {
+      return std::make_shared<instr>(INC{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr> INC_(unsigned int a0) {
-        return std::shared_ptr<instr>(new instr(INC{a0}));
-      }
+    static std::shared_ptr<instr> add(unsigned int a0) {
+      return std::make_shared<instr>(ADD{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr> ADD_(unsigned int a0) {
-        return std::shared_ptr<instr>(new instr(ADD{a0}));
-      }
+    static std::shared_ptr<instr> sub(unsigned int a0) {
+      return std::make_shared<instr>(SUB{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr> SUB_(unsigned int a0) {
-        return std::shared_ptr<instr>(new instr(SUB{a0}));
-      }
+    static std::shared_ptr<instr> iac() {
+      return std::make_shared<instr>(IAC{});
+    }
 
-      static std::shared_ptr<instr> IAC_() {
-        return std::shared_ptr<instr>(new instr(IAC{}));
-      }
+    static std::shared_ptr<instr> dac() {
+      return std::make_shared<instr>(DAC{});
+    }
 
-      static std::shared_ptr<instr> DAC_() {
-        return std::shared_ptr<instr>(new instr(DAC{}));
-      }
+    static std::shared_ptr<instr> clc() {
+      return std::make_shared<instr>(CLC{});
+    }
 
-      static std::shared_ptr<instr> CLC_() {
-        return std::shared_ptr<instr>(new instr(CLC{}));
-      }
+    static std::shared_ptr<instr> stc() {
+      return std::make_shared<instr>(STC{});
+    }
 
-      static std::shared_ptr<instr> STC_() {
-        return std::shared_ptr<instr>(new instr(STC{}));
-      }
+    static std::shared_ptr<instr> cmc() {
+      return std::make_shared<instr>(CMC{});
+    }
 
-      static std::shared_ptr<instr> CMC_() {
-        return std::shared_ptr<instr>(new instr(CMC{}));
-      }
+    static std::shared_ptr<instr> cma() {
+      return std::make_shared<instr>(CMA{});
+    }
 
-      static std::shared_ptr<instr> CMA_() {
-        return std::shared_ptr<instr>(new instr(CMA{}));
-      }
+    static std::shared_ptr<instr> clb() {
+      return std::make_shared<instr>(CLB{});
+    }
 
-      static std::shared_ptr<instr> CLB_() {
-        return std::shared_ptr<instr>(new instr(CLB{}));
-      }
+    static std::shared_ptr<instr> ral() {
+      return std::make_shared<instr>(RAL{});
+    }
 
-      static std::shared_ptr<instr> RAL_() {
-        return std::shared_ptr<instr>(new instr(RAL{}));
-      }
+    static std::shared_ptr<instr> rar() {
+      return std::make_shared<instr>(RAR{});
+    }
 
-      static std::shared_ptr<instr> RAR_() {
-        return std::shared_ptr<instr>(new instr(RAR{}));
-      }
+    static std::shared_ptr<instr> tcc() {
+      return std::make_shared<instr>(TCC{});
+    }
 
-      static std::shared_ptr<instr> TCC_() {
-        return std::shared_ptr<instr>(new instr(TCC{}));
-      }
+    static std::shared_ptr<instr> tcs() {
+      return std::make_shared<instr>(TCS{});
+    }
 
-      static std::shared_ptr<instr> TCS_() {
-        return std::shared_ptr<instr>(new instr(TCS{}));
-      }
+    static std::shared_ptr<instr> daa() {
+      return std::make_shared<instr>(DAA{});
+    }
 
-      static std::shared_ptr<instr> DAA_() {
-        return std::shared_ptr<instr>(new instr(DAA{}));
-      }
+    static std::shared_ptr<instr> kbp() {
+      return std::make_shared<instr>(KBP{});
+    }
 
-      static std::shared_ptr<instr> KBP_() {
-        return std::shared_ptr<instr>(new instr(KBP{}));
-      }
+    static std::shared_ptr<instr> jun(unsigned int a0) {
+      return std::make_shared<instr>(JUN{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr> JUN_(unsigned int a0) {
-        return std::shared_ptr<instr>(new instr(JUN{a0}));
-      }
+    static std::shared_ptr<instr> jms(unsigned int a0) {
+      return std::make_shared<instr>(JMS{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr> JMS_(unsigned int a0) {
-        return std::shared_ptr<instr>(new instr(JMS{a0}));
-      }
+    static std::shared_ptr<instr> jcn(unsigned int a0, unsigned int a1) {
+      return std::make_shared<instr>(JCN{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<instr> JCN_(unsigned int a0, unsigned int a1) {
-        return std::shared_ptr<instr>(new instr(JCN{a0, a1}));
-      }
+    static std::shared_ptr<instr> fim(unsigned int a0, unsigned int a1) {
+      return std::make_shared<instr>(FIM{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<instr> FIM_(unsigned int a0, unsigned int a1) {
-        return std::shared_ptr<instr>(new instr(FIM{a0, a1}));
-      }
+    static std::shared_ptr<instr> src(unsigned int a0) {
+      return std::make_shared<instr>(SRC{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr> SRC_(unsigned int a0) {
-        return std::shared_ptr<instr>(new instr(SRC{a0}));
-      }
+    static std::shared_ptr<instr> fin(unsigned int a0) {
+      return std::make_shared<instr>(FIN{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr> FIN_(unsigned int a0) {
-        return std::shared_ptr<instr>(new instr(FIN{a0}));
-      }
+    static std::shared_ptr<instr> jin(unsigned int a0) {
+      return std::make_shared<instr>(JIN{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr> JIN_(unsigned int a0) {
-        return std::shared_ptr<instr>(new instr(JIN{a0}));
-      }
+    static std::shared_ptr<instr> isz(unsigned int a0, unsigned int a1) {
+      return std::make_shared<instr>(ISZ{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<instr> ISZ_(unsigned int a0, unsigned int a1) {
-        return std::shared_ptr<instr>(new instr(ISZ{a0, a1}));
-      }
+    static std::shared_ptr<instr> bbl(unsigned int a0) {
+      return std::make_shared<instr>(BBL{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr> BBL_(unsigned int a0) {
-        return std::shared_ptr<instr>(new instr(BBL{a0}));
-      }
+    static std::unique_ptr<instr> nop_uptr() {
+      return std::make_unique<instr>(NOP{});
+    }
 
-      static std::unique_ptr<instr> NOP_uptr() {
-        return std::unique_ptr<instr>(new instr(NOP{}));
-      }
+    static std::unique_ptr<instr> ldm_uptr(unsigned int a0) {
+      return std::make_unique<instr>(LDM{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr> LDM_uptr(unsigned int a0) {
-        return std::unique_ptr<instr>(new instr(LDM{a0}));
-      }
+    static std::unique_ptr<instr> ld_uptr(unsigned int a0) {
+      return std::make_unique<instr>(LD{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr> LD_uptr(unsigned int a0) {
-        return std::unique_ptr<instr>(new instr(LD{a0}));
-      }
+    static std::unique_ptr<instr> xch_uptr(unsigned int a0) {
+      return std::make_unique<instr>(XCH{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr> XCH_uptr(unsigned int a0) {
-        return std::unique_ptr<instr>(new instr(XCH{a0}));
-      }
+    static std::unique_ptr<instr> inc_uptr(unsigned int a0) {
+      return std::make_unique<instr>(INC{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr> INC_uptr(unsigned int a0) {
-        return std::unique_ptr<instr>(new instr(INC{a0}));
-      }
+    static std::unique_ptr<instr> add_uptr(unsigned int a0) {
+      return std::make_unique<instr>(ADD{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr> ADD_uptr(unsigned int a0) {
-        return std::unique_ptr<instr>(new instr(ADD{a0}));
-      }
+    static std::unique_ptr<instr> sub_uptr(unsigned int a0) {
+      return std::make_unique<instr>(SUB{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr> SUB_uptr(unsigned int a0) {
-        return std::unique_ptr<instr>(new instr(SUB{a0}));
-      }
+    static std::unique_ptr<instr> iac_uptr() {
+      return std::make_unique<instr>(IAC{});
+    }
 
-      static std::unique_ptr<instr> IAC_uptr() {
-        return std::unique_ptr<instr>(new instr(IAC{}));
-      }
+    static std::unique_ptr<instr> dac_uptr() {
+      return std::make_unique<instr>(DAC{});
+    }
 
-      static std::unique_ptr<instr> DAC_uptr() {
-        return std::unique_ptr<instr>(new instr(DAC{}));
-      }
+    static std::unique_ptr<instr> clc_uptr() {
+      return std::make_unique<instr>(CLC{});
+    }
 
-      static std::unique_ptr<instr> CLC_uptr() {
-        return std::unique_ptr<instr>(new instr(CLC{}));
-      }
+    static std::unique_ptr<instr> stc_uptr() {
+      return std::make_unique<instr>(STC{});
+    }
 
-      static std::unique_ptr<instr> STC_uptr() {
-        return std::unique_ptr<instr>(new instr(STC{}));
-      }
+    static std::unique_ptr<instr> cmc_uptr() {
+      return std::make_unique<instr>(CMC{});
+    }
 
-      static std::unique_ptr<instr> CMC_uptr() {
-        return std::unique_ptr<instr>(new instr(CMC{}));
-      }
+    static std::unique_ptr<instr> cma_uptr() {
+      return std::make_unique<instr>(CMA{});
+    }
 
-      static std::unique_ptr<instr> CMA_uptr() {
-        return std::unique_ptr<instr>(new instr(CMA{}));
-      }
+    static std::unique_ptr<instr> clb_uptr() {
+      return std::make_unique<instr>(CLB{});
+    }
 
-      static std::unique_ptr<instr> CLB_uptr() {
-        return std::unique_ptr<instr>(new instr(CLB{}));
-      }
+    static std::unique_ptr<instr> ral_uptr() {
+      return std::make_unique<instr>(RAL{});
+    }
 
-      static std::unique_ptr<instr> RAL_uptr() {
-        return std::unique_ptr<instr>(new instr(RAL{}));
-      }
+    static std::unique_ptr<instr> rar_uptr() {
+      return std::make_unique<instr>(RAR{});
+    }
 
-      static std::unique_ptr<instr> RAR_uptr() {
-        return std::unique_ptr<instr>(new instr(RAR{}));
-      }
+    static std::unique_ptr<instr> tcc_uptr() {
+      return std::make_unique<instr>(TCC{});
+    }
 
-      static std::unique_ptr<instr> TCC_uptr() {
-        return std::unique_ptr<instr>(new instr(TCC{}));
-      }
+    static std::unique_ptr<instr> tcs_uptr() {
+      return std::make_unique<instr>(TCS{});
+    }
 
-      static std::unique_ptr<instr> TCS_uptr() {
-        return std::unique_ptr<instr>(new instr(TCS{}));
-      }
+    static std::unique_ptr<instr> daa_uptr() {
+      return std::make_unique<instr>(DAA{});
+    }
 
-      static std::unique_ptr<instr> DAA_uptr() {
-        return std::unique_ptr<instr>(new instr(DAA{}));
-      }
+    static std::unique_ptr<instr> kbp_uptr() {
+      return std::make_unique<instr>(KBP{});
+    }
 
-      static std::unique_ptr<instr> KBP_uptr() {
-        return std::unique_ptr<instr>(new instr(KBP{}));
-      }
+    static std::unique_ptr<instr> jun_uptr(unsigned int a0) {
+      return std::make_unique<instr>(JUN{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr> JUN_uptr(unsigned int a0) {
-        return std::unique_ptr<instr>(new instr(JUN{a0}));
-      }
+    static std::unique_ptr<instr> jms_uptr(unsigned int a0) {
+      return std::make_unique<instr>(JMS{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr> JMS_uptr(unsigned int a0) {
-        return std::unique_ptr<instr>(new instr(JMS{a0}));
-      }
+    static std::unique_ptr<instr> jcn_uptr(unsigned int a0, unsigned int a1) {
+      return std::make_unique<instr>(JCN{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<instr> JCN_uptr(unsigned int a0, unsigned int a1) {
-        return std::unique_ptr<instr>(new instr(JCN{a0, a1}));
-      }
+    static std::unique_ptr<instr> fim_uptr(unsigned int a0, unsigned int a1) {
+      return std::make_unique<instr>(FIM{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<instr> FIM_uptr(unsigned int a0, unsigned int a1) {
-        return std::unique_ptr<instr>(new instr(FIM{a0, a1}));
-      }
+    static std::unique_ptr<instr> src_uptr(unsigned int a0) {
+      return std::make_unique<instr>(SRC{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr> SRC_uptr(unsigned int a0) {
-        return std::unique_ptr<instr>(new instr(SRC{a0}));
-      }
+    static std::unique_ptr<instr> fin_uptr(unsigned int a0) {
+      return std::make_unique<instr>(FIN{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr> FIN_uptr(unsigned int a0) {
-        return std::unique_ptr<instr>(new instr(FIN{a0}));
-      }
+    static std::unique_ptr<instr> jin_uptr(unsigned int a0) {
+      return std::make_unique<instr>(JIN{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr> JIN_uptr(unsigned int a0) {
-        return std::unique_ptr<instr>(new instr(JIN{a0}));
-      }
+    static std::unique_ptr<instr> isz_uptr(unsigned int a0, unsigned int a1) {
+      return std::make_unique<instr>(ISZ{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<instr> ISZ_uptr(unsigned int a0, unsigned int a1) {
-        return std::unique_ptr<instr>(new instr(ISZ{a0, a1}));
-      }
-
-      static std::unique_ptr<instr> BBL_uptr(unsigned int a0) {
-        return std::unique_ptr<instr>(new instr(BBL{a0}));
-      }
-    };
+    static std::unique_ptr<instr> bbl_uptr(unsigned int a0) {
+      return std::make_unique<instr>(BBL{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -764,51 +761,49 @@ struct GetPairBoundProp {
   static inline const std::shared_ptr<state> sample =
       std::make_shared<state>(state{
           3u,
-          List<unsigned int>::ctor::Cons_(
+          List<unsigned int>::cons(
               1u,
-              List<unsigned int>::ctor::Cons_(
+              List<unsigned int>::cons(
                   2u,
-                  List<unsigned int>::ctor::Cons_(
+                  List<unsigned int>::cons(
                       3u,
-                      List<unsigned int>::ctor::Cons_(
+                      List<unsigned int>::cons(
                           4u,
-                          List<unsigned int>::ctor::Cons_(
-                              5u, List<unsigned int>::ctor::Cons_(
-                                      6u,
-                                      List<unsigned int>::ctor::Cons_(
-                                          7u,
-                                          List<unsigned int>::ctor::Cons_(
+                          List<unsigned int>::cons(
+                              5u,
+                              List<unsigned int>::cons(
+                                  6u,
+                                  List<unsigned int>::cons(
+                                      7u, List<unsigned int>::cons(
                                               8u,
-                                              List<unsigned int>::ctor::Cons_(
+                                              List<unsigned int>::cons(
                                                   9u,
-                                                  List<unsigned int>::ctor::Cons_(
+                                                  List<unsigned int>::cons(
                                                       10u,
-                                                      List<unsigned int>::ctor::Cons_(
+                                                      List<unsigned int>::cons(
                                                           11u,
-                                                          List<unsigned int>::ctor::Cons_(
+                                                          List<unsigned int>::cons(
                                                               12u,
-                                                              List<unsigned int>::ctor::Cons_(
+                                                              List<unsigned int>::cons(
                                                                   13u,
-                                                                  List<unsigned int>::ctor::Cons_(
+                                                                  List<unsigned int>::cons(
                                                                       14u,
-                                                                      List<unsigned int>::ctor::Cons_(
+                                                                      List<unsigned int>::cons(
                                                                           15u,
-                                                                          List<unsigned int>::ctor::Cons_(
+                                                                          List<unsigned int>::cons(
                                                                               0u,
                                                                               List<
-                                                                                  unsigned int>::ctor::
-                                                                                  Nil_())))))))))))))))),
+                                                                                  unsigned int>::
+                                                                                  nil())))))))))))))))),
           false, 10u,
-          List<unsigned int>::ctor::Cons_(
-              20u, List<unsigned int>::ctor::Cons_(
-                       30u, List<unsigned int>::ctor::Nil_())),
+          List<unsigned int>::cons(
+              20u, List<unsigned int>::cons(30u, List<unsigned int>::nil())),
           42u,
-          List<unsigned int>::ctor::Cons_(
-              1u,
-              List<unsigned int>::ctor::Cons_(
-                  2u, List<unsigned int>::ctor::Cons_(
-                          3u, List<unsigned int>::ctor::Cons_(
-                                  4u, List<unsigned int>::ctor::Nil_()))))});
+          List<unsigned int>::cons(
+              1u, List<unsigned int>::cons(
+                      2u, List<unsigned int>::cons(
+                              3u, List<unsigned int>::cons(
+                                      4u, List<unsigned int>::nil()))))});
 };
 
 #endif // INCLUDED_GET_PAIR_BOUND_PROP

@@ -36,9 +36,9 @@ void aSsErT(bool condition, const char *message, int line) {
 
 bsl::shared_ptr<Nat> int_to_nat(int x) {
   if (x <= 0) {
-    return Nat::ctor::O_();
+    return Nat::o();
   } else {
-    return Nat::ctor::S_(int_to_nat(x - 1));
+    return Nat::s(int_to_nat(x - 1));
   }
 }
 

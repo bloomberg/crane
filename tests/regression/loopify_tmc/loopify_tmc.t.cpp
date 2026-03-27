@@ -38,9 +38,9 @@ std::vector<T> to_vec(std::shared_ptr<LoopifyTmc::list<T>> l) {
 template <typename T>
 std::shared_ptr<LoopifyTmc::list<T>> from_vec(const std::vector<T> &v) {
   using List = LoopifyTmc::list<T>;
-  auto result = List::ctor::Nil_();
+  auto result = List::nil();
   for (int i = v.size() - 1; i >= 0; --i) {
-    result = List::ctor::Cons_(v[i], result);
+    result = List::cons(v[i], result);
   }
   return result;
 }
@@ -51,7 +51,7 @@ int main() {
   // Build test lists
   auto l3 = from_vec<unsigned int>({1, 2, 3});
   auto l5 = from_vec<unsigned int>({4, 5, 6, 7, 8});
-  auto empty = List::ctor::Nil_();
+  auto empty = List::nil();
 
   // ===== app =====
   {
@@ -156,13 +156,13 @@ int main() {
   // destructor chains while still being large enough to overflow without TMC.
   {
     const unsigned int N = 2000;
-    auto big = List::ctor::Nil_();
+    auto big = List::nil();
     for (unsigned int i = 0; i < N; ++i) {
-      big = List::ctor::Cons_(i, big);
+      big = List::cons(i, big);
     }
 
     // app on large lists — would overflow with O(n) stack frames
-    auto appended = LoopifyTmc::app(big, List::ctor::Cons_(999u, List::ctor::Nil_()));
+    auto appended = LoopifyTmc::app(big, List::cons(999u, List::nil()));
     ASSERT(appended != nullptr);
 
     // map on large list

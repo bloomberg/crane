@@ -19,9 +19,9 @@ void aSsErT(bool condition, const char *message, int line) {
 using UIntList = List<unsigned int>;
 
 int main() {
-  auto nil = UIntList::ctor::Nil_();
-  auto l5 = UIntList::ctor::Cons_(3u, UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(
-    4u, UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(5u, nil)))));
+  auto nil = UIntList::nil();
+  auto l5 = UIntList::cons(3u, UIntList::cons(1u, UIntList::cons(
+    4u, UIntList::cons(1u, UIntList::cons(5u, nil)))));
 
   // maximum
   ASSERT(LoopifyExtrema::maximum(nil) == 0u);
@@ -51,19 +51,19 @@ int main() {
   ASSERT(LoopifyExtrema::argmin(id, l5) == 1u);  // element with min value
 
   // lex_compare
-  auto l1 = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, nil));
-  auto l2 = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(3u, nil));
+  auto l1 = UIntList::cons(1u, UIntList::cons(2u, nil));
+  auto l2 = UIntList::cons(1u, UIntList::cons(3u, nil));
   ASSERT(LoopifyExtrema::lex_compare(l1, l2) == 1u);  // l1 < l2
   ASSERT(LoopifyExtrema::lex_compare(l2, l1) == 2u);  // l2 > l1
   ASSERT(LoopifyExtrema::lex_compare(l1, l1) == 0u);  // l1 == l1
 
   // all_equal
-  auto eq = UIntList::ctor::Cons_(5u, UIntList::ctor::Cons_(5u, UIntList::ctor::Cons_(5u, nil)));
+  auto eq = UIntList::cons(5u, UIntList::cons(5u, UIntList::cons(5u, nil)));
   ASSERT(LoopifyExtrema::all_equal(eq) == true);
   ASSERT(LoopifyExtrema::all_equal(l5) == false);
 
   // is_sorted
-  auto sorted = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(3u, nil)));
+  auto sorted = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(3u, nil)));
   ASSERT(LoopifyExtrema::is_sorted(sorted) == true);
   ASSERT(LoopifyExtrema::is_sorted(l5) == false);
 

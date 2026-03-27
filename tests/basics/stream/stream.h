@@ -35,32 +35,31 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Nat(O _v) : d_v_(std::move(_v)) {}
 
   explicit Nat(S _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Nat> o() { return std::make_shared<Nat>(O{}); }
 
-    static std::shared_ptr<Nat> O_() {
-      return std::shared_ptr<Nat>(new Nat(O{}));
-    }
+  static std::shared_ptr<Nat> s(const std::shared_ptr<Nat> &a0) {
+    return std::make_shared<Nat>(S{a0});
+  }
 
-    static std::shared_ptr<Nat> S_(const std::shared_ptr<Nat> &a0) {
-      return std::shared_ptr<Nat>(new Nat(S{a0}));
-    }
+  static std::shared_ptr<Nat> s(std::shared_ptr<Nat> &&a0) {
+    return std::make_shared<Nat>(S{std::move(a0)});
+  }
 
-    static std::unique_ptr<Nat> O_uptr() {
-      return std::unique_ptr<Nat>(new Nat(O{}));
-    }
+  static std::unique_ptr<Nat> o_uptr() { return std::make_unique<Nat>(O{}); }
 
-    static std::unique_ptr<Nat> S_uptr(const std::shared_ptr<Nat> &a0) {
-      return std::unique_ptr<Nat>(new Nat(S{a0}));
-    }
-  };
+  static std::unique_ptr<Nat> s_uptr(const std::shared_ptr<Nat> &a0) {
+    return std::make_unique<Nat>(S{a0});
+  }
+
+  static std::unique_ptr<Nat> s_uptr(std::shared_ptr<Nat> &&a0) {
+    return std::make_unique<Nat>(S{std::move(a0)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -84,34 +83,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -133,6 +137,7 @@ private:
   // DATA
   crane::lazy<variant_t> d_lazyV_;
 
+public:
   // CREATORS
   explicit Stream(Scons _v)
       : d_lazyV_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
@@ -140,30 +145,34 @@ private:
   explicit Stream(std::function<variant_t()> _thunk)
       : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Stream<t_A>>
+  scons(t_A a0, const std::shared_ptr<Stream<t_A>> &a1) {
+    return std::make_shared<Stream<t_A>>(Scons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<Stream<t_A>>
-    Scons_(t_A a0, const std::shared_ptr<Stream<t_A>> &a1) {
-      return std::shared_ptr<Stream<t_A>>(new Stream<t_A>(Scons{a0, a1}));
-    }
+  static std::shared_ptr<Stream<t_A>> scons(t_A a0,
+                                            std::shared_ptr<Stream<t_A>> &&a1) {
+    return std::make_shared<Stream<t_A>>(Scons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<Stream<t_A>>
-    Scons_uptr(t_A a0, const std::shared_ptr<Stream<t_A>> &a1) {
-      return std::unique_ptr<Stream<t_A>>(new Stream<t_A>(Scons{a0, a1}));
-    }
+  static std::unique_ptr<Stream<t_A>>
+  scons_uptr(t_A a0, const std::shared_ptr<Stream<t_A>> &a1) {
+    return std::make_unique<Stream<t_A>>(Scons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<Stream<t_A>>
-    lazy_(std::function<std::shared_ptr<Stream<t_A>>()> thunk) {
-      return std::shared_ptr<Stream<t_A>>(new Stream<t_A>(
-          std::function<variant_t()>([=](void) mutable -> variant_t {
-            std::shared_ptr<Stream<t_A>> _tmp = thunk();
-            return _tmp->v();
-          })));
-    }
-  };
+  static std::unique_ptr<Stream<t_A>>
+  scons_uptr(t_A a0, std::shared_ptr<Stream<t_A>> &&a1) {
+    return std::make_unique<Stream<t_A>>(Scons{std::move(a0), std::move(a1)});
+  }
+
+  static std::shared_ptr<Stream<t_A>>
+  lazy_(std::function<std::shared_ptr<Stream<t_A>>()> thunk) {
+    return std::make_shared<Stream<t_A>>(
+        std::function<variant_t()>([=](void) mutable -> variant_t {
+          std::shared_ptr<Stream<t_A>> _tmp = thunk();
+          return _tmp->v();
+        }));
+  }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_lazyV_.force(); }
@@ -172,14 +181,14 @@ public:
     return std::visit(
         Overloaded{
             [](const typename Nat::O _args) -> std::shared_ptr<List<t_A>> {
-              return List<t_A>::ctor::Nil_();
+              return List<t_A>::nil();
             },
             [&](const typename Nat::S _args) -> std::shared_ptr<List<t_A>> {
               return std::visit(
                   Overloaded{[&](const typename Stream<t_A>::Scons _args0)
                                  -> std::shared_ptr<List<t_A>> {
-                    return List<t_A>::ctor::Cons_(
-                        _args0.d_a0, _args0.d_a1->take(_args.d_a0));
+                    return List<t_A>::cons(_args0.d_a0,
+                                           _args0.d_a1->take(_args.d_a0));
                   }},
                   this->v());
             }},
@@ -188,63 +197,56 @@ public:
 
   std::shared_ptr<Stream<t_A>>
   interleave(std::shared_ptr<Stream<t_A>> sb) const {
-    return Stream<t_A>::ctor::lazy_([=, this](
-                                        void) -> std::shared_ptr<Stream<t_A>> {
+    return Stream<t_A>::lazy_([=, this](void) -> std::shared_ptr<Stream<t_A>> {
       return std::visit(Overloaded{[&](const typename Stream<t_A>::Scons _args)
                                        -> std::shared_ptr<Stream<t_A>> {
-                          return Stream<t_A>::ctor::Scons_(
-                              _args.d_a0, sb->interleave(_args.d_a1));
+                          return Stream<t_A>::scons(_args.d_a0,
+                                                    sb->interleave(_args.d_a1));
                         }},
                         this->v());
     });
   }
 
   template <typename T1> static std::shared_ptr<Stream<T1>> repeat(const T1 x) {
-    return Stream<T1>::ctor::lazy_(
-        [=](void) mutable -> std::shared_ptr<Stream<T1>> {
-          return Stream<T1>::ctor::Scons_(x, repeat<T1>(x));
-        });
+    return Stream<T1>::lazy_([=](void) mutable -> std::shared_ptr<Stream<T1>> {
+      return Stream<T1>::scons(x, repeat<T1>(x));
+    });
   }
 
   static std::shared_ptr<Stream<std::shared_ptr<Nat>>>
   nats_from(std::shared_ptr<Nat> n) {
-    return Stream<std::shared_ptr<Nat>>::ctor::lazy_(
+    return Stream<std::shared_ptr<Nat>>::lazy_(
         [=](void) mutable -> std::shared_ptr<Stream<std::shared_ptr<Nat>>> {
-          return Stream<std::shared_ptr<Nat>>::ctor::Scons_(
-              n, nats_from(Nat::ctor::S_(n)));
+          return Stream<std::shared_ptr<Nat>>::scons(n, nats_from(Nat::s(n)));
         });
   }
 
   static const std::shared_ptr<Stream<std::shared_ptr<Nat>>> &ones() {
     static const std::shared_ptr<Stream<std::shared_ptr<Nat>>> v =
-        repeat<std::shared_ptr<Nat>>(Nat::ctor::S_(Nat::ctor::O_()));
+        repeat<std::shared_ptr<Nat>>(Nat::s(Nat::o()));
     return v;
   }
 
   static const std::shared_ptr<List<std::shared_ptr<Nat>>> &first_five_nats() {
     static const std::shared_ptr<List<std::shared_ptr<Nat>>> v =
-        nats_from(Nat::ctor::O_())
-            ->take(Nat::ctor::S_(Nat::ctor::S_(
-                Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_()))))));
+        nats_from(Nat::o())->take(
+            Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
     return v;
   }
 
   static const std::shared_ptr<List<std::shared_ptr<Nat>>> &first_five_ones() {
     static const std::shared_ptr<List<std::shared_ptr<Nat>>> v =
-        ones()->take(Nat::ctor::S_(Nat::ctor::S_(
-            Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_()))))));
+        ones()->take(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
     return v;
   }
 
   static const std::shared_ptr<List<std::shared_ptr<Nat>>> &interleaved() {
     static const std::shared_ptr<List<std::shared_ptr<Nat>>> v =
-        nats_from(Nat::ctor::O_())
-            ->interleave(repeat<std::shared_ptr<Nat>>(Nat::ctor::S_(
-                Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(
-                    Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_())))))))))
-            ->take(Nat::ctor::S_(Nat::ctor::S_(
-                Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(
-                    Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_())))))))));
+        nats_from(Nat::o())
+            ->interleave(repeat<std::shared_ptr<Nat>>(Nat::s(
+                Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))
+            ->take(Nat::s(Nat::s(
+                Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))));
     return v;
   }
 };

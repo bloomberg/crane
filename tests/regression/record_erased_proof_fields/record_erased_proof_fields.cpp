@@ -78,13 +78,13 @@ RecordErasedProofFieldsCase::bucket_to_tag(
   return [&](void) {
     switch (b) {
     case TraceBucket::e_BUCKETA: {
-      return StoredTag::ctor::TagSecondary_(ItemKind::e_KINDD);
+      return StoredTag::tagsecondary(ItemKind::e_KINDD);
     }
     case TraceBucket::e_BUCKETB: {
-      return StoredTag::ctor::TagSecondary_(ItemKind::e_KINDE);
+      return StoredTag::tagsecondary(ItemKind::e_KINDE);
     }
     case TraceBucket::e_BUCKETC: {
-      return StoredTag::ctor::TagSecondary_(ItemKind::e_KINDB);
+      return StoredTag::tagsecondary(ItemKind::e_KINDB);
     }
     }
   }();
@@ -115,17 +115,17 @@ __attribute__((pure)) unsigned int RecordErasedProofFieldsCase::bucket_code_of(
 std::shared_ptr<List<unsigned int>> RecordErasedProofFieldsCase::trace_codes_of(
     std::shared_ptr<RecordErasedProofFieldsCase::PrimaryRecord> primary,
     std::shared_ptr<RecordErasedProofFieldsCase::ErasedProofRecord> erased) {
-  return List<unsigned int>::ctor::Cons_(
+  return List<unsigned int>::cons(
       left_kind_code_of(primary),
-      List<unsigned int>::ctor::Cons_(
+      List<unsigned int>::cons(
           right_kind_code_of(primary),
-          List<unsigned int>::ctor::Cons_(
+          List<unsigned int>::cons(
               tag_code_of(primary),
-              List<unsigned int>::ctor::Cons_(
+              List<unsigned int>::cons(
                   bucket_code_of(erased),
-                  List<unsigned int>::ctor::Cons_(
+                  List<unsigned int>::cons(
                       tag_code(bucket_to_tag(erased->erased_bucket)),
-                      List<unsigned int>::ctor::Nil_())))));
+                      List<unsigned int>::nil())))));
 }
 
 __attribute__((pure)) unsigned int

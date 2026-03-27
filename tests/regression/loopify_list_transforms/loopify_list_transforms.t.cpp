@@ -19,11 +19,11 @@ void aSsErT(bool condition, const char *message, int line) {
 using UIntList = List<unsigned int>;
 
 int main() {
-  auto nil = UIntList::ctor::Nil_();
-  auto l5 = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(
-    3u, UIntList::ctor::Cons_(4u, UIntList::ctor::Cons_(5u, nil)))));
-  auto l_dups = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(
-    2u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(3u, nil)))));
+  auto nil = UIntList::nil();
+  auto l5 = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(
+    3u, UIntList::cons(4u, UIntList::cons(5u, nil)))));
+  auto l_dups = UIntList::cons(1u, UIntList::cons(1u, UIntList::cons(
+    2u, UIntList::cons(2u, UIntList::cons(3u, nil)))));
 
   // run_length_encode
   auto rle = LoopifyListTransforms::run_length_encode(l_dups);

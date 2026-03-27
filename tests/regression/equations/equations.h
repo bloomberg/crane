@@ -108,6 +108,7 @@ struct Equations {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit gcd_graph(Gcd_graph_equation_1 _v) : d_v_(std::move(_v)) {}
 
@@ -115,47 +116,51 @@ struct Equations {
 
     explicit gcd_graph(Gcd_graph_refinement_3 _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<gcd_graph> gcd_graph_equation_1(unsigned int a0) {
+      return std::make_shared<gcd_graph>(Gcd_graph_equation_1{std::move(a0)});
+    }
 
-      static std::shared_ptr<gcd_graph> Gcd_graph_equation_1_(unsigned int a0) {
-        return std::shared_ptr<gcd_graph>(
-            new gcd_graph(Gcd_graph_equation_1{a0}));
-      }
+    static std::shared_ptr<gcd_graph> gcd_graph_equation_2(unsigned int a0) {
+      return std::make_shared<gcd_graph>(Gcd_graph_equation_2{std::move(a0)});
+    }
 
-      static std::shared_ptr<gcd_graph> Gcd_graph_equation_2_(unsigned int a0) {
-        return std::shared_ptr<gcd_graph>(
-            new gcd_graph(Gcd_graph_equation_2{a0}));
-      }
+    static std::shared_ptr<gcd_graph>
+    gcd_graph_refinement_3(unsigned int a0, unsigned int a1,
+                           const std::shared_ptr<gcd_clause_3_graph> &a2) {
+      return std::make_shared<gcd_graph>(
+          Gcd_graph_refinement_3{std::move(a0), std::move(a1), a2});
+    }
 
-      static std::shared_ptr<gcd_graph>
-      Gcd_graph_refinement_3_(unsigned int a0, unsigned int a1,
-                              const std::shared_ptr<gcd_clause_3_graph> &a2) {
-        return std::shared_ptr<gcd_graph>(
-            new gcd_graph(Gcd_graph_refinement_3{a0, a1, a2}));
-      }
+    static std::shared_ptr<gcd_graph>
+    gcd_graph_refinement_3(unsigned int a0, unsigned int a1,
+                           std::shared_ptr<gcd_clause_3_graph> &&a2) {
+      return std::make_shared<gcd_graph>(
+          Gcd_graph_refinement_3{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
-      static std::unique_ptr<gcd_graph>
-      Gcd_graph_equation_1_uptr(unsigned int a0) {
-        return std::unique_ptr<gcd_graph>(
-            new gcd_graph(Gcd_graph_equation_1{a0}));
-      }
+    static std::unique_ptr<gcd_graph>
+    gcd_graph_equation_1_uptr(unsigned int a0) {
+      return std::make_unique<gcd_graph>(Gcd_graph_equation_1{std::move(a0)});
+    }
 
-      static std::unique_ptr<gcd_graph>
-      Gcd_graph_equation_2_uptr(unsigned int a0) {
-        return std::unique_ptr<gcd_graph>(
-            new gcd_graph(Gcd_graph_equation_2{a0}));
-      }
+    static std::unique_ptr<gcd_graph>
+    gcd_graph_equation_2_uptr(unsigned int a0) {
+      return std::make_unique<gcd_graph>(Gcd_graph_equation_2{std::move(a0)});
+    }
 
-      static std::unique_ptr<gcd_graph> Gcd_graph_refinement_3_uptr(
-          unsigned int a0, unsigned int a1,
-          const std::shared_ptr<gcd_clause_3_graph> &a2) {
-        return std::unique_ptr<gcd_graph>(
-            new gcd_graph(Gcd_graph_refinement_3{a0, a1, a2}));
-      }
-    };
+    static std::unique_ptr<gcd_graph>
+    gcd_graph_refinement_3_uptr(unsigned int a0, unsigned int a1,
+                                const std::shared_ptr<gcd_clause_3_graph> &a2) {
+      return std::make_unique<gcd_graph>(
+          Gcd_graph_refinement_3{std::move(a0), std::move(a1), a2});
+    }
+
+    static std::unique_ptr<gcd_graph>
+    gcd_graph_refinement_3_uptr(unsigned int a0, unsigned int a1,
+                                std::shared_ptr<gcd_clause_3_graph> &&a2) {
+      return std::make_unique<gcd_graph>(
+          Gcd_graph_refinement_3{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -185,6 +190,7 @@ struct Equations {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit gcd_clause_3_graph(Gcd_clause_3_graph_equation_1 _v)
         : d_v_(std::move(_v)) {}
@@ -192,39 +198,61 @@ struct Equations {
     explicit gcd_clause_3_graph(Gcd_clause_3_graph_equation_2 _v)
         : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<gcd_clause_3_graph>
+    gcd_clause_3_graph_equation_1(unsigned int a0, unsigned int a1,
+                                  const std::shared_ptr<gcd_graph> &a2) {
+      return std::make_shared<gcd_clause_3_graph>(
+          Gcd_clause_3_graph_equation_1{std::move(a0), std::move(a1), a2});
+    }
 
-      static std::shared_ptr<gcd_clause_3_graph>
-      Gcd_clause_3_graph_equation_1_(unsigned int a0, unsigned int a1,
-                                     const std::shared_ptr<gcd_graph> &a2) {
-        return std::shared_ptr<gcd_clause_3_graph>(
-            new gcd_clause_3_graph(Gcd_clause_3_graph_equation_1{a0, a1, a2}));
-      }
+    static std::shared_ptr<gcd_clause_3_graph>
+    gcd_clause_3_graph_equation_1(unsigned int a0, unsigned int a1,
+                                  std::shared_ptr<gcd_graph> &&a2) {
+      return std::make_shared<gcd_clause_3_graph>(Gcd_clause_3_graph_equation_1{
+          std::move(a0), std::move(a1), std::move(a2)});
+    }
 
-      static std::shared_ptr<gcd_clause_3_graph>
-      Gcd_clause_3_graph_equation_2_(unsigned int a0, unsigned int a1,
-                                     const std::shared_ptr<gcd_graph> &a2) {
-        return std::shared_ptr<gcd_clause_3_graph>(
-            new gcd_clause_3_graph(Gcd_clause_3_graph_equation_2{a0, a1, a2}));
-      }
+    static std::shared_ptr<gcd_clause_3_graph>
+    gcd_clause_3_graph_equation_2(unsigned int a0, unsigned int a1,
+                                  const std::shared_ptr<gcd_graph> &a2) {
+      return std::make_shared<gcd_clause_3_graph>(
+          Gcd_clause_3_graph_equation_2{std::move(a0), std::move(a1), a2});
+    }
 
-      static std::unique_ptr<gcd_clause_3_graph>
-      Gcd_clause_3_graph_equation_1_uptr(unsigned int a0, unsigned int a1,
-                                         const std::shared_ptr<gcd_graph> &a2) {
-        return std::unique_ptr<gcd_clause_3_graph>(
-            new gcd_clause_3_graph(Gcd_clause_3_graph_equation_1{a0, a1, a2}));
-      }
+    static std::shared_ptr<gcd_clause_3_graph>
+    gcd_clause_3_graph_equation_2(unsigned int a0, unsigned int a1,
+                                  std::shared_ptr<gcd_graph> &&a2) {
+      return std::make_shared<gcd_clause_3_graph>(Gcd_clause_3_graph_equation_2{
+          std::move(a0), std::move(a1), std::move(a2)});
+    }
 
-      static std::unique_ptr<gcd_clause_3_graph>
-      Gcd_clause_3_graph_equation_2_uptr(unsigned int a0, unsigned int a1,
-                                         const std::shared_ptr<gcd_graph> &a2) {
-        return std::unique_ptr<gcd_clause_3_graph>(
-            new gcd_clause_3_graph(Gcd_clause_3_graph_equation_2{a0, a1, a2}));
-      }
-    };
+    static std::unique_ptr<gcd_clause_3_graph>
+    gcd_clause_3_graph_equation_1_uptr(unsigned int a0, unsigned int a1,
+                                       const std::shared_ptr<gcd_graph> &a2) {
+      return std::make_unique<gcd_clause_3_graph>(
+          Gcd_clause_3_graph_equation_1{std::move(a0), std::move(a1), a2});
+    }
+
+    static std::unique_ptr<gcd_clause_3_graph>
+    gcd_clause_3_graph_equation_1_uptr(unsigned int a0, unsigned int a1,
+                                       std::shared_ptr<gcd_graph> &&a2) {
+      return std::make_unique<gcd_clause_3_graph>(Gcd_clause_3_graph_equation_1{
+          std::move(a0), std::move(a1), std::move(a2)});
+    }
+
+    static std::unique_ptr<gcd_clause_3_graph>
+    gcd_clause_3_graph_equation_2_uptr(unsigned int a0, unsigned int a1,
+                                       const std::shared_ptr<gcd_graph> &a2) {
+      return std::make_unique<gcd_clause_3_graph>(
+          Gcd_clause_3_graph_equation_2{std::move(a0), std::move(a1), a2});
+    }
+
+    static std::unique_ptr<gcd_clause_3_graph>
+    gcd_clause_3_graph_equation_2_uptr(unsigned int a0, unsigned int a1,
+                                       std::shared_ptr<gcd_graph> &&a2) {
+      return std::make_unique<gcd_clause_3_graph>(Gcd_clause_3_graph_equation_2{
+          std::move(a0), std::move(a1), std::move(a2)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -512,6 +540,7 @@ struct Equations {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit collatz_steps_graph(Collatz_steps_graph_equation_1 _v)
         : d_v_(std::move(_v)) {}
@@ -522,51 +551,59 @@ struct Equations {
     explicit collatz_steps_graph(Collatz_steps_graph_refinement_3 _v)
         : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<collatz_steps_graph>
+    collatz_steps_graph_equation_1() {
+      return std::make_shared<collatz_steps_graph>(
+          Collatz_steps_graph_equation_1{});
+    }
 
-      static std::shared_ptr<collatz_steps_graph>
-      Collatz_steps_graph_equation_1_() {
-        return std::shared_ptr<collatz_steps_graph>(
-            new collatz_steps_graph(Collatz_steps_graph_equation_1{}));
-      }
+    static std::shared_ptr<collatz_steps_graph>
+    collatz_steps_graph_equation_2() {
+      return std::make_shared<collatz_steps_graph>(
+          Collatz_steps_graph_equation_2{});
+    }
 
-      static std::shared_ptr<collatz_steps_graph>
-      Collatz_steps_graph_equation_2_() {
-        return std::shared_ptr<collatz_steps_graph>(
-            new collatz_steps_graph(Collatz_steps_graph_equation_2{}));
-      }
+    static std::shared_ptr<collatz_steps_graph>
+    collatz_steps_graph_refinement_3(
+        unsigned int a0,
+        const std::shared_ptr<collatz_steps_clause_3_graph> &a1) {
+      return std::make_shared<collatz_steps_graph>(
+          Collatz_steps_graph_refinement_3{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<collatz_steps_graph>
-      Collatz_steps_graph_refinement_3_(
-          unsigned int a0,
-          const std::shared_ptr<collatz_steps_clause_3_graph> &a1) {
-        return std::shared_ptr<collatz_steps_graph>(
-            new collatz_steps_graph(Collatz_steps_graph_refinement_3{a0, a1}));
-      }
+    static std::shared_ptr<collatz_steps_graph>
+    collatz_steps_graph_refinement_3(
+        unsigned int a0, std::shared_ptr<collatz_steps_clause_3_graph> &&a1) {
+      return std::make_shared<collatz_steps_graph>(
+          Collatz_steps_graph_refinement_3{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<collatz_steps_graph>
-      Collatz_steps_graph_equation_1_uptr() {
-        return std::unique_ptr<collatz_steps_graph>(
-            new collatz_steps_graph(Collatz_steps_graph_equation_1{}));
-      }
+    static std::unique_ptr<collatz_steps_graph>
+    collatz_steps_graph_equation_1_uptr() {
+      return std::make_unique<collatz_steps_graph>(
+          Collatz_steps_graph_equation_1{});
+    }
 
-      static std::unique_ptr<collatz_steps_graph>
-      Collatz_steps_graph_equation_2_uptr() {
-        return std::unique_ptr<collatz_steps_graph>(
-            new collatz_steps_graph(Collatz_steps_graph_equation_2{}));
-      }
+    static std::unique_ptr<collatz_steps_graph>
+    collatz_steps_graph_equation_2_uptr() {
+      return std::make_unique<collatz_steps_graph>(
+          Collatz_steps_graph_equation_2{});
+    }
 
-      static std::unique_ptr<collatz_steps_graph>
-      Collatz_steps_graph_refinement_3_uptr(
-          unsigned int a0,
-          const std::shared_ptr<collatz_steps_clause_3_graph> &a1) {
-        return std::unique_ptr<collatz_steps_graph>(
-            new collatz_steps_graph(Collatz_steps_graph_refinement_3{a0, a1}));
-      }
-    };
+    static std::unique_ptr<collatz_steps_graph>
+    collatz_steps_graph_refinement_3_uptr(
+        unsigned int a0,
+        const std::shared_ptr<collatz_steps_clause_3_graph> &a1) {
+      return std::make_unique<collatz_steps_graph>(
+          Collatz_steps_graph_refinement_3{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<collatz_steps_graph>
+    collatz_steps_graph_refinement_3_uptr(
+        unsigned int a0, std::shared_ptr<collatz_steps_clause_3_graph> &&a1) {
+      return std::make_unique<collatz_steps_graph>(
+          Collatz_steps_graph_refinement_3{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -594,6 +631,7 @@ struct Equations {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit collatz_steps_clause_3_graph(
         Collatz_steps_clause_3_graph_equation_1 _v)
@@ -603,43 +641,65 @@ struct Equations {
         Collatz_steps_clause_3_graph_equation_2 _v)
         : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<collatz_steps_clause_3_graph>
+    collatz_steps_clause_3_graph_equation_1(
+        unsigned int a0, const std::shared_ptr<collatz_steps_graph> &a1) {
+      return std::make_shared<collatz_steps_clause_3_graph>(
+          Collatz_steps_clause_3_graph_equation_1{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<collatz_steps_clause_3_graph>
-      Collatz_steps_clause_3_graph_equation_1_(
-          unsigned int a0, const std::shared_ptr<collatz_steps_graph> &a1) {
-        return std::shared_ptr<collatz_steps_clause_3_graph>(
-            new collatz_steps_clause_3_graph(
-                Collatz_steps_clause_3_graph_equation_1{a0, a1}));
-      }
+    static std::shared_ptr<collatz_steps_clause_3_graph>
+    collatz_steps_clause_3_graph_equation_1(
+        unsigned int a0, std::shared_ptr<collatz_steps_graph> &&a1) {
+      return std::make_shared<collatz_steps_clause_3_graph>(
+          Collatz_steps_clause_3_graph_equation_1{std::move(a0),
+                                                  std::move(a1)});
+    }
 
-      static std::shared_ptr<collatz_steps_clause_3_graph>
-      Collatz_steps_clause_3_graph_equation_2_(
-          unsigned int a0, const std::shared_ptr<collatz_steps_graph> &a1) {
-        return std::shared_ptr<collatz_steps_clause_3_graph>(
-            new collatz_steps_clause_3_graph(
-                Collatz_steps_clause_3_graph_equation_2{a0, a1}));
-      }
+    static std::shared_ptr<collatz_steps_clause_3_graph>
+    collatz_steps_clause_3_graph_equation_2(
+        unsigned int a0, const std::shared_ptr<collatz_steps_graph> &a1) {
+      return std::make_shared<collatz_steps_clause_3_graph>(
+          Collatz_steps_clause_3_graph_equation_2{std::move(a0), a1});
+    }
 
-      static std::unique_ptr<collatz_steps_clause_3_graph>
-      Collatz_steps_clause_3_graph_equation_1_uptr(
-          unsigned int a0, const std::shared_ptr<collatz_steps_graph> &a1) {
-        return std::unique_ptr<collatz_steps_clause_3_graph>(
-            new collatz_steps_clause_3_graph(
-                Collatz_steps_clause_3_graph_equation_1{a0, a1}));
-      }
+    static std::shared_ptr<collatz_steps_clause_3_graph>
+    collatz_steps_clause_3_graph_equation_2(
+        unsigned int a0, std::shared_ptr<collatz_steps_graph> &&a1) {
+      return std::make_shared<collatz_steps_clause_3_graph>(
+          Collatz_steps_clause_3_graph_equation_2{std::move(a0),
+                                                  std::move(a1)});
+    }
 
-      static std::unique_ptr<collatz_steps_clause_3_graph>
-      Collatz_steps_clause_3_graph_equation_2_uptr(
-          unsigned int a0, const std::shared_ptr<collatz_steps_graph> &a1) {
-        return std::unique_ptr<collatz_steps_clause_3_graph>(
-            new collatz_steps_clause_3_graph(
-                Collatz_steps_clause_3_graph_equation_2{a0, a1}));
-      }
-    };
+    static std::unique_ptr<collatz_steps_clause_3_graph>
+    collatz_steps_clause_3_graph_equation_1_uptr(
+        unsigned int a0, const std::shared_ptr<collatz_steps_graph> &a1) {
+      return std::make_unique<collatz_steps_clause_3_graph>(
+          Collatz_steps_clause_3_graph_equation_1{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<collatz_steps_clause_3_graph>
+    collatz_steps_clause_3_graph_equation_1_uptr(
+        unsigned int a0, std::shared_ptr<collatz_steps_graph> &&a1) {
+      return std::make_unique<collatz_steps_clause_3_graph>(
+          Collatz_steps_clause_3_graph_equation_1{std::move(a0),
+                                                  std::move(a1)});
+    }
+
+    static std::unique_ptr<collatz_steps_clause_3_graph>
+    collatz_steps_clause_3_graph_equation_2_uptr(
+        unsigned int a0, const std::shared_ptr<collatz_steps_graph> &a1) {
+      return std::make_unique<collatz_steps_clause_3_graph>(
+          Collatz_steps_clause_3_graph_equation_2{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<collatz_steps_clause_3_graph>
+    collatz_steps_clause_3_graph_equation_2_uptr(
+        unsigned int a0, std::shared_ptr<collatz_steps_graph> &&a1) {
+      return std::make_unique<collatz_steps_clause_3_graph>(
+          Collatz_steps_clause_3_graph_equation_2{std::move(a0),
+                                                  std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

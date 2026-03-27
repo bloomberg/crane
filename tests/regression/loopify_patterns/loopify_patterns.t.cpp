@@ -44,8 +44,8 @@ int main() {
   ASSERT(a == 3u && b > 0u && c > 0u);
 
   // Test sum_prod_count - returns ((sum,prod),count)
-  auto lst = List::ctor::Cons_(
-      2u, List::ctor::Cons_(3u, List::ctor::Cons_(4u, List::ctor::Nil_())));
+  auto lst = List::cons(
+      2u, List::cons(3u, List::cons(4u, List::nil())));
   auto spc_result = LoopifyPatterns::sum_prod_count(lst, 0u, 1u, 0u);
   auto sum = spc_result.first.first;
   auto prod = spc_result.first.second;
@@ -81,10 +81,10 @@ int main() {
   // Test nested_pattern
   using Pair3 = std::pair<std::pair<unsigned int, unsigned int>, unsigned int>;
   using TupleList = LoopifyPatterns::list<Pair3>;
-  auto tpl = TupleList::ctor::Cons_(
+  auto tpl = TupleList::cons(
       std::make_pair(std::make_pair(1u, 2u), 3u),
-      TupleList::ctor::Cons_(std::make_pair(std::make_pair(4u, 5u), 6u),
-                             TupleList::ctor::Nil_()));
+      TupleList::cons(std::make_pair(std::make_pair(4u, 5u), 6u),
+                             TupleList::nil()));
   ASSERT(LoopifyPatterns::nested_pattern(tpl) == 21u);
 
   // Test let_nested

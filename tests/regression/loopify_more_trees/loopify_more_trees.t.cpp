@@ -20,10 +20,10 @@ using Tree = LoopifyMoreTrees::tree;
 using UIntList = List<unsigned int>;
 
 int main() {
-  auto leaf = Tree::ctor::Leaf_();
-  auto t1 = Tree::ctor::Node_(leaf, 1u, leaf);
-  auto t2 = Tree::ctor::Node_(leaf, 2u, leaf);
-  auto t3 = Tree::ctor::Node_(t1, 3u, t2);
+  auto leaf = Tree::leaf();
+  auto t1 = Tree::node(leaf, 1u, leaf);
+  auto t2 = Tree::node(leaf, 2u, leaf);
+  auto t3 = Tree::node(t1, 3u, t2);
 
   // mirror
   auto mirrored = LoopifyMoreTrees::mirror(t3);
@@ -37,10 +37,10 @@ int main() {
   // tree_to_list
   auto lst = LoopifyMoreTrees::tree_to_list(t3);
   // In-order: [1, 3, 2]
-  ASSERT(LoopifyMoreTrees::append_lists(lst, UIntList::ctor::Nil_()) != nullptr);
+  ASSERT(LoopifyMoreTrees::append_lists(lst, UIntList::nil()) != nullptr);
 
   // mirror_equal
-  auto symmetric = Tree::ctor::Node_(t1, 5u, t1);
+  auto symmetric = Tree::node(t1, 5u, t1);
   ASSERT(LoopifyMoreTrees::mirror_equal(symmetric) == true);
 
   // count_nodes
@@ -64,8 +64,8 @@ int main() {
   ASSERT(LoopifyMoreTrees::count_nodes(bst) == 3u);
 
   // build_bst
-  auto nil = UIntList::ctor::Nil_();
-  auto l3 = UIntList::ctor::Cons_(5u, UIntList::ctor::Cons_(3u, UIntList::ctor::Cons_(7u, nil)));
+  auto nil = UIntList::nil();
+  auto l3 = UIntList::cons(5u, UIntList::cons(3u, UIntList::cons(7u, nil)));
   auto bst2 = LoopifyMoreTrees::build_bst(l3);
   ASSERT(LoopifyMoreTrees::count_nodes(bst2) == 3u);
 

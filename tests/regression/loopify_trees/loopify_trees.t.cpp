@@ -19,10 +19,10 @@ void aSsErT(bool condition, const char *message, int line) {
 int main() {
   using Tree = LoopifyTrees::tree<unsigned int>;
 
-  auto leaf = Tree::ctor::Leaf_();
-  auto t1 = Tree::ctor::Node_(leaf, 5u, leaf);
-  auto t2 = Tree::ctor::Node_(leaf, 3u, leaf);
-  auto tree_val = Tree::ctor::Node_(t1, 2u, t2);
+  auto leaf = Tree::leaf();
+  auto t1 = Tree::node(leaf, 5u, leaf);
+  auto t2 = Tree::node(leaf, 3u, leaf);
+  auto tree_val = Tree::node(t1, 2u, t2);
 
   // Test tree functions (methods on tree)
   ASSERT(LoopifyTrees::tree_sum(tree_val) == 10u);
@@ -48,12 +48,12 @@ int main() {
   // Test rose trees
   using RoseList = ::List<std::shared_ptr<LoopifyTrees::rose>>;
   auto rose_leaf1 =
-      LoopifyTrees::rose::ctor::RNode_(5u, RoseList::ctor::Nil_());
+      LoopifyTrees::rose::rnode(5u, RoseList::nil());
   auto rose_leaf2 =
-      LoopifyTrees::rose::ctor::RNode_(3u, RoseList::ctor::Nil_());
-  auto rose_children = RoseList::ctor::Cons_(
-      rose_leaf1, RoseList::ctor::Cons_(rose_leaf2, RoseList::ctor::Nil_()));
-  auto rose_tree = LoopifyTrees::rose::ctor::RNode_(10u, rose_children);
+      LoopifyTrees::rose::rnode(3u, RoseList::nil());
+  auto rose_children = RoseList::cons(
+      rose_leaf1, RoseList::cons(rose_leaf2, RoseList::nil()));
+  auto rose_tree = LoopifyTrees::rose::rnode(10u, rose_children);
 
   ASSERT(rose_tree->rose_sum() == 18u); // 10 + 5 + 3
 

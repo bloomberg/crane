@@ -172,6 +172,7 @@ struct LargeEnum {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit tok(TNum _v) : d_v_(std::move(_v)) {}
 
@@ -197,107 +198,97 @@ struct LargeEnum {
 
     explicit tok(TEOF _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<tok> tnum(unsigned int a0) {
+      return std::make_shared<tok>(TNum{std::move(a0)});
+    }
 
-      static std::shared_ptr<tok> TNum_(unsigned int a0) {
-        return std::shared_ptr<tok>(new tok(TNum{a0}));
-      }
+    static std::shared_ptr<tok> tplus() {
+      return std::make_shared<tok>(TPlus{});
+    }
 
-      static std::shared_ptr<tok> TPlus_() {
-        return std::shared_ptr<tok>(new tok(TPlus{}));
-      }
+    static std::shared_ptr<tok> tminus() {
+      return std::make_shared<tok>(TMinus{});
+    }
 
-      static std::shared_ptr<tok> TMinus_() {
-        return std::shared_ptr<tok>(new tok(TMinus{}));
-      }
+    static std::shared_ptr<tok> tstar() {
+      return std::make_shared<tok>(TStar{});
+    }
 
-      static std::shared_ptr<tok> TStar_() {
-        return std::shared_ptr<tok>(new tok(TStar{}));
-      }
+    static std::shared_ptr<tok> tslash() {
+      return std::make_shared<tok>(TSlash{});
+    }
 
-      static std::shared_ptr<tok> TSlash_() {
-        return std::shared_ptr<tok>(new tok(TSlash{}));
-      }
+    static std::shared_ptr<tok> tlparen() {
+      return std::make_shared<tok>(TLParen{});
+    }
 
-      static std::shared_ptr<tok> TLParen_() {
-        return std::shared_ptr<tok>(new tok(TLParen{}));
-      }
+    static std::shared_ptr<tok> trparen() {
+      return std::make_shared<tok>(TRParen{});
+    }
 
-      static std::shared_ptr<tok> TRParen_() {
-        return std::shared_ptr<tok>(new tok(TRParen{}));
-      }
+    static std::shared_ptr<tok> teq() { return std::make_shared<tok>(TEq{}); }
 
-      static std::shared_ptr<tok> TEq_() {
-        return std::shared_ptr<tok>(new tok(TEq{}));
-      }
+    static std::shared_ptr<tok> tbang() {
+      return std::make_shared<tok>(TBang{});
+    }
 
-      static std::shared_ptr<tok> TBang_() {
-        return std::shared_ptr<tok>(new tok(TBang{}));
-      }
+    static std::shared_ptr<tok> tsemicolon() {
+      return std::make_shared<tok>(TSemicolon{});
+    }
 
-      static std::shared_ptr<tok> TSemicolon_() {
-        return std::shared_ptr<tok>(new tok(TSemicolon{}));
-      }
+    static std::shared_ptr<tok> tident(unsigned int a0) {
+      return std::make_shared<tok>(TIdent{std::move(a0)});
+    }
 
-      static std::shared_ptr<tok> TIdent_(unsigned int a0) {
-        return std::shared_ptr<tok>(new tok(TIdent{a0}));
-      }
+    static std::shared_ptr<tok> teof() { return std::make_shared<tok>(TEOF{}); }
 
-      static std::shared_ptr<tok> TEOF_() {
-        return std::shared_ptr<tok>(new tok(TEOF{}));
-      }
+    static std::unique_ptr<tok> tnum_uptr(unsigned int a0) {
+      return std::make_unique<tok>(TNum{std::move(a0)});
+    }
 
-      static std::unique_ptr<tok> TNum_uptr(unsigned int a0) {
-        return std::unique_ptr<tok>(new tok(TNum{a0}));
-      }
+    static std::unique_ptr<tok> tplus_uptr() {
+      return std::make_unique<tok>(TPlus{});
+    }
 
-      static std::unique_ptr<tok> TPlus_uptr() {
-        return std::unique_ptr<tok>(new tok(TPlus{}));
-      }
+    static std::unique_ptr<tok> tminus_uptr() {
+      return std::make_unique<tok>(TMinus{});
+    }
 
-      static std::unique_ptr<tok> TMinus_uptr() {
-        return std::unique_ptr<tok>(new tok(TMinus{}));
-      }
+    static std::unique_ptr<tok> tstar_uptr() {
+      return std::make_unique<tok>(TStar{});
+    }
 
-      static std::unique_ptr<tok> TStar_uptr() {
-        return std::unique_ptr<tok>(new tok(TStar{}));
-      }
+    static std::unique_ptr<tok> tslash_uptr() {
+      return std::make_unique<tok>(TSlash{});
+    }
 
-      static std::unique_ptr<tok> TSlash_uptr() {
-        return std::unique_ptr<tok>(new tok(TSlash{}));
-      }
+    static std::unique_ptr<tok> tlparen_uptr() {
+      return std::make_unique<tok>(TLParen{});
+    }
 
-      static std::unique_ptr<tok> TLParen_uptr() {
-        return std::unique_ptr<tok>(new tok(TLParen{}));
-      }
+    static std::unique_ptr<tok> trparen_uptr() {
+      return std::make_unique<tok>(TRParen{});
+    }
 
-      static std::unique_ptr<tok> TRParen_uptr() {
-        return std::unique_ptr<tok>(new tok(TRParen{}));
-      }
+    static std::unique_ptr<tok> teq_uptr() {
+      return std::make_unique<tok>(TEq{});
+    }
 
-      static std::unique_ptr<tok> TEq_uptr() {
-        return std::unique_ptr<tok>(new tok(TEq{}));
-      }
+    static std::unique_ptr<tok> tbang_uptr() {
+      return std::make_unique<tok>(TBang{});
+    }
 
-      static std::unique_ptr<tok> TBang_uptr() {
-        return std::unique_ptr<tok>(new tok(TBang{}));
-      }
+    static std::unique_ptr<tok> tsemicolon_uptr() {
+      return std::make_unique<tok>(TSemicolon{});
+    }
 
-      static std::unique_ptr<tok> TSemicolon_uptr() {
-        return std::unique_ptr<tok>(new tok(TSemicolon{}));
-      }
+    static std::unique_ptr<tok> tident_uptr(unsigned int a0) {
+      return std::make_unique<tok>(TIdent{std::move(a0)});
+    }
 
-      static std::unique_ptr<tok> TIdent_uptr(unsigned int a0) {
-        return std::unique_ptr<tok>(new tok(TIdent{a0}));
-      }
-
-      static std::unique_ptr<tok> TEOF_uptr() {
-        return std::unique_ptr<tok>(new tok(TEOF{}));
-      }
-    };
+    static std::unique_ptr<tok> teof_uptr() {
+      return std::make_unique<tok>(TEOF{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -365,16 +356,12 @@ struct LargeEnum {
   static inline const bool test_warm_blue = is_warm(Color::e_BLUE);
   static inline const bool test_neutral_black = is_neutral(Color::e_BLACK);
   static inline const bool test_neutral_red = is_neutral(Color::e_RED);
-  static inline const unsigned int test_tok_num =
-      tok_to_nat(tok::ctor::TNum_(42u));
-  static inline const unsigned int test_tok_plus =
-      tok_to_nat(tok::ctor::TPlus_());
-  static inline const unsigned int test_tok_ident =
-      tok_to_nat(tok::ctor::TIdent_(3u));
-  static inline const unsigned int test_tok_eof =
-      tok_to_nat(tok::ctor::TEOF_());
-  static inline const bool test_is_op_plus = is_operator(tok::ctor::TPlus_());
-  static inline const bool test_is_op_num = is_operator(tok::ctor::TNum_(0u));
+  static inline const unsigned int test_tok_num = tok_to_nat(tok::tnum(42u));
+  static inline const unsigned int test_tok_plus = tok_to_nat(tok::tplus());
+  static inline const unsigned int test_tok_ident = tok_to_nat(tok::tident(3u));
+  static inline const unsigned int test_tok_eof = tok_to_nat(tok::teof());
+  static inline const bool test_is_op_plus = is_operator(tok::tplus());
+  static inline const bool test_is_op_num = is_operator(tok::tnum(0u));
 };
 
 #endif // INCLUDED_LARGE_ENUM

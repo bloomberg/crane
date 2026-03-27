@@ -15,9 +15,9 @@
 std::shared_ptr<DecodeList::instruction>
 DecodeList::decode(const unsigned int b1, const unsigned int b2) {
   if (b1 == 0u) {
-    return instruction::ctor::NOP_();
+    return instruction::nop();
   } else {
-    return instruction::ctor::LDM_((std::move(b2) % 16u));
+    return instruction::ldm((std::move(b2) % 16u));
   }
 }
 
@@ -28,7 +28,7 @@ DecodeList::decode_list(const std::shared_ptr<List<unsigned int>> &bytes) {
           [](const typename List<unsigned int>::Nil _args)
               -> std::shared_ptr<
                   List<std::shared_ptr<DecodeList::instruction>>> {
-            return List<std::shared_ptr<DecodeList::instruction>>::ctor::Nil_();
+            return List<std::shared_ptr<DecodeList::instruction>>::nil();
           },
           [](const typename List<unsigned int>::Cons _args)
               -> std::shared_ptr<
@@ -38,15 +38,15 @@ DecodeList::decode_list(const std::shared_ptr<List<unsigned int>> &bytes) {
                     [](const typename List<unsigned int>::Nil _args0)
                         -> std::shared_ptr<
                             List<std::shared_ptr<DecodeList::instruction>>> {
-                      return List<std::shared_ptr<DecodeList::instruction>>::
-                          ctor::Nil_();
+                      return List<
+                          std::shared_ptr<DecodeList::instruction>>::nil();
                     },
                     [&](const typename List<unsigned int>::Cons _args0)
                         -> std::shared_ptr<
                             List<std::shared_ptr<DecodeList::instruction>>> {
                       return List<std::shared_ptr<DecodeList::instruction>>::
-                          ctor::Cons_(decode(_args.d_a0, _args0.d_a0),
-                                      decode_list(_args0.d_a1));
+                          cons(decode(_args.d_a0, _args0.d_a0),
+                               decode_list(_args0.d_a1));
                     }},
                 _args.d_a1->v());
           }},

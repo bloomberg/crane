@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -102,6 +107,7 @@ struct JumpTargets {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit instr_collection(JUN_coll _v) : d_v_(std::move(_v)) {}
 
@@ -109,41 +115,29 @@ struct JumpTargets {
 
     explicit instr_collection(NOP_coll _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<instr_collection> jun_coll(unsigned int a0) {
+      return std::make_shared<instr_collection>(JUN_coll{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr_collection> JUN_coll_(unsigned int a0) {
-        return std::shared_ptr<instr_collection>(
-            new instr_collection(JUN_coll{a0}));
-      }
+    static std::shared_ptr<instr_collection> jms_coll(unsigned int a0) {
+      return std::make_shared<instr_collection>(JMS_coll{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr_collection> JMS_coll_(unsigned int a0) {
-        return std::shared_ptr<instr_collection>(
-            new instr_collection(JMS_coll{a0}));
-      }
+    static std::shared_ptr<instr_collection> nop_coll() {
+      return std::make_shared<instr_collection>(NOP_coll{});
+    }
 
-      static std::shared_ptr<instr_collection> NOP_coll_() {
-        return std::shared_ptr<instr_collection>(
-            new instr_collection(NOP_coll{}));
-      }
+    static std::unique_ptr<instr_collection> jun_coll_uptr(unsigned int a0) {
+      return std::make_unique<instr_collection>(JUN_coll{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr_collection> JUN_coll_uptr(unsigned int a0) {
-        return std::unique_ptr<instr_collection>(
-            new instr_collection(JUN_coll{a0}));
-      }
+    static std::unique_ptr<instr_collection> jms_coll_uptr(unsigned int a0) {
+      return std::make_unique<instr_collection>(JMS_coll{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr_collection> JMS_coll_uptr(unsigned int a0) {
-        return std::unique_ptr<instr_collection>(
-            new instr_collection(JMS_coll{a0}));
-      }
-
-      static std::unique_ptr<instr_collection> NOP_coll_uptr() {
-        return std::unique_ptr<instr_collection>(
-            new instr_collection(NOP_coll{}));
-      }
-    };
+    static std::unique_ptr<instr_collection> nop_coll_uptr() {
+      return std::make_unique<instr_collection>(NOP_coll{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -208,16 +202,15 @@ struct JumpTargets {
       const std::shared_ptr<List<std::shared_ptr<instr_collection>>> &prog);
   static inline const unsigned int test_collection =
       collect_targets(
-          List<std::shared_ptr<instr_collection>>::ctor::Cons_(
-              instr_collection::ctor::JUN_coll_(17u),
-              List<std::shared_ptr<instr_collection>>::ctor::Cons_(
-                  instr_collection::ctor::NOP_coll_(),
-                  List<std::shared_ptr<instr_collection>>::ctor::Cons_(
-                      instr_collection::ctor::JMS_coll_(511u),
-                      List<std::shared_ptr<instr_collection>>::ctor::Cons_(
-                          instr_collection::ctor::NOP_coll_(),
-                          List<std::shared_ptr<instr_collection>>::ctor::
-                              Nil_())))))
+          List<std::shared_ptr<instr_collection>>::cons(
+              instr_collection::jun_coll(17u),
+              List<std::shared_ptr<instr_collection>>::cons(
+                  instr_collection::nop_coll(),
+                  List<std::shared_ptr<instr_collection>>::cons(
+                      instr_collection::jms_coll(511u),
+                      List<std::shared_ptr<instr_collection>>::cons(
+                          instr_collection::nop_coll(),
+                          List<std::shared_ptr<instr_collection>>::nil())))))
           ->length();
 
   struct instr_region {
@@ -238,6 +231,7 @@ struct JumpTargets {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit instr_region(JUN_reg _v) : d_v_(std::move(_v)) {}
 
@@ -245,35 +239,29 @@ struct JumpTargets {
 
     explicit instr_region(NOP_reg _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<instr_region> jun_reg(unsigned int a0) {
+      return std::make_shared<instr_region>(JUN_reg{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr_region> JUN_reg_(unsigned int a0) {
-        return std::shared_ptr<instr_region>(new instr_region(JUN_reg{a0}));
-      }
+    static std::shared_ptr<instr_region> jms_reg(unsigned int a0) {
+      return std::make_shared<instr_region>(JMS_reg{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr_region> JMS_reg_(unsigned int a0) {
-        return std::shared_ptr<instr_region>(new instr_region(JMS_reg{a0}));
-      }
+    static std::shared_ptr<instr_region> nop_reg() {
+      return std::make_shared<instr_region>(NOP_reg{});
+    }
 
-      static std::shared_ptr<instr_region> NOP_reg_() {
-        return std::shared_ptr<instr_region>(new instr_region(NOP_reg{}));
-      }
+    static std::unique_ptr<instr_region> jun_reg_uptr(unsigned int a0) {
+      return std::make_unique<instr_region>(JUN_reg{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr_region> JUN_reg_uptr(unsigned int a0) {
-        return std::unique_ptr<instr_region>(new instr_region(JUN_reg{a0}));
-      }
+    static std::unique_ptr<instr_region> jms_reg_uptr(unsigned int a0) {
+      return std::make_unique<instr_region>(JMS_reg{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr_region> JMS_reg_uptr(unsigned int a0) {
-        return std::unique_ptr<instr_region>(new instr_region(JMS_reg{a0}));
-      }
-
-      static std::unique_ptr<instr_region> NOP_reg_uptr() {
-        return std::unique_ptr<instr_region>(new instr_region(NOP_reg{}));
-      }
-    };
+    static std::unique_ptr<instr_region> nop_reg_uptr() {
+      return std::make_unique<instr_region>(NOP_reg{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -342,9 +330,8 @@ struct JumpTargets {
   __attribute__((pure)) static bool
   in_layout(const std::shared_ptr<layout> &l,
             const std::shared_ptr<instr_region> &i);
-  static inline const bool test_region_check =
-      in_layout(std::make_shared<layout>(layout{16u, 32u}),
-                instr_region::ctor::JUN_reg_(40u));
+  static inline const bool test_region_check = in_layout(
+      std::make_shared<layout>(layout{16u, 32u}), instr_region::jun_reg(40u));
 
   struct instr_jms {
     // TYPES
@@ -364,6 +351,7 @@ struct JumpTargets {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit instr_jms(JUN_jms _v) : d_v_(std::move(_v)) {}
 
@@ -371,35 +359,29 @@ struct JumpTargets {
 
     explicit instr_jms(NOP_jms _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<instr_jms> jun_jms(unsigned int a0) {
+      return std::make_shared<instr_jms>(JUN_jms{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr_jms> JUN_jms_(unsigned int a0) {
-        return std::shared_ptr<instr_jms>(new instr_jms(JUN_jms{a0}));
-      }
+    static std::shared_ptr<instr_jms> jms_jms(unsigned int a0) {
+      return std::make_shared<instr_jms>(JMS_jms{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr_jms> JMS_jms_(unsigned int a0) {
-        return std::shared_ptr<instr_jms>(new instr_jms(JMS_jms{a0}));
-      }
+    static std::shared_ptr<instr_jms> nop_jms() {
+      return std::make_shared<instr_jms>(NOP_jms{});
+    }
 
-      static std::shared_ptr<instr_jms> NOP_jms_() {
-        return std::shared_ptr<instr_jms>(new instr_jms(NOP_jms{}));
-      }
+    static std::unique_ptr<instr_jms> jun_jms_uptr(unsigned int a0) {
+      return std::make_unique<instr_jms>(JUN_jms{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr_jms> JUN_jms_uptr(unsigned int a0) {
-        return std::unique_ptr<instr_jms>(new instr_jms(JUN_jms{a0}));
-      }
+    static std::unique_ptr<instr_jms> jms_jms_uptr(unsigned int a0) {
+      return std::make_unique<instr_jms>(JMS_jms{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr_jms> JMS_jms_uptr(unsigned int a0) {
-        return std::unique_ptr<instr_jms>(new instr_jms(JMS_jms{a0}));
-      }
-
-      static std::unique_ptr<instr_jms> NOP_jms_uptr() {
-        return std::unique_ptr<instr_jms>(new instr_jms(NOP_jms{}));
-      }
-    };
+    static std::unique_ptr<instr_jms> nop_jms_uptr() {
+      return std::make_unique<instr_jms>(NOP_jms{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -460,7 +442,7 @@ struct JumpTargets {
   __attribute__((pure)) static unsigned int
   option_nat_or_zero(const std::optional<unsigned int> o);
   static inline const unsigned int test_jms =
-      option_nat_or_zero(instr_jms::ctor::JMS_jms_(144u)->jump_target_jms());
+      option_nat_or_zero(instr_jms::jms_jms(144u)->jump_target_jms());
 
   struct instr_jun {
     // TYPES
@@ -480,6 +462,7 @@ struct JumpTargets {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit instr_jun(JUN_jun _v) : d_v_(std::move(_v)) {}
 
@@ -487,35 +470,29 @@ struct JumpTargets {
 
     explicit instr_jun(NOP_jun _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<instr_jun> jun_jun(unsigned int a0) {
+      return std::make_shared<instr_jun>(JUN_jun{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr_jun> JUN_jun_(unsigned int a0) {
-        return std::shared_ptr<instr_jun>(new instr_jun(JUN_jun{a0}));
-      }
+    static std::shared_ptr<instr_jun> jms_jun(unsigned int a0) {
+      return std::make_shared<instr_jun>(JMS_jun{std::move(a0)});
+    }
 
-      static std::shared_ptr<instr_jun> JMS_jun_(unsigned int a0) {
-        return std::shared_ptr<instr_jun>(new instr_jun(JMS_jun{a0}));
-      }
+    static std::shared_ptr<instr_jun> nop_jun() {
+      return std::make_shared<instr_jun>(NOP_jun{});
+    }
 
-      static std::shared_ptr<instr_jun> NOP_jun_() {
-        return std::shared_ptr<instr_jun>(new instr_jun(NOP_jun{}));
-      }
+    static std::unique_ptr<instr_jun> jun_jun_uptr(unsigned int a0) {
+      return std::make_unique<instr_jun>(JUN_jun{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr_jun> JUN_jun_uptr(unsigned int a0) {
-        return std::unique_ptr<instr_jun>(new instr_jun(JUN_jun{a0}));
-      }
+    static std::unique_ptr<instr_jun> jms_jun_uptr(unsigned int a0) {
+      return std::make_unique<instr_jun>(JMS_jun{std::move(a0)});
+    }
 
-      static std::unique_ptr<instr_jun> JMS_jun_uptr(unsigned int a0) {
-        return std::unique_ptr<instr_jun>(new instr_jun(JMS_jun{a0}));
-      }
-
-      static std::unique_ptr<instr_jun> NOP_jun_uptr() {
-        return std::unique_ptr<instr_jun>(new instr_jun(NOP_jun{}));
-      }
-    };
+    static std::unique_ptr<instr_jun> nop_jun_uptr() {
+      return std::make_unique<instr_jun>(NOP_jun{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -576,7 +553,7 @@ struct JumpTargets {
   __attribute__((pure)) static unsigned int
   target_default(const std::optional<unsigned int> o);
   static inline const unsigned int test_jun =
-      target_default(instr_jun::ctor::JUN_jun_(511u)->jump_target_jun());
+      target_default(instr_jun::jun_jun(511u)->jump_target_jun());
   static inline const std::pair<
       std::pair<std::pair<unsigned int, bool>, unsigned int>, unsigned int>
       t = std::make_pair(

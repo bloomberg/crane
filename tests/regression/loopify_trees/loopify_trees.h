@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -88,7 +93,7 @@ public:
                 _continue = false;
               },
               [&](const typename List<t_A>::Cons _args) {
-                auto _cell = List<t_A>::ctor::Cons_(_args.d_a0, nullptr);
+                auto _cell = List<t_A>::cons(_args.d_a0, nullptr);
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =
                       _cell;
@@ -122,36 +127,45 @@ struct LoopifyTrees {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit tree(Leaf _v) : d_v_(std::move(_v)) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<tree<t_A>> leaf() {
+      return std::make_shared<tree<t_A>>(Leaf{});
+    }
 
-      static std::shared_ptr<tree<t_A>> Leaf_() {
-        return std::shared_ptr<tree<t_A>>(new tree<t_A>(Leaf{}));
-      }
+    static std::shared_ptr<tree<t_A>>
+    node(const std::shared_ptr<tree<t_A>> &a0, t_A a1,
+         const std::shared_ptr<tree<t_A>> &a2) {
+      return std::make_shared<tree<t_A>>(Node{a0, std::move(a1), a2});
+    }
 
-      static std::shared_ptr<tree<t_A>>
-      Node_(const std::shared_ptr<tree<t_A>> &a0, t_A a1,
-            const std::shared_ptr<tree<t_A>> &a2) {
-        return std::shared_ptr<tree<t_A>>(new tree<t_A>(Node{a0, a1, a2}));
-      }
+    static std::shared_ptr<tree<t_A>> node(std::shared_ptr<tree<t_A>> &&a0,
+                                           t_A a1,
+                                           std::shared_ptr<tree<t_A>> &&a2) {
+      return std::make_shared<tree<t_A>>(
+          Node{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
-      static std::unique_ptr<tree<t_A>> Leaf_uptr() {
-        return std::unique_ptr<tree<t_A>>(new tree<t_A>(Leaf{}));
-      }
+    static std::unique_ptr<tree<t_A>> leaf_uptr() {
+      return std::make_unique<tree<t_A>>(Leaf{});
+    }
 
-      static std::unique_ptr<tree<t_A>>
-      Node_uptr(const std::shared_ptr<tree<t_A>> &a0, t_A a1,
-                const std::shared_ptr<tree<t_A>> &a2) {
-        return std::unique_ptr<tree<t_A>>(new tree<t_A>(Node{a0, a1, a2}));
-      }
-    };
+    static std::unique_ptr<tree<t_A>>
+    node_uptr(const std::shared_ptr<tree<t_A>> &a0, t_A a1,
+              const std::shared_ptr<tree<t_A>> &a2) {
+      return std::make_unique<tree<t_A>>(Node{a0, std::move(a1), a2});
+    }
+
+    static std::unique_ptr<tree<t_A>>
+    node_uptr(std::shared_ptr<tree<t_A>> &&a0, t_A a1,
+              std::shared_ptr<tree<t_A>> &&a2) {
+      return std::make_unique<tree<t_A>>(
+          Node{std::move(a0), std::move(a1), std::move(a2)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -195,7 +209,7 @@ struct LoopifyTrees {
                   std::visit(
                       Overloaded{
                           [&](const typename tree<t_A>::Leaf _args) -> void {
-                            _result = tree<T1>::ctor::Leaf_();
+                            _result = tree<T1>::leaf();
                           },
                           [&](const typename tree<t_A>::Node _args) -> void {
                             _stack.push_back(
@@ -209,7 +223,7 @@ struct LoopifyTrees {
                   _stack.push_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) {
-                  _result = tree<T1>::ctor::Node_(_result, _f._s1, _f._s0);
+                  _result = tree<T1>::node(_result, _f._s1, _f._s0);
                 }},
             _frame);
       }
@@ -320,7 +334,7 @@ struct LoopifyTrees {
                   std::visit(
                       Overloaded{
                           [&](const typename tree<t_A>::Leaf _args) -> void {
-                            _result = List<t_A>::ctor::Nil_();
+                            _result = List<t_A>::nil();
                           },
                           [&](const typename tree<t_A>::Node _args) -> void {
                             _stack.push_back(
@@ -334,8 +348,7 @@ struct LoopifyTrees {
                   _stack.push_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) {
-                  _result =
-                      _result->app(List<t_A>::ctor::Cons_(_f._s1, _f._s0));
+                  _result = _result->app(List<t_A>::cons(_f._s1, _f._s0));
                 }},
             _frame);
       }
@@ -491,7 +504,7 @@ struct LoopifyTrees {
                   std::visit(
                       Overloaded{
                           [&](const typename tree<t_A>::Leaf _args) -> void {
-                            _result = tree<t_A>::ctor::Leaf_();
+                            _result = tree<t_A>::leaf();
                           },
                           [&](const typename tree<t_A>::Node _args) -> void {
                             _stack.push_back(
@@ -505,7 +518,7 @@ struct LoopifyTrees {
                   _stack.push_back(_Enter{_f._s0});
                 },
                 [&](_Call2 _f) {
-                  _result = tree<t_A>::ctor::Node_(_result, _f._s1, _f._s0);
+                  _result = tree<t_A>::node(_result, _f._s1, _f._s0);
                 }},
             _frame);
       }
@@ -828,38 +841,49 @@ struct LoopifyTrees {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit ternary(TLeaf _v) : d_v_(std::move(_v)) {}
 
     explicit ternary(TNode _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<ternary> tleaf() {
+      return std::make_shared<ternary>(TLeaf{});
+    }
 
-      static std::shared_ptr<ternary> TLeaf_() {
-        return std::shared_ptr<ternary>(new ternary(TLeaf{}));
-      }
+    static std::shared_ptr<ternary> tnode(const std::shared_ptr<ternary> &a0,
+                                          const std::shared_ptr<ternary> &a1,
+                                          const std::shared_ptr<ternary> &a2,
+                                          unsigned int a3) {
+      return std::make_shared<ternary>(TNode{a0, a1, a2, std::move(a3)});
+    }
 
-      static std::shared_ptr<ternary> TNode_(const std::shared_ptr<ternary> &a0,
-                                             const std::shared_ptr<ternary> &a1,
-                                             const std::shared_ptr<ternary> &a2,
-                                             unsigned int a3) {
-        return std::shared_ptr<ternary>(new ternary(TNode{a0, a1, a2, a3}));
-      }
+    static std::shared_ptr<ternary> tnode(std::shared_ptr<ternary> &&a0,
+                                          std::shared_ptr<ternary> &&a1,
+                                          std::shared_ptr<ternary> &&a2,
+                                          unsigned int a3) {
+      return std::make_shared<ternary>(
+          TNode{std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
+    }
 
-      static std::unique_ptr<ternary> TLeaf_uptr() {
-        return std::unique_ptr<ternary>(new ternary(TLeaf{}));
-      }
+    static std::unique_ptr<ternary> tleaf_uptr() {
+      return std::make_unique<ternary>(TLeaf{});
+    }
 
-      static std::unique_ptr<ternary>
-      TNode_uptr(const std::shared_ptr<ternary> &a0,
-                 const std::shared_ptr<ternary> &a1,
-                 const std::shared_ptr<ternary> &a2, unsigned int a3) {
-        return std::unique_ptr<ternary>(new ternary(TNode{a0, a1, a2, a3}));
-      }
-    };
+    static std::unique_ptr<ternary>
+    tnode_uptr(const std::shared_ptr<ternary> &a0,
+               const std::shared_ptr<ternary> &a1,
+               const std::shared_ptr<ternary> &a2, unsigned int a3) {
+      return std::make_unique<ternary>(TNode{a0, a1, a2, std::move(a3)});
+    }
+
+    static std::unique_ptr<ternary> tnode_uptr(std::shared_ptr<ternary> &&a0,
+                                               std::shared_ptr<ternary> &&a1,
+                                               std::shared_ptr<ternary> &&a2,
+                                               unsigned int a3) {
+      return std::make_unique<ternary>(
+          TNode{std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -1190,26 +1214,32 @@ struct LoopifyTrees {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit rose(RNode _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<rose>
+    rnode(unsigned int a0,
+          const std::shared_ptr<List<std::shared_ptr<rose>>> &a1) {
+      return std::make_shared<rose>(RNode{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<rose>
-      RNode_(unsigned int a0,
-             const std::shared_ptr<List<std::shared_ptr<rose>>> &a1) {
-        return std::shared_ptr<rose>(new rose(RNode{a0, a1}));
-      }
+    static std::shared_ptr<rose>
+    rnode(unsigned int a0, std::shared_ptr<List<std::shared_ptr<rose>>> &&a1) {
+      return std::make_shared<rose>(RNode{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<rose>
-      RNode_uptr(unsigned int a0,
-                 const std::shared_ptr<List<std::shared_ptr<rose>>> &a1) {
-        return std::unique_ptr<rose>(new rose(RNode{a0, a1}));
-      }
-    };
+    static std::unique_ptr<rose>
+    rnode_uptr(unsigned int a0,
+               const std::shared_ptr<List<std::shared_ptr<rose>>> &a1) {
+      return std::make_unique<rose>(RNode{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<rose>
+    rnode_uptr(unsigned int a0,
+               std::shared_ptr<List<std::shared_ptr<rose>>> &&a1) {
+      return std::make_unique<rose>(RNode{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -1230,7 +1260,7 @@ struct LoopifyTrees {
     std::shared_ptr<List<unsigned int>> rose_flatten() const {
       return std::visit(Overloaded{[](const typename rose::RNode _args)
                                        -> std::shared_ptr<List<unsigned int>> {
-                          return List<unsigned int>::ctor::Cons_(
+                          return List<unsigned int>::cons(
                               _args.d_a0,
                               flatten_rose_list_fuel(1000u, _args.d_a1));
                         }},
@@ -1243,8 +1273,8 @@ struct LoopifyTrees {
       return std::visit(
           Overloaded{
               [&](const typename rose::RNode _args) -> std::shared_ptr<rose> {
-                return rose::ctor::RNode_(
-                    f(_args.d_a0), map_rose_list_fuel(1000u, f, _args.d_a1));
+                return rose::rnode(f(_args.d_a0),
+                                   map_rose_list_fuel(1000u, f, _args.d_a1));
               }},
           this->v());
     }
@@ -1319,14 +1349,14 @@ struct LoopifyTrees {
                 const std::shared_ptr<List<std::shared_ptr<rose>>> cs = _f.cs;
                 const unsigned int fuel = _f.fuel;
                 if (fuel <= 0) {
-                  _result = List<std::shared_ptr<rose>>::ctor::Nil_();
+                  _result = List<std::shared_ptr<rose>>::nil();
                 } else {
                   unsigned int g = fuel - 1;
                   std::visit(
                       Overloaded{
                           [&](const typename List<std::shared_ptr<rose>>::Nil
                                   _args) -> void {
-                            _result = List<std::shared_ptr<rose>>::ctor::Nil_();
+                            _result = List<std::shared_ptr<rose>>::nil();
                           },
                           [&](const typename List<std::shared_ptr<rose>>::Cons
                                   _args) -> void {
@@ -1348,8 +1378,8 @@ struct LoopifyTrees {
                 _stack.push_back(_Enter{_f._s0, _f._s1});
               },
               [&](_Call2 _f) {
-                _result = List<std::shared_ptr<rose>>::ctor::Cons_(
-                    rose::ctor::RNode_(_f._s1, _result), _f._s0);
+                _result = List<std::shared_ptr<rose>>::cons(
+                    rose::rnode(_f._s1, _result), _f._s0);
               }},
           _frame);
     }
@@ -1482,40 +1512,50 @@ struct LoopifyTrees {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit quadtree(QLeaf _v) : d_v_(std::move(_v)) {}
 
     explicit quadtree(Quad _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<quadtree> qleaf(unsigned int a0) {
+      return std::make_shared<quadtree>(QLeaf{std::move(a0)});
+    }
 
-      static std::shared_ptr<quadtree> QLeaf_(unsigned int a0) {
-        return std::shared_ptr<quadtree>(new quadtree(QLeaf{a0}));
-      }
+    static std::shared_ptr<quadtree> quad(const std::shared_ptr<quadtree> &a0,
+                                          const std::shared_ptr<quadtree> &a1,
+                                          const std::shared_ptr<quadtree> &a2,
+                                          const std::shared_ptr<quadtree> &a3) {
+      return std::make_shared<quadtree>(Quad{a0, a1, a2, a3});
+    }
 
-      static std::shared_ptr<quadtree>
-      Quad_(const std::shared_ptr<quadtree> &a0,
-            const std::shared_ptr<quadtree> &a1,
-            const std::shared_ptr<quadtree> &a2,
-            const std::shared_ptr<quadtree> &a3) {
-        return std::shared_ptr<quadtree>(new quadtree(Quad{a0, a1, a2, a3}));
-      }
+    static std::shared_ptr<quadtree> quad(std::shared_ptr<quadtree> &&a0,
+                                          std::shared_ptr<quadtree> &&a1,
+                                          std::shared_ptr<quadtree> &&a2,
+                                          std::shared_ptr<quadtree> &&a3) {
+      return std::make_shared<quadtree>(
+          Quad{std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
+    }
 
-      static std::unique_ptr<quadtree> QLeaf_uptr(unsigned int a0) {
-        return std::unique_ptr<quadtree>(new quadtree(QLeaf{a0}));
-      }
+    static std::unique_ptr<quadtree> qleaf_uptr(unsigned int a0) {
+      return std::make_unique<quadtree>(QLeaf{std::move(a0)});
+    }
 
-      static std::unique_ptr<quadtree>
-      Quad_uptr(const std::shared_ptr<quadtree> &a0,
-                const std::shared_ptr<quadtree> &a1,
-                const std::shared_ptr<quadtree> &a2,
-                const std::shared_ptr<quadtree> &a3) {
-        return std::unique_ptr<quadtree>(new quadtree(Quad{a0, a1, a2, a3}));
-      }
-    };
+    static std::unique_ptr<quadtree>
+    quad_uptr(const std::shared_ptr<quadtree> &a0,
+              const std::shared_ptr<quadtree> &a1,
+              const std::shared_ptr<quadtree> &a2,
+              const std::shared_ptr<quadtree> &a3) {
+      return std::make_unique<quadtree>(Quad{a0, a1, a2, a3});
+    }
+
+    static std::unique_ptr<quadtree> quad_uptr(std::shared_ptr<quadtree> &&a0,
+                                               std::shared_ptr<quadtree> &&a1,
+                                               std::shared_ptr<quadtree> &&a2,
+                                               std::shared_ptr<quadtree> &&a3) {
+      return std::make_unique<quadtree>(
+          Quad{std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -1902,36 +1942,43 @@ struct LoopifyTrees {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit simple_tree(SLeaf _v) : d_v_(std::move(_v)) {}
 
     explicit simple_tree(SNode _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<simple_tree> sleaf(unsigned int a0) {
+      return std::make_shared<simple_tree>(SLeaf{std::move(a0)});
+    }
 
-      static std::shared_ptr<simple_tree> SLeaf_(unsigned int a0) {
-        return std::shared_ptr<simple_tree>(new simple_tree(SLeaf{a0}));
-      }
+    static std::shared_ptr<simple_tree>
+    snode(const std::shared_ptr<simple_tree> &a0,
+          const std::shared_ptr<simple_tree> &a1) {
+      return std::make_shared<simple_tree>(SNode{a0, a1});
+    }
 
-      static std::shared_ptr<simple_tree>
-      SNode_(const std::shared_ptr<simple_tree> &a0,
-             const std::shared_ptr<simple_tree> &a1) {
-        return std::shared_ptr<simple_tree>(new simple_tree(SNode{a0, a1}));
-      }
+    static std::shared_ptr<simple_tree>
+    snode(std::shared_ptr<simple_tree> &&a0,
+          std::shared_ptr<simple_tree> &&a1) {
+      return std::make_shared<simple_tree>(SNode{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<simple_tree> SLeaf_uptr(unsigned int a0) {
-        return std::unique_ptr<simple_tree>(new simple_tree(SLeaf{a0}));
-      }
+    static std::unique_ptr<simple_tree> sleaf_uptr(unsigned int a0) {
+      return std::make_unique<simple_tree>(SLeaf{std::move(a0)});
+    }
 
-      static std::unique_ptr<simple_tree>
-      SNode_uptr(const std::shared_ptr<simple_tree> &a0,
-                 const std::shared_ptr<simple_tree> &a1) {
-        return std::unique_ptr<simple_tree>(new simple_tree(SNode{a0, a1}));
-      }
-    };
+    static std::unique_ptr<simple_tree>
+    snode_uptr(const std::shared_ptr<simple_tree> &a0,
+               const std::shared_ptr<simple_tree> &a1) {
+      return std::make_unique<simple_tree>(SNode{a0, a1});
+    }
+
+    static std::unique_ptr<simple_tree>
+    snode_uptr(std::shared_ptr<simple_tree> &&a0,
+               std::shared_ptr<simple_tree> &&a1) {
+      return std::make_unique<simple_tree>(SNode{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

@@ -21,8 +21,8 @@ int main() {
   using List = LoopifyLists::list<unsigned int>;
 
   // Build [1, 2, 3]
-  auto l3 = List::ctor::Cons_(
-      1u, List::ctor::Cons_(2u, List::ctor::Cons_(3u, List::ctor::Nil_())));
+  auto l3 = List::cons(
+      1u, List::cons(2u, List::cons(3u, List::nil())));
 
   // Test stutter: [1,2,3] -> [1,1,2,2,3,3]
   auto stuttered = LoopifyLists::stutter(l3);
@@ -50,8 +50,8 @@ int main() {
   ASSERT(scanned != nullptr);
 
   // Test step_sum: [2,3,4] -> 2 + 3*2 + 4 = 2 + 6 + 4 = 12
-  auto nums = List::ctor::Cons_(
-      2u, List::ctor::Cons_(3u, List::ctor::Cons_(4u, List::ctor::Nil_())));
+  auto nums = List::cons(
+      2u, List::cons(3u, List::cons(4u, List::nil())));
   ASSERT(LoopifyLists::step_sum(nums) == 12u);
 
   // Test sum_abs (absolute differences from base)
@@ -59,11 +59,11 @@ int main() {
   ASSERT(abs_sum > 0u);
 
   // Test four_elem
-  auto four = List::ctor::Cons_(
-      1u, List::ctor::Cons_(
-              2u, List::ctor::Cons_(
-                      3u, List::ctor::Cons_(
-                              4u, List::ctor::Cons_(5u, List::ctor::Nil_())))));
+  auto four = List::cons(
+      1u, List::cons(
+              2u, List::cons(
+                      3u, List::cons(
+                              4u, List::cons(5u, List::nil())))));
   auto result = LoopifyLists::four_elem(four);
   ASSERT(result == 11u); // 1+2+3+4 + four_elem([5]) = 10 + 1
 

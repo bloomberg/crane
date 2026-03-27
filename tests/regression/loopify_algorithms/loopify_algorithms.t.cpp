@@ -20,36 +20,36 @@ int main() {
   using List = ::List<unsigned int>;
 
   // Test sieve (simple case)
-  auto l = List::ctor::Cons_(
-      2u, List::ctor::Cons_(
-              3u, List::ctor::Cons_(
-                      4u, List::ctor::Cons_(
-                              5u, List::ctor::Cons_(6u, List::ctor::Nil_())))));
+  auto l = List::cons(
+      2u, List::cons(
+              3u, List::cons(
+                      4u, List::cons(
+                              5u, List::cons(6u, List::nil())))));
   auto sieved = LoopifyAlgorithms::sieve(l);
   ASSERT(sieved != nullptr);
 
   // Test run_length_encode
-  auto rle_input = List::ctor::Cons_(
-      1u, List::ctor::Cons_(
-              1u, List::ctor::Cons_(
-                      2u, List::ctor::Cons_(
-                              3u, List::ctor::Cons_(
-                                      3u, List::ctor::Cons_(
-                                              3u, List::ctor::Nil_()))))));
+  auto rle_input = List::cons(
+      1u, List::cons(
+              1u, List::cons(
+                      2u, List::cons(
+                              3u, List::cons(
+                                      3u, List::cons(
+                                              3u, List::nil()))))));
   auto encoded = LoopifyAlgorithms::run_length_encode(rle_input);
   ASSERT(encoded != nullptr);
 
   // Test prefix_sums
-  auto nums = List::ctor::Cons_(
-      1u, List::ctor::Cons_(2u, List::ctor::Cons_(3u, List::ctor::Nil_())));
+  auto nums = List::cons(
+      1u, List::cons(2u, List::cons(3u, List::nil())));
   auto prefixes = LoopifyAlgorithms::prefix_sums(0u, nums);
   ASSERT(prefixes != nullptr);
 
   // Test differences
-  auto seq = List::ctor::Cons_(
-      5u, List::ctor::Cons_(
-              3u, List::ctor::Cons_(
-                      8u, List::ctor::Cons_(2u, List::ctor::Nil_()))));
+  auto seq = List::cons(
+      5u, List::cons(
+              3u, List::cons(
+                      8u, List::cons(2u, List::nil()))));
   auto diffs = LoopifyAlgorithms::differences(seq);
   ASSERT(diffs != nullptr);
 
@@ -58,28 +58,28 @@ int main() {
   ASSERT(rotated != nullptr);
 
   // Test nub
-  auto with_dups = List::ctor::Cons_(
-      1u, List::ctor::Cons_(
-              2u, List::ctor::Cons_(
-                      1u, List::ctor::Cons_(
-                              3u, List::ctor::Cons_(2u, List::ctor::Nil_())))));
+  auto with_dups = List::cons(
+      1u, List::cons(
+              2u, List::cons(
+                      1u, List::cons(
+                              3u, List::cons(2u, List::nil())))));
   auto unique = LoopifyAlgorithms::nub(with_dups);
   ASSERT(unique != nullptr);
 
   // Test is_palindrome
-  auto pal = List::ctor::Cons_(
-      1u, List::ctor::Cons_(
-              2u, List::ctor::Cons_(
-                      3u, List::ctor::Cons_(
-                              2u, List::ctor::Cons_(1u, List::ctor::Nil_())))));
+  auto pal = List::cons(
+      1u, List::cons(
+              2u, List::cons(
+                      3u, List::cons(
+                              2u, List::cons(1u, List::nil())))));
   ASSERT(LoopifyAlgorithms::is_palindrome(pal));
   ASSERT(!LoopifyAlgorithms::is_palindrome(nums));
 
   // Test windows
-  auto four = List::ctor::Cons_(
-      1u, List::ctor::Cons_(
-              2u, List::ctor::Cons_(
-                      3u, List::ctor::Cons_(4u, List::ctor::Nil_()))));
+  auto four = List::cons(
+      1u, List::cons(
+              2u, List::cons(
+                      3u, List::cons(4u, List::nil()))));
   auto wins = LoopifyAlgorithms::windows(2u, four);
   ASSERT(wins != nullptr);
 

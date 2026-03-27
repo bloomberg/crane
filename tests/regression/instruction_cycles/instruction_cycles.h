@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -113,34 +118,29 @@ struct InstructionCycles {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit instruction1(JCN1 _v) : d_v_(std::move(_v)) {}
 
     explicit instruction1(NOP1 _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<instruction1> jcn1(unsigned int a0,
+                                              unsigned int a1) {
+      return std::make_shared<instruction1>(JCN1{std::move(a0), std::move(a1)});
+    }
 
-      static std::shared_ptr<instruction1> JCN1_(unsigned int a0,
-                                                 unsigned int a1) {
-        return std::shared_ptr<instruction1>(new instruction1(JCN1{a0, a1}));
-      }
+    static std::shared_ptr<instruction1> nop1() {
+      return std::make_shared<instruction1>(NOP1{});
+    }
 
-      static std::shared_ptr<instruction1> NOP1_() {
-        return std::shared_ptr<instruction1>(new instruction1(NOP1{}));
-      }
+    static std::unique_ptr<instruction1> jcn1_uptr(unsigned int a0,
+                                                   unsigned int a1) {
+      return std::make_unique<instruction1>(JCN1{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<instruction1> JCN1_uptr(unsigned int a0,
-                                                     unsigned int a1) {
-        return std::unique_ptr<instruction1>(new instruction1(JCN1{a0, a1}));
-      }
-
-      static std::unique_ptr<instruction1> NOP1_uptr() {
-        return std::unique_ptr<instruction1>(new instruction1(NOP1{}));
-      }
-    };
+    static std::unique_ptr<instruction1> nop1_uptr() {
+      return std::make_unique<instruction1>(NOP1{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -204,7 +204,7 @@ struct InstructionCycles {
   };
 
   static inline const unsigned int test_cycles_jcn_not_taken =
-      instruction1::ctor::JCN1_(4u, 7u)->cycles_jcn(
+      instruction1::jcn1(4u, 7u)->cycles_jcn(
           std::make_shared<state1>(state1{1u, false, true}));
 
   struct instruction2 {
@@ -221,32 +221,27 @@ struct InstructionCycles {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit instruction2(JMS2 _v) : d_v_(std::move(_v)) {}
 
     explicit instruction2(NOP2 _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<instruction2> jms2(unsigned int a0) {
+      return std::make_shared<instruction2>(JMS2{std::move(a0)});
+    }
 
-      static std::shared_ptr<instruction2> JMS2_(unsigned int a0) {
-        return std::shared_ptr<instruction2>(new instruction2(JMS2{a0}));
-      }
+    static std::shared_ptr<instruction2> nop2() {
+      return std::make_shared<instruction2>(NOP2{});
+    }
 
-      static std::shared_ptr<instruction2> NOP2_() {
-        return std::shared_ptr<instruction2>(new instruction2(NOP2{}));
-      }
+    static std::unique_ptr<instruction2> jms2_uptr(unsigned int a0) {
+      return std::make_unique<instruction2>(JMS2{std::move(a0)});
+    }
 
-      static std::unique_ptr<instruction2> JMS2_uptr(unsigned int a0) {
-        return std::unique_ptr<instruction2>(new instruction2(JMS2{a0}));
-      }
-
-      static std::unique_ptr<instruction2> NOP2_uptr() {
-        return std::unique_ptr<instruction2>(new instruction2(NOP2{}));
-      }
-    };
+    static std::unique_ptr<instruction2> nop2_uptr() {
+      return std::make_unique<instruction2>(NOP2{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -286,8 +281,8 @@ struct InstructionCycles {
   __attribute__((pure)) static unsigned int
   cycles_jms(const std::shared_ptr<state2> &_x,
              const std::shared_ptr<instruction2> &i);
-  static inline const unsigned int test_cycles_jms_constant = cycles_jms(
-      std::make_shared<state2>(state2{0u}), instruction2::ctor::JMS2_(77u));
+  static inline const unsigned int test_cycles_jms_constant =
+      cycles_jms(std::make_shared<state2>(state2{0u}), instruction2::jms2(77u));
   enum class Instr3 {
     e_NOP3,
     e_ADD3,
@@ -376,25 +371,25 @@ struct InstructionCycles {
 
   __attribute__((pure)) static unsigned int cycles_min(const Instr3 i);
   static inline const std::shared_ptr<List<Instr3>> all_instrs3 =
-      List<Instr3>::ctor::Cons_(
+      List<Instr3>::cons(
           Instr3::e_NOP3,
-          List<Instr3>::ctor::Cons_(
+          List<Instr3>::cons(
               Instr3::e_ADD3,
-              List<Instr3>::ctor::Cons_(
+              List<Instr3>::cons(
                   Instr3::e_WRM3,
-                  List<Instr3>::ctor::Cons_(
+                  List<Instr3>::cons(
                       Instr3::e_FIM3,
-                      List<Instr3>::ctor::Cons_(
+                      List<Instr3>::cons(
                           Instr3::e_JMS3,
-                          List<Instr3>::ctor::Cons_(
+                          List<Instr3>::cons(
                               Instr3::e_JCNTAKEN3,
-                              List<Instr3>::ctor::Cons_(
+                              List<Instr3>::cons(
                                   Instr3::e_JCNNOTTAKEN3,
-                                  List<Instr3>::ctor::Cons_(
+                                  List<Instr3>::cons(
                                       Instr3::e_ISZTAKEN3,
-                                      List<Instr3>::ctor::Cons_(
+                                      List<Instr3>::cons(
                                           Instr3::e_ISZZERO3,
-                                          List<Instr3>::ctor::Nil_())))))))));
+                                          List<Instr3>::nil())))))))));
   static inline const bool test_min_cycles_per_instruction =
       all_instrs3->forallb([](Instr3 i) { return 8u <= cycles_min(i); });
   enum class Instr4 {
@@ -485,25 +480,25 @@ struct InstructionCycles {
 
   __attribute__((pure)) static unsigned int cycles_max(const Instr4 i);
   static inline const std::shared_ptr<List<Instr4>> all_instrs4 =
-      List<Instr4>::ctor::Cons_(
+      List<Instr4>::cons(
           Instr4::e_NOP4,
-          List<Instr4>::ctor::Cons_(
+          List<Instr4>::cons(
               Instr4::e_ADD4,
-              List<Instr4>::ctor::Cons_(
+              List<Instr4>::cons(
                   Instr4::e_WRM4,
-                  List<Instr4>::ctor::Cons_(
+                  List<Instr4>::cons(
                       Instr4::e_FIM4,
-                      List<Instr4>::ctor::Cons_(
+                      List<Instr4>::cons(
                           Instr4::e_JMS4,
-                          List<Instr4>::ctor::Cons_(
+                          List<Instr4>::cons(
                               Instr4::e_JCNTAKEN4,
-                              List<Instr4>::ctor::Cons_(
+                              List<Instr4>::cons(
                                   Instr4::e_JCNNOTTAKEN4,
-                                  List<Instr4>::ctor::Cons_(
+                                  List<Instr4>::cons(
                                       Instr4::e_ISZTAKEN4,
-                                      List<Instr4>::ctor::Cons_(
+                                      List<Instr4>::cons(
                                           Instr4::e_ISZZERO4,
-                                          List<Instr4>::ctor::Nil_())))))))));
+                                          List<Instr4>::nil())))))))));
   static inline const bool test_max_cycles_per_instruction =
       all_instrs4->forallb([](Instr4 i) { return cycles_max(i) <= 24u; });
 
@@ -531,6 +526,7 @@ struct InstructionCycles {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit instruction5(NOP5 _v) : d_v_(std::move(_v)) {}
 
@@ -538,35 +534,29 @@ struct InstructionCycles {
 
     explicit instruction5(INC5 _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<instruction5> nop5() {
+      return std::make_shared<instruction5>(NOP5{});
+    }
 
-      static std::shared_ptr<instruction5> NOP5_() {
-        return std::shared_ptr<instruction5>(new instruction5(NOP5{}));
-      }
+    static std::shared_ptr<instruction5> jcn5(unsigned int a0) {
+      return std::make_shared<instruction5>(JCN5{std::move(a0)});
+    }
 
-      static std::shared_ptr<instruction5> JCN5_(unsigned int a0) {
-        return std::shared_ptr<instruction5>(new instruction5(JCN5{a0}));
-      }
+    static std::shared_ptr<instruction5> inc5(unsigned int a0) {
+      return std::make_shared<instruction5>(INC5{std::move(a0)});
+    }
 
-      static std::shared_ptr<instruction5> INC5_(unsigned int a0) {
-        return std::shared_ptr<instruction5>(new instruction5(INC5{a0}));
-      }
+    static std::unique_ptr<instruction5> nop5_uptr() {
+      return std::make_unique<instruction5>(NOP5{});
+    }
 
-      static std::unique_ptr<instruction5> NOP5_uptr() {
-        return std::unique_ptr<instruction5>(new instruction5(NOP5{}));
-      }
+    static std::unique_ptr<instruction5> jcn5_uptr(unsigned int a0) {
+      return std::make_unique<instruction5>(JCN5{std::move(a0)});
+    }
 
-      static std::unique_ptr<instruction5> JCN5_uptr(unsigned int a0) {
-        return std::unique_ptr<instruction5>(new instruction5(JCN5{a0}));
-      }
-
-      static std::unique_ptr<instruction5> INC5_uptr(unsigned int a0) {
-        return std::unique_ptr<instruction5>(new instruction5(INC5{a0}));
-      }
-    };
+    static std::unique_ptr<instruction5> inc5_uptr(unsigned int a0) {
+      return std::make_unique<instruction5>(INC5{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -639,13 +629,13 @@ struct InstructionCycles {
       const std::shared_ptr<List<std::shared_ptr<instruction5>>> &prog);
   static inline const unsigned int test_instruction_cycle_sum = program_cycles5(
       std::make_shared<state5>(state5{0u, false, true}),
-      List<std::shared_ptr<instruction5>>::ctor::Cons_(
-          instruction5::ctor::JCN5_(8u),
-          List<std::shared_ptr<instruction5>>::ctor::Cons_(
-              instruction5::ctor::INC5_(0u),
-              List<std::shared_ptr<instruction5>>::ctor::Cons_(
-                  instruction5::ctor::NOP5_(),
-                  List<std::shared_ptr<instruction5>>::ctor::Nil_()))));
+      List<std::shared_ptr<instruction5>>::cons(
+          instruction5::jcn5(8u),
+          List<std::shared_ptr<instruction5>>::cons(
+              instruction5::inc5(0u),
+              List<std::shared_ptr<instruction5>>::cons(
+                  instruction5::nop5(),
+                  List<std::shared_ptr<instruction5>>::nil()))));
   enum class Instruction6 { e_NOP6 };
 
   template <typename T1>
@@ -679,18 +669,18 @@ struct InstructionCycles {
   __attribute__((pure)) static unsigned int
   program_cycles6(const std::shared_ptr<state6> &s,
                   const std::shared_ptr<List<Instruction6>> &prog);
-  static inline const unsigned int singleton_cycles6 = program_cycles6(
-      std::make_shared<state6>(state6{0u}),
-      List<Instruction6>::ctor::Cons_(Instruction6::e_NOP6,
-                                      List<Instruction6>::ctor::Nil_()));
+  static inline const unsigned int singleton_cycles6 =
+      program_cycles6(std::make_shared<state6>(state6{0u}),
+                      List<Instruction6>::cons(Instruction6::e_NOP6,
+                                               List<Instruction6>::nil()));
   static inline const unsigned int three_nop_cycles6 = program_cycles6(
       std::make_shared<state6>(state6{0u}),
-      List<Instruction6>::ctor::Cons_(
+      List<Instruction6>::cons(
           Instruction6::e_NOP6,
-          List<Instruction6>::ctor::Cons_(
+          List<Instruction6>::cons(
               Instruction6::e_NOP6,
-              List<Instruction6>::ctor::Cons_(
-                  Instruction6::e_NOP6, List<Instruction6>::ctor::Nil_()))));
+              List<Instruction6>::cons(Instruction6::e_NOP6,
+                                       List<Instruction6>::nil()))));
   static inline const std::pair<unsigned int, unsigned int>
       test_program_cycles =
           std::make_pair(singleton_cycles6, three_nop_cycles6);
@@ -727,10 +717,10 @@ struct InstructionCycles {
   __attribute__((pure)) static unsigned int
   program_cycles7(const std::shared_ptr<state7> &s,
                   const std::shared_ptr<List<Instruction7>> &prog);
-  static inline const unsigned int test_program_cycles_single = program_cycles7(
-      std::make_shared<state7>(state7{16u}),
-      List<Instruction7>::ctor::Cons_(Instruction7::e_NOP7,
-                                      List<Instruction7>::ctor::Nil_()));
+  static inline const unsigned int test_program_cycles_single =
+      program_cycles7(std::make_shared<state7>(state7{16u}),
+                      List<Instruction7>::cons(Instruction7::e_NOP7,
+                                               List<Instruction7>::nil()));
   static inline const std::pair<
       std::pair<
           std::pair<

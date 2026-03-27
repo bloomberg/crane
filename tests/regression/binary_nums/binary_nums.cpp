@@ -15,13 +15,13 @@ std::shared_ptr<Positive> Pos::succ(const std::shared_ptr<Positive> &x) {
   return std::visit(
       Overloaded{
           [](const typename Positive::XI _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XO_(succ(_args.d_a0));
+            return Positive::xo(succ(_args.d_a0));
           },
           [](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XI_(_args.d_a0);
+            return Positive::xi(_args.d_a0);
           },
           [](const typename Positive::XH _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XO_(Positive::ctor::XH_());
+            return Positive::xo(Positive::xh());
           }},
       x->v());
 }
@@ -34,52 +34,50 @@ std::shared_ptr<Positive> Pos::add(const std::shared_ptr<Positive> &x,
             return std::visit(
                 Overloaded{[&](const typename Positive::XI _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(
+                             return Positive::xo(
                                  add_carry(_args.d_a0, _args0.d_a0));
                            },
                            [&](const typename Positive::XO _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(
-                                 add(_args.d_a0, _args0.d_a0));
+                             return Positive::xi(add(_args.d_a0, _args0.d_a0));
                            },
                            [&](const typename Positive::XH _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(succ(_args.d_a0));
+                             return Positive::xo(succ(_args.d_a0));
                            }},
                 y->v());
           },
           [&](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
             return std::visit(
-                Overloaded{
-                    [&](const typename Positive::XI _args0)
-                        -> std::shared_ptr<Positive> {
-                      return Positive::ctor::XI_(add(_args.d_a0, _args0.d_a0));
-                    },
-                    [&](const typename Positive::XO _args0)
-                        -> std::shared_ptr<Positive> {
-                      return Positive::ctor::XO_(add(_args.d_a0, _args0.d_a0));
-                    },
-                    [&](const typename Positive::XH _args0)
-                        -> std::shared_ptr<Positive> {
-                      return Positive::ctor::XI_(_args.d_a0);
-                    }},
+                Overloaded{[&](const typename Positive::XI _args0)
+                               -> std::shared_ptr<Positive> {
+                             return Positive::xi(add(_args.d_a0, _args0.d_a0));
+                           },
+                           [&](const typename Positive::XO _args0)
+                               -> std::shared_ptr<Positive> {
+                             return Positive::xo(add(_args.d_a0, _args0.d_a0));
+                           },
+                           [&](const typename Positive::XH _args0)
+                               -> std::shared_ptr<Positive> {
+                             return Positive::xi(_args.d_a0);
+                           }},
                 y->v());
           },
           [&](const typename Positive::XH _args) -> std::shared_ptr<Positive> {
-            return std::visit(
-                Overloaded{[](const typename Positive::XI _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(succ(_args0.d_a0));
-                           },
-                           [](const typename Positive::XO _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(_args0.d_a0);
-                           },
-                           [](const typename Positive::XH _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(Positive::ctor::XH_());
-                           }},
-                y->v());
+            return std::visit(Overloaded{[](const typename Positive::XI _args0)
+                                             -> std::shared_ptr<Positive> {
+                                           return Positive::xo(
+                                               succ(_args0.d_a0));
+                                         },
+                                         [](const typename Positive::XO _args0)
+                                             -> std::shared_ptr<Positive> {
+                                           return Positive::xi(_args0.d_a0);
+                                         },
+                                         [](const typename Positive::XH _args0)
+                                             -> std::shared_ptr<Positive> {
+                                           return Positive::xo(Positive::xh());
+                                         }},
+                              y->v());
           }},
       x->v());
 }
@@ -90,37 +88,35 @@ std::shared_ptr<Positive> Pos::add_carry(const std::shared_ptr<Positive> &x,
       Overloaded{
           [&](const typename Positive::XI _args) -> std::shared_ptr<Positive> {
             return std::visit(
-                Overloaded{[&](const typename Positive::XI _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(
-                                 add_carry(_args.d_a0, _args0.d_a0));
-                           },
-                           [&](const typename Positive::XO _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(
-                                 add_carry(_args.d_a0, _args0.d_a0));
-                           },
-                           [&](const typename Positive::XH _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(succ(_args.d_a0));
-                           }},
+                Overloaded{
+                    [&](const typename Positive::XI _args0)
+                        -> std::shared_ptr<Positive> {
+                      return Positive::xi(add_carry(_args.d_a0, _args0.d_a0));
+                    },
+                    [&](const typename Positive::XO _args0)
+                        -> std::shared_ptr<Positive> {
+                      return Positive::xo(add_carry(_args.d_a0, _args0.d_a0));
+                    },
+                    [&](const typename Positive::XH _args0)
+                        -> std::shared_ptr<Positive> {
+                      return Positive::xi(succ(_args.d_a0));
+                    }},
                 y->v());
           },
           [&](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
             return std::visit(
                 Overloaded{[&](const typename Positive::XI _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(
+                             return Positive::xo(
                                  add_carry(_args.d_a0, _args0.d_a0));
                            },
                            [&](const typename Positive::XO _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(
-                                 add(_args.d_a0, _args0.d_a0));
+                             return Positive::xi(add(_args.d_a0, _args0.d_a0));
                            },
                            [&](const typename Positive::XH _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(succ(_args.d_a0));
+                             return Positive::xo(succ(_args.d_a0));
                            }},
                 y->v());
           },
@@ -128,15 +124,15 @@ std::shared_ptr<Positive> Pos::add_carry(const std::shared_ptr<Positive> &x,
             return std::visit(
                 Overloaded{[](const typename Positive::XI _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(succ(_args0.d_a0));
+                             return Positive::xi(succ(_args0.d_a0));
                            },
                            [](const typename Positive::XO _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(succ(_args0.d_a0));
+                             return Positive::xo(succ(_args0.d_a0));
                            },
                            [](const typename Positive::XH _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(Positive::ctor::XH_());
+                             return Positive::xi(Positive::xh());
                            }},
                 y->v());
           }},
@@ -147,13 +143,13 @@ std::shared_ptr<Positive> Pos::pred_double(const std::shared_ptr<Positive> &x) {
   return std::visit(
       Overloaded{
           [](const typename Positive::XI _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XI_(Positive::ctor::XO_(_args.d_a0));
+            return Positive::xi(Positive::xo(_args.d_a0));
           },
           [](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XI_(pred_double(_args.d_a0));
+            return Positive::xi(pred_double(_args.d_a0));
           },
           [](const typename Positive::XH _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XH_();
+            return Positive::xh();
           }},
       x->v());
 }
@@ -161,13 +157,13 @@ std::shared_ptr<Positive> Pos::pred_double(const std::shared_ptr<Positive> &x) {
 std::shared_ptr<N> Pos::pred_N(const std::shared_ptr<Positive> &x) {
   return std::visit(
       Overloaded{[](const typename Positive::XI _args) -> std::shared_ptr<N> {
-                   return N::ctor::Npos_(Positive::ctor::XO_(_args.d_a0));
+                   return N::npos(Positive::xo(_args.d_a0));
                  },
                  [](const typename Positive::XO _args) -> std::shared_ptr<N> {
-                   return N::ctor::Npos_(pred_double(_args.d_a0));
+                   return N::npos(pred_double(_args.d_a0));
                  },
                  [](const typename Positive::XH _args) -> std::shared_ptr<N> {
-                   return N::ctor::N0_();
+                   return N::n0();
                  }},
       x->v());
 }
@@ -175,32 +171,30 @@ std::shared_ptr<N> Pos::pred_N(const std::shared_ptr<Positive> &x) {
 std::shared_ptr<Pos::mask>
 Pos::succ_double_mask(const std::shared_ptr<Pos::mask> &x) {
   return std::visit(
-      Overloaded{
-          [](const typename Pos::mask::IsNul _args)
-              -> std::shared_ptr<Pos::mask> {
-            return mask::ctor::IsPos_(Positive::ctor::XH_());
-          },
-          [](const typename Pos::mask::IsPos _args)
-              -> std::shared_ptr<Pos::mask> {
-            return mask::ctor::IsPos_(Positive::ctor::XI_(_args.d_a0));
-          },
-          [](const typename Pos::mask::IsNeg _args)
-              -> std::shared_ptr<Pos::mask> { return mask::ctor::IsNeg_(); }},
+      Overloaded{[](const typename Pos::mask::IsNul _args)
+                     -> std::shared_ptr<Pos::mask> {
+                   return mask::ispos(Positive::xh());
+                 },
+                 [](const typename Pos::mask::IsPos _args)
+                     -> std::shared_ptr<Pos::mask> {
+                   return mask::ispos(Positive::xi(_args.d_a0));
+                 },
+                 [](const typename Pos::mask::IsNeg _args)
+                     -> std::shared_ptr<Pos::mask> { return mask::isneg(); }},
       x->v());
 }
 
 std::shared_ptr<Pos::mask>
 Pos::double_mask(const std::shared_ptr<Pos::mask> &x) {
   return std::visit(
-      Overloaded{
-          [](const typename Pos::mask::IsNul _args)
-              -> std::shared_ptr<Pos::mask> { return mask::ctor::IsNul_(); },
-          [](const typename Pos::mask::IsPos _args)
-              -> std::shared_ptr<Pos::mask> {
-            return mask::ctor::IsPos_(Positive::ctor::XO_(_args.d_a0));
-          },
-          [](const typename Pos::mask::IsNeg _args)
-              -> std::shared_ptr<Pos::mask> { return mask::ctor::IsNeg_(); }},
+      Overloaded{[](const typename Pos::mask::IsNul _args)
+                     -> std::shared_ptr<Pos::mask> { return mask::isnul(); },
+                 [](const typename Pos::mask::IsPos _args)
+                     -> std::shared_ptr<Pos::mask> {
+                   return mask::ispos(Positive::xo(_args.d_a0));
+                 },
+                 [](const typename Pos::mask::IsNeg _args)
+                     -> std::shared_ptr<Pos::mask> { return mask::isneg(); }},
       x->v());
 }
 
@@ -209,15 +203,13 @@ Pos::double_pred_mask(const std::shared_ptr<Positive> &x) {
   return std::visit(
       Overloaded{
           [](const typename Positive::XI _args) -> std::shared_ptr<Pos::mask> {
-            return mask::ctor::IsPos_(
-                Positive::ctor::XO_(Positive::ctor::XO_(_args.d_a0)));
+            return mask::ispos(Positive::xo(Positive::xo(_args.d_a0)));
           },
           [](const typename Positive::XO _args) -> std::shared_ptr<Pos::mask> {
-            return mask::ctor::IsPos_(
-                Positive::ctor::XO_(pred_double(_args.d_a0)));
+            return mask::ispos(Positive::xo(pred_double(_args.d_a0)));
           },
           [](const typename Positive::XH _args) -> std::shared_ptr<Pos::mask> {
-            return mask::ctor::IsNul_();
+            return mask::isnul();
           }},
       x->v());
 }
@@ -227,22 +219,22 @@ std::shared_ptr<Pos::mask> Pos::sub_mask(const std::shared_ptr<Positive> &x,
   return std::visit(
       Overloaded{
           [&](const typename Positive::XI _args) -> std::shared_ptr<Pos::mask> {
-            return std::visit(Overloaded{[&](const typename Positive::XI _args0)
-                                             -> std::shared_ptr<Pos::mask> {
-                                           return double_mask(sub_mask(
-                                               _args.d_a0, _args0.d_a0));
-                                         },
-                                         [&](const typename Positive::XO _args0)
-                                             -> std::shared_ptr<Pos::mask> {
-                                           return succ_double_mask(sub_mask(
-                                               _args.d_a0, _args0.d_a0));
-                                         },
-                                         [&](const typename Positive::XH _args0)
-                                             -> std::shared_ptr<Pos::mask> {
-                                           return mask::ctor::IsPos_(
-                                               Positive::ctor::XO_(_args.d_a0));
-                                         }},
-                              y->v());
+            return std::visit(
+                Overloaded{[&](const typename Positive::XI _args0)
+                               -> std::shared_ptr<Pos::mask> {
+                             return double_mask(
+                                 sub_mask(_args.d_a0, _args0.d_a0));
+                           },
+                           [&](const typename Positive::XO _args0)
+                               -> std::shared_ptr<Pos::mask> {
+                             return succ_double_mask(
+                                 sub_mask(_args.d_a0, _args0.d_a0));
+                           },
+                           [&](const typename Positive::XH _args0)
+                               -> std::shared_ptr<Pos::mask> {
+                             return mask::ispos(Positive::xo(_args.d_a0));
+                           }},
+                y->v());
           },
           [&](const typename Positive::XO _args) -> std::shared_ptr<Pos::mask> {
             return std::visit(
@@ -258,24 +250,22 @@ std::shared_ptr<Pos::mask> Pos::sub_mask(const std::shared_ptr<Positive> &x,
                            },
                            [&](const typename Positive::XH _args0)
                                -> std::shared_ptr<Pos::mask> {
-                             return mask::ctor::IsPos_(pred_double(_args.d_a0));
+                             return mask::ispos(pred_double(_args.d_a0));
                            }},
                 y->v());
           },
           [&](const typename Positive::XH _args) -> std::shared_ptr<Pos::mask> {
-            return std::visit(Overloaded{[](const typename Positive::XI _args0)
-                                             -> std::shared_ptr<Pos::mask> {
-                                           return mask::ctor::IsNeg_();
-                                         },
-                                         [](const typename Positive::XO _args0)
-                                             -> std::shared_ptr<Pos::mask> {
-                                           return mask::ctor::IsNeg_();
-                                         },
-                                         [](const typename Positive::XH _args0)
-                                             -> std::shared_ptr<Pos::mask> {
-                                           return mask::ctor::IsNul_();
-                                         }},
-                              y->v());
+            return std::visit(
+                Overloaded{
+                    [](const typename Positive::XI _args0)
+                        -> std::shared_ptr<Pos::mask> { return mask::isneg(); },
+                    [](const typename Positive::XO _args0)
+                        -> std::shared_ptr<Pos::mask> { return mask::isneg(); },
+                    [](const typename Positive::XH _args0)
+                        -> std::shared_ptr<Pos::mask> {
+                      return mask::isnul();
+                    }},
+                y->v());
           }},
       x->v());
 }
@@ -299,7 +289,7 @@ Pos::sub_mask_carry(const std::shared_ptr<Positive> &x,
                            },
                            [&](const typename Positive::XH _args0)
                                -> std::shared_ptr<Pos::mask> {
-                             return mask::ctor::IsPos_(pred_double(_args.d_a0));
+                             return mask::ispos(pred_double(_args.d_a0));
                            }},
                 y->v());
           },
@@ -322,7 +312,7 @@ Pos::sub_mask_carry(const std::shared_ptr<Positive> &x,
                 y->v());
           },
           [](const typename Positive::XH _args) -> std::shared_ptr<Pos::mask> {
-            return mask::ctor::IsNeg_();
+            return mask::isneg();
           }},
       x->v());
 }
@@ -332,10 +322,10 @@ std::shared_ptr<Positive> Pos::mul(const std::shared_ptr<Positive> &x,
   return std::visit(
       Overloaded{
           [&](const typename Positive::XI _args) -> std::shared_ptr<Positive> {
-            return add(y, Positive::ctor::XO_(mul(_args.d_a0, y)));
+            return add(y, Positive::xo(mul(_args.d_a0, y)));
           },
           [&](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XO_(mul(_args.d_a0, std::move(y)));
+            return Positive::xo(mul(_args.d_a0, std::move(y)));
           },
           [&](const typename Positive::XH _args) -> std::shared_ptr<Positive> {
             return std::move(y);
@@ -414,13 +404,13 @@ std::shared_ptr<Positive> Coq_Pos::succ(const std::shared_ptr<Positive> &x) {
   return std::visit(
       Overloaded{
           [](const typename Positive::XI _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XO_(succ(_args.d_a0));
+            return Positive::xo(succ(_args.d_a0));
           },
           [](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XI_(_args.d_a0);
+            return Positive::xi(_args.d_a0);
           },
           [](const typename Positive::XH _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XO_(Positive::ctor::XH_());
+            return Positive::xo(Positive::xh());
           }},
       x->v());
 }
@@ -433,52 +423,50 @@ std::shared_ptr<Positive> Coq_Pos::add(const std::shared_ptr<Positive> &x,
             return std::visit(
                 Overloaded{[&](const typename Positive::XI _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(
+                             return Positive::xo(
                                  add_carry(_args.d_a0, _args0.d_a0));
                            },
                            [&](const typename Positive::XO _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(
-                                 add(_args.d_a0, _args0.d_a0));
+                             return Positive::xi(add(_args.d_a0, _args0.d_a0));
                            },
                            [&](const typename Positive::XH _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(succ(_args.d_a0));
+                             return Positive::xo(succ(_args.d_a0));
                            }},
                 y->v());
           },
           [&](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
             return std::visit(
-                Overloaded{
-                    [&](const typename Positive::XI _args0)
-                        -> std::shared_ptr<Positive> {
-                      return Positive::ctor::XI_(add(_args.d_a0, _args0.d_a0));
-                    },
-                    [&](const typename Positive::XO _args0)
-                        -> std::shared_ptr<Positive> {
-                      return Positive::ctor::XO_(add(_args.d_a0, _args0.d_a0));
-                    },
-                    [&](const typename Positive::XH _args0)
-                        -> std::shared_ptr<Positive> {
-                      return Positive::ctor::XI_(_args.d_a0);
-                    }},
+                Overloaded{[&](const typename Positive::XI _args0)
+                               -> std::shared_ptr<Positive> {
+                             return Positive::xi(add(_args.d_a0, _args0.d_a0));
+                           },
+                           [&](const typename Positive::XO _args0)
+                               -> std::shared_ptr<Positive> {
+                             return Positive::xo(add(_args.d_a0, _args0.d_a0));
+                           },
+                           [&](const typename Positive::XH _args0)
+                               -> std::shared_ptr<Positive> {
+                             return Positive::xi(_args.d_a0);
+                           }},
                 y->v());
           },
           [&](const typename Positive::XH _args) -> std::shared_ptr<Positive> {
-            return std::visit(
-                Overloaded{[](const typename Positive::XI _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(succ(_args0.d_a0));
-                           },
-                           [](const typename Positive::XO _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(_args0.d_a0);
-                           },
-                           [](const typename Positive::XH _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(Positive::ctor::XH_());
-                           }},
-                y->v());
+            return std::visit(Overloaded{[](const typename Positive::XI _args0)
+                                             -> std::shared_ptr<Positive> {
+                                           return Positive::xo(
+                                               succ(_args0.d_a0));
+                                         },
+                                         [](const typename Positive::XO _args0)
+                                             -> std::shared_ptr<Positive> {
+                                           return Positive::xi(_args0.d_a0);
+                                         },
+                                         [](const typename Positive::XH _args0)
+                                             -> std::shared_ptr<Positive> {
+                                           return Positive::xo(Positive::xh());
+                                         }},
+                              y->v());
           }},
       x->v());
 }
@@ -490,37 +478,35 @@ Coq_Pos::add_carry(const std::shared_ptr<Positive> &x,
       Overloaded{
           [&](const typename Positive::XI _args) -> std::shared_ptr<Positive> {
             return std::visit(
-                Overloaded{[&](const typename Positive::XI _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(
-                                 add_carry(_args.d_a0, _args0.d_a0));
-                           },
-                           [&](const typename Positive::XO _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(
-                                 add_carry(_args.d_a0, _args0.d_a0));
-                           },
-                           [&](const typename Positive::XH _args0)
-                               -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(succ(_args.d_a0));
-                           }},
+                Overloaded{
+                    [&](const typename Positive::XI _args0)
+                        -> std::shared_ptr<Positive> {
+                      return Positive::xi(add_carry(_args.d_a0, _args0.d_a0));
+                    },
+                    [&](const typename Positive::XO _args0)
+                        -> std::shared_ptr<Positive> {
+                      return Positive::xo(add_carry(_args.d_a0, _args0.d_a0));
+                    },
+                    [&](const typename Positive::XH _args0)
+                        -> std::shared_ptr<Positive> {
+                      return Positive::xi(succ(_args.d_a0));
+                    }},
                 y->v());
           },
           [&](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
             return std::visit(
                 Overloaded{[&](const typename Positive::XI _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(
+                             return Positive::xo(
                                  add_carry(_args.d_a0, _args0.d_a0));
                            },
                            [&](const typename Positive::XO _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(
-                                 add(_args.d_a0, _args0.d_a0));
+                             return Positive::xi(add(_args.d_a0, _args0.d_a0));
                            },
                            [&](const typename Positive::XH _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(succ(_args.d_a0));
+                             return Positive::xo(succ(_args.d_a0));
                            }},
                 y->v());
           },
@@ -528,15 +514,15 @@ Coq_Pos::add_carry(const std::shared_ptr<Positive> &x,
             return std::visit(
                 Overloaded{[](const typename Positive::XI _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(succ(_args0.d_a0));
+                             return Positive::xi(succ(_args0.d_a0));
                            },
                            [](const typename Positive::XO _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XO_(succ(_args0.d_a0));
+                             return Positive::xo(succ(_args0.d_a0));
                            },
                            [](const typename Positive::XH _args0)
                                -> std::shared_ptr<Positive> {
-                             return Positive::ctor::XI_(Positive::ctor::XH_());
+                             return Positive::xi(Positive::xh());
                            }},
                 y->v());
           }},
@@ -548,10 +534,10 @@ std::shared_ptr<Positive> Coq_Pos::mul(const std::shared_ptr<Positive> &x,
   return std::visit(
       Overloaded{
           [&](const typename Positive::XI _args) -> std::shared_ptr<Positive> {
-            return add(y, Positive::ctor::XO_(mul(_args.d_a0, y)));
+            return add(y, Positive::xo(mul(_args.d_a0, y)));
           },
           [&](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
-            return Positive::ctor::XO_(mul(_args.d_a0, std::move(y)));
+            return Positive::xo(mul(_args.d_a0, std::move(y)));
           },
           [&](const typename Positive::XH _args) -> std::shared_ptr<Positive> {
             return std::move(y);
@@ -578,7 +564,7 @@ std::shared_ptr<N> BinNat::sub(std::shared_ptr<N> n,
       return std::visit(
           Overloaded{
               [](const typename N::N0 _args) -> std::shared_ptr<N> {
-                return N::ctor::N0_();
+                return N::n0();
               },
               [&](const typename N::Npos _args) -> std::shared_ptr<N> {
                 return std::visit(
@@ -591,16 +577,14 @@ std::shared_ptr<N> BinNat::sub(std::shared_ptr<N> n,
                           return std::visit(
                               Overloaded{
                                   [](const typename Pos::mask::IsNul _args1)
-                                      -> std::shared_ptr<N> {
-                                    return N::ctor::N0_();
-                                  },
+                                      -> std::shared_ptr<N> { return N::n0(); },
                                   [](const typename Pos::mask::IsPos _args1)
                                       -> std::shared_ptr<N> {
-                                    return N::ctor::Npos_(_args1.d_a0);
+                                    return N::npos(_args1.d_a0);
                                   },
                                   [](const typename Pos::mask::IsNeg _args1)
                                       -> std::shared_ptr<N> {
-                                    return N::ctor::N0_();
+                                    return N::n0();
                                   }},
                               Pos::sub_mask(_args.d_a0, _args0.d_a0)->v());
                         }},
@@ -641,7 +625,7 @@ __attribute__((pure)) Comparison BinNat::compare(const std::shared_ptr<N> &n,
 std::shared_ptr<N> BinNat::pred(const std::shared_ptr<N> &n) {
   return std::visit(
       Overloaded{[](const typename N::N0 _args) -> std::shared_ptr<N> {
-                   return N::ctor::N0_();
+                   return N::n0();
                  },
                  [](const typename N::Npos _args) -> std::shared_ptr<N> {
                    return Pos::pred_N(_args.d_a0);
@@ -671,8 +655,7 @@ std::shared_ptr<N> BinNat::add(std::shared_ptr<N> n, std::shared_ptr<N> m) {
                         },
                         [&](const typename N::Npos _args0)
                             -> std::shared_ptr<N> {
-                          return N::ctor::Npos_(
-                              Coq_Pos::add(_args.d_a0, _args0.d_a0));
+                          return N::npos(Coq_Pos::add(_args.d_a0, _args0.d_a0));
                         }},
                     std::move(m)->v());
               }
@@ -686,17 +669,16 @@ std::shared_ptr<N> BinNat::mul(const std::shared_ptr<N> &n,
   return std::visit(
       Overloaded{
           [](const typename N::N0 _args) -> std::shared_ptr<N> {
-            return N::ctor::N0_();
+            return N::n0();
           },
           [&](const typename N::Npos _args) -> std::shared_ptr<N> {
             return std::visit(
                 Overloaded{
                     [](const typename N::N0 _args0) -> std::shared_ptr<N> {
-                      return N::ctor::N0_();
+                      return N::n0();
                     },
                     [&](const typename N::Npos _args0) -> std::shared_ptr<N> {
-                      return N::ctor::Npos_(
-                          Coq_Pos::mul(_args.d_a0, _args0.d_a0));
+                      return N::npos(Coq_Pos::mul(_args.d_a0, _args0.d_a0));
                     }},
                 m->v());
           }},
@@ -715,13 +697,13 @@ __attribute__((pure)) unsigned int BinNat::to_nat(const std::shared_ptr<N> &a) {
 std::shared_ptr<Z> BinInt::double_(const std::shared_ptr<Z> &x) {
   return std::visit(
       Overloaded{[](const typename Z::Z0 _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Z0_();
+                   return Z::z0();
                  },
                  [](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(Positive::ctor::XO_(_args.d_a0));
+                   return Z::zpos(Positive::xo(_args.d_a0));
                  },
                  [](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zneg_(Positive::ctor::XO_(_args.d_a0));
+                   return Z::zneg(Positive::xo(_args.d_a0));
                  }},
       x->v());
 }
@@ -729,13 +711,13 @@ std::shared_ptr<Z> BinInt::double_(const std::shared_ptr<Z> &x) {
 std::shared_ptr<Z> BinInt::succ_double(const std::shared_ptr<Z> &x) {
   return std::visit(
       Overloaded{[](const typename Z::Z0 _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(Positive::ctor::XH_());
+                   return Z::zpos(Positive::xh());
                  },
                  [](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(Positive::ctor::XI_(_args.d_a0));
+                   return Z::zpos(Positive::xi(_args.d_a0));
                  },
                  [](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zneg_(Pos::pred_double(_args.d_a0));
+                   return Z::zneg(Pos::pred_double(_args.d_a0));
                  }},
       x->v());
 }
@@ -743,13 +725,13 @@ std::shared_ptr<Z> BinInt::succ_double(const std::shared_ptr<Z> &x) {
 std::shared_ptr<Z> BinInt::pred_double(const std::shared_ptr<Z> &x) {
   return std::visit(
       Overloaded{[](const typename Z::Z0 _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zneg_(Positive::ctor::XH_());
+                   return Z::zneg(Positive::xh());
                  },
                  [](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(Pos::pred_double(_args.d_a0));
+                   return Z::zpos(Pos::pred_double(_args.d_a0));
                  },
                  [](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zneg_(Positive::ctor::XI_(_args.d_a0));
+                   return Z::zneg(Positive::xi(_args.d_a0));
                  }},
       x->v());
 }
@@ -772,8 +754,7 @@ std::shared_ptr<Z> BinInt::pos_sub(const std::shared_ptr<Positive> &x,
                            },
                            [&](const typename Positive::XH _args0)
                                -> std::shared_ptr<Z> {
-                             return Z::ctor::Zpos_(
-                                 Positive::ctor::XO_(_args.d_a0));
+                             return Z::zpos(Positive::xo(_args.d_a0));
                            }},
                 y->v());
           },
@@ -791,24 +772,22 @@ std::shared_ptr<Z> BinInt::pos_sub(const std::shared_ptr<Positive> &x,
                            },
                            [&](const typename Positive::XH _args0)
                                -> std::shared_ptr<Z> {
-                             return Z::ctor::Zpos_(
-                                 Pos::pred_double(_args.d_a0));
+                             return Z::zpos(Pos::pred_double(_args.d_a0));
                            }},
                 y->v());
           },
           [&](const typename Positive::XH _args) -> std::shared_ptr<Z> {
             return std::visit(
-                Overloaded{
-                    [](const typename Positive::XI _args0)
-                        -> std::shared_ptr<Z> {
-                      return Z::ctor::Zneg_(Positive::ctor::XO_(_args0.d_a0));
-                    },
-                    [](const typename Positive::XO _args0)
-                        -> std::shared_ptr<Z> {
-                      return Z::ctor::Zneg_(Pos::pred_double(_args0.d_a0));
-                    },
-                    [](const typename Positive::XH _args0)
-                        -> std::shared_ptr<Z> { return Z::ctor::Z0_(); }},
+                Overloaded{[](const typename Positive::XI _args0)
+                               -> std::shared_ptr<Z> {
+                             return Z::zneg(Positive::xo(_args0.d_a0));
+                           },
+                           [](const typename Positive::XO _args0)
+                               -> std::shared_ptr<Z> {
+                             return Z::zneg(Pos::pred_double(_args0.d_a0));
+                           },
+                           [](const typename Positive::XH _args0)
+                               -> std::shared_ptr<Z> { return Z::z0(); }},
                 y->v());
           }},
       x->v());
@@ -836,8 +815,7 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
                         },
                         [&](const typename Z::Zpos _args0)
                             -> std::shared_ptr<Z> {
-                          return Z::ctor::Zpos_(
-                              Pos::add(_args.d_a0, _args0.d_a0));
+                          return Z::zpos(Pos::add(_args.d_a0, _args0.d_a0));
                         },
                         [&](const typename Z::Zneg _args0)
                             -> std::shared_ptr<Z> {
@@ -867,8 +845,7 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
                         },
                         [&](const typename Z::Zneg _args0)
                             -> std::shared_ptr<Z> {
-                          return Z::ctor::Zneg_(
-                              Pos::add(_args.d_a0, _args0.d_a0));
+                          return Z::zneg(Pos::add(_args.d_a0, _args0.d_a0));
                         }},
                     std::move(y)->v());
               }
@@ -880,13 +857,13 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
 std::shared_ptr<Z> BinInt::opp(const std::shared_ptr<Z> &x) {
   return std::visit(
       Overloaded{[](const typename Z::Z0 _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Z0_();
+                   return Z::z0();
                  },
                  [](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zneg_(_args.d_a0);
+                   return Z::zneg(_args.d_a0);
                  },
                  [](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(_args.d_a0);
+                   return Z::zpos(_args.d_a0);
                  }},
       x->v());
 }
@@ -901,19 +878,19 @@ std::shared_ptr<Z> BinInt::mul(const std::shared_ptr<Z> &x,
   return std::visit(
       Overloaded{
           [](const typename Z::Z0 _args) -> std::shared_ptr<Z> {
-            return Z::ctor::Z0_();
+            return Z::z0();
           },
           [&](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
             return std::visit(
                 Overloaded{
                     [](const typename Z::Z0 _args0) -> std::shared_ptr<Z> {
-                      return Z::ctor::Z0_();
+                      return Z::z0();
                     },
                     [&](const typename Z::Zpos _args0) -> std::shared_ptr<Z> {
-                      return Z::ctor::Zpos_(Pos::mul(_args.d_a0, _args0.d_a0));
+                      return Z::zpos(Pos::mul(_args.d_a0, _args0.d_a0));
                     },
                     [&](const typename Z::Zneg _args0) -> std::shared_ptr<Z> {
-                      return Z::ctor::Zneg_(Pos::mul(_args.d_a0, _args0.d_a0));
+                      return Z::zneg(Pos::mul(_args.d_a0, _args0.d_a0));
                     }},
                 y->v());
           },
@@ -921,13 +898,13 @@ std::shared_ptr<Z> BinInt::mul(const std::shared_ptr<Z> &x,
             return std::visit(
                 Overloaded{
                     [](const typename Z::Z0 _args0) -> std::shared_ptr<Z> {
-                      return Z::ctor::Z0_();
+                      return Z::z0();
                     },
                     [&](const typename Z::Zpos _args0) -> std::shared_ptr<Z> {
-                      return Z::ctor::Zneg_(Pos::mul(_args.d_a0, _args0.d_a0));
+                      return Z::zneg(Pos::mul(_args.d_a0, _args0.d_a0));
                     },
                     [&](const typename Z::Zneg _args0) -> std::shared_ptr<Z> {
-                      return Z::ctor::Zpos_(Pos::mul(_args.d_a0, _args0.d_a0));
+                      return Z::zpos(Pos::mul(_args.d_a0, _args0.d_a0));
                     }},
                 y->v());
           }},
@@ -995,13 +972,13 @@ __attribute__((pure)) unsigned int BinInt::to_nat(const std::shared_ptr<Z> &z) {
 std::shared_ptr<Z> BinInt::abs(const std::shared_ptr<Z> &z) {
   return std::visit(
       Overloaded{[](const typename Z::Z0 _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Z0_();
+                   return Z::z0();
                  },
                  [](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(_args.d_a0);
+                   return Z::zpos(_args.d_a0);
                  },
                  [](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(_args.d_a0);
+                   return Z::zpos(_args.d_a0);
                  }},
       z->v());
 }
@@ -1026,13 +1003,13 @@ std::shared_ptr<N> BinaryNums::n_max(std::shared_ptr<N> a,
 std::shared_ptr<Z> BinaryNums::z_sign(const std::shared_ptr<Z> &z) {
   return std::visit(
       Overloaded{[](const typename Z::Z0 _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Z0_();
+                   return Z::z0();
                  },
                  [](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zpos_(Positive::ctor::XH_());
+                   return Z::zpos(Positive::xh());
                  },
                  [](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-                   return Z::ctor::Zneg_(Positive::ctor::XH_());
+                   return Z::zneg(Positive::xh());
                  }},
       z->v());
 }

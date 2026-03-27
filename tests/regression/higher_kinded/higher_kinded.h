@@ -43,36 +43,42 @@ struct HigherKinded {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit Tree(Leaf _v) : d_v_(std::move(_v)) {}
 
     explicit Tree(Branch _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<Tree<t_A>> leaf(t_A a0) {
+      return std::make_shared<Tree<t_A>>(Leaf{std::move(a0)});
+    }
 
-      static std::shared_ptr<Tree<t_A>> Leaf_(t_A a0) {
-        return std::shared_ptr<Tree<t_A>>(new Tree<t_A>(Leaf{a0}));
-      }
+    static std::shared_ptr<Tree<t_A>>
+    branch(const std::shared_ptr<Tree<t_A>> &a0,
+           const std::shared_ptr<Tree<t_A>> &a1) {
+      return std::make_shared<Tree<t_A>>(Branch{a0, a1});
+    }
 
-      static std::shared_ptr<Tree<t_A>>
-      Branch_(const std::shared_ptr<Tree<t_A>> &a0,
-              const std::shared_ptr<Tree<t_A>> &a1) {
-        return std::shared_ptr<Tree<t_A>>(new Tree<t_A>(Branch{a0, a1}));
-      }
+    static std::shared_ptr<Tree<t_A>> branch(std::shared_ptr<Tree<t_A>> &&a0,
+                                             std::shared_ptr<Tree<t_A>> &&a1) {
+      return std::make_shared<Tree<t_A>>(Branch{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<Tree<t_A>> Leaf_uptr(t_A a0) {
-        return std::unique_ptr<Tree<t_A>>(new Tree<t_A>(Leaf{a0}));
-      }
+    static std::unique_ptr<Tree<t_A>> leaf_uptr(t_A a0) {
+      return std::make_unique<Tree<t_A>>(Leaf{std::move(a0)});
+    }
 
-      static std::unique_ptr<Tree<t_A>>
-      Branch_uptr(const std::shared_ptr<Tree<t_A>> &a0,
-                  const std::shared_ptr<Tree<t_A>> &a1) {
-        return std::unique_ptr<Tree<t_A>>(new Tree<t_A>(Branch{a0, a1}));
-      }
-    };
+    static std::unique_ptr<Tree<t_A>>
+    branch_uptr(const std::shared_ptr<Tree<t_A>> &a0,
+                const std::shared_ptr<Tree<t_A>> &a1) {
+      return std::make_unique<Tree<t_A>>(Branch{a0, a1});
+    }
+
+    static std::unique_ptr<Tree<t_A>>
+    branch_uptr(std::shared_ptr<Tree<t_A>> &&a0,
+                std::shared_ptr<Tree<t_A>> &&a1) {
+      return std::make_unique<Tree<t_A>>(Branch{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -119,11 +125,11 @@ struct HigherKinded {
   tree_map(F0 &&f, const std::shared_ptr<Tree<T1>> &t) {
     return std::visit(Overloaded{[&](const typename Tree<T1>::Leaf _args)
                                      -> std::shared_ptr<Tree<T2>> {
-                                   return Tree<T2>::ctor::Leaf_(f(_args.d_a0));
+                                   return Tree<T2>::leaf(f(_args.d_a0));
                                  },
                                  [&](const typename Tree<T1>::Branch _args)
                                      -> std::shared_ptr<Tree<T2>> {
-                                   return Tree<T2>::ctor::Branch_(
+                                   return Tree<T2>::branch(
                                        tree_map<T1, T2>(f, _args.d_a0),
                                        tree_map<T1, T2>(f, _args.d_a1));
                                  }},
@@ -171,11 +177,10 @@ struct HigherKinded {
   }
 
   static inline const std::shared_ptr<Tree<unsigned int>> test_tree =
-      Tree<unsigned int>::ctor::Branch_(
-          Tree<unsigned int>::ctor::Leaf_(1u),
-          Tree<unsigned int>::ctor::Branch_(
-              Tree<unsigned int>::ctor::Leaf_(2u),
-              Tree<unsigned int>::ctor::Leaf_(3u)));
+      Tree<unsigned int>::branch(
+          Tree<unsigned int>::leaf(1u),
+          Tree<unsigned int>::branch(Tree<unsigned int>::leaf(2u),
+                                     Tree<unsigned int>::leaf(3u)));
   static inline const unsigned int test_tree_sum = tree_sum(test_tree);
   static inline const unsigned int test_tree_size =
       tree_size<unsigned int>(test_tree);

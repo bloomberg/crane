@@ -25,8 +25,8 @@ int main() {
   using List = ::List<unsigned int>;
 
   // Test foldl1
-  auto lst = List::ctor::Cons_(
-      1u, List::ctor::Cons_(2u, List::ctor::Cons_(3u, List::ctor::Nil_())));
+  auto lst = List::cons(
+      1u, List::cons(2u, List::cons(3u, List::nil())));
   auto sum = [](unsigned int a, unsigned int b) { return a + b; };
   ASSERT(LoopifyHofs::foldl1(sum, 0u, lst) == 6u);
 
@@ -37,7 +37,7 @@ int main() {
   ASSERT(!LoopifyHofs::forall_(gt5, lst));
 
   // Test exists_fn
-  ASSERT(LoopifyHofs::exists_fn(gt5, List::ctor::Cons_(6u, lst)) == true);
+  ASSERT(LoopifyHofs::exists_fn(gt5, List::cons(6u, lst)) == true);
   ASSERT(LoopifyHofs::exists_fn(gt5, lst) == false);
 
   // Test drop_while
@@ -50,17 +50,17 @@ int main() {
   ASSERT(taken != nullptr);
 
   // Test all_pairs
-  auto lst2a = List::ctor::Cons_(1u, List::ctor::Cons_(2u, List::ctor::Nil_()));
-  auto lst2b = List::ctor::Cons_(3u, List::ctor::Cons_(4u, List::ctor::Nil_()));
+  auto lst2a = List::cons(1u, List::cons(2u, List::nil()));
+  auto lst2b = List::cons(3u, List::cons(4u, List::nil()));
   auto pairs = LoopifyHofs::all_pairs(lst2a, lst2b);
   ASSERT(pairs != nullptr);
 
   // Test find_indices
   auto eq2 = [](unsigned int x) { return x == 2; };
-  auto lst3 = List::ctor::Cons_(
-      1u, List::ctor::Cons_(
-              2u, List::ctor::Cons_(
-                      2u, List::ctor::Cons_(3u, List::ctor::Nil_()))));
+  auto lst3 = List::cons(
+      1u, List::cons(
+              2u, List::cons(
+                      2u, List::cons(3u, List::nil()))));
   auto indices = LoopifyHofs::find_indices(eq2, lst3);
   ASSERT(indices != nullptr);
 
@@ -71,19 +71,19 @@ int main() {
 
   // Test is_prefix_of
   auto prefix =
-      List::ctor::Cons_(1u, List::ctor::Cons_(2u, List::ctor::Nil_()));
+      List::cons(1u, List::cons(2u, List::nil()));
   ASSERT(LoopifyHofs::is_prefix_of(prefix, lst));
   auto not_prefix =
-      List::ctor::Cons_(2u, List::ctor::Cons_(3u, List::ctor::Nil_()));
+      List::cons(2u, List::cons(3u, List::nil()));
   ASSERT(!LoopifyHofs::is_prefix_of(not_prefix, lst));
 
   // Test lookup_all: [(1,10), (2,20), (1,30)] lookup 1 -> [10,30]
   using PairList = ::List<std::pair<unsigned int, unsigned int>>;
-  auto assoc = PairList::ctor::Cons_(
+  auto assoc = PairList::cons(
       std::make_pair(1u, 10u),
-      PairList::ctor::Cons_(std::make_pair(2u, 20u),
-                            PairList::ctor::Cons_(std::make_pair(1u, 30u),
-                                                  PairList::ctor::Nil_())));
+      PairList::cons(std::make_pair(2u, 20u),
+                            PairList::cons(std::make_pair(1u, 30u),
+                                                  PairList::nil())));
   auto values = LoopifyHofs::lookup_all(1u, assoc);
   ASSERT(values != nullptr);
 

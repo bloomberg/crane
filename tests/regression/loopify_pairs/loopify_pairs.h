@@ -38,34 +38,39 @@ struct LoopifyPairs {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit list(Nil _v) : d_v_(std::move(_v)) {}
 
     explicit list(Cons _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<list<t_A>> nil() {
+      return std::make_shared<list<t_A>>(Nil{});
+    }
 
-      static std::shared_ptr<list<t_A>> Nil_() {
-        return std::shared_ptr<list<t_A>>(new list<t_A>(Nil{}));
-      }
+    static std::shared_ptr<list<t_A>>
+    cons(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
+      return std::make_shared<list<t_A>>(Cons{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<list<t_A>>
-      Cons_(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
-        return std::shared_ptr<list<t_A>>(new list<t_A>(Cons{a0, a1}));
-      }
+    static std::shared_ptr<list<t_A>> cons(t_A a0,
+                                           std::shared_ptr<list<t_A>> &&a1) {
+      return std::make_shared<list<t_A>>(Cons{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<list<t_A>> Nil_uptr() {
-        return std::unique_ptr<list<t_A>>(new list<t_A>(Nil{}));
-      }
+    static std::unique_ptr<list<t_A>> nil_uptr() {
+      return std::make_unique<list<t_A>>(Nil{});
+    }
 
-      static std::unique_ptr<list<t_A>>
-      Cons_uptr(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
-        return std::unique_ptr<list<t_A>>(new list<t_A>(Cons{a0, a1}));
-      }
-    };
+    static std::unique_ptr<list<t_A>>
+    cons_uptr(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
+      return std::make_unique<list<t_A>>(Cons{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<list<t_A>>
+    cons_uptr(t_A a0, std::shared_ptr<list<t_A>> &&a1) {
+      return std::make_unique<list<t_A>>(Cons{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -182,8 +187,8 @@ struct LoopifyPairs {
                 std::visit(
                     Overloaded{
                         [&](const typename list<T1>::Nil _args) -> void {
-                          _result = std::make_pair(list<T1>::ctor::Nil_(),
-                                                   list<T1>::ctor::Nil_());
+                          _result =
+                              std::make_pair(list<T1>::nil(), list<T1>::nil());
                         },
                         [&](const typename list<T1>::Cons _args) -> void {
                           _stack.push_back(_Call1{p, _args});
@@ -197,11 +202,9 @@ struct LoopifyPairs {
                 std::shared_ptr<list<T1>> yes = _result.first;
                 std::shared_ptr<list<T1>> no = _result.second;
                 if (p(_args.d_a0)) {
-                  _result = std::make_pair(
-                      list<T1>::ctor::Cons_(_args.d_a0, yes), no);
+                  _result = std::make_pair(list<T1>::cons(_args.d_a0, yes), no);
                 } else {
-                  _result = std::make_pair(
-                      yes, list<T1>::ctor::Cons_(_args.d_a0, no));
+                  _result = std::make_pair(yes, list<T1>::cons(_args.d_a0, no));
                 }
               }},
           _frame);
@@ -231,9 +234,9 @@ struct LoopifyPairs {
                 if (_last) {
                   std::get<typename list<std::pair<T1, T2>>::Cons>(
                       _last->v_mut())
-                      .d_a1 = list<std::pair<T1, T2>>::ctor::Nil_();
+                      .d_a1 = list<std::pair<T1, T2>>::nil();
                 } else {
-                  _head = list<std::pair<T1, T2>>::ctor::Nil_();
+                  _head = list<std::pair<T1, T2>>::nil();
                 }
                 _continue = false;
               },
@@ -244,14 +247,14 @@ struct LoopifyPairs {
                           if (_last) {
                             std::get<typename list<std::pair<T1, T2>>::Cons>(
                                 _last->v_mut())
-                                .d_a1 = list<std::pair<T1, T2>>::ctor::Nil_();
+                                .d_a1 = list<std::pair<T1, T2>>::nil();
                           } else {
-                            _head = list<std::pair<T1, T2>>::ctor::Nil_();
+                            _head = list<std::pair<T1, T2>>::nil();
                           }
                           _continue = false;
                         },
                         [&](const typename list<T2>::Cons _args0) {
-                          auto _cell = list<std::pair<T1, T2>>::ctor::Cons_(
+                          auto _cell = list<std::pair<T1, T2>>::cons(
                               std::make_pair(_args.d_a0, _args0.d_a0), nullptr);
                           if (_last) {
                             std::get<typename list<std::pair<T1, T2>>::Cons>(
@@ -291,10 +294,9 @@ struct LoopifyPairs {
                   std::get<
                       typename list<std::pair<T1, std::pair<T2, T3>>>::Cons>(
                       _last->v_mut())
-                      .d_a1 =
-                      list<std::pair<T1, std::pair<T2, T3>>>::ctor::Nil_();
+                      .d_a1 = list<std::pair<T1, std::pair<T2, T3>>>::nil();
                 } else {
-                  _head = list<std::pair<T1, std::pair<T2, T3>>>::ctor::Nil_();
+                  _head = list<std::pair<T1, std::pair<T2, T3>>>::nil();
                 }
                 _continue = false;
               },
@@ -306,11 +308,11 @@ struct LoopifyPairs {
                             std::get<typename list<
                                 std::pair<T1, std::pair<T2, T3>>>::Cons>(
                                 _last->v_mut())
-                                .d_a1 = list<
-                                std::pair<T1, std::pair<T2, T3>>>::ctor::Nil_();
+                                .d_a1 =
+                                list<std::pair<T1, std::pair<T2, T3>>>::nil();
                           } else {
-                            _head = list<
-                                std::pair<T1, std::pair<T2, T3>>>::ctor::Nil_();
+                            _head =
+                                list<std::pair<T1, std::pair<T2, T3>>>::nil();
                           }
                           _continue = false;
                         },
@@ -323,22 +325,22 @@ struct LoopifyPairs {
                                           T1, std::pair<T2, T3>>>::Cons>(
                                           _last->v_mut())
                                           .d_a1 = list<std::pair<
-                                          T1, std::pair<T2, T3>>>::ctor::Nil_();
+                                          T1, std::pair<T2, T3>>>::nil();
                                     } else {
                                       _head = list<std::pair<
-                                          T1, std::pair<T2, T3>>>::ctor::Nil_();
+                                          T1, std::pair<T2, T3>>>::nil();
                                     }
                                     _continue = false;
                                   },
                                   [&](const typename list<T3>::Cons _args1) {
                                     auto _cell =
                                         list<std::pair<T1, std::pair<T2, T3>>>::
-                                            ctor::Cons_(std::make_pair(
-                                                            _args.d_a0,
-                                                            std::make_pair(
-                                                                _args0.d_a0,
-                                                                _args1.d_a0)),
-                                                        nullptr);
+                                            cons(std::make_pair(
+                                                     _args.d_a0,
+                                                     std::make_pair(
+                                                         _args0.d_a0,
+                                                         _args1.d_a0)),
+                                                 nullptr);
                                     if (_last) {
                                       std::get<typename list<std::pair<
                                           T1, std::pair<T2, T3>>>::Cons>(
@@ -393,15 +395,14 @@ struct LoopifyPairs {
                 std::shared_ptr<list<T1>> l = _f.l;
                 const unsigned int n = _f.n;
                 if (n <= 0) {
-                  _result =
-                      std::make_pair(list<T1>::ctor::Nil_(), std::move(l));
+                  _result = std::make_pair(list<T1>::nil(), std::move(l));
                 } else {
                   unsigned int m = n - 1;
                   std::visit(
                       Overloaded{
                           [&](const typename list<T1>::Nil _args) -> void {
-                            _result = std::make_pair(list<T1>::ctor::Nil_(),
-                                                     list<T1>::ctor::Nil_());
+                            _result = std::make_pair(list<T1>::nil(),
+                                                     list<T1>::nil());
                           },
                           [&](const typename list<T1>::Cons _args) -> void {
                             _stack.push_back(_Call1{_args});
@@ -414,8 +415,8 @@ struct LoopifyPairs {
                 const typename list<T1>::Cons _args = _f._s0;
                 std::shared_ptr<list<T1>> taken = _result.first;
                 std::shared_ptr<list<T1>> rest = _result.second;
-                _result = std::make_pair(
-                    list<T1>::ctor::Cons_(_args.d_a0, taken), rest);
+                _result =
+                    std::make_pair(list<T1>::cons(_args.d_a0, taken), rest);
               }},
           _frame);
     }
@@ -450,8 +451,8 @@ struct LoopifyPairs {
                 std::visit(
                     Overloaded{
                         [&](const typename list<T1>::Nil _args) -> void {
-                          _result = std::make_pair(list<T1>::ctor::Nil_(),
-                                                   list<T1>::ctor::Nil_());
+                          _result =
+                              std::make_pair(list<T1>::nil(), list<T1>::nil());
                         },
                         [&](const typename list<T1>::Cons _args) -> void {
                           std::visit(
@@ -459,9 +460,9 @@ struct LoopifyPairs {
                                   [&](const typename list<T1>::Nil _args0)
                                       -> void {
                                     _result = std::make_pair(
-                                        list<T1>::ctor::Cons_(
-                                            _args.d_a0, list<T1>::ctor::Nil_()),
-                                        list<T1>::ctor::Nil_());
+                                        list<T1>::cons(_args.d_a0,
+                                                       list<T1>::nil()),
+                                        list<T1>::nil());
                                   },
                                   [&](const typename list<T1>::Cons _args0)
                                       -> void {
@@ -477,9 +478,8 @@ struct LoopifyPairs {
                 const typename list<T1>::Cons _args = _f._s1;
                 std::shared_ptr<list<T1>> evens = _result.first;
                 std::shared_ptr<list<T1>> odds = _result.second;
-                _result =
-                    std::make_pair(list<T1>::ctor::Cons_(_args.d_a0, evens),
-                                   list<T1>::ctor::Cons_(_args0.d_a0, odds));
+                _result = std::make_pair(list<T1>::cons(_args.d_a0, evens),
+                                         list<T1>::cons(_args0.d_a0, odds));
               }},
           _frame);
     }
@@ -513,8 +513,8 @@ struct LoopifyPairs {
                 std::visit(
                     Overloaded{
                         [&](const typename list<T1>::Nil _args) -> void {
-                          _result = std::make_pair(list<T1>::ctor::Nil_(),
-                                                   list<T1>::ctor::Nil_());
+                          _result =
+                              std::make_pair(list<T1>::nil(), list<T1>::nil());
                         },
                         [&](const typename list<T1>::Cons _args) -> void {
                           if (p(_args.d_a0)) {
@@ -522,8 +522,8 @@ struct LoopifyPairs {
                             _stack.push_back(_Enter{_args.d_a1});
                           } else {
                             _result = std::make_pair(
-                                list<T1>::ctor::Nil_(),
-                                list<T1>::ctor::Cons_(_args.d_a0, _args.d_a1));
+                                list<T1>::nil(),
+                                list<T1>::cons(_args.d_a0, _args.d_a1));
                           }
                         }},
                     l->v());
@@ -532,8 +532,7 @@ struct LoopifyPairs {
                 const typename list<T1>::Cons _args = _f._s0;
                 std::shared_ptr<list<T1>> ys = _result.first;
                 std::shared_ptr<list<T1>> zs = _result.second;
-                _result =
-                    std::make_pair(list<T1>::ctor::Cons_(_args.d_a0, ys), zs);
+                _result = std::make_pair(list<T1>::cons(_args.d_a0, ys), zs);
               }},
           _frame);
     }
@@ -591,8 +590,8 @@ struct LoopifyPairs {
                     Overloaded{
                         [&](const typename list<unsigned int>::Nil _args)
                             -> void {
-                          _result = std::make_pair(
-                              std::move(acc), list<unsigned int>::ctor::Nil_());
+                          _result = std::make_pair(std::move(acc),
+                                                   list<unsigned int>::nil());
                         },
                         [&](const typename list<unsigned int>::Cons _args)
                             -> void {
@@ -607,8 +606,8 @@ struct LoopifyPairs {
                 unsigned int y = _f._s0;
                 unsigned int final_acc = _result.first;
                 std::shared_ptr<list<unsigned int>> ys = _result.second;
-                _result = std::make_pair(
-                    final_acc, list<unsigned int>::ctor::Cons_(y, ys));
+                _result =
+                    std::make_pair(final_acc, list<unsigned int>::cons(y, ys));
               }},
           _frame);
     }

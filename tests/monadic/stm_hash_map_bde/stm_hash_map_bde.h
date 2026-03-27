@@ -42,29 +42,33 @@ template <typename t_A> struct List {
 private:
   // DATA
   variant_t d_v_;
+
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(bsl::move(_v)) {}
   explicit List(Cons _v) : d_v_(bsl::move(_v)) {}
-
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
-    static bsl::shared_ptr<List<t_A>> Nil_() {
-      return bsl::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
-    static bsl::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const bsl::shared_ptr<List<t_A>> &a1) {
-      return bsl::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-    static bsl::unique_ptr<List<t_A>> Nil_uptr() {
-      return bsl::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
-    static bsl::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const bsl::shared_ptr<List<t_A>> &a1) {
-      return bsl::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static bsl::shared_ptr<List<t_A>> nil() {
+    return bsl::make_shared<List<t_A>>(Nil{});
+  }
+  static bsl::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const bsl::shared_ptr<List<t_A>> &a1) {
+    return bsl::make_shared<List<t_A>>(Cons{bsl::move(a0), a1});
+  }
+  static bsl::shared_ptr<List<t_A>> cons(t_A a0,
+                                         bsl::shared_ptr<List<t_A>> &&a1) {
+    return bsl::make_shared<List<t_A>>(Cons{bsl::move(a0), bsl::move(a1)});
+  }
+  static bsl::unique_ptr<List<t_A>> nil_uptr() {
+    return bsl::make_unique<List<t_A>>(Nil{});
+  }
+  static bsl::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const bsl::shared_ptr<List<t_A>> &a1) {
+    return bsl::make_unique<List<t_A>>(Cons{bsl::move(a0), a1});
+  }
+  static bsl::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              bsl::shared_ptr<List<t_A>> &&a1) {
+    return bsl::make_unique<List<t_A>>(Cons{bsl::move(a0), bsl::move(a1)});
+  }
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
   // ACCESSORS
@@ -190,18 +194,18 @@ template <typename K, typename V> struct CHT {
         bdlf::Overloaded{
             [&](const typename List<bsl::pair<T1, T2>>::Nil _args)
                 -> bsl::shared_ptr<List<bsl::pair<T1, T2>>> {
-              return List<bsl::pair<T1, T2>>::ctor::Cons_(
-                  bsl::make_pair(k, v), List<bsl::pair<T1, T2>>::ctor::Nil_());
+              return List<bsl::pair<T1, T2>>::cons(
+                  bsl::make_pair(k, v), List<bsl::pair<T1, T2>>::nil());
             },
             [&](const typename List<bsl::pair<T1, T2>>::Cons _args)
                 -> bsl::shared_ptr<List<bsl::pair<T1, T2>>> {
               T1 k_ = _args.d_a0.first;
               T2 v_ = _args.d_a0.second;
               if (eqb(k, k_)) {
-                return List<bsl::pair<T1, T2>>::ctor::Cons_(
-                    bsl::make_pair(k, v), _args.d_a1);
+                return List<bsl::pair<T1, T2>>::cons(bsl::make_pair(k, v),
+                                                     _args.d_a1);
               } else {
-                return List<bsl::pair<T1, T2>>::ctor::Cons_(
+                return List<bsl::pair<T1, T2>>::cons(
                     bsl::make_pair(k_, v_),
                     CHT<int, int>::template assoc_insert_or_replace<T1, T2>(
                         eqb, k, v, _args.d_a1));
@@ -235,7 +239,7 @@ template <typename K, typename V> struct CHT {
                     q = CHT<int, int>::template assoc_remove<T1, T2>(
                         eqb, k, bsl::move(_args.d_a1));
                 return bsl::make_pair(q.first,
-                                      List<bsl::pair<T1, T2>>::ctor::Cons_(
+                                      List<bsl::pair<T1, T2>>::cons(
                                           bsl::make_pair(k_, v_), q.second));
               }
             }},
@@ -261,7 +265,7 @@ template <typename K, typename V> struct CHT {
         bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>> b =
             stm::atomically([&] {
               return stm::newTVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>(
-                  List<bsl::pair<T1, T2>>::ctor::Nil_());
+                  List<bsl::pair<T1, T2>>::nil());
             });
         buckets.push_back(b);
         return f(n_);
@@ -282,7 +286,7 @@ template <typename K, typename V> struct CHT {
       bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>> fb =
           stm::atomically([&] {
             return stm::newTVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>(
-                List<bsl::pair<T1, T2>>::ctor::Nil_());
+                List<bsl::pair<T1, T2>>::nil());
           });
       bsl::vector<
           bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>>>

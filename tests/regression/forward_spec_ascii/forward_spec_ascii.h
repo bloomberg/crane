@@ -37,32 +37,27 @@ struct ForwardSpecAscii {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit node(ANode _v) : d_v_(std::move(_v)) {}
 
     explicit node(BNode _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<node> anode(unsigned int a0) {
+      return std::make_shared<node>(ANode{std::move(a0)});
+    }
 
-      static std::shared_ptr<node> ANode_(unsigned int a0) {
-        return std::shared_ptr<node>(new node(ANode{a0}));
-      }
+    static std::shared_ptr<node> bnode(unsigned int a0) {
+      return std::make_shared<node>(BNode{std::move(a0)});
+    }
 
-      static std::shared_ptr<node> BNode_(unsigned int a0) {
-        return std::shared_ptr<node>(new node(BNode{a0}));
-      }
+    static std::unique_ptr<node> anode_uptr(unsigned int a0) {
+      return std::make_unique<node>(ANode{std::move(a0)});
+    }
 
-      static std::unique_ptr<node> ANode_uptr(unsigned int a0) {
-        return std::unique_ptr<node>(new node(ANode{a0}));
-      }
-
-      static std::unique_ptr<node> BNode_uptr(unsigned int a0) {
-        return std::unique_ptr<node>(new node(BNode{a0}));
-      }
-    };
+    static std::unique_ptr<node> bnode_uptr(unsigned int a0) {
+      return std::make_unique<node>(BNode{std::move(a0)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -99,7 +94,7 @@ struct ForwardSpecAscii {
   __attribute__((pure)) static unsigned int
   bump_node(const std::shared_ptr<node> &x);
 
-  static inline const unsigned int t = bump_node(node::ctor::ANode_(2u));
+  static inline const unsigned int t = bump_node(node::anode(2u));
 };
 
 #endif // INCLUDED_FORWARD_SPEC_ASCII

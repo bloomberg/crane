@@ -94,7 +94,7 @@ int main() {
 
   // Test that AxiomInductive works with non-axiom values
   {
-    auto ind = AxiomTypes::AxiomInductive::ctor::AxConstr1_(42u);
+    auto ind = AxiomTypes::AxiomInductive::axconstr1(42u);
     auto result = AxiomTypes::AxiomInductive_rect<unsigned int>(
         [](unsigned int n) { return n; },
         [](std::any) -> unsigned int { return 0u; }, ind);

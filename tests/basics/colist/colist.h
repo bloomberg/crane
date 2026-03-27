@@ -35,32 +35,31 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Nat(O _v) : d_v_(std::move(_v)) {}
 
   explicit Nat(S _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Nat> o() { return std::make_shared<Nat>(O{}); }
 
-    static std::shared_ptr<Nat> O_() {
-      return std::shared_ptr<Nat>(new Nat(O{}));
-    }
+  static std::shared_ptr<Nat> s(const std::shared_ptr<Nat> &a0) {
+    return std::make_shared<Nat>(S{a0});
+  }
 
-    static std::shared_ptr<Nat> S_(const std::shared_ptr<Nat> &a0) {
-      return std::shared_ptr<Nat>(new Nat(S{a0}));
-    }
+  static std::shared_ptr<Nat> s(std::shared_ptr<Nat> &&a0) {
+    return std::make_shared<Nat>(S{std::move(a0)});
+  }
 
-    static std::unique_ptr<Nat> O_uptr() {
-      return std::unique_ptr<Nat>(new Nat(O{}));
-    }
+  static std::unique_ptr<Nat> o_uptr() { return std::make_unique<Nat>(O{}); }
 
-    static std::unique_ptr<Nat> S_uptr(const std::shared_ptr<Nat> &a0) {
-      return std::unique_ptr<Nat>(new Nat(S{a0}));
-    }
-  };
+  static std::unique_ptr<Nat> s_uptr(const std::shared_ptr<Nat> &a0) {
+    return std::make_unique<Nat>(S{a0});
+  }
+
+  static std::unique_ptr<Nat> s_uptr(std::shared_ptr<Nat> &&a0) {
+    return std::make_unique<Nat>(S{std::move(a0)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -84,34 +83,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -135,6 +139,7 @@ private:
   // DATA
   crane::lazy<variant_t> d_lazyV_;
 
+public:
   // CREATORS
   explicit Colist(Conil _v)
       : d_lazyV_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
@@ -145,38 +150,42 @@ private:
   explicit Colist(std::function<variant_t()> _thunk)
       : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Colist<t_A>> conil() {
+    return std::make_shared<Colist<t_A>>(Conil{});
+  }
 
-    static std::shared_ptr<Colist<t_A>> Conil_() {
-      return std::shared_ptr<Colist<t_A>>(new Colist<t_A>(Conil{}));
-    }
+  static std::shared_ptr<Colist<t_A>>
+  cocons(t_A a0, const std::shared_ptr<Colist<t_A>> &a1) {
+    return std::make_shared<Colist<t_A>>(Cocons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<Colist<t_A>>
-    Cocons_(t_A a0, const std::shared_ptr<Colist<t_A>> &a1) {
-      return std::shared_ptr<Colist<t_A>>(new Colist<t_A>(Cocons{a0, a1}));
-    }
+  static std::shared_ptr<Colist<t_A>>
+  cocons(t_A a0, std::shared_ptr<Colist<t_A>> &&a1) {
+    return std::make_shared<Colist<t_A>>(Cocons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<Colist<t_A>> Conil_uptr() {
-      return std::unique_ptr<Colist<t_A>>(new Colist<t_A>(Conil{}));
-    }
+  static std::unique_ptr<Colist<t_A>> conil_uptr() {
+    return std::make_unique<Colist<t_A>>(Conil{});
+  }
 
-    static std::unique_ptr<Colist<t_A>>
-    Cocons_uptr(t_A a0, const std::shared_ptr<Colist<t_A>> &a1) {
-      return std::unique_ptr<Colist<t_A>>(new Colist<t_A>(Cocons{a0, a1}));
-    }
+  static std::unique_ptr<Colist<t_A>>
+  cocons_uptr(t_A a0, const std::shared_ptr<Colist<t_A>> &a1) {
+    return std::make_unique<Colist<t_A>>(Cocons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<Colist<t_A>>
-    lazy_(std::function<std::shared_ptr<Colist<t_A>>()> thunk) {
-      return std::shared_ptr<Colist<t_A>>(new Colist<t_A>(
-          std::function<variant_t()>([=](void) mutable -> variant_t {
-            std::shared_ptr<Colist<t_A>> _tmp = thunk();
-            return _tmp->v();
-          })));
-    }
-  };
+  static std::unique_ptr<Colist<t_A>>
+  cocons_uptr(t_A a0, std::shared_ptr<Colist<t_A>> &&a1) {
+    return std::make_unique<Colist<t_A>>(Cocons{std::move(a0), std::move(a1)});
+  }
+
+  static std::shared_ptr<Colist<t_A>>
+  lazy_(std::function<std::shared_ptr<Colist<t_A>>()> thunk) {
+    return std::make_shared<Colist<t_A>>(
+        std::function<variant_t()>([=](void) mutable -> variant_t {
+          std::shared_ptr<Colist<t_A>> _tmp = thunk();
+          return _tmp->v();
+        }));
+  }
 
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_lazyV_.force(); }
@@ -186,17 +195,17 @@ public:
     return std::visit(
         Overloaded{
             [](const typename Nat::O _args) -> std::shared_ptr<List<t_A>> {
-              return List<t_A>::ctor::Nil_();
+              return List<t_A>::nil();
             },
             [&](const typename Nat::S _args) -> std::shared_ptr<List<t_A>> {
               return std::visit(
                   Overloaded{[](const typename Colist<t_A>::Conil _args0)
                                  -> std::shared_ptr<List<t_A>> {
-                               return List<t_A>::ctor::Nil_();
+                               return List<t_A>::nil();
                              },
                              [&](const typename Colist<t_A>::Cocons _args0)
                                  -> std::shared_ptr<List<t_A>> {
-                               return List<t_A>::ctor::Cons_(
+                               return List<t_A>::cons(
                                    _args0.d_a0,
                                    _args0.d_a1->list_of_colist(_args.d_a0));
                              }},
@@ -207,15 +216,14 @@ public:
 
   template <typename T1, MapsTo<T1, t_A> F0>
   std::shared_ptr<Colist<T1>> comap(F0 &&f) const {
-    return Colist<T1>::ctor::lazy_([=,
-                                    this](void) -> std::shared_ptr<Colist<T1>> {
+    return Colist<T1>::lazy_([=, this](void) -> std::shared_ptr<Colist<T1>> {
       return std::visit(Overloaded{[](const typename Colist<t_A>::Conil _args)
                                        -> std::shared_ptr<Colist<T1>> {
-                                     return Colist<T1>::ctor::Conil_();
+                                     return Colist<T1>::conil();
                                    },
                                    [&](const typename Colist<t_A>::Cocons _args)
                                        -> std::shared_ptr<Colist<T1>> {
-                                     return Colist<T1>::ctor::Cocons_(
+                                     return Colist<T1>::cocons(
                                          f(_args.d_a0),
                                          _args.d_a1->template comap<T1>(f));
                                    }},
@@ -225,18 +233,15 @@ public:
 
   static std::shared_ptr<Colist<std::shared_ptr<Nat>>>
   nats(std::shared_ptr<Nat> n) {
-    return Colist<std::shared_ptr<Nat>>::ctor::lazy_(
+    return Colist<std::shared_ptr<Nat>>::lazy_(
         [=](void) mutable -> std::shared_ptr<Colist<std::shared_ptr<Nat>>> {
-          return Colist<std::shared_ptr<Nat>>::ctor::Cocons_(
-              n, nats(Nat::ctor::S_(n)));
+          return Colist<std::shared_ptr<Nat>>::cocons(n, nats(Nat::s(n)));
         });
   }
 
   static const std::shared_ptr<List<std::shared_ptr<Nat>>> &first_three() {
     static const std::shared_ptr<List<std::shared_ptr<Nat>>> v =
-        nats(Nat::ctor::O_())
-            ->list_of_colist(
-                Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::S_(Nat::ctor::O_()))));
+        nats(Nat::o())->list_of_colist(Nat::s(Nat::s(Nat::s(Nat::o()))));
     return v;
   }
 };

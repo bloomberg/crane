@@ -74,35 +74,40 @@ struct PatternImpossible {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit nested(Leaf _v) : d_v_(std::move(_v)) {}
 
     explicit nested(Node _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<nested> leaf(unsigned int a0) {
+      return std::make_shared<nested>(Leaf{std::move(a0)});
+    }
 
-      static std::shared_ptr<nested> Leaf_(unsigned int a0) {
-        return std::shared_ptr<nested>(new nested(Leaf{a0}));
-      }
+    static std::shared_ptr<nested> node(const std::shared_ptr<nested> &a0,
+                                        const std::shared_ptr<nested> &a1) {
+      return std::make_shared<nested>(Node{a0, a1});
+    }
 
-      static std::shared_ptr<nested> Node_(const std::shared_ptr<nested> &a0,
-                                           const std::shared_ptr<nested> &a1) {
-        return std::shared_ptr<nested>(new nested(Node{a0, a1}));
-      }
+    static std::shared_ptr<nested> node(std::shared_ptr<nested> &&a0,
+                                        std::shared_ptr<nested> &&a1) {
+      return std::make_shared<nested>(Node{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<nested> Leaf_uptr(unsigned int a0) {
-        return std::unique_ptr<nested>(new nested(Leaf{a0}));
-      }
+    static std::unique_ptr<nested> leaf_uptr(unsigned int a0) {
+      return std::make_unique<nested>(Leaf{std::move(a0)});
+    }
 
-      static std::unique_ptr<nested>
-      Node_uptr(const std::shared_ptr<nested> &a0,
-                const std::shared_ptr<nested> &a1) {
-        return std::unique_ptr<nested>(new nested(Node{a0, a1}));
-      }
-    };
+    static std::unique_ptr<nested>
+    node_uptr(const std::shared_ptr<nested> &a0,
+              const std::shared_ptr<nested> &a1) {
+      return std::make_unique<nested>(Node{a0, a1});
+    }
+
+    static std::unique_ptr<nested> node_uptr(std::shared_ptr<nested> &&a0,
+                                             std::shared_ptr<nested> &&a1) {
+      return std::make_unique<nested>(Node{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -149,8 +154,8 @@ struct PatternImpossible {
   __attribute__((pure)) static unsigned int
   multi_arg_pattern(const std::shared_ptr<nested> &n);
   static inline const unsigned int test1 = complex_match(Three::e_ONE);
-  static inline const unsigned int test2 = nested_match(
-      nested::ctor::Node_(nested::ctor::Leaf_(5u), nested::ctor::Leaf_(10u)));
+  static inline const unsigned int test2 =
+      nested_match(nested::node(nested::leaf(5u), nested::leaf(10u)));
   static inline const unsigned int test3 =
       double_match(Three::e_ONE, Three::e_TWO);
 };

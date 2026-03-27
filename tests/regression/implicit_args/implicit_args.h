@@ -53,34 +53,41 @@ struct ImplicitArgs {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit mylist(Mynil _v) : d_v_(std::move(_v)) {}
 
     explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<mylist<t_A>> mynil() {
+      return std::make_shared<mylist<t_A>>(Mynil{});
+    }
 
-      static std::shared_ptr<mylist<t_A>> Mynil_() {
-        return std::shared_ptr<mylist<t_A>>(new mylist<t_A>(Mynil{}));
-      }
+    static std::shared_ptr<mylist<t_A>>
+    mycons(t_A a0, const std::shared_ptr<mylist<t_A>> &a1) {
+      return std::make_shared<mylist<t_A>>(Mycons{std::move(a0), a1});
+    }
 
-      static std::shared_ptr<mylist<t_A>>
-      Mycons_(t_A a0, const std::shared_ptr<mylist<t_A>> &a1) {
-        return std::shared_ptr<mylist<t_A>>(new mylist<t_A>(Mycons{a0, a1}));
-      }
+    static std::shared_ptr<mylist<t_A>>
+    mycons(t_A a0, std::shared_ptr<mylist<t_A>> &&a1) {
+      return std::make_shared<mylist<t_A>>(
+          Mycons{std::move(a0), std::move(a1)});
+    }
 
-      static std::unique_ptr<mylist<t_A>> Mynil_uptr() {
-        return std::unique_ptr<mylist<t_A>>(new mylist<t_A>(Mynil{}));
-      }
+    static std::unique_ptr<mylist<t_A>> mynil_uptr() {
+      return std::make_unique<mylist<t_A>>(Mynil{});
+    }
 
-      static std::unique_ptr<mylist<t_A>>
-      Mycons_uptr(t_A a0, const std::shared_ptr<mylist<t_A>> &a1) {
-        return std::unique_ptr<mylist<t_A>>(new mylist<t_A>(Mycons{a0, a1}));
-      }
-    };
+    static std::unique_ptr<mylist<t_A>>
+    mycons_uptr(t_A a0, const std::shared_ptr<mylist<t_A>> &a1) {
+      return std::make_unique<mylist<t_A>>(Mycons{std::move(a0), a1});
+    }
+
+    static std::unique_ptr<mylist<t_A>>
+    mycons_uptr(t_A a0, std::shared_ptr<mylist<t_A>> &&a1) {
+      return std::make_unique<mylist<t_A>>(
+          Mycons{std::move(a0), std::move(a1)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -173,17 +180,16 @@ struct ImplicitArgs {
   }
 
   static inline const unsigned int use_head_empty =
-      head_or<unsigned int>(0u, mylist<unsigned int>::ctor::Mynil_());
-  static inline const unsigned int use_head_nonempty =
-      head_or<unsigned int>(0u, mylist<unsigned int>::ctor::Mycons_(
-                                    7u, mylist<unsigned int>::ctor::Mynil_()));
+      head_or<unsigned int>(0u, mylist<unsigned int>::mynil());
+  static inline const unsigned int use_head_nonempty = head_or<unsigned int>(
+      0u, mylist<unsigned int>::mycons(7u, mylist<unsigned int>::mynil()));
   __attribute__((pure)) static unsigned int
   sum_with_init(const unsigned int init,
                 const std::shared_ptr<mylist<unsigned int>> &l);
-  static inline const unsigned int use_sum_init =
-      sum_with_init(5u, mylist<unsigned int>::ctor::Mycons_(
-                            1u, mylist<unsigned int>::ctor::Mycons_(
-                                    2u, mylist<unsigned int>::ctor::Mynil_())));
+  static inline const unsigned int use_sum_init = sum_with_init(
+      5u,
+      mylist<unsigned int>::mycons(
+          1u, mylist<unsigned int>::mycons(2u, mylist<unsigned int>::mynil())));
   __attribute__((pure)) static unsigned int
   nested_implicits(const unsigned int a, const unsigned int b,
                    const unsigned int c);
@@ -204,10 +210,10 @@ struct ImplicitArgs {
           double_nat,
           [](unsigned int _x0) -> unsigned int { return (1u + _x0); }, 3u);
   static inline const unsigned int test_length =
-      length<unsigned int>(mylist<unsigned int>::ctor::Mycons_(
-          1u, mylist<unsigned int>::ctor::Mycons_(
-                  2u, mylist<unsigned int>::ctor::Mycons_(
-                          3u, mylist<unsigned int>::ctor::Mynil_()))));
+      length<unsigned int>(mylist<unsigned int>::mycons(
+          1u, mylist<unsigned int>::mycons(
+                  2u, mylist<unsigned int>::mycons(
+                          3u, mylist<unsigned int>::mynil()))));
   static inline const unsigned int test_explicit_id = explicit_id;
   static inline const unsigned int test_explicit_fst = explicit_fst;
   static inline const unsigned int test_add_implicit = use_add_implicit;

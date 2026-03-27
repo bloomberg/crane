@@ -20,13 +20,13 @@ using UIntList = List<unsigned int>;
 using ListOfLists = List<std::shared_ptr<UIntList>>;
 
 int main() {
-  auto nil = UIntList::ctor::Nil_();
-  auto l1 = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, nil));
-  auto l2 = UIntList::ctor::Cons_(3u, UIntList::ctor::Cons_(4u, nil));
-  auto sep = UIntList::ctor::Cons_(0u, nil);
+  auto nil = UIntList::nil();
+  auto l1 = UIntList::cons(1u, UIntList::cons(2u, nil));
+  auto l2 = UIntList::cons(3u, UIntList::cons(4u, nil));
+  auto sep = UIntList::cons(0u, nil);
 
-  auto ll_nil = ListOfLists::ctor::Nil_();
-  auto ll = ListOfLists::ctor::Cons_(l1, ListOfLists::ctor::Cons_(l2, ll_nil));
+  auto ll_nil = ListOfLists::nil();
+  auto ll = ListOfLists::cons(l1, ListOfLists::cons(l2, ll_nil));
 
   // intercalate
   auto intercalated = LoopifyListOfLists::intercalate(sep, ll);
@@ -44,13 +44,13 @@ int main() {
   ASSERT(LoopifyListOfLists::list_len(f) == 2u);  // [1, 3]
 
   // all_nil
-  auto empty_ll = ListOfLists::ctor::Cons_(nil, ListOfLists::ctor::Cons_(nil, ll_nil));
+  auto empty_ll = ListOfLists::cons(nil, ListOfLists::cons(nil, ll_nil));
   ASSERT(LoopifyListOfLists::all_nil(empty_ll) == true);
   ASSERT(LoopifyListOfLists::all_nil(ll) == false);
 
   // max_length
-  auto l3 = UIntList::ctor::Cons_(5u, UIntList::ctor::Cons_(6u, UIntList::ctor::Cons_(7u, nil)));
-  auto ll2 = ListOfLists::ctor::Cons_(l1, ListOfLists::ctor::Cons_(l3, ll_nil));
+  auto l3 = UIntList::cons(5u, UIntList::cons(6u, UIntList::cons(7u, nil)));
+  auto ll2 = ListOfLists::cons(l1, ListOfLists::cons(l3, ll_nil));
   ASSERT(LoopifyListOfLists::max_length(ll2) == 3u);
 
   // transpose - basic test

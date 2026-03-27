@@ -52,32 +52,27 @@ struct ConstrainedPoly {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit UOption(USome _v) : d_v_(std::move(_v)) {}
 
     explicit UOption(UNone _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<UOption<t_A>> usome(t_A a0) {
+      return std::make_shared<UOption<t_A>>(USome{std::move(a0)});
+    }
 
-      static std::shared_ptr<UOption<t_A>> USome_(t_A a0) {
-        return std::shared_ptr<UOption<t_A>>(new UOption<t_A>(USome{a0}));
-      }
+    static std::shared_ptr<UOption<t_A>> unone() {
+      return std::make_shared<UOption<t_A>>(UNone{});
+    }
 
-      static std::shared_ptr<UOption<t_A>> UNone_() {
-        return std::shared_ptr<UOption<t_A>>(new UOption<t_A>(UNone{}));
-      }
+    static std::unique_ptr<UOption<t_A>> usome_uptr(t_A a0) {
+      return std::make_unique<UOption<t_A>>(USome{std::move(a0)});
+    }
 
-      static std::unique_ptr<UOption<t_A>> USome_uptr(t_A a0) {
-        return std::unique_ptr<UOption<t_A>>(new UOption<t_A>(USome{a0}));
-      }
-
-      static std::unique_ptr<UOption<t_A>> UNone_uptr() {
-        return std::unique_ptr<UOption<t_A>>(new UOption<t_A>(UNone{}));
-      }
-    };
+    static std::unique_ptr<UOption<t_A>> unone_uptr() {
+      return std::make_unique<UOption<t_A>>(UNone{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -115,12 +110,11 @@ struct ConstrainedPoly {
   uoption_map(F0 &&f, const std::shared_ptr<UOption<T1>> &o) {
     return std::visit(Overloaded{[&](const typename UOption<T1>::USome _args)
                                      -> std::shared_ptr<UOption<T2>> {
-                                   return UOption<T2>::ctor::USome_(
-                                       f(_args.d_a0));
+                                   return UOption<T2>::usome(f(_args.d_a0));
                                  },
                                  [](const typename UOption<T1>::UNone _args)
                                      -> std::shared_ptr<UOption<T2>> {
-                                   return UOption<T2>::ctor::UNone_();
+                                   return UOption<T2>::unone();
                                  }},
                       o->v());
   }
@@ -136,7 +130,7 @@ struct ConstrainedPoly {
   static inline const std::shared_ptr<UOption<unsigned int>> test_umap =
       uoption_map<unsigned int, unsigned int>(
           [](unsigned int n) { return (n + 1u); },
-          UOption<unsigned int>::ctor::USome_(9u));
+          UOption<unsigned int>::usome(9u));
 };
 
 #endif // INCLUDED_CONSTRAINED_POLY

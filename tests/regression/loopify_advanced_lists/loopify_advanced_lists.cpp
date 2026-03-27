@@ -62,9 +62,9 @@ LoopifyAdvancedLists::compress(const std::shared_ptr<List<unsigned int>> &l) {
             [&](const typename List<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::ctor::Nil_();
+                    .d_a1 = List<unsigned int>::nil();
               } else {
-                _head = List<unsigned int>::ctor::Nil_();
+                _head = List<unsigned int>::nil();
               }
               _continue = false;
             },
@@ -75,11 +75,11 @@ LoopifyAdvancedLists::compress(const std::shared_ptr<List<unsigned int>> &l) {
                         if (_last) {
                           std::get<typename List<unsigned int>::Cons>(
                               _last->v_mut())
-                              .d_a1 = List<unsigned int>::ctor::Cons_(
-                              _args.d_a0, List<unsigned int>::ctor::Nil_());
+                              .d_a1 = List<unsigned int>::cons(
+                              _args.d_a0, List<unsigned int>::nil());
                         } else {
-                          _head = List<unsigned int>::ctor::Cons_(
-                              _args.d_a0, List<unsigned int>::ctor::Nil_());
+                          _head = List<unsigned int>::cons(
+                              _args.d_a0, List<unsigned int>::nil());
                         }
                         _continue = false;
                       },
@@ -87,8 +87,8 @@ LoopifyAdvancedLists::compress(const std::shared_ptr<List<unsigned int>> &l) {
                         if (_args.d_a0 == _args0.d_a0) {
                           _loop_l = _args.d_a1;
                         } else {
-                          auto _cell = List<unsigned int>::ctor::Cons_(
-                              _args.d_a0, nullptr);
+                          auto _cell =
+                              List<unsigned int>::cons(_args.d_a0, nullptr);
                           if (_last) {
                             std::get<typename List<unsigned int>::Cons>(
                                 _last->v_mut())
@@ -119,9 +119,9 @@ std::shared_ptr<List<unsigned int>> LoopifyAdvancedLists::pairwise_sum(
             [&](const typename List<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::ctor::Nil_();
+                    .d_a1 = List<unsigned int>::nil();
               } else {
-                _head = List<unsigned int>::ctor::Nil_();
+                _head = List<unsigned int>::nil();
               }
               _continue = false;
             },
@@ -132,14 +132,14 @@ std::shared_ptr<List<unsigned int>> LoopifyAdvancedLists::pairwise_sum(
                         if (_last) {
                           std::get<typename List<unsigned int>::Cons>(
                               _last->v_mut())
-                              .d_a1 = List<unsigned int>::ctor::Nil_();
+                              .d_a1 = List<unsigned int>::nil();
                         } else {
-                          _head = List<unsigned int>::ctor::Nil_();
+                          _head = List<unsigned int>::nil();
                         }
                         _continue = false;
                       },
                       [&](const typename List<unsigned int>::Cons _args0) {
-                        auto _cell = List<unsigned int>::ctor::Cons_(
+                        auto _cell = List<unsigned int>::cons(
                             (_args.d_a0 + _args0.d_a0), nullptr);
                         if (_last) {
                           std::get<typename List<unsigned int>::Cons>(
@@ -173,11 +173,9 @@ LoopifyAdvancedLists::group_pairs(
                 std::get<
                     typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                     _last->v_mut())
-                    .d_a1 =
-                    List<std::pair<unsigned int, unsigned int>>::ctor::Nil_();
+                    .d_a1 = List<std::pair<unsigned int, unsigned int>>::nil();
               } else {
-                _head =
-                    List<std::pair<unsigned int, unsigned int>>::ctor::Nil_();
+                _head = List<std::pair<unsigned int, unsigned int>>::nil();
               }
               _continue = false;
             },
@@ -189,20 +187,19 @@ LoopifyAdvancedLists::group_pairs(
                           std::get<typename List<
                               std::pair<unsigned int, unsigned int>>::Cons>(
                               _last->v_mut())
-                              .d_a1 =
-                              List<std::pair<unsigned int,
-                                             unsigned int>>::ctor::Nil_();
+                              .d_a1 = List<
+                              std::pair<unsigned int, unsigned int>>::nil();
                         } else {
-                          _head = List<std::pair<unsigned int,
-                                                 unsigned int>>::ctor::Nil_();
+                          _head = List<
+                              std::pair<unsigned int, unsigned int>>::nil();
                         }
                         _continue = false;
                       },
                       [&](const typename List<unsigned int>::Cons _args0) {
                         auto _cell =
-                            List<std::pair<unsigned int, unsigned int>>::ctor::
-                                Cons_(std::make_pair(_args.d_a0, _args0.d_a0),
-                                      nullptr);
+                            List<std::pair<unsigned int, unsigned int>>::cons(
+                                std::make_pair(_args.d_a0, _args0.d_a0),
+                                nullptr);
                         if (_last) {
                           std::get<typename List<
                               std::pair<unsigned int, unsigned int>>::Cons>(
@@ -272,8 +269,8 @@ LoopifyAdvancedLists::interleave(std::shared_ptr<List<unsigned int>> l1,
                   l1->v());
             },
             [&](_Call1 _f) {
-              _result = List<unsigned int>::ctor::Cons_(
-                  _f._s0, List<unsigned int>::ctor::Cons_(_f._s1, _result));
+              _result = List<unsigned int>::cons(
+                  _f._s0, List<unsigned int>::cons(_f._s1, _result));
             }},
         _frame);
   }
@@ -308,9 +305,7 @@ std::shared_ptr<List<unsigned int>> LoopifyAdvancedLists::concat_lists(
                   Overloaded{
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Nil _args)
-                          -> void {
-                        _result = List<unsigned int>::ctor::Nil_();
-                      },
+                          -> void { _result = List<unsigned int>::nil(); },
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Cons _args)
                           -> void {

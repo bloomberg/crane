@@ -19,9 +19,9 @@ void aSsErT(bool condition, const char *message, int line) {
 using UIntList = List<unsigned int>;
 
 int main() {
-  auto nil = UIntList::ctor::Nil_();
-  auto abc = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(3u, nil)));
-  auto sep = UIntList::ctor::Cons_(0u, nil);
+  auto nil = UIntList::nil();
+  auto abc = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(3u, nil)));
+  auto sep = UIntList::cons(0u, nil);
 
   // join_with
   auto joined = LoopifyStrings::join_with(0u, abc);
@@ -37,7 +37,7 @@ int main() {
   ASSERT(LoopifyStrings::append(rep_sep, nil) != nullptr);
 
   // is_palindrome
-  auto pal = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(1u, nil)));
+  auto pal = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(1u, nil)));
   ASSERT(LoopifyStrings::is_palindrome(pal) == true);
   ASSERT(LoopifyStrings::is_palindrome(abc) == false);
 
@@ -47,9 +47,9 @@ int main() {
 
   // intercalate
   using UIntListList = List<std::shared_ptr<UIntList>>;
-  auto ll_nil = UIntListList::ctor::Nil_();
-  auto ll = UIntListList::ctor::Cons_(abc,
-    UIntListList::ctor::Cons_(abc, ll_nil));
+  auto ll_nil = UIntListList::nil();
+  auto ll = UIntListList::cons(abc,
+    UIntListList::cons(abc, ll_nil));
   auto intercal = LoopifyStrings::intercalate(sep, ll);
   ASSERT(LoopifyStrings::append(intercal, nil) != nullptr);
 
@@ -58,8 +58,8 @@ int main() {
   ASSERT(LoopifyStrings::append(reps, nil) != nullptr);
 
   // run_length_encode
-  auto dups = UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(1u, UIntList::ctor::Cons_(
-    2u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(2u, UIntList::ctor::Cons_(3u, nil))))));
+  auto dups = UIntList::cons(1u, UIntList::cons(1u, UIntList::cons(
+    2u, UIntList::cons(2u, UIntList::cons(2u, UIntList::cons(3u, nil))))));
   auto encoded = LoopifyStrings::run_length_encode(dups);
   // [(1,2), (2,3), (3,1)]
   using PairList = List<std::pair<unsigned int, unsigned int>>;

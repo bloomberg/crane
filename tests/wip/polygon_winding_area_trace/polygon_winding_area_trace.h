@@ -39,32 +39,27 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Sum(Inl _v) : d_v_(std::move(_v)) {}
 
   explicit Sum(Inr _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Sum<t_A, t_B>> inl(t_A a0) {
+    return std::make_shared<Sum<t_A, t_B>>(Inl{std::move(a0)});
+  }
 
-    static std::shared_ptr<Sum<t_A, t_B>> Inl_(t_A a0) {
-      return std::shared_ptr<Sum<t_A, t_B>>(new Sum<t_A, t_B>(Inl{a0}));
-    }
+  static std::shared_ptr<Sum<t_A, t_B>> inr(t_B a0) {
+    return std::make_shared<Sum<t_A, t_B>>(Inr{std::move(a0)});
+  }
 
-    static std::shared_ptr<Sum<t_A, t_B>> Inr_(t_B a0) {
-      return std::shared_ptr<Sum<t_A, t_B>>(new Sum<t_A, t_B>(Inr{a0}));
-    }
+  static std::unique_ptr<Sum<t_A, t_B>> inl_uptr(t_A a0) {
+    return std::make_unique<Sum<t_A, t_B>>(Inl{std::move(a0)});
+  }
 
-    static std::unique_ptr<Sum<t_A, t_B>> Inl_uptr(t_A a0) {
-      return std::unique_ptr<Sum<t_A, t_B>>(new Sum<t_A, t_B>(Inl{a0}));
-    }
-
-    static std::unique_ptr<Sum<t_A, t_B>> Inr_uptr(t_B a0) {
-      return std::unique_ptr<Sum<t_A, t_B>>(new Sum<t_A, t_B>(Inr{a0}));
-    }
-  };
+  static std::unique_ptr<Sum<t_A, t_B>> inr_uptr(t_B a0) {
+    return std::make_unique<Sum<t_A, t_B>>(Inr{std::move(a0)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -88,34 +83,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -171,22 +171,17 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Sig(Exist _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Sig<t_A>> exist(t_A a0) {
+    return std::make_shared<Sig<t_A>>(Exist{std::move(a0)});
+  }
 
-    static std::shared_ptr<Sig<t_A>> Exist_(t_A a0) {
-      return std::shared_ptr<Sig<t_A>>(new Sig<t_A>(Exist{a0}));
-    }
-
-    static std::unique_ptr<Sig<t_A>> Exist_uptr(t_A a0) {
-      return std::unique_ptr<Sig<t_A>>(new Sig<t_A>(Exist{a0}));
-    }
-  };
+  static std::unique_ptr<Sig<t_A>> exist_uptr(t_A a0) {
+    return std::make_unique<Sig<t_A>>(Exist{std::move(a0)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -208,24 +203,19 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit SigT(ExistT _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<SigT<t_A, t_P>> existt(t_A a0, t_P a1) {
+    return std::make_shared<SigT<t_A, t_P>>(
+        ExistT{std::move(a0), std::move(a1)});
+  }
 
-    static std::shared_ptr<SigT<t_A, t_P>> ExistT_(t_A a0, t_P a1) {
-      return std::shared_ptr<SigT<t_A, t_P>>(
-          new SigT<t_A, t_P>(ExistT{a0, a1}));
-    }
-
-    static std::unique_ptr<SigT<t_A, t_P>> ExistT_uptr(t_A a0, t_P a1) {
-      return std::unique_ptr<SigT<t_A, t_P>>(
-          new SigT<t_A, t_P>(ExistT{a0, a1}));
-    }
-  };
+  static std::unique_ptr<SigT<t_A, t_P>> existt_uptr(t_A a0, t_P a1) {
+    return std::make_unique<SigT<t_A, t_P>>(
+        ExistT{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -248,32 +238,27 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Sumor(Inleft _v) : d_v_(std::move(_v)) {}
 
   explicit Sumor(Inright _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Sumor<t_A>> inleft(t_A a0) {
+    return std::make_shared<Sumor<t_A>>(Inleft{std::move(a0)});
+  }
 
-    static std::shared_ptr<Sumor<t_A>> Inleft_(t_A a0) {
-      return std::shared_ptr<Sumor<t_A>>(new Sumor<t_A>(Inleft{a0}));
-    }
+  static std::shared_ptr<Sumor<t_A>> inright() {
+    return std::make_shared<Sumor<t_A>>(Inright{});
+  }
 
-    static std::shared_ptr<Sumor<t_A>> Inright_() {
-      return std::shared_ptr<Sumor<t_A>>(new Sumor<t_A>(Inright{}));
-    }
+  static std::unique_ptr<Sumor<t_A>> inleft_uptr(t_A a0) {
+    return std::make_unique<Sumor<t_A>>(Inleft{std::move(a0)});
+  }
 
-    static std::unique_ptr<Sumor<t_A>> Inleft_uptr(t_A a0) {
-      return std::unique_ptr<Sumor<t_A>>(new Sumor<t_A>(Inleft{a0}));
-    }
-
-    static std::unique_ptr<Sumor<t_A>> Inright_uptr() {
-      return std::unique_ptr<Sumor<t_A>>(new Sumor<t_A>(Inright{}));
-    }
-  };
+  static std::unique_ptr<Sumor<t_A>> inright_uptr() {
+    return std::make_unique<Sumor<t_A>>(Inright{});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -316,6 +301,7 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Positive(XI _v) : d_v_(std::move(_v)) {}
 
@@ -323,37 +309,47 @@ private:
 
   explicit Positive(XH _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Positive> xi(const std::shared_ptr<Positive> &a0) {
+    return std::make_shared<Positive>(XI{a0});
+  }
 
-    static std::shared_ptr<Positive> XI_(const std::shared_ptr<Positive> &a0) {
-      return std::shared_ptr<Positive>(new Positive(XI{a0}));
-    }
+  static std::shared_ptr<Positive> xi(std::shared_ptr<Positive> &&a0) {
+    return std::make_shared<Positive>(XI{std::move(a0)});
+  }
 
-    static std::shared_ptr<Positive> XO_(const std::shared_ptr<Positive> &a0) {
-      return std::shared_ptr<Positive>(new Positive(XO{a0}));
-    }
+  static std::shared_ptr<Positive> xo(const std::shared_ptr<Positive> &a0) {
+    return std::make_shared<Positive>(XO{a0});
+  }
 
-    static std::shared_ptr<Positive> XH_() {
-      return std::shared_ptr<Positive>(new Positive(XH{}));
-    }
+  static std::shared_ptr<Positive> xo(std::shared_ptr<Positive> &&a0) {
+    return std::make_shared<Positive>(XO{std::move(a0)});
+  }
 
-    static std::unique_ptr<Positive>
-    XI_uptr(const std::shared_ptr<Positive> &a0) {
-      return std::unique_ptr<Positive>(new Positive(XI{a0}));
-    }
+  static std::shared_ptr<Positive> xh() {
+    return std::make_shared<Positive>(XH{});
+  }
 
-    static std::unique_ptr<Positive>
-    XO_uptr(const std::shared_ptr<Positive> &a0) {
-      return std::unique_ptr<Positive>(new Positive(XO{a0}));
-    }
+  static std::unique_ptr<Positive>
+  xi_uptr(const std::shared_ptr<Positive> &a0) {
+    return std::make_unique<Positive>(XI{a0});
+  }
 
-    static std::unique_ptr<Positive> XH_uptr() {
-      return std::unique_ptr<Positive>(new Positive(XH{}));
-    }
-  };
+  static std::unique_ptr<Positive> xi_uptr(std::shared_ptr<Positive> &&a0) {
+    return std::make_unique<Positive>(XI{std::move(a0)});
+  }
+
+  static std::unique_ptr<Positive>
+  xo_uptr(const std::shared_ptr<Positive> &a0) {
+    return std::make_unique<Positive>(XO{a0});
+  }
+
+  static std::unique_ptr<Positive> xo_uptr(std::shared_ptr<Positive> &&a0) {
+    return std::make_unique<Positive>(XO{std::move(a0)});
+  }
+
+  static std::unique_ptr<Positive> xh_uptr() {
+    return std::make_unique<Positive>(XH{});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -380,6 +376,7 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Z(Z0 _v) : d_v_(std::move(_v)) {}
 
@@ -387,33 +384,41 @@ private:
 
   explicit Z(Zneg _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Z> z0() { return std::make_shared<Z>(Z0{}); }
 
-    static std::shared_ptr<Z> Z0_() { return std::shared_ptr<Z>(new Z(Z0{})); }
+  static std::shared_ptr<Z> zpos(const std::shared_ptr<Positive> &a0) {
+    return std::make_shared<Z>(Zpos{a0});
+  }
 
-    static std::shared_ptr<Z> Zpos_(const std::shared_ptr<Positive> &a0) {
-      return std::shared_ptr<Z>(new Z(Zpos{a0}));
-    }
+  static std::shared_ptr<Z> zpos(std::shared_ptr<Positive> &&a0) {
+    return std::make_shared<Z>(Zpos{std::move(a0)});
+  }
 
-    static std::shared_ptr<Z> Zneg_(const std::shared_ptr<Positive> &a0) {
-      return std::shared_ptr<Z>(new Z(Zneg{a0}));
-    }
+  static std::shared_ptr<Z> zneg(const std::shared_ptr<Positive> &a0) {
+    return std::make_shared<Z>(Zneg{a0});
+  }
 
-    static std::unique_ptr<Z> Z0_uptr() {
-      return std::unique_ptr<Z>(new Z(Z0{}));
-    }
+  static std::shared_ptr<Z> zneg(std::shared_ptr<Positive> &&a0) {
+    return std::make_shared<Z>(Zneg{std::move(a0)});
+  }
 
-    static std::unique_ptr<Z> Zpos_uptr(const std::shared_ptr<Positive> &a0) {
-      return std::unique_ptr<Z>(new Z(Zpos{a0}));
-    }
+  static std::unique_ptr<Z> z0_uptr() { return std::make_unique<Z>(Z0{}); }
 
-    static std::unique_ptr<Z> Zneg_uptr(const std::shared_ptr<Positive> &a0) {
-      return std::unique_ptr<Z>(new Z(Zneg{a0}));
-    }
-  };
+  static std::unique_ptr<Z> zpos_uptr(const std::shared_ptr<Positive> &a0) {
+    return std::make_unique<Z>(Zpos{a0});
+  }
+
+  static std::unique_ptr<Z> zpos_uptr(std::shared_ptr<Positive> &&a0) {
+    return std::make_unique<Z>(Zpos{std::move(a0)});
+  }
+
+  static std::unique_ptr<Z> zneg_uptr(const std::shared_ptr<Positive> &a0) {
+    return std::make_unique<Z>(Zneg{a0});
+  }
+
+  static std::unique_ptr<Z> zneg_uptr(std::shared_ptr<Positive> &&a0) {
+    return std::make_unique<Z>(Zneg{std::move(a0)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -474,6 +479,7 @@ struct Pos {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit mask(IsNul0 _v) : d_v_(std::move(_v)) {}
 
@@ -481,37 +487,38 @@ struct Pos {
 
     explicit mask(IsNeg0 _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<mask> isnul0() {
+      return std::make_shared<mask>(IsNul0{});
+    }
 
-      static std::shared_ptr<mask> IsNul0_() {
-        return std::shared_ptr<mask>(new mask(IsNul0{}));
-      }
+    static std::shared_ptr<mask> ispos0(const std::shared_ptr<Positive> &a0) {
+      return std::make_shared<mask>(IsPos0{a0});
+    }
 
-      static std::shared_ptr<mask>
-      IsPos0_(const std::shared_ptr<Positive> &a0) {
-        return std::shared_ptr<mask>(new mask(IsPos0{a0}));
-      }
+    static std::shared_ptr<mask> ispos0(std::shared_ptr<Positive> &&a0) {
+      return std::make_shared<mask>(IsPos0{std::move(a0)});
+    }
 
-      static std::shared_ptr<mask> IsNeg0_() {
-        return std::shared_ptr<mask>(new mask(IsNeg0{}));
-      }
+    static std::shared_ptr<mask> isneg0() {
+      return std::make_shared<mask>(IsNeg0{});
+    }
 
-      static std::unique_ptr<mask> IsNul0_uptr() {
-        return std::unique_ptr<mask>(new mask(IsNul0{}));
-      }
+    static std::unique_ptr<mask> isnul0_uptr() {
+      return std::make_unique<mask>(IsNul0{});
+    }
 
-      static std::unique_ptr<mask>
-      IsPos0_uptr(const std::shared_ptr<Positive> &a0) {
-        return std::unique_ptr<mask>(new mask(IsPos0{a0}));
-      }
+    static std::unique_ptr<mask>
+    ispos0_uptr(const std::shared_ptr<Positive> &a0) {
+      return std::make_unique<mask>(IsPos0{a0});
+    }
 
-      static std::unique_ptr<mask> IsNeg0_uptr() {
-        return std::unique_ptr<mask>(new mask(IsNeg0{}));
-      }
-    };
+    static std::unique_ptr<mask> ispos0_uptr(std::shared_ptr<Positive> &&a0) {
+      return std::make_unique<mask>(IsPos0{std::move(a0)});
+    }
+
+    static std::unique_ptr<mask> isneg0_uptr() {
+      return std::make_unique<mask>(IsNeg0{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -588,6 +595,7 @@ struct Coq_Pos {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit mask(IsNul _v) : d_v_(std::move(_v)) {}
 
@@ -595,36 +603,38 @@ struct Coq_Pos {
 
     explicit mask(IsNeg _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<mask> isnul() {
+      return std::make_shared<mask>(IsNul{});
+    }
 
-      static std::shared_ptr<mask> IsNul_() {
-        return std::shared_ptr<mask>(new mask(IsNul{}));
-      }
+    static std::shared_ptr<mask> ispos(const std::shared_ptr<Positive> &a0) {
+      return std::make_shared<mask>(IsPos{a0});
+    }
 
-      static std::shared_ptr<mask> IsPos_(const std::shared_ptr<Positive> &a0) {
-        return std::shared_ptr<mask>(new mask(IsPos{a0}));
-      }
+    static std::shared_ptr<mask> ispos(std::shared_ptr<Positive> &&a0) {
+      return std::make_shared<mask>(IsPos{std::move(a0)});
+    }
 
-      static std::shared_ptr<mask> IsNeg_() {
-        return std::shared_ptr<mask>(new mask(IsNeg{}));
-      }
+    static std::shared_ptr<mask> isneg() {
+      return std::make_shared<mask>(IsNeg{});
+    }
 
-      static std::unique_ptr<mask> IsNul_uptr() {
-        return std::unique_ptr<mask>(new mask(IsNul{}));
-      }
+    static std::unique_ptr<mask> isnul_uptr() {
+      return std::make_unique<mask>(IsNul{});
+    }
 
-      static std::unique_ptr<mask>
-      IsPos_uptr(const std::shared_ptr<Positive> &a0) {
-        return std::unique_ptr<mask>(new mask(IsPos{a0}));
-      }
+    static std::unique_ptr<mask>
+    ispos_uptr(const std::shared_ptr<Positive> &a0) {
+      return std::make_unique<mask>(IsPos{a0});
+    }
 
-      static std::unique_ptr<mask> IsNeg_uptr() {
-        return std::unique_ptr<mask>(new mask(IsNeg{}));
-      }
-    };
+    static std::unique_ptr<mask> ispos_uptr(std::shared_ptr<Positive> &&a0) {
+      return std::make_unique<mask>(IsPos{std::move(a0)});
+    }
+
+    static std::unique_ptr<mask> isneg_uptr() {
+      return std::make_unique<mask>(IsNeg{});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -969,10 +979,9 @@ struct RbaseSymbolsImpl {
   static inline const std::any Rquot2 =
       ([]() -> const std::any { throw std::logic_error("unreachable"); })();
   static inline const R R0 = Rabst(ConstructiveCauchyReals::inject_Q(
-      std::make_shared<Q>(Q{Z::ctor::Z0_(), Positive::ctor::XH_()})));
-  static inline const R R1 =
-      Rabst(ConstructiveCauchyReals::inject_Q(std::make_shared<Q>(
-          Q{Z::ctor::Zpos_(Positive::ctor::XH_()), Positive::ctor::XH_()})));
+      std::make_shared<Q>(Q{Z::z0(), Positive::xh()})));
+  static inline const R R1 = Rabst(ConstructiveCauchyReals::inject_Q(
+      std::make_shared<Q>(Q{Z::zpos(Positive::xh()), Positive::xh()})));
   __attribute__((pure)) static R
   Rplus(const std::shared_ptr<Sig<std::function<bool(std::shared_ptr<Q>)>>> &x,
         const std::shared_ptr<Sig<std::function<bool(std::shared_ptr<Q>)>>> &y);
@@ -1044,7 +1053,7 @@ struct Raxioms {
         return std::visit(
             Overloaded{[](const typename Sig<std::any>::Exist _args)
                            -> std::shared_ptr<Sig<RbaseSymbolsImpl::R>> {
-              return Sig<RbaseSymbolsImpl::R>::ctor::Exist_(
+              return Sig<RbaseSymbolsImpl::R>::exist(
                   RbaseSymbolsImpl::Rabst(_args.d_a0));
             }},
             std::move(s)->v());
@@ -1159,22 +1168,18 @@ struct Rtrigo1 {
           [](RbaseSymbolsImpl::R z) {
             return RbaseSymbolsImpl::Ropp(Rtrigo_def::cos(z));
           },
-          Rdiv(IZR(Z::ctor::Zpos_(Positive::ctor::XI_(
-                   Positive::ctor::XI_(Positive::ctor::XH_())))),
-               IZR(Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XO_(
-                   Positive::ctor::XO_(Positive::ctor::XH_())))))),
-          Rdiv(IZR(Z::ctor::Zpos_(Positive::ctor::XI_(
-                   Positive::ctor::XI_(Positive::ctor::XH_())))),
-               IZR(Z::ctor::Zpos_(Positive::ctor::XO_(
-                   Positive::ctor::XO_(Positive::ctor::XH_()))))));
+          Rdiv(IZR(Z::zpos(Positive::xi(Positive::xi(Positive::xh())))),
+               IZR(Z::zpos(
+                   Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
+          Rdiv(IZR(Z::zpos(Positive::xi(Positive::xi(Positive::xh())))),
+               IZR(Z::zpos(Positive::xo(Positive::xo(Positive::xh()))))));
   static inline const RbaseSymbolsImpl::R PI2 =
       std::visit(Overloaded{[](const typename Sig<T1>::Exist _args0) -> auto {
                    return _args0.d_a0;
                  }},
                  Rtrigo1::PI_2_aux->v());
   static inline const RbaseSymbolsImpl::R PI = RbaseSymbolsImpl::Rmult(
-      IZR(Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XH_()))),
-      Rtrigo1::PI2);
+      IZR(Z::zpos(Positive::xo(Positive::xh()))), Rtrigo1::PI2);
   __attribute__((pure)) static RbaseSymbolsImpl::R
   tan(const RbaseSymbolsImpl::R x);
 };
@@ -1249,7 +1254,7 @@ struct ConstructiveRcomplete {
                             return Sum<
                                 std::shared_ptr<Sig<std::shared_ptr<Z>>>,
                                 std::shared_ptr<Sig<std::shared_ptr<Z>>>>::
-                                ctor::Inl_(_args.d_a0);
+                                inl(_args.d_a0);
                           },
                           [](const typename Sum<
                               std::shared_ptr<Sig<std::shared_ptr<Z>>>,
@@ -1261,7 +1266,7 @@ struct ConstructiveRcomplete {
                             return Sum<
                                 std::shared_ptr<Sig<std::shared_ptr<Z>>>,
                                 std::shared_ptr<Sig<std::shared_ptr<Z>>>>::
-                                ctor::Inr_(_args.d_a0);
+                                inr(_args.d_a0);
                           }},
                       std::move(s)->v());
                 }
@@ -1347,8 +1352,7 @@ struct ClassicalDedekindReals {
 struct ConstructiveCauchyReals {
   static std::shared_ptr<CReal> inject_Q(std::shared_ptr<Q> q);
   static inline const CRealLt CRealLt_0_1 =
-      Sig<std::shared_ptr<Z>>::ctor::Exist_(
-          Z::ctor::Zneg_(Positive::ctor::XO_(Positive::ctor::XH_())));
+      Sig<std::shared_ptr<Z>>::exist(Z::zneg(Positive::xo(Positive::xh())));
   __attribute__((pure)) static CRealLt inject_Q_lt(const std::shared_ptr<Q> &q,
                                                    const std::shared_ptr<Q> &r);
 };
@@ -1393,23 +1397,15 @@ struct PolygonWindingAreaTraceCase {
 
   static inline const RbaseSymbolsImpl::R R_earth_default =
       Q2R(std::make_shared<Q>(Q{
-          Z::ctor::Zpos_(Positive::ctor::XI_(Positive::ctor::XO_(
-              Positive::ctor::XO_(Positive::ctor::XO_(Positive::ctor::XO_(
-                  Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XI_(
-                      Positive::ctor::XI_(Positive::ctor::XO_(
-                          Positive::ctor::XI_(Positive::ctor::XI_(
-                              Positive::ctor::XI_(Positive::ctor::XI_(
-                                  Positive::ctor::XI_(Positive::ctor::XO_(
-                                      Positive::ctor::XO_(Positive::ctor::XO_(
-                                          Positive::ctor::XI_(
-                                              Positive::ctor::XO_(
-                                                  Positive::ctor::XI_(
-                                                      Positive::ctor::
-                                                          XH_())))))))))))))))))))))),
-          Positive::ctor::XO_(Positive::ctor::XO_(
-              Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XO_(
-                  Positive::ctor::XI_(Positive::ctor::XI_(Positive::ctor::XI_(
-                      Positive::ctor::XI_(Positive::ctor::XH_())))))))))}));
+          Z::zpos(Positive::xi(Positive::xo(Positive::xo(
+              Positive::xo(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
+                  Positive::xi(Positive::xo(Positive::xi(Positive::xi(
+                      Positive::xi(Positive::xi(Positive::xi(Positive::xo(
+                          Positive::xo(Positive::xo(Positive::xi(Positive::xo(
+                              Positive::xi(Positive::xh())))))))))))))))))))))),
+          Positive::xo(Positive::xo(
+              Positive::xo(Positive::xi(Positive::xo(Positive::xi(Positive::xi(
+                  Positive::xi(Positive::xi(Positive::xh())))))))))}));
   static inline const RbaseSymbolsImpl::R R_earth = R_earth_default;
   __attribute__((pure)) static RbaseSymbolsImpl::R
   hav(const RbaseSymbolsImpl::R theta);
@@ -1469,41 +1465,38 @@ struct PolygonWindingAreaTraceCase {
       const std::shared_ptr<Point> &p,
       const std::shared_ptr<List<std::shared_ptr<Point>>> &poly);
   static inline const std::shared_ptr<Point> test_triangle_v1 =
-      std::make_shared<Point>(Point{IZR(Z::ctor::Z0_()), IZR(Z::ctor::Z0_())});
+      std::make_shared<Point>(Point{IZR(Z::z0()), IZR(Z::z0())});
   static inline const std::shared_ptr<Point> test_triangle_v2 =
-      std::make_shared<Point>(Point{IZR(Z::ctor::Zpos_(Positive::ctor::XH_())),
-                                    IZR(Z::ctor::Z0_())});
+      std::make_shared<Point>(
+          Point{IZR(Z::zpos(Positive::xh())), IZR(Z::z0())});
   static inline const std::shared_ptr<Point> test_triangle_v3 =
-      std::make_shared<Point>(Point{
-          Rdiv(IZR(Z::ctor::Zpos_(Positive::ctor::XH_())),
-               IZR(Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XH_())))),
-          IZR(Z::ctor::Zpos_(Positive::ctor::XH_()))});
+      std::make_shared<Point>(
+          Point{Rdiv(IZR(Z::zpos(Positive::xh())),
+                     IZR(Z::zpos(Positive::xo(Positive::xh())))),
+                IZR(Z::zpos(Positive::xh()))});
   static inline const Polygon test_triangle =
-      List<std::shared_ptr<Point>>::ctor::Cons_(
+      List<std::shared_ptr<Point>>::cons(
           test_triangle_v1,
-          List<std::shared_ptr<Point>>::ctor::Cons_(
+          List<std::shared_ptr<Point>>::cons(
               test_triangle_v2,
-              List<std::shared_ptr<Point>>::ctor::Cons_(
-                  test_triangle_v3,
-                  List<std::shared_ptr<Point>>::ctor::Nil_())));
+              List<std::shared_ptr<Point>>::cons(
+                  test_triangle_v3, List<std::shared_ptr<Point>>::nil())));
   static inline const std::shared_ptr<Point> test_centroid =
-      std::make_shared<Point>(Point{
-          Rdiv(IZR(Z::ctor::Zpos_(Positive::ctor::XH_())),
-               IZR(Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XH_())))),
-          Rdiv(IZR(Z::ctor::Zpos_(Positive::ctor::XH_())),
-               IZR(Z::ctor::Zpos_(
-                   Positive::ctor::XI_(Positive::ctor::XH_()))))});
+      std::make_shared<Point>(
+          Point{Rdiv(IZR(Z::zpos(Positive::xh())),
+                     IZR(Z::zpos(Positive::xo(Positive::xh())))),
+                Rdiv(IZR(Z::zpos(Positive::xh())),
+                     IZR(Z::zpos(Positive::xi(Positive::xh()))))});
   static inline const std::shared_ptr<Point> test_exterior =
-      std::make_shared<Point>(Point{
-          Rdiv(IZR(Z::ctor::Zpos_(Positive::ctor::XH_())),
-               IZR(Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XH_())))),
-          IZR(Z::ctor::Zneg_(Positive::ctor::XH_()))});
+      std::make_shared<Point>(
+          Point{Rdiv(IZR(Z::zpos(Positive::xh())),
+                     IZR(Z::zpos(Positive::xo(Positive::xh())))),
+                IZR(Z::zneg(Positive::xh()))});
   __attribute__((pure)) static Polygon
   test_equatorial_square(const RbaseSymbolsImpl::R delta);
-  static inline const RbaseSymbolsImpl::R sample_square_delta =
-      Rdiv(IZR(Z::ctor::Zpos_(Positive::ctor::XH_())),
-           IZR(Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XI_(
-               Positive::ctor::XO_(Positive::ctor::XH_()))))));
+  static inline const RbaseSymbolsImpl::R sample_square_delta = Rdiv(
+      IZR(Z::zpos(Positive::xh())),
+      IZR(Z::zpos(Positive::xo(Positive::xi(Positive::xo(Positive::xh()))))));
   static inline const bool sample_centroid_inside =
       inside_by_winding(test_centroid, test_triangle);
   static inline const bool sample_exterior_inside =
@@ -1530,12 +1523,12 @@ std::shared_ptr<Sig<unsigned int>>
 ConstructiveEpsilon::linear_search_conform(F0 &&p_dec,
                                            const unsigned int start) {
   if (p_dec(start)) {
-    return Sig<unsigned int>::ctor::Exist_(std::move(start));
+    return Sig<unsigned int>::exist(std::move(start));
   } else {
     return std::visit(
         Overloaded{[](const typename Sig<unsigned int>::Exist _args)
                        -> std::shared_ptr<Sig<unsigned int>> {
-          return Sig<unsigned int>::ctor::Exist_(_args.d_a0);
+          return Sig<unsigned int>::exist(_args.d_a0);
         }},
         ConstructiveEpsilon::linear_search_conform(p_dec,
                                                    (std::move(start) + 1))
@@ -1565,7 +1558,7 @@ ConstructiveEpsilon::constructive_indefinite_ground_description_nat(
       return std::visit(
           Overloaded{[](const typename Sig<unsigned int>::Exist _args)
                          -> std::shared_ptr<Sig<unsigned int>> {
-            return Sig<unsigned int>::ctor::Exist_(_args.d_a0);
+            return Sig<unsigned int>::exist(_args.d_a0);
           }},
           std::move(s)->v());
     }
@@ -1599,7 +1592,7 @@ _x0);
        return std::visit(
            Overloaded{[&](const typename Sig<unsigned int>::Exist _args)
                           -> std::shared_ptr<Sig<T1>> {
-             return Sig<T1>::ctor::Exist_(g(_args.d_a0));
+             return Sig<T1>::exist(g(_args.d_a0));
            }},
            std::move(h1)->v());
      }
@@ -1683,7 +1676,7 @@ _x0);
                [=](unsigned int n) mutable {
                  return ConstructiveLUB::template is_upper_bound_dec<_tcI0>(
                      _tcI0::CR_of_Q(std::make_shared<Q>(
-                         Q{BinInt::of_nat(n), Positive::ctor::XH_()})),
+                         Q{BinInt::of_nat(n), Positive::xh()})),
                      lpo, sig_not_dec0);
                });
      }
@@ -1698,7 +1691,7 @@ _x0);
                [=](unsigned int n) mutable {
                  bool s = ConstructiveLUB::template is_upper_bound_dec<_tcI0>(
                      _tcI0::CRopp(_tcI0::CR_of_Q(std::make_shared<Q>(
-                         Q{BinInt::of_nat(n), Positive::ctor::XH_()}))),
+                         Q{BinInt::of_nat(n), Positive::xh()}))),
                      lpo, sig_not_dec0);
                  if (std::move(s)) {
                    return false;
@@ -1723,38 +1716,37 @@ _x0);
                  ConstructiveLUB::template is_upper_bound_not_epsilon<_tcI0>(
                      lpo, sig_not_dec0);
              return std::visit(
-                 Overloaded{
-                     [&](const typename Sig<unsigned int>::Exist _args0)
-                         -> std::shared_ptr<Sig<typename _tcI0::CRcarrier>> {
-                       std::function<bool(std::shared_ptr<Q>)> h =
-                           [=](std::shared_ptr<Q> q) mutable {
-                             return ConstructiveLUB::
-                                 template is_upper_bound_dec<_tcI0>(
-                                     _tcI0::CR_of_Q(q), lpo, sig_not_dec0);
-                           };
-                       std::shared_ptr<Sig<typename _tcI0::CRcarrier>> s1 =
-                           [](const auto &_x) { return _x->glb_dec_Q(); }();
-                       return [&](void) {
-                         if (std::move(s1).use_count() == 1 &&
-                             std::move(s1)->v().index() == 0) {
-                           auto &_rf = std::get<0>(std::move(s1)->v_mut());
-                           typename _tcI0::CRcarrier x1 = std::move(_rf.d_a0);
-                           _rf.d_a0 = std::move(x1);
-                           return std::move(s1);
-                         } else {
-                           return std::visit(
-                               Overloaded{
-                                   [](const typename Sig<
-                                       typename _tcI0::CRcarrier>::Exist _args1)
-                                       -> std::shared_ptr<
-                                           Sig<typename _tcI0::CRcarrier>> {
-                                     return Sig<typename _tcI0::CRcarrier>::
-                                         ctor::Exist_(_args1.d_a0);
-                                   }},
-                               std::move(s1)->v());
-                         }
-                       }();
-                     }},
+                 Overloaded{[&](const typename Sig<unsigned int>::Exist _args0)
+                                -> std::shared_ptr<
+                                    Sig<typename _tcI0::CRcarrier>> {
+                   std::function<bool(std::shared_ptr<Q>)> h =
+                       [=](std::shared_ptr<Q> q) mutable {
+                         return ConstructiveLUB::template is_upper_bound_dec<
+                             _tcI0>(_tcI0::CR_of_Q(q), lpo, sig_not_dec0);
+                       };
+                   std::shared_ptr<Sig<typename _tcI0::CRcarrier>> s1 =
+                       [](const auto &_x) { return _x->glb_dec_Q(); }();
+                   return [&](void) {
+                     if (std::move(s1).use_count() == 1 &&
+                         std::move(s1)->v().index() == 0) {
+                       auto &_rf = std::get<0>(std::move(s1)->v_mut());
+                       typename _tcI0::CRcarrier x1 = std::move(_rf.d_a0);
+                       _rf.d_a0 = std::move(x1);
+                       return std::move(s1);
+                     } else {
+                       return std::visit(
+                           Overloaded{
+                               [](const typename Sig<
+                                   typename _tcI0::CRcarrier>::Exist _args1)
+                                   -> std::shared_ptr<
+                                       Sig<typename _tcI0::CRcarrier>> {
+                                 return Sig<typename _tcI0::CRcarrier>::exist(
+                                     _args1.d_a0);
+                               }},
+                           std::move(s1)->v());
+                     }
+                   }();
+                 }},
                  std::move(s0)->v());
            }},
            std::move(s)->v());
@@ -1779,8 +1771,7 @@ _x0);
                    [](const typename Sig<typename _tcI0::CRcarrier>::Exist
                           _args)
                        -> std::shared_ptr<Sig<typename _tcI0::CRcarrier>> {
-                     return Sig<typename _tcI0::CRcarrier>::ctor::Exist_(
-                         _args.d_a0);
+                     return Sig<typename _tcI0::CRcarrier>::exist(_args.d_a0);
                    }},
                std::move(s)->v());
          }
@@ -1807,9 +1798,9 @@ _x0);
      ClassicalDedekindReals::lowerCutBelow(F0 &&f) {
        std::shared_ptr<Sumor<std::shared_ptr<Sig<unsigned int>>>> s =
            ClassicalDedekindReals::sig_forall_dec([=](unsigned int n) mutable {
-             bool b = f(std::make_shared<Q>(
-                            Q{BinInt::of_nat(n), Positive::ctor::XH_()})
-                            ->Qopp());
+             bool b =
+                 f(std::make_shared<Q>(Q{BinInt::of_nat(n), Positive::xh()})
+                       ->Qopp());
              if (b) {
                return false;
              } else {
@@ -1825,10 +1816,10 @@ _x0);
                      Overloaded{
                          [](const typename Sig<unsigned int>::Exist _args0)
                              -> std::shared_ptr<Sig<std::shared_ptr<Q>>> {
-                           return Sig<std::shared_ptr<Q>>::ctor::Exist_(
+                           return Sig<std::shared_ptr<Q>>::exist(
                                std::make_shared<Q>(
                                    Q{BinInt::of_nat(_args0.d_a0),
-                                     Positive::ctor::XH_()})
+                                     Positive::xh()})
                                    ->Qopp());
                          }},
                      _args.d_a0->v());
@@ -1846,8 +1837,8 @@ _x0);
      ClassicalDedekindReals::lowerCutAbove(F0 &&f) {
        std::shared_ptr<Sumor<std::shared_ptr<Sig<unsigned int>>>> s =
            ClassicalDedekindReals::sig_forall_dec([=](unsigned int n) mutable {
-             bool b = f(std::make_shared<Q>(
-                 Q{BinInt::of_nat(n), Positive::ctor::XH_()}));
+             bool b =
+                 f(std::make_shared<Q>(Q{BinInt::of_nat(n), Positive::xh()}));
              if (b) {
                return true;
              } else {
@@ -1863,10 +1854,10 @@ _x0);
                      Overloaded{
                          [](const typename Sig<unsigned int>::Exist _args0)
                              -> std::shared_ptr<Sig<std::shared_ptr<Q>>> {
-                           return Sig<std::shared_ptr<Q>>::ctor::Exist_(
+                           return Sig<std::shared_ptr<Q>>::exist(
                                std::make_shared<Q>(
                                    Q{BinInt::of_nat(_args0.d_a0),
-                                     Positive::ctor::XH_()}));
+                                     Positive::xh()}));
                          }},
                      _args.d_a0->v());
                },
@@ -1894,7 +1885,7 @@ _x0);
                    ->Qplus(std::make_shared<Q>(
                        Q{BinInt::of_nat(n0), Coq_Pos::of_nat((n + 1))})));
          if (std::move(b)) {
-           return Sig<std::shared_ptr<Q>>::ctor::Exist_(
+           return Sig<std::shared_ptr<Q>>::exist(
                std::visit(
                    Overloaded{[](const typename Sig<std::shared_ptr<Q>>::Exist
                                      _args0) -> auto { return _args0.d_a0; }},
@@ -1916,8 +1907,7 @@ _x0);
                    Overloaded{
                        [](const typename Sig<std::shared_ptr<Q>>::Exist _args1)
                            -> std::shared_ptr<Sig<std::shared_ptr<Q>>> {
-                         return Sig<std::shared_ptr<Q>>::ctor::Exist_(
-                             _args1.d_a0);
+                         return Sig<std::shared_ptr<Q>>::exist(_args1.d_a0);
                        }},
                    std::move(s)->v());
              }
@@ -1936,15 +1926,11 @@ _x0);
            Overloaded{[&](const typename Sig<unsigned int>::Exist _args)
                           -> std::shared_ptr<Q> {
              return xn(_args.d_a0)
-                 ->seq(BinInt::sub(Z::ctor::Zneg_(p),
-                                   Z::ctor::Zpos_(Positive::ctor::XO_(
-                                       Positive::ctor::XH_()))));
+                 ->seq(BinInt::sub(Z::zneg(p),
+                                   Z::zpos(Positive::xo(Positive::xh()))));
            }},
-           xcau(
-               Coq_Pos::mul(
-                   Positive::ctor::XO_(
-                       Positive::ctor::XO_(Positive::ctor::XH_())),
-                   Coq_Pos::pow(Positive::ctor::XO_(Positive::ctor::XH_()), p)))
+           xcau(Coq_Pos::mul(Positive::xo(Positive::xo(Positive::xh())),
+                             Coq_Pos::pow(Positive::xo(Positive::xh()), p)))
                ->v());
      }
 
@@ -1952,11 +1938,10 @@ _x0);
      std::shared_ptr<Z> ConstructiveRcomplete::CReal_from_cauchy_scale(
          F0 &&xn, const ConstructiveRcomplete::Un_cauchy_mod xcau) {
        return ConstructiveRcomplete::CReal_from_cauchy_seq(
-                  xn, xcau, Z::ctor::Zneg_(Positive::ctor::XH_()))
+                  xn, xcau, Z::zneg(Positive::xh()))
            ->Qabs()
            ->Qplus(std::make_shared<Q>(
-               Q{Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XH_())),
-                 Positive::ctor::XH_()}))
+               Q{Z::zpos(Positive::xo(Positive::xh())), Positive::xh()}))
            ->Qbound_lt_ZExp2();
      }
 
@@ -1977,27 +1962,24 @@ _x0);
          F0 &&xn, const ConstructiveRcomplete::Un_cauchy_mod cau) {
        return SigT<std::shared_ptr<CReal>,
                    std::function<std::shared_ptr<Sig<unsigned int>>(
-                       std::shared_ptr<Positive>)>>::ctor::
-           ExistT_(
+                       std::shared_ptr<Positive>)>>::
+           existt(
                ConstructiveRcomplete::CReal_from_cauchy(xn, cau),
                [=](std::shared_ptr<Positive> p) mutable {
-                 std::shared_ptr<Sig<unsigned int>> h0 = cau(Coq_Pos::mul(
-                     Positive::ctor::XO_(Positive::ctor::XH_()), p));
+                 std::shared_ptr<Sig<unsigned int>> h0 =
+                     cau(Coq_Pos::mul(Positive::xo(Positive::xh()), p));
                  return std::visit(
                      Overloaded{[&](const typename Sig<unsigned int>::Exist
                                         _args)
                                     -> std::shared_ptr<Sig<unsigned int>> {
                        std::shared_ptr<Positive> i_ =
                            ConstructiveRcomplete::CReal_from_cauchy_cm(
-                               BinInt::sub(
-                                   Z::ctor::Zneg_(p),
-                                   Z::ctor::Zpos_(Positive::ctor::XH_())));
+                               BinInt::sub(Z::zneg(p),
+                                           Z::zpos(Positive::xh())));
                        std::shared_ptr<Sig<unsigned int>> s = cau(Coq_Pos::mul(
-                           Positive::ctor::XO_(
-                               Positive::ctor::XO_(Positive::ctor::XH_())),
-                           Coq_Pos::pow(
-                               Positive::ctor::XO_(Positive::ctor::XH_()),
-                               std::move(i_))));
+                           Positive::xo(Positive::xo(Positive::xh())),
+                           Coq_Pos::pow(Positive::xo(Positive::xh()),
+                                        std::move(i_))));
                        return [&](void) {
                          if (std::move(s).use_count() == 1 &&
                              std::move(s)->v().index() == 0) {
@@ -2011,7 +1993,7 @@ _x0);
                                    [&](const typename Sig<unsigned int>::Exist
                                            _args0)
                                        -> std::shared_ptr<Sig<unsigned int>> {
-                                     return Sig<unsigned int>::ctor::Exist_(
+                                     return Sig<unsigned int>::exist(
                                          std::max(_args.d_a0, _args0.d_a0));
                                    }},
                                std::move(s)->v());
@@ -2047,8 +2029,7 @@ _x0);
                          Overloaded{
                              [](const typename Sig<unsigned int>::Exist _args)
                                  -> std::shared_ptr<Sig<unsigned int>> {
-                               return Sig<unsigned int>::ctor::Exist_(
-                                   _args.d_a0);
+                               return Sig<unsigned int>::exist(_args.d_a0);
                              }},
                          s->v());
                    }
@@ -2076,7 +2057,7 @@ _x0);
                      Overloaded{
                          [](const typename Sig<unsigned int>::Exist _args)
                              -> std::shared_ptr<Sig<unsigned int>> {
-                           return Sig<unsigned int>::ctor::Exist_(_args.d_a0);
+                           return Sig<unsigned int>::exist(_args.d_a0);
                          }},
                      std::move(s1)->v());
                }
@@ -2096,9 +2077,9 @@ _x0);
                                                std::shared_ptr<Positive>)>>> {
                  return SigT<std::shared_ptr<CReal>,
                              std::function<std::shared_ptr<Sig<unsigned int>>(
-                                 std::shared_ptr<Positive>)>>::ctor::
-                     ExistT_(_args.d_a0, [=](std::shared_ptr<Positive>
-                                                 p) mutable {
+                                 std::shared_ptr<Positive>)>>::
+                     existt(_args.d_a0, [=](std::shared_ptr<Positive>
+                                                p) mutable {
                        std::shared_ptr<Sig<unsigned int>> s1 = _args.d_a1(p);
                        return [&](void) {
                          if (std::move(s1).use_count() == 1 &&
@@ -2113,7 +2094,7 @@ _x0);
                                    [](const typename Sig<unsigned int>::Exist
                                           _args)
                                        -> std::shared_ptr<Sig<unsigned int>> {
-                                     return Sig<unsigned int>::ctor::Exist_(
+                                     return Sig<unsigned int>::exist(
                                          _args.d_a0);
                                    }},
                                std::move(s1)->v());
@@ -2134,7 +2115,7 @@ _x0);
 
      template <MapsTo<RbaseSymbolsImpl::R, unsigned int> F0>
      std::shared_ptr<Sig<RbaseSymbolsImpl::R>> SeqProp::growing_cv(F0 &&_x) {
-       return Sig<RbaseSymbolsImpl::R>::ctor::Exist_(std::visit(
+       return Sig<RbaseSymbolsImpl::R>::exist(std::visit(
            Overloaded{[](const typename Sig<RbaseSymbolsImpl::R>::Exist _args)
                           -> auto { return _args.d_a0; }},
            Raxioms::completeness()->v()));
@@ -2149,7 +2130,7 @@ _x0);
        return std::visit(
            Overloaded{[](const typename Sig<RbaseSymbolsImpl::R>::Exist _args)
                           -> std::shared_ptr<Sig<RbaseSymbolsImpl::R>> {
-             return Sig<RbaseSymbolsImpl::R>::ctor::Exist_(
+             return Sig<RbaseSymbolsImpl::R>::exist(
                  RbaseSymbolsImpl::Ropp(_args.d_a0));
            }},
            std::move(h1)->v());
@@ -2161,7 +2142,7 @@ _x0);
        return std::visit(
            Overloaded{[](const typename Sig<std::any>::Exist _args)
                           -> std::shared_ptr<Sig<std::any>> {
-             return Sig<std::any>::ctor::Exist_(_args.d_a0);
+             return Sig<std::any>::exist(_args.d_a0);
            }},
            std::move(h2)->v());
      }
@@ -2172,23 +2153,19 @@ _x0);
            [=](unsigned int i) mutable {
              return ::Rdiv(RbaseSymbolsImpl::Rplus(
                                RbaseSymbolsImpl::Rmult(
-                                   ::IZR(Z::ctor::Zpos_(Positive::ctor::XO_(
-                                       Positive::ctor::XH_()))),
+                                   ::IZR(Z::zpos(Positive::xo(Positive::xh()))),
                                    Rbasic_fun::Rabs(an(i))),
                                an(i)),
-                           ::IZR(Z::ctor::Zpos_(
-                               Positive::ctor::XO_(Positive::ctor::XH_()))));
+                           ::IZR(Z::zpos(Positive::xo(Positive::xh()))));
            };
        std::function<RbaseSymbolsImpl::R(unsigned int)> wn =
            [=](unsigned int i) mutable {
              return ::Rdiv(
                  ::Rminus(RbaseSymbolsImpl::Rmult(
-                              ::IZR(Z::ctor::Zpos_(
-                                  Positive::ctor::XO_(Positive::ctor::XH_()))),
+                              ::IZR(Z::zpos(Positive::xo(Positive::xh()))),
                               Rbasic_fun::Rabs(an(i))),
                           an(i)),
-                 ::IZR(Z::ctor::Zpos_(
-                     Positive::ctor::XO_(Positive::ctor::XH_()))));
+                 ::IZR(Z::zpos(Positive::xo(Positive::xh()))));
            };
        std::shared_ptr<Sig<RbaseSymbolsImpl::R>> h5 = Alembert::Alembert_C1(vn);
        return std::visit(
@@ -2209,7 +2186,7 @@ _x0);
                          [&](const typename Sig<RbaseSymbolsImpl::R>::Exist
                                  _args0)
                              -> std::shared_ptr<Sig<RbaseSymbolsImpl::R>> {
-                           return Sig<RbaseSymbolsImpl::R>::ctor::Exist_(
+                           return Sig<RbaseSymbolsImpl::R>::exist(
                                ::Rminus(_args.d_a0, _args0.d_a0));
                          }},
                      std::move(h6)->v());
@@ -2238,7 +2215,7 @@ _x0);
                Overloaded{
                    [](const typename Sig<RbaseSymbolsImpl::R>::Exist _args)
                        -> std::shared_ptr<Sig<RbaseSymbolsImpl::R>> {
-                     return Sig<RbaseSymbolsImpl::R>::ctor::Exist_(_args.d_a0);
+                     return Sig<RbaseSymbolsImpl::R>::exist(_args.d_a0);
                    }},
                std::move(s)->v());
          }
@@ -2248,14 +2225,13 @@ _x0);
      template <MapsTo<RbaseSymbolsImpl::R, unsigned int> F0>
      std::shared_ptr<Sig<RbaseSymbolsImpl::R>>
      Alembert::AlembertC3_step2(F0 &&an, const RbaseSymbolsImpl::R _x) {
-       return Sig<RbaseSymbolsImpl::R>::ctor::Exist_(an(0u));
+       return Sig<RbaseSymbolsImpl::R>::exist(an(0u));
      }
 
      template <MapsTo<RbaseSymbolsImpl::R, unsigned int> F0>
      std::shared_ptr<Sig<RbaseSymbolsImpl::R>>
      Alembert::Alembert_C3(F0 &&an, const RbaseSymbolsImpl::R x) {
-       std::shared_ptr<Sumor<bool>> s =
-           ::total_order_T(x, ::IZR(Z::ctor::Z0_()));
+       std::shared_ptr<Sumor<bool>> s = ::total_order_T(x, ::IZR(Z::z0()));
        return std::visit(
            Overloaded{[&](const typename Sumor<bool>::Inleft _args)
                           -> std::shared_ptr<Sig<RbaseSymbolsImpl::R>> {
@@ -2283,9 +2259,9 @@ _x0);
          unsigned int n0 = n - 1;
          RbaseSymbolsImpl::R down = Rsqrt_def::Dichotomy_lb(x, y, p, n0);
          RbaseSymbolsImpl::R up = Rsqrt_def::Dichotomy_ub(x, y, p, n0);
-         RbaseSymbolsImpl::R z = ::Rdiv(
-             RbaseSymbolsImpl::Rplus(down, up),
-             ::IZR(Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XH_()))));
+         RbaseSymbolsImpl::R z =
+             ::Rdiv(RbaseSymbolsImpl::Rplus(down, up),
+                    ::IZR(Z::zpos(Positive::xo(Positive::xh()))));
          if (p(z)) {
            return down;
          } else {
@@ -2305,9 +2281,9 @@ _x0);
          unsigned int n0 = n - 1;
          RbaseSymbolsImpl::R down = Rsqrt_def::Dichotomy_lb(x, y, p, n0);
          RbaseSymbolsImpl::R up = Rsqrt_def::Dichotomy_ub(x, y, p, n0);
-         RbaseSymbolsImpl::R z = ::Rdiv(
-             RbaseSymbolsImpl::Rplus(down, up),
-             ::IZR(Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XH_()))));
+         RbaseSymbolsImpl::R z =
+             ::Rdiv(RbaseSymbolsImpl::Rplus(down, up),
+                    ::IZR(Z::zpos(Positive::xo(Positive::xh()))));
          if (p(z)) {
            return z;
          } else {
@@ -2380,8 +2356,7 @@ _x0);
                          [](const typename Sig<RbaseSymbolsImpl::R>::Exist
                                 _args0)
                              -> std::shared_ptr<Sig<RbaseSymbolsImpl::R>> {
-                           return Sig<RbaseSymbolsImpl::R>::ctor::Exist_(
-                               _args0.d_a0);
+                           return Sig<RbaseSymbolsImpl::R>::exist(_args0.d_a0);
                          }},
                      std::move(s0)->v());
                }
@@ -2394,15 +2369,14 @@ _x0);
      std::shared_ptr<Sig<RbaseSymbolsImpl::R>>
      Rsqrt_def::IVT_cor(F0 &&f, const RbaseSymbolsImpl::R x,
                         const RbaseSymbolsImpl::R y) {
-       std::shared_ptr<Sumor<bool>> s =
-           ::total_order_T(::IZR(Z::ctor::Z0_()), f(x));
+       std::shared_ptr<Sumor<bool>> s = ::total_order_T(::IZR(Z::z0()), f(x));
        return std::visit(
            Overloaded{
                [&](const typename Sumor<bool>::Inleft _args)
                    -> std::shared_ptr<Sig<RbaseSymbolsImpl::R>> {
                  if (_args.d_a0) {
                    std::shared_ptr<Sumor<bool>> s1 =
-                       ::total_order_T(::IZR(Z::ctor::Z0_()), f(y));
+                       ::total_order_T(::IZR(Z::z0()), f(y));
                    return std::visit(
                        Overloaded{
                            [&](const typename Sumor<bool>::Inleft _args0)
@@ -2410,7 +2384,7 @@ _x0);
                              if (_args0.d_a0) {
                                throw std::logic_error("absurd case");
                              } else {
-                               return Sig<RbaseSymbolsImpl::R>::ctor::Exist_(y);
+                               return Sig<RbaseSymbolsImpl::R>::exist(y);
                              }
                            },
                            [&](const typename Sumor<bool>::Inright _args0)
@@ -2436,27 +2410,27 @@ _x0);
                                  return std::move(s2);
                                } else {
                                  return std::visit(
-                                     Overloaded{
-                                         [](const typename Sig<
-                                             RbaseSymbolsImpl::R>::Exist _args1)
-                                             -> std::shared_ptr<
-                                                 Sig<RbaseSymbolsImpl::R>> {
-                                           return Sig<RbaseSymbolsImpl::R>::
-                                               ctor::Exist_(_args1.d_a0);
-                                         }},
+                                     Overloaded{[](const typename Sig<
+                                                    RbaseSymbolsImpl::R>::Exist
+                                                       _args1)
+                                                    -> std::shared_ptr<Sig<
+                                                        RbaseSymbolsImpl::R>> {
+                                       return Sig<RbaseSymbolsImpl::R>::exist(
+                                           _args1.d_a0);
+                                     }},
                                      std::move(s2)->v());
                                }
                              }();
                            }},
                        std::move(s1)->v());
                  } else {
-                   return Sig<RbaseSymbolsImpl::R>::ctor::Exist_(x);
+                   return Sig<RbaseSymbolsImpl::R>::exist(x);
                  }
                },
                [&](const typename Sumor<bool>::Inright _args)
                    -> std::shared_ptr<Sig<RbaseSymbolsImpl::R>> {
                  std::shared_ptr<Sumor<bool>> s0 =
-                     ::total_order_T(::IZR(Z::ctor::Z0_()), f(y));
+                     ::total_order_T(::IZR(Z::z0()), f(y));
                  return std::visit(
                      Overloaded{
                          [&](const typename Sumor<bool>::Inleft _args0)
@@ -2464,7 +2438,7 @@ _x0);
                            if (_args0.d_a0) {
                              return Rsqrt_def::IVT(f, x, y);
                            } else {
-                             return Sig<RbaseSymbolsImpl::R>::ctor::Exist_(y);
+                             return Sig<RbaseSymbolsImpl::R>::exist(y);
                            }
                          },
                          [](const typename Sumor<bool>::Inright _args0)
@@ -2502,8 +2476,7 @@ _x0);
                      Overloaded{
                          [&](const typename Sig<RbaseSymbolsImpl::R>::Exist
                                  _args0) -> auto {
-                           return Sig<RbaseSymbolsImpl::R>::ctor::Exist_(
-                               _args.d_a0);
+                           return Sig<RbaseSymbolsImpl::R>::exist(_args.d_a0);
                          }},
                      std::move(x1)->v());
                }

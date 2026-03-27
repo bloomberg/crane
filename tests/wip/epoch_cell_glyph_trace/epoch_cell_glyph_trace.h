@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -91,6 +96,7 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Positive(XI _v) : d_v_(std::move(_v)) {}
 
@@ -98,37 +104,47 @@ private:
 
   explicit Positive(XH _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Positive> xi(const std::shared_ptr<Positive> &a0) {
+    return std::make_shared<Positive>(XI{a0});
+  }
 
-    static std::shared_ptr<Positive> XI_(const std::shared_ptr<Positive> &a0) {
-      return std::shared_ptr<Positive>(new Positive(XI{a0}));
-    }
+  static std::shared_ptr<Positive> xi(std::shared_ptr<Positive> &&a0) {
+    return std::make_shared<Positive>(XI{std::move(a0)});
+  }
 
-    static std::shared_ptr<Positive> XO_(const std::shared_ptr<Positive> &a0) {
-      return std::shared_ptr<Positive>(new Positive(XO{a0}));
-    }
+  static std::shared_ptr<Positive> xo(const std::shared_ptr<Positive> &a0) {
+    return std::make_shared<Positive>(XO{a0});
+  }
 
-    static std::shared_ptr<Positive> XH_() {
-      return std::shared_ptr<Positive>(new Positive(XH{}));
-    }
+  static std::shared_ptr<Positive> xo(std::shared_ptr<Positive> &&a0) {
+    return std::make_shared<Positive>(XO{std::move(a0)});
+  }
 
-    static std::unique_ptr<Positive>
-    XI_uptr(const std::shared_ptr<Positive> &a0) {
-      return std::unique_ptr<Positive>(new Positive(XI{a0}));
-    }
+  static std::shared_ptr<Positive> xh() {
+    return std::make_shared<Positive>(XH{});
+  }
 
-    static std::unique_ptr<Positive>
-    XO_uptr(const std::shared_ptr<Positive> &a0) {
-      return std::unique_ptr<Positive>(new Positive(XO{a0}));
-    }
+  static std::unique_ptr<Positive>
+  xi_uptr(const std::shared_ptr<Positive> &a0) {
+    return std::make_unique<Positive>(XI{a0});
+  }
 
-    static std::unique_ptr<Positive> XH_uptr() {
-      return std::unique_ptr<Positive>(new Positive(XH{}));
-    }
-  };
+  static std::unique_ptr<Positive> xi_uptr(std::shared_ptr<Positive> &&a0) {
+    return std::make_unique<Positive>(XI{std::move(a0)});
+  }
+
+  static std::unique_ptr<Positive>
+  xo_uptr(const std::shared_ptr<Positive> &a0) {
+    return std::make_unique<Positive>(XO{a0});
+  }
+
+  static std::unique_ptr<Positive> xo_uptr(std::shared_ptr<Positive> &&a0) {
+    return std::make_unique<Positive>(XO{std::move(a0)});
+  }
+
+  static std::unique_ptr<Positive> xh_uptr() {
+    return std::make_unique<Positive>(XH{});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -155,6 +171,7 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit Z(Z0 _v) : d_v_(std::move(_v)) {}
 
@@ -162,33 +179,41 @@ private:
 
   explicit Z(Zneg _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<Z> z0() { return std::make_shared<Z>(Z0{}); }
 
-    static std::shared_ptr<Z> Z0_() { return std::shared_ptr<Z>(new Z(Z0{})); }
+  static std::shared_ptr<Z> zpos(const std::shared_ptr<Positive> &a0) {
+    return std::make_shared<Z>(Zpos{a0});
+  }
 
-    static std::shared_ptr<Z> Zpos_(const std::shared_ptr<Positive> &a0) {
-      return std::shared_ptr<Z>(new Z(Zpos{a0}));
-    }
+  static std::shared_ptr<Z> zpos(std::shared_ptr<Positive> &&a0) {
+    return std::make_shared<Z>(Zpos{std::move(a0)});
+  }
 
-    static std::shared_ptr<Z> Zneg_(const std::shared_ptr<Positive> &a0) {
-      return std::shared_ptr<Z>(new Z(Zneg{a0}));
-    }
+  static std::shared_ptr<Z> zneg(const std::shared_ptr<Positive> &a0) {
+    return std::make_shared<Z>(Zneg{a0});
+  }
 
-    static std::unique_ptr<Z> Z0_uptr() {
-      return std::unique_ptr<Z>(new Z(Z0{}));
-    }
+  static std::shared_ptr<Z> zneg(std::shared_ptr<Positive> &&a0) {
+    return std::make_shared<Z>(Zneg{std::move(a0)});
+  }
 
-    static std::unique_ptr<Z> Zpos_uptr(const std::shared_ptr<Positive> &a0) {
-      return std::unique_ptr<Z>(new Z(Zpos{a0}));
-    }
+  static std::unique_ptr<Z> z0_uptr() { return std::make_unique<Z>(Z0{}); }
 
-    static std::unique_ptr<Z> Zneg_uptr(const std::shared_ptr<Positive> &a0) {
-      return std::unique_ptr<Z>(new Z(Zneg{a0}));
-    }
-  };
+  static std::unique_ptr<Z> zpos_uptr(const std::shared_ptr<Positive> &a0) {
+    return std::make_unique<Z>(Zpos{a0});
+  }
+
+  static std::unique_ptr<Z> zpos_uptr(std::shared_ptr<Positive> &&a0) {
+    return std::make_unique<Z>(Zpos{std::move(a0)});
+  }
+
+  static std::unique_ptr<Z> zneg_uptr(const std::shared_ptr<Positive> &a0) {
+    return std::make_unique<Z>(Zneg{a0});
+  }
+
+  static std::unique_ptr<Z> zneg_uptr(std::shared_ptr<Positive> &&a0) {
+    return std::make_unique<Z>(Zneg{std::move(a0)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -453,29 +478,23 @@ struct EpochCellGlyphTraceCase {
 
   static inline const std::shared_ptr<MechanismState> initial_state =
       std::make_shared<MechanismState>(MechanismState{
-          Z::ctor::Z0_(), Z::ctor::Z0_(), Z::ctor::Z0_(), Z::ctor::Z0_(),
-          Z::ctor::Z0_(), Z::ctor::Z0_(), Z::ctor::Z0_()});
-  static inline const std::shared_ptr<Z> metonic_modulus = Z::ctor::Zpos_(
-      Positive::ctor::XI_(Positive::ctor::XI_(Positive::ctor::XO_(
-          Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XI_(
-              Positive::ctor::XI_(Positive::ctor::XH_()))))))));
-  static inline const std::shared_ptr<Z> saros_modulus = Z::ctor::Zpos_(
-      Positive::ctor::XI_(Positive::ctor::XI_(Positive::ctor::XI_(
-          Positive::ctor::XI_(Positive::ctor::XI_(Positive::ctor::XO_(
-              Positive::ctor::XI_(Positive::ctor::XH_()))))))));
+          Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0()});
+  static inline const std::shared_ptr<Z> metonic_modulus =
+      Z::zpos(Positive::xi(Positive::xi(Positive::xo(Positive::xi(
+          Positive::xo(Positive::xi(Positive::xi(Positive::xh()))))))));
+  static inline const std::shared_ptr<Z> saros_modulus =
+      Z::zpos(Positive::xi(Positive::xi(Positive::xi(Positive::xi(
+          Positive::xi(Positive::xo(Positive::xi(Positive::xh()))))))));
   static inline const std::shared_ptr<Z> callippic_modulus =
-      Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XO_(
-          Positive::ctor::XI_(Positive::ctor::XI_(Positive::ctor::XO_(
-              Positive::ctor::XO_(Positive::ctor::XH_())))))));
+      Z::zpos(Positive::xo(Positive::xo(Positive::xi(
+          Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))));
   static inline const std::shared_ptr<Z> exeligmos_modulus =
-      Z::ctor::Zpos_(Positive::ctor::XI_(Positive::ctor::XH_()));
-  static inline const std::shared_ptr<Z> games_modulus = Z::ctor::Zpos_(
-      Positive::ctor::XO_(Positive::ctor::XO_(Positive::ctor::XH_())));
+      Z::zpos(Positive::xi(Positive::xh()));
+  static inline const std::shared_ptr<Z> games_modulus =
+      Z::zpos(Positive::xo(Positive::xo(Positive::xh())));
   static inline const std::shared_ptr<Z> zodiac_modulus =
-      Z::ctor::Zpos_(Positive::ctor::XO_(
-          Positive::ctor::XO_(Positive::ctor::XO_(Positive::ctor::XI_(
-              Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XI_(
-                  Positive::ctor::XO_(Positive::ctor::XH_())))))))));
+      Z::zpos(Positive::xo(Positive::xo(Positive::xo(Positive::xi(Positive::xo(
+          Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))))));
   static std::shared_ptr<MechanismState>
   step(std::shared_ptr<MechanismState> s);
   static std::shared_ptr<MechanismState>
@@ -623,175 +642,123 @@ struct EpochCellGlyphTraceCase {
   glyph_at_cell(const std::shared_ptr<Z> &cell);
   static inline const std::shared_ptr<HistoricalEclipse> eclipse_may_205_bc =
       std::make_shared<HistoricalEclipse>(HistoricalEclipse{
-          Z::ctor::Zneg_(
-              Positive::ctor::XO_(Positive::ctor::XO_(Positive::ctor::XI_(
-                  Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XO_(
-                      Positive::ctor::XI_(Positive::ctor::XH_())))))))),
-          Z::ctor::Zpos_(
-              Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XH_()))),
-          Z::ctor::Zpos_(Positive::ctor::XO_(
-              Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XH_())))),
+          Z::zneg(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
+              Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
+          Z::zpos(Positive::xi(Positive::xo(Positive::xh()))),
+          Z::zpos(Positive::xo(Positive::xo(Positive::xi(Positive::xh())))),
           EclipseCategory::e_EC_TOTALLUNAR,
-          Z::ctor::Zpos_(Positive::ctor::XO_(
-              Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XI_(
-                  Positive::ctor::XO_(Positive::ctor::XH_())))))),
-          Z::ctor::Zpos_(Positive::ctor::XO_(
-              Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XO_(
-                  Positive::ctor::XO_(Positive::ctor::XH_())))))),
-          std::make_shared<Q>(
-              Q{Z::ctor::Zpos_(Positive::ctor::XI_(
-                    Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XO_(
-                        Positive::ctor::XO_(Positive::ctor::XI_(
-                            Positive::ctor::XO_(Positive::ctor::XH_())))))))),
-                Positive::ctor::XO_(Positive::ctor::XO_(
-                    Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XO_(
-                        Positive::ctor::XI_(Positive::ctor::XH_()))))))}),
+          Z::zpos(Positive::xo(Positive::xo(
+              Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))),
+          Z::zpos(Positive::xo(Positive::xi(
+              Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
+          std::make_shared<Q>(Q{
+              Z::zpos(Positive::xi(Positive::xo(Positive::xi(Positive::xo(
+                  Positive::xo(Positive::xi(Positive::xo(Positive::xh())))))))),
+              Positive::xo(Positive::xo(Positive::xi(
+                  Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))}),
           true});
   static inline const std::shared_ptr<HistoricalEclipse> eclipse_nov_205_bc =
       std::make_shared<HistoricalEclipse>(HistoricalEclipse{
-          Z::ctor::Zneg_(
-              Positive::ctor::XO_(Positive::ctor::XO_(Positive::ctor::XI_(
-                  Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XO_(
-                      Positive::ctor::XI_(Positive::ctor::XH_())))))))),
-          Z::ctor::Zpos_(Positive::ctor::XI_(
-              Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XH_())))),
-          Z::ctor::Zpos_(
-              Positive::ctor::XI_(Positive::ctor::XI_(Positive::ctor::XI_(
-                  Positive::ctor::XO_(Positive::ctor::XH_()))))),
+          Z::zneg(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
+              Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
+          Z::zpos(Positive::xi(Positive::xi(Positive::xo(Positive::xh())))),
+          Z::zpos(Positive::xi(
+              Positive::xi(Positive::xi(Positive::xo(Positive::xh()))))),
           EclipseCategory::e_EC_TOTALLUNAR,
-          Z::ctor::Zpos_(Positive::ctor::XI_(
-              Positive::ctor::XO_(Positive::ctor::XO_(Positive::ctor::XO_(
-                  Positive::ctor::XI_(Positive::ctor::XH_())))))),
-          Z::ctor::Zpos_(Positive::ctor::XO_(
-              Positive::ctor::XO_(Positive::ctor::XO_(Positive::ctor::XO_(
-                  Positive::ctor::XO_(Positive::ctor::XH_())))))),
-          std::make_shared<Q>(
-              Q{Z::ctor::Zpos_(Positive::ctor::XO_(
-                    Positive::ctor::XI_(Positive::ctor::XI_(Positive::ctor::XI_(
-                        Positive::ctor::XO_(Positive::ctor::XO_(
-                            Positive::ctor::XO_(Positive::ctor::XH_())))))))),
-                Positive::ctor::XO_(Positive::ctor::XO_(
-                    Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XO_(
-                        Positive::ctor::XI_(Positive::ctor::XH_()))))))}),
+          Z::zpos(Positive::xi(Positive::xo(
+              Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))),
+          Z::zpos(Positive::xo(Positive::xo(
+              Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
+          std::make_shared<Q>(Q{
+              Z::zpos(Positive::xo(Positive::xi(Positive::xi(Positive::xi(
+                  Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))))),
+              Positive::xo(Positive::xo(Positive::xi(
+                  Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))}),
           true});
   static inline const std::shared_ptr<HistoricalEclipse> eclipse_may_204_bc =
       std::make_shared<HistoricalEclipse>(HistoricalEclipse{
-          Z::ctor::Zneg_(
-              Positive::ctor::XI_(Positive::ctor::XI_(Positive::ctor::XO_(
-                  Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XO_(
-                      Positive::ctor::XI_(Positive::ctor::XH_())))))))),
-          Z::ctor::Zpos_(
-              Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XH_()))),
-          Z::ctor::Zpos_(Positive::ctor::XH_()),
-          EclipseCategory::e_EC_PARTIALSOLAR,
-          Z::ctor::Zpos_(Positive::ctor::XO_(
-              Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XI_(
-                  Positive::ctor::XO_(Positive::ctor::XH_())))))),
-          Z::ctor::Zpos_(Positive::ctor::XI_(
-              Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XO_(
-                  Positive::ctor::XO_(Positive::ctor::XH_())))))),
+          Z::zneg(Positive::xi(Positive::xi(Positive::xo(Positive::xi(
+              Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
+          Z::zpos(Positive::xi(Positive::xo(Positive::xh()))),
+          Z::zpos(Positive::xh()), EclipseCategory::e_EC_PARTIALSOLAR,
+          Z::zpos(Positive::xo(Positive::xo(
+              Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))),
+          Z::zpos(Positive::xi(Positive::xi(
+              Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
           std::make_shared<Q>(
-              Q{Z::ctor::Zpos_(Positive::ctor::XO_(
-                    Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XO_(
-                        Positive::ctor::XO_(Positive::ctor::XH_())))))),
-                Positive::ctor::XO_(Positive::ctor::XO_(
-                    Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XO_(
-                        Positive::ctor::XI_(Positive::ctor::XH_()))))))}),
+              Q{Z::zpos(Positive::xo(Positive::xi(
+                    Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
+                Positive::xo(Positive::xo(Positive::xi(Positive::xo(
+                    Positive::xo(Positive::xi(Positive::xh()))))))}),
           true});
   static inline const std::shared_ptr<HistoricalEclipse> eclipse_oct_204_bc =
       std::make_shared<HistoricalEclipse>(HistoricalEclipse{
-          Z::ctor::Zneg_(
-              Positive::ctor::XI_(Positive::ctor::XI_(Positive::ctor::XO_(
-                  Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XO_(
-                      Positive::ctor::XI_(Positive::ctor::XH_())))))))),
-          Z::ctor::Zpos_(Positive::ctor::XO_(
-              Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XH_())))),
-          Z::ctor::Zpos_(
-              Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XO_(
-                  Positive::ctor::XI_(Positive::ctor::XH_()))))),
+          Z::zneg(Positive::xi(Positive::xi(Positive::xo(Positive::xi(
+              Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
+          Z::zpos(Positive::xo(Positive::xi(Positive::xo(Positive::xh())))),
+          Z::zpos(Positive::xo(
+              Positive::xi(Positive::xo(Positive::xi(Positive::xh()))))),
           EclipseCategory::e_EC_TOTALLUNAR,
-          Z::ctor::Zpos_(Positive::ctor::XI_(
-              Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XI_(
-                  Positive::ctor::XI_(Positive::ctor::XH_())))))),
-          Z::ctor::Zpos_(
-              Positive::ctor::XI_(Positive::ctor::XI_(Positive::ctor::XO_(
-                  Positive::ctor::XI_(Positive::ctor::XH_()))))),
-          std::make_shared<Q>(
-              Q{Z::ctor::Zpos_(Positive::ctor::XO_(
-                    Positive::ctor::XO_(Positive::ctor::XO_(Positive::ctor::XI_(
-                        Positive::ctor::XO_(Positive::ctor::XO_(
-                            Positive::ctor::XO_(Positive::ctor::XH_())))))))),
-                Positive::ctor::XO_(Positive::ctor::XO_(
-                    Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XO_(
-                        Positive::ctor::XI_(Positive::ctor::XH_()))))))}),
+          Z::zpos(Positive::xi(Positive::xi(
+              Positive::xo(Positive::xi(Positive::xi(Positive::xh())))))),
+          Z::zpos(Positive::xi(
+              Positive::xi(Positive::xo(Positive::xi(Positive::xh()))))),
+          std::make_shared<Q>(Q{
+              Z::zpos(Positive::xo(Positive::xo(Positive::xo(Positive::xi(
+                  Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))))),
+              Positive::xo(Positive::xo(Positive::xi(
+                  Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))}),
           true});
   static inline const std::shared_ptr<HistoricalEclipse> eclipse_mar_187_bc =
       std::make_shared<HistoricalEclipse>(HistoricalEclipse{
-          Z::ctor::Zneg_(
-              Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XO_(
-                  Positive::ctor::XI_(Positive::ctor::XI_(Positive::ctor::XI_(
-                      Positive::ctor::XO_(Positive::ctor::XH_())))))))),
-          Z::ctor::Zpos_(Positive::ctor::XI_(Positive::ctor::XH_())),
-          Z::ctor::Zpos_(Positive::ctor::XO_(
-              Positive::ctor::XI_(Positive::ctor::XI_(Positive::ctor::XH_())))),
+          Z::zneg(Positive::xo(Positive::xi(Positive::xo(Positive::xi(
+              Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))))),
+          Z::zpos(Positive::xi(Positive::xh())),
+          Z::zpos(Positive::xo(Positive::xi(Positive::xi(Positive::xh())))),
           EclipseCategory::e_EC_TOTALLUNAR,
-          Z::ctor::Zpos_(Positive::ctor::XO_(
-              Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XI_(
-                  Positive::ctor::XO_(Positive::ctor::XH_())))))),
-          Z::ctor::Zpos_(Positive::ctor::XI_(
-              Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XO_(
-                  Positive::ctor::XO_(Positive::ctor::XH_())))))),
-          std::make_shared<Q>(
-              Q{Z::ctor::Zpos_(Positive::ctor::XI_(
-                    Positive::ctor::XO_(Positive::ctor::XO_(Positive::ctor::XO_(
-                        Positive::ctor::XO_(Positive::ctor::XI_(
-                            Positive::ctor::XO_(Positive::ctor::XH_())))))))),
-                Positive::ctor::XO_(Positive::ctor::XO_(
-                    Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XO_(
-                        Positive::ctor::XI_(Positive::ctor::XH_()))))))}),
+          Z::zpos(Positive::xo(Positive::xo(
+              Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))),
+          Z::zpos(Positive::xi(Positive::xi(
+              Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
+          std::make_shared<Q>(Q{
+              Z::zpos(Positive::xi(Positive::xo(Positive::xo(Positive::xo(
+                  Positive::xo(Positive::xi(Positive::xo(Positive::xh())))))))),
+              Positive::xo(Positive::xo(Positive::xi(
+                  Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))}),
           true});
   static inline const std::shared_ptr<HistoricalEclipse> eclipse_jun_178_bc =
       std::make_shared<HistoricalEclipse>(HistoricalEclipse{
-          Z::ctor::Zneg_(
-              Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XO_(
-                  Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XI_(
-                      Positive::ctor::XO_(Positive::ctor::XH_())))))))),
-          Z::ctor::Zpos_(
-              Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XH_()))),
-          Z::ctor::Zpos_(
-              Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XI_(
-                  Positive::ctor::XO_(Positive::ctor::XH_()))))),
+          Z::zneg(Positive::xi(Positive::xo(Positive::xo(Positive::xo(
+              Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))))),
+          Z::zpos(Positive::xo(Positive::xi(Positive::xh()))),
+          Z::zpos(Positive::xi(
+              Positive::xo(Positive::xi(Positive::xo(Positive::xh()))))),
           EclipseCategory::e_EC_TOTALLUNAR,
-          Z::ctor::Zpos_(Positive::ctor::XO_(
-              Positive::ctor::XO_(Positive::ctor::XO_(Positive::ctor::XI_(
-                  Positive::ctor::XI_(Positive::ctor::XH_())))))),
-          Z::ctor::Zpos_(Positive::ctor::XO_(
-              Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XO_(
-                  Positive::ctor::XO_(Positive::ctor::XH_())))))),
-          std::make_shared<Q>(
-              Q{Z::ctor::Zpos_(Positive::ctor::XO_(
-                    Positive::ctor::XO_(Positive::ctor::XI_(Positive::ctor::XI_(
-                        Positive::ctor::XI_(Positive::ctor::XO_(
-                            Positive::ctor::XO_(Positive::ctor::XH_())))))))),
-                Positive::ctor::XO_(Positive::ctor::XO_(
-                    Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XO_(
-                        Positive::ctor::XI_(Positive::ctor::XH_()))))))}),
+          Z::zpos(Positive::xo(Positive::xo(
+              Positive::xo(Positive::xi(Positive::xi(Positive::xh())))))),
+          Z::zpos(Positive::xo(Positive::xo(
+              Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))),
+          std::make_shared<Q>(Q{
+              Z::zpos(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
+                  Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))))),
+              Positive::xo(Positive::xo(Positive::xi(
+                  Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))}),
           true});
   static inline const std::shared_ptr<List<std::shared_ptr<HistoricalEclipse>>>
-      eclipse_database = List<std::shared_ptr<HistoricalEclipse>>::ctor::Cons_(
+      eclipse_database = List<std::shared_ptr<HistoricalEclipse>>::cons(
           eclipse_may_205_bc,
-          List<std::shared_ptr<HistoricalEclipse>>::ctor::Cons_(
+          List<std::shared_ptr<HistoricalEclipse>>::cons(
               eclipse_nov_205_bc,
-              List<std::shared_ptr<HistoricalEclipse>>::ctor::Cons_(
+              List<std::shared_ptr<HistoricalEclipse>>::cons(
                   eclipse_may_204_bc,
-                  List<std::shared_ptr<HistoricalEclipse>>::ctor::Cons_(
+                  List<std::shared_ptr<HistoricalEclipse>>::cons(
                       eclipse_oct_204_bc,
-                      List<std::shared_ptr<HistoricalEclipse>>::ctor::Cons_(
+                      List<std::shared_ptr<HistoricalEclipse>>::cons(
                           eclipse_mar_187_bc,
-                          List<std::shared_ptr<HistoricalEclipse>>::ctor::Cons_(
+                          List<std::shared_ptr<HistoricalEclipse>>::cons(
                               eclipse_jun_178_bc,
-                              List<std::shared_ptr<HistoricalEclipse>>::ctor::
-                                  Nil_()))))));
+                              List<std::shared_ptr<HistoricalEclipse>>::
+                                  nil()))))));
   __attribute__((pure)) static unsigned int count_total_lunar(
       const std::shared_ptr<List<std::shared_ptr<HistoricalEclipse>>> &es);
   __attribute__((pure)) static unsigned int count_visible_total_lunar(
@@ -837,12 +804,9 @@ struct EpochCellGlyphTraceCase {
 
   static inline const std::shared_ptr<ValidEpoch> epoch_205_bc_valid =
       std::make_shared<ValidEpoch>(ValidEpoch{
-          Z::ctor::Zneg_(
-              Positive::ctor::XO_(Positive::ctor::XO_(Positive::ctor::XI_(
-                  Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XO_(
-                      Positive::ctor::XI_(Positive::ctor::XH_())))))))),
-          Z::ctor::Zpos_(
-              Positive::ctor::XI_(Positive::ctor::XO_(Positive::ctor::XH_()))),
+          Z::zneg(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
+              Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
+          Z::zpos(Positive::xi(Positive::xo(Positive::xh()))),
           eclipse_may_205_bc});
   static inline const std::shared_ptr<EpochReading> sample_epoch_reading =
       build_epoch_reading(epoch_205_bc_valid->ve_year,
@@ -859,7 +823,7 @@ struct EpochCellGlyphTraceCase {
   static inline const unsigned int sample_visible_series_checksum =
       visible_series_checksum(eclipse_database);
   static inline const bool sample_epoch_cell_zero =
-      BinInt::eqb(sample_epoch_reading->reading_cell, Z::ctor::Z0_());
+      BinInt::eqb(sample_epoch_reading->reading_cell, Z::z0());
   static inline const bool sample_epoch_glyph_match =
       reading_matches(sample_epoch_reading);
   static inline const unsigned int sample_epoch_phase_code =
@@ -870,29 +834,25 @@ struct EpochCellGlyphTraceCase {
       epoch_205_bc_valid->ve_eclipse->he_visible_mediterranean;
   static inline const bool sample_valid_epoch_series_44 =
       BinInt::eqb(epoch_205_bc_valid->ve_eclipse->he_saros_series,
-                  Z::ctor::Zpos_(Positive::ctor::XO_(Positive::ctor::XO_(
-                      Positive::ctor::XI_(Positive::ctor::XI_(
-                          Positive::ctor::XO_(Positive::ctor::XH_())))))));
+                  Z::zpos(Positive::xo(Positive::xo(Positive::xi(
+                      Positive::xi(Positive::xo(Positive::xh())))))));
   static inline const bool sample_valid_epoch_magnitude_ge_one =
-      std::make_shared<Q>(
-          Q{Z::ctor::Zpos_(Positive::ctor::XH_()), Positive::ctor::XH_()})
+      std::make_shared<Q>(Q{Z::zpos(Positive::xh()), Positive::xh()})
           ->Qle_bool(epoch_205_bc_valid->ve_eclipse->he_magnitude);
-  static inline const bool sample_step_roundtrip_saros = BinInt::eqb(
-      step_reverse(step(initial_state))->saros_dial, Z::ctor::Z0_());
+  static inline const bool sample_step_roundtrip_saros =
+      BinInt::eqb(step_reverse(step(initial_state))->saros_dial, Z::z0());
   static inline const bool sample_olympiad_year_is_one_after_4 =
       BinInt::eqb(predict_olympiad_year(step_n(4u, initial_state)),
-                  Z::ctor::Zpos_(Positive::ctor::XH_()));
+                  Z::zpos(Positive::xh()));
   static inline const bool sample_eclipse_possible_after_6 =
       eclipse_possible_at_dial(step_n(6u, initial_state)->saros_dial);
   static inline const bool sample_epoch_178_misaligned = !(BinInt::eqb(
-      saros_cell(Z::ctor::Zneg_(Positive::ctor::XO_(Positive::ctor::XO_(
-                     Positive::ctor::XI_(Positive::ctor::XI_(
-                         Positive::ctor::XO_(Positive::ctor::XO_(
-                             Positive::ctor::XI_(Positive::ctor::XH_())))))))),
-                 Z::ctor::Zpos_(Positive::ctor::XI_(
-                     Positive::ctor::XO_(Positive::ctor::XH_()))),
-                 eclipse_jun_178_bc),
-      Z::ctor::Z0_()));
+      saros_cell(
+          Z::zneg(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
+              Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
+          Z::zpos(Positive::xi(Positive::xo(Positive::xh()))),
+          eclipse_jun_178_bc),
+      Z::z0()));
 };
 
 #endif // INCLUDED_EPOCH_CELL_GLYPH_TRACE

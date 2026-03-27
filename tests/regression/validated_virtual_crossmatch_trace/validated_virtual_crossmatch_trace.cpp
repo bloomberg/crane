@@ -208,37 +208,37 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
     case HLALocus::e_LOCUS_A: {
       if (a->hla_group <= 0) {
         return List<std::shared_ptr<
-            ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::ctor::Nil_();
+            ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
       } else {
         unsigned int n = a->hla_group - 1;
         if (n <= 0) {
           return List<std::shared_ptr<
-              ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::ctor::Nil_();
+              ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
         } else {
           unsigned int n0 = n - 1;
           if (n0 <= 0) {
             return List<std::shared_ptr<
-                ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::ctor::
-                Cons_(eplet_62GE,
-                      List<std::shared_ptr<
-                          ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
-                          ctor::Cons_(eplet_65QIA,
-                                      List<std::shared_ptr<
-                                          ValidatedVirtualCrossmatchTraceCase::
-                                              HLAEpitope>>::ctor::Nil_()));
+                ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
+                cons(eplet_62GE,
+                     List<std::shared_ptr<
+                         ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
+                         cons(eplet_65QIA,
+                              List<std::shared_ptr<
+                                  ValidatedVirtualCrossmatchTraceCase::
+                                      HLAEpitope>>::nil()));
           } else {
             unsigned int n1 = n0 - 1;
             if (n1 <= 0) {
               return List<std::shared_ptr<
-                  ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::ctor::
-                  Cons_(
+                  ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
+                  cons(
                       eplet_62GE,
                       List<std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::
-                                               HLAEpitope>>::ctor::Nil_());
+                                               HLAEpitope>>::nil());
             } else {
               unsigned int _x = n1 - 1;
-              return List<std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::
-                                              HLAEpitope>>::ctor::Nil_();
+              return List<std::shared_ptr<
+                  ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
             }
           }
         }
@@ -247,54 +247,52 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
     case HLALocus::e_LOCUS_B: {
       if (a->hla_group <= 0) {
         return List<std::shared_ptr<
-            ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::ctor::Nil_();
+            ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
       } else {
         unsigned int n = a->hla_group - 1;
         if (n <= 0) {
           return List<std::shared_ptr<
-              ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::ctor::Nil_();
+              ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
         } else {
           unsigned int n0 = n - 1;
           if (n0 <= 0) {
             return List<std::shared_ptr<
-                ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::ctor::Nil_();
+                ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
           } else {
             unsigned int n1 = n0 - 1;
             if (n1 <= 0) {
-              return List<std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::
-                                              HLAEpitope>>::ctor::Nil_();
+              return List<std::shared_ptr<
+                  ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
             } else {
               unsigned int n2 = n1 - 1;
               if (n2 <= 0) {
                 return List<std::shared_ptr<
-                    ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::ctor::
-                    Nil_();
+                    ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
               } else {
                 unsigned int n3 = n2 - 1;
                 if (n3 <= 0) {
                   return List<std::shared_ptr<
-                      ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::ctor::
-                      Nil_();
+                      ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
                 } else {
                   unsigned int n4 = n3 - 1;
                   if (n4 <= 0) {
                     return List<std::shared_ptr<
                         ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
-                        ctor::Nil_();
+                        nil();
                   } else {
                     unsigned int n5 = n4 - 1;
                     if (n5 <= 0) {
                       return List<std::shared_ptr<
                           ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
-                          ctor::Cons_(eplet_142T,
-                                      List<std::shared_ptr<
-                                          ValidatedVirtualCrossmatchTraceCase::
-                                              HLAEpitope>>::ctor::Nil_());
+                          cons(eplet_142T,
+                               List<std::shared_ptr<
+                                   ValidatedVirtualCrossmatchTraceCase::
+                                       HLAEpitope>>::nil());
                     } else {
                       unsigned int _x = n5 - 1;
                       return List<std::shared_ptr<
                           ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
-                          ctor::Nil_();
+                          nil();
                     }
                   }
                 }
@@ -307,37 +305,35 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
     case HLALocus::e_LOCUS_DR: {
       if (a->hla_group <= 0) {
         return List<std::shared_ptr<
-            ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::ctor::Nil_();
+            ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
       } else {
         unsigned int n = a->hla_group - 1;
         if (n <= 0) {
           return List<std::shared_ptr<
-              ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::ctor::Nil_();
+              ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
         } else {
           unsigned int n0 = n - 1;
           if (n0 <= 0) {
             return List<std::shared_ptr<
-                ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::ctor::Nil_();
+                ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
           } else {
             unsigned int n1 = n0 - 1;
             if (n1 <= 0) {
-              return List<std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::
-                                              HLAEpitope>>::ctor::Nil_();
+              return List<std::shared_ptr<
+                  ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
             } else {
               unsigned int n2 = n1 - 1;
               if (n2 <= 0) {
                 return List<std::shared_ptr<
-                    ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::ctor::
-                    Cons_(
-                        eplet_77N,
-                        List<std::shared_ptr<
-                            ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
-                            ctor::Nil_());
+                    ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
+                    cons(eplet_77N,
+                         List<std::shared_ptr<
+                             ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
+                             nil());
               } else {
                 unsigned int _x = n2 - 1;
                 return List<std::shared_ptr<
-                    ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::ctor::
-                    Nil_();
+                    ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
               }
             }
           }
@@ -370,7 +366,7 @@ ValidatedVirtualCrossmatchTraceCase::epitope_dedup(
               -> std::shared_ptr<List<std::shared_ptr<
                   ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>> {
             return List<std::shared_ptr<
-                ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::ctor::Nil_();
+                ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
           },
           [](const typename List<std::shared_ptr<
                  ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::Cons _args)
@@ -383,8 +379,8 @@ ValidatedVirtualCrossmatchTraceCase::epitope_dedup(
               return epitope_dedup(_args.d_a1);
             } else {
               return List<std::shared_ptr<
-                  ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::ctor::
-                  Cons_(_args.d_a0, epitope_dedup(_args.d_a1));
+                  ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
+                  cons(_args.d_a0, epitope_dedup(_args.d_a1));
             }
           }},
       l->v());

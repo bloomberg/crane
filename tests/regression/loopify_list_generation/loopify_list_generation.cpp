@@ -23,16 +23,16 @@ LoopifyListGeneration::replicate(const unsigned int n, const unsigned int x) {
       {
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::ctor::Nil_();
+              List<unsigned int>::nil();
         } else {
-          _head = List<unsigned int>::ctor::Nil_();
+          _head = List<unsigned int>::nil();
         }
         _continue = false;
       }
     } else {
       unsigned int n_ = _loop_n - 1;
       {
-        auto _cell = List<unsigned int>::ctor::Cons_(x, nullptr);
+        auto _cell = List<unsigned int>::cons(x, nullptr);
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
               _cell;
@@ -60,16 +60,15 @@ LoopifyListGeneration::stutter(const std::shared_ptr<List<unsigned int>> &l) {
             [&](const typename List<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::ctor::Nil_();
+                    .d_a1 = List<unsigned int>::nil();
               } else {
-                _head = List<unsigned int>::ctor::Nil_();
+                _head = List<unsigned int>::nil();
               }
               _continue = false;
             },
             [&](const typename List<unsigned int>::Cons _args) {
-              auto _cell = List<unsigned int>::ctor::Cons_(_args.d_a0, nullptr);
-              auto _cell1 =
-                  List<unsigned int>::ctor::Cons_(_args.d_a0, nullptr);
+              auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);
+              auto _cell1 = List<unsigned int>::cons(_args.d_a0, nullptr);
               std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1 =
                   _cell1;
               if (_last) {
@@ -107,7 +106,7 @@ LoopifyListGeneration::cycle(const unsigned int n,
     std::visit(Overloaded{[&](_Enter _f) {
                             const unsigned int n = _f.n;
                             if (n <= 0) {
-                              _result = List<unsigned int>::ctor::Nil_();
+                              _result = List<unsigned int>::nil();
                             } else {
                               unsigned int n_ = n - 1;
                               _stack.push_back(_Call1{l});
@@ -132,16 +131,16 @@ LoopifyListGeneration::iterate(const unsigned int n, const unsigned int x) {
       {
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::ctor::Nil_();
+              List<unsigned int>::nil();
         } else {
-          _head = List<unsigned int>::ctor::Nil_();
+          _head = List<unsigned int>::nil();
         }
         _continue = false;
       }
     } else {
       unsigned int n_ = _loop_n - 1;
       {
-        auto _cell = List<unsigned int>::ctor::Cons_(_loop_x, nullptr);
+        auto _cell = List<unsigned int>::cons(_loop_x, nullptr);
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
               _cell;
@@ -186,9 +185,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListGeneration::replicate_list(
                   Overloaded{
                       [&](const typename List<
                           std::pair<unsigned int, unsigned int>>::Nil _args)
-                          -> void {
-                        _result = List<unsigned int>::ctor::Nil_();
-                      },
+                          -> void { _result = List<unsigned int>::nil(); },
                       [&](const typename List<
                           std::pair<unsigned int, unsigned int>>::Cons _args)
                           -> void {
@@ -218,9 +215,9 @@ std::shared_ptr<List<unsigned int>> LoopifyListGeneration::repeat_with_sep(
       {
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::ctor::Nil_();
+              List<unsigned int>::nil();
         } else {
-          _head = List<unsigned int>::ctor::Nil_();
+          _head = List<unsigned int>::nil();
         }
         _continue = false;
       }
@@ -230,19 +227,17 @@ std::shared_ptr<List<unsigned int>> LoopifyListGeneration::repeat_with_sep(
         {
           if (_last) {
             std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-                List<unsigned int>::ctor::Cons_(
-                    x, List<unsigned int>::ctor::Nil_());
+                List<unsigned int>::cons(x, List<unsigned int>::nil());
           } else {
-            _head = List<unsigned int>::ctor::Cons_(
-                x, List<unsigned int>::ctor::Nil_());
+            _head = List<unsigned int>::cons(x, List<unsigned int>::nil());
           }
           _continue = false;
         }
       } else {
         unsigned int _x = n_ - 1;
         {
-          auto _cell = List<unsigned int>::ctor::Cons_(x, nullptr);
-          auto _cell1 = List<unsigned int>::ctor::Cons_(sep, nullptr);
+          auto _cell = List<unsigned int>::cons(x, nullptr);
+          auto _cell1 = List<unsigned int>::cons(sep, nullptr);
           std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1 =
               _cell1;
           if (_last) {
@@ -273,16 +268,16 @@ LoopifyListGeneration::range(const unsigned int start, const unsigned int len) {
       {
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
-              List<unsigned int>::ctor::Nil_();
+              List<unsigned int>::nil();
         } else {
-          _head = List<unsigned int>::ctor::Nil_();
+          _head = List<unsigned int>::nil();
         }
         _continue = false;
       }
     } else {
       unsigned int len_ = _loop_len - 1;
       {
-        auto _cell = List<unsigned int>::ctor::Cons_(_loop_start, nullptr);
+        auto _cell = List<unsigned int>::cons(_loop_start, nullptr);
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
               _cell;

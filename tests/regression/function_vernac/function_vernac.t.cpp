@@ -48,9 +48,9 @@ list_to_vector(const std::shared_ptr<List<unsigned int>> &l) {
 
 std::shared_ptr<List<unsigned int>>
 vector_to_list(const std::vector<unsigned int> &vec) {
-  auto result = List<unsigned int>::ctor::Nil_();
+  auto result = List<unsigned int>::nil();
   for (auto it = vec.rbegin(); it != vec.rend(); ++it) {
-    result = List<unsigned int>::ctor::Cons_(*it, result);
+    result = List<unsigned int>::cons(*it, result);
   }
   return result;
 }

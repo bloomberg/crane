@@ -36,34 +36,39 @@ private:
   // DATA
   variant_t d_v_;
 
+public:
   // CREATORS
   explicit List(Nil _v) : d_v_(std::move(_v)) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-public:
-  // TYPES
-  struct ctor {
-    ctor() = delete;
+  static std::shared_ptr<List<t_A>> nil() {
+    return std::make_shared<List<t_A>>(Nil{});
+  }
 
-    static std::shared_ptr<List<t_A>> Nil_() {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  }
 
-    static std::shared_ptr<List<t_A>>
-    Cons_(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::shared_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
+  static std::shared_ptr<List<t_A>> cons(t_A a0,
+                                         std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
-    static std::unique_ptr<List<t_A>> Nil_uptr() {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Nil{}));
-    }
+  static std::unique_ptr<List<t_A>> nil_uptr() {
+    return std::make_unique<List<t_A>>(Nil{});
+  }
 
-    static std::unique_ptr<List<t_A>>
-    Cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-      return std::unique_ptr<List<t_A>>(new List<t_A>(Cons{a0, a1}));
-    }
-  };
+  static std::unique_ptr<List<t_A>>
+  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
+  }
+
+  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
+                                              std::shared_ptr<List<t_A>> &&a1) {
+    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  }
 
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
@@ -108,27 +113,25 @@ struct RamStateOps {
     if (n <= 0) {
       return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
                                        -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::ctor::Nil_();
+                                     return List<T1>::nil();
                                    },
                                    [&](const typename List<T1>::Cons _args)
                                        -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::ctor::Cons_(x,
-                                                                  _args.d_a1);
+                                     return List<T1>::cons(x, _args.d_a1);
                                    }},
                         l->v());
     } else {
       unsigned int n_ = n - 1;
-      return std::visit(Overloaded{[](const typename List<T1>::Nil _args0)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::ctor::Nil_();
-                                   },
-                                   [&](const typename List<T1>::Cons _args0)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::ctor::Cons_(
-                                         _args0.d_a0,
-                                         update_nth<T1>(n_, x, _args0.d_a1));
-                                   }},
-                        l->v());
+      return std::visit(
+          Overloaded{
+              [](const typename List<T1>::Nil _args0)
+                  -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
+              [&](const typename List<T1>::Cons _args0)
+                  -> std::shared_ptr<List<T1>> {
+                return List<T1>::cons(_args0.d_a0,
+                                      update_nth<T1>(n_, x, _args0.d_a1));
+              }},
+          l->v());
     }
   }
 
@@ -183,33 +186,33 @@ struct RamStateOps {
   static inline const std::shared_ptr<state> init_state =
       std::make_shared<state>(
           state{ListDef::template repeat<unsigned int>(0u, 16u), 0u, false, 0u,
-                List<unsigned int>::ctor::Nil_(), empty_ram, default_sel,
+                List<unsigned int>::nil(), empty_ram, default_sel,
                 ListDef::template repeat<unsigned int>(0u, 8u)});
   static inline const std::shared_ptr<state> bad_state_wrong_reg_count =
       std::make_shared<state>(
           state{ListDef::template repeat<unsigned int>(0u, 15u), 0u, false, 0u,
-                List<unsigned int>::ctor::Nil_(), empty_ram, default_sel,
+                List<unsigned int>::nil(), empty_ram, default_sel,
                 ListDef::template repeat<unsigned int>(0u, 8u)});
   static inline const std::shared_ptr<state> bad_state_acc_overflow =
       std::make_shared<state>(
           state{ListDef::template repeat<unsigned int>(0u, 16u), 16u, false, 0u,
-                List<unsigned int>::ctor::Nil_(), empty_ram, default_sel,
+                List<unsigned int>::nil(), empty_ram, default_sel,
                 ListDef::template repeat<unsigned int>(0u, 8u)});
   static inline const std::shared_ptr<state> bad_state_pc_overflow =
       std::make_shared<state>(
           state{ListDef::template repeat<unsigned int>(0u, 16u), 0u, false,
-                4096u, List<unsigned int>::ctor::Nil_(), empty_ram, default_sel,
+                4096u, List<unsigned int>::nil(), empty_ram, default_sel,
                 ListDef::template repeat<unsigned int>(0u, 8u)});
   static inline const std::shared_ptr<state> bad_state_stack_overflow =
-      std::make_shared<state>(state{
-          ListDef::template repeat<unsigned int>(0u, 16u), 0u, false, 0u,
-          List<unsigned int>::ctor::Cons_(
-              0u, List<unsigned int>::ctor::Cons_(
-                      1u, List<unsigned int>::ctor::Cons_(
-                              2u, List<unsigned int>::ctor::Cons_(
-                                      3u, List<unsigned int>::ctor::Nil_())))),
-          empty_ram, default_sel,
-          ListDef::template repeat<unsigned int>(0u, 8u)});
+      std::make_shared<state>(
+          state{ListDef::template repeat<unsigned int>(0u, 16u), 0u, false, 0u,
+                List<unsigned int>::cons(
+                    0u, List<unsigned int>::cons(
+                            1u, List<unsigned int>::cons(
+                                    2u, List<unsigned int>::cons(
+                                            3u, List<unsigned int>::nil())))),
+                empty_ram, default_sel,
+                ListDef::template repeat<unsigned int>(0u, 8u)});
   static std::shared_ptr<state> reset_state(std::shared_ptr<state> s);
   __attribute__((pure)) static unsigned int
   get_main(const std::shared_ptr<ram_reg> &rg, const unsigned int i);
@@ -255,19 +258,18 @@ struct RamStateOps {
                                          std::shared_ptr<state>>
   pop_stack(std::shared_ptr<state> s);
   static inline const std::shared_ptr<state> stack_state =
-      std::make_shared<state>(state{
-          ListDef::template repeat<unsigned int>(0u, 16u), 0u, false, 0u,
-          List<unsigned int>::ctor::Cons_(
-              17u, List<unsigned int>::ctor::Cons_(
-                       255u, List<unsigned int>::ctor::Cons_(
-                                 4095u, List<unsigned int>::ctor::Nil_()))),
-          empty_ram, default_sel,
-          ListDef::template repeat<unsigned int>(0u, 8u)});
+      std::make_shared<state>(
+          state{ListDef::template repeat<unsigned int>(0u, 16u), 0u, false, 0u,
+                List<unsigned int>::cons(
+                    17u, List<unsigned int>::cons(
+                             255u, List<unsigned int>::cons(
+                                       4095u, List<unsigned int>::nil()))),
+                empty_ram, default_sel,
+                ListDef::template repeat<unsigned int>(0u, 8u)});
   static inline const std::shared_ptr<state> cleared_state =
       std::make_shared<state>(
           state{ListDef::template repeat<unsigned int>(0u, 16u), 7u, true, 99u,
-                List<unsigned int>::ctor::Cons_(
-                    300u, List<unsigned int>::ctor::Nil_()),
+                List<unsigned int>::cons(300u, List<unsigned int>::nil()),
                 empty_ram, std::make_shared<ram_sel>(ram_sel{3u, 2u, 1u, 7u}),
                 ListDef::template repeat<unsigned int>(0u, 8u)});
   static inline const std::shared_ptr<ram_reg> patched_reg =
@@ -285,10 +287,10 @@ struct RamStateOps {
 template <typename T1>
 std::shared_ptr<List<T1>> ListDef::repeat(const T1 x, const unsigned int n) {
   if (n <= 0) {
-    return List<T1>::ctor::Nil_();
+    return List<T1>::nil();
   } else {
     unsigned int k = n - 1;
-    return List<T1>::ctor::Cons_(x, ListDef::template repeat<T1>(x, k));
+    return List<T1>::cons(x, ListDef::template repeat<T1>(x, k));
   }
 }
 

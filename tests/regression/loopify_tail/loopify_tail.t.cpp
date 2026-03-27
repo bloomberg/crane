@@ -35,8 +35,8 @@ int main() {
   using List = LoopifyTail::list<unsigned int>;
 
   // Build a small list: [1, 2, 3]
-  auto small = List::ctor::Cons_(
-      1u, List::ctor::Cons_(2u, List::ctor::Cons_(3u, List::ctor::Nil_())));
+  auto small = List::cons(
+      1u, List::cons(2u, List::cons(3u, List::nil())));
 
   // Test last
   ASSERT(LoopifyTail::last(0u, small) == 3u);
@@ -61,18 +61,18 @@ int main() {
 
   // Test lookup
   using PList = LoopifyTail::list<std::pair<unsigned int, unsigned int>>;
-  auto assoc = PList::ctor::Cons_(
+  auto assoc = PList::cons(
       std::make_pair(1u, 10u),
-      PList::ctor::Cons_(
+      PList::cons(
           std::make_pair(2u, 20u),
-          PList::ctor::Cons_(std::make_pair(3u, 30u), PList::ctor::Nil_())));
+          PList::cons(std::make_pair(3u, 30u), PList::nil())));
   ASSERT(LoopifyTail::lookup(2u, assoc) == 20u);
   ASSERT(LoopifyTail::lookup(5u, assoc) == 0u);
 
   // Build a moderately large list to test no stack overflow
-  auto big = List::ctor::Nil_();
+  auto big = List::nil();
   for (unsigned int i = 0; i < 10000; ++i) {
-    big = List::ctor::Cons_(i, big);
+    big = List::cons(i, big);
   }
 
   // These use the loopified (iterative) versions - should not stack overflow

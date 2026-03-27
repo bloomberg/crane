@@ -31,8 +31,8 @@ LoadProgramHeadWrite::update_nth(const unsigned int n, const unsigned int x,
                        },
                        [&](const typename List<unsigned int>::Cons _args)
                            -> std::shared_ptr<List<unsigned int>> {
-                         return List<unsigned int>::ctor::Cons_(std::move(x),
-                                                                _args.d_a1);
+                         return List<unsigned int>::cons(std::move(x),
+                                                         _args.d_a1);
                        }},
             l->v());
       }
@@ -55,7 +55,7 @@ LoadProgramHeadWrite::update_nth(const unsigned int n, const unsigned int x,
                        },
                        [&](const typename List<unsigned int>::Cons _args0)
                            -> std::shared_ptr<List<unsigned int>> {
-                         return List<unsigned int>::ctor::Cons_(
+                         return List<unsigned int>::cons(
                              _args0.d_a0,
                              update_nth(std::move(n_), x, _args0.d_a1));
                        }},

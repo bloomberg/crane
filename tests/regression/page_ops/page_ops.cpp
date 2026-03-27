@@ -56,9 +56,9 @@ __attribute__((pure)) unsigned int PageOps::recompose(const unsigned int p) {
 std::shared_ptr<PageOps::instruction> PageOps::decode(const unsigned int b1,
                                                       const unsigned int b2) {
   if (b1 == 0u) {
-    return instruction::ctor::NOP_();
+    return instruction::nop();
   } else {
-    return instruction::ctor::LDM_((std::move(b2) % 16u));
+    return instruction::ldm((std::move(b2) % 16u));
   }
 }
 

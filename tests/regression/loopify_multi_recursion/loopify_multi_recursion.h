@@ -53,40 +53,50 @@ struct LoopifyMultiRecursion {
     // DATA
     variant_t d_v_;
 
+  public:
     // CREATORS
     explicit quadtree(QLeaf _v) : d_v_(std::move(_v)) {}
 
     explicit quadtree(QQuad _v) : d_v_(std::move(_v)) {}
 
-  public:
-    // TYPES
-    struct ctor {
-      ctor() = delete;
+    static std::shared_ptr<quadtree> qleaf(unsigned int a0) {
+      return std::make_shared<quadtree>(QLeaf{std::move(a0)});
+    }
 
-      static std::shared_ptr<quadtree> QLeaf_(unsigned int a0) {
-        return std::shared_ptr<quadtree>(new quadtree(QLeaf{a0}));
-      }
+    static std::shared_ptr<quadtree>
+    qquad(const std::shared_ptr<quadtree> &a0,
+          const std::shared_ptr<quadtree> &a1,
+          const std::shared_ptr<quadtree> &a2,
+          const std::shared_ptr<quadtree> &a3) {
+      return std::make_shared<quadtree>(QQuad{a0, a1, a2, a3});
+    }
 
-      static std::shared_ptr<quadtree>
-      QQuad_(const std::shared_ptr<quadtree> &a0,
-             const std::shared_ptr<quadtree> &a1,
-             const std::shared_ptr<quadtree> &a2,
-             const std::shared_ptr<quadtree> &a3) {
-        return std::shared_ptr<quadtree>(new quadtree(QQuad{a0, a1, a2, a3}));
-      }
+    static std::shared_ptr<quadtree> qquad(std::shared_ptr<quadtree> &&a0,
+                                           std::shared_ptr<quadtree> &&a1,
+                                           std::shared_ptr<quadtree> &&a2,
+                                           std::shared_ptr<quadtree> &&a3) {
+      return std::make_shared<quadtree>(
+          QQuad{std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
+    }
 
-      static std::unique_ptr<quadtree> QLeaf_uptr(unsigned int a0) {
-        return std::unique_ptr<quadtree>(new quadtree(QLeaf{a0}));
-      }
+    static std::unique_ptr<quadtree> qleaf_uptr(unsigned int a0) {
+      return std::make_unique<quadtree>(QLeaf{std::move(a0)});
+    }
 
-      static std::unique_ptr<quadtree>
-      QQuad_uptr(const std::shared_ptr<quadtree> &a0,
-                 const std::shared_ptr<quadtree> &a1,
-                 const std::shared_ptr<quadtree> &a2,
-                 const std::shared_ptr<quadtree> &a3) {
-        return std::unique_ptr<quadtree>(new quadtree(QQuad{a0, a1, a2, a3}));
-      }
-    };
+    static std::unique_ptr<quadtree>
+    qquad_uptr(const std::shared_ptr<quadtree> &a0,
+               const std::shared_ptr<quadtree> &a1,
+               const std::shared_ptr<quadtree> &a2,
+               const std::shared_ptr<quadtree> &a3) {
+      return std::make_unique<quadtree>(QQuad{a0, a1, a2, a3});
+    }
+
+    static std::unique_ptr<quadtree>
+    qquad_uptr(std::shared_ptr<quadtree> &&a0, std::shared_ptr<quadtree> &&a1,
+               std::shared_ptr<quadtree> &&a2, std::shared_ptr<quadtree> &&a3) {
+      return std::make_unique<quadtree>(
+          QQuad{std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
+    }
 
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }

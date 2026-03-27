@@ -21,15 +21,15 @@ int main() {
       ::List<std::shared_ptr<LoopifyStructures::nested>>;
 
   // Test nested structure
-  auto elem1 = LoopifyStructures::nested::ctor::Elem_(5u);
-  auto elem2 = LoopifyStructures::nested::ctor::Elem_(3u);
-  auto inner_list = NestedList::ctor::Cons_(
-      elem1, NestedList::ctor::Cons_(elem2, NestedList::ctor::Nil_()));
-  auto nested = LoopifyStructures::nested::ctor::NList_(inner_list);
+  auto elem1 = LoopifyStructures::nested::elem(5u);
+  auto elem2 = LoopifyStructures::nested::elem(3u);
+  auto inner_list = NestedList::cons(
+      elem1, NestedList::cons(elem2, NestedList::nil()));
+  auto nested = LoopifyStructures::nested::nlist(inner_list);
 
   ASSERT(nested->nested_sum() == 8u); // 5 + 3
 
-  auto elem_only = LoopifyStructures::nested::ctor::Elem_(10u);
+  auto elem_only = LoopifyStructures::nested::elem(10u);
   ASSERT(elem_only->nested_sum() == 10u);
 
   // Test nested_depth
@@ -40,12 +40,12 @@ int main() {
   ASSERT(flattened != nullptr);
 
   // Test quadtree
-  auto leaf1 = LoopifyStructures::quadtree::ctor::QLeaf_(1u);
-  auto leaf2 = LoopifyStructures::quadtree::ctor::QLeaf_(2u);
-  auto leaf3 = LoopifyStructures::quadtree::ctor::QLeaf_(3u);
-  auto leaf4 = LoopifyStructures::quadtree::ctor::QLeaf_(4u);
+  auto leaf1 = LoopifyStructures::quadtree::qleaf(1u);
+  auto leaf2 = LoopifyStructures::quadtree::qleaf(2u);
+  auto leaf3 = LoopifyStructures::quadtree::qleaf(3u);
+  auto leaf4 = LoopifyStructures::quadtree::qleaf(4u);
   auto quad =
-      LoopifyStructures::quadtree::ctor::Quad_(leaf1, leaf2, leaf3, leaf4);
+      LoopifyStructures::quadtree::quad(leaf1, leaf2, leaf3, leaf4);
 
   ASSERT(quad->quad_sum() == 10u); // 1+2+3+4
 

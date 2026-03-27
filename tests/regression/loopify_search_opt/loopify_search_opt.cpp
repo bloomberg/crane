@@ -24,9 +24,9 @@ LoopifySearchOpt::lis(const std::shared_ptr<List<unsigned int>> &l) {
             [&](const typename List<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::ctor::Nil_();
+                    .d_a1 = List<unsigned int>::nil();
               } else {
-                _head = List<unsigned int>::ctor::Nil_();
+                _head = List<unsigned int>::nil();
               }
               _continue = false;
             },
@@ -37,18 +37,18 @@ LoopifySearchOpt::lis(const std::shared_ptr<List<unsigned int>> &l) {
                         if (_last) {
                           std::get<typename List<unsigned int>::Cons>(
                               _last->v_mut())
-                              .d_a1 = List<unsigned int>::ctor::Cons_(
-                              _args.d_a0, List<unsigned int>::ctor::Nil_());
+                              .d_a1 = List<unsigned int>::cons(
+                              _args.d_a0, List<unsigned int>::nil());
                         } else {
-                          _head = List<unsigned int>::ctor::Cons_(
-                              _args.d_a0, List<unsigned int>::ctor::Nil_());
+                          _head = List<unsigned int>::cons(
+                              _args.d_a0, List<unsigned int>::nil());
                         }
                         _continue = false;
                       },
                       [&](const typename List<unsigned int>::Cons _args0) {
                         if (_args.d_a0 < _args0.d_a0) {
-                          auto _cell = List<unsigned int>::ctor::Cons_(
-                              _args.d_a0, nullptr);
+                          auto _cell =
+                              List<unsigned int>::cons(_args.d_a0, nullptr);
                           if (_last) {
                             std::get<typename List<unsigned int>::Cons>(
                                 _last->v_mut())
@@ -109,8 +109,8 @@ std::shared_ptr<List<unsigned int>> LoopifySearchOpt::longest_run_fuel(
                           std::shared_ptr<List<unsigned int>> _next_best =
                               std::move(_loop_best);
                           std::shared_ptr<List<unsigned int>> _next_current =
-                              List<unsigned int>::ctor::Cons_(
-                                  _args.d_a0, List<unsigned int>::ctor::Nil_());
+                              List<unsigned int>::cons(
+                                  _args.d_a0, List<unsigned int>::nil());
                           unsigned int _next_fuel = fuel_;
                           _loop_l = std::move(_next_l);
                           _loop_best = std::move(_next_best);
@@ -124,8 +124,8 @@ std::shared_ptr<List<unsigned int>> LoopifySearchOpt::longest_run_fuel(
                             std::shared_ptr<List<unsigned int>> _next_best =
                                 std::move(_loop_best);
                             std::shared_ptr<List<unsigned int>> _next_current =
-                                List<unsigned int>::ctor::Cons_(_args.d_a0,
-                                                                _loop_current);
+                                List<unsigned int>::cons(_args.d_a0,
+                                                         _loop_current);
                             unsigned int _next_fuel = fuel_;
                             _loop_l = std::move(_next_l);
                             _loop_best = std::move(_next_best);
@@ -145,9 +145,8 @@ std::shared_ptr<List<unsigned int>> LoopifySearchOpt::longest_run_fuel(
                             std::shared_ptr<List<unsigned int>> _next_best =
                                 std::move(new_best);
                             std::shared_ptr<List<unsigned int>> _next_current =
-                                List<unsigned int>::ctor::Cons_(
-                                    _args.d_a0,
-                                    List<unsigned int>::ctor::Nil_());
+                                List<unsigned int>::cons(
+                                    _args.d_a0, List<unsigned int>::nil());
                             unsigned int _next_fuel = fuel_;
                             _loop_l = std::move(_next_l);
                             _loop_best = std::move(_next_best);
@@ -165,8 +164,8 @@ std::shared_ptr<List<unsigned int>> LoopifySearchOpt::longest_run_fuel(
 
 std::shared_ptr<List<unsigned int>>
 LoopifySearchOpt::longest_run(const std::shared_ptr<List<unsigned int>> &l) {
-  return longest_run_fuel(l->length(), List<unsigned int>::ctor::Nil_(),
-                          List<unsigned int>::ctor::Nil_(), l);
+  return longest_run_fuel(l->length(), List<unsigned int>::nil(),
+                          List<unsigned int>::nil(), l);
 }
 
 __attribute__((pure)) unsigned int LoopifySearchOpt::knapsack_fuel(
@@ -500,7 +499,7 @@ __attribute__((pure)) bool LoopifySearchOpt::binary_search_fuel(
                                 std::shared_ptr<List<unsigned int>> xs = _f.xs;
                                 unsigned int n = _f.n;
                                 if (n <= 0) {
-                                  _result = List<unsigned int>::ctor::Nil_();
+                                  _result = List<unsigned int>::nil();
                                 } else {
                                   unsigned int n_ = n - 1;
                                   std::visit(
@@ -508,8 +507,7 @@ __attribute__((pure)) bool LoopifySearchOpt::binary_search_fuel(
                                           [&](const typename List<
                                               unsigned int>::Nil _args3)
                                               -> void {
-                                            _result = List<
-                                                unsigned int>::ctor::Nil_();
+                                            _result = List<unsigned int>::nil();
                                           },
                                           [&](const typename List<
                                               unsigned int>::Cons _args3)
@@ -523,8 +521,8 @@ __attribute__((pure)) bool LoopifySearchOpt::binary_search_fuel(
                                 }
                               },
                               [&](_Call1 _f) {
-                                _result = List<unsigned int>::ctor::Cons_(
-                                    _f._s0, _result);
+                                _result =
+                                    List<unsigned int>::cons(_f._s0, _result);
                               }},
                           _frame);
                     }
@@ -554,7 +552,7 @@ __attribute__((pure)) bool LoopifySearchOpt::binary_search_fuel(
                             Overloaded{
                                 [&](const typename List<unsigned int>::Nil
                                         _args4) {
-                                  _result = List<unsigned int>::ctor::Nil_();
+                                  _result = List<unsigned int>::nil();
                                   _continue = false;
                                 },
                                 [&](const typename List<unsigned int>::Cons
