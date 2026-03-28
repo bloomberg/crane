@@ -55,3 +55,14 @@
   (alias runtest)
   (deps unsound_axioms.t.exe)
   (action (run ./unsound_axioms.t.exe))))
+
+(subdir hof_tree_loopify
+ (rule
+  (targets hof_tree_loopify.t.exe)
+  (deps HofTreeLoopify.vo hof_tree_loopify.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hof_tree_loopify.t.exe hof_tree_loopify.cpp hof_tree_loopify.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hof_tree_loopify.t.exe)
+  (action (run ./hof_tree_loopify.t.exe))))
