@@ -101,16 +101,6 @@ public:
   }
 };
 
-template <typename I>
-concept Container = requires {
-  typename I::elem_type;
-  { I::count() } -> std::convertible_to<unsigned int>;
-} && requires {
-  { I::elem() } -> std::convertible_to<typename I::elem_type>;
-} || requires {
-  { I::elem } -> std::convertible_to<typename I::elem_type>;
-};
-
 template <typename M>
 concept HasRecord = requires {
   typename M::R;
@@ -207,13 +197,15 @@ struct RecordFieldPatterns {
   map_py(const std::shared_ptr<List<std::shared_ptr<Point>>> &points);
   static std::shared_ptr<Point> swap(const std::shared_ptr<Point> &p);
   static std::shared_ptr<Point> double_swap(const std::shared_ptr<Point> &p);
+
+  struct Container {
+    std::any elem;
+    unsigned int count;
+  };
+
   using elem_type = std::any;
-
-  template <Container _tcI0>
-  __attribute__((pure)) static unsigned int get_count() {
-    return _tcI0::count();
-  }
-
+  __attribute__((pure)) static unsigned int
+  get_count(const std::shared_ptr<Container> &c);
   static inline const unsigned int test_container =
       get_count(std::make_shared<Container>(Container{42u, 5u}));
   static inline const unsigned int test_origin =

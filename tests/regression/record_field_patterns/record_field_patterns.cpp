@@ -77,19 +77,20 @@ __attribute__((pure)) unsigned int RecordFieldPatterns::scaled_sum(
   }();
 }
 
-std::shared_ptr<Point>
+std::shared_ptr<RecordFieldPatterns::Point>
 RecordFieldPatterns::PointImpl::mk(const unsigned int x,
                                    const unsigned int x0) {
-  return std::make_shared<Point>(Point{std::move(x), std::move(x0)});
+  return std::make_shared<RecordFieldPatterns::Point>(
+      Point{std::move(x), std::move(x0)});
 }
 
-__attribute__((pure)) unsigned int
-RecordFieldPatterns::PointImpl::get_x(const std::shared_ptr<Point> &p) {
+__attribute__((pure)) unsigned int RecordFieldPatterns::PointImpl::get_x(
+    const std::shared_ptr<RecordFieldPatterns::Point> &p) {
   return p->px;
 }
 
-__attribute__((pure)) unsigned int
-RecordFieldPatterns::PointImpl::get_y(const std::shared_ptr<Point> &p) {
+__attribute__((pure)) unsigned int RecordFieldPatterns::PointImpl::get_y(
+    const std::shared_ptr<RecordFieldPatterns::Point> &p) {
   return p->py;
 }
 
@@ -151,4 +152,9 @@ std::shared_ptr<RecordFieldPatterns::Point> RecordFieldPatterns::swap(
 std::shared_ptr<RecordFieldPatterns::Point> RecordFieldPatterns::double_swap(
     const std::shared_ptr<RecordFieldPatterns::Point> &p) {
   return swap(swap(p));
+}
+
+__attribute__((pure)) unsigned int RecordFieldPatterns::get_count(
+    const std::shared_ptr<RecordFieldPatterns::Container> &c) {
+  return c->count;
 }

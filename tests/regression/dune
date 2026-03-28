@@ -2566,3 +2566,14 @@
   (alias runtest)
   (deps polygon_winding_area_trace.t.exe)
   (action (run ./polygon_winding_area_trace.t.exe))))
+
+(subdir record_field_patterns
+ (rule
+  (targets record_field_patterns.t.exe)
+  (deps RecordFieldPatterns.vo record_field_patterns.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_field_patterns.t.exe record_field_patterns.cpp record_field_patterns.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_field_patterns.t.exe)
+  (action (run ./record_field_patterns.t.exe))))

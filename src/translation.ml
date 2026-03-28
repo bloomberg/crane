@@ -4356,10 +4356,46 @@ let gen_ind_cpp vars name cnames tys =
   in
   Dnspace (Some name, constrdecl)
 
-(** Generate C++ struct for a record type *)
+(* =========================================================================
+   Shared helpers for record and typeclass generation
+   ========================================================================= *)
+
+(** Count the actual (non-promoted) type parameters in [ip_sign].  Entries
+    marked [Keep] correspond to real template parameters; the remaining
+    entries are promoted Type-valued fields. *)
+let count_keep_params sign =
+  List.length (List.filter (fun x -> x == Keep) sign)
+
+(** Filter [Tdummy] entries from the first constructor's type list.  Both
+    [gen_record_cpp] and [gen_typeclass_cpp] need the non-erased types only,
+    because [select_fields] already drops the corresponding field names. *)
+let non_dummy_constructor_types ind =
+  List.filter (fun t -> not (Mlutil.isTdummy t)) ind.ip_types.(0)
+
+(** Generate C++ struct for a record type.
+
+    Only actual type parameters ([Keep] in [ip_sign]) become C++ template
+    parameters.  Promoted Type-valued fields (present in [ip_vars] but past
+    the [Keep] entries) are erased to [std::any] — they have no C++ template
+    counterpart in a plain struct (unlike typeclasses, which turn them into
+    [typename I::field] requirements). *)
 let gen_record_cpp name fields ind =
-  let vars = List.map Common.tparam_name ind.ip_vars in
-  let l = List.combine fields ind.ip_types.(0) in
+  let nb_keep = count_keep_params ind.ip_sign in
+  let param_ip_vars = List.filteri (fun i _ -> i < nb_keep) ind.ip_vars in
+  let vars = List.map Common.tparam_name param_ip_vars in
+  (* Use full ip_vars for type name resolution so Tvars resolve to names,
+     then replace promoted Tvars (not in template params) with std::any. *)
+  let all_vars = List.map Common.tparam_name ind.ip_vars in
+  let promoted_var_names =
+    List.filteri (fun i _ -> i >= nb_keep) ind.ip_vars
+    |> List.map (fun id -> Id.to_string (Common.tparam_name id))
+  in
+  let replace_promoted = function
+    | Tvar (_, Some id) when List.mem (Id.to_string id) promoted_var_names ->
+      Tany
+    | ty -> ty
+  in
+  let l = List.combine fields (non_dummy_constructor_types ind) in
   let l =
     List.mapi
       (fun i (x, t) ->
@@ -4368,10 +4404,11 @@ let gen_record_cpp name fields ind =
           | Some n -> n
           | None -> GlobRef.VarRef (Id.of_string ("_field" ^ string_of_int i))
         in
-        ( Fvar'
-            (n, convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty vars t),
-          VPublic,
-          SNoTag ) )
+        let ct =
+          convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty all_vars t
+        in
+        let ct = Minicpp.map_cpp_type replace_promoted ct in
+        ( Fvar' (n, ct), VPublic, SNoTag ) )
       l
   in
   let ty_vars = List.map (fun x -> (TTtypename, x)) vars in
@@ -4396,24 +4433,17 @@ let gen_record_cpp name fields ind =
 *)
 let gen_typeclass_cpp name fields ind =
   let inst_id = Id.of_string "I" in
-  (* Determine the number of non-promoted type variables (from ip_sign Keep
-     entries). Promoted type variables (from erased Type fields) have Tvar
-     indices beyond this. *)
-  let nb_sign_keeps =
-    List.length (List.filter (fun x -> x == Keep) ind.ip_sign)
-  in
+  let nb_keep = count_keep_params ind.ip_sign in
   (* Split ip_vars into param vars (real type params) and promoted vars
      (associated types). Prefix param vars with t_ for BDE convention. *)
   let prefixed_ip_vars =
     List.mapi
-      (fun i x -> if i < nb_sign_keeps then Common.tparam_name x else x)
+      (fun i x -> if i < nb_keep then Common.tparam_name x else x)
       ind.ip_vars
   in
-  let param_vars =
-    List.filteri (fun i _ -> i < nb_sign_keeps) prefixed_ip_vars
-  in
+  let param_vars = List.filteri (fun i _ -> i < nb_keep) prefixed_ip_vars in
   let promoted_vars =
-    List.filteri (fun i _ -> i >= nb_sign_keeps) prefixed_ip_vars
+    List.filteri (fun i _ -> i >= nb_keep) prefixed_ip_vars
   in
   (* Only param vars become concept template parameters; promoted vars become
      typename requirements inside the requires block *)
@@ -4425,10 +4455,7 @@ let gen_typeclass_cpp name fields ind =
       (fun var_id -> Tqualified (Tvar (0, Some inst_id), var_id))
       promoted_vars
   in
-  (* Compute method_list first — needed by nested_promoted_map below. *)
-  let non_dummy_types =
-    List.filter (fun t -> not (Mlutil.isTdummy t)) ind.ip_types.(0)
-  in
+  let non_dummy_types = non_dummy_constructor_types ind in
   let method_list =
     ( try List.combine fields non_dummy_types
       with _ ->
@@ -4509,7 +4536,7 @@ let gen_typeclass_cpp name fields ind =
      function). *)
   let is_bare_promoted_tvar ty =
     match ty with
-    | Miniml.Tvar n -> n > nb_sign_keeps
+    | Miniml.Tvar n -> n > nb_keep
     | _ -> false
   in
   (* Check if a field type is a typeclass-typed promoted field.  Such

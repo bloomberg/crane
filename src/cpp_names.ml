@@ -248,6 +248,16 @@ let typename_prefix_for name_str =
   else
     mt ()
 
+(** Convert a C++ qualified name ([A::B::C]) to its Rocq dotted form
+    ([A.B.C]). *)
+let cpp_to_rocq_path s =
+  Str.global_replace (Str.regexp_string "::") "." s
+
+(** Convert a Rocq dotted path ([A.B.C]) to its C++ qualified form
+    ([A::B::C]). *)
+let rocq_to_cpp_path s =
+  Str.global_replace (Str.regexp_string ".") "::" s
+
 (** Return [true] when [r]'s Rocq fully-qualified path shows that it lives
     inside the module that maps to the C++ struct [struct_name_str].
 
@@ -257,10 +267,38 @@ let typename_prefix_for name_str =
     struct and therefore needs a struct qualifier in the [.cpp] file. *)
 let is_nested_in_struct r struct_name_str =
   let full_path = Pp.string_of_ppcmds (GlobRef.print r) in
-  let struct_name_dotted =
-    Str.global_replace (Str.regexp_string "::") "." struct_name_str
+  Common.contains_substring full_path (cpp_to_rocq_path struct_name_str)
+
+(** Find the right ancestor qualifier for a type that lives inside a parent
+    of the current nested struct.
+
+    E.g., when struct_name is [RecordFieldPatterns::PointImpl] and the type
+    [Point] has Rocq path [RecordFieldPatterns.Point], this returns
+    [RecordFieldPatterns::].
+
+    Walks up the [.]-separated components of [struct_name_dotted] (the Rocq
+    form of the struct name), checking whether the type's Rocq path contains
+    each prefix.  Returns the first matching ancestor as a C++ qualifier, or
+    [mt ()] if none matches. *)
+let find_ancestor_qualifier_from full_path struct_name_dotted =
+  let rec find s =
+    match String.rindex_opt s '.' with
+    | Some i ->
+      let parent = String.sub s 0 i in
+      if Common.contains_substring full_path parent then
+        str (rocq_to_cpp_path parent) ++ str "::"
+      else
+        find parent
+    | None -> mt ()
   in
-  Common.contains_substring full_path struct_name_dotted
+  find struct_name_dotted
+
+(** Convenience wrapper: compute [full_path] and [struct_name_dotted] from a
+    global reference and a C++ struct name, then delegate to
+    {!find_ancestor_qualifier_from}. *)
+let find_ancestor_qualifier r struct_name_str =
+  let full_path = Pp.string_of_ppcmds (GlobRef.print r) in
+  find_ancestor_qualifier_from full_path (cpp_to_rocq_path struct_name_str)
 
 (** Add struct qualification prefix when generating out-of-struct definitions.
 
@@ -306,9 +344,7 @@ let struct_qualifier_for r name_str =
        nests under the struct's parent module. *)
     else
       let full_path = Pp.string_of_ppcmds (GlobRef.print r) in
-      let struct_name_dotted =
-        Str.global_replace (Str.regexp_string "::") "." struct_name_str
-      in
+      let struct_name_dotted = cpp_to_rocq_path struct_name_str in
       let parent_struct_dotted =
         match String.rindex_opt struct_name_dotted '.' with
         | Some i -> String.sub struct_name_dotted 0 i
@@ -320,6 +356,14 @@ let struct_qualifier_for r name_str =
            && Common.contains_substring full_path parent_struct_dotted
       then
         struct_name ++ str "::"
+      else if is_local_inductive r then
+        (* Local inductives live inside the C++ struct.  When the current
+           struct context is a nested sub-module (e.g.,
+           RecordFieldPatterns::PointImpl) and the type is in an ancestor
+           module (e.g., RecordFieldPatterns), use the ancestor qualifier
+           instead of the full nested path.  Reuse the already-computed
+           [full_path] and [struct_name_dotted] to avoid re-deriving them. *)
+        find_ancestor_qualifier_from full_path struct_name_dotted
       else
         mt ()
   | _ -> mt ()
@@ -336,9 +380,7 @@ let needs_global_qualifier x =
     else
       let full_path = Pp.string_of_ppcmds (GlobRef.print x) in
       let struct_name_str = Pp.string_of_ppcmds struct_name in
-      let struct_name_dotted =
-        Str.global_replace (Str.regexp_string "::") "." struct_name_str
-      in
+      let struct_name_dotted = cpp_to_rocq_path struct_name_str in
       if Common.contains_substring full_path struct_name_dotted then
         false
       else (

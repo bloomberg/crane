@@ -914,9 +914,25 @@ and extract_really_ind env kn mib =
       let has_promoted =
         lang () == Cpp && List.length p.ip_vars > nb_sign_keeps
       in
-      if has_promoted then
-        TypeClass field_glob
-      else if is_class then
+      (* A promoted record (with Type-valued fields) should be a TypeClass
+         (C++ concept) only when it also carries function-typed fields —
+         i.e., it models an algebraic structure such as Monoid whose
+         operations become [requires]-clause entries.  A record with only
+         data-typed promoted fields (e.g. Container with [elem : elem_type]
+         and [count : nat]) stays a plain [Record] (template struct). *)
+      let rec has_arrow_type = function
+        | Tarr _ -> true
+        | Tmeta { contents = Some t } -> has_arrow_type t
+        | _ -> false
+      in
+      let has_arrow_field =
+        List.exists
+          (fun t ->
+            let t = expand env t in
+            (not (isTdummy t)) && has_arrow_type t)
+          typ
+      in
+      if is_class || (has_promoted && has_arrow_field) then
         TypeClass field_glob
       else
         Record field_glob
