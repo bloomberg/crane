@@ -592,9 +592,13 @@ let rec pre_register_methods_from_structure
               if (not (is_custom ind_ref)) && not is_mutual then
                 if Table.is_enum_inductive_packet ind i then
                   Table.add_enum_inductive ind_ref;
-              (* Skip type classes — they become C++ concepts, not structs. *)
+              (* Skip type classes (C++ concepts) and standalone records.
+                 Records have their own eponymous merging path and don't
+                 support methods via the multi-inductive heuristic.
+                 Registering methods on standalone records (like Q from
+                 QArith) would generate method calls without definitions. *)
               match ind.ind_kind with
-              | TypeClass _ -> ()
+              | TypeClass _ | Record _ -> ()
               | _ ->
                 (* Register methods from sibling declarations at this level. *)
                 register_methods_for_epon tbl cands ind_ref sel;

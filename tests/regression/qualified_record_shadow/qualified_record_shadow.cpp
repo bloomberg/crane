@@ -11,10 +11,10 @@
 #include <string>
 #include <variant>
 
-std::shared_ptr<QualifiedRecordShadow::Shadow> QualifiedRecordShadow::bump(
-    const std::shared_ptr<QualifiedRecordShadow::Shadow> &x) {
+std::shared_ptr<Shadow>
+QualifiedRecordShadow::bump(const std::shared_ptr<Shadow> &x) {
   return [&](void) {
     unsigned int n = x->Shadow::value;
-    return std::make_shared<QualifiedRecordShadow::Shadow>(Shadow{(n + 1)});
+    return std::make_shared<Shadow>(Shadow{(n + 1)});
   }();
 }

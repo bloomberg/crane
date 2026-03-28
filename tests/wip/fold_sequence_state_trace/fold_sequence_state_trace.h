@@ -652,9 +652,19 @@ struct Q {
   std::shared_ptr<Positive> Qden;
 };
 
+struct Qreduction {
+  static std::shared_ptr<Q> Qred(const std::shared_ptr<Q> &q);
+};
+
+struct Qabs {
+  static std::shared_ptr<Q> Qabs(const std::shared_ptr<Q> &x);
+};
+
 struct QExtra {
   static std::shared_ptr<Positive>
   Pos_log2floor_plus1(const std::shared_ptr<Positive> &p);
+  static std::shared_ptr<Z> Qbound_lt_ZExp2(const std::shared_ptr<Q> &q);
+  static std::shared_ptr<Z> Qbound_ltabs_ZExp2(const std::shared_ptr<Q> &q);
 };
 
 struct CReal {
@@ -757,6 +767,24 @@ struct RIneq {
                                               const RbaseSymbolsImpl::R r2);
 };
 
+struct QArith_base {
+  static std::shared_ptr<Q> Qplus(std::shared_ptr<Q> x, std::shared_ptr<Q> y);
+  static std::shared_ptr<Q> Qmult(std::shared_ptr<Q> x, std::shared_ptr<Q> y);
+  static std::shared_ptr<Q> Qopp(std::shared_ptr<Q> x);
+  static std::shared_ptr<Q> Qminus(const std::shared_ptr<Q> &x,
+                                   const std::shared_ptr<Q> &y);
+  static std::shared_ptr<Q> Qinv(std::shared_ptr<Q> x);
+  __attribute__((pure)) static bool Qlt_le_dec(std::shared_ptr<Q> x,
+                                               std::shared_ptr<Q> y);
+  static std::shared_ptr<Sig<std::shared_ptr<Positive>>>
+  Qarchimedean(const std::shared_ptr<Q> &q);
+  static std::shared_ptr<Q>
+  Qpower_positive(const std::shared_ptr<Q> &_x0,
+                  const std::shared_ptr<Positive> &_x1);
+  static std::shared_ptr<Q> Qpower(const std::shared_ptr<Q> &q,
+                                   const std::shared_ptr<Z> &z);
+};
+
 struct ClassicalDedekindReals {
   template <MapsTo<bool, unsigned int> F0>
   static std::shared_ptr<Sumor<std::shared_ptr<Sig<unsigned int>>>>
@@ -785,7 +813,23 @@ struct ClassicalDedekindReals {
 };
 
 struct ConstructiveCauchyReals {
+  template <MapsTo<std::shared_ptr<Sumor<std::shared_ptr<Sig<unsigned int>>>>,
+                   std::function<bool(unsigned int)>>
+                F2>
+  static std::shared_ptr<Sum<CRealLt, std::any>>
+  CRealLt_lpo_dec(std::shared_ptr<CReal> x, std::shared_ptr<CReal> y, F2 &&lpo);
   static std::shared_ptr<CReal> inject_Q(std::shared_ptr<Q> q);
+  static std::shared_ptr<Q> CReal_plus_seq(const std::shared_ptr<CReal> &x,
+                                           const std::shared_ptr<CReal> &y,
+                                           const std::shared_ptr<Z> &n);
+  static std::shared_ptr<Z> CReal_plus_scale(const std::shared_ptr<CReal> &x,
+                                             const std::shared_ptr<CReal> &y);
+  static std::shared_ptr<CReal> CReal_plus(std::shared_ptr<CReal> x,
+                                           std::shared_ptr<CReal> y);
+  static std::shared_ptr<Q> CReal_opp_seq(const std::shared_ptr<CReal> &x,
+                                          const std::shared_ptr<Z> &n);
+  static std::shared_ptr<Z> CReal_opp_scale(const std::shared_ptr<CReal> &x);
+  static std::shared_ptr<CReal> CReal_opp(std::shared_ptr<CReal> x);
 };
 
 struct Datatypes {
@@ -1104,6 +1148,56 @@ T1 Ring_theory::pow_pos(F0 &&rmul, const T1 x,
       i->v());
 }
 
+template <MapsTo<std::shared_ptr<Sumor<std::shared_ptr<Sig<unsigned int>>>>,
+                 std::function<bool(unsigned int)>>
+              F2>
+std::shared_ptr<Sum<ConstructiveCauchyReals::CRealLt, std::any>>
+ConstructiveCauchyReals::CRealLt_lpo_dec(std::shared_ptr<CReal> x,
+                                         std::shared_ptr<CReal> y, F2 &&lpo) {
+  std::shared_ptr<Sumor<std::shared_ptr<Sig<unsigned int>>>> s =
+      lpo([=](unsigned int n) mutable {
+        bool s = QArith_base::Qlt_le_dec(
+            QArith_base::Qmult(
+                std::make_shared<Q>(
+                    Q{Z::zpos(Positive::xo(Positive::xh())), Positive::xh()}),
+                QArith_base::Qpower(
+                    std::make_shared<Q>(Q{Z::zpos(Positive::xo(Positive::xh())),
+                                          Positive::xh()}),
+                    ConstructiveExtra::Z_inj_nat_rev(n))),
+            QArith_base::Qminus(y->seq(ConstructiveExtra::Z_inj_nat_rev(n)),
+                                x->seq(ConstructiveExtra::Z_inj_nat_rev(n))));
+        if (s) {
+          return false;
+        } else {
+          return true;
+        }
+      });
+  return std::visit(
+      Overloaded{
+          [](const typename Sumor<std::shared_ptr<Sig<unsigned int>>>::Inleft
+                 _args)
+              -> std::shared_ptr<
+                  Sum<std::shared_ptr<Sig<std::shared_ptr<Z>>>, std::any>> {
+            return Sum<std::shared_ptr<Sig<std::shared_ptr<Z>>>, std::any>::inl(
+                std::visit(
+                    Overloaded{
+                        [](const typename Sig<unsigned int>::Exist _args0)
+                            -> std::shared_ptr<Sig<std::shared_ptr<Z>>> {
+                          return Sig<std::shared_ptr<Z>>::exist(
+                              ConstructiveExtra::Z_inj_nat_rev(_args0.d_a0));
+                        }},
+                    _args.d_a0->v()));
+          },
+          [](const typename Sumor<std::shared_ptr<Sig<unsigned int>>>::Inright
+                 _args)
+              -> std::shared_ptr<
+                  Sum<std::shared_ptr<Sig<std::shared_ptr<Z>>>, std::any>> {
+            return Sum<std::shared_ptr<Sig<std::shared_ptr<Z>>>, std::any>::inr(
+                std::any{});
+          }},
+      std::move(s)->v());
+}
+
 template <MapsTo<bool, unsigned int> F0>
 std::shared_ptr<Sumor<std::shared_ptr<Sig<unsigned int>>>>
 ClassicalDedekindReals::sig_forall_dec(F0 &&_x0) {
@@ -1116,8 +1210,8 @@ std::shared_ptr<Sig<std::shared_ptr<Q>>>
 ClassicalDedekindReals::lowerCutBelow(F0 &&f) {
   std::shared_ptr<Sumor<std::shared_ptr<Sig<unsigned int>>>> s =
       ClassicalDedekindReals::sig_forall_dec([=](unsigned int n) mutable {
-        bool b = f(
-            std::make_shared<Q>(Q{BinInt::of_nat(n), Positive::xh()})->Qopp());
+        bool b = f(QArith_base::Qopp(
+            std::make_shared<Q>(Q{BinInt::of_nat(n), Positive::xh()})));
         if (b) {
           return false;
         } else {
@@ -1132,9 +1226,8 @@ ClassicalDedekindReals::lowerCutBelow(F0 &&f) {
                 Overloaded{[](const typename Sig<unsigned int>::Exist _args0)
                                -> std::shared_ptr<Sig<std::shared_ptr<Q>>> {
                   return Sig<std::shared_ptr<Q>>::exist(
-                      std::make_shared<Q>(
-                          Q{BinInt::of_nat(_args0.d_a0), Positive::xh()})
-                          ->Qopp());
+                      QArith_base::Qopp(std::make_shared<Q>(
+                          Q{BinInt::of_nat(_args0.d_a0), Positive::xh()})));
                 }},
                 _args.d_a0->v());
           },
@@ -1184,20 +1277,18 @@ ClassicalDedekindReals::DRealQlim_rec(F0 &&f, const unsigned int n,
     throw std::logic_error("absurd case");
   } else {
     unsigned int n0 = p - 1;
-    bool b =
-        f(std::visit(
-              Overloaded{[](const typename Sig<std::shared_ptr<Q>>::Exist _args)
-                             -> auto { return _args.d_a0; }},
-              ClassicalDedekindReals::lowerCutBelow(f)->v())
-              ->Qplus(std::make_shared<Q>(
-                  Q{BinInt::of_nat(n0), Coq_Pos::of_nat((n + 1))})));
+    bool b = f(QArith_base::Qplus(
+        std::visit(Overloaded{[](const typename Sig<std::shared_ptr<Q>>::Exist
+                                     _args) -> auto { return _args.d_a0; }},
+                   ClassicalDedekindReals::lowerCutBelow(f)->v()),
+        std::make_shared<Q>(Q{BinInt::of_nat(n0), Coq_Pos::of_nat((n + 1))})));
     if (std::move(b)) {
-      return Sig<std::shared_ptr<Q>>::exist(
+      return Sig<std::shared_ptr<Q>>::exist(QArith_base::Qplus(
           std::visit(Overloaded{[](const typename Sig<std::shared_ptr<Q>>::Exist
                                        _args0) -> auto { return _args0.d_a0; }},
-                     ClassicalDedekindReals::lowerCutBelow(f)->v())
-              ->Qplus(std::make_shared<Q>(
-                  Q{BinInt::of_nat(n0), Coq_Pos::of_nat((n + 1))})));
+                     ClassicalDedekindReals::lowerCutBelow(f)->v()),
+          std::make_shared<Q>(
+              Q{BinInt::of_nat(n0), Coq_Pos::of_nat((n + 1))})));
     } else {
       std::shared_ptr<Sig<std::shared_ptr<Q>>> s =
           ClassicalDedekindReals::DRealQlim_rec(f, n, n0);

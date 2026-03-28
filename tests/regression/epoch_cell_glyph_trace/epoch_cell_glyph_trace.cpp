@@ -1491,3 +1491,9 @@ __attribute__((pure)) Comparison Datatypes::CompOpp(const Comparison r) {
     }
   }();
 }
+
+__attribute__((pure)) bool QArith_base::Qle_bool(std::shared_ptr<Q> x,
+                                                 std::shared_ptr<Q> y) {
+  return BinInt::leb(BinInt::mul(x->Qnum, Z::zpos(y->Qden)),
+                     BinInt::mul(y->Qnum, Z::zpos(x->Qden)));
+}

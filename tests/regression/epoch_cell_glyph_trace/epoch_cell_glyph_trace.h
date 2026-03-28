@@ -296,6 +296,11 @@ struct Q {
   std::shared_ptr<Positive> Qden;
 };
 
+struct QArith_base {
+  __attribute__((pure)) static bool Qle_bool(std::shared_ptr<Q> x,
+                                             std::shared_ptr<Q> y);
+};
+
 struct Datatypes {
   __attribute__((pure)) static Comparison CompOpp(const Comparison r);
 };
@@ -837,8 +842,9 @@ struct EpochCellGlyphTraceCase {
                   Z::zpos(Positive::xo(Positive::xo(Positive::xi(
                       Positive::xi(Positive::xo(Positive::xh())))))));
   static inline const bool sample_valid_epoch_magnitude_ge_one =
-      std::make_shared<Q>(Q{Z::zpos(Positive::xh()), Positive::xh()})
-          ->Qle_bool(epoch_205_bc_valid->ve_eclipse->he_magnitude);
+      QArith_base::Qle_bool(
+          std::make_shared<Q>(Q{Z::zpos(Positive::xh()), Positive::xh()}),
+          epoch_205_bc_valid->ve_eclipse->he_magnitude);
   static inline const bool sample_step_roundtrip_saros =
       BinInt::eqb(step_reverse(step(initial_state))->saros_dial, Z::z0());
   static inline const bool sample_olympiad_year_is_one_after_4 =

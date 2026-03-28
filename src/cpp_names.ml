@@ -261,6 +261,19 @@ let struct_qualifier_for r name_str =
         (Str.global_replace (Str.regexp_string "::") "::" struct_name_str ^ "::")
     then
       mt ()
+    else if is_eponymous_record_global r then
+      (* Eponymous records are merged into the module struct body at global
+         scope — never qualify with the module prefix. *)
+      mt ()
+    else if is_record_inductive r && not (is_local_inductive r) then
+      (* Records NOT defined in the current module's MEstruct (i.e. not local
+         inductives) are extracted at global scope in C++.  They don't need the
+         struct prefix.  E.g., Q from QArith_base is placed at global scope
+         before the QArith_base struct.  Records INSIDE the current struct
+         (wrapper in SingletonRecord, MechanismState in
+         EpochCellGlyphTraceCase) are local inductives and DO need the
+         prefix. *)
+      mt ()
     else if Table.is_enum_inductive r then
       if Hashtbl.mem global_scope_enum_table r then
         mt ()

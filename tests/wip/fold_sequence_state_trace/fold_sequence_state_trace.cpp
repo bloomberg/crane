@@ -1337,7 +1337,7 @@ assert(true);
   f q = true ->
   ~ (forall r : QArith_base.Q, QArith_base.Qle r q \/ f r = false)))
 assert(true);
-  return Rabst(Rrepr(x)->CReal_plus(Rrepr(y)));
+  return Rabst(ConstructiveCauchyReals::CReal_plus(Rrepr(x), Rrepr(y)));
 }
 
 __attribute__((pure)) RbaseSymbolsImpl::R RbaseSymbolsImpl::Rmult(
@@ -1369,7 +1369,7 @@ __attribute__((pure)) RbaseSymbolsImpl::R RbaseSymbolsImpl::Ropp(
   f q = true ->
   ~ (forall r : QArith_base.Q, QArith_base.Qle r q \/ f r = false)))
 assert(true);
-  return Rabst(Rrepr(x)->CReal_opp());
+  return Rabst(ConstructiveCauchyReals::CReal_opp(Rrepr(x)));
 }
 
 __attribute__((pure)) RbaseSymbolsImpl::R Rminus(const RbaseSymbolsImpl::R r1,
@@ -1433,8 +1433,9 @@ __attribute__((pure)) RbaseSymbolsImpl::R IZR(const std::shared_ptr<Z> &z) {
 std::shared_ptr<Sumor<bool>> total_order_T(const RbaseSymbolsImpl::R r1,
                                            const RbaseSymbolsImpl::R r2) {
   std::shared_ptr<Sum<std::shared_ptr<Sig<std::shared_ptr<Z>>>, std::any>> s =
-      RbaseSymbolsImpl::Rrepr(r1)->CRealLt_lpo_dec(
-          RbaseSymbolsImpl::Rrepr(r2), [](auto &&d_a0) -> decltype(auto) {
+      ConstructiveCauchyReals::CRealLt_lpo_dec(
+          RbaseSymbolsImpl::Rrepr(r1), RbaseSymbolsImpl::Rrepr(r2),
+          [](auto &&d_a0) -> decltype(auto) {
             return sig_forall_dec(std::forward<decltype(d_a0)>(d_a0));
           });
   return std::visit(
@@ -1449,8 +1450,8 @@ std::shared_ptr<Sumor<bool>> total_order_T(const RbaseSymbolsImpl::R r1,
               -> std::shared_ptr<Sumor<bool>> {
             std::shared_ptr<
                 Sum<std::shared_ptr<Sig<std::shared_ptr<Z>>>, std::any>>
-                s0 = RbaseSymbolsImpl::Rrepr(r2)->CRealLt_lpo_dec(
-                    RbaseSymbolsImpl::Rrepr(r1),
+                s0 = ConstructiveCauchyReals::CRealLt_lpo_dec(
+                    RbaseSymbolsImpl::Rrepr(r2), RbaseSymbolsImpl::Rrepr(r1),
                     [](auto &&d_a0) -> decltype(auto) {
                       return sig_forall_dec(std::forward<decltype(d_a0)>(d_a0));
                     });
@@ -1640,6 +1641,117 @@ std::shared_ptr<Z> ConstructiveExtra::Z_inj_nat_rev(const unsigned int n) {
   }
 }
 
+std::shared_ptr<Q> QArith_base::Qplus(std::shared_ptr<Q> x,
+                                      std::shared_ptr<Q> y) {
+  return std::make_shared<Q>(
+      Q{BinInt::add(BinInt::mul(x->Qnum, Z::zpos(y->Qden)),
+                    BinInt::mul(y->Qnum, Z::zpos(x->Qden))),
+        Coq_Pos::mul(x->Qden, y->Qden)});
+}
+
+std::shared_ptr<Q> QArith_base::Qmult(std::shared_ptr<Q> x,
+                                      std::shared_ptr<Q> y) {
+  return std::make_shared<Q>(
+      Q{BinInt::mul(x->Qnum, y->Qnum), Coq_Pos::mul(x->Qden, y->Qden)});
+}
+
+std::shared_ptr<Q> QArith_base::Qopp(std::shared_ptr<Q> x) {
+  return std::make_shared<Q>(Q{BinInt::opp(x->Qnum), x->Qden});
+}
+
+std::shared_ptr<Q> QArith_base::Qminus(const std::shared_ptr<Q> &x,
+                                       const std::shared_ptr<Q> &y) {
+  return QArith_base::Qplus(x, QArith_base::Qopp(y));
+}
+
+std::shared_ptr<Q> QArith_base::Qinv(std::shared_ptr<Q> x) {
+  return std::visit(
+      Overloaded{[](const typename Z::Z0 _args) -> std::shared_ptr<Q> {
+                   return std::make_shared<Q>(Q{Z::z0(), Positive::xh()});
+                 },
+                 [&](const typename Z::Zpos _args) -> std::shared_ptr<Q> {
+                   return std::make_shared<Q>(
+                       Q{Z::zpos(std::move(x)->Qden), _args.d_a0});
+                 },
+                 [&](const typename Z::Zneg _args) -> std::shared_ptr<Q> {
+                   return std::make_shared<Q>(
+                       Q{Z::zneg(std::move(x)->Qden), _args.d_a0});
+                 }},
+      x->Qnum->v());
+}
+
+__attribute__((pure)) bool QArith_base::Qlt_le_dec(std::shared_ptr<Q> x,
+                                                   std::shared_ptr<Q> y) {
+  return BinInt::mul(x->Qnum, Z::zpos(y->Qden))
+      ->Z_lt_le_dec(BinInt::mul(y->Qnum, Z::zpos(x->Qden)));
+}
+
+std::shared_ptr<Sig<std::shared_ptr<Positive>>>
+QArith_base::Qarchimedean(const std::shared_ptr<Q> &q) {
+  return [&](void) {
+    std::shared_ptr<Z> qnum = q->Qnum;
+    std::any _x = q->Qden;
+    return std::visit(
+        Overloaded{
+            [](const typename Z::Z0 _args)
+                -> std::shared_ptr<Sig<std::shared_ptr<Positive>>> {
+              return Sig<std::shared_ptr<Positive>>::exist(Positive::xh());
+            },
+            [](const typename Z::Zpos _args)
+                -> std::shared_ptr<Sig<std::shared_ptr<Positive>>> {
+              return Sig<std::shared_ptr<Positive>>::exist(
+                  Coq_Pos::add(_args.d_a0, Positive::xh()));
+            },
+            [](const typename Z::Zneg _args)
+                -> std::shared_ptr<Sig<std::shared_ptr<Positive>>> {
+              return Sig<std::shared_ptr<Positive>>::exist(Positive::xh());
+            }},
+        qnum->v());
+  }();
+}
+
+std::shared_ptr<Q>
+QArith_base::Qpower_positive(const std::shared_ptr<Q> &_x0,
+                             const std::shared_ptr<Positive> &_x1) {
+  return Ring_theory::template pow_pos<std::shared_ptr<Q>>(QArith_base::Qmult,
+                                                           _x0, _x1);
+}
+
+std::shared_ptr<Q> QArith_base::Qpower(const std::shared_ptr<Q> &q,
+                                       const std::shared_ptr<Z> &z) {
+  return std::visit(
+      Overloaded{[](const typename Z::Z0 _args) -> std::shared_ptr<Q> {
+                   return std::make_shared<Q>(
+                       Q{Z::zpos(Positive::xh()), Positive::xh()});
+                 },
+                 [&](const typename Z::Zpos _args) -> std::shared_ptr<Q> {
+                   return QArith_base::Qpower_positive(q, _args.d_a0);
+                 },
+                 [&](const typename Z::Zneg _args) -> std::shared_ptr<Q> {
+                   return QArith_base::Qinv(
+                       QArith_base::Qpower_positive(q, _args.d_a0));
+                 }},
+      z->v());
+}
+
+std::shared_ptr<Q> Qreduction::Qred(const std::shared_ptr<Q> &q) {
+  return [&](void) {
+    std::shared_ptr<Z> q1 = q->Qnum;
+    std::shared_ptr<Positive> q2 = q->Qden;
+    std::shared_ptr<Z> r1 = BinInt::ggcd(q1, Z::zpos(q2)).second.first;
+    std::shared_ptr<Z> r2 = BinInt::ggcd(q1, Z::zpos(q2)).second.second;
+    return std::make_shared<Q>(Q{r1, BinInt::to_pos(r2)});
+  }();
+}
+
+std::shared_ptr<Q> Qabs::Qabs(const std::shared_ptr<Q> &x) {
+  return [&](void) {
+    std::shared_ptr<Z> n = x->Qnum;
+    std::shared_ptr<Positive> d = x->Qden;
+    return std::make_shared<Q>(Q{BinInt::abs(n), d});
+  }();
+}
+
 std::shared_ptr<Positive>
 QExtra::Pos_log2floor_plus1(const std::shared_ptr<Positive> &p) {
   return std::visit(
@@ -1656,22 +1768,90 @@ QExtra::Pos_log2floor_plus1(const std::shared_ptr<Positive> &p) {
       p->v());
 }
 
-std::shared_ptr<ConstructiveCauchyReals::CReal>
-ConstructiveCauchyReals::inject_Q(std::shared_ptr<Q> q) {
-  return std::make_shared<ConstructiveCauchyReals::CReal>(
+std::shared_ptr<Z> QExtra::Qbound_lt_ZExp2(const std::shared_ptr<Q> &q) {
+  return std::visit(
+      Overloaded{[](const typename Z::Z0 _args) -> std::shared_ptr<Z> {
+                   return Z::zneg(Positive::xo(Positive::xo(Positive::xo(
+                       Positive::xi(Positive::xo(Positive::xi(Positive::xi(
+                           Positive::xi(Positive::xi(Positive::xh()))))))))));
+                 },
+                 [&](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
+                   return BinInt::pos_sub(
+                       Coq_Pos::succ(QExtra::Pos_log2floor_plus1(_args.d_a0)),
+                       QExtra::Pos_log2floor_plus1(q->Qden));
+                 },
+                 [](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
+                   return Z::z0();
+                 }},
+      q->Qnum->v());
+}
+
+std::shared_ptr<Z> QExtra::Qbound_ltabs_ZExp2(const std::shared_ptr<Q> &q) {
+  return QExtra::Qbound_lt_ZExp2(Qabs::Qabs(q));
+}
+
+std::shared_ptr<CReal> ConstructiveCauchyReals::inject_Q(std::shared_ptr<Q> q) {
+  return std::make_shared<CReal>(
       CReal{[=](std::shared_ptr<Z> _x) mutable { return q; },
-            q->Qbound_ltabs_ZExp2()});
+            QExtra::Qbound_ltabs_ZExp2(q)});
+}
+
+std::shared_ptr<Q>
+ConstructiveCauchyReals::CReal_plus_seq(const std::shared_ptr<CReal> &x,
+                                        const std::shared_ptr<CReal> &y,
+                                        const std::shared_ptr<Z> &n) {
+  return Qreduction::Qred(
+      QArith_base::Qplus(x->seq(BinInt::sub(n, Z::zpos(Positive::xh()))),
+                         y->seq(BinInt::sub(n, Z::zpos(Positive::xh())))));
+}
+
+std::shared_ptr<Z>
+ConstructiveCauchyReals::CReal_plus_scale(const std::shared_ptr<CReal> &x,
+                                          const std::shared_ptr<CReal> &y) {
+  return BinInt::add(BinInt::max(x->scale, y->scale), Z::zpos(Positive::xh()));
+}
+
+std::shared_ptr<CReal>
+ConstructiveCauchyReals::CReal_plus(std::shared_ptr<CReal> x,
+                                    std::shared_ptr<CReal> y) {
+  return std::make_shared<CReal>(
+      CReal{[&](const std::shared_ptr<Z> &_x0) -> std::shared_ptr<Q> {
+              return ConstructiveCauchyReals::CReal_plus_seq(x, y, _x0);
+            },
+            ConstructiveCauchyReals::CReal_plus_scale(x, y)});
+}
+
+std::shared_ptr<Q>
+ConstructiveCauchyReals::CReal_opp_seq(const std::shared_ptr<CReal> &x,
+                                       const std::shared_ptr<Z> &n) {
+  return QArith_base::Qopp(x->seq(n));
+}
+
+std::shared_ptr<Z>
+ConstructiveCauchyReals::CReal_opp_scale(const std::shared_ptr<CReal> &x) {
+  return x->scale;
+}
+
+std::shared_ptr<CReal>
+ConstructiveCauchyReals::CReal_opp(std::shared_ptr<CReal> x) {
+  return std::make_shared<CReal>(
+      CReal{[&](const std::shared_ptr<Z> &_x0) -> std::shared_ptr<Q> {
+              return ConstructiveCauchyReals::CReal_opp_seq(x, _x0);
+            },
+            ConstructiveCauchyReals::CReal_opp_scale(x)});
 }
 
 __attribute__((pure)) ClassicalDedekindReals::DReal
 ClassicalDedekindReals::DRealAbstr(std::shared_ptr<CReal> x) {
   std::function<bool(std::shared_ptr<Q>, unsigned int)> h =
       [=](std::shared_ptr<Q> q, unsigned int n) mutable {
-        bool s = q->Qplus(std::make_shared<Q>(
-                              Q{Z::zpos(Positive::xo(Positive::xh())),
-                                Positive::xh()})
-                              ->Qpower(BinInt::opp(BinInt::of_nat(n))))
-                     ->Qlt_le_dec(x->seq(BinInt::opp(BinInt::of_nat(n))));
+        bool s = QArith_base::Qlt_le_dec(
+            QArith_base::Qplus(q, QArith_base::Qpower(
+                                      std::make_shared<Q>(Q{
+                                          Z::zpos(Positive::xo(Positive::xh())),
+                                          Positive::xh()}),
+                                      BinInt::opp(BinInt::of_nat(n)))),
+            x->seq(BinInt::opp(BinInt::of_nat(n))));
         if (std::move(s)) {
           return false;
         } else {
@@ -1710,14 +1890,14 @@ assert(true);
             Overloaded{[&](const typename Sig<std::shared_ptr<Q>>::Exist _args0)
                            -> std::shared_ptr<Sig<std::shared_ptr<Q>>> {
               std::shared_ptr<Sig<std::shared_ptr<Positive>>> s0 =
-                  _args0.d_a0
-                      ->Qminus(std::visit(
+                  QArith_base::Qarchimedean(QArith_base::Qminus(
+                      _args0.d_a0,
+                      std::visit(
                           Overloaded{
                               [](const typename Sig<std::shared_ptr<Q>>::Exist
                                      _args1) -> auto { return _args1.d_a0; }},
                           ClassicalDedekindReals::lowerCutBelow(_args.d_a0)
-                              ->v()))
-                      ->Qarchimedean();
+                              ->v())));
               return std::visit(
                   Overloaded{
                       [&](const typename Sig<std::shared_ptr<Positive>>::Exist
@@ -1791,11 +1971,11 @@ std::shared_ptr<Z> ClassicalDedekindReals::CReal_of_DReal_scale(
   f q = true ->
   ~ (forall r : QArith_base.Q, QArith_base.Qle r q \/ f r = false)))
 assert(true);
-  return ClassicalDedekindReals::CReal_of_DReal_seq(x, Z::zneg(Positive::xh()))
-      ->Qabs()
-      ->Qplus(std::make_shared<Q>(
-          Q{Z::zpos(Positive::xo(Positive::xh())), Positive::xh()}))
-      ->Qbound_lt_ZExp2();
+  return QExtra::Qbound_lt_ZExp2(QArith_base::Qplus(
+      Qabs::Qabs(ClassicalDedekindReals::CReal_of_DReal_seq(
+          x, Z::zneg(Positive::xh()))),
+      std::make_shared<Q>(
+          Q{Z::zpos(Positive::xo(Positive::xh())), Positive::xh()})));
 }
 
 std::shared_ptr<CReal> ClassicalDedekindReals::DRealRepr(
@@ -1818,9 +1998,9 @@ std::shared_ptr<Q>
 ConstructiveCauchyRealsMult::CReal_mult_seq(const std::shared_ptr<CReal> &x,
                                             const std::shared_ptr<CReal> &y,
                                             const std::shared_ptr<Z> &n) {
-  return x->seq(BinInt::sub(BinInt::sub(n, y->scale), Z::zpos(Positive::xh())))
-      ->Qmult(y->seq(
-          BinInt::sub(BinInt::sub(n, x->scale), Z::zpos(Positive::xh()))));
+  return QArith_base::Qmult(
+      x->seq(BinInt::sub(BinInt::sub(n, y->scale), Z::zpos(Positive::xh()))),
+      y->seq(BinInt::sub(BinInt::sub(n, x->scale), Z::zpos(Positive::xh()))));
 }
 
 std::shared_ptr<Z>
