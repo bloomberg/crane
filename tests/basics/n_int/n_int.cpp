@@ -313,7 +313,7 @@ BinNat::pos_div_eucl(const unsigned int a, const unsigned int b) {
     unsigned int q = BinNat::pos_div_eucl(a_, b).first;
     unsigned int r = BinNat::pos_div_eucl(a_, b).second;
     unsigned int r_ = (std::move(r) * 2u + 1u);
-    if (b <= std::move(r_)) {
+    if (b <= r_) {
       return std::make_pair((q * 2u + 1u),
                             (std::move(r_) >= b ? std::move(r_) - b : 0u));
     } else {
@@ -324,7 +324,7 @@ BinNat::pos_div_eucl(const unsigned int a, const unsigned int b) {
     unsigned int q = BinNat::pos_div_eucl(a_, b).first;
     unsigned int r = BinNat::pos_div_eucl(a_, b).second;
     unsigned int r_ = (std::move(r) * 2u);
-    if (b <= std::move(r_)) {
+    if (b <= r_) {
       return std::make_pair((q * 2u + 1u),
                             (std::move(r_) >= b ? std::move(r_) - b : 0u));
     } else {

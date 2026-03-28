@@ -44,16 +44,6 @@
   (alias runtest)
   (deps unsound_axioms.t.exe)
   (action (run ./unsound_axioms.t.exe))))
-(subdir historical_event_safety_trace
- (rule
-  (targets historical_event_safety_trace.t.exe)
-  (deps HistoricalEventSafetyTrace.vo historical_event_safety_trace.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} historical_event_safety_trace.t.exe historical_event_safety_trace.cpp historical_event_safety_trace.t.cpp)))
- (rule
-  (alias runtest)
-  (deps historical_event_safety_trace.t.exe)
-  (action (run ./historical_event_safety_trace.t.exe))))
 (subdir epoch_cell_glyph_trace
  (rule
   (targets epoch_cell_glyph_trace.t.exe)

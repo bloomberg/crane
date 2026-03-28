@@ -3055,9 +3055,10 @@ and gen_cpp_case (typ : ml_type) t env pv =
         | MLletin (x, t, a, b) ->
           let x' = remove_prime_id (id_of_mlid x) in
           let _, env'' = push_vars' [(x', t)] env' in
-          push_env_types [(x', t)];
           let afun v = Sasgn (x', None, v) in
           let asgn = gen_stmts env' afun a in
+          (* Push env_types AFTER generating the value expression [a]. *)
+          push_env_types [(x', t)];
           let letin_stmt =
             match asgn with
             | [Sasgn (x', None, e)] ->
@@ -3416,13 +3417,17 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       (* Add renamed ids to environment for processing body *)
       let _, env_with_fix = push_vars' renamed_ids env in
       push_env_types renamed_ids;
-      (* Phase 2: shift owned vars for fix bindings *)
+      (* Phase 2: shift owned vars and dead-after for fix bindings *)
       let n_fix_bindings = Array.length ids in
       let saved_owned = tctx.move_owned_vars in
+      let saved_dead_fix = tctx.move_dead_after in
       tctx.move_owned_vars <-
         Escape.IntSet.map (fun i -> i + n_fix_bindings) tctx.move_owned_vars;
+      tctx.move_dead_after <-
+        Escape.IntSet.map (fun i -> i + n_fix_bindings) tctx.move_dead_after;
       let cont = gen_stmts env_with_fix k b in
       tctx.move_owned_vars <- saved_owned;
+      tctx.move_dead_after <- saved_dead_fix;
       decls @ defs @ cont
   | MLletin (x, t, (MLlam _ as a), b) ->
     (* Check if this is a polymorphic lambda that should be lifted to a
@@ -3457,20 +3462,28 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       let x' = remove_prime_id (id_of_mlid x) in
       let renamed_ids, env' = push_vars' [(x', t)] env in
       let x_renamed = fst (List.hd renamed_ids) in
-      push_env_types [(x_renamed, t)];
-      if x == Dummy then
-        gen_stmts env' k b
+      if x == Dummy then (
+        push_env_types [(x_renamed, t)];
+        gen_stmts env' k b )
       else
         let afun v = Sasgn (x_renamed, None, v) in
         let asgn = gen_stmts env afun a in
+        (* Push env_types AFTER generating the value expression [a]. *)
+        push_env_types [(x_renamed, t)];
         let tvars = get_current_type_vars () in
-        (* Phase 2: shift owned vars for lambda let binding *)
+        (* Phase 2: shift owned vars and dead-after for lambda let binding.
+           The body [b] has one more de Bruijn binder, so all indices must
+           be shifted +1. *)
         let saved_owned_lam = tctx.move_owned_vars in
+        let saved_dead_lam = tctx.move_dead_after in
         tctx.move_owned_vars <-
           Escape.IntSet.map (fun i -> i + 1) tctx.move_owned_vars;
+        tctx.move_dead_after <-
+          Escape.IntSet.map (fun i -> i + 1) tctx.move_dead_after;
         let gen_cont () =
           let cont = gen_stmts env' k b in
           tctx.move_owned_vars <- saved_owned_lam;
+          tctx.move_dead_after <- saved_dead_lam;
           cont
         in
         match asgn with
@@ -3763,9 +3776,9 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     let x' = remove_prime_id (id_of_mlid x) in
     let ids_renamed, env' = push_vars' [(x', t)] env in
     let x_renamed = fst (List.hd ids_renamed) in
-    push_env_types [(x_renamed, t)];
-    if x == Dummy then
-      gen_stmts env' k b
+    if x == Dummy then (
+      push_env_types [(x_renamed, t)];
+      gen_stmts env' k b )
     else
       let depth = tctx.current_letin_depth in
       tctx.current_letin_depth <- depth + 1;
@@ -3802,8 +3815,15 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       tctx.move_suppress_tail <- true;
       let afun v = Sasgn (x_renamed, None, v) in
       let asgn = gen_stmts env afun a in
+      (* Push env_types AFTER generating the value expression [a] — [a] uses de
+         Bruijn indices that don't include the new let binding.  The body [b]
+         (generated below) does include it. *)
+      push_env_types [(x_renamed, t)];
       tctx.move_suppress_tail <- saved_suppress;
-      tctx.move_dead_after <- saved_dead;
+      (* Shift saved_dead +1 for the body [b]: the new let binding adds one
+         de Bruijn level, so all parent-scope indices must be shifted to stay
+         in sync with the body's coordinate system. *)
+      tctx.move_dead_after <- Escape.IntSet.map (fun i -> i + 1) saved_dead;
       (* The new let binding is owned (it's a local variable). Update
          move_owned_vars for processing [b]: shift all existing indices by 1
          (because [b] has one more binder) and add index 1 if the type is

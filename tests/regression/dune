@@ -2511,3 +2511,14 @@
   (alias runtest)
   (deps dim10_tower_proof_chain.t.exe)
   (action (run ./dim10_tower_proof_chain.t.exe))))
+
+(subdir historical_event_safety_trace
+ (rule
+  (targets historical_event_safety_trace.t.exe)
+  (deps HistoricalEventSafetyTrace.vo historical_event_safety_trace.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} historical_event_safety_trace.t.exe historical_event_safety_trace.cpp historical_event_safety_trace.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps historical_event_safety_trace.t.exe)
+  (action (run ./historical_event_safety_trace.t.exe))))

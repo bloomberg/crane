@@ -479,8 +479,8 @@ __attribute__((pure)) bool skiplist_test::stm_test_bde_api() {
   }
   return (front1 &&
           (front2 &&
-           (c3 && (c4 && (c5 && (c6 && (c7 && (c8 && (std::move(c9) &&
-                                                      std::move(c10))))))))));
+           (c3 && (c4 && (c5 && (c6 && (std::move(c7) &&
+                                        (std::move(c8) && (c9 && c10)))))))));
 }
 
 __attribute__((pure)) bool skiplist_test::test_insert_lookup() {

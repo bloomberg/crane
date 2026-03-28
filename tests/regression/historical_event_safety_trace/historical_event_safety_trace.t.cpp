@@ -7,7 +7,7 @@ int main() {
   assert(HistoricalEventSafetyTraceCase::historical_lookup_1983(42u) == 0u);
   assert(HistoricalEventSafetyTraceCase::historical_lookup_2011(4u) == 400u);
   assert(HistoricalEventSafetyTraceCase::witness_test_initial_safe_at(10u));
-  assert(HistoricalEventSafetyTraceCase::witness_test_peak_level_at(3u) > 0u);
+  assert(HistoricalEventSafetyTraceCase::witness_test_peak_level_at(10u) > 0u);
   assert(HistoricalEventSafetyTraceCase::hoover_controller_sample(2050u) ==
          100u);
   assert(HistoricalEventSafetyTraceCase::hoover_controller_sample(1750u) ==

@@ -868,7 +868,7 @@ struct HistoricalEventSafetyTraceCase {
             const std::shared_ptr<PlantConfig> &pconf, std::shared_ptr<State> s,
             const unsigned int t) {
     unsigned int out = PeanoNat::min(
-        PeanoNat::div((pconf->gate_capacity_cm * ctrl(s)(t)), 100u),
+        PeanoNat::div((pconf->gate_capacity_cm * ctrl(s, t)), 100u),
         (s->reservoir_level_cm + inflow(t)));
     unsigned int new_level =
         ((((s->reservoir_level_cm + inflow(t)) - out) >
@@ -899,11 +899,9 @@ struct HistoricalEventSafetyTraceCase {
       std::shared_ptr<State> s_ =
           step_hist(inflow, ctrl, stage_fn, pconf, s, std::move(k));
       return simulate_with_max(
-          inflow, ctrl, stage_fn, pconf, std::move(k), std::move(s_),
-          PeanoNat::max(std::move(max_level),
-                        std::move(s_)->reservoir_level_cm),
-          PeanoNat::max(std::move(max_stage),
-                        std::move(s_)->downstream_stage_cm));
+          inflow, ctrl, stage_fn, pconf, std::move(k), s_,
+          PeanoNat::max(std::move(max_level), s_->reservoir_level_cm),
+          PeanoNat::max(std::move(max_stage), s_->downstream_stage_cm));
     }
   }
 

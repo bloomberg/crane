@@ -477,7 +477,7 @@ ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
         }
         unsigned int safe_insulin =
             PeanoNat::div((std::move(safe_drop) * 200u), isf_tenths);
-        if (PeanoNat::leb(std::move(safe_insulin), iob_twentieths)) {
+        if (PeanoNat::leb(safe_insulin, iob_twentieths)) {
           return SuspendDecision::suspend_withhold();
         } else {
           return SuspendDecision::suspend_reduce(
@@ -754,7 +754,7 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                           suspend_decision = suspend_check_tenths_with_cob(
                               default_config, std::move(eff_bg), std::move(iob),
                               input->pi_carbs_g->grams_val,
-                              std::move(activity_isf), std::move(tdd_capped));
+                              std::move(activity_isf), tdd_capped);
                       unsigned int suspended = apply_suspend(
                           std::move(tdd_capped), std::move(suspend_decision));
                       unsigned int adult_capped =
