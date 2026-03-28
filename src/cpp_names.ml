@@ -248,44 +248,62 @@ let typename_prefix_for name_str =
   else
     mt ()
 
-(** Add struct qualification prefix if needed. When generating out-of-struct
-    member function definitions, we need to qualify types that belong to the
-    current struct. *)
+(** Return [true] when [r]'s Rocq fully-qualified path shows that it lives
+    inside the module that maps to the C++ struct [struct_name_str].
+
+    The check converts C++ [::] separators in [struct_name_str] to Rocq [.]
+    separators, then tests whether the result is a substring of the global
+    reference path.  This tells us the type is nested inside the current
+    struct and therefore needs a struct qualifier in the [.cpp] file. *)
+let is_nested_in_struct r struct_name_str =
+  let full_path = Pp.string_of_ppcmds (GlobRef.print r) in
+  let struct_name_dotted =
+    Str.global_replace (Str.regexp_string "::") "." struct_name_str
+  in
+  Common.contains_substring full_path struct_name_dotted
+
+(** Add struct qualification prefix when generating out-of-struct definitions.
+
+    In a [.cpp] file, types defined inside the enclosing struct need to be
+    qualified (e.g. [MyStruct::NestedType]) because the return-type position
+    is outside the class scope.  This function decides whether to prepend
+    [struct_name::] for a given global reference [r] whose printed name is
+    [name_str]. *)
 let struct_qualifier_for r name_str =
   match render_ctx.rc_struct_name with
   | Some struct_name when not render_ctx.rc_in_struct ->
     let struct_name_str = Pp.string_of_ppcmds struct_name in
+    (* Already contains the struct prefix — nothing to add. *)
     if
       Common.contains_substring
         name_str
         (Str.global_replace (Str.regexp_string "::") "::" struct_name_str ^ "::")
     then
       mt ()
+    (* Eponymous records are merged into the module struct at global scope,
+       so they don't get an extra wrapper prefix.  However, when the record
+       itself lives inside the current struct (nested sub-module), we must
+       still qualify it in the [.cpp] file. *)
     else if is_eponymous_record_global r then
-      (* Eponymous records are merged into the module struct body at global
-         scope — never qualify with the module prefix. *)
-      mt ()
+      if is_nested_in_struct r struct_name_str then
+        struct_name ++ str "::"
+      else
+        mt ()
+    (* Non-local records are placed at C++ global scope (before the struct),
+       so they never need the struct prefix. *)
     else if is_record_inductive r && not (is_local_inductive r) then
-      (* Records NOT defined in the current module's MEstruct (i.e. not local
-         inductives) are extracted at global scope in C++.  They don't need the
-         struct prefix.  E.g., Q from QArith_base is placed at global scope
-         before the QArith_base struct.  Records INSIDE the current struct
-         (wrapper in SingletonRecord, MechanismState in
-         EpochCellGlyphTraceCase) are local inductives and DO need the
-         prefix. *)
       mt ()
+    (* Enums at global scope need no prefix; those inside the struct do. *)
     else if Table.is_enum_inductive r then
       if Hashtbl.mem global_scope_enum_table r then
         mt ()
+      else if is_nested_in_struct r struct_name_str then
+        struct_name ++ str "::"
       else
-        let full_path = Pp.string_of_ppcmds (GlobRef.print r) in
-        let struct_name_dotted =
-          Str.global_replace (Str.regexp_string "::") "." struct_name_str
-        in
-        if Common.contains_substring full_path struct_name_dotted then
-          struct_name ++ str "::"
-        else
-          mt ()
+        mt ()
+    (* Default: qualify when the type's Rocq path nests under the struct,
+       or when the type already carries a qualified C++ name whose Rocq path
+       nests under the struct's parent module. *)
     else
       let full_path = Pp.string_of_ppcmds (GlobRef.print r) in
       let struct_name_dotted =

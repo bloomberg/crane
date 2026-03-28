@@ -376,6 +376,8 @@ let rec extract_structure access env mp reso ~all = function
           if (not b) && logical_decl d then
             ms
           else (
+            (* Skip dependency tracking for fixpoints whose bodies are
+               entirely replaced by inline-custom C++ code. *)
             if not (Array.for_all
                       (fun c -> is_inline_custom (GlobRef.ConstRef c)) vc) then
               Visit.add_decl_deps d;
@@ -391,9 +393,8 @@ let rec extract_structure access env mp reso ~all = function
           if (not b) && logical_decl d then
             ms
           else (
-            (* Don't follow dependencies for inline-custom constants;
-               their bodies are replaced by user-supplied C++ code,
-               so transitive Rocq dependencies are irrelevant. *)
+            (* Skip dependency tracking for constants whose bodies are
+               replaced by inline-custom C++ code. *)
             if not (is_inline_custom (GlobRef.ConstRef c)) then
               Visit.add_decl_deps d;
             (l, SEdecl d) :: ms )
@@ -408,6 +409,8 @@ let rec extract_structure access env mp reso ~all = function
       if (not b) && logical_decl d then
         ms
       else (
+        (* Skip dependency tracking for inductives with a custom
+           C++ extraction — their Rocq definitions are not emitted. *)
         if not (is_custom (GlobRef.IndRef (mind, 0))) then
           Visit.add_decl_deps d;
         (l, SEdecl d) :: ms )
