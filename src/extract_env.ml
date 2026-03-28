@@ -376,7 +376,9 @@ let rec extract_structure access env mp reso ~all = function
           if (not b) && logical_decl d then
             ms
           else (
-            Visit.add_decl_deps d;
+            if not (Array.for_all
+                      (fun c -> is_inline_custom (GlobRef.ConstRef c)) vc) then
+              Visit.add_decl_deps d;
             (l, SEdecl d) :: ms )
         else
           ms
@@ -389,7 +391,11 @@ let rec extract_structure access env mp reso ~all = function
           if (not b) && logical_decl d then
             ms
           else (
-            Visit.add_decl_deps d;
+            (* Don't follow dependencies for inline-custom constants;
+               their bodies are replaced by user-supplied C++ code,
+               so transitive Rocq dependencies are irrelevant. *)
+            if not (is_inline_custom (GlobRef.ConstRef c)) then
+              Visit.add_decl_deps d;
             (l, SEdecl d) :: ms )
         else
           ms )
@@ -402,7 +408,8 @@ let rec extract_structure access env mp reso ~all = function
       if (not b) && logical_decl d then
         ms
       else (
-        Visit.add_decl_deps d;
+        if not (is_custom (GlobRef.IndRef (mind, 0))) then
+          Visit.add_decl_deps d;
         (l, SEdecl d) :: ms )
     else
       ms

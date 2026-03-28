@@ -147,6 +147,6 @@ Definition sample_has_expected_lines : bool :=
 End FoldSequenceStateTraceCase.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Mapping.NatIntStd Mapping.Real.
 
 Crane Extraction "fold_sequence_state_trace" FoldSequenceStateTraceCase.

@@ -21,96 +21,12 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-enum class Comparison { e_EQ, e_LT, e_GT };
-
 struct Pos {
-  __attribute__((pure)) static unsigned int succ(const unsigned int x);
-  __attribute__((pure)) static unsigned int pred_double(const unsigned int x);
-  __attribute__((pure)) static unsigned int pred_N(const unsigned int x);
-
-  struct mask {
-    // TYPES
-    struct IsNul {};
-
-    struct IsPos {
-      unsigned int d_a0;
-    };
-
-    struct IsNeg {};
-
-    using variant_t = std::variant<IsNul, IsPos, IsNeg>;
-
-  private:
-    // DATA
-    variant_t d_v_;
-
-  public:
-    // CREATORS
-    explicit mask(IsNul _v) : d_v_(std::move(_v)) {}
-
-    explicit mask(IsPos _v) : d_v_(std::move(_v)) {}
-
-    explicit mask(IsNeg _v) : d_v_(std::move(_v)) {}
-
-    static std::shared_ptr<mask> isnul() {
-      return std::make_shared<mask>(IsNul{});
-    }
-
-    static std::shared_ptr<mask> ispos(unsigned int a0) {
-      return std::make_shared<mask>(IsPos{std::move(a0)});
-    }
-
-    static std::shared_ptr<mask> isneg() {
-      return std::make_shared<mask>(IsNeg{});
-    }
-
-    static std::unique_ptr<mask> isnul_uptr() {
-      return std::make_unique<mask>(IsNul{});
-    }
-
-    static std::unique_ptr<mask> ispos_uptr(unsigned int a0) {
-      return std::make_unique<mask>(IsPos{std::move(a0)});
-    }
-
-    static std::unique_ptr<mask> isneg_uptr() {
-      return std::make_unique<mask>(IsNeg{});
-    }
-
-    // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
-  };
-
-  static std::shared_ptr<mask> succ_double_mask(const std::shared_ptr<mask> &x);
-  static std::shared_ptr<mask> double_mask(const std::shared_ptr<mask> &x);
-  static std::shared_ptr<mask> double_pred_mask(const unsigned int x);
-  static std::shared_ptr<mask> sub_mask(const unsigned int x,
-                                        const unsigned int y);
-  static std::shared_ptr<mask> sub_mask_carry(const unsigned int x,
-                                              const unsigned int y);
-  __attribute__((pure)) static Comparison
-  compare_cont(const Comparison r, const unsigned int x, const unsigned int y);
-  __attribute__((pure)) static Comparison compare(const unsigned int _x0,
-                                                  const unsigned int _x1);
-  __attribute__((pure)) static bool eqb(const unsigned int p,
-                                        const unsigned int q);
-};
-
-struct Coq_Pos {
   __attribute__((pure)) static unsigned int add_carry(const unsigned int x,
                                                       const unsigned int y);
 };
 
-struct BinNat {
-  __attribute__((pure)) static Comparison compare(const unsigned int n,
-                                                  const unsigned int m);
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  pos_div_eucl(const unsigned int a, const unsigned int b);
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  div_eucl(const unsigned int a, const unsigned int b);
-};
+struct BinNat {};
 
 struct NIntTest {
   __attribute__((pure)) static unsigned int add_test(const unsigned int _x0,

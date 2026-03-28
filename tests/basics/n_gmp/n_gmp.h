@@ -22,94 +22,12 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-enum class Comparison { e_EQ, e_LT, e_GT };
-
 struct Pos {
-  __attribute__((pure)) static mpz_class succ(const mpz_class x);
-  __attribute__((pure)) static mpz_class pred_double(const mpz_class x);
-  __attribute__((pure)) static mpz_class pred_N(const mpz_class x);
-
-  struct mask {
-    // TYPES
-    struct IsNul {};
-
-    struct IsPos {
-      mpz_class d_a0;
-    };
-
-    struct IsNeg {};
-
-    using variant_t = std::variant<IsNul, IsPos, IsNeg>;
-
-  private:
-    // DATA
-    variant_t d_v_;
-
-  public:
-    // CREATORS
-    explicit mask(IsNul _v) : d_v_(std::move(_v)) {}
-
-    explicit mask(IsPos _v) : d_v_(std::move(_v)) {}
-
-    explicit mask(IsNeg _v) : d_v_(std::move(_v)) {}
-
-    static std::shared_ptr<mask> isnul() {
-      return std::make_shared<mask>(IsNul{});
-    }
-
-    static std::shared_ptr<mask> ispos(mpz_class a0) {
-      return std::make_shared<mask>(IsPos{std::move(a0)});
-    }
-
-    static std::shared_ptr<mask> isneg() {
-      return std::make_shared<mask>(IsNeg{});
-    }
-
-    static std::unique_ptr<mask> isnul_uptr() {
-      return std::make_unique<mask>(IsNul{});
-    }
-
-    static std::unique_ptr<mask> ispos_uptr(mpz_class a0) {
-      return std::make_unique<mask>(IsPos{std::move(a0)});
-    }
-
-    static std::unique_ptr<mask> isneg_uptr() {
-      return std::make_unique<mask>(IsNeg{});
-    }
-
-    // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
-  };
-
-  static std::shared_ptr<mask> succ_double_mask(const std::shared_ptr<mask> &x);
-  static std::shared_ptr<mask> double_mask(const std::shared_ptr<mask> &x);
-  static std::shared_ptr<mask> double_pred_mask(const mpz_class x);
-  static std::shared_ptr<mask> sub_mask(const mpz_class x, const mpz_class y);
-  static std::shared_ptr<mask> sub_mask_carry(const mpz_class x,
-                                              const mpz_class y);
-  __attribute__((pure)) static Comparison
-  compare_cont(const Comparison r, const mpz_class x, const mpz_class y);
-  __attribute__((pure)) static Comparison compare(const mpz_class _x0,
-                                                  const mpz_class _x1);
-  __attribute__((pure)) static bool eqb(const mpz_class p, const mpz_class q);
-};
-
-struct Coq_Pos {
   __attribute__((pure)) static mpz_class add_carry(const mpz_class x,
                                                    const mpz_class y);
 };
 
-struct BinNat {
-  __attribute__((pure)) static Comparison compare(const mpz_class n,
-                                                  const mpz_class m);
-  __attribute__((pure)) static std::pair<mpz_class, mpz_class>
-  pos_div_eucl(const mpz_class a, const mpz_class b);
-  __attribute__((pure)) static std::pair<mpz_class, mpz_class>
-  div_eucl(const mpz_class a, const mpz_class b);
-};
+struct BinNat {};
 
 struct NGMPTest {
   __attribute__((pure)) static mpz_class add_test(const mpz_class _x0,
