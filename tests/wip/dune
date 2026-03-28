@@ -34,6 +34,17 @@
   (deps skiplist.t.exe)
   (action (run ./skiplist.t.exe))))
 
+(subdir record_field_patterns
+ (rule
+  (targets record_field_patterns.t.exe)
+  (deps RecordFieldPatterns.vo record_field_patterns.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_field_patterns.t.exe record_field_patterns.cpp record_field_patterns.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_field_patterns.t.exe)
+  (action (run ./record_field_patterns.t.exe))))
+
 (subdir unsound_axioms
  (rule
   (targets unsound_axioms.t.exe)
