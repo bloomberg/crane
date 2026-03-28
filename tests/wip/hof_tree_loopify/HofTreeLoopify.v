@@ -22,6 +22,8 @@ Import ListNotations.
 Require Import Crane.Mapping.NatIntStd.
 Require Crane.Extraction.
 
+Set Crane Loopify.
+
 Module HofTreeLoopify.
 
 Inductive tree (A : Type) : Type :=
