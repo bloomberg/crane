@@ -86,74 +86,68 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::carbs_reasonable(
 __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::isf_activity_modifier(
     const ValidatedPumpDeliveryTraceCase::ActivityState state) {
-  return [&](void) {
-    switch (state) {
-    case ActivityState::e_ACTIVITY_NORMAL: {
-      return 100u;
-    }
-    case ActivityState::e_ACTIVITY_LIGHTEXERCISE: {
-      return 110u;
-    }
-    case ActivityState::e_ACTIVITY_MODERATEEXERCISE: {
-      return 130u;
-    }
-    case ActivityState::e_ACTIVITY_INTENSEEXERCISE: {
-      return 150u;
-    }
-    case ActivityState::e_ACTIVITY_ILLNESS: {
-      return 80u;
-    }
-    case ActivityState::e_ACTIVITY_STRESS: {
-      return 90u;
-    }
-    }
-  }();
+  switch (state) {
+  case ActivityState::e_ACTIVITY_NORMAL: {
+    return 100u;
+  }
+  case ActivityState::e_ACTIVITY_LIGHTEXERCISE: {
+    return 110u;
+  }
+  case ActivityState::e_ACTIVITY_MODERATEEXERCISE: {
+    return 130u;
+  }
+  case ActivityState::e_ACTIVITY_INTENSEEXERCISE: {
+    return 150u;
+  }
+  case ActivityState::e_ACTIVITY_ILLNESS: {
+    return 80u;
+  }
+  case ActivityState::e_ACTIVITY_STRESS: {
+    return 90u;
+  }
+  }
 }
 
 __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::icr_activity_modifier(
     const ValidatedPumpDeliveryTraceCase::ActivityState state) {
-  return [&](void) {
-    switch (state) {
-    case ActivityState::e_ACTIVITY_NORMAL: {
-      return 100u;
-    }
-    case ActivityState::e_ACTIVITY_LIGHTEXERCISE: {
-      return 110u;
-    }
-    case ActivityState::e_ACTIVITY_MODERATEEXERCISE: {
-      return 125u;
-    }
-    case ActivityState::e_ACTIVITY_INTENSEEXERCISE: {
-      return 140u;
-    }
-    case ActivityState::e_ACTIVITY_ILLNESS: {
-      return 85u;
-    }
-    case ActivityState::e_ACTIVITY_STRESS: {
-      return 95u;
-    }
-    }
-  }();
+  switch (state) {
+  case ActivityState::e_ACTIVITY_NORMAL: {
+    return 100u;
+  }
+  case ActivityState::e_ACTIVITY_LIGHTEXERCISE: {
+    return 110u;
+  }
+  case ActivityState::e_ACTIVITY_MODERATEEXERCISE: {
+    return 125u;
+  }
+  case ActivityState::e_ACTIVITY_INTENSEEXERCISE: {
+    return 140u;
+  }
+  case ActivityState::e_ACTIVITY_ILLNESS: {
+    return 85u;
+  }
+  case ActivityState::e_ACTIVITY_STRESS: {
+    return 95u;
+  }
+  }
 }
 
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Minutes
 ValidatedPumpDeliveryTraceCase::peak_time(
     const ValidatedPumpDeliveryTraceCase::InsulinType itype,
     const unsigned int _x) {
-  return [&](void) {
-    switch (itype) {
-    case InsulinType::e_INSULIN_HUMALOG: {
-      return 75u;
-    }
-    case InsulinType::e_INSULIN_ASPART: {
-      return 70u;
-    }
-    case InsulinType::e_INSULIN_LISPRO: {
-      return 75u;
-    }
-    }
-  }();
+  switch (itype) {
+  case InsulinType::e_INSULIN_HUMALOG: {
+    return 75u;
+  }
+  case InsulinType::e_INSULIN_ASPART: {
+    return 70u;
+  }
+  case InsulinType::e_INSULIN_LISPRO: {
+    return 75u;
+  }
+  }
 }
 
 __attribute__((pure)) unsigned int
@@ -835,22 +829,20 @@ __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::apply_rounding(
     const ValidatedPumpDeliveryTraceCase::RoundingMode mode,
     const unsigned int t) {
-  return [&](void) {
-    switch (mode) {
-    case RoundingMode::e_ROUNDTWENTIETH: {
-      return std::move(t);
-    }
-    case RoundingMode::e_ROUNDTENTH: {
-      return round_down_to_increment(std::move(t), 2u);
-    }
-    case RoundingMode::e_ROUNDHALF: {
-      return round_down_to_increment(std::move(t), 10u);
-    }
-    case RoundingMode::e_ROUNDUNIT: {
-      return round_down_to_increment(std::move(t), ONE_UNIT);
-    }
-    }
-  }();
+  switch (mode) {
+  case RoundingMode::e_ROUNDTWENTIETH: {
+    return std::move(t);
+  }
+  case RoundingMode::e_ROUNDTENTH: {
+    return round_down_to_increment(std::move(t), 2u);
+  }
+  case RoundingMode::e_ROUNDHALF: {
+    return round_down_to_increment(std::move(t), 10u);
+  }
+  case RoundingMode::e_ROUNDUNIT: {
+    return round_down_to_increment(std::move(t), ONE_UNIT);
+  }
+  }
 }
 
 __attribute__((pure))

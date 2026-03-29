@@ -161,30 +161,26 @@ struct DepRecord {
 
   template <typename T1>
   static T1 tag_rect(const T1 f, const T1 f0, const Tag t) {
-    return [&](void) {
-      switch (t) {
-      case Tag::e_TNAT: {
-        return f;
-      }
-      case Tag::e_TBOOL: {
-        return f0;
-      }
-      }
-    }();
+    switch (t) {
+    case Tag::e_TNAT: {
+      return f;
+    }
+    case Tag::e_TBOOL: {
+      return f0;
+    }
+    }
   }
 
   template <typename T1>
   static T1 tag_rec(const T1 f, const T1 f0, const Tag t) {
-    return [&](void) {
-      switch (t) {
-      case Tag::e_TNAT: {
-        return f;
-      }
-      case Tag::e_TBOOL: {
-        return f0;
-      }
-      }
-    }();
+    switch (t) {
+    case Tag::e_TNAT: {
+      return f;
+    }
+    case Tag::e_TBOOL: {
+      return f0;
+    }
+    }
   }
 
   using tag_type = std::any;

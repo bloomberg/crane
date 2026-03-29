@@ -862,37 +862,33 @@ struct ValidatedVirtualCrossmatchTraceCase {
   template <typename T1>
   static T1 HLALocus_rect(const T1 f, const T1 f0, const T1 f1,
                           const HLALocus h) {
-    return [&](void) {
-      switch (h) {
-      case HLALocus::e_LOCUS_A: {
-        return f;
-      }
-      case HLALocus::e_LOCUS_B: {
-        return f0;
-      }
-      case HLALocus::e_LOCUS_DR: {
-        return f1;
-      }
-      }
-    }();
+    switch (h) {
+    case HLALocus::e_LOCUS_A: {
+      return f;
+    }
+    case HLALocus::e_LOCUS_B: {
+      return f0;
+    }
+    case HLALocus::e_LOCUS_DR: {
+      return f1;
+    }
+    }
   }
 
   template <typename T1>
   static T1 HLALocus_rec(const T1 f, const T1 f0, const T1 f1,
                          const HLALocus h) {
-    return [&](void) {
-      switch (h) {
-      case HLALocus::e_LOCUS_A: {
-        return f;
-      }
-      case HLALocus::e_LOCUS_B: {
-        return f0;
-      }
-      case HLALocus::e_LOCUS_DR: {
-        return f1;
-      }
-      }
-    }();
+    switch (h) {
+    case HLALocus::e_LOCUS_A: {
+      return f;
+    }
+    case HLALocus::e_LOCUS_B: {
+      return f0;
+    }
+    case HLALocus::e_LOCUS_DR: {
+      return f1;
+    }
+    }
   }
 
   __attribute__((pure)) static bool hla_locus_eq_dec(const HLALocus x,
@@ -993,49 +989,45 @@ struct ValidatedVirtualCrossmatchTraceCase {
   template <typename T1>
   static T1 MFIStrength_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                              const T1 f3, const MFIStrength m) {
-    return [&](void) {
-      switch (m) {
-      case MFIStrength::e_MFI_NEGATIVE: {
-        return f;
-      }
-      case MFIStrength::e_MFI_WEAKPOSITIVE: {
-        return f0;
-      }
-      case MFIStrength::e_MFI_MODERATE: {
-        return f1;
-      }
-      case MFIStrength::e_MFI_STRONG: {
-        return f2;
-      }
-      case MFIStrength::e_MFI_VERYSTRONG: {
-        return f3;
-      }
-      }
-    }();
+    switch (m) {
+    case MFIStrength::e_MFI_NEGATIVE: {
+      return f;
+    }
+    case MFIStrength::e_MFI_WEAKPOSITIVE: {
+      return f0;
+    }
+    case MFIStrength::e_MFI_MODERATE: {
+      return f1;
+    }
+    case MFIStrength::e_MFI_STRONG: {
+      return f2;
+    }
+    case MFIStrength::e_MFI_VERYSTRONG: {
+      return f3;
+    }
+    }
   }
 
   template <typename T1>
   static T1 MFIStrength_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                             const T1 f3, const MFIStrength m) {
-    return [&](void) {
-      switch (m) {
-      case MFIStrength::e_MFI_NEGATIVE: {
-        return f;
-      }
-      case MFIStrength::e_MFI_WEAKPOSITIVE: {
-        return f0;
-      }
-      case MFIStrength::e_MFI_MODERATE: {
-        return f1;
-      }
-      case MFIStrength::e_MFI_STRONG: {
-        return f2;
-      }
-      case MFIStrength::e_MFI_VERYSTRONG: {
-        return f3;
-      }
-      }
-    }();
+    switch (m) {
+    case MFIStrength::e_MFI_NEGATIVE: {
+      return f;
+    }
+    case MFIStrength::e_MFI_WEAKPOSITIVE: {
+      return f0;
+    }
+    case MFIStrength::e_MFI_MODERATE: {
+      return f1;
+    }
+    case MFIStrength::e_MFI_STRONG: {
+      return f2;
+    }
+    case MFIStrength::e_MFI_VERYSTRONG: {
+      return f3;
+    }
+    }
   }
 
   __attribute__((pure)) static MFIStrength
@@ -1061,43 +1053,39 @@ struct ValidatedVirtualCrossmatchTraceCase {
   template <typename T1>
   static T1 VirtualXMResult_rect(const T1 f, const T1 f0, const T1 f1,
                                  const T1 f2, const VirtualXMResult v) {
-    return [&](void) {
-      switch (v) {
-      case VirtualXMResult::e_VXM_NEGATIVE: {
-        return f;
-      }
-      case VirtualXMResult::e_VXM_WEAKPOSITIVE: {
-        return f0;
-      }
-      case VirtualXMResult::e_VXM_POSITIVE: {
-        return f1;
-      }
-      case VirtualXMResult::e_VXM_STRONGPOSITIVE: {
-        return f2;
-      }
-      }
-    }();
+    switch (v) {
+    case VirtualXMResult::e_VXM_NEGATIVE: {
+      return f;
+    }
+    case VirtualXMResult::e_VXM_WEAKPOSITIVE: {
+      return f0;
+    }
+    case VirtualXMResult::e_VXM_POSITIVE: {
+      return f1;
+    }
+    case VirtualXMResult::e_VXM_STRONGPOSITIVE: {
+      return f2;
+    }
+    }
   }
 
   template <typename T1>
   static T1 VirtualXMResult_rec(const T1 f, const T1 f0, const T1 f1,
                                 const T1 f2, const VirtualXMResult v) {
-    return [&](void) {
-      switch (v) {
-      case VirtualXMResult::e_VXM_NEGATIVE: {
-        return f;
-      }
-      case VirtualXMResult::e_VXM_WEAKPOSITIVE: {
-        return f0;
-      }
-      case VirtualXMResult::e_VXM_POSITIVE: {
-        return f1;
-      }
-      case VirtualXMResult::e_VXM_STRONGPOSITIVE: {
-        return f2;
-      }
-      }
-    }();
+    switch (v) {
+    case VirtualXMResult::e_VXM_NEGATIVE: {
+      return f;
+    }
+    case VirtualXMResult::e_VXM_WEAKPOSITIVE: {
+      return f0;
+    }
+    case VirtualXMResult::e_VXM_POSITIVE: {
+      return f1;
+    }
+    case VirtualXMResult::e_VXM_STRONGPOSITIVE: {
+      return f2;
+    }
+    }
   }
 
   __attribute__((pure)) static VirtualXMResult
@@ -1115,44 +1103,40 @@ struct ValidatedVirtualCrossmatchTraceCase {
   static T1 TransplantAcceptability_rect(const T1 f, const T1 f0, const T1 f1,
                                          const T1 f2,
                                          const TransplantAcceptability t) {
-    return [&](void) {
-      switch (t) {
-      case TransplantAcceptability::e_ACCEPTABLE: {
-        return f;
-      }
-      case TransplantAcceptability::e_ACCEPTABLE_WITH_DESENSITIZATION: {
-        return f0;
-      }
-      case TransplantAcceptability::e_UNACCEPTABLE_HIGH_RISK: {
-        return f1;
-      }
-      case TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION: {
-        return f2;
-      }
-      }
-    }();
+    switch (t) {
+    case TransplantAcceptability::e_ACCEPTABLE: {
+      return f;
+    }
+    case TransplantAcceptability::e_ACCEPTABLE_WITH_DESENSITIZATION: {
+      return f0;
+    }
+    case TransplantAcceptability::e_UNACCEPTABLE_HIGH_RISK: {
+      return f1;
+    }
+    case TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION: {
+      return f2;
+    }
+    }
   }
 
   template <typename T1>
   static T1 TransplantAcceptability_rec(const T1 f, const T1 f0, const T1 f1,
                                         const T1 f2,
                                         const TransplantAcceptability t) {
-    return [&](void) {
-      switch (t) {
-      case TransplantAcceptability::e_ACCEPTABLE: {
-        return f;
-      }
-      case TransplantAcceptability::e_ACCEPTABLE_WITH_DESENSITIZATION: {
-        return f0;
-      }
-      case TransplantAcceptability::e_UNACCEPTABLE_HIGH_RISK: {
-        return f1;
-      }
-      case TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION: {
-        return f2;
-      }
-      }
-    }();
+    switch (t) {
+    case TransplantAcceptability::e_ACCEPTABLE: {
+      return f;
+    }
+    case TransplantAcceptability::e_ACCEPTABLE_WITH_DESENSITIZATION: {
+      return f0;
+    }
+    case TransplantAcceptability::e_UNACCEPTABLE_HIGH_RISK: {
+      return f1;
+    }
+    case TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION: {
+      return f2;
+    }
+    }
   }
 
   __attribute__((pure)) static TransplantAcceptability
@@ -1172,37 +1156,33 @@ struct ValidatedVirtualCrossmatchTraceCase {
   template <typename T1>
   static T1 TestConfidence_rect(const T1 f, const T1 f0, const T1 f1,
                                 const TestConfidence t) {
-    return [&](void) {
-      switch (t) {
-      case TestConfidence::e_CONFIDENCE_HIGH: {
-        return f;
-      }
-      case TestConfidence::e_CONFIDENCE_MEDIUM: {
-        return f0;
-      }
-      case TestConfidence::e_CONFIDENCE_LOW: {
-        return f1;
-      }
-      }
-    }();
+    switch (t) {
+    case TestConfidence::e_CONFIDENCE_HIGH: {
+      return f;
+    }
+    case TestConfidence::e_CONFIDENCE_MEDIUM: {
+      return f0;
+    }
+    case TestConfidence::e_CONFIDENCE_LOW: {
+      return f1;
+    }
+    }
   }
 
   template <typename T1>
   static T1 TestConfidence_rec(const T1 f, const T1 f0, const T1 f1,
                                const TestConfidence t) {
-    return [&](void) {
-      switch (t) {
-      case TestConfidence::e_CONFIDENCE_HIGH: {
-        return f;
-      }
-      case TestConfidence::e_CONFIDENCE_MEDIUM: {
-        return f0;
-      }
-      case TestConfidence::e_CONFIDENCE_LOW: {
-        return f1;
-      }
-      }
-    }();
+    switch (t) {
+    case TestConfidence::e_CONFIDENCE_HIGH: {
+      return f;
+    }
+    case TestConfidence::e_CONFIDENCE_MEDIUM: {
+      return f0;
+    }
+    case TestConfidence::e_CONFIDENCE_LOW: {
+      return f1;
+    }
+    }
   }
   enum class CrossmatchResult {
     e_XM_COMPATIBLE,
@@ -1214,43 +1194,39 @@ struct ValidatedVirtualCrossmatchTraceCase {
   template <typename T1>
   static T1 CrossmatchResult_rect(const T1 f, const T1 f0, const T1 f1,
                                   const T1 f2, const CrossmatchResult c) {
-    return [&](void) {
-      switch (c) {
-      case CrossmatchResult::e_XM_COMPATIBLE: {
-        return f;
-      }
-      case CrossmatchResult::e_XM_INCOMPATIBLE: {
-        return f0;
-      }
-      case CrossmatchResult::e_XM_INCONCLUSIVE: {
-        return f1;
-      }
-      case CrossmatchResult::e_XM_NOT_DONE: {
-        return f2;
-      }
-      }
-    }();
+    switch (c) {
+    case CrossmatchResult::e_XM_COMPATIBLE: {
+      return f;
+    }
+    case CrossmatchResult::e_XM_INCOMPATIBLE: {
+      return f0;
+    }
+    case CrossmatchResult::e_XM_INCONCLUSIVE: {
+      return f1;
+    }
+    case CrossmatchResult::e_XM_NOT_DONE: {
+      return f2;
+    }
+    }
   }
 
   template <typename T1>
   static T1 CrossmatchResult_rec(const T1 f, const T1 f0, const T1 f1,
                                  const T1 f2, const CrossmatchResult c) {
-    return [&](void) {
-      switch (c) {
-      case CrossmatchResult::e_XM_COMPATIBLE: {
-        return f;
-      }
-      case CrossmatchResult::e_XM_INCOMPATIBLE: {
-        return f0;
-      }
-      case CrossmatchResult::e_XM_INCONCLUSIVE: {
-        return f1;
-      }
-      case CrossmatchResult::e_XM_NOT_DONE: {
-        return f2;
-      }
-      }
-    }();
+    switch (c) {
+    case CrossmatchResult::e_XM_COMPATIBLE: {
+      return f;
+    }
+    case CrossmatchResult::e_XM_INCOMPATIBLE: {
+      return f0;
+    }
+    case CrossmatchResult::e_XM_INCONCLUSIVE: {
+      return f1;
+    }
+    case CrossmatchResult::e_XM_NOT_DONE: {
+      return f2;
+    }
+    }
   }
 
   struct CrossmatchWithUncertainty {

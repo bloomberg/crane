@@ -879,55 +879,51 @@ struct ValidatedPumpDeliveryTraceCase {
   static T1 ActivityState_rect(const T1 f, const T1 f0, const T1 f1,
                                const T1 f2, const T1 f3, const T1 f4,
                                const ActivityState a) {
-    return [&](void) {
-      switch (a) {
-      case ActivityState::e_ACTIVITY_NORMAL: {
-        return f;
-      }
-      case ActivityState::e_ACTIVITY_LIGHTEXERCISE: {
-        return f0;
-      }
-      case ActivityState::e_ACTIVITY_MODERATEEXERCISE: {
-        return f1;
-      }
-      case ActivityState::e_ACTIVITY_INTENSEEXERCISE: {
-        return f2;
-      }
-      case ActivityState::e_ACTIVITY_ILLNESS: {
-        return f3;
-      }
-      case ActivityState::e_ACTIVITY_STRESS: {
-        return f4;
-      }
-      }
-    }();
+    switch (a) {
+    case ActivityState::e_ACTIVITY_NORMAL: {
+      return f;
+    }
+    case ActivityState::e_ACTIVITY_LIGHTEXERCISE: {
+      return f0;
+    }
+    case ActivityState::e_ACTIVITY_MODERATEEXERCISE: {
+      return f1;
+    }
+    case ActivityState::e_ACTIVITY_INTENSEEXERCISE: {
+      return f2;
+    }
+    case ActivityState::e_ACTIVITY_ILLNESS: {
+      return f3;
+    }
+    case ActivityState::e_ACTIVITY_STRESS: {
+      return f4;
+    }
+    }
   }
 
   template <typename T1>
   static T1 ActivityState_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                               const T1 f3, const T1 f4, const ActivityState a) {
-    return [&](void) {
-      switch (a) {
-      case ActivityState::e_ACTIVITY_NORMAL: {
-        return f;
-      }
-      case ActivityState::e_ACTIVITY_LIGHTEXERCISE: {
-        return f0;
-      }
-      case ActivityState::e_ACTIVITY_MODERATEEXERCISE: {
-        return f1;
-      }
-      case ActivityState::e_ACTIVITY_INTENSEEXERCISE: {
-        return f2;
-      }
-      case ActivityState::e_ACTIVITY_ILLNESS: {
-        return f3;
-      }
-      case ActivityState::e_ACTIVITY_STRESS: {
-        return f4;
-      }
-      }
-    }();
+    switch (a) {
+    case ActivityState::e_ACTIVITY_NORMAL: {
+      return f;
+    }
+    case ActivityState::e_ACTIVITY_LIGHTEXERCISE: {
+      return f0;
+    }
+    case ActivityState::e_ACTIVITY_MODERATEEXERCISE: {
+      return f1;
+    }
+    case ActivityState::e_ACTIVITY_INTENSEEXERCISE: {
+      return f2;
+    }
+    case ActivityState::e_ACTIVITY_ILLNESS: {
+      return f3;
+    }
+    case ActivityState::e_ACTIVITY_STRESS: {
+      return f4;
+    }
+    }
   }
 
   __attribute__((pure)) static unsigned int
@@ -1094,37 +1090,33 @@ struct ValidatedPumpDeliveryTraceCase {
   template <typename T1>
   static T1 InsulinType_rect(const T1 f, const T1 f0, const T1 f1,
                              const InsulinType i) {
-    return [&](void) {
-      switch (i) {
-      case InsulinType::e_INSULIN_HUMALOG: {
-        return f;
-      }
-      case InsulinType::e_INSULIN_ASPART: {
-        return f0;
-      }
-      case InsulinType::e_INSULIN_LISPRO: {
-        return f1;
-      }
-      }
-    }();
+    switch (i) {
+    case InsulinType::e_INSULIN_HUMALOG: {
+      return f;
+    }
+    case InsulinType::e_INSULIN_ASPART: {
+      return f0;
+    }
+    case InsulinType::e_INSULIN_LISPRO: {
+      return f1;
+    }
+    }
   }
 
   template <typename T1>
   static T1 InsulinType_rec(const T1 f, const T1 f0, const T1 f1,
                             const InsulinType i) {
-    return [&](void) {
-      switch (i) {
-      case InsulinType::e_INSULIN_HUMALOG: {
-        return f;
-      }
-      case InsulinType::e_INSULIN_ASPART: {
-        return f0;
-      }
-      case InsulinType::e_INSULIN_LISPRO: {
-        return f1;
-      }
-      }
-    }();
+    switch (i) {
+    case InsulinType::e_INSULIN_HUMALOG: {
+      return f;
+    }
+    case InsulinType::e_INSULIN_ASPART: {
+      return f0;
+    }
+    case InsulinType::e_INSULIN_LISPRO: {
+      return f1;
+    }
+    }
   }
 
   __attribute__((pure)) static Minutes peak_time(const InsulinType itype,
@@ -1478,43 +1470,39 @@ struct ValidatedPumpDeliveryTraceCase {
   template <typename T1>
   static T1 RoundingMode_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                               const RoundingMode r) {
-    return [&](void) {
-      switch (r) {
-      case RoundingMode::e_ROUNDTWENTIETH: {
-        return f;
-      }
-      case RoundingMode::e_ROUNDTENTH: {
-        return f0;
-      }
-      case RoundingMode::e_ROUNDHALF: {
-        return f1;
-      }
-      case RoundingMode::e_ROUNDUNIT: {
-        return f2;
-      }
-      }
-    }();
+    switch (r) {
+    case RoundingMode::e_ROUNDTWENTIETH: {
+      return f;
+    }
+    case RoundingMode::e_ROUNDTENTH: {
+      return f0;
+    }
+    case RoundingMode::e_ROUNDHALF: {
+      return f1;
+    }
+    case RoundingMode::e_ROUNDUNIT: {
+      return f2;
+    }
+    }
   }
 
   template <typename T1>
   static T1 RoundingMode_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                              const RoundingMode r) {
-    return [&](void) {
-      switch (r) {
-      case RoundingMode::e_ROUNDTWENTIETH: {
-        return f;
-      }
-      case RoundingMode::e_ROUNDTENTH: {
-        return f0;
-      }
-      case RoundingMode::e_ROUNDHALF: {
-        return f1;
-      }
-      case RoundingMode::e_ROUNDUNIT: {
-        return f2;
-      }
-      }
-    }();
+    switch (r) {
+    case RoundingMode::e_ROUNDTWENTIETH: {
+      return f;
+    }
+    case RoundingMode::e_ROUNDTENTH: {
+      return f0;
+    }
+    case RoundingMode::e_ROUNDHALF: {
+      return f1;
+    }
+    case RoundingMode::e_ROUNDUNIT: {
+      return f2;
+    }
+    }
   }
 
   __attribute__((pure)) static unsigned int

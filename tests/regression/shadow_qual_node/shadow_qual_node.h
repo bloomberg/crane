@@ -16,23 +16,19 @@ struct ShadowQualNode {
     enum class Shadow { e_TAG };
 
     template <typename T1> static T1 shadow_rect(const T1 f, const Shadow s) {
-      return [&](void) {
-        switch (s) {
-        case Shadow::e_TAG: {
-          return f;
-        }
-        }
-      }();
+      switch (s) {
+      case Shadow::e_TAG: {
+        return f;
+      }
+      }
     }
 
     template <typename T1> static T1 shadow_rec(const T1 f, const Shadow s) {
-      return [&](void) {
-        switch (s) {
-        case Shadow::e_TAG: {
-          return f;
-        }
-        }
-      }();
+      switch (s) {
+      case Shadow::e_TAG: {
+        return f;
+      }
+      }
     }
   };
 

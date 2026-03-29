@@ -17,36 +17,32 @@ struct Comparison {
 
   template <typename T1>
   static T1 cmp_rect(const T1 f, const T1 f0, const T1 f1, const Cmp c) {
-    return [&](void) {
-      switch (c) {
-      case Cmp::e_CMPLT: {
-        return f;
-      }
-      case Cmp::e_CMPEQ: {
-        return f0;
-      }
-      case Cmp::e_CMPGT: {
-        return f1;
-      }
-      }
-    }();
+    switch (c) {
+    case Cmp::e_CMPLT: {
+      return f;
+    }
+    case Cmp::e_CMPEQ: {
+      return f0;
+    }
+    case Cmp::e_CMPGT: {
+      return f1;
+    }
+    }
   }
 
   template <typename T1>
   static T1 cmp_rec(const T1 f, const T1 f0, const T1 f1, const Cmp c) {
-    return [&](void) {
-      switch (c) {
-      case Cmp::e_CMPLT: {
-        return f;
-      }
-      case Cmp::e_CMPEQ: {
-        return f0;
-      }
-      case Cmp::e_CMPGT: {
-        return f1;
-      }
-      }
-    }();
+    switch (c) {
+    case Cmp::e_CMPLT: {
+      return f;
+    }
+    case Cmp::e_CMPEQ: {
+      return f0;
+    }
+    case Cmp::e_CMPGT: {
+      return f1;
+    }
+    }
   }
 
   __attribute__((pure)) static unsigned int cmp_to_nat(const Cmp c);

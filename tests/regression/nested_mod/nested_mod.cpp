@@ -23,36 +23,32 @@ __attribute__((pure)) unsigned int NestedMod::Outer::Inner::area(
 __attribute__((pure)) unsigned int
 NestedMod::Outer::shape_with_color(const std::shared_ptr<Inner::shape> &s,
                                    const NestedMod::Outer::Color c) {
-  return [&](void) {
-    switch (c) {
-    case Color::e_RED: {
-      return (Inner::area(s) + 100u);
-    }
-    case Color::e_GREEN: {
-      return (Inner::area(s) + 200u);
-    }
-    case Color::e_BLUE: {
-      return (Inner::area(s) + 300u);
-    }
-    }
-  }();
+  switch (c) {
+  case Color::e_RED: {
+    return (Inner::area(s) + 100u);
+  }
+  case Color::e_GREEN: {
+    return (Inner::area(s) + 200u);
+  }
+  case Color::e_BLUE: {
+    return (Inner::area(s) + 300u);
+  }
+  }
 }
 
 __attribute__((pure)) unsigned int
 NestedMod::Outer::color_code(const NestedMod::Outer::Color c) {
-  return [&](void) {
-    switch (c) {
-    case Color::e_RED: {
-      return 1u;
-    }
-    case Color::e_GREEN: {
-      return 2u;
-    }
-    case Color::e_BLUE: {
-      return 3u;
-    }
-    }
-  }();
+  switch (c) {
+  case Color::e_RED: {
+    return 1u;
+  }
+  case Color::e_GREEN: {
+    return 2u;
+  }
+  case Color::e_BLUE: {
+    return 3u;
+  }
+  }
 }
 
 __attribute__((pure)) std::pair<unsigned int, unsigned int>

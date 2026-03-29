@@ -131,23 +131,19 @@ Dim10TowerProofChainCase::graded_goodwillie_layers_stabilize(
     const unsigned int base_dim) {
   std::shared_ptr<SigT<unsigned int, std::any>> e =
       D_n_measure_eventually_zero(base_dim);
-  return [&](void) {
-    if (std::move(e).use_count() == 1 && std::move(e)->v().index() == 0) {
-      auto &_rf = std::get<0>(std::move(e)->v_mut());
-      unsigned int x = std::move(_rf.d_x);
-      _rf.d_x = x;
-      return std::move(e);
-    } else {
-      return std::visit(
-          Overloaded{
-              [](const typename SigT<unsigned int, std::any>::ExistT _args)
-                  -> std::shared_ptr<SigT<unsigned int, std::any>> {
-                return SigT<unsigned int, std::any>::existt(_args.d_x,
-                                                            std::any{});
-              }},
-          std::move(e)->v());
-    }
-  }();
+  if (std::move(e).use_count() == 1 && std::move(e)->v().index() == 0) {
+    auto &_rf = std::get<0>(std::move(e)->v_mut());
+    unsigned int x = std::move(_rf.d_x);
+    _rf.d_x = x;
+    return std::move(e);
+  } else {
+    return std::visit(
+        Overloaded{[](const typename SigT<unsigned int, std::any>::ExistT _args)
+                       -> std::shared_ptr<SigT<unsigned int, std::any>> {
+          return SigT<unsigned int, std::any>::existt(_args.d_x, std::any{});
+        }},
+        std::move(e)->v());
+  }
 }
 
 std::shared_ptr<SigT<unsigned int, std::any>>

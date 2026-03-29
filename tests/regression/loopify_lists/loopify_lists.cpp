@@ -1358,61 +1358,66 @@ __attribute__((pure)) unsigned int LoopifyLists::index_of(
 std::shared_ptr<LoopifyLists::list<unsigned int>>
 LoopifyLists::interleave(std::shared_ptr<LoopifyLists::list<unsigned int>> l1,
                          std::shared_ptr<LoopifyLists::list<unsigned int>> l2) {
-  struct _Enter {
-    std::shared_ptr<LoopifyLists::list<unsigned int>> l2;
-    std::shared_ptr<LoopifyLists::list<unsigned int>> l1;
-  };
-
-  struct _Call1 {
-    decltype(std::declval<
-                 const typename LoopifyLists::list<unsigned int>::Cons &>()
-                 .d_a0) _s0;
-    decltype(std::declval<
-                 const typename LoopifyLists::list<unsigned int>::Cons &>()
-                 .d_a0) _s1;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1>;
-  std::shared_ptr<LoopifyLists::list<unsigned int>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l2, l1});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
+  std::shared_ptr<LoopifyLists::list<unsigned int>> _head{};
+  std::shared_ptr<LoopifyLists::list<unsigned int>> _last{};
+  std::shared_ptr<LoopifyLists::list<unsigned int>> _loop_l2 = l2;
+  std::shared_ptr<LoopifyLists::list<unsigned int>> _loop_l1 = l1;
+  bool _continue = true;
+  while (_continue) {
     std::visit(
         Overloaded{
-            [&](_Enter _f) {
-              std::shared_ptr<LoopifyLists::list<unsigned int>> l2 = _f.l2;
-              std::shared_ptr<LoopifyLists::list<unsigned int>> l1 = _f.l1;
+            [&](const typename LoopifyLists::list<unsigned int>::Nil _args) {
+              if (_last) {
+                std::get<typename list<unsigned int>::Cons>(_last->v_mut())
+                    .d_a1 = std::move(_loop_l2);
+              } else {
+                _head = std::move(_loop_l2);
+              }
+              _continue = false;
+            },
+            [&](const typename LoopifyLists::list<unsigned int>::Cons _args) {
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyLists::list<unsigned int>::Nil
-                              _args) -> void { _result = std::move(l2); },
+                              _args0) {
+                        if (_last) {
+                          std::get<typename list<unsigned int>::Cons>(
+                              _last->v_mut())
+                              .d_a1 = std::move(_loop_l1);
+                        } else {
+                          _head = std::move(_loop_l1);
+                        }
+                        _continue = false;
+                      },
                       [&](const typename LoopifyLists::list<unsigned int>::Cons
-                              _args) -> void {
-                        std::visit(
-                            Overloaded{[&](const typename LoopifyLists::list<
-                                           unsigned int>::Nil _args0) -> void {
-                                         _result = std::move(l1);
-                                       },
-                                       [&](const typename LoopifyLists::list<
-                                           unsigned int>::Cons _args0) -> void {
-                                         _stack.push_back(
-                                             _Call1{_args.d_a0, _args0.d_a0});
-                                         _stack.push_back(
-                                             _Enter{_args0.d_a1, _args.d_a1});
-                                       }},
-                            std::move(l2)->v());
+                              _args0) {
+                        auto _cell =
+                            list<unsigned int>::cons(_args.d_a0, nullptr);
+                        auto _cell1 =
+                            list<unsigned int>::cons(_args0.d_a0, nullptr);
+                        std::get<typename list<unsigned int>::Cons>(
+                            _cell->v_mut())
+                            .d_a1 = _cell1;
+                        if (_last) {
+                          std::get<typename list<unsigned int>::Cons>(
+                              _last->v_mut())
+                              .d_a1 = _cell;
+                        } else {
+                          _head = _cell;
+                        }
+                        _last = _cell1;
+                        std::shared_ptr<LoopifyLists::list<unsigned int>>
+                            _next_l2 = _args0.d_a1;
+                        std::shared_ptr<LoopifyLists::list<unsigned int>>
+                            _next_l1 = _args.d_a1;
+                        _loop_l2 = std::move(_next_l2);
+                        _loop_l1 = std::move(_next_l1);
                       }},
-                  l1->v());
-            },
-            [&](_Call1 _f) {
-              _result = list<unsigned int>::cons(
-                  _f._s0, list<unsigned int>::cons(_f._s1, _result));
+                  std::move(_loop_l2)->v());
             }},
-        _frame);
+        _loop_l1->v());
   }
-  return _result;
+  return _head;
 }
 
 /// lookup key l finds value for key in association list.
@@ -2011,45 +2016,39 @@ LoopifyLists::last(const std::shared_ptr<LoopifyLists::list<unsigned int>> &l,
 std::shared_ptr<LoopifyLists::list<unsigned int>>
 LoopifyLists::drop(const unsigned int n,
                    std::shared_ptr<LoopifyLists::list<unsigned int>> l) {
-  struct _Enter {
-    std::shared_ptr<LoopifyLists::list<unsigned int>> l;
-    const unsigned int n;
-  };
-
-  using _Frame = std::variant<_Enter>;
-  std::shared_ptr<LoopifyLists::list<unsigned int>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, n});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    std::visit(
-        Overloaded{[&](_Enter _f) {
-          std::shared_ptr<LoopifyLists::list<unsigned int>> l = _f.l;
-          const unsigned int n = _f.n;
-          if (l.use_count() == 1 && l->v().index() == 0) {
-            auto &_rf = std::get<0>(l->v_mut());
-            _result = l;
-          } else {
-            std::visit(
-                Overloaded{
-                    [&](const typename LoopifyLists::list<unsigned int>::Nil
-                            _args) -> void {
-                      _result = list<unsigned int>::nil();
-                    },
-                    [&](const typename LoopifyLists::list<unsigned int>::Cons
-                            _args) -> void {
-                      if (n == 0u) {
-                        _result = std::move(l);
-                      } else {
-                        _stack.push_back(_Enter{
-                            _args.d_a1, (((n - 1u) > n ? 0 : (n - 1u)))});
-                      }
-                    }},
-                l->v());
-          }
-        }},
-        _frame);
+  std::shared_ptr<LoopifyLists::list<unsigned int>> _result;
+  std::shared_ptr<LoopifyLists::list<unsigned int>> _loop_l = l;
+  unsigned int _loop_n = n;
+  bool _continue = true;
+  while (_continue) {
+    if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
+      auto &_rf = std::get<0>(_loop_l->v_mut());
+      {
+        _result = _loop_l;
+        _continue = false;
+      }
+    } else {
+      std::visit(
+          Overloaded{
+              [&](const typename LoopifyLists::list<unsigned int>::Nil _args) {
+                _result = list<unsigned int>::nil();
+                _continue = false;
+              },
+              [&](const typename LoopifyLists::list<unsigned int>::Cons _args) {
+                if (_loop_n == 0u) {
+                  _result = std::move(_loop_l);
+                  _continue = false;
+                } else {
+                  std::shared_ptr<LoopifyLists::list<unsigned int>> _next_l =
+                      _args.d_a1;
+                  unsigned int _next_n =
+                      (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
+                  _loop_l = std::move(_next_l);
+                  _loop_n = std::move(_next_n);
+                }
+              }},
+          _loop_l->v());
+    }
   }
   return _result;
 }

@@ -7,19 +7,17 @@
 
 __attribute__((pure)) unsigned int
 PatternImpossible::complex_match(const PatternImpossible::Three x) {
-  return [&](void) {
-    switch (x) {
-    case Three::e_ONE: {
-      return 1u;
-    }
-    case Three::e_TWO: {
-      return 2u;
-    }
-    case Three::e_THREE0: {
-      return 3u;
-    }
-    }
-  }();
+  switch (x) {
+  case Three::e_ONE: {
+    return 1u;
+  }
+  case Three::e_TWO: {
+    return 2u;
+  }
+  case Three::e_THREE0: {
+    return 3u;
+  }
+  }
 }
 
 __attribute__((pure)) unsigned int PatternImpossible::nested_match(
@@ -54,31 +52,27 @@ __attribute__((pure)) unsigned int PatternImpossible::nested_match(
 __attribute__((pure)) unsigned int
 PatternImpossible::double_match(const PatternImpossible::Three x,
                                 const PatternImpossible::Three y) {
-  return [&](void) {
-    switch (x) {
+  switch (x) {
+  case Three::e_ONE: {
+    switch (y) {
     case Three::e_ONE: {
-      return [&](void) {
-        switch (y) {
-        case Three::e_ONE: {
-          return 1u;
-        }
-        case Three::e_TWO: {
-          return 2u;
-        }
-        case Three::e_THREE0: {
-          return 3u;
-        }
-        }
-      }();
+      return 1u;
     }
     case Three::e_TWO: {
-      return 10u;
+      return 2u;
     }
     case Three::e_THREE0: {
-      return 20u;
+      return 3u;
     }
     }
-  }();
+  }
+  case Three::e_TWO: {
+    return 10u;
+  }
+  case Three::e_THREE0: {
+    return 20u;
+  }
+  }
 }
 
 __attribute__((pure)) unsigned int PatternImpossible::multi_arg_pattern(

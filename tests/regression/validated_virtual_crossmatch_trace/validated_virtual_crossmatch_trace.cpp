@@ -70,78 +70,66 @@ __attribute__((pure)) bool
 ValidatedVirtualCrossmatchTraceCase::hla_locus_eq_dec(
     const ValidatedVirtualCrossmatchTraceCase::HLALocus x,
     const ValidatedVirtualCrossmatchTraceCase::HLALocus y) {
-  return [&](void) {
-    switch (x) {
+  switch (x) {
+  case HLALocus::e_LOCUS_A: {
+    switch (y) {
     case HLALocus::e_LOCUS_A: {
-      return [&](void) {
-        switch (y) {
-        case HLALocus::e_LOCUS_A: {
-          return true;
-        }
-        case HLALocus::e_LOCUS_B: {
-          return false;
-        }
-        case HLALocus::e_LOCUS_DR: {
-          return false;
-        }
-        }
-      }();
+      return true;
     }
     case HLALocus::e_LOCUS_B: {
-      return [&](void) {
-        switch (y) {
-        case HLALocus::e_LOCUS_A: {
-          return false;
-        }
-        case HLALocus::e_LOCUS_B: {
-          return true;
-        }
-        case HLALocus::e_LOCUS_DR: {
-          return false;
-        }
-        }
-      }();
+      return false;
     }
     case HLALocus::e_LOCUS_DR: {
-      return [&](void) {
-        switch (y) {
-        case HLALocus::e_LOCUS_A: {
-          return false;
-        }
-        case HLALocus::e_LOCUS_B: {
-          return false;
-        }
-        case HLALocus::e_LOCUS_DR: {
-          return true;
-        }
-        }
-      }();
+      return false;
     }
     }
-  }();
+  }
+  case HLALocus::e_LOCUS_B: {
+    switch (y) {
+    case HLALocus::e_LOCUS_A: {
+      return false;
+    }
+    case HLALocus::e_LOCUS_B: {
+      return true;
+    }
+    case HLALocus::e_LOCUS_DR: {
+      return false;
+    }
+    }
+  }
+  case HLALocus::e_LOCUS_DR: {
+    switch (y) {
+    case HLALocus::e_LOCUS_A: {
+      return false;
+    }
+    case HLALocus::e_LOCUS_B: {
+      return false;
+    }
+    case HLALocus::e_LOCUS_DR: {
+      return true;
+    }
+    }
+  }
+  }
 }
 
 __attribute__((pure)) bool
 ValidatedVirtualCrossmatchTraceCase::hla_allele_eq_dec(
     const std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::HLAAllele> &x,
     const std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::HLAAllele> &y) {
-  return [&](void) {
-    ValidatedVirtualCrossmatchTraceCase::HLALocus hla_locus0 = x->hla_locus;
-    unsigned int hla_group0 = x->hla_group;
-    return [&](void) {
-      ValidatedVirtualCrossmatchTraceCase::HLALocus hla_locus1 = y->hla_locus;
-      unsigned int hla_group1 = y->hla_group;
-      if (hla_locus_eq_dec(hla_locus0, hla_locus1)) {
-        if (PeanoNat::eq_dec(hla_group0, hla_group1)) {
-          return true;
-        } else {
-          return false;
-        }
-      } else {
-        return false;
-      }
-    }();
-  }();
+  ValidatedVirtualCrossmatchTraceCase::HLALocus hla_locus0 = x->hla_locus;
+  unsigned int hla_group0 = x->hla_group;
+  ValidatedVirtualCrossmatchTraceCase::HLALocus hla_locus1 = y->hla_locus;
+  unsigned int hla_group1 = y->hla_group;
+  if (hla_locus_eq_dec(hla_locus0, hla_locus1)) {
+    if (PeanoNat::eq_dec(hla_group0, hla_group1)) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return false;
+  }
 }
 
 __attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::hla_allele_eqb(
@@ -157,31 +145,27 @@ __attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::hla_allele_eqb(
 __attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::epitope_eq_dec(
     const std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> &x,
     const std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> &y) {
-  return [&](void) {
-    unsigned int epitope_id0 = x->epitope_id;
-    ValidatedVirtualCrossmatchTraceCase::HLALocus epitope_locus0 =
-        x->epitope_locus;
-    bool epitope_immunogenic0 = x->epitope_immunogenic;
-    return [&](void) {
-      unsigned int epitope_id1 = y->epitope_id;
-      ValidatedVirtualCrossmatchTraceCase::HLALocus epitope_locus1 =
-          y->epitope_locus;
-      bool epitope_immunogenic1 = y->epitope_immunogenic;
-      if (PeanoNat::eq_dec(epitope_id0, epitope_id1)) {
-        if (hla_locus_eq_dec(epitope_locus0, epitope_locus1)) {
-          if (Bool::bool_dec(epitope_immunogenic0, epitope_immunogenic1)) {
-            return true;
-          } else {
-            return false;
-          }
-        } else {
-          return false;
-        }
+  unsigned int epitope_id0 = x->epitope_id;
+  ValidatedVirtualCrossmatchTraceCase::HLALocus epitope_locus0 =
+      x->epitope_locus;
+  bool epitope_immunogenic0 = x->epitope_immunogenic;
+  unsigned int epitope_id1 = y->epitope_id;
+  ValidatedVirtualCrossmatchTraceCase::HLALocus epitope_locus1 =
+      y->epitope_locus;
+  bool epitope_immunogenic1 = y->epitope_immunogenic;
+  if (PeanoNat::eq_dec(epitope_id0, epitope_id1)) {
+    if (hla_locus_eq_dec(epitope_locus0, epitope_locus1)) {
+      if (Bool::bool_dec(epitope_immunogenic0, epitope_immunogenic1)) {
+        return true;
       } else {
         return false;
       }
-    }();
-  }();
+    } else {
+      return false;
+    }
+  } else {
+    return false;
+  }
 }
 
 __attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::epitope_eqb(
@@ -198,97 +182,93 @@ std::shared_ptr<
     List<std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>>
 ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
     const std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::HLAAllele> &a) {
-  return [&](void) {
-    switch (a->hla_locus) {
-    case HLALocus::e_LOCUS_A: {
-      if (a->hla_group <= 0) {
+  switch (a->hla_locus) {
+  case HLALocus::e_LOCUS_A: {
+    if (a->hla_group <= 0) {
+      return List<std::shared_ptr<
+          ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
+    } else {
+      unsigned int n = a->hla_group - 1;
+      if (n <= 0) {
         return List<std::shared_ptr<
             ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
       } else {
-        unsigned int n = a->hla_group - 1;
-        if (n <= 0) {
+        unsigned int n0 = n - 1;
+        if (n0 <= 0) {
           return List<std::shared_ptr<
-              ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
+              ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
+              cons(eplet_62GE,
+                   List<std::shared_ptr<
+                       ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
+                       cons(eplet_65QIA,
+                            List<std::shared_ptr<
+                                ValidatedVirtualCrossmatchTraceCase::
+                                    HLAEpitope>>::nil()));
         } else {
-          unsigned int n0 = n - 1;
-          if (n0 <= 0) {
+          unsigned int n1 = n0 - 1;
+          if (n1 <= 0) {
             return List<std::shared_ptr<
                 ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
                 cons(eplet_62GE,
-                     List<std::shared_ptr<
-                         ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
-                         cons(eplet_65QIA,
-                              List<std::shared_ptr<
-                                  ValidatedVirtualCrossmatchTraceCase::
-                                      HLAEpitope>>::nil()));
+                     List<std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::
+                                              HLAEpitope>>::nil());
           } else {
-            unsigned int n1 = n0 - 1;
-            if (n1 <= 0) {
-              return List<std::shared_ptr<
-                  ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
-                  cons(
-                      eplet_62GE,
-                      List<std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::
-                                               HLAEpitope>>::nil());
-            } else {
-              unsigned int _x = n1 - 1;
-              return List<std::shared_ptr<
-                  ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
-            }
+            unsigned int _x = n1 - 1;
+            return List<std::shared_ptr<
+                ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
           }
         }
       }
     }
-    case HLALocus::e_LOCUS_B: {
-      if (a->hla_group <= 0) {
+  }
+  case HLALocus::e_LOCUS_B: {
+    if (a->hla_group <= 0) {
+      return List<std::shared_ptr<
+          ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
+    } else {
+      unsigned int n = a->hla_group - 1;
+      if (n <= 0) {
         return List<std::shared_ptr<
             ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
       } else {
-        unsigned int n = a->hla_group - 1;
-        if (n <= 0) {
+        unsigned int n0 = n - 1;
+        if (n0 <= 0) {
           return List<std::shared_ptr<
               ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
         } else {
-          unsigned int n0 = n - 1;
-          if (n0 <= 0) {
+          unsigned int n1 = n0 - 1;
+          if (n1 <= 0) {
             return List<std::shared_ptr<
                 ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
           } else {
-            unsigned int n1 = n0 - 1;
-            if (n1 <= 0) {
+            unsigned int n2 = n1 - 1;
+            if (n2 <= 0) {
               return List<std::shared_ptr<
                   ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
             } else {
-              unsigned int n2 = n1 - 1;
-              if (n2 <= 0) {
+              unsigned int n3 = n2 - 1;
+              if (n3 <= 0) {
                 return List<std::shared_ptr<
                     ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
               } else {
-                unsigned int n3 = n2 - 1;
-                if (n3 <= 0) {
+                unsigned int n4 = n3 - 1;
+                if (n4 <= 0) {
                   return List<std::shared_ptr<
                       ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
                 } else {
-                  unsigned int n4 = n3 - 1;
-                  if (n4 <= 0) {
+                  unsigned int n5 = n4 - 1;
+                  if (n5 <= 0) {
+                    return List<std::shared_ptr<
+                        ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
+                        cons(eplet_142T,
+                             List<std::shared_ptr<
+                                 ValidatedVirtualCrossmatchTraceCase::
+                                     HLAEpitope>>::nil());
+                  } else {
+                    unsigned int _x = n5 - 1;
                     return List<std::shared_ptr<
                         ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
                         nil();
-                  } else {
-                    unsigned int n5 = n4 - 1;
-                    if (n5 <= 0) {
-                      return List<std::shared_ptr<
-                          ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
-                          cons(eplet_142T,
-                               List<std::shared_ptr<
-                                   ValidatedVirtualCrossmatchTraceCase::
-                                       HLAEpitope>>::nil());
-                    } else {
-                      unsigned int _x = n5 - 1;
-                      return List<std::shared_ptr<
-                          ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
-                          nil();
-                    }
                   }
                 }
               }
@@ -297,46 +277,46 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
         }
       }
     }
-    case HLALocus::e_LOCUS_DR: {
-      if (a->hla_group <= 0) {
+  }
+  case HLALocus::e_LOCUS_DR: {
+    if (a->hla_group <= 0) {
+      return List<std::shared_ptr<
+          ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
+    } else {
+      unsigned int n = a->hla_group - 1;
+      if (n <= 0) {
         return List<std::shared_ptr<
             ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
       } else {
-        unsigned int n = a->hla_group - 1;
-        if (n <= 0) {
+        unsigned int n0 = n - 1;
+        if (n0 <= 0) {
           return List<std::shared_ptr<
               ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
         } else {
-          unsigned int n0 = n - 1;
-          if (n0 <= 0) {
+          unsigned int n1 = n0 - 1;
+          if (n1 <= 0) {
             return List<std::shared_ptr<
                 ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
           } else {
-            unsigned int n1 = n0 - 1;
-            if (n1 <= 0) {
+            unsigned int n2 = n1 - 1;
+            if (n2 <= 0) {
+              return List<std::shared_ptr<
+                  ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
+                  cons(
+                      eplet_77N,
+                      List<std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::
+                                               HLAEpitope>>::nil());
+            } else {
+              unsigned int _x = n2 - 1;
               return List<std::shared_ptr<
                   ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
-            } else {
-              unsigned int n2 = n1 - 1;
-              if (n2 <= 0) {
-                return List<std::shared_ptr<
-                    ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
-                    cons(eplet_77N,
-                         List<std::shared_ptr<
-                             ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::
-                             nil());
-              } else {
-                unsigned int _x = n2 - 1;
-                return List<std::shared_ptr<
-                    ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>::nil();
-              }
             }
           }
         }
       }
     }
-    }
-  }();
+  }
+  }
 }
 
 std::shared_ptr<
@@ -477,25 +457,23 @@ ValidatedVirtualCrossmatchTraceCase::virtual_crossmatch_safe(
     const std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::HLATyping>
         &donor) {
   unsigned int max_mfi = max_dsa_mfi(recipient, donor);
-  return [&](void) {
-    switch (classify_mfi_safe(vcfg, std::move(max_mfi))) {
-    case MFIStrength::e_MFI_NEGATIVE: {
-      return VirtualXMResult::e_VXM_NEGATIVE;
-    }
-    case MFIStrength::e_MFI_WEAKPOSITIVE: {
-      return VirtualXMResult::e_VXM_WEAKPOSITIVE;
-    }
-    case MFIStrength::e_MFI_MODERATE: {
-      return VirtualXMResult::e_VXM_POSITIVE;
-    }
-    case MFIStrength::e_MFI_STRONG: {
-      return VirtualXMResult::e_VXM_STRONGPOSITIVE;
-    }
-    case MFIStrength::e_MFI_VERYSTRONG: {
-      return VirtualXMResult::e_VXM_STRONGPOSITIVE;
-    }
-    }
-  }();
+  switch (classify_mfi_safe(vcfg, std::move(max_mfi))) {
+  case MFIStrength::e_MFI_NEGATIVE: {
+    return VirtualXMResult::e_VXM_NEGATIVE;
+  }
+  case MFIStrength::e_MFI_WEAKPOSITIVE: {
+    return VirtualXMResult::e_VXM_WEAKPOSITIVE;
+  }
+  case MFIStrength::e_MFI_MODERATE: {
+    return VirtualXMResult::e_VXM_POSITIVE;
+  }
+  case MFIStrength::e_MFI_STRONG: {
+    return VirtualXMResult::e_VXM_STRONGPOSITIVE;
+  }
+  case MFIStrength::e_MFI_VERYSTRONG: {
+    return VirtualXMResult::e_VXM_STRONGPOSITIVE;
+  }
+  }
 }
 
 __attribute__((pure))
@@ -503,26 +481,24 @@ ValidatedVirtualCrossmatchTraceCase::TransplantAcceptability
 ValidatedVirtualCrossmatchTraceCase::transplant_acceptability(
     const ValidatedVirtualCrossmatchTraceCase::VirtualXMResult vxm,
     const bool complement_fixing_dsa) {
-  return [&](void) {
-    switch (vxm) {
-    case VirtualXMResult::e_VXM_NEGATIVE: {
-      return TransplantAcceptability::e_ACCEPTABLE;
-    }
-    case VirtualXMResult::e_VXM_WEAKPOSITIVE: {
-      if (complement_fixing_dsa) {
-        return TransplantAcceptability::e_UNACCEPTABLE_HIGH_RISK;
-      } else {
-        return TransplantAcceptability::e_ACCEPTABLE_WITH_DESENSITIZATION;
-      }
-    }
-    case VirtualXMResult::e_VXM_POSITIVE: {
+  switch (vxm) {
+  case VirtualXMResult::e_VXM_NEGATIVE: {
+    return TransplantAcceptability::e_ACCEPTABLE;
+  }
+  case VirtualXMResult::e_VXM_WEAKPOSITIVE: {
+    if (complement_fixing_dsa) {
       return TransplantAcceptability::e_UNACCEPTABLE_HIGH_RISK;
+    } else {
+      return TransplantAcceptability::e_ACCEPTABLE_WITH_DESENSITIZATION;
     }
-    case VirtualXMResult::e_VXM_STRONGPOSITIVE: {
-      return TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION;
-    }
-    }
-  }();
+  }
+  case VirtualXMResult::e_VXM_POSITIVE: {
+    return TransplantAcceptability::e_UNACCEPTABLE_HIGH_RISK;
+  }
+  case VirtualXMResult::e_VXM_STRONGPOSITIVE: {
+    return TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION;
+  }
+  }
 }
 
 __attribute__((pure))
@@ -543,34 +519,30 @@ ValidatedVirtualCrossmatchTraceCase::full_virtual_crossmatch_safe(
 __attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::safe_to_release(
     const std::shared_ptr<
         ValidatedVirtualCrossmatchTraceCase::CrossmatchWithUncertainty> &xm) {
-  return [&](void) {
-    switch (xm->xmu_result) {
-    case CrossmatchResult::e_XM_COMPATIBLE: {
-      return [&](void) {
-        switch (xm->xmu_confidence) {
-        case TestConfidence::e_CONFIDENCE_HIGH: {
-          return true;
-        }
-        case TestConfidence::e_CONFIDENCE_MEDIUM: {
-          return true;
-        }
-        case TestConfidence::e_CONFIDENCE_LOW: {
-          return false;
-        }
-        }
-      }();
+  switch (xm->xmu_result) {
+  case CrossmatchResult::e_XM_COMPATIBLE: {
+    switch (xm->xmu_confidence) {
+    case TestConfidence::e_CONFIDENCE_HIGH: {
+      return true;
     }
-    case CrossmatchResult::e_XM_INCOMPATIBLE: {
-      return false;
+    case TestConfidence::e_CONFIDENCE_MEDIUM: {
+      return true;
     }
-    case CrossmatchResult::e_XM_INCONCLUSIVE: {
-      return false;
-    }
-    case CrossmatchResult::e_XM_NOT_DONE: {
+    case TestConfidence::e_CONFIDENCE_LOW: {
       return false;
     }
     }
-  }();
+  }
+  case CrossmatchResult::e_XM_INCOMPATIBLE: {
+    return false;
+  }
+  case CrossmatchResult::e_XM_INCONCLUSIVE: {
+    return false;
+  }
+  case CrossmatchResult::e_XM_NOT_DONE: {
+    return false;
+  }
+  }
 }
 
 __attribute__((pure)) bool
@@ -626,22 +598,20 @@ ValidatedVirtualCrossmatchTraceCase::create_safe_transfusion_order(
 
 __attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::risk_acceptable(
     const ValidatedVirtualCrossmatchTraceCase::TransplantAcceptability a) {
-  return [&](void) {
-    switch (a) {
-    case TransplantAcceptability::e_ACCEPTABLE: {
-      return true;
-    }
-    case TransplantAcceptability::e_ACCEPTABLE_WITH_DESENSITIZATION: {
-      return true;
-    }
-    case TransplantAcceptability::e_UNACCEPTABLE_HIGH_RISK: {
-      return false;
-    }
-    case TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION: {
-      return false;
-    }
-    }
-  }();
+  switch (a) {
+  case TransplantAcceptability::e_ACCEPTABLE: {
+    return true;
+  }
+  case TransplantAcceptability::e_ACCEPTABLE_WITH_DESENSITIZATION: {
+    return true;
+  }
+  case TransplantAcceptability::e_UNACCEPTABLE_HIGH_RISK: {
+    return false;
+  }
+  case TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION: {
+    return false;
+  }
+  }
 }
 
 __attribute__((pure)) bool Bool::bool_dec(const bool b1, const bool b2) {

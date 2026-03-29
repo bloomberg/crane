@@ -19,13 +19,10 @@ OppositePropertyTransferTraceCase::right_stable_gives_opposite_left(
         &_x,
     const std::shared_ptr<OppositePropertyTransferTraceCase::RightStableWitness>
         &h) {
-  return [&](void) {
-    unsigned int rsw_seed0 = h->rsw_seed;
-    unsigned int rsw_value0 = h->rsw_value;
-    return std::make_shared<
-        OppositePropertyTransferTraceCase::LeftStableWitness>(
-        LeftStableWitness{rsw_seed0, rsw_value0});
-  }();
+  unsigned int rsw_seed0 = h->rsw_seed;
+  unsigned int rsw_value0 = h->rsw_value;
+  return std::make_shared<OppositePropertyTransferTraceCase::LeftStableWitness>(
+      LeftStableWitness{rsw_seed0, rsw_value0});
 }
 
 __attribute__((pure)) OppositePropertyTransferTraceCase::EquivT<
@@ -37,23 +34,19 @@ OppositePropertyTransferTraceCase::triangle_identity_duality(
   return std::make_pair(
       [](std::shared_ptr<OppositePropertyTransferTraceCase::Triangle1Witness>
              h) {
-        return [&](void) {
-          unsigned int t1_seed0 = h->t1_seed;
-          unsigned int t1_value0 = h->t1_value;
-          return std::make_shared<
-              OppositePropertyTransferTraceCase::Triangle2Witness>(
-              Triangle2Witness{t1_seed0, t1_value0});
-        }();
+        unsigned int t1_seed0 = h->t1_seed;
+        unsigned int t1_value0 = h->t1_value;
+        return std::make_shared<
+            OppositePropertyTransferTraceCase::Triangle2Witness>(
+            Triangle2Witness{t1_seed0, t1_value0});
       },
       [](std::shared_ptr<OppositePropertyTransferTraceCase::Triangle2Witness>
              h) {
-        return [&](void) {
-          unsigned int t2_seed0 = h->t2_seed;
-          unsigned int t2_value0 = h->t2_value;
-          return std::make_shared<
-              OppositePropertyTransferTraceCase::Triangle1Witness>(
-              Triangle1Witness{t2_seed0, t2_value0});
-        }();
+        unsigned int t2_seed0 = h->t2_seed;
+        unsigned int t2_value0 = h->t2_value;
+        return std::make_shared<
+            OppositePropertyTransferTraceCase::Triangle1Witness>(
+            Triangle1Witness{t2_seed0, t2_value0});
       });
 }
 
@@ -64,13 +57,11 @@ OppositePropertyTransferTraceCase::sample_left_property(
         &h_left,
     const std::shared_ptr<OppositePropertyTransferTraceCase::Triangle1Witness>
         &_x) {
-  return [&](void) {
-    unsigned int lsw_seed0 = h_left->lsw_seed;
-    unsigned int lsw_value0 = h_left->lsw_value;
-    return std::make_shared<OppositePropertyTransferTraceCase::LeftProperty>(
-        LeftProperty{lsw_seed0, ((lsw_value0 + pS->ps_shift) + pS->ps_tag),
-                     pS->ps_tag});
-  }();
+  unsigned int lsw_seed0 = h_left->lsw_seed;
+  unsigned int lsw_value0 = h_left->lsw_value;
+  return std::make_shared<OppositePropertyTransferTraceCase::LeftProperty>(
+      LeftProperty{lsw_seed0, ((lsw_value0 + pS->ps_shift) + pS->ps_tag),
+                   pS->ps_tag});
 }
 
 __attribute__((pure)) OppositePropertyTransferTraceCase::EquivT<
@@ -81,23 +72,19 @@ OppositePropertyTransferTraceCase::dual_property_equiv(
         &_x) {
   return std::make_pair(
       [](std::shared_ptr<OppositePropertyTransferTraceCase::LeftProperty> h) {
-        return [&](void) {
-          unsigned int lp_seed0 = h->lp_seed;
-          unsigned int lp_value0 = h->lp_value;
-          unsigned int lp_tag0 = h->lp_tag;
-          return std::make_shared<
-              OppositePropertyTransferTraceCase::RightProperty>(
-              RightProperty{lp_seed0, lp_value0, lp_tag0});
-        }();
+        unsigned int lp_seed0 = h->lp_seed;
+        unsigned int lp_value0 = h->lp_value;
+        unsigned int lp_tag0 = h->lp_tag;
+        return std::make_shared<
+            OppositePropertyTransferTraceCase::RightProperty>(
+            RightProperty{lp_seed0, lp_value0, lp_tag0});
       },
       [](std::shared_ptr<OppositePropertyTransferTraceCase::RightProperty> h) {
-        return [&](void) {
-          unsigned int rp_seed0 = h->rp_seed;
-          unsigned int rp_value0 = h->rp_value;
-          unsigned int rp_tag0 = h->rp_tag;
-          return std::make_shared<
-              OppositePropertyTransferTraceCase::LeftProperty>(
-              LeftProperty{rp_seed0, rp_value0, rp_tag0});
-        }();
+        unsigned int rp_seed0 = h->rp_seed;
+        unsigned int rp_value0 = h->rp_value;
+        unsigned int rp_tag0 = h->rp_tag;
+        return std::make_shared<
+            OppositePropertyTransferTraceCase::LeftProperty>(
+            LeftProperty{rp_seed0, rp_value0, rp_tag0});
       });
 }

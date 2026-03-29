@@ -309,43 +309,39 @@ struct EpochCellGlyphTraceCase {
   template <typename T1>
   static T1 LunarPhase_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                             const LunarPhase l) {
-    return [&](void) {
-      switch (l) {
-      case LunarPhase::e_NEWMOON: {
-        return f;
-      }
-      case LunarPhase::e_FIRSTQUARTER: {
-        return f0;
-      }
-      case LunarPhase::e_FULLMOON: {
-        return f1;
-      }
-      case LunarPhase::e_LASTQUARTER: {
-        return f2;
-      }
-      }
-    }();
+    switch (l) {
+    case LunarPhase::e_NEWMOON: {
+      return f;
+    }
+    case LunarPhase::e_FIRSTQUARTER: {
+      return f0;
+    }
+    case LunarPhase::e_FULLMOON: {
+      return f1;
+    }
+    case LunarPhase::e_LASTQUARTER: {
+      return f2;
+    }
+    }
   }
 
   template <typename T1>
   static T1 LunarPhase_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                            const LunarPhase l) {
-    return [&](void) {
-      switch (l) {
-      case LunarPhase::e_NEWMOON: {
-        return f;
-      }
-      case LunarPhase::e_FIRSTQUARTER: {
-        return f0;
-      }
-      case LunarPhase::e_FULLMOON: {
-        return f1;
-      }
-      case LunarPhase::e_LASTQUARTER: {
-        return f2;
-      }
-      }
-    }();
+    switch (l) {
+    case LunarPhase::e_NEWMOON: {
+      return f;
+    }
+    case LunarPhase::e_FIRSTQUARTER: {
+      return f0;
+    }
+    case LunarPhase::e_FULLMOON: {
+      return f1;
+    }
+    case LunarPhase::e_LASTQUARTER: {
+      return f2;
+    }
+    }
   }
 
   __attribute__((pure)) static unsigned int phase_code(const LunarPhase p);
@@ -371,46 +367,44 @@ struct EpochCellGlyphTraceCase {
                             const T1 f3, const T1 f4, const T1 f5, const T1 f6,
                             const T1 f7, const T1 f8, const T1 f9, const T1 f10,
                             const ZodiacSign z) {
-    return [&](void) {
-      switch (z) {
-      case ZodiacSign::e_ARIES: {
-        return f;
-      }
-      case ZodiacSign::e_TAURUS: {
-        return f0;
-      }
-      case ZodiacSign::e_GEMINI: {
-        return f1;
-      }
-      case ZodiacSign::e_CANCER: {
-        return f2;
-      }
-      case ZodiacSign::e_LEO: {
-        return f3;
-      }
-      case ZodiacSign::e_VIRGO: {
-        return f4;
-      }
-      case ZodiacSign::e_LIBRA: {
-        return f5;
-      }
-      case ZodiacSign::e_SCORPIO: {
-        return f6;
-      }
-      case ZodiacSign::e_SAGITTARIUS: {
-        return f7;
-      }
-      case ZodiacSign::e_CAPRICORN: {
-        return f8;
-      }
-      case ZodiacSign::e_AQUARIUS: {
-        return f9;
-      }
-      case ZodiacSign::e_PISCES: {
-        return f10;
-      }
-      }
-    }();
+    switch (z) {
+    case ZodiacSign::e_ARIES: {
+      return f;
+    }
+    case ZodiacSign::e_TAURUS: {
+      return f0;
+    }
+    case ZodiacSign::e_GEMINI: {
+      return f1;
+    }
+    case ZodiacSign::e_CANCER: {
+      return f2;
+    }
+    case ZodiacSign::e_LEO: {
+      return f3;
+    }
+    case ZodiacSign::e_VIRGO: {
+      return f4;
+    }
+    case ZodiacSign::e_LIBRA: {
+      return f5;
+    }
+    case ZodiacSign::e_SCORPIO: {
+      return f6;
+    }
+    case ZodiacSign::e_SAGITTARIUS: {
+      return f7;
+    }
+    case ZodiacSign::e_CAPRICORN: {
+      return f8;
+    }
+    case ZodiacSign::e_AQUARIUS: {
+      return f9;
+    }
+    case ZodiacSign::e_PISCES: {
+      return f10;
+    }
+    }
   }
 
   template <typename T1>
@@ -418,46 +412,44 @@ struct EpochCellGlyphTraceCase {
                            const T1 f3, const T1 f4, const T1 f5, const T1 f6,
                            const T1 f7, const T1 f8, const T1 f9, const T1 f10,
                            const ZodiacSign z) {
-    return [&](void) {
-      switch (z) {
-      case ZodiacSign::e_ARIES: {
-        return f;
-      }
-      case ZodiacSign::e_TAURUS: {
-        return f0;
-      }
-      case ZodiacSign::e_GEMINI: {
-        return f1;
-      }
-      case ZodiacSign::e_CANCER: {
-        return f2;
-      }
-      case ZodiacSign::e_LEO: {
-        return f3;
-      }
-      case ZodiacSign::e_VIRGO: {
-        return f4;
-      }
-      case ZodiacSign::e_LIBRA: {
-        return f5;
-      }
-      case ZodiacSign::e_SCORPIO: {
-        return f6;
-      }
-      case ZodiacSign::e_SAGITTARIUS: {
-        return f7;
-      }
-      case ZodiacSign::e_CAPRICORN: {
-        return f8;
-      }
-      case ZodiacSign::e_AQUARIUS: {
-        return f9;
-      }
-      case ZodiacSign::e_PISCES: {
-        return f10;
-      }
-      }
-    }();
+    switch (z) {
+    case ZodiacSign::e_ARIES: {
+      return f;
+    }
+    case ZodiacSign::e_TAURUS: {
+      return f0;
+    }
+    case ZodiacSign::e_GEMINI: {
+      return f1;
+    }
+    case ZodiacSign::e_CANCER: {
+      return f2;
+    }
+    case ZodiacSign::e_LEO: {
+      return f3;
+    }
+    case ZodiacSign::e_VIRGO: {
+      return f4;
+    }
+    case ZodiacSign::e_LIBRA: {
+      return f5;
+    }
+    case ZodiacSign::e_SCORPIO: {
+      return f6;
+    }
+    case ZodiacSign::e_SAGITTARIUS: {
+      return f7;
+    }
+    case ZodiacSign::e_CAPRICORN: {
+      return f8;
+    }
+    case ZodiacSign::e_AQUARIUS: {
+      return f9;
+    }
+    case ZodiacSign::e_PISCES: {
+      return f10;
+    }
+    }
   }
 
   __attribute__((pure)) static unsigned int zodiac_code(const ZodiacSign z);
@@ -518,50 +510,46 @@ struct EpochCellGlyphTraceCase {
   static T1 EclipseCategory_rect(const T1 f, const T1 f0, const T1 f1,
                                  const T1 f2, const T1 f3,
                                  const EclipseCategory e) {
-    return [&](void) {
-      switch (e) {
-      case EclipseCategory::e_EC_TOTALLUNAR: {
-        return f;
-      }
-      case EclipseCategory::e_EC_PARTIALLUNAR: {
-        return f0;
-      }
-      case EclipseCategory::e_EC_TOTALSOLAR: {
-        return f1;
-      }
-      case EclipseCategory::e_EC_ANNULARSOLAR: {
-        return f2;
-      }
-      case EclipseCategory::e_EC_PARTIALSOLAR: {
-        return f3;
-      }
-      }
-    }();
+    switch (e) {
+    case EclipseCategory::e_EC_TOTALLUNAR: {
+      return f;
+    }
+    case EclipseCategory::e_EC_PARTIALLUNAR: {
+      return f0;
+    }
+    case EclipseCategory::e_EC_TOTALSOLAR: {
+      return f1;
+    }
+    case EclipseCategory::e_EC_ANNULARSOLAR: {
+      return f2;
+    }
+    case EclipseCategory::e_EC_PARTIALSOLAR: {
+      return f3;
+    }
+    }
   }
 
   template <typename T1>
   static T1 EclipseCategory_rec(const T1 f, const T1 f0, const T1 f1,
                                 const T1 f2, const T1 f3,
                                 const EclipseCategory e) {
-    return [&](void) {
-      switch (e) {
-      case EclipseCategory::e_EC_TOTALLUNAR: {
-        return f;
-      }
-      case EclipseCategory::e_EC_PARTIALLUNAR: {
-        return f0;
-      }
-      case EclipseCategory::e_EC_TOTALSOLAR: {
-        return f1;
-      }
-      case EclipseCategory::e_EC_ANNULARSOLAR: {
-        return f2;
-      }
-      case EclipseCategory::e_EC_PARTIALSOLAR: {
-        return f3;
-      }
-      }
-    }();
+    switch (e) {
+    case EclipseCategory::e_EC_TOTALLUNAR: {
+      return f;
+    }
+    case EclipseCategory::e_EC_PARTIALLUNAR: {
+      return f0;
+    }
+    case EclipseCategory::e_EC_TOTALSOLAR: {
+      return f1;
+    }
+    case EclipseCategory::e_EC_ANNULARSOLAR: {
+      return f2;
+    }
+    case EclipseCategory::e_EC_PARTIALSOLAR: {
+      return f3;
+    }
+    }
   }
 
   __attribute__((pure)) static unsigned int
@@ -588,49 +576,45 @@ struct EpochCellGlyphTraceCase {
   template <typename T1>
   static T1 DialGlyph_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                            const T1 f3, const DialGlyph d) {
-    return [&](void) {
-      switch (d) {
-      case DialGlyph::e_GLYPH_SIGMA: {
-        return f;
-      }
-      case DialGlyph::e_GLYPH_ETA: {
-        return f0;
-      }
-      case DialGlyph::e_GLYPH_SIGMATOTAL: {
-        return f1;
-      }
-      case DialGlyph::e_GLYPH_ETAANNULAR: {
-        return f2;
-      }
-      case DialGlyph::e_GLYPH_EMPTY: {
-        return f3;
-      }
-      }
-    }();
+    switch (d) {
+    case DialGlyph::e_GLYPH_SIGMA: {
+      return f;
+    }
+    case DialGlyph::e_GLYPH_ETA: {
+      return f0;
+    }
+    case DialGlyph::e_GLYPH_SIGMATOTAL: {
+      return f1;
+    }
+    case DialGlyph::e_GLYPH_ETAANNULAR: {
+      return f2;
+    }
+    case DialGlyph::e_GLYPH_EMPTY: {
+      return f3;
+    }
+    }
   }
 
   template <typename T1>
   static T1 DialGlyph_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                           const T1 f3, const DialGlyph d) {
-    return [&](void) {
-      switch (d) {
-      case DialGlyph::e_GLYPH_SIGMA: {
-        return f;
-      }
-      case DialGlyph::e_GLYPH_ETA: {
-        return f0;
-      }
-      case DialGlyph::e_GLYPH_SIGMATOTAL: {
-        return f1;
-      }
-      case DialGlyph::e_GLYPH_ETAANNULAR: {
-        return f2;
-      }
-      case DialGlyph::e_GLYPH_EMPTY: {
-        return f3;
-      }
-      }
-    }();
+    switch (d) {
+    case DialGlyph::e_GLYPH_SIGMA: {
+      return f;
+    }
+    case DialGlyph::e_GLYPH_ETA: {
+      return f0;
+    }
+    case DialGlyph::e_GLYPH_SIGMATOTAL: {
+      return f1;
+    }
+    case DialGlyph::e_GLYPH_ETAANNULAR: {
+      return f2;
+    }
+    case DialGlyph::e_GLYPH_EMPTY: {
+      return f3;
+    }
+    }
   }
 
   __attribute__((pure)) static unsigned int glyph_code(const DialGlyph g);

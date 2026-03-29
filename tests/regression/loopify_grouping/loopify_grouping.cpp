@@ -10,38 +10,37 @@ LoopifyGrouping::prepend_to_groups(
     const unsigned int x, const bool same,
     std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> groups) {
   if (same) {
-    return [&](void) {
-      if (std::move(groups).use_count() == 1 &&
-          std::move(groups)->v().index() == 1) {
-        auto &_rf = std::get<1>(std::move(groups)->v_mut());
-        std::shared_ptr<List<unsigned int>> g = std::move(_rf.d_a0);
-        std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> gs =
-            std::move(_rf.d_a1);
-        _rf.d_a0 = List<unsigned int>::cons(x, g);
-        _rf.d_a1 = std::move(gs);
-        return std::move(groups);
-      } else {
-        return std::visit(
-            Overloaded{[&](const typename List<
-                           std::shared_ptr<List<unsigned int>>>::Nil _args)
-                           -> std::shared_ptr<
-                               List<std::shared_ptr<List<unsigned int>>>> {
-                         return List<std::shared_ptr<List<unsigned int>>>::cons(
-                             List<unsigned int>::cons(
-                                 std::move(x), List<unsigned int>::nil()),
-                             List<std::shared_ptr<List<unsigned int>>>::nil());
-                       },
-                       [&](const typename List<
-                           std::shared_ptr<List<unsigned int>>>::Cons _args)
-                           -> std::shared_ptr<
-                               List<std::shared_ptr<List<unsigned int>>>> {
-                         return List<std::shared_ptr<List<unsigned int>>>::cons(
-                             List<unsigned int>::cons(std::move(x), _args.d_a0),
-                             _args.d_a1);
-                       }},
-            std::move(groups)->v());
-      }
-    }();
+    if (std::move(groups).use_count() == 1 &&
+        std::move(groups)->v().index() == 1) {
+      auto &_rf = std::get<1>(std::move(groups)->v_mut());
+      std::shared_ptr<List<unsigned int>> g = std::move(_rf.d_a0);
+      std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> gs =
+          std::move(_rf.d_a1);
+      _rf.d_a0 = List<unsigned int>::cons(x, g);
+      _rf.d_a1 = std::move(gs);
+      return std::move(groups);
+    } else {
+      return std::visit(
+          Overloaded{
+              [&](const typename List<std::shared_ptr<List<unsigned int>>>::Nil
+                      _args)
+                  -> std::shared_ptr<
+                      List<std::shared_ptr<List<unsigned int>>>> {
+                return List<std::shared_ptr<List<unsigned int>>>::cons(
+                    List<unsigned int>::cons(std::move(x),
+                                             List<unsigned int>::nil()),
+                    List<std::shared_ptr<List<unsigned int>>>::nil());
+              },
+              [&](const typename List<std::shared_ptr<List<unsigned int>>>::Cons
+                      _args)
+                  -> std::shared_ptr<
+                      List<std::shared_ptr<List<unsigned int>>>> {
+                return List<std::shared_ptr<List<unsigned int>>>::cons(
+                    List<unsigned int>::cons(std::move(x), _args.d_a0),
+                    _args.d_a1);
+              }},
+          std::move(groups)->v());
+    }
   } else {
     return List<std::shared_ptr<List<unsigned int>>>::cons(
         List<unsigned int>::cons(std::move(x), List<unsigned int>::nil()),

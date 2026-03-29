@@ -35,46 +35,44 @@ struct LargeEnum {
                        const T1 f3, const T1 f4, const T1 f5, const T1 f6,
                        const T1 f7, const T1 f8, const T1 f9, const T1 f10,
                        const Color c) {
-    return [&](void) {
-      switch (c) {
-      case Color::e_RED: {
-        return f;
-      }
-      case Color::e_ORANGE: {
-        return f0;
-      }
-      case Color::e_YELLOW: {
-        return f1;
-      }
-      case Color::e_GREEN: {
-        return f2;
-      }
-      case Color::e_BLUE: {
-        return f3;
-      }
-      case Color::e_INDIGO: {
-        return f4;
-      }
-      case Color::e_VIOLET: {
-        return f5;
-      }
-      case Color::e_BLACK: {
-        return f6;
-      }
-      case Color::e_WHITE: {
-        return f7;
-      }
-      case Color::e_GRAY: {
-        return f8;
-      }
-      case Color::e_BROWN: {
-        return f9;
-      }
-      case Color::e_PINK: {
-        return f10;
-      }
-      }
-    }();
+    switch (c) {
+    case Color::e_RED: {
+      return f;
+    }
+    case Color::e_ORANGE: {
+      return f0;
+    }
+    case Color::e_YELLOW: {
+      return f1;
+    }
+    case Color::e_GREEN: {
+      return f2;
+    }
+    case Color::e_BLUE: {
+      return f3;
+    }
+    case Color::e_INDIGO: {
+      return f4;
+    }
+    case Color::e_VIOLET: {
+      return f5;
+    }
+    case Color::e_BLACK: {
+      return f6;
+    }
+    case Color::e_WHITE: {
+      return f7;
+    }
+    case Color::e_GRAY: {
+      return f8;
+    }
+    case Color::e_BROWN: {
+      return f9;
+    }
+    case Color::e_PINK: {
+      return f10;
+    }
+    }
   }
 
   template <typename T1>
@@ -82,46 +80,44 @@ struct LargeEnum {
                       const T1 f3, const T1 f4, const T1 f5, const T1 f6,
                       const T1 f7, const T1 f8, const T1 f9, const T1 f10,
                       const Color c) {
-    return [&](void) {
-      switch (c) {
-      case Color::e_RED: {
-        return f;
-      }
-      case Color::e_ORANGE: {
-        return f0;
-      }
-      case Color::e_YELLOW: {
-        return f1;
-      }
-      case Color::e_GREEN: {
-        return f2;
-      }
-      case Color::e_BLUE: {
-        return f3;
-      }
-      case Color::e_INDIGO: {
-        return f4;
-      }
-      case Color::e_VIOLET: {
-        return f5;
-      }
-      case Color::e_BLACK: {
-        return f6;
-      }
-      case Color::e_WHITE: {
-        return f7;
-      }
-      case Color::e_GRAY: {
-        return f8;
-      }
-      case Color::e_BROWN: {
-        return f9;
-      }
-      case Color::e_PINK: {
-        return f10;
-      }
-      }
-    }();
+    switch (c) {
+    case Color::e_RED: {
+      return f;
+    }
+    case Color::e_ORANGE: {
+      return f0;
+    }
+    case Color::e_YELLOW: {
+      return f1;
+    }
+    case Color::e_GREEN: {
+      return f2;
+    }
+    case Color::e_BLUE: {
+      return f3;
+    }
+    case Color::e_INDIGO: {
+      return f4;
+    }
+    case Color::e_VIOLET: {
+      return f5;
+    }
+    case Color::e_BLACK: {
+      return f6;
+    }
+    case Color::e_WHITE: {
+      return f7;
+    }
+    case Color::e_GRAY: {
+      return f8;
+    }
+    case Color::e_BROWN: {
+      return f9;
+    }
+    case Color::e_PINK: {
+      return f10;
+    }
+    }
   }
 
   __attribute__((pure)) static unsigned int color_to_nat(const Color c);

@@ -120,40 +120,32 @@ struct LoopifyPredicates {
   template <MapsTo<bool, unsigned int> F0>
   static std::shared_ptr<List<unsigned int>>
   drop_while(F0 &&p, std::shared_ptr<List<unsigned int>> l) {
-    struct _Enter {
-      std::shared_ptr<List<unsigned int>> l;
-    };
-
-    using _Frame = std::variant<_Enter>;
-    std::shared_ptr<List<unsigned int>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{l});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      std::visit(
-          Overloaded{[&](_Enter _f) {
-            std::shared_ptr<List<unsigned int>> l = _f.l;
-            if (l.use_count() == 1 && l->v().index() == 0) {
-              auto &_rf = std::get<0>(l->v_mut());
-              _result = l;
-            } else {
-              std::visit(
-                  Overloaded{
-                      [&](const typename List<unsigned int>::Nil _args)
-                          -> void { _result = List<unsigned int>::nil(); },
-                      [&](const typename List<unsigned int>::Cons _args)
-                          -> void {
-                        if (p(_args.d_a0)) {
-                          _stack.push_back(_Enter{_args.d_a1});
-                        } else {
-                          _result = std::move(l);
-                        }
-                      }},
-                  l->v());
-            }
-          }},
-          _frame);
+    std::shared_ptr<List<unsigned int>> _result;
+    std::shared_ptr<List<unsigned int>> _loop_l = l;
+    bool _continue = true;
+    while (_continue) {
+      if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
+        auto &_rf = std::get<0>(_loop_l->v_mut());
+        {
+          _result = _loop_l;
+          _continue = false;
+        }
+      } else {
+        std::visit(
+            Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+                         _result = List<unsigned int>::nil();
+                         _continue = false;
+                       },
+                       [&](const typename List<unsigned int>::Cons _args) {
+                         if (p(_args.d_a0)) {
+                           _loop_l = _args.d_a1;
+                         } else {
+                           _result = std::move(_loop_l);
+                           _continue = false;
+                         }
+                       }},
+            _loop_l->v());
+      }
     }
     return _result;
   }

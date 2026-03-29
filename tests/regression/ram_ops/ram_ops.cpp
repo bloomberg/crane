@@ -371,14 +371,12 @@ RamOps::read_status0(const std::shared_ptr<RamOps::state_nested_bank> &s) {
 }
 
 __attribute__((pure)) unsigned int RamOps::score(const RamOps::Item x) {
-  return [&](void) {
-    switch (x) {
-    case Item::e_S_: {
-      return 1u;
-    }
-    case Item::e_S_0: {
-      return 2u;
-    }
-    }
-  }();
+  switch (x) {
+  case Item::e_S_: {
+    return 1u;
+  }
+  case Item::e_S_0: {
+    return 2u;
+  }
+  }
 }

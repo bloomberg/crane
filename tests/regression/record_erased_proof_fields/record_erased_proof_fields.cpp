@@ -7,31 +7,29 @@
 
 __attribute__((pure)) unsigned int RecordErasedProofFieldsCase::kind_code(
     const RecordErasedProofFieldsCase::ItemKind k) {
-  return [&](void) {
-    switch (k) {
-    case ItemKind::e_KINDA: {
-      return 0u;
-    }
-    case ItemKind::e_KINDB: {
-      return 1u;
-    }
-    case ItemKind::e_KINDC: {
-      return 2u;
-    }
-    case ItemKind::e_KINDD: {
-      return 3u;
-    }
-    case ItemKind::e_KINDE: {
-      return 4u;
-    }
-    case ItemKind::e_KINDF: {
-      return 5u;
-    }
-    case ItemKind::e_KINDG: {
-      return 6u;
-    }
-    }
-  }();
+  switch (k) {
+  case ItemKind::e_KINDA: {
+    return 0u;
+  }
+  case ItemKind::e_KINDB: {
+    return 1u;
+  }
+  case ItemKind::e_KINDC: {
+    return 2u;
+  }
+  case ItemKind::e_KINDD: {
+    return 3u;
+  }
+  case ItemKind::e_KINDE: {
+    return 4u;
+  }
+  case ItemKind::e_KINDF: {
+    return 5u;
+  }
+  case ItemKind::e_KINDG: {
+    return 6u;
+  }
+  }
 }
 
 __attribute__((pure)) unsigned int RecordErasedProofFieldsCase::tag_code(
@@ -51,37 +49,33 @@ __attribute__((pure)) unsigned int RecordErasedProofFieldsCase::tag_code(
 
 __attribute__((pure)) unsigned int RecordErasedProofFieldsCase::bucket_code(
     const RecordErasedProofFieldsCase::TraceBucket b) {
-  return [&](void) {
-    switch (b) {
-    case TraceBucket::e_BUCKETA: {
-      return 30u;
-    }
-    case TraceBucket::e_BUCKETB: {
-      return 31u;
-    }
-    case TraceBucket::e_BUCKETC: {
-      return 32u;
-    }
-    }
-  }();
+  switch (b) {
+  case TraceBucket::e_BUCKETA: {
+    return 30u;
+  }
+  case TraceBucket::e_BUCKETB: {
+    return 31u;
+  }
+  case TraceBucket::e_BUCKETC: {
+    return 32u;
+  }
+  }
 }
 
 std::shared_ptr<RecordErasedProofFieldsCase::StoredTag>
 RecordErasedProofFieldsCase::bucket_to_tag(
     const RecordErasedProofFieldsCase::TraceBucket b) {
-  return [&](void) {
-    switch (b) {
-    case TraceBucket::e_BUCKETA: {
-      return StoredTag::tagsecondary(ItemKind::e_KINDD);
-    }
-    case TraceBucket::e_BUCKETB: {
-      return StoredTag::tagsecondary(ItemKind::e_KINDE);
-    }
-    case TraceBucket::e_BUCKETC: {
-      return StoredTag::tagsecondary(ItemKind::e_KINDB);
-    }
-    }
-  }();
+  switch (b) {
+  case TraceBucket::e_BUCKETA: {
+    return StoredTag::tagsecondary(ItemKind::e_KINDD);
+  }
+  case TraceBucket::e_BUCKETB: {
+    return StoredTag::tagsecondary(ItemKind::e_KINDE);
+  }
+  case TraceBucket::e_BUCKETC: {
+    return StoredTag::tagsecondary(ItemKind::e_KINDB);
+  }
+  }
 }
 
 __attribute__((pure)) unsigned int

@@ -104,34 +104,28 @@ PulseParseCertificateCase::classify_runs_with_base(
 __attribute__((pure)) bool PulseParseCertificateCase::pulse_class_eqb(
     const PulseParseCertificateCase::PulseClass x,
     const PulseParseCertificateCase::PulseClass y) {
-  return [&](void) {
-    switch (x) {
+  switch (x) {
+  case PulseClass::e_MARKSHORT: {
+    switch (y) {
     case PulseClass::e_MARKSHORT: {
-      return [&](void) {
-        switch (y) {
-        case PulseClass::e_MARKSHORT: {
-          return true;
-        }
-        case PulseClass::e_MARKLONG: {
-          return false;
-        }
-        }
-      }();
+      return true;
     }
     case PulseClass::e_MARKLONG: {
-      return [&](void) {
-        switch (y) {
-        case PulseClass::e_MARKSHORT: {
-          return false;
-        }
-        case PulseClass::e_MARKLONG: {
-          return true;
-        }
-        }
-      }();
+      return false;
     }
     }
-  }();
+  }
+  case PulseClass::e_MARKLONG: {
+    switch (y) {
+    case PulseClass::e_MARKSHORT: {
+      return false;
+    }
+    case PulseClass::e_MARKLONG: {
+      return true;
+    }
+    }
+  }
+  }
 }
 
 __attribute__((pure)) bool PulseParseCertificateCase::pulse_class_list_eqb(

@@ -550,43 +550,38 @@ Coq_Pos::to_nat(const std::shared_ptr<Positive> &x) {
 
 std::shared_ptr<N> BinNat::sub(std::shared_ptr<N> n,
                                const std::shared_ptr<N> &m) {
-  return [&](void) {
-    if (n.use_count() == 1 && n->v().index() == 0) {
-      auto &_rf = std::get<0>(n->v_mut());
-      return n;
-    } else {
-      return std::visit(
-          Overloaded{
-              [](const typename N::N0 _args) -> std::shared_ptr<N> {
-                return N::n0();
-              },
-              [&](const typename N::Npos _args) -> std::shared_ptr<N> {
-                return std::visit(
-                    Overloaded{
-                        [&](const typename N::N0 _args0) -> std::shared_ptr<N> {
-                          return std::move(n);
-                        },
-                        [&](const typename N::Npos _args0)
-                            -> std::shared_ptr<N> {
-                          return std::visit(
-                              Overloaded{
-                                  [](const typename Pos::mask::IsNul _args1)
-                                      -> std::shared_ptr<N> { return N::n0(); },
-                                  [](const typename Pos::mask::IsPos _args1)
-                                      -> std::shared_ptr<N> {
-                                    return N::npos(_args1.d_a0);
-                                  },
-                                  [](const typename Pos::mask::IsNeg _args1)
-                                      -> std::shared_ptr<N> {
-                                    return N::n0();
-                                  }},
-                              Pos::sub_mask(_args.d_a0, _args0.d_a0)->v());
-                        }},
-                    m->v());
-              }},
-          n->v());
-    }
-  }();
+  if (n.use_count() == 1 && n->v().index() == 0) {
+    auto &_rf = std::get<0>(n->v_mut());
+    return n;
+  } else {
+    return std::visit(
+        Overloaded{
+            [](const typename N::N0 _args) -> std::shared_ptr<N> {
+              return N::n0();
+            },
+            [&](const typename N::Npos _args) -> std::shared_ptr<N> {
+              return std::visit(
+                  Overloaded{
+                      [&](const typename N::N0 _args0) -> std::shared_ptr<N> {
+                        return std::move(n);
+                      },
+                      [&](const typename N::Npos _args0) -> std::shared_ptr<N> {
+                        return std::visit(
+                            Overloaded{
+                                [](const typename Pos::mask::IsNul _args1)
+                                    -> std::shared_ptr<N> { return N::n0(); },
+                                [](const typename Pos::mask::IsPos _args1)
+                                    -> std::shared_ptr<N> {
+                                  return N::npos(_args1.d_a0);
+                                },
+                                [](const typename Pos::mask::IsNeg _args1)
+                                    -> std::shared_ptr<N> { return N::n0(); }},
+                            Pos::sub_mask(_args.d_a0, _args0.d_a0)->v());
+                      }},
+                  m->v());
+            }},
+        n->v());
+  }
 }
 
 __attribute__((pure)) Comparison BinNat::compare(const std::shared_ptr<N> &n,
@@ -634,26 +629,23 @@ std::shared_ptr<N> BinNat::add(std::shared_ptr<N> n, std::shared_ptr<N> m) {
             return std::move(m);
           },
           [&](const typename N::Npos _args) -> std::shared_ptr<N> {
-            return [&](void) {
-              if (std::move(m).use_count() == 1 &&
-                  std::move(m)->v().index() == 1) {
-                auto &_rf = std::get<1>(std::move(m)->v_mut());
-                std::shared_ptr<Positive> q = std::move(_rf.d_a0);
-                _rf.d_a0 = Coq_Pos::add(std::move(_args.d_a0), q);
-                return std::move(m);
-              } else {
-                return std::visit(
-                    Overloaded{
-                        [&](const typename N::N0 _args0) -> std::shared_ptr<N> {
-                          return std::move(n);
-                        },
-                        [&](const typename N::Npos _args0)
-                            -> std::shared_ptr<N> {
-                          return N::npos(Coq_Pos::add(_args.d_a0, _args0.d_a0));
-                        }},
-                    std::move(m)->v());
-              }
-            }();
+            if (std::move(m).use_count() == 1 &&
+                std::move(m)->v().index() == 1) {
+              auto &_rf = std::get<1>(std::move(m)->v_mut());
+              std::shared_ptr<Positive> q = std::move(_rf.d_a0);
+              _rf.d_a0 = Coq_Pos::add(std::move(_args.d_a0), q);
+              return std::move(m);
+            } else {
+              return std::visit(
+                  Overloaded{
+                      [&](const typename N::N0 _args0) -> std::shared_ptr<N> {
+                        return std::move(n);
+                      },
+                      [&](const typename N::Npos _args0) -> std::shared_ptr<N> {
+                        return N::npos(Coq_Pos::add(_args.d_a0, _args0.d_a0));
+                      }},
+                  std::move(m)->v());
+            }
           }},
       n->v());
 }
@@ -794,56 +786,48 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
             return std::move(y);
           },
           [&](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-            return [&](void) {
-              if (std::move(y).use_count() == 1 &&
-                  std::move(y)->v().index() == 1) {
-                auto &_rf = std::get<1>(std::move(y)->v_mut());
-                std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
-                _rf.d_a0 = Pos::add(std::move(_args.d_a0), y_);
-                return std::move(y);
-              } else {
-                return std::visit(
-                    Overloaded{
-                        [&](const typename Z::Z0 _args0) -> std::shared_ptr<Z> {
-                          return std::move(x);
-                        },
-                        [&](const typename Z::Zpos _args0)
-                            -> std::shared_ptr<Z> {
-                          return Z::zpos(Pos::add(_args.d_a0, _args0.d_a0));
-                        },
-                        [&](const typename Z::Zneg _args0)
-                            -> std::shared_ptr<Z> {
-                          return BinInt::pos_sub(_args.d_a0, _args0.d_a0);
-                        }},
-                    std::move(y)->v());
-              }
-            }();
+            if (std::move(y).use_count() == 1 &&
+                std::move(y)->v().index() == 1) {
+              auto &_rf = std::get<1>(std::move(y)->v_mut());
+              std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
+              _rf.d_a0 = Pos::add(std::move(_args.d_a0), y_);
+              return std::move(y);
+            } else {
+              return std::visit(
+                  Overloaded{
+                      [&](const typename Z::Z0 _args0) -> std::shared_ptr<Z> {
+                        return std::move(x);
+                      },
+                      [&](const typename Z::Zpos _args0) -> std::shared_ptr<Z> {
+                        return Z::zpos(Pos::add(_args.d_a0, _args0.d_a0));
+                      },
+                      [&](const typename Z::Zneg _args0) -> std::shared_ptr<Z> {
+                        return BinInt::pos_sub(_args.d_a0, _args0.d_a0);
+                      }},
+                  std::move(y)->v());
+            }
           },
           [&](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-            return [&](void) {
-              if (std::move(y).use_count() == 1 &&
-                  std::move(y)->v().index() == 2) {
-                auto &_rf = std::get<2>(std::move(y)->v_mut());
-                std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
-                _rf.d_a0 = Pos::add(std::move(_args.d_a0), y_);
-                return std::move(y);
-              } else {
-                return std::visit(
-                    Overloaded{
-                        [&](const typename Z::Z0 _args0) -> std::shared_ptr<Z> {
-                          return std::move(x);
-                        },
-                        [&](const typename Z::Zpos _args0)
-                            -> std::shared_ptr<Z> {
-                          return BinInt::pos_sub(_args0.d_a0, _args.d_a0);
-                        },
-                        [&](const typename Z::Zneg _args0)
-                            -> std::shared_ptr<Z> {
-                          return Z::zneg(Pos::add(_args.d_a0, _args0.d_a0));
-                        }},
-                    std::move(y)->v());
-              }
-            }();
+            if (std::move(y).use_count() == 1 &&
+                std::move(y)->v().index() == 2) {
+              auto &_rf = std::get<2>(std::move(y)->v_mut());
+              std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
+              _rf.d_a0 = Pos::add(std::move(_args.d_a0), y_);
+              return std::move(y);
+            } else {
+              return std::visit(
+                  Overloaded{
+                      [&](const typename Z::Z0 _args0) -> std::shared_ptr<Z> {
+                        return std::move(x);
+                      },
+                      [&](const typename Z::Zpos _args0) -> std::shared_ptr<Z> {
+                        return BinInt::pos_sub(_args0.d_a0, _args.d_a0);
+                      },
+                      [&](const typename Z::Zneg _args0) -> std::shared_ptr<Z> {
+                        return Z::zneg(Pos::add(_args.d_a0, _args0.d_a0));
+                      }},
+                  std::move(y)->v());
+            }
           }},
       x->v());
 }
@@ -979,19 +963,17 @@ std::shared_ptr<Z> BinInt::abs(const std::shared_ptr<Z> &z) {
 
 std::shared_ptr<N> BinaryNums::n_max(std::shared_ptr<N> a,
                                      std::shared_ptr<N> b) {
-  return [&](void) {
-    switch (BinNat::compare(a, b)) {
-    case Comparison::e_EQ: {
-      return std::move(a);
-    }
-    case Comparison::e_LT: {
-      return std::move(b);
-    }
-    case Comparison::e_GT: {
-      return std::move(a);
-    }
-    }
-  }();
+  switch (BinNat::compare(a, b)) {
+  case Comparison::e_EQ: {
+    return std::move(a);
+  }
+  case Comparison::e_LT: {
+    return std::move(b);
+  }
+  case Comparison::e_GT: {
+    return std::move(a);
+  }
+  }
 }
 
 std::shared_ptr<Z> BinaryNums::z_sign(const std::shared_ptr<Z> &z) {
@@ -1009,17 +991,15 @@ std::shared_ptr<Z> BinaryNums::z_sign(const std::shared_ptr<Z> &z) {
 }
 
 __attribute__((pure)) Comparison Datatypes::CompOpp(const Comparison r) {
-  return [&](void) {
-    switch (r) {
-    case Comparison::e_EQ: {
-      return Comparison::e_EQ;
-    }
-    case Comparison::e_LT: {
-      return Comparison::e_GT;
-    }
-    case Comparison::e_GT: {
-      return Comparison::e_LT;
-    }
-    }
-  }();
+  switch (r) {
+  case Comparison::e_EQ: {
+    return Comparison::e_EQ;
+  }
+  case Comparison::e_LT: {
+    return Comparison::e_GT;
+  }
+  case Comparison::e_GT: {
+    return Comparison::e_LT;
+  }
+  }
 }

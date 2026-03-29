@@ -5,8 +5,6 @@
 
 std::shared_ptr<NestedRecordUpdateQual::Shadow> NestedRecordUpdateQual::bump(
     const std::shared_ptr<NestedRecordUpdateQual::Shadow> &x) {
-  return [&](void) {
-    unsigned int n = x->Shadow::value;
-    return std::make_shared<NestedRecordUpdateQual::Shadow>(Shadow{(n + 1)});
-  }();
+  unsigned int n = x->Shadow::value;
+  return std::make_shared<NestedRecordUpdateQual::Shadow>(Shadow{(n + 1)});
 }

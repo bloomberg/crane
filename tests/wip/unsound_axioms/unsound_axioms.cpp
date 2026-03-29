@@ -8,30 +8,24 @@
 
 __attribute__((pure)) unsigned int
 UnsoundAxioms::cast_confusion(const std::shared_ptr<UnsoundAxioms::Rec> &r) {
-  return [&](void) {
-    unsigned int a = r->f1;
-    unsigned int b = r->f2;
-    return (unsafe_cast<unsigned int, unsigned int>(a) + b);
-  }();
+  unsigned int a = r->f1;
+  unsigned int b = r->f2;
+  return (unsafe_cast<unsigned int, unsigned int>(a) + b);
 }
 
 __attribute__((pure)) unsigned int
 UnsoundAxioms::choose_in_match(const std::shared_ptr<UnsoundAxioms::Rec> &r) {
-  return [&](void) {
-    unsigned int a = r->f1;
-    unsigned int b = r->f2;
-    unsigned int witness = choose<unsigned int>();
-    return ((a + b) + std::move(witness));
-  }();
+  unsigned int a = r->f1;
+  unsigned int b = r->f2;
+  unsigned int witness = choose<unsigned int>();
+  return ((a + b) + std::move(witness));
 }
 
 __attribute__((pure)) unsigned int UnsoundAxioms::extract_proof_computation(
     const std::shared_ptr<UnsoundAxioms::ProofRec> &pr) {
-  return [&](void) {
-    unsigned int v = pr->pf_val;
-    unsigned int v2 = pr->pf_val2;
-    return (v + v2);
-  }();
+  unsigned int v = pr->pf_val;
+  unsigned int v2 = pr->pf_val2;
+  return (v + v2);
 }
 
 __attribute__((pure)) bool UnsoundAxioms::use_type_eq(const unsigned int n) {
@@ -55,9 +49,7 @@ UnsoundAxioms::from_false(const std::shared_ptr<UnsoundAxioms::Rec> &r) {
 
 __attribute__((pure)) unsigned int
 UnsoundAxioms::use_prop_as_type(const std::shared_ptr<UnsoundAxioms::Rec> &r) {
-  return [&](void) {
-    unsigned int a = r->f1;
-    unsigned int b = r->f2;
-    return ((prop_as_type() + a) + b);
-  }();
+  unsigned int a = r->f1;
+  unsigned int b = r->f2;
+  return ((prop_as_type() + a) + b);
 }

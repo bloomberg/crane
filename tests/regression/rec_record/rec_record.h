@@ -108,21 +108,17 @@ struct RecRecord {
   template <typename T1,
             MapsTo<T1, unsigned int, std::optional<std::shared_ptr<RNode>>> F0>
   static T1 RNode_rect(F0 &&f, const std::shared_ptr<RNode> &r) {
-    return [&](void) {
-      unsigned int rn_value0 = r->rn_value;
-      std::optional<std::shared_ptr<RNode>> rn_next0 = r->rn_next;
-      return f(rn_value0, rn_next0);
-    }();
+    unsigned int rn_value0 = r->rn_value;
+    std::optional<std::shared_ptr<RNode>> rn_next0 = r->rn_next;
+    return f(rn_value0, rn_next0);
   }
 
   template <typename T1,
             MapsTo<T1, unsigned int, std::optional<std::shared_ptr<RNode>>> F0>
   static T1 RNode_rec(F0 &&f, const std::shared_ptr<RNode> &r) {
-    return [&](void) {
-      unsigned int rn_value0 = r->rn_value;
-      std::optional<std::shared_ptr<RNode>> rn_next0 = r->rn_next;
-      return f(rn_value0, rn_next0);
-    }();
+    unsigned int rn_value0 = r->rn_value;
+    std::optional<std::shared_ptr<RNode>> rn_next0 = r->rn_next;
+    return f(rn_value0, rn_next0);
   }
 
   struct Employee {

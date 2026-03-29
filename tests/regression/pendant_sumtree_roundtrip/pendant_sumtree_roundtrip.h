@@ -399,102 +399,90 @@ struct PendantSumtreeRoundtripCase {
 
   template <typename T1>
   static T1 Twist_rect(const T1 f, const T1 f0, const Twist t1) {
-    return [&](void) {
-      switch (t1) {
-      case Twist::e_TS: {
-        return f;
-      }
-      case Twist::e_TZ: {
-        return f0;
-      }
-      }
-    }();
+    switch (t1) {
+    case Twist::e_TS: {
+      return f;
+    }
+    case Twist::e_TZ: {
+      return f0;
+    }
+    }
   }
 
   template <typename T1>
   static T1 Twist_rec(const T1 f, const T1 f0, const Twist t1) {
-    return [&](void) {
-      switch (t1) {
-      case Twist::e_TS: {
-        return f;
-      }
-      case Twist::e_TZ: {
-        return f0;
-      }
-      }
-    }();
+    switch (t1) {
+    case Twist::e_TS: {
+      return f;
+    }
+    case Twist::e_TZ: {
+      return f0;
+    }
+    }
   }
   enum class Fiber { e_COTTON, e_CAMELID };
 
   template <typename T1>
   static T1 Fiber_rect(const T1 f, const T1 f0, const Fiber f1) {
-    return [&](void) {
-      switch (f1) {
-      case Fiber::e_COTTON: {
-        return f;
-      }
-      case Fiber::e_CAMELID: {
-        return f0;
-      }
-      }
-    }();
+    switch (f1) {
+    case Fiber::e_COTTON: {
+      return f;
+    }
+    case Fiber::e_CAMELID: {
+      return f0;
+    }
+    }
   }
 
   template <typename T1>
   static T1 Fiber_rec(const T1 f, const T1 f0, const Fiber f1) {
-    return [&](void) {
-      switch (f1) {
-      case Fiber::e_COTTON: {
-        return f;
-      }
-      case Fiber::e_CAMELID: {
-        return f0;
-      }
-      }
-    }();
+    switch (f1) {
+    case Fiber::e_COTTON: {
+      return f;
+    }
+    case Fiber::e_CAMELID: {
+      return f0;
+    }
+    }
   }
   enum class Color { e_WHITE, e_BROWN, e_RED, e_BLUE };
 
   template <typename T1>
   static T1 Color_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                        const Color c) {
-    return [&](void) {
-      switch (c) {
-      case Color::e_WHITE: {
-        return f;
-      }
-      case Color::e_BROWN: {
-        return f0;
-      }
-      case Color::e_RED: {
-        return f1;
-      }
-      case Color::e_BLUE: {
-        return f2;
-      }
-      }
-    }();
+    switch (c) {
+    case Color::e_WHITE: {
+      return f;
+    }
+    case Color::e_BROWN: {
+      return f0;
+    }
+    case Color::e_RED: {
+      return f1;
+    }
+    case Color::e_BLUE: {
+      return f2;
+    }
+    }
   }
 
   template <typename T1>
   static T1 Color_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                       const Color c) {
-    return [&](void) {
-      switch (c) {
-      case Color::e_WHITE: {
-        return f;
-      }
-      case Color::e_BROWN: {
-        return f0;
-      }
-      case Color::e_RED: {
-        return f1;
-      }
-      case Color::e_BLUE: {
-        return f2;
-      }
-      }
-    }();
+    switch (c) {
+    case Color::e_WHITE: {
+      return f;
+    }
+    case Color::e_BROWN: {
+      return f0;
+    }
+    case Color::e_RED: {
+      return f1;
+    }
+    case Color::e_BLUE: {
+      return f2;
+    }
+    }
   }
 
   struct CordMeta {

@@ -19,36 +19,32 @@ struct PatternImpossible {
 
   template <typename T1>
   static T1 three_rect(const T1 f, const T1 f0, const T1 f1, const Three t) {
-    return [&](void) {
-      switch (t) {
-      case Three::e_ONE: {
-        return f;
-      }
-      case Three::e_TWO: {
-        return f0;
-      }
-      case Three::e_THREE0: {
-        return f1;
-      }
-      }
-    }();
+    switch (t) {
+    case Three::e_ONE: {
+      return f;
+    }
+    case Three::e_TWO: {
+      return f0;
+    }
+    case Three::e_THREE0: {
+      return f1;
+    }
+    }
   }
 
   template <typename T1>
   static T1 three_rec(const T1 f, const T1 f0, const T1 f1, const Three t) {
-    return [&](void) {
-      switch (t) {
-      case Three::e_ONE: {
-        return f;
-      }
-      case Three::e_TWO: {
-        return f0;
-      }
-      case Three::e_THREE0: {
-        return f1;
-      }
-      }
-    }();
+    switch (t) {
+    case Three::e_ONE: {
+      return f;
+    }
+    case Three::e_TWO: {
+      return f0;
+    }
+    case Three::e_THREE0: {
+      return f1;
+    }
+    }
   }
 
   struct nested {

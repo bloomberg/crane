@@ -26,49 +26,45 @@ struct OpcodeOperandDecode {
   template <typename T1>
   static T1 instruction_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                              const T1 f3, const Instruction i) {
-    return [&](void) {
-      switch (i) {
-      case Instruction::e_NOP_: {
-        return f;
-      }
-      case Instruction::e_WRM_: {
-        return f0;
-      }
-      case Instruction::e_WRR_: {
-        return f1;
-      }
-      case Instruction::e_RDM_: {
-        return f2;
-      }
-      case Instruction::e_DCL_: {
-        return f3;
-      }
-      }
-    }();
+    switch (i) {
+    case Instruction::e_NOP_: {
+      return f;
+    }
+    case Instruction::e_WRM_: {
+      return f0;
+    }
+    case Instruction::e_WRR_: {
+      return f1;
+    }
+    case Instruction::e_RDM_: {
+      return f2;
+    }
+    case Instruction::e_DCL_: {
+      return f3;
+    }
+    }
   }
 
   template <typename T1>
   static T1 instruction_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                             const T1 f3, const Instruction i) {
-    return [&](void) {
-      switch (i) {
-      case Instruction::e_NOP_: {
-        return f;
-      }
-      case Instruction::e_WRM_: {
-        return f0;
-      }
-      case Instruction::e_WRR_: {
-        return f1;
-      }
-      case Instruction::e_RDM_: {
-        return f2;
-      }
-      case Instruction::e_DCL_: {
-        return f3;
-      }
-      }
-    }();
+    switch (i) {
+    case Instruction::e_NOP_: {
+      return f;
+    }
+    case Instruction::e_WRM_: {
+      return f0;
+    }
+    case Instruction::e_WRR_: {
+      return f1;
+    }
+    case Instruction::e_RDM_: {
+      return f2;
+    }
+    case Instruction::e_DCL_: {
+      return f3;
+    }
+    }
   }
 
   __attribute__((pure)) static Instruction decode(const unsigned int b1,

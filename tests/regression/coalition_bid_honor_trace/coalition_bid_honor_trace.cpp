@@ -367,56 +367,48 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
             return std::move(y);
           },
           [&](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-            return [&](void) {
-              if (std::move(y).use_count() == 1 &&
-                  std::move(y)->v().index() == 1) {
-                auto &_rf = std::get<1>(std::move(y)->v_mut());
-                std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
-                _rf.d_a0 = Pos::add(std::move(_args.d_a0), y_);
-                return std::move(y);
-              } else {
-                return std::visit(
-                    Overloaded{
-                        [&](const typename Z::Z0 _args0) -> std::shared_ptr<Z> {
-                          return std::move(x);
-                        },
-                        [&](const typename Z::Zpos _args0)
-                            -> std::shared_ptr<Z> {
-                          return Z::zpos(Pos::add(_args.d_a0, _args0.d_a0));
-                        },
-                        [&](const typename Z::Zneg _args0)
-                            -> std::shared_ptr<Z> {
-                          return BinInt::pos_sub(_args.d_a0, _args0.d_a0);
-                        }},
-                    std::move(y)->v());
-              }
-            }();
+            if (std::move(y).use_count() == 1 &&
+                std::move(y)->v().index() == 1) {
+              auto &_rf = std::get<1>(std::move(y)->v_mut());
+              std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
+              _rf.d_a0 = Pos::add(std::move(_args.d_a0), y_);
+              return std::move(y);
+            } else {
+              return std::visit(
+                  Overloaded{
+                      [&](const typename Z::Z0 _args0) -> std::shared_ptr<Z> {
+                        return std::move(x);
+                      },
+                      [&](const typename Z::Zpos _args0) -> std::shared_ptr<Z> {
+                        return Z::zpos(Pos::add(_args.d_a0, _args0.d_a0));
+                      },
+                      [&](const typename Z::Zneg _args0) -> std::shared_ptr<Z> {
+                        return BinInt::pos_sub(_args.d_a0, _args0.d_a0);
+                      }},
+                  std::move(y)->v());
+            }
           },
           [&](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-            return [&](void) {
-              if (std::move(y).use_count() == 1 &&
-                  std::move(y)->v().index() == 2) {
-                auto &_rf = std::get<2>(std::move(y)->v_mut());
-                std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
-                _rf.d_a0 = Pos::add(std::move(_args.d_a0), y_);
-                return std::move(y);
-              } else {
-                return std::visit(
-                    Overloaded{
-                        [&](const typename Z::Z0 _args0) -> std::shared_ptr<Z> {
-                          return std::move(x);
-                        },
-                        [&](const typename Z::Zpos _args0)
-                            -> std::shared_ptr<Z> {
-                          return BinInt::pos_sub(_args0.d_a0, _args.d_a0);
-                        },
-                        [&](const typename Z::Zneg _args0)
-                            -> std::shared_ptr<Z> {
-                          return Z::zneg(Pos::add(_args.d_a0, _args0.d_a0));
-                        }},
-                    std::move(y)->v());
-              }
-            }();
+            if (std::move(y).use_count() == 1 &&
+                std::move(y)->v().index() == 2) {
+              auto &_rf = std::get<2>(std::move(y)->v_mut());
+              std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
+              _rf.d_a0 = Pos::add(std::move(_args.d_a0), y_);
+              return std::move(y);
+            } else {
+              return std::visit(
+                  Overloaded{
+                      [&](const typename Z::Z0 _args0) -> std::shared_ptr<Z> {
+                        return std::move(x);
+                      },
+                      [&](const typename Z::Zpos _args0) -> std::shared_ptr<Z> {
+                        return BinInt::pos_sub(_args0.d_a0, _args.d_a0);
+                      },
+                      [&](const typename Z::Zneg _args0) -> std::shared_ptr<Z> {
+                        return Z::zneg(Pos::add(_args.d_a0, _args0.d_a0));
+                      }},
+                  std::move(y)->v());
+            }
           }},
       x->v());
 }
@@ -463,55 +455,47 @@ __attribute__((pure)) bool BinInt::eqb(const std::shared_ptr<Z> &x,
 __attribute__((pure)) bool CoalitionBidHonorTraceCase::clan_eq_dec(
     const CoalitionBidHonorTraceCase::Clan c1,
     const CoalitionBidHonorTraceCase::Clan c2) {
-  return [&](void) {
-    switch (c1) {
+  switch (c1) {
+  case Clan::e_CLANWOLF: {
+    switch (c2) {
     case Clan::e_CLANWOLF: {
-      return [&](void) {
-        switch (c2) {
-        case Clan::e_CLANWOLF: {
-          return true;
-        }
-        case Clan::e_CLANJADEFALCON: {
-          return false;
-        }
-        case Clan::e_CLANGHOSTBEAR: {
-          return false;
-        }
-        }
-      }();
+      return true;
     }
     case Clan::e_CLANJADEFALCON: {
-      return [&](void) {
-        switch (c2) {
-        case Clan::e_CLANWOLF: {
-          return false;
-        }
-        case Clan::e_CLANJADEFALCON: {
-          return true;
-        }
-        case Clan::e_CLANGHOSTBEAR: {
-          return false;
-        }
-        }
-      }();
+      return false;
     }
     case Clan::e_CLANGHOSTBEAR: {
-      return [&](void) {
-        switch (c2) {
-        case Clan::e_CLANWOLF: {
-          return false;
-        }
-        case Clan::e_CLANJADEFALCON: {
-          return false;
-        }
-        case Clan::e_CLANGHOSTBEAR: {
-          return true;
-        }
-        }
-      }();
+      return false;
     }
     }
-  }();
+  }
+  case Clan::e_CLANJADEFALCON: {
+    switch (c2) {
+    case Clan::e_CLANWOLF: {
+      return false;
+    }
+    case Clan::e_CLANJADEFALCON: {
+      return true;
+    }
+    case Clan::e_CLANGHOSTBEAR: {
+      return false;
+    }
+    }
+  }
+  case Clan::e_CLANGHOSTBEAR: {
+    switch (c2) {
+    case Clan::e_CLANWOLF: {
+      return false;
+    }
+    case Clan::e_CLANJADEFALCON: {
+      return false;
+    }
+    case Clan::e_CLANGHOSTBEAR: {
+      return true;
+    }
+    }
+  }
+  }
 }
 
 __attribute__((pure)) bool CoalitionBidHonorTraceCase::clan_eqb(
@@ -526,19 +510,17 @@ __attribute__((pure)) bool CoalitionBidHonorTraceCase::clan_eqb(
 
 __attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::rank_to_nat(
     const CoalitionBidHonorTraceCase::Rank r) {
-  return [&](void) {
-    switch (r) {
-    case Rank::e_WARRIOR: {
-      return 0u;
-    }
-    case Rank::e_STARCAPTAIN: {
-      return 3u;
-    }
-    case Rank::e_STARCOLONEL: {
-      return 4u;
-    }
-    }
-  }();
+  switch (r) {
+  case Rank::e_WARRIOR: {
+    return 0u;
+  }
+  case Rank::e_STARCAPTAIN: {
+    return 3u;
+  }
+  case Rank::e_STARCOLONEL: {
+    return 4u;
+  }
+  }
 }
 
 __attribute__((pure)) bool
@@ -555,36 +537,32 @@ __attribute__((pure)) bool CoalitionBidHonorTraceCase::may_issue_batchall(
 __attribute__((pure)) unsigned int
 CoalitionBidHonorTraceCase::weight_class_value(
     const CoalitionBidHonorTraceCase::WeightClass w) {
-  return [&](void) {
-    switch (w) {
-    case WeightClass::e_LIGHT: {
-      return 10u;
-    }
-    case WeightClass::e_HEAVY: {
-      return 15u;
-    }
-    case WeightClass::e_ASSAULT: {
-      return 18u;
-    }
-    }
-  }();
+  switch (w) {
+  case WeightClass::e_LIGHT: {
+    return 10u;
+  }
+  case WeightClass::e_HEAVY: {
+    return 15u;
+  }
+  case WeightClass::e_ASSAULT: {
+    return 18u;
+  }
+  }
 }
 
 __attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::unit_class_bonus(
     const CoalitionBidHonorTraceCase::UnitClass c) {
-  return [&](void) {
-    switch (c) {
-    case UnitClass::e_OMNIMECH: {
-      return 20u;
-    }
-    case UnitClass::e_BATTLEMECH: {
-      return 10u;
-    }
-    case UnitClass::e_ELEMENTAL: {
-      return 15u;
-    }
-    }
-  }();
+  switch (c) {
+  case UnitClass::e_OMNIMECH: {
+    return 20u;
+  }
+  case UnitClass::e_BATTLEMECH: {
+    return 10u;
+  }
+  case UnitClass::e_ELEMENTAL: {
+    return 15u;
+  }
+  }
 }
 
 __attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::unit_skill(
@@ -852,138 +830,116 @@ CoalitionBidHonorTraceCase::valid_coalition_member_bid_b(
 __attribute__((pure)) bool CoalitionBidHonorTraceCase::is_ready(
     const CoalitionBidHonorTraceCase::ReadyStatus rs,
     const CoalitionBidHonorTraceCase::Side side) {
-  return [&](void) {
-    switch (rs) {
-    case ReadyStatus::e_NEITHERREADY: {
+  switch (rs) {
+  case ReadyStatus::e_NEITHERREADY: {
+    return false;
+  }
+  case ReadyStatus::e_ATTACKERREADY: {
+    switch (side) {
+    case Side::e_ATTACKER: {
+      return true;
+    }
+    case Side::e_DEFENDER: {
       return false;
     }
-    case ReadyStatus::e_ATTACKERREADY: {
-      return [&](void) {
-        switch (side) {
-        case Side::e_ATTACKER: {
-          return true;
-        }
-        case Side::e_DEFENDER: {
-          return false;
-        }
-        }
-      }();
     }
-    case ReadyStatus::e_DEFENDERREADY: {
-      return [&](void) {
-        switch (side) {
-        case Side::e_ATTACKER: {
-          return false;
-        }
-        case Side::e_DEFENDER: {
-          return true;
-        }
-        }
-      }();
+  }
+  case ReadyStatus::e_DEFENDERREADY: {
+    switch (side) {
+    case Side::e_ATTACKER: {
+      return false;
     }
-    case ReadyStatus::e_BOTHREADY: {
+    case Side::e_DEFENDER: {
       return true;
     }
     }
-  }();
+  }
+  case ReadyStatus::e_BOTHREADY: {
+    return true;
+  }
+  }
 }
 
 __attribute__((pure)) CoalitionBidHonorTraceCase::ReadyStatus
 CoalitionBidHonorTraceCase::set_ready(
     const CoalitionBidHonorTraceCase::ReadyStatus rs,
     const CoalitionBidHonorTraceCase::Side side) {
-  return [&](void) {
-    switch (rs) {
-    case ReadyStatus::e_NEITHERREADY: {
-      return [&](void) {
-        switch (side) {
-        case Side::e_ATTACKER: {
-          return ReadyStatus::e_ATTACKERREADY;
-        }
-        case Side::e_DEFENDER: {
-          return ReadyStatus::e_DEFENDERREADY;
-        }
-        }
-      }();
+  switch (rs) {
+  case ReadyStatus::e_NEITHERREADY: {
+    switch (side) {
+    case Side::e_ATTACKER: {
+      return ReadyStatus::e_ATTACKERREADY;
     }
-    case ReadyStatus::e_ATTACKERREADY: {
-      return [&](void) {
-        switch (side) {
-        case Side::e_ATTACKER: {
-          return rs;
-        }
-        case Side::e_DEFENDER: {
-          return ReadyStatus::e_BOTHREADY;
-        }
-        }
-      }();
+    case Side::e_DEFENDER: {
+      return ReadyStatus::e_DEFENDERREADY;
     }
-    case ReadyStatus::e_DEFENDERREADY: {
-      return [&](void) {
-        switch (side) {
-        case Side::e_ATTACKER: {
-          return ReadyStatus::e_BOTHREADY;
-        }
-        case Side::e_DEFENDER: {
-          return rs;
-        }
-        }
-      }();
     }
-    case ReadyStatus::e_BOTHREADY: {
+  }
+  case ReadyStatus::e_ATTACKERREADY: {
+    switch (side) {
+    case Side::e_ATTACKER: {
+      return rs;
+    }
+    case Side::e_DEFENDER: {
+      return ReadyStatus::e_BOTHREADY;
+    }
+    }
+  }
+  case ReadyStatus::e_DEFENDERREADY: {
+    switch (side) {
+    case Side::e_ATTACKER: {
+      return ReadyStatus::e_BOTHREADY;
+    }
+    case Side::e_DEFENDER: {
       return rs;
     }
     }
-  }();
+  }
+  case ReadyStatus::e_BOTHREADY: {
+    return rs;
+  }
+  }
 }
 
 __attribute__((pure)) CoalitionBidHonorTraceCase::ReadyStatus
 CoalitionBidHonorTraceCase::clear_ready(
     const CoalitionBidHonorTraceCase::ReadyStatus rs,
     const CoalitionBidHonorTraceCase::Side side) {
-  return [&](void) {
-    switch (rs) {
-    case ReadyStatus::e_NEITHERREADY: {
+  switch (rs) {
+  case ReadyStatus::e_NEITHERREADY: {
+    return rs;
+  }
+  case ReadyStatus::e_ATTACKERREADY: {
+    switch (side) {
+    case Side::e_ATTACKER: {
+      return ReadyStatus::e_NEITHERREADY;
+    }
+    case Side::e_DEFENDER: {
       return rs;
     }
-    case ReadyStatus::e_ATTACKERREADY: {
-      return [&](void) {
-        switch (side) {
-        case Side::e_ATTACKER: {
-          return ReadyStatus::e_NEITHERREADY;
-        }
-        case Side::e_DEFENDER: {
-          return rs;
-        }
-        }
-      }();
     }
-    case ReadyStatus::e_DEFENDERREADY: {
-      return [&](void) {
-        switch (side) {
-        case Side::e_ATTACKER: {
-          return rs;
-        }
-        case Side::e_DEFENDER: {
-          return ReadyStatus::e_NEITHERREADY;
-        }
-        }
-      }();
+  }
+  case ReadyStatus::e_DEFENDERREADY: {
+    switch (side) {
+    case Side::e_ATTACKER: {
+      return rs;
     }
-    case ReadyStatus::e_BOTHREADY: {
-      return [&](void) {
-        switch (side) {
-        case Side::e_ATTACKER: {
-          return ReadyStatus::e_DEFENDERREADY;
-        }
-        case Side::e_DEFENDER: {
-          return ReadyStatus::e_ATTACKERREADY;
-        }
-        }
-      }();
+    case Side::e_DEFENDER: {
+      return ReadyStatus::e_NEITHERREADY;
     }
     }
-  }();
+  }
+  case ReadyStatus::e_BOTHREADY: {
+    switch (side) {
+    case Side::e_ATTACKER: {
+      return ReadyStatus::e_DEFENDERREADY;
+    }
+    case Side::e_DEFENDER: {
+      return ReadyStatus::e_ATTACKERREADY;
+    }
+    }
+  }
+  }
 }
 
 __attribute__((pure)) CoalitionBidHonorTraceCase::Force

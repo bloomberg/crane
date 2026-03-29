@@ -5,8 +5,6 @@
 
 std::shared_ptr<QualifiedRecordShadow::Shadow> QualifiedRecordShadow::bump(
     const std::shared_ptr<QualifiedRecordShadow::Shadow> &x) {
-  return [&](void) {
-    unsigned int n = x->Shadow::value;
-    return std::make_shared<QualifiedRecordShadow::Shadow>(Shadow{(n + 1)});
-  }();
+  unsigned int n = x->Shadow::value;
+  return std::make_shared<QualifiedRecordShadow::Shadow>(Shadow{(n + 1)});
 }

@@ -383,56 +383,48 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
             return std::move(y);
           },
           [&](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-            return [&](void) {
-              if (std::move(y).use_count() == 1 &&
-                  std::move(y)->v().index() == 1) {
-                auto &_rf = std::get<1>(std::move(y)->v_mut());
-                std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
-                _rf.d_a0 = Pos::add(std::move(_args.d_a0), y_);
-                return std::move(y);
-              } else {
-                return std::visit(
-                    Overloaded{
-                        [&](const typename Z::Z0 _args0) -> std::shared_ptr<Z> {
-                          return std::move(x);
-                        },
-                        [&](const typename Z::Zpos _args0)
-                            -> std::shared_ptr<Z> {
-                          return Z::zpos(Pos::add(_args.d_a0, _args0.d_a0));
-                        },
-                        [&](const typename Z::Zneg _args0)
-                            -> std::shared_ptr<Z> {
-                          return BinInt::pos_sub(_args.d_a0, _args0.d_a0);
-                        }},
-                    std::move(y)->v());
-              }
-            }();
+            if (std::move(y).use_count() == 1 &&
+                std::move(y)->v().index() == 1) {
+              auto &_rf = std::get<1>(std::move(y)->v_mut());
+              std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
+              _rf.d_a0 = Pos::add(std::move(_args.d_a0), y_);
+              return std::move(y);
+            } else {
+              return std::visit(
+                  Overloaded{
+                      [&](const typename Z::Z0 _args0) -> std::shared_ptr<Z> {
+                        return std::move(x);
+                      },
+                      [&](const typename Z::Zpos _args0) -> std::shared_ptr<Z> {
+                        return Z::zpos(Pos::add(_args.d_a0, _args0.d_a0));
+                      },
+                      [&](const typename Z::Zneg _args0) -> std::shared_ptr<Z> {
+                        return BinInt::pos_sub(_args.d_a0, _args0.d_a0);
+                      }},
+                  std::move(y)->v());
+            }
           },
           [&](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-            return [&](void) {
-              if (std::move(y).use_count() == 1 &&
-                  std::move(y)->v().index() == 2) {
-                auto &_rf = std::get<2>(std::move(y)->v_mut());
-                std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
-                _rf.d_a0 = Pos::add(std::move(_args.d_a0), y_);
-                return std::move(y);
-              } else {
-                return std::visit(
-                    Overloaded{
-                        [&](const typename Z::Z0 _args0) -> std::shared_ptr<Z> {
-                          return std::move(x);
-                        },
-                        [&](const typename Z::Zpos _args0)
-                            -> std::shared_ptr<Z> {
-                          return BinInt::pos_sub(_args0.d_a0, _args.d_a0);
-                        },
-                        [&](const typename Z::Zneg _args0)
-                            -> std::shared_ptr<Z> {
-                          return Z::zneg(Pos::add(_args.d_a0, _args0.d_a0));
-                        }},
-                    std::move(y)->v());
-              }
-            }();
+            if (std::move(y).use_count() == 1 &&
+                std::move(y)->v().index() == 2) {
+              auto &_rf = std::get<2>(std::move(y)->v_mut());
+              std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
+              _rf.d_a0 = Pos::add(std::move(_args.d_a0), y_);
+              return std::move(y);
+            } else {
+              return std::visit(
+                  Overloaded{
+                      [&](const typename Z::Z0 _args0) -> std::shared_ptr<Z> {
+                        return std::move(x);
+                      },
+                      [&](const typename Z::Zpos _args0) -> std::shared_ptr<Z> {
+                        return BinInt::pos_sub(_args0.d_a0, _args.d_a0);
+                      },
+                      [&](const typename Z::Zneg _args0) -> std::shared_ptr<Z> {
+                        return Z::zneg(Pos::add(_args.d_a0, _args0.d_a0));
+                      }},
+                  std::move(y)->v());
+            }
           }},
       x->v());
 }
@@ -543,36 +535,32 @@ __attribute__((pure)) Comparison BinInt::compare(const std::shared_ptr<Z> &x,
 
 __attribute__((pure)) bool BinInt::leb(const std::shared_ptr<Z> &x,
                                        const std::shared_ptr<Z> &y) {
-  return [&](void) {
-    switch (BinInt::compare(x, y)) {
-    case Comparison::e_EQ: {
-      return true;
-    }
-    case Comparison::e_LT: {
-      return true;
-    }
-    case Comparison::e_GT: {
-      return false;
-    }
-    }
-  }();
+  switch (BinInt::compare(x, y)) {
+  case Comparison::e_EQ: {
+    return true;
+  }
+  case Comparison::e_LT: {
+    return true;
+  }
+  case Comparison::e_GT: {
+    return false;
+  }
+  }
 }
 
 __attribute__((pure)) bool BinInt::ltb(const std::shared_ptr<Z> &x,
                                        const std::shared_ptr<Z> &y) {
-  return [&](void) {
-    switch (BinInt::compare(x, y)) {
-    case Comparison::e_EQ: {
-      return false;
-    }
-    case Comparison::e_LT: {
-      return true;
-    }
-    case Comparison::e_GT: {
-      return false;
-    }
-    }
-  }();
+  switch (BinInt::compare(x, y)) {
+  case Comparison::e_EQ: {
+    return false;
+  }
+  case Comparison::e_LT: {
+    return true;
+  }
+  case Comparison::e_GT: {
+    return false;
+  }
+  }
 }
 
 __attribute__((pure)) bool BinInt::eqb(const std::shared_ptr<Z> &x,
@@ -819,22 +807,20 @@ std::shared_ptr<Z> BinInt::abs(const std::shared_ptr<Z> &z) {
 
 __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::phase_code(
     const EpochCellGlyphTraceCase::LunarPhase p) {
-  return [&](void) {
-    switch (p) {
-    case LunarPhase::e_NEWMOON: {
-      return 0u;
-    }
-    case LunarPhase::e_FIRSTQUARTER: {
-      return 1u;
-    }
-    case LunarPhase::e_FULLMOON: {
-      return 2u;
-    }
-    case LunarPhase::e_LASTQUARTER: {
-      return 3u;
-    }
-    }
-  }();
+  switch (p) {
+  case LunarPhase::e_NEWMOON: {
+    return 0u;
+  }
+  case LunarPhase::e_FIRSTQUARTER: {
+    return 1u;
+  }
+  case LunarPhase::e_FULLMOON: {
+    return 2u;
+  }
+  case LunarPhase::e_LASTQUARTER: {
+    return 3u;
+  }
+  }
 }
 
 __attribute__((pure)) EpochCellGlyphTraceCase::LunarPhase
@@ -873,46 +859,44 @@ EpochCellGlyphTraceCase::phase_from_angle(const std::shared_ptr<Z> &angle_deg) {
 
 __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::zodiac_code(
     const EpochCellGlyphTraceCase::ZodiacSign z) {
-  return [&](void) {
-    switch (z) {
-    case ZodiacSign::e_ARIES: {
-      return 0u;
-    }
-    case ZodiacSign::e_TAURUS: {
-      return 1u;
-    }
-    case ZodiacSign::e_GEMINI: {
-      return 2u;
-    }
-    case ZodiacSign::e_CANCER: {
-      return 3u;
-    }
-    case ZodiacSign::e_LEO: {
-      return 4u;
-    }
-    case ZodiacSign::e_VIRGO: {
-      return 5u;
-    }
-    case ZodiacSign::e_LIBRA: {
-      return 6u;
-    }
-    case ZodiacSign::e_SCORPIO: {
-      return 7u;
-    }
-    case ZodiacSign::e_SAGITTARIUS: {
-      return 8u;
-    }
-    case ZodiacSign::e_CAPRICORN: {
-      return 9u;
-    }
-    case ZodiacSign::e_AQUARIUS: {
-      return 10u;
-    }
-    case ZodiacSign::e_PISCES: {
-      return 11u;
-    }
-    }
-  }();
+  switch (z) {
+  case ZodiacSign::e_ARIES: {
+    return 0u;
+  }
+  case ZodiacSign::e_TAURUS: {
+    return 1u;
+  }
+  case ZodiacSign::e_GEMINI: {
+    return 2u;
+  }
+  case ZodiacSign::e_CANCER: {
+    return 3u;
+  }
+  case ZodiacSign::e_LEO: {
+    return 4u;
+  }
+  case ZodiacSign::e_VIRGO: {
+    return 5u;
+  }
+  case ZodiacSign::e_LIBRA: {
+    return 6u;
+  }
+  case ZodiacSign::e_SCORPIO: {
+    return 7u;
+  }
+  case ZodiacSign::e_SAGITTARIUS: {
+    return 8u;
+  }
+  case ZodiacSign::e_CAPRICORN: {
+    return 9u;
+  }
+  case ZodiacSign::e_AQUARIUS: {
+    return 10u;
+  }
+  case ZodiacSign::e_PISCES: {
+    return 11u;
+  }
+  }
 }
 
 __attribute__((pure)) bool EpochCellGlyphTraceCase::eclipse_possible_at_dial(
@@ -1118,162 +1102,146 @@ EpochCellGlyphTraceCase::predict_zodiac_sign(
 __attribute__((pure)) unsigned int
 EpochCellGlyphTraceCase::eclipse_category_code(
     const EpochCellGlyphTraceCase::EclipseCategory c) {
-  return [&](void) {
-    switch (c) {
-    case EclipseCategory::e_EC_TOTALLUNAR: {
-      return 0u;
-    }
-    case EclipseCategory::e_EC_PARTIALLUNAR: {
-      return 1u;
-    }
-    case EclipseCategory::e_EC_TOTALSOLAR: {
-      return 2u;
-    }
-    case EclipseCategory::e_EC_ANNULARSOLAR: {
-      return 3u;
-    }
-    case EclipseCategory::e_EC_PARTIALSOLAR: {
-      return 4u;
-    }
-    }
-  }();
+  switch (c) {
+  case EclipseCategory::e_EC_TOTALLUNAR: {
+    return 0u;
+  }
+  case EclipseCategory::e_EC_PARTIALLUNAR: {
+    return 1u;
+  }
+  case EclipseCategory::e_EC_TOTALSOLAR: {
+    return 2u;
+  }
+  case EclipseCategory::e_EC_ANNULARSOLAR: {
+    return 3u;
+  }
+  case EclipseCategory::e_EC_PARTIALSOLAR: {
+    return 4u;
+  }
+  }
 }
 
 __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::glyph_code(
     const EpochCellGlyphTraceCase::DialGlyph g) {
-  return [&](void) {
-    switch (g) {
-    case DialGlyph::e_GLYPH_SIGMA: {
-      return 0u;
-    }
-    case DialGlyph::e_GLYPH_ETA: {
-      return 1u;
-    }
-    case DialGlyph::e_GLYPH_SIGMATOTAL: {
-      return 2u;
-    }
-    case DialGlyph::e_GLYPH_ETAANNULAR: {
-      return 3u;
-    }
-    case DialGlyph::e_GLYPH_EMPTY: {
-      return 4u;
-    }
-    }
-  }();
+  switch (g) {
+  case DialGlyph::e_GLYPH_SIGMA: {
+    return 0u;
+  }
+  case DialGlyph::e_GLYPH_ETA: {
+    return 1u;
+  }
+  case DialGlyph::e_GLYPH_SIGMATOTAL: {
+    return 2u;
+  }
+  case DialGlyph::e_GLYPH_ETAANNULAR: {
+    return 3u;
+  }
+  case DialGlyph::e_GLYPH_EMPTY: {
+    return 4u;
+  }
+  }
 }
 
 __attribute__((pure)) bool EpochCellGlyphTraceCase::category_matches_glyph(
     const EpochCellGlyphTraceCase::EclipseCategory cat,
     const EpochCellGlyphTraceCase::DialGlyph g) {
-  return [&](void) {
-    switch (cat) {
-    case EclipseCategory::e_EC_TOTALLUNAR: {
-      return [&](void) {
-        switch (g) {
-        case DialGlyph::e_GLYPH_SIGMA: {
-          return true;
-        }
-        case DialGlyph::e_GLYPH_ETA: {
-          return false;
-        }
-        case DialGlyph::e_GLYPH_SIGMATOTAL: {
-          return true;
-        }
-        case DialGlyph::e_GLYPH_ETAANNULAR: {
-          return false;
-        }
-        case DialGlyph::e_GLYPH_EMPTY: {
-          return false;
-        }
-        }
-      }();
+  switch (cat) {
+  case EclipseCategory::e_EC_TOTALLUNAR: {
+    switch (g) {
+    case DialGlyph::e_GLYPH_SIGMA: {
+      return true;
     }
-    case EclipseCategory::e_EC_PARTIALLUNAR: {
-      return [&](void) {
-        switch (g) {
-        case DialGlyph::e_GLYPH_SIGMA: {
-          return true;
-        }
-        case DialGlyph::e_GLYPH_ETA: {
-          return false;
-        }
-        case DialGlyph::e_GLYPH_SIGMATOTAL: {
-          return false;
-        }
-        case DialGlyph::e_GLYPH_ETAANNULAR: {
-          return false;
-        }
-        case DialGlyph::e_GLYPH_EMPTY: {
-          return false;
-        }
-        }
-      }();
+    case DialGlyph::e_GLYPH_ETA: {
+      return false;
     }
-    case EclipseCategory::e_EC_TOTALSOLAR: {
-      return [&](void) {
-        switch (g) {
-        case DialGlyph::e_GLYPH_SIGMA: {
-          return false;
-        }
-        case DialGlyph::e_GLYPH_ETA: {
-          return true;
-        }
-        case DialGlyph::e_GLYPH_SIGMATOTAL: {
-          return false;
-        }
-        case DialGlyph::e_GLYPH_ETAANNULAR: {
-          return false;
-        }
-        case DialGlyph::e_GLYPH_EMPTY: {
-          return false;
-        }
-        }
-      }();
+    case DialGlyph::e_GLYPH_SIGMATOTAL: {
+      return true;
     }
-    case EclipseCategory::e_EC_ANNULARSOLAR: {
-      return [&](void) {
-        switch (g) {
-        case DialGlyph::e_GLYPH_SIGMA: {
-          return false;
-        }
-        case DialGlyph::e_GLYPH_ETA: {
-          return true;
-        }
-        case DialGlyph::e_GLYPH_SIGMATOTAL: {
-          return false;
-        }
-        case DialGlyph::e_GLYPH_ETAANNULAR: {
-          return true;
-        }
-        case DialGlyph::e_GLYPH_EMPTY: {
-          return false;
-        }
-        }
-      }();
+    case DialGlyph::e_GLYPH_ETAANNULAR: {
+      return false;
     }
-    case EclipseCategory::e_EC_PARTIALSOLAR: {
-      return [&](void) {
-        switch (g) {
-        case DialGlyph::e_GLYPH_SIGMA: {
-          return false;
-        }
-        case DialGlyph::e_GLYPH_ETA: {
-          return true;
-        }
-        case DialGlyph::e_GLYPH_SIGMATOTAL: {
-          return false;
-        }
-        case DialGlyph::e_GLYPH_ETAANNULAR: {
-          return false;
-        }
-        case DialGlyph::e_GLYPH_EMPTY: {
-          return false;
-        }
-        }
-      }();
+    case DialGlyph::e_GLYPH_EMPTY: {
+      return false;
     }
     }
-  }();
+  }
+  case EclipseCategory::e_EC_PARTIALLUNAR: {
+    switch (g) {
+    case DialGlyph::e_GLYPH_SIGMA: {
+      return true;
+    }
+    case DialGlyph::e_GLYPH_ETA: {
+      return false;
+    }
+    case DialGlyph::e_GLYPH_SIGMATOTAL: {
+      return false;
+    }
+    case DialGlyph::e_GLYPH_ETAANNULAR: {
+      return false;
+    }
+    case DialGlyph::e_GLYPH_EMPTY: {
+      return false;
+    }
+    }
+  }
+  case EclipseCategory::e_EC_TOTALSOLAR: {
+    switch (g) {
+    case DialGlyph::e_GLYPH_SIGMA: {
+      return false;
+    }
+    case DialGlyph::e_GLYPH_ETA: {
+      return true;
+    }
+    case DialGlyph::e_GLYPH_SIGMATOTAL: {
+      return false;
+    }
+    case DialGlyph::e_GLYPH_ETAANNULAR: {
+      return false;
+    }
+    case DialGlyph::e_GLYPH_EMPTY: {
+      return false;
+    }
+    }
+  }
+  case EclipseCategory::e_EC_ANNULARSOLAR: {
+    switch (g) {
+    case DialGlyph::e_GLYPH_SIGMA: {
+      return false;
+    }
+    case DialGlyph::e_GLYPH_ETA: {
+      return true;
+    }
+    case DialGlyph::e_GLYPH_SIGMATOTAL: {
+      return false;
+    }
+    case DialGlyph::e_GLYPH_ETAANNULAR: {
+      return true;
+    }
+    case DialGlyph::e_GLYPH_EMPTY: {
+      return false;
+    }
+    }
+  }
+  case EclipseCategory::e_EC_PARTIALSOLAR: {
+    switch (g) {
+    case DialGlyph::e_GLYPH_SIGMA: {
+      return false;
+    }
+    case DialGlyph::e_GLYPH_ETA: {
+      return true;
+    }
+    case DialGlyph::e_GLYPH_SIGMATOTAL: {
+      return false;
+    }
+    case DialGlyph::e_GLYPH_ETAANNULAR: {
+      return false;
+    }
+    case DialGlyph::e_GLYPH_EMPTY: {
+      return false;
+    }
+    }
+  }
+  }
 }
 
 __attribute__((pure)) EpochCellGlyphTraceCase::DialGlyph
@@ -1470,19 +1438,17 @@ EpochCellGlyphTraceCase::zodiac_code_after_steps(const unsigned int n) {
 }
 
 __attribute__((pure)) Comparison Datatypes::CompOpp(const Comparison r) {
-  return [&](void) {
-    switch (r) {
-    case Comparison::e_EQ: {
-      return Comparison::e_EQ;
-    }
-    case Comparison::e_LT: {
-      return Comparison::e_GT;
-    }
-    case Comparison::e_GT: {
-      return Comparison::e_LT;
-    }
-    }
-  }();
+  switch (r) {
+  case Comparison::e_EQ: {
+    return Comparison::e_EQ;
+  }
+  case Comparison::e_LT: {
+    return Comparison::e_GT;
+  }
+  case Comparison::e_GT: {
+    return Comparison::e_LT;
+  }
+  }
 }
 
 __attribute__((pure)) bool QArith_base::Qle_bool(std::shared_ptr<Q> x,

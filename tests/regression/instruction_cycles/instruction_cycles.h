@@ -292,74 +292,70 @@ struct InstructionCycles {
   static T1 instr3_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                         const T1 f3, const T1 f4, const T1 f5, const T1 f6,
                         const T1 f7, const Instr3 i) {
-    return [&](void) {
-      switch (i) {
-      case Instr3::e_NOP3: {
-        return f;
-      }
-      case Instr3::e_ADD3: {
-        return f0;
-      }
-      case Instr3::e_WRM3: {
-        return f1;
-      }
-      case Instr3::e_FIM3: {
-        return f2;
-      }
-      case Instr3::e_JMS3: {
-        return f3;
-      }
-      case Instr3::e_JCNTAKEN3: {
-        return f4;
-      }
-      case Instr3::e_JCNNOTTAKEN3: {
-        return f5;
-      }
-      case Instr3::e_ISZTAKEN3: {
-        return f6;
-      }
-      case Instr3::e_ISZZERO3: {
-        return f7;
-      }
-      }
-    }();
+    switch (i) {
+    case Instr3::e_NOP3: {
+      return f;
+    }
+    case Instr3::e_ADD3: {
+      return f0;
+    }
+    case Instr3::e_WRM3: {
+      return f1;
+    }
+    case Instr3::e_FIM3: {
+      return f2;
+    }
+    case Instr3::e_JMS3: {
+      return f3;
+    }
+    case Instr3::e_JCNTAKEN3: {
+      return f4;
+    }
+    case Instr3::e_JCNNOTTAKEN3: {
+      return f5;
+    }
+    case Instr3::e_ISZTAKEN3: {
+      return f6;
+    }
+    case Instr3::e_ISZZERO3: {
+      return f7;
+    }
+    }
   }
 
   template <typename T1>
   static T1 instr3_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                        const T1 f3, const T1 f4, const T1 f5, const T1 f6,
                        const T1 f7, const Instr3 i) {
-    return [&](void) {
-      switch (i) {
-      case Instr3::e_NOP3: {
-        return f;
-      }
-      case Instr3::e_ADD3: {
-        return f0;
-      }
-      case Instr3::e_WRM3: {
-        return f1;
-      }
-      case Instr3::e_FIM3: {
-        return f2;
-      }
-      case Instr3::e_JMS3: {
-        return f3;
-      }
-      case Instr3::e_JCNTAKEN3: {
-        return f4;
-      }
-      case Instr3::e_JCNNOTTAKEN3: {
-        return f5;
-      }
-      case Instr3::e_ISZTAKEN3: {
-        return f6;
-      }
-      case Instr3::e_ISZZERO3: {
-        return f7;
-      }
-      }
-    }();
+    switch (i) {
+    case Instr3::e_NOP3: {
+      return f;
+    }
+    case Instr3::e_ADD3: {
+      return f0;
+    }
+    case Instr3::e_WRM3: {
+      return f1;
+    }
+    case Instr3::e_FIM3: {
+      return f2;
+    }
+    case Instr3::e_JMS3: {
+      return f3;
+    }
+    case Instr3::e_JCNTAKEN3: {
+      return f4;
+    }
+    case Instr3::e_JCNNOTTAKEN3: {
+      return f5;
+    }
+    case Instr3::e_ISZTAKEN3: {
+      return f6;
+    }
+    case Instr3::e_ISZZERO3: {
+      return f7;
+    }
+    }
   }
 
   __attribute__((pure)) static unsigned int cycles_min(const Instr3 i);
@@ -401,74 +397,70 @@ struct InstructionCycles {
   static T1 instr4_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                         const T1 f3, const T1 f4, const T1 f5, const T1 f6,
                         const T1 f7, const Instr4 i) {
-    return [&](void) {
-      switch (i) {
-      case Instr4::e_NOP4: {
-        return f;
-      }
-      case Instr4::e_ADD4: {
-        return f0;
-      }
-      case Instr4::e_WRM4: {
-        return f1;
-      }
-      case Instr4::e_FIM4: {
-        return f2;
-      }
-      case Instr4::e_JMS4: {
-        return f3;
-      }
-      case Instr4::e_JCNTAKEN4: {
-        return f4;
-      }
-      case Instr4::e_JCNNOTTAKEN4: {
-        return f5;
-      }
-      case Instr4::e_ISZTAKEN4: {
-        return f6;
-      }
-      case Instr4::e_ISZZERO4: {
-        return f7;
-      }
-      }
-    }();
+    switch (i) {
+    case Instr4::e_NOP4: {
+      return f;
+    }
+    case Instr4::e_ADD4: {
+      return f0;
+    }
+    case Instr4::e_WRM4: {
+      return f1;
+    }
+    case Instr4::e_FIM4: {
+      return f2;
+    }
+    case Instr4::e_JMS4: {
+      return f3;
+    }
+    case Instr4::e_JCNTAKEN4: {
+      return f4;
+    }
+    case Instr4::e_JCNNOTTAKEN4: {
+      return f5;
+    }
+    case Instr4::e_ISZTAKEN4: {
+      return f6;
+    }
+    case Instr4::e_ISZZERO4: {
+      return f7;
+    }
+    }
   }
 
   template <typename T1>
   static T1 instr4_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                        const T1 f3, const T1 f4, const T1 f5, const T1 f6,
                        const T1 f7, const Instr4 i) {
-    return [&](void) {
-      switch (i) {
-      case Instr4::e_NOP4: {
-        return f;
-      }
-      case Instr4::e_ADD4: {
-        return f0;
-      }
-      case Instr4::e_WRM4: {
-        return f1;
-      }
-      case Instr4::e_FIM4: {
-        return f2;
-      }
-      case Instr4::e_JMS4: {
-        return f3;
-      }
-      case Instr4::e_JCNTAKEN4: {
-        return f4;
-      }
-      case Instr4::e_JCNNOTTAKEN4: {
-        return f5;
-      }
-      case Instr4::e_ISZTAKEN4: {
-        return f6;
-      }
-      case Instr4::e_ISZZERO4: {
-        return f7;
-      }
-      }
-    }();
+    switch (i) {
+    case Instr4::e_NOP4: {
+      return f;
+    }
+    case Instr4::e_ADD4: {
+      return f0;
+    }
+    case Instr4::e_WRM4: {
+      return f1;
+    }
+    case Instr4::e_FIM4: {
+      return f2;
+    }
+    case Instr4::e_JMS4: {
+      return f3;
+    }
+    case Instr4::e_JCNTAKEN4: {
+      return f4;
+    }
+    case Instr4::e_JCNNOTTAKEN4: {
+      return f5;
+    }
+    case Instr4::e_ISZTAKEN4: {
+      return f6;
+    }
+    case Instr4::e_ISZZERO4: {
+      return f7;
+    }
+    }
   }
 
   __attribute__((pure)) static unsigned int cycles_max(const Instr4 i);
@@ -633,24 +625,20 @@ struct InstructionCycles {
 
   template <typename T1>
   static T1 instruction6_rect(const T1 f, const Instruction6 i) {
-    return [&](void) {
-      switch (i) {
-      case Instruction6::e_NOP6: {
-        return f;
-      }
-      }
-    }();
+    switch (i) {
+    case Instruction6::e_NOP6: {
+      return f;
+    }
+    }
   }
 
   template <typename T1>
   static T1 instruction6_rec(const T1 f, const Instruction6 i) {
-    return [&](void) {
-      switch (i) {
-      case Instruction6::e_NOP6: {
-        return f;
-      }
-      }
-    }();
+    switch (i) {
+    case Instruction6::e_NOP6: {
+      return f;
+    }
+    }
   }
 
   struct state6 {
@@ -681,24 +669,20 @@ struct InstructionCycles {
 
   template <typename T1>
   static T1 instruction7_rect(const T1 f, const Instruction7 i) {
-    return [&](void) {
-      switch (i) {
-      case Instruction7::e_NOP7: {
-        return f;
-      }
-      }
-    }();
+    switch (i) {
+    case Instruction7::e_NOP7: {
+      return f;
+    }
+    }
   }
 
   template <typename T1>
   static T1 instruction7_rec(const T1 f, const Instruction7 i) {
-    return [&](void) {
-      switch (i) {
-      case Instruction7::e_NOP7: {
-        return f;
-      }
-      }
-    }();
+    switch (i) {
+    case Instruction7::e_NOP7: {
+      return f;
+    }
+    }
   }
 
   struct state7 {

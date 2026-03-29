@@ -18,72 +18,68 @@ __attribute__((pure)) unsigned int InstructionCycles::cycles_jms(
 
 __attribute__((pure)) unsigned int
 InstructionCycles::cycles_min(const InstructionCycles::Instr3 i) {
-  return [&](void) {
-    switch (i) {
-    case Instr3::e_NOP3: {
-      return 8u;
-    }
-    case Instr3::e_ADD3: {
-      return 8u;
-    }
-    case Instr3::e_WRM3: {
-      return 8u;
-    }
-    case Instr3::e_FIM3: {
-      return 16u;
-    }
-    case Instr3::e_JMS3: {
-      return 24u;
-    }
-    case Instr3::e_JCNTAKEN3: {
-      return 16u;
-    }
-    case Instr3::e_JCNNOTTAKEN3: {
-      return 8u;
-    }
-    case Instr3::e_ISZTAKEN3: {
-      return 16u;
-    }
-    case Instr3::e_ISZZERO3: {
-      return 8u;
-    }
-    }
-  }();
+  switch (i) {
+  case Instr3::e_NOP3: {
+    return 8u;
+  }
+  case Instr3::e_ADD3: {
+    return 8u;
+  }
+  case Instr3::e_WRM3: {
+    return 8u;
+  }
+  case Instr3::e_FIM3: {
+    return 16u;
+  }
+  case Instr3::e_JMS3: {
+    return 24u;
+  }
+  case Instr3::e_JCNTAKEN3: {
+    return 16u;
+  }
+  case Instr3::e_JCNNOTTAKEN3: {
+    return 8u;
+  }
+  case Instr3::e_ISZTAKEN3: {
+    return 16u;
+  }
+  case Instr3::e_ISZZERO3: {
+    return 8u;
+  }
+  }
 }
 
 __attribute__((pure)) unsigned int
 InstructionCycles::cycles_max(const InstructionCycles::Instr4 i) {
-  return [&](void) {
-    switch (i) {
-    case Instr4::e_NOP4: {
-      return 8u;
-    }
-    case Instr4::e_ADD4: {
-      return 8u;
-    }
-    case Instr4::e_WRM4: {
-      return 8u;
-    }
-    case Instr4::e_FIM4: {
-      return 16u;
-    }
-    case Instr4::e_JMS4: {
-      return 24u;
-    }
-    case Instr4::e_JCNTAKEN4: {
-      return 16u;
-    }
-    case Instr4::e_JCNNOTTAKEN4: {
-      return 8u;
-    }
-    case Instr4::e_ISZTAKEN4: {
-      return 16u;
-    }
-    case Instr4::e_ISZZERO4: {
-      return 8u;
-    }
-    }
-  }();
+  switch (i) {
+  case Instr4::e_NOP4: {
+    return 8u;
+  }
+  case Instr4::e_ADD4: {
+    return 8u;
+  }
+  case Instr4::e_WRM4: {
+    return 8u;
+  }
+  case Instr4::e_FIM4: {
+    return 16u;
+  }
+  case Instr4::e_JMS4: {
+    return 24u;
+  }
+  case Instr4::e_JCNTAKEN4: {
+    return 16u;
+  }
+  case Instr4::e_JCNNOTTAKEN4: {
+    return 8u;
+  }
+  case Instr4::e_ISZTAKEN4: {
+    return 16u;
+  }
+  case Instr4::e_ISZZERO4: {
+    return 8u;
+  }
+  }
 }
 
 std::shared_ptr<InstructionCycles::state5> InstructionCycles::execute5(

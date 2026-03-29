@@ -14,13 +14,11 @@ __attribute__((pure)) unsigned int UnitType::take_unit(const Unit _x) {
 }
 
 __attribute__((pure)) unsigned int UnitType::match_unit(const Unit u) {
-  return [&](void) {
-    switch (u) {
-    case Unit::e_TT: {
-      return 7u;
-    }
-    }
-  }();
+  switch (u) {
+  case Unit::e_TT: {
+    return 7u;
+  }
+  }
 }
 
 __attribute__((pure)) Unit UnitType::unit_to_unit(const Unit u) { return u; }

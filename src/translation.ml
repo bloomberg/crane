@@ -3331,6 +3331,104 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   in
   Scustom_case (typ, t, temps, gen_cases (Array.to_list pv), cmatch)
 
+(** {2 IIFE Inlining}
+
+    When [gen_expr] wraps multi-statement code in an immediately-invoked
+    function expression (IIFE):
+    {[
+      [&]() \{
+        unsigned int x = p->px;
+        unsigned int y = p->py;
+        return (x + y);
+      \}()
+    ]}
+    and the result is consumed at statement level (e.g. by [Sreturn] or
+    [Sasgn]), the lambda wrapper is unnecessary.  {!inline_iife} detects
+    this pattern and flattens the body statements, replacing the final
+    [return] with the enclosing continuation:
+    {[
+      unsigned int x = p->px;
+      unsigned int y = p->py;
+      return (x + y);
+    ]}
+    This produces more readable C++ and avoids interfering with compiler
+    optimisations (e.g. copy elision / RVO through a lambda boundary). *)
+
+(** [inline_iife k expr] checks whether [expr] is an IIFE
+    ([CPPfun_call(CPPlambda(\[\], _, body, _), \[\])]).  If so, it replaces
+    the final [Sreturn(Some v)] in [body] with [k v] and returns the
+    inlined statement list.  Otherwise it falls back to [\[k expr\]].
+
+    Only zero-argument, zero-parameter IIFEs are inlined — parameterised
+    lambdas and those with explicit return-type annotations involving
+    captures are left untouched, since they may have name-scoping or
+    type-deduction side-effects.
+
+    @param k     the statement-level continuation (e.g. [Sreturn], [Sasgn])
+    @param expr  the expression produced by [gen_expr] *)
+and inline_iife (k : cpp_expr -> cpp_stmt) = function
+  | CPPfun_call (CPPlambda ([], _, body, _), []) when body <> [] ->
+    let k_is_return =
+      match k (CPPint 0) with Sreturn _ -> true | _ -> false
+    in
+    if not k_is_return then
+      (* Non-return continuations (e.g. Sasgn for let-bindings) keep the
+         IIFE to prevent name clashes between variables from separately
+         inlined IIFEs in the same block scope. *)
+      [k (CPPfun_call (CPPlambda ([], None, body, false), []))]
+    else
+    (* Replace each [Sreturn(Some v)] in the IIFE body with [k(v)] and
+       emit the body statements directly, eliminating the lambda wrapper.
+
+       Since k is guaranteed to produce [Sreturn], inlining into
+       [Sswitch] and [Scustom_case] is safe — [return] preserves the
+       "exit the enclosing case" semantics.  [Sif] is always safe
+       because if/else branches are mutually exclusive. *)
+    let try_all_branches transform branches =
+      let results = List.map transform branches in
+      if List.for_all (fun x -> x <> None) results then
+        Some (List.filter_map Fun.id results)
+      else None
+    in
+    let rec replace_last_return = function
+      | [Sreturn (Some v)] -> Some [k v]
+      | [Sreturn None] -> None  (* void return — cannot apply k *)
+      | [Sif (c, then_br, else_br)] ->
+        ( match (replace_last_return then_br, replace_last_return else_br) with
+        | Some then_br', Some else_br' -> Some [Sif (c, then_br', else_br')]
+        | _ -> None )
+      | [Sswitch (scrut, ind_ref, branches)] ->
+        ( match try_all_branches
+            (fun (id, stmts) ->
+              match replace_last_return stmts with
+              | Some stmts' -> Some (id, stmts')
+              | None -> None )
+            branches
+        with
+        | Some branches' -> Some [Sswitch (scrut, ind_ref, branches')]
+        | None -> None )
+      | [Scustom_case (ty, scrut, tyargs, branches, cmatch)] ->
+        ( match try_all_branches
+            (fun (args, bty, stmts) ->
+              match replace_last_return stmts with
+              | Some stmts' -> Some (args, bty, stmts')
+              | None -> None )
+            branches
+        with
+        | Some branches' ->
+          Some [Scustom_case (ty, scrut, tyargs, branches', cmatch)]
+        | None -> None )
+      | stmt :: rest when rest <> [] ->
+        ( match replace_last_return rest with
+        | Some rest' -> Some (stmt :: rest')
+        | None -> None )
+      | _ -> None
+    in
+    ( match replace_last_return body with
+    | Some stmts -> stmts
+    | None -> [k (CPPfun_call (CPPlambda ([], None, body, false), []))] )
+  | expr -> [k expr]
+
 (** Generate C++ statements from an ML AST. The continuation [k] transforms the
     final expression into a statement (e.g., return, assignment). Handles
     let-bindings, pattern matching, fix expressions, and monadic operations. *)
@@ -4384,7 +4482,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         in
         tctx.move_dead_after <-
           Escape.IntSet.union tctx.move_dead_after tail_dead );
-    let result = [k (gen_expr env t)] in
+    let result = inline_iife k (gen_expr env t) in
     tctx.move_dead_after <- saved_dead;
     result
 

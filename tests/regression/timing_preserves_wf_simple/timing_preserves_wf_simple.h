@@ -18,49 +18,45 @@ struct TimingPreservesWfSimple {
   template <typename T1>
   static T1 instr_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                        const T1 f3, const Instr i) {
-    return [&](void) {
-      switch (i) {
-      case Instr::e_NOP: {
-        return f;
-      }
-      case Instr::e_ADD: {
-        return f0;
-      }
-      case Instr::e_WRM: {
-        return f1;
-      }
-      case Instr::e_FIM: {
-        return f2;
-      }
-      case Instr::e_JMS: {
-        return f3;
-      }
-      }
-    }();
+    switch (i) {
+    case Instr::e_NOP: {
+      return f;
+    }
+    case Instr::e_ADD: {
+      return f0;
+    }
+    case Instr::e_WRM: {
+      return f1;
+    }
+    case Instr::e_FIM: {
+      return f2;
+    }
+    case Instr::e_JMS: {
+      return f3;
+    }
+    }
   }
 
   template <typename T1>
   static T1 instr_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                       const T1 f3, const Instr i) {
-    return [&](void) {
-      switch (i) {
-      case Instr::e_NOP: {
-        return f;
-      }
-      case Instr::e_ADD: {
-        return f0;
-      }
-      case Instr::e_WRM: {
-        return f1;
-      }
-      case Instr::e_FIM: {
-        return f2;
-      }
-      case Instr::e_JMS: {
-        return f3;
-      }
-      }
-    }();
+    switch (i) {
+    case Instr::e_NOP: {
+      return f;
+    }
+    case Instr::e_ADD: {
+      return f0;
+    }
+    case Instr::e_WRM: {
+      return f1;
+    }
+    case Instr::e_FIM: {
+      return f2;
+    }
+    case Instr::e_JMS: {
+      return f3;
+    }
+    }
   }
 
   struct state {

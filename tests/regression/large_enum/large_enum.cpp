@@ -7,132 +7,126 @@
 
 __attribute__((pure)) unsigned int
 LargeEnum::color_to_nat(const LargeEnum::Color c) {
-  return [&](void) {
-    switch (c) {
-    case Color::e_RED: {
-      return 0u;
-    }
-    case Color::e_ORANGE: {
-      return 1u;
-    }
-    case Color::e_YELLOW: {
-      return 2u;
-    }
-    case Color::e_GREEN: {
-      return 3u;
-    }
-    case Color::e_BLUE: {
-      return 4u;
-    }
-    case Color::e_INDIGO: {
-      return 5u;
-    }
-    case Color::e_VIOLET: {
-      return 6u;
-    }
-    case Color::e_BLACK: {
-      return 7u;
-    }
-    case Color::e_WHITE: {
-      return 8u;
-    }
-    case Color::e_GRAY: {
-      return 9u;
-    }
-    case Color::e_BROWN: {
-      return 10u;
-    }
-    case Color::e_PINK: {
-      return 11u;
-    }
-    }
-  }();
+  switch (c) {
+  case Color::e_RED: {
+    return 0u;
+  }
+  case Color::e_ORANGE: {
+    return 1u;
+  }
+  case Color::e_YELLOW: {
+    return 2u;
+  }
+  case Color::e_GREEN: {
+    return 3u;
+  }
+  case Color::e_BLUE: {
+    return 4u;
+  }
+  case Color::e_INDIGO: {
+    return 5u;
+  }
+  case Color::e_VIOLET: {
+    return 6u;
+  }
+  case Color::e_BLACK: {
+    return 7u;
+  }
+  case Color::e_WHITE: {
+    return 8u;
+  }
+  case Color::e_GRAY: {
+    return 9u;
+  }
+  case Color::e_BROWN: {
+    return 10u;
+  }
+  case Color::e_PINK: {
+    return 11u;
+  }
+  }
 }
 
 __attribute__((pure)) bool LargeEnum::is_warm(const LargeEnum::Color c) {
-  return [&](void) {
-    switch (c) {
-    case Color::e_RED: {
-      return true;
-    }
-    case Color::e_ORANGE: {
-      return true;
-    }
-    case Color::e_YELLOW: {
-      return true;
-    }
-    case Color::e_GREEN: {
-      return false;
-    }
-    case Color::e_BLUE: {
-      return false;
-    }
-    case Color::e_INDIGO: {
-      return false;
-    }
-    case Color::e_VIOLET: {
-      return false;
-    }
-    case Color::e_BLACK: {
-      return false;
-    }
-    case Color::e_WHITE: {
-      return false;
-    }
-    case Color::e_GRAY: {
-      return false;
-    }
-    case Color::e_BROWN: {
-      return true;
-    }
-    case Color::e_PINK: {
-      return true;
-    }
-    }
-  }();
+  switch (c) {
+  case Color::e_RED: {
+    return true;
+  }
+  case Color::e_ORANGE: {
+    return true;
+  }
+  case Color::e_YELLOW: {
+    return true;
+  }
+  case Color::e_GREEN: {
+    return false;
+  }
+  case Color::e_BLUE: {
+    return false;
+  }
+  case Color::e_INDIGO: {
+    return false;
+  }
+  case Color::e_VIOLET: {
+    return false;
+  }
+  case Color::e_BLACK: {
+    return false;
+  }
+  case Color::e_WHITE: {
+    return false;
+  }
+  case Color::e_GRAY: {
+    return false;
+  }
+  case Color::e_BROWN: {
+    return true;
+  }
+  case Color::e_PINK: {
+    return true;
+  }
+  }
 }
 
 __attribute__((pure)) bool LargeEnum::is_neutral(const LargeEnum::Color c) {
-  return [&](void) {
-    switch (c) {
-    case Color::e_RED: {
-      return false;
-    }
-    case Color::e_ORANGE: {
-      return false;
-    }
-    case Color::e_YELLOW: {
-      return false;
-    }
-    case Color::e_GREEN: {
-      return false;
-    }
-    case Color::e_BLUE: {
-      return false;
-    }
-    case Color::e_INDIGO: {
-      return false;
-    }
-    case Color::e_VIOLET: {
-      return false;
-    }
-    case Color::e_BLACK: {
-      return true;
-    }
-    case Color::e_WHITE: {
-      return true;
-    }
-    case Color::e_GRAY: {
-      return true;
-    }
-    case Color::e_BROWN: {
-      return false;
-    }
-    case Color::e_PINK: {
-      return false;
-    }
-    }
-  }();
+  switch (c) {
+  case Color::e_RED: {
+    return false;
+  }
+  case Color::e_ORANGE: {
+    return false;
+  }
+  case Color::e_YELLOW: {
+    return false;
+  }
+  case Color::e_GREEN: {
+    return false;
+  }
+  case Color::e_BLUE: {
+    return false;
+  }
+  case Color::e_INDIGO: {
+    return false;
+  }
+  case Color::e_VIOLET: {
+    return false;
+  }
+  case Color::e_BLACK: {
+    return true;
+  }
+  case Color::e_WHITE: {
+    return true;
+  }
+  case Color::e_GRAY: {
+    return true;
+  }
+  case Color::e_BROWN: {
+    return false;
+  }
+  case Color::e_PINK: {
+    return false;
+  }
+  }
 }
 
 __attribute__((pure)) unsigned int

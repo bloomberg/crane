@@ -8,40 +8,36 @@
 
 __attribute__((pure)) unsigned int RecordFieldPatterns::classify_point(
     const std::shared_ptr<RecordFieldPatterns::Point> &p) {
-  return [&](void) {
-    unsigned int x = p->px;
-    unsigned int y = p->py;
-    if (x <= 0) {
-      if (y <= 0) {
-        return 0u;
-      } else {
-        unsigned int _x = y - 1;
-        return 1u;
-      }
+  unsigned int x = p->px;
+  unsigned int y = p->py;
+  if (x <= 0) {
+    if (y <= 0) {
+      return 0u;
     } else {
-      unsigned int _x = x - 1;
-      if (y <= 0) {
-        return 2u;
-      } else {
-        unsigned int _x0 = y - 1;
-        return (x + y);
-      }
+      unsigned int _x = y - 1;
+      return 1u;
     }
-  }();
+  } else {
+    unsigned int _x = x - 1;
+    if (y <= 0) {
+      return 2u;
+    } else {
+      unsigned int _x0 = y - 1;
+      return (x + y);
+    }
+  }
 }
 
 __attribute__((pure)) unsigned int RecordFieldPatterns::zero_x(
     const std::shared_ptr<RecordFieldPatterns::Point> &p) {
-  return [&](void) {
-    unsigned int px0 = p->px;
-    unsigned int n = p->py;
-    if (px0 <= 0) {
-      return n;
-    } else {
-      unsigned int m = px0 - 1;
-      return (m + n);
-    }
-  }();
+  unsigned int px0 = p->px;
+  unsigned int n = p->py;
+  if (px0 <= 0) {
+    return n;
+  } else {
+    unsigned int m = px0 - 1;
+    return (m + n);
+  }
 }
 
 /// Apply a polymorphic function to a record — the record type flows
@@ -64,11 +60,9 @@ __attribute__((pure)) unsigned int RecordFieldPatterns::first_coord(
 __attribute__((pure)) unsigned int RecordFieldPatterns::scaled_sum(
     const unsigned int scale,
     const std::shared_ptr<RecordFieldPatterns::ScaledPoint> &sp) {
-  return [&](void) {
-    unsigned int x = sp->sp_x;
-    unsigned int y = sp->sp_y;
-    return (scale * (x + y));
-  }();
+  unsigned int x = sp->sp_x;
+  unsigned int y = sp->sp_y;
+  return (scale * (x + y));
 }
 
 std::shared_ptr<RecordFieldPatterns::Point>
@@ -90,31 +84,23 @@ __attribute__((pure)) unsigned int RecordFieldPatterns::PointImpl::get_y(
 
 __attribute__((pure)) unsigned int RecordFieldPatterns::segment_length_sq(
     const std::shared_ptr<RecordFieldPatterns::Segment> &s) {
-  return [&](void) {
-    std::shared_ptr<RecordFieldPatterns::Point> seg_start0 = s->seg_start;
-    std::shared_ptr<RecordFieldPatterns::Point> seg_end0 = s->seg_end;
-    return [&](void) {
-      unsigned int x1 = seg_start0->px;
-      unsigned int y1 = seg_start0->py;
-      return [&](void) {
-        unsigned int x2 = seg_end0->px;
-        unsigned int y2 = seg_end0->py;
-        unsigned int dx = (((x2 - x1) > x2 ? 0 : (x2 - x1)));
-        unsigned int dy = (((y2 - y1) > y2 ? 0 : (y2 - y1)));
-        return ((dx * dx) + (dy * dy));
-      }();
-    }();
-  }();
+  std::shared_ptr<RecordFieldPatterns::Point> seg_start0 = s->seg_start;
+  std::shared_ptr<RecordFieldPatterns::Point> seg_end0 = s->seg_end;
+  unsigned int x1 = seg_start0->px;
+  unsigned int y1 = seg_start0->py;
+  unsigned int x2 = seg_end0->px;
+  unsigned int y2 = seg_end0->py;
+  unsigned int dx = (((x2 - x1) > x2 ? 0 : (x2 - x1)));
+  unsigned int dy = (((y2 - y1) > y2 ? 0 : (y2 - y1)));
+  return ((dx * dx) + (dy * dy));
 }
 
 __attribute__((pure)) unsigned int RecordFieldPatterns::bounded_range(
     const std::shared_ptr<RecordFieldPatterns::Bounded> &b) {
-  return [&](void) {
-    unsigned int l = b->lo;
-    unsigned int h = b->hi;
-    unsigned int m = b->mid;
-    return ((((h - l) > h ? 0 : (h - l))) + m);
-  }();
+  unsigned int l = b->lo;
+  unsigned int h = b->hi;
+  unsigned int m = b->mid;
+  return ((((h - l) > h ? 0 : (h - l))) + m);
 }
 
 __attribute__((pure)) unsigned int RecordFieldPatterns::sum_px(
@@ -136,11 +122,9 @@ std::shared_ptr<List<unsigned int>> RecordFieldPatterns::map_py(
 
 std::shared_ptr<RecordFieldPatterns::Point> RecordFieldPatterns::swap(
     const std::shared_ptr<RecordFieldPatterns::Point> &p) {
-  return [&](void) {
-    unsigned int x = p->px;
-    unsigned int y = p->py;
-    return std::make_shared<RecordFieldPatterns::Point>(Point{y, x});
-  }();
+  unsigned int x = p->px;
+  unsigned int y = p->py;
+  return std::make_shared<RecordFieldPatterns::Point>(Point{y, x});
 }
 
 std::shared_ptr<RecordFieldPatterns::Point> RecordFieldPatterns::double_swap(

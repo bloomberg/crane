@@ -110,56 +110,44 @@ struct Dim10TowerProofChainCase {
   static inline const std::shared_ptr<GradedGoodwillieTower> dim10_tower =
       make_graded_goodwillie_tower(10u);
   static inline const std::shared_ptr<SigT<unsigned int, std::any>>
-      dim10_layers_stabilize = []() {
-        return [](void) {
-          std::shared_ptr<SigT<unsigned int, std::any>> s =
-              graded_goodwillie_layers_stabilize(10u);
-          return [&](void) {
-            if (std::move(s).use_count() == 1 &&
-                std::move(s)->v().index() == 0) {
-              auto &_rf = std::get<0>(std::move(s)->v_mut());
-              unsigned int x = std::move(_rf.d_x);
-              _rf.d_x = x;
-              return std::move(s);
-            } else {
-              return std::visit(
-                  Overloaded{
-                      [](const typename SigT<unsigned int, std::any>::ExistT
-                             _args)
-                          -> std::shared_ptr<SigT<unsigned int, std::any>> {
-                        return SigT<unsigned int, std::any>::existt(_args.d_x,
-                                                                    std::any{});
-                      }},
-                  std::move(s)->v());
-            }
-          }();
-        }();
+      dim10_layers_stabilize = [](void) {
+        std::shared_ptr<SigT<unsigned int, std::any>> s =
+            graded_goodwillie_layers_stabilize(10u);
+        if (std::move(s).use_count() == 1 && std::move(s)->v().index() == 0) {
+          auto &_rf = std::get<0>(std::move(s)->v_mut());
+          unsigned int x = std::move(_rf.d_x);
+          _rf.d_x = x;
+          return std::move(s);
+        } else {
+          return std::visit(
+              Overloaded{
+                  [](const typename SigT<unsigned int, std::any>::ExistT _args)
+                      -> std::shared_ptr<SigT<unsigned int, std::any>> {
+                    return SigT<unsigned int, std::any>::existt(_args.d_x,
+                                                                std::any{});
+                  }},
+              std::move(s)->v());
+        }
       }();
   static inline const std::shared_ptr<SigT<unsigned int, std::any>>
-      dim10_P_stabilizes = []() {
-        return [](void) {
-          std::shared_ptr<SigT<unsigned int, std::any>> s =
-              graded_goodwillie_P_stabilizes(10u);
-          return [&](void) {
-            if (std::move(s).use_count() == 1 &&
-                std::move(s)->v().index() == 0) {
-              auto &_rf = std::get<0>(std::move(s)->v_mut());
-              unsigned int x = std::move(_rf.d_x);
-              _rf.d_x = x;
-              return std::move(s);
-            } else {
-              return std::visit(
-                  Overloaded{
-                      [](const typename SigT<unsigned int, std::any>::ExistT
-                             _args)
-                          -> std::shared_ptr<SigT<unsigned int, std::any>> {
-                        return SigT<unsigned int, std::any>::existt(_args.d_x,
-                                                                    std::any{});
-                      }},
-                  std::move(s)->v());
-            }
-          }();
-        }();
+      dim10_P_stabilizes = [](void) {
+        std::shared_ptr<SigT<unsigned int, std::any>> s =
+            graded_goodwillie_P_stabilizes(10u);
+        if (std::move(s).use_count() == 1 && std::move(s)->v().index() == 0) {
+          auto &_rf = std::get<0>(std::move(s)->v_mut());
+          unsigned int x = std::move(_rf.d_x);
+          _rf.d_x = x;
+          return std::move(s);
+        } else {
+          return std::visit(
+              Overloaded{
+                  [](const typename SigT<unsigned int, std::any>::ExistT _args)
+                      -> std::shared_ptr<SigT<unsigned int, std::any>> {
+                    return SigT<unsigned int, std::any>::existt(_args.d_x,
+                                                                std::any{});
+                  }},
+              std::move(s)->v());
+        }
       }();
   __attribute__((pure)) static std::pair<
       std::pair<std::pair<IsIntegerValued, EventuallyZero>,

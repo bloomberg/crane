@@ -110,30 +110,26 @@ struct PulseParseCertificateCase {
 
   template <typename T1>
   static T1 PulseClass_rect(const T1 f, const T1 f0, const PulseClass p) {
-    return [&](void) {
-      switch (p) {
-      case PulseClass::e_MARKSHORT: {
-        return f;
-      }
-      case PulseClass::e_MARKLONG: {
-        return f0;
-      }
-      }
-    }();
+    switch (p) {
+    case PulseClass::e_MARKSHORT: {
+      return f;
+    }
+    case PulseClass::e_MARKLONG: {
+      return f0;
+    }
+    }
   }
 
   template <typename T1>
   static T1 PulseClass_rec(const T1 f, const T1 f0, const PulseClass p) {
-    return [&](void) {
-      switch (p) {
-      case PulseClass::e_MARKSHORT: {
-        return f;
-      }
-      case PulseClass::e_MARKLONG: {
-        return f0;
-      }
-      }
-    }();
+    switch (p) {
+    case PulseClass::e_MARKSHORT: {
+      return f;
+    }
+    case PulseClass::e_MARKLONG: {
+      return f0;
+    }
+    }
   }
 
   __attribute__((pure)) static PulseClass

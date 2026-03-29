@@ -178,83 +178,63 @@ public:
         Overloaded{[&](const typename Ascii::Ascii0 _args) -> auto {
           return std::visit(
               Overloaded{[&](const typename Ascii::Ascii0 _args0) -> Sumbool {
-                return [&](void) {
-                  switch (Bool::bool_dec(_args.d_a0, _args0.d_a0)) {
+                switch (Bool::bool_dec(_args.d_a0, _args0.d_a0)) {
+                case Sumbool::e_LEFT: {
+                  switch (Bool::bool_dec(_args.d_a1, _args0.d_a1)) {
                   case Sumbool::e_LEFT: {
-                    return [&](void) {
-                      switch (Bool::bool_dec(_args.d_a1, _args0.d_a1)) {
+                    switch (Bool::bool_dec(_args.d_a2, _args0.d_a2)) {
+                    case Sumbool::e_LEFT: {
+                      switch (Bool::bool_dec(_args.d_a3, _args0.d_a3)) {
                       case Sumbool::e_LEFT: {
-                        return [&](void) {
-                          switch (Bool::bool_dec(_args.d_a2, _args0.d_a2)) {
+                        switch (Bool::bool_dec(_args.d_a4, _args0.d_a4)) {
+                        case Sumbool::e_LEFT: {
+                          switch (Bool::bool_dec(_args.d_a5, _args0.d_a5)) {
                           case Sumbool::e_LEFT: {
-                            return [&](void) {
-                              switch (Bool::bool_dec(_args.d_a3, _args0.d_a3)) {
+                            switch (Bool::bool_dec(_args.d_a6, _args0.d_a6)) {
+                            case Sumbool::e_LEFT: {
+                              switch (Bool::bool_dec(_args.d_a7, _args0.d_a7)) {
                               case Sumbool::e_LEFT: {
-                                return [&](void) {
-                                  switch (
-                                      Bool::bool_dec(_args.d_a4, _args0.d_a4)) {
-                                  case Sumbool::e_LEFT: {
-                                    return [&](void) {
-                                      switch (Bool::bool_dec(_args.d_a5,
-                                                             _args0.d_a5)) {
-                                      case Sumbool::e_LEFT: {
-                                        return [&](void) {
-                                          switch (Bool::bool_dec(_args.d_a6,
-                                                                 _args0.d_a6)) {
-                                          case Sumbool::e_LEFT: {
-                                            return [&](void) {
-                                              switch (Bool::bool_dec(
-                                                  _args.d_a7, _args0.d_a7)) {
-                                              case Sumbool::e_LEFT: {
-                                                return Sumbool::e_LEFT;
-                                              }
-                                              case Sumbool::e_RIGHT: {
-                                                return Sumbool::e_RIGHT;
-                                              }
-                                              }
-                                            }();
-                                          }
-                                          case Sumbool::e_RIGHT: {
-                                            return Sumbool::e_RIGHT;
-                                          }
-                                          }
-                                        }();
-                                      }
-                                      case Sumbool::e_RIGHT: {
-                                        return Sumbool::e_RIGHT;
-                                      }
-                                      }
-                                    }();
-                                  }
-                                  case Sumbool::e_RIGHT: {
-                                    return Sumbool::e_RIGHT;
-                                  }
-                                  }
-                                }();
+                                return Sumbool::e_LEFT;
                               }
                               case Sumbool::e_RIGHT: {
                                 return Sumbool::e_RIGHT;
                               }
                               }
-                            }();
+                            }
+                            case Sumbool::e_RIGHT: {
+                              return Sumbool::e_RIGHT;
+                            }
+                            }
                           }
                           case Sumbool::e_RIGHT: {
                             return Sumbool::e_RIGHT;
                           }
                           }
-                        }();
+                        }
+                        case Sumbool::e_RIGHT: {
+                          return Sumbool::e_RIGHT;
+                        }
+                        }
                       }
                       case Sumbool::e_RIGHT: {
                         return Sumbool::e_RIGHT;
                       }
                       }
-                    }();
+                    }
+                    case Sumbool::e_RIGHT: {
+                      return Sumbool::e_RIGHT;
+                    }
+                    }
                   }
                   case Sumbool::e_RIGHT: {
                     return Sumbool::e_RIGHT;
                   }
                   }
-                }();
+                }
+                case Sumbool::e_RIGHT: {
+                  return Sumbool::e_RIGHT;
+                }
+                }
               }},
               b->v());
         }},
@@ -782,34 +762,28 @@ struct Levenshtein {
     std::shared_ptr<Nat> n1 = f(x);
     std::shared_ptr<Nat> n2 = f(y);
     std::shared_ptr<Nat> n3 = f(z);
-    return [&](void) {
-      switch (n1->leb(n2)) {
+    switch (n1->leb(n2)) {
+    case Bool0::e_TRUE0: {
+      switch (std::move(n1)->leb(std::move(n3))) {
       case Bool0::e_TRUE0: {
-        return [&](void) {
-          switch (std::move(n1)->leb(std::move(n3))) {
-          case Bool0::e_TRUE0: {
-            return x;
-          }
-          case Bool0::e_FALSE0: {
-            return z;
-          }
-          }
-        }();
+        return x;
       }
       case Bool0::e_FALSE0: {
-        return [&](void) {
-          switch (std::move(n2)->leb(std::move(n3))) {
-          case Bool0::e_TRUE0: {
-            return y;
-          }
-          case Bool0::e_FALSE0: {
-            return z;
-          }
-          }
-        }();
+        return z;
       }
       }
-    }();
+    }
+    case Bool0::e_FALSE0: {
+      switch (std::move(n2)->leb(std::move(n3))) {
+      case Bool0::e_TRUE0: {
+        return y;
+      }
+      case Bool0::e_FALSE0: {
+        return z;
+      }
+      }
+    }
+    }
   }
 
   static std::shared_ptr<SigT<std::shared_ptr<Nat>, std::shared_ptr<chain>>>

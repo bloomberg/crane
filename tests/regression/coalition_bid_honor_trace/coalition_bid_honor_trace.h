@@ -351,36 +351,32 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1>
   static T1 Clan_rect(const T1 f, const T1 f0, const T1 f1, const Clan c) {
-    return [&](void) {
-      switch (c) {
-      case Clan::e_CLANWOLF: {
-        return f;
-      }
-      case Clan::e_CLANJADEFALCON: {
-        return f0;
-      }
-      case Clan::e_CLANGHOSTBEAR: {
-        return f1;
-      }
-      }
-    }();
+    switch (c) {
+    case Clan::e_CLANWOLF: {
+      return f;
+    }
+    case Clan::e_CLANJADEFALCON: {
+      return f0;
+    }
+    case Clan::e_CLANGHOSTBEAR: {
+      return f1;
+    }
+    }
   }
 
   template <typename T1>
   static T1 Clan_rec(const T1 f, const T1 f0, const T1 f1, const Clan c) {
-    return [&](void) {
-      switch (c) {
-      case Clan::e_CLANWOLF: {
-        return f;
-      }
-      case Clan::e_CLANJADEFALCON: {
-        return f0;
-      }
-      case Clan::e_CLANGHOSTBEAR: {
-        return f1;
-      }
-      }
-    }();
+    switch (c) {
+    case Clan::e_CLANWOLF: {
+      return f;
+    }
+    case Clan::e_CLANJADEFALCON: {
+      return f0;
+    }
+    case Clan::e_CLANGHOSTBEAR: {
+      return f1;
+    }
+    }
   }
 
   __attribute__((pure)) static bool clan_eq_dec(const Clan c1, const Clan c2);
@@ -389,36 +385,32 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1>
   static T1 Rank_rect(const T1 f, const T1 f0, const T1 f1, const Rank r) {
-    return [&](void) {
-      switch (r) {
-      case Rank::e_WARRIOR: {
-        return f;
-      }
-      case Rank::e_STARCAPTAIN: {
-        return f0;
-      }
-      case Rank::e_STARCOLONEL: {
-        return f1;
-      }
-      }
-    }();
+    switch (r) {
+    case Rank::e_WARRIOR: {
+      return f;
+    }
+    case Rank::e_STARCAPTAIN: {
+      return f0;
+    }
+    case Rank::e_STARCOLONEL: {
+      return f1;
+    }
+    }
   }
 
   template <typename T1>
   static T1 Rank_rec(const T1 f, const T1 f0, const T1 f1, const Rank r) {
-    return [&](void) {
-      switch (r) {
-      case Rank::e_WARRIOR: {
-        return f;
-      }
-      case Rank::e_STARCAPTAIN: {
-        return f0;
-      }
-      case Rank::e_STARCOLONEL: {
-        return f1;
-      }
-      }
-    }();
+    switch (r) {
+    case Rank::e_WARRIOR: {
+      return f;
+    }
+    case Rank::e_STARCAPTAIN: {
+      return f0;
+    }
+    case Rank::e_STARCOLONEL: {
+      return f1;
+    }
+    }
   }
 
   __attribute__((pure)) static unsigned int rank_to_nat(const Rank r);
@@ -438,74 +430,66 @@ struct CoalitionBidHonorTraceCase {
   template <typename T1>
   static T1 UnitClass_rect(const T1 f, const T1 f0, const T1 f1,
                            const UnitClass u) {
-    return [&](void) {
-      switch (u) {
-      case UnitClass::e_OMNIMECH: {
-        return f;
-      }
-      case UnitClass::e_BATTLEMECH: {
-        return f0;
-      }
-      case UnitClass::e_ELEMENTAL: {
-        return f1;
-      }
-      }
-    }();
+    switch (u) {
+    case UnitClass::e_OMNIMECH: {
+      return f;
+    }
+    case UnitClass::e_BATTLEMECH: {
+      return f0;
+    }
+    case UnitClass::e_ELEMENTAL: {
+      return f1;
+    }
+    }
   }
 
   template <typename T1>
   static T1 UnitClass_rec(const T1 f, const T1 f0, const T1 f1,
                           const UnitClass u) {
-    return [&](void) {
-      switch (u) {
-      case UnitClass::e_OMNIMECH: {
-        return f;
-      }
-      case UnitClass::e_BATTLEMECH: {
-        return f0;
-      }
-      case UnitClass::e_ELEMENTAL: {
-        return f1;
-      }
-      }
-    }();
+    switch (u) {
+    case UnitClass::e_OMNIMECH: {
+      return f;
+    }
+    case UnitClass::e_BATTLEMECH: {
+      return f0;
+    }
+    case UnitClass::e_ELEMENTAL: {
+      return f1;
+    }
+    }
   }
   enum class WeightClass { e_LIGHT, e_HEAVY, e_ASSAULT };
 
   template <typename T1>
   static T1 WeightClass_rect(const T1 f, const T1 f0, const T1 f1,
                              const WeightClass w) {
-    return [&](void) {
-      switch (w) {
-      case WeightClass::e_LIGHT: {
-        return f;
-      }
-      case WeightClass::e_HEAVY: {
-        return f0;
-      }
-      case WeightClass::e_ASSAULT: {
-        return f1;
-      }
-      }
-    }();
+    switch (w) {
+    case WeightClass::e_LIGHT: {
+      return f;
+    }
+    case WeightClass::e_HEAVY: {
+      return f0;
+    }
+    case WeightClass::e_ASSAULT: {
+      return f1;
+    }
+    }
   }
 
   template <typename T1>
   static T1 WeightClass_rec(const T1 f, const T1 f0, const T1 f1,
                             const WeightClass w) {
-    return [&](void) {
-      switch (w) {
-      case WeightClass::e_LIGHT: {
-        return f;
-      }
-      case WeightClass::e_HEAVY: {
-        return f0;
-      }
-      case WeightClass::e_ASSAULT: {
-        return f1;
-      }
-      }
-    }();
+    switch (w) {
+    case WeightClass::e_LIGHT: {
+      return f;
+    }
+    case WeightClass::e_HEAVY: {
+      return f0;
+    }
+    case WeightClass::e_ASSAULT: {
+      return f1;
+    }
+    }
   }
 
   __attribute__((pure)) static unsigned int
@@ -561,30 +545,26 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1>
   static T1 Side_rect(const T1 f, const T1 f0, const Side s) {
-    return [&](void) {
-      switch (s) {
-      case Side::e_ATTACKER: {
-        return f;
-      }
-      case Side::e_DEFENDER: {
-        return f0;
-      }
-      }
-    }();
+    switch (s) {
+    case Side::e_ATTACKER: {
+      return f;
+    }
+    case Side::e_DEFENDER: {
+      return f0;
+    }
+    }
   }
 
   template <typename T1>
   static T1 Side_rec(const T1 f, const T1 f0, const Side s) {
-    return [&](void) {
-      switch (s) {
-      case Side::e_ATTACKER: {
-        return f;
-      }
-      case Side::e_DEFENDER: {
-        return f0;
-      }
-      }
-    }();
+    switch (s) {
+    case Side::e_ATTACKER: {
+      return f;
+    }
+    case Side::e_DEFENDER: {
+      return f0;
+    }
+    }
   }
 
   struct CoalitionMember {
@@ -639,30 +619,26 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1>
   static T1 TrialType_rect(const T1 f, const T1 f0, const TrialType t) {
-    return [&](void) {
-      switch (t) {
-      case TrialType::e_TRIALOFPOSSESSION: {
-        return f;
-      }
-      case TrialType::e_TRIALOFANNIHILATION: {
-        return f0;
-      }
-      }
-    }();
+    switch (t) {
+    case TrialType::e_TRIALOFPOSSESSION: {
+      return f;
+    }
+    case TrialType::e_TRIALOFANNIHILATION: {
+      return f0;
+    }
+    }
   }
 
   template <typename T1>
   static T1 TrialType_rec(const T1 f, const T1 f0, const TrialType t) {
-    return [&](void) {
-      switch (t) {
-      case TrialType::e_TRIALOFPOSSESSION: {
-        return f;
-      }
-      case TrialType::e_TRIALOFANNIHILATION: {
-        return f0;
-      }
-      }
-    }();
+    switch (t) {
+    case TrialType::e_TRIALOFPOSSESSION: {
+      return f;
+    }
+    case TrialType::e_TRIALOFANNIHILATION: {
+      return f0;
+    }
+    }
   }
 
   struct Prize {
@@ -1196,43 +1172,39 @@ struct CoalitionBidHonorTraceCase {
   template <typename T1>
   static T1 ReadyStatus_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                              const ReadyStatus r) {
-    return [&](void) {
-      switch (r) {
-      case ReadyStatus::e_NEITHERREADY: {
-        return f;
-      }
-      case ReadyStatus::e_ATTACKERREADY: {
-        return f0;
-      }
-      case ReadyStatus::e_DEFENDERREADY: {
-        return f1;
-      }
-      case ReadyStatus::e_BOTHREADY: {
-        return f2;
-      }
-      }
-    }();
+    switch (r) {
+    case ReadyStatus::e_NEITHERREADY: {
+      return f;
+    }
+    case ReadyStatus::e_ATTACKERREADY: {
+      return f0;
+    }
+    case ReadyStatus::e_DEFENDERREADY: {
+      return f1;
+    }
+    case ReadyStatus::e_BOTHREADY: {
+      return f2;
+    }
+    }
   }
 
   template <typename T1>
   static T1 ReadyStatus_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                             const ReadyStatus r) {
-    return [&](void) {
-      switch (r) {
-      case ReadyStatus::e_NEITHERREADY: {
-        return f;
-      }
-      case ReadyStatus::e_ATTACKERREADY: {
-        return f0;
-      }
-      case ReadyStatus::e_DEFENDERREADY: {
-        return f1;
-      }
-      case ReadyStatus::e_BOTHREADY: {
-        return f2;
-      }
-      }
-    }();
+    switch (r) {
+    case ReadyStatus::e_NEITHERREADY: {
+      return f;
+    }
+    case ReadyStatus::e_ATTACKERREADY: {
+      return f0;
+    }
+    case ReadyStatus::e_DEFENDERREADY: {
+      return f1;
+    }
+    case ReadyStatus::e_BOTHREADY: {
+      return f2;
+    }
+    }
   }
 
   __attribute__((pure)) static bool is_ready(const ReadyStatus rs,
@@ -1567,46 +1539,43 @@ struct CoalitionBidHonorTraceCase {
     __attribute__((pure)) std::optional<std::shared_ptr<Commander>>
     get_side_commander(const Side side) const {
       return std::visit(
-          Overloaded{
-              [](const typename BatchallPhase::PhaseIdle _args)
-                  -> std::optional<std::shared_ptr<Commander>> {
-                return std::optional<std::shared_ptr<Commander>>();
-              },
-              [](const typename BatchallPhase::PhaseChallenged _args)
-                  -> std::optional<std::shared_ptr<Commander>> {
-                return std::optional<std::shared_ptr<Commander>>();
-              },
-              [](const typename BatchallPhase::PhaseResponded _args)
-                  -> std::optional<std::shared_ptr<Commander>> {
-                return std::optional<std::shared_ptr<Commander>>();
-              },
-              [&](const typename BatchallPhase::PhaseBidding _args)
-                  -> std::optional<std::shared_ptr<Commander>> {
-                return [&](void) {
-                  switch (side) {
-                  case Side::e_ATTACKER: {
-                    return std::make_optional<std::shared_ptr<Commander>>(
-                        _args.d_attacker_bid->bid_commander);
-                  }
-                  case Side::e_DEFENDER: {
-                    return std::make_optional<std::shared_ptr<Commander>>(
-                        _args.d_defender_bid->bid_commander);
-                  }
-                  }
-                }();
-              },
-              [](const typename BatchallPhase::PhaseAgreed _args)
-                  -> std::optional<std::shared_ptr<Commander>> {
-                return std::optional<std::shared_ptr<Commander>>();
-              },
-              [](const typename BatchallPhase::PhaseRefused _args)
-                  -> std::optional<std::shared_ptr<Commander>> {
-                return std::optional<std::shared_ptr<Commander>>();
-              },
-              [](const typename BatchallPhase::PhaseAborted _args)
-                  -> std::optional<std::shared_ptr<Commander>> {
-                return std::optional<std::shared_ptr<Commander>>();
-              }},
+          Overloaded{[](const typename BatchallPhase::PhaseIdle _args)
+                         -> std::optional<std::shared_ptr<Commander>> {
+                       return std::optional<std::shared_ptr<Commander>>();
+                     },
+                     [](const typename BatchallPhase::PhaseChallenged _args)
+                         -> std::optional<std::shared_ptr<Commander>> {
+                       return std::optional<std::shared_ptr<Commander>>();
+                     },
+                     [](const typename BatchallPhase::PhaseResponded _args)
+                         -> std::optional<std::shared_ptr<Commander>> {
+                       return std::optional<std::shared_ptr<Commander>>();
+                     },
+                     [&](const typename BatchallPhase::PhaseBidding _args)
+                         -> std::optional<std::shared_ptr<Commander>> {
+                       switch (side) {
+                       case Side::e_ATTACKER: {
+                         return std::make_optional<std::shared_ptr<Commander>>(
+                             _args.d_attacker_bid->bid_commander);
+                       }
+                       case Side::e_DEFENDER: {
+                         return std::make_optional<std::shared_ptr<Commander>>(
+                             _args.d_defender_bid->bid_commander);
+                       }
+                       }
+                     },
+                     [](const typename BatchallPhase::PhaseAgreed _args)
+                         -> std::optional<std::shared_ptr<Commander>> {
+                       return std::optional<std::shared_ptr<Commander>>();
+                     },
+                     [](const typename BatchallPhase::PhaseRefused _args)
+                         -> std::optional<std::shared_ptr<Commander>> {
+                       return std::optional<std::shared_ptr<Commander>>();
+                     },
+                     [](const typename BatchallPhase::PhaseAborted _args)
+                         -> std::optional<std::shared_ptr<Commander>> {
+                       return std::optional<std::shared_ptr<Commander>>();
+                     }},
           this->v());
     }
 

@@ -2577,3 +2577,14 @@
   (alias runtest)
   (deps record_field_patterns.t.exe)
   (action (run ./record_field_patterns.t.exe))))
+
+(subdir iife_name_clash
+ (rule
+  (targets iife_name_clash.t.exe)
+  (deps IifeNameClash.vo iife_name_clash.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} iife_name_clash.t.exe iife_name_clash.cpp iife_name_clash.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps iife_name_clash.t.exe)
+  (action (run ./iife_name_clash.t.exe))))

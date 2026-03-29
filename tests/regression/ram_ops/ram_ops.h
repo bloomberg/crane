@@ -771,30 +771,26 @@ struct RamOps {
 
   template <typename T1>
   static T1 item_rect(const T1 f, const T1 f0, const Item i) {
-    return [&](void) {
-      switch (i) {
-      case Item::e_S_: {
-        return f;
-      }
-      case Item::e_S_0: {
-        return f0;
-      }
-      }
-    }();
+    switch (i) {
+    case Item::e_S_: {
+      return f;
+    }
+    case Item::e_S_0: {
+      return f0;
+    }
+    }
   }
 
   template <typename T1>
   static T1 item_rec(const T1 f, const T1 f0, const Item i) {
-    return [&](void) {
-      switch (i) {
-      case Item::e_S_: {
-        return f;
-      }
-      case Item::e_S_0: {
-        return f0;
-      }
-      }
-    }();
+    switch (i) {
+    case Item::e_S_: {
+      return f;
+    }
+    case Item::e_S_0: {
+      return f0;
+    }
+    }
   }
 
   __attribute__((pure)) static unsigned int score(const Item x);

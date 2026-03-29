@@ -17,30 +17,26 @@ struct EnumSwitchQualified {
 
     template <typename T1>
     static T1 color_rect(const T1 f, const T1 f0, const Color c) {
-      return [&](void) {
-        switch (c) {
-        case Color::e_RED: {
-          return f;
-        }
-        case Color::e_BLUE: {
-          return f0;
-        }
-        }
-      }();
+      switch (c) {
+      case Color::e_RED: {
+        return f;
+      }
+      case Color::e_BLUE: {
+        return f0;
+      }
+      }
     }
 
     template <typename T1>
     static T1 color_rec(const T1 f, const T1 f0, const Color c) {
-      return [&](void) {
-        switch (c) {
-        case Color::e_RED: {
-          return f;
-        }
-        case Color::e_BLUE: {
-          return f0;
-        }
-        }
-      }();
+      switch (c) {
+      case Color::e_RED: {
+        return f;
+      }
+      case Color::e_BLUE: {
+        return f0;
+      }
+      }
     }
 
     __attribute__((pure)) static Color flip(const Color c);

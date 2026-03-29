@@ -629,28 +629,26 @@ LoopifyTrees::tree_max(std::shared_ptr<LoopifyTrees::tree<unsigned int>> t1,
                   Overloaded{
                       [&](const typename LoopifyTrees::tree<unsigned int>::Leaf
                               _args) -> void {
-                        _result = [&](void) {
-                          if (t2.use_count() == 1 && t2->v().index() == 0) {
-                            auto &_rf = std::get<0>(t2->v_mut());
-                            return t2;
-                          } else {
-                            return std::visit(
-                                Overloaded{
-                                    [](const typename LoopifyTrees::tree<
-                                        unsigned int>::Leaf _args0)
-                                        -> std::shared_ptr<
-                                            LoopifyTrees::tree<unsigned int>> {
-                                      return tree<unsigned int>::leaf();
-                                    },
-                                    [&](const typename LoopifyTrees::tree<
-                                        unsigned int>::Node _args0)
-                                        -> std::shared_ptr<
-                                            LoopifyTrees::tree<unsigned int>> {
-                                      return std::move(t2);
-                                    }},
-                                t2->v());
-                          }
-                        }();
+                        if (t2.use_count() == 1 && t2->v().index() == 0) {
+                          auto &_rf = std::get<0>(t2->v_mut());
+                          _result = t2;
+                        } else {
+                          _result = std::visit(
+                              Overloaded{
+                                  [](const typename LoopifyTrees::tree<
+                                      unsigned int>::Leaf _args0)
+                                      -> std::shared_ptr<
+                                          LoopifyTrees::tree<unsigned int>> {
+                                    return tree<unsigned int>::leaf();
+                                  },
+                                  [&](const typename LoopifyTrees::tree<
+                                      unsigned int>::Node _args0)
+                                      -> std::shared_ptr<
+                                          LoopifyTrees::tree<unsigned int>> {
+                                    return std::move(t2);
+                                  }},
+                              t2->v());
+                        }
                       },
                       [&](const typename LoopifyTrees::tree<unsigned int>::Node
                               _args) -> void {

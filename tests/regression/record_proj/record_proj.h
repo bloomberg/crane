@@ -36,11 +36,9 @@ struct RecordProj {
   template <MapsTo<unsigned int, unsigned int> F0>
   __attribute__((pure)) static unsigned int
   apply_to_field(F0 &&f, const std::shared_ptr<Point> &p) {
-    return [&](void) {
-      unsigned int a = p->x;
-      unsigned int b = p->y;
-      return (f(a) + f(b));
-    }();
+    unsigned int a = p->x;
+    unsigned int b = p->y;
+    return (f(a) + f(b));
   }
 
   static inline const unsigned int test1 =

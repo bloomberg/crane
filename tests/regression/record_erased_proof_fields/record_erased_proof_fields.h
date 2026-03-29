@@ -96,62 +96,58 @@ struct RecordErasedProofFieldsCase {
   static T1 ItemKind_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                           const T1 f3, const T1 f4, const T1 f5,
                           const ItemKind i) {
-    return [&](void) {
-      switch (i) {
-      case ItemKind::e_KINDA: {
-        return f;
-      }
-      case ItemKind::e_KINDB: {
-        return f0;
-      }
-      case ItemKind::e_KINDC: {
-        return f1;
-      }
-      case ItemKind::e_KINDD: {
-        return f2;
-      }
-      case ItemKind::e_KINDE: {
-        return f3;
-      }
-      case ItemKind::e_KINDF: {
-        return f4;
-      }
-      case ItemKind::e_KINDG: {
-        return f5;
-      }
-      }
-    }();
+    switch (i) {
+    case ItemKind::e_KINDA: {
+      return f;
+    }
+    case ItemKind::e_KINDB: {
+      return f0;
+    }
+    case ItemKind::e_KINDC: {
+      return f1;
+    }
+    case ItemKind::e_KINDD: {
+      return f2;
+    }
+    case ItemKind::e_KINDE: {
+      return f3;
+    }
+    case ItemKind::e_KINDF: {
+      return f4;
+    }
+    case ItemKind::e_KINDG: {
+      return f5;
+    }
+    }
   }
 
   template <typename T1>
   static T1 ItemKind_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
                          const T1 f3, const T1 f4, const T1 f5,
                          const ItemKind i) {
-    return [&](void) {
-      switch (i) {
-      case ItemKind::e_KINDA: {
-        return f;
-      }
-      case ItemKind::e_KINDB: {
-        return f0;
-      }
-      case ItemKind::e_KINDC: {
-        return f1;
-      }
-      case ItemKind::e_KINDD: {
-        return f2;
-      }
-      case ItemKind::e_KINDE: {
-        return f3;
-      }
-      case ItemKind::e_KINDF: {
-        return f4;
-      }
-      case ItemKind::e_KINDG: {
-        return f5;
-      }
-      }
-    }();
+    switch (i) {
+    case ItemKind::e_KINDA: {
+      return f;
+    }
+    case ItemKind::e_KINDB: {
+      return f0;
+    }
+    case ItemKind::e_KINDC: {
+      return f1;
+    }
+    case ItemKind::e_KINDD: {
+      return f2;
+    }
+    case ItemKind::e_KINDE: {
+      return f3;
+    }
+    case ItemKind::e_KINDF: {
+      return f4;
+    }
+    case ItemKind::e_KINDG: {
+      return f5;
+    }
+    }
   }
 
   struct StoredTag {
@@ -229,37 +225,33 @@ struct RecordErasedProofFieldsCase {
   template <typename T1>
   static T1 TraceBucket_rect(const T1 f, const T1 f0, const T1 f1,
                              const TraceBucket t) {
-    return [&](void) {
-      switch (t) {
-      case TraceBucket::e_BUCKETA: {
-        return f;
-      }
-      case TraceBucket::e_BUCKETB: {
-        return f0;
-      }
-      case TraceBucket::e_BUCKETC: {
-        return f1;
-      }
-      }
-    }();
+    switch (t) {
+    case TraceBucket::e_BUCKETA: {
+      return f;
+    }
+    case TraceBucket::e_BUCKETB: {
+      return f0;
+    }
+    case TraceBucket::e_BUCKETC: {
+      return f1;
+    }
+    }
   }
 
   template <typename T1>
   static T1 TraceBucket_rec(const T1 f, const T1 f0, const T1 f1,
                             const TraceBucket t) {
-    return [&](void) {
-      switch (t) {
-      case TraceBucket::e_BUCKETA: {
-        return f;
-      }
-      case TraceBucket::e_BUCKETB: {
-        return f0;
-      }
-      case TraceBucket::e_BUCKETC: {
-        return f1;
-      }
-      }
-    }();
+    switch (t) {
+    case TraceBucket::e_BUCKETA: {
+      return f;
+    }
+    case TraceBucket::e_BUCKETB: {
+      return f0;
+    }
+    case TraceBucket::e_BUCKETC: {
+      return f1;
+    }
+    }
   }
 
   struct PrimaryRecord {
