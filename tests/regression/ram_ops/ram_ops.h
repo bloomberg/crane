@@ -778,6 +778,8 @@ struct RamOps {
     case Item::e_S_0: {
       return f0;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -790,6 +792,8 @@ struct RamOps {
     case Item::e_S_0: {
       return f0;
     }
+    default:
+      std::unreachable();
     }
   }
 

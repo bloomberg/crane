@@ -320,6 +320,8 @@ struct InstructionCycles {
     case Instr3::e_ISZZERO3: {
       return f7;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -355,6 +357,8 @@ struct InstructionCycles {
     case Instr3::e_ISZZERO3: {
       return f7;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -425,6 +429,8 @@ struct InstructionCycles {
     case Instr4::e_ISZZERO4: {
       return f7;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -460,6 +466,8 @@ struct InstructionCycles {
     case Instr4::e_ISZZERO4: {
       return f7;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -629,6 +637,8 @@ struct InstructionCycles {
     case Instruction6::e_NOP6: {
       return f;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -638,6 +648,8 @@ struct InstructionCycles {
     case Instruction6::e_NOP6: {
       return f;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -673,6 +685,8 @@ struct InstructionCycles {
     case Instruction7::e_NOP7: {
       return f;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -682,6 +696,8 @@ struct InstructionCycles {
     case Instruction7::e_NOP7: {
       return f;
     }
+    default:
+      std::unreachable();
     }
   }
 

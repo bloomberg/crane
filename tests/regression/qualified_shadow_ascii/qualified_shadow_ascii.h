@@ -2,6 +2,7 @@
 #define INCLUDED_QUALIFIED_SHADOW_ASCII
 
 #include <type_traits>
+#include <utility>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
@@ -20,6 +21,8 @@ struct QualifiedShadowAscii {
       case shadow::e_MK: {
         return f;
       }
+      default:
+        std::unreachable();
       }
     }
 
@@ -28,6 +31,8 @@ struct QualifiedShadowAscii {
       case shadow::e_MK: {
         return f;
       }
+      default:
+        std::unreachable();
       }
     }
   };

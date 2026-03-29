@@ -46,6 +46,8 @@ InstructionCycles::cycles_min(const InstructionCycles::Instr3 i) {
   case Instr3::e_ISZZERO3: {
     return 8u;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -79,6 +81,8 @@ InstructionCycles::cycles_max(const InstructionCycles::Instr4 i) {
   case Instr4::e_ISZZERO4: {
     return 8u;
   }
+  default:
+    std::unreachable();
   }
 }
 

@@ -361,6 +361,8 @@ struct CoalitionBidHonorTraceCase {
     case Clan::e_CLANGHOSTBEAR: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -376,6 +378,8 @@ struct CoalitionBidHonorTraceCase {
     case Clan::e_CLANGHOSTBEAR: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -395,6 +399,8 @@ struct CoalitionBidHonorTraceCase {
     case Rank::e_STARCOLONEL: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -410,6 +416,8 @@ struct CoalitionBidHonorTraceCase {
     case Rank::e_STARCOLONEL: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -440,6 +448,8 @@ struct CoalitionBidHonorTraceCase {
     case UnitClass::e_ELEMENTAL: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -456,6 +466,8 @@ struct CoalitionBidHonorTraceCase {
     case UnitClass::e_ELEMENTAL: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
   enum class WeightClass { e_LIGHT, e_HEAVY, e_ASSAULT };
@@ -473,6 +485,8 @@ struct CoalitionBidHonorTraceCase {
     case WeightClass::e_ASSAULT: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -489,6 +503,8 @@ struct CoalitionBidHonorTraceCase {
     case WeightClass::e_ASSAULT: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -552,6 +568,8 @@ struct CoalitionBidHonorTraceCase {
     case Side::e_DEFENDER: {
       return f0;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -564,6 +582,8 @@ struct CoalitionBidHonorTraceCase {
     case Side::e_DEFENDER: {
       return f0;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -626,6 +646,8 @@ struct CoalitionBidHonorTraceCase {
     case TrialType::e_TRIALOFANNIHILATION: {
       return f0;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -638,6 +660,8 @@ struct CoalitionBidHonorTraceCase {
     case TrialType::e_TRIALOFANNIHILATION: {
       return f0;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -1185,6 +1209,8 @@ struct CoalitionBidHonorTraceCase {
     case ReadyStatus::e_BOTHREADY: {
       return f2;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -1204,6 +1230,8 @@ struct CoalitionBidHonorTraceCase {
     case ReadyStatus::e_BOTHREADY: {
       return f2;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -1562,6 +1590,8 @@ struct CoalitionBidHonorTraceCase {
                          return std::make_optional<std::shared_ptr<Commander>>(
                              _args.d_defender_bid->bid_commander);
                        }
+                       default:
+                         std::unreachable();
                        }
                      },
                      [](const typename BatchallPhase::PhaseAgreed _args)
@@ -1606,6 +1636,8 @@ struct CoalitionBidHonorTraceCase {
                              case ReadyStatus::e_BOTHREADY: {
                                return 0u;
                              }
+                             default:
+                               std::unreachable();
                              }
                            }());
                      },

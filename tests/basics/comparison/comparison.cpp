@@ -15,6 +15,8 @@ Comparison::cmp_to_nat(const Comparison::Cmp c) {
   case Cmp::e_CMPGT: {
     return 2u;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -43,6 +45,8 @@ __attribute__((pure)) unsigned int Comparison::max_nat(const unsigned int a,
   case Cmp::e_CMPGT: {
     return std::move(a);
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -58,6 +62,8 @@ __attribute__((pure)) unsigned int Comparison::min_nat(const unsigned int a,
   case Cmp::e_CMPGT: {
     return std::move(b);
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -79,6 +85,8 @@ __attribute__((pure)) unsigned int Comparison::clamp(const unsigned int val,
     case Cmp::e_CMPGT: {
       return std::move(hi);
     }
+    default:
+      std::unreachable();
     }
   }
   case Cmp::e_CMPGT: {
@@ -92,8 +100,12 @@ __attribute__((pure)) unsigned int Comparison::clamp(const unsigned int val,
     case Cmp::e_CMPGT: {
       return std::move(hi);
     }
+    default:
+      std::unreachable();
     }
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -109,5 +121,7 @@ Comparison::flip_cmp(const Comparison::Cmp c) {
   case Cmp::e_CMPGT: {
     return Cmp::e_CMPLT;
   }
+  default:
+    std::unreachable();
   }
 }

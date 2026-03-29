@@ -467,6 +467,8 @@ __attribute__((pure)) bool CoalitionBidHonorTraceCase::clan_eq_dec(
     case Clan::e_CLANGHOSTBEAR: {
       return false;
     }
+    default:
+      std::unreachable();
     }
   }
   case Clan::e_CLANJADEFALCON: {
@@ -480,6 +482,8 @@ __attribute__((pure)) bool CoalitionBidHonorTraceCase::clan_eq_dec(
     case Clan::e_CLANGHOSTBEAR: {
       return false;
     }
+    default:
+      std::unreachable();
     }
   }
   case Clan::e_CLANGHOSTBEAR: {
@@ -493,8 +497,12 @@ __attribute__((pure)) bool CoalitionBidHonorTraceCase::clan_eq_dec(
     case Clan::e_CLANGHOSTBEAR: {
       return true;
     }
+    default:
+      std::unreachable();
     }
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -520,6 +528,8 @@ __attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::rank_to_nat(
   case Rank::e_STARCOLONEL: {
     return 4u;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -547,6 +557,8 @@ CoalitionBidHonorTraceCase::weight_class_value(
   case WeightClass::e_ASSAULT: {
     return 18u;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -562,6 +574,8 @@ __attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::unit_class_bonus(
   case UnitClass::e_ELEMENTAL: {
     return 15u;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -842,6 +856,8 @@ __attribute__((pure)) bool CoalitionBidHonorTraceCase::is_ready(
     case Side::e_DEFENDER: {
       return false;
     }
+    default:
+      std::unreachable();
     }
   }
   case ReadyStatus::e_DEFENDERREADY: {
@@ -852,11 +868,15 @@ __attribute__((pure)) bool CoalitionBidHonorTraceCase::is_ready(
     case Side::e_DEFENDER: {
       return true;
     }
+    default:
+      std::unreachable();
     }
   }
   case ReadyStatus::e_BOTHREADY: {
     return true;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -873,6 +893,8 @@ CoalitionBidHonorTraceCase::set_ready(
     case Side::e_DEFENDER: {
       return ReadyStatus::e_DEFENDERREADY;
     }
+    default:
+      std::unreachable();
     }
   }
   case ReadyStatus::e_ATTACKERREADY: {
@@ -883,6 +905,8 @@ CoalitionBidHonorTraceCase::set_ready(
     case Side::e_DEFENDER: {
       return ReadyStatus::e_BOTHREADY;
     }
+    default:
+      std::unreachable();
     }
   }
   case ReadyStatus::e_DEFENDERREADY: {
@@ -893,11 +917,15 @@ CoalitionBidHonorTraceCase::set_ready(
     case Side::e_DEFENDER: {
       return rs;
     }
+    default:
+      std::unreachable();
     }
   }
   case ReadyStatus::e_BOTHREADY: {
     return rs;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -917,6 +945,8 @@ CoalitionBidHonorTraceCase::clear_ready(
     case Side::e_DEFENDER: {
       return rs;
     }
+    default:
+      std::unreachable();
     }
   }
   case ReadyStatus::e_DEFENDERREADY: {
@@ -927,6 +957,8 @@ CoalitionBidHonorTraceCase::clear_ready(
     case Side::e_DEFENDER: {
       return ReadyStatus::e_NEITHERREADY;
     }
+    default:
+      std::unreachable();
     }
   }
   case ReadyStatus::e_BOTHREADY: {
@@ -937,8 +969,12 @@ CoalitionBidHonorTraceCase::clear_ready(
     case Side::e_DEFENDER: {
       return ReadyStatus::e_ATTACKERREADY;
     }
+    default:
+      std::unreachable();
     }
   }
+  default:
+    std::unreachable();
   }
 }
 

@@ -168,6 +168,8 @@ struct DepRecord {
     case Tag::e_TBOOL: {
       return f0;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -180,6 +182,8 @@ struct DepRecord {
     case Tag::e_TBOOL: {
       return f0;
     }
+    default:
+      std::unreachable();
     }
   }
 

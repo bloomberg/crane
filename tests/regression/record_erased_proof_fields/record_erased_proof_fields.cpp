@@ -29,6 +29,8 @@ __attribute__((pure)) unsigned int RecordErasedProofFieldsCase::kind_code(
   case ItemKind::e_KINDG: {
     return 6u;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -59,6 +61,8 @@ __attribute__((pure)) unsigned int RecordErasedProofFieldsCase::bucket_code(
   case TraceBucket::e_BUCKETC: {
     return 32u;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -75,6 +79,8 @@ RecordErasedProofFieldsCase::bucket_to_tag(
   case TraceBucket::e_BUCKETC: {
     return StoredTag::tagsecondary(ItemKind::e_KINDB);
   }
+  default:
+    std::unreachable();
   }
 }
 

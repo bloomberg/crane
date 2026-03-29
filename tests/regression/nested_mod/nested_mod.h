@@ -38,6 +38,8 @@ struct NestedMod {
       case Color::e_BLUE: {
         return f1;
       }
+      default:
+        std::unreachable();
       }
     }
 
@@ -53,6 +55,8 @@ struct NestedMod {
       case Color::e_BLUE: {
         return f1;
       }
+      default:
+        std::unreachable();
       }
     }
 

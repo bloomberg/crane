@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <type_traits>
+#include <utility>
 
 __attribute__((pure)) bool TimingPreservesWfSimple::wf(
     const std::shared_ptr<TimingPreservesWfSimple::state> &s) {
@@ -27,6 +28,8 @@ TimingPreservesWfSimple::cycles(const TimingPreservesWfSimple::Instr i) {
   case Instr::e_JMS: {
     return 24u;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -55,5 +58,7 @@ TimingPreservesWfSimple::execute(
     return std::make_shared<TimingPreservesWfSimple::state>(
         state{s->regs_len, s->rom_len, s->pc, (s->stack_len + 1)});
   }
+  default:
+    std::unreachable();
   }
 }

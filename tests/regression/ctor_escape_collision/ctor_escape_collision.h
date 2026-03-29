@@ -2,6 +2,7 @@
 #define INCLUDED_CTOR_ESCAPE_COLLISION
 
 #include <type_traits>
+#include <utility>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
@@ -36,6 +37,8 @@ struct CtorEscapeCollision {
     case Item::e_D__2: {
       return f4;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -61,6 +64,8 @@ struct CtorEscapeCollision {
     case Item::e_D__2: {
       return f4;
     }
+    default:
+      std::unreachable();
     }
   }
 

@@ -266,6 +266,8 @@ Levenshtein::levenshtein_chain(const std::shared_ptr<String> &s,
                               }},
                               levenshtein_chain1(_args0.d_a1)->v());
                         }
+                        default:
+                          std::unreachable();
                         }
                       }},
                   t->v());
@@ -297,6 +299,8 @@ __attribute__((pure)) Sumbool Bool::bool_dec(const Bool0 b1, const Bool0 b2) {
     case Bool0::e_FALSE0: {
       return Sumbool::e_RIGHT;
     }
+    default:
+      std::unreachable();
     }
   }
   case Bool0::e_FALSE0: {
@@ -307,7 +311,11 @@ __attribute__((pure)) Sumbool Bool::bool_dec(const Bool0 b1, const Bool0 b2) {
     case Bool0::e_FALSE0: {
       return Sumbool::e_LEFT;
     }
+    default:
+      std::unreachable();
     }
   }
+  default:
+    std::unreachable();
   }
 }

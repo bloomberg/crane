@@ -18,6 +18,8 @@ __attribute__((pure)) unsigned int UnitType::match_unit(const Unit u) {
   case Unit::e_TT: {
     return 7u;
   }
+  default:
+    std::unreachable();
   }
 }
 

@@ -44,6 +44,8 @@ LargeEnum::color_to_nat(const LargeEnum::Color c) {
   case Color::e_PINK: {
     return 11u;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -85,6 +87,8 @@ __attribute__((pure)) bool LargeEnum::is_warm(const LargeEnum::Color c) {
   case Color::e_PINK: {
     return true;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -126,6 +130,8 @@ __attribute__((pure)) bool LargeEnum::is_neutral(const LargeEnum::Color c) {
   case Color::e_PINK: {
     return false;
   }
+  default:
+    std::unreachable();
   }
 }
 

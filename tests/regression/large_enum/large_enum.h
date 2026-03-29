@@ -72,6 +72,8 @@ struct LargeEnum {
     case Color::e_PINK: {
       return f10;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -117,6 +119,8 @@ struct LargeEnum {
     case Color::e_PINK: {
       return f10;
     }
+    default:
+      std::unreachable();
     }
   }
 

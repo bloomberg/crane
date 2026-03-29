@@ -17,6 +17,8 @@ PatternImpossible::complex_match(const PatternImpossible::Three x) {
   case Three::e_THREE0: {
     return 3u;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -64,6 +66,8 @@ PatternImpossible::double_match(const PatternImpossible::Three x,
     case Three::e_THREE0: {
       return 3u;
     }
+    default:
+      std::unreachable();
     }
   }
   case Three::e_TWO: {
@@ -72,6 +76,8 @@ PatternImpossible::double_match(const PatternImpossible::Three x,
   case Three::e_THREE0: {
     return 20u;
   }
+  default:
+    std::unreachable();
   }
 }
 

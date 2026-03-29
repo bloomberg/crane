@@ -30,6 +30,8 @@ struct InductiveInModule {
       case Color::e_BLUE: {
         return f1;
       }
+      default:
+        std::unreachable();
       }
     }
 
@@ -45,6 +47,8 @@ struct InductiveInModule {
       case Color::e_BLUE: {
         return f1;
       }
+      default:
+        std::unreachable();
       }
     }
 

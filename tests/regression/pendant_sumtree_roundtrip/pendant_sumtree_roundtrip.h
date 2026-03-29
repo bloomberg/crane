@@ -406,6 +406,8 @@ struct PendantSumtreeRoundtripCase {
     case Twist::e_TZ: {
       return f0;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -418,6 +420,8 @@ struct PendantSumtreeRoundtripCase {
     case Twist::e_TZ: {
       return f0;
     }
+    default:
+      std::unreachable();
     }
   }
   enum class Fiber { e_COTTON, e_CAMELID };
@@ -431,6 +435,8 @@ struct PendantSumtreeRoundtripCase {
     case Fiber::e_CAMELID: {
       return f0;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -443,6 +449,8 @@ struct PendantSumtreeRoundtripCase {
     case Fiber::e_CAMELID: {
       return f0;
     }
+    default:
+      std::unreachable();
     }
   }
   enum class Color { e_WHITE, e_BROWN, e_RED, e_BLUE };
@@ -463,6 +471,8 @@ struct PendantSumtreeRoundtripCase {
     case Color::e_BLUE: {
       return f2;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -482,6 +492,8 @@ struct PendantSumtreeRoundtripCase {
     case Color::e_BLUE: {
       return f2;
     }
+    default:
+      std::unreachable();
     }
   }
 

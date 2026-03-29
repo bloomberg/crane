@@ -378,5 +378,7 @@ __attribute__((pure)) unsigned int RamOps::score(const RamOps::Item x) {
   case Item::e_S_0: {
     return 2u;
   }
+  default:
+    std::unreachable();
   }
 }

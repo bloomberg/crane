@@ -105,6 +105,8 @@ ValidatedPumpDeliveryTraceCase::isf_activity_modifier(
   case ActivityState::e_ACTIVITY_STRESS: {
     return 90u;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -130,6 +132,8 @@ ValidatedPumpDeliveryTraceCase::icr_activity_modifier(
   case ActivityState::e_ACTIVITY_STRESS: {
     return 95u;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -147,6 +151,8 @@ ValidatedPumpDeliveryTraceCase::peak_time(
   case InsulinType::e_INSULIN_LISPRO: {
     return 75u;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -842,6 +848,8 @@ ValidatedPumpDeliveryTraceCase::apply_rounding(
   case RoundingMode::e_ROUNDUNIT: {
     return round_down_to_increment(std::move(t), ONE_UNIT);
   }
+  default:
+    std::unreachable();
   }
 }
 

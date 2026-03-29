@@ -113,6 +113,8 @@ __attribute__((pure)) bool PulseParseCertificateCase::pulse_class_eqb(
     case PulseClass::e_MARKLONG: {
       return false;
     }
+    default:
+      std::unreachable();
     }
   }
   case PulseClass::e_MARKLONG: {
@@ -123,8 +125,12 @@ __attribute__((pure)) bool PulseParseCertificateCase::pulse_class_eqb(
     case PulseClass::e_MARKLONG: {
       return true;
     }
+    default:
+      std::unreachable();
     }
   }
+  default:
+    std::unreachable();
   }
 }
 

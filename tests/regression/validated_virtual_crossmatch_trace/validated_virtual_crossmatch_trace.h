@@ -872,6 +872,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
     case HLALocus::e_LOCUS_DR: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -888,6 +890,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
     case HLALocus::e_LOCUS_DR: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -1005,6 +1009,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
     case MFIStrength::e_MFI_VERYSTRONG: {
       return f3;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -1027,6 +1033,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
     case MFIStrength::e_MFI_VERYSTRONG: {
       return f3;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -1066,6 +1074,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
     case VirtualXMResult::e_VXM_STRONGPOSITIVE: {
       return f2;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -1085,6 +1095,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
     case VirtualXMResult::e_VXM_STRONGPOSITIVE: {
       return f2;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -1116,6 +1128,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
     case TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION: {
       return f2;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -1136,6 +1150,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
     case TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION: {
       return f2;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -1166,6 +1182,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
     case TestConfidence::e_CONFIDENCE_LOW: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -1182,6 +1200,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
     case TestConfidence::e_CONFIDENCE_LOW: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
   enum class CrossmatchResult {
@@ -1207,6 +1227,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
     case CrossmatchResult::e_XM_NOT_DONE: {
       return f2;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -1226,6 +1248,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
     case CrossmatchResult::e_XM_NOT_DONE: {
       return f2;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -1325,6 +1349,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
     case MFIStrength::e_MFI_VERYSTRONG: {
       return false;
     }
+    default:
+      std::unreachable();
     }
   }();
   static inline const unsigned int sample_dedup_count =
@@ -1344,6 +1370,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
     case TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION: {
       return false;
     }
+    default:
+      std::unreachable();
     }
   }();
   static inline const bool sample_strong_absolute_contra = [](void) {
@@ -1361,6 +1389,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
     case TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION: {
       return true;
     }
+    default:
+      std::unreachable();
     }
   }();
   static inline const bool sample_strong_has_complement_fixing_dsa =

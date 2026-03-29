@@ -82,6 +82,8 @@ ValidatedVirtualCrossmatchTraceCase::hla_locus_eq_dec(
     case HLALocus::e_LOCUS_DR: {
       return false;
     }
+    default:
+      std::unreachable();
     }
   }
   case HLALocus::e_LOCUS_B: {
@@ -95,6 +97,8 @@ ValidatedVirtualCrossmatchTraceCase::hla_locus_eq_dec(
     case HLALocus::e_LOCUS_DR: {
       return false;
     }
+    default:
+      std::unreachable();
     }
   }
   case HLALocus::e_LOCUS_DR: {
@@ -108,8 +112,12 @@ ValidatedVirtualCrossmatchTraceCase::hla_locus_eq_dec(
     case HLALocus::e_LOCUS_DR: {
       return true;
     }
+    default:
+      std::unreachable();
     }
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -316,6 +324,8 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
       }
     }
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -473,6 +483,8 @@ ValidatedVirtualCrossmatchTraceCase::virtual_crossmatch_safe(
   case MFIStrength::e_MFI_VERYSTRONG: {
     return VirtualXMResult::e_VXM_STRONGPOSITIVE;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -498,6 +510,8 @@ ValidatedVirtualCrossmatchTraceCase::transplant_acceptability(
   case VirtualXMResult::e_VXM_STRONGPOSITIVE: {
     return TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -531,6 +545,8 @@ __attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::safe_to_release(
     case TestConfidence::e_CONFIDENCE_LOW: {
       return false;
     }
+    default:
+      std::unreachable();
     }
   }
   case CrossmatchResult::e_XM_INCOMPATIBLE: {
@@ -542,6 +558,8 @@ __attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::safe_to_release(
   case CrossmatchResult::e_XM_NOT_DONE: {
     return false;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -611,6 +629,8 @@ __attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::risk_acceptable(
   case TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION: {
     return false;
   }
+  default:
+    std::unreachable();
   }
 }
 

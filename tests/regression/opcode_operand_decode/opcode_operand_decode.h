@@ -42,6 +42,8 @@ struct OpcodeOperandDecode {
     case Instruction::e_DCL_: {
       return f3;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -64,6 +66,8 @@ struct OpcodeOperandDecode {
     case Instruction::e_DCL_: {
       return f3;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -86,6 +90,8 @@ struct OpcodeOperandDecode {
     case Instruction::e_DCL_: {
       return 0u;
     }
+    default:
+      std::unreachable();
     }
   }();
 };

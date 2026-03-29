@@ -2,6 +2,7 @@
 #define INCLUDED_ENUM_SWITCH_QUALIFIED
 
 #include <type_traits>
+#include <utility>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
@@ -24,6 +25,8 @@ struct EnumSwitchQualified {
       case Color::e_BLUE: {
         return f0;
       }
+      default:
+        std::unreachable();
       }
     }
 
@@ -36,6 +39,8 @@ struct EnumSwitchQualified {
       case Color::e_BLUE: {
         return f0;
       }
+      default:
+        std::unreachable();
       }
     }
 

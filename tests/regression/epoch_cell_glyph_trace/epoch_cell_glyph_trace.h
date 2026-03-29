@@ -322,6 +322,8 @@ struct EpochCellGlyphTraceCase {
     case LunarPhase::e_LASTQUARTER: {
       return f2;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -341,6 +343,8 @@ struct EpochCellGlyphTraceCase {
     case LunarPhase::e_LASTQUARTER: {
       return f2;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -404,6 +408,8 @@ struct EpochCellGlyphTraceCase {
     case ZodiacSign::e_PISCES: {
       return f10;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -449,6 +455,8 @@ struct EpochCellGlyphTraceCase {
     case ZodiacSign::e_PISCES: {
       return f10;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -526,6 +534,8 @@ struct EpochCellGlyphTraceCase {
     case EclipseCategory::e_EC_PARTIALSOLAR: {
       return f3;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -549,6 +559,8 @@ struct EpochCellGlyphTraceCase {
     case EclipseCategory::e_EC_PARTIALSOLAR: {
       return f3;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -592,6 +604,8 @@ struct EpochCellGlyphTraceCase {
     case DialGlyph::e_GLYPH_EMPTY: {
       return f3;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -614,6 +628,8 @@ struct EpochCellGlyphTraceCase {
     case DialGlyph::e_GLYPH_EMPTY: {
       return f3;
     }
+    default:
+      std::unreachable();
     }
   }
 

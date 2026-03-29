@@ -898,6 +898,8 @@ struct ValidatedPumpDeliveryTraceCase {
     case ActivityState::e_ACTIVITY_STRESS: {
       return f4;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -923,6 +925,8 @@ struct ValidatedPumpDeliveryTraceCase {
     case ActivityState::e_ACTIVITY_STRESS: {
       return f4;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -1100,6 +1104,8 @@ struct ValidatedPumpDeliveryTraceCase {
     case InsulinType::e_INSULIN_LISPRO: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -1116,6 +1122,8 @@ struct ValidatedPumpDeliveryTraceCase {
     case InsulinType::e_INSULIN_LISPRO: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -1483,6 +1491,8 @@ struct ValidatedPumpDeliveryTraceCase {
     case RoundingMode::e_ROUNDUNIT: {
       return f2;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -1502,6 +1512,8 @@ struct ValidatedPumpDeliveryTraceCase {
     case RoundingMode::e_ROUNDUNIT: {
       return f2;
     }
+    default:
+      std::unreachable();
     }
   }
 

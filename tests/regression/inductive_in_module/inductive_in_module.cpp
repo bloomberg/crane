@@ -17,5 +17,7 @@ __attribute__((pure)) unsigned int InductiveInModule::Inner::color_to_nat(
   case Color::e_BLUE: {
     return 2u;
   }
+  default:
+    std::unreachable();
   }
 }

@@ -1234,11 +1234,16 @@ and pp_cpp_stmt env args = function
       ++ fnl ()
       ++ str "}"
     in
+    require_header "utility";
     str "switch ("
     ++ pp_cpp_expr env args scrut
     ++ str ") {"
     ++ fnl ()
     ++ prlist_with_sep fnl pp_branch branches
+    ++ fnl ()
+    ++ str "default:"
+    ++ fnl ()
+    ++ str "  std::unreachable();"
     ++ fnl ()
     ++ str "}"
   | Sassert (expr_str, comment_opt) ->

@@ -29,6 +29,8 @@ struct PatternImpossible {
     case Three::e_THREE0: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -44,6 +46,8 @@ struct PatternImpossible {
     case Three::e_THREE0: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
 

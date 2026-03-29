@@ -27,6 +27,8 @@ struct Comparison {
     case Cmp::e_CMPGT: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -42,6 +44,8 @@ struct Comparison {
     case Cmp::e_CMPGT: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
 

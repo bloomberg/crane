@@ -1,6 +1,7 @@
 #include <enum_switch_qualified.h>
 
 #include <type_traits>
+#include <utility>
 
 __attribute__((pure)) EnumSwitchQualified::Outer::Color
 EnumSwitchQualified::Outer::flip(const EnumSwitchQualified::Outer::Color c) {
@@ -11,6 +12,8 @@ EnumSwitchQualified::Outer::flip(const EnumSwitchQualified::Outer::Color c) {
   case Color::e_BLUE: {
     return Color::e_RED;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -23,5 +26,7 @@ EnumSwitchQualified::Outer::code(const EnumSwitchQualified::Outer::Color c) {
   case Color::e_BLUE: {
     return 2u;
   }
+  default:
+    std::unreachable();
   }
 }

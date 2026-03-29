@@ -199,41 +199,57 @@ public:
                               case Sumbool::e_RIGHT: {
                                 return Sumbool::e_RIGHT;
                               }
+                              default:
+                                std::unreachable();
                               }
                             }
                             case Sumbool::e_RIGHT: {
                               return Sumbool::e_RIGHT;
                             }
+                            default:
+                              std::unreachable();
                             }
                           }
                           case Sumbool::e_RIGHT: {
                             return Sumbool::e_RIGHT;
                           }
+                          default:
+                            std::unreachable();
                           }
                         }
                         case Sumbool::e_RIGHT: {
                           return Sumbool::e_RIGHT;
                         }
+                        default:
+                          std::unreachable();
                         }
                       }
                       case Sumbool::e_RIGHT: {
                         return Sumbool::e_RIGHT;
                       }
+                      default:
+                        std::unreachable();
                       }
                     }
                     case Sumbool::e_RIGHT: {
                       return Sumbool::e_RIGHT;
                     }
+                    default:
+                      std::unreachable();
                     }
                   }
                   case Sumbool::e_RIGHT: {
                     return Sumbool::e_RIGHT;
                   }
+                  default:
+                    std::unreachable();
                   }
                 }
                 case Sumbool::e_RIGHT: {
                   return Sumbool::e_RIGHT;
                 }
+                default:
+                  std::unreachable();
                 }
               }},
               b->v());
@@ -771,6 +787,8 @@ struct Levenshtein {
       case Bool0::e_FALSE0: {
         return z;
       }
+      default:
+        std::unreachable();
       }
     }
     case Bool0::e_FALSE0: {
@@ -781,8 +799,12 @@ struct Levenshtein {
       case Bool0::e_FALSE0: {
         return z;
       }
+      default:
+        std::unreachable();
       }
     }
+    default:
+      std::unreachable();
     }
   }
 

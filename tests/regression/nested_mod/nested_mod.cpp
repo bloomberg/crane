@@ -33,6 +33,8 @@ NestedMod::Outer::shape_with_color(const std::shared_ptr<Inner::shape> &s,
   case Color::e_BLUE: {
     return (Inner::area(s) + 300u);
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -48,6 +50,8 @@ NestedMod::Outer::color_code(const NestedMod::Outer::Color c) {
   case Color::e_BLUE: {
     return 3u;
   }
+  default:
+    std::unreachable();
   }
 }
 

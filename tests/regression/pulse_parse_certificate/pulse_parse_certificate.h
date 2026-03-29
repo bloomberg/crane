@@ -117,6 +117,8 @@ struct PulseParseCertificateCase {
     case PulseClass::e_MARKLONG: {
       return f0;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -129,6 +131,8 @@ struct PulseParseCertificateCase {
     case PulseClass::e_MARKLONG: {
       return f0;
     }
+    default:
+      std::unreachable();
     }
   }
 

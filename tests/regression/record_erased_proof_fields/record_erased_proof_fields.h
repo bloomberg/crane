@@ -118,6 +118,8 @@ struct RecordErasedProofFieldsCase {
     case ItemKind::e_KINDG: {
       return f5;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -147,6 +149,8 @@ struct RecordErasedProofFieldsCase {
     case ItemKind::e_KINDG: {
       return f5;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -235,6 +239,8 @@ struct RecordErasedProofFieldsCase {
     case TraceBucket::e_BUCKETC: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
 
@@ -251,6 +257,8 @@ struct RecordErasedProofFieldsCase {
     case TraceBucket::e_BUCKETC: {
       return f1;
     }
+    default:
+      std::unreachable();
     }
   }
 

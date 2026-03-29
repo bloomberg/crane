@@ -149,6 +149,8 @@ template <OrderedType K, BaseType V> struct MakeMap {
                 return tree::node(_args.d_a0, _args.d_a1, _args.d_a2,
                                   add(k, v, _args.d_a3));
               }
+              default:
+                std::unreachable();
               }
             }},
         m->v());
@@ -173,6 +175,8 @@ template <OrderedType K, BaseType V> struct MakeMap {
                                    case Comparison::e_GT: {
                                      return find(k, _args.d_a3);
                                    }
+                                   default:
+                                     std::unreachable();
                                    }
                                  }},
                       m->v());

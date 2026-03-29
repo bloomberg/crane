@@ -545,6 +545,8 @@ __attribute__((pure)) bool BinInt::leb(const std::shared_ptr<Z> &x,
   case Comparison::e_GT: {
     return false;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -560,6 +562,8 @@ __attribute__((pure)) bool BinInt::ltb(const std::shared_ptr<Z> &x,
   case Comparison::e_GT: {
     return false;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -820,6 +824,8 @@ __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::phase_code(
   case LunarPhase::e_LASTQUARTER: {
     return 3u;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -896,6 +902,8 @@ __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::zodiac_code(
   case ZodiacSign::e_PISCES: {
     return 11u;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -1118,6 +1126,8 @@ EpochCellGlyphTraceCase::eclipse_category_code(
   case EclipseCategory::e_EC_PARTIALSOLAR: {
     return 4u;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -1139,6 +1149,8 @@ __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::glyph_code(
   case DialGlyph::e_GLYPH_EMPTY: {
     return 4u;
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -1163,6 +1175,8 @@ __attribute__((pure)) bool EpochCellGlyphTraceCase::category_matches_glyph(
     case DialGlyph::e_GLYPH_EMPTY: {
       return false;
     }
+    default:
+      std::unreachable();
     }
   }
   case EclipseCategory::e_EC_PARTIALLUNAR: {
@@ -1182,6 +1196,8 @@ __attribute__((pure)) bool EpochCellGlyphTraceCase::category_matches_glyph(
     case DialGlyph::e_GLYPH_EMPTY: {
       return false;
     }
+    default:
+      std::unreachable();
     }
   }
   case EclipseCategory::e_EC_TOTALSOLAR: {
@@ -1201,6 +1217,8 @@ __attribute__((pure)) bool EpochCellGlyphTraceCase::category_matches_glyph(
     case DialGlyph::e_GLYPH_EMPTY: {
       return false;
     }
+    default:
+      std::unreachable();
     }
   }
   case EclipseCategory::e_EC_ANNULARSOLAR: {
@@ -1220,6 +1238,8 @@ __attribute__((pure)) bool EpochCellGlyphTraceCase::category_matches_glyph(
     case DialGlyph::e_GLYPH_EMPTY: {
       return false;
     }
+    default:
+      std::unreachable();
     }
   }
   case EclipseCategory::e_EC_PARTIALSOLAR: {
@@ -1239,8 +1259,12 @@ __attribute__((pure)) bool EpochCellGlyphTraceCase::category_matches_glyph(
     case DialGlyph::e_GLYPH_EMPTY: {
       return false;
     }
+    default:
+      std::unreachable();
     }
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -1297,6 +1321,8 @@ __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::count_total_lunar(
               case EclipseCategory::e_EC_PARTIALSOLAR: {
                 return 0u;
               }
+              default:
+                std::unreachable();
               }
             }();
             return (std::move(count_here) + count_total_lunar(_args.d_a1));
@@ -1338,6 +1364,8 @@ EpochCellGlyphTraceCase::count_visible_total_lunar(
               case EclipseCategory::e_EC_PARTIALSOLAR: {
                 return 0u;
               }
+              default:
+                std::unreachable();
               }
             }();
             return (std::move(count_here) +
@@ -1448,6 +1476,8 @@ __attribute__((pure)) Comparison Datatypes::CompOpp(const Comparison r) {
   case Comparison::e_GT: {
     return Comparison::e_LT;
   }
+  default:
+    std::unreachable();
   }
 }
 

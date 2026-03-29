@@ -973,6 +973,8 @@ std::shared_ptr<N> BinaryNums::n_max(std::shared_ptr<N> a,
   case Comparison::e_GT: {
     return std::move(a);
   }
+  default:
+    std::unreachable();
   }
 }
 
@@ -1001,5 +1003,7 @@ __attribute__((pure)) Comparison Datatypes::CompOpp(const Comparison r) {
   case Comparison::e_GT: {
     return Comparison::e_LT;
   }
+  default:
+    std::unreachable();
   }
 }
