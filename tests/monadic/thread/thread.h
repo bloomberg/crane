@@ -1,19 +1,11 @@
 #ifndef INCLUDED_THREAD
 #define INCLUDED_THREAD
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <chrono>
 #include <cstdint>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
 #include <string>
 #include <thread>
-#include <variant>
+#include <type_traits>
 
 using namespace std::string_literals;
 template <typename F, typename R, typename... Args>

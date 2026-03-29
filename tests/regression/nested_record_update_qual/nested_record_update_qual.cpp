@@ -1,15 +1,7 @@
 #include <nested_record_update_qual.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
 
 std::shared_ptr<NestedRecordUpdateQual::Shadow> NestedRecordUpdateQual::bump(
     const std::shared_ptr<NestedRecordUpdateQual::Shadow> &x) {

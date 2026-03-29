@@ -1,16 +1,8 @@
 #include <io.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <fstream>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
 #include <string>
-#include <variant>
+#include <type_traits>
 
 void iotest::test1(const std::string _x) { return; }
 

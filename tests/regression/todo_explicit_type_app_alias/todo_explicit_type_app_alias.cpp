@@ -1,12 +1,4 @@
 #include <todo_explicit_type_app_alias.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
+#include <utility>

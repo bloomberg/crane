@@ -610,6 +610,19 @@ let get_containing_eponymous_struct (r : GlobRef.t) : GlobRef.t option =
 let current_structure_decls : (Label.t * Miniml.ml_structure_elem) list ref =
   ref []
 
+(** Track which standard library headers are needed by the generated code.
+    Populated during the Pre-phase dry run; read by extract_env.ml to emit
+    only necessary #include directives. *)
+module SSet = Set.Make (String)
+
+let needed_headers : SSet.t ref = ref SSet.empty
+
+let require_header h = needed_headers := SSet.add h !needed_headers
+
+let get_needed_headers () = SSet.elements !needed_headers
+
+let reset_needed_headers () = needed_headers := SSet.empty
+
 (** Reset ALL global state - must be called between extractions to avoid
     pollution. This prevents state from one extraction affecting another when
     running multiple extractions in the same process (e.g., during 'dune
@@ -640,7 +653,8 @@ let reset_cpp_state () =
   Hashtbl.clear global_inductive_names;
   template_static_accessors := [];
   Hashtbl.clear functor_app_sources;
-  hoisted_concept_defs := []
+  hoisted_concept_defs := [];
+  reset_needed_headers ()
 
 (** Check if a function is a projection for the eponymous record. Such
     projections are redundant when the record fields are merged into the module

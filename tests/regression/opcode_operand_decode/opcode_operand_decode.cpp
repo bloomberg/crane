@@ -1,16 +1,7 @@
 #include <opcode_operand_decode.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
 #include <utility>
-#include <variant>
 
 __attribute__((pure)) OpcodeOperandDecode::Instruction
 OpcodeOperandDecode::decode(const unsigned int b1, const unsigned int _x) {

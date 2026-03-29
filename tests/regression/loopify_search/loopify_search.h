@@ -1,15 +1,9 @@
 #ifndef INCLUDED_LOOPIFY_SEARCH
 #define INCLUDED_LOOPIFY_SEARCH
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
 #include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 

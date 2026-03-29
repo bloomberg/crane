@@ -1,18 +1,9 @@
 #ifndef INCLUDED_PRIM_ARRAY
 #define INCLUDED_PRIM_ARRAY
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <cstdint>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
 #include <persistent_array.h>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;

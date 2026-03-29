@@ -1,17 +1,8 @@
 #include <n_gmp.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
 #include <gmpxx.h>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
 #include <utility>
-#include <variant>
 
 __attribute__((pure)) mpz_class Pos::add_carry(const mpz_class x,
                                                const mpz_class y) {

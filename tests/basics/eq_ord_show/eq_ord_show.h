@@ -1,16 +1,8 @@
 #ifndef INCLUDED_EQ_ORD_SHOW
 #define INCLUDED_EQ_ORD_SHOW
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
 #include <string>
-#include <variant>
+#include <type_traits>
 
 using namespace std::string_literals;
 template <typename F, typename R, typename... Args>

@@ -1,15 +1,8 @@
 #include <prim_proj.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
+#include <utility>
 
 std::shared_ptr<PrimProj::point>
 PrimProj::add_points(std::shared_ptr<PrimProj::point> p1,

@@ -1,15 +1,6 @@
 #include <bool_dec_bde.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
 
 __attribute__((pure)) bool BoolDecBde::eqb_dec(const bool a, const bool b) {
   if (Bool::bool_dec(a, b)) {

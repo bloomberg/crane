@@ -1,15 +1,8 @@
 #ifndef INCLUDED_EVEN_LENGTH_BYTE_VALIDATION
 #define INCLUDED_EVEN_LENGTH_BYTE_VALIDATION
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 

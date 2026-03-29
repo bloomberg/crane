@@ -1,16 +1,7 @@
 #include <z_gmp.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
 #include <gmpxx.h>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
 
 __attribute__((pure)) mpz_class ZGMPTest::add_test(const mpz_class _x0,
                                                    const mpz_class _x1) {

@@ -1,17 +1,8 @@
 #ifndef INCLUDED_MUTABLE_VECTOR
 #define INCLUDED_MUTABLE_VECTOR
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <cstdint>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
 #include <vector>
 
 template <typename F, typename R, typename... Args>

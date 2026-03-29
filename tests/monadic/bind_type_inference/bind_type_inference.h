@@ -1,16 +1,10 @@
 #ifndef INCLUDED_BIND_TYPE_INFERENCE
 #define INCLUDED_BIND_TYPE_INFERENCE
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <cstdint>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
+#include <utility>
 #include <variant>
 #include <vector>
 

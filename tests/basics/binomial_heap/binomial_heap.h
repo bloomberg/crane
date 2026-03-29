@@ -1,15 +1,10 @@
 #ifndef INCLUDED_BINOMIAL_HEAP
 #define INCLUDED_BINOMIAL_HEAP
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 

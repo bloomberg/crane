@@ -1,15 +1,7 @@
 #include <valid_layout_window.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
 
 __attribute__((pure)) bool ValidLayoutWindow::valid_layoutb(
     const std::shared_ptr<ValidLayoutWindow::layout> &l) {

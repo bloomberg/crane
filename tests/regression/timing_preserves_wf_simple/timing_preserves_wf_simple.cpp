@@ -1,15 +1,7 @@
 #include <timing_preserves_wf_simple.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
 
 __attribute__((pure)) bool TimingPreservesWfSimple::wf(
     const std::shared_ptr<TimingPreservesWfSimple::state> &s) {

@@ -615,8 +615,16 @@ let header_imports =
     "optional";
     "stdexcept";
     "string";
+    "type_traits";
+    "utility";
     "variant";
   ]
+
+(** Return only the standard headers that were actually referenced during
+    rendering.  Falls back to the full list for BDE mode (different naming). *)
+let needed_std_headers () =
+  let needed = Cpp_state.get_needed_headers () in
+  List.filter (fun h -> List.mem h needed) header_imports
 
 let header_imports_bsl =
   [
@@ -636,7 +644,8 @@ let mk_include s = str ("#include <" ^ s ^ ">")
 let header fn () =
   let imps = get_custom_imports () in
   let himports =
-    if Table.std_lib () = "BDE" then header_imports_bsl else header_imports
+    if Table.std_lib () = "BDE" then header_imports_bsl
+    else needed_std_headers ()
   in
   (* Component's own header must be first include (BDE Rule 5.5) *)
   let self_include =
@@ -669,7 +678,8 @@ let mk_include_quoted s = str ("#include \"" ^ s ^ "\"")
 let spec_header si () =
   let imps = get_custom_imports () in
   let himports =
-    if Table.std_lib () = "BDE" then header_imports_bsl else header_imports
+    if Table.std_lib () = "BDE" then header_imports_bsl
+    else needed_std_headers ()
   in
   (* Include guard (BDE Rule 4.2.3): #ifndef INCLUDED_NAME *)
   let guard_name =
@@ -999,9 +1009,16 @@ let print_structure_to_file (fn, si, mo) dry struc =
     Table.mark_needs_string_literals ()
   else
     Table.reset_needs_string_literals ();
-  (* First, a dry run, for computing objects to rename or duplicate *)
+  (* First, a dry run, for computing objects to rename or duplicate.
+     Also accumulates needed standard headers via require_header. *)
+  Cpp_state.reset_needed_headers ();
   set_phase Pre;
   ignore (d.pp_struct struc);
+  ignore (d.pp_hstruct struc);
+  (* The MapsTo concept / Overloaded boilerplate always emitted by spec_header
+     uses std::is_invocable_r_v, which requires <type_traits>. *)
+  if Table.std_lib () <> "BDE" then
+    Cpp_state.require_header "type_traits";
   let opened = opened_libraries () in
   (* Print the implementation *)
   let cout = if dry then None else Option.map open_out fn in

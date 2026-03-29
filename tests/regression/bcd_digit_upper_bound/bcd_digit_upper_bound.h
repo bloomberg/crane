@@ -1,16 +1,7 @@
 #ifndef INCLUDED_BCD_DIGIT_UPPER_BOUND
 #define INCLUDED_BCD_DIGIT_UPPER_BOUND
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;

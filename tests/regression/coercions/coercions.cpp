@@ -1,15 +1,8 @@
 #include <coercions.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
 
 __attribute__((pure)) unsigned int Coercions::bool_to_nat(const bool b) {
   if (b) {

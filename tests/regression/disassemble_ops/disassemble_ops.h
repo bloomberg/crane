@@ -1,15 +1,9 @@
 #ifndef INCLUDED_DISASSEMBLE_OPS
 #define INCLUDED_DISASSEMBLE_OPS
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
 #include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -203,7 +197,7 @@ struct DisassembleOps {
   drop_(const unsigned int n, std::shared_ptr<List<unsigned int>> l);
   __attribute__((pure)) static std::optional<
       std::pair<std::shared_ptr<instruction>, unsigned int>>
-  disassemble1(const std::shared_ptr<List<unsigned int>> &rom,
+  disassemble1(const std::shared_ptr<List<unsigned int>> &rom0,
                const unsigned int addr);
   static inline const unsigned int test_disassemble_drop_window = [](void) {
     if (disassemble1(
@@ -256,7 +250,7 @@ struct DisassembleOps {
 
   __attribute__((pure)) static std::optional<
       std::pair<std::shared_ptr<instruction>, unsigned int>>
-  disassemble2(const std::shared_ptr<List<unsigned int>> &rom,
+  disassemble2(const std::shared_ptr<List<unsigned int>> &rom0,
                const unsigned int addr);
   static inline const unsigned int test_disassemble_next_address = [](void) {
     if (disassemble2(
@@ -285,7 +279,7 @@ struct DisassembleOps {
                                               const unsigned int b2);
   __attribute__((pure)) static std::optional<
       std::pair<std::shared_ptr<instruction>, unsigned int>>
-  disassemble3(const std::shared_ptr<List<unsigned int>> &rom,
+  disassemble3(const std::shared_ptr<List<unsigned int>> &rom0,
                const unsigned int addr);
 
   template <typename T1>
@@ -306,7 +300,7 @@ struct DisassembleOps {
                                               const unsigned int b2);
   __attribute__((pure)) static std::optional<
       std::pair<std::shared_ptr<instruction>, unsigned int>>
-  disassemble4(const std::shared_ptr<List<unsigned int>> &rom,
+  disassemble4(const std::shared_ptr<List<unsigned int>> &rom0,
                const unsigned int addr);
 
   struct state {

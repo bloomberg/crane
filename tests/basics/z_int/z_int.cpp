@@ -1,17 +1,8 @@
 #include <z_int.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <cstdint>
 #include <cstdlib>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
 
 __attribute__((pure)) int64_t ZIntTest::add_test(const int64_t _x0,
                                                  const int64_t _x1) {

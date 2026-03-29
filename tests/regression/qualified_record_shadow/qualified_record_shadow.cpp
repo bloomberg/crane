@@ -1,15 +1,7 @@
 #include <qualified_record_shadow.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
 
 std::shared_ptr<QualifiedRecordShadow::Shadow> QualifiedRecordShadow::bump(
     const std::shared_ptr<QualifiedRecordShadow::Shadow> &x) {

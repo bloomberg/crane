@@ -1,15 +1,7 @@
 #include <comparison.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
+#include <utility>
 
 __attribute__((pure)) unsigned int
 Comparison::cmp_to_nat(const Comparison::Cmp c) {

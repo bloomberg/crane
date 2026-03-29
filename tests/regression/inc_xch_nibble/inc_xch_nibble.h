@@ -1,15 +1,8 @@
 #ifndef INCLUDED_INC_XCH_NIBBLE
 #define INCLUDED_INC_XCH_NIBBLE
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 

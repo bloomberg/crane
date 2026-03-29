@@ -475,7 +475,9 @@ let rec pp_cpp_type par vl t =
         when let name = Id.to_string id in
              name = "dummy_type"
              || name = "dummy_prop"
-             || name = "dummy_implicit" -> str "std::any"
+             || name = "dummy_implicit" ->
+        require_header "any";
+        str "std::any"
       | _ ->
       match find_custom_opt r with
       | Some s when to_inline r ->
@@ -536,6 +538,7 @@ let rec pp_cpp_type par vl t =
           ++ pp_list (pp_rec false) l
           ++ str ">" ) )
     | Tfun (d, c) ->
+      require_header "functional";
       std_angle
         "function"
         (pp_rec false c ++ pp_par true (pp_list (pp_rec false) d))
@@ -627,13 +630,21 @@ let rec pp_cpp_type par vl t =
         | _ -> pp_rec false ty
       in
       str "typename " ++ pp_qualified_chain base_ty ++ str "::" ++ Id.print nested_id
-    | Tvariant tys -> std_angle "variant" (pp_list (pp_rec false) tys)
-    | Tshared_ptr t -> cpp_angle (sn ()).shared_ptr (pp_rec false t)
-    | Tunique_ptr t -> cpp_angle (sn ()).unique_ptr (pp_rec false t)
+    | Tvariant tys ->
+      require_header "variant";
+      std_angle "variant" (pp_list (pp_rec false) tys)
+    | Tshared_ptr t ->
+      require_header "memory";
+      cpp_angle (sn ()).shared_ptr (pp_rec false t)
+    | Tunique_ptr t ->
+      require_header "memory";
+      cpp_angle (sn ()).unique_ptr (pp_rec false t)
     | Tvoid -> str "void"
     | Ttodo -> str "auto"
     | Tunknown -> str "UNKNOWN"
-    | Tany -> str "std::any"
+    | Tany ->
+      require_header "any";
+      str "std::any"
     | Tauto -> str "auto"
     | Tdecltype e ->
       (* Print decltype(expr) where expr has been rewritten by
@@ -938,6 +949,7 @@ and pp_cpp_expr env args t =
     pp_cpp_expr env args f ++ str "(" ++ args_s ++ str ")"
   | CPPderef e -> str "*" ++ pp_cpp_expr env args e
   | CPPmove e ->
+    require_header "utility";
     str (sn ()).move ++ str "(" ++ pp_cpp_expr env args e ++ str ")"
   | CPPforward (ty, e) ->
     str (sn ()).forward
@@ -1003,9 +1015,15 @@ and pp_cpp_expr env args t =
       ++ body_s
       ++ fnl ()
       ++ str "}" )
-  | CPPvisit -> str (sn ()).visit
-  | CPPmk_shared t -> cpp_angle (sn ()).make_shared (pp_cpp_type false [] t)
-  | CPPmk_unique t -> cpp_angle (sn ()).make_unique (pp_cpp_type false [] t)
+  | CPPvisit ->
+    require_header "variant";
+    str (sn ()).visit
+  | CPPmk_shared t ->
+    require_header "memory";
+    cpp_angle (sn ()).make_shared (pp_cpp_type false [] t)
+  | CPPmk_unique t ->
+    require_header "memory";
+    cpp_angle (sn ()).make_unique (pp_cpp_type false [] t)
   | CPPoverloaded ls ->
     let ls_s = pp_list_newline (pp_cpp_expr env args) ls in
     str (sn ()).overloaded ++ str " {" ++ fnl () ++ ls_s ++ fnl () ++ str "}"
@@ -1163,6 +1181,7 @@ and pp_cpp_expr env args t =
   | CPPbrace_init -> str "{}"
   | CPPunop (op, e) -> str op ++ pp_cpp_expr env args e
   | CPPany_cast (ty, e) ->
+    require_header "any";
     str (sn ()).any_cast
     ++ str "<"
     ++ pp_cpp_type false [] ty
@@ -1193,6 +1212,7 @@ and pp_cpp_stmt env args = function
     Id.print id ++ str " = " ++ pp_cpp_expr env args e ++ str ";"
   | Sexpr e -> pp_cpp_expr env args e ++ str ";"
   | Sthrow msg ->
+    require_header "stdexcept";
     str "throw "
     ++ str (sn ()).logic_error
     ++ str "(\""
@@ -1222,6 +1242,7 @@ and pp_cpp_stmt env args = function
     ++ fnl ()
     ++ str "}"
   | Sassert (expr_str, comment_opt) ->
+    require_header "cassert";
     ( match comment_opt with
     | Some c ->
       str "// Precondition: "

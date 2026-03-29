@@ -1,15 +1,9 @@
 #include <singleton_record.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
+#include <utility>
 
 __attribute__((pure)) unsigned int
 SingletonRecord::get_value(const std::shared_ptr<SingletonRecord::wrapper> &w) {

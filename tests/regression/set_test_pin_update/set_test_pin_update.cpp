@@ -1,15 +1,8 @@
 #include <set_test_pin_update.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
+#include <utility>
 
 std::shared_ptr<SetTestPinUpdate::state>
 SetTestPinUpdate::set_test_pin(std::shared_ptr<SetTestPinUpdate::state> s,

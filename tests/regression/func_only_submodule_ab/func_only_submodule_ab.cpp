@@ -1,15 +1,7 @@
 #include <func_only_submodule_ab.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
+#include <utility>
 
 __attribute__((pure)) unsigned int
 FuncOnlySubmoduleAb::Root::A::inc(const unsigned int n) {

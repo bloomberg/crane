@@ -1,17 +1,8 @@
 #ifndef INCLUDED_TODO_INLINE_CUSTOM_SYMBOL
 #define INCLUDED_TODO_INLINE_CUSTOM_SYMBOL
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
 #include <todo_inline_custom_symbol_support.h>
-#include <variant>
+#include <type_traits>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;

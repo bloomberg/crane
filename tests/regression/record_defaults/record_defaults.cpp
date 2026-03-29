@@ -1,15 +1,8 @@
 #include <record_defaults.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
+#include <utility>
 
 std::shared_ptr<RecordDefaults::Config>
 RecordDefaults::set_width(const unsigned int w,

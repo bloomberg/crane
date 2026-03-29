@@ -1,14 +1,8 @@
 #include <count_loop_test_target.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
+#include <utility>
 #include <variant>
 
 std::shared_ptr<CountLoopTestTarget::instruction>

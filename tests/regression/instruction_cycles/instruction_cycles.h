@@ -1,15 +1,8 @@
 #ifndef INCLUDED_INSTRUCTION_CYCLES
 #define INCLUDED_INSTRUCTION_CYCLES
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 

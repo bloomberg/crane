@@ -1,15 +1,8 @@
 #ifndef INCLUDED_LOOPIFY_SPECIAL_RECURSION
 #define INCLUDED_LOOPIFY_SPECIAL_RECURSION
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 

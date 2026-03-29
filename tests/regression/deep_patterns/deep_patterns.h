@@ -1,15 +1,9 @@
 #ifndef INCLUDED_DEEP_PATTERNS
 #define INCLUDED_DEEP_PATTERNS
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
 #include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 

@@ -1,15 +1,9 @@
 #ifndef INCLUDED_HISTORICAL_EVENT_SAFETY_TRACE
 #define INCLUDED_HISTORICAL_EVENT_SAFETY_TRACE
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 

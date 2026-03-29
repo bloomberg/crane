@@ -1,15 +1,10 @@
 #ifndef INCLUDED_PARTIAL_APPLY
 #define INCLUDED_PARTIAL_APPLY
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 

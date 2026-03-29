@@ -1,15 +1,7 @@
 #include <signature_parity_fix.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
 
 __attribute__((pure)) unsigned int
 SignatureParityFix::f(const unsigned int seed) {

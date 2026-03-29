@@ -1,15 +1,9 @@
 #include <pathological_record.h>
 
-#include <algorithm>
 #include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
+#include <utility>
 
 __attribute__((pure)) unsigned int PathologicalRecord::hof_access(
     const std::shared_ptr<PathologicalRecord::Rec> &r) {

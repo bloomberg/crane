@@ -1,15 +1,9 @@
 #ifndef INCLUDED_COALITION_BID_HONOR_TRACE
 #define INCLUDED_COALITION_BID_HONOR_TRACE
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
 #include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 

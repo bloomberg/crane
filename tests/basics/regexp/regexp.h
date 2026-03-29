@@ -1,16 +1,10 @@
 #ifndef INCLUDED_REGEXP
 #define INCLUDED_REGEXP
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <cstdint>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
+#include <utility>
 #include <variant>
 
 template <typename F, typename R, typename... Args>
@@ -297,11 +291,11 @@ struct Matcher {
   __attribute__((pure)) static bool regexp_eq(const std::shared_ptr<regexp> &r,
                                               const std::shared_ptr<regexp> &x);
   /// An optimized constructor for Cat.
-  static std::shared_ptr<regexp> OptCat(std::shared_ptr<regexp> r1,
-                                        std::shared_ptr<regexp> r2);
+  static std::shared_ptr<regexp> OptCat(std::shared_ptr<regexp> r2,
+                                        std::shared_ptr<regexp> r3);
   /// Optimized version of Alt.
-  static std::shared_ptr<regexp> OptAlt(std::shared_ptr<regexp> r1,
-                                        std::shared_ptr<regexp> r2);
+  static std::shared_ptr<regexp> OptAlt(std::shared_ptr<regexp> r2,
+                                        std::shared_ptr<regexp> r3);
   /// If r accepts the empty string, return Eps, else return Zero.
   static std::shared_ptr<regexp> null(const std::shared_ptr<regexp> &r);
   __attribute__((pure)) static bool

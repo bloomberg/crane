@@ -1,15 +1,10 @@
 #ifndef INCLUDED_TAIL_REC_ZIP
 #define INCLUDED_TAIL_REC_ZIP
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
+#include <utility>
 #include <variant>
 
 template <typename F, typename R, typename... Args>

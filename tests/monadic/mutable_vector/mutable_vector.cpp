@@ -1,16 +1,7 @@
 #include <mutable_vector.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <cstdint>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
 #include <vector>
 
 __attribute__((pure)) int64_t MutableVectorTest::test1(const int64_t _x) {

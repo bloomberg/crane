@@ -1,17 +1,8 @@
 #include <density_potential_trace.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <crane_real.h>
 #include <cstdint>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
 
 __attribute__((pure)) Real
 DensityPotentialTraceCase::sample_activation(const Real z) {

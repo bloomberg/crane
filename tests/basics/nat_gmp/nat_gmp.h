@@ -1,17 +1,8 @@
 #ifndef INCLUDED_NAT_GMP
 #define INCLUDED_NAT_GMP
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
 #include <gmpxx.h>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;

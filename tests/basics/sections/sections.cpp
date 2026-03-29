@@ -1,15 +1,6 @@
 #include <sections.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
 
 __attribute__((pure)) unsigned int Sections::add_n(const unsigned int _x0,
                                                    const unsigned int _x1) {

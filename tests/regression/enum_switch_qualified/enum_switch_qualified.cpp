@@ -1,15 +1,6 @@
 #include <enum_switch_qualified.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
 
 __attribute__((pure)) EnumSwitchQualified::Outer::Color
 EnumSwitchQualified::Outer::flip(const EnumSwitchQualified::Outer::Color c) {

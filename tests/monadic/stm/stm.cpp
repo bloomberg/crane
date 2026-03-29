@@ -1,15 +1,9 @@
 #include <stm.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
 #include <mini_stm.h>
-#include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
+#include <utility>
 #include <variant>
 
 __attribute__((pure)) unsigned int stmtest::stm_basic_counter() {

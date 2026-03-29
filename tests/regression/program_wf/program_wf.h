@@ -1,15 +1,10 @@
 #ifndef INCLUDED_PROGRAM_WF
 #define INCLUDED_PROGRAM_WF
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
 #include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
+#include <utility>
 #include <variant>
 
 template <typename F, typename R, typename... Args>

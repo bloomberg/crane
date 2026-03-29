@@ -1,15 +1,7 @@
 #include <prop_erasure.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
+#include <utility>
 
 __attribute__((pure)) unsigned int
 PropErasure::with_proof_arg(const unsigned int n) {

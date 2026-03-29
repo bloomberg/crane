@@ -1,15 +1,8 @@
 #include <kbp_multibit_default.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
+#include <utility>
 
 std::shared_ptr<KbpMultibitDefault::state> KbpMultibitDefault::execute_kbp(
     const std::shared_ptr<KbpMultibitDefault::state> &s) {

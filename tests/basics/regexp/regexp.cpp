@@ -1,15 +1,9 @@
 #include <regexp.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <cstdint>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
+#include <utility>
 #include <variant>
 
 __attribute__((pure)) bool Matcher::char_eq(const int64_t x, const int64_t y) {
@@ -237,45 +231,45 @@ Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
 
 /// An optimized constructor for Cat.
 std::shared_ptr<Matcher::regexp>
-Matcher::OptCat(std::shared_ptr<Matcher::regexp> r1,
-                std::shared_ptr<Matcher::regexp> r2) {
+Matcher::OptCat(std::shared_ptr<Matcher::regexp> r2,
+                std::shared_ptr<Matcher::regexp> r3) {
   return [&](void) {
-    if (r1.use_count() == 1 && r1->v().index() == 5) {
-      auto &_rf = std::get<5>(r1->v_mut());
-      return r1;
+    if (r2.use_count() == 1 && r2->v().index() == 5) {
+      auto &_rf = std::get<5>(r2->v_mut());
+      return r2;
     } else {
       return std::visit(
           Overloaded{
               [&](const typename Matcher::regexp::Any _args)
                   -> std::shared_ptr<Matcher::regexp> {
                 return [&](void) {
-                  if (r2.use_count() == 1 && r2->v().index() == 3) {
-                    auto &_rf = std::get<3>(r2->v_mut());
-                    _rf.d_a0 = r1;
-                    _rf.d_a1 = r2;
-                    return r2;
+                  if (r3.use_count() == 1 && r3->v().index() == 3) {
+                    auto &_rf = std::get<3>(r3->v_mut());
+                    _rf.d_a0 = r2;
+                    _rf.d_a1 = r3;
+                    return r3;
                   } else {
                     return std::visit(
                         Overloaded{
                             [&](const typename Matcher::regexp::Any _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [&](const typename Matcher::regexp::Char _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [&](const typename Matcher::regexp::Eps _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return std::move(r1);
+                              return std::move(r2);
                             },
                             [&](const typename Matcher::regexp::Cat _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [&](const typename Matcher::regexp::Alt _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [](const typename Matcher::regexp::Zero _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
@@ -283,42 +277,42 @@ Matcher::OptCat(std::shared_ptr<Matcher::regexp> r1,
                             },
                             [&](const typename Matcher::regexp::Star _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             }},
-                        r2->v());
+                        r3->v());
                   }
                 }();
               },
               [&](const typename Matcher::regexp::Char _args)
                   -> std::shared_ptr<Matcher::regexp> {
                 return [&](void) {
-                  if (r2.use_count() == 1 && r2->v().index() == 3) {
-                    auto &_rf = std::get<3>(r2->v_mut());
-                    _rf.d_a0 = r1;
-                    _rf.d_a1 = r2;
-                    return r2;
+                  if (r3.use_count() == 1 && r3->v().index() == 3) {
+                    auto &_rf = std::get<3>(r3->v_mut());
+                    _rf.d_a0 = r2;
+                    _rf.d_a1 = r3;
+                    return r3;
                   } else {
                     return std::visit(
                         Overloaded{
                             [&](const typename Matcher::regexp::Any _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [&](const typename Matcher::regexp::Char _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [&](const typename Matcher::regexp::Eps _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return std::move(r1);
+                              return std::move(r2);
                             },
                             [&](const typename Matcher::regexp::Cat _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [&](const typename Matcher::regexp::Alt _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [](const typename Matcher::regexp::Zero _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
@@ -326,44 +320,44 @@ Matcher::OptCat(std::shared_ptr<Matcher::regexp> r1,
                             },
                             [&](const typename Matcher::regexp::Star _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             }},
-                        r2->v());
+                        r3->v());
                   }
                 }();
               },
               [&](const typename Matcher::regexp::Eps _args)
-                  -> std::shared_ptr<Matcher::regexp> { return std::move(r2); },
+                  -> std::shared_ptr<Matcher::regexp> { return std::move(r3); },
               [&](const typename Matcher::regexp::Cat _args)
                   -> std::shared_ptr<Matcher::regexp> {
                 return [&](void) {
-                  if (r2.use_count() == 1 && r2->v().index() == 3) {
-                    auto &_rf = std::get<3>(r2->v_mut());
-                    _rf.d_a0 = r1;
-                    _rf.d_a1 = r2;
-                    return r2;
+                  if (r3.use_count() == 1 && r3->v().index() == 3) {
+                    auto &_rf = std::get<3>(r3->v_mut());
+                    _rf.d_a0 = r2;
+                    _rf.d_a1 = r3;
+                    return r3;
                   } else {
                     return std::visit(
                         Overloaded{
                             [&](const typename Matcher::regexp::Any _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [&](const typename Matcher::regexp::Char _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [&](const typename Matcher::regexp::Eps _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return std::move(r1);
+                              return std::move(r2);
                             },
                             [&](const typename Matcher::regexp::Cat _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [&](const typename Matcher::regexp::Alt _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [](const typename Matcher::regexp::Zero _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
@@ -371,42 +365,42 @@ Matcher::OptCat(std::shared_ptr<Matcher::regexp> r1,
                             },
                             [&](const typename Matcher::regexp::Star _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             }},
-                        r2->v());
+                        r3->v());
                   }
                 }();
               },
               [&](const typename Matcher::regexp::Alt _args)
                   -> std::shared_ptr<Matcher::regexp> {
                 return [&](void) {
-                  if (r2.use_count() == 1 && r2->v().index() == 3) {
-                    auto &_rf = std::get<3>(r2->v_mut());
-                    _rf.d_a0 = r1;
-                    _rf.d_a1 = r2;
-                    return r2;
+                  if (r3.use_count() == 1 && r3->v().index() == 3) {
+                    auto &_rf = std::get<3>(r3->v_mut());
+                    _rf.d_a0 = r2;
+                    _rf.d_a1 = r3;
+                    return r3;
                   } else {
                     return std::visit(
                         Overloaded{
                             [&](const typename Matcher::regexp::Any _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [&](const typename Matcher::regexp::Char _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [&](const typename Matcher::regexp::Eps _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return std::move(r1);
+                              return std::move(r2);
                             },
                             [&](const typename Matcher::regexp::Cat _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [&](const typename Matcher::regexp::Alt _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [](const typename Matcher::regexp::Zero _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
@@ -414,9 +408,9 @@ Matcher::OptCat(std::shared_ptr<Matcher::regexp> r1,
                             },
                             [&](const typename Matcher::regexp::Star _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             }},
-                        r2->v());
+                        r3->v());
                   }
                 }();
               },
@@ -427,33 +421,33 @@ Matcher::OptCat(std::shared_ptr<Matcher::regexp> r1,
               [&](const typename Matcher::regexp::Star _args)
                   -> std::shared_ptr<Matcher::regexp> {
                 return [&](void) {
-                  if (r2.use_count() == 1 && r2->v().index() == 3) {
-                    auto &_rf = std::get<3>(r2->v_mut());
-                    _rf.d_a0 = r1;
-                    _rf.d_a1 = r2;
-                    return r2;
+                  if (r3.use_count() == 1 && r3->v().index() == 3) {
+                    auto &_rf = std::get<3>(r3->v_mut());
+                    _rf.d_a0 = r2;
+                    _rf.d_a1 = r3;
+                    return r3;
                   } else {
                     return std::visit(
                         Overloaded{
                             [&](const typename Matcher::regexp::Any _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [&](const typename Matcher::regexp::Char _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [&](const typename Matcher::regexp::Eps _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return std::move(r1);
+                              return std::move(r2);
                             },
                             [&](const typename Matcher::regexp::Cat _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [&](const typename Matcher::regexp::Alt _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             },
                             [](const typename Matcher::regexp::Zero _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
@@ -461,21 +455,21 @@ Matcher::OptCat(std::shared_ptr<Matcher::regexp> r1,
                             },
                             [&](const typename Matcher::regexp::Star _args0)
                                 -> std::shared_ptr<Matcher::regexp> {
-                              return regexp::cat(std::move(r1), std::move(r2));
+                              return regexp::cat(std::move(r2), std::move(r3));
                             }},
-                        r2->v());
+                        r3->v());
                   }
                 }();
               }},
-          r1->v());
+          r2->v());
     }
   }();
 }
 
 /// Optimized version of Alt.
 std::shared_ptr<Matcher::regexp>
-Matcher::OptAlt(std::shared_ptr<Matcher::regexp> r1,
-                std::shared_ptr<Matcher::regexp> r2) {
+Matcher::OptAlt(std::shared_ptr<Matcher::regexp> r2,
+                std::shared_ptr<Matcher::regexp> r3) {
   return std::visit(
       Overloaded{
           [&](const typename Matcher::regexp::Any _args)
@@ -483,346 +477,346 @@ Matcher::OptAlt(std::shared_ptr<Matcher::regexp> r1,
             return std::visit(
                 Overloaded{[&](const typename Matcher::regexp::Any _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Char _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Eps _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Cat _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Alt _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Zero _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             return std::move(r1);
+                             return std::move(r2);
                            },
                            [&](const typename Matcher::regexp::Star _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            }},
-                r2->v());
+                r3->v());
           },
           [&](const typename Matcher::regexp::Char _args)
               -> std::shared_ptr<Matcher::regexp> {
             return std::visit(
                 Overloaded{[&](const typename Matcher::regexp::Any _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Char _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Eps _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Cat _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Alt _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Zero _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             return std::move(r1);
+                             return std::move(r2);
                            },
                            [&](const typename Matcher::regexp::Star _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            }},
-                r2->v());
+                r3->v());
           },
           [&](const typename Matcher::regexp::Eps _args)
               -> std::shared_ptr<Matcher::regexp> {
             return std::visit(
                 Overloaded{[&](const typename Matcher::regexp::Any _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Char _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Eps _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Cat _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Alt _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Zero _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             return std::move(r1);
+                             return std::move(r2);
                            },
                            [&](const typename Matcher::regexp::Star _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            }},
-                r2->v());
+                r3->v());
           },
           [&](const typename Matcher::regexp::Cat _args)
               -> std::shared_ptr<Matcher::regexp> {
             return std::visit(
                 Overloaded{[&](const typename Matcher::regexp::Any _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Char _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Eps _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Cat _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Alt _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Zero _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             return std::move(r1);
+                             return std::move(r2);
                            },
                            [&](const typename Matcher::regexp::Star _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            }},
-                r2->v());
+                r3->v());
           },
           [&](const typename Matcher::regexp::Alt _args)
               -> std::shared_ptr<Matcher::regexp> {
             return std::visit(
                 Overloaded{[&](const typename Matcher::regexp::Any _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Char _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Eps _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Cat _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Alt _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Zero _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             return std::move(r1);
+                             return std::move(r2);
                            },
                            [&](const typename Matcher::regexp::Star _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            }},
-                r2->v());
+                r3->v());
           },
           [&](const typename Matcher::regexp::Zero _args)
-              -> std::shared_ptr<Matcher::regexp> { return std::move(r2); },
+              -> std::shared_ptr<Matcher::regexp> { return std::move(r3); },
           [&](const typename Matcher::regexp::Star _args)
               -> std::shared_ptr<Matcher::regexp> {
             return std::visit(
                 Overloaded{[&](const typename Matcher::regexp::Any _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Char _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Eps _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Cat _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Alt _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            },
                            [&](const typename Matcher::regexp::Zero _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             return std::move(r1);
+                             return std::move(r2);
                            },
                            [&](const typename Matcher::regexp::Star _args0)
                                -> std::shared_ptr<Matcher::regexp> {
-                             if (regexp_eq(r1, r2)) {
-                               return std::move(r1);
+                             if (regexp_eq(r2, r3)) {
+                               return std::move(r2);
                              } else {
-                               return regexp::alt(std::move(r1), std::move(r2));
+                               return regexp::alt(std::move(r2), std::move(r3));
                              }
                            }},
-                r2->v());
+                r3->v());
           }},
-      r1->v());
+      r2->v());
 }
 
 /// If r accepts the empty string, return Eps, else return Zero.

@@ -1,15 +1,8 @@
 #ifndef INCLUDED_CPU_EMULATOR
 #define INCLUDED_CPU_EMULATOR
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 

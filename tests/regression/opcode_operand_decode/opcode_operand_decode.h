@@ -1,17 +1,8 @@
 #ifndef INCLUDED_OPCODE_OPERAND_DECODE
 #define INCLUDED_OPCODE_OPERAND_DECODE
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
 #include <utility>
-#include <variant>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;

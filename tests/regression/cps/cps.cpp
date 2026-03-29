@@ -1,14 +1,9 @@
 #include <cps.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
+#include <utility>
 #include <variant>
 
 __attribute__((pure)) unsigned int CPS::factorial(const unsigned int n) {

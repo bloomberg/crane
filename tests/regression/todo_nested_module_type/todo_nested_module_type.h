@@ -1,16 +1,8 @@
 #ifndef INCLUDED_TODO_NESTED_MODULE_TYPE
 #define INCLUDED_TODO_NESTED_MODULE_TYPE
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
+#include <utility>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;

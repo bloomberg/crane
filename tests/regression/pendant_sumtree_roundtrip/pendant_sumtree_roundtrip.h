@@ -1,15 +1,12 @@
 #ifndef INCLUDED_PENDANT_SUMTREE_ROUNDTRIP
 #define INCLUDED_PENDANT_SUMTREE_ROUNDTRIP
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <string>
+#include <type_traits>
+#include <utility>
 #include <variant>
 
 template <typename F, typename R, typename... Args>

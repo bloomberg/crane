@@ -1,16 +1,10 @@
 #ifndef INCLUDED_STM
 #define INCLUDED_STM
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
 #include <mini_stm.h>
-#include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
+#include <utility>
 #include <variant>
 
 template <typename F, typename R, typename... Args>

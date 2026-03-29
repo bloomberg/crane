@@ -1,15 +1,7 @@
 #include <sections_modules.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
+#include <utility>
 
 __attribute__((pure)) unsigned int
 SectionsModules::add_params(const unsigned int x, const unsigned int y,

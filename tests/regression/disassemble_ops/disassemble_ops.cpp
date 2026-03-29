@@ -1,14 +1,8 @@
 #include <disassemble_ops.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
 #include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -43,7 +37,7 @@ DisassembleOps::drop_(const unsigned int n,
 
 __attribute__((pure)) std::optional<
     std::pair<std::shared_ptr<DisassembleOps::instruction>, unsigned int>>
-DisassembleOps::disassemble1(const std::shared_ptr<List<unsigned int>> &rom,
+DisassembleOps::disassemble1(const std::shared_ptr<List<unsigned int>> &rom0,
                              const unsigned int addr) {
   return std::visit(
       Overloaded{
@@ -78,7 +72,7 @@ DisassembleOps::disassemble1(const std::shared_ptr<List<unsigned int>> &rom,
                            }},
                 _args.d_a1->v());
           }},
-      drop_(addr, rom)->v());
+      drop_(addr, rom0)->v());
 }
 
 std::shared_ptr<DisassembleOps::instruction>
@@ -92,7 +86,7 @@ DisassembleOps::decode2(const unsigned int b1, const unsigned int b2) {
 
 __attribute__((pure)) std::optional<
     std::pair<std::shared_ptr<DisassembleOps::instruction>, unsigned int>>
-DisassembleOps::disassemble2(const std::shared_ptr<List<unsigned int>> &rom,
+DisassembleOps::disassemble2(const std::shared_ptr<List<unsigned int>> &rom0,
                              const unsigned int addr) {
   return std::visit(
       Overloaded{
@@ -127,7 +121,7 @@ DisassembleOps::disassemble2(const std::shared_ptr<List<unsigned int>> &rom,
                            }},
                 _args.d_a1->v());
           }},
-      drop<unsigned int>(addr, rom)->v());
+      drop<unsigned int>(addr, rom0)->v());
 }
 
 std::shared_ptr<DisassembleOps::instruction>
@@ -141,7 +135,7 @@ DisassembleOps::decode3(const unsigned int b1, const unsigned int b2) {
 
 __attribute__((pure)) std::optional<
     std::pair<std::shared_ptr<DisassembleOps::instruction>, unsigned int>>
-DisassembleOps::disassemble3(const std::shared_ptr<List<unsigned int>> &rom,
+DisassembleOps::disassemble3(const std::shared_ptr<List<unsigned int>> &rom0,
                              const unsigned int addr) {
   return std::visit(
       Overloaded{
@@ -176,7 +170,7 @@ DisassembleOps::disassemble3(const std::shared_ptr<List<unsigned int>> &rom,
                            }},
                 _args.d_a1->v());
           }},
-      drop<unsigned int>(addr, rom)->v());
+      drop<unsigned int>(addr, rom0)->v());
 }
 
 std::shared_ptr<DisassembleOps::instruction>
@@ -190,7 +184,7 @@ DisassembleOps::decode4(const unsigned int b1, const unsigned int b2) {
 
 __attribute__((pure)) std::optional<
     std::pair<std::shared_ptr<DisassembleOps::instruction>, unsigned int>>
-DisassembleOps::disassemble4(const std::shared_ptr<List<unsigned int>> &rom,
+DisassembleOps::disassemble4(const std::shared_ptr<List<unsigned int>> &rom0,
                              const unsigned int addr) {
   return std::visit(
       Overloaded{
@@ -225,5 +219,5 @@ DisassembleOps::disassemble4(const std::shared_ptr<List<unsigned int>> &rom,
                            }},
                 _args.d_a1->v());
           }},
-      drop<unsigned int>(addr, rom)->v());
+      drop<unsigned int>(addr, rom0)->v());
 }

@@ -1,15 +1,10 @@
 #ifndef INCLUDED_PSTRING
 #define INCLUDED_PSTRING
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
 #include <memory>
-#include <optional>
-#include <stdexcept>
 #include <string>
+#include <type_traits>
+#include <utility>
 #include <variant>
 
 using namespace std::string_literals;

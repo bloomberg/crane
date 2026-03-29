@@ -1,15 +1,7 @@
 #include <lambda.h>
 
-#include <algorithm>
-#include <any>
-#include <cassert>
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <variant>
+#include <type_traits>
+#include <utility>
 
 __attribute__((pure)) unsigned int Lambda::simple_lambda(const unsigned int x) {
   return std::move(x);

@@ -1,17 +1,12 @@
 #ifndef INCLUDED_STM_HASH_MAP
 #define INCLUDED_STM_HASH_MAP
 
-#include <algorithm>
-#include <any>
-#include <cassert>
 #include <cstdint>
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <mini_stm.h>
 #include <optional>
-#include <stdexcept>
-#include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
