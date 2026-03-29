@@ -15,16 +15,18 @@ Fixpoint add (n m : nat) : nat :=
 
 (** A simple pair holding two values of possibly different types. *)
 Record pair (A B : Type) := mkpair {
+  (** The first element of the pair. *)
   fst : A;
+  (** The second element of the pair. *)
   snd : B
 }.
 
-(** [mylist] is a polymorphic list type.
-    - [mynil] is the empty list.
-    - [mycons] prepends an element. *)
+(** [mylist] is a polymorphic list type. *)
 Inductive mylist (A : Type) : Type :=
-| mynil : mylist A
-| mycons : A -> mylist A -> mylist A.
+  (** The empty list. *)
+  | mynil : mylist A
+  (** Cons cell: an element followed by the rest of the list. *)
+  | mycons : A -> mylist A -> mylist A.
 
 Arguments mynil {A}.
 Arguments mycons {A} a l.
@@ -36,6 +38,15 @@ Definition identity {A : Type} (x : A) : A := x.
 
 (** [double n] returns [2 * n]. *)
 Definition double (n : nat) : nat := add n n.
+
+(** A simple color enumeration. *)
+Inductive color : Type :=
+  (** Red color. *)
+  | red
+  (** Green color. *)
+  | green
+  (** Blue color. *)
+  | blue.
 
 End DocComments.
 

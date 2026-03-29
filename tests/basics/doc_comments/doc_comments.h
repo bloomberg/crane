@@ -22,17 +22,18 @@ struct DocComments {
 
   /// A simple pair holding two values of possibly different types.
   template <typename t_A, typename t_B> struct pair {
+    /// The first element of the pair.
     t_A fst;
+    /// The second element of the pair.
     t_B snd;
-  };
+  }; /// mylist is a polymorphic list type.
 
-  /// mylist is a polymorphic list type.
-  /// - mynil is the empty list.
-  /// - mycons prepends an element.
   template <typename t_A> struct mylist {
     // TYPES
+    /// The empty list.
     struct Mynil {};
 
+    /// Cons cell: an element followed by the rest of the list.
     struct Mycons {
       t_A d_a0;
       std::shared_ptr<mylist<t_A>> d_a1;
@@ -123,6 +124,49 @@ struct DocComments {
 
   /// double n returns 2 * n.
   __attribute__((pure)) static unsigned int double_(const unsigned int n);
+  /// A simple color enumeration.
+  enum class Color {
+    /// Red color.
+    e_RED,
+    /// Green color.
+    e_GREEN,
+    /// Blue color.
+    e_BLUE
+  };
+
+  template <typename T1>
+  static T1 color_rect(const T1 f, const T1 f0, const T1 f1, const Color c) {
+    switch (c) {
+    case Color::e_RED: {
+      return f;
+    }
+    case Color::e_GREEN: {
+      return f0;
+    }
+    case Color::e_BLUE: {
+      return f1;
+    }
+    default:
+      std::unreachable();
+    }
+  }
+
+  template <typename T1>
+  static T1 color_rec(const T1 f, const T1 f0, const T1 f1, const Color c) {
+    switch (c) {
+    case Color::e_RED: {
+      return f;
+    }
+    case Color::e_GREEN: {
+      return f0;
+    }
+    case Color::e_BLUE: {
+      return f1;
+    }
+    default:
+      std::unreachable();
+    }
+  }
 };
 
 #endif // INCLUDED_DOC_COMMENTS

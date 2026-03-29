@@ -375,5 +375,7 @@ type cpp_decl =
   | Denum of {
       de_ref : GlobRef.t;  (** Enum reference *)
       de_ctors : Id.t list;  (** Constructor names *)
+      de_ctor_rocq_names : string list;
+          (** Original Rocq constructor names for doc comment lookup *)
       de_tparams : (template_type * Id.t) list;  (** Template parameters *)
     }

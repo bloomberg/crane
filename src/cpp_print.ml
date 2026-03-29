@@ -1560,12 +1560,35 @@ let pp_template_param (tt, id) =
     ++ pp_cpp_type false [] default_ty
   | _ -> pp_template_type tt ++ spc () ++ Id.print id
 
+(** Render a doc comment as [///]-prefixed lines followed by a newline, or
+    [mt ()] if no comment is registered for [name].  This is the single lookup
+    point used by field, constructor-struct, and enum-value printers.
+
+    @param indent  optional prefix prepended to every line (e.g. ["  "] for
+    indented contexts such as enum values).  Defaults to [""]. *)
+let pp_doc_comment_for_name ?(indent = "") name =
+  match Doc_comments.find name with
+  | None -> mt ()
+  | Some text ->
+    let lines = Doc_comments.format_as_cpp_lines text in
+    prlist_with_sep fnl (fun l -> str (indent ^ l)) lines ++ fnl ()
+
 (** pp_cpp_field takes optional struct_name for printing constructors *)
 let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
   | Fvar (id, ty) ->
-    h (pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str ";")
+    (* Strip d_ prefix for doc comment lookup (C++ fields are d_fst, Rocq
+       names are fst) *)
+    let id_str = Id.to_string id in
+    let rocq_name =
+      if String.length id_str > 2 && String.sub id_str 0 2 = "d_" then
+        String.sub id_str 2 (String.length id_str - 2)
+      else id_str
+    in
+    pp_doc_comment_for_name rocq_name
+    ++ h (pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str ";")
   | Fvar' (id, ty) ->
-    h (pp_cpp_type false [] ty ++ str " " ++ pp_global Type id ++ str ";")
+    pp_doc_comment_for_name (Common.pp_global_name Type id)
+    ++ h (pp_cpp_type false [] ty ++ str " " ++ pp_global Type id ++ str ";")
   | Ffundef (id, ret_ty, params, body) ->
     let params_s =
       pp_list
@@ -1635,13 +1658,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
         let args = pp_list pp_template_param mf_tparams in
         str "template <" ++ args ++ str ">" ++ fnl ()
     in
-    let doc_comment =
-      match Doc_comments.find (Id.to_string mf_name) with
-      | None -> mt ()
-      | Some text ->
-        let lines = Doc_comments.format_as_cpp_lines text in
-        prlist_with_sep fnl (fun l -> str l) lines ++ fnl ()
-    in
+    let doc_comment = pp_doc_comment_for_name (Id.to_string mf_name) in
     let qualifier =
       fun_qualifier ~can_constexpr:mf_is_static ~throws:false
         mf_ret_type mf_params
@@ -1687,7 +1704,16 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     let fields_s =
       pp_cpp_fields_with_vis ~struct_name:(Id.print id) env fields
     in
-    h (str "struct " ++ Id.print id ++ str " {")
+    (* Constructor structs are PascalCase (e.g. Mycons) while Rocq names are
+       lowercase (mycons).  Try both for the doc comment lookup. *)
+    let id_str = Id.to_string id in
+    let doc_s =
+      let d = pp_doc_comment_for_name id_str in
+      if Pp.ismt d then pp_doc_comment_for_name (String.uncapitalize_ascii id_str)
+      else d
+    in
+    doc_s
+    ++ h (str "struct " ++ Id.print id ++ str " {")
     ++ fnl ()
     ++ fields_s
     ++ fnl ()
@@ -2250,23 +2276,28 @@ and pp_cpp_decl_raw env = function
         ++ str ", \""
         ++ str s
         ++ str "\");" ) )
-  | Denum {de_ref = name; de_ctors = ctors; _} ->
+  | Denum {de_ref = name; de_ctors = ctors; de_ctor_rocq_names = rocq_names; _}
+    ->
     let struct_name =
       match name with
       | GlobRef.IndRef _ -> pp_inductive_type_name_cached name
       | _ -> pp_global Type name
     in
+    (* Emit each enum value, preceded by its doc comment if one exists.
+       [rocq_names] and [ctors] are parallel lists from the same constructor
+       array, so [List.map2] is safe. *)
     let ctors_s =
       prlist_with_sep
-        (fun () -> str "," ++ fnl () ++ str "  ")
-        (fun id -> Id.print id)
-        ctors
+        (fun () -> str "," ++ fnl ())
+        (fun (id, rname) ->
+          pp_doc_comment_for_name ~indent:"  " rname
+          ++ str "  " ++ Id.print id )
+        (List.combine ctors rocq_names)
     in
     str "enum class "
     ++ struct_name
     ++ str " {"
     ++ fnl ()
-    ++ str "  "
     ++ ctors_s
     ++ fnl ()
     ++ str "};"

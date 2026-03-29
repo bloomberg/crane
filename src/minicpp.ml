@@ -444,5 +444,6 @@ type cpp_decl =
   | Denum of {
       de_ref : GlobRef.t;
       de_ctors : Id.t list;
+      de_ctor_rocq_names : string list;
       de_tparams : (template_type * Id.t) list;
     }

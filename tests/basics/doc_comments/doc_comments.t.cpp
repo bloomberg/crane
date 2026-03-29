@@ -62,6 +62,21 @@ int main() {
       header, "/// The identity function: returns its argument unchanged."));
   ASSERT(file_contains(header, "/// double n returns 2 * n."));
 
+  // Check that constructor doc comments appear
+  ASSERT(file_contains(header, "/// The empty list."));
+  ASSERT(file_contains(
+      header,
+      "/// Cons cell: an element followed by the rest of the list."));
+
+  // Check that record field doc comments appear
+  ASSERT(file_contains(header, "/// The first element of the pair."));
+  ASSERT(file_contains(header, "/// The second element of the pair."));
+
+  // Check that enum constructor doc comments appear
+  ASSERT(file_contains(header, "/// Red color."));
+  ASSERT(file_contains(header, "/// Green color."));
+  ASSERT(file_contains(header, "/// Blue color."));
+
   // Basic functional test: the extracted code works
   ASSERT(DocComments::add(3, 4) == 7);
   ASSERT(DocComments::add(0, 5) == 5);

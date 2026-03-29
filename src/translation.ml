@@ -7658,7 +7658,22 @@ let gen_ind_header_v2
                | _ -> ctor_fallback_id 0 )
              cnames )
       in
-      Denum {de_ref = name; de_ctors = ctor_names; de_tparams = []} )
+      let rocq_names =
+        Array.to_list
+          (Array.map
+             (fun c ->
+               match c with
+               | GlobRef.ConstructRef _ -> Common.pp_global_name Type c
+               | _ -> "" )
+             cnames )
+      in
+      Denum
+        {
+          de_ref = name;
+          de_ctors = ctor_names;
+          de_ctor_rocq_names = rocq_names;
+          de_tparams = [];
+        } )
     else
       (* The main struct type: std::shared_ptr<Tree> or
          std::shared_ptr<Tree<A>> *)

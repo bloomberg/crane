@@ -137,8 +137,62 @@ let extract_doc_comment s i =
   in
   (body, next)
 
-(** Try to match a definition keyword at position [i] and extract the definition
-    name that follows it. Returns [Some name] or [None]. *)
+(** {3 Identifier scanning}
+
+    Shared helper for collecting an identifier token during doc-comment
+    association. *)
+
+(** Test whether [c] is an identifier-terminating character.  These are
+    characters that cannot appear inside a Rocq identifier: whitespace,
+    parentheses, braces, colon, period, and the constructor bar. *)
+let is_ident_delim c =
+  match c with
+  | ' ' | '\t' | '\n' | '\r' | '(' | '{' | ':' | '.' | '|' -> true
+  | _ -> false
+
+(** Collect a contiguous identifier starting at position [i] in [s], stopping
+    at any {!is_ident_delim} character.  Returns [Some (name, end_pos)] where
+    [end_pos] is one past the last character of the identifier, or [None] if
+    [i] is already at a delimiter or past the end of [s]. *)
+let collect_identifier s i =
+  let len = String.length s in
+  let j = ref i in
+  while !j < len && not (is_ident_delim s.[!j]) do
+    incr j
+  done;
+  if !j > i then Some (String.sub s i (!j - i), !j) else None
+
+(** Skip horizontal whitespace (spaces and tabs) starting at [i].
+    Returns the index of the first non-blank character. *)
+let skip_hspace s i =
+  let len = String.length s in
+  let j = ref i in
+  while !j < len && (s.[!j] = ' ' || s.[!j] = '\t') do
+    incr j
+  done;
+  !j
+
+(** Skip all whitespace (spaces, tabs, newlines) starting at [i].
+    Returns the index of the first non-whitespace character. *)
+let skip_all_whitespace s i =
+  let len = String.length s in
+  let j = ref i in
+  while
+    !j < len
+    && (s.[!j] = ' ' || s.[!j] = '\t' || s.[!j] = '\n' || s.[!j] = '\r')
+  do
+    incr j
+  done;
+  !j
+
+(** {3 Name matchers}
+
+    Each matcher attempts to identify the Rocq name that a doc comment should
+    be associated with.  They are tried in order by {!parse_file}:
+    definition keyword, then constructor bar, then record field. *)
+
+(** Try to match a definition keyword at position [i] and extract the
+    definition name that follows it.  Returns [Some name] or [None]. *)
 let try_match_definition s i =
   let len = String.length s in
   let try_keyword kw =
@@ -148,53 +202,63 @@ let try_match_definition s i =
       if
         i + klen < len
         && (s.[i + klen] = ' ' || s.[i + klen] = '\t' || s.[i + klen] = '\n')
-      then (
-        (* Skip whitespace to find the name *)
-        let j = ref (i + klen) in
-        while
-          !j < len
-          && (s.[!j] = ' ' || s.[!j] = '\t' || s.[!j] = '\n' || s.[!j] = '\r')
-        do
-          incr j
-        done;
-        (* Collect the identifier *)
-        let name_start = !j in
-        while
-          !j < len
-          && s.[!j] <> ' '
-          && s.[!j] <> '\t'
-          && s.[!j] <> '\n'
-          && s.[!j] <> '\r'
-          && s.[!j] <> '('
-          && s.[!j] <> '{'
-          && s.[!j] <> ':'
-          && s.[!j] <> '.'
-        do
-          incr j
-        done;
-        if !j > name_start then
-          Some (String.sub s name_start (!j - name_start))
-        else
-          None )
-      else
-        None
-    else
-      None
+      then
+        let after_ws = skip_all_whitespace s (i + klen) in
+        collect_identifier s after_ws |> Option.map fst
+      else None
+    else None
   in
   (* Try "Module Type" first (longer match), then other keywords *)
   let rec try_keywords = function
     | [] -> None
-    | kw :: rest ->
-    match try_keyword kw with
-    | Some _ as result -> result
-    | None -> try_keywords rest
+    | kw :: rest -> (
+      match try_keyword kw with
+      | Some _ as result -> result
+      | None -> try_keywords rest )
   in
   try_keywords
     ( "Module Type"
     :: List.filter (fun k -> k <> "Module Type") definition_keywords )
 
+(** Try to match a constructor line at position [i]: [| CtorName].
+    Matches the ['|'] separator, skips horizontal whitespace, then collects the
+    constructor identifier.  Returns [Some name] or [None]. *)
+let try_match_constructor s i =
+  let len = String.length s in
+  if i < len && s.[i] = '|' then
+    let after_ws = skip_hspace s (i + 1) in
+    collect_identifier s after_ws |> Option.map fst
+  else None
+
+(** Try to match a record field at position [i]: [fieldname : Type].
+    Collects an identifier, then verifies it is followed by (optional
+    whitespace and) a colon.  Returns [Some name] or [None]. *)
+let try_match_field s i =
+  let len = String.length s in
+  match collect_identifier s i with
+  | None -> None
+  | Some (name, j) ->
+    let after_ws = skip_hspace s j in
+    if after_ws < len && s.[after_ws] = ':' then Some name else None
+
+(** Try each name matcher in order until one succeeds.  Returns [Some name]
+    from the first matcher that recognises the text at position [i], or [None]
+    if none match. *)
+let try_match_name s i =
+  match try_match_definition s i with
+  | Some _ as hit -> hit
+  | None -> (
+    match try_match_constructor s i with
+    | Some _ as hit -> hit
+    | None -> try_match_field s i )
+
 (** Parse a [.v] file and return a fresh doc comment table mapping definition
-    names to their comment text. *)
+    names to their comment text.
+
+    Scans linearly for [(** ... *)] blocks.  For each one, skips any
+    intervening whitespace and regular comments, then uses {!try_match_name}
+    to associate the comment with the immediately following definition,
+    constructor, or record field. *)
 let parse_file path =
   let tbl = Hashtbl.create 64 in
   ( try
@@ -219,10 +283,8 @@ let parse_file path =
         then (
           let body, next = extract_doc_comment s pos in
           ( if body <> "" then
-              (* Skip whitespace/regular comments after doc comment to find
-                 definition *)
               let def_start = skip_whitespace_and_comments s next in
-              match try_match_definition s def_start with
+              match try_match_name s def_start with
               | Some name -> Hashtbl.replace tbl name body
               | None -> () );
           i := next )
