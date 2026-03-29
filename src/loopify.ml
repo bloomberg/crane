@@ -1626,16 +1626,20 @@ let try_tmc_classify check body =
       _last = _cell1;                    // advance to innermost
     ]} *)
 
-(** Generate [std::get<typename Type::Ctor>(ptr->v_mut()).d_aN = val] — the
-    statement that patches the recursive field of a TMC cell.
+(** Generate [std::get<typename Type::Ctor>(ptr->v_mut()).<field> = val] —
+    the statement that patches the recursive field of a TMC cell.
 
     The field index accounts for the reversed AST argument order
-    (see translation.ml:1776): AST index [rec_field_idx] maps to struct field
-    [d_a{n_args - 1 - rec_field_idx}]. *)
+    (see translation.ml:1776): AST index [rec_field_idx] maps to struct
+    field index [n_args - 1 - rec_field_idx].  The actual field name is
+    resolved via {!Common.lookup_ctor_field_name}, which returns the
+    descriptive Rocq binder name (e.g. [d_tl]) when one was registered
+    during inductive definition, or falls back to the positional name
+    [d_a{idx}]. *)
 let patch_cell_field pp_expr ~type_expr ~ctor_name ~n_args ~rec_field_idx
     ptr val_expr =
   let field_idx = n_args - 1 - rec_field_idx in
-  let field_id = Id.of_string ("d_a" ^ string_of_int field_idx) in
+  let field_id = Common.lookup_ctor_field_name ctor_name field_idx in
   let type_str = pp_expr type_expr in
   let get_expr =
     CPPraw ("std::get<typename " ^ type_str ^ "::" ^ ctor_name ^ ">")

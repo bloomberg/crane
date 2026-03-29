@@ -20,7 +20,7 @@ __attribute__((pure)) unsigned int
 SigmaTypes::get_positive(const unsigned int n) {
   return std::visit(
       Overloaded{[](const typename Sig<unsigned int>::Exist _args) -> auto {
-        return _args.d_a0;
+        return _args.d_x;
       }},
       positive_succ(n)->v());
 }
@@ -30,10 +30,10 @@ SigmaTypes::double_positive(const unsigned int n) {
   std::shared_ptr<Sig<unsigned int>> p = positive_succ(n);
   return Sig<unsigned int>::exist(
       (std::visit(Overloaded{[](const typename Sig<unsigned int>::Exist _args)
-                                 -> auto { return _args.d_a0; }},
+                                 -> auto { return _args.d_x; }},
                   p->v()) +
        std::visit(Overloaded{[](const typename Sig<unsigned int>::Exist _args0)
-                                 -> auto { return _args0.d_a0; }},
+                                 -> auto { return _args0.d_x; }},
                   p->v())));
 }
 
@@ -50,7 +50,7 @@ SigmaTypes::positives_up_to(const unsigned int k) {
     unsigned int k_ = k - 1;
     return List<unsigned int>::cons(
         std::visit(Overloaded{[](const typename Sig<unsigned int>::Exist _args)
-                                  -> auto { return _args.d_a0; }},
+                                  -> auto { return _args.d_x; }},
                    positive_succ(k_)->v()),
         positives_up_to(k_));
   }

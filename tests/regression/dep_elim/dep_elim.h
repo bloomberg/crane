@@ -74,11 +74,11 @@ struct DepElim {
   struct fin {
     // TYPES
     struct FZ {
-      unsigned int d_a0;
+      unsigned int d_n;
     };
 
     struct FS {
-      unsigned int d_a0;
+      unsigned int d_n;
       std::shared_ptr<fin> d_a1;
     };
 
@@ -94,31 +94,31 @@ struct DepElim {
 
     explicit fin(FS _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<fin> fz(unsigned int a0) {
-      return std::make_shared<fin>(FZ{std::move(a0)});
+    static std::shared_ptr<fin> fz(unsigned int n) {
+      return std::make_shared<fin>(FZ{std::move(n)});
     }
 
-    static std::shared_ptr<fin> fs(unsigned int a0,
+    static std::shared_ptr<fin> fs(unsigned int n,
                                    const std::shared_ptr<fin> &a1) {
-      return std::make_shared<fin>(FS{std::move(a0), a1});
+      return std::make_shared<fin>(FS{std::move(n), a1});
     }
 
-    static std::shared_ptr<fin> fs(unsigned int a0, std::shared_ptr<fin> &&a1) {
-      return std::make_shared<fin>(FS{std::move(a0), std::move(a1)});
+    static std::shared_ptr<fin> fs(unsigned int n, std::shared_ptr<fin> &&a1) {
+      return std::make_shared<fin>(FS{std::move(n), std::move(a1)});
     }
 
-    static std::unique_ptr<fin> fz_uptr(unsigned int a0) {
-      return std::make_unique<fin>(FZ{std::move(a0)});
+    static std::unique_ptr<fin> fz_uptr(unsigned int n) {
+      return std::make_unique<fin>(FZ{std::move(n)});
     }
 
-    static std::unique_ptr<fin> fs_uptr(unsigned int a0,
+    static std::unique_ptr<fin> fs_uptr(unsigned int n,
                                         const std::shared_ptr<fin> &a1) {
-      return std::make_unique<fin>(FS{std::move(a0), a1});
+      return std::make_unique<fin>(FS{std::move(n), a1});
     }
 
-    static std::unique_ptr<fin> fs_uptr(unsigned int a0,
+    static std::unique_ptr<fin> fs_uptr(unsigned int n,
                                         std::shared_ptr<fin> &&a1) {
-      return std::make_unique<fin>(FS{std::move(a0), std::move(a1)});
+      return std::make_unique<fin>(FS{std::move(n), std::move(a1)});
     }
 
     // MANIPULATORS
@@ -132,7 +132,7 @@ struct DepElim {
           Overloaded{
               [](const typename fin::FZ _args) -> unsigned int { return 0u; },
               [](const typename fin::FS _args) -> unsigned int {
-                return (_args.d_a1->fin_to_nat(_args.d_a0) + 1);
+                return (_args.d_a1->fin_to_nat(_args.d_n) + 1);
               }},
           this->v());
     }
@@ -142,10 +142,10 @@ struct DepElim {
     T1 fin_rec(F0 &&f, F1 &&f0, const unsigned int _x) const {
       return std::visit(
           Overloaded{
-              [&](const typename fin::FZ _args) -> T1 { return f(_args.d_a0); },
+              [&](const typename fin::FZ _args) -> T1 { return f(_args.d_n); },
               [&](const typename fin::FS _args) -> T1 {
-                return f0(_args.d_a0, _args.d_a1,
-                          _args.d_a1->template fin_rec<T1>(f, f0, _args.d_a0));
+                return f0(_args.d_n, _args.d_a1,
+                          _args.d_a1->template fin_rec<T1>(f, f0, _args.d_n));
               }},
           this->v());
     }
@@ -155,10 +155,10 @@ struct DepElim {
     T1 fin_rect(F0 &&f, F1 &&f0, const unsigned int _x) const {
       return std::visit(
           Overloaded{
-              [&](const typename fin::FZ _args) -> T1 { return f(_args.d_a0); },
+              [&](const typename fin::FZ _args) -> T1 { return f(_args.d_n); },
               [&](const typename fin::FS _args) -> T1 {
-                return f0(_args.d_a0, _args.d_a1,
-                          _args.d_a1->template fin_rect<T1>(f, f0, _args.d_a0));
+                return f0(_args.d_n, _args.d_a1,
+                          _args.d_a1->template fin_rect<T1>(f, f0, _args.d_n));
               }},
           this->v());
     }
@@ -169,7 +169,7 @@ struct DepElim {
     struct Vnil {};
 
     struct Vcons {
-      unsigned int d_a0;
+      unsigned int d_n;
       t_A d_a1;
       std::shared_ptr<vec<t_A>> d_a2;
     };
@@ -191,15 +191,14 @@ struct DepElim {
     }
 
     static std::shared_ptr<vec<t_A>>
-    vcons(unsigned int a0, t_A a1, const std::shared_ptr<vec<t_A>> &a2) {
-      return std::make_shared<vec<t_A>>(
-          Vcons{std::move(a0), std::move(a1), a2});
+    vcons(unsigned int n, t_A a1, const std::shared_ptr<vec<t_A>> &a2) {
+      return std::make_shared<vec<t_A>>(Vcons{std::move(n), std::move(a1), a2});
     }
 
-    static std::shared_ptr<vec<t_A>> vcons(unsigned int a0, t_A a1,
+    static std::shared_ptr<vec<t_A>> vcons(unsigned int n, t_A a1,
                                            std::shared_ptr<vec<t_A>> &&a2) {
       return std::make_shared<vec<t_A>>(
-          Vcons{std::move(a0), std::move(a1), std::move(a2)});
+          Vcons{std::move(n), std::move(a1), std::move(a2)});
     }
 
     static std::unique_ptr<vec<t_A>> vnil_uptr() {
@@ -207,15 +206,14 @@ struct DepElim {
     }
 
     static std::unique_ptr<vec<t_A>>
-    vcons_uptr(unsigned int a0, t_A a1, const std::shared_ptr<vec<t_A>> &a2) {
-      return std::make_unique<vec<t_A>>(
-          Vcons{std::move(a0), std::move(a1), a2});
+    vcons_uptr(unsigned int n, t_A a1, const std::shared_ptr<vec<t_A>> &a2) {
+      return std::make_unique<vec<t_A>>(Vcons{std::move(n), std::move(a1), a2});
     }
 
     static std::unique_ptr<vec<t_A>>
-    vcons_uptr(unsigned int a0, t_A a1, std::shared_ptr<vec<t_A>> &&a2) {
+    vcons_uptr(unsigned int n, t_A a1, std::shared_ptr<vec<t_A>> &&a2) {
       return std::make_unique<vec<t_A>>(
-          Vcons{std::move(a0), std::move(a1), std::move(a2)});
+          Vcons{std::move(n), std::move(a1), std::move(a2)});
     }
 
     // MANIPULATORS
@@ -255,8 +253,8 @@ struct DepElim {
               [&](const typename vec<t_A>::Vcons _args)
                   -> std::shared_ptr<vec<T1>> {
                 return vec<T1>::vcons(
-                    _args.d_a0, f(_args.d_a1),
-                    _args.d_a2->template vec_map<T1>(_args.d_a0, f));
+                    _args.d_n, f(_args.d_a1),
+                    _args.d_a2->template vec_map<T1>(_args.d_n, f));
               }},
           this->v());
     }
@@ -269,7 +267,7 @@ struct DepElim {
               [](const typename vec<t_A>::Vcons _args)
                   -> std::shared_ptr<List<t_A>> {
                 return List<t_A>::cons(_args.d_a1,
-                                       _args.d_a2->vec_to_list(_args.d_a0));
+                                       _args.d_a2->vec_to_list(_args.d_n));
               }},
           this->v());
     }
@@ -282,8 +280,8 @@ struct DepElim {
     return std::visit(
         Overloaded{[&](const typename vec<T1>::Vnil _args) -> T2 { return f; },
                    [&](const typename vec<T1>::Vcons _args) -> T2 {
-                     return f0(_args.d_a0, _args.d_a1, _args.d_a2,
-                               vec_rect<T1, T2>(f, f0, _args.d_a0, _args.d_a2));
+                     return f0(_args.d_n, _args.d_a1, _args.d_a2,
+                               vec_rect<T1, T2>(f, f0, _args.d_n, _args.d_a2));
                    }},
         v->v());
   }
@@ -295,8 +293,8 @@ struct DepElim {
     return std::visit(
         Overloaded{[&](const typename vec<T1>::Vnil _args) -> T2 { return f; },
                    [&](const typename vec<T1>::Vcons _args) -> T2 {
-                     return f0(_args.d_a0, _args.d_a1, _args.d_a2,
-                               vec_rec<T1, T2>(f, f0, _args.d_a0, _args.d_a2));
+                     return f0(_args.d_n, _args.d_a1, _args.d_a2,
+                               vec_rec<T1, T2>(f, f0, _args.d_n, _args.d_a2));
                    }},
         v->v());
   }

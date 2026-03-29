@@ -146,7 +146,7 @@ public:
 template <typename t_A> struct Sig {
   // TYPES
   struct Exist {
-    t_A d_a0;
+    t_A d_x;
   };
 
   using variant_t = std::variant<Exist>;
@@ -159,12 +159,12 @@ public:
   // CREATORS
   explicit Sig(Exist _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<Sig<t_A>> exist(t_A a0) {
-    return std::make_shared<Sig<t_A>>(Exist{std::move(a0)});
+  static std::shared_ptr<Sig<t_A>> exist(t_A x) {
+    return std::make_shared<Sig<t_A>>(Exist{std::move(x)});
   }
 
-  static std::unique_ptr<Sig<t_A>> exist_uptr(t_A a0) {
-    return std::make_unique<Sig<t_A>>(Exist{std::move(a0)});
+  static std::unique_ptr<Sig<t_A>> exist_uptr(t_A x) {
+    return std::make_unique<Sig<t_A>>(Exist{std::move(x)});
   }
 
   // MANIPULATORS
@@ -177,7 +177,7 @@ public:
 template <typename t_A, typename t_P> struct SigT {
   // TYPES
   struct ExistT {
-    t_A d_a0;
+    t_A d_x;
     t_P d_a1;
   };
 
@@ -191,14 +191,14 @@ public:
   // CREATORS
   explicit SigT(ExistT _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<SigT<t_A, t_P>> existt(t_A a0, t_P a1) {
+  static std::shared_ptr<SigT<t_A, t_P>> existt(t_A x, t_P a1) {
     return std::make_shared<SigT<t_A, t_P>>(
-        ExistT{std::move(a0), std::move(a1)});
+        ExistT{std::move(x), std::move(a1)});
   }
 
-  static std::unique_ptr<SigT<t_A, t_P>> existt_uptr(t_A a0, t_P a1) {
+  static std::unique_ptr<SigT<t_A, t_P>> existt_uptr(t_A x, t_P a1) {
     return std::make_unique<SigT<t_A, t_P>>(
-        ExistT{std::move(a0), std::move(a1)});
+        ExistT{std::move(x), std::move(a1)});
   }
 
   // MANIPULATORS
@@ -220,8 +220,8 @@ template <typename t_A> struct T0 {
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    unsigned int d_a1;
+    t_A d_h;
+    unsigned int d_n;
     std::shared_ptr<T0<t_A>> d_a2;
   };
 
@@ -241,15 +241,15 @@ public:
     return std::make_shared<T0<t_A>>(Nil{});
   }
 
-  static std::shared_ptr<T0<t_A>> cons(t_A a0, unsigned int a1,
+  static std::shared_ptr<T0<t_A>> cons(t_A h, unsigned int n,
                                        const std::shared_ptr<T0<t_A>> &a2) {
-    return std::make_shared<T0<t_A>>(Cons{std::move(a0), std::move(a1), a2});
+    return std::make_shared<T0<t_A>>(Cons{std::move(h), std::move(n), a2});
   }
 
-  static std::shared_ptr<T0<t_A>> cons(t_A a0, unsigned int a1,
+  static std::shared_ptr<T0<t_A>> cons(t_A h, unsigned int n,
                                        std::shared_ptr<T0<t_A>> &&a2) {
     return std::make_shared<T0<t_A>>(
-        Cons{std::move(a0), std::move(a1), std::move(a2)});
+        Cons{std::move(h), std::move(n), std::move(a2)});
   }
 
   static std::unique_ptr<T0<t_A>> nil_uptr() {
@@ -257,14 +257,14 @@ public:
   }
 
   static std::unique_ptr<T0<t_A>>
-  cons_uptr(t_A a0, unsigned int a1, const std::shared_ptr<T0<t_A>> &a2) {
-    return std::make_unique<T0<t_A>>(Cons{std::move(a0), std::move(a1), a2});
+  cons_uptr(t_A h, unsigned int n, const std::shared_ptr<T0<t_A>> &a2) {
+    return std::make_unique<T0<t_A>>(Cons{std::move(h), std::move(n), a2});
   }
 
-  static std::unique_ptr<T0<t_A>> cons_uptr(t_A a0, unsigned int a1,
+  static std::unique_ptr<T0<t_A>> cons_uptr(t_A h, unsigned int n,
                                             std::shared_ptr<T0<t_A>> &&a2) {
     return std::make_unique<T0<t_A>>(
-        Cons{std::move(a0), std::move(a1), std::move(a2)});
+        Cons{std::move(h), std::move(n), std::move(a2)});
   }
 
   // MANIPULATORS
@@ -277,11 +277,11 @@ public:
 struct T {
   // TYPES
   struct F1 {
-    unsigned int d_a0;
+    unsigned int d_n;
   };
 
   struct FS {
-    unsigned int d_a0;
+    unsigned int d_n;
     std::shared_ptr<T> d_a1;
   };
 
@@ -297,29 +297,29 @@ public:
 
   explicit T(FS _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<T> f1(unsigned int a0) {
-    return std::make_shared<T>(F1{std::move(a0)});
+  static std::shared_ptr<T> f1(unsigned int n) {
+    return std::make_shared<T>(F1{std::move(n)});
   }
 
-  static std::shared_ptr<T> fs(unsigned int a0, const std::shared_ptr<T> &a1) {
-    return std::make_shared<T>(FS{std::move(a0), a1});
+  static std::shared_ptr<T> fs(unsigned int n, const std::shared_ptr<T> &a1) {
+    return std::make_shared<T>(FS{std::move(n), a1});
   }
 
-  static std::shared_ptr<T> fs(unsigned int a0, std::shared_ptr<T> &&a1) {
-    return std::make_shared<T>(FS{std::move(a0), std::move(a1)});
+  static std::shared_ptr<T> fs(unsigned int n, std::shared_ptr<T> &&a1) {
+    return std::make_shared<T>(FS{std::move(n), std::move(a1)});
   }
 
-  static std::unique_ptr<T> f1_uptr(unsigned int a0) {
-    return std::make_unique<T>(F1{std::move(a0)});
+  static std::unique_ptr<T> f1_uptr(unsigned int n) {
+    return std::make_unique<T>(F1{std::move(n)});
   }
 
-  static std::unique_ptr<T> fs_uptr(unsigned int a0,
+  static std::unique_ptr<T> fs_uptr(unsigned int n,
                                     const std::shared_ptr<T> &a1) {
-    return std::make_unique<T>(FS{std::move(a0), a1});
+    return std::make_unique<T>(FS{std::move(n), a1});
   }
 
-  static std::unique_ptr<T> fs_uptr(unsigned int a0, std::shared_ptr<T> &&a1) {
-    return std::make_unique<T>(FS{std::move(a0), std::move(a1)});
+  static std::unique_ptr<T> fs_uptr(unsigned int n, std::shared_ptr<T> &&a1) {
+    return std::make_unique<T>(FS{std::move(n), std::move(a1)});
   }
 
   // MANIPULATORS
@@ -340,9 +340,9 @@ public:
               return std::visit(
                   Overloaded{[](const typename Sig<unsigned int>::Exist _args0)
                                  -> std::shared_ptr<Sig<unsigned int>> {
-                    return Sig<unsigned int>::exist((_args0.d_a0 + 1));
+                    return Sig<unsigned int>::exist((_args0.d_x + 1));
                   }},
-                  _args.d_a1->to_nat(_args.d_a0)->v());
+                  _args.d_a1->to_nat(_args.d_n)->v());
             }},
         this->v());
   }
@@ -803,8 +803,8 @@ std::shared_ptr<List<T1>> Vector::to_list(const unsigned int n,
                    [&](const typename T0<T1>::Cons _args)
                        -> std::shared_ptr<List<T1>> {
                      return List<T1>::cons0(
-                         _args.d_a0,
-                         fold_right_fix(_args.d_a1, _args.d_a2, std::move(b)));
+                         _args.d_h,
+                         fold_right_fix(_args.d_n, _args.d_a2, std::move(b)));
                    }},
         v0->v());
   };

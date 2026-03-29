@@ -1361,6 +1361,61 @@ and is_pure_return_type = function
   | Tmod (_, t) | Tref t | Tptr t -> is_pure_return_type t
   | _ -> true
 
+(** Check if a C++ type is a literal type eligible for [constexpr] context.
+
+    Strictly stronger than {!is_pure_return_type}: in addition to the same
+    exclusions (allocation, side-effects, unknowns), also rejects:
+    - [Tfun]: [std::function] uses type-erased internal storage
+    - [Tdecltype]: the expression may reference non-constexpr entities
+    - Composite types where any component is non-literal
+
+    The check is recursive for container types ([Tvariant], [Tglob], [Tid],
+    [Tnamespace], [Tqualified]) — a [std::variant<A, B>] is constexpr only
+    if both [A] and [B] are. *)
+and is_constexpr_type = function
+  | Tshared_ptr _ | Tunique_ptr _ -> false
+  | Tvoid | Tvar _ | Tany | Tauto | Ttodo | Tunknown -> false
+  | Tfun _ -> false  (* std::function uses type erasure *)
+  | Tdecltype _ -> false
+  | Tglob (r, _, _) when is_axiom_type_ref r -> false
+  | Tmod (_, t) | Tref t | Tptr t -> is_constexpr_type t
+  | Tvariant tys -> List.for_all is_constexpr_type tys
+  | Tglob (_, tys, _) -> List.for_all is_constexpr_type tys
+  | Tid (_, tys) -> List.for_all is_constexpr_type tys
+  | Tnamespace (_, t) -> is_constexpr_type t
+  | Tqualified (t, _) -> is_constexpr_type t
+
+(** Check if a function is constexpr-eligible: all param types AND return
+    type must be constexpr-eligible literal types. *)
+and is_constexpr_eligible ret_ty params =
+  is_constexpr_type ret_ty
+  && List.for_all (fun (_, ty) -> is_constexpr_type ty) params
+
+(** Check if a function body consists solely of throwing an abort/axiom error.
+    Such functions must not be marked [pure] or [constexpr] because the compiler
+    may optimise away the throw. *)
+and body_is_throw = function
+  | [Sreturn (Some (CPPabort _))] -> true
+  | _ -> false
+
+(** Compute the C++ function qualifier prefix as a three-way decision:
+    - [constexpr] when the function is constexpr-eligible and [can_constexpr]
+      is [true] (i.e. the definition is visible in the header);
+    - [__attribute__((pure))] when the return type is allocation-free; or
+    - nothing, for functions that allocate, throw, or take non-literal types.
+
+    @param can_constexpr  whether this call site may use [constexpr]
+    @param throws         whether the body unconditionally throws
+    @param ret_ty         the C++ return type
+    @param params         [(name, type)] pairs for all formal parameters *)
+and fun_qualifier ~can_constexpr ~throws ret_ty params =
+  if can_constexpr && not throws && is_constexpr_eligible ret_ty params then
+    str "constexpr "
+  else if is_pure_return_type ret_ty && not throws then
+    str "__attribute__((pure)) "
+  else
+    mt ()
+
 (** Check if a C++ type is concrete (can be used in any_cast). Type variables
     and unknown types are not concrete - we can't cast to them. *)
 and is_concrete_cpp_type = function
@@ -1513,19 +1568,12 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
         params
     in
     let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
-    let body_throws =
-      match body with
-      | [Sreturn (Some (CPPabort _))] -> true
-      | _ -> false
-    in
-    let pure_attr =
-      if is_pure_return_type ret_ty && not body_throws then
-        str "__attribute__((pure)) "
-      else
-        mt ()
+    let qualifier =
+      fun_qualifier ~can_constexpr:true ~throws:(body_is_throw body)
+        ret_ty params
     in
     h
-      ( pure_attr
+      ( qualifier
       ++ pp_cpp_type false [] ret_ty
       ++ str " "
       ++ Id.print id
@@ -1540,14 +1588,11 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
         (fun (id, ty) -> pp_cpp_type false [] ty ++ str " " ++ Id.print id)
         (List.rev params)
     in
-    let pure_attr =
-      if is_pure_return_type ret_ty then
-        str "__attribute__((pure)) "
-      else
-        mt ()
+    let qualifier =
+      fun_qualifier ~can_constexpr:true ~throws:false ret_ty params
     in
     h
-      ( pure_attr
+      ( qualifier
       ++ pp_cpp_type false [] ret_ty
       ++ str " "
       ++ Id.print id
@@ -1592,16 +1637,14 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
         let lines = Doc_comments.format_as_cpp_lines text in
         prlist_with_sep fnl (fun l -> str l) lines ++ fnl ()
     in
-    let pure_attr =
-      if is_pure_return_type mf_ret_type then
-        str "__attribute__((pure)) "
-      else
-        mt ()
+    let qualifier =
+      fun_qualifier ~can_constexpr:mf_is_static ~throws:false
+        mf_ret_type mf_params
     in
     doc_comment
     ++ template_s
     ++ h
-         ( pure_attr
+         ( qualifier
          ++ static_s
          ++ pp_cpp_type false [] mf_ret_type
          ++ str " "
@@ -1981,19 +2024,18 @@ and pp_cpp_decl_raw env = function
       else
         mt ()
     in
-    let body_throws =
-      match body with
-      | [Sreturn (Some (CPPabort _))] -> true
-      | _ -> false
-    in
-    let pure_attr =
-      if is_pure_return_type ret_ty && not body_throws then
-        str "__attribute__((pure)) "
-      else
-        mt ()
+    (* Dfundef is the top-level definition form — it's either in a .cpp file
+       (out-of-line) or inline in a template struct (in-struct + in-template).
+       constexpr requires the definition visible in the header, so only use
+       it for inline template struct definitions. *)
+    let qualifier =
+      fun_qualifier
+        ~can_constexpr:(render_ctx.rc_in_struct && not is_out_of_struct_def)
+        ~throws:(body_is_throw body)
+        ret_ty params
     in
     h
-      ( pure_attr
+      ( qualifier
       ++ static_kw
       ++ pp_cpp_type false [] ret_ty
       ++ str " "
@@ -2033,14 +2075,19 @@ and pp_cpp_decl_raw env = function
     in
     let is_struct_member = is_qualified || render_ctx.rc_in_struct in
     let static_kw = if is_struct_member then str "static " else mt () in
-    let pure_attr =
+    (* Dfundecl is always a forward declaration for an out-of-line .cpp
+       definition, so constexpr is never applicable here (it requires the
+       full definition to be visible in the header).  We don't use
+       {!fun_qualifier} because [can_constexpr] is unconditionally false
+       and the param list has a different shape ([Id.t option] vs [Id.t]). *)
+    let qualifier =
       if is_pure_return_type ret_ty && not no_pure then
         str "__attribute__((pure)) "
       else
         mt ()
     in
     h
-      ( pure_attr
+      ( qualifier
       ++ static_kw
       ++ pp_cpp_type false [] ret_ty
       ++ str " "

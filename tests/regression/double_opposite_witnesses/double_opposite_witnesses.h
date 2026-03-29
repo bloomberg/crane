@@ -19,7 +19,7 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 template <typename t_A, typename t_P> struct SigT {
   // TYPES
   struct ExistT {
-    t_A d_a0;
+    t_A d_x;
     t_P d_a1;
   };
 
@@ -33,14 +33,14 @@ public:
   // CREATORS
   explicit SigT(ExistT _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<SigT<t_A, t_P>> existt(t_A a0, t_P a1) {
+  static std::shared_ptr<SigT<t_A, t_P>> existt(t_A x, t_P a1) {
     return std::make_shared<SigT<t_A, t_P>>(
-        ExistT{std::move(a0), std::move(a1)});
+        ExistT{std::move(x), std::move(a1)});
   }
 
-  static std::unique_ptr<SigT<t_A, t_P>> existt_uptr(t_A a0, t_P a1) {
+  static std::unique_ptr<SigT<t_A, t_P>> existt_uptr(t_A x, t_P a1) {
     return std::make_unique<SigT<t_A, t_P>>(
-        ExistT{std::move(a0), std::move(a1)});
+        ExistT{std::move(x), std::move(a1)});
   }
 
   // MANIPULATORS
@@ -52,7 +52,7 @@ public:
   t_A projT1() const {
     return std::visit(
         Overloaded{[](const typename SigT<t_A, t_P>::ExistT _args) -> t_A {
-          return _args.d_a0;
+          return _args.d_x;
         }},
         this->v());
   }

@@ -20,7 +20,7 @@ struct Nat {
   struct O {};
 
   struct S {
-    std::shared_ptr<Nat> d_a0;
+    std::shared_ptr<Nat> d_n;
   };
 
   using variant_t = std::variant<O, S>;
@@ -37,22 +37,22 @@ public:
 
   static std::shared_ptr<Nat> o() { return std::make_shared<Nat>(O{}); }
 
-  static std::shared_ptr<Nat> s(const std::shared_ptr<Nat> &a0) {
-    return std::make_shared<Nat>(S{a0});
+  static std::shared_ptr<Nat> s(const std::shared_ptr<Nat> &n) {
+    return std::make_shared<Nat>(S{n});
   }
 
-  static std::shared_ptr<Nat> s(std::shared_ptr<Nat> &&a0) {
-    return std::make_shared<Nat>(S{std::move(a0)});
+  static std::shared_ptr<Nat> s(std::shared_ptr<Nat> &&n) {
+    return std::make_shared<Nat>(S{std::move(n)});
   }
 
   static std::unique_ptr<Nat> o_uptr() { return std::make_unique<Nat>(O{}); }
 
-  static std::unique_ptr<Nat> s_uptr(const std::shared_ptr<Nat> &a0) {
-    return std::make_unique<Nat>(S{a0});
+  static std::unique_ptr<Nat> s_uptr(const std::shared_ptr<Nat> &n) {
+    return std::make_unique<Nat>(S{n});
   }
 
-  static std::unique_ptr<Nat> s_uptr(std::shared_ptr<Nat> &&a0) {
-    return std::make_unique<Nat>(S{std::move(a0)});
+  static std::unique_ptr<Nat> s_uptr(std::shared_ptr<Nat> &&n) {
+    return std::make_unique<Nat>(S{std::move(n)});
   }
 
   // MANIPULATORS
@@ -66,7 +66,7 @@ public:
     return std::visit(
         Overloaded{[](const typename Nat::O _args) -> int { return 0; },
                    [](const typename Nat::S _args) -> int {
-                     return 1 + _args.d_a0->nat_to_int();
+                     return 1 + _args.d_n->nat_to_int();
                    }},
         this->v());
   }
@@ -76,8 +76,8 @@ public:
     return std::visit(
         Overloaded{[&](const typename Nat::O _args) -> T1 { return f; },
                    [&](const typename Nat::S _args) -> T1 {
-                     return f0(_args.d_a0,
-                               _args.d_a0->template nat_rec<T1>(f, f0));
+                     return f0(_args.d_n,
+                               _args.d_n->template nat_rec<T1>(f, f0));
                    }},
         this->v());
   }
@@ -87,8 +87,8 @@ public:
     return std::visit(
         Overloaded{[&](const typename Nat::O _args) -> T1 { return f; },
                    [&](const typename Nat::S _args) -> T1 {
-                     return f0(_args.d_a0,
-                               _args.d_a0->template nat_rect<T1>(f, f0));
+                     return f0(_args.d_n,
+                               _args.d_n->template nat_rect<T1>(f, f0));
                    }},
         this->v());
   }
@@ -100,7 +100,7 @@ public:
                      return n;
                    },
                    [&](const typename Nat::S _args) -> std::shared_ptr<Nat> {
-                     return Nat::s(_args.d_a0->add(n));
+                     return Nat::s(_args.d_n->add(n));
                    }},
         this->v());
   }

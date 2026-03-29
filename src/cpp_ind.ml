@@ -66,7 +66,8 @@ let pp_cpp_ind kn ind =
           in
           pp_cpp_decl
             (empty_env ())
-            (gen_ind_cpp param_vars names.(i) cnames.(i) p.ip_types)
+            (gen_ind_cpp ~consarg_names:p.ip_consarg_names
+               param_vars names.(i) cnames.(i) p.ip_types)
           ++ pp (i + 1)
     in
     pp 0
@@ -519,6 +520,7 @@ let pp_cpp_ind_header kn ind =
           let decl =
             gen_ind_header_v2
               ~is_mutual
+              ~consarg_names:p.ip_consarg_names
               param_vars
               names.(i)
               cnames.(i)

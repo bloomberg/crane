@@ -654,6 +654,7 @@ let reset_cpp_state () =
   template_static_accessors := [];
   Hashtbl.clear functor_app_sources;
   hoisted_concept_defs := [];
+  Common.reset_ctor_field_names ();
   reset_needed_headers ()
 
 (** Check if a function is a projection for the eponymous record. Such

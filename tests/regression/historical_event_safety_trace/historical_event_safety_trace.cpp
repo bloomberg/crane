@@ -533,9 +533,9 @@ __attribute__((pure)) unsigned int
 Nat::of_num_uint(const std::shared_ptr<Uint1> &d) {
   return std::visit(
       Overloaded{[](const typename Uint1::UIntDecimal _args) -> unsigned int {
-                   return Nat::of_uint(_args.d_a0);
+                   return Nat::of_uint(_args.d_u);
                  },
                  [](const typename Uint1::UIntHexadecimal _args)
-                     -> unsigned int { return Nat::of_hex_uint(_args.d_a0); }},
+                     -> unsigned int { return Nat::of_hex_uint(_args.d_u); }},
       d->v());
 }

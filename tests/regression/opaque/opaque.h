@@ -18,7 +18,7 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 template <typename t_A> struct Sig {
   // TYPES
   struct Exist {
-    t_A d_a0;
+    t_A d_x;
   };
 
   using variant_t = std::variant<Exist>;
@@ -31,12 +31,12 @@ public:
   // CREATORS
   explicit Sig(Exist _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<Sig<t_A>> exist(t_A a0) {
-    return std::make_shared<Sig<t_A>>(Exist{std::move(a0)});
+  static std::shared_ptr<Sig<t_A>> exist(t_A x) {
+    return std::make_shared<Sig<t_A>>(Exist{std::move(x)});
   }
 
-  static std::unique_ptr<Sig<t_A>> exist_uptr(t_A a0) {
-    return std::make_unique<Sig<t_A>>(Exist{std::move(a0)});
+  static std::unique_ptr<Sig<t_A>> exist_uptr(t_A x) {
+    return std::make_unique<Sig<t_A>>(Exist{std::move(x)});
   }
 
   // MANIPULATORS

@@ -227,6 +227,19 @@ val field_param_name : int -> string
 
 val field_param_id : int -> Id.t
 
+(** {2 Constructor Field Name Registry}
+
+    See {!Common.ctor_field_names} for design rationale. *)
+
+(** Register a named field for a constructor struct. *)
+val register_ctor_field_name : string -> int -> Id.t -> unit
+
+(** Look up the field name; falls back to [d_a{idx}] if unregistered. *)
+val lookup_ctor_field_name : string -> int -> Id.t
+
+(** Clear the registry between extraction passes. *)
+val reset_ctor_field_names : unit -> unit
+
 val eta_param_name : int -> string
 
 val eta_param_id : int -> Id.t

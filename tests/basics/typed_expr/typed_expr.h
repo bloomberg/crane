@@ -38,7 +38,7 @@ struct Expr {
   };
 
   struct EIf {
-    Ty d_a0;
+    Ty d_t;
     std::shared_ptr<Expr> d_a1;
     std::shared_ptr<Expr> d_a2;
     std::shared_ptr<Expr> d_a3;
@@ -90,17 +90,17 @@ public:
     return std::make_shared<Expr>(EEq{std::move(a0), std::move(a1)});
   }
 
-  static std::shared_ptr<Expr> eif(Ty a0, const std::shared_ptr<Expr> &a1,
+  static std::shared_ptr<Expr> eif(Ty t, const std::shared_ptr<Expr> &a1,
                                    const std::shared_ptr<Expr> &a2,
                                    const std::shared_ptr<Expr> &a3) {
-    return std::make_shared<Expr>(EIf{std::move(a0), a1, a2, a3});
+    return std::make_shared<Expr>(EIf{std::move(t), a1, a2, a3});
   }
 
-  static std::shared_ptr<Expr> eif(Ty a0, std::shared_ptr<Expr> &&a1,
+  static std::shared_ptr<Expr> eif(Ty t, std::shared_ptr<Expr> &&a1,
                                    std::shared_ptr<Expr> &&a2,
                                    std::shared_ptr<Expr> &&a3) {
     return std::make_shared<Expr>(
-        EIf{std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
+        EIf{std::move(t), std::move(a1), std::move(a2), std::move(a3)});
   }
 
   static std::unique_ptr<Expr> enat_uptr(unsigned int a0) {
@@ -131,17 +131,17 @@ public:
     return std::make_unique<Expr>(EEq{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<Expr> eif_uptr(Ty a0, const std::shared_ptr<Expr> &a1,
+  static std::unique_ptr<Expr> eif_uptr(Ty t, const std::shared_ptr<Expr> &a1,
                                         const std::shared_ptr<Expr> &a2,
                                         const std::shared_ptr<Expr> &a3) {
-    return std::make_unique<Expr>(EIf{std::move(a0), a1, a2, a3});
+    return std::make_unique<Expr>(EIf{std::move(t), a1, a2, a3});
   }
 
-  static std::unique_ptr<Expr> eif_uptr(Ty a0, std::shared_ptr<Expr> &&a1,
+  static std::unique_ptr<Expr> eif_uptr(Ty t, std::shared_ptr<Expr> &&a1,
                                         std::shared_ptr<Expr> &&a2,
                                         std::shared_ptr<Expr> &&a3) {
     return std::make_unique<Expr>(
-        EIf{std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
+        EIf{std::move(t), std::move(a1), std::move(a2), std::move(a3)});
   }
 
   // MANIPULATORS
@@ -171,9 +171,9 @@ public:
             },
             [](const typename Expr::EIf _args) -> std::any {
               if (std::any_cast<bool>(_args.d_a1->eval(Ty::e_TBOOL))) {
-                return _args.d_a2->eval(_args.d_a0);
+                return _args.d_a2->eval(_args.d_t);
               } else {
-                return _args.d_a3->eval(_args.d_a0);
+                return _args.d_a3->eval(_args.d_t);
               }
             }},
         this->v());

@@ -63,11 +63,11 @@ struct SectionsModules {
   static inline const unsigned int use_monoid = TransparentMod::op(5u, 10u);
 
   template <Semigroup M> struct MakeDoubleOp {
-    __attribute__((pure)) static typename M::T double_(const typename M::T x) {
+    constexpr static typename M::T double_(const typename M::T x) {
       return M::op(x, x);
     }
 
-    __attribute__((pure)) static typename M::T quad(const typename M::T x) {
+    constexpr static typename M::T quad(const typename M::T x) {
       return double_(double_(x));
     }
   };

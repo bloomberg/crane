@@ -134,15 +134,15 @@ Dim10TowerProofChainCase::graded_goodwillie_layers_stabilize(
   return [&](void) {
     if (std::move(e).use_count() == 1 && std::move(e)->v().index() == 0) {
       auto &_rf = std::get<0>(std::move(e)->v_mut());
-      unsigned int x = std::move(_rf.d_a0);
-      _rf.d_a0 = x;
+      unsigned int x = std::move(_rf.d_x);
+      _rf.d_x = x;
       return std::move(e);
     } else {
       return std::visit(
           Overloaded{
               [](const typename SigT<unsigned int, std::any>::ExistT _args)
                   -> std::shared_ptr<SigT<unsigned int, std::any>> {
-                return SigT<unsigned int, std::any>::existt(_args.d_a0,
+                return SigT<unsigned int, std::any>::existt(_args.d_x,
                                                             std::any{});
               }},
           std::move(e)->v());

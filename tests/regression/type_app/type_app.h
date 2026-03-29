@@ -172,7 +172,7 @@ struct TypeApp {
       return v;
     }
 
-    __attribute__((pure)) static typename M::T triple(const typename M::T x) {
+    constexpr static typename M::T triple(const typename M::T x) {
       return M::append(x, M::append(x, x));
     }
   };

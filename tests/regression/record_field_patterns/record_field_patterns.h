@@ -159,8 +159,7 @@ struct RecordFieldPatterns {
   };
 
   template <HasRecord M> struct UseRecord {
-    __attribute__((pure)) static unsigned int
-    sum_fields(const typename M::R r) {
+    constexpr static unsigned int sum_fields(const typename M::R r) {
       return (M::get_x(r) + M::get_y(r));
     }
   };

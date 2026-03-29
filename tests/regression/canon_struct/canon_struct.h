@@ -28,7 +28,7 @@ struct CanonStruct {
   struct nat_eqType {
     using carrier = unsigned int;
 
-    __attribute__((pure)) static bool eqb(unsigned int a0, unsigned int a1) {
+    constexpr static bool eqb(unsigned int a0, unsigned int a1) {
       return a0 == a1;
     }
   };
@@ -38,9 +38,7 @@ struct CanonStruct {
   struct bool_eqType {
     using carrier = bool;
 
-    __attribute__((pure)) static bool eqb(bool a0, bool a1) {
-      return Bool::eqb(a0, a1);
-    }
+    constexpr static bool eqb(bool a0, bool a1) { return Bool::eqb(a0, a1); }
   };
 
   static_assert(EqType<bool_eqType>);

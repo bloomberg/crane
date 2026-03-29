@@ -23,12 +23,12 @@ struct FreeMonad {
   struct IO {
     // TYPES
     struct Pure {
-      std::any d_a0;
+      std::any d_a;
     };
 
     struct Bind {
-      std::shared_ptr<IO> d_a0;
-      std::function<std::shared_ptr<IO>(std::any)> d_a1;
+      std::shared_ptr<IO> d_a;
+      std::function<std::shared_ptr<IO>(std::any)> d_b;
     };
 
     struct Get_line {};
@@ -53,20 +53,20 @@ struct FreeMonad {
 
     explicit IO(Print _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<IO> pure(std::any a0) {
-      return std::make_shared<IO>(Pure{std::move(a0)});
+    static std::shared_ptr<IO> pure(std::any a) {
+      return std::make_shared<IO>(Pure{std::move(a)});
     }
 
     static std::shared_ptr<IO>
-    bind(const std::shared_ptr<IO> &a0,
-         std::function<std::shared_ptr<IO>(std::any)> a1) {
-      return std::make_shared<IO>(Bind{a0, std::move(a1)});
+    bind(const std::shared_ptr<IO> &a,
+         std::function<std::shared_ptr<IO>(std::any)> b) {
+      return std::make_shared<IO>(Bind{a, std::move(b)});
     }
 
     static std::shared_ptr<IO>
-    bind(std::shared_ptr<IO> &&a0,
-         std::function<std::shared_ptr<IO>(std::any)> a1) {
-      return std::make_shared<IO>(Bind{std::move(a0), std::move(a1)});
+    bind(std::shared_ptr<IO> &&a,
+         std::function<std::shared_ptr<IO>(std::any)> b) {
+      return std::make_shared<IO>(Bind{std::move(a), std::move(b)});
     }
 
     static std::shared_ptr<IO> get_line() {
@@ -77,20 +77,20 @@ struct FreeMonad {
       return std::make_shared<IO>(Print{std::move(a0)});
     }
 
-    static std::unique_ptr<IO> pure_uptr(std::any a0) {
-      return std::make_unique<IO>(Pure{std::move(a0)});
+    static std::unique_ptr<IO> pure_uptr(std::any a) {
+      return std::make_unique<IO>(Pure{std::move(a)});
     }
 
     static std::unique_ptr<IO>
-    bind_uptr(const std::shared_ptr<IO> &a0,
-              std::function<std::shared_ptr<IO>(std::any)> a1) {
-      return std::make_unique<IO>(Bind{a0, std::move(a1)});
+    bind_uptr(const std::shared_ptr<IO> &a,
+              std::function<std::shared_ptr<IO>(std::any)> b) {
+      return std::make_unique<IO>(Bind{a, std::move(b)});
     }
 
     static std::unique_ptr<IO>
-    bind_uptr(std::shared_ptr<IO> &&a0,
-              std::function<std::shared_ptr<IO>(std::any)> a1) {
-      return std::make_unique<IO>(Bind{std::move(a0), std::move(a1)});
+    bind_uptr(std::shared_ptr<IO> &&a,
+              std::function<std::shared_ptr<IO>(std::any)> b) {
+      return std::make_unique<IO>(Bind{std::move(a), std::move(b)});
     }
 
     static std::unique_ptr<IO> get_line_uptr() {
@@ -113,11 +113,11 @@ struct FreeMonad {
                     const std::shared_ptr<IO> &i) {
     return std::visit(
         Overloaded{
-            [&](const typename IO::Pure _args) -> T1 { return f(_args.d_a0); },
+            [&](const typename IO::Pure _args) -> T1 { return f(_args.d_a); },
             [&](const typename IO::Bind _args) -> T1 {
-              return f0(_args.d_a0, IO_rect<T1>(f, f0, f1, f2, _args.d_a0),
-                        _args.d_a1, [=](std::any a) mutable {
-                          return IO_rect<T1>(f, f0, f1, f2, _args.d_a1(a));
+              return f0(_args.d_a, IO_rect<T1>(f, f0, f1, f2, _args.d_a),
+                        _args.d_b, [=](std::any a) mutable {
+                          return IO_rect<T1>(f, f0, f1, f2, _args.d_b(a));
                         });
             },
             [&](const typename IO::Get_line _args) -> T1 { return f1; },
@@ -132,11 +132,11 @@ struct FreeMonad {
                    const std::shared_ptr<IO> &i) {
     return std::visit(
         Overloaded{
-            [&](const typename IO::Pure _args) -> T1 { return f(_args.d_a0); },
+            [&](const typename IO::Pure _args) -> T1 { return f(_args.d_a); },
             [&](const typename IO::Bind _args) -> T1 {
-              return f0(_args.d_a0, IO_rec<T1>(f, f0, f1, f2, _args.d_a0),
-                        _args.d_a1, [=](std::any a) mutable {
-                          return IO_rec<T1>(f, f0, f1, f2, _args.d_a1(a));
+              return f0(_args.d_a, IO_rec<T1>(f, f0, f1, f2, _args.d_a),
+                        _args.d_b, [=](std::any a) mutable {
+                          return IO_rec<T1>(f, f0, f1, f2, _args.d_b(a));
                         });
             },
             [&](const typename IO::Get_line _args) -> T1 { return f1; },

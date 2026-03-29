@@ -80,25 +80,25 @@ struct Matcher {
     struct Any {};
 
     struct Char {
-      int64_t d_a0;
+      int64_t d_c;
     };
 
     struct Eps {};
 
     struct Cat {
-      std::shared_ptr<regexp> d_a0;
-      std::shared_ptr<regexp> d_a1;
+      std::shared_ptr<regexp> d_r1;
+      std::shared_ptr<regexp> d_r2;
     };
 
     struct Alt {
-      std::shared_ptr<regexp> d_a0;
-      std::shared_ptr<regexp> d_a1;
+      std::shared_ptr<regexp> d_r1;
+      std::shared_ptr<regexp> d_r2;
     };
 
     struct Zero {};
 
     struct Star {
-      std::shared_ptr<regexp> d_a0;
+      std::shared_ptr<regexp> d_r;
     };
 
     using variant_t = std::variant<Any, Char, Eps, Cat, Alt, Zero, Star>;
@@ -127,89 +127,88 @@ struct Matcher {
       return std::make_shared<regexp>(Any{});
     }
 
-    static std::shared_ptr<regexp> Char_(int64_t a0) {
-      return std::make_shared<regexp>(Char{std::move(a0)});
+    static std::shared_ptr<regexp> Char_(int64_t c) {
+      return std::make_shared<regexp>(Char{std::move(c)});
     }
 
     static std::shared_ptr<regexp> eps() {
       return std::make_shared<regexp>(Eps{});
     }
 
-    static std::shared_ptr<regexp> cat(const std::shared_ptr<regexp> &a0,
-                                       const std::shared_ptr<regexp> &a1) {
-      return std::make_shared<regexp>(Cat{a0, a1});
+    static std::shared_ptr<regexp> cat(const std::shared_ptr<regexp> &r1,
+                                       const std::shared_ptr<regexp> &r2) {
+      return std::make_shared<regexp>(Cat{r1, r2});
     }
 
-    static std::shared_ptr<regexp> cat(std::shared_ptr<regexp> &&a0,
-                                       std::shared_ptr<regexp> &&a1) {
-      return std::make_shared<regexp>(Cat{std::move(a0), std::move(a1)});
+    static std::shared_ptr<regexp> cat(std::shared_ptr<regexp> &&r1,
+                                       std::shared_ptr<regexp> &&r2) {
+      return std::make_shared<regexp>(Cat{std::move(r1), std::move(r2)});
     }
 
-    static std::shared_ptr<regexp> alt(const std::shared_ptr<regexp> &a0,
-                                       const std::shared_ptr<regexp> &a1) {
-      return std::make_shared<regexp>(Alt{a0, a1});
+    static std::shared_ptr<regexp> alt(const std::shared_ptr<regexp> &r1,
+                                       const std::shared_ptr<regexp> &r2) {
+      return std::make_shared<regexp>(Alt{r1, r2});
     }
 
-    static std::shared_ptr<regexp> alt(std::shared_ptr<regexp> &&a0,
-                                       std::shared_ptr<regexp> &&a1) {
-      return std::make_shared<regexp>(Alt{std::move(a0), std::move(a1)});
+    static std::shared_ptr<regexp> alt(std::shared_ptr<regexp> &&r1,
+                                       std::shared_ptr<regexp> &&r2) {
+      return std::make_shared<regexp>(Alt{std::move(r1), std::move(r2)});
     }
 
     static std::shared_ptr<regexp> zero() {
       return std::make_shared<regexp>(Zero{});
     }
 
-    static std::shared_ptr<regexp> star(const std::shared_ptr<regexp> &a0) {
-      return std::make_shared<regexp>(Star{a0});
+    static std::shared_ptr<regexp> star(const std::shared_ptr<regexp> &r) {
+      return std::make_shared<regexp>(Star{r});
     }
 
-    static std::shared_ptr<regexp> star(std::shared_ptr<regexp> &&a0) {
-      return std::make_shared<regexp>(Star{std::move(a0)});
+    static std::shared_ptr<regexp> star(std::shared_ptr<regexp> &&r) {
+      return std::make_shared<regexp>(Star{std::move(r)});
     }
 
     static std::unique_ptr<regexp> any_uptr() {
       return std::make_unique<regexp>(Any{});
     }
 
-    static std::unique_ptr<regexp> Char_uptr(int64_t a0) {
-      return std::make_unique<regexp>(Char{std::move(a0)});
+    static std::unique_ptr<regexp> Char_uptr(int64_t c) {
+      return std::make_unique<regexp>(Char{std::move(c)});
     }
 
     static std::unique_ptr<regexp> eps_uptr() {
       return std::make_unique<regexp>(Eps{});
     }
 
-    static std::unique_ptr<regexp> cat_uptr(const std::shared_ptr<regexp> &a0,
-                                            const std::shared_ptr<regexp> &a1) {
-      return std::make_unique<regexp>(Cat{a0, a1});
+    static std::unique_ptr<regexp> cat_uptr(const std::shared_ptr<regexp> &r1,
+                                            const std::shared_ptr<regexp> &r2) {
+      return std::make_unique<regexp>(Cat{r1, r2});
     }
 
-    static std::unique_ptr<regexp> cat_uptr(std::shared_ptr<regexp> &&a0,
-                                            std::shared_ptr<regexp> &&a1) {
-      return std::make_unique<regexp>(Cat{std::move(a0), std::move(a1)});
+    static std::unique_ptr<regexp> cat_uptr(std::shared_ptr<regexp> &&r1,
+                                            std::shared_ptr<regexp> &&r2) {
+      return std::make_unique<regexp>(Cat{std::move(r1), std::move(r2)});
     }
 
-    static std::unique_ptr<regexp> alt_uptr(const std::shared_ptr<regexp> &a0,
-                                            const std::shared_ptr<regexp> &a1) {
-      return std::make_unique<regexp>(Alt{a0, a1});
+    static std::unique_ptr<regexp> alt_uptr(const std::shared_ptr<regexp> &r1,
+                                            const std::shared_ptr<regexp> &r2) {
+      return std::make_unique<regexp>(Alt{r1, r2});
     }
 
-    static std::unique_ptr<regexp> alt_uptr(std::shared_ptr<regexp> &&a0,
-                                            std::shared_ptr<regexp> &&a1) {
-      return std::make_unique<regexp>(Alt{std::move(a0), std::move(a1)});
+    static std::unique_ptr<regexp> alt_uptr(std::shared_ptr<regexp> &&r1,
+                                            std::shared_ptr<regexp> &&r2) {
+      return std::make_unique<regexp>(Alt{std::move(r1), std::move(r2)});
     }
 
     static std::unique_ptr<regexp> zero_uptr() {
       return std::make_unique<regexp>(Zero{});
     }
 
-    static std::unique_ptr<regexp>
-    star_uptr(const std::shared_ptr<regexp> &a0) {
-      return std::make_unique<regexp>(Star{a0});
+    static std::unique_ptr<regexp> star_uptr(const std::shared_ptr<regexp> &r) {
+      return std::make_unique<regexp>(Star{r});
     }
 
-    static std::unique_ptr<regexp> star_uptr(std::shared_ptr<regexp> &&a0) {
-      return std::make_unique<regexp>(Star{std::move(a0)});
+    static std::unique_ptr<regexp> star_uptr(std::shared_ptr<regexp> &&r) {
+      return std::make_unique<regexp>(Star{std::move(r)});
     }
 
     // MANIPULATORS
@@ -231,25 +230,25 @@ struct Matcher {
         Overloaded{
             [&](const typename regexp::Any _args) -> T1 { return f; },
             [&](const typename regexp::Char _args) -> T1 {
-              return f0(_args.d_a0);
+              return f0(_args.d_c);
             },
             [&](const typename regexp::Eps _args) -> T1 { return f1; },
             [&](const typename regexp::Cat _args) -> T1 {
-              return f2(_args.d_a0,
-                        regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a0),
-                        _args.d_a1,
-                        regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a1));
+              return f2(_args.d_r1,
+                        regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r1),
+                        _args.d_r2,
+                        regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r2));
             },
             [&](const typename regexp::Alt _args) -> T1 {
-              return f3(_args.d_a0,
-                        regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a0),
-                        _args.d_a1,
-                        regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a1));
+              return f3(_args.d_r1,
+                        regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r1),
+                        _args.d_r2,
+                        regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r2));
             },
             [&](const typename regexp::Zero _args) -> T1 { return f4; },
             [&](const typename regexp::Star _args) -> T1 {
-              return f5(_args.d_a0,
-                        regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a0));
+              return f5(_args.d_r,
+                        regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r));
             }},
         r->v());
   }
@@ -265,25 +264,25 @@ struct Matcher {
         Overloaded{
             [&](const typename regexp::Any _args) -> T1 { return f; },
             [&](const typename regexp::Char _args) -> T1 {
-              return f0(_args.d_a0);
+              return f0(_args.d_c);
             },
             [&](const typename regexp::Eps _args) -> T1 { return f1; },
             [&](const typename regexp::Cat _args) -> T1 {
-              return f2(_args.d_a0,
-                        regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a0),
-                        _args.d_a1,
-                        regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a1));
+              return f2(_args.d_r1,
+                        regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r1),
+                        _args.d_r2,
+                        regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r2));
             },
             [&](const typename regexp::Alt _args) -> T1 {
-              return f3(_args.d_a0,
-                        regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a0),
-                        _args.d_a1,
-                        regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a1));
+              return f3(_args.d_r1,
+                        regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r1),
+                        _args.d_r2,
+                        regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r2));
             },
             [&](const typename regexp::Zero _args) -> T1 { return f4; },
             [&](const typename regexp::Star _args) -> T1 {
-              return f5(_args.d_a0,
-                        regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a0));
+              return f5(_args.d_r,
+                        regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r));
             }},
         r->v());
   }

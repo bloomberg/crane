@@ -32,7 +32,7 @@ std::shared_ptr<List<unsigned int>> ProgFix::interleave_func(
                     -> std::shared_ptr<
                         SigT<std::shared_ptr<List<unsigned int>>,
                              std::shared_ptr<List<unsigned int>>>> {
-                  return _args.d_a0;
+                  return _args.d_x;
                 }},
             std::move(y)->v()));
       };

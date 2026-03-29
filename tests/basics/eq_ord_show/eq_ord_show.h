@@ -31,11 +31,11 @@ concept Show = requires(t_A a0) {
 };
 
 struct NatEq {
-  __attribute__((pure)) static bool eqb(unsigned int a0, unsigned int a1) {
+  constexpr static bool eqb(unsigned int a0, unsigned int a1) {
     return a0 == a1;
   }
 
-  __attribute__((pure)) static bool neqb(unsigned int x, unsigned int y) {
+  constexpr static bool neqb(unsigned int x, unsigned int y) {
     return !(x == y);
   }
 };
@@ -43,29 +43,21 @@ struct NatEq {
 static_assert(Eq<NatEq, unsigned int>);
 
 struct NatOrd {
-  __attribute__((pure)) static bool lt(unsigned int a0, unsigned int a1) {
-    return a0 < a1;
-  }
+  constexpr static bool lt(unsigned int a0, unsigned int a1) { return a0 < a1; }
 
-  __attribute__((pure)) static bool le(unsigned int a0, unsigned int a1) {
+  constexpr static bool le(unsigned int a0, unsigned int a1) {
     return a0 <= a1;
   }
 
-  __attribute__((pure)) static bool gt(unsigned int x, unsigned int y) {
-    return y < x;
-  }
+  constexpr static bool gt(unsigned int x, unsigned int y) { return y < x; }
 
-  __attribute__((pure)) static bool ge(unsigned int x, unsigned int y) {
-    return y <= x;
-  }
+  constexpr static bool ge(unsigned int x, unsigned int y) { return y <= x; }
 };
 
 static_assert(Ord<NatOrd, unsigned int>);
 
 struct NatShow {
-  __attribute__((pure)) static std::string show(unsigned int _x) {
-    return "<nat>";
-  }
+  constexpr static std::string show(unsigned int _x) { return "<nat>"; }
 };
 
 static_assert(Show<NatShow, unsigned int>);

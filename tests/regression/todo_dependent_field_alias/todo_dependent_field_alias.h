@@ -25,8 +25,7 @@ struct TodoDependentFieldAlias {
   struct nat_magma {
     using carrier = unsigned int;
 
-    __attribute__((pure)) static unsigned int op(unsigned int a0,
-                                                 unsigned int a1) {
+    constexpr static unsigned int op(unsigned int a0, unsigned int a1) {
       return (a0 + a1);
     }
   };

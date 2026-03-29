@@ -47,7 +47,7 @@ __attribute__((pure)) unsigned int
 PendantSumtreeRoundtripCase::digit_to_nat(const std::shared_ptr<T> &d) {
   return std::visit(
       Overloaded{[](const typename Sig<unsigned int>::Exist _args) -> auto {
-        return _args.d_a0;
+        return _args.d_x;
       }},
       d->to_nat(10u)->v());
 }
@@ -64,8 +64,8 @@ __attribute__((pure)) unsigned int PendantSumtreeRoundtripCase::value_digits(
                      -> unsigned int { return 0u; },
                  [](const typename T0<std::shared_ptr<T>>::Cons _args)
                      -> unsigned int {
-                   return (digit_to_nat(_args.d_a0) +
-                           (10u * value_digits(_args.d_a1, _args.d_a2)));
+                   return (digit_to_nat(_args.d_h) +
+                           (10u * value_digits(_args.d_n, _args.d_a2)));
                  }},
       ds->v());
 }
@@ -261,7 +261,7 @@ PendantSumtreeRoundtripCase::ledger_values(
                                             CertifiedPendant>>::ExistT _args0)
                         -> std::shared_ptr<List<std::optional<unsigned int>>> {
                       return List<std::optional<unsigned int>>::cons0(
-                          pendant_value(_args0.d_a0, _args0.d_a1),
+                          pendant_value(_args0.d_x, _args0.d_a1),
                           ledger_values(_args.d_a1));
                     }},
                 _args.d_a0->v());

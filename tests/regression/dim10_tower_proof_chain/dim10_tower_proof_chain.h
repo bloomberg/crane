@@ -22,7 +22,7 @@ enum class Unit { e_TT };
 template <typename t_A, typename t_P> struct SigT {
   // TYPES
   struct ExistT {
-    t_A d_a0;
+    t_A d_x;
     t_P d_a1;
   };
 
@@ -36,14 +36,14 @@ public:
   // CREATORS
   explicit SigT(ExistT _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<SigT<t_A, t_P>> existt(t_A a0, t_P a1) {
+  static std::shared_ptr<SigT<t_A, t_P>> existt(t_A x, t_P a1) {
     return std::make_shared<SigT<t_A, t_P>>(
-        ExistT{std::move(a0), std::move(a1)});
+        ExistT{std::move(x), std::move(a1)});
   }
 
-  static std::unique_ptr<SigT<t_A, t_P>> existt_uptr(t_A a0, t_P a1) {
+  static std::unique_ptr<SigT<t_A, t_P>> existt_uptr(t_A x, t_P a1) {
     return std::make_unique<SigT<t_A, t_P>>(
-        ExistT{std::move(a0), std::move(a1)});
+        ExistT{std::move(x), std::move(a1)});
   }
 
   // MANIPULATORS
@@ -118,8 +118,8 @@ struct Dim10TowerProofChainCase {
             if (std::move(s).use_count() == 1 &&
                 std::move(s)->v().index() == 0) {
               auto &_rf = std::get<0>(std::move(s)->v_mut());
-              unsigned int x = std::move(_rf.d_a0);
-              _rf.d_a0 = x;
+              unsigned int x = std::move(_rf.d_x);
+              _rf.d_x = x;
               return std::move(s);
             } else {
               return std::visit(
@@ -127,7 +127,7 @@ struct Dim10TowerProofChainCase {
                       [](const typename SigT<unsigned int, std::any>::ExistT
                              _args)
                           -> std::shared_ptr<SigT<unsigned int, std::any>> {
-                        return SigT<unsigned int, std::any>::existt(_args.d_a0,
+                        return SigT<unsigned int, std::any>::existt(_args.d_x,
                                                                     std::any{});
                       }},
                   std::move(s)->v());
@@ -144,8 +144,8 @@ struct Dim10TowerProofChainCase {
             if (std::move(s).use_count() == 1 &&
                 std::move(s)->v().index() == 0) {
               auto &_rf = std::get<0>(std::move(s)->v_mut());
-              unsigned int x = std::move(_rf.d_a0);
-              _rf.d_a0 = x;
+              unsigned int x = std::move(_rf.d_x);
+              _rf.d_x = x;
               return std::move(s);
             } else {
               return std::visit(
@@ -153,7 +153,7 @@ struct Dim10TowerProofChainCase {
                       [](const typename SigT<unsigned int, std::any>::ExistT
                              _args)
                           -> std::shared_ptr<SigT<unsigned int, std::any>> {
-                        return SigT<unsigned int, std::any>::existt(_args.d_a0,
+                        return SigT<unsigned int, std::any>::existt(_args.d_x,
                                                                     std::any{});
                       }},
                   std::move(s)->v());
@@ -210,11 +210,11 @@ struct Dim10TowerProofChainCase {
       dim10_bundle->dt_tower->ggt_D(10u)->go_dim;
   static inline const unsigned int dim10_layers_cutoff = std::visit(
       Overloaded{[](const typename SigT<unsigned int, std::any>::ExistT _args)
-                     -> unsigned int { return _args.d_a0; }},
+                     -> unsigned int { return _args.d_x; }},
       dim10_bundle->dt_chain->gc_layers_stabilize->v());
   static inline const unsigned int dim10_P_cutoff = std::visit(
       Overloaded{[](const typename SigT<unsigned int, std::any>::ExistT _args0)
-                     -> unsigned int { return _args0.d_a0; }},
+                     -> unsigned int { return _args0.d_x; }},
       dim10_bundle->dt_chain->gc_P_stabilize->v());
   static inline const bool dim10_layers_cutoff_matches =
       dim10_layers_cutoff == 10u;

@@ -87,15 +87,13 @@ concept Ord = requires(t_A a0, t_A a1) {
 
 struct Typeclasses {
   struct numNat {
-    __attribute__((pure)) static unsigned int to_nat(unsigned int n) {
-      return n;
-    }
+    constexpr static unsigned int to_nat(unsigned int n) { return n; }
   };
 
   static_assert(Numeric<numNat, unsigned int>);
 
   struct numBool {
-    __attribute__((pure)) static unsigned int to_nat(bool b) {
+    constexpr static unsigned int to_nat(bool b) {
       if (b) {
         return 1u;
       } else {
@@ -148,7 +146,7 @@ struct Typeclasses {
   }
 
   struct eqNat {
-    __attribute__((pure)) static bool eqb(unsigned int a0, unsigned int a1) {
+    constexpr static bool eqb(unsigned int a0, unsigned int a1) {
       return a0 == a1;
     }
   };
@@ -156,7 +154,7 @@ struct Typeclasses {
   static_assert(Eq<eqNat, unsigned int>);
 
   struct ordNat {
-    __attribute__((pure)) static bool leb(unsigned int a0, unsigned int a1) {
+    constexpr static bool leb(unsigned int a0, unsigned int a1) {
       return a0 <= a1;
     }
   };

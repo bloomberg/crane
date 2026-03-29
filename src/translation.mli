@@ -115,8 +115,11 @@ val take_lifted_decls : unit -> cpp_decl list
 (** {2 Inductive Type Generation} *)
 
 (** Generate C++ code for an inductive type (older style with make functions).
-*)
+    @param consarg_names  Optional constructor argument binder names from
+      {!Miniml.ml_ind_packet.ip_consarg_names}.  When provided, struct fields
+      use descriptive names (e.g. [d_left]) instead of positional [d_a0]. *)
 val gen_ind_cpp :
+  ?consarg_names:Id.t option list array ->
   variable list ->
   GlobRef.t ->
   GlobRef.t array ->
@@ -131,8 +134,10 @@ val gen_record_cpp :
 val gen_typeclass_cpp :
   GlobRef.t -> GlobRef.t option list -> ml_ind_packet -> cpp_decl
 
-(** Generate C++ header for an inductive type (older style). *)
+(** Generate C++ header for an inductive type (older style).
+    @param consarg_names  see {!gen_ind_cpp} *)
 val gen_ind_header :
+  ?consarg_names:Id.t option list array ->
   variable list ->
   GlobRef.t ->
   GlobRef.t array ->
@@ -141,14 +146,18 @@ val gen_ind_header :
 
 (** Generate C++ header for an inductive type (v2 style: encapsulated struct
     with methods).
-    @param vars Template type parameter names
-    @param name The inductive type reference
-    @param cnames Constructor references
-    @param tys Constructor argument types
+    @param is_mutual       whether this is part of a mutual inductive definition
+    @param consarg_names   see {!gen_ind_cpp}
+    @param vars            template type parameter names
+    @param name            the inductive type reference
+    @param cnames          constructor references
+    @param tys             constructor argument types
     @param method_candidates
-      Functions to generate as methods: (func_ref, body, type, this_position) *)
+      functions to generate as methods: (func_ref, body, type, this_position)
+    @param ind_kind        whether the inductive is coinductive, standard, etc. *)
 val gen_ind_header_v2 :
   ?is_mutual:bool ->
+  ?consarg_names:Id.t option list array ->
   variable list ->
   GlobRef.t ->
   GlobRef.t array ->

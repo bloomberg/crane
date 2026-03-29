@@ -64,11 +64,10 @@ and inductive_kind =
   | Record of GlobRef.t option list (* None for anonymous field *)
   | TypeClass of GlobRef.t option list (* Type class methods *)
 
-(* A [ml_ind_packet] is the miniml counterpart of a [one_inductive_body]. If the
-   inductive is logical ([ip_logical = false]), then all other fields are
-   unused. Otherwise, [ip_sign] is a signature concerning the arguments of the
-   inductive, [ip_vars] contains the names of the type variables surviving in
-   ML, [ip_types] contains the ML types of all constructors. *)
+(** A [ml_ind_packet] is the miniml counterpart of a [one_inductive_body].
+    See {!miniml.ml} for detailed field documentation, including the
+    [ip_consarg_names] field that maps constructor arguments to their Rocq
+    binder names for readable C++ field generation. *)
 and ml_ind_packet = {
   ip_typename : Id.t;
   ip_consnames : Id.t array;
@@ -76,6 +75,7 @@ and ml_ind_packet = {
   ip_sign : signature;
   mutable ip_vars : Id.t list;
   ip_types : ml_type list array;
+  ip_consarg_names : Id.t option list array;
 }
 
 (* [ip_nparams] contains the number of parameters. *)

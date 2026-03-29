@@ -195,27 +195,27 @@ struct GetPairBoundProp {
     struct NOP {};
 
     struct LDM {
-      unsigned int d_a0;
+      unsigned int d_n;
     };
 
     struct LD {
-      unsigned int d_a0;
+      unsigned int d_r;
     };
 
     struct XCH {
-      unsigned int d_a0;
+      unsigned int d_r;
     };
 
     struct INC {
-      unsigned int d_a0;
+      unsigned int d_r;
     };
 
     struct ADD {
-      unsigned int d_a0;
+      unsigned int d_r;
     };
 
     struct SUB {
-      unsigned int d_a0;
+      unsigned int d_r;
     };
 
     struct IAC {};
@@ -245,42 +245,42 @@ struct GetPairBoundProp {
     struct KBP {};
 
     struct JUN {
-      unsigned int d_a0;
+      unsigned int d_a;
     };
 
     struct JMS {
-      unsigned int d_a0;
+      unsigned int d_a;
     };
 
     struct JCN {
-      unsigned int d_a0;
-      unsigned int d_a1;
+      unsigned int d_c;
+      unsigned int d_a;
     };
 
     struct FIM {
-      unsigned int d_a0;
-      unsigned int d_a1;
+      unsigned int d_r;
+      unsigned int d_d;
     };
 
     struct SRC {
-      unsigned int d_a0;
+      unsigned int d_r;
     };
 
     struct FIN {
-      unsigned int d_a0;
+      unsigned int d_r;
     };
 
     struct JIN {
-      unsigned int d_a0;
+      unsigned int d_r;
     };
 
     struct ISZ {
-      unsigned int d_a0;
-      unsigned int d_a1;
+      unsigned int d_r;
+      unsigned int d_a;
     };
 
     struct BBL {
-      unsigned int d_a0;
+      unsigned int d_d;
     };
 
     using variant_t =
@@ -356,28 +356,28 @@ struct GetPairBoundProp {
       return std::make_shared<instr>(NOP{});
     }
 
-    static std::shared_ptr<instr> ldm(unsigned int a0) {
-      return std::make_shared<instr>(LDM{std::move(a0)});
+    static std::shared_ptr<instr> ldm(unsigned int n) {
+      return std::make_shared<instr>(LDM{std::move(n)});
     }
 
-    static std::shared_ptr<instr> ld(unsigned int a0) {
-      return std::make_shared<instr>(LD{std::move(a0)});
+    static std::shared_ptr<instr> ld(unsigned int r) {
+      return std::make_shared<instr>(LD{std::move(r)});
     }
 
-    static std::shared_ptr<instr> xch(unsigned int a0) {
-      return std::make_shared<instr>(XCH{std::move(a0)});
+    static std::shared_ptr<instr> xch(unsigned int r) {
+      return std::make_shared<instr>(XCH{std::move(r)});
     }
 
-    static std::shared_ptr<instr> inc(unsigned int a0) {
-      return std::make_shared<instr>(INC{std::move(a0)});
+    static std::shared_ptr<instr> inc(unsigned int r) {
+      return std::make_shared<instr>(INC{std::move(r)});
     }
 
-    static std::shared_ptr<instr> add(unsigned int a0) {
-      return std::make_shared<instr>(ADD{std::move(a0)});
+    static std::shared_ptr<instr> add(unsigned int r) {
+      return std::make_shared<instr>(ADD{std::move(r)});
     }
 
-    static std::shared_ptr<instr> sub(unsigned int a0) {
-      return std::make_shared<instr>(SUB{std::move(a0)});
+    static std::shared_ptr<instr> sub(unsigned int r) {
+      return std::make_shared<instr>(SUB{std::move(r)});
     }
 
     static std::shared_ptr<instr> iac() {
@@ -432,68 +432,68 @@ struct GetPairBoundProp {
       return std::make_shared<instr>(KBP{});
     }
 
-    static std::shared_ptr<instr> jun(unsigned int a0) {
-      return std::make_shared<instr>(JUN{std::move(a0)});
+    static std::shared_ptr<instr> jun(unsigned int a) {
+      return std::make_shared<instr>(JUN{std::move(a)});
     }
 
-    static std::shared_ptr<instr> jms(unsigned int a0) {
-      return std::make_shared<instr>(JMS{std::move(a0)});
+    static std::shared_ptr<instr> jms(unsigned int a) {
+      return std::make_shared<instr>(JMS{std::move(a)});
     }
 
-    static std::shared_ptr<instr> jcn(unsigned int a0, unsigned int a1) {
-      return std::make_shared<instr>(JCN{std::move(a0), std::move(a1)});
+    static std::shared_ptr<instr> jcn(unsigned int c, unsigned int a) {
+      return std::make_shared<instr>(JCN{std::move(c), std::move(a)});
     }
 
-    static std::shared_ptr<instr> fim(unsigned int a0, unsigned int a1) {
-      return std::make_shared<instr>(FIM{std::move(a0), std::move(a1)});
+    static std::shared_ptr<instr> fim(unsigned int r, unsigned int d) {
+      return std::make_shared<instr>(FIM{std::move(r), std::move(d)});
     }
 
-    static std::shared_ptr<instr> src(unsigned int a0) {
-      return std::make_shared<instr>(SRC{std::move(a0)});
+    static std::shared_ptr<instr> src(unsigned int r) {
+      return std::make_shared<instr>(SRC{std::move(r)});
     }
 
-    static std::shared_ptr<instr> fin(unsigned int a0) {
-      return std::make_shared<instr>(FIN{std::move(a0)});
+    static std::shared_ptr<instr> fin(unsigned int r) {
+      return std::make_shared<instr>(FIN{std::move(r)});
     }
 
-    static std::shared_ptr<instr> jin(unsigned int a0) {
-      return std::make_shared<instr>(JIN{std::move(a0)});
+    static std::shared_ptr<instr> jin(unsigned int r) {
+      return std::make_shared<instr>(JIN{std::move(r)});
     }
 
-    static std::shared_ptr<instr> isz(unsigned int a0, unsigned int a1) {
-      return std::make_shared<instr>(ISZ{std::move(a0), std::move(a1)});
+    static std::shared_ptr<instr> isz(unsigned int r, unsigned int a) {
+      return std::make_shared<instr>(ISZ{std::move(r), std::move(a)});
     }
 
-    static std::shared_ptr<instr> bbl(unsigned int a0) {
-      return std::make_shared<instr>(BBL{std::move(a0)});
+    static std::shared_ptr<instr> bbl(unsigned int d) {
+      return std::make_shared<instr>(BBL{std::move(d)});
     }
 
     static std::unique_ptr<instr> nop_uptr() {
       return std::make_unique<instr>(NOP{});
     }
 
-    static std::unique_ptr<instr> ldm_uptr(unsigned int a0) {
-      return std::make_unique<instr>(LDM{std::move(a0)});
+    static std::unique_ptr<instr> ldm_uptr(unsigned int n) {
+      return std::make_unique<instr>(LDM{std::move(n)});
     }
 
-    static std::unique_ptr<instr> ld_uptr(unsigned int a0) {
-      return std::make_unique<instr>(LD{std::move(a0)});
+    static std::unique_ptr<instr> ld_uptr(unsigned int r) {
+      return std::make_unique<instr>(LD{std::move(r)});
     }
 
-    static std::unique_ptr<instr> xch_uptr(unsigned int a0) {
-      return std::make_unique<instr>(XCH{std::move(a0)});
+    static std::unique_ptr<instr> xch_uptr(unsigned int r) {
+      return std::make_unique<instr>(XCH{std::move(r)});
     }
 
-    static std::unique_ptr<instr> inc_uptr(unsigned int a0) {
-      return std::make_unique<instr>(INC{std::move(a0)});
+    static std::unique_ptr<instr> inc_uptr(unsigned int r) {
+      return std::make_unique<instr>(INC{std::move(r)});
     }
 
-    static std::unique_ptr<instr> add_uptr(unsigned int a0) {
-      return std::make_unique<instr>(ADD{std::move(a0)});
+    static std::unique_ptr<instr> add_uptr(unsigned int r) {
+      return std::make_unique<instr>(ADD{std::move(r)});
     }
 
-    static std::unique_ptr<instr> sub_uptr(unsigned int a0) {
-      return std::make_unique<instr>(SUB{std::move(a0)});
+    static std::unique_ptr<instr> sub_uptr(unsigned int r) {
+      return std::make_unique<instr>(SUB{std::move(r)});
     }
 
     static std::unique_ptr<instr> iac_uptr() {
@@ -548,40 +548,40 @@ struct GetPairBoundProp {
       return std::make_unique<instr>(KBP{});
     }
 
-    static std::unique_ptr<instr> jun_uptr(unsigned int a0) {
-      return std::make_unique<instr>(JUN{std::move(a0)});
+    static std::unique_ptr<instr> jun_uptr(unsigned int a) {
+      return std::make_unique<instr>(JUN{std::move(a)});
     }
 
-    static std::unique_ptr<instr> jms_uptr(unsigned int a0) {
-      return std::make_unique<instr>(JMS{std::move(a0)});
+    static std::unique_ptr<instr> jms_uptr(unsigned int a) {
+      return std::make_unique<instr>(JMS{std::move(a)});
     }
 
-    static std::unique_ptr<instr> jcn_uptr(unsigned int a0, unsigned int a1) {
-      return std::make_unique<instr>(JCN{std::move(a0), std::move(a1)});
+    static std::unique_ptr<instr> jcn_uptr(unsigned int c, unsigned int a) {
+      return std::make_unique<instr>(JCN{std::move(c), std::move(a)});
     }
 
-    static std::unique_ptr<instr> fim_uptr(unsigned int a0, unsigned int a1) {
-      return std::make_unique<instr>(FIM{std::move(a0), std::move(a1)});
+    static std::unique_ptr<instr> fim_uptr(unsigned int r, unsigned int d) {
+      return std::make_unique<instr>(FIM{std::move(r), std::move(d)});
     }
 
-    static std::unique_ptr<instr> src_uptr(unsigned int a0) {
-      return std::make_unique<instr>(SRC{std::move(a0)});
+    static std::unique_ptr<instr> src_uptr(unsigned int r) {
+      return std::make_unique<instr>(SRC{std::move(r)});
     }
 
-    static std::unique_ptr<instr> fin_uptr(unsigned int a0) {
-      return std::make_unique<instr>(FIN{std::move(a0)});
+    static std::unique_ptr<instr> fin_uptr(unsigned int r) {
+      return std::make_unique<instr>(FIN{std::move(r)});
     }
 
-    static std::unique_ptr<instr> jin_uptr(unsigned int a0) {
-      return std::make_unique<instr>(JIN{std::move(a0)});
+    static std::unique_ptr<instr> jin_uptr(unsigned int r) {
+      return std::make_unique<instr>(JIN{std::move(r)});
     }
 
-    static std::unique_ptr<instr> isz_uptr(unsigned int a0, unsigned int a1) {
-      return std::make_unique<instr>(ISZ{std::move(a0), std::move(a1)});
+    static std::unique_ptr<instr> isz_uptr(unsigned int r, unsigned int a) {
+      return std::make_unique<instr>(ISZ{std::move(r), std::move(a)});
     }
 
-    static std::unique_ptr<instr> bbl_uptr(unsigned int a0) {
-      return std::make_unique<instr>(BBL{std::move(a0)});
+    static std::unique_ptr<instr> bbl_uptr(unsigned int d) {
+      return std::make_unique<instr>(BBL{std::move(d)});
     }
 
     // MANIPULATORS
@@ -608,65 +608,64 @@ struct GetPairBoundProp {
                        F22 &&f21, F23 &&f22, F24 &&f23, F25 &&f24, F26 &&f25,
                        F27 &&f26, F28 &&f27, const std::shared_ptr<instr> &i) {
     return std::visit(
-        Overloaded{[&](const typename instr::NOP _args) -> T1 { return f; },
-                   [&](const typename instr::LDM _args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename instr::LD _args) -> T1 {
-                     return f1(_args.d_a0);
-                   },
-                   [&](const typename instr::XCH _args) -> T1 {
-                     return f2(_args.d_a0);
-                   },
-                   [&](const typename instr::INC _args) -> T1 {
-                     return f3(_args.d_a0);
-                   },
-                   [&](const typename instr::ADD _args) -> T1 {
-                     return f4(_args.d_a0);
-                   },
-                   [&](const typename instr::SUB _args) -> T1 {
-                     return f5(_args.d_a0);
-                   },
-                   [&](const typename instr::IAC _args) -> T1 { return f6; },
-                   [&](const typename instr::DAC _args) -> T1 { return f7; },
-                   [&](const typename instr::CLC _args) -> T1 { return f8; },
-                   [&](const typename instr::STC _args) -> T1 { return f9; },
-                   [&](const typename instr::CMC _args) -> T1 { return f10; },
-                   [&](const typename instr::CMA _args) -> T1 { return f11; },
-                   [&](const typename instr::CLB _args) -> T1 { return f12; },
-                   [&](const typename instr::RAL _args) -> T1 { return f13; },
-                   [&](const typename instr::RAR _args) -> T1 { return f14; },
-                   [&](const typename instr::TCC _args) -> T1 { return f15; },
-                   [&](const typename instr::TCS _args) -> T1 { return f16; },
-                   [&](const typename instr::DAA _args) -> T1 { return f17; },
-                   [&](const typename instr::KBP _args) -> T1 { return f18; },
-                   [&](const typename instr::JUN _args) -> T1 {
-                     return f19(_args.d_a0);
-                   },
-                   [&](const typename instr::JMS _args) -> T1 {
-                     return f20(_args.d_a0);
-                   },
-                   [&](const typename instr::JCN _args) -> T1 {
-                     return f21(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename instr::FIM _args) -> T1 {
-                     return f22(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename instr::SRC _args) -> T1 {
-                     return f23(_args.d_a0);
-                   },
-                   [&](const typename instr::FIN _args) -> T1 {
-                     return f24(_args.d_a0);
-                   },
-                   [&](const typename instr::JIN _args) -> T1 {
-                     return f25(_args.d_a0);
-                   },
-                   [&](const typename instr::ISZ _args) -> T1 {
-                     return f26(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename instr::BBL _args) -> T1 {
-                     return f27(_args.d_a0);
-                   }},
+        Overloaded{
+            [&](const typename instr::NOP _args) -> T1 { return f; },
+            [&](const typename instr::LDM _args) -> T1 {
+              return f0(_args.d_n);
+            },
+            [&](const typename instr::LD _args) -> T1 { return f1(_args.d_r); },
+            [&](const typename instr::XCH _args) -> T1 {
+              return f2(_args.d_r);
+            },
+            [&](const typename instr::INC _args) -> T1 {
+              return f3(_args.d_r);
+            },
+            [&](const typename instr::ADD _args) -> T1 {
+              return f4(_args.d_r);
+            },
+            [&](const typename instr::SUB _args) -> T1 {
+              return f5(_args.d_r);
+            },
+            [&](const typename instr::IAC _args) -> T1 { return f6; },
+            [&](const typename instr::DAC _args) -> T1 { return f7; },
+            [&](const typename instr::CLC _args) -> T1 { return f8; },
+            [&](const typename instr::STC _args) -> T1 { return f9; },
+            [&](const typename instr::CMC _args) -> T1 { return f10; },
+            [&](const typename instr::CMA _args) -> T1 { return f11; },
+            [&](const typename instr::CLB _args) -> T1 { return f12; },
+            [&](const typename instr::RAL _args) -> T1 { return f13; },
+            [&](const typename instr::RAR _args) -> T1 { return f14; },
+            [&](const typename instr::TCC _args) -> T1 { return f15; },
+            [&](const typename instr::TCS _args) -> T1 { return f16; },
+            [&](const typename instr::DAA _args) -> T1 { return f17; },
+            [&](const typename instr::KBP _args) -> T1 { return f18; },
+            [&](const typename instr::JUN _args) -> T1 {
+              return f19(_args.d_a);
+            },
+            [&](const typename instr::JMS _args) -> T1 {
+              return f20(_args.d_a);
+            },
+            [&](const typename instr::JCN _args) -> T1 {
+              return f21(_args.d_c, _args.d_a);
+            },
+            [&](const typename instr::FIM _args) -> T1 {
+              return f22(_args.d_r, _args.d_d);
+            },
+            [&](const typename instr::SRC _args) -> T1 {
+              return f23(_args.d_r);
+            },
+            [&](const typename instr::FIN _args) -> T1 {
+              return f24(_args.d_r);
+            },
+            [&](const typename instr::JIN _args) -> T1 {
+              return f25(_args.d_r);
+            },
+            [&](const typename instr::ISZ _args) -> T1 {
+              return f26(_args.d_r, _args.d_a);
+            },
+            [&](const typename instr::BBL _args) -> T1 {
+              return f27(_args.d_d);
+            }},
         i->v());
   }
 
@@ -687,65 +686,64 @@ struct GetPairBoundProp {
                       F22 &&f21, F23 &&f22, F24 &&f23, F25 &&f24, F26 &&f25,
                       F27 &&f26, F28 &&f27, const std::shared_ptr<instr> &i) {
     return std::visit(
-        Overloaded{[&](const typename instr::NOP _args) -> T1 { return f; },
-                   [&](const typename instr::LDM _args) -> T1 {
-                     return f0(_args.d_a0);
-                   },
-                   [&](const typename instr::LD _args) -> T1 {
-                     return f1(_args.d_a0);
-                   },
-                   [&](const typename instr::XCH _args) -> T1 {
-                     return f2(_args.d_a0);
-                   },
-                   [&](const typename instr::INC _args) -> T1 {
-                     return f3(_args.d_a0);
-                   },
-                   [&](const typename instr::ADD _args) -> T1 {
-                     return f4(_args.d_a0);
-                   },
-                   [&](const typename instr::SUB _args) -> T1 {
-                     return f5(_args.d_a0);
-                   },
-                   [&](const typename instr::IAC _args) -> T1 { return f6; },
-                   [&](const typename instr::DAC _args) -> T1 { return f7; },
-                   [&](const typename instr::CLC _args) -> T1 { return f8; },
-                   [&](const typename instr::STC _args) -> T1 { return f9; },
-                   [&](const typename instr::CMC _args) -> T1 { return f10; },
-                   [&](const typename instr::CMA _args) -> T1 { return f11; },
-                   [&](const typename instr::CLB _args) -> T1 { return f12; },
-                   [&](const typename instr::RAL _args) -> T1 { return f13; },
-                   [&](const typename instr::RAR _args) -> T1 { return f14; },
-                   [&](const typename instr::TCC _args) -> T1 { return f15; },
-                   [&](const typename instr::TCS _args) -> T1 { return f16; },
-                   [&](const typename instr::DAA _args) -> T1 { return f17; },
-                   [&](const typename instr::KBP _args) -> T1 { return f18; },
-                   [&](const typename instr::JUN _args) -> T1 {
-                     return f19(_args.d_a0);
-                   },
-                   [&](const typename instr::JMS _args) -> T1 {
-                     return f20(_args.d_a0);
-                   },
-                   [&](const typename instr::JCN _args) -> T1 {
-                     return f21(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename instr::FIM _args) -> T1 {
-                     return f22(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename instr::SRC _args) -> T1 {
-                     return f23(_args.d_a0);
-                   },
-                   [&](const typename instr::FIN _args) -> T1 {
-                     return f24(_args.d_a0);
-                   },
-                   [&](const typename instr::JIN _args) -> T1 {
-                     return f25(_args.d_a0);
-                   },
-                   [&](const typename instr::ISZ _args) -> T1 {
-                     return f26(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename instr::BBL _args) -> T1 {
-                     return f27(_args.d_a0);
-                   }},
+        Overloaded{
+            [&](const typename instr::NOP _args) -> T1 { return f; },
+            [&](const typename instr::LDM _args) -> T1 {
+              return f0(_args.d_n);
+            },
+            [&](const typename instr::LD _args) -> T1 { return f1(_args.d_r); },
+            [&](const typename instr::XCH _args) -> T1 {
+              return f2(_args.d_r);
+            },
+            [&](const typename instr::INC _args) -> T1 {
+              return f3(_args.d_r);
+            },
+            [&](const typename instr::ADD _args) -> T1 {
+              return f4(_args.d_r);
+            },
+            [&](const typename instr::SUB _args) -> T1 {
+              return f5(_args.d_r);
+            },
+            [&](const typename instr::IAC _args) -> T1 { return f6; },
+            [&](const typename instr::DAC _args) -> T1 { return f7; },
+            [&](const typename instr::CLC _args) -> T1 { return f8; },
+            [&](const typename instr::STC _args) -> T1 { return f9; },
+            [&](const typename instr::CMC _args) -> T1 { return f10; },
+            [&](const typename instr::CMA _args) -> T1 { return f11; },
+            [&](const typename instr::CLB _args) -> T1 { return f12; },
+            [&](const typename instr::RAL _args) -> T1 { return f13; },
+            [&](const typename instr::RAR _args) -> T1 { return f14; },
+            [&](const typename instr::TCC _args) -> T1 { return f15; },
+            [&](const typename instr::TCS _args) -> T1 { return f16; },
+            [&](const typename instr::DAA _args) -> T1 { return f17; },
+            [&](const typename instr::KBP _args) -> T1 { return f18; },
+            [&](const typename instr::JUN _args) -> T1 {
+              return f19(_args.d_a);
+            },
+            [&](const typename instr::JMS _args) -> T1 {
+              return f20(_args.d_a);
+            },
+            [&](const typename instr::JCN _args) -> T1 {
+              return f21(_args.d_c, _args.d_a);
+            },
+            [&](const typename instr::FIM _args) -> T1 {
+              return f22(_args.d_r, _args.d_d);
+            },
+            [&](const typename instr::SRC _args) -> T1 {
+              return f23(_args.d_r);
+            },
+            [&](const typename instr::FIN _args) -> T1 {
+              return f24(_args.d_r);
+            },
+            [&](const typename instr::JIN _args) -> T1 {
+              return f25(_args.d_r);
+            },
+            [&](const typename instr::ISZ _args) -> T1 {
+              return f26(_args.d_r, _args.d_a);
+            },
+            [&](const typename instr::BBL _args) -> T1 {
+              return f27(_args.d_d);
+            }},
         i->v());
   }
 

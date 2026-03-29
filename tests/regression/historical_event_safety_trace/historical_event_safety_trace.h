@@ -730,11 +730,11 @@ struct PeanoNat {
 struct Uint1 {
   // TYPES
   struct UIntDecimal {
-    std::shared_ptr<Uint> d_a0;
+    std::shared_ptr<Uint> d_u;
   };
 
   struct UIntHexadecimal {
-    std::shared_ptr<Uint0> d_a0;
+    std::shared_ptr<Uint0> d_u;
   };
 
   using variant_t = std::variant<UIntDecimal, UIntHexadecimal>;
@@ -749,40 +749,40 @@ public:
 
   explicit Uint1(UIntHexadecimal _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<Uint1> uintdecimal(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint1>(UIntDecimal{a0});
+  static std::shared_ptr<Uint1> uintdecimal(const std::shared_ptr<Uint> &u) {
+    return std::make_shared<Uint1>(UIntDecimal{u});
   }
 
-  static std::shared_ptr<Uint1> uintdecimal(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint1>(UIntDecimal{std::move(a0)});
+  static std::shared_ptr<Uint1> uintdecimal(std::shared_ptr<Uint> &&u) {
+    return std::make_shared<Uint1>(UIntDecimal{std::move(u)});
   }
 
   static std::shared_ptr<Uint1>
-  uinthexadecimal(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint1>(UIntHexadecimal{a0});
+  uinthexadecimal(const std::shared_ptr<Uint0> &u) {
+    return std::make_shared<Uint1>(UIntHexadecimal{u});
   }
 
-  static std::shared_ptr<Uint1> uinthexadecimal(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint1>(UIntHexadecimal{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint1>
-  uintdecimal_uptr(const std::shared_ptr<Uint> &a0) {
-    return std::make_unique<Uint1>(UIntDecimal{a0});
-  }
-
-  static std::unique_ptr<Uint1> uintdecimal_uptr(std::shared_ptr<Uint> &&a0) {
-    return std::make_unique<Uint1>(UIntDecimal{std::move(a0)});
+  static std::shared_ptr<Uint1> uinthexadecimal(std::shared_ptr<Uint0> &&u) {
+    return std::make_shared<Uint1>(UIntHexadecimal{std::move(u)});
   }
 
   static std::unique_ptr<Uint1>
-  uinthexadecimal_uptr(const std::shared_ptr<Uint0> &a0) {
-    return std::make_unique<Uint1>(UIntHexadecimal{a0});
+  uintdecimal_uptr(const std::shared_ptr<Uint> &u) {
+    return std::make_unique<Uint1>(UIntDecimal{u});
+  }
+
+  static std::unique_ptr<Uint1> uintdecimal_uptr(std::shared_ptr<Uint> &&u) {
+    return std::make_unique<Uint1>(UIntDecimal{std::move(u)});
   }
 
   static std::unique_ptr<Uint1>
-  uinthexadecimal_uptr(std::shared_ptr<Uint0> &&a0) {
-    return std::make_unique<Uint1>(UIntHexadecimal{std::move(a0)});
+  uinthexadecimal_uptr(const std::shared_ptr<Uint0> &u) {
+    return std::make_unique<Uint1>(UIntHexadecimal{u});
+  }
+
+  static std::unique_ptr<Uint1>
+  uinthexadecimal_uptr(std::shared_ptr<Uint0> &&u) {
+    return std::make_unique<Uint1>(UIntHexadecimal{std::move(u)});
   }
 
   // MANIPULATORS

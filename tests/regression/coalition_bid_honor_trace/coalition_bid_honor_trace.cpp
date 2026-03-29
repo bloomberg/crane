@@ -1101,7 +1101,7 @@ CoalitionBidHonorTraceCase::protocol_honor_delta(
           },
           [](const typename CoalitionBidHonorTraceCase::ProtocolAction::
                  ActRefuse _args) -> std::shared_ptr<Z> {
-            return refusal_honor_delta(_args.d_a0);
+            return refusal_honor_delta(_args.d_reason);
           },
           [](const typename CoalitionBidHonorTraceCase::ProtocolAction::ActBid
                  _args) -> std::shared_ptr<Z> { return Z::z0(); },

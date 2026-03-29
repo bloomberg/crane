@@ -23,7 +23,7 @@ struct MutualIndexed {
     struct ELeaf {};
 
     struct ENode {
-      unsigned int d_a0;
+      unsigned int d_n;
       unsigned int d_a1;
       std::shared_ptr<OddTree> d_a2;
     };
@@ -44,16 +44,15 @@ struct MutualIndexed {
       return std::make_shared<EvenTree>(ELeaf{});
     }
 
-    static std::shared_ptr<EvenTree> enode(unsigned int a0, unsigned int a1,
+    static std::shared_ptr<EvenTree> enode(unsigned int n, unsigned int a1,
                                            const std::shared_ptr<OddTree> &a2) {
-      return std::make_shared<EvenTree>(
-          ENode{std::move(a0), std::move(a1), a2});
+      return std::make_shared<EvenTree>(ENode{std::move(n), std::move(a1), a2});
     }
 
-    static std::shared_ptr<EvenTree> enode(unsigned int a0, unsigned int a1,
+    static std::shared_ptr<EvenTree> enode(unsigned int n, unsigned int a1,
                                            std::shared_ptr<OddTree> &&a2) {
       return std::make_shared<EvenTree>(
-          ENode{std::move(a0), std::move(a1), std::move(a2)});
+          ENode{std::move(n), std::move(a1), std::move(a2)});
     }
 
     static std::unique_ptr<EvenTree> eleaf_uptr() {
@@ -61,17 +60,15 @@ struct MutualIndexed {
     }
 
     static std::unique_ptr<EvenTree>
-    enode_uptr(unsigned int a0, unsigned int a1,
+    enode_uptr(unsigned int n, unsigned int a1,
                const std::shared_ptr<OddTree> &a2) {
-      return std::make_unique<EvenTree>(
-          ENode{std::move(a0), std::move(a1), a2});
+      return std::make_unique<EvenTree>(ENode{std::move(n), std::move(a1), a2});
     }
 
-    static std::unique_ptr<EvenTree> enode_uptr(unsigned int a0,
-                                                unsigned int a1,
+    static std::unique_ptr<EvenTree> enode_uptr(unsigned int n, unsigned int a1,
                                                 std::shared_ptr<OddTree> &&a2) {
       return std::make_unique<EvenTree>(
-          ENode{std::move(a0), std::move(a1), std::move(a2)});
+          ENode{std::move(n), std::move(a1), std::move(a2)});
     }
 
     // MANIPULATORS
@@ -84,7 +81,7 @@ struct MutualIndexed {
   struct OddTree {
     // TYPES
     struct ONode {
-      unsigned int d_a0;
+      unsigned int d_n;
       unsigned int d_a1;
       std::shared_ptr<EvenTree> d_a2;
     };
@@ -99,27 +96,27 @@ struct MutualIndexed {
     // CREATORS
     explicit OddTree(ONode _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<OddTree> onode(unsigned int a0, unsigned int a1,
+    static std::shared_ptr<OddTree> onode(unsigned int n, unsigned int a1,
                                           const std::shared_ptr<EvenTree> &a2) {
-      return std::make_shared<OddTree>(ONode{std::move(a0), std::move(a1), a2});
+      return std::make_shared<OddTree>(ONode{std::move(n), std::move(a1), a2});
     }
 
-    static std::shared_ptr<OddTree> onode(unsigned int a0, unsigned int a1,
+    static std::shared_ptr<OddTree> onode(unsigned int n, unsigned int a1,
                                           std::shared_ptr<EvenTree> &&a2) {
       return std::make_shared<OddTree>(
-          ONode{std::move(a0), std::move(a1), std::move(a2)});
+          ONode{std::move(n), std::move(a1), std::move(a2)});
     }
 
     static std::unique_ptr<OddTree>
-    onode_uptr(unsigned int a0, unsigned int a1,
+    onode_uptr(unsigned int n, unsigned int a1,
                const std::shared_ptr<EvenTree> &a2) {
-      return std::make_unique<OddTree>(ONode{std::move(a0), std::move(a1), a2});
+      return std::make_unique<OddTree>(ONode{std::move(n), std::move(a1), a2});
     }
 
-    static std::unique_ptr<OddTree> onode_uptr(unsigned int a0, unsigned int a1,
+    static std::unique_ptr<OddTree> onode_uptr(unsigned int n, unsigned int a1,
                                                std::shared_ptr<EvenTree> &&a2) {
       return std::make_unique<OddTree>(
-          ONode{std::move(a0), std::move(a1), std::move(a2)});
+          ONode{std::move(n), std::move(a1), std::move(a2)});
     }
 
     // MANIPULATORS
@@ -137,7 +134,7 @@ struct MutualIndexed {
         Overloaded{
             [&](const typename EvenTree::ELeaf _args) -> T1 { return f; },
             [&](const typename EvenTree::ENode _args) -> T1 {
-              return f0(_args.d_a0, _args.d_a1, _args.d_a2);
+              return f0(_args.d_n, _args.d_a1, _args.d_a2);
             }},
         e->v());
   }
@@ -150,7 +147,7 @@ struct MutualIndexed {
         Overloaded{
             [&](const typename EvenTree::ELeaf _args) -> T1 { return f; },
             [&](const typename EvenTree::ENode _args) -> T1 {
-              return f0(_args.d_a0, _args.d_a1, _args.d_a2);
+              return f0(_args.d_n, _args.d_a1, _args.d_a2);
             }},
         e->v());
   }
@@ -162,7 +159,7 @@ struct MutualIndexed {
                          const std::shared_ptr<OddTree> &o) {
     return std::visit(
         Overloaded{[&](const typename OddTree::ONode _args) -> T1 {
-          return f(_args.d_a0, _args.d_a1, _args.d_a2);
+          return f(_args.d_n, _args.d_a1, _args.d_a2);
         }},
         o->v());
   }
@@ -174,7 +171,7 @@ struct MutualIndexed {
                         const std::shared_ptr<OddTree> &o) {
     return std::visit(
         Overloaded{[&](const typename OddTree::ONode _args) -> T1 {
-          return f(_args.d_a0, _args.d_a1, _args.d_a2);
+          return f(_args.d_n, _args.d_a1, _args.d_a2);
         }},
         o->v());
   }

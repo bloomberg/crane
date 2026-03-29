@@ -43,11 +43,9 @@ struct TodoTypeSubstPackAlias {
   struct nat_pack {
     using carrier = unsigned int;
 
-    __attribute__((pure)) static unsigned int seed() { return 3u; }
+    constexpr static unsigned int seed() { return 3u; }
 
-    __attribute__((pure)) static unsigned int step(unsigned int x) {
-      return (x + 1);
-    }
+    constexpr static unsigned int step(unsigned int x) { return (x + 1); }
   };
 
   static_assert(Pack<nat_pack>);

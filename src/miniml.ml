@@ -75,7 +75,18 @@ and inductive_kind =
     the inductive is logical ([ip_logical = false]), then all other fields are
     unused. Otherwise, [ip_sign] is a signature concerning the arguments of the
     inductive, [ip_vars] contains the names of the type variables surviving in
-    ML, [ip_types] contains the ML types of all constructors. *)
+    ML, [ip_types] contains the ML types of all constructors.
+
+    [ip_consarg_names] stores the binder names for each constructor's arguments,
+    extracted from the Rocq kernel ([mind_user_lc]).  Each entry is an array
+    indexed by constructor ordinal, containing a list of [Some id] for named
+    binders and [None] for anonymous ones.  This enables C++ code generation to
+    use meaningful field names (e.g. [d_left], [d_value]) instead of the generic
+    positional names [d_a0], [d_a1], etc.
+
+    Example for [Inductive tree := Leaf | Node (left : tree) (v : A) (right : tree)]:
+    - [ip_consarg_names.(0) = \[\]]                  (Leaf: no arguments)
+    - [ip_consarg_names.(1) = \[Some left; Some v; Some right\]]  (Node) *)
 and ml_ind_packet = {
   ip_typename : Id.t;
   ip_consnames : Id.t array;
@@ -83,6 +94,7 @@ and ml_ind_packet = {
   ip_sign : signature;
   mutable ip_vars : Id.t list;
   ip_types : ml_type list array;
+  ip_consarg_names : Id.t option list array;
 }
 
 (** Equivalence information for an inductive. *)

@@ -72,7 +72,7 @@ void test_sort(const std::string &name, SortFn sortFn) {
   {
     auto empty = List<unsigned int>::nil();
     auto result = sortFn(empty);
-    auto sorted_list = std::get<0>(result->v()).d_a0;
+    auto sorted_list = std::get<0>(result->v()).d_x;
     auto vec = list_to_vector(sorted_list);
     ASSERT(vec.size() == 0);
   }
@@ -82,7 +82,7 @@ void test_sort(const std::string &name, SortFn sortFn) {
     auto single =
         List<unsigned int>::cons(5, List<unsigned int>::nil());
     auto result = sortFn(single);
-    auto sorted_list = std::get<0>(result->v()).d_a0;
+    auto sorted_list = std::get<0>(result->v()).d_x;
     auto vec = list_to_vector(sorted_list);
     ASSERT(vec.size() == 1);
     ASSERT(vec[0] == 5);
@@ -92,7 +92,7 @@ void test_sort(const std::string &name, SortFn sortFn) {
   {
     auto input = vector_to_list({2, 1});
     auto result = sortFn(input);
-    auto sorted_list = std::get<0>(result->v()).d_a0;
+    auto sorted_list = std::get<0>(result->v()).d_x;
     auto vec = list_to_vector(sorted_list);
     ASSERT(vec.size() == 2);
     ASSERT(vec[0] == 1 && vec[1] == 2);
@@ -102,7 +102,7 @@ void test_sort(const std::string &name, SortFn sortFn) {
   {
     auto input = vector_to_list({1, 2, 3, 4, 5, 6, 7, 8});
     auto result = sortFn(input);
-    auto sorted_list = std::get<0>(result->v()).d_a0;
+    auto sorted_list = std::get<0>(result->v()).d_x;
     auto vec = list_to_vector(sorted_list);
     ASSERT(vec.size() == 8);
     for (size_t i = 0; i < 8; ++i) {
@@ -114,7 +114,7 @@ void test_sort(const std::string &name, SortFn sortFn) {
   {
     auto input = vector_to_list({8, 7, 6, 5, 4, 3, 2, 1});
     auto result = sortFn(input);
-    auto sorted_list = std::get<0>(result->v()).d_a0;
+    auto sorted_list = std::get<0>(result->v()).d_x;
     auto vec = list_to_vector(sorted_list);
     ASSERT(vec.size() == 8);
     for (size_t i = 0; i < 8; ++i) {
@@ -126,7 +126,7 @@ void test_sort(const std::string &name, SortFn sortFn) {
   {
     auto input = vector_to_list({5, 2, 8, 1, 9, 3, 7, 4, 6, 5});
     auto result = sortFn(input);
-    auto sorted_list = std::get<0>(result->v()).d_a0;
+    auto sorted_list = std::get<0>(result->v()).d_x;
     auto vec = list_to_vector(sorted_list);
     ASSERT(vec.size() == 10);
     for (size_t i = 1; i < vec.size(); ++i) {

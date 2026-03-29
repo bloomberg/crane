@@ -41,6 +41,142 @@ let factory_name_of_ctor ?(uptr = false) ?(type_name = "") ctor_struct_name =
   else if collides then stem ^ "_"
   else stem
 
+(** {2 Named Constructor Fields}
+
+    Constructor struct fields in C++ are named using Rocq binder names when
+    available.  For example, [Node (left : tree) (v : A) (right : tree)]
+    generates fields [d_left], [d_v], [d_right] instead of [d_a0], [d_a1],
+    [d_a2].
+
+    The pipeline:
+    + Extraction ({!Extraction.extract_really_ind}) populates
+      {!Miniml.ml_ind_packet.ip_consarg_names} from the kernel binder names.
+    + {!compute_and_register_field_names} transforms each binder into a
+      C++-safe identifier and registers the mapping in
+      {!Common.ctor_field_names}.
+    + Access sites ({!gen_cpp_pat_lambda}, record reuse, {!Loopify.patch_cell_field})
+      call {!Common.lookup_ctor_field_name} to resolve field names. *)
+
+(** Sanitize a Rocq binder name for use as a C++ struct field identifier.
+
+    Performs the following transformations:
+    - Lowercases the name (Rocq names are often CamelCase)
+    - Strips trailing primes ([a'] → [a], [x''] → [x])
+    - Replaces non-alphanumeric characters (except [_]) with underscores
+
+    Returns [None] if the result is empty or starts with a digit, in which
+    case the caller falls back to the generic positional name [d_aJ].
+
+    @param name  The raw Rocq binder name (e.g. ["left"], ["a'"], ["1st"]) *)
+let sanitize_binder_name name =
+  let lc = String.lowercase_ascii name in
+  let len = String.length lc in
+  (* Strip trailing primes: [a'''] → [a] *)
+  let rec strip_end i =
+    if i <= 0 then 0
+    else if lc.[i - 1] = '\'' then strip_end (i - 1)
+    else i
+  in
+  let end_pos = strip_end len in
+  if end_pos = 0 then None
+  else
+    let s = String.sub lc 0 end_pos in
+    (* Replace non-C++ chars with underscores *)
+    let buf = Buffer.create (String.length s) in
+    String.iter
+      (fun c ->
+        if (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c = '_' then
+          Buffer.add_char buf c
+        else
+          Buffer.add_char buf '_' )
+      s;
+    let result = Buffer.contents buf in
+    if String.length result = 0 || (result.[0] >= '0' && result.[0] <= '9') then
+      None
+    else
+      Some result
+
+(** Derive the C++ field name string for constructor argument [k] from the
+    binder name list [consarg_names].
+
+    Returns ["d_<sanitized_name>"] when a valid binder name exists and does
+    not collide with a C++ keyword, or the generic positional name
+    ["d_a<k>"] otherwise.  This helper is factored out of
+    {!compute_field_name} so that the deduplication check can call it for
+    both the current index and all prior indices. *)
+let field_name_str_of_idx consarg_names k =
+  match List.nth_opt consarg_names k with
+  | Some (Some id) -> (
+    match sanitize_binder_name (Id.to_string id) with
+    | Some sanitized ->
+      if Id.Set.mem (Id.of_string sanitized) (get_keywords ()) then
+        field_param_name k
+      else
+        "d_" ^ sanitized
+    | None -> field_param_name k )
+  | _ -> field_param_name k
+
+(** Compute the C++ field name for field [j] of constructor struct
+    [ctor_struct_name], register it in {!Common.ctor_field_names}, and
+    return the resulting identifier.
+
+    Handles three cases:
+    - Named binder that is C++-safe → [d_<lowercase_name>] (e.g. [d_left])
+    - Anonymous binder or keyword collision → [d_a<j>] (e.g. [d_a0])
+    - Duplicate name within the same constructor → appends [_<j>] suffix
+
+    @param ctor_struct_name  PascalCase name of the constructor struct
+    @param consarg_names     binder names from {!ml_ind_packet.ip_consarg_names}
+    @param n_fields          total field count (unused but kept for symmetry)
+    @param j                 0-based field index *)
+let compute_field_name ctor_struct_name consarg_names _n_fields j =
+  let base_str = field_name_str_of_idx consarg_names j in
+  (* Deduplicate: if an earlier field already has the same name, append the
+     index as a suffix to disambiguate (e.g. [d_x] and [d_x_3]). *)
+  let has_dup =
+    let rec check k =
+      if k >= j then false
+      else if String.equal (field_name_str_of_idx consarg_names k) base_str
+      then true
+      else check (k + 1)
+    in
+    check 0
+  in
+  let field_str =
+    if has_dup then base_str ^ "_" ^ string_of_int j else base_str
+  in
+  let field_id = Id.of_string field_str in
+  register_ctor_field_name ctor_struct_name j field_id;
+  field_id
+
+(** Compute and register field names for all [n_fields] fields of a
+    constructor struct.  Returns the list of field identifiers in order.
+
+    This is the single entry point called from {!gen_ind_header_v2},
+    {!gen_ind_header}, and {!gen_ind_cpp} at definition sites. *)
+let compute_and_register_field_names ctor_struct_name consarg_names n_fields =
+  List.init n_fields (fun j ->
+    compute_field_name ctor_struct_name consarg_names n_fields j)
+
+(** Derive the PascalCase C++ constructor struct name from a [GlobRef.t].
+
+    Constructor references (e.g. [ConstructRef ((kn,0), 1)] for [Cons])
+    are rendered as capitalized versions of their Rocq name; other references
+    fall back to [Ctor<i>].  This is used at both definition sites (struct
+    generation) and access sites (pattern matching, record reuse) to
+    obtain the key for {!Common.lookup_ctor_field_name}.
+
+    @param i  fallback index when the reference is not a [ConstructRef] *)
+let ctor_struct_name_of_ref ?(fallback_idx = 0) (c : GlobRef.t) : string =
+  match c with
+  | GlobRef.ConstructRef _ ->
+    String.capitalize_ascii (Common.pp_global_name Type c)
+  | _ -> ctor_fallback_name fallback_idx
+
+(** Like {!ctor_struct_name_of_ref} but returns an [Id.t]. *)
+let ctor_struct_id_of_ref ?(fallback_idx = 0) (c : GlobRef.t) : Id.t =
+  Id.of_string (ctor_struct_name_of_ref ~fallback_idx c)
+
 (** Safe version of [List.firstn] that returns [min(n, length lst)] elements
     instead of raising [Failure "firstn"] when [n > length lst].
 
@@ -1947,9 +2083,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
           in
           let tvars = get_current_type_vars () in
           let temps = build_template_params env tvars tys in
-          let ctor_struct =
-            String.capitalize_ascii (Common.pp_global_name Type r)
-          in
+          let ctor_struct = ctor_struct_name_of_ref r in
           let ind_type_name = Common.pp_global_name Type n in
           let fname =
             factory_name_of_ctor ~type_name:ind_type_name ctor_struct
@@ -1959,9 +2093,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
           CPPfun_call (CPPqualified (type_expr, Id.of_string fname), args)
         | _ ->
           (* Fallback for non-Tglob types *)
-          let ctor_struct =
-            String.capitalize_ascii (Common.pp_global_name Type r)
-          in
+          let ctor_struct = ctor_struct_name_of_ref r in
           let fname = factory_name_of_ctor ctor_struct in
           CPPfun_call (CPPqualified (mk_cppglob r [], Id.of_string fname), args)
       in
@@ -2711,12 +2843,7 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body sname =
      parameters *)
   let tvars = get_current_type_vars () in
   (* Get the constructor name as a simple Id *)
-  let ctor_name =
-    match cname with
-    | GlobRef.ConstructRef _ ->
-      Id.of_string (String.capitalize_ascii (Common.pp_global_name Type cname))
-    | _ -> Id.of_string "unknown_ctor"
-  in
+  let ctor_name = ctor_struct_id_of_ref cname in
   (* Build path: typename InductiveType<temps>::ConstructorName *)
   let constr =
     match typ with
@@ -2781,13 +2908,17 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body sname =
   tctx.move_dead_after <- saved_dead;
   tctx.move_owned_vars <- saved_owned;
   (* Substitute pattern variable references with direct field accesses: var_name
-     → _args.d_aX *)
+     → _args.<field_name> *)
+  let ctor_struct_name = Id.to_string ctor_name in
   let rev_ids = List.rev ids in
   let body_stmts =
     List.fold_left
       (fun stmts (i, (var_name, _ty)) ->
         if List.nth dummies i then
-          let field_expr = CPPget (CPPvar sname, field_param_id i) in
+          let field_id =
+            lookup_ctor_field_name ctor_struct_name i
+          in
+          let field_expr = CPPget (CPPvar sname, field_id) in
           List.map (local_var_subst_stmt var_name field_expr) stmts
         else
           stmts )
@@ -2964,8 +3095,11 @@ and gen_cpp_case (typ : ml_type) t env pv =
       let scrut_expr = gen_expr env t in
       let tvars = get_current_type_vars () in
       (* For now, handle the first reuse candidate only. *)
-      let branch_idx, _matched_ctor, arity, _tail_ctor, tail_args =
+      let branch_idx, matched_ctor, arity, _tail_ctor, tail_args =
         List.hd reuse_candidates
+      in
+      let reuse_ctor_struct_name =
+        ctor_struct_name_of_ref matched_ctor
       in
       let ids, _rty, _pat, body = pv.(branch_idx) in
       let n_fields = arity in
@@ -3031,12 +3165,15 @@ and gen_cpp_case (typ : ml_type) t env pv =
               convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty
             in
             if List.nth dummies i then
+              let field_id =
+                lookup_ctor_field_name reuse_ctor_struct_name i
+              in
               Some
                 (Sasgn
                    ( var_name,
                      Some cpp_ty,
                      CPPmove
-                       (CPPmember (CPPvar (Id.of_string "_rf"), field_param_id i)
+                       (CPPmember (CPPvar (Id.of_string "_rf"), field_id)
                        ) ) )
             else
               None )
@@ -3095,7 +3232,9 @@ and gen_cpp_case (typ : ml_type) t env pv =
             | MLdummy _ -> None
             | MLmagic (MLdummy _) -> None
             | _ ->
-              let field_id = field_param_id i in
+              let field_id =
+                lookup_ctor_field_name reuse_ctor_struct_name i
+              in
               let new_val = gen_expr body_env tail_arg in
               Some
                 (Sassign_field
@@ -4312,18 +4451,29 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
   result
 
 (** Generate C++ namespace with constructor factory functions for an inductive
-    type. TODO: REDO NAMESPACE AS PART OF NAMES!!! *)
-let gen_ind_cpp vars name cnames tys =
+    type.
+    @param consarg_names  binder names from {!Miniml.ml_ind_packet.ip_consarg_names};
+      when provided, struct fields use descriptive names instead of [d_aJ]. *)
+let gen_ind_cpp ?(consarg_names = [||]) vars name cnames tys =
   let constrdecl =
     Array.to_list
       (Array.mapi
          (fun i tys ->
            let c = cnames.(i) in
-           (* eventually incorporate given names when they exist *)
+           let ctor_struct_name = ctor_struct_name_of_ref ~fallback_idx:i c in
+           let ctor_consarg_names =
+             if i < Array.length consarg_names then consarg_names.(i)
+             else []
+           in
+           let n_fields = List.length tys in
+           let field_ids =
+             compute_and_register_field_names
+               ctor_struct_name ctor_consarg_names n_fields
+           in
            let constr =
              List.mapi
                (fun i x ->
-                 ( field_param_id i,
+                 ( List.nth field_ids i,
                    convert_ml_type_to_cpp_type
                      (empty_env ())
                      (Refset'.add name Refset'.empty)
@@ -6850,8 +7000,10 @@ let gen_decl_for_pp_dual ~is_header n b ty =
     let spec_ds, spec_env = gen_spec n b ty in
     (Some (spec_ds, spec_env), None, tvars)
 
-(** Generate C++ struct for an inductive type (old version) *)
-let gen_ind_header vars name cnames tys =
+(** Generate C++ struct for an inductive type (old version).
+    @param consarg_names  binder names from {!Miniml.ml_ind_packet.ip_consarg_names};
+      when provided, struct fields use descriptive names instead of [d_aJ]. *)
+let gen_ind_header ?(consarg_names = [||]) vars name cnames tys =
   let templates = List.map (fun n -> (TTtypename, n)) vars in
   let add_templates d =
     match templates with
@@ -6878,11 +7030,20 @@ let gen_ind_header vars name cnames tys =
       (Array.mapi
          (fun i tys ->
            let c = cnames.(i) in
-           (* eventually incorporate given names when they exist *)
+           let ctor_struct_name = ctor_struct_name_of_ref ~fallback_idx:i c in
+           let ctor_consarg_names =
+             if i < Array.length consarg_names then consarg_names.(i)
+             else []
+           in
+           let n_fields = List.length tys in
+           let field_ids =
+             compute_and_register_field_names
+               ctor_struct_name ctor_consarg_names n_fields
+           in
            let constr =
              List.mapi
                (fun i x ->
-                 ( field_param_id i,
+                 ( List.nth field_ids i,
                    convert_ml_type_to_cpp_type
                      (empty_env ())
                      (Refset'.add name Refset'.empty)
@@ -7339,16 +7500,23 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
     VPublic,
     SNoTag )
 
-(** New inductive generation: encapsulated struct with methods. Generates: struct
-    Tree { struct Leaf {}; struct Node { std::shared_ptr<Tree> left;
-    std::shared_ptr<Tree> right; }; using variant_t = std::variant<Leaf, Node>;
-    private: variant_t v_; explicit Tree(Leaf x) : v_(x) {} explicit Tree(Node x)
-    : v_(std::move(x)) {} public: struct ctor { ctor() = delete; static
-    std::shared_ptr<Tree> Leaf_() { return std::shared_ptr<Tree>(new
-    Tree(Leaf{})); } static std::shared_ptr<Tree> Node_(std::shared_ptr<Tree> l,
-    std::shared_ptr<Tree> r) { ... } }; }; *)
+(** Generate C++ header for an inductive type (v2 style: encapsulated struct
+    with methods).
+
+    Produces a self-contained struct with:
+    - Nested constructor-alternative structs (e.g. [Leaf {}], [Node { ... }])
+    - [using variant_t = std::variant<Leaf, Node>]
+    - Private [variant_t d_v_] data member
+    - Explicit constructors for each alternative
+    - Static factory methods ([cons(...)], [cons_uptr(...)]) with move semantics
+    - Methods from [method_candidates] (with [this] substitution)
+
+    @param consarg_names  binder names from {!Miniml.ml_ind_packet.ip_consarg_names};
+      when provided, constructor struct fields and factory parameters use
+      descriptive names derived from the Rocq source instead of [d_a0] etc. *)
 let gen_ind_header_v2
     ?(is_mutual = false)
+    ?(consarg_names = [||])
     vars
     name
     cnames
@@ -7404,16 +7572,19 @@ let gen_ind_header_v2
           (Array.mapi
              (fun i tys_list ->
                let c = cnames.(i) in
-               let cname =
-                 match c with
-                 | GlobRef.ConstructRef ((_, _), _) ->
-                   (* Get constructor name from the GlobRef *)
-                   Id.of_string
-                     (String.capitalize_ascii (Common.pp_global_name Type c))
-                 | _ -> ctor_fallback_id i
-               in
+               let cname = ctor_struct_id_of_ref ~fallback_idx:i c in
                (* Fields: convert types, using self_ty for recursive
                   references *)
+               let ctor_struct_name = Id.to_string cname in
+               let ctor_consarg_names =
+                 if i < Array.length consarg_names then consarg_names.(i)
+                 else []
+               in
+               let n_fields = List.length tys_list in
+               let field_ids =
+                 compute_and_register_field_names
+                   ctor_struct_name ctor_consarg_names n_fields
+               in
                let fields =
                  List.mapi
                    (fun j ty ->
@@ -7429,9 +7600,7 @@ let gen_ind_header_v2
                      let cpp_ty =
                        if vars = [] then tvar_erase_type cpp_ty else cpp_ty
                      in
-                     (* Field name: use descriptive names if available,
-                        otherwise _a0, _a1, etc. *)
-                     let field_name = field_param_id j in
+                     let field_name = List.nth field_ids j in
                      (Fvar (field_name, cpp_ty), VPublic, SNoTag) )
                    tys_list
                in
@@ -7446,13 +7615,7 @@ let gen_ind_header_v2
           (Array.to_list
              (Array.mapi
                 (fun i c ->
-                  let cname_id =
-                    match c with
-                    | GlobRef.ConstructRef _ ->
-                      Id.of_string
-                        (String.capitalize_ascii (Common.pp_global_name Type c))
-                    | _ -> ctor_fallback_id i
-                  in
+                  let cname_id = ctor_struct_id_of_ref ~fallback_idx:i c in
                   (* Use Tid for local nested struct types - no template args
                      since they inherit *)
                   Tid (cname_id, []) )
@@ -7486,13 +7649,7 @@ let gen_ind_header_v2
         Array.to_list
           (Array.mapi
              (fun i c ->
-               let cname =
-                 match c with
-                 | GlobRef.ConstructRef _ ->
-                   Id.of_string
-                     (String.capitalize_ascii (Common.pp_global_name Type c))
-                 | _ -> ctor_fallback_id i
-               in
+               let cname = ctor_struct_id_of_ref ~fallback_idx:i c in
                let param_name = Id.of_string "_v" in
                let param_ty = Tid (cname, []) in
                if is_coinductive then
@@ -7574,12 +7731,7 @@ let gen_ind_header_v2
 
       let mk_factory_methods ~uptr ret_ty wrap_expr i tys_list =
         let c = cnames.(i) in
-        let cname =
-          match c with
-          | GlobRef.ConstructRef _ ->
-            String.capitalize_ascii (Common.pp_global_name Type c)
-          | _ -> ctor_fallback_name i
-        in
+        let cname = ctor_struct_name_of_ref ~fallback_idx:i c in
         let fname =
           factory_name_of_ctor ~uptr ~type_name:ind_type_name cname
         in
@@ -7604,8 +7756,18 @@ let gen_ind_header_v2
         let has_ptr_params =
           List.exists (fun (_, ty) -> is_ptr_type ty) cpp_tys
         in
-        (* Build one overload.  When [move_ptrs] is true, pointer params
-           become [T&&] and are moved; otherwise they are [const T&]. *)
+        (* Derive factory parameter name from the registered field name.
+           Factory params use the bare binder name (e.g. [left]) rather than
+           the prefixed field name (e.g. [d_left]), since they are function
+           parameters, not struct members.  Falls back to the full field id
+           if stripping the [d_] prefix fails. *)
+        let param_name_of j =
+          let field_id = lookup_ctor_field_name cname j in
+          let s = Id.to_string field_id in
+          if String.length s > 2 && s.[0] = 'd' && s.[1] = '_' then
+            Id.of_string (String.sub s 2 (String.length s - 2))
+          else field_id
+        in
         let build_overload ~move_ptrs =
           let params =
             List.map
@@ -7616,13 +7778,13 @@ let gen_ind_header_v2
                     else Tref (Tmod (TMconst, cpp_ty))
                   else cpp_ty
                 in
-                (Id.of_string ("a" ^ string_of_int j), param_ty) )
+                (param_name_of j, param_ty) )
               cpp_tys
           in
           let ctor_args =
             List.map
               (fun (j, cpp_ty) ->
-                let var = CPPvar (Id.of_string ("a" ^ string_of_int j)) in
+                let var = CPPvar (param_name_of j) in
                 if is_ptr_type cpp_ty then
                   if move_ptrs then CPPmove var else var
                 else CPPmove var )

@@ -1123,6 +1123,45 @@ let field_param_name i = "d_a" ^ string_of_int i
 
 let field_param_id i = Id.of_string (field_param_name i)
 
+(** {2 Constructor Field Name Registry}
+
+    Maps [(ctor_struct_name, field_idx)] pairs to the C++ field identifier
+    derived from the Rocq binder name.  Populated by
+    {!Translation.compute_and_register_field_names} at definition sites
+    (struct field declarations, factory methods) and queried at access sites
+    (pattern-match lambdas, record reuse, loopification cell patching).
+
+    The registry lives in {!Common} rather than {!Cpp_state} to avoid a
+    dependency cycle: [Translation] depends on [Common] but not on
+    [Cpp_state], while [Cpp_state] transitively depends on [Translation]
+    through [Method_registry].  Cleared by {!reset_ctor_field_names}
+    between extraction passes (called from {!Cpp_state.reset_cpp_state}). *)
+
+let ctor_field_names : (string * int, Id.t) Hashtbl.t = Hashtbl.create 64
+
+(** [register_ctor_field_name ctor_name field_idx field_id] records that
+    field [field_idx] of the C++ constructor struct [ctor_name] should be
+    named [field_id].
+
+    @param ctor_name  PascalCase name of the constructor struct (e.g. ["Cons"])
+    @param field_idx  0-based field position
+    @param field_id   The identifier to use (e.g. [d_hd], or [d_a0] as fallback) *)
+let register_ctor_field_name ctor_name field_idx field_id =
+  Hashtbl.replace ctor_field_names (ctor_name, field_idx) field_id
+
+(** [lookup_ctor_field_name ctor_name field_idx] retrieves the registered
+    field name, falling back to the generic positional name
+    [d_a{field_idx}] when no name was registered (e.g. for custom-extracted
+    inductives or when the registry hasn't been populated yet). *)
+let lookup_ctor_field_name ctor_name field_idx =
+  match Hashtbl.find_opt ctor_field_names (ctor_name, field_idx) with
+  | Some id -> id
+  | None -> field_param_id field_idx
+
+(** Clear the field name registry.  Must be called between extraction
+    passes to avoid stale names from one module leaking into another. *)
+let reset_ctor_field_names () = Hashtbl.clear ctor_field_names
+
 let eta_param_name i = "_x" ^ string_of_int i
 
 let eta_param_id i = Id.of_string (eta_param_name i)
