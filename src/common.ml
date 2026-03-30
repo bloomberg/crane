@@ -956,8 +956,15 @@ let pp_global_name k r =
   assert (List.length ls > 1);
   List.hd ls
 
-(** Print the capitalized type name of a reference (for C++ type names). *)
-let pp_type_name_capitalized r = String.capitalize_ascii (pp_global_name Type r)
+(** Print the type name for an eponymous record reference.  Returns the
+    enclosing module name (from [mp_renaming]) so that type references match
+    the struct definition name and qualified field accesses.  Eponymous
+    detection is case-insensitive, so the record and module names may differ
+    in casing (e.g. [Module Shadow] with [Record shadow]).  The struct
+    definition uses the module name, so type references must too. *)
+let pp_type_name_capitalized r =
+  let mp = modpath_of_r r in
+  List.hd (mp_renaming mp)
 
 (** Print a module path. The next function is used only in Ocaml extraction...
 *)
