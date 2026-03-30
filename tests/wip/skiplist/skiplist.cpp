@@ -6,6 +6,7 @@
 #include <skipnode.h>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 __attribute__((pure)) bool PeanoNat::eqb(const unsigned int n,
                                          const unsigned int m) {
@@ -99,7 +100,7 @@ bool skiplist_test::stm_test_insert_lookup() {
   }
   bool c5;
   if (v9.has_value()) {
-    unsigned int _x4 = *v9;
+    unsigned int _x3 = *v9;
     c5 = false;
   } else {
     c5 = true;
@@ -119,7 +120,7 @@ bool skiplist_test::stm_test_delete() {
   std::optional<unsigned int> v7 = sl->lookup(nat_lt, nat_eq, 7u);
   bool c1;
   if (v5.has_value()) {
-    unsigned int _x4 = *v5;
+    unsigned int _x3 = *v5;
     c1 = false;
   } else {
     c1 = true;
@@ -147,7 +148,7 @@ bool skiplist_test::stm_test_update() {
   sl->insert(nat_lt, nat_eq, 5u, 50u, 0u);
   sl->insert(nat_lt, nat_eq, 5u, 500u, 0u);
   std::optional<unsigned int> v = sl->lookup(nat_lt, nat_eq, 5u);
-  return [&](void) {
+  return [&]() {
     if (v.has_value()) {
       unsigned int n = *v;
       return PeanoNat::eqb(n, 500u);
@@ -164,7 +165,7 @@ bool skiplist_test::stm_test_minimum() {
   sl->insert(nat_lt, nat_eq, 3u, 30u, 0u);
   sl->insert(nat_lt, nat_eq, 7u, 70u, 0u);
   std::optional<std::pair<unsigned int, unsigned int>> minOpt = sl->minimum();
-  return [&](void) {
+  return [&]() {
     if (minOpt.has_value()) {
       std::pair<unsigned int, unsigned int> p = *minOpt;
       unsigned int k = p.first;
@@ -291,7 +292,7 @@ bool skiplist_test::stm_test_find() {
   }
   bool c2;
   if (noneOpt.has_value()) {
-    std::shared_ptr<SkipNode<unsigned int, unsigned int>> _x2 = *noneOpt;
+    std::shared_ptr<SkipNode<unsigned int, unsigned int>> _x1 = *noneOpt;
     c2 = false;
   } else {
     c2 = true;
@@ -398,15 +399,15 @@ bool skiplist_test::stm_test_bde_api() {
       SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   std::pair<std::shared_ptr<SkipNode<unsigned int, unsigned int>>, bool>
       result1 = sl->bde_add(nat_lt, nat_eq, 5u, 50u, 0u);
-  std::shared_ptr<SkipNode<unsigned int, unsigned int>> _x0 = result1.first;
+  std::shared_ptr<SkipNode<unsigned int, unsigned int>> _x = result1.first;
   bool front1 = result1.second;
   std::pair<std::shared_ptr<SkipNode<unsigned int, unsigned int>>, bool>
       result2 = sl->bde_add(nat_lt, nat_eq, 3u, 30u, 0u);
-  std::shared_ptr<SkipNode<unsigned int, unsigned int>> _x1 = result2.first;
+  std::shared_ptr<SkipNode<unsigned int, unsigned int>> _x0 = result2.first;
   bool front2 = result2.second;
   std::pair<std::shared_ptr<SkipNode<unsigned int, unsigned int>>, bool>
       result3 = sl->bde_add(nat_lt, nat_eq, 7u, 70u, 0u);
-  std::shared_ptr<SkipNode<unsigned int, unsigned int>> _x2 = result3.first;
+  std::shared_ptr<SkipNode<unsigned int, unsigned int>> _x1 = result3.first;
   bool front3 = result3.second;
   bool c3 = !(front3);
   std::pair<
@@ -414,7 +415,7 @@ bool skiplist_test::stm_test_bde_api() {
       std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>>
       findResult = sl->bde_find(nat_lt, nat_eq, 5u);
   unsigned int status1 = findResult.first;
-  std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> _x3 =
+  std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> _x2 =
       findResult.second;
   bool c4 = PeanoNat::eqb(status1, SkipList<int, int>::e_SUCCESS);
   std::pair<
@@ -422,7 +423,7 @@ bool skiplist_test::stm_test_bde_api() {
       std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>>
       findResult2 = sl->bde_find(nat_lt, nat_eq, 9u);
   unsigned int status2 = findResult2.first;
-  std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> _x4 =
+  std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> _x3 =
       findResult2.second;
   bool c5 = PeanoNat::eqb(std::move(status2), SkipList<int, int>::e_NOT_FOUND);
   std::pair<std::pair<unsigned int, std::optional<std::shared_ptr<
@@ -433,9 +434,9 @@ bool skiplist_test::stm_test_bde_api() {
       unsigned int,
       std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>>
       p = uniqueResult.first;
-  bool _x5 = uniqueResult.second;
+  bool _x4 = uniqueResult.second;
   unsigned int status3 = p.first;
-  std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> _x6 =
+  std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> _x5 =
       p.second;
   bool c6 = PeanoNat::eqb(std::move(status3), SkipList<int, int>::e_DUPLICATE);
   std::pair<
@@ -542,91 +543,91 @@ unsigned int skiplist_test::run_tests() {
   bool r11 = test_bounds();
   bool r12 = test_removeAll();
   bool r13 = test_bde_api();
-  unsigned int passed = (((((((((((([&](void) {
+  unsigned int passed = (((((((((((([&]() {
                                      if (r1) {
                                        return 1u;
                                      } else {
                                        return 0u;
                                      }
                                    }() +
-                                    [&](void) {
+                                    [&]() {
                                       if (r2) {
                                         return 1u;
                                       } else {
                                         return 0u;
                                       }
                                     }()) +
-                                   [&](void) {
+                                   [&]() {
                                      if (r3) {
                                        return 1u;
                                      } else {
                                        return 0u;
                                      }
                                    }()) +
-                                  [&](void) {
+                                  [&]() {
                                     if (r4) {
                                       return 1u;
                                     } else {
                                       return 0u;
                                     }
                                   }()) +
-                                 [&](void) {
+                                 [&]() {
                                    if (r5) {
                                      return 1u;
                                    } else {
                                      return 0u;
                                    }
                                  }()) +
-                                [&](void) {
+                                [&]() {
                                   if (r6) {
                                     return 1u;
                                   } else {
                                     return 0u;
                                   }
                                 }()) +
-                               [&](void) {
+                               [&]() {
                                  if (r7) {
                                    return 1u;
                                  } else {
                                    return 0u;
                                  }
                                }()) +
-                              [&](void) {
+                              [&]() {
                                 if (r8) {
                                   return 1u;
                                 } else {
                                   return 0u;
                                 }
                               }()) +
-                             [&](void) {
+                             [&]() {
                                if (r9) {
                                  return 1u;
                                } else {
                                  return 0u;
                                }
                              }()) +
-                            [&](void) {
+                            [&]() {
                               if (r10) {
                                 return 1u;
                               } else {
                                 return 0u;
                               }
                             }()) +
-                           [&](void) {
+                           [&]() {
                              if (r11) {
                                return 1u;
                              } else {
                                return 0u;
                              }
                            }()) +
-                          [&](void) {
+                          [&]() {
                             if (r12) {
                               return 1u;
                             } else {
                               return 0u;
                             }
                           }()) +
-                         [&](void) {
+                         [&]() {
                            if (r13) {
                              return 1u;
                            } else {

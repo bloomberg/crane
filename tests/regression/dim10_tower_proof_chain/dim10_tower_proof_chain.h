@@ -17,8 +17,6 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-enum class Unit { e_TT };
-
 template <typename t_A, typename t_P> struct SigT {
   // TYPES
   struct ExistT {
@@ -110,7 +108,7 @@ struct Dim10TowerProofChainCase {
   static inline const std::shared_ptr<GradedGoodwillieTower> dim10_tower =
       make_graded_goodwillie_tower(10u);
   static inline const std::shared_ptr<SigT<unsigned int, std::any>>
-      dim10_layers_stabilize = [](void) {
+      dim10_layers_stabilize = []() {
         std::shared_ptr<SigT<unsigned int, std::any>> s =
             graded_goodwillie_layers_stabilize(10u);
         if (std::move(s).use_count() == 1 && std::move(s)->v().index() == 0) {
@@ -130,7 +128,7 @@ struct Dim10TowerProofChainCase {
         }
       }();
   static inline const std::shared_ptr<SigT<unsigned int, std::any>>
-      dim10_P_stabilizes = [](void) {
+      dim10_P_stabilizes = []() {
         std::shared_ptr<SigT<unsigned int, std::any>> s =
             graded_goodwillie_P_stabilizes(10u);
         if (std::move(s).use_count() == 1 && std::move(s)->v().index() == 0) {

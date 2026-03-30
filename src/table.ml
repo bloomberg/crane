@@ -239,6 +239,27 @@ let needs_string_literals () = !needs_string_literals_flag
 
 let reset_needs_string_literals () = needs_string_literals_flag := false
 
+(** Track whether any reified [ITree<R>] types appear in the output,
+    requiring the [crane_itree.h] header. *)
+let itree_header_needed : bool ref = ref false
+
+let require_itree_header () = itree_header_needed := true
+
+let needs_itree_header () = !itree_header_needed
+
+let reset_itree_header () = itree_header_needed := false
+
+(** Track if a main function returning itree was encountered in reified mode.
+    Stores (function_name, return_type, struct_qualifier) for wrapper generation. *)
+let main_function_tree : (Id.t * Miniml.ml_type * Id.t option) option ref = ref None
+
+let set_main_function name ret_type struct_name =
+  main_function_tree := Some (name, ret_type, struct_name)
+
+let get_main_function () = !main_function_tree
+
+let reset_main_function () = main_function_tree := None
+
 (** Check if an ML type is a coinductive type by inspecting its global
     reference. *)
 let is_coinductive_type = function
@@ -1827,6 +1848,11 @@ let is_bind b = Refmap'.mem b !binds
 
 let is_ret r = Refmap'.mem r !rets
 
+let get_monad_template_opt m =
+  match Refmap'.find_opt m !monads with
+  | Some (_, _, template) -> Some template
+  | None -> None
+
 let monad_extraction : GlobRef.t * GlobRef.t * GlobRef.t * string -> obj =
   declare_object
   @@ superglobal_object
@@ -1882,6 +1908,36 @@ let add_ghost_tm v g = ghost_tm := Refmap'.add g v !ghost_tm
 let is_void v = Refmap'.mem v !void_ty
 
 let is_ghost g = Refmap'.mem g !ghost_tm
+
+(** Cached GlobRef for Rocq's [unit] type and [tt] constructor. *)
+let unit_type_ref : GlobRef.t option ref = ref None
+let tt_ctor_ref : GlobRef.t option ref = ref None
+
+let resolve_unit_type () =
+  match !unit_type_ref with
+  | Some r -> Some r
+  | None ->
+    (try let r = Rocqlib.lib_ref "core.unit.type" in
+         unit_type_ref := Some r; Some r
+     with _ -> None)
+
+let resolve_tt_ctor () =
+  match !tt_ctor_ref with
+  | Some r -> Some r
+  | None ->
+    (try let r = Rocqlib.lib_ref "core.unit.tt" in
+         tt_ctor_ref := Some r; Some r
+     with _ -> None)
+
+let is_unit_type r =
+  match resolve_unit_type () with
+  | Some u -> GlobRef.CanOrd.equal r u
+  | None -> false
+
+let is_tt_constructor r =
+  match resolve_tt_ctor () with
+  | Some u -> GlobRef.CanOrd.equal r u
+  | None -> false
 
 let is_any_custom r =
   is_custom r || is_monad r || is_bind r || is_ret r || is_void r || is_ghost r

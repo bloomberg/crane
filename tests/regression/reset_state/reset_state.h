@@ -125,7 +125,7 @@ struct ResetState {
 
   static std::shared_ptr<state_full>
   reset_state_full(std::shared_ptr<state_full> s);
-  static inline const unsigned int memory_preserve_test = [](void) {
+  static inline const unsigned int memory_preserve_test = []() {
     std::unique_ptr<state_full> s = std::make_unique<state_full>(state_full{
         9u,
         List<unsigned int>::cons(

@@ -6,13 +6,11 @@ From Crane Require Import Mapping.Std.
 From Crane Require Import Monads.ITree Monads.IO.
 From Crane Require Import External.Vector.
 
-Import MonadNotations.
-
 Module MutableVectorTest.
 
   Open Scope int63.
 
-    Definition test1 (x : int) : IO int :=
+    Definition test1 (x : int) : itree iIO int :=
     v <- emptyVec int ;;
     push v 3 ;;
     push v 2 ;;
@@ -22,7 +20,7 @@ Module MutableVectorTest.
     y <- size v ;;
     Ret (sub x y).
 
-  Definition test2 (x : int) : IO (vector int) :=
+  Definition test2 (x : int) : itree iIO (vector int) :=
     v <- emptyVec int ;;
     push v 12 ;;
     push v 23 ;;

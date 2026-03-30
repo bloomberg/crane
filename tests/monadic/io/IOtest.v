@@ -3,30 +3,28 @@
 From Corelib Require Import PrimString.
 From Crane Require Import Mapping.Std Monads.ITree Monads.IO.
 
-Import MonadNotations.
-
 Module iotest.
 
-  Definition test1 (s : string) : void := ghost.
+  Definition test1 (s : string) : unit := tt.
 
-  Definition test2 (s : string) : IO unit :=
+  Definition test2 (s : string) : itree iIO unit :=
     print s ;;
     Ret tt.
 
-  Definition test3 (s : string) : IO void :=
+  Definition test3 (s : string) : itree iIO unit :=
     print_endline s ;;
-    Ret ghost.
+    Ret tt.
 
-  Definition test4 : IO string :=
+  Definition test4 : itree iIO string :=
     print_endline "what is your name?" ;;
     s2 <- get_line ;;
     print_endline (cat "hello " s2) ;;
     Ret (cat "I read the name " (cat s2 " from the command line!")).
 
-  Definition test5 : IO void :=
+  Definition test5 : itree iIO unit :=
     s <- read "file.txt" ;;
     print_endline s ;;
-    Ret ghost.
+    Ret tt.
 
 End iotest.
 

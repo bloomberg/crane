@@ -21,16 +21,16 @@ struct RegionMembershipBounds {
   __attribute__((pure)) static bool
   addr_in_regionb(const unsigned int addr, const std::shared_ptr<layout> &l);
   static inline const unsigned int t = []() {
-    return [](void) {
+    return []() {
       std::shared_ptr<layout> l = std::make_shared<layout>(layout{100u, 20u});
-      return ([&](void) {
+      return ([&]() {
         if (addr_in_regionb(110u, l)) {
           return 1u;
         } else {
           return 0u;
         }
       }() +
-              [&](void) {
+              [&]() {
                 if (addr_in_regionb(121u, l)) {
                   return 1u;
                 } else {

@@ -860,7 +860,7 @@ LoopifyNumbers::mixed_arith_fuel(const unsigned int fuel,
                              unsigned int m = n_ - 1;
                              _stack.push_back(_Call1{m, f, n_, f});
                              _stack.push_back(_Enter{
-                                 [&](void) {
+                                 [&]() {
                                    if (m == 0u) {
                                      return 0u;
                                    } else {

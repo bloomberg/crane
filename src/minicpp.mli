@@ -92,6 +92,8 @@ type cpp_type =
       (** Type variable with De Bruijn index and optional name *)
   | Tid of Id.t * cpp_type list
       (** Local type identifier with type arguments, for nested structs *)
+  | Tid_external of Id.t * cpp_type list
+      (** External type from a header — never struct-qualified *)
   | Tglob of GlobRef.t * cpp_type list * cpp_expr list
       (** Global type reference with type and value arguments *)
   | Tfun of cpp_type list * cpp_type

@@ -354,7 +354,7 @@ __attribute__((pure)) unsigned int LoopifyTrees::sum_of_max_branches(
                   _f._s0;
               unsigned int lsum = _f._s1;
               unsigned int rsum = _result;
-              _result = (_args.d_a1 + [&](void) {
+              _result = (_args.d_a1 + [&]() {
                 if (lsum <= rsum) {
                   return std::move(rsum);
                 } else {
@@ -1270,14 +1270,14 @@ std::shared_ptr<List<unsigned int>> LoopifyTrees::collect_sorted(
 __attribute__((pure)) unsigned int
 LoopifyTrees::max4_impl(const unsigned int a, const unsigned int b,
                         const unsigned int c, const unsigned int d) {
-  if ([&](void) {
+  if ([&]() {
         if (a <= b) {
           return std::move(b);
         } else {
           return std::move(a);
         }
       }() <=
-      [&](void) {
+      [&]() {
         if (c <= d) {
           return std::move(d);
         } else {
@@ -1394,14 +1394,14 @@ LoopifyTrees::tree_min_max(
               unsigned int rmin = _result.first;
               unsigned int rmax = _result.second;
               _result = std::make_pair(min3(
-                                           [&](void) {
+                                           [&]() {
                                              if (lmin == 0u) {
                                                return _args.d_a1;
                                              } else {
                                                return lmin;
                                              }
                                            }(),
-                                           [&](void) {
+                                           [&]() {
                                              if (rmin == 0u) {
                                                return _args.d_a1;
                                              } else {

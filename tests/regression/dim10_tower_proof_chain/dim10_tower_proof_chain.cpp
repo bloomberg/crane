@@ -14,10 +14,10 @@ Dim10TowerProofChainCase::nat_le_of_lt(const unsigned int n,
                                        const std::any _H) {
   if (n <= 0) {
     if (m <= 0) {
-      return Unit::e_TT;
+      return std::monostate{};
     } else {
       unsigned int _x = m - 1;
-      return Unit::e_TT;
+      return std::monostate{};
     }
   } else {
     unsigned int n0 = n - 1;

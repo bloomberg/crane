@@ -16,8 +16,6 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-enum class Unit { e_TT };
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -75,10 +73,7 @@ public:
 };
 
 struct BindTypeInference {
-  template <typename T1> static T1 ignoreAndReturn(const T1 b) {
-    Unit _x = Unit::e_TT;
-    return b;
-  }
+  template <typename T1> static T1 ignoreAndReturn(const T1 b) { return b; }
 
   static int64_t test1();
 
@@ -90,7 +85,8 @@ struct BindTypeInference {
 
   static int64_t test2();
 
-  template <typename T1, typename T2, typename T3, typename F1, typename F2>
+  template <typename T1, typename T2 = void, typename T3, typename F1,
+            typename F2>
   static T3 nested(const T1 a, F1 &&f, F2 &&g) {
     T1 x = a;
     T2 y = f(x);

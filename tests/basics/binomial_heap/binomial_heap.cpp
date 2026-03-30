@@ -454,7 +454,7 @@ __attribute__((pure)) BinomialHeap::key BinomialHeap::find_max_helper(
                 Overloaded{[&](const typename BinomialHeap::tree::Node _args0)
                                -> unsigned int {
                              return find_max_helper(
-                                 [&](void) {
+                                 [&]() {
                                    if (current < _args0.d_a0) {
                                      return _args0.d_a0;
                                    } else {

@@ -104,7 +104,7 @@ struct stmtest {
     }
   }
 
-  static unsigned int stm_basic_counter();
+  static unsigned int stm_basic_counter(const std::monostate _x);
   static unsigned int io_basic_counter();
   static unsigned int stm_inc(const unsigned int x);
   static unsigned int io_inc(const unsigned int x);
@@ -120,7 +120,7 @@ struct stmtest {
       const unsigned int dflt);
   static unsigned int stm_queue_roundtrip(const unsigned int x);
   static unsigned int io_queue_roundtrip(const unsigned int x);
-  static unsigned int stm_orElse_retry_example();
+  static unsigned int stm_orElse_retry_example(const std::monostate _x);
   static unsigned int io_orElse_retry_example();
 };
 

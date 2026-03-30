@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <type_traits>
+#include <variant>
 #include <vector>
 
 int64_t MutableVectorTest::test1(const int64_t _x) {

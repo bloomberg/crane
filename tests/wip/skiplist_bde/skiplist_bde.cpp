@@ -13,6 +13,7 @@
 #include <bsl_variant.h>
 #include <mini_stm.h>
 #include <skipnode.h>
+#include <variant>
 
 namespace BloombergLP {}
 __attribute__((pure)) bool PeanoNat::eqb(const unsigned int n,

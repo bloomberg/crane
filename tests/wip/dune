@@ -8,7 +8,8 @@
  (modules :standard) ; automatically includes all .v files in this directory
  (theories
    Stdlib
-   Crane)
+   Crane
+   ITree ExtLib Paco)
  (flags (:standard -output-directory ../../tests/wip)))
 
 

@@ -466,6 +466,9 @@ let rec pp_cpp_type par vl t =
         ++ pp_list (pp_rec false) args
         ++ str ">"
       | _ -> Id.print id ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
+    | Tid_external (id, []) -> Id.print id
+    | Tid_external (id, args) ->
+      Id.print id ++ str "<" ++ pp_list (pp_rec false) args ++ str ">"
     | Tglob (r, tys, args) ->
       (* Erased type/prop/implicit markers (from Tdummy in the ML AST) should
          never reach the C++ output. When they do survive — e.g. as a template
@@ -980,7 +983,7 @@ and pp_cpp_expr env args t =
     in
     let params_s, capture =
       match params with
-      | [] -> (str "void", capture_str)
+      | [] -> (mt (), capture_str)
       | _ ->
         ( pp_list
             (fun (ty, id_opt) ->
@@ -1386,7 +1389,7 @@ and is_constexpr_type = function
   | Tmod (_, t) | Tref t | Tptr t -> is_constexpr_type t
   | Tvariant tys -> List.for_all is_constexpr_type tys
   | Tglob (_, tys, _) -> List.for_all is_constexpr_type tys
-  | Tid (_, tys) -> List.for_all is_constexpr_type tys
+  | Tid (_, tys) | Tid_external (_, tys) -> List.for_all is_constexpr_type tys
   | Tnamespace (_, t) -> is_constexpr_type t
   | Tqualified (t, _) -> is_constexpr_type t
 

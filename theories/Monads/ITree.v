@@ -1,111 +1,128 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(**
+   Bridge between the InteractionTrees library (DeepSpec/InteractionTrees)
+   and Crane's extraction pipeline.
+
+   This file imports the real ITree library and adds all extraction directives
+   needed to erase the ITree infrastructure during C++ code generation.
+   Effect types compose via [+'] and automatic injection via [E -< F].
+*)
 From Crane Require Extraction.
 
-Set Implicit Arguments.
-Set Contextual Implicit.
-Set Primitive Projections.
+(** Import the real ITree library.
+    [Basics.Basics] is imported non-exportingly because it defines
+    [Notation void := Empty_set] which conflicts with Crane's [void]. *)
+From ITree Require Import
+     Basics.Basics
+     Basics.CategoryOps.
+From ITree Require Export
+     Core.ITreeDefinition
+     Core.Subevent
+     Indexed.Sum
+     Indexed.Function
+     Interp.Interp
+     Interp.Handler.
 
-Section Defn.
+(** Re-export the library's monad notations (in [itree_scope]). *)
+Export ITreeNotations.
+Open Scope itree_scope.
 
-  Context {E : Type -> Type} {R : Type}.
+(** ------------------------------------------------------------------ *)
+(** Core ITree type erasure                                             *)
+(** ------------------------------------------------------------------ *)
 
-  Variant itreeF (itree : Type) :=
-  | RetF (r : R)
-  | TauF (t : itree)
-  | VisF {X : Type} (e : E X) (k : X -> itree)
-  .
-
-  CoInductive itree : Type := go
-  { _observe : itreeF itree }.
-
-End Defn.
-
-Declare Scope itree_scope.
-Bind Scope itree_scope with itree.
-Delimit Scope itree_scope with itree.
-Local Open Scope itree_scope.
-
-Arguments itree _ _ : clear implicits.
-Arguments itreeF _ _ : clear implicits.
-
-Create HintDb itree.
-Notation itree' E R := (itreeF E R (itree E R)).
-Definition observe {E R} (t : itree E R) : itree' E R := @_observe E R t.
-
-
-Definition Ret {E} {R} (x : R) : itree E R :=
-  go (@RetF E R (itree E R) x).
-Definition Tau {E} {R} (t : itree E R) : itree E R :=
-  go (@TauF E R (itree E R) t).
-Definition Vis {E} {R} {X} (e : E X) (k : X -> itree E R) : itree E R :=
-  go (@VisF E R (itree E R) X e k).
-
-(* Definition subst {E : Type -> Type} {T U : Type} (k : T -> itree E U)
-  : itree E T -> itree E U :=
-  cofix _subst (u : itree E T) : itree E U :=
-    match observe u with
-    | RetF r => k r
-    | TauF t => Tau (_subst t)
-    | VisF e h => Vis e (fun x => _subst (h x))
-    end.
-
-Definition bind {E : Type -> Type} {T U : Type} (u : itree E T) (k : T -> itree E U)
-  : itree E U := subst u k.
-    *)
-
-Definition bind {E : Type -> Type} {T U : Type} (u : itree E T) (k : T -> itree E U)
-  : itree E U :=
-  let cofix _subst (u : itree E T) : itree E U :=
-    match observe u with
-    | RetF r => k r
-    | TauF t => Tau (_subst t)
-    | VisF e h => Vis e (fun x => _subst (h x))
-    end in _subst u.
-
-Definition trigger {E : Type -> Type} {T : Type} (e : E T) : itree E T := Vis e Ret.
-
-CoFixpoint hoist {E1 E2 R}
-  (t : forall X, E1 X -> E2 X)
-  (tr : itree E1 R) : itree E2 R :=
-  match observe tr with
-  | RetF r      => Ret r
-  | TauF tr'    => Tau (hoist t tr')
-  | VisF e k    => Vis (t _ e) (fun x => hoist t (k x))
-  end.
-
-Module MonadNotations.
-
-  Declare Scope monad_scope.
-  Delimit Scope monad_scope with monad.
-  Open Scope monad.
-
-  (* Notation "e1 ;; e2" := (@Vis _ _ _ e1%monad (fun _ => e2%monad))
-    (at level 61, right associativity) : monad_scope.
-  Notation "x <- c1 ;; c2" := (@Vis _ _ _ c1%monad (fun x => c2%monad))
-    (at level 61, c1 at next level, right associativity) : monad_scope. *)
-
-  Notation "e1 ;; e2" := (@bind _ _ _ e1%monad (fun _ => e2%monad))
-    (at level 61, right associativity) : monad_scope.
-  Notation "x <- c1 ;; c2" := (@bind _ _ _ c1%monad (fun x => c2%monad))
-    (at level 61, c1 at next level, right associativity) : monad_scope.
-
-End MonadNotations.
-Import MonadNotations.
-
+Crane Extract Skip itree.
 Crane Extract Skip itreeF.
-Crane Extract Skip Tau.
-Crane Extract Skip Ret.
-Crane Extract Skip Vis.
-Crane Extract Skip bind.
-Crane Extract Skip trigger.
-(* Crane Extract Monad itree [ bind := Vis , ret := Ret , hoist := hoist ] => "%t1". *)
-
-(* TODO: Need a better solution to this. Both aesthetically
-   and one that is more robust. *)
-Crane Extract Monad itree [ bind := bind , ret := Ret ] => "%t1".
 Crane Extract Inlined Constant observe => "".
-(* Crane Extract Inlined Constant subst => "". *)
+Crane Extract Skip ITree.subst.
 
-(* TODO: figure out how to get hoist working *)
-(* Crane Extract Inlined Constant hoist => "%a0(%a1)". *)
+(* Skip the ITree module struct — its contents are individually skipped/erased *)
+Crane Extract Skip Module ITree.
+
+(** The ITree library defines [Ret] as a [Notation]. We shadow it with
+    a [Definition] so Crane's monad registration can reference it as a
+    global. Users still write [Ret x] — the Definition has the same
+    behavior as the Notation it shadows. *)
+Definition Ret {E : Type -> Type} {R : Type} (x : R) : itree E R := Ret x.
+
+Crane Extract Monad itree [ bind := ITree.bind , ret := Ret ] => "%t1".
+
+(** ------------------------------------------------------------------ *)
+(** Effect sum erasure                                                  *)
+(** ------------------------------------------------------------------ *)
+
+Crane Extract Inductive sum1 => "" [ "%a0" "%a0" ].
+Crane Extract Skip void1.
+Crane Extract Inlined Constant elim_void1 => "".
+Crane Extract Inlined Constant case_sum1 => "".
+
+(** ------------------------------------------------------------------ *)
+(** Subevent erasure                                                    *)
+(** ------------------------------------------------------------------ *)
+
+Crane Extract Inlined Constant subevent => "%a0".
+
+(** ------------------------------------------------------------------ *)
+(** ITree operations erasure                                            *)
+(** ------------------------------------------------------------------ *)
+
+Crane Extract Skip ITree.map.
+Crane Extract Skip ITree.trigger.
+Crane Extract Skip ITree.iter.
+Crane Extract Skip ITree.forever.
+Crane Extract Skip ITree.spin.
+Crane Extract Skip ITree.ignore.
+Crane Extract Skip ITree.cat.
+Crane Extract Skip translate.
+Crane Extract Skip translateF.
+
+(** ------------------------------------------------------------------ *)
+(** ExtLib instance erasure                                             *)
+(** ------------------------------------------------------------------ *)
+
+Crane Extract Skip Functor_itree.
+Crane Extract Skip Applicative_itree.
+Crane Extract Skip Monad_itree.
+Crane Extract Skip MonadIter_itree.
+Crane Extract Inlined Constant idM => "%a0".
+
+(** ------------------------------------------------------------------ *)
+(** Category infrastructure erasure                                     *)
+(** ------------------------------------------------------------------ *)
+
+Crane Extract Skip Cat.
+Crane Extract Skip Id_.
+Crane Extract Skip Inl.
+Crane Extract Skip Inr.
+Crane Extract Skip Case.
+Crane Extract Skip ReSum.
+Crane Extract Skip Eq2.
+Crane Extract Skip Initial.
+
+Crane Extract Inlined Constant cat => "".
+Crane Extract Inlined Constant id_ => "%a0".
+Crane Extract Inlined Constant inl_ => "%a0".
+Crane Extract Inlined Constant inr_ => "%a0".
+Crane Extract Inlined Constant case_ => "".
+Crane Extract Inlined Constant resum => "%a0".
+
+Crane Extract Inlined Constant ReSum_id => "%a0".
+Crane Extract Inlined Constant ReSum_inl => "%a0".
+Crane Extract Inlined Constant ReSum_inr => "%a0".
+Crane Extract Inlined Constant ReSum_sum => "%a0".
+Crane Extract Inlined Constant ReSum_empty => "".
+
+Crane Extract Skip IFun.
+Crane Extract Skip apply_IFun.
+Crane Extract Skip apply_IFun'.
+Crane Extract Skip as_IFun.
+Crane Extract Skip Eq2_IFun.
+Crane Extract Skip Id_IFun.
+Crane Extract Skip Cat_IFun.
+Crane Extract Skip Initial_void1.
+Crane Extract Skip Case_sum1.
+Crane Extract Skip Inl_sum1.
+Crane Extract Skip Inr_sum1.
+
+Crane Extract Inlined Constant subevent_void1 => "".

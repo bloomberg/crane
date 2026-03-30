@@ -3,12 +3,13 @@
 #include <fstream>
 #include <string>
 #include <type_traits>
+#include <variant>
 
 void iotest::test1(const std::string _x) { return; }
 
-Unit iotest::test2(const std::string s) {
+void iotest::test2(const std::string s) {
   std::cout << s;
-  return Unit::e_TT;
+  return;
 }
 
 void iotest::test3(const std::string s) {

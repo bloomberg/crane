@@ -16,8 +16,6 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-enum class Unit { e_TT };
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -141,8 +139,8 @@ struct Monadic {
   }
 
   template <typename T1>
-  __attribute__((pure)) static State<T1, Unit> state_put(const T1 s) {
-    return [=](T1 _x) mutable { return std::make_pair(Unit::e_TT, s); };
+  __attribute__((pure)) static State<T1, std::monostate> state_put(const T1 s) {
+    return [=](T1 _x) mutable { return std::make_pair(std::monostate{}, s); };
   }
 
   template <typename T1>
@@ -152,17 +150,17 @@ struct Monadic {
         [](std::function<std::pair<unsigned int, unsigned int>(unsigned int)>
                acc,
            T1 _x) {
-          return state_bind<unsigned int, unsigned int, unsigned int>(
-              acc, [](unsigned int _x0) {
-                return state_bind<unsigned int, unsigned int, unsigned int>(
-                    state_get<unsigned int>(), [](unsigned int n) {
-                      return state_bind<unsigned int, Unit, unsigned int>(
-                          state_put<unsigned int>((n + 1)),
-                          [=](Unit _x1) mutable {
-                            return state_return<unsigned int, unsigned int>(n);
-                          });
-                    });
-              });
+          return state_bind<unsigned int, unsigned int,
+                            unsigned int>(acc, [](unsigned int _x0) {
+            return state_bind<unsigned int, unsigned int, unsigned int>(
+                state_get<unsigned int>(), [](unsigned int n) {
+                  return state_bind<unsigned int, std::monostate, unsigned int>(
+                      state_put<unsigned int>((n + 1)),
+                      [=](std::monostate _x1) mutable {
+                        return state_return<unsigned int, unsigned int>(n);
+                      });
+                });
+          });
         },
         state_return<unsigned int, unsigned int>(0u));
   }

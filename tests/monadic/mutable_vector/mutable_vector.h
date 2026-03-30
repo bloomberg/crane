@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <type_traits>
+#include <variant>
 #include <vector>
 
 template <typename F, typename R, typename... Args>

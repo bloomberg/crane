@@ -46,7 +46,7 @@ PromOps::prom_data_or_zero(const std::shared_ptr<PromOps::state1> &s) {
 
 __attribute__((pure)) unsigned int
 PromOps::flagged_sum(const std::shared_ptr<PromOps::state2> &s) {
-  return ((s->acc2 + s->prom_addr2) + [&](void) {
+  return ((s->acc2 + s->prom_addr2) + [&]() {
     if (s->prom_enable2) {
       return s->prom_data2;
     } else {

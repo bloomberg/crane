@@ -15,6 +15,7 @@
 #include <bsl_variant.h>
 #include <bsl_vector.h>
 #include <mini_stm.h>
+#include <variant>
 
 using namespace BloombergLP;
 template <class From, class To>
@@ -99,7 +100,7 @@ template <typename K, typename V> struct CHT {
     return CHT<int, int>::template assoc_lookup<K, V>(this->CHT::cht_eqb, k,
                                                       xs);
   }
-  __attribute__((pure)) void stm_put(const K k, const V v) const {
+  __attribute__((pure)) std::monostate stm_put(const K k, const V v) const {
     bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>> b =
         this->bucket_of(k);
     bsl::shared_ptr<List<bsl::pair<K, V>>> xs =
@@ -108,7 +109,7 @@ template <typename K, typename V> struct CHT {
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
             this->CHT::cht_eqb, k, v, xs);
     stm::writeTVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>(b, xs_);
-    return;
+    return std::monostate{};
   }
   __attribute__((pure)) bsl::optional<V> stm_delete(const K k) const {
     bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>> b =
@@ -149,8 +150,13 @@ template <typename K, typename V> struct CHT {
       return dflt;
     }
   }
-  __attribute__((pure)) void put(const K k, const V v) const {
-    return stm::atomically([&] { return this->stm_put(k, v); });
+  __attribute__((pure)) std::monostate put(const K k, const V v) const {
+    return stm::atomically([&] {
+      return [&]() {
+        this->stm_put(k, v);
+        return std::monostate{};
+      }();
+    });
   }
   __attribute__((pure)) bsl::optional<V> get(const K k) const {
     return stm::atomically([&] { return this->stm_get(k); });
@@ -246,7 +252,7 @@ template <typename K, typename V> struct CHT {
         xs->v());
   }
   template <typename T1, typename T2>
-  __attribute__((pure)) static bsl::vector<
+  static bsl::vector<
       bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>>>
   mk_buckets(const int64_t num) {
     bsl::vector<
@@ -275,8 +281,8 @@ template <typename K, typename V> struct CHT {
   }
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0,
             MapsTo<int64_t, T1> F1>
-  __attribute__((pure)) static bsl::shared_ptr<CHT<T1, T2>>
-  new_hash(F0 &&eqb, F1 &&hash, const int64_t requested) {
+  static bsl::shared_ptr<CHT<T1, T2>> new_hash(F0 &&eqb, F1 &&hash,
+                                               const int64_t requested) {
     int64_t n = bsl::max(requested, int64_t(1));
     bsl::vector<
         bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>>>

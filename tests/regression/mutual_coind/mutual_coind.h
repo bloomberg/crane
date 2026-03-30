@@ -122,7 +122,7 @@ struct MutualCoind {
     static std::shared_ptr<streamA<t_A>>
     lazy_(std::function<std::shared_ptr<streamA<t_A>>()> thunk) {
       return std::make_shared<streamA<t_A>>(
-          std::function<variant_t()>([=](void) mutable -> variant_t {
+          std::function<variant_t()>([=]() mutable -> variant_t {
             std::shared_ptr<streamA<t_A>> _tmp = thunk();
             return _tmp->v();
           }));
@@ -180,7 +180,7 @@ struct MutualCoind {
     static std::shared_ptr<streamB<t_A>>
     lazy_(std::function<std::shared_ptr<streamB<t_A>>()> thunk) {
       return std::make_shared<streamB<t_A>>(
-          std::function<variant_t()>([=](void) mutable -> variant_t {
+          std::function<variant_t()>([=]() mutable -> variant_t {
             std::shared_ptr<streamB<t_A>> _tmp = thunk();
             return _tmp->v();
           }));
@@ -204,14 +204,13 @@ struct MutualCoind {
   template <typename T1>
   static std::shared_ptr<streamB<T1>>
   tailA(const std::shared_ptr<streamA<T1>> &s) {
-    return streamB<T1>::lazy_(
-        [=](void) mutable -> std::shared_ptr<streamB<T1>> {
-          return std::visit(
-              Overloaded{
-                  [](const typename streamA<T1>::ConsA _args)
-                      -> std::shared_ptr<streamB<T1>> { return _args.d_a1; }},
-              s->v());
-        });
+    return streamB<T1>::lazy_([=]() mutable -> std::shared_ptr<streamB<T1>> {
+      return std::visit(Overloaded{[](const typename streamA<T1>::ConsA _args)
+                                       -> std::shared_ptr<streamB<T1>> {
+                          return _args.d_a1;
+                        }},
+                        s->v());
+    });
   }
 
   template <typename T1>
@@ -226,14 +225,13 @@ struct MutualCoind {
   template <typename T1>
   static std::shared_ptr<streamA<T1>>
   tailB(const std::shared_ptr<streamB<T1>> &s) {
-    return streamA<T1>::lazy_(
-        [=](void) mutable -> std::shared_ptr<streamA<T1>> {
-          return std::visit(
-              Overloaded{
-                  [](const typename streamB<T1>::ConsB _args)
-                      -> std::shared_ptr<streamA<T1>> { return _args.d_a1; }},
-              s->v());
-        });
+    return streamA<T1>::lazy_([=]() mutable -> std::shared_ptr<streamA<T1>> {
+      return std::visit(Overloaded{[](const typename streamB<T1>::ConsB _args)
+                                       -> std::shared_ptr<streamA<T1>> {
+                          return _args.d_a1;
+                        }},
+                        s->v());
+    });
   }
 
   static std::shared_ptr<streamA<unsigned int>> countA(const unsigned int n);

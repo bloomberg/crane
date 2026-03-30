@@ -22,10 +22,10 @@ struct SetTestPinUpdate {
   static std::shared_ptr<state> set_test_pin(std::shared_ptr<state> s,
                                              const bool v);
   static inline const unsigned int t = []() {
-    return [](void) {
+    return []() {
       std::shared_ptr<state> s_ =
           set_test_pin(std::make_shared<state>(state{6u, false}), true);
-      return (s_->acc + [&](void) {
+      return (s_->acc + [&]() {
         if (s_->test_pin) {
           return 1u;
         } else {

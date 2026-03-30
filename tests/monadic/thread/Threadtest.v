@@ -8,32 +8,32 @@ Import ConcNotations.
 
 Module threadtest.
 
-  Fixpoint fun1 (n : nat)  : Conc void :=
+  Fixpoint fun1 (n : nat)  : Conc unit :=
     match n with
     | 0 => print_endline "fun1 is done!!!" ;;
-           Cret ghost
+           Cret tt
     | S n => print_endline "fun1 is sleeping for 100ms" ;;
              sleep 100%int63 ;;
              fun1 n
     end.
 
-  Fixpoint fun2 (n : nat) : Conc void :=
+  Fixpoint fun2 (n : nat) : Conc unit :=
     match n with
     | 0 => print_endline "fun2 is done!!!" ;;
-           Cret ghost
+           Cret tt
     | S n => print_endline "fun2 is sleeping for 150ms" ;;
              sleep 150%int63 ;;
              fun2 n
     end.
 
-  Definition test (m n : nat) : Conc void :=
+  Definition test (m n : nat) : Conc unit :=
     t1 <- mk_thread fun1 m ;;
     t2 <- mk_thread fun2 n ;;
     join t1 ;;
     join t2 ;;
-    Cret ghost.
+    Cret tt.
 
-  Definition test2 (m n : nat) : void := Ceval (test m n).
+  Definition test2 (m n : nat) : unit := Ceval (test m n).
 
 End threadtest.
 

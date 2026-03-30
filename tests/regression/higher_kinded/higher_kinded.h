@@ -16,7 +16,8 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct HigherKinded {
-  template <typename T1, typename F0, typename F1>
+  template <typename T1, typename T2 = void, typename T3 = void, typename F0,
+            typename F1>
   static T1 hk_map(F0 &&map_f, F1 &&f, const T1 x) {
     return map_f(f, x);
   }

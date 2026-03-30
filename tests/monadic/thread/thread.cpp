@@ -5,6 +5,7 @@
 #include <string>
 #include <thread>
 #include <type_traits>
+#include <variant>
 
 void threadtest::fun1(const unsigned int n) {
   if (n <= 0) {
@@ -14,7 +15,10 @@ void threadtest::fun1(const unsigned int n) {
     unsigned int n0 = n - 1;
     std::cout << "fun1 is sleeping for 100ms"s << '\n';
     std::this_thread::sleep_for(std::chrono::milliseconds(int64_t(100)));
-    return fun1(n0);
+    {
+      fun1(n0);
+      return;
+    }
   }
 }
 
@@ -26,7 +30,10 @@ void threadtest::fun2(const unsigned int n) {
     unsigned int n0 = n - 1;
     std::cout << "fun2 is sleeping for 150ms"s << '\n';
     std::this_thread::sleep_for(std::chrono::milliseconds(int64_t(150)));
-    return fun2(n0);
+    {
+      fun2(n0);
+      return;
+    }
   }
 }
 
@@ -39,5 +46,6 @@ void threadtest::test(const unsigned int m, const unsigned int n) {
 }
 
 void threadtest::test2(const unsigned int m, const unsigned int n) {
-  return test(m, n);
+  test(m, n);
+  return;
 }

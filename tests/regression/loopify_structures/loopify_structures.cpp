@@ -334,7 +334,7 @@ LoopifyStructures::ltree_max(std::shared_ptr<LoopifyStructures::ltree> t1,
                         if (t2.use_count() == 1 && t2->v().index() == 0) {
                           auto &_rf = std::get<0>(t2->v_mut());
                           unsigned int y = std::move(_rf.d_a0);
-                          _rf.d_a0 = [&](void) {
+                          _rf.d_a0 = [&]() {
                             if (_args.d_a0 <= y) {
                               return y;
                             } else {
@@ -348,7 +348,7 @@ LoopifyStructures::ltree_max(std::shared_ptr<LoopifyStructures::ltree> t1,
                                                  ltree::LLeaf _args0)
                                              -> std::shared_ptr<
                                                  LoopifyStructures::ltree> {
-                                           return ltree::lleaf([&](void) {
+                                           return ltree::lleaf([&]() {
                                              if (_args.d_a0 <= _args0.d_a0) {
                                                return _args0.d_a0;
                                              } else {

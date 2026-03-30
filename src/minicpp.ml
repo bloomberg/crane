@@ -96,6 +96,8 @@ type cpp_type =
   | Tvar of int * Id.t option
   | Tid of Id.t * cpp_type list
     (* Simple Id-based type, for local names like nested structs *)
+  | Tid_external of Id.t * cpp_type list
+    (* External type from a header — never struct-qualified *)
   | Tglob of GlobRef.t * cpp_type list * cpp_expr list
   | Tfun of cpp_type list * cpp_type
   | Tmod of cpp_tymod * cpp_type
@@ -294,6 +296,7 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   match ty with
   | Tglob (r, tys, args) -> Tglob (r, List.map (map_cpp_type f) tys, args)
   | Tid (id, tys) -> Tid (id, List.map (map_cpp_type f) tys)
+  | Tid_external (id, tys) -> Tid_external (id, List.map (map_cpp_type f) tys)
   | Tfun (dom, cod) -> Tfun (List.map (map_cpp_type f) dom, map_cpp_type f cod)
   | Tmod (m, t) -> Tmod (m, map_cpp_type f t)
   | Tshared_ptr t -> Tshared_ptr (map_cpp_type f t)

@@ -176,7 +176,7 @@ public:
   static std::shared_ptr<Colist<t_A>>
   lazy_(std::function<std::shared_ptr<Colist<t_A>>()> thunk) {
     return std::make_shared<Colist<t_A>>(
-        std::function<variant_t()>([=](void) mutable -> variant_t {
+        std::function<variant_t()>([=]() mutable -> variant_t {
           std::shared_ptr<Colist<t_A>> _tmp = thunk();
           return _tmp->v();
         }));
@@ -211,7 +211,7 @@ public:
 
   template <typename T1, MapsTo<T1, t_A> F0>
   std::shared_ptr<Colist<T1>> comap(F0 &&f) const {
-    return Colist<T1>::lazy_([=, this](void) -> std::shared_ptr<Colist<T1>> {
+    return Colist<T1>::lazy_([=, this]() -> std::shared_ptr<Colist<T1>> {
       return std::visit(Overloaded{[](const typename Colist<t_A>::Conil _args)
                                        -> std::shared_ptr<Colist<T1>> {
                                      return Colist<T1>::conil();
@@ -229,7 +229,7 @@ public:
   static std::shared_ptr<Colist<std::shared_ptr<Nat>>>
   nats(std::shared_ptr<Nat> n) {
     return Colist<std::shared_ptr<Nat>>::lazy_(
-        [=](void) mutable -> std::shared_ptr<Colist<std::shared_ptr<Nat>>> {
+        [=]() mutable -> std::shared_ptr<Colist<std::shared_ptr<Nat>>> {
           return Colist<std::shared_ptr<Nat>>::cocons(n, nats(Nat::s(n)));
         });
   }

@@ -165,7 +165,7 @@ struct RamOps {
   static std::shared_ptr<List<std::shared_ptr<ram_bank_main>>>
   ram_write_main_sys(const std::shared_ptr<state_main> &s,
                      const unsigned int v);
-  static inline const unsigned int test_main_write_chain = [](void) {
+  static inline const unsigned int test_main_write_chain = []() {
     std::shared_ptr<ram_reg_main> rg0 =
         std::make_shared<ram_reg_main>(ram_reg_main{List<unsigned int>::cons(
             0u,
@@ -254,7 +254,7 @@ struct RamOps {
   static std::shared_ptr<List<std::shared_ptr<bank_port>>>
   ram_write_port_sys(const std::shared_ptr<state_port> &s,
                      const unsigned int v);
-  static inline const unsigned int test_port_write_chain = [](void) {
+  static inline const unsigned int test_port_write_chain = []() {
     std::shared_ptr<chip_port> ch0 = std::make_shared<chip_port>(chip_port{0u});
     std::shared_ptr<bank_port> bk0 = std::make_shared<bank_port>(
         bank_port{List<std::shared_ptr<chip_port>>::cons(
@@ -347,7 +347,7 @@ struct RamOps {
   static std::shared_ptr<List<std::shared_ptr<ram_bank_status>>>
   ram_write_status_sys(const std::shared_ptr<state_status> &s,
                        const unsigned int idx, const unsigned int v);
-  static inline const unsigned int test_status_write_chain = [](void) {
+  static inline const unsigned int test_status_write_chain = []() {
     std::shared_ptr<ram_reg_status> rg0 = std::make_shared<ram_reg_status>(
         ram_reg_status{List<unsigned int>::cons(
             0u, List<unsigned int>::cons(
@@ -608,7 +608,7 @@ struct RamOps {
                            List<std::shared_ptr<List<unsigned int>>>::nil())),
                    List<std::shared_ptr<
                        List<std::shared_ptr<List<unsigned int>>>>>::nil()));
-  static inline const bank_frame updated_bank_frame = [](void) {
+  static inline const bank_frame updated_bank_frame = []() {
     std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> ch =
         sample_bank_frame->nth(
             0u, List<std::shared_ptr<List<unsigned int>>>::nil());
@@ -681,14 +681,14 @@ struct RamOps {
                      const unsigned int b2, const unsigned int c2,
                      const unsigned int r2, const unsigned int i2);
   static inline const unsigned int test_addr_disjoint_bool =
-      ([](void) {
+      ([]() {
         if (ram_addr_disjointb(0u, 1u, 2u, 3u, 0u, 1u, 2u, 3u)) {
           return 1u;
         } else {
           return 0u;
         }
       }() +
-       [](void) {
+       []() {
          if (ram_addr_disjointb(0u, 1u, 2u, 3u, 0u, 1u, 2u, 4u)) {
            return 1u;
          } else {

@@ -96,7 +96,7 @@ struct ValidProgramChecks {
   __attribute__((pure)) static bool
   valid_program(const std::shared_ptr<List<unsigned int>> &bytes);
   static inline const unsigned int t =
-      ([](void) {
+      ([]() {
         if (valid_program(List<unsigned int>::cons(
                 1u, List<unsigned int>::cons(
                         2u, List<unsigned int>::cons(
@@ -107,7 +107,7 @@ struct ValidProgramChecks {
           return 0u;
         }
       }() +
-       [](void) {
+       []() {
          if (valid_program(List<unsigned int>::cons(
                  1u, List<unsigned int>::cons(
                          2u, List<unsigned int>::cons(

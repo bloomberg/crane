@@ -172,7 +172,7 @@ struct PulseParseCertificateCase {
       pulse_parse_certificate_self_consistent(sample_certificate);
   static inline const unsigned int sample_certificate_base =
       sample_certificate->certificate_base;
-  static inline const unsigned int sample_certificate_first_active = [](void) {
+  static inline const unsigned int sample_certificate_first_active = []() {
     if (sample_certificate->certificate_first_active.has_value()) {
       unsigned int idx = *sample_certificate->certificate_first_active;
       return std::move(idx);
@@ -180,7 +180,7 @@ struct PulseParseCertificateCase {
       return 99u;
     }
   }();
-  static inline const unsigned int sample_certificate_last_active = [](void) {
+  static inline const unsigned int sample_certificate_last_active = []() {
     if (sample_certificate->certificate_last_active.has_value()) {
       unsigned int idx = *sample_certificate->certificate_last_active;
       return std::move(idx);

@@ -106,7 +106,7 @@ template <typename K, typename V> struct CHT {
                                                       xs);
   }
 
-  __attribute__((pure)) void stm_put(const K k, const V v) const {
+  __attribute__((pure)) std::monostate stm_put(const K k, const V v) const {
     std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<K, V>>>>> b =
         this->bucket_of(k);
     std::shared_ptr<List<std::pair<K, V>>> xs = b->read();
@@ -114,7 +114,7 @@ template <typename K, typename V> struct CHT {
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
             this->CHT::cht_eqb, k, v, xs);
     b->write(xs_);
-    return;
+    return std::monostate{};
   }
 
   __attribute__((pure)) std::optional<V> stm_delete(const K k) const {
@@ -157,8 +157,13 @@ template <typename K, typename V> struct CHT {
     }
   }
 
-  __attribute__((pure)) void put(const K k, const V v) const {
-    return stm::atomically([&] { return this->stm_put(k, v); });
+  __attribute__((pure)) std::monostate put(const K k, const V v) const {
+    return stm::atomically([&] {
+      return [&]() {
+        this->stm_put(k, v);
+        return std::monostate{};
+      }();
+    });
   }
 
   __attribute__((pure)) std::optional<V> get(const K k) const {

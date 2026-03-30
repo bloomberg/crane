@@ -211,7 +211,8 @@ let pp_cpp_ind_header kn ind =
             mt ()
           else
             let ip = (kn, i) in
-            if is_custom (GlobRef.IndRef ip) then
+            if is_custom (GlobRef.IndRef ip)
+               || is_monad (GlobRef.IndRef ip) then
               fwd (i + 1)
             else
               let p = ind.ind_packets.(i) in
@@ -358,7 +359,8 @@ let pp_cpp_ind_header kn ind =
       else
         let ip = (kn, i) in
         let p = ind.ind_packets.(i) in
-        if is_custom (GlobRef.IndRef ip) then
+        if is_custom (GlobRef.IndRef ip)
+           || is_monad (GlobRef.IndRef ip) then
           pp (i + 1)
         else
           (* Get method candidates: first check if set via SEmodule processing,

@@ -1304,7 +1304,7 @@ __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::count_total_lunar(
           [](const typename List<
               std::shared_ptr<EpochCellGlyphTraceCase::HistoricalEclipse>>::Cons
                  _args) -> unsigned int {
-            unsigned int count_here = [&](void) {
+            unsigned int count_here = [&]() {
               switch (_args.d_a0->he_category) {
               case EclipseCategory::e_EC_TOTALLUNAR: {
                 return 1u;
@@ -1343,7 +1343,7 @@ EpochCellGlyphTraceCase::count_visible_total_lunar(
           [](const typename List<
               std::shared_ptr<EpochCellGlyphTraceCase::HistoricalEclipse>>::Cons
                  _args) -> unsigned int {
-            unsigned int count_here = [&](void) {
+            unsigned int count_here = [&]() {
               switch (_args.d_a0->he_category) {
               case EclipseCategory::e_EC_TOTALLUNAR: {
                 if (_args.d_a0->he_visible_mediterranean) {

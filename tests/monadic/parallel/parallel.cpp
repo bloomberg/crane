@@ -31,14 +31,12 @@ ParallelTest::ack(const std::pair<unsigned int, unsigned int> p) {
 
 __attribute__((pure)) std::pair<unsigned int, unsigned int>
 ParallelTest::fast(const unsigned int m, const unsigned int n) {
-  return [=](void) mutable {
-    std::pair<unsigned int, unsigned int> p = std::make_pair(m, n);
-    std::future<unsigned int> t1 = std::async(std::launch::async, ack, p);
-    std::future<unsigned int> t2 = std::async(std::launch::async, ack, p);
-    unsigned int r1 = t1.get();
-    unsigned int r2 = t2.get();
-    return std::make_pair(r1, r2);
-  }();
+  std::pair<unsigned int, unsigned int> p = std::make_pair(m, n);
+  std::future<unsigned int> t1 = std::async(std::launch::async, ack, p);
+  std::future<unsigned int> t2 = std::async(std::launch::async, ack, p);
+  unsigned int r1 = t1.get();
+  unsigned int r2 = t2.get();
+  return std::make_pair(r1, r2);
 }
 
 __attribute__((pure)) std::pair<unsigned int, unsigned int>

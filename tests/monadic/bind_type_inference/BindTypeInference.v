@@ -8,8 +8,6 @@ From Crane Require Import Mapping.Std.
 From Crane Require Import Monads.ITree Monads.IO.
 From Crane Require Import External.Vector.
 
-Import MonadNotations.
-
 Module BindTypeInference.
 
   Open Scope int63.
@@ -17,33 +15,33 @@ Module BindTypeInference.
   (* Case 1: Parameter is unit, return type has type variable *)
   (* bind : IO unit -> (unit -> IO B) -> IO B *)
   (* Here A=unit (no metas), B=list int (concrete but through a polymorphic path) *)
-  Definition ignoreAndReturn {B : Type} (b : B) : IO B :=
+  Definition ignoreAndReturn {B : Type} (b : B) : itree iIO B :=
     _ <- Ret tt ;;
     Ret b.
 
-  Definition test1 : IO int :=
+  Definition test1 : itree iIO int :=
     ignoreAndReturn 42.
 
   (* Case 2: More complex - parameter and return have different type variables *)
   (* This tests if B's metas get resolved when A's metas are unrelated *)
-  Definition transform {A B : Type} (ma : IO A) (f : A -> B) : IO B :=
+  Definition transform {A B : Type} (ma : itree iIO A) (f : A -> B) : itree iIO B :=
     x <- ma ;;
     Ret (f x).
 
-  Definition test2 : IO int :=
+  Definition test2 : itree iIO int :=
     transform (Ret tt) (fun _ => 42).
 
   (* Case 3: Nested binds with different type variables *)
-  Definition nested {A B C : Type} (a : A) (f : A -> B) (g : B -> C) : IO C :=
+  Definition nested {A B C : Type} (a : A) (f : A -> B) (g : B -> C) : itree iIO C :=
     x <- Ret a ;;
     y <- Ret (f x) ;;
     Ret (g y).
 
-  Definition test3 : IO int :=
+  Definition test3 : itree iIO int :=
     nested tt (fun _ => true) (fun b => if b then 1 else 0).
 
   (* Case 4: Vector operations returning different type *)
-  Definition test4 : IO int :=
+  Definition test4 : itree iIO int :=
     v <- emptyVec int ;;
     push v 1 ;;
     push v 2 ;;
@@ -54,12 +52,12 @@ Module BindTypeInference.
   (* Here A = int, B = list int - testing if list's type param resolves *)
   Definition intToList (n : int) : list int := cons n nil.
 
-  Definition test5 : IO (list int) :=
+  Definition test5 : itree iIO (list int) :=
     x <- Ret (1 : int) ;;
     Ret (intToList x).
 
   (* Case 6: Direct nested bind - no separate function *)
-  Definition test6 : IO int :=
+  Definition test6 : itree iIO int :=
     x <- Ret tt ;;
     y <- Ret true ;;
     Ret (if y then 42 else 0).

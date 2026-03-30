@@ -242,7 +242,7 @@ struct LoopifyListGenerators {
       return List<unsigned int>::nil();
     } else {
       unsigned int n_ = n - 1;
-      return List<unsigned int>::cons(f(0u), [&](void) {
+      return List<unsigned int>::cons(f(0u), [&]() {
         std::function<std::shared_ptr<List<unsigned int>>(unsigned int)> go;
         go = [&](unsigned int i) -> std::shared_ptr<List<unsigned int>> {
           struct _Enter {

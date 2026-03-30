@@ -204,7 +204,7 @@ struct WpmOps {
   };
 
   static std::shared_ptr<state4> execute_wpm4(std::shared_ptr<state4> s);
-  static inline const unsigned int test_wpm_update_gate = [](void) {
+  static inline const unsigned int test_wpm_update_gate = []() {
     std::unique_ptr<state4> s = std::make_unique<state4>(state4{
         List<unsigned int>::cons(
             10u,

@@ -6,23 +6,21 @@ From Crane Require Import Mapping.BDE Monads.ITree.
 
 Module IO_axioms.
   Axiom iIO : Type -> Type.
-  Axiom iprint : string -> iIO void.
-  Axiom iprint_endline : string -> iIO void.
+  Axiom iprint : string -> iIO unit.
+  Axiom iprint_endline : string -> iIO unit.
   Axiom iget_line : iIO string.
   Axiom iread : string -> iIO string.
 
 End IO_axioms.
 
 Crane Extract Skip Module IO_axioms.
-Import IO_axioms.
+Export IO_axioms.
 
-Definition IO : Type -> Type := itree iIO.
-Definition print (s : string) : IO void := trigger (iprint s).
-Definition print_endline (s : string) : IO void := trigger (iprint_endline s).
-Definition get_line : IO string := trigger iget_line.
-Definition read (s : string) : IO string := trigger (iread s).
+Definition print (s : string) : itree iIO unit := ITree.trigger (iprint s).
+Definition print_endline (s : string) : itree iIO unit := ITree.trigger (iprint_endline s).
+Definition get_line : itree iIO string := ITree.trigger iget_line.
+Definition read (s : string) : itree iIO string := ITree.trigger (iread s).
 
-Crane Extract Inlined Constant IO => "%t0".
 Crane Extract Inlined Constant print => "bsl::cout << %a0".
 Crane Extract Inlined Constant print_endline => "bsl::cout << %a0 << '\n'".
 Crane Extract Inlined Constant get_line =>

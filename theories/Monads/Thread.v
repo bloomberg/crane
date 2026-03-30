@@ -13,9 +13,9 @@ Axiom Ceval : forall {A}, @Conc 0 A -> A.
 
 Axiom thread : Type.
 Axiom mk_thread  : forall {A B}, (A -> B) -> A -> @Conc 1 thread.
-Axiom join : thread -> @Conc (PrimInt63.sub 0 1) void.
-Axiom sleep : int -> @Conc 0 void.
-Axiom print_endline : string -> @Conc 0 void.
+Axiom join : thread -> @Conc (PrimInt63.sub 0 1) unit.
+Axiom sleep : int -> @Conc 0 unit.
+Axiom print_endline : string -> @Conc 0 unit.
 
 Crane Extract Monad Conc [ bind := Cbind , ret := Cret ].
 Crane Extract Inlined Constant Ceval => "%a0".

@@ -9,7 +9,8 @@
  (theories
    Stdlib
    Crane
-   Equations)
+   Equations
+   ITree ExtLib Paco)
  (flags (:standard -output-directory %{project_root}/tests/regression)))
 
 ; Test rules - compile C++ and run tests
@@ -2599,3 +2600,36 @@
   (alias runtest)
   (deps lowercase_eponymous_record.t.exe)
   (action (run ./lowercase_eponymous_record.t.exe))))
+
+(subdir unit_void_edge
+ (rule
+  (targets unit_void_edge.t.exe)
+  (deps UnitVoidEdge.vo unit_void_edge.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unit_void_edge.t.exe unit_void_edge.cpp unit_void_edge.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps unit_void_edge.t.exe)
+  (action (run ./unit_void_edge.t.exe))))
+
+(subdir unit_void_edge2
+ (rule
+  (targets unit_void_edge2.t.exe)
+  (deps UnitVoidEdge2.vo unit_void_edge2.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unit_void_edge2.t.exe unit_void_edge2.cpp unit_void_edge2.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps unit_void_edge2.t.exe)
+  (action (run ./unit_void_edge2.t.exe))))
+
+(subdir unit_void_stress
+ (rule
+  (targets unit_void_stress.t.exe)
+  (deps UnitVoidStress.vo unit_void_stress.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unit_void_stress.t.exe unit_void_stress.cpp unit_void_stress.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps unit_void_stress.t.exe)
+  (action (run ./unit_void_stress.t.exe))))

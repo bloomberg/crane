@@ -20,6 +20,12 @@ Axiom void : Type.
 Axiom ghost : void.
 Crane Extract Void void [ ghost ].
 
+Crane Extract Inductive unit =>
+  "std::monostate"
+  [ "std::monostate{}" ]
+  "{ %br0 }"
+  From "variant".
+
 (* PrimArray - persistent copy-on-write array (persistent_array<T>). *)
 From Corelib Require PrimArray.
 Crane Extract Inlined Constant PrimArray.array => "persistent_array<%t0>" From "persistent_array.h".

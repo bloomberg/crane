@@ -467,15 +467,15 @@ struct LoopifyStructures {
                   unsigned int d2 = _f._s1;
                   unsigned int d3 = _f._s2;
                   unsigned int d4 = _result;
-                  _result = ([&](void) {
-                    if ([&](void) {
+                  _result = ([&]() {
+                    if ([&]() {
                           if (d1 <= d2) {
                             return std::move(d2);
                           } else {
                             return std::move(d1);
                           }
                         }() <=
-                        [&](void) {
+                        [&]() {
                           if (d3 <= d4) {
                             return std::move(d4);
                           } else {

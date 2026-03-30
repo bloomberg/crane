@@ -725,7 +725,7 @@ LoopifyListRelations::union_(const std::shared_ptr<List<unsigned int>> &l1,
               _continue = false;
             },
             [&](const typename List<unsigned int>::Cons _args) {
-              if ([&](void) {
+              if ([&]() {
                     std::function<bool(unsigned int,
                                        std::shared_ptr<List<unsigned int>>)>
                         member;
@@ -824,7 +824,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListRelations::intersection(
               _continue = false;
             },
             [&](const typename List<unsigned int>::Cons _args) {
-              if ([&](void) {
+              if ([&]() {
                     std::function<bool(unsigned int,
                                        std::shared_ptr<List<unsigned int>>)>
                         member;

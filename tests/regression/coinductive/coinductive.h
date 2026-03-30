@@ -61,7 +61,7 @@ struct Coinductive {
     static std::shared_ptr<stream>
     lazy_(std::function<std::shared_ptr<stream>()> thunk) {
       return std::make_shared<stream>(
-          std::function<variant_t()>([=](void) mutable -> variant_t {
+          std::function<variant_t()>([=]() mutable -> variant_t {
             std::shared_ptr<stream> _tmp = thunk();
             return _tmp->v();
           }));
@@ -82,7 +82,7 @@ struct Coinductive {
   template <MapsTo<unsigned int, unsigned int> F0>
   static std::shared_ptr<stream> smap(F0 &&f,
                                       const std::shared_ptr<stream> &s) {
-    return stream::lazy_([=](void) mutable -> std::shared_ptr<stream> {
+    return stream::lazy_([=]() mutable -> std::shared_ptr<stream> {
       return std::visit(Overloaded{[&](const typename stream::Cons _args)
                                        -> std::shared_ptr<stream> {
                           return stream::cons(f(_args.d_a0),
@@ -165,7 +165,7 @@ struct Coinductive {
     static std::shared_ptr<tree>
     lazy_(std::function<std::shared_ptr<tree>()> thunk) {
       return std::make_shared<tree>(
-          std::function<variant_t()>([=](void) mutable -> variant_t {
+          std::function<variant_t()>([=]() mutable -> variant_t {
             std::shared_ptr<tree> _tmp = thunk();
             return _tmp->v();
           }));

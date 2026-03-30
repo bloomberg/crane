@@ -708,6 +708,17 @@ let spec_header si () =
     else
       h
   in
+  (* Reified ITree types require the crane_itree.h runtime header.  Only
+     add it when the header isn't already pulled in by a user-specified
+     [From "crane_itree.h"] directive. *)
+  let h =
+    if Table.needs_itree_header ()
+       && not (List.exists (fun s -> String.equal s "crane_itree.h") (himports @ imps))
+    then
+      h ++ mk_include_quoted "crane_itree.h" ++ fnl ()
+    else
+      h
+  in
   (* let fun_concept = "template <typename F, typename Out, typename...
      In>\nconcept MapsTo = requires (const F &f, const In&... args) {\n{
      f(args...) } -> std::same_as<Out>;\n};" in *)
@@ -1027,6 +1038,25 @@ let print_structure_to_file (fn, si, mo) dry struc =
       pp_with ft (header fn ());
       pp_with ft (d.preamble mo comment opened unsafe_needs);
       pp_with ft (d.pp_struct struc);
+      (* Reified ITree mode: if a [main] function returning [itree E R] was
+         found, it was renamed to [_main].  Generate a [main()] wrapper that
+         calls [_main()->run()] to execute the reified tree. *)
+      ( match Table.get_main_function () with
+      | Some (main_name, _ret_ml_ty, struct_qual) ->
+        let qualified_name =
+          match struct_qual with
+          | Some sn -> Id.print sn ++ str "::" ++ Id.print main_name
+          | None -> Id.print main_name
+        in
+        let wrapper =
+          str "\n" ++
+          str "int main() {" ++ fnl () ++
+          str "  " ++ qualified_name ++ str "()->run();" ++ fnl () ++
+          str "  return 0;" ++ fnl () ++
+          str "}" ++ fnl ()
+        in
+        pp_with ft wrapper
+      | None -> () );
       Format.pp_print_flush ft ();
       Option.iter close_out cout
     with reraise ->

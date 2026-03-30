@@ -44,7 +44,7 @@ struct UnsoundAxioms {
   extract_proof_computation(const std::shared_ptr<ProofRec> &pr);
   __attribute__((pure)) static bool use_type_eq(const unsigned int n);
   static std::shared_ptr<Rec> impossible_rec();
-  static inline const unsigned int use_impossible = [](void) {
+  static inline const unsigned int use_impossible = []() {
     unsigned int a = impossible_rec()->f1;
     unsigned int b = impossible_rec()->f2;
     return (a + std::move(b));

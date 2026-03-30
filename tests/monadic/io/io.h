@@ -4,6 +4,7 @@
 #include <fstream>
 #include <string>
 #include <type_traits>
+#include <variant>
 
 using namespace std::string_literals;
 template <typename F, typename R, typename... Args>
@@ -14,11 +15,9 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-enum class Unit { e_TT };
-
 struct iotest {
   static void test1(const std::string _x);
-  static Unit test2(const std::string s);
+  static void test2(const std::string s);
   static void test3(const std::string s);
   static std::string test4();
   static void test5();

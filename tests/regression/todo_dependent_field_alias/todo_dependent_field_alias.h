@@ -39,7 +39,7 @@ struct TodoDependentFieldAlias {
     return _tcI0::op(_x0, _x1);
   }
 
-  static inline const unsigned int test_value = [](void) {
+  static inline const unsigned int test_value = []() {
     std::function<unsigned int(unsigned int, unsigned int)> alias =
         [](unsigned int _x0, unsigned int _x1) -> unsigned int {
       return pick_op<nat_magma>(_x0, _x1);
