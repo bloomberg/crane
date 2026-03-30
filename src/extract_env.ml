@@ -827,16 +827,13 @@ let formatter dry file =
     if dry then
       Format.make_formatter (fun _ _ _ -> ()) (fun _ -> ())
     else
-      match
-        file
-      with
-      | Some f -> Topfmt.with_output_to f
+      match file with
+      | Some f -> Format.formatter_of_out_channel f
       | None -> Format.formatter_of_buffer buf
   in
-  (* XXX: Fixme, this shouldn't depend on Topfmt *)
   (* We never want to see ellipsis ... in extracted code *)
   Format.pp_set_max_boxes ft max_int;
-  (* We reuse the width information given via "Set Printing Width" *)
+  (* Reuse the width from "Set Printing Width" if the user set one *)
   ( match Topfmt.get_margin () with
   | None -> ()
   | Some i ->

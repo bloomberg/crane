@@ -5807,8 +5807,19 @@ let detect_cps_params (self_ref : GlobRef.t) (n_params : int) (body : ml_ast) :
   walk body;
   Hashtbl.fold (fun k _ acc -> k :: acc) cps_set []
 
-(** TODO: CLEANUP: dom and cod are redundant with ty *)
-let gen_dfun n b dom cod ty temps =
+(** Generate a C++ function definition from an ML function body.
+
+    @param n     the global reference for the function being defined
+    @param b     the ML AST body
+    @param cty   the C++ type of the function (decomposed internally into domain
+                 and codomain)
+    @param ty    the original ML type (used for domain decomposition and type
+                 inference)
+    @param temps template type parameters *)
+let gen_dfun n b cty ty temps =
+  let dom, cod =
+    match cty with Tfun (d, c) -> (d, c) | t -> ([ Tvoid ], t)
+  in
   let rec get_dom l ty =
     match ty with
     | Tarr (t1, t2) -> get_dom (t1 :: l) t2
@@ -6741,8 +6752,8 @@ let gen_decl n b ty =
   let tvars = get_tvars cty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
   match cty with
-  | Tfun (dom, cod) ->
-    let f, env = gen_dfun n b dom cod ty temps in
+  | Tfun _ ->
+    let f, env = gen_dfun n b cty ty temps in
     (f, env, tvars)
   | _ ->
   match b with
@@ -6851,13 +6862,13 @@ let gen_decl_for_pp n b ty =
   in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
   match cty with
-  | Tfun (dom, cod) ->
-    let f, e = gen_dfun n b dom cod ty temps in
+  | Tfun (dom, _) ->
+    let f, e = gen_dfun n b cty ty temps in
     let fun_tys =
       List.filter_map
         (fun (ty, i) ->
           match ty with
-          | Tfun (dom, cod) -> Some (fun_tparam_id i)
+          | Tfun _ -> Some (fun_tparam_id i)
           | _ -> None )
         (List.mapi (fun i ty -> (ty, i)) dom)
     in
@@ -6878,8 +6889,12 @@ let gen_decl_for_pp n b ty =
     (Some ds, empty_env (), tc_param_ids @ tvars)
   | _ -> (None, empty_env (), tc_param_ids @ tvars)
 
-(** TODO: maybe cleanup this function/its name etc.. *)
-let gen_decl_for_dfuns n b ty =
+(** Generate a full C++ function definition for a [Dfix] member.
+
+    Simplifies the ML type, resolves promoted carrier references in the body,
+    converts to C++ types, and delegates to {!gen_dfun} for the actual
+    definition.  Returns [(decl, env, tvars)]. *)
+let gen_dfun_def n b ty =
   (* Simplify the ML type to resolve metavariables before converting to C++ *)
   let ty = type_simpl ty in
   (* Rewrite Tunknown in body types to promoted carrier refs. This allows
@@ -6909,20 +6924,20 @@ let gen_decl_for_dfuns n b ty =
     | _ -> []
   in
   match cty with
-  | Tfun (dom, cod) ->
-    let f, env = gen_dfun n b dom cod ty temps in
+  | Tfun (dom, _) ->
+    let f, env = gen_dfun n b cty ty temps in
     let fun_tys =
       List.filter_map
         (fun (ty, i) ->
           match ty with
-          | Tfun (dom, cod) -> Some (fun_tparam_id i)
+          | Tfun _ -> Some (fun_tparam_id i)
           | _ -> None )
         (List.mapi (fun i ty -> (ty, i)) dom)
     in
     let tvars = tc_param_ids @ tvars @ fun_tys in
     (f, env, tvars)
   | _ ->
-    let f, env = gen_dfun n b [Tvoid] cty ty temps in
+    let f, env = gen_dfun n b cty ty temps in
     (f, env, tc_param_ids @ tvars)
 
 (** Generate C++ function specification (for header files) *)
@@ -6981,8 +6996,11 @@ let gen_spec n b ty =
     | [] -> (inner, empty_env ())
     | l -> (Dtemplate (l, None, inner), empty_env ()) )
 
-(** TODO: maybe cleanup this function/its name etc.. *)
-let gen_spec_for_sfuns n b ty =
+(** Generate a C++ forward declaration (spec) for a struct-level function.
+
+    Produces a simpler signature than {!gen_dfun_def} — suitable for use in
+    struct bodies where the full definition is not needed. *)
+let gen_sfun_spec n b ty =
   let ty = type_simpl ty in
   let ty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
   let tvars = get_tvars ty in
@@ -6995,7 +7013,7 @@ let gen_spec_for_sfuns n b ty =
 let gen_dfuns (ns, bs, tys) =
   List.concat_map
     (fun (i, name) ->
-      let result = gen_decl_for_dfuns name bs.(i) tys.(i) in
+      let result = gen_dfun_def name bs.(i) tys.(i) in
       (* Discard lifted declarations here - they are template functions that
          belong only in the header file (.h), not the source file (.cpp).
          gen_dfuns_header will collect them for the header. *)
@@ -7024,13 +7042,13 @@ let rec decl_to_spec (d : cpp_decl) : cpp_decl =
 let gen_dfuns_header (ns, bs, tys) =
   List.concat_map
     (fun (i, name) ->
-      let ds, env, tvars = gen_decl_for_dfuns name bs.(i) tys.(i) in
+      let ds, env, tvars = gen_dfun_def name bs.(i) tys.(i) in
       let lifted = take_lifted_decls () in
       let lifted_results = List.map (fun d -> (d, empty_env ())) lifted in
       (* For non-template functions, derive the spec from the definition via
          decl_to_spec to ensure parameter types (owned vs borrowed) match
          exactly between the forward declaration and the out-of-line definition.
-         Previously used gen_spec_for_sfuns which ran independent escape
+         Previously used gen_sfun_spec which ran independent escape
          analysis and could produce different ownership decisions. *)
       let main_result =
         match tvars with
@@ -7044,25 +7062,25 @@ let gen_dfuns_header (ns, bs, tys) =
     functions, using the SAME signature as the full definitions. This ensures
     the specs match the out-of-line definitions (including concept-constrained
     template parameters). Unlike gen_dfuns_header which may use
-    gen_spec_for_sfuns (producing simpler signatures), this always derives the
-    spec from gen_decl_for_dfuns. *)
+    gen_sfun_spec (producing simpler signatures), this always derives the
+    spec from gen_dfun_def. *)
 let gen_dfuns_spec (ns, bs, tys) =
   List.concat_map
     (fun (i, name) ->
-      let ds, _env, _tvars = gen_decl_for_dfuns name bs.(i) tys.(i) in
+      let ds, _env, _tvars = gen_dfun_def name bs.(i) tys.(i) in
       ignore (take_lifted_decls ());
       [(decl_to_spec ds, empty_env ())] )
     (List.mapi (fun i name -> (i, name)) (Array.to_list ns))
 
 (** Generate both spec and def for a group of mutually recursive functions in
-    one pass. Calls gen_decl_for_dfuns ONCE per function, then derives:
+    one pass. Calls gen_dfun_def ONCE per function, then derives:
     - spec: decl_to_spec of the full definition (forward declaration)
     - def: the full definition (for templates) or None (for non-templates in
       header mode) Returns list of (spec, def_option, lifted_decls) *)
 let gen_dfuns_dual ~is_header (ns, bs, tys) =
   List.concat_map
     (fun (i, name) ->
-      let ds, env, tvars = gen_decl_for_dfuns name bs.(i) tys.(i) in
+      let ds, env, tvars = gen_dfun_def name bs.(i) tys.(i) in
       let lifted = take_lifted_decls () in
       let spec = (decl_to_spec ds, env) in
       let def =

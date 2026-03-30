@@ -81,13 +81,13 @@ val gen_dfuns_header :
 
 (** Generate forward declarations matching the full definition signatures.
     Unlike gen_dfuns_header which may simplify signatures for non-template
-    functions, this always derives specs from gen_decl_for_dfuns for signature
+    functions, this always derives specs from gen_dfun_def for signature
     consistency. *)
 val gen_dfuns_spec :
   GlobRef.t array * ml_ast array * ml_type array -> (cpp_decl * env) list
 
 (** Generate both spec and def for a group of mutually recursive functions in
-    one pass. Calls gen_decl_for_dfuns ONCE per function, then derives both spec
+    one pass. Calls gen_dfun_def ONCE per function, then derives both spec
     and def. Returns list of (spec, def_option, lifted_decls). *)
 val gen_dfuns_dual :
   is_header:bool ->
