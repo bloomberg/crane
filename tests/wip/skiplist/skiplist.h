@@ -317,7 +317,7 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static std::shared_ptr<SkipNode<T1, T2>>
+  static std::shared_ptr<SkipNode<T1, T2>>
   findPred_go(F0 &&ltK, const unsigned int fuel,
               const std::shared_ptr<SkipNode<T1, T2>> curr, const T1 target,
               const unsigned int level) {
@@ -343,7 +343,7 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static std::shared_ptr<SkipNode<T1, T2>>
+  static std::shared_ptr<SkipNode<T1, T2>>
   findPred(F0 &&ltK, const std::shared_ptr<SkipNode<T1, T2>> curr,
            const T1 target, const unsigned int level) {
     return SkipList<int, int>::template findPred_go<T1, T2>(ltK, 10000u, curr,
@@ -351,7 +351,7 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static SkipPath<T1, T2>
+  static SkipPath<T1, T2>
   findPath_aux(F0 &&ltK, const std::shared_ptr<SkipNode<T1, T2>> curr,
                const T1 target, const unsigned int level,
                const SkipPath<T1, T2> path) {
@@ -368,10 +368,9 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
-  linkAtLevel(const std::shared_ptr<SkipNode<T1, T2>> pred,
-              const std::shared_ptr<SkipNode<T1, T2>> newNode,
-              const unsigned int level) {
+  static void linkAtLevel(const std::shared_ptr<SkipNode<T1, T2>> pred,
+                          const std::shared_ptr<SkipNode<T1, T2>> newNode,
+                          const unsigned int level) {
     std::optional<std::shared_ptr<SkipNode<T1, T2>>> oldNext = ptr_to_opt(
         stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(pred->forward[level]));
     stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
@@ -383,11 +382,10 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
-  linkNode_aux(const SkipPath<T1, T2> path,
-               const std::shared_ptr<SkipNode<T1, T2>> head,
-               const std::shared_ptr<SkipNode<T1, T2>> newNode,
-               const unsigned int level) {
+  static void linkNode_aux(const SkipPath<T1, T2> path,
+                           const std::shared_ptr<SkipNode<T1, T2>> head,
+                           const std::shared_ptr<SkipNode<T1, T2>> newNode,
+                           const unsigned int level) {
     std::shared_ptr<SkipNode<T1, T2>> pred = path.get(level);
     SkipList<int, int>::template linkAtLevel<T1, T2>(pred, newNode, level);
     if (level <= 0) {
@@ -400,10 +398,10 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
-  extendPath_aux(const SkipPath<T1, T2> path,
-                 const std::shared_ptr<SkipNode<T1, T2>> head,
-                 const unsigned int level, const unsigned int maxLevel) {
+  static void extendPath_aux(const SkipPath<T1, T2> path,
+                             const std::shared_ptr<SkipNode<T1, T2>> head,
+                             const unsigned int level,
+                             const unsigned int maxLevel) {
     if (level <= 0) {
       return path.set(0u, head);
     } else {
@@ -419,10 +417,10 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
-  extendPath(const SkipPath<T1, T2> path,
-             const std::shared_ptr<SkipNode<T1, T2>> head,
-             const unsigned int needed, const unsigned int currentMax) {
+  static void extendPath(const SkipPath<T1, T2> path,
+                         const std::shared_ptr<SkipNode<T1, T2>> head,
+                         const unsigned int needed,
+                         const unsigned int currentMax) {
     if (PeanoNat::leb(needed, (currentMax + 1))) {
       return;
     } else {
@@ -433,20 +431,18 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
-  linkNode(const SkipPath<T1, T2> path,
-           const std::shared_ptr<SkipNode<T1, T2>> head,
-           const std::shared_ptr<SkipNode<T1, T2>> newNode) {
+  static void linkNode(const SkipPath<T1, T2> path,
+                       const std::shared_ptr<SkipNode<T1, T2>> head,
+                       const std::shared_ptr<SkipNode<T1, T2>> newNode) {
     unsigned int lvl = newNode->level;
     return SkipList<int, int>::template linkNode_aux<T1, T2>(
         path, head, newNode, std::move(lvl));
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
-  unlinkAtLevel(const std::shared_ptr<SkipNode<T1, T2>> pred,
-                const std::shared_ptr<SkipNode<T1, T2>> target,
-                const unsigned int level) {
+  static void unlinkAtLevel(const std::shared_ptr<SkipNode<T1, T2>> pred,
+                            const std::shared_ptr<SkipNode<T1, T2>> target,
+                            const unsigned int level) {
     std::optional<std::shared_ptr<SkipNode<T1, T2>>> targetNext =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
             target->forward[level]));
@@ -455,10 +451,9 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
-  unlinkNode_aux(const SkipPath<T1, T2> path,
-                 const std::shared_ptr<SkipNode<T1, T2>> target,
-                 const unsigned int level) {
+  static void unlinkNode_aux(const SkipPath<T1, T2> path,
+                             const std::shared_ptr<SkipNode<T1, T2>> target,
+                             const unsigned int level) {
     std::shared_ptr<SkipNode<T1, T2>> pred = path.get(level);
     SkipList<int, int>::template unlinkAtLevel<T1, T2>(pred, target, level);
     if (level <= 0) {
@@ -471,9 +466,8 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
-  unlinkNode(const SkipPath<T1, T2> path,
-             const std::shared_ptr<SkipNode<T1, T2>> target) {
+  static void unlinkNode(const SkipPath<T1, T2> path,
+                         const std::shared_ptr<SkipNode<T1, T2>> target) {
     unsigned int lvl = target->level;
     return SkipList<int, int>::template unlinkNode_aux<T1, T2>(path, target,
                                                                std::move(lvl));
@@ -481,9 +475,9 @@ template <typename K, typename V> struct SkipList {
 
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0,
             MapsTo<bool, T1, T1> F1>
-  __attribute__((pure)) static bool
-  findKey_aux(F0 &&ltK, F1 &&eqK, const std::shared_ptr<SkipNode<T1, T2>> curr,
-              const T1 target, const unsigned int level) {
+  static bool findKey_aux(F0 &&ltK, F1 &&eqK,
+                          const std::shared_ptr<SkipNode<T1, T2>> curr,
+                          const T1 target, const unsigned int level) {
     std::shared_ptr<SkipNode<T1, T2>> pred =
         SkipList<int, int>::template findPred<T1, T2>(ltK, curr, target, level);
     if (level <= 0) {
@@ -504,7 +498,7 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static std::optional<std::shared_ptr<SkipNode<T1, T2>>>
+  static std::optional<std::shared_ptr<SkipNode<T1, T2>>>
   findLast_aux(const unsigned int fuel,
                const std::shared_ptr<SkipNode<T1, T2>> curr) {
     if (fuel <= 0) {
@@ -523,10 +517,10 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
-  unlinkFirstFromHead(const std::shared_ptr<SkipNode<T1, T2>> head,
-                      const std::shared_ptr<SkipNode<T1, T2>> node,
-                      const unsigned int nodeLevel, const unsigned int lvl) {
+  static void unlinkFirstFromHead(const std::shared_ptr<SkipNode<T1, T2>> head,
+                                  const std::shared_ptr<SkipNode<T1, T2>> node,
+                                  const unsigned int nodeLevel,
+                                  const unsigned int lvl) {
     if (lvl <= 0) {
       std::optional<std::shared_ptr<SkipNode<T1, T2>>> nodeNext = ptr_to_opt(
           stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(node->forward[0u]));
@@ -558,7 +552,7 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
+  static void
   unlinkNodeAtAllLevels(const std::shared_ptr<SkipNode<T1, T2>> head,
                         const std::shared_ptr<SkipNode<T1, T2>> node,
                         const unsigned int lvl) {
@@ -586,7 +580,7 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   removeAll_aux(const unsigned int fuel,
                 const std::shared_ptr<SkipNode<T1, T2>> head,
                 const unsigned int maxLvl, const unsigned int acc) {
@@ -609,14 +603,14 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static std::optional<std::shared_ptr<SkipNode<T1, T2>>>
+  static std::optional<std::shared_ptr<SkipNode<T1, T2>>>
   next(const std::shared_ptr<SkipNode<T1, T2>> pair) {
     return ptr_to_opt(
         stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(pair->forward[0u]));
   }
 
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static std::optional<std::shared_ptr<SkipNode<T1, T2>>>
+  static std::optional<std::shared_ptr<SkipNode<T1, T2>>>
   findPrev_aux(F0 &&eqK, const unsigned int fuel,
                const std::shared_ptr<SkipNode<T1, T2>> curr,
                const std::shared_ptr<SkipNode<T1, T2>> _x, const T1 target) {
@@ -646,8 +640,7 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static T2
-  data(const std::shared_ptr<SkipNode<T1, T2>> _x0) {
+  static T2 data(const std::shared_ptr<SkipNode<T1, T2>> _x0) {
     return stm::readTVar<T2>(_x0->value);
   }
 
@@ -657,8 +650,8 @@ template <typename K, typename V> struct SkipList {
   static inline const unsigned int e_INVALID = 3u;
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static std::pair<
-      unsigned int, std::optional<std::shared_ptr<SkipNode<T1, T2>>>>
+  static std::pair<unsigned int,
+                   std::optional<std::shared_ptr<SkipNode<T1, T2>>>>
   bde_next(const std::shared_ptr<SkipNode<T1, T2>> pair) {
     std::optional<std::shared_ptr<SkipNode<T1, T2>>> nextOpt =
         SkipList<int, int>::template next<T1, T2>(pair);
@@ -674,8 +667,8 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static std::shared_ptr<SkipList<T1, T2>>
-  create(const T1 dummyKey, const T2 dummyVal) {
+  static std::shared_ptr<SkipList<T1, T2>> create(const T1 dummyKey,
+                                                  const T2 dummyVal) {
     std::shared_ptr<SkipNode<T1, T2>> headNode = SkipNode<T1, T2>::create(
         dummyKey, dummyVal, (((16u - 1u) > 16u ? 0 : (16u - 1u))));
     std::shared_ptr<stm::TVar<unsigned int>> lvlTV =
@@ -687,8 +680,8 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static std::shared_ptr<SkipList<T1, T2>>
-  createIO(const T1 dummyKey, const T2 dummyVal) {
+  static std::shared_ptr<SkipList<T1, T2>> createIO(const T1 dummyKey,
+                                                    const T2 dummyVal) {
     return stm::atomically([&] {
       return SkipList<int, int>::template create<T1, T2>(dummyKey, dummyVal);
     });
@@ -700,33 +693,33 @@ struct skiplist_test {
                                            const unsigned int _x1);
   __attribute__((pure)) static bool nat_eq(const unsigned int _x0,
                                            const unsigned int _x1);
-  __attribute__((pure)) static bool stm_test_insert_lookup();
-  __attribute__((pure)) static bool stm_test_delete();
-  __attribute__((pure)) static bool stm_test_update();
-  __attribute__((pure)) static bool stm_test_minimum();
-  __attribute__((pure)) static bool stm_test_length_isEmpty();
-  __attribute__((pure)) static bool stm_test_front_back();
-  __attribute__((pure)) static bool stm_test_popFront();
-  __attribute__((pure)) static bool stm_test_addUnique();
-  __attribute__((pure)) static bool stm_test_find();
-  __attribute__((pure)) static bool stm_test_navigation();
-  __attribute__((pure)) static bool stm_test_bounds();
-  __attribute__((pure)) static bool stm_test_removeAll();
-  __attribute__((pure)) static bool stm_test_bde_api();
-  __attribute__((pure)) static bool test_insert_lookup();
-  __attribute__((pure)) static bool test_delete();
-  __attribute__((pure)) static bool test_update();
-  __attribute__((pure)) static bool test_minimum();
-  __attribute__((pure)) static bool test_length_isEmpty();
-  __attribute__((pure)) static bool test_front_back();
-  __attribute__((pure)) static bool test_popFront();
-  __attribute__((pure)) static bool test_addUnique();
-  __attribute__((pure)) static bool test_find();
-  __attribute__((pure)) static bool test_navigation();
-  __attribute__((pure)) static bool test_bounds();
-  __attribute__((pure)) static bool test_removeAll();
-  __attribute__((pure)) static bool test_bde_api();
-  __attribute__((pure)) static unsigned int run_tests();
+  static bool stm_test_insert_lookup();
+  static bool stm_test_delete();
+  static bool stm_test_update();
+  static bool stm_test_minimum();
+  static bool stm_test_length_isEmpty();
+  static bool stm_test_front_back();
+  static bool stm_test_popFront();
+  static bool stm_test_addUnique();
+  static bool stm_test_find();
+  static bool stm_test_navigation();
+  static bool stm_test_bounds();
+  static bool stm_test_removeAll();
+  static bool stm_test_bde_api();
+  static bool test_insert_lookup();
+  static bool test_delete();
+  static bool test_update();
+  static bool test_minimum();
+  static bool test_length_isEmpty();
+  static bool test_front_back();
+  static bool test_popFront();
+  static bool test_addUnique();
+  static bool test_find();
+  static bool test_navigation();
+  static bool test_bounds();
+  static bool test_removeAll();
+  static bool test_bde_api();
+  static unsigned int run_tests();
 };
 
 #endif // INCLUDED_SKIPLIST

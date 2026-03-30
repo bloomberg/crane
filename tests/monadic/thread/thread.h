@@ -17,10 +17,9 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct threadtest {
-  __attribute__((pure)) static void fun1(const unsigned int n);
-  __attribute__((pure)) static void fun2(const unsigned int n);
-  __attribute__((pure)) static void test(const unsigned int m,
-                                         const unsigned int n);
+  static void fun1(const unsigned int n);
+  static void fun2(const unsigned int n);
+  static void test(const unsigned int m, const unsigned int n);
   static void test2(const unsigned int m, const unsigned int n);
 };
 

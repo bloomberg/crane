@@ -3525,7 +3525,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
               (List.map (fun id -> Tvar (0, Some id)) all_tvar_names)
           in
           let body = List.map (local_var_subst_stmt renamed_id rec_call) body in
-          let inner = Dfundef ([(lifted_ref, [])], cod, cpp_params, body) in
+          let inner = Dfundef ([(lifted_ref, [])], cod, cpp_params, body, false) in
           let lifted_decl = Dtemplate (all_temps_with_funs, None, inner) in
           add_lifted_decl lifted_decl )
         funs_compiled;
@@ -3986,7 +3986,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
 
         (* 9. Build and register the lifted declaration *)
         let inner =
-          Dfundef ([(lifted_ref, [])], cod, cpp_params, compiled_body)
+          Dfundef ([(lifted_ref, [])], cod, cpp_params, compiled_body, false)
         in
         let lifted_decl = Dtemplate (all_temps_with_funs, None, inner) in
         add_lifted_decl lifted_decl;
@@ -4207,7 +4207,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
               (List.map (fun id -> Tvar (0, Some id)) all_tvar_names)
           in
           let body = List.map (local_var_subst_stmt renamed_id rec_call) body in
-          let inner = Dfundef ([(lifted_ref, [])], cod, cpp_params, body) in
+          let inner = Dfundef ([(lifted_ref, [])], cod, cpp_params, body, false) in
           let lifted_decl = Dtemplate (all_temps_with_funs, None, inner) in
           add_lifted_decl lifted_decl )
         funs_compiled;
@@ -4669,7 +4669,8 @@ let gen_ind_cpp ?(consarg_names = [||]) vars name cnames tys =
                         (CPPfun_call
                            ( CPPmk_shared (Tglob (name, ty_vars, [])),
                              [CPPstruct (c, ty_vars, make_args)] ) ) );
-                 ] )
+                 ],
+                 false )
            in
            (ty_vars == [], make) )
          tys )
@@ -5880,6 +5881,12 @@ let detect_cps_params (self_ref : GlobRef.t) (n_params : int) (body : ml_ast) :
   walk body;
   Hashtbl.fold (fun k _ acc -> k :: acc) cps_set []
 
+(** Extract the codomain (final return type) of an ML type by stripping
+    arrows. *)
+let rec ml_codomain = function
+  | Miniml.Tarr (_, t2) -> ml_codomain t2
+  | t -> t
+
 (** Generate a C++ function definition from an ML function body.
 
     @param n     the global reference for the function being defined
@@ -5899,6 +5906,10 @@ let gen_dfun n b cty ty temps =
     | _ -> l
   in
   let mldom = get_dom [] ty in
+  (* Suppress __attribute__((pure)) for functions whose ML return type is
+     monadic — these perform side effects even though the C++ return type
+     may look pure after type erasure. *)
+  let no_pure = is_monadic_ml_type (ml_codomain ty) in
   (* Limit lambda collection to the number of type arrows. When a type alias
      like [State S A = S -> A * S] is used as a return type, the extraction may
      fully uncurry the body (producing more lambdas than the type has arrows),
@@ -6516,7 +6527,7 @@ let gen_dfun n b cty ty temps =
       in
       clear_current_type_vars ();
       clear_current_param_types ();
-      Dfundef ([(n, [])], cod, ids, sigma_asserts @ b) )
+      Dfundef ([(n, [])], cod, ids, sigma_asserts @ b, no_pure) )
     else
       (* Eta-expansion: the body 'b' references original params starting at
          MLrel 1. After adding k=|missing| new params to the environment, the
@@ -6551,7 +6562,7 @@ let gen_dfun n b cty ty temps =
       (* let b = List.map forward_fun_args b in *)
       clear_current_type_vars ();
       clear_current_param_types ();
-      Dfundef ([(n, [])], cod, ids, sigma_asserts @ b)
+      Dfundef ([(n, [])], cod, ids, sigma_asserts @ b, no_pure)
   in
   tctx.current_cpp_return_type <- saved_return_type;
   tctx.current_outer_function_name <- saved_outer_name;
@@ -6835,7 +6846,7 @@ let gen_decl n b ty =
        called. This avoids throwing during static initialization (which
        terminates the program before main). *)
     let body_expr = gen_expr (empty_env ()) b in
-    let inner = Dfundef ([(n, [])], cty, [], [Sreturn (Some body_expr)]) in
+    let inner = Dfundef ([(n, [])], cty, [], [Sreturn (Some body_expr)], false) in
     ( match temps with
     | [] -> (inner, empty_env (), tvars)
     | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
@@ -6953,7 +6964,7 @@ let gen_decl_for_pp n b ty =
     (* Axiom values: generate as zero-arg function so they throw when called,
        not at static init time *)
     let body_expr = gen_expr (empty_env ()) b in
-    let inner = Dfundef ([(n, [])], cty, [], [Sreturn (Some body_expr)]) in
+    let inner = Dfundef ([(n, [])], cty, [], [Sreturn (Some body_expr)], false) in
     let ds =
       match temps with
       | [] -> inner
@@ -7025,7 +7036,7 @@ let gen_spec n b ty =
   match b with
   | MLaxiom _ ->
     (* Axiom values: generate as zero-arg function declaration *)
-    let inner = Dfundef ([(n, [])], ty, [], []) in
+    let inner = Dfundef ([(n, [])], ty, [], [], false) in
     ( match temps with
     | [] -> (inner, empty_env ())
     | l -> (Dtemplate (l, None, inner), empty_env ()) )
@@ -7100,8 +7111,8 @@ let gen_dfuns (ns, bs, tys) =
     constraints). *)
 let rec decl_to_spec (d : cpp_decl) : cpp_decl =
   match d with
-  | Dfundef (ids, ret_ty, params, body) ->
-    let no_pure =
+  | Dfundef (ids, ret_ty, params, body, no_pure) ->
+    let no_pure = no_pure ||
       match body with
       | [Sreturn (Some (CPPabort _))] -> true
       | _ -> false

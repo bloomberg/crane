@@ -62,9 +62,9 @@ public:
 };
 
 struct TodoMonadicGlobalAlias {
-  __attribute__((pure)) static std::shared_ptr<Nat> base();
-  __attribute__((pure)) static std::shared_ptr<Nat> alias();
-  __attribute__((pure)) static std::shared_ptr<Nat> rebound();
+  static std::shared_ptr<Nat> base();
+  static std::shared_ptr<Nat> alias();
+  static std::shared_ptr<Nat> rebound();
 };
 
 #endif // INCLUDED_TODO_MONADIC_GLOBAL_ALIAS

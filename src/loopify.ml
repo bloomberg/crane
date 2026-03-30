@@ -4859,7 +4859,7 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
     @param params   Parameter list [(Id.t * cpp_type)]
     @param body     Original function body (statement list)
     @return A [Dfundef] declaration with the loopified body *)
-let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body =
+let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure =
   (* Register this function for mutual recursion detection *)
   register_fundef names params body;
   (* Try to inline mutual recursion partners *)
@@ -4884,7 +4884,7 @@ let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body =
   in
   (* Post-pass: loopify any self-recursive std::function lambdas *)
   let body = loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body in
-  Dfundef (names, ret_ty, params, body)
+  Dfundef (names, ret_ty, params, body, no_pure)
 
 (** Transform a struct method by loopifying its body.
 
@@ -5131,8 +5131,8 @@ let rec transform_decl ?(tparams = []) ~pp_type ~pp_expr = function
   | Dtemplate (tparams, constraint_opt, inner) ->
     Dtemplate
       (tparams, constraint_opt, transform_decl ~tparams ~pp_type ~pp_expr inner)
-  | Dfundef (names, ret_ty, params, body) ->
-    transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body
+  | Dfundef (names, ret_ty, params, body, no_pure) ->
+    transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure
   | Dstruct ds ->
     let self_ty = Tmod (TMconst, Tptr (Tglob (ds.ds_ref, [], []))) in
     (* Try inlining mutual recursion among struct fields before transforms *)
@@ -5150,8 +5150,8 @@ let rec transform_decl ?(tparams = []) ~pp_type ~pp_expr = function
        transforming *)
     List.iter
       (function
-        | Dfundef (names, _, params, body) -> register_fundef names params body
-        | Dtemplate (_, _, Dfundef (names, _, params, body)) ->
+        | Dfundef (names, _, params, body, _) -> register_fundef names params body
+        | Dtemplate (_, _, Dfundef (names, _, params, body, _)) ->
           register_fundef names params body
         | _ -> () )
       decls;

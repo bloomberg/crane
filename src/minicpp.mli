@@ -343,8 +343,9 @@ type cpp_decl =
       * cpp_type
       * (Id.t * cpp_type) list
       * cpp_stmt list
+      * bool
       (** Function definition: names with type args, return type, parameters,
-          body *)
+          body. Bool suppresses pure/constexpr (for monadic functions). *)
   | Dfundecl of
       (GlobRef.t * cpp_type list) list
       * cpp_type

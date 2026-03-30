@@ -75,34 +75,33 @@ public:
 };
 
 struct BindTypeInference {
-  template <typename T1>
-  __attribute__((pure)) static T1 ignoreAndReturn(const T1 b) {
+  template <typename T1> static T1 ignoreAndReturn(const T1 b) {
     Unit _x = Unit::e_TT;
     return b;
   }
 
-  __attribute__((pure)) static int64_t test1();
+  static int64_t test1();
 
   template <typename T1, typename T2, MapsTo<T2, T1> F1>
-  __attribute__((pure)) static T2 transform(const T1 ma, F1 &&f) {
+  static T2 transform(const T1 ma, F1 &&f) {
     T1 x = ma;
     return f(x);
   }
 
-  __attribute__((pure)) static int64_t test2();
+  static int64_t test2();
 
   template <typename T1, typename T2, typename T3, typename F1, typename F2>
-  __attribute__((pure)) static T3 nested(const T1 a, F1 &&f, F2 &&g) {
+  static T3 nested(const T1 a, F1 &&f, F2 &&g) {
     T1 x = a;
     T2 y = f(x);
     return g(y);
   }
 
-  __attribute__((pure)) static int64_t test3();
-  __attribute__((pure)) static int64_t test4();
+  static int64_t test3();
+  static int64_t test4();
   static std::shared_ptr<List<int64_t>> intToList(const int64_t n);
-  __attribute__((pure)) static std::shared_ptr<List<int64_t>> test5();
-  __attribute__((pure)) static int64_t test6();
+  static std::shared_ptr<List<int64_t>> test5();
+  static int64_t test6();
 };
 
 #endif // INCLUDED_BIND_TYPE_INFERENCE

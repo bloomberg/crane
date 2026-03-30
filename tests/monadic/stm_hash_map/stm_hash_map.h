@@ -260,7 +260,7 @@ template <typename K, typename V> struct CHT {
   }
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static std::vector<
+  static std::vector<
       std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>>>
   mk_buckets(const int64_t num) {
     std::vector<
@@ -290,8 +290,8 @@ template <typename K, typename V> struct CHT {
 
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0,
             MapsTo<int64_t, T1> F1>
-  __attribute__((pure)) static std::shared_ptr<CHT<T1, T2>>
-  new_hash(F0 &&eqb, F1 &&hash, const int64_t requested) {
+  static std::shared_ptr<CHT<T1, T2>> new_hash(F0 &&eqb, F1 &&hash,
+                                               const int64_t requested) {
     int64_t n = std::max(requested, int64_t(1));
     std::vector<
         std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>>>

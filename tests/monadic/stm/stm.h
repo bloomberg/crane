@@ -87,8 +87,7 @@ struct STM {};
 struct TVar {};
 
 template <typename T1, MapsTo<T1, T1> F1>
-__attribute__((pure)) void modifyTVar(const std::shared_ptr<stm::TVar<T1>> a,
-                                      F1 &&f) {
+void modifyTVar(const std::shared_ptr<stm::TVar<T1>> a, F1 &&f) {
   T1 val = a->read();
   a->write(f(val));
   return;
@@ -96,8 +95,7 @@ __attribute__((pure)) void modifyTVar(const std::shared_ptr<stm::TVar<T1>> a,
 
 struct stmtest {
   template <typename T1, MapsTo<bool, T1> F1>
-  __attribute__((pure)) static T1
-  readOrRetry(const std::shared_ptr<stm::TVar<T1>> tv, F1 &&ok) {
+  static T1 readOrRetry(const std::shared_ptr<stm::TVar<T1>> tv, F1 &&ok) {
     T1 x = tv->read();
     if (ok(x)) {
       return x;
@@ -106,26 +104,24 @@ struct stmtest {
     }
   }
 
-  __attribute__((pure)) static unsigned int stm_basic_counter();
-  __attribute__((pure)) static unsigned int io_basic_counter();
-  __attribute__((pure)) static unsigned int stm_inc(const unsigned int x);
-  __attribute__((pure)) static unsigned int io_inc(const unsigned int x);
-  __attribute__((pure)) static unsigned int stm_add_self(const unsigned int x);
-  __attribute__((pure)) static unsigned int io_add_self(const unsigned int x);
-  __attribute__((pure)) static void stm_enqueue(
+  static unsigned int stm_basic_counter();
+  static unsigned int io_basic_counter();
+  static unsigned int stm_inc(const unsigned int x);
+  static unsigned int io_inc(const unsigned int x);
+  static unsigned int stm_add_self(const unsigned int x);
+  static unsigned int io_add_self(const unsigned int x);
+  static void stm_enqueue(
       const std::shared_ptr<stm::TVar<std::shared_ptr<List<unsigned int>>>> q,
       const unsigned int x);
-  __attribute__((pure)) static unsigned int stm_dequeue(
+  static unsigned int stm_dequeue(
       const std::shared_ptr<stm::TVar<std::shared_ptr<List<unsigned int>>>> q);
-  __attribute__((pure)) static unsigned int stm_tryDequeue(
+  static unsigned int stm_tryDequeue(
       const std::shared_ptr<stm::TVar<std::shared_ptr<List<unsigned int>>>> q,
       const unsigned int dflt);
-  __attribute__((pure)) static unsigned int
-  stm_queue_roundtrip(const unsigned int x);
-  __attribute__((pure)) static unsigned int
-  io_queue_roundtrip(const unsigned int x);
-  __attribute__((pure)) static unsigned int stm_orElse_retry_example();
-  __attribute__((pure)) static unsigned int io_orElse_retry_example();
+  static unsigned int stm_queue_roundtrip(const unsigned int x);
+  static unsigned int io_queue_roundtrip(const unsigned int x);
+  static unsigned int stm_orElse_retry_example();
+  static unsigned int io_orElse_retry_example();
 };
 
 #endif // INCLUDED_STM

@@ -171,8 +171,7 @@ struct Tokenizer {
               const std::basic_string_view<char> hard);
 
   template <typename T1>
-  __attribute__((pure)) static std::vector<T1>
-  list_to_vec_h(const std::shared_ptr<List<T1>> &l) {
+  static std::vector<T1> list_to_vec_h(const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{[](const typename List<T1>::Nil _args) -> std::vector<T1> {
                      return {};
@@ -186,14 +185,13 @@ struct Tokenizer {
   }
 
   template <typename T1>
-  __attribute__((pure)) static std::vector<T1>
-  list_to_vec(const std::shared_ptr<List<T1>> &l) {
+  static std::vector<T1> list_to_vec(const std::shared_ptr<List<T1>> &l) {
     return list_to_vec_h<T1>(l->rev());
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  __attribute__((pure)) static std::vector<T2>
-  list_to_vec_map_h(F0 &&f, const std::shared_ptr<List<T1>> &l) {
+  static std::vector<T2> list_to_vec_map_h(F0 &&f,
+                                           const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{[](const typename List<T1>::Nil _args) -> std::vector<T2> {
                      return {};
@@ -208,8 +206,8 @@ struct Tokenizer {
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  __attribute__((pure)) static std::vector<T2>
-  list_to_vec_map(F0 &&f, const std::shared_ptr<List<T1>> &l) {
+  static std::vector<T2> list_to_vec_map(F0 &&f,
+                                         const std::shared_ptr<List<T1>> &l) {
     return list_to_vec_map_h<T1, T2>(f, l->rev());
   }
 };

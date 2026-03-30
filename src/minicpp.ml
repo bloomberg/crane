@@ -419,6 +419,7 @@ type cpp_decl =
       * cpp_type
       * (Id.t * cpp_type) list
       * cpp_stmt list
+      * bool (* no_pure: suppress __attribute__((pure)) for monadic functions *)
   | Dfundecl of
       (GlobRef.t * cpp_type list) list
       * cpp_type

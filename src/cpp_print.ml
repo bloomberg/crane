@@ -1413,10 +1413,10 @@ and body_is_throw = function
     @param throws         whether the body unconditionally throws
     @param ret_ty         the C++ return type
     @param params         [(name, type)] pairs for all formal parameters *)
-and fun_qualifier ~can_constexpr ~throws ret_ty params =
-  if can_constexpr && not throws && is_constexpr_eligible ret_ty params then
+and fun_qualifier ~can_constexpr ~throws ~no_pure ret_ty params =
+  if can_constexpr && not throws && not no_pure && is_constexpr_eligible ret_ty params then
     str "constexpr "
-  else if is_pure_return_type ret_ty && not throws then
+  else if is_pure_return_type ret_ty && not throws && not no_pure then
     str "__attribute__((pure)) "
   else
     mt ()
@@ -1597,7 +1597,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     in
     let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
     let qualifier =
-      fun_qualifier ~can_constexpr:true ~throws:(body_is_throw body)
+      fun_qualifier ~can_constexpr:true ~throws:(body_is_throw body) ~no_pure:false
         ret_ty params
     in
     h
@@ -1617,7 +1617,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
         (List.rev params)
     in
     let qualifier =
-      fun_qualifier ~can_constexpr:true ~throws:false ret_ty params
+      fun_qualifier ~can_constexpr:true ~throws:false ~no_pure:false ret_ty params
     in
     h
       ( qualifier
@@ -1660,7 +1660,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     in
     let doc_comment = pp_doc_comment_for_name (Id.to_string mf_name) in
     let qualifier =
-      fun_qualifier ~can_constexpr:mf_is_static ~throws:false
+      fun_qualifier ~can_constexpr:mf_is_static ~throws:false ~no_pure:false
         mf_ret_type mf_params
     in
     doc_comment
@@ -1854,7 +1854,7 @@ let pp_meyers_singleton env id ty expr_pp =
 (** Extract the primary GlobRef from a declaration, if any. *)
 let rec decl_globref = function
   | Dtemplate (_, _, inner) -> decl_globref inner
-  | Dfundef ((r, _) :: _, _, _, _) -> Some r
+  | Dfundef ((r, _) :: _, _, _, _, _) -> Some r
   | Dstruct ds -> Some ds.ds_ref
   | Dnspace (Some r, _) -> Some r
   | _ -> None
@@ -2002,7 +2002,7 @@ and pp_cpp_decl_raw env = function
       ++ pending_fwd
       ++ fnl ()
       ++ str "};" )
-  | Dfundef (ids, ret_ty, params, body) ->
+  | Dfundef (ids, ret_ty, params, body, no_pure) ->
     let params_s =
       pp_list
         (fun (id, ty) -> pp_cpp_type false [] ty ++ str " " ++ Id.print id)
@@ -2063,6 +2063,7 @@ and pp_cpp_decl_raw env = function
       fun_qualifier
         ~can_constexpr:(render_ctx.rc_in_struct && not is_out_of_struct_def)
         ~throws:(body_is_throw body)
+        ~no_pure
         ret_ty params
     in
     h
