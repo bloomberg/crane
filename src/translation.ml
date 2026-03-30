@@ -2142,7 +2142,6 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
   | MLcase (typ, t, pv) when is_custom_match pv ->
     let cexp = gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv in
     CPPfun_call (CPPlambda ([], None, [cexp], false), [])
-  (* TODO: SLOPPY and incomplete *)
   | MLcase (typ, t, pv)
     when (not (record_fields_of_type typ == [])) && Array.length pv == 1 ->
     let ids, r, pat, body = pv.(0) in
@@ -2205,7 +2204,8 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
             access
         else
           access
-      | _ -> CPPstring (Pstring.unsafe_of_string "TODOrecordProj") )
+      | _ ->
+        CErrors.anomaly (Pp.str "record field index out of bounds") )
     | MLapp (MLrel i, args) when i <= n ->
       let fld =
         try Some (List.nth non_erased_fields (n - i)) with _ -> None
@@ -2224,7 +2224,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
         CPPfun_call
           ( make_field_access (gen_expr env t) fld,
             List.rev_map (gen_expr env') args )
-      | _ -> CPPstring (Pstring.unsafe_of_string "TODOrecordProj") )
+      | _ -> CErrors.anomaly (Pp.str "record field index out of bounds") )
     | MLapp (MLmagic (MLrel i), args) when i <= n ->
       let fld =
         try Some (List.nth non_erased_fields (n - i)) with _ -> None
@@ -2241,7 +2241,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
         CPPfun_call
           ( make_field_access (gen_expr env t) fld,
             List.rev_map (gen_expr env') args )
-      | _ -> CPPstring (Pstring.unsafe_of_string "TODOrecordProj") )
+      | _ -> CErrors.anomaly (Pp.str "record field index out of bounds") )
     | _ ->
       (* Destructure record fields into local variables, then evaluate the body
          in an IIFE. push_vars' may rename variables to avoid shadowing
@@ -2272,7 +2272,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
             let e =
               match fld with
               | Some fld -> make_field_access (gen_expr env t) fld
-              | _ -> CPPstring (Pstring.unsafe_of_string "TODOrecordProj")
+              | _ -> CErrors.anomaly (Pp.str "record field index out of bounds")
             in
             Sasgn
               ( renamed_name,
@@ -2287,8 +2287,8 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
               asgns @ gen_stmts env' (fun x -> Sreturn (Some x)) body,
               false ),
           [] ) )
-    (* TODO: ugly. should better attempt when generating statements! *)
-    (* TODO: we don't currently support the fancy thing of pattern matching on record fields at the same time *)
+    (* Known limitation: simultaneous pattern matching on record fields is not
+       supported — each field is destructured individually. *)
   | MLcase (typ, t, pv) when lang () == Cpp -> gen_cpp_case typ t env pv
   | MLletin (_, ty, _, _) as a ->
     with_escape_analysis a (fun () ->
@@ -4469,6 +4469,79 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
   | MLmagic (MLexn msg) ->
     (* Handle MLexn wrapped in MLmagic *)
     [Sthrow msg]
+  | MLcase (typ, t, pv)
+    when (not (record_fields_of_type typ == [])) && Array.length pv == 1 ->
+    let ids, _r, _pat, body = pv.(0) in
+    let n = List.length ids in
+    let body' = match body with MLmagic b -> b | b -> b in
+    let is_simple =
+      match body' with
+      | MLrel i when i <= n -> true
+      | MLapp (MLrel i, _) when i <= n -> true
+      | MLapp (MLmagic (MLrel i), _) when i <= n -> true
+      | _ -> false
+    in
+    if is_simple then
+      (* Simple body: gen_expr handles these as direct field access (no IIFE),
+         so delegate to the default path. *)
+      let saved_dead = tctx.move_dead_after in
+      ( if not tctx.move_suppress_tail then
+          let tail_dead =
+            Escape.IntSet.filter
+              (fun i -> Escape.nb_occur_match i ast = 1)
+              tctx.move_owned_vars
+          in
+          tctx.move_dead_after <-
+            Escape.IntSet.union tctx.move_dead_after tail_dead );
+      let result = inline_iife k (gen_expr env ast) in
+      tctx.move_dead_after <- saved_dead;
+      result
+    else
+      (* Complex body: emit field extraction assignments as flat statements
+         instead of wrapping in an IIFE. This produces clean code for all
+         continuations (return, assignment, etc.). *)
+      let is_typeclass = Table.is_typeclass_type typ in
+      let all_fields = record_fields_of_type typ in
+      let non_erased_fields = List.filter_map Fun.id all_fields in
+      let make_field_access base_expr fld =
+        if is_typeclass then
+          let fld_name = Id.of_string (Common.pp_global_name Term fld) in
+          CPPqualified (base_expr, fld_name)
+        else
+          CPPget' (base_expr, fld)
+      in
+      let renamed_ids, env' =
+        push_vars'
+          (List.rev_map
+             (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
+             ids )
+          env
+      in
+      let renamed_ids_fwd = List.rev renamed_ids in
+      let tvars = get_current_type_vars () in
+      let asgns =
+        List.mapi
+          (fun i ((renamed_name, _), (_, ty)) ->
+            let fld =
+              try Some (List.nth non_erased_fields i) with _ -> None
+            in
+            let e =
+              match fld with
+              | Some fld -> make_field_access (gen_expr env t) fld
+              | _ ->
+                CErrors.anomaly (Pp.str "record field index out of bounds")
+            in
+            Sasgn
+              ( renamed_name,
+                Some (convert_ml_type_to_cpp_type env Refset'.empty tvars ty),
+                e ) )
+          (List.combine renamed_ids_fwd ids)
+      in
+      push_env_types
+        (List.map
+           (fun ((n, _), (_, ty)) -> (n, ty))
+           (List.combine renamed_ids_fwd ids) );
+      asgns @ gen_stmts env' k body
   | t ->
     (* Tail position: all owned variables used here are at their last use. Set
        move_dead_after to include all owned variables that occur exactly once in

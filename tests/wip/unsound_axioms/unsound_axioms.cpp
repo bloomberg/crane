@@ -40,11 +40,9 @@ std::shared_ptr<UnsoundAxioms::Rec> UnsoundAxioms::impossible_rec() {
 
 __attribute__((pure)) unsigned int
 UnsoundAxioms::from_false(const std::shared_ptr<UnsoundAxioms::Rec> &r) {
-  return [&](void) {
-    std::any _x = r->f1;
-    std::any _x0 = r->f2;
-    throw std::logic_error("absurd case");
-  }();
+  std::any _x = r->f1;
+  std::any _x0 = r->f2;
+  throw std::logic_error("absurd case");
 }
 
 __attribute__((pure)) unsigned int

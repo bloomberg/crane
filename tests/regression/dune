@@ -2588,3 +2588,14 @@
   (alias runtest)
   (deps iife_name_clash.t.exe)
   (action (run ./iife_name_clash.t.exe))))
+
+(subdir lowercase_eponymous_record
+ (rule
+  (targets lowercase_eponymous_record.t.exe)
+  (deps LowercaseEponymousRecord.vo lowercase_eponymous_record.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lowercase_eponymous_record.t.exe lowercase_eponymous_record.cpp lowercase_eponymous_record.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lowercase_eponymous_record.t.exe)
+  (action (run ./lowercase_eponymous_record.t.exe))))
