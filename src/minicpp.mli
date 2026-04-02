@@ -164,6 +164,15 @@ and cpp_stmt =
       (** While loop: condition and body (used by loopify pass) *)
   | Sblock of cpp_stmt list  (** Scoped block for local declarations *)
   | Scontinue  (** Continue statement for loopified while loops *)
+  | Sblock_custom of
+      GlobRef.t
+      * string
+      * Id.t
+      * cpp_type
+      * cpp_expr list
+      * cpp_type list
+      (** Block template expansion: multi-statement inline custom that
+          substitutes [%result] with the bind target variable name. *)
 
 (** {2 C++ expressions} *)
 

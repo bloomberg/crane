@@ -159,7 +159,16 @@ and cpp_stmt =
   | Sblock of cpp_stmt list
     (* { stmts } — scoped block for local declarations *)
   | Scontinue
-(* continue; — used in loopified while loops *)
+    (* continue; — used in loopified while loops *)
+  | Sblock_custom of
+      GlobRef.t
+      * string (* template string containing %result *)
+      * Id.t (* result variable name *)
+      * cpp_type (* result variable type *)
+      * cpp_expr list (* value args for %a0, %a1, ... *)
+      * cpp_type list (* type args for %t0, %t1, ... *)
+    (* Block template expansion: multi-statement inline custom that
+       substitutes %result with the bind target variable name. *)
 
 (** C++ expressions. *)
 and cpp_expr =
@@ -412,6 +421,8 @@ let map_stmt
   | Swhile (cond, body) -> Swhile (fe cond, List.map fs body)
   | Sblock stmts -> Sblock (List.map fs stmts)
   | Scontinue -> s
+  | Sblock_custom (r, tmpl, id, ty, args, tys) ->
+    Sblock_custom (r, tmpl, id, ft ty, List.map fe args, List.map ft tys)
 
 (** C++ top-level declarations. *)
 type cpp_decl =

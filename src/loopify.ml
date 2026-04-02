@@ -393,6 +393,8 @@ and collect_stmt check ~in_visitor = function
         (fun (_, _, body) -> collect_stmts check ~in_visitor body)
         branches
   | Sassign_field (obj, _, e) -> collect_expr check obj @ collect_expr check e
+  | Sblock_custom (_, _, _, _, args, _) ->
+    List.concat_map (collect_expr check) args
   | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _ | Susing _
   | Sdecl_init _ | Scontinue -> []
 
@@ -4433,6 +4435,8 @@ and stmt_has_expr pred = function
   | Swhile (cond, body) -> expr_has pred cond || body_has_expr pred body
   | Sblock stmts -> body_has_expr pred stmts
   | Sassign_field (obj, _, e) -> expr_has pred obj || expr_has pred e
+  | Sblock_custom (_, _, _, _, args, _) ->
+    List.exists (expr_has pred) args
   | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _ | Susing _ | Sdecl_init _
   | Scontinue -> false
 

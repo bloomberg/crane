@@ -3904,6 +3904,24 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     This produces more readable C++ and avoids interfering with compiler
     optimisations (e.g. copy elision / RVO through a lambda boundary). *)
 
+(** Extract block template info from an inline custom expression.
+    Returns [Some(ref, template, args, tyargs)] if the expression is
+    an inline custom whose template contains [%result]. *)
+and extract_block_template = function
+  | CPPglob (ref, tys, Some ci) -> begin
+    match ci.ci_inline with
+    | Some tmpl when Common.contains_substring tmpl "%result" ->
+      Some (ref, tmpl, [], tys)
+    | _ -> None
+    end
+  | CPPfun_call (CPPglob (ref, tys, Some ci), args) -> begin
+    match ci.ci_inline with
+    | Some tmpl when Common.contains_substring tmpl "%result" ->
+      Some (ref, tmpl, List.rev args, tys)
+    | _ -> None
+    end
+  | _ -> None
+
 (** [inline_iife k expr] checks whether [expr] is an IIFE
     ([CPPfun_call(CPPlambda(\[\], _, body, _), \[\])]).  If so, it replaces
     the final [Sreturn(Some v)] in [body] with [k v] and returns the
@@ -4703,7 +4721,13 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
             in
             let cpp_ty = if use_unique then shared_to_unique cpp_ty else cpp_ty in
             let e = if use_unique then shared_expr_to_unique e else e in
-            Sasgn (x_renamed, Some cpp_ty, e) :: gen_stmts env' k b
+            begin match extract_block_template e with
+            | Some (ref, tmpl, args, tys) ->
+              Sblock_custom (ref, tmpl, x_renamed, cpp_ty, args, tys)
+              :: gen_stmts env' k b
+            | None ->
+              Sasgn (x_renamed, Some cpp_ty, e) :: gen_stmts env' k b
+            end
           | _ ->
             let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars t in
             let cpp_ty = if use_unique then shared_to_unique cpp_ty else cpp_ty in
@@ -5077,8 +5101,14 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
             []
         in
         side_effect @ decl @ body
-      else
-        Sasgn (x, Some ty, a) :: gen_stmts env k f
+      else begin
+        match extract_block_template a with
+        | Some (ref, tmpl, args, tys) ->
+          Sblock_custom (ref, tmpl, x, ty, args, tys)
+          :: gen_stmts env k f
+        | None ->
+          Sasgn (x, Some ty, a) :: gen_stmts env k f
+      end
     | _ ->
       (* No lambda parameters (eta-reduced continuation like bare Ret).
          Execute the action for side effects, then run the continuation. *)

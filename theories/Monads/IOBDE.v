@@ -45,11 +45,7 @@ Definition remove_file {E} `{fileE -< E} (path : string) : itree E unit := embed
 Crane Extract Inlined Constant print => "bsl::cout << %a0".
 Crane Extract Inlined Constant print_endline => "bsl::cout << %a0 << '\n'".
 Crane Extract Inlined Constant get_line =>
-"[]() -> bsl::string {
-    bsl::string s;
-    bsl::getline(bsl::cin, s);
-    return s;
-}()".
+  "bsl::getline(bsl::cin, %result)".
 
 Crane Extract Inlined Constant read =>
 "[]() -> bsl::string {

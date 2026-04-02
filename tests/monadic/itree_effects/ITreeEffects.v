@@ -50,7 +50,7 @@ Definition get_time : itree appE nat := embed GetTime.
 
 Crane Extract Inlined Constant print_endline => "std::cout << %a0 << '\n'" From "iostream".
 Crane Extract Inlined Constant get_line =>
-  "[]() -> std::string { std::string s; std::getline(std::cin, s); return s; }()" From "iostream".
+  "std::getline(std::cin, %result)" From "iostream".
 Crane Extract Inlined Constant random_nat => "(std::rand() % %a0)" From "cstdlib".
 Crane Extract Inlined Constant get_time =>
   "static_cast<unsigned int>(std::time(nullptr))" From "ctime".

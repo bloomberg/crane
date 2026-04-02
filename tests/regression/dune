@@ -2633,3 +2633,25 @@
   (alias runtest)
   (deps unit_void_stress.t.exe)
   (action (run ./unit_void_stress.t.exe))))
+
+(subdir block_template_hygiene
+ (rule
+  (targets block_template_hygiene.t.exe)
+  (deps BlockTemplateHygiene.vo block_template_hygiene.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} block_template_hygiene.t.exe block_template_hygiene.cpp block_template_hygiene.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps block_template_hygiene.t.exe)
+  (action (run ./block_template_hygiene.t.exe))))
+
+(subdir block_template_types
+ (rule
+  (targets block_template_types.t.exe)
+  (deps BlockTemplateTypes.vo block_template_types.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} block_template_types.t.exe block_template_types.cpp block_template_types.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps block_template_types.t.exe)
+  (action (run ./block_template_types.t.exe))))

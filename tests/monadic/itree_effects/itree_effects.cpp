@@ -12,11 +12,8 @@
 /// ------------------------------------------------------------------
 void ITreeEffects::greet() {
   std::cout << "What is your name?"s << '\n';
-  std::string name = []() -> std::string {
-    std::string s;
-    std::getline(std::cin, s);
-    return s;
-  }();
+  std::string name;
+  std::getline(std::cin, name);
   std::cout << name << '\n';
   return;
 }
@@ -44,11 +41,8 @@ void ITreeEffects::echo_loop(const unsigned int n) {
       auto _acc = std::monostate{};
       for (unsigned int _i = 0; _i < n; _i++) {
         _acc = [](std::monostate acc) {
-          std::string line = []() -> std::string {
-            std::string s;
-            std::getline(std::cin, s);
-            return s;
-          }();
+          std::string line;
+          std::getline(std::cin, line);
           std::cout << line << '\n';
           return acc;
         }(std::move(_acc));

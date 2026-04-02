@@ -192,6 +192,10 @@ let rec lambda_needs_capture
         (collect_from_expr (refs, decls) cond)
         body
     | Sblock stmts -> List.fold_left collect_from_stmt (refs, decls) stmts
+    | Sblock_custom (_, _, id, _, args, _) ->
+      let acc = List.fold_left (fun a e -> collect_from_expr a e) (refs, decls) args in
+      let refs', decls' = acc in
+      (refs', IdSet.add id decls')
     | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _ | Susing _ | Sdecl_init _
     | Scontinue -> (refs, decls)
   in
@@ -275,6 +279,7 @@ and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
     expr scrut || List.exists (fun (_, _, stmts) -> any stmts) branches
   | Swhile (cond, body) -> expr cond || any body
   | Sblock stmts -> any stmts
+  | Sblock_custom (_, _, _, _, args, _) -> List.exists expr args
   | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _ | Susing _
   | Sdecl_init _ | Scontinue -> false
 
@@ -339,7 +344,7 @@ let parse_custom_fixed esc cc s =
       List.rev (CCstring last_chunk :: chunks_rev)
     else
       match
-        (s.[i], i + esc_len + 1 < n)
+        (s.[i], i + esc_len + 1 <= n)
       with
       | '%', true ->
         if esc = String.sub s (i + 1) esc_len then
@@ -665,6 +670,50 @@ and pp_cpp_expr env args t =
   | CPPvar id -> Id.print id
   | CPPglob (x, tys, Some ci) when ci.ci_inline <> None ->
     let custom = Option.get ci.ci_inline in
+    if Common.contains_substring custom "%result" then
+      (* Block template in expression position: auto-wrap in IIFE *)
+      let ret_ty =
+        try
+          let ml_ty = Table.find_type x in
+          let rec final_ret = function
+            | Miniml.Tarr (_, t2) -> final_ret t2
+            | t -> t
+          in
+          Translation.convert_ml_type_to_cpp_type env Refset'.empty [] (final_ret ml_ty)
+        with _ -> Tauto
+      in
+      let result_str = "_r" in
+      let substituted =
+        let cmds = parse_custom_fixed "result" (CCstring result_str) custom in
+        String.concat ""
+          (List.map (function CCstring s -> s | _ -> assert false) cmds)
+      in
+      let cmds = parse_numbered_args "t" (fun i -> CCty_arg i) substituted in
+      let body_pp =
+        pp_custom
+          (Pp.string_of_ppcmds (GlobRef.print x) ^ " := " ^ custom)
+          env None None tys [] [] [] [] cmds
+      in
+      let body_str = Pp.string_of_ppcmds body_pp in
+      let stmts =
+        List.filter (fun s -> String.trim s <> "")
+          (String.split_on_char ';' body_str)
+      in
+      let stmt_lines =
+        String.concat "\n"
+          (List.map (fun s -> "  " ^ String.trim s ^ ";") stmts)
+      in
+      str "[&]() -> " ++ pp_cpp_type false [] ret_ty ++ str " {"
+      ++ fnl ()
+      ++ str ("  " ^ Pp.string_of_ppcmds (pp_cpp_type false [] ret_ty)
+              ^ " " ^ result_str ^ ";")
+      ++ fnl ()
+      ++ str stmt_lines
+      ++ fnl ()
+      ++ str ("  return " ^ result_str ^ ";")
+      ++ fnl ()
+      ++ str "}()"
+    else
     let cmds = parse_numbered_args "t" (fun i -> CCty_arg i) custom in
     pp_custom
       (Pp.string_of_ppcmds (GlobRef.print x) ^ " := " ^ custom)
@@ -861,6 +910,60 @@ and pp_cpp_expr env args t =
     h (name ++ str "::" ++ pp_cpp_expr env args t)
   | CPPfun_call (CPPglob (n, tys, Some ci), ts) when ci.ci_inline <> None ->
     let s = Option.get ci.ci_inline in
+    if Common.contains_substring s "%result" then
+      (* Block template with args in expression position: auto-wrap in IIFE *)
+      let ret_ty =
+        try
+          let ml_ty = Table.find_type n in
+          let rec final_ret = function
+            | Miniml.Tarr (_, t2) -> final_ret t2
+            | t -> t
+          in
+          Translation.convert_ml_type_to_cpp_type env Refset'.empty [] (final_ret ml_ty)
+        with _ -> Tauto
+      in
+      let result_str = "_r" in
+      let substituted =
+        let cmds = parse_custom_fixed "result" (CCstring result_str) s in
+        String.concat ""
+          (List.map (function CCstring s -> s | _ -> assert false) cmds)
+      in
+      let cmds = parse_numbered_args "a" (fun i -> CCarg i) substituted in
+      let cmds =
+        List.fold_left
+          (fun prev curr ->
+            match curr with
+            | CCstring s ->
+              prev @ parse_numbered_args "t" (fun i -> CCty_arg i) s
+            | _ -> prev @ [curr] )
+          []
+          cmds
+      in
+      let body_pp =
+        pp_custom
+          (Pp.string_of_ppcmds (GlobRef.print n) ^ " := " ^ s)
+          env None None tys [] (List.rev ts) [] [] cmds
+      in
+      let body_str = Pp.string_of_ppcmds body_pp in
+      let stmts =
+        List.filter (fun s -> String.trim s <> "")
+          (String.split_on_char ';' body_str)
+      in
+      let stmt_lines =
+        String.concat "\n"
+          (List.map (fun s -> "  " ^ String.trim s ^ ";") stmts)
+      in
+      str "[&]() -> " ++ pp_cpp_type false [] ret_ty ++ str " {"
+      ++ fnl ()
+      ++ str ("  " ^ Pp.string_of_ppcmds (pp_cpp_type false [] ret_ty)
+              ^ " " ^ result_str ^ ";")
+      ++ fnl ()
+      ++ str stmt_lines
+      ++ fnl ()
+      ++ str ("  return " ^ result_str ^ ";")
+      ++ fnl ()
+      ++ str "}()"
+    else
     let has_placeholder = String.contains s '%' in
     if not has_placeholder then
       let ty_args_s =
@@ -1309,6 +1412,54 @@ and pp_cpp_stmt env args = function
     ++ str " = "
     ++ pp_cpp_expr env args e
     ++ str ";"
+  | Sblock_custom (_ref, tmpl, result_var, result_ty, args, tyargs) ->
+    (* Block template: emit a declaration + template-substituted statements.
+       %result → result_var, %aN → value args, %tN → type args *)
+    let result_str = Pp.string_of_ppcmds (Id.print result_var) in
+    (* Substitute %result first *)
+    let substituted = tmpl in
+    let cmds = parse_custom_fixed "result" (CCstring result_str) substituted in
+    (* Flatten CCstring chunks back into a single string *)
+    let flat =
+      String.concat ""
+        (List.map
+           (function CCstring s -> s | _ -> assert false)
+           cmds)
+    in
+    (* Now parse %aN and %tN *)
+    let cmds = parse_numbered_args "a" (fun i -> CCarg i) flat in
+    let cmds =
+      List.fold_left
+        (fun prev curr ->
+          match curr with
+          | CCstring s -> prev @ parse_numbered_args "t" (fun i -> CCty_arg i) s
+          | _ -> prev @ [curr] )
+        []
+        cmds
+    in
+    (* Render: type declaration + template body as statements *)
+    let decl_pp =
+      pp_cpp_type false [] result_ty
+      ++ str " "
+      ++ Id.print result_var
+      ++ str ";"
+    in
+    let body_pp =
+      pp_custom
+        ("block custom " ^ Pp.string_of_ppcmds (GlobRef.print _ref))
+        env None None tyargs [] args [] [] cmds
+    in
+    (* Split rendered body by ';' and emit each as a statement line *)
+    let body_str = Pp.string_of_ppcmds body_pp in
+    let stmts =
+      List.filter
+        (fun s -> String.trim s <> "")
+        (String.split_on_char ';' body_str)
+    in
+    let stmt_pps =
+      List.map (fun s -> str (String.trim s) ++ str ";") stmts
+    in
+    prlist_with_sep fnl (fun x -> x) (decl_pp :: stmt_pps)
   | Scustom_case (typ, t, tyargs, cases, cmatch) ->
     let cmds = parse_custom_fixed "scrut" CCscrut cmatch in
     let cmds =
