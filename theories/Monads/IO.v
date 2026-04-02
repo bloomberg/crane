@@ -42,20 +42,20 @@ Definition append_file {E} `{fileE -< E} (path content : string) : itree E unit 
 Definition file_exists {E} `{fileE -< E} (path : string) : itree E bool := embed (FileExists path).
 Definition remove_file {E} `{fileE -< E} (path : string) : itree E unit := embed (RemoveFile path).
 
-Crane Extract Inlined Constant print => "std::cout << %a1".
-Crane Extract Inlined Constant print_endline => "std::cout << %a1 << '\n'".
+Crane Extract Inlined Constant print => "std::cout << %a0".
+Crane Extract Inlined Constant print_endline => "std::cout << %a0 << '\n'".
 Crane Extract Inlined Constant get_line =>
-"((void)sizeof(%a0), []() -> std::string {
+"[]() -> std::string {
     std::string s;
     std::getline(std::cin, s);
     return s;
-}())".
+}()".
 
 Crane Extract Inlined Constant read =>
 "[]() -> std::string {
-  std::ifstream file(%a1);
+  std::ifstream file(%a0);
   if (!file) {
-      std::cerr << ""Failed to open file "" << %a1 << '\n';
+      std::cerr << ""Failed to open file "" << %a0 << '\n';
       return std::string{};
   }
   return std::string(
@@ -65,18 +65,18 @@ Crane Extract Inlined Constant read =>
 
 Crane Extract Inlined Constant write_file =>
 "[&]() {
-  std::ofstream file(%a1);
-  file << %a2;
+  std::ofstream file(%a0);
+  file << %a1;
 }()" From "fstream".
 
 Crane Extract Inlined Constant append_file =>
 "[&]() {
-  std::ofstream file(%a1, std::ios::app);
-  file << %a2;
+  std::ofstream file(%a0, std::ios::app);
+  file << %a1;
 }()" From "fstream".
 
 Crane Extract Inlined Constant file_exists =>
-  "std::filesystem::exists(std::filesystem::path(%a1))" From "filesystem".
+  "std::filesystem::exists(std::filesystem::path(%a0))" From "filesystem".
 
 Crane Extract Inlined Constant remove_file =>
-  "std::filesystem::remove(std::filesystem::path(%a1))" From "filesystem".
+  "std::filesystem::remove(std::filesystem::path(%a0))" From "filesystem".

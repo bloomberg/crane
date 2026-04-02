@@ -700,6 +700,14 @@ let is_cpp_dummy_type = function
     be dropped (see filter_erased_type_args). *)
 let is_erased_type t = t = Minicpp.Tany || is_cpp_dummy_type t
 
+(** Check if a C++ type is a skipped type (inline custom with empty string).
+    Such types arise from [Crane Extract Skip] and represent infrastructure
+    (e.g. ReSum) that should be completely erased. *)
+let is_skipped_cpp_type = function
+  | Minicpp.Tglob (r, _, _) ->
+    Table.is_inline_custom r && Table.find_custom_opt r = Some ""
+  | _ -> false
+
 (** Recursively check whether a C++ type contains Tany (std::any). Used to
     detect when a let-binding's type annotation has unresolved carrier
     projections that should be replaced by concrete types from the generated
@@ -1168,6 +1176,18 @@ let rec get_args_and_ret acc = function
 let ref_returns_typeclass r =
   match find_type_opt r with
   | Some ty -> Table.is_typeclass_type (ml_return_type ty)
+  | None -> false
+
+(** Check if a function returns a skipped type (e.g., ReSum instances whose
+    Class is extracted as a ConstRef, not IndRef, and thus not recognized by
+    [is_typeclass]). Such arguments are infrastructure that should be erased. *)
+let ref_returns_skipped r =
+  match find_type_opt r with
+  | Some ty ->
+    ( match ml_return_type ty with
+    | Tglob (rr, _, _) ->
+      Table.is_inline_custom rr && Table.find_custom_opt rr = Some ""
+    | _ -> false )
   | None -> false
 
 (* Use Common.extract_at_pos for extracting elements at a position *)
@@ -2747,6 +2767,7 @@ and eta_fun env f args =
       ( match find_type_opt r with
       | Some arg_ty -> Table.is_typeclass_type arg_ty
       | None -> false )
+      || ref_returns_skipped r
     | MLrel i ->
       (* Check if the referenced parameter is a type class instance *)
       ( try
@@ -2760,8 +2781,10 @@ and eta_fun env f args =
         with _ -> false )
     | MLapp (MLglob (r, _), _) ->
       (* Parameterized instance application, e.g. numList A H. Check if r's
-         return type (after stripping Tarr) is a typeclass type. *)
-      ref_returns_typeclass r
+         return type (after stripping Tarr) is a typeclass type, or if it
+         returns a skipped type (e.g. ReSum instances where the Class is a
+         ConstRef not recognized by is_typeclass). *)
+      ref_returns_typeclass r || ref_returns_skipped r
     | MLcase (case_ty, _scrutinee, branches) when Array.length branches = 1 ->
       (* Single-branch case = record field projection.  If the projected
          field's type is itself a typeclass, this is a typeclass instance
@@ -2844,14 +2867,23 @@ and eta_fun env f args =
     let rec ml_arg_to_template_type ml_arg =
       match ml_arg with
       | MLglob (r, ts) ->
-        (* Use the instance struct as a type - convert to Tglob *)
-        Tglob (r, build_template_params env [] ts, [])
+        if ref_returns_skipped r then
+          (* Skipped infrastructure (e.g. ReSum_id) — erase to void *)
+          Tvoid
+        else
+          (* Use the instance struct as a type - convert to Tglob *)
+          Tglob (r, build_template_params env [] ts, [])
       | MLrel i ->
         (* The instance is a lambda parameter - look up its name in the env and
            create a Tvar reference to the template parameter *)
         let db, _ = env in
         let name = List.nth db (pred i) in
         Tvar (0, Some name)
+      | MLapp (MLglob (r, _), _) when ref_returns_skipped r ->
+        (* Skipped infrastructure (e.g. ReSum_inl applied to args) — the inner
+           args are complex and cannot be converted to C++ template types.
+           Erase to void since these type args are never referenced. *)
+        Tvoid
       | MLapp (MLglob (r, ts), inner_args) ->
         (* Parameterized instance application, e.g. numList A H. Convert to
            Tglob(r, template_args, []) where template_args are built from the
@@ -3138,6 +3170,13 @@ and eta_fun env f args =
        resolution.  No additional template type arguments are needed at
        call sites. *)
     let promoted_type_args = [] in
+    (* Filter out Tvoid entries from typeclass_type_args — these arise from
+       skipped infrastructure (e.g. ReSum instances) that we classified as
+       typeclass args just to remove them from regular_ml_args. They should
+       not become actual template type parameters. *)
+    let typeclass_type_args =
+      List.filter (fun t -> t <> Tvoid) typeclass_type_args
+    in
     let all_type_args =
       typeclass_type_args @ regular_type_args @ promoted_type_args
     in
@@ -3199,7 +3238,9 @@ and eta_fun env f args =
         let dom =
           List.filter
             (fun t ->
-              (not (Table.is_typeclass_type_cpp t)) && not (is_erased_type t) )
+              (not (Table.is_typeclass_type_cpp t))
+              && not (is_erased_type t)
+              && not (is_skipped_cpp_type t) )
             dom
         in
         let missing_args = get_eta_args dom args in
@@ -3212,9 +3253,9 @@ and eta_fun env f args =
            ML-level arity.  The excess args will be chained by [wrap_excess]
            below. *)
         if missing_args == [] || excess_args <> [] then
-          if id_is_typeclass_instance && args = [] then
-            (* Typeclass instance with no regular args — return as a type
-               reference *)
+          if (id_is_typeclass_instance || is_inline_custom id) && args = [] then
+            (* Typeclass instance or zero-arg inline custom — return
+               the glob directly so the template renders as-is. *)
             cglob
           else
             CPPfun_call (cglob, List.rev args)
@@ -3289,6 +3330,10 @@ and eta_fun env f args =
               false )
       | _ ->
         if id_is_typeclass_instance && args = [] then
+          cglob
+        else if is_inline_custom id && args = [] then
+          (* Zero-arg inline custom: return the glob directly so the
+             template string renders as-is, without an appended (). *)
           cglob
         else
           CPPfun_call (cglob, args)

@@ -42,20 +42,20 @@ Definition append_file {E} `{fileE -< E} (path content : string) : itree E unit 
 Definition file_exists {E} `{fileE -< E} (path : string) : itree E bool := embed (FileExists path).
 Definition remove_file {E} `{fileE -< E} (path : string) : itree E unit := embed (RemoveFile path).
 
-Crane Extract Inlined Constant print => "bsl::cout << %a1".
-Crane Extract Inlined Constant print_endline => "bsl::cout << %a1 << '\n'".
+Crane Extract Inlined Constant print => "bsl::cout << %a0".
+Crane Extract Inlined Constant print_endline => "bsl::cout << %a0 << '\n'".
 Crane Extract Inlined Constant get_line =>
-"((void)sizeof(%a0), []() -> bsl::string {
+"[]() -> bsl::string {
     bsl::string s;
     bsl::getline(bsl::cin, s);
     return s;
-}())".
+}()".
 
 Crane Extract Inlined Constant read =>
 "[]() -> bsl::string {
-  bsl::ifstream file(%a1);
+  bsl::ifstream file(%a0);
   if (!file) {
-      bsl::cerr << ""Failed to open file "" << %a1 << '\n';
+      bsl::cerr << ""Failed to open file "" << %a0 << '\n';
       return bsl::string{};
   }
   return bsl::string(
@@ -65,18 +65,18 @@ Crane Extract Inlined Constant read =>
 
 Crane Extract Inlined Constant write_file =>
 "[&]() {
-  bsl::ofstream file(%a1);
-  file << %a2;
+  bsl::ofstream file(%a0);
+  file << %a1;
 }()" From "fstream".
 
 Crane Extract Inlined Constant append_file =>
 "[&]() {
-  bsl::ofstream file(%a1, bsl::ios::app);
-  file << %a2;
+  bsl::ofstream file(%a0, bsl::ios::app);
+  file << %a1;
 }()" From "fstream".
 
 Crane Extract Inlined Constant file_exists =>
-  "std::filesystem::exists(std::filesystem::path(%a1))" From "filesystem".
+  "std::filesystem::exists(std::filesystem::path(%a0))" From "filesystem".
 
 Crane Extract Inlined Constant remove_file =>
-  "std::filesystem::remove(std::filesystem::path(%a1))" From "filesystem".
+  "std::filesystem::remove(std::filesystem::path(%a0))" From "filesystem".

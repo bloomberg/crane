@@ -5,6 +5,7 @@
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <variant>
 
@@ -32,9 +33,14 @@ void aSsErT(bool condition, const char *message, int line) {
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
 int main() {
-  // auto s = test4();
-  // std::cout << s << "\n";
-  return 0;
+  // Feed stdin so get_line returns "Alice"
+  std::istringstream fake_input("Alice\n");
+  std::cin.rdbuf(fake_input.rdbuf());
+
+  auto s = iotest::test4();
+  ASSERT(s == "I read the name Alice from the command line!");
+  std::cout << (testStatus ? "FAIL" : "PASS") << ": io get_line test\n";
+  return testStatus;
 }
 
 // clang++ -I. -std=c++23 io.o io.t.cpp -o io.t.o; ./io.t.o

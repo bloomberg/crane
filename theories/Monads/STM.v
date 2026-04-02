@@ -63,9 +63,9 @@ Crane Extract Inlined Constant atomically => "stm::atomically([&] { return %a0; 
 Crane Extract Inlined Constant retry => "stm::retry<%t0>()".
 Crane Extract Inlined Constant orElse => "stm::orElse<%t0>(%a0, %a1)".
 
-Crane Extract Inlined Constant newTVar => "stm::newTVar(%a1)".
-Crane Extract Inlined Constant readTVar => "%a1->read()".
-Crane Extract Inlined Constant writeTVar => "%a1->write(%a2)".
+Crane Extract Inlined Constant newTVar => "stm::newTVar(%a0)".
+Crane Extract Inlined Constant readTVar => "%a0->read()".
+Crane Extract Inlined Constant writeTVar => "%a0->write(%a1)".
 
-Crane Extract Inlined Constant getSTM => "%a1.at(%a2)".
-Crane Extract Inlined Constant isEmptySTM => "%a1.empty()".
+Crane Extract Inlined Constant getSTM => "%a0.at(%a1)".
+Crane Extract Inlined Constant isEmptySTM => "%a0.empty()".

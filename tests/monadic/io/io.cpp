@@ -19,15 +19,11 @@ void iotest::test3(const std::string s) {
 
 std::string iotest::test4() {
   std::cout << "what is your name?"s << '\n';
-  std::string s2 = ((void)sizeof(([]() -> std::any {
-                      throw std::logic_error("unreachable");
-                      return std::any{};
-                    })()),
-                    []() -> std::string {
-                      std::string s;
-                      std::getline(std::cin, s);
-                      return s;
-                    }());
+  std::string s2 = []() -> std::string {
+    std::string s;
+    std::getline(std::cin, s);
+    return s;
+  }();
   std::cout << "hello "s + s2 << '\n';
   return "I read the name "s + s2 + " from the command line!"s;
 }
