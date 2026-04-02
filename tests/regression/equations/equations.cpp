@@ -24,7 +24,7 @@ __attribute__((pure)) bool PeanoNat::leb(const unsigned int n,
 
 __attribute__((pure)) bool PeanoNat::ltb(const unsigned int n,
                                          const unsigned int m) {
-  return PeanoNat::leb((std::move(n) + 1), m);
+  return PeanoNat::leb((n + 1), m);
 }
 
 __attribute__((pure)) bool PeanoNat::even(const unsigned int n) {
@@ -66,15 +66,12 @@ Equations::gcd_unfold_clause_3(const unsigned int n, const unsigned int n0,
                                const bool refine) {
   if (refine) {
     return gcd(std::make_pair(
-        (n + 1), ((((std::move(n0) + 1) - (n + 1)) > (std::move(n0) + 1)
-                       ? 0
-                       : ((std::move(n0) + 1) - (n + 1))))));
+        (n + 1),
+        ((((n0 + 1) - (n + 1)) > (n0 + 1) ? 0 : ((n0 + 1) - (n + 1))))));
   } else {
-    return gcd(
-        std::make_pair(((((std::move(n) + 1) - (n0 + 1)) > (std::move(n) + 1)
-                             ? 0
-                             : ((std::move(n) + 1) - (n0 + 1)))),
-                       (n0 + 1)));
+    return gcd(std::make_pair(
+        ((((n + 1) - (n0 + 1)) > (n + 1) ? 0 : ((n + 1) - (n0 + 1)))),
+        (n0 + 1)));
   }
 }
 
@@ -144,9 +141,9 @@ __attribute__((pure)) unsigned int
 Equations::collatz_steps_unfold_clause_3(const unsigned int n,
                                          const bool refine) {
   if (refine) {
-    return (collatz_steps(PeanoNat::div2(std::move(n))) + 1);
+    return (collatz_steps(PeanoNat::div2(n)) + 1);
   } else {
-    return (collatz_steps(((3u * std::move(n)) + 1u)) + 1);
+    return (collatz_steps(((3u * n) + 1u)) + 1);
   }
 }
 

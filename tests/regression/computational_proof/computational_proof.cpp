@@ -91,18 +91,17 @@ ComputationalProof::insert_dec(const unsigned int x,
   return std::visit(
       Overloaded{[&](const typename List<unsigned int>::Nil _args)
                      -> std::shared_ptr<List<unsigned int>> {
-                   return List<unsigned int>::cons(std::move(x),
+                   return List<unsigned int>::cons(x,
                                                    List<unsigned int>::nil());
                  },
                  [&](const typename List<unsigned int>::Cons _args)
                      -> std::shared_ptr<List<unsigned int>> {
                    if (le_dec(x, _args.d_a0)) {
                      return List<unsigned int>::cons(
-                         std::move(x),
-                         List<unsigned int>::cons(_args.d_a0, _args.d_a1));
+                         x, List<unsigned int>::cons(_args.d_a0, _args.d_a1));
                    } else {
-                     return List<unsigned int>::cons(
-                         _args.d_a0, insert_dec(std::move(x), _args.d_a1));
+                     return List<unsigned int>::cons(_args.d_a0,
+                                                     insert_dec(x, _args.d_a1));
                    }
                  }},
       l->v());

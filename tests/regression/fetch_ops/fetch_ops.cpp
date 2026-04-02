@@ -66,8 +66,7 @@ FetchOps::fetch_window(const std::shared_ptr<List<unsigned int>> &rom_data,
                                    std::pair<unsigned int, unsigned int>> {
                              return std::make_optional<
                                  std::pair<unsigned int, unsigned int>>(
-                                 std::make_pair(_args.d_a0,
-                                                (std::move(addr) + 2u)));
+                                 std::make_pair(_args.d_a0, (addr + 2u)));
                            }},
                 _args.d_a1->v());
           }},

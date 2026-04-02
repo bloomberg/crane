@@ -32,13 +32,12 @@ Dim10TowerProofChainCase::nat_le_of_lt(const unsigned int n,
 
 __attribute__((pure)) unsigned int Dim10TowerProofChainCase::qpos_denom(
     std::shared_ptr<Dim10TowerProofChainCase::QPos> q) {
-  return (std::move(q)->qpos_denom_pred + 1);
+  return (q->qpos_denom_pred + 1);
 }
 
 std::shared_ptr<Dim10TowerProofChainCase::QPos>
 Dim10TowerProofChainCase::nat_to_qpos(const unsigned int n) {
-  return std::make_shared<Dim10TowerProofChainCase::QPos>(
-      QPos{std::move(n), 0u});
+  return std::make_shared<Dim10TowerProofChainCase::QPos>(QPos{n, 0u});
 }
 
 __attribute__((pure)) unsigned int
@@ -73,7 +72,7 @@ std::shared_ptr<Dim10TowerProofChainCase::GradedObj>
 Dim10TowerProofChainCase::layer_obj(const unsigned int base_dim,
                                     const unsigned int n) {
   return std::make_shared<Dim10TowerProofChainCase::GradedObj>(
-      GradedObj{layer_dim(std::move(base_dim), std::move(n))});
+      GradedObj{layer_dim(base_dim, n)});
 }
 
 std::shared_ptr<Dim10TowerProofChainCase::QPos>
@@ -85,7 +84,7 @@ Dim10TowerProofChainCase::layer_measure(const unsigned int base_dim,
 __attribute__((pure)) Dim10TowerProofChainCase::EventuallyZero
 Dim10TowerProofChainCase::layer_measure_eventually_zero(
     const unsigned int base_dim) {
-  return SigT<unsigned int, std::any>::existt(std::move(base_dim), std::any{});
+  return SigT<unsigned int, std::any>::existt(base_dim, std::any{});
 }
 
 std::shared_ptr<Dim10TowerProofChainCase::GradedObj>
@@ -93,7 +92,7 @@ Dim10TowerProofChainCase::P_n_obj(
     const unsigned int n,
     std::shared_ptr<Dim10TowerProofChainCase::GradedObj> x) {
   return std::make_shared<Dim10TowerProofChainCase::GradedObj>(
-      GradedObj{poly_approx_dim(std::move(x)->go_dim, std::move(n))});
+      GradedObj{poly_approx_dim(x->go_dim, n)});
 }
 
 std::shared_ptr<Dim10TowerProofChainCase::GradedObj>
@@ -131,25 +130,25 @@ Dim10TowerProofChainCase::graded_goodwillie_layers_stabilize(
     const unsigned int base_dim) {
   std::shared_ptr<SigT<unsigned int, std::any>> e =
       D_n_measure_eventually_zero(base_dim);
-  if (std::move(e).use_count() == 1 && std::move(e)->v().index() == 0) {
-    auto &_rf = std::get<0>(std::move(e)->v_mut());
+  if (e.use_count() == 1 && e->v().index() == 0) {
+    auto &_rf = std::get<0>(e->v_mut());
     unsigned int x = std::move(_rf.d_x);
     _rf.d_x = x;
-    return std::move(e);
+    return e;
   } else {
     return std::visit(
         Overloaded{[](const typename SigT<unsigned int, std::any>::ExistT _args)
                        -> std::shared_ptr<SigT<unsigned int, std::any>> {
           return SigT<unsigned int, std::any>::existt(_args.d_x, std::any{});
         }},
-        std::move(e)->v());
+        e->v());
   }
 }
 
 std::shared_ptr<SigT<unsigned int, std::any>>
 Dim10TowerProofChainCase::graded_goodwillie_P_stabilizes(
     const unsigned int base_dim) {
-  return SigT<unsigned int, std::any>::existt(std::move(base_dim), std::any{});
+  return SigT<unsigned int, std::any>::existt(base_dim, std::any{});
 }
 
 __attribute__((pure))

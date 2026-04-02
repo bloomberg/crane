@@ -151,7 +151,7 @@ std::shared_ptr<List<unsigned int>> LoopifySearchOpt::longest_run_fuel(
                         }},
                     _loop_current->v());
               }},
-          std::move(_loop_l)->v());
+          _loop_l->v());
     }
   }
   return _result;
@@ -607,7 +607,7 @@ Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
   while (_continue) {
     if (_loop_x <= 0) {
       {
-        _result = std::make_pair(std::move(_loop_q), std::move(_loop_u));
+        _result = std::make_pair(_loop_q, _loop_u);
         _continue = false;
       }
     } else {

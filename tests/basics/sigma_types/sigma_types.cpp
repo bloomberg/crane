@@ -13,7 +13,7 @@ SigmaTypes::nat_with_double(const unsigned int n) {
 
 std::shared_ptr<Sig<unsigned int>>
 SigmaTypes::positive_succ(const unsigned int n) {
-  return Sig<unsigned int>::exist((std::move(n) + 1));
+  return Sig<unsigned int>::exist((n + 1));
 }
 
 __attribute__((pure)) unsigned int

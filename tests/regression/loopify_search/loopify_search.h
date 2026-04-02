@@ -690,7 +690,7 @@ struct LoopifySearch {
                   _loop_idx = std::move(_next_idx);
                   _loop_l = std::move(_next_l);
                 } else {
-                  unsigned int _next_idx = (std::move(_loop_idx) + 1);
+                  unsigned int _next_idx = (_loop_idx + 1);
                   std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
                   _loop_idx = std::move(_next_idx);
                   _loop_l = std::move(_next_l);

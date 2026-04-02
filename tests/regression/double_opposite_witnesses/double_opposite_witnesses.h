@@ -194,7 +194,7 @@ struct DoubleOppositeWitnessesCase {
 
     static Obj zero_object() { return 0u; }
 
-    static Obj suspension(unsigned int x) { return (std::move(x) + 1); }
+    static Obj suspension(unsigned int x) { return (x + 1); }
   };
 
   static_assert(PreStableCategory<toy_prestable>);

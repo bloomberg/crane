@@ -33,7 +33,7 @@ LoopifyListGeneration::replicate(const unsigned int n, const unsigned int x) {
           _head = _cell;
         }
         _last = _cell;
-        _loop_n = std::move(n_);
+        _loop_n = n_;
         continue;
       }
     }
@@ -142,7 +142,7 @@ LoopifyListGeneration::iterate(const unsigned int n, const unsigned int x) {
         }
         _last = _cell;
         unsigned int _next_x = (_loop_x + 1u);
-        unsigned int _next_n = std::move(n_);
+        unsigned int _next_n = n_;
         _loop_x = std::move(_next_x);
         _loop_n = std::move(_next_n);
         continue;

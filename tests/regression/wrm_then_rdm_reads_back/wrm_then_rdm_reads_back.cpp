@@ -22,7 +22,7 @@ std::shared_ptr<WrmThenRdmReadsBack::state>
 WrmThenRdmReadsBack::execute_src(std::shared_ptr<WrmThenRdmReadsBack::state> s,
                                  const unsigned int r) {
   return std::make_shared<WrmThenRdmReadsBack::state>(
-      state{s->regs, s->acc, s->ram, (get_reg_pair(s, std::move(r)) % 16u)});
+      state{s->regs, s->acc, s->ram, (get_reg_pair(s, r) % 16u)});
 }
 
 std::shared_ptr<WrmThenRdmReadsBack::state> WrmThenRdmReadsBack::execute_wrm(

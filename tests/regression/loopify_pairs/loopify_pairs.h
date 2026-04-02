@@ -388,7 +388,7 @@ struct LoopifyPairs {
                 std::shared_ptr<list<T1>> l = _f.l;
                 const unsigned int n = _f.n;
                 if (n <= 0) {
-                  _result = std::make_pair(list<T1>::nil(), std::move(l));
+                  _result = std::make_pair(list<T1>::nil(), l);
                 } else {
                   unsigned int m = n - 1;
                   std::visit(
@@ -583,8 +583,8 @@ struct LoopifyPairs {
                     Overloaded{
                         [&](const typename list<unsigned int>::Nil _args)
                             -> void {
-                          _result = std::make_pair(std::move(acc),
-                                                   list<unsigned int>::nil());
+                          _result =
+                              std::make_pair(acc, list<unsigned int>::nil());
                         },
                         [&](const typename list<unsigned int>::Cons _args)
                             -> void {

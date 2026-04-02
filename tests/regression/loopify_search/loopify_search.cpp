@@ -409,7 +409,7 @@ __attribute__((pure)) bool LoopifySearch::binary_search_fuel(
           } else {
             {
               std::shared_ptr<List<unsigned int>> _next_l =
-                  drop_impl((std::move(mid) + 1), _loop_l);
+                  drop_impl((mid + 1), _loop_l);
               unsigned int _next_fuel = f;
               _loop_l = std::move(_next_l);
               _loop_fuel = std::move(_next_fuel);
@@ -457,8 +457,8 @@ LoopifySearch::longest_run_aux(std::shared_ptr<List<unsigned int>> current_run,
                   Overloaded{
                       [&](const typename List<unsigned int>::Nil _args0) {
                         std::shared_ptr<List<unsigned int>> new_run =
-                            List<unsigned int>::cons(
-                                _args.d_a0, std::move(_loop_current_run));
+                            List<unsigned int>::cons(_args.d_a0,
+                                                     _loop_current_run);
                         if (len_impl<unsigned int>(new_run) <=
                             len_impl<unsigned int>(_loop_best_run)) {
                           _result = std::move(_loop_best_run);
@@ -476,14 +476,14 @@ LoopifySearch::longest_run_aux(std::shared_ptr<List<unsigned int>> current_run,
                               std::move(_loop_best_run);
                           std::shared_ptr<List<unsigned int>>
                               _next_current_run = List<unsigned int>::cons(
-                                  _args.d_a0, std::move(_loop_current_run));
+                                  _args.d_a0, _loop_current_run);
                           _loop_l = std::move(_next_l);
                           _loop_best_run = std::move(_next_best_run);
                           _loop_current_run = std::move(_next_current_run);
                         } else {
                           std::shared_ptr<List<unsigned int>> new_run =
-                              List<unsigned int>::cons(
-                                  _args.d_a0, std::move(_loop_current_run));
+                              List<unsigned int>::cons(_args.d_a0,
+                                                       _loop_current_run);
                           std::shared_ptr<List<unsigned int>> new_best;
                           if (len_impl<unsigned int>(new_run) <=
                               len_impl<unsigned int>(_loop_best_run)) {
@@ -546,12 +546,10 @@ LoopifySearch::collatz_fuel(const unsigned int fuel, const unsigned int n) {
                               } else {
                                 if ((n % 2u) == 0u) {
                                   _stack.push_back(_Call1{});
-                                  _stack.push_back(
-                                      _Enter{Nat::div(n, 2u), std::move(f)});
+                                  _stack.push_back(_Enter{Nat::div(n, 2u), f});
                                 } else {
                                   _stack.push_back(_Call2{});
-                                  _stack.push_back(
-                                      _Enter{((3u * n) + 1u), std::move(f)});
+                                  _stack.push_back(_Enter{((3u * n) + 1u), f});
                                 }
                               }
                             }
@@ -749,7 +747,7 @@ LoopifySearch::sieve_fuel(const unsigned int fuel,
                       return !((y % _args.d_a0) == 0u);
                     },
                     _args.d_a1);
-                unsigned int _next_fuel = std::move(f);
+                unsigned int _next_fuel = f;
                 _loop_l = std::move(_next_l);
                 _loop_fuel = std::move(_next_fuel);
               }},
@@ -838,7 +836,7 @@ LoopifySearch::nub_fuel(const unsigned int fuel,
                   }
                   _last = _cell;
                   std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                  unsigned int _next_fuel = std::move(f);
+                  unsigned int _next_fuel = f;
                   _loop_l = std::move(_next_l);
                   _loop_fuel = std::move(_next_fuel);
                 }
@@ -907,7 +905,7 @@ LoopifySearch::remove_duplicates_fuel(const unsigned int fuel,
                         return !(_args.d_a0 == y);
                       },
                       _args.d_a1);
-                  unsigned int _next_fuel = std::move(f);
+                  unsigned int _next_fuel = f;
                   _loop_l = std::move(_next_l);
                   _loop_fuel = std::move(_next_fuel);
                 }
@@ -981,7 +979,7 @@ LoopifySearch::quicksort_fuel(const unsigned int fuel,
                                   _args.d_a1);
                           _stack.push_back(
                               _Call1{std::move(smaller), f, _args.d_a0});
-                          _stack.push_back(_Enter{std::move(greater), f});
+                          _stack.push_back(_Enter{greater, f});
                         }},
                     l->v());
               }
@@ -1131,12 +1129,9 @@ LoopifySearch::merge_sorted_fuel(const unsigned int fuel,
                               _head = _cell;
                             }
                             _last = _cell;
-                            std::shared_ptr<List<unsigned int>> _next_l2 =
-                                std::move(_loop_l2);
                             std::shared_ptr<List<unsigned int>> _next_l1 =
                                 _args.d_a1;
-                            unsigned int _next_fuel = std::move(f);
-                            _loop_l2 = std::move(_next_l2);
+                            unsigned int _next_fuel = f;
                             _loop_l1 = std::move(_next_l1);
                             _loop_fuel = std::move(_next_fuel);
                           } else {
@@ -1152,7 +1147,7 @@ LoopifySearch::merge_sorted_fuel(const unsigned int fuel,
                             _last = _cell;
                             std::shared_ptr<List<unsigned int>> _next_l2 =
                                 _args0.d_a1;
-                            unsigned int _next_fuel = std::move(f);
+                            unsigned int _next_fuel = f;
                             _loop_l2 = std::move(_next_l2);
                             _loop_fuel = std::move(_next_fuel);
                           }
@@ -1252,7 +1247,6 @@ LoopifySearch::remove_first(const unsigned int x,
   std::shared_ptr<List<unsigned int>> _head{};
   std::shared_ptr<List<unsigned int>> _last{};
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  unsigned int _loop_x = x;
   bool _continue = true;
   while (_continue) {
     std::visit(
@@ -1267,7 +1261,7 @@ LoopifySearch::remove_first(const unsigned int x,
               _continue = false;
             },
             [&](const typename List<unsigned int>::Cons _args) {
-              if (_loop_x == _args.d_a0) {
+              if (x == _args.d_a0) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = _args.d_a1;
@@ -1284,10 +1278,7 @@ LoopifySearch::remove_first(const unsigned int x,
                   _head = _cell;
                 }
                 _last = _cell;
-                std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                unsigned int _next_x = std::move(_loop_x);
-                _loop_l = std::move(_next_l);
-                _loop_x = std::move(_next_x);
+                _loop_l = _args.d_a1;
               }
             }},
         _loop_l->v());
@@ -1481,12 +1472,11 @@ LoopifySearch::linear_search_aux(const unsigned int x,
                           },
                           [&](const typename List<unsigned int>::Cons _args) {
                             if (x == _args.d_a0) {
-                              _result = std::make_optional<unsigned int>(
-                                  std::move(_loop_idx));
+                              _result =
+                                  std::make_optional<unsigned int>(_loop_idx);
                               _continue = false;
                             } else {
-                              unsigned int _next_idx =
-                                  (std::move(_loop_idx) + 1);
+                              unsigned int _next_idx = (_loop_idx + 1);
                               std::shared_ptr<List<unsigned int>> _next_l =
                                   _args.d_a1;
                               _loop_idx = std::move(_next_idx);
@@ -1539,12 +1529,10 @@ LoopifySearch::all_indices_aux(const unsigned int x,
                 _last = _cell;
                 unsigned int _next_idx = (_loop_idx + 1);
                 std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                unsigned int _next_x = std::move(_loop_x);
                 _loop_idx = std::move(_next_idx);
                 _loop_l = std::move(_next_l);
-                _loop_x = std::move(_next_x);
               } else {
-                unsigned int _next_idx = (std::move(_loop_idx) + 1);
+                unsigned int _next_idx = (_loop_idx + 1);
                 std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
                 unsigned int _next_x = std::move(_loop_x);
                 _loop_idx = std::move(_next_idx);
@@ -1631,7 +1619,7 @@ Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
   while (_continue) {
     if (_loop_x <= 0) {
       {
-        _result = std::make_pair(std::move(_loop_q), std::move(_loop_u));
+        _result = std::make_pair(_loop_q, _loop_u);
         _continue = false;
       }
     } else {

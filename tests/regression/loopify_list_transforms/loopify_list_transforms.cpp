@@ -106,10 +106,10 @@ std::shared_ptr<List<unsigned int>> LoopifyListTransforms::prefix_sums(
             [&](const typename List<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::cons(std::move(_loop_acc),
+                    .d_a1 = List<unsigned int>::cons(_loop_acc,
                                                      List<unsigned int>::nil());
               } else {
-                _head = List<unsigned int>::cons(std::move(_loop_acc),
+                _head = List<unsigned int>::cons(_loop_acc,
                                                  List<unsigned int>::nil());
               }
               _continue = false;
@@ -452,7 +452,7 @@ LoopifyListTransforms::chunks_of_fuel(const unsigned int fuel,
                          _last = _cell;
                          std::shared_ptr<List<unsigned int>> _next_l =
                              drop(n, _loop_l);
-                         unsigned int _next_fuel = std::move(fuel_);
+                         unsigned int _next_fuel = fuel_;
                          _loop_l = std::move(_next_l);
                          _loop_fuel = std::move(_next_fuel);
                        }},

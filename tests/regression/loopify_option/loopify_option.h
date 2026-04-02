@@ -300,11 +300,11 @@ struct LoopifyOption {
                             },
                             [&](const typename list<T1>::Cons _args) {
                               if (p(_args.d_a0)) {
-                                _result = std::make_optional<unsigned int>(
-                                    std::move(_loop_i));
+                                _result =
+                                    std::make_optional<unsigned int>(_loop_i);
                                 _continue = false;
                               } else {
-                                unsigned int _next_i = (std::move(_loop_i) + 1);
+                                unsigned int _next_i = (_loop_i + 1);
                                 std::shared_ptr<list<T1>> _next_l = _args.d_a1;
                                 _loop_i = std::move(_next_i);
                                 _loop_l = std::move(_next_l);

@@ -339,30 +339,25 @@ struct LoopifyExpr {
                               if (std::move(_args1.d_a0) == 1u) {
                                 _result = s1;
                               } else {
-                                _result = expr::mul(
-                                    s1, expr::val(std::move(_args1.d_a0)));
+                                _result = expr::mul(s1, expr::val(_args1.d_a0));
                               }
                             }
                           },
                           [&](const typename expr::Succ _args1) -> void {
-                            _result = expr::mul(std::move(s1),
-                                                expr::succ(_args1.d_a0));
+                            _result = expr::mul(s1, expr::succ(_args1.d_a0));
                           },
                           [&](const typename expr::Add _args1) -> void {
-                            _result =
-                                expr::mul(std::move(s1),
-                                          expr::add(_args1.d_a0, _args1.d_a1));
+                            _result = expr::mul(
+                                s1, expr::add(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename expr::Mul _args1) -> void {
-                            _result =
-                                expr::mul(std::move(s1),
-                                          expr::mul(_args1.d_a0, _args1.d_a1));
+                            _result = expr::mul(
+                                s1, expr::mul(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename expr::Cond _args1) -> void {
-                            _result =
-                                expr::mul(std::move(s1),
-                                          expr::cond(_args1.d_a0, _args1.d_a1,
-                                                     _args1.d_a2));
+                            _result = expr::mul(s1, expr::cond(_args1.d_a0,
+                                                               _args1.d_a1,
+                                                               _args1.d_a2));
                           }},
                       _result->v());
                 },
@@ -378,30 +373,25 @@ struct LoopifyExpr {
                               if (std::move(_args1.d_a0) == 1u) {
                                 _result = s1;
                               } else {
-                                _result = expr::mul(
-                                    s1, expr::val(std::move(_args1.d_a0)));
+                                _result = expr::mul(s1, expr::val(_args1.d_a0));
                               }
                             }
                           },
                           [&](const typename expr::Succ _args1) -> void {
-                            _result = expr::mul(std::move(s1),
-                                                expr::succ(_args1.d_a0));
+                            _result = expr::mul(s1, expr::succ(_args1.d_a0));
                           },
                           [&](const typename expr::Add _args1) -> void {
-                            _result =
-                                expr::mul(std::move(s1),
-                                          expr::add(_args1.d_a0, _args1.d_a1));
+                            _result = expr::mul(
+                                s1, expr::add(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename expr::Mul _args1) -> void {
-                            _result =
-                                expr::mul(std::move(s1),
-                                          expr::mul(_args1.d_a0, _args1.d_a1));
+                            _result = expr::mul(
+                                s1, expr::mul(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename expr::Cond _args1) -> void {
-                            _result =
-                                expr::mul(std::move(s1),
-                                          expr::cond(_args1.d_a0, _args1.d_a1,
-                                                     _args1.d_a2));
+                            _result = expr::mul(s1, expr::cond(_args1.d_a0,
+                                                               _args1.d_a1,
+                                                               _args1.d_a2));
                           }},
                       _result->v());
                 },
@@ -417,30 +407,25 @@ struct LoopifyExpr {
                               if (std::move(_args1.d_a0) == 1u) {
                                 _result = s1;
                               } else {
-                                _result = expr::mul(
-                                    s1, expr::val(std::move(_args1.d_a0)));
+                                _result = expr::mul(s1, expr::val(_args1.d_a0));
                               }
                             }
                           },
                           [&](const typename expr::Succ _args1) -> void {
-                            _result = expr::mul(std::move(s1),
-                                                expr::succ(_args1.d_a0));
+                            _result = expr::mul(s1, expr::succ(_args1.d_a0));
                           },
                           [&](const typename expr::Add _args1) -> void {
-                            _result =
-                                expr::mul(std::move(s1),
-                                          expr::add(_args1.d_a0, _args1.d_a1));
+                            _result = expr::mul(
+                                s1, expr::add(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename expr::Mul _args1) -> void {
-                            _result =
-                                expr::mul(std::move(s1),
-                                          expr::mul(_args1.d_a0, _args1.d_a1));
+                            _result = expr::mul(
+                                s1, expr::mul(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename expr::Cond _args1) -> void {
-                            _result =
-                                expr::mul(std::move(s1),
-                                          expr::cond(_args1.d_a0, _args1.d_a1,
-                                                     _args1.d_a2));
+                            _result = expr::mul(s1, expr::cond(_args1.d_a0,
+                                                               _args1.d_a1,
+                                                               _args1.d_a2));
                           }},
                       _result->v());
                 },
@@ -456,30 +441,25 @@ struct LoopifyExpr {
                               if (std::move(_args1.d_a0) == 1u) {
                                 _result = s1;
                               } else {
-                                _result = expr::mul(
-                                    s1, expr::val(std::move(_args1.d_a0)));
+                                _result = expr::mul(s1, expr::val(_args1.d_a0));
                               }
                             }
                           },
                           [&](const typename expr::Succ _args1) -> void {
-                            _result = expr::mul(std::move(s1),
-                                                expr::succ(_args1.d_a0));
+                            _result = expr::mul(s1, expr::succ(_args1.d_a0));
                           },
                           [&](const typename expr::Add _args1) -> void {
-                            _result =
-                                expr::mul(std::move(s1),
-                                          expr::add(_args1.d_a0, _args1.d_a1));
+                            _result = expr::mul(
+                                s1, expr::add(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename expr::Mul _args1) -> void {
-                            _result =
-                                expr::mul(std::move(s1),
-                                          expr::mul(_args1.d_a0, _args1.d_a1));
+                            _result = expr::mul(
+                                s1, expr::mul(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename expr::Cond _args1) -> void {
-                            _result =
-                                expr::mul(std::move(s1),
-                                          expr::cond(_args1.d_a0, _args1.d_a1,
-                                                     _args1.d_a2));
+                            _result = expr::mul(s1, expr::cond(_args1.d_a0,
+                                                               _args1.d_a1,
+                                                               _args1.d_a2));
                           }},
                       _result->v());
                 },
@@ -537,171 +517,156 @@ struct LoopifyExpr {
                 [&](_Call3 _f) {
                   std::shared_ptr<expr> s1 = _f._s0;
                   std::visit(
-                      Overloaded{
-                          [&](const typename expr::Val _args1) -> void {
-                            if (_args1.d_a0 <= 0) {
-                              _result = std::move(s1);
-                            } else {
-                              unsigned int n2 = _args1.d_a0 - 1;
-                              _result = expr::add(s1, expr::val((n2 + 1)));
-                            }
-                          },
-                          [&](const typename expr::Succ _args1) -> void {
-                            _result = expr::add(std::move(s1),
-                                                expr::succ(_args1.d_a0));
-                          },
-                          [&](const typename expr::Add _args1) -> void {
-                            _result =
-                                expr::add(std::move(s1),
-                                          expr::add(_args1.d_a0, _args1.d_a1));
-                          },
-                          [&](const typename expr::Mul _args1) -> void {
-                            _result =
-                                expr::add(std::move(s1),
-                                          expr::mul(_args1.d_a0, _args1.d_a1));
-                          },
-                          [&](const typename expr::Cond _args1) -> void {
-                            _result =
-                                expr::add(std::move(s1),
-                                          expr::cond(_args1.d_a0, _args1.d_a1,
-                                                     _args1.d_a2));
-                          }},
+                      Overloaded{[&](const typename expr::Val _args1) -> void {
+                                   if (_args1.d_a0 <= 0) {
+                                     _result = std::move(s1);
+                                   } else {
+                                     unsigned int n2 = _args1.d_a0 - 1;
+                                     _result =
+                                         expr::add(s1, expr::val((n2 + 1)));
+                                   }
+                                 },
+                                 [&](const typename expr::Succ _args1) -> void {
+                                   _result =
+                                       expr::add(s1, expr::succ(_args1.d_a0));
+                                 },
+                                 [&](const typename expr::Add _args1) -> void {
+                                   _result = expr::add(
+                                       s1, expr::add(_args1.d_a0, _args1.d_a1));
+                                 },
+                                 [&](const typename expr::Mul _args1) -> void {
+                                   _result = expr::add(
+                                       s1, expr::mul(_args1.d_a0, _args1.d_a1));
+                                 },
+                                 [&](const typename expr::Cond _args1) -> void {
+                                   _result = expr::add(
+                                       s1, expr::cond(_args1.d_a0, _args1.d_a1,
+                                                      _args1.d_a2));
+                                 }},
                       _result->v());
                 },
                 [&](_Call4 _f) {
                   std::shared_ptr<expr> s1 = _f._s0;
                   std::visit(
-                      Overloaded{
-                          [&](const typename expr::Val _args1) -> void {
-                            if (_args1.d_a0 <= 0) {
-                              _result = std::move(s1);
-                            } else {
-                              unsigned int n0 = _args1.d_a0 - 1;
-                              _result = expr::add(s1, expr::val((n0 + 1)));
-                            }
-                          },
-                          [&](const typename expr::Succ _args1) -> void {
-                            _result = expr::add(std::move(s1),
-                                                expr::succ(_args1.d_a0));
-                          },
-                          [&](const typename expr::Add _args1) -> void {
-                            _result =
-                                expr::add(std::move(s1),
-                                          expr::add(_args1.d_a0, _args1.d_a1));
-                          },
-                          [&](const typename expr::Mul _args1) -> void {
-                            _result =
-                                expr::add(std::move(s1),
-                                          expr::mul(_args1.d_a0, _args1.d_a1));
-                          },
-                          [&](const typename expr::Cond _args1) -> void {
-                            _result =
-                                expr::add(std::move(s1),
-                                          expr::cond(_args1.d_a0, _args1.d_a1,
-                                                     _args1.d_a2));
-                          }},
+                      Overloaded{[&](const typename expr::Val _args1) -> void {
+                                   if (_args1.d_a0 <= 0) {
+                                     _result = std::move(s1);
+                                   } else {
+                                     unsigned int n0 = _args1.d_a0 - 1;
+                                     _result =
+                                         expr::add(s1, expr::val((n0 + 1)));
+                                   }
+                                 },
+                                 [&](const typename expr::Succ _args1) -> void {
+                                   _result =
+                                       expr::add(s1, expr::succ(_args1.d_a0));
+                                 },
+                                 [&](const typename expr::Add _args1) -> void {
+                                   _result = expr::add(
+                                       s1, expr::add(_args1.d_a0, _args1.d_a1));
+                                 },
+                                 [&](const typename expr::Mul _args1) -> void {
+                                   _result = expr::add(
+                                       s1, expr::mul(_args1.d_a0, _args1.d_a1));
+                                 },
+                                 [&](const typename expr::Cond _args1) -> void {
+                                   _result = expr::add(
+                                       s1, expr::cond(_args1.d_a0, _args1.d_a1,
+                                                      _args1.d_a2));
+                                 }},
                       _result->v());
                 },
                 [&](_Call5 _f) {
                   std::shared_ptr<expr> s1 = _f._s0;
                   std::visit(
-                      Overloaded{
-                          [&](const typename expr::Val _args1) -> void {
-                            if (_args1.d_a0 <= 0) {
-                              _result = std::move(s1);
-                            } else {
-                              unsigned int n0 = _args1.d_a0 - 1;
-                              _result = expr::add(s1, expr::val((n0 + 1)));
-                            }
-                          },
-                          [&](const typename expr::Succ _args1) -> void {
-                            _result = expr::add(std::move(s1),
-                                                expr::succ(_args1.d_a0));
-                          },
-                          [&](const typename expr::Add _args1) -> void {
-                            _result =
-                                expr::add(std::move(s1),
-                                          expr::add(_args1.d_a0, _args1.d_a1));
-                          },
-                          [&](const typename expr::Mul _args1) -> void {
-                            _result =
-                                expr::add(std::move(s1),
-                                          expr::mul(_args1.d_a0, _args1.d_a1));
-                          },
-                          [&](const typename expr::Cond _args1) -> void {
-                            _result =
-                                expr::add(std::move(s1),
-                                          expr::cond(_args1.d_a0, _args1.d_a1,
-                                                     _args1.d_a2));
-                          }},
+                      Overloaded{[&](const typename expr::Val _args1) -> void {
+                                   if (_args1.d_a0 <= 0) {
+                                     _result = std::move(s1);
+                                   } else {
+                                     unsigned int n0 = _args1.d_a0 - 1;
+                                     _result =
+                                         expr::add(s1, expr::val((n0 + 1)));
+                                   }
+                                 },
+                                 [&](const typename expr::Succ _args1) -> void {
+                                   _result =
+                                       expr::add(s1, expr::succ(_args1.d_a0));
+                                 },
+                                 [&](const typename expr::Add _args1) -> void {
+                                   _result = expr::add(
+                                       s1, expr::add(_args1.d_a0, _args1.d_a1));
+                                 },
+                                 [&](const typename expr::Mul _args1) -> void {
+                                   _result = expr::add(
+                                       s1, expr::mul(_args1.d_a0, _args1.d_a1));
+                                 },
+                                 [&](const typename expr::Cond _args1) -> void {
+                                   _result = expr::add(
+                                       s1, expr::cond(_args1.d_a0, _args1.d_a1,
+                                                      _args1.d_a2));
+                                 }},
                       _result->v());
                 },
                 [&](_Call6 _f) {
                   std::shared_ptr<expr> s1 = _f._s0;
                   std::visit(
-                      Overloaded{
-                          [&](const typename expr::Val _args1) -> void {
-                            if (_args1.d_a0 <= 0) {
-                              _result = std::move(s1);
-                            } else {
-                              unsigned int n0 = _args1.d_a0 - 1;
-                              _result = expr::add(s1, expr::val((n0 + 1)));
-                            }
-                          },
-                          [&](const typename expr::Succ _args1) -> void {
-                            _result = expr::add(std::move(s1),
-                                                expr::succ(_args1.d_a0));
-                          },
-                          [&](const typename expr::Add _args1) -> void {
-                            _result =
-                                expr::add(std::move(s1),
-                                          expr::add(_args1.d_a0, _args1.d_a1));
-                          },
-                          [&](const typename expr::Mul _args1) -> void {
-                            _result =
-                                expr::add(std::move(s1),
-                                          expr::mul(_args1.d_a0, _args1.d_a1));
-                          },
-                          [&](const typename expr::Cond _args1) -> void {
-                            _result =
-                                expr::add(std::move(s1),
-                                          expr::cond(_args1.d_a0, _args1.d_a1,
-                                                     _args1.d_a2));
-                          }},
+                      Overloaded{[&](const typename expr::Val _args1) -> void {
+                                   if (_args1.d_a0 <= 0) {
+                                     _result = std::move(s1);
+                                   } else {
+                                     unsigned int n0 = _args1.d_a0 - 1;
+                                     _result =
+                                         expr::add(s1, expr::val((n0 + 1)));
+                                   }
+                                 },
+                                 [&](const typename expr::Succ _args1) -> void {
+                                   _result =
+                                       expr::add(s1, expr::succ(_args1.d_a0));
+                                 },
+                                 [&](const typename expr::Add _args1) -> void {
+                                   _result = expr::add(
+                                       s1, expr::add(_args1.d_a0, _args1.d_a1));
+                                 },
+                                 [&](const typename expr::Mul _args1) -> void {
+                                   _result = expr::add(
+                                       s1, expr::mul(_args1.d_a0, _args1.d_a1));
+                                 },
+                                 [&](const typename expr::Cond _args1) -> void {
+                                   _result = expr::add(
+                                       s1, expr::cond(_args1.d_a0, _args1.d_a1,
+                                                      _args1.d_a2));
+                                 }},
                       _result->v());
                 },
                 [&](_Call7 _f) {
                   std::shared_ptr<expr> s1 = _f._s0;
                   std::visit(
-                      Overloaded{
-                          [&](const typename expr::Val _args1) -> void {
-                            if (_args1.d_a0 <= 0) {
-                              _result = std::move(s1);
-                            } else {
-                              unsigned int n0 = _args1.d_a0 - 1;
-                              _result = expr::add(s1, expr::val((n0 + 1)));
-                            }
-                          },
-                          [&](const typename expr::Succ _args1) -> void {
-                            _result = expr::add(std::move(s1),
-                                                expr::succ(_args1.d_a0));
-                          },
-                          [&](const typename expr::Add _args1) -> void {
-                            _result =
-                                expr::add(std::move(s1),
-                                          expr::add(_args1.d_a0, _args1.d_a1));
-                          },
-                          [&](const typename expr::Mul _args1) -> void {
-                            _result =
-                                expr::add(std::move(s1),
-                                          expr::mul(_args1.d_a0, _args1.d_a1));
-                          },
-                          [&](const typename expr::Cond _args1) -> void {
-                            _result =
-                                expr::add(std::move(s1),
-                                          expr::cond(_args1.d_a0, _args1.d_a1,
-                                                     _args1.d_a2));
-                          }},
+                      Overloaded{[&](const typename expr::Val _args1) -> void {
+                                   if (_args1.d_a0 <= 0) {
+                                     _result = std::move(s1);
+                                   } else {
+                                     unsigned int n0 = _args1.d_a0 - 1;
+                                     _result =
+                                         expr::add(s1, expr::val((n0 + 1)));
+                                   }
+                                 },
+                                 [&](const typename expr::Succ _args1) -> void {
+                                   _result =
+                                       expr::add(s1, expr::succ(_args1.d_a0));
+                                 },
+                                 [&](const typename expr::Add _args1) -> void {
+                                   _result = expr::add(
+                                       s1, expr::add(_args1.d_a0, _args1.d_a1));
+                                 },
+                                 [&](const typename expr::Mul _args1) -> void {
+                                   _result = expr::add(
+                                       s1, expr::mul(_args1.d_a0, _args1.d_a1));
+                                 },
+                                 [&](const typename expr::Cond _args1) -> void {
+                                   _result = expr::add(
+                                       s1, expr::cond(_args1.d_a0, _args1.d_a1,
+                                                      _args1.d_a2));
+                                 }},
                       _result->v());
                 },
                 [&](_Call8 _f) {
@@ -755,8 +720,7 @@ struct LoopifyExpr {
                               if (_args0.d_a0 == 1u) {
                                 _result = std::move(s2);
                               } else {
-                                _result = expr::mul(expr::val(_args0.d_a0),
-                                                    std::move(s2));
+                                _result = expr::mul(expr::val(_args0.d_a0), s2);
                               }
                             }
                           },
@@ -765,8 +729,7 @@ struct LoopifyExpr {
                             if (_args0.d_a0 == 1u) {
                               _result = std::move(s2);
                             } else {
-                              _result = expr::mul(expr::val(_args0.d_a0),
-                                                  std::move(s2));
+                              _result = expr::mul(expr::val(_args0.d_a0), s2);
                             }
                           },
                           [&](const typename expr::Add _args1) -> void {
@@ -775,8 +738,7 @@ struct LoopifyExpr {
                             if (_args0.d_a0 == 1u) {
                               _result = std::move(s2);
                             } else {
-                              _result = expr::mul(expr::val(_args0.d_a0),
-                                                  std::move(s2));
+                              _result = expr::mul(expr::val(_args0.d_a0), s2);
                             }
                           },
                           [&](const typename expr::Mul _args1) -> void {
@@ -785,8 +747,7 @@ struct LoopifyExpr {
                             if (_args0.d_a0 == 1u) {
                               _result = std::move(s2);
                             } else {
-                              _result = expr::mul(expr::val(_args0.d_a0),
-                                                  std::move(s2));
+                              _result = expr::mul(expr::val(_args0.d_a0), s2);
                             }
                           },
                           [&](const typename expr::Cond _args1) -> void {
@@ -795,8 +756,7 @@ struct LoopifyExpr {
                             if (_args0.d_a0 == 1u) {
                               _result = std::move(s2);
                             } else {
-                              _result = expr::mul(expr::val(_args0.d_a0),
-                                                  std::move(s2));
+                              _result = expr::mul(expr::val(_args0.d_a0), s2);
                             }
                           }},
                       _result->v());

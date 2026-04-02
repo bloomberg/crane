@@ -178,7 +178,7 @@ struct LoopifyListGenerators {
           }
           _last = _cell;
           unsigned int _next_x = f(_loop_x);
-          unsigned int _next_n = std::move(n_);
+          unsigned int _next_n = n_;
           _loop_x = std::move(_next_x);
           _loop_n = std::move(_next_n);
           continue;
@@ -268,7 +268,7 @@ struct LoopifyListGenerators {
                                       unsigned int i_ = i - 1;
                                       _stack.push_back(_Call1{
                                           f((((n - i) > n ? 0 : (n - i))))});
-                                      _stack.push_back(_Enter{std::move(i_)});
+                                      _stack.push_back(_Enter{i_});
                                     }
                                   },
                                   [&](_Call1 _f) {

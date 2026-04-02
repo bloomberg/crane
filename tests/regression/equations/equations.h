@@ -40,15 +40,12 @@ struct Equations {
                F3 &&gcd0) {
     if (refine) {
       return gcd0(std::make_pair(
-          (n + 1), ((((std::move(n0) + 1) - (n + 1)) > (std::move(n0) + 1)
-                         ? 0
-                         : ((std::move(n0) + 1) - (n + 1))))));
+          (n + 1),
+          ((((n0 + 1) - (n + 1)) > (n0 + 1) ? 0 : ((n0 + 1) - (n + 1))))));
     } else {
-      return gcd0(
-          std::make_pair(((((std::move(n) + 1) - (n0 + 1)) > (std::move(n) + 1)
-                               ? 0
-                               : ((std::move(n) + 1) - (n0 + 1)))),
-                         (n0 + 1)));
+      return gcd0(std::make_pair(
+          ((((n + 1) - (n0 + 1)) > (n + 1) ? 0 : ((n + 1) - (n0 + 1)))),
+          (n0 + 1)));
     }
   }
 
@@ -485,9 +482,9 @@ struct Equations {
   collatz_steps_clause_3(const unsigned int n, const bool refine,
                          F2 &&collatz_steps0) {
     if (refine) {
-      return (collatz_steps0(PeanoNat::div2(std::move(n))) + 1);
+      return (collatz_steps0(PeanoNat::div2(n)) + 1);
     } else {
-      return (collatz_steps0(((3u * std::move(n)) + 1u)) + 1);
+      return (collatz_steps0(((3u * n) + 1u)) + 1);
     }
   }
 

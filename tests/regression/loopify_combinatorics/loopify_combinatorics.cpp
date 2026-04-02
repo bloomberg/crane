@@ -14,7 +14,6 @@ LoopifyCombinatorics::remove(const unsigned int x,
   std::shared_ptr<List<unsigned int>> _head{};
   std::shared_ptr<List<unsigned int>> _last{};
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  unsigned int _loop_x = x;
   bool _continue = true;
   while (_continue) {
     std::visit(
@@ -29,7 +28,7 @@ LoopifyCombinatorics::remove(const unsigned int x,
               _continue = false;
             },
             [&](const typename List<unsigned int>::Cons _args) {
-              if (_loop_x == _args.d_a0) {
+              if (x == _args.d_a0) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = _args.d_a1;
@@ -46,10 +45,7 @@ LoopifyCombinatorics::remove(const unsigned int x,
                   _head = _cell;
                 }
                 _last = _cell;
-                std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                unsigned int _next_x = std::move(_loop_x);
-                _loop_l = std::move(_next_l);
-                _loop_x = std::move(_next_x);
+                _loop_l = _args.d_a1;
               }
             }},
         _loop_l->v());
@@ -639,7 +635,7 @@ LoopifyCombinatorics::insert_everywhere(const unsigned int x,
                         _result =
                             List<std::shared_ptr<List<unsigned int>>>::cons(
                                 List<unsigned int>::cons(
-                                    std::move(x), List<unsigned int>::nil()),
+                                    x, List<unsigned int>::nil()),
                                 List<std::shared_ptr<List<unsigned int>>>::
                                     nil());
                       },
@@ -718,8 +714,7 @@ LoopifyCombinatorics::insert_everywhere(const unsigned int x,
                 return _result;
               };
               _result = List<std::shared_ptr<List<unsigned int>>>::cons(
-                  List<unsigned int>::cons(std::move(x), std::move(l)),
-                  prepend_y(std::move(rest)));
+                  List<unsigned int>::cons(x, l), prepend_y(rest));
             }},
         _frame);
   }
@@ -850,7 +845,7 @@ LoopifyCombinatorics::dedup_fuel(const unsigned int fuel,
               if (elem(_args.d_a0, rest)) {
                 _result = std::move(rest);
               } else {
-                _result = List<unsigned int>::cons(_args.d_a0, std::move(rest));
+                _result = List<unsigned int>::cons(_args.d_a0, rest);
               }
             }},
         _frame);

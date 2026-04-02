@@ -14,18 +14,15 @@ RamWrite::get_main(const std::shared_ptr<RamWrite::ram_reg> &rg,
 std::shared_ptr<RamWrite::ram_reg>
 RamWrite::upd_main_in_reg(std::shared_ptr<RamWrite::ram_reg> rg,
                           const unsigned int i, const unsigned int v) {
-  return std::make_shared<RamWrite::ram_reg>(
-      ram_reg{update_nth<unsigned int>(std::move(i), (std::move(v) % 16u),
-                                       rg->reg_main),
-              rg->reg_status});
+  return std::make_shared<RamWrite::ram_reg>(ram_reg{
+      update_nth<unsigned int>(i, (v % 16u), rg->reg_main), rg->reg_status});
 }
 
 std::shared_ptr<RamWrite::ram_reg>
 RamWrite::upd_stat_in_reg(std::shared_ptr<RamWrite::ram_reg> rg,
                           const unsigned int i, const unsigned int v) {
   return std::make_shared<RamWrite::ram_reg>(ram_reg{
-      rg->reg_main, update_nth<unsigned int>(std::move(i), (std::move(v) % 16u),
-                                             rg->reg_status)});
+      rg->reg_main, update_nth<unsigned int>(i, (v % 16u), rg->reg_status)});
 }
 
 std::shared_ptr<RamWrite::ram_reg>
@@ -38,10 +35,9 @@ std::shared_ptr<RamWrite::ram_chip>
 RamWrite::upd_reg_in_chip(std::shared_ptr<RamWrite::ram_chip> ch,
                           const unsigned int r,
                           std::shared_ptr<RamWrite::ram_reg> rg) {
-  return std::make_shared<RamWrite::ram_chip>(
-      ram_chip{update_nth<std::shared_ptr<RamWrite::ram_reg>>(
-                   std::move(r), std::move(rg), ch->chip_regs),
-               ch->chip_port});
+  return std::make_shared<RamWrite::ram_chip>(ram_chip{
+      update_nth<std::shared_ptr<RamWrite::ram_reg>>(r, rg, ch->chip_regs),
+      ch->chip_port});
 }
 
 std::shared_ptr<RamWrite::ram_chip>
@@ -54,9 +50,8 @@ std::shared_ptr<RamWrite::ram_bank>
 RamWrite::upd_chip_in_bank(std::shared_ptr<RamWrite::ram_bank> bk,
                            const unsigned int c,
                            std::shared_ptr<RamWrite::ram_chip> ch) {
-  return std::make_shared<RamWrite::ram_bank>(
-      ram_bank{update_nth<std::shared_ptr<RamWrite::ram_chip>>(
-          std::move(c), std::move(ch), std::move(bk)->bank_chips)});
+  return std::make_shared<RamWrite::ram_bank>(ram_bank{
+      update_nth<std::shared_ptr<RamWrite::ram_chip>>(c, ch, bk->bank_chips)});
 }
 
 std::shared_ptr<RamWrite::ram_bank> RamWrite::get_bank_from_sys(

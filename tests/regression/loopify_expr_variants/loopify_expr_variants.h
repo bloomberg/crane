@@ -1357,17 +1357,15 @@ struct LoopifyExprVariants {
                           },
                           [&](const typename bool_expr::BAnd _args1) -> void {
                             _result = bool_expr::bor(
-                                std::move(a_),
-                                bool_expr::band(_args1.d_a0, _args1.d_a1));
+                                a_, bool_expr::band(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BOr _args1) -> void {
                             _result = bool_expr::bor(
-                                std::move(a_),
-                                bool_expr::bor(_args1.d_a0, _args1.d_a1));
+                                a_, bool_expr::bor(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BNot _args1) -> void {
                             _result = bool_expr::bor(
-                                std::move(a_), bool_expr::bnot(_args1.d_a0));
+                                a_, bool_expr::bnot(_args1.d_a0));
                           }},
                       _result->v());
                 },
@@ -1426,17 +1424,15 @@ struct LoopifyExprVariants {
                           },
                           [&](const typename bool_expr::BAnd _args1) -> void {
                             _result = bool_expr::band(
-                                std::move(a_),
-                                bool_expr::band(_args1.d_a0, _args1.d_a1));
+                                a_, bool_expr::band(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BOr _args1) -> void {
                             _result = bool_expr::band(
-                                std::move(a_),
-                                bool_expr::bor(_args1.d_a0, _args1.d_a1));
+                                a_, bool_expr::bor(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BNot _args1) -> void {
                             _result = bool_expr::band(
-                                std::move(a_), bool_expr::bnot(_args1.d_a0));
+                                a_, bool_expr::bnot(_args1.d_a0));
                           }},
                       _result->v());
                 },
@@ -1452,17 +1448,15 @@ struct LoopifyExprVariants {
                           },
                           [&](const typename bool_expr::BAnd _args1) -> void {
                             _result = bool_expr::band(
-                                std::move(a_),
-                                bool_expr::band(_args1.d_a0, _args1.d_a1));
+                                a_, bool_expr::band(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BOr _args1) -> void {
                             _result = bool_expr::band(
-                                std::move(a_),
-                                bool_expr::bor(_args1.d_a0, _args1.d_a1));
+                                a_, bool_expr::bor(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BNot _args1) -> void {
                             _result = bool_expr::band(
-                                std::move(a_), bool_expr::bnot(_args1.d_a0));
+                                a_, bool_expr::bnot(_args1.d_a0));
                           }},
                       _result->v());
                 },
@@ -1478,17 +1472,15 @@ struct LoopifyExprVariants {
                           },
                           [&](const typename bool_expr::BAnd _args1) -> void {
                             _result = bool_expr::band(
-                                std::move(a_),
-                                bool_expr::band(_args1.d_a0, _args1.d_a1));
+                                a_, bool_expr::band(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BOr _args1) -> void {
                             _result = bool_expr::band(
-                                std::move(a_),
-                                bool_expr::bor(_args1.d_a0, _args1.d_a1));
+                                a_, bool_expr::bor(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BNot _args1) -> void {
                             _result = bool_expr::band(
-                                std::move(a_), bool_expr::bnot(_args1.d_a0));
+                                a_, bool_expr::bnot(_args1.d_a0));
                           }},
                       _result->v());
                 },
@@ -1555,17 +1547,15 @@ struct LoopifyExprVariants {
                           },
                           [&](const typename bool_expr::BAnd _args1) -> void {
                             _result = bool_expr::bor(
-                                std::move(a_),
-                                bool_expr::band(_args1.d_a0, _args1.d_a1));
+                                a_, bool_expr::band(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BOr _args1) -> void {
                             _result = bool_expr::bor(
-                                std::move(a_),
-                                bool_expr::bor(_args1.d_a0, _args1.d_a1));
+                                a_, bool_expr::bor(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BNot _args1) -> void {
                             _result = bool_expr::bor(
-                                std::move(a_), bool_expr::bnot(_args1.d_a0));
+                                a_, bool_expr::bnot(_args1.d_a0));
                           }},
                       _result->v());
                 },
@@ -1581,17 +1571,15 @@ struct LoopifyExprVariants {
                           },
                           [&](const typename bool_expr::BAnd _args1) -> void {
                             _result = bool_expr::bor(
-                                std::move(a_),
-                                bool_expr::band(_args1.d_a0, _args1.d_a1));
+                                a_, bool_expr::band(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BOr _args1) -> void {
                             _result = bool_expr::bor(
-                                std::move(a_),
-                                bool_expr::bor(_args1.d_a0, _args1.d_a1));
+                                a_, bool_expr::bor(_args1.d_a0, _args1.d_a1));
                           },
                           [&](const typename bool_expr::BNot _args1) -> void {
                             _result = bool_expr::bor(
-                                std::move(a_), bool_expr::bnot(_args1.d_a0));
+                                a_, bool_expr::bnot(_args1.d_a0));
                           }},
                       _result->v());
                 }},

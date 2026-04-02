@@ -265,13 +265,7 @@ std::shared_ptr<LoopifyLists::list<unsigned int>> LoopifyLists::between(
                   _head = _cell;
                 }
                 _last = _cell;
-                std::shared_ptr<LoopifyLists::list<unsigned int>> _next_l =
-                    _args.d_a1;
-                unsigned int _next_hi = std::move(_loop_hi);
-                unsigned int _next_lo = std::move(_loop_lo);
-                _loop_l = std::move(_next_l);
-                _loop_hi = std::move(_next_hi);
-                _loop_lo = std::move(_next_lo);
+                _loop_l = _args.d_a1;
               } else {
                 std::shared_ptr<LoopifyLists::list<unsigned int>> _next_l =
                     _args.d_a1;
@@ -500,10 +494,10 @@ std::shared_ptr<LoopifyLists::list<unsigned int>> LoopifyLists::prefix_sums(
             [&](const typename LoopifyLists::list<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename list<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = list<unsigned int>::cons(std::move(_loop_acc),
+                    .d_a1 = list<unsigned int>::cons(_loop_acc,
                                                      list<unsigned int>::nil());
               } else {
-                _head = list<unsigned int>::cons(std::move(_loop_acc),
+                _head = list<unsigned int>::cons(_loop_acc,
                                                  list<unsigned int>::nil());
               }
               _continue = false;
@@ -762,8 +756,7 @@ LoopifyLists::windows_aux(
                               unsigned int>::Cons _args0) {
                             auto _cell =
                                 list<std::shared_ptr<LoopifyLists::list<
-                                    unsigned int>>>::cons(std::move(window),
-                                                          nullptr);
+                                    unsigned int>>>::cons(window, nullptr);
                             if (_last) {
                               std::get<typename list<std::shared_ptr<
                                   LoopifyLists::list<unsigned int>>>::Cons>(
@@ -1336,7 +1329,7 @@ __attribute__((pure)) unsigned int LoopifyLists::index_of_aux(
                 _result = std::move(_loop_i);
                 _continue = false;
               } else {
-                unsigned int _next_i = (std::move(_loop_i) + 1);
+                unsigned int _next_i = (_loop_i + 1);
                 std::shared_ptr<LoopifyLists::list<unsigned int>> _next_l =
                     _args.d_a1;
                 _loop_i = std::move(_next_i);
@@ -1413,7 +1406,7 @@ LoopifyLists::interleave(std::shared_ptr<LoopifyLists::list<unsigned int>> l1,
                         _loop_l2 = std::move(_next_l2);
                         _loop_l1 = std::move(_next_l1);
                       }},
-                  std::move(_loop_l2)->v());
+                  _loop_l2->v());
             }},
         _loop_l1->v());
   }
@@ -1594,7 +1587,7 @@ std::shared_ptr<LoopifyLists::list<unsigned int>> LoopifyLists::rev_helper(
               std::shared_ptr<LoopifyLists::list<unsigned int>> _next_l =
                   _args.d_a1;
               std::shared_ptr<LoopifyLists::list<unsigned int>> _next_acc =
-                  list<unsigned int>::cons(_args.d_a0, std::move(_loop_acc));
+                  list<unsigned int>::cons(_args.d_a0, _loop_acc);
               _loop_l = std::move(_next_l);
               _loop_acc = std::move(_next_acc);
             }},
@@ -1609,7 +1602,6 @@ std::shared_ptr<LoopifyLists::list<unsigned int>> LoopifyLists::reverse_insert(
     const std::shared_ptr<LoopifyLists::list<unsigned int>> &l) {
   struct _Enter {
     const std::shared_ptr<LoopifyLists::list<unsigned int>> l;
-    const unsigned int x;
   };
 
   struct _Call1 {
@@ -1622,7 +1614,7 @@ std::shared_ptr<LoopifyLists::list<unsigned int>> LoopifyLists::reverse_insert(
   using _Frame = std::variant<_Enter, _Call1>;
   std::shared_ptr<LoopifyLists::list<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{l, x});
+  _stack.push_back(_Enter{l});
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1630,19 +1622,18 @@ std::shared_ptr<LoopifyLists::list<unsigned int>> LoopifyLists::reverse_insert(
         Overloaded{
             [&](_Enter _f) {
               const std::shared_ptr<LoopifyLists::list<unsigned int>> l = _f.l;
-              const unsigned int x = _f.x;
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyLists::list<unsigned int>::Nil
                               _args) -> void {
                         _result = list<unsigned int>::cons(
-                            std::move(x), list<unsigned int>::nil());
+                            x, list<unsigned int>::nil());
                       },
                       [&](const typename LoopifyLists::list<unsigned int>::Cons
                               _args) -> void {
                         _stack.push_back(
                             _Call1{list<unsigned int>::nil(), _args.d_a0});
-                        _stack.push_back(_Enter{_args.d_a1, std::move(x)});
+                        _stack.push_back(_Enter{_args.d_a1});
                       }},
                   l->v());
             },
@@ -1661,7 +1652,6 @@ std::shared_ptr<LoopifyLists::list<unsigned int>> LoopifyLists::app_helper(
     std::shared_ptr<LoopifyLists::list<unsigned int>> l2) {
   std::shared_ptr<LoopifyLists::list<unsigned int>> _head{};
   std::shared_ptr<LoopifyLists::list<unsigned int>> _last{};
-  std::shared_ptr<LoopifyLists::list<unsigned int>> _loop_l2 = l2;
   std::shared_ptr<LoopifyLists::list<unsigned int>> _loop_l1 = l1;
   bool _continue = true;
   while (_continue) {
@@ -1670,9 +1660,9 @@ std::shared_ptr<LoopifyLists::list<unsigned int>> LoopifyLists::app_helper(
             [&](const typename LoopifyLists::list<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename list<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = std::move(_loop_l2);
+                    .d_a1 = std::move(l2);
               } else {
-                _head = std::move(_loop_l2);
+                _head = std::move(l2);
               }
               _continue = false;
             },
@@ -1685,12 +1675,7 @@ std::shared_ptr<LoopifyLists::list<unsigned int>> LoopifyLists::app_helper(
                 _head = _cell;
               }
               _last = _cell;
-              std::shared_ptr<LoopifyLists::list<unsigned int>> _next_l2 =
-                  std::move(_loop_l2);
-              std::shared_ptr<LoopifyLists::list<unsigned int>> _next_l1 =
-                  _args.d_a1;
-              _loop_l2 = std::move(_next_l2);
-              _loop_l1 = std::move(_next_l1);
+              _loop_l1 = _args.d_a1;
             }},
         _loop_l1->v());
   }
@@ -1846,8 +1831,8 @@ LoopifyLists::split_at(const unsigned int n,
                       [&](const typename LoopifyLists::list<unsigned int>::Cons
                               _args) -> void {
                         if (n == 0u) {
-                          _result = std::make_pair(list<unsigned int>::nil(),
-                                                   std::move(l));
+                          _result =
+                              std::make_pair(list<unsigned int>::nil(), l);
                         } else {
                           _stack.push_back(_Call1{_args});
                           _stack.push_back(_Enter{
@@ -2138,7 +2123,7 @@ __attribute__((pure)) unsigned int LoopifyLists::count(
                               _args) -> void {
                         if (x == _args.d_a0) {
                           _stack.push_back(_Call1{});
-                          _stack.push_back(_Enter{_args.d_a1, std::move(x)});
+                          _stack.push_back(_Enter{_args.d_a1, x});
                         } else {
                           _stack.push_back(_Enter{_args.d_a1, std::move(x)});
                         }

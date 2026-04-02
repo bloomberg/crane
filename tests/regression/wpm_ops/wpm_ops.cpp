@@ -43,8 +43,8 @@ WpmOps::execute_wpm1(std::shared_ptr<WpmOps::state1> s) {
   } else {
     new_rom = s->rom1;
   }
-  return std::make_shared<WpmOps::state1>(state1{
-      std::move(new_rom), s->prom_addr1, s->prom_data1, s->prom_enable1});
+  return std::make_shared<WpmOps::state1>(
+      state1{new_rom, s->prom_addr1, s->prom_data1, s->prom_enable1});
 }
 
 std::shared_ptr<WpmOps::state2>
@@ -55,9 +55,8 @@ WpmOps::execute_wpm2(std::shared_ptr<WpmOps::state2> s) {
   } else {
     new_rom = s->rom2;
   }
-  return std::make_shared<WpmOps::state2>(
-      state2{s->ram_sys2, std::move(new_rom), s->prom_addr2, s->prom_data2,
-             s->prom_enable2});
+  return std::make_shared<WpmOps::state2>(state2{
+      s->ram_sys2, new_rom, s->prom_addr2, s->prom_data2, s->prom_enable2});
 }
 
 std::shared_ptr<WpmOps::state3>
@@ -68,9 +67,8 @@ WpmOps::execute_wpm3(std::shared_ptr<WpmOps::state3> s) {
   } else {
     new_rom = s->rom3;
   }
-  return std::make_shared<WpmOps::state3>(state3{s->regs3, std::move(new_rom),
-                                                 s->prom_addr3, s->prom_data3,
-                                                 s->prom_enable3});
+  return std::make_shared<WpmOps::state3>(
+      state3{s->regs3, new_rom, s->prom_addr3, s->prom_data3, s->prom_enable3});
 }
 
 std::shared_ptr<WpmOps::state4>
@@ -81,8 +79,8 @@ WpmOps::execute_wpm4(std::shared_ptr<WpmOps::state4> s) {
   } else {
     new_rom = s->rom4;
   }
-  return std::make_shared<WpmOps::state4>(state4{
-      std::move(new_rom), s->prom_addr4, s->prom_data4, s->prom_enable4});
+  return std::make_shared<WpmOps::state4>(
+      state4{new_rom, s->prom_addr4, s->prom_data4, s->prom_enable4});
 }
 
 std::shared_ptr<WpmOps::state5>
@@ -93,8 +91,8 @@ WpmOps::execute_wpm5(std::shared_ptr<WpmOps::state5> s) {
   } else {
     new_rom = s->rom5;
   }
-  return std::make_shared<WpmOps::state5>(state5{
-      std::move(new_rom), s->prom_addr5, s->prom_data5, s->prom_enable5});
+  return std::make_shared<WpmOps::state5>(
+      state5{new_rom, s->prom_addr5, s->prom_data5, s->prom_enable5});
 }
 
 std::shared_ptr<WpmOps::state6>
@@ -105,6 +103,6 @@ WpmOps::execute_wpm6(std::shared_ptr<WpmOps::state6> s) {
   } else {
     new_rom = s->rom6;
   }
-  return std::make_shared<WpmOps::state6>(state6{
-      std::move(new_rom), s->prom_addr6, s->prom_data6, s->prom_enable6});
+  return std::make_shared<WpmOps::state6>(
+      state6{new_rom, s->prom_addr6, s->prom_data6, s->prom_enable6});
 }

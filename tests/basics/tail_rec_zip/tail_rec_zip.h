@@ -160,7 +160,7 @@ better_zip(const std::shared_ptr<List<T1>> &la,
                             _args.d_a1, _args0.d_a1,
                             List<std::shared_ptr<Prod<T1, T2>>>::cons(
                                 Prod<T1, T2>::pair(_args.d_a0, _args0.d_a0),
-                                std::move(acc)));
+                                acc));
                       }},
                   lb0->v());
             }},

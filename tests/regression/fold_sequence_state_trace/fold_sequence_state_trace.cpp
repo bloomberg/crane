@@ -86,20 +86,20 @@ FoldSequenceStateTraceCase::perp_through(
 std::shared_ptr<FoldSequenceStateTraceCase::Fold>
 FoldSequenceStateTraceCase::fold_O1(const std::pair<Real, Real> p1,
                                     const std::pair<Real, Real> p2) {
-  return Fold::fold_line_ctor(line_through(std::move(p1), std::move(p2)));
+  return Fold::fold_line_ctor(line_through(p1, p2));
 }
 
 std::shared_ptr<FoldSequenceStateTraceCase::Fold>
 FoldSequenceStateTraceCase::fold_O2(const std::pair<Real, Real> p1,
                                     const std::pair<Real, Real> p2) {
-  return Fold::fold_line_ctor(perp_bisector(std::move(p1), std::move(p2)));
+  return Fold::fold_line_ctor(perp_bisector(p1, p2));
 }
 
 std::shared_ptr<FoldSequenceStateTraceCase::Fold>
 FoldSequenceStateTraceCase::fold_O4(
     const std::pair<Real, Real> p,
     std::shared_ptr<FoldSequenceStateTraceCase::Line> l) {
-  return Fold::fold_line_ctor(perp_through(std::move(p), std::move(l)));
+  return Fold::fold_line_ctor(perp_through(p, l));
 }
 
 std::shared_ptr<FoldSequenceStateTraceCase::ConstructionState>
@@ -112,7 +112,7 @@ FoldSequenceStateTraceCase::add_fold_to_state(
       ConstructionState{
           st->state_points,
           List<std::shared_ptr<FoldSequenceStateTraceCase::Line>>::cons(
-              std::move(new_line), st->state_lines)});
+              new_line, st->state_lines)});
 }
 
 std::shared_ptr<FoldSequenceStateTraceCase::ConstructionState>

@@ -68,8 +68,7 @@ __attribute__((pure)) unsigned int RecordFieldPatterns::scaled_sum(
 std::shared_ptr<RecordFieldPatterns::Point>
 RecordFieldPatterns::PointImpl::mk(const unsigned int x,
                                    const unsigned int x0) {
-  return std::make_shared<RecordFieldPatterns::Point>(
-      Point{std::move(x), std::move(x0)});
+  return std::make_shared<RecordFieldPatterns::Point>(Point{x, x0});
 }
 
 __attribute__((pure)) unsigned int RecordFieldPatterns::PointImpl::get_x(

@@ -22,10 +22,7 @@ Monadic::safe_sub(const unsigned int n, const unsigned int m) {
   if (n < m) {
     return std::optional<unsigned int>();
   } else {
-    return std::make_optional<unsigned int>(
-        (((std::move(n) - std::move(m)) > std::move(n)
-              ? 0
-              : (std::move(n) - std::move(m)))));
+    return std::make_optional<unsigned int>((((n - m) > n ? 0 : (n - m))));
   }
 }
 
@@ -43,7 +40,7 @@ __attribute__((pure)) std::pair<unsigned int, unsigned int>
 Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
             const unsigned int u) {
   if (x <= 0) {
-    return std::make_pair(std::move(q), std::move(u));
+    return std::make_pair(q, u);
   } else {
     unsigned int x_ = x - 1;
     if (u <= 0) {

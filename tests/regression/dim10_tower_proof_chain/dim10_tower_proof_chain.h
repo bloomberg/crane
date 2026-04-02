@@ -113,11 +113,11 @@ struct Dim10TowerProofChainCase {
       dim10_layers_stabilize = [](void) {
         std::shared_ptr<SigT<unsigned int, std::any>> s =
             graded_goodwillie_layers_stabilize(10u);
-        if (std::move(s).use_count() == 1 && std::move(s)->v().index() == 0) {
-          auto &_rf = std::get<0>(std::move(s)->v_mut());
+        if (s.use_count() == 1 && s->v().index() == 0) {
+          auto &_rf = std::get<0>(s->v_mut());
           unsigned int x = std::move(_rf.d_x);
           _rf.d_x = x;
-          return std::move(s);
+          return s;
         } else {
           return std::visit(
               Overloaded{
@@ -126,18 +126,18 @@ struct Dim10TowerProofChainCase {
                     return SigT<unsigned int, std::any>::existt(_args.d_x,
                                                                 std::any{});
                   }},
-              std::move(s)->v());
+              s->v());
         }
       }();
   static inline const std::shared_ptr<SigT<unsigned int, std::any>>
       dim10_P_stabilizes = [](void) {
         std::shared_ptr<SigT<unsigned int, std::any>> s =
             graded_goodwillie_P_stabilizes(10u);
-        if (std::move(s).use_count() == 1 && std::move(s)->v().index() == 0) {
-          auto &_rf = std::get<0>(std::move(s)->v_mut());
+        if (s.use_count() == 1 && s->v().index() == 0) {
+          auto &_rf = std::get<0>(s->v_mut());
           unsigned int x = std::move(_rf.d_x);
           _rf.d_x = x;
-          return std::move(s);
+          return s;
         } else {
           return std::visit(
               Overloaded{
@@ -146,7 +146,7 @@ struct Dim10TowerProofChainCase {
                     return SigT<unsigned int, std::any>::existt(_args.d_x,
                                                                 std::any{});
                   }},
-              std::move(s)->v());
+              s->v());
         }
       }();
   __attribute__((pure)) static std::pair<

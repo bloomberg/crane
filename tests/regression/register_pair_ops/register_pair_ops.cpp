@@ -57,14 +57,14 @@ __attribute__((pure)) bool PeanoNat::leb(const unsigned int n,
 
 __attribute__((pure)) bool PeanoNat::ltb(const unsigned int n,
                                          const unsigned int m) {
-  return PeanoNat::leb((std::move(n) + 1), m);
+  return PeanoNat::leb((n + 1), m);
 }
 
 __attribute__((pure)) std::pair<unsigned int, unsigned int>
 PeanoNat::divmod(const unsigned int x, const unsigned int y,
                  const unsigned int q, const unsigned int u) {
   if (x <= 0) {
-    return std::make_pair(std::move(q), std::move(u));
+    return std::make_pair(q, u);
   } else {
     unsigned int x_ = x - 1;
     if (u <= 0) {
@@ -106,9 +106,7 @@ std::shared_ptr<RegisterPairOps::state>
 RegisterPairOps::set_reg(std::shared_ptr<RegisterPairOps::state> s,
                          const unsigned int r, const unsigned int v) {
   return std::make_shared<RegisterPairOps::state>(
-      state{update_nth<unsigned int>(std::move(r),
-                                     PeanoNat::modulo(std::move(v), 16u),
-                                     std::move(s)->regs)});
+      state{update_nth<unsigned int>(r, PeanoNat::modulo(v, 16u), s->regs)});
 }
 
 __attribute__((pure)) unsigned int

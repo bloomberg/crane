@@ -23,7 +23,7 @@ __attribute__((pure)) bool PeanoNat::leb(const unsigned int n,
 
 __attribute__((pure)) bool PeanoNat::ltb(const unsigned int n,
                                          const unsigned int m) {
-  return PeanoNat::leb((std::move(n) + 1), m);
+  return PeanoNat::leb((n + 1), m);
 }
 
 __attribute__((pure)) unsigned int PeanoNat::max(const unsigned int n,
@@ -36,7 +36,7 @@ __attribute__((pure)) unsigned int PeanoNat::max(const unsigned int n,
       return n;
     } else {
       unsigned int m_ = m - 1;
-      return (PeanoNat::max(std::move(n_), std::move(m_)) + 1);
+      return (PeanoNat::max(n_, m_) + 1);
     }
   }
 }
@@ -600,14 +600,11 @@ ValidatedVirtualCrossmatchTraceCase::create_safe_transfusion_order(
   std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder>
       order = std::make_shared<
           ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder>(
-          SafeTransfusionOrder{std::move(recipient_id), std::move(product_id),
-                               std::move(compat_result), std::move(xm),
-                               std::move(sample_time), std::move(authorizer),
-                               std::move(is_emergency)});
+          SafeTransfusionOrder{recipient_id, product_id, compat_result, xm,
+                               sample_time, authorizer, is_emergency});
   if (transfusion_order_authorized(order, current_time)) {
     return std::make_optional<std::shared_ptr<
-        ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder>>(
-        std::move(order));
+        ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder>>(order);
   } else {
     return std::optional<std::shared_ptr<
         ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder>>();
@@ -688,60 +685,47 @@ Nat::of_uint_acc(const std::shared_ptr<Uint> &d, const unsigned int acc) {
                                     Nat::tail_mul(10u, std::move(acc)));
           },
           [&](const typename Uint::D1 _args) -> unsigned int {
-            return Nat::of_uint_acc(_args.d_a0,
-                                    (Nat::tail_mul(10u, std::move(acc)) + 1));
+            return Nat::of_uint_acc(_args.d_a0, (Nat::tail_mul(10u, acc) + 1));
           },
           [&](const typename Uint::D2 _args) -> unsigned int {
-            return Nat::of_uint_acc(
-                _args.d_a0, ((Nat::tail_mul(10u, std::move(acc)) + 1) + 1));
+            return Nat::of_uint_acc(_args.d_a0,
+                                    ((Nat::tail_mul(10u, acc) + 1) + 1));
           },
           [&](const typename Uint::D3 _args) -> unsigned int {
-            return Nat::of_uint_acc(
-                _args.d_a0,
-                (((Nat::tail_mul(10u, std::move(acc)) + 1) + 1) + 1));
+            return Nat::of_uint_acc(_args.d_a0,
+                                    (((Nat::tail_mul(10u, acc) + 1) + 1) + 1));
           },
           [&](const typename Uint::D4 _args) -> unsigned int {
             return Nat::of_uint_acc(
-                _args.d_a0,
-                ((((Nat::tail_mul(10u, std::move(acc)) + 1) + 1) + 1) + 1));
+                _args.d_a0, ((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1));
           },
           [&](const typename Uint::D5 _args) -> unsigned int {
             return Nat::of_uint_acc(
                 _args.d_a0,
-                (((((Nat::tail_mul(10u, std::move(acc)) + 1) + 1) + 1) + 1) +
-                 1));
+                (((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1));
           },
           [&](const typename Uint::D6 _args) -> unsigned int {
             return Nat::of_uint_acc(
                 _args.d_a0,
-                ((((((Nat::tail_mul(10u, std::move(acc)) + 1) + 1) + 1) + 1) +
-                  1) +
-                 1));
+                ((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
           },
           [&](const typename Uint::D7 _args) -> unsigned int {
             return Nat::of_uint_acc(
                 _args.d_a0,
-                (((((((Nat::tail_mul(10u, std::move(acc)) + 1) + 1) + 1) + 1) +
-                   1) +
-                  1) +
+                (((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                  1));
           },
           [&](const typename Uint::D8 _args) -> unsigned int {
             return Nat::of_uint_acc(
                 _args.d_a0,
-                ((((((((Nat::tail_mul(10u, std::move(acc)) + 1) + 1) + 1) + 1) +
-                    1) +
-                   1) +
+                ((((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                   1) +
                  1));
           },
           [&](const typename Uint::D9 _args) -> unsigned int {
             return Nat::of_uint_acc(
                 _args.d_a0,
-                (((((((((Nat::tail_mul(10u, std::move(acc)) + 1) + 1) + 1) +
-                      1) +
-                     1) +
-                    1) +
+                (((((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                    1) +
                   1) +
                  1));
@@ -766,60 +750,48 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
                                         Nat::tail_mul(16u, std::move(acc)));
           },
           [&](const typename Uint0::D11 _args) -> unsigned int {
-            return Nat::of_hex_uint_acc(
-                _args.d_a0, (Nat::tail_mul(16u, std::move(acc)) + 1));
+            return Nat::of_hex_uint_acc(_args.d_a0,
+                                        (Nat::tail_mul(16u, acc) + 1));
           },
           [&](const typename Uint0::D12 _args) -> unsigned int {
-            return Nat::of_hex_uint_acc(
-                _args.d_a0, ((Nat::tail_mul(16u, std::move(acc)) + 1) + 1));
+            return Nat::of_hex_uint_acc(_args.d_a0,
+                                        ((Nat::tail_mul(16u, acc) + 1) + 1));
           },
           [&](const typename Uint0::D13 _args) -> unsigned int {
             return Nat::of_hex_uint_acc(
-                _args.d_a0,
-                (((Nat::tail_mul(16u, std::move(acc)) + 1) + 1) + 1));
+                _args.d_a0, (((Nat::tail_mul(16u, acc) + 1) + 1) + 1));
           },
           [&](const typename Uint0::D14 _args) -> unsigned int {
             return Nat::of_hex_uint_acc(
-                _args.d_a0,
-                ((((Nat::tail_mul(16u, std::move(acc)) + 1) + 1) + 1) + 1));
+                _args.d_a0, ((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1));
           },
           [&](const typename Uint0::D15 _args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
-                (((((Nat::tail_mul(16u, std::move(acc)) + 1) + 1) + 1) + 1) +
-                 1));
+                (((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1));
           },
           [&](const typename Uint0::D16 _args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
-                ((((((Nat::tail_mul(16u, std::move(acc)) + 1) + 1) + 1) + 1) +
-                  1) +
-                 1));
+                ((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
           },
           [&](const typename Uint0::D17 _args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
-                (((((((Nat::tail_mul(16u, std::move(acc)) + 1) + 1) + 1) + 1) +
-                   1) +
-                  1) +
+                (((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                  1));
           },
           [&](const typename Uint0::D18 _args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
-                ((((((((Nat::tail_mul(16u, std::move(acc)) + 1) + 1) + 1) + 1) +
-                    1) +
-                   1) +
+                ((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                   1) +
                  1));
           },
           [&](const typename Uint0::D19 _args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
-                (((((((((Nat::tail_mul(16u, std::move(acc)) + 1) + 1) + 1) +
-                      1) +
-                     1) +
-                    1) +
+                (((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                    1) +
                   1) +
                  1));
@@ -827,9 +799,7 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
           [&](const typename Uint0::Da _args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
-                ((((((((((Nat::tail_mul(16u, std::move(acc)) + 1) + 1) + 1) +
-                       1) +
-                      1) +
+                ((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) +
                      1) +
                     1) +
                    1) +
@@ -839,9 +809,7 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
           [&](const typename Uint0::Db _args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
-                (((((((((((Nat::tail_mul(16u, std::move(acc)) + 1) + 1) + 1) +
-                        1) +
-                       1) +
+                (((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) +
                       1) +
                      1) +
                     1) +
@@ -852,9 +820,7 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
           [&](const typename Uint0::Dc _args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
-                ((((((((((((Nat::tail_mul(16u, std::move(acc)) + 1) + 1) + 1) +
-                         1) +
-                        1) +
+                ((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) +
                        1) +
                       1) +
                      1) +
@@ -866,9 +832,7 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
           [&](const typename Uint0::Dd _args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
-                (((((((((((((Nat::tail_mul(16u, std::move(acc)) + 1) + 1) + 1) +
-                          1) +
-                         1) +
+                (((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) +
                         1) +
                        1) +
                       1) +
@@ -881,10 +845,7 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
           [&](const typename Uint0::De _args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
-                ((((((((((((((Nat::tail_mul(16u, std::move(acc)) + 1) + 1) +
-                            1) +
-                           1) +
-                          1) +
+                ((((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) +
                          1) +
                         1) +
                        1) +
@@ -898,9 +859,7 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
           [&](const typename Uint0::Df _args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
-                (((((((((((((((Nat::tail_mul(16u, std::move(acc)) + 1) + 1) +
-                             1) +
-                            1) +
+                (((((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) +
                            1) +
                           1) +
                          1) +

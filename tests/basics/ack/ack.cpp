@@ -9,7 +9,7 @@ __attribute__((pure)) unsigned int Ack::ack(const unsigned int m,
   std::function<unsigned int(unsigned int)> ack_m;
   ack_m = [&](unsigned int n0) -> unsigned int {
     if (m <= 0) {
-      return (std::move(n0) + 1);
+      return (n0 + 1);
     } else {
       unsigned int pm = m - 1;
       if (n0 <= 0) {

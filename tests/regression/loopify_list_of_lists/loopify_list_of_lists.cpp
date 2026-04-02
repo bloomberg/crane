@@ -266,7 +266,7 @@ LoopifyListOfLists::transpose_fuel(
                                 tails = map_tl(_loop_ll);
                             auto _cell =
                                 List<std::shared_ptr<List<unsigned int>>>::cons(
-                                    std::move(heads), nullptr);
+                                    heads, nullptr);
                             if (_last) {
                               std::get<typename List<
                                   std::shared_ptr<List<unsigned int>>>::Cons>(
@@ -278,7 +278,7 @@ LoopifyListOfLists::transpose_fuel(
                             _last = _cell;
                             std::shared_ptr<
                                 List<std::shared_ptr<List<unsigned int>>>>
-                                _next_ll = std::move(tails);
+                                _next_ll = tails;
                             unsigned int _next_fuel = fuel_;
                             _loop_ll = std::move(_next_ll);
                             _loop_fuel = std::move(_next_fuel);

@@ -9,8 +9,8 @@ std::shared_ptr<LoadProgram::state>
 LoadProgram::set_prom_params(std::shared_ptr<LoadProgram::state> s,
                              const unsigned int addr, const unsigned int data,
                              const bool enable) {
-  return std::make_shared<LoadProgram::state>(state{
-      std::move(s)->rom, std::move(addr), std::move(data), std::move(enable)});
+  return std::make_shared<LoadProgram::state>(
+      state{s->rom, addr, data, enable});
 }
 
 std::shared_ptr<LoadProgram::state>
@@ -22,7 +22,7 @@ LoadProgram::execute_wpm(std::shared_ptr<LoadProgram::state> s) {
     new_rom = s->rom;
   }
   return std::make_shared<LoadProgram::state>(
-      state{std::move(new_rom), s->prom_addr, s->prom_data, s->prom_enable});
+      state{new_rom, s->prom_addr, s->prom_data, s->prom_enable});
 }
 
 std::shared_ptr<LoadProgram::state>
@@ -48,9 +48,8 @@ std::shared_ptr<LoadProgram::state_extended>
 LoadProgram::set_prom_params_ext(std::shared_ptr<LoadProgram::state_extended> s,
                                  const unsigned int addr,
                                  const unsigned int data, const bool enable) {
-  return std::make_shared<LoadProgram::state_extended>(
-      state_extended{s->regs_len, s->rom_ext, s->pc, s->stack_len,
-                     std::move(addr), std::move(data), std::move(enable)});
+  return std::make_shared<LoadProgram::state_extended>(state_extended{
+      s->regs_len, s->rom_ext, s->pc, s->stack_len, addr, data, enable});
 }
 
 std::shared_ptr<LoadProgram::state_extended>
@@ -63,7 +62,7 @@ LoadProgram::execute_wpm_ext(std::shared_ptr<LoadProgram::state_extended> s) {
     new_rom = s->rom_ext;
   }
   return std::make_shared<LoadProgram::state_extended>(
-      state_extended{s->regs_len, std::move(new_rom), s->pc, s->stack_len,
+      state_extended{s->regs_len, new_rom, s->pc, s->stack_len,
                      s->prom_addr_ext, s->prom_data_ext, s->prom_enable_ext});
 }
 
@@ -71,7 +70,7 @@ std::shared_ptr<LoadProgram::state_simple>
 LoadProgram::write_byte(std::shared_ptr<LoadProgram::state_simple> s,
                         const unsigned int b) {
   return std::make_shared<LoadProgram::state_simple>(state_simple{
-      update_nth<unsigned int>(s->ptr_, std::move(b), s->rom_), (s->ptr_ + 1)});
+      update_nth<unsigned int>(s->ptr_, b, s->rom_), (s->ptr_ + 1)});
 }
 
 std::shared_ptr<LoadProgram::state_simple> LoadProgram::load_program_simple(

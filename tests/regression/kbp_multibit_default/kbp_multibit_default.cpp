@@ -2,7 +2,6 @@
 
 #include <memory>
 #include <type_traits>
-#include <utility>
 
 std::shared_ptr<KbpMultibitDefault::state> KbpMultibitDefault::execute_kbp(
     const std::shared_ptr<KbpMultibitDefault::state> &s) {
@@ -53,5 +52,5 @@ std::shared_ptr<KbpMultibitDefault::state> KbpMultibitDefault::execute_kbp(
       }
     }
   }
-  return std::make_shared<KbpMultibitDefault::state>(state{std::move(result)});
+  return std::make_shared<KbpMultibitDefault::state>(state{result});
 }

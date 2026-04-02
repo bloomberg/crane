@@ -22,8 +22,7 @@ std::shared_ptr<SrcWrrRomPortRoundtrip::state>
 SrcWrrRomPortRoundtrip::execute_src(
     std::shared_ptr<SrcWrrRomPortRoundtrip::state> s, const unsigned int r) {
   return std::make_shared<SrcWrrRomPortRoundtrip::state>(
-      state{s->regs, s->acc, s->rom_ports,
-            Nat::div(get_reg_pair(s, std::move(r)), 16u)});
+      state{s->regs, s->acc, s->rom_ports, Nat::div(get_reg_pair(s, r), 16u)});
 }
 
 std::shared_ptr<SrcWrrRomPortRoundtrip::state>
@@ -38,7 +37,7 @@ __attribute__((pure)) std::pair<unsigned int, unsigned int>
 Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
             const unsigned int u) {
   if (x <= 0) {
-    return std::make_pair(std::move(q), std::move(u));
+    return std::make_pair(q, u);
   } else {
     unsigned int x_ = x - 1;
     if (u <= 0) {

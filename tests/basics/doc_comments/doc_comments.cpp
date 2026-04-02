@@ -13,7 +13,7 @@ __attribute__((pure)) unsigned int DocComments::add(const unsigned int n,
     return std::move(m);
   } else {
     unsigned int p = n - 1;
-    return (add(std::move(p), m) + 1);
+    return (add(p, m) + 1);
   }
 }
 

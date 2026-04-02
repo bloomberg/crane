@@ -205,25 +205,23 @@ LoopifyOptionMaybe::find_index_even_aux(
   std::shared_ptr<List<unsigned int>> _loop_l = l;
   bool _continue = true;
   while (_continue) {
-    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
-                            _result = std::optional<unsigned int>();
-                            _continue = false;
-                          },
-                          [&](const typename List<unsigned int>::Cons _args) {
-                            if ((_args.d_a0 % 2u) == 0u) {
-                              _result = std::make_optional<unsigned int>(
-                                  std::move(_loop_idx));
-                              _continue = false;
-                            } else {
-                              unsigned int _next_idx =
-                                  (std::move(_loop_idx) + 1u);
-                              std::shared_ptr<List<unsigned int>> _next_l =
-                                  _args.d_a1;
-                              _loop_idx = std::move(_next_idx);
-                              _loop_l = std::move(_next_l);
-                            }
-                          }},
-               _loop_l->v());
+    std::visit(
+        Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+                     _result = std::optional<unsigned int>();
+                     _continue = false;
+                   },
+                   [&](const typename List<unsigned int>::Cons _args) {
+                     if ((_args.d_a0 % 2u) == 0u) {
+                       _result = std::make_optional<unsigned int>(_loop_idx);
+                       _continue = false;
+                     } else {
+                       unsigned int _next_idx = (std::move(_loop_idx) + 1u);
+                       std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
+                       _loop_idx = std::move(_next_idx);
+                       _loop_l = std::move(_next_l);
+                     }
+                   }},
+        _loop_l->v());
   }
   return _result;
 }

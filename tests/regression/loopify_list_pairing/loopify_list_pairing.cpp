@@ -229,7 +229,7 @@ LoopifyListPairing::zip_longest_fuel(
                               _args0.d_a1;
                           std::shared_ptr<List<unsigned int>> _next_l1 =
                               List<unsigned int>::nil();
-                          unsigned int _next_fuel = std::move(fuel_);
+                          unsigned int _next_fuel = fuel_;
                           _loop_l2 = std::move(_next_l2);
                           _loop_l1 = std::move(_next_l1);
                           _loop_fuel = std::move(_next_fuel);
@@ -257,7 +257,7 @@ LoopifyListPairing::zip_longest_fuel(
                               List<unsigned int>::nil();
                           std::shared_ptr<List<unsigned int>> _next_l1 =
                               _args.d_a1;
-                          unsigned int _next_fuel = std::move(fuel_);
+                          unsigned int _next_fuel = fuel_;
                           _loop_l2 = std::move(_next_l2);
                           _loop_l1 = std::move(_next_l1);
                           _loop_fuel = std::move(_next_fuel);
@@ -280,7 +280,7 @@ LoopifyListPairing::zip_longest_fuel(
                               _args0.d_a1;
                           std::shared_ptr<List<unsigned int>> _next_l1 =
                               _args.d_a1;
-                          unsigned int _next_fuel = std::move(fuel_);
+                          unsigned int _next_fuel = fuel_;
                           _loop_l2 = std::move(_next_l2);
                           _loop_l1 = std::move(_next_l1);
                           _loop_fuel = std::move(_next_fuel);

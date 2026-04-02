@@ -26,7 +26,7 @@ __attribute__((pure)) std::pair<unsigned int, unsigned int>
 Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
             const unsigned int u) {
   if (x <= 0) {
-    return std::make_pair(std::move(q), std::move(u));
+    return std::make_pair(q, u);
   } else {
     unsigned int x_ = x - 1;
     if (u <= 0) {

@@ -295,12 +295,9 @@ struct LoopifySorting {
                                 _head = _cell;
                               }
                               _last = _cell;
-                              std::shared_ptr<List<unsigned int>> _next_l2 =
-                                  std::move(_loop_l2);
                               std::shared_ptr<List<unsigned int>> _next_l1 =
                                   _args.d_a1;
-                              unsigned int _next_fuel = std::move(f);
-                              _loop_l2 = std::move(_next_l2);
+                              unsigned int _next_fuel = f;
                               _loop_l1 = std::move(_next_l1);
                               _loop_fuel = std::move(_next_fuel);
                             } else {
@@ -316,7 +313,7 @@ struct LoopifySorting {
                               _last = _cell;
                               std::shared_ptr<List<unsigned int>> _next_l2 =
                                   _args0.d_a1;
-                              unsigned int _next_fuel = std::move(f);
+                              unsigned int _next_fuel = f;
                               _loop_l2 = std::move(_next_l2);
                               _loop_fuel = std::move(_next_fuel);
                             }

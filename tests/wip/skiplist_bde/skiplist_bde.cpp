@@ -50,5 +50,5 @@ __attribute__((pure)) bool PeanoNat::leb(const unsigned int n,
 }
 __attribute__((pure)) bool PeanoNat::ltb(const unsigned int n,
                                          const unsigned int m) {
-  return PeanoNat::leb((bsl::move(n) + 1), m);
+  return PeanoNat::leb((n + 1), m);
 }

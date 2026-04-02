@@ -380,13 +380,12 @@ LoopifyStructures::ltree_max(std::shared_ptr<LoopifyStructures::ltree> t1,
                                          } else {
                                            max_val = _args.d_a0;
                                          }
-                                         _stack.push_back(
-                                             _Call1{_args0.d_a1, _args.d_a1,
-                                                    std::move(max_val)});
+                                         _stack.push_back(_Call1{
+                                             _args0.d_a1, _args.d_a1, max_val});
                                          _stack.push_back(
                                              _Enter{_args0.d_a2, _args.d_a2});
                                        }},
-                            std::move(t2)->v());
+                            t2->v());
                       }},
                   t1->v());
             },

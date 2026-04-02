@@ -2,7 +2,6 @@
 #define INCLUDED_TODO_WITH_TYPE_CONSTRAINT
 
 #include <type_traits>
-#include <utility>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;

@@ -41,10 +41,7 @@ LoopifyPredicates::remove_all(const unsigned int x,
                   _head = _cell;
                 }
                 _last = _cell;
-                std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                unsigned int _next_x = std::move(_loop_x);
-                _loop_l = std::move(_next_l);
-                _loop_x = std::move(_next_x);
+                _loop_l = _args.d_a1;
               }
             }},
         _loop_l->v());

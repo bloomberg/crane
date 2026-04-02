@@ -242,29 +242,27 @@ LoopifyNestedConstructs::tuple_constr(const unsigned int n) {
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(Overloaded{[&](_Enter _f) {
-                            const unsigned int n = _f.n;
-                            if (n <= 0) {
-                              _result =
-                                  std::make_pair(std::make_pair(0u, 0u), 0u);
-                            } else {
-                              unsigned int n_ = n - 1;
-                              _stack.push_back(_Call1{n});
-                              _stack.push_back(_Enter{n_});
-                            }
-                          },
-                          [&](_Call1 _f) {
-                            const unsigned int n = _f._s0;
-                            std::pair<unsigned int, unsigned int> p =
-                                _result.first;
-                            unsigned int c = _result.second;
-                            unsigned int a = p.first;
-                            unsigned int b = p.second;
-                            _result = std::make_pair(
-                                std::make_pair((a + 1u), (std::move(b) + n)),
-                                (c + (n * n)));
-                          }},
-               _frame);
+    std::visit(
+        Overloaded{[&](_Enter _f) {
+                     const unsigned int n = _f.n;
+                     if (n <= 0) {
+                       _result = std::make_pair(std::make_pair(0u, 0u), 0u);
+                     } else {
+                       unsigned int n_ = n - 1;
+                       _stack.push_back(_Call1{n});
+                       _stack.push_back(_Enter{n_});
+                     }
+                   },
+                   [&](_Call1 _f) {
+                     const unsigned int n = _f._s0;
+                     std::pair<unsigned int, unsigned int> p = _result.first;
+                     unsigned int c = _result.second;
+                     unsigned int a = p.first;
+                     unsigned int b = p.second;
+                     _result = std::make_pair(std::make_pair((a + 1u), (b + n)),
+                                              (c + (n * n)));
+                   }},
+        _frame);
   }
   return _result;
 }
@@ -475,7 +473,7 @@ Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
   while (_continue) {
     if (_loop_x <= 0) {
       {
-        _result = std::make_pair(std::move(_loop_q), std::move(_loop_u));
+        _result = std::make_pair(_loop_q, _loop_u);
         _continue = false;
       }
     } else {

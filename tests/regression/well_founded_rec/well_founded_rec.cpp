@@ -24,7 +24,7 @@ __attribute__((pure)) std::pair<unsigned int, unsigned int>
 PeanoNat::divmod(const unsigned int x, const unsigned int y,
                  const unsigned int q, const unsigned int u) {
   if (x <= 0) {
-    return std::make_pair(std::move(q), std::move(u));
+    return std::make_pair(q, u);
   } else {
     unsigned int x_ = x - 1;
     if (u <= 0) {
@@ -52,7 +52,7 @@ WellFoundedRec::countdown_acc(const unsigned int n) {
     return List<unsigned int>::cons(0u, List<unsigned int>::nil());
   } else {
     unsigned int m = n - 1;
-    return List<unsigned int>::cons(n, countdown_acc(std::move(m)));
+    return List<unsigned int>::cons(n, countdown_acc(m));
   }
 }
 
@@ -82,7 +82,7 @@ WellFoundedRec::gcd_wf(const unsigned int x, const unsigned int b) {
     return std::move(b);
   } else {
     unsigned int a_ = x - 1;
-    unsigned int y = PeanoNat::modulo(b, (std::move(a_) + 1));
-    return gcd_wf(std::move(y), (std::move(a_) + 1));
+    unsigned int y = PeanoNat::modulo(b, (a_ + 1));
+    return gcd_wf(std::move(y), (a_ + 1));
   }
 }

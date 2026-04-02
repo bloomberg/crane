@@ -72,7 +72,7 @@ MergesortFuel::merge(std::shared_ptr<List<unsigned int>> l1,
                           -> std::shared_ptr<List<unsigned int>> {
                         if (Compare_dec::le_lt_dec(_args.d_a0, _args0.d_a0)) {
                           return List<unsigned int>::cons(
-                              _args.d_a0, merge(_args.d_a1, std::move(l3)));
+                              _args.d_a0, merge(_args.d_a1, l3));
                         } else {
                           return List<unsigned int>::cons(
                               _args0.d_a0, merge_aux(_args0.d_a1));

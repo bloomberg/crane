@@ -187,8 +187,7 @@ struct LoopifyTail {
                             },
                             [&](const typename list<T1>::Cons _args) {
                               std::shared_ptr<list<T1>> _next_l = _args.d_a1;
-                              unsigned int _next_acc =
-                                  (std::move(_loop_acc) + 1);
+                              unsigned int _next_acc = (_loop_acc + 1);
                               _loop_l = std::move(_next_l);
                               _loop_acc = std::move(_next_acc);
                             }},

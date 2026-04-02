@@ -10,19 +10,19 @@ __attribute__((pure))
 std::pair<std::optional<unsigned int>, std::shared_ptr<StackOps::state_basic>>
 StackOps::pop_stack(std::shared_ptr<StackOps::state_basic> s) {
   return std::visit(
-      Overloaded{
-          [&](const typename List<unsigned int>::Nil _args)
-              -> std::pair<std::optional<unsigned int>,
-                           std::shared_ptr<StackOps::state_basic>> {
-            return std::make_pair(std::optional<unsigned int>(), std::move(s));
-          },
-          [](const typename List<unsigned int>::Cons _args)
-              -> std::pair<std::optional<unsigned int>,
-                           std::shared_ptr<StackOps::state_basic>> {
-            return std::make_pair(std::make_optional<unsigned int>(_args.d_a0),
-                                  std::make_shared<StackOps::state_basic>(
-                                      state_basic{_args.d_a1}));
-          }},
+      Overloaded{[&](const typename List<unsigned int>::Nil _args)
+                     -> std::pair<std::optional<unsigned int>,
+                                  std::shared_ptr<StackOps::state_basic>> {
+                   return std::make_pair(std::optional<unsigned int>(), s);
+                 },
+                 [](const typename List<unsigned int>::Cons _args)
+                     -> std::pair<std::optional<unsigned int>,
+                                  std::shared_ptr<StackOps::state_basic>> {
+                   return std::make_pair(
+                       std::make_optional<unsigned int>(_args.d_a0),
+                       std::make_shared<StackOps::state_basic>(
+                           state_basic{_args.d_a1}));
+                 }},
       s->stack_basic->v());
 }
 
@@ -53,8 +53,7 @@ StackOps::pop_stack_acc(std::shared_ptr<StackOps::state_with_acc> s) {
       Overloaded{[&](const typename List<unsigned int>::Nil _args)
                      -> std::pair<std::optional<unsigned int>,
                                   std::shared_ptr<StackOps::state_with_acc>> {
-                   return std::make_pair(std::optional<unsigned int>(),
-                                         std::move(s));
+                   return std::make_pair(std::optional<unsigned int>(), s);
                  },
                  [&](const typename List<unsigned int>::Cons _args)
                      -> std::pair<std::optional<unsigned int>,
@@ -62,7 +61,7 @@ StackOps::pop_stack_acc(std::shared_ptr<StackOps::state_with_acc> s) {
                    return std::make_pair(
                        std::make_optional<unsigned int>(_args.d_a0),
                        std::make_shared<StackOps::state_with_acc>(
-                           state_with_acc{_args.d_a1, std::move(s)->acc}));
+                           state_with_acc{_args.d_a1, s->acc}));
                  }},
       s->stack_with_acc->v());
 }
@@ -74,9 +73,8 @@ StackOps::push_stack(const std::shared_ptr<StackOps::state_basic> &s,
       Overloaded{
           [&](const typename List<unsigned int>::Nil _args)
               -> std::shared_ptr<StackOps::state_basic> {
-            return std::make_shared<StackOps::state_basic>(
-                state_basic{List<unsigned int>::cons(
-                    std::move(addr), List<unsigned int>::nil())});
+            return std::make_shared<StackOps::state_basic>(state_basic{
+                List<unsigned int>::cons(addr, List<unsigned int>::nil())});
           },
           [&](const typename List<unsigned int>::Cons _args)
               -> std::shared_ptr<StackOps::state_basic> {
@@ -86,7 +84,7 @@ StackOps::push_stack(const std::shared_ptr<StackOps::state_basic> &s,
                         -> std::shared_ptr<StackOps::state_basic> {
                       return std::make_shared<StackOps::state_basic>(
                           state_basic{List<unsigned int>::cons(
-                              std::move(addr),
+                              addr,
                               List<unsigned int>::cons(
                                   _args.d_a0, List<unsigned int>::nil()))});
                     },
@@ -98,7 +96,7 @@ StackOps::push_stack(const std::shared_ptr<StackOps::state_basic> &s,
                                   -> std::shared_ptr<StackOps::state_basic> {
                                 return std::make_shared<StackOps::state_basic>(
                                     state_basic{List<unsigned int>::cons(
-                                        std::move(addr),
+                                        addr,
                                         List<unsigned int>::cons(
                                             _args.d_a0,
                                             List<unsigned int>::cons(
@@ -110,7 +108,7 @@ StackOps::push_stack(const std::shared_ptr<StackOps::state_basic> &s,
                                   -> std::shared_ptr<StackOps::state_basic> {
                                 return std::make_shared<StackOps::state_basic>(
                                     state_basic{List<unsigned int>::cons(
-                                        std::move(addr),
+                                        addr,
                                         List<unsigned int>::cons(
                                             _args.d_a0,
                                             List<unsigned int>::cons(
@@ -180,6 +178,5 @@ StackOps::push_stack_cap(const std::shared_ptr<StackOps::state_basic> &s,
                 _args.d_a1->v());
           }},
       s->stack_basic->v());
-  return std::make_shared<StackOps::state_basic>(
-      state_basic{std::move(new_stack)});
+  return std::make_shared<StackOps::state_basic>(state_basic{new_stack});
 }

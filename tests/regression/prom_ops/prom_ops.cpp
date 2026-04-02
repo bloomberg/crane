@@ -59,10 +59,10 @@ std::shared_ptr<PromOps::state3>
 PromOps::set_prom_params3(std::shared_ptr<PromOps::state3> s,
                           const unsigned int addr, const unsigned int data,
                           const bool enable) {
-  return std::make_shared<PromOps::state3>(state3{
-      s->acc3, s->regs3, s->carry3, s->pc3, s->stack3, s->ram_sys3,
-      s->cur_bank3, s->sel_ram3, s->rom_ports3, s->sel_rom3, s->rom3,
-      s->test_pin3, std::move(addr), std::move(data), std::move(enable)});
+  return std::make_shared<PromOps::state3>(
+      state3{s->acc3, s->regs3, s->carry3, s->pc3, s->stack3, s->ram_sys3,
+             s->cur_bank3, s->sel_ram3, s->rom_ports3, s->sel_rom3, s->rom3,
+             s->test_pin3, addr, data, enable});
 }
 
 std::shared_ptr<PromOps::state5>
@@ -70,16 +70,14 @@ PromOps::set_prom_params5(std::shared_ptr<PromOps::state5> s,
                           const unsigned int addr, const unsigned int data,
                           const bool enable) {
   return std::make_shared<PromOps::state5>(
-      state5{s->acc5, s->regs5, s->rom5, std::move(addr), std::move(data),
-             std::move(enable)});
+      state5{s->acc5, s->regs5, s->rom5, addr, data, enable});
 }
 
 std::shared_ptr<PromOps::state6>
 PromOps::set_prom_params6(std::shared_ptr<PromOps::state6> s,
                           const unsigned int addr, const unsigned int data,
                           const bool enable) {
-  return std::make_shared<PromOps::state6>(state6{
-      std::move(s)->rom6, std::move(addr), std::move(data), std::move(enable)});
+  return std::make_shared<PromOps::state6>(state6{s->rom6, addr, data, enable});
 }
 
 std::shared_ptr<PromOps::state7>
@@ -87,8 +85,7 @@ PromOps::set_prom_params7(std::shared_ptr<PromOps::state7> s,
                           const unsigned int addr, const unsigned int data,
                           const bool enable) {
   return std::make_shared<PromOps::state7>(
-      state7{s->regs7, s->ram_sys7, std::move(addr), std::move(data),
-             std::move(enable)});
+      state7{s->regs7, s->ram_sys7, addr, data, enable});
 }
 
 std::shared_ptr<PromOps::state8>
@@ -96,16 +93,14 @@ PromOps::set_prom_params8(std::shared_ptr<PromOps::state8> s,
                           const unsigned int addr, const unsigned int data,
                           const bool enable) {
   return std::make_shared<PromOps::state8>(
-      state8{s->regs8, s->ram_sys8, std::move(addr), std::move(data),
-             std::move(enable)});
+      state8{s->regs8, s->ram_sys8, addr, data, enable});
 }
 
 std::shared_ptr<PromOps::state9>
 PromOps::set_prom_params9(std::shared_ptr<PromOps::state9> s,
                           const unsigned int addr, const unsigned int data,
                           const bool enable) {
-  return std::make_shared<PromOps::state9>(state9{
-      std::move(s)->rom9, std::move(addr), std::move(data), std::move(enable)});
+  return std::make_shared<PromOps::state9>(state9{s->rom9, addr, data, enable});
 }
 
 std::shared_ptr<PromOps::state10>
@@ -114,8 +109,7 @@ PromOps::set_prom_params10(std::shared_ptr<PromOps::state10> s,
                            const bool enable) {
   return std::make_shared<PromOps::state10>(
       state10{s->regs10, s->rom10, s->acc10, s->pc10, s->stack10, s->cur_bank10,
-              s->rom_ports10, s->sel_rom10, std::move(addr), std::move(data),
-              std::move(enable)});
+              s->rom_ports10, s->sel_rom10, addr, data, enable});
 }
 
 std::shared_ptr<PromOps::state10>
@@ -128,9 +122,9 @@ PromOps::execute_wpm10(std::shared_ptr<PromOps::state10> s) {
     new_rom = s->rom10;
   }
   return std::make_shared<PromOps::state10>(
-      state10{s->regs10, std::move(new_rom), s->acc10, s->pc10, s->stack10,
-              s->cur_bank10, s->rom_ports10, s->sel_rom10, s->prom_addr10,
-              s->prom_data10, s->prom_enable10});
+      state10{s->regs10, new_rom, s->acc10, s->pc10, s->stack10, s->cur_bank10,
+              s->rom_ports10, s->sel_rom10, s->prom_addr10, s->prom_data10,
+              s->prom_enable10});
 }
 
 std::shared_ptr<PromOps::state11>

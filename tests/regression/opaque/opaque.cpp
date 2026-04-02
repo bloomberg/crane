@@ -16,7 +16,7 @@ __attribute__((pure)) unsigned int Opaque::safe_pred(const unsigned int n) {
 }
 
 __attribute__((pure)) unsigned int Opaque::pred_of_succ(const unsigned int n) {
-  return safe_pred((std::move(n) + 1));
+  return safe_pred((n + 1));
 }
 
 __attribute__((pure)) bool Opaque::nat_eq_dec(const unsigned int n,

@@ -193,9 +193,9 @@ struct LoopifyFolds {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = List<unsigned int>::cons(
-                      std::move(_loop_acc), List<unsigned int>::nil());
+                      _loop_acc, List<unsigned int>::nil());
                 } else {
-                  _head = List<unsigned int>::cons(std::move(_loop_acc),
+                  _head = List<unsigned int>::cons(_loop_acc,
                                                    List<unsigned int>::nil());
                 }
                 _continue = false;
@@ -249,7 +249,7 @@ struct LoopifyFolds {
                         [&](const typename List<unsigned int>::Nil _args)
                             -> void {
                           _result = List<unsigned int>::cons(
-                              std::move(acc), List<unsigned int>::nil());
+                              acc, List<unsigned int>::nil());
                         },
                         [&](const typename List<unsigned int>::Cons _args)
                             -> void {
@@ -267,7 +267,7 @@ struct LoopifyFolds {
                         [&](const typename List<unsigned int>::Nil _args0)
                             -> void {
                           _result = List<unsigned int>::cons(
-                              std::move(acc), List<unsigned int>::nil());
+                              acc, List<unsigned int>::nil());
                         },
                         [&](const typename List<unsigned int>::Cons _args0)
                             -> void {
@@ -414,8 +414,8 @@ struct LoopifyFolds {
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
                             -> void {
-                          _result = std::make_pair(std::move(acc),
-                                                   List<unsigned int>::nil());
+                          _result =
+                              std::make_pair(acc, List<unsigned int>::nil());
                         },
                         [&](const typename List<unsigned int>::Cons _args)
                             -> void {
@@ -469,7 +469,7 @@ struct LoopifyFolds {
           }
           _last = _cell;
           unsigned int _next_x = f(_loop_x);
-          unsigned int _next_n = std::move(n_);
+          unsigned int _next_n = n_;
           _loop_x = std::move(_next_x);
           _loop_n = std::move(_next_n);
           continue;

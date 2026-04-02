@@ -870,9 +870,7 @@ struct HistoricalEventSafetyTraceCase {
               ? 0
               : ((s->reservoir_level_cm + inflow(t)) - out)));
     unsigned int new_stage = stage_fn(std::move(out));
-    return std::make_shared<State>(State{std::move(new_level),
-                                         std::move(new_stage),
-                                         ctrl(std::move(s), std::move(t))});
+    return std::make_shared<State>(State{new_level, new_stage, ctrl(s, t)});
   }
 
   template <MapsTo<unsigned int, unsigned int> F0,
@@ -886,8 +884,7 @@ struct HistoricalEventSafetyTraceCase {
                     const unsigned int max_level,
                     const unsigned int max_stage) {
     if (horizon <= 0) {
-      return std::make_pair(std::make_pair(std::move(s), std::move(max_level)),
-                            std::move(max_stage));
+      return std::make_pair(std::make_pair(s, max_level), max_stage);
     } else {
       unsigned int k = horizon - 1;
       std::shared_ptr<State> s_ =
@@ -923,8 +920,7 @@ struct HistoricalEventSafetyTraceCase {
     unsigned int max_lev = p.second;
     bool final_safe = is_safe_bool(pconf, final_state);
     return std::make_shared<TestResult>(
-        TestResult{event_id, initial_safe, std::move(final_safe),
-                   std::move(max_lev), std::move(max_stg)});
+        TestResult{event_id, initial_safe, final_safe, max_lev, max_stg});
   }
 
   __attribute__((pure)) static bool

@@ -344,7 +344,7 @@ std::shared_ptr<List<unsigned int>> LoopifyAdvancedPatterns::cons_computed(
               }
               _last = _cell;
               std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-              unsigned int _next_n = std::move(next_n);
+              unsigned int _next_n = next_n;
               _loop_l = std::move(_next_l);
               _loop_n = std::move(_next_n);
             }},
@@ -500,7 +500,6 @@ std::shared_ptr<List<unsigned int>> LoopifyAdvancedPatterns::replace_at(
   std::shared_ptr<List<unsigned int>> _head{};
   std::shared_ptr<List<unsigned int>> _last{};
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  unsigned int _loop_value = value;
   unsigned int _loop_idx = idx;
   bool _continue = true;
   while (_continue) {
@@ -519,11 +518,9 @@ std::shared_ptr<List<unsigned int>> LoopifyAdvancedPatterns::replace_at(
               if (_loop_idx == 0u) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                      .d_a1 = List<unsigned int>::cons(std::move(_loop_value),
-                                                       _args.d_a1);
+                      .d_a1 = List<unsigned int>::cons(value, _args.d_a1);
                 } else {
-                  _head = List<unsigned int>::cons(std::move(_loop_value),
-                                                   _args.d_a1);
+                  _head = List<unsigned int>::cons(value, _args.d_a1);
                 }
                 _continue = false;
               } else {
@@ -536,13 +533,9 @@ std::shared_ptr<List<unsigned int>> LoopifyAdvancedPatterns::replace_at(
                 }
                 _last = _cell;
                 std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                unsigned int _next_value = std::move(_loop_value);
                 unsigned int _next_idx =
-                    (((std::move(_loop_idx) - 1u) > std::move(_loop_idx)
-                          ? 0
-                          : (std::move(_loop_idx) - 1u)));
+                    (((_loop_idx - 1u) > _loop_idx ? 0 : (_loop_idx - 1u)));
                 _loop_l = std::move(_next_l);
-                _loop_value = std::move(_next_value);
                 _loop_idx = std::move(_next_idx);
               }
             }},

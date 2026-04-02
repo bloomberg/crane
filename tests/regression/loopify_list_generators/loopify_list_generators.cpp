@@ -133,7 +133,7 @@ LoopifyListGenerators::replicate_elem(const unsigned int n,
           _head = _cell;
         }
         _last = _cell;
-        _loop_n = std::move(n_);
+        _loop_n = n_;
         continue;
       }
     }

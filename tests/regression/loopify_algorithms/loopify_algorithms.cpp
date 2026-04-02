@@ -117,8 +117,8 @@ LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
                                               _args0.d_a1, std::move(p)});
                                         } else {
                                           _stack.push_back(_Call1{_args0.d_a0});
-                                          _stack.push_back(_Enter{
-                                              _args0.d_a1, std::move(p)});
+                                          _stack.push_back(
+                                              _Enter{_args0.d_a1, p});
                                         }
                                       }},
                                   rest->v());
@@ -141,7 +141,7 @@ LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
                 _last = _cell;
                 std::shared_ptr<List<unsigned int>> _next_l =
                     filter_multiples(_args.d_a0, _args.d_a1);
-                unsigned int _next_fuel = std::move(f);
+                unsigned int _next_fuel = f;
                 _loop_l = std::move(_next_l);
                 _loop_fuel = std::move(_next_fuel);
               }},
@@ -246,10 +246,10 @@ LoopifyAlgorithms::prefix_sums(const unsigned int acc,
             [&](const typename List<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::cons(std::move(_loop_acc),
+                    .d_a1 = List<unsigned int>::cons(_loop_acc,
                                                      List<unsigned int>::nil());
               } else {
-                _head = List<unsigned int>::cons(std::move(_loop_acc),
+                _head = List<unsigned int>::cons(_loop_acc,
                                                  List<unsigned int>::nil());
               }
               _continue = false;
@@ -456,8 +456,8 @@ LoopifyAlgorithms::nub_aux(const std::shared_ptr<List<unsigned int>> &l,
                                               _args0.d_a1, std::move(val)});
                                         } else {
                                           _stack.push_back(_Call1{_args0.d_a0});
-                                          _stack.push_back(_Enter{
-                                              _args0.d_a1, std::move(val)});
+                                          _stack.push_back(
+                                              _Enter{_args0.d_a1, val});
                                         }
                                       }},
                                   rest->v());
@@ -512,8 +512,7 @@ LoopifyAlgorithms::rev_impl(std::shared_ptr<List<unsigned int>> acc,
                             std::shared_ptr<List<unsigned int>> _next_l =
                                 _args.d_a1;
                             std::shared_ptr<List<unsigned int>> _next_acc =
-                                List<unsigned int>::cons(_args.d_a0,
-                                                         std::move(_loop_acc));
+                                List<unsigned int>::cons(_args.d_a0, _loop_acc);
                             _loop_l = std::move(_next_l);
                             _loop_acc = std::move(_next_acc);
                           }},
@@ -678,7 +677,7 @@ LoopifyAlgorithms::windows_aux(const unsigned int n,
                   _continue = false;
                 } else {
                   auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
-                      take_impl(n, std::move(_loop_l)), nullptr);
+                      take_impl(n, _loop_l), nullptr);
                   if (_last) {
                     std::get<typename List<
                         std::shared_ptr<List<unsigned int>>>::Cons>(

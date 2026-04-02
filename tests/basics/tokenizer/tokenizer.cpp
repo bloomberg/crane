@@ -85,7 +85,7 @@ Tokenizer::list_tokens(const std::basic_string_view<char> input,
           t = next_token(rest, soft, hard);
       if (t.first.has_value()) {
         std::basic_string_view<char> t_ = *t.first;
-        return List<std::basic_string_view<char>>::cons(std::move(t_),
+        return List<std::basic_string_view<char>>::cons(t_,
                                                         aux(fuel_, t.second));
       } else {
         return List<std::basic_string_view<char>>::nil();

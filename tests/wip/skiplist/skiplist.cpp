@@ -44,7 +44,7 @@ __attribute__((pure)) bool PeanoNat::leb(const unsigned int n,
 
 __attribute__((pure)) bool PeanoNat::ltb(const unsigned int n,
                                          const unsigned int m) {
-  return PeanoNat::leb((std::move(n) + 1), m);
+  return PeanoNat::leb((n + 1), m);
 }
 
 __attribute__((pure)) bool skiplist_test::nat_lt(const unsigned int _x0,

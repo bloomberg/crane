@@ -88,7 +88,7 @@ struct LetIn {
         Overloaded{
             [](const typename pair<unsigned int, unsigned int>::Pair0 _args)
                 -> unsigned int { return _args.d_a0; }},
-        std::move(p)->v());
+        p->v());
   }();
   static inline const unsigned int multi_let = [](void) {
     unsigned int a = 1u;

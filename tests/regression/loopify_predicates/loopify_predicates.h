@@ -188,8 +188,8 @@ struct LoopifyPredicates {
                             _stack.push_back(_Call1{_args});
                             _stack.push_back(_Enter{_args.d_a1});
                           } else {
-                            _result = std::make_pair(List<unsigned int>::nil(),
-                                                     std::move(l));
+                            _result =
+                                std::make_pair(List<unsigned int>::nil(), l);
                           }
                         }},
                     l->v());
@@ -241,8 +241,8 @@ struct LoopifyPredicates {
                         [&](const typename List<unsigned int>::Cons _args)
                             -> void {
                           if (p(_args.d_a0)) {
-                            _result = std::make_pair(List<unsigned int>::nil(),
-                                                     std::move(l));
+                            _result =
+                                std::make_pair(List<unsigned int>::nil(), l);
                           } else {
                             _stack.push_back(_Call1{_args});
                             _stack.push_back(_Enter{_args.d_a1});
@@ -433,8 +433,8 @@ struct LoopifyPredicates {
                             },
                             [&](const typename List<unsigned int>::Cons _args) {
                               if (p(_args.d_a0)) {
-                                _result = std::make_optional<unsigned int>(
-                                    std::move(_loop_idx));
+                                _result =
+                                    std::make_optional<unsigned int>(_loop_idx);
                                 _continue = false;
                               } else {
                                 unsigned int _next_idx =
@@ -516,7 +516,6 @@ struct LoopifyPredicates {
     std::shared_ptr<List<unsigned int>> _head{};
     std::shared_ptr<List<unsigned int>> _last{};
     std::shared_ptr<List<unsigned int>> _loop_l = l;
-    unsigned int _loop_x = x;
     bool _continue = true;
     while (_continue) {
       std::visit(
@@ -531,7 +530,7 @@ struct LoopifyPredicates {
                 _continue = false;
               },
               [&](const typename List<unsigned int>::Cons _args) {
-                if (eq(_loop_x, _args.d_a0)) {
+                if (eq(x, _args.d_a0)) {
                   if (_last) {
                     std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                         .d_a1 = _args.d_a1;
@@ -548,10 +547,7 @@ struct LoopifyPredicates {
                     _head = _cell;
                   }
                   _last = _cell;
-                  std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                  unsigned int _next_x = std::move(_loop_x);
-                  _loop_l = std::move(_next_l);
-                  _loop_x = std::move(_next_x);
+                  _loop_l = _args.d_a1;
                 }
               }},
           _loop_l->v());

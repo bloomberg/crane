@@ -369,7 +369,7 @@ LoopifyHofs::longest_run_fuel(const unsigned int fuel,
                             std::shared_ptr<List<unsigned int>> _next_l =
                                 List<unsigned int>::cons(_args0.d_a0,
                                                          _args0.d_a1);
-                            unsigned int _next_fuel = std::move(f);
+                            unsigned int _next_fuel = f;
                             _loop_l = std::move(_next_l);
                             _loop_fuel = std::move(_next_fuel);
                           } else {

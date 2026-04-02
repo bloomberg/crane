@@ -398,12 +398,10 @@ LoopifyNumbers::collatz_length_fuel(const unsigned int fuel,
                               } else {
                                 if ((n % 2u) == 0u) {
                                   _stack.push_back(_Call1{});
-                                  _stack.push_back(
-                                      _Enter{Nat::div(n, 2u), std::move(f)});
+                                  _stack.push_back(_Enter{Nat::div(n, 2u), f});
                                 } else {
                                   _stack.push_back(_Call2{});
-                                  _stack.push_back(
-                                      _Enter{((3u * n) + 1u), std::move(f)});
+                                  _stack.push_back(_Enter{((3u * n) + 1u), f});
                                 }
                               }
                             }
@@ -787,8 +785,7 @@ LoopifyNumbers::count_down_by_fuel(const unsigned int fuel,
                                 } else {
                                   _stack.push_back(_Call1{});
                                   _stack.push_back(
-                                      _Enter{(((n - k) > n ? 0 : (n - k))),
-                                             std::move(f)});
+                                      _Enter{(((n - k) > n ? 0 : (n - k))), f});
                                 }
                               }
                             }
@@ -1304,7 +1301,7 @@ LoopifyNumbers::collatz_list_fuel(const unsigned int fuel,
             }
             _last = _cell;
             unsigned int _next_n = Nat::div(_loop_n, 2u);
-            unsigned int _next_fuel = std::move(f);
+            unsigned int _next_fuel = f;
             _loop_n = std::move(_next_n);
             _loop_fuel = std::move(_next_fuel);
             continue;
@@ -1321,7 +1318,7 @@ LoopifyNumbers::collatz_list_fuel(const unsigned int fuel,
               }
               _last = _cell;
               unsigned int _next_n = Nat::div(_loop_n, 3u);
-              unsigned int _next_fuel = std::move(f);
+              unsigned int _next_fuel = f;
               _loop_n = std::move(_next_n);
               _loop_fuel = std::move(_next_fuel);
               continue;
@@ -1337,7 +1334,7 @@ LoopifyNumbers::collatz_list_fuel(const unsigned int fuel,
               }
               _last = _cell;
               unsigned int _next_n = ((3u * _loop_n) + 1u);
-              unsigned int _next_fuel = std::move(f);
+              unsigned int _next_fuel = f;
               _loop_n = std::move(_next_n);
               _loop_fuel = std::move(_next_fuel);
               continue;
@@ -1404,7 +1401,7 @@ Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
   while (_continue) {
     if (_loop_x <= 0) {
       {
-        _result = std::make_pair(std::move(_loop_q), std::move(_loop_u));
+        _result = std::make_pair(_loop_q, _loop_u);
         _continue = false;
       }
     } else {

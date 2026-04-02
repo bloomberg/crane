@@ -10,15 +10,14 @@ LoopifyGrouping::prepend_to_groups(
     const unsigned int x, const bool same,
     std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> groups) {
   if (same) {
-    if (std::move(groups).use_count() == 1 &&
-        std::move(groups)->v().index() == 1) {
-      auto &_rf = std::get<1>(std::move(groups)->v_mut());
+    if (groups.use_count() == 1 && groups->v().index() == 1) {
+      auto &_rf = std::get<1>(groups->v_mut());
       std::shared_ptr<List<unsigned int>> g = std::move(_rf.d_a0);
       std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> gs =
           std::move(_rf.d_a1);
       _rf.d_a0 = List<unsigned int>::cons(x, g);
       _rf.d_a1 = std::move(gs);
-      return std::move(groups);
+      return groups;
     } else {
       return std::visit(
           Overloaded{
@@ -27,8 +26,7 @@ LoopifyGrouping::prepend_to_groups(
                   -> std::shared_ptr<
                       List<std::shared_ptr<List<unsigned int>>>> {
                 return List<std::shared_ptr<List<unsigned int>>>::cons(
-                    List<unsigned int>::cons(std::move(x),
-                                             List<unsigned int>::nil()),
+                    List<unsigned int>::cons(x, List<unsigned int>::nil()),
                     List<std::shared_ptr<List<unsigned int>>>::nil());
               },
               [&](const typename List<std::shared_ptr<List<unsigned int>>>::Cons
@@ -36,15 +34,13 @@ LoopifyGrouping::prepend_to_groups(
                   -> std::shared_ptr<
                       List<std::shared_ptr<List<unsigned int>>>> {
                 return List<std::shared_ptr<List<unsigned int>>>::cons(
-                    List<unsigned int>::cons(std::move(x), _args.d_a0),
-                    _args.d_a1);
+                    List<unsigned int>::cons(x, _args.d_a0), _args.d_a1);
               }},
-          std::move(groups)->v());
+          groups->v());
     }
   } else {
     return List<std::shared_ptr<List<unsigned int>>>::cons(
-        List<unsigned int>::cons(std::move(x), List<unsigned int>::nil()),
-        std::move(groups));
+        List<unsigned int>::cons(x, List<unsigned int>::nil()), groups);
   }
 }
 
@@ -191,7 +187,7 @@ LoopifyGrouping::nub(const std::shared_ptr<List<unsigned int>> &l) {
               if (elem(_args.d_a0, rest)) {
                 _result = std::move(rest);
               } else {
-                _result = List<unsigned int>::cons(_args.d_a0, std::move(rest));
+                _result = List<unsigned int>::cons(_args.d_a0, rest);
               }
             }},
         _frame);
@@ -234,10 +230,7 @@ LoopifyGrouping::remove_elem(const unsigned int x,
                   _head = _cell;
                 }
                 _last = _cell;
-                std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                unsigned int _next_x = std::move(_loop_x);
-                _loop_l = std::move(_next_l);
-                _loop_x = std::move(_next_x);
+                _loop_l = _args.d_a1;
               }
             }},
         _loop_l->v());

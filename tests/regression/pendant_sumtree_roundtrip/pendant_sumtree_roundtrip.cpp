@@ -38,7 +38,7 @@ __attribute__((pure)) unsigned int PeanoNat::max(const unsigned int n,
       return n;
     } else {
       unsigned int m_ = m - 1;
-      return (PeanoNat::max(std::move(n_), std::move(m_)) + 1);
+      return (PeanoNat::max(n_, m_) + 1);
     }
   }
 }
@@ -218,7 +218,7 @@ PendantSumtreeRoundtripCase::pendant_digits(
                       }},
                   _args.d_a1->v());
             }},
-        std::move(l)->v());
+        l->v());
   } else {
     return std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>>();
   }
@@ -373,15 +373,14 @@ __attribute__((pure)) unsigned int PendantSumtreeRoundtripCase::sumtree_depth(
               -> unsigned int { return 1u; },
           [&](const typename PendantSumtreeRoundtripCase::SumTree::SumNode
                   _args) -> unsigned int {
-            return (_args.d_a1
-                        ->template map<unsigned int>(
-                            [&](const std::shared_ptr<
-                                PendantSumtreeRoundtripCase::SumTree> &_x0)
-                                -> unsigned int {
-                              return sumtree_depth(std::move(n), _x0);
-                            })
-                        ->template fold_right<unsigned int>(PeanoNat::max, 0u) +
-                    1);
+            return (
+                _args.d_a1
+                    ->template map<unsigned int>(
+                        [&](const std::shared_ptr<
+                            PendantSumtreeRoundtripCase::SumTree> &_x0)
+                            -> unsigned int { return sumtree_depth(n, _x0); })
+                    ->template fold_right<unsigned int>(PeanoNat::max, 0u) +
+                1);
           }},
       st->v());
 }
@@ -411,7 +410,7 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::sumtree_validb_aux(
                       });
               std::unique_ptr<PendantSumtreeRoundtripCase::PendantGroup> g =
                   std::make_unique<PendantSumtreeRoundtripCase::PendantGroup>(
-                      PendantGroup{_args.d_a0, std::move(child_tops)});
+                      PendantGroup{_args.d_a0, child_tops});
               return (
                   group_sums_validb(n, std::move(g)) &&
                   _args.d_a1->forallb(
@@ -515,8 +514,7 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::option_nat_is_some(
 
 std::shared_ptr<T0<PendantSumtreeRoundtripCase::digit>>
 PendantSumtreeRoundtripCase::digit_vec1(std::shared_ptr<T> a) {
-  return T0<std::shared_ptr<T>>::cons(std::move(a), 0u,
-                                      T0<std::shared_ptr<T>>::nil());
+  return T0<std::shared_ptr<T>>::cons(a, 0u, T0<std::shared_ptr<T>>::nil());
 }
 
 std::shared_ptr<T0<PendantSumtreeRoundtripCase::digit>>
@@ -524,11 +522,10 @@ PendantSumtreeRoundtripCase::digit_vec3(std::shared_ptr<T> a,
                                         std::shared_ptr<T> b,
                                         std::shared_ptr<T> c) {
   return T0<std::shared_ptr<T>>::cons(
-      std::move(a), 2u,
+      a, 2u,
       T0<std::shared_ptr<T>>::cons(
-          std::move(b), 1u,
-          T0<std::shared_ptr<T>>::cons(std::move(c), 0u,
-                                       T0<std::shared_ptr<T>>::nil())));
+          b, 1u,
+          T0<std::shared_ptr<T>>::cons(c, 0u, T0<std::shared_ptr<T>>::nil())));
 }
 
 std::shared_ptr<T> Fin::of_nat_lt(const unsigned int p, const unsigned int n) {

@@ -311,9 +311,7 @@ LoopifyGenerators::take(const unsigned int n,
                 _last = _cell;
                 std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
                 unsigned int _next_n =
-                    (((std::move(_loop_n) - 1u) > std::move(_loop_n)
-                          ? 0
-                          : (std::move(_loop_n) - 1u)));
+                    (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
                 _loop_l = std::move(_next_l);
                 _loop_n = std::move(_next_n);
               }
@@ -452,7 +450,7 @@ Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
   while (_continue) {
     if (_loop_x <= 0) {
       {
-        _result = std::make_pair(std::move(_loop_q), std::move(_loop_u));
+        _result = std::make_pair(_loop_q, _loop_u);
         _continue = false;
       }
     } else {

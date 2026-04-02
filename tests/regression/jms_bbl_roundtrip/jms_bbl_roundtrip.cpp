@@ -13,8 +13,7 @@ std::shared_ptr<JmsBblRoundtrip::state>
 JmsBblRoundtrip::execute_jms(std::shared_ptr<JmsBblRoundtrip::state> s,
                              const unsigned int addr) {
   return std::make_shared<JmsBblRoundtrip::state>(
-      state{addr12_of_nat(std::move(addr)),
-            addr12_of_nat((std::move(s)->pc + 2u)), true});
+      state{addr12_of_nat(addr), addr12_of_nat((s->pc + 2u)), true});
 }
 
 std::shared_ptr<JmsBblRoundtrip::state>

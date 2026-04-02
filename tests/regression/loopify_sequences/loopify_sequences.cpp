@@ -138,7 +138,7 @@ LoopifySequences::run_sum_aux(const unsigned int acc,
 
 std::shared_ptr<List<unsigned int>>
 LoopifySequences::run_sum(std::shared_ptr<List<unsigned int>> l) {
-  return List<unsigned int>::cons(0u, run_sum_aux(0u, std::move(l)));
+  return List<unsigned int>::cons(0u, run_sum_aux(0u, l));
 }
 
 /// rotate_left n l rotates list left by n positions.
@@ -370,33 +370,31 @@ LoopifySequences::split_by_sign(const std::shared_ptr<List<unsigned int>> &l,
   bool _continue = true;
   while (_continue) {
     std::visit(
-        Overloaded{
-            [&](const typename List<unsigned int>::Nil _args) {
-              _result =
-                  std::make_pair(std::move(_loop_pos), std::move(_loop_neg));
-              _continue = false;
-            },
-            [&](const typename List<unsigned int>::Cons _args) {
-              if (base <= _args.d_a0) {
-                std::shared_ptr<List<unsigned int>> _next_neg =
-                    std::move(_loop_neg);
-                std::shared_ptr<List<unsigned int>> _next_pos =
-                    List<unsigned int>::cons(_args.d_a0, std::move(_loop_pos));
-                std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                _loop_neg = std::move(_next_neg);
-                _loop_pos = std::move(_next_pos);
-                _loop_l = std::move(_next_l);
-              } else {
-                std::shared_ptr<List<unsigned int>> _next_neg =
-                    List<unsigned int>::cons(_args.d_a0, std::move(_loop_neg));
-                std::shared_ptr<List<unsigned int>> _next_pos =
-                    std::move(_loop_pos);
-                std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                _loop_neg = std::move(_next_neg);
-                _loop_pos = std::move(_next_pos);
-                _loop_l = std::move(_next_l);
-              }
-            }},
+        Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+                     _result = std::make_pair(_loop_pos, _loop_neg);
+                     _continue = false;
+                   },
+                   [&](const typename List<unsigned int>::Cons _args) {
+                     if (base <= _args.d_a0) {
+                       std::shared_ptr<List<unsigned int>> _next_neg =
+                           std::move(_loop_neg);
+                       std::shared_ptr<List<unsigned int>> _next_pos =
+                           List<unsigned int>::cons(_args.d_a0, _loop_pos);
+                       std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
+                       _loop_neg = std::move(_next_neg);
+                       _loop_pos = std::move(_next_pos);
+                       _loop_l = std::move(_next_l);
+                     } else {
+                       std::shared_ptr<List<unsigned int>> _next_neg =
+                           List<unsigned int>::cons(_args.d_a0, _loop_neg);
+                       std::shared_ptr<List<unsigned int>> _next_pos =
+                           std::move(_loop_pos);
+                       std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
+                       _loop_neg = std::move(_next_neg);
+                       _loop_pos = std::move(_next_pos);
+                       _loop_l = std::move(_next_l);
+                     }
+                   }},
         _loop_l->v());
   }
   return _result;
@@ -464,7 +462,6 @@ LoopifySequences::replace_at(const unsigned int idx, const unsigned int value,
   std::shared_ptr<List<unsigned int>> _head{};
   std::shared_ptr<List<unsigned int>> _last{};
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  unsigned int _loop_value = value;
   unsigned int _loop_idx = idx;
   bool _continue = true;
   while (_continue) {
@@ -483,11 +480,9 @@ LoopifySequences::replace_at(const unsigned int idx, const unsigned int value,
               if (_loop_idx == 0u) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                      .d_a1 = List<unsigned int>::cons(std::move(_loop_value),
-                                                       _args.d_a1);
+                      .d_a1 = List<unsigned int>::cons(value, _args.d_a1);
                 } else {
-                  _head = List<unsigned int>::cons(std::move(_loop_value),
-                                                   _args.d_a1);
+                  _head = List<unsigned int>::cons(value, _args.d_a1);
                 }
                 _continue = false;
               } else {
@@ -500,13 +495,9 @@ LoopifySequences::replace_at(const unsigned int idx, const unsigned int value,
                 }
                 _last = _cell;
                 std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                unsigned int _next_value = std::move(_loop_value);
                 unsigned int _next_idx =
-                    (((std::move(_loop_idx) - 1u) > std::move(_loop_idx)
-                          ? 0
-                          : (std::move(_loop_idx) - 1u)));
+                    (((_loop_idx - 1u) > _loop_idx ? 0 : (_loop_idx - 1u)));
                 _loop_l = std::move(_next_l);
-                _loop_value = std::move(_next_value);
                 _loop_idx = std::move(_next_idx);
               }
             }},
@@ -861,9 +852,9 @@ std::shared_ptr<List<unsigned int>> LoopifySequences::run_length_groups_aux(
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = List<unsigned int>::cons(
-                      std::move(_loop_count), List<unsigned int>::nil());
+                      _loop_count, List<unsigned int>::nil());
                 } else {
-                  _head = List<unsigned int>::cons(std::move(_loop_count),
+                  _head = List<unsigned int>::cons(_loop_count,
                                                    List<unsigned int>::nil());
                 }
                 _continue = false;
@@ -872,7 +863,7 @@ std::shared_ptr<List<unsigned int>> LoopifySequences::run_length_groups_aux(
             [&](const typename List<unsigned int>::Cons _args) {
               if (_loop_prev == _args.d_a0) {
                 std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                unsigned int _next_count = (std::move(_loop_count) + 1);
+                unsigned int _next_count = (_loop_count + 1);
                 unsigned int _next_prev = _args.d_a0;
                 _loop_l = std::move(_next_l);
                 _loop_count = std::move(_next_count);
@@ -886,8 +877,7 @@ std::shared_ptr<List<unsigned int>> LoopifySequences::run_length_groups_aux(
                   _loop_count = std::move(_next_count);
                   _loop_prev = std::move(_next_prev);
                 } else {
-                  auto _cell =
-                      List<unsigned int>::cons(std::move(_loop_count), nullptr);
+                  auto _cell = List<unsigned int>::cons(_loop_count, nullptr);
                   if (_last) {
                     std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                         .d_a1 = _cell;
@@ -1111,10 +1101,7 @@ LoopifySequences::filter_ne(const unsigned int x,
                   _head = _cell;
                 }
                 _last = _cell;
-                std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                unsigned int _next_x = std::move(_loop_x);
-                _loop_l = std::move(_next_l);
-                _loop_x = std::move(_next_x);
+                _loop_l = _args.d_a1;
               }
             }},
         _loop_l->v());
@@ -1483,12 +1470,7 @@ LoopifySequences::between(const unsigned int lo, const unsigned int hi,
                   _head = _cell;
                 }
                 _last = _cell;
-                std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                unsigned int _next_hi = std::move(_loop_hi);
-                unsigned int _next_lo = std::move(_loop_lo);
-                _loop_l = std::move(_next_l);
-                _loop_hi = std::move(_next_hi);
-                _loop_lo = std::move(_next_lo);
+                _loop_l = _args.d_a1;
               } else {
                 std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
                 unsigned int _next_hi = std::move(_loop_hi);
@@ -1514,7 +1496,7 @@ Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
   while (_continue) {
     if (_loop_x <= 0) {
       {
-        _result = std::make_pair(std::move(_loop_q), std::move(_loop_u));
+        _result = std::make_pair(_loop_q, _loop_u);
         _continue = false;
       }
     } else {

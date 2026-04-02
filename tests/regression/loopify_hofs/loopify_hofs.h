@@ -466,7 +466,7 @@ struct LoopifyHofs {
                   _loop_i = std::move(_next_i);
                   _loop_l = std::move(_next_l);
                 } else {
-                  unsigned int _next_i = (std::move(_loop_i) + 1);
+                  unsigned int _next_i = (_loop_i + 1);
                   std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
                   _loop_i = std::move(_next_i);
                   _loop_l = std::move(_next_l);
@@ -491,7 +491,6 @@ struct LoopifyHofs {
     std::shared_ptr<List<unsigned int>> _head{};
     std::shared_ptr<List<unsigned int>> _last{};
     std::shared_ptr<List<unsigned int>> _loop_l = l;
-    unsigned int _loop_x = x;
     bool _continue = true;
     while (_continue) {
       std::visit(
@@ -506,7 +505,7 @@ struct LoopifyHofs {
                 _continue = false;
               },
               [&](const typename List<unsigned int>::Cons _args) {
-                if (eq(_loop_x, _args.d_a0)) {
+                if (eq(x, _args.d_a0)) {
                   if (_last) {
                     std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                         .d_a1 = _args.d_a1;
@@ -523,10 +522,7 @@ struct LoopifyHofs {
                     _head = _cell;
                   }
                   _last = _cell;
-                  std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                  unsigned int _next_x = std::move(_loop_x);
-                  _loop_l = std::move(_next_l);
-                  _loop_x = std::move(_next_x);
+                  _loop_l = _args.d_a1;
                 }
               }},
           _loop_l->v());
@@ -560,9 +556,9 @@ struct LoopifyHofs {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = List<unsigned int>::cons(
-                      std::move(_loop_acc), List<unsigned int>::nil());
+                      _loop_acc, List<unsigned int>::nil());
                 } else {
-                  _head = List<unsigned int>::cons(std::move(_loop_acc),
+                  _head = List<unsigned int>::cons(_loop_acc,
                                                    List<unsigned int>::nil());
                 }
                 _continue = false;
@@ -649,7 +645,7 @@ struct LoopifyHofs {
                             std::shared_ptr<List<unsigned int>> _next_l =
                                 List<unsigned int>::cons(
                                     f(_args.d_a0, _args0.d_a0), _args0.d_a1);
-                            unsigned int _next_fuel = std::move(g);
+                            unsigned int _next_fuel = g;
                             _loop_l = std::move(_next_l);
                             _loop_fuel = std::move(_next_fuel);
                           }},
@@ -754,7 +750,7 @@ struct LoopifyHofs {
                         [&](const typename List<unsigned int>::Nil _args)
                             -> void {
                           _result = List<unsigned int>::cons(
-                              std::move(acc), List<unsigned int>::nil());
+                              acc, List<unsigned int>::nil());
                         },
                         [&](const typename List<unsigned int>::Cons _args)
                             -> void {
@@ -769,8 +765,7 @@ struct LoopifyHofs {
                 F0 f = _f._s2;
                 std::shared_ptr<List<unsigned int>> rest = _result;
                 unsigned int h = head_default(std::move(acc), rest);
-                _result = List<unsigned int>::cons(f(_args.d_a0, std::move(h)),
-                                                   std::move(rest));
+                _result = List<unsigned int>::cons(f(_args.d_a0, h), rest);
               }},
           _frame);
     }
@@ -828,8 +823,7 @@ struct LoopifyHofs {
                 F0 f = _f._s1;
                 std::shared_ptr<List<unsigned int>> rest = _result;
                 unsigned int h = head_default(_args.d_a0, rest);
-                _result = List<unsigned int>::cons(f(_args.d_a0, std::move(h)),
-                                                   std::move(rest));
+                _result = List<unsigned int>::cons(f(_args.d_a0, h), rest);
               }},
           _frame);
     }
@@ -917,7 +911,7 @@ struct LoopifyHofs {
                 std::shared_ptr<List<unsigned int>> rest = _result;
                 if (f(_args.d_a0).has_value()) {
                   unsigned int y = *f(_args.d_a0);
-                  _result = List<unsigned int>::cons(std::move(y), rest);
+                  _result = List<unsigned int>::cons(y, rest);
                 } else {
                   _result = std::move(rest);
                 }
@@ -1028,12 +1022,9 @@ struct LoopifyHofs {
                                 _head = _cell;
                               }
                               _last = _cell;
-                              std::shared_ptr<List<unsigned int>> _next_l2 =
-                                  std::move(_loop_l2);
                               std::shared_ptr<List<unsigned int>> _next_l1 =
                                   _args.d_a1;
-                              unsigned int _next_fuel = std::move(f);
-                              _loop_l2 = std::move(_next_l2);
+                              unsigned int _next_fuel = f;
                               _loop_l1 = std::move(_next_l1);
                               _loop_fuel = std::move(_next_fuel);
                             } else {
@@ -1049,7 +1040,7 @@ struct LoopifyHofs {
                               _last = _cell;
                               std::shared_ptr<List<unsigned int>> _next_l2 =
                                   _args0.d_a1;
-                              unsigned int _next_fuel = std::move(f);
+                              unsigned int _next_fuel = f;
                               _loop_l2 = std::move(_next_l2);
                               _loop_fuel = std::move(_next_fuel);
                             }
@@ -1162,7 +1153,7 @@ struct LoopifyHofs {
           }
           _last = _cell;
           unsigned int _next_x = f(_loop_x);
-          unsigned int _next_n = std::move(m);
+          unsigned int _next_n = m;
           _loop_x = std::move(_next_x);
           _loop_n = std::move(_next_n);
           continue;
@@ -1657,8 +1648,8 @@ struct LoopifyHofs {
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
                             -> void {
-                          _result = std::make_pair(std::move(acc),
-                                                   List<unsigned int>::nil());
+                          _result =
+                              std::make_pair(acc, List<unsigned int>::nil());
                         },
                         [&](const typename List<unsigned int>::Cons _args)
                             -> void {

@@ -11,7 +11,7 @@ DisassembleOps::decode1(const unsigned int b1, const unsigned int b2) {
   if ((b1 % 2u) == 0u) {
     return instruction::nop2();
   } else {
-    return instruction::ldm2((std::move(b2) % 16u));
+    return instruction::ldm2((b2 % 16u));
   }
 }
 
@@ -68,7 +68,7 @@ DisassembleOps::disassemble1(const std::shared_ptr<List<unsigned int>> &rom0,
                                  unsigned int>>(
                                  std::make_pair(
                                      decode1(_args.d_a0, _args0.d_a0),
-                                     (std::move(addr) + 2u)));
+                                     (addr + 2u)));
                            }},
                 _args.d_a1->v());
           }},
@@ -80,7 +80,7 @@ DisassembleOps::decode2(const unsigned int b1, const unsigned int b2) {
   if (b1 == 0u) {
     return instruction::nop();
   } else {
-    return instruction::ldm((std::move(b2) % 16u));
+    return instruction::ldm((b2 % 16u));
   }
 }
 
@@ -117,7 +117,7 @@ DisassembleOps::disassemble2(const std::shared_ptr<List<unsigned int>> &rom0,
                                  unsigned int>>(
                                  std::make_pair(
                                      decode2(_args.d_a0, _args0.d_a0),
-                                     (std::move(addr) + 2u)));
+                                     (addr + 2u)));
                            }},
                 _args.d_a1->v());
           }},
@@ -129,7 +129,7 @@ DisassembleOps::decode3(const unsigned int b1, const unsigned int b2) {
   if (b1 == 0u) {
     return instruction::nop();
   } else {
-    return instruction::ldm((std::move(b2) % 16u));
+    return instruction::ldm((b2 % 16u));
   }
 }
 
@@ -166,7 +166,7 @@ DisassembleOps::disassemble3(const std::shared_ptr<List<unsigned int>> &rom0,
                                  unsigned int>>(
                                  std::make_pair(
                                      decode3(_args.d_a0, _args0.d_a0),
-                                     (std::move(addr) + 2u)));
+                                     (addr + 2u)));
                            }},
                 _args.d_a1->v());
           }},
@@ -178,7 +178,7 @@ DisassembleOps::decode4(const unsigned int b1, const unsigned int b2) {
   if (b1 == 0u) {
     return instruction::nop();
   } else {
-    return instruction::ldm((std::move(b2) % 16u));
+    return instruction::ldm((b2 % 16u));
   }
 }
 
@@ -215,7 +215,7 @@ DisassembleOps::disassemble4(const std::shared_ptr<List<unsigned int>> &rom0,
                                  unsigned int>>(
                                  std::make_pair(
                                      decode4(_args.d_a0, _args0.d_a0),
-                                     (std::move(addr) + 2u)));
+                                     (addr + 2u)));
                            }},
                 _args.d_a1->v());
           }},

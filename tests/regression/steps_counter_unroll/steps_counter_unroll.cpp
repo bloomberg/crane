@@ -7,7 +7,7 @@
 std::shared_ptr<StepsCounterUnroll::state>
 StepsCounterUnroll::step(std::shared_ptr<StepsCounterUnroll::state> s) {
   return std::make_shared<StepsCounterUnroll::state>(
-      state{((std::move(s)->pc + 1u) % 4096u)});
+      state{((s->pc + 1u) % 4096u)});
 }
 
 std::shared_ptr<StepsCounterUnroll::state>

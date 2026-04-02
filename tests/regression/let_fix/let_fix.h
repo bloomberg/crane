@@ -83,16 +83,16 @@ struct LetFix {
         go;
     go = [&](std::shared_ptr<List<T1>> acc,
              std::shared_ptr<List<T1>> xs) -> std::shared_ptr<List<T1>> {
-      return std::visit(
-          Overloaded{
-              [&](const typename List<T1>::Nil _args)
-                  -> std::shared_ptr<List<T1>> { return std::move(acc); },
-              [&](const typename List<T1>::Cons _args)
-                  -> std::shared_ptr<List<T1>> {
-                return go(List<T1>::cons(_args.d_a0, std::move(acc)),
-                          _args.d_a1);
-              }},
-          xs->v());
+      return std::visit(Overloaded{[&](const typename List<T1>::Nil _args)
+                                       -> std::shared_ptr<List<T1>> {
+                                     return std::move(acc);
+                                   },
+                                   [&](const typename List<T1>::Cons _args)
+                                       -> std::shared_ptr<List<T1>> {
+                                     return go(List<T1>::cons(_args.d_a0, acc),
+                                               _args.d_a1);
+                                   }},
+                        xs->v());
     };
     return go(List<T1>::nil(), l);
   }

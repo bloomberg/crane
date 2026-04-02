@@ -23,15 +23,14 @@ SrcUsesPairValue::execute_src(std::shared_ptr<SrcUsesPairValue::state> s,
   unsigned int pair_val = get_reg_pair(s, r);
   unsigned int hi = Nat::div(pair_val, 16u);
   return std::make_shared<SrcUsesPairValue::state>(
-      state{std::move(s)->regs, hi, Nat::div(hi, 4u), (hi % 4u),
-            (std::move(pair_val) % 16u)});
+      state{s->regs, hi, Nat::div(hi, 4u), (hi % 4u), (pair_val % 16u)});
 }
 
 __attribute__((pure)) std::pair<unsigned int, unsigned int>
 Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
             const unsigned int u) {
   if (x <= 0) {
-    return std::make_pair(std::move(q), std::move(u));
+    return std::make_pair(q, u);
   } else {
     unsigned int x_ = x - 1;
     if (u <= 0) {

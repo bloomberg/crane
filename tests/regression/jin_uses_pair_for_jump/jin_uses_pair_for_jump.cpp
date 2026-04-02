@@ -28,15 +28,14 @@ JinUsesPairForJump::execute_jin(std::shared_ptr<JinUsesPairForJump::state> s,
   unsigned int next_page = page_of((s->pc + 1u));
   unsigned int pair_val = get_reg_pair(s, r);
   return std::make_shared<JinUsesPairForJump::state>(
-      state{std::move(s)->regs,
-            ((std::move(next_page) * 256u) + (std::move(pair_val) % 256u))});
+      state{s->regs, ((next_page * 256u) + (pair_val % 256u))});
 }
 
 __attribute__((pure)) std::pair<unsigned int, unsigned int>
 Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
             const unsigned int u) {
   if (x <= 0) {
-    return std::make_pair(std::move(q), std::move(u));
+    return std::make_pair(q, u);
   } else {
     unsigned int x_ = x - 1;
     if (u <= 0) {

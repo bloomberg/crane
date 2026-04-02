@@ -465,7 +465,7 @@ struct LoopifySequences {
             _last = _cell;
             std::shared_ptr<List<std::shared_ptr<List<T1>>>> _next_ll =
                 tails(_loop_ll);
-            unsigned int _next_fuel = std::move(f);
+            unsigned int _next_fuel = f;
             _loop_ll = std::move(_next_ll);
             _loop_fuel = std::move(_next_fuel);
             continue;
@@ -532,7 +532,7 @@ struct LoopifySequences {
           }
           _last = _cell;
           unsigned int _next_x = f(_loop_x);
-          unsigned int _next_n = std::move(m);
+          unsigned int _next_n = m;
           _loop_x = std::move(_next_x);
           _loop_n = std::move(_next_n);
           continue;

@@ -156,7 +156,7 @@ LoopifyListWindows::span_eq(const unsigned int first,
                                  _stack.push_back(_Enter{_args.d_a1});
                                } else {
                                  _result = std::make_pair(
-                                     List<unsigned int>::nil(), std::move(lst));
+                                     List<unsigned int>::nil(), lst);
                                }
                              }},
                   lst->v());
@@ -403,7 +403,7 @@ LoopifyListWindows::tails(std::shared_ptr<List<unsigned int>> l) {
             },
             [&](const typename List<unsigned int>::Cons _args) {
               auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
-                  std::move(_loop_l), nullptr);
+                  _loop_l, nullptr);
               if (_last) {
                 std::get<
                     typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
@@ -521,7 +521,7 @@ LoopifyListWindows::windows_fuel(const unsigned int fuel, const unsigned int n,
                   _continue = false;
                 } else {
                   auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
-                      take(n, std::move(_loop_l)), nullptr);
+                      take(n, _loop_l), nullptr);
                   if (_last) {
                     std::get<typename List<
                         std::shared_ptr<List<unsigned int>>>::Cons>(
@@ -532,7 +532,7 @@ LoopifyListWindows::windows_fuel(const unsigned int fuel, const unsigned int n,
                   }
                   _last = _cell;
                   std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                  unsigned int _next_fuel = std::move(fuel_);
+                  unsigned int _next_fuel = fuel_;
                   _loop_l = std::move(_next_l);
                   _loop_fuel = std::move(_next_fuel);
                 }
@@ -589,7 +589,7 @@ LoopifyListWindows::chunks_fuel(const unsigned int fuel, const unsigned int n,
                 std::shared_ptr<List<unsigned int>> rest =
                     drop(n, std::move(_loop_l));
                 auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
-                    std::move(chunk), nullptr);
+                    chunk, nullptr);
                 if (_last) {
                   std::get<
                       typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
@@ -599,7 +599,7 @@ LoopifyListWindows::chunks_fuel(const unsigned int fuel, const unsigned int n,
                   _head = _cell;
                 }
                 _last = _cell;
-                std::shared_ptr<List<unsigned int>> _next_l = std::move(rest);
+                std::shared_ptr<List<unsigned int>> _next_l = rest;
                 unsigned int _next_fuel = fuel_;
                 _loop_l = std::move(_next_l);
                 _loop_fuel = std::move(_next_fuel);

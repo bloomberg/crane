@@ -1,11 +1,10 @@
 #include <func_only_submodule_ab.h>
 
 #include <type_traits>
-#include <utility>
 
 __attribute__((pure)) unsigned int
 FuncOnlySubmoduleAb::Root::A::inc(const unsigned int n) {
-  return (std::move(n) + 1);
+  return (n + 1);
 }
 
 __attribute__((pure)) unsigned int

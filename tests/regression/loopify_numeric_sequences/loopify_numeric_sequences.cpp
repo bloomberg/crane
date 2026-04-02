@@ -104,7 +104,7 @@ LoopifyNumericSequences::collatz_sequence_fuel(const unsigned int fuel,
             }
             _last = _cell;
             unsigned int _next_n = Nat::div(_loop_n, 2u);
-            unsigned int _next_fuel = std::move(fuel_);
+            unsigned int _next_fuel = fuel_;
             _loop_n = std::move(_next_n);
             _loop_fuel = std::move(_next_fuel);
             continue;
@@ -120,7 +120,7 @@ LoopifyNumericSequences::collatz_sequence_fuel(const unsigned int fuel,
             }
             _last = _cell;
             unsigned int _next_n = ((3u * _loop_n) + 1u);
-            unsigned int _next_fuel = std::move(fuel_);
+            unsigned int _next_fuel = fuel_;
             _loop_n = std::move(_next_n);
             _loop_fuel = std::move(_next_fuel);
             continue;
@@ -491,7 +491,7 @@ Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
   while (_continue) {
     if (_loop_x <= 0) {
       {
-        _result = std::make_pair(std::move(_loop_q), std::move(_loop_u));
+        _result = std::make_pair(_loop_q, _loop_u);
         _continue = false;
       }
     } else {

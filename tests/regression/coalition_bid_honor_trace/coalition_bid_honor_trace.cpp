@@ -43,14 +43,14 @@ __attribute__((pure)) bool PeanoNat::leb(const unsigned int n,
 
 __attribute__((pure)) bool PeanoNat::ltb(const unsigned int n,
                                          const unsigned int m) {
-  return PeanoNat::leb((std::move(n) + 1), m);
+  return PeanoNat::leb((n + 1), m);
 }
 
 __attribute__((pure)) std::pair<unsigned int, unsigned int>
 PeanoNat::divmod(const unsigned int x, const unsigned int y,
                  const unsigned int q, const unsigned int u) {
   if (x <= 0) {
-    return std::make_pair(std::move(q), std::move(u));
+    return std::make_pair(q, u);
   } else {
     unsigned int x_ = x - 1;
     if (u <= 0) {
@@ -367,12 +367,11 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
             return std::move(y);
           },
           [&](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-            if (std::move(y).use_count() == 1 &&
-                std::move(y)->v().index() == 1) {
-              auto &_rf = std::get<1>(std::move(y)->v_mut());
+            if (y.use_count() == 1 && y->v().index() == 1) {
+              auto &_rf = std::get<1>(y->v_mut());
               std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
               _rf.d_a0 = Pos::add(std::move(_args.d_a0), y_);
-              return std::move(y);
+              return y;
             } else {
               return std::visit(
                   Overloaded{
@@ -385,16 +384,15 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
                       [&](const typename Z::Zneg _args0) -> std::shared_ptr<Z> {
                         return BinInt::pos_sub(_args.d_a0, _args0.d_a0);
                       }},
-                  std::move(y)->v());
+                  y->v());
             }
           },
           [&](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-            if (std::move(y).use_count() == 1 &&
-                std::move(y)->v().index() == 2) {
-              auto &_rf = std::get<2>(std::move(y)->v_mut());
+            if (y.use_count() == 1 && y->v().index() == 2) {
+              auto &_rf = std::get<2>(y->v_mut());
               std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
               _rf.d_a0 = Pos::add(std::move(_args.d_a0), y_);
-              return std::move(y);
+              return y;
             } else {
               return std::visit(
                   Overloaded{
@@ -407,7 +405,7 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
                       [&](const typename Z::Zneg _args0) -> std::shared_ptr<Z> {
                         return Z::zneg(Pos::add(_args.d_a0, _args0.d_a0));
                       }},
-                  std::move(y)->v());
+                  y->v());
             }
           }},
       x->v());
@@ -744,17 +742,17 @@ CoalitionBidHonorTraceCase::update_coalition_force(
             if (idx <= 0) {
               return List<std::shared_ptr<
                   CoalitionBidHonorTraceCase::CoalitionMember>>::
-                  cons(std::make_shared<
-                           CoalitionBidHonorTraceCase::CoalitionMember>(
-                           CoalitionMember{_args.d_a0->cm_clan,
-                                           _args.d_a0->cm_commander,
-                                           std::move(new_force)}),
-                       _args.d_a1);
+                  cons(
+                      std::make_shared<
+                          CoalitionBidHonorTraceCase::CoalitionMember>(
+                          CoalitionMember{_args.d_a0->cm_clan,
+                                          _args.d_a0->cm_commander, new_force}),
+                      _args.d_a1);
             } else {
               unsigned int n = idx - 1;
               return List<std::shared_ptr<
                   CoalitionBidHonorTraceCase::CoalitionMember>>::
-                  cons(std::move(_args.d_a0),
+                  cons(_args.d_a0,
                        update_coalition_force(_args.d_a1, n, new_force));
             }
           }},
@@ -806,7 +804,7 @@ CoalitionBidHonorTraceCase::coalition_to_bid(
     return std::make_optional<
         std::shared_ptr<CoalitionBidHonorTraceCase::ForceBid>>(
         std::make_shared<CoalitionBidHonorTraceCase::ForceBid>(
-            ForceBid{coalition_force(c), std::move(side), cmd}));
+            ForceBid{coalition_force(c), side, cmd}));
   } else {
     return std::optional<
         std::shared_ptr<CoalitionBidHonorTraceCase::ForceBid>>();
@@ -1030,7 +1028,7 @@ CoalitionBidHonorTraceCase::ledger_update_by_id(
               -> std::shared_ptr<
                   List<std::pair<unsigned int, std::shared_ptr<Z>>>> {
             return List<std::pair<unsigned int, std::shared_ptr<Z>>>::cons(
-                std::make_pair(std::move(warrior_id), std::move(new_honor)),
+                std::make_pair(warrior_id, new_honor),
                 List<std::pair<unsigned int, std::shared_ptr<Z>>>::nil());
           },
           [&](const typename List<
@@ -1041,12 +1039,11 @@ CoalitionBidHonorTraceCase::ledger_update_by_id(
             std::shared_ptr<Z> honor = _args.d_a0.second;
             if (PeanoNat::eqb(id, warrior_id)) {
               return List<std::pair<unsigned int, std::shared_ptr<Z>>>::cons(
-                  std::make_pair(id, new_honor), std::move(_args.d_a1));
+                  std::make_pair(id, new_honor), _args.d_a1);
             } else {
               return List<std::pair<unsigned int, std::shared_ptr<Z>>>::cons(
                   std::make_pair(id, honor),
-                  ledger_update_by_id(std::move(_args.d_a1), warrior_id,
-                                      new_honor));
+                  ledger_update_by_id(_args.d_a1, warrior_id, new_honor));
             }
           }},
       ledger->v());

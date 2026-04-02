@@ -10,7 +10,6 @@ LoopifyListCombining::append(const std::shared_ptr<List<unsigned int>> &a,
                              std::shared_ptr<List<unsigned int>> b) {
   std::shared_ptr<List<unsigned int>> _head{};
   std::shared_ptr<List<unsigned int>> _last{};
-  std::shared_ptr<List<unsigned int>> _loop_b = b;
   std::shared_ptr<List<unsigned int>> _loop_a = a;
   bool _continue = true;
   while (_continue) {
@@ -19,9 +18,9 @@ LoopifyListCombining::append(const std::shared_ptr<List<unsigned int>> &a,
             [&](const typename List<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = std::move(_loop_b);
+                    .d_a1 = std::move(b);
               } else {
-                _head = std::move(_loop_b);
+                _head = std::move(b);
               }
               _continue = false;
             },
@@ -34,10 +33,7 @@ LoopifyListCombining::append(const std::shared_ptr<List<unsigned int>> &a,
                 _head = _cell;
               }
               _last = _cell;
-              std::shared_ptr<List<unsigned int>> _next_b = std::move(_loop_b);
-              std::shared_ptr<List<unsigned int>> _next_a = _args.d_a1;
-              _loop_b = std::move(_next_b);
-              _loop_a = std::move(_next_a);
+              _loop_a = _args.d_a1;
             }},
         _loop_a->v());
   }
@@ -304,7 +300,7 @@ LoopifyListCombining::interleave_two(std::shared_ptr<List<unsigned int>> l1,
                         _loop_l2 = std::move(_next_l2);
                         _loop_l1 = std::move(_next_l1);
                       }},
-                  std::move(_loop_l2)->v());
+                  _loop_l2->v());
             }},
         _loop_l1->v());
   }

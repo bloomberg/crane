@@ -7,7 +7,7 @@
 
 __attribute__((pure)) unsigned int
 ForwardSpecAscii::helper_nat(const unsigned int n) {
-  return (std::move(n) + 1);
+  return (n + 1);
 }
 
 __attribute__((pure)) unsigned int

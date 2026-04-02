@@ -464,12 +464,9 @@ struct LoopifyPatterns {
                                 _head = _cell;
                               }
                               _last = _cell;
-                              std::shared_ptr<list<unsigned int>> _next_l2 =
-                                  std::move(_loop_l2);
                               std::shared_ptr<list<unsigned int>> _next_l1 =
                                   _args.d_a1;
-                              unsigned int _next_fuel = std::move(f);
-                              _loop_l2 = std::move(_next_l2);
+                              unsigned int _next_fuel = f;
                               _loop_l1 = std::move(_next_l1);
                               _loop_fuel = std::move(_next_fuel);
                             } else {
@@ -485,7 +482,7 @@ struct LoopifyPatterns {
                               _last = _cell;
                               std::shared_ptr<list<unsigned int>> _next_l2 =
                                   _args0.d_a1;
-                              unsigned int _next_fuel = std::move(f);
+                              unsigned int _next_fuel = f;
                               _loop_l2 = std::move(_next_l2);
                               _loop_fuel = std::move(_next_fuel);
                             }
@@ -706,12 +703,12 @@ struct LoopifyPatterns {
                     _head = _cell;
                   }
                   _last = _cell;
-                  unsigned int _next_idx = (std::move(_loop_idx) + 1);
+                  unsigned int _next_idx = (_loop_idx + 1);
                   std::shared_ptr<list<unsigned int>> _next_l = _args.d_a1;
                   _loop_idx = std::move(_next_idx);
                   _loop_l = std::move(_next_l);
                 } else {
-                  unsigned int _next_idx = (std::move(_loop_idx) + 1);
+                  unsigned int _next_idx = (_loop_idx + 1);
                   std::shared_ptr<list<unsigned int>> _next_l = _args.d_a1;
                   _loop_idx = std::move(_next_idx);
                   _loop_l = std::move(_next_l);

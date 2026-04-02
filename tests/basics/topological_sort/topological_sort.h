@@ -296,8 +296,7 @@ struct TopologicalSort {
                 } else {
                   if (f2.has_value()) {
                     T1 _x = *f2;
-                    return get_elems_aux(_args.d_a1,
-                                         List<T1>::cons(std::move(e1), h));
+                    return get_elems_aux(_args.d_a1, List<T1>::cons(e1, h));
                   } else {
                     if (eqb_node(e1, e2)) {
                       return get_elems_aux(std::move(_args.d_a1),
@@ -320,7 +319,7 @@ struct TopologicalSort {
   make_entry(F0 &&eqb_node, std::shared_ptr<List<std::pair<T1, T1>>> l,
              const T1 e) {
     return std::make_pair(
-        e, std::move(l)->template fold_right<std::shared_ptr<List<T1>>>(
+        e, l->template fold_right<std::shared_ptr<List<T1>>>(
                [=](std::pair<T1, T1> x, std::shared_ptr<List<T1>> ret) mutable {
                  if (eqb_node(e, x.first)) {
                    return List<T1>::cons(x.second, ret);
@@ -401,12 +400,11 @@ struct TopologicalSort {
                          return std::move(elem);
                        },
                        [&](const typename List<T1>::Cons _args) -> T1 {
-                         return cycle_entry_aux<T1>(
-                             eqb_node, graph0,
-                             List<T1>::cons(std::move(elem), seens), _args.d_a0,
-                             c);
+                         return cycle_entry_aux<T1>(eqb_node, graph0,
+                                                    List<T1>::cons(elem, seens),
+                                                    _args.d_a0, c);
                        }},
-            std::move(l)->v());
+            l->v());
       }
     }
   }
@@ -525,8 +523,7 @@ struct TopologicalSort {
                           }));
                     });
         return List<std::shared_ptr<List<T1>>>::cons(
-            std::move(mins_),
-            topological_sort_aux<T1>(eqb_node, std::move(rest_), c));
+            mins_, topological_sort_aux<T1>(eqb_node, rest_, c));
       }
     }
   }

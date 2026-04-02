@@ -236,7 +236,7 @@ template <typename K, typename V> struct CHT {
         Overloaded{[&](const typename List<std::pair<T1, T2>>::Nil _args)
                        -> std::pair<std::optional<T2>,
                                     std::shared_ptr<List<std::pair<T1, T2>>>> {
-                     return std::make_pair(std::optional<T2>(), std::move(xs));
+                     return std::make_pair(std::optional<T2>(), xs);
                    },
                    [&](const typename List<std::pair<T1, T2>>::Cons _args)
                        -> std::pair<std::optional<T2>,
@@ -245,7 +245,7 @@ template <typename K, typename V> struct CHT {
                      T2 v_ = _args.d_a0.second;
                      if (eqb(k, k_)) {
                        return std::make_pair(std::make_optional<T2>(v_),
-                                             std::move(_args.d_a1));
+                                             _args.d_a1);
                      } else {
                        std::pair<std::optional<T2>,
                                  std::shared_ptr<List<std::pair<T1, T2>>>>

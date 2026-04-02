@@ -319,7 +319,7 @@ std::shared_ptr<Positive> Pos::mul(const std::shared_ptr<Positive> &x,
             return add(y, Positive::xo(mul(_args.d_a0, y)));
           },
           [&](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
-            return Positive::xo(mul(_args.d_a0, std::move(y)));
+            return Positive::xo(mul(_args.d_a0, y));
           },
           [&](const typename Positive::XH _args) -> std::shared_ptr<Positive> {
             return std::move(y);
@@ -531,7 +531,7 @@ std::shared_ptr<Positive> Coq_Pos::mul(const std::shared_ptr<Positive> &x,
             return add(y, Positive::xo(mul(_args.d_a0, y)));
           },
           [&](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
-            return Positive::xo(mul(_args.d_a0, std::move(y)));
+            return Positive::xo(mul(_args.d_a0, y));
           },
           [&](const typename Positive::XH _args) -> std::shared_ptr<Positive> {
             return std::move(y);
@@ -629,12 +629,11 @@ std::shared_ptr<N> BinNat::add(std::shared_ptr<N> n, std::shared_ptr<N> m) {
             return std::move(m);
           },
           [&](const typename N::Npos _args) -> std::shared_ptr<N> {
-            if (std::move(m).use_count() == 1 &&
-                std::move(m)->v().index() == 1) {
-              auto &_rf = std::get<1>(std::move(m)->v_mut());
+            if (m.use_count() == 1 && m->v().index() == 1) {
+              auto &_rf = std::get<1>(m->v_mut());
               std::shared_ptr<Positive> q = std::move(_rf.d_a0);
               _rf.d_a0 = Coq_Pos::add(std::move(_args.d_a0), q);
-              return std::move(m);
+              return m;
             } else {
               return std::visit(
                   Overloaded{
@@ -644,7 +643,7 @@ std::shared_ptr<N> BinNat::add(std::shared_ptr<N> n, std::shared_ptr<N> m) {
                       [&](const typename N::Npos _args0) -> std::shared_ptr<N> {
                         return N::npos(Coq_Pos::add(_args.d_a0, _args0.d_a0));
                       }},
-                  std::move(m)->v());
+                  m->v());
             }
           }},
       n->v());
@@ -786,12 +785,11 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
             return std::move(y);
           },
           [&](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-            if (std::move(y).use_count() == 1 &&
-                std::move(y)->v().index() == 1) {
-              auto &_rf = std::get<1>(std::move(y)->v_mut());
+            if (y.use_count() == 1 && y->v().index() == 1) {
+              auto &_rf = std::get<1>(y->v_mut());
               std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
               _rf.d_a0 = Pos::add(std::move(_args.d_a0), y_);
-              return std::move(y);
+              return y;
             } else {
               return std::visit(
                   Overloaded{
@@ -804,16 +802,15 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
                       [&](const typename Z::Zneg _args0) -> std::shared_ptr<Z> {
                         return BinInt::pos_sub(_args.d_a0, _args0.d_a0);
                       }},
-                  std::move(y)->v());
+                  y->v());
             }
           },
           [&](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-            if (std::move(y).use_count() == 1 &&
-                std::move(y)->v().index() == 2) {
-              auto &_rf = std::get<2>(std::move(y)->v_mut());
+            if (y.use_count() == 1 && y->v().index() == 2) {
+              auto &_rf = std::get<2>(y->v_mut());
               std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
               _rf.d_a0 = Pos::add(std::move(_args.d_a0), y_);
-              return std::move(y);
+              return y;
             } else {
               return std::visit(
                   Overloaded{
@@ -826,7 +823,7 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
                       [&](const typename Z::Zneg _args0) -> std::shared_ptr<Z> {
                         return Z::zneg(Pos::add(_args.d_a0, _args0.d_a0));
                       }},
-                  std::move(y)->v());
+                  y->v());
             }
           }},
       x->v());

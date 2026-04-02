@@ -23,20 +23,19 @@ LoadProgramHeadWrite::update_nth(const unsigned int n, const unsigned int x,
                      },
                      [&](const typename List<unsigned int>::Cons _args)
                          -> std::shared_ptr<List<unsigned int>> {
-                       return List<unsigned int>::cons(std::move(x),
-                                                       _args.d_a1);
+                       return List<unsigned int>::cons(x, _args.d_a1);
                      }},
           l->v());
     }
   } else {
     unsigned int n_ = n - 1;
-    if (std::move(l).use_count() == 1 && std::move(l)->v().index() == 1) {
-      auto &_rf = std::get<1>(std::move(l)->v_mut());
+    if (l.use_count() == 1 && l->v().index() == 1) {
+      auto &_rf = std::get<1>(l->v_mut());
       unsigned int y = std::move(_rf.d_a0);
       std::shared_ptr<List<unsigned int>> ys = std::move(_rf.d_a1);
       _rf.d_a0 = std::move(y);
       _rf.d_a1 = update_nth(n_, x, std::move(ys));
-      return std::move(l);
+      return l;
     } else {
       return std::visit(
           Overloaded{[&](const typename List<unsigned int>::Nil _args0)
@@ -46,10 +45,9 @@ LoadProgramHeadWrite::update_nth(const unsigned int n, const unsigned int x,
                      [&](const typename List<unsigned int>::Cons _args0)
                          -> std::shared_ptr<List<unsigned int>> {
                        return List<unsigned int>::cons(
-                           _args0.d_a0,
-                           update_nth(std::move(n_), x, _args0.d_a1));
+                           _args0.d_a0, update_nth(n_, x, _args0.d_a1));
                      }},
-          std::move(l)->v());
+          l->v());
     }
   }
 }
@@ -58,8 +56,8 @@ std::shared_ptr<LoadProgramHeadWrite::state>
 LoadProgramHeadWrite::set_prom_params(
     std::shared_ptr<LoadProgramHeadWrite::state> s, const unsigned int addr,
     const unsigned int data, const bool enable) {
-  return std::make_shared<LoadProgramHeadWrite::state>(state{
-      std::move(s)->rom, std::move(addr), std::move(data), std::move(enable)});
+  return std::make_shared<LoadProgramHeadWrite::state>(
+      state{s->rom, addr, data, enable});
 }
 
 std::shared_ptr<LoadProgramHeadWrite::state> LoadProgramHeadWrite::execute_wpm(
@@ -71,7 +69,7 @@ std::shared_ptr<LoadProgramHeadWrite::state> LoadProgramHeadWrite::execute_wpm(
     new_rom = s->rom;
   }
   return std::make_shared<LoadProgramHeadWrite::state>(
-      state{std::move(new_rom), s->prom_addr, s->prom_data, s->prom_enable});
+      state{new_rom, s->prom_addr, s->prom_data, s->prom_enable});
 }
 
 std::shared_ptr<LoadProgramHeadWrite::state> LoadProgramHeadWrite::load_program(

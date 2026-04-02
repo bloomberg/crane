@@ -85,7 +85,7 @@ PulseParseCertificateCase::pulse_base_from_runs(
 __attribute__((pure)) PulseParseCertificateCase::PulseClass
 PulseParseCertificateCase::classify_run_with_base(const unsigned int base,
                                                   const unsigned int n) {
-  if ((std::move(base) + 1) <= n) {
+  if ((base + 1) <= n) {
     return PulseClass::e_MARKLONG;
   } else {
     return PulseClass::e_MARKSHORT;
@@ -188,6 +188,5 @@ PulseParseCertificateCase::certify_trace(std::shared_ptr<List<bool>> xs) {
   std::shared_ptr<List<PulseParseCertificateCase::PulseClass>> classes =
       classify_runs_with_base(base, runs);
   return std::make_shared<PulseParseCertificateCase::PulseCertificate>(
-      PulseCertificate{first_true(xs), last_true(xs), std::move(runs),
-                       std::move(base), std::move(classes)});
+      PulseCertificate{first_true(xs), last_true(xs), runs, base, classes});
 }

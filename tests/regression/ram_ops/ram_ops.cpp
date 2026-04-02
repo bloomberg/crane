@@ -33,8 +33,7 @@ std::shared_ptr<RamOps::ram_reg_main>
 RamOps::upd_main_in_reg(std::shared_ptr<RamOps::ram_reg_main> rg,
                         const unsigned int i, const unsigned int v) {
   return std::make_shared<RamOps::ram_reg_main>(
-      ram_reg_main{update_nth_main<unsigned int>(
-          std::move(i), (std::move(v) % 16u), std::move(rg)->reg_main)});
+      ram_reg_main{update_nth_main<unsigned int>(i, (v % 16u), rg->reg_main)});
 }
 
 std::shared_ptr<RamOps::ram_chip_main>
@@ -43,7 +42,7 @@ RamOps::upd_reg_in_chip_main(std::shared_ptr<RamOps::ram_chip_main> ch,
                              std::shared_ptr<RamOps::ram_reg_main> rg) {
   return std::make_shared<RamOps::ram_chip_main>(
       ram_chip_main{update_nth_main<std::shared_ptr<RamOps::ram_reg_main>>(
-          std::move(r), std::move(rg), std::move(ch)->chip_regs_main)});
+          r, rg, ch->chip_regs_main)});
 }
 
 std::shared_ptr<RamOps::ram_bank_main>
@@ -52,7 +51,7 @@ RamOps::upd_chip_in_bank_main(std::shared_ptr<RamOps::ram_bank_main> bk,
                               std::shared_ptr<RamOps::ram_chip_main> ch) {
   return std::make_shared<RamOps::ram_bank_main>(
       ram_bank_main{update_nth_main<std::shared_ptr<RamOps::ram_chip_main>>(
-          std::move(c), std::move(ch), std::move(bk)->bank_chips_main)});
+          c, ch, bk->bank_chips_main)});
 }
 
 std::shared_ptr<List<std::shared_ptr<RamOps::ram_bank_main>>>
@@ -100,7 +99,7 @@ RamOps::get_chip_port(const std::shared_ptr<RamOps::bank_port> &bk,
 std::shared_ptr<RamOps::chip_port>
 RamOps::upd_port_in_chip(const std::shared_ptr<RamOps::chip_port> &_x,
                          const unsigned int v) {
-  return std::make_shared<RamOps::chip_port>(chip_port{(std::move(v) % 16u)});
+  return std::make_shared<RamOps::chip_port>(chip_port{(v % 16u)});
 }
 
 std::shared_ptr<RamOps::bank_port>
@@ -109,7 +108,7 @@ RamOps::upd_chip_in_bank_port(std::shared_ptr<RamOps::bank_port> bk,
                               std::shared_ptr<RamOps::chip_port> ch) {
   return std::make_shared<RamOps::bank_port>(
       bank_port{update_nth_port<std::shared_ptr<RamOps::chip_port>>(
-          std::move(c), std::move(ch), std::move(bk)->bank_chips_port)});
+          c, ch, bk->bank_chips_port)});
 }
 
 std::shared_ptr<List<std::shared_ptr<RamOps::bank_port>>>
@@ -160,9 +159,8 @@ RamOps::get_reg_status(const std::shared_ptr<RamOps::ram_chip_status> &ch,
 std::shared_ptr<RamOps::ram_reg_status>
 RamOps::upd_status_in_reg(std::shared_ptr<RamOps::ram_reg_status> rg,
                           const unsigned int i, const unsigned int v) {
-  return std::make_shared<RamOps::ram_reg_status>(
-      ram_reg_status{update_nth_status<unsigned int>(
-          std::move(i), (std::move(v) % 16u), std::move(rg)->reg_status)});
+  return std::make_shared<RamOps::ram_reg_status>(ram_reg_status{
+      update_nth_status<unsigned int>(i, (v % 16u), rg->reg_status)});
 }
 
 std::shared_ptr<RamOps::ram_chip_status>
@@ -171,7 +169,7 @@ RamOps::upd_reg_in_chip_status(std::shared_ptr<RamOps::ram_chip_status> ch,
                                std::shared_ptr<RamOps::ram_reg_status> rg) {
   return std::make_shared<RamOps::ram_chip_status>(ram_chip_status{
       update_nth_status<std::shared_ptr<RamOps::ram_reg_status>>(
-          std::move(r), std::move(rg), std::move(ch)->chip_regs_status)});
+          r, rg, ch->chip_regs_status)});
 }
 
 std::shared_ptr<RamOps::ram_bank_status>
@@ -180,7 +178,7 @@ RamOps::upd_chip_in_bank_status(std::shared_ptr<RamOps::ram_bank_status> bk,
                                 std::shared_ptr<RamOps::ram_chip_status> ch) {
   return std::make_shared<RamOps::ram_bank_status>(ram_bank_status{
       update_nth_status<std::shared_ptr<RamOps::ram_chip_status>>(
-          std::move(c), std::move(ch), std::move(bk)->bank_chips_status)});
+          c, ch, bk->bank_chips_status)});
 }
 
 std::shared_ptr<List<std::shared_ptr<RamOps::ram_bank_status>>>
@@ -307,8 +305,8 @@ std::shared_ptr<List<unsigned int>> RamOps::ram_write_main_sys_preserve(
 std::shared_ptr<RamOps::state_preserve>
 RamOps::execute_write(std::shared_ptr<RamOps::state_preserve> s,
                       const unsigned int v) {
-  return std::make_shared<RamOps::state_preserve>(state_preserve{
-      ram_write_main_sys_preserve(s, std::move(v)), s->cur_bank_preserve});
+  return std::make_shared<RamOps::state_preserve>(
+      state_preserve{ram_write_main_sys_preserve(s, v), s->cur_bank_preserve});
 }
 
 __attribute__((pure)) bool
@@ -346,20 +344,19 @@ RamOps::write_status0(std::shared_ptr<RamOps::state_nested_bank> s,
   std::shared_ptr<RamOps::chip_nested_bank> c = get_chip0(b);
   std::shared_ptr<RamOps::reg_nested_bank> r = get_reg0(c);
   std::shared_ptr<RamOps::reg_nested_bank> r_ =
-      std::make_shared<RamOps::reg_nested_bank>(
-          reg_nested_bank{update_nth_nested_bank<unsigned int>(
-              0u, std::move(v), std::move(r)->status_)});
+      std::make_shared<RamOps::reg_nested_bank>(reg_nested_bank{
+          update_nth_nested_bank<unsigned int>(0u, v, r->status_)});
   std::shared_ptr<RamOps::chip_nested_bank> c_ =
       std::make_shared<RamOps::chip_nested_bank>(chip_nested_bank{
           update_nth_nested_bank<std::shared_ptr<RamOps::reg_nested_bank>>(
-              0u, std::move(r_), std::move(c)->regs_)});
+              0u, r_, c->regs_)});
   std::shared_ptr<RamOps::bank_nested_bank> b_ =
       std::make_shared<RamOps::bank_nested_bank>(bank_nested_bank{
           update_nth_nested_bank<std::shared_ptr<RamOps::chip_nested_bank>>(
-              0u, std::move(c_), std::move(b)->chips_)});
+              0u, c_, b->chips_)});
   return std::make_shared<RamOps::state_nested_bank>(state_nested_bank{
       update_nth_nested_bank<std::shared_ptr<RamOps::bank_nested_bank>>(
-          0u, std::move(b_), std::move(s)->banks_)});
+          0u, b_, s->banks_)});
 }
 
 __attribute__((pure)) unsigned int

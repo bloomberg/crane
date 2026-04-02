@@ -229,11 +229,8 @@ std::shared_ptr<List<unsigned int>> LoopifyListRelations::find_sublists_aux(
                 _last = _cell;
                 unsigned int _next_idx = (_loop_idx + 1u);
                 std::shared_ptr<List<unsigned int>> _next_haystack = _args.d_a1;
-                std::shared_ptr<List<unsigned int>> _next_needle =
-                    std::move(_loop_needle);
                 _loop_idx = std::move(_next_idx);
                 _loop_haystack = std::move(_next_haystack);
-                _loop_needle = std::move(_next_needle);
               } else {
                 unsigned int _next_idx = (std::move(_loop_idx) + 1u);
                 std::shared_ptr<List<unsigned int>> _next_haystack = _args.d_a1;
@@ -596,7 +593,7 @@ LoopifyListRelations::interleave(std::shared_ptr<List<unsigned int>> l1,
                         _loop_l2 = std::move(_next_l2);
                         _loop_l1 = std::move(_next_l1);
                       }},
-                  std::move(_loop_l2)->v());
+                  _loop_l2->v());
             }},
         _loop_l1->v());
   }
@@ -662,12 +659,9 @@ LoopifyListRelations::merge_fuel(const unsigned int fuel,
                               _head = _cell;
                             }
                             _last = _cell;
-                            std::shared_ptr<List<unsigned int>> _next_l2 =
-                                std::move(_loop_l2);
                             std::shared_ptr<List<unsigned int>> _next_l1 =
                                 _args.d_a1;
-                            unsigned int _next_fuel = std::move(fuel_);
-                            _loop_l2 = std::move(_next_l2);
+                            unsigned int _next_fuel = fuel_;
                             _loop_l1 = std::move(_next_l1);
                             _loop_fuel = std::move(_next_fuel);
                           } else {
@@ -683,7 +677,7 @@ LoopifyListRelations::merge_fuel(const unsigned int fuel,
                             _last = _cell;
                             std::shared_ptr<List<unsigned int>> _next_l2 =
                                 _args0.d_a1;
-                            unsigned int _next_fuel = std::move(fuel_);
+                            unsigned int _next_fuel = fuel_;
                             _loop_l2 = std::move(_next_l2);
                             _loop_fuel = std::move(_next_fuel);
                           }
@@ -791,11 +785,7 @@ LoopifyListRelations::union_(const std::shared_ptr<List<unsigned int>> &l1,
                   _head = _cell;
                 }
                 _last = _cell;
-                std::shared_ptr<List<unsigned int>> _next_l2 =
-                    std::move(_loop_l2);
-                std::shared_ptr<List<unsigned int>> _next_l1 = _args.d_a1;
-                _loop_l2 = std::move(_next_l2);
-                _loop_l1 = std::move(_next_l1);
+                _loop_l1 = _args.d_a1;
               }
             }},
         _loop_l1->v());
@@ -884,11 +874,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListRelations::intersection(
                   _head = _cell;
                 }
                 _last = _cell;
-                std::shared_ptr<List<unsigned int>> _next_l2 =
-                    std::move(_loop_l2);
-                std::shared_ptr<List<unsigned int>> _next_l1 = _args.d_a1;
-                _loop_l2 = std::move(_next_l2);
-                _loop_l1 = std::move(_next_l1);
+                _loop_l1 = _args.d_a1;
               } else {
                 std::shared_ptr<List<unsigned int>> _next_l2 =
                     std::move(_loop_l2);

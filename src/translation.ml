@@ -1416,12 +1416,18 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
      [std::make_pair] are evaluated eagerly so a throw would crash at
      runtime.  This mirrors the [gen_ctor_arg] in the [MLcons] case of
      {!gen_expr}. *)
+  (* Defense-in-depth: clear move_dead_after when generating custom constructor
+     arguments (std::make_pair, std::make_optional, etc.) to prevent use-after-move.
+     While escape analysis already handles this, this safeguard ensures correctness. *)
+  let saved_dead = tctx.move_dead_after in
+  tctx.move_dead_after <- Escape.IntSet.empty;
   let gen_ctor_arg e =
     match e with
     | MLdummy _ -> CPPraw "std::any{}"
     | _ -> gen_expr env e
   in
   let args = List.rev_map gen_ctor_arg ts in
+  tctx.move_dead_after <- saved_dead;
   (* Helper to wrap expression in function call syntax if it has arguments *)
   let app x =
     match args with
@@ -2103,12 +2109,20 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
          would throw at runtime.  The same pattern is used in
          {!gen_expr_custom_cons} for inline-extracted constructors
          (e.g., [std::make_pair]). *)
+      (* Defense-in-depth: clear move_dead_after when generating constructor
+         arguments to prevent use-after-move if a variable appears in multiple
+         arguments. The escape analysis already handles this correctly, but this
+         safeguard ensures correctness even with future modifications. *)
+      let saved_dead = tctx.move_dead_after in
+      tctx.move_dead_after <- Escape.IntSet.empty;
       let gen_ctor_arg e =
         match e with
         | MLdummy _ -> CPPraw "std::any{}"
         | _ -> gen_expr env e
       in
-      gen_ctor_call (List.rev_map gen_ctor_arg ts_updated)
+      let result = gen_ctor_call (List.rev_map gen_ctor_arg ts_updated) in
+      tctx.move_dead_after <- saved_dead;
+      result
     | _ ->
       (* Records: clear [promoted_var_map] because record structs use erased
          types (std::any) for promoted fields.  Lambda parameters assigned to
@@ -2134,7 +2148,12 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
             (Pp.str
                "gen_expr: non-record MLcons with matching type expected Tglob" )
       in
-      nstempmod (List.map (gen_expr env) ts)
+      (* Defense-in-depth: same safeguard as for non-record constructors above *)
+      let saved_dead = tctx.move_dead_after in
+      tctx.move_dead_after <- Escape.IntSet.empty;
+      let result = nstempmod (List.map (gen_expr env) ts) in
+      tctx.move_dead_after <- saved_dead;
+      result
     in
     tctx.promoted_var_map <- saved_promoted_cons;
     tctx.in_constructor_expr <- saved_in_ctor_cons;
@@ -3083,7 +3102,14 @@ and gen_cpp_case (typ : ml_type) t env pv =
           br :: gen_cases cs
         | Pwild | Prel _ | Ptuple _ -> gen_cases cs
       in
-      outer (gen_cases (Array.to_list pv)) (gen_expr env t)
+      (* Defense-in-depth: clear move_dead_after when generating std::visit
+         scrutinee to prevent std::move(x)->v() use-after-move. The scrutinee
+         expression is used to call ->v(), so it cannot be moved. *)
+      let saved_dead_visit = tctx.move_dead_after in
+      tctx.move_dead_after <- Escape.IntSet.empty;
+      let normal_visit_result = outer (gen_cases (Array.to_list pv)) (gen_expr env t) in
+      tctx.move_dead_after <- saved_dead_visit;
+      normal_visit_result
     in
     (* Also exclude coinductive types — they use lazy evaluation and don't have
        v_mut(). *)
@@ -3092,7 +3118,10 @@ and gen_cpp_case (typ : ml_type) t env pv =
       (* Generate dual-path code wrapped in IIFE: if (scrut.use_count() == 1 &&
          scrut->v().index() == N) { // reuse path: mutate in place } else { //
          normal std::visit path } *)
+      let saved_dead_reuse = tctx.move_dead_after in
+      tctx.move_dead_after <- Escape.IntSet.empty;
       let scrut_expr = gen_expr env t in
+      tctx.move_dead_after <- saved_dead_reuse;
       let tvars = get_current_type_vars () in
       (* For now, handle the first reuse candidate only. *)
       let branch_idx, matched_ctor, arity, _tail_ctor, tail_args =

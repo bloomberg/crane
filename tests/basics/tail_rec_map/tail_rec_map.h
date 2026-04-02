@@ -109,8 +109,7 @@ std::shared_ptr<List<T2>> better_map(F0 &&f,
                 -> std::shared_ptr<List<T2>> { return std::move(acc)->rev(); },
             [&](const typename List<T1>::Cons _args)
                 -> std::shared_ptr<List<T2>> {
-              return go(_args.d_a1,
-                        List<T2>::cons(f(_args.d_a0), std::move(acc)));
+              return go(_args.d_a1, List<T2>::cons(f(_args.d_a0), acc));
             }},
         l0->v());
   };

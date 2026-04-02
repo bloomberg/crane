@@ -12,7 +12,6 @@ LoopifySorting::insert(const unsigned int x,
   std::shared_ptr<List<unsigned int>> _head{};
   std::shared_ptr<List<unsigned int>> _last{};
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  unsigned int _loop_x = x;
   bool _continue = true;
   while (_continue) {
     std::visit(
@@ -20,23 +19,20 @@ LoopifySorting::insert(const unsigned int x,
             [&](const typename List<unsigned int>::Nil _args) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                    .d_a1 = List<unsigned int>::cons(std::move(_loop_x),
-                                                     List<unsigned int>::nil());
+                    .d_a1 =
+                    List<unsigned int>::cons(x, List<unsigned int>::nil());
               } else {
-                _head = List<unsigned int>::cons(std::move(_loop_x),
-                                                 List<unsigned int>::nil());
+                _head = List<unsigned int>::cons(x, List<unsigned int>::nil());
               }
               _continue = false;
             },
             [&](const typename List<unsigned int>::Cons _args) {
-              if (_loop_x <= _args.d_a0) {
+              if (x <= _args.d_a0) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                      .d_a1 = List<unsigned int>::cons(std::move(_loop_x),
-                                                       std::move(_loop_l));
+                      .d_a1 = List<unsigned int>::cons(x, _loop_l);
                 } else {
-                  _head = List<unsigned int>::cons(std::move(_loop_x),
-                                                   std::move(_loop_l));
+                  _head = List<unsigned int>::cons(x, _loop_l);
                 }
                 _continue = false;
               } else {
@@ -48,10 +44,7 @@ LoopifySorting::insert(const unsigned int x,
                   _head = _cell;
                 }
                 _last = _cell;
-                std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                unsigned int _next_x = std::move(_loop_x);
-                _loop_l = std::move(_next_l);
-                _loop_x = std::move(_next_x);
+                _loop_l = _args.d_a1;
               }
             }},
         _loop_l->v());
@@ -157,12 +150,9 @@ LoopifySorting::merge_fuel(const unsigned int fuel,
                               _head = _cell;
                             }
                             _last = _cell;
-                            std::shared_ptr<List<unsigned int>> _next_l2 =
-                                std::move(_loop_l2);
                             std::shared_ptr<List<unsigned int>> _next_l1 =
                                 _args.d_a1;
-                            unsigned int _next_fuel = std::move(f);
-                            _loop_l2 = std::move(_next_l2);
+                            unsigned int _next_fuel = f;
                             _loop_l1 = std::move(_next_l1);
                             _loop_fuel = std::move(_next_fuel);
                           } else {
@@ -178,7 +168,7 @@ LoopifySorting::merge_fuel(const unsigned int fuel,
                             _last = _cell;
                             std::shared_ptr<List<unsigned int>> _next_l2 =
                                 _args0.d_a1;
-                            unsigned int _next_fuel = std::move(f);
+                            unsigned int _next_fuel = f;
                             _loop_l2 = std::move(_next_l2);
                             _loop_fuel = std::move(_next_fuel);
                           }

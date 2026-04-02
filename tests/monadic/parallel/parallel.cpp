@@ -13,7 +13,7 @@ ParallelTest::ack(const std::pair<unsigned int, unsigned int> p) {
     std::function<unsigned int(unsigned int)> ack_m;
     ack_m = [&](unsigned int n0) -> unsigned int {
       if (m <= 0) {
-        return (std::move(n0) + 1);
+        return (n0 + 1);
       } else {
         unsigned int pm = m - 1;
         if (n0 <= 0) {
@@ -43,9 +43,8 @@ ParallelTest::fast(const unsigned int m, const unsigned int n) {
 
 __attribute__((pure)) std::pair<unsigned int, unsigned int>
 ParallelTest::slow(const unsigned int m, const unsigned int n) {
-  std::pair<unsigned int, unsigned int> p =
-      std::make_pair(std::move(m), std::move(n));
+  std::pair<unsigned int, unsigned int> p = std::make_pair(m, n);
   unsigned int r1 = ack(p);
   unsigned int r2 = ack(std::move(p));
-  return std::make_pair(std::move(r1), std::move(r2));
+  return std::make_pair(r1, r2);
 }

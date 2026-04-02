@@ -10,5 +10,5 @@ WrapperDeclMerge::A::Nat::fa(const unsigned int n) {
 
 __attribute__((pure)) unsigned int
 WrapperDeclMerge::B::Nat::fb(const unsigned int n) {
-  return (std::move(n) + 1);
+  return (n + 1);
 }

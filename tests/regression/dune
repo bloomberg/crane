@@ -2599,3 +2599,25 @@
   (alias runtest)
   (deps lowercase_eponymous_record.t.exe)
   (action (run ./lowercase_eponymous_record.t.exe))))
+
+(subdir use_after_move
+ (rule
+  (targets use_after_move.t.exe)
+  (deps UseAfterMove.vo use_after_move.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} use_after_move.t.exe use_after_move.cpp use_after_move.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps use_after_move.t.exe)
+  (action (run ./use_after_move.t.exe))))
+
+(subdir superfluous_moves
+ (rule
+  (targets superfluous_moves.t.exe)
+  (deps SuperfluousMoves.vo superfluous_moves.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} superfluous_moves.t.exe superfluous_moves.cpp superfluous_moves.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps superfluous_moves.t.exe)
+  (action (run ./superfluous_moves.t.exe))))

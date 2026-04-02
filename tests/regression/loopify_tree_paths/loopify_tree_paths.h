@@ -328,8 +328,7 @@ struct LoopifyTreePaths {
                     std::shared_ptr<List<unsigned int>> path = *_result;
                     _result =
                         std::make_optional<std::shared_ptr<List<unsigned int>>>(
-                            List<unsigned int>::cons(_args.d_a1,
-                                                     std::move(path)));
+                            List<unsigned int>::cons(_args.d_a1, path));
                   } else {
                     _stack.push_back(_Call2{_args});
                     _stack.push_back(_Enter{_args.d_a2.get(), new_acc});
@@ -341,8 +340,7 @@ struct LoopifyTreePaths {
                     std::shared_ptr<List<unsigned int>> path = *_result;
                     _result =
                         std::make_optional<std::shared_ptr<List<unsigned int>>>(
-                            List<unsigned int>::cons(_args.d_a1,
-                                                     std::move(path)));
+                            List<unsigned int>::cons(_args.d_a1, path));
                   } else {
                     _result =
                         std::optional<std::shared_ptr<List<unsigned int>>>();

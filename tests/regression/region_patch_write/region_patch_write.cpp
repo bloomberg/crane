@@ -18,15 +18,14 @@ RegionPatchWrite::update_region(const std::shared_ptr<List<unsigned int>> &rom,
           [&](const typename List<unsigned int>::Cons _args)
               -> std::shared_ptr<List<unsigned int>> {
             if (base <= 0) {
-              if (std::move(bytes).use_count() == 1 &&
-                  std::move(bytes)->v().index() == 1) {
-                auto &_rf = std::get<1>(std::move(bytes)->v_mut());
+              if (bytes.use_count() == 1 && bytes->v().index() == 1) {
+                auto &_rf = std::get<1>(bytes->v_mut());
                 unsigned int b = std::move(_rf.d_a0);
                 std::shared_ptr<List<unsigned int>> bytes_ =
                     std::move(_rf.d_a1);
                 _rf.d_a0 = b;
                 _rf.d_a1 = update_region(std::move(_args.d_a1), 0u, bytes_);
-                return std::move(bytes);
+                return bytes;
               } else {
                 return std::visit(
                     Overloaded{
@@ -41,12 +40,12 @@ RegionPatchWrite::update_region(const std::shared_ptr<List<unsigned int>> &rom,
                               _args0.d_a0,
                               update_region(_args.d_a1, 0u, _args0.d_a1));
                         }},
-                    std::move(bytes)->v());
+                    bytes->v());
               }
             } else {
               unsigned int n = base - 1;
               return List<unsigned int>::cons(
-                  std::move(_args.d_a0), update_region(_args.d_a1, n, bytes));
+                  _args.d_a0, update_region(_args.d_a1, n, bytes));
             }
           }},
       rom->v());

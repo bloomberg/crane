@@ -223,7 +223,7 @@ template <typename K, typename V> struct CHT {
             [&](const typename List<bsl::pair<T1, T2>>::Nil _args)
                 -> bsl::pair<bsl::optional<T2>,
                              bsl::shared_ptr<List<bsl::pair<T1, T2>>>> {
-              return bsl::make_pair(bsl::optional<T2>(), bsl::move(xs));
+              return bsl::make_pair(bsl::optional<T2>(), xs);
             },
             [&](const typename List<bsl::pair<T1, T2>>::Cons _args)
                 -> bsl::pair<bsl::optional<T2>,
@@ -231,8 +231,7 @@ template <typename K, typename V> struct CHT {
               T1 k_ = _args.d_a0.first;
               T2 v_ = _args.d_a0.second;
               if (eqb(k, k_)) {
-                return bsl::make_pair(bsl::make_optional<T2>(v_),
-                                      bsl::move(_args.d_a1));
+                return bsl::make_pair(bsl::make_optional<T2>(v_), _args.d_a1);
               } else {
                 bsl::pair<bsl::optional<T2>,
                           bsl::shared_ptr<List<bsl::pair<T1, T2>>>>

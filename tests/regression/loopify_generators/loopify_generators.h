@@ -149,7 +149,7 @@ struct LoopifyGenerators {
           }
           _last = _cell;
           unsigned int _next_x = f(_loop_x);
-          unsigned int _next_n = std::move(m);
+          unsigned int _next_n = m;
           _loop_x = std::move(_next_x);
           _loop_n = std::move(_next_n);
           continue;
@@ -280,7 +280,7 @@ struct LoopifyGenerators {
           unsigned int val = f(_loop_seed).first;
           unsigned int next_seed = f(_loop_seed).second;
           {
-            auto _cell = List<unsigned int>::cons(std::move(val), nullptr);
+            auto _cell = List<unsigned int>::cons(val, nullptr);
             if (_last) {
               std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
                   _cell;
@@ -339,7 +339,7 @@ struct LoopifyGenerators {
                                   unsigned int j = i - 1;
                                   _stack.push_back(
                                       _Call1{f((((n - i) > n ? 0 : (n - i))))});
-                                  _stack.push_back(_Enter{std::move(j)});
+                                  _stack.push_back(_Enter{j});
                                 }
                               },
                               [&](_Call1 _f) {

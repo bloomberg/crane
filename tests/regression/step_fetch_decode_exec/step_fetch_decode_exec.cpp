@@ -16,7 +16,7 @@ StepFetchDecodeExec::decode(const unsigned int b1, const unsigned int b2) {
   if ((b1 % 2u) == 0u) {
     return instruction::nop();
   } else {
-    return instruction::add_acc((std::move(b2) % 16u));
+    return instruction::add_acc((b2 % 16u));
   }
 }
 

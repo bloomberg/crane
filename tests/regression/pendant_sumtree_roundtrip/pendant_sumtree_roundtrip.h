@@ -803,8 +803,7 @@ std::shared_ptr<List<T1>> Vector::to_list(const unsigned int n,
                    [&](const typename T0<T1>::Cons _args)
                        -> std::shared_ptr<List<T1>> {
                      return List<T1>::cons0(
-                         _args.d_h,
-                         fold_right_fix(_args.d_n, _args.d_a2, std::move(b)));
+                         _args.d_h, fold_right_fix(_args.d_n, _args.d_a2, b));
                    }},
         v0->v());
   };

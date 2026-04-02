@@ -2,7 +2,6 @@
 
 #include <memory>
 #include <type_traits>
-#include <utility>
 
 std::shared_ptr<PrimProj::point>
 PrimProj::add_points(std::shared_ptr<PrimProj::point> p1,
@@ -14,6 +13,5 @@ PrimProj::add_points(std::shared_ptr<PrimProj::point> p1,
 std::shared_ptr<PrimProj::point>
 PrimProj::translate(const unsigned int dx, const unsigned int dy,
                     std::shared_ptr<PrimProj::point> p) {
-  return std::make_shared<PrimProj::point>(
-      point{(p->px + std::move(dx)), (p->py + std::move(dy))});
+  return std::make_shared<PrimProj::point>(point{(p->px + dx), (p->py + dy)});
 }

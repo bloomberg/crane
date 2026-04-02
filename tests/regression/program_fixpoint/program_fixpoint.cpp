@@ -34,15 +34,15 @@ std::shared_ptr<List<unsigned int>> ProgFix::interleave_func(
                              std::shared_ptr<List<unsigned int>>>> {
                   return _args.d_x;
                 }},
-            std::move(y)->v()));
+            y->v()));
       };
-  if (std::move(l1).use_count() == 1 && std::move(l1)->v().index() == 1) {
-    auto &_rf = std::get<1>(std::move(l1)->v_mut());
+  if (l1.use_count() == 1 && l1->v().index() == 1) {
+    auto &_rf = std::get<1>(l1->v_mut());
     unsigned int x0 = std::move(_rf.d_a0);
     std::shared_ptr<List<unsigned int>> xs = std::move(_rf.d_a1);
     _rf.d_a0 = std::move(x0);
     _rf.d_a1 = std::move(interleave0)(l2, xs);
-    return std::move(l1);
+    return l1;
   } else {
     return std::visit(
         Overloaded{[&](const typename List<unsigned int>::Nil _args)
@@ -52,9 +52,9 @@ std::shared_ptr<List<unsigned int>> ProgFix::interleave_func(
                    [&](const typename List<unsigned int>::Cons _args)
                        -> std::shared_ptr<List<unsigned int>> {
                      return List<unsigned int>::cons(
-                         _args.d_a0, interleave0(std::move(l2), _args.d_a1));
+                         _args.d_a0, interleave0(l2, _args.d_a1));
                    }},
-        std::move(l1)->v());
+        l1->v());
   }
 }
 
@@ -63,6 +63,5 @@ ProgFix::interleave(std::shared_ptr<List<unsigned int>> l1,
                     std::shared_ptr<List<unsigned int>> l2) {
   return interleave_func(
       SigT<std::shared_ptr<List<unsigned int>>,
-           std::shared_ptr<List<unsigned int>>>::existt(std::move(l1),
-                                                        std::move(l2)));
+           std::shared_ptr<List<unsigned int>>>::existt(l1, l2));
 }

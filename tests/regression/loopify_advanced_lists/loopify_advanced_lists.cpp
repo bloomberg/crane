@@ -268,7 +268,7 @@ LoopifyAdvancedLists::interleave(std::shared_ptr<List<unsigned int>> l1,
                         _loop_l2 = std::move(_next_l2);
                         _loop_l1 = std::move(_next_l1);
                       }},
-                  std::move(_loop_l2)->v());
+                  _loop_l2->v());
             }},
         _loop_l1->v());
   }

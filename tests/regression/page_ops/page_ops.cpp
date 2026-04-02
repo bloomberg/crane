@@ -52,7 +52,7 @@ std::shared_ptr<PageOps::instruction> PageOps::decode(const unsigned int b1,
   if (b1 == 0u) {
     return instruction::nop();
   } else {
-    return instruction::ldm((std::move(b2) % 16u));
+    return instruction::ldm((b2 % 16u));
   }
 }
 
@@ -88,7 +88,7 @@ PageOps::disassemble(const std::shared_ptr<List<unsigned int>> &rom,
                       return std::make_optional<std::pair<
                           std::shared_ptr<PageOps::instruction>, unsigned int>>(
                           std::make_pair(decode(_args.d_a0, _args0.d_a0),
-                                         (std::move(addr) + 2u)));
+                                         (addr + 2u)));
                     }},
                 _args.d_a1->v());
           }},
@@ -109,7 +109,7 @@ __attribute__((pure)) std::pair<unsigned int, unsigned int>
 Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
             const unsigned int u) {
   if (x <= 0) {
-    return std::make_pair(std::move(q), std::move(u));
+    return std::make_pair(q, u);
   } else {
     unsigned int x_ = x - 1;
     if (u <= 0) {

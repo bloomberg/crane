@@ -156,7 +156,7 @@ std::shared_ptr<Positive> Pos::mul(const std::shared_ptr<Positive> &x,
             return add(y, Positive::xo(mul(_args.d_a0, y)));
           },
           [&](const typename Positive::XO _args) -> std::shared_ptr<Positive> {
-            return Positive::xo(mul(_args.d_a0, std::move(y)));
+            return Positive::xo(mul(_args.d_a0, y));
           },
           [&](const typename Positive::XH _args) -> std::shared_ptr<Positive> {
             return std::move(y);
@@ -383,12 +383,11 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
             return std::move(y);
           },
           [&](const typename Z::Zpos _args) -> std::shared_ptr<Z> {
-            if (std::move(y).use_count() == 1 &&
-                std::move(y)->v().index() == 1) {
-              auto &_rf = std::get<1>(std::move(y)->v_mut());
+            if (y.use_count() == 1 && y->v().index() == 1) {
+              auto &_rf = std::get<1>(y->v_mut());
               std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
               _rf.d_a0 = Pos::add(std::move(_args.d_a0), y_);
-              return std::move(y);
+              return y;
             } else {
               return std::visit(
                   Overloaded{
@@ -401,16 +400,15 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
                       [&](const typename Z::Zneg _args0) -> std::shared_ptr<Z> {
                         return BinInt::pos_sub(_args.d_a0, _args0.d_a0);
                       }},
-                  std::move(y)->v());
+                  y->v());
             }
           },
           [&](const typename Z::Zneg _args) -> std::shared_ptr<Z> {
-            if (std::move(y).use_count() == 1 &&
-                std::move(y)->v().index() == 2) {
-              auto &_rf = std::get<2>(std::move(y)->v_mut());
+            if (y.use_count() == 1 && y->v().index() == 2) {
+              auto &_rf = std::get<2>(y->v_mut());
               std::shared_ptr<Positive> y_ = std::move(_rf.d_a0);
               _rf.d_a0 = Pos::add(std::move(_args.d_a0), y_);
-              return std::move(y);
+              return y;
             } else {
               return std::visit(
                   Overloaded{
@@ -423,7 +421,7 @@ std::shared_ptr<Z> BinInt::add(std::shared_ptr<Z> x, std::shared_ptr<Z> y) {
                       [&](const typename Z::Zneg _args0) -> std::shared_ptr<Z> {
                         return Z::zneg(Pos::add(_args.d_a0, _args0.d_a0));
                       }},
-                  std::move(y)->v());
+                  y->v());
             }
           }},
       x->v());
@@ -630,15 +628,13 @@ BinInt::pos_div_eucl(const std::shared_ptr<Positive> &a, std::shared_ptr<Z> b) {
                 Z::zpos(Positive::xh()));
             if (BinInt::ltb(r_, b)) {
               return std::make_pair(
-                  BinInt::mul(Z::zpos(Positive::xo(Positive::xh())),
-                              std::move(q)),
-                  std::move(r_));
+                  BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q), r_);
             } else {
               return std::make_pair(
-                  BinInt::add(BinInt::mul(Z::zpos(Positive::xo(Positive::xh())),
-                                          std::move(q)),
-                              Z::zpos(Positive::xh())),
-                  BinInt::sub(std::move(r_), b));
+                  BinInt::add(
+                      BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q),
+                      Z::zpos(Positive::xh())),
+                  BinInt::sub(r_, b));
             }
           },
           [&](const typename Positive::XO _args)
@@ -649,15 +645,13 @@ BinInt::pos_div_eucl(const std::shared_ptr<Positive> &a, std::shared_ptr<Z> b) {
                 BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), r);
             if (BinInt::ltb(r_, b)) {
               return std::make_pair(
-                  BinInt::mul(Z::zpos(Positive::xo(Positive::xh())),
-                              std::move(q)),
-                  std::move(r_));
+                  BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q), r_);
             } else {
               return std::make_pair(
-                  BinInt::add(BinInt::mul(Z::zpos(Positive::xo(Positive::xh())),
-                                          std::move(q)),
-                              Z::zpos(Positive::xh())),
-                  BinInt::sub(std::move(r_), b));
+                  BinInt::add(
+                      BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q),
+                      Z::zpos(Positive::xh())),
+                  BinInt::sub(r_, b));
             }
           },
           [&](const typename Positive::XH _args)
@@ -686,7 +680,7 @@ BinInt::div_eucl(std::shared_ptr<Z> a, std::shared_ptr<Z> b) {
                 Overloaded{
                     [&](const typename Z::Z0 _args0)
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
-                      return std::make_pair(Z::z0(), std::move(a));
+                      return std::make_pair(Z::z0(), a);
                     },
                     [&](const typename Z::Zpos _args0)
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
@@ -733,7 +727,7 @@ BinInt::div_eucl(std::shared_ptr<Z> a, std::shared_ptr<Z> b) {
                 Overloaded{
                     [&](const typename Z::Z0 _args0)
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
-                      return std::make_pair(Z::z0(), std::move(a));
+                      return std::make_pair(Z::z0(), a);
                     },
                     [&](const typename Z::Zpos _args0)
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
@@ -1435,8 +1429,8 @@ EpochCellGlyphTraceCase::build_epoch_reading(
     const std::shared_ptr<Z> &epoch_year, const std::shared_ptr<Z> &epoch_month,
     std::shared_ptr<EpochCellGlyphTraceCase::HistoricalEclipse> e) {
   std::shared_ptr<Z> cell = saros_cell(epoch_year, epoch_month, e);
-  return std::make_shared<EpochCellGlyphTraceCase::EpochReading>(EpochReading{
-      state_at_cell(cell), std::move(e), cell, glyph_at_cell(cell)});
+  return std::make_shared<EpochCellGlyphTraceCase::EpochReading>(
+      EpochReading{state_at_cell(cell), e, cell, glyph_at_cell(cell)});
 }
 
 __attribute__((pure)) bool EpochCellGlyphTraceCase::reading_matches(

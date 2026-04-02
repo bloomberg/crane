@@ -160,7 +160,6 @@ struct LoopifyTmc {
                                        std::shared_ptr<list<T1>> l2) {
     std::shared_ptr<list<T1>> _head{};
     std::shared_ptr<list<T1>> _last{};
-    std::shared_ptr<list<T1>> _loop_l2 = l2;
     std::shared_ptr<list<T1>> _loop_l1 = l1;
     bool _continue = true;
     while (_continue) {
@@ -169,9 +168,9 @@ struct LoopifyTmc {
               [&](const typename list<T1>::Nil _args) {
                 if (_last) {
                   std::get<typename list<T1>::Cons>(_last->v_mut()).d_a1 =
-                      std::move(_loop_l2);
+                      std::move(l2);
                 } else {
-                  _head = std::move(_loop_l2);
+                  _head = std::move(l2);
                 }
                 _continue = false;
               },
@@ -184,10 +183,7 @@ struct LoopifyTmc {
                   _head = _cell;
                 }
                 _last = _cell;
-                std::shared_ptr<list<T1>> _next_l2 = std::move(_loop_l2);
-                std::shared_ptr<list<T1>> _next_l1 = _args.d_a1;
-                _loop_l2 = std::move(_next_l2);
-                _loop_l1 = std::move(_next_l1);
+                _loop_l1 = _args.d_a1;
               }},
           _loop_l1->v());
     }

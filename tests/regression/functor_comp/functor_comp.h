@@ -190,7 +190,7 @@ struct FunctorComp {
             std::pair<unsigned int, typename C::t> p = *C::pop(c0);
             unsigned int x = p.first;
             typename C::t c_ = p.second;
-            return go(f, List<unsigned int>::cons(std::move(x), acc), c_);
+            return go(f, List<unsigned int>::cons(x, acc), c_);
           } else {
             return acc->rev();
           }

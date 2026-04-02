@@ -3,7 +3,6 @@
 #include <functional>
 #include <memory>
 #include <type_traits>
-#include <utility>
 
 __attribute__((pure)) unsigned int
 SingletonRecord::get_value(const std::shared_ptr<SingletonRecord::wrapper> &w) {
@@ -22,8 +21,7 @@ SingletonRecord::unwrap(const std::shared_ptr<SingletonRecord::wrapper> &w) {
 
 std::shared_ptr<SingletonRecord::wrapper>
 SingletonRecord::double_wrapped(std::shared_ptr<SingletonRecord::wrapper> w) {
-  return std::make_shared<SingletonRecord::wrapper>(
-      wrapper{(2u * std::move(w)->value)});
+  return std::make_shared<SingletonRecord::wrapper>(wrapper{(2u * w->value)});
 }
 
 __attribute__((pure)) unsigned int SingletonRecord::apply_wrapped(
