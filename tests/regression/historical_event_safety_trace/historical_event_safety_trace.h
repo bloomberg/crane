@@ -1079,9 +1079,7 @@ struct HistoricalEventSafetyTraceCase {
   static inline const std::shared_ptr<TestResult> hoover_test =
       run_historical_test(hoover_dam_config, dual_peak_scenario, 0u,
                           hoover_controller, hoover_stage_from_rating,
-                          hoover_initial_state, 10u,
-                          Nat::of_num_uint(Uint1::uintdecimal(Uint::d9(
-                              Uint::d0(Uint::d0(Uint::d1(Uint::nil())))))));
+                          hoover_initial_state, 10u, 9001u);
 
   struct HistoricalScenarioBundle {
     std::shared_ptr<PlantConfig> hsb_hist_plant;

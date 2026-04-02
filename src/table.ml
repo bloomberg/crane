@@ -2022,27 +2022,48 @@ type numeral_info = {
   num_zero_ctor : int; (* constructor index of zero, 1-based *)
   num_succ_ctor : int; (* constructor index of successor, 1-based *)
   num_fmt : string; (* format string with %n placeholder for the integer *)
+  num_converters : GlobRef.t list;
+    (* Converter functions (e.g. Nat.of_num_uint) resolved from Rocq's
+       Number Notation system.  Used to recognize digit-chain applications
+       and fold them into integer literals. *)
 }
 
 let numeral_table = Summary.ref Refmap'.empty ~name:"CraneExtrNumeral"
 
+(* Reverse lookup: converter function → numeral inductive it targets. *)
+let converter_table = Summary.ref Refmap'.empty ~name:"CraneExtrNumeralConv"
+
 let add_numeral_inductive r info =
-  numeral_table := Refmap'.add r info !numeral_table
+  numeral_table := Refmap'.add r info !numeral_table;
+  List.iter
+    (fun conv -> converter_table := Refmap'.add conv r !converter_table)
+    info.num_converters
 
 let is_numeral_inductive r = Refmap'.mem r !numeral_table
 
 let get_numeral_info r = Refmap'.find_opt r !numeral_table
+
+let is_numeral_converter r = Refmap'.mem r !converter_table
+
+let numeral_ind_of_converter r = Refmap'.find_opt r !converter_table
 
 let in_numeral : GlobRef.t * numeral_info -> obj =
   declare_object
   @@ superglobal_object
        "Crane Numeral extraction"
        ~cache:(fun (r, info) -> add_numeral_inductive r info)
-       ~subst:(Some (fun (s, (r, info)) -> (fst (subst_global s r), info)))
+       ~subst:(Some (fun (s, (r, info)) ->
+         let r' = fst (subst_global s r) in
+         let convs' = List.map (fun c -> fst (subst_global s c))
+                        info.num_converters in
+         (r', { info with num_converters = convs' })))
        ~discharge:(fun x -> Some x)
 
-(** Detect and register numeral-like inductive types (zero/successor pattern)
-    for optimized extraction. *)
+(** Detect and register numeral inductive types for optimized extraction.
+    Supports both Peano-style inductives (zero/successor pattern, e.g. nat)
+    and non-Peano numeric types (e.g. N, Z).  For Peano types, S(S(..O))
+    chains are folded.  For all types, digit-chain converters like
+    [of_num_uint] are resolved and registered for large-literal folding. *)
 let extract_numeral r fmt =
   check_inside_section ();
   let g = Smartlocate.global_with_alias r in
@@ -2051,15 +2072,9 @@ let extract_numeral r fmt =
   | GlobRef.IndRef (kn, i) ->
     let mib = Global.lookup_mind kn in
     let mip = mib.mind_packets.(i) in
-    let n = Array.length mip.mind_consnames in
-    (* Must have exactly 2 constructors for Peano numerals *)
-    if n <> 2 then
-      CErrors.user_err
-        (Pp.str
-           "Crane Extract Numeral requires an inductive with exactly 2 \
-            constructors (zero and successor)" );
-    (* Detect which is zero (0 args) and which is successor (1 arg). Use
-       mind_consnrealdecls to get non-parameter argument counts. *)
+    (* Try to detect a Peano pattern (zero + successor).  Non-Peano types
+       (e.g. N with N0/Npos, Z with Z0/Zpos/Zneg) get -1 for both indices,
+       which means try_fold_numeral will never match their constructors. *)
     let ctor_arities = mip.mind_consnrealdecls in
     let zero_idx = ref (-1) in
     let succ_idx = ref (-1) in
@@ -2070,13 +2085,30 @@ let extract_numeral r fmt =
         else if arity = 1 then
           succ_idx := j + 1 )
       ctor_arities;
-    if !zero_idx < 0 || !succ_idx < 0 then
-      CErrors.user_err
-        (Pp.str
-           "Crane Extract Numeral: could not identify a zero constructor (0 \
-            args) and a successor constructor (1 arg)" );
+    (* Resolve converter functions (e.g. Nat.of_num_uint, Z.of_num_int).
+       These live in a module named after the type (e.g. module Nat for nat),
+       which may differ from the module where the inductive is defined
+       (e.g. nat is in Corelib.Init.Datatypes, not Corelib.Init.Nat). *)
+    let ind_path = Nametab.path_of_global g in
+    let ind_label = Libnames.basename ind_path in
+    let module_name =
+      String.capitalize_ascii (Names.Id.to_string ind_label) in
+    let converter_names = ["of_num_uint"; "of_num_int"] in
+    let converters =
+      List.filter_map (fun name ->
+        (* Try <Module>.of_num_uint (e.g. Nat.of_num_uint) *)
+        let qstr = module_name ^ "." ^ name in
+        try Some (Nametab.locate (Libnames.qualid_of_string qstr))
+        with Not_found ->
+          (* Fallback: try in the inductive's own directory *)
+          let ind_dir = Libnames.dirpath ind_path in
+          let qid = Libnames.make_qualid ind_dir (Names.Id.of_string name) in
+          try Some (Nametab.locate qid) with Not_found -> None)
+        converter_names
+    in
     let info =
-      {num_zero_ctor = !zero_idx; num_succ_ctor = !succ_idx; num_fmt = fmt}
+      { num_zero_ctor = !zero_idx; num_succ_ctor = !succ_idx;
+        num_fmt = fmt; num_converters = converters }
     in
     Lib.add_leaf (in_numeral (g, info))
   | _ ->

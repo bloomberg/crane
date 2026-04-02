@@ -966,14 +966,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
   __attribute__((pure)) static bool
   mfi_config_valid(const std::shared_ptr<MFIThresholdConfig> &cfg);
   static inline const std::shared_ptr<MFIThresholdConfig>
-      example_luminex_thresholds =
-          std::make_shared<MFIThresholdConfig>(MFIThresholdConfig{
-              1000u, 3000u,
-              Nat::of_num_uint(Uint1::uintdecimal(
-                  Uint::d8(Uint::d0(Uint::d0(Uint::d0(Uint::nil())))))),
-              Nat::of_num_uint(Uint1::uintdecimal(Uint::d1(
-                  Uint::d2(Uint::d0(Uint::d0(Uint::d0(Uint::nil()))))))),
-              1u, true});
+      example_luminex_thresholds = std::make_shared<MFIThresholdConfig>(
+          MFIThresholdConfig{1000u, 3000u, 8000u, 12000u, 1u, true});
 
   struct ValidatedMFIConfig {
     std::shared_ptr<MFIThresholdConfig> vmc_config;
@@ -1309,17 +1303,11 @@ struct ValidatedVirtualCrossmatchTraceCase {
   static inline const std::shared_ptr<VirtualXMProfile> strong_profile =
       std::make_shared<VirtualXMProfile>(VirtualXMProfile{
           List<std::shared_ptr<EpitopeAntibody>>::cons(
-              std::make_shared<EpitopeAntibody>(EpitopeAntibody{
-                  eplet_65QIA,
-                  Nat::of_num_uint(Uint1::uintdecimal(
-                      Uint::d9(Uint::d0(Uint::d0(Uint::d0(Uint::nil())))))),
-                  true}),
+              std::make_shared<EpitopeAntibody>(
+                  EpitopeAntibody{eplet_65QIA, 9000u, true}),
               List<std::shared_ptr<EpitopeAntibody>>::cons(
-                  std::make_shared<EpitopeAntibody>(EpitopeAntibody{
-                      eplet_142T,
-                      Nat::of_num_uint(Uint1::uintdecimal(
-                          Uint::d6(Uint::d0(Uint::d0(Uint::d0(Uint::nil())))))),
-                      false}),
+                  std::make_shared<EpitopeAntibody>(
+                      EpitopeAntibody{eplet_142T, 6000u, false}),
                   List<std::shared_ptr<EpitopeAntibody>>::nil())),
           95u, 98u, 5u});
   static inline const std::shared_ptr<CrossmatchWithUncertainty>

@@ -637,6 +637,10 @@ type numeral_info = {
   num_zero_ctor : int;  (** Index of zero constructor *)
   num_succ_ctor : int;  (** Index of successor constructor *)
   num_fmt : string;  (** Format string for numeral *)
+  num_converters : GlobRef.t list;
+    (** Converter functions (e.g. [Nat.of_num_uint]) that parse digit chains
+        into this numeral type.  Resolved automatically from the inductive's
+        module when [Crane Extract Numeral] is processed. *)
 }
 
 (** Check if inductive is numeric. *)
@@ -644,6 +648,14 @@ val is_numeral_inductive : GlobRef.t -> bool
 
 (** Get numeral information if available. *)
 val get_numeral_info : GlobRef.t -> numeral_info option
+
+(** Check if a function is a registered numeral converter (e.g.
+    [Nat.of_num_uint]).  These are resolved from the same module as the
+    numeral inductive during [Crane Extract Numeral] processing. *)
+val is_numeral_converter : GlobRef.t -> bool
+
+(** Return the numeral inductive targeted by a converter function, if any. *)
+val numeral_ind_of_converter : GlobRef.t -> GlobRef.t option
 
 (** Extract numeral inductive. *)
 val extract_numeral : qualid -> string -> unit

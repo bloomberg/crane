@@ -22,6 +22,8 @@ Crane Extract Inductive N =>
   [ "0u" "%a0" ]
   "if (%scrut == 0u) { %br0 } else { unsigned int %b1a0 = %scrut; %br1 }".
 
+Crane Extract Numeral N => "%nu".
+
 (* Pos operations *)
 Crane Extract Inlined Constant Pos.add => "(%a0 + %a1)".
 Crane Extract Inlined Constant Pos.sub => "(%a0 - %a1)".

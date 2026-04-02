@@ -19,6 +19,8 @@ Crane Extract Inductive Z =>
   [ "mpz_class(0)" "%a0" "(-%a0)" ]
   "if (%scrut == 0) { %br0 } else if (%scrut > 0) { mpz_class %b1a0 = %scrut; %br1 } else { mpz_class %b2a0 = -%scrut; %br2 }".
 
+Crane Extract Numeral Z => "mpz_class(%n)".
+
 (* Z operations *)
 Crane Extract Inlined Constant Z.add => "(%a0 + %a1)".
 Crane Extract Inlined Constant Z.sub => "(%a0 - %a1)".

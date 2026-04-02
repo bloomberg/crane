@@ -16,6 +16,8 @@ Crane Extract Inductive Z =>
   "if (%scrut == 0) { %br0 } else if (%scrut > 0) { unsigned int %b1a0 = static_cast<unsigned int>(%scrut); %br1 } else { unsigned int %b2a0 = static_cast<unsigned int>(-%scrut); %br2 }"
   From "cstdint".
 
+Crane Extract Numeral Z => "INT64_C(%n)".
+
 (* Z operations *)
 Crane Extract Inlined Constant Z.add => "(%a0 + %a1)".
 Crane Extract Inlined Constant Z.sub => "(%a0 - %a1)".

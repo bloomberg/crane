@@ -589,9 +589,7 @@ ValidatedPumpDeliveryTraceCase::calculate_precision_bolus(
 
 __attribute__((pure)) bool
 ValidatedPumpDeliveryTraceCase::time_reasonable(const unsigned int now) {
-  return PeanoNat::leb(
-      now, Nat::of_num_uint(Uint1::uintdecimal(Uint::d5(Uint::d2(
-               Uint::d5(Uint::d6(Uint::d0(Uint::d0(Uint::nil())))))))));
+  return PeanoNat::leb(now, 525600u);
 }
 
 __attribute__((pure)) bool

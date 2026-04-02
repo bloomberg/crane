@@ -1747,6 +1747,95 @@ and try_fold_numeral info expr =
   | MLmagic inner -> try_fold_numeral info inner
   | _ -> None
 
+(** Fold a Decimal.uint digit chain into an arbitrary-precision integer.
+    Constructors: Nil(idx=1), D0(idx=2, digit 0), ..., D9(idx=11, digit 9).
+    Digits are processed outside-in (most significant first).
+    Uses [Z.t] from zarith to avoid overflow on large literals. *)
+and try_fold_decimal_uint expr acc =
+  match expr with
+  | MLcons (_, cr, []) ->
+    ( match cr with
+    | GlobRef.ConstructRef (_, 1) -> Some acc
+    | _ -> None )
+  | MLcons (_, cr, [inner]) ->
+    ( match cr with
+    | GlobRef.ConstructRef (_, cidx) when cidx >= 2 && cidx <= 11 ->
+      let digit = Z.of_int (cidx - 2) in
+      try_fold_decimal_uint inner Z.(acc * of_int 10 + digit)
+    | _ -> None )
+  | MLmagic inner -> try_fold_decimal_uint inner acc
+  | _ -> None
+
+(** Fold a Hexadecimal.uint digit chain into an arbitrary-precision integer.
+    Constructors: Nil(idx=1), D0(idx=2, digit 0), ..., Df(idx=17, digit 15).
+    Uses [Z.t] from zarith to avoid overflow on large literals. *)
+and try_fold_hex_uint expr acc =
+  match expr with
+  | MLcons (_, cr, []) ->
+    ( match cr with
+    | GlobRef.ConstructRef (_, 1) -> Some acc
+    | _ -> None )
+  | MLcons (_, cr, [inner]) ->
+    ( match cr with
+    | GlobRef.ConstructRef (_, cidx) when cidx >= 2 && cidx <= 17 ->
+      let digit = Z.of_int (cidx - 2) in
+      try_fold_hex_uint inner Z.(acc * of_int 16 + digit)
+    | _ -> None )
+  | MLmagic inner -> try_fold_hex_uint inner acc
+  | _ -> None
+
+(** Fold a Number.uint (UIntDecimal | UIntHexadecimal) into an
+    arbitrary-precision integer.
+    Constructors: UIntDecimal(idx=1), UIntHexadecimal(idx=2). *)
+and try_fold_num_uint expr =
+  match expr with
+  | MLcons (_, cr, [inner]) ->
+    ( match cr with
+    | GlobRef.ConstructRef (_, 1) -> try_fold_decimal_uint inner Z.zero
+    | GlobRef.ConstructRef (_, 2) -> try_fold_hex_uint inner Z.zero
+    | _ -> None )
+  | MLmagic inner -> try_fold_num_uint inner
+  | _ -> None
+
+(** Fold a Decimal.signed_int (Pos | Neg) wrapping a Decimal.uint chain.
+    Constructors: Pos(idx=1), Neg(idx=2). *)
+and try_fold_signed_decimal_int expr =
+  match expr with
+  | MLcons (_, cr, [inner]) ->
+    ( match cr with
+    | GlobRef.ConstructRef (_, 1) -> try_fold_decimal_uint inner Z.zero
+    | GlobRef.ConstructRef (_, 2) ->
+      Option.map Z.neg (try_fold_decimal_uint inner Z.zero)
+    | _ -> None )
+  | MLmagic inner -> try_fold_signed_decimal_int inner
+  | _ -> None
+
+(** Fold a Hexadecimal.signed_int (Pos | Neg) wrapping a Hexadecimal.uint chain.
+    Constructors: Pos(idx=1), Neg(idx=2). *)
+and try_fold_signed_hex_int expr =
+  match expr with
+  | MLcons (_, cr, [inner]) ->
+    ( match cr with
+    | GlobRef.ConstructRef (_, 1) -> try_fold_hex_uint inner Z.zero
+    | GlobRef.ConstructRef (_, 2) ->
+      Option.map Z.neg (try_fold_hex_uint inner Z.zero)
+    | _ -> None )
+  | MLmagic inner -> try_fold_signed_hex_int inner
+  | _ -> None
+
+(** Fold a Number.signed_int (IntDecimal | IntHexadecimal) into an
+    arbitrary-precision integer.
+    Constructors: IntDecimal(idx=1), IntHexadecimal(idx=2). *)
+and try_fold_num_int expr =
+  match expr with
+  | MLcons (_, cr, [inner]) ->
+    ( match cr with
+    | GlobRef.ConstructRef (_, 1) -> try_fold_signed_decimal_int inner
+    | GlobRef.ConstructRef (_, 2) -> try_fold_signed_hex_int inner
+    | _ -> None )
+  | MLmagic inner -> try_fold_num_int inner
+  | _ -> None
+
 (** Generate C++ expression from ML AST. Main expression compiler - handles
     lambdas, applications, constructors, pattern matching, etc. Monadic
     non-function globals are wrapped in CPPfun_call by the MLglob case below. *)
@@ -1826,6 +1915,28 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
        MLapp(MLglob(dcs), [x,f1,f2,l]) lets eta_fun see the complete argument
        list and generate a direct call. *)
     eta_fun env g (inner_args @ outer_args)
+  | MLapp (MLglob (r, _), [arg]) when Table.is_numeral_converter r ->
+    (* Fold Number.uint/signed_int digit chain into a direct integer literal.
+       Tries unsigned (of_num_uint) then signed (of_num_int).
+       Falls through to eta_fun on failure. *)
+    let ind_ref = Option.get (Table.numeral_ind_of_converter r) in
+    ( match Table.get_numeral_info ind_ref with
+    | Some info ->
+      let folded = match try_fold_num_uint arg with
+        | Some _ as r -> r
+        | None -> try_fold_num_int arg
+      in
+      ( match folded with
+      | Some n ->
+        let rendered =
+          Str.global_replace
+            (Str.regexp_string "%n")
+            (Z.to_string n)
+            info.Table.num_fmt
+        in
+        CPPraw rendered
+      | None -> eta_fun env (MLglob (r, [])) [arg] )
+    | None -> eta_fun env (MLglob (r, [])) [arg] )
   | MLapp (f, args) -> eta_fun env f args
   | MLlam _ as a ->
     let args, a = collect_lams a in
@@ -5075,14 +5186,12 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
            (List.combine renamed_ids_fwd ids) );
       asgns @ gen_stmts env' k body
   | t ->
-    (* Tail position: generate expression with dead-after tracking, then
-       deref reified monadic variables in sequential mode. *)
+    (* Tail position: generate expression with dead-after tracking.
+       No deref_reified needed: in sequential mode, monadic variables are
+       direct values (bind desugars to let-binding); in reified mode,
+       they are trees returned as-is. *)
     let saved_dead = tctx.move_dead_after in
     let e = gen_tail_expr env t in
-    let e =
-      if tctx.itree_mode = Reified then e
-      else deref_reified t e
-    in
     let result = inline_iife k e in
     tctx.move_dead_after <- saved_dead;
     result
