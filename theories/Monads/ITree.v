@@ -28,10 +28,6 @@ From ITree Require Export
 Export ITreeNotations.
 Open Scope itree_scope.
 
-(** ------------------------------------------------------------------ *)
-(** Core ITree type erasure                                             *)
-(** ------------------------------------------------------------------ *)
-
 Crane Extract Skip itree.
 Crane Extract Skip itreeF.
 Crane Extract Inlined Constant observe => "".
@@ -48,24 +44,12 @@ Definition Ret {E : Type -> Type} {R : Type} (x : R) : itree E R := Ret x.
 
 Crane Extract Monad itree [ bind := ITree.bind , ret := Ret ] => "%t1".
 
-(** ------------------------------------------------------------------ *)
-(** Effect sum erasure                                                  *)
-(** ------------------------------------------------------------------ *)
-
 Crane Extract Inductive sum1 => "" [ "%a0" "%a0" ].
 Crane Extract Skip void1.
 Crane Extract Inlined Constant elim_void1 => "".
 Crane Extract Inlined Constant case_sum1 => "".
 
-(** ------------------------------------------------------------------ *)
-(** Subevent erasure                                                    *)
-(** ------------------------------------------------------------------ *)
-
 Crane Extract Inlined Constant subevent => "%a0".
-
-(** ------------------------------------------------------------------ *)
-(** ITree operations erasure                                            *)
-(** ------------------------------------------------------------------ *)
 
 Crane Extract Skip ITree.map.
 Crane Extract Skip ITree.trigger.
@@ -77,19 +61,11 @@ Crane Extract Skip ITree.cat.
 Crane Extract Skip translate.
 Crane Extract Skip translateF.
 
-(** ------------------------------------------------------------------ *)
-(** ExtLib instance erasure                                             *)
-(** ------------------------------------------------------------------ *)
-
 Crane Extract Skip Functor_itree.
 Crane Extract Skip Applicative_itree.
 Crane Extract Skip Monad_itree.
 Crane Extract Skip MonadIter_itree.
 Crane Extract Inlined Constant idM => "%a0".
-
-(** ------------------------------------------------------------------ *)
-(** Category infrastructure erasure                                     *)
-(** ------------------------------------------------------------------ *)
 
 Crane Extract Skip Cat.
 Crane Extract Skip Id_.

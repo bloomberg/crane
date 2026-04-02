@@ -33,10 +33,6 @@ From ITree Require Export
 Export ITreeNotations.
 Open Scope itree_scope.
 
-(** ------------------------------------------------------------------ *)
-(** Reified mode: preserve itree structure for observation              *)
-(** ------------------------------------------------------------------ *)
-
 (* Skip the itree inductive itself to avoid struct generation *)
 Crane Extract Skip itree.
 Crane Extract Skip ITree.subst.
@@ -86,24 +82,12 @@ Crane Extract Inlined Constant Tau =>
 Crane Extract Inlined Constant Vis =>
   "itree_vis(%a0, %a1)" From "crane_itree.h".
 
-(** ------------------------------------------------------------------ *)
-(** Effect sum erasure (same as sequential mode)                        *)
-(** ------------------------------------------------------------------ *)
-
 Crane Extract Inductive sum1 => "" [ "%a0" "%a0" ].
 Crane Extract Skip void1.
 Crane Extract Inlined Constant elim_void1 => "".
 Crane Extract Inlined Constant case_sum1 => "".
 
-(** ------------------------------------------------------------------ *)
-(** Subevent erasure (same as sequential mode)                          *)
-(** ------------------------------------------------------------------ *)
-
 Crane Extract Inlined Constant subevent => "%a0".
-
-(** ------------------------------------------------------------------ *)
-(** ITree operations                                                    *)
-(** ------------------------------------------------------------------ *)
 
 Crane Extract Skip ITree.map.
 Crane Extract Skip ITree.trigger.
@@ -116,19 +100,11 @@ Crane Extract Skip translate.
 Crane Extract Skip translateF.
 Crane Extract Skip ITree.subst.
 
-(** ------------------------------------------------------------------ *)
-(** ExtLib instance erasure                                             *)
-(** ------------------------------------------------------------------ *)
-
 Crane Extract Skip Functor_itree.
 Crane Extract Skip Applicative_itree.
 Crane Extract Skip Monad_itree.
 Crane Extract Skip MonadIter_itree.
 Crane Extract Inlined Constant idM => "%a0".
-
-(** ------------------------------------------------------------------ *)
-(** Category infrastructure erasure                                     *)
-(** ------------------------------------------------------------------ *)
 
 Crane Extract Skip Cat.
 Crane Extract Skip Id_.

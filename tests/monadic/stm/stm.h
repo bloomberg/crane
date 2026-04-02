@@ -82,16 +82,10 @@ public:
   }
 };
 
-struct STM {};
-
-struct TVar {};
-
-template <typename T1, MapsTo<T1, T1> F1>
-void modifyTVar(const std::shared_ptr<stm::TVar<T1>> a, F1 &&f) {
-  T1 val = a->read();
-  a->write(f(val));
-  return;
-}
+struct STM {
+  template <typename T1, MapsTo<T1, T1> F1>
+  static void modifyTVar(const std::shared_ptr<stm::TVar<T1>> a, F1 &&f);
+};
 
 struct stmtest {
   template <typename T1, MapsTo<bool, T1> F1>
@@ -123,5 +117,12 @@ struct stmtest {
   static unsigned int stm_orElse_retry_example(const std::monostate _x);
   static unsigned int io_orElse_retry_example();
 };
+
+template <typename T1, MapsTo<T1, T1> F1>
+void STM::modifyTVar(const std::shared_ptr<stm::TVar<T1>> a, F1 &&f) {
+  T1 val = a->read();
+  a->write(f(val));
+  return;
+}
 
 #endif // INCLUDED_STM

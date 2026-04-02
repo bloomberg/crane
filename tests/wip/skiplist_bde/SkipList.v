@@ -39,7 +39,7 @@ Crane Extract Inlined Constant maxLevels => "16u".
 
 (* Axiom for random number generation *)
 Module Random_axioms.
-  Axiom irandomInt : int -> IO_axioms.iIO int.
+  Axiom irandomInt : int -> iIO int.
 End Random_axioms.
 
 Crane Extract Skip Module Random_axioms.
@@ -80,13 +80,13 @@ Module Node_axioms.
   Axiom NodeRef : Type -> Type -> Type.
 
   (* Node operations *)
-  Axiom inewNode : forall {K V : Type}, K -> V -> nat -> STM_axioms.iSTM (NodeRef K V).
+  Axiom inewNode : forall {K V : Type}, K -> V -> nat -> iSTM (NodeRef K V).
   Axiom igetKey : forall {K V : Type}, NodeRef K V -> K.
-  Axiom ireadValue : forall {K V : Type}, NodeRef K V -> STM_axioms.iSTM V.
-  Axiom iwriteValue : forall {K V : Type}, NodeRef K V -> V -> STM_axioms.iSTM unit.
+  Axiom ireadValue : forall {K V : Type}, NodeRef K V -> iSTM V.
+  Axiom iwriteValue : forall {K V : Type}, NodeRef K V -> V -> iSTM unit.
   Axiom igetLevel : forall {K V : Type}, NodeRef K V -> nat.
-  Axiom ireadNext : forall {K V : Type}, NodeRef K V -> nat -> STM_axioms.iSTM (option (NodeRef K V)).
-  Axiom iwriteNext : forall {K V : Type}, NodeRef K V -> nat -> option (NodeRef K V) -> STM_axioms.iSTM unit.
+  Axiom ireadNext : forall {K V : Type}, NodeRef K V -> nat -> iSTM (option (NodeRef K V)).
+  Axiom iwriteNext : forall {K V : Type}, NodeRef K V -> nat -> option (NodeRef K V) -> iSTM unit.
 End Node_axioms.
 
 Crane Extract Skip Module Node_axioms.
@@ -126,9 +126,9 @@ Crane Extract Inlined Constant findPredFuel => "10000u".
 (* Path stores predecessors at each level - extracts to std::array for efficiency *)
 Module Path_axioms.
   Axiom Path : Type -> Type -> Type.
-  Axiom iemptyPath : forall {K V : Type}, STM_axioms.iSTM (Path K V).
-  Axiom isetPath : forall {K V : Type}, Path K V -> nat -> NodeRef K V -> STM_axioms.iSTM unit.
-  Axiom igetPath : forall {K V : Type}, Path K V -> nat -> STM_axioms.iSTM (NodeRef K V).
+  Axiom iemptyPath : forall {K V : Type}, iSTM (Path K V).
+  Axiom isetPath : forall {K V : Type}, Path K V -> nat -> NodeRef K V -> iSTM unit.
+  Axiom igetPath : forall {K V : Type}, Path K V -> nat -> iSTM (NodeRef K V).
 End Path_axioms.
 
 Crane Extract Skip Module Path_axioms.

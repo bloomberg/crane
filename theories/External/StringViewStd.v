@@ -1,5 +1,10 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(** Axiomatized [std::string_view] interface with verification axioms.
+
+    Provides non-owning string views with [substr], [contains], [length],
+    and character access, plus axioms relating these operations for use
+    in verified programs. *)
 From Corelib Require Import PrimString PrimInt63.
 From Corelib Require Import Relations.Relation_Definitions.
 

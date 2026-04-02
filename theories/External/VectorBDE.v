@@ -1,5 +1,9 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(** Mutable vector effects for the BDE flavor.
+
+    Provides axioms for [bsl::vector] operations as IO effects.
+    Smart constructors produce [itree iIO] computations. *)
 From Corelib Require Import PrimInt63.
 From Crane Require Extraction.
 From Crane Require Import Mapping.BDE Monads.ITree Monads.IOBDE.
@@ -7,7 +11,6 @@ From Crane Require Import Mapping.BDE Monads.ITree Monads.IOBDE.
 Axiom vector : Type -> Type.
 
 Module Vector_axioms.
-  Import IO_axioms.
   Axiom iemptyVec : forall (A : Type), iIO (vector A).
   Axiom iget : forall {A}, vector A -> int -> iIO A.
   Axiom ipush : forall {A}, vector A -> A -> iIO unit.

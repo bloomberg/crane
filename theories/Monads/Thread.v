@@ -1,5 +1,10 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(** Concurrency monad using [std::thread].
+
+    [Conc z A] tracks an integer thread cost [z].
+    Threads are fire-and-forget ([mk_thread] returns a [thread] handle)
+    and synchronized with [join]. *)
 From Corelib Require Import PrimInt63 Sint63Axioms PrimString.
 From Crane Require Extraction.
 From Crane Require Import Mapping.Std.

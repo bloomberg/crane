@@ -1,5 +1,10 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(** Extraction mappings shared by all C++ flavors (Std, BDE).
+
+    Maps [bool], [sumbool], [unit], [void], and [PrimArray] to
+    library-agnostic C++ types. Imported transitively by [Mapping.Std]
+    and [Mapping.BDE]. *)
 From Crane Require Extraction.
 
 Crane Extract Inductive bool =>

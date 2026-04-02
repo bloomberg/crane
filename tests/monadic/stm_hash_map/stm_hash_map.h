@@ -75,10 +75,6 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
-struct STM {};
-
-struct TVar {};
-
 template <typename K, typename V> struct CHT {
   std::function<bool(K, K)> cht_eqb;
   std::function<int64_t(K)> cht_hash;
@@ -282,10 +278,8 @@ template <typename K, typename V> struct CHT {
       } else {
         unsigned int n_ = n - 1;
         std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>> b =
-            stm::atomically([&] {
-              return stm::newTVar<std::shared_ptr<List<std::pair<T1, T2>>>>(
-                  List<std::pair<T1, T2>>::nil());
-            });
+            stm::atomically(
+                [&] { return stm::newTVar(List<std::pair<T1, T2>>::nil()); });
         buckets.push_back(b);
         return f(n_);
       }
@@ -304,10 +298,8 @@ template <typename K, typename V> struct CHT {
     bool empt = bs.empty();
     if (empt) {
       std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>> fb =
-          stm::atomically([&] {
-            return stm::newTVar<std::shared_ptr<List<std::pair<T1, T2>>>>(
-                List<std::pair<T1, T2>>::nil());
-          });
+          stm::atomically(
+              [&] { return stm::newTVar(List<std::pair<T1, T2>>::nil()); });
       std::vector<
           std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>>>
           v = {};

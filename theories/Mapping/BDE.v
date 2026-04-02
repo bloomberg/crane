@@ -1,5 +1,12 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(** Bloomberg Development Environment (BDE) extraction mappings.
+
+    Maps [option], [prod], [string], [int63], and [float] to their
+    BDE equivalents ([bsl::optional], [bsl::pair], [bsl::string],
+    [int64_t], [double]).
+
+    Sets the stdlib flavor to ["BDE"]. *)
 From Crane Require Extraction.
 From Crane Require Export Mapping.Shared.
 

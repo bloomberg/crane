@@ -1,5 +1,10 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(** Parallel computation monad using [std::async] / [std::future].
+
+    [Par S z A] tracks a phantom resource type [S] and an integer cost [z].
+    [runPar] erases the wrapper and returns the result.
+    Threads are created with [mk_thread] and joined with [get_thread]. *)
 From Corelib Require Import PrimInt63 Sint63Axioms PrimString.
 From Stdlib Require Import ZArith.
 From Crane Require Extraction.

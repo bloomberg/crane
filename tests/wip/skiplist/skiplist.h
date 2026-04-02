@@ -26,10 +26,6 @@ struct PeanoNat {
                                         const unsigned int m);
 };
 
-struct STM {};
-
-struct TVar {};
-
 template <typename K, typename V> struct SkipList {
   std::shared_ptr<SkipNode<K, V>> slHead;
   unsigned int slMaxLevel;
@@ -711,10 +707,8 @@ template <typename K, typename V> struct SkipList {
                                                   const T2 dummyVal) {
     std::shared_ptr<SkipNode<T1, T2>> headNode = SkipNode<T1, T2>::create(
         dummyKey, dummyVal, (((16u - 1u) > 16u ? 0 : (16u - 1u))));
-    std::shared_ptr<stm::TVar<unsigned int>> lvlTV =
-        stm::newTVar<unsigned int>(0u);
-    std::shared_ptr<stm::TVar<unsigned int>> lenTV =
-        stm::newTVar<unsigned int>(0u);
+    std::shared_ptr<stm::TVar<unsigned int>> lvlTV = stm::newTVar(0u);
+    std::shared_ptr<stm::TVar<unsigned int>> lenTV = stm::newTVar(0u);
     return std::make_shared<SkipList<T1, T2>>(
         SkipList<T1, T2>{headNode, 16u, lvlTV, lenTV});
   }

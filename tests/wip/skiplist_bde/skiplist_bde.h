@@ -38,8 +38,6 @@ struct PeanoNat {
   __attribute__((pure)) static bool ltb(const unsigned int n,
                                         const unsigned int m);
 };
-struct STM {};
-struct TVar {};
 template <typename K, typename V> struct SkipList {
   bsl::shared_ptr<SkipNode<K, V>> slHead;
   unsigned int slMaxLevel;
@@ -48,7 +46,7 @@ template <typename K, typename V> struct SkipList {
   template <MapsTo<bool, K, K> F0>
   __attribute__((pure)) SkipPath<K, V> findPath(F0 &&ltK,
                                                 const K target) const {
-    unsigned int lvl = stm::readTVar<unsigned int>(this->SkipList::slLevel);
+    unsigned int lvl = stm::readTVar(this->SkipList::slLevel);
     SkipPath<K, V> path = SkipPath<K, V>{};
     return SkipList<int, int>::template findPath_aux<K, V>(
         ltK, this->SkipList::slHead, target, lvl, path);
@@ -77,7 +75,7 @@ template <typename K, typename V> struct SkipList {
   insert(F0 &&ltK, F1 &&eqK, const K k, const V v,
          const unsigned int newLevel) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
-    unsigned int curLvl = stm::readTVar<unsigned int>(this->SkipList::slLevel);
+    unsigned int curLvl = stm::readTVar(this->SkipList::slLevel);
     SkipList<int, int>::template extendPath<K, V>(path, this->SkipList::slHead,
                                                   (newLevel + 1), curLvl);
     bsl::shared_ptr<SkipNode<K, V>> pred0 = path.get(0u);
@@ -94,16 +92,13 @@ template <typename K, typename V> struct SkipList {
             path, this->SkipList::slHead, newN);
         [&]() {
           if (PeanoNat::ltb(curLvl, newLevel)) {
-            return stm::writeTVar<unsigned int>(this->SkipList::slLevel,
-                                                newLevel);
+            return stm::writeTVar(this->SkipList::slLevel, newLevel);
           } else {
             return std::monostate{};
           }
         }();
-        unsigned int len =
-            stm::readTVar<unsigned int>(this->SkipList::slLength);
-        return stm::writeTVar<unsigned int>(this->SkipList::slLength,
-                                            (len + 1));
+        unsigned int len = stm::readTVar(this->SkipList::slLength);
+        return stm::writeTVar(this->SkipList::slLength, (len + 1));
       }
     } else {
       bsl::shared_ptr<SkipNode<K, V>> newN =
@@ -112,14 +107,13 @@ template <typename K, typename V> struct SkipList {
                                                   newN);
       [&]() {
         if (PeanoNat::ltb(curLvl, newLevel)) {
-          return stm::writeTVar<unsigned int>(this->SkipList::slLevel,
-                                              newLevel);
+          return stm::writeTVar(this->SkipList::slLevel, newLevel);
         } else {
           return std::monostate{};
         }
       }();
-      unsigned int len = stm::readTVar<unsigned int>(this->SkipList::slLength);
-      return stm::writeTVar<unsigned int>(this->SkipList::slLength, (len + 1));
+      unsigned int len = stm::readTVar(this->SkipList::slLength);
+      return stm::writeTVar(this->SkipList::slLength, (len + 1));
     }
   }
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
@@ -132,15 +126,13 @@ template <typename K, typename V> struct SkipList {
     if (nextOpt.has_value()) {
       bsl::shared_ptr<SkipNode<K, V>> node = *nextOpt;
       if (eqK(node->key, k)) {
-        unsigned int curLvl =
-            stm::readTVar<unsigned int>(this->SkipList::slLevel);
+        unsigned int curLvl = stm::readTVar(this->SkipList::slLevel);
         SkipList<int, int>::template extendPath<K, V>(
             path, this->SkipList::slHead, (node->level + 1), curLvl);
         SkipList<int, int>::template unlinkNode<K, V>(path, node);
-        unsigned int len =
-            stm::readTVar<unsigned int>(this->SkipList::slLength);
-        return stm::writeTVar<unsigned int>(
-            this->SkipList::slLength, (((len - 1u) > len ? 0 : (len - 1u))));
+        unsigned int len = stm::readTVar(this->SkipList::slLength);
+        return stm::writeTVar(this->SkipList::slLength,
+                              (((len - 1u) > len ? 0 : (len - 1u))));
       } else {
         return std::monostate{};
       }
@@ -162,26 +154,26 @@ template <typename K, typename V> struct SkipList {
   }
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
   __attribute__((pure)) bool memberFast(F0 &&ltK, F1 &&eqK, const K k) const {
-    unsigned int lvl = stm::readTVar<unsigned int>(this->SkipList::slLevel);
+    unsigned int lvl = stm::readTVar(this->SkipList::slLevel);
     return SkipList<int, int>::template findKey_aux<K, V>(
         ltK, eqK, this->SkipList::slHead, k, lvl);
   }
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
   __attribute__((pure)) bool member(F0 &&ltK, F1 &&eqK, const K k) const {
-    unsigned int lvl = stm::readTVar<unsigned int>(this->SkipList::slLevel);
+    unsigned int lvl = stm::readTVar(this->SkipList::slLevel);
     return SkipList<int, int>::template findKey_aux<K, V>(
         ltK, eqK, this->SkipList::slHead, k, lvl);
   }
   __attribute__((pure)) bool isEmpty() const {
-    unsigned int len = stm::readTVar<unsigned int>(this->SkipList::slLength);
+    unsigned int len = stm::readTVar(this->SkipList::slLength);
     return PeanoNat::eqb(len, 0u);
   }
   __attribute__((pure)) unsigned int length() const {
-    return stm::readTVar<unsigned int>(this->SkipList::slLength);
+    return stm::readTVar(this->SkipList::slLength);
   }
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
   __attribute__((pure)) bool exists_(F0 &&ltK, F1 &&eqK, const K k) const {
-    unsigned int lvl = stm::readTVar<unsigned int>(this->SkipList::slLevel);
+    unsigned int lvl = stm::readTVar(this->SkipList::slLevel);
     return SkipList<int, int>::template findKey_aux<K, V>(
         ltK, eqK, this->SkipList::slHead, k, lvl);
   }
@@ -194,9 +186,9 @@ template <typename K, typename V> struct SkipList {
       SkipList<int, int>::template unlinkFirstFromHead<K, V>(
           this->SkipList::slHead, node, node->level,
           (((16u - 1u) > 16u ? 0 : (16u - 1u))));
-      unsigned int len = stm::readTVar<unsigned int>(this->SkipList::slLength);
-      stm::writeTVar<unsigned int>(this->SkipList::slLength,
-                                   (((len - 1u) > len ? 0 : (len - 1u))));
+      unsigned int len = stm::readTVar(this->SkipList::slLength);
+      stm::writeTVar(this->SkipList::slLength,
+                     (((len - 1u) > len ? 0 : (len - 1u))));
       V v = stm::readTVar<V>(node->value);
       return bsl::make_optional<bsl::pair<K, V>>(bsl::make_pair(node->key, v));
     } else {
@@ -207,8 +199,8 @@ template <typename K, typename V> struct SkipList {
     unsigned int count = SkipList<int, int>::template removeAll_aux<K, V>(
         10000u, this->SkipList::slHead, (((16u - 1u) > 16u ? 0 : (16u - 1u))),
         0u);
-    stm::writeTVar<unsigned int>(this->SkipList::slLength, 0u);
-    stm::writeTVar<unsigned int>(this->SkipList::slLevel, 0u);
+    stm::writeTVar(this->SkipList::slLength, 0u);
+    stm::writeTVar(this->SkipList::slLevel, 0u);
     return count;
   }
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
@@ -216,7 +208,7 @@ template <typename K, typename V> struct SkipList {
                                            const V v,
                                            const unsigned int newLevel) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
-    unsigned int curLvl = stm::readTVar<unsigned int>(this->SkipList::slLevel);
+    unsigned int curLvl = stm::readTVar(this->SkipList::slLevel);
     SkipList<int, int>::template extendPath<K, V>(path, this->SkipList::slHead,
                                                   (newLevel + 1), curLvl);
     bsl::shared_ptr<SkipNode<K, V>> pred0 = path.get(0u);
@@ -233,16 +225,13 @@ template <typename K, typename V> struct SkipList {
             path, this->SkipList::slHead, newN);
         [&]() {
           if (PeanoNat::ltb(curLvl, newLevel)) {
-            return stm::writeTVar<unsigned int>(this->SkipList::slLevel,
-                                                newLevel);
+            return stm::writeTVar(this->SkipList::slLevel, newLevel);
           } else {
             return std::monostate{};
           }
         }();
-        unsigned int len =
-            stm::readTVar<unsigned int>(this->SkipList::slLength);
-        return stm::writeTVar<unsigned int>(this->SkipList::slLength,
-                                            (len + 1));
+        unsigned int len = stm::readTVar(this->SkipList::slLength);
+        return stm::writeTVar(this->SkipList::slLength, (len + 1));
       }
     } else {
       bsl::shared_ptr<SkipNode<K, V>> newN =
@@ -251,21 +240,20 @@ template <typename K, typename V> struct SkipList {
                                                   newN);
       [&]() {
         if (PeanoNat::ltb(curLvl, newLevel)) {
-          return stm::writeTVar<unsigned int>(this->SkipList::slLevel,
-                                              newLevel);
+          return stm::writeTVar(this->SkipList::slLevel, newLevel);
         } else {
           return std::monostate{};
         }
       }();
-      unsigned int len = stm::readTVar<unsigned int>(this->SkipList::slLength);
-      return stm::writeTVar<unsigned int>(this->SkipList::slLength, (len + 1));
+      unsigned int len = stm::readTVar(this->SkipList::slLength);
+      return stm::writeTVar(this->SkipList::slLength, (len + 1));
     }
   }
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
   __attribute__((pure)) bool addUnique(F0 &&ltK, F1 &&eqK, const K k, const V v,
                                        const unsigned int newLevel) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
-    unsigned int curLvl = stm::readTVar<unsigned int>(this->SkipList::slLevel);
+    unsigned int curLvl = stm::readTVar(this->SkipList::slLevel);
     SkipList<int, int>::template extendPath<K, V>(path, this->SkipList::slHead,
                                                   (newLevel + 1), curLvl);
     bsl::shared_ptr<SkipNode<K, V>> pred0 = path.get(0u);
@@ -282,15 +270,13 @@ template <typename K, typename V> struct SkipList {
             path, this->SkipList::slHead, newN);
         [&]() {
           if (PeanoNat::ltb(curLvl, newLevel)) {
-            return stm::writeTVar<unsigned int>(this->SkipList::slLevel,
-                                                newLevel);
+            return stm::writeTVar(this->SkipList::slLevel, newLevel);
           } else {
             return std::monostate{};
           }
         }();
-        unsigned int len =
-            stm::readTVar<unsigned int>(this->SkipList::slLength);
-        stm::writeTVar<unsigned int>(this->SkipList::slLength, (len + 1));
+        unsigned int len = stm::readTVar(this->SkipList::slLength);
+        stm::writeTVar(this->SkipList::slLength, (len + 1));
         return true;
       }
     } else {
@@ -300,14 +286,13 @@ template <typename K, typename V> struct SkipList {
                                                   newN);
       [&]() {
         if (PeanoNat::ltb(curLvl, newLevel)) {
-          return stm::writeTVar<unsigned int>(this->SkipList::slLevel,
-                                              newLevel);
+          return stm::writeTVar(this->SkipList::slLevel, newLevel);
         } else {
           return std::monostate{};
         }
       }();
-      unsigned int len = stm::readTVar<unsigned int>(this->SkipList::slLength);
-      stm::writeTVar<unsigned int>(this->SkipList::slLength, (len + 1));
+      unsigned int len = stm::readTVar(this->SkipList::slLength);
+      stm::writeTVar(this->SkipList::slLength, (len + 1));
       return true;
     }
   }
@@ -317,7 +302,7 @@ template <typename K, typename V> struct SkipList {
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
   __attribute__((pure)) bool bde_exists(F0 &&ltK, F1 &&eqK,
                                         const K key0) const {
-    unsigned int lvl = stm::readTVar<unsigned int>(this->SkipList::slLevel);
+    unsigned int lvl = stm::readTVar(this->SkipList::slLevel);
     return SkipList<int, int>::template findKey_aux<K, V>(
         ltK, eqK, this->SkipList::slHead, key0, lvl);
   }
@@ -694,10 +679,8 @@ template <typename K, typename V> struct SkipList {
                                                   const T2 dummyVal) {
     bsl::shared_ptr<SkipNode<T1, T2>> headNode = SkipNode<T1, T2>::create(
         dummyKey, dummyVal, (((16u - 1u) > 16u ? 0 : (16u - 1u))));
-    bsl::shared_ptr<stm::TVar<unsigned int>> lvlTV =
-        stm::newTVar<unsigned int>(0u);
-    bsl::shared_ptr<stm::TVar<unsigned int>> lenTV =
-        stm::newTVar<unsigned int>(0u);
+    bsl::shared_ptr<stm::TVar<unsigned int>> lvlTV = stm::newTVar(0u);
+    bsl::shared_ptr<stm::TVar<unsigned int>> lenTV = stm::newTVar(0u);
     return bsl::make_shared<SkipList<T1, T2>>(
         SkipList<T1, T2>{headNode, 16u, lvlTV, lenTV});
   }
