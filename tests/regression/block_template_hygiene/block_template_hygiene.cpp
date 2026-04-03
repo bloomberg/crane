@@ -1,6 +1,8 @@
 #include <block_template_hygiene.h>
 
+#include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <string>
 #include <type_traits>
 #include <variant>

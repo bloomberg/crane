@@ -5,8 +5,7 @@
 From Corelib Require Import PrimInt63.
 From Crane Require Extraction.
 From Crane Require Import Mapping.Std.
-From Crane Require Import Monads.ITree Monads.IO.
-From Crane Require Import External.Vector.
+From Crane Require Import Monads.ITree Monads.IO External.Vector.
 
 Module BindTypeInference.
 
@@ -41,7 +40,7 @@ Module BindTypeInference.
     nested tt (fun _ => true) (fun b => if b then 1 else 0).
 
   (* Case 4: Vector operations returning different type *)
-  Definition test4 : itree ioE int :=
+  Definition test4 : itree vectorE int :=
     v <- emptyVec int ;;
     push v 1 ;;
     push v 2 ;;

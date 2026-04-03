@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <iostream>
 #include <string>
 #include <thread>
 #include <type_traits>

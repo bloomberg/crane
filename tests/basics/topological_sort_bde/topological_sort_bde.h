@@ -193,30 +193,30 @@ struct ListDef {
                                                  const unsigned int len);
 };
 struct ToString {
-  template <typename T1, typename T2, MapsTo<std::string, T1> F0,
-            MapsTo<std::string, T2> F1>
-  __attribute__((pure)) static std::string
+  template <typename T1, typename T2, MapsTo<bsl::string, T1> F0,
+            MapsTo<bsl::string, T2> F1>
+  __attribute__((pure)) static bsl::string
   pair_to_string(F0 &&p1, F1 &&p2, const bsl::pair<T1, T2> x) {
     T1 a = x.first;
     T2 b = x.second;
     return "("_s + p1(a) + ", "_s + p2(b) + ")"_s;
   }
-  template <typename T1, MapsTo<std::string, T1> F0>
-  __attribute__((pure)) static std::string
-  intersperse(F0 &&p, const std::string sep,
+  template <typename T1, MapsTo<bsl::string, T1> F0>
+  __attribute__((pure)) static bsl::string
+  intersperse(F0 &&p, const bsl::string sep,
               const bsl::shared_ptr<List<T1>> &l) {
     return bsl::visit(
         bdlf::Overloaded{
-            [](const typename List<T1>::Nil _args) -> std::string {
+            [](const typename List<T1>::Nil _args) -> bsl::string {
               return "";
             },
-            [&](const typename List<T1>::Cons _args) -> std::string {
+            [&](const typename List<T1>::Cons _args) -> bsl::string {
               return bsl::visit(
                   bdlf::Overloaded{
-                      [&](const typename List<T1>::Nil _args0) -> std::string {
+                      [&](const typename List<T1>::Nil _args0) -> bsl::string {
                         return sep + p(_args.d_a0);
                       },
-                      [&](const typename List<T1>::Cons _args0) -> std::string {
+                      [&](const typename List<T1>::Cons _args0) -> bsl::string {
                         return sep + p(_args.d_a0) +
                                intersperse<T1>(p, sep, _args.d_a1);
                       }},
@@ -224,21 +224,21 @@ struct ToString {
             }},
         l->v());
   }
-  template <typename T1, MapsTo<std::string, T1> F0>
-  __attribute__((pure)) static std::string
+  template <typename T1, MapsTo<bsl::string, T1> F0>
+  __attribute__((pure)) static bsl::string
   list_to_string(F0 &&p, const bsl::shared_ptr<List<T1>> &l) {
     return bsl::visit(
         bdlf::Overloaded{
-            [](const typename List<T1>::Nil _args) -> std::string {
+            [](const typename List<T1>::Nil _args) -> bsl::string {
               return "[]";
             },
-            [&](const typename List<T1>::Cons _args) -> std::string {
+            [&](const typename List<T1>::Cons _args) -> bsl::string {
               return bsl::visit(
                   bdlf::Overloaded{
-                      [&](const typename List<T1>::Nil _args0) -> std::string {
+                      [&](const typename List<T1>::Nil _args0) -> bsl::string {
                         return "["_s + p(_args.d_a0) + "]"_s;
                       },
-                      [&](const typename List<T1>::Cons _args0) -> std::string {
+                      [&](const typename List<T1>::Cons _args0) -> bsl::string {
                         return "["_s + p(_args.d_a0) +
                                intersperse<T1>(p, "; ", _args.d_a1) + "]"_s;
                       }},

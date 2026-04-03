@@ -1,6 +1,9 @@
 #include <bind_type_inference.h>
 
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
 #include <memory>
 #include <type_traits>
 #include <utility>

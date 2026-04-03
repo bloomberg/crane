@@ -1,6 +1,9 @@
 #ifndef INCLUDED_UNIT_VOID_EDGE2
 #define INCLUDED_UNIT_VOID_EDGE2
 
+#include <filesystem>
+#include <fstream>
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>

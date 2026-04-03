@@ -1,6 +1,9 @@
 #ifndef INCLUDED_STM
 #define INCLUDED_STM
 
+#include <filesystem>
+#include <fstream>
+#include <iostream>
 #include <memory>
 #include <mini_stm.h>
 #include <type_traits>
@@ -82,7 +85,7 @@ public:
   }
 };
 
-struct STM {
+struct STMDefs {
   template <typename T1, MapsTo<T1, T1> F1>
   static void modifyTVar(const std::shared_ptr<stm::TVar<T1>> a, F1 &&f);
 };
@@ -119,7 +122,7 @@ struct stmtest {
 };
 
 template <typename T1, MapsTo<T1, T1> F1>
-void STM::modifyTVar(const std::shared_ptr<stm::TVar<T1>> a, F1 &&f) {
+void STMDefs::modifyTVar(const std::shared_ptr<stm::TVar<T1>> a, F1 &&f) {
   T1 val = a->read();
   a->write(f(val));
   return;

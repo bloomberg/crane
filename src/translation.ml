@@ -419,6 +419,48 @@ let rec voidify_unit_in_type = function
   | Tunique_ptr t -> Tunique_ptr (voidify_unit_in_type t)
   | t -> t
 
+(** Check if an ML type represents a void or unit type. *)
+let ml_type_is_unit_or_void ty = ml_type_is_void ty || ml_type_is_unit ty
+
+(** Filter out erased ([Tdummy]) types from a type list. *)
+let filter_value_types = List.filter (fun t -> not (isTdummy t))
+
+(** Check if a monad reference uses the reified ITree extraction mode
+    (i.e. its monad template string contains ["ITree"]). *)
+let is_monad_reified monad_ref =
+  match Table.get_monad_template_opt monad_ref with
+  | Some t ->
+    ( try ignore (Str.search_forward (Str.regexp_string "ITree") t 0); true
+      with Not_found -> false )
+  | None -> false
+
+(** If the codomain of [ty] is a registered monad, return its reference. *)
+let extract_monad_from_codomain ty =
+  match ml_codomain ty with
+  | Miniml.Tglob (monad_ref, _, _) when Table.is_monad monad_ref ->
+    Some monad_ref
+  | _ -> None
+
+(** Collect [Id.t]s for typeclass-typed parameters in an ML arrow type. *)
+let collect_typeclass_param_ids ty =
+  let rec aux acc i = function
+    | Miniml.Tarr (t1, t2) ->
+      if Table.is_typeclass_type t1 then
+        aux (tc_instance_id i :: acc) (i + 1) t2
+      else
+        aux acc i t2
+    | _ -> List.rev acc
+  in
+  match ty with Miniml.Tarr _ -> aux [] 0 ty | _ -> []
+
+(** Apply unit-to-void conversion on a C++ type, respecting reified mode.
+    In reified mode, [Unit] inside [ITree<Unit>] becomes [ITree<void>].
+    In sequential mode, the entire type becomes [Tvoid]. *)
+let apply_unit_void unit_void is_reified ty =
+  if unit_void then
+    if is_reified then voidify_unit_in_type ty
+    else Tvoid
+  else ty
 
 (** Generate the C++ expression for Rocq's [tt] (the unit constructor).
     Does NOT call [gen_expr] — it checks the extraction table directly. *)
@@ -534,7 +576,7 @@ let mk_itree_ret (r_cpp : cpp_type) (args : cpp_expr list) : cpp_expr =
     the ML result type (checked with {!ml_type_is_void} for unit-mapped
     types); [v] is the value expression to wrap. *)
 let mk_itree_ret_for_value r_cpp r_ml v =
-  if r_cpp = Tvoid || ml_type_is_void r_ml || ml_type_is_unit r_ml then
+  if r_cpp = Tvoid || ml_type_is_unit_or_void r_ml then
     mk_itree_ret Tvoid []
   else
     mk_itree_ret r_cpp [v]
@@ -1382,7 +1424,7 @@ let rec ml_body_returns_erased_field = function
       | Tglob (r, _, _) ->
         let all_field_types = Table.record_field_types r in
         let non_erased =
-          List.filter (fun t -> not (Mlutil.isTdummy t)) all_field_types
+          filter_value_types all_field_types
         in
         ( try
             let field_ty = List.nth non_erased idx in
@@ -1905,7 +1947,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
            and R is the result type. *)
         let tvars = get_current_type_vars () in
         let r_cpp =
-          let non_dummy = List.filter (fun t -> not (isTdummy t)) ret_tys in
+          let non_dummy = filter_value_types ret_tys in
           match non_dummy with
           | r_ml :: _ ->
             convert_ml_type_to_cpp_type env Refset'.empty tvars r_ml
@@ -2261,7 +2303,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
            continuations which expect std::function, not the result of
            calling the function. *)
         if tctx.itree_mode = Reified
-           && List.exists (fun (_, ty) -> ml_type_is_void ty || ml_type_is_unit ty) lam_params then
+           && List.exists (fun (_, ty) -> ml_type_is_unit_or_void ty) lam_params then
           f
         else
           CPPfun_call (f, []) )
@@ -2581,7 +2623,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       | _ -> []
     in
     let non_erased_field_types =
-      List.filter (fun t -> not (isTdummy t)) all_field_types
+      filter_value_types all_field_types
     in
     (* For type classes, use qualified access (::) instead of arrow (->) since
        type class instances are template type parameters, not runtime values *)
@@ -2802,7 +2844,7 @@ and eta_fun env f args =
           | Tglob (r, _, _) when Table.is_typeclass r ->
             let field_types = Table.record_field_types r in
             let non_dummy =
-              List.filter (fun t -> not (Mlutil.isTdummy t)) field_types
+              filter_value_types field_types
             in
             ( try
                 let fty = List.nth non_dummy idx in
@@ -3014,7 +3056,7 @@ and eta_fun env f args =
         let ret_expr = mk_itree_ret_for_value r_cpp r_ml expr in
         (* Void/unit effects need their side-effect evaluated before ret(). *)
         let body =
-          if r_cpp = Tvoid || ml_type_is_void r_ml || ml_type_is_unit r_ml then
+          if r_cpp = Tvoid || ml_type_is_unit_or_void r_ml then
             [Sexpr expr; Sreturn (Some ret_expr)]
           else
             [Sreturn (Some ret_expr)]
@@ -5055,7 +5097,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
        Tdummy entries in bind_tys — these come from failed type extractions in
        make_tyargs (e.g., HKT type constructors that can't be extracted).
        Unifying a meta with Tdummy would not resolve it usefully. *)
-    let non_dummy_bind_tys = List.filter (fun t -> not (isTdummy t)) bind_tys in
+    let non_dummy_bind_tys = filter_value_types bind_tys in
     let () =
       match non_dummy_bind_tys with
       | elem_ty :: _ -> List.iter (fun (_, ty) -> try_mgu ty elem_ty) ids'
@@ -5422,7 +5464,7 @@ let count_keep_params sign =
     [gen_record_cpp] and [gen_typeclass_cpp] need the non-erased types only,
     because [select_fields] already drops the corresponding field names. *)
 let non_dummy_constructor_types ind =
-  List.filter (fun t -> not (Mlutil.isTdummy t)) ind.ip_types.(0)
+  filter_value_types ind.ip_types.(0)
 
 (** Generate C++ struct for a record type.
 
@@ -6707,12 +6749,6 @@ let detect_cps_params (self_ref : GlobRef.t) (n_params : int) (body : ml_ast) :
   walk body;
   Hashtbl.fold (fun k _ acc -> k :: acc) cps_set []
 
-(** Extract the codomain (final return type) of an ML type by stripping
-    arrows. *)
-let rec ml_codomain = function
-  | Miniml.Tarr (_, t2) -> ml_codomain t2
-  | t -> t
-
 (** Generate a C++ function definition from an ML function body.
 
     @param n     the global reference for the function being defined
@@ -6736,17 +6772,11 @@ let gen_dfun n b cty ty temps =
      template contains "ITree" (e.g. ["std::shared_ptr<ITree<%t1>>"]).
      Must be set BEFORE void-ification so the mode is available. *)
   let saved_mode = tctx.itree_mode in
-  ( match ml_codomain ty with
-  | Miniml.Tglob (monad_ref, _, _) when Table.is_monad monad_ref ->
-    let is_reified =
-      match Table.get_monad_template_opt monad_ref with
-      | Some t ->
-        ( try ignore (Str.search_forward (Str.regexp_string "ITree") t 0); true
-          with Not_found -> false )
-      | None -> false
-    in
-    tctx.itree_mode <- (if is_reified then Reified else Sequential)
-  | _ -> () );
+  ( match extract_monad_from_codomain ty with
+  | Some monad_ref ->
+    tctx.itree_mode <-
+      (if is_monad_reified monad_ref then Reified else Sequential)
+  | None -> () );
   (* Void-ify unit codomain: unit as return type maps to C++ void.
      Check the ML result type (unwrapping monad if present) to determine
      if the function returns unit. Then recursively replace the unit enum
@@ -6760,10 +6790,7 @@ let gen_dfun n b cty ty temps =
      | Miniml.Tglob (r, _, _) when Table.is_monad r -> true | _ -> false)
     && ml_type_is_unit (ml_result_type ty)
   in
-  let cod = if unit_void then
-    if tctx.itree_mode = Reified then voidify_unit_in_type cod
-    else Tvoid
-  else cod in
+  let cod = apply_unit_void unit_void (tctx.itree_mode = Reified) cod in
   let rec get_dom l ty =
     match ty with
     | Tarr (t1, t2) -> get_dom (t1 :: l) t2
@@ -7013,7 +7040,7 @@ let gen_dfun n b cty ty temps =
           let fields = Table.get_record_fields class_ref in
           let field_types = Table.record_field_types class_ref in
           let non_dummy =
-            List.filter (fun t -> not (Mlutil.isTdummy t)) field_types
+            filter_value_types field_types
           in
           if List.length fields = List.length non_dummy then
             List.combine fields non_dummy
@@ -7577,7 +7604,7 @@ let rec expand_tc_typed_carriers
   let fields = Table.get_record_fields class_ref in
   let field_types = Table.record_field_types class_ref in
   let non_dummy =
-    List.filter (fun t -> not (Mlutil.isTdummy t)) field_types
+    filter_value_types field_types
   in
   if List.length fields <> List.length non_dummy then
     carrier_refs
@@ -7703,7 +7730,7 @@ let rewrite_typeclass_projection_type (n : GlobRef.t) (ty : ml_type) : ml_type =
     let proj_map = erased_proj_tvar_map class_ref in
     if proj_map <> [] then (* Check if n is a projection of this typeclass *)
       let non_dummy_types =
-        List.filter (fun t -> not (Mlutil.isTdummy t)) field_types
+        filter_value_types field_types
       in
       let non_dummy_fields_types =
         if List.length fields = List.length non_dummy_types then
@@ -7741,17 +7768,11 @@ let gen_decl n b ty =
      reify_monadic_param_type (called inside convert_ml_type_to_cpp_type)
      can correctly voidify unit result types in ITree parameters. *)
   let saved_mode = tctx.itree_mode in
-  ( match ml_codomain ty with
-  | Miniml.Tglob (monad_ref, _, _) when Table.is_monad monad_ref ->
-    let is_reified =
-      match Table.get_monad_template_opt monad_ref with
-      | Some t ->
-        ( try ignore (Str.search_forward (Str.regexp_string "ITree") t 0); true
-          with Not_found -> false )
-      | None -> false
-    in
-    tctx.itree_mode <- (if is_reified then Reified else Sequential)
-  | _ -> () );
+  ( match extract_monad_from_codomain ty with
+  | Some monad_ref ->
+    tctx.itree_mode <-
+      (if is_monad_reified monad_ref then Reified else Sequential)
+  | None -> () );
   let cty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
   let tvars = get_tvars cty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
@@ -7825,16 +7846,7 @@ let gen_decl_for_pp n b ty =
      callers use the full Dtemplate definition. *)
   let tc_param_ids =
     match ty with
-    | Tarr _ ->
-      let rec collect_tc_ids acc i = function
-        | Miniml.Tarr (t1, t2) ->
-          if Table.is_typeclass_type t1 then
-            collect_tc_ids (tc_instance_id i :: acc) (i + 1) t2
-          else
-            collect_tc_ids acc i t2
-        | _ -> List.rev acc
-      in
-      collect_tc_ids [] 0 ty
+    | Tarr _ -> collect_typeclass_param_ids ty
     | _ -> []
   in
   let temps = phantom_aware_temps cty tvars in
@@ -7888,16 +7900,7 @@ let gen_dfun_def n b ty =
      callers (gen_dfuns_header) use the full Dtemplate definition. *)
   let tc_param_ids =
     match ty with
-    | Tarr _ ->
-      let rec collect_tc_ids acc i = function
-        | Miniml.Tarr (t1, t2) ->
-          if Table.is_typeclass_type t1 then
-            collect_tc_ids (tc_instance_id i :: acc) (i + 1) t2
-          else
-            collect_tc_ids acc i t2
-        | _ -> List.rev acc
-      in
-      collect_tc_ids [] 0 ty
+    | Tarr _ -> collect_typeclass_param_ids ty
     | _ -> []
   in
   match cty with
@@ -7926,23 +7929,14 @@ let gen_spec n b ty =
      | Miniml.Tglob (r, _, _) when Table.is_monad r -> true | _ -> false)
     && ml_type_is_unit (ml_result_type ty) in
   let is_reified = unit_void &&
-    match ml_codomain ty with
-    | Miniml.Tglob (monad_ref, _, _) when Table.is_monad monad_ref ->
-      (match Table.get_monad_template_opt monad_ref with
-       | Some t ->
-         (try ignore (Str.search_forward (Str.regexp_string "ITree") t 0); true
-          with Not_found -> false)
-       | None -> false)
-    | _ -> false in
+    (match extract_monad_from_codomain ty with
+     | Some mr -> is_monad_reified mr | None -> false) in
   let ty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
   let tvars = get_tvars ty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
   match ty with
   | Tfun (dom, cod) ->
-    let cod = if unit_void then
-      if is_reified then voidify_unit_in_type cod
-      else Tvoid
-    else cod in
+    let cod = apply_unit_void unit_void is_reified cod in
     gen_sfun n b dom cod temps
   | _ ->
   match b with
@@ -8019,29 +8013,17 @@ let gen_sfun_spec n b ty =
      | Miniml.Tglob (r, _, _) when Table.is_monad r -> true | _ -> false)
     && ml_type_is_unit (ml_result_type ty) in
   let is_reified = unit_void &&
-    match ml_codomain ty with
-    | Miniml.Tglob (monad_ref, _, _) when Table.is_monad monad_ref ->
-      (match Table.get_monad_template_opt monad_ref with
-       | Some t ->
-         (try ignore (Str.search_forward (Str.regexp_string "ITree") t 0); true
-          with Not_found -> false)
-       | None -> false)
-    | _ -> false in
+    (match extract_monad_from_codomain ty with
+     | Some mr -> is_monad_reified mr | None -> false) in
   let ty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
   let tvars = get_tvars ty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
   match ty with
   | Tfun (dom, cod) ->
-    let cod = if unit_void then
-      if is_reified then voidify_unit_in_type cod
-      else Tvoid
-    else cod in
+    let cod = apply_unit_void unit_void is_reified cod in
     gen_sfun n b dom cod temps
   | _ ->
-    let ty = if unit_void then
-      if is_reified then voidify_unit_in_type ty
-      else Tvoid
-    else ty in
+    let ty = apply_unit_void unit_void is_reified ty in
     gen_sfun n b [Tvoid] ty temps
 
 (** Generate multiple function definitions *)

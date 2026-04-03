@@ -1,6 +1,9 @@
 #ifndef INCLUDED_BLOCK_TEMPLATE_TYPES
 #define INCLUDED_BLOCK_TEMPLATE_TYPES
 
+#include <filesystem>
+#include <fstream>
+#include <iostream>
 #include <string>
 #include <type_traits>
 

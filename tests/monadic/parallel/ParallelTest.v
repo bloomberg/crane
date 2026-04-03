@@ -24,8 +24,8 @@ Module ParallelTest.
   Definition fast (m n : nat) : nat * nat :=
     runPar (
       let p := (m, n) in
-      t1 <- mk_thread ack p ;;
-      t2 <- mk_thread ack p ;;
+      t1 <- async ack p ;;
+      t2 <- async ack p ;;
       r1 <- get_thread t1 ;;
       r2 <- get_thread t2 ;;
       Ret (r1, r2)

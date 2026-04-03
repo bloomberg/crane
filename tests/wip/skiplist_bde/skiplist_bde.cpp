@@ -1,6 +1,7 @@
 #include <skiplist_bde.h>
 
 #include <bdlf_overloaded.h>
+#include <bdls_filesystemutil.h>
 #include <bsl_concepts.h>
 #include <bsl_functional.h>
 #include <bsl_iostream.h>
@@ -11,6 +12,7 @@
 #include <bsl_type_traits.h>
 #include <bsl_utility.h>
 #include <bsl_variant.h>
+#include <fstream>
 #include <mini_stm.h>
 #include <skipnode.h>
 #include <variant>

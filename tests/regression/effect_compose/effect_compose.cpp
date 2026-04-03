@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <future>
+#include <iostream>
 #include <string>
 #include <type_traits>
 #include <variant>

@@ -1,7 +1,9 @@
 #ifndef INCLUDED_BLOCK_TEMPLATE_HYGIENE
 #define INCLUDED_BLOCK_TEMPLATE_HYGIENE
 
+#include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <string>
 #include <type_traits>
 #include <variant>

@@ -27,8 +27,8 @@ Module threadtest.
     end.
 
   Definition test (m n : nat) : itree concE unit :=
-    t1 <- mk_thread fun1 m ;;
-    t2 <- mk_thread fun2 n ;;
+    t1 <- spawn fun1 m ;;
+    t2 <- spawn fun2 n ;;
     join t1 ;;
     join t2 ;;
     Ret tt.

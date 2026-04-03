@@ -3,49 +3,46 @@
 (**
    IO effect events for the BDE flavor.
 
-   Provides IO effects ([ioE]) as composable inductives with smart constructors
-   and C++ extraction mappings. Use [itree ioE A] as the monadic type.
-
-   Smart constructors are polymorphic over the effect type [E] via [-<],
-   so they can be used in any composed effect that includes the relevant
-   sub-effect.
+   Re-exports shared definitions from [IODefs.v] and adds C++ extraction
+   mappings targeting BDE ([bsl::]).
 *)
-From Corelib Require Import PrimString.
 From Crane Require Extraction.
-From Crane Require Import Mapping.BDE Monads.ITree.
+From Crane Require Import Mapping.BDE.
+From Crane Require Export Monads.IODefs.
 
-Inductive consoleE : Type -> Type :=
-| Print : string -> consoleE unit
-| PrintEndline : string -> consoleE unit
-| GetLine : consoleE string.
+Crane Extract Inductive consoleE => ""
+  [ "bsl::cout << %a0"
+    "bsl::cout << %a0 << '\n'"
+    "[&]() -> bsl::string { bsl::string s; bsl::getline(bsl::cin, s); return s; }()" ]
+  From "bsl_iostream.h".
 
-Inductive fileE : Type -> Type :=
-| ReadFile : string -> fileE string
-| WriteFile : string -> string -> fileE unit
-| AppendFile : string -> string -> fileE unit
-| FileExists : string -> fileE bool
-| RemoveFile : string -> fileE unit.
+Crane Extract Inductive fileE => ""
+  [ "[]() -> bsl::string {
+  bsl::ifstream file(%a0);
+  if (!file) {
+      bsl::cerr << ""Failed to open file "" << %a0 << '\n';
+      return bsl::string{};
+  }
+  return bsl::string(
+      bsl::istreambuf_iterator<char>(file),
+      bsl::istreambuf_iterator<char>());
+}()"
+    "[&]() {
+  bsl::ofstream file(%a0);
+  file << %a1;
+}()"
+    "[&]() {
+  bsl::ofstream file(%a0, bsl::ios::app);
+  file << %a1;
+}()"
+    "bdls::FilesystemUtil::exists(%a0)"
+    "bdls::FilesystemUtil::remove(%a0)" ]
+  From "fstream" "bdls_filesystemutil.h".
 
-Crane Extract Skip consoleE.
-Crane Extract Skip fileE.
-
-Definition ioE := consoleE +' fileE.
-Crane Extract Skip ioE.
-
-Definition print {E} `{consoleE -< E} (s : string) : itree E unit := embed (Print s).
-Definition print_endline {E} `{consoleE -< E} (s : string) : itree E unit := embed (PrintEndline s).
-Definition get_line {E} `{consoleE -< E} : itree E string := embed GetLine.
-
-Definition read {E} `{fileE -< E} (path : string) : itree E string := embed (ReadFile path).
-Definition write_file {E} `{fileE -< E} (path content : string) : itree E unit := embed (WriteFile path content).
-Definition append_file {E} `{fileE -< E} (path content : string) : itree E unit := embed (AppendFile path content).
-Definition file_exists {E} `{fileE -< E} (path : string) : itree E bool := embed (FileExists path).
-Definition remove_file {E} `{fileE -< E} (path : string) : itree E unit := embed (RemoveFile path).
-
-Crane Extract Inlined Constant print => "bsl::cout << %a0".
-Crane Extract Inlined Constant print_endline => "bsl::cout << %a0 << '\n'".
+Crane Extract Inlined Constant print => "bsl::cout << %a0" From "bsl_iostream.h".
+Crane Extract Inlined Constant print_endline => "bsl::cout << %a0 << '\n'" From "bsl_iostream.h".
 Crane Extract Inlined Constant get_line =>
-  "bsl::getline(bsl::cin, %result)".
+  "bsl::getline(bsl::cin, %result)" From "bsl_iostream.h".
 
 Crane Extract Inlined Constant read =>
 "[]() -> bsl::string {
@@ -72,7 +69,6 @@ Crane Extract Inlined Constant append_file =>
 }()" From "fstream".
 
 Crane Extract Inlined Constant file_exists =>
-  "std::filesystem::exists(std::filesystem::path(%a0))" From "filesystem".
-
+  "bdls::FilesystemUtil::exists(%a0)" From "bdls_filesystemutil.h".
 Crane Extract Inlined Constant remove_file =>
-  "std::filesystem::remove(std::filesystem::path(%a0))" From "filesystem".
+  "bdls::FilesystemUtil::remove(%a0)" From "bdls_filesystemutil.h".

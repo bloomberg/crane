@@ -2,6 +2,7 @@
 #define INCLUDED_STM_HASH_MAP_BDE
 
 #include <bdlf_overloaded.h>
+#include <bdls_filesystemutil.h>
 #include <bsl_concepts.h>
 #include <bsl_cstdint.h>
 #include <bsl_functional.h>
@@ -14,6 +15,7 @@
 #include <bsl_utility.h>
 #include <bsl_variant.h>
 #include <bsl_vector.h>
+#include <fstream>
 #include <mini_stm.h>
 #include <variant>
 
@@ -275,7 +277,7 @@ template <typename K, typename V> struct CHT {
             MapsTo<int64_t, T1> F1>
   static bsl::shared_ptr<CHT<T1, T2>> new_hash(F0 &&eqb, F1 &&hash,
                                                const int64_t requested) {
-    int64_t n = bsl::max(requested, int64_t(1));
+    int64_t n = bsl::max<int64_t>(requested, 1);
     bsl::vector<
         bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>>>
         bs = CHT<int, int>::template mk_buckets<T1, T2>(n);
@@ -288,11 +290,10 @@ template <typename K, typename V> struct CHT {
           bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>>>
           v = {};
       v.push_back(fb);
-      return bsl::make_shared<CHT<T1, T2>>(
-          CHT<T1, T2>{eqb, hash, v, int64_t(1), fb});
+      return bsl::make_shared<CHT<T1, T2>>(CHT<T1, T2>{eqb, hash, v, 1, fb});
     } else {
       bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>> b =
-          bs.at(int64_t(0));
+          bs.at(0);
       return bsl::make_shared<CHT<T1, T2>>(CHT<T1, T2>{eqb, hash, bs, n, b});
     }
   }

@@ -46,10 +46,13 @@ Crane Extract Inlined Constant Nat.ltb => "%a0 < %a1".
 Crane Extract Inlined Constant Nat.leb => "%a0 <= %a1".
 
 
+Crane Extract Inlined Constant Nat.iter =>
+  "[&]() { auto _acc = %a2; for (unsigned int _i = 0; _i < %a0; _i++) { _acc = %a1(std::move(_acc)); } return _acc; }()".
+
 From Corelib Require Import PrimInt63.
 Axiom nat_of_int : int -> nat.
 Crane Extract Inlined Constant nat_of_int => "static_cast<unsigned int>(%a0)".
 
 From Corelib Require Import PrimString.
 Axiom string_of_nat : nat -> string.
-Crane Extract Inlined Constant string_of_nat => "std::to_string(%a0)".
+Crane Extract Inlined Constant string_of_nat => "bsl::to_string(%a0)" From "bsl_string.h".

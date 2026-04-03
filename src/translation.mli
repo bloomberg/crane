@@ -30,6 +30,10 @@ val clear_local_inductives : unit -> unit
 
 val get_local_inductives : unit -> GlobRef.t list
 
+(** Return the codomain of an ML type, chasing through arrows and meta
+    indirections. For [A -> B -> C] this returns [C]. *)
+val ml_codomain : Miniml.ml_type -> Miniml.ml_type
+
 (** {2 Type Conversion}
     Convert Miniml types to Minicpp types. *)
 

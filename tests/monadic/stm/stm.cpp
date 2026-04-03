@@ -1,5 +1,8 @@
 #include <stm.h>
 
+#include <filesystem>
+#include <fstream>
+#include <iostream>
 #include <memory>
 #include <mini_stm.h>
 #include <type_traits>
@@ -18,7 +21,7 @@ unsigned int stmtest::io_basic_counter() {
 
 unsigned int stmtest::stm_inc(const unsigned int x) {
   std::shared_ptr<stm::TVar<unsigned int>> c = stm::newTVar(x);
-  STM::template modifyTVar<unsigned int>(
+  STMDefs::template modifyTVar<unsigned int>(
       c, [](unsigned int n) { return (n + 1); });
   return c->read();
 }

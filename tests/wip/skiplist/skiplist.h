@@ -1,6 +1,9 @@
 #ifndef INCLUDED_SKIPLIST
 #define INCLUDED_SKIPLIST
 
+#include <filesystem>
+#include <fstream>
+#include <iostream>
 #include <memory>
 #include <mini_stm.h>
 #include <optional>

@@ -19,14 +19,14 @@ Module EffectCompose.
   (** Spawn a future that doubles a number, retrieve the result. *)
   Definition par_double (n : nat) : itree parIOE nat :=
     let double (x : nat) := x + x in
-    t <- mk_thread double n ;;
+    t <- async double n ;;
     get_thread t.
 
   (** Use parE to compute two values in parallel and add them. *)
   Definition par_add (a b : nat) : itree parIOE nat :=
     let double (x : nat) := x + x in
-    t1 <- mk_thread double a ;;
-    t2 <- mk_thread double b ;;
+    t1 <- async double a ;;
+    t2 <- async double b ;;
     r1 <- get_thread t1 ;;
     r2 <- get_thread t2 ;;
     Ret (r1 + r2).
@@ -35,7 +35,7 @@ Module EffectCompose.
   Definition par_compute_and_greet (n : nat) : itree parIOE nat :=
     let succ (x : nat) := x + 1 in
     print_endline "computing..." ;;
-    t <- mk_thread succ n ;;
+    t <- async succ n ;;
     result <- get_thread t ;;
     print_endline "done" ;;
     Ret result.

@@ -2666,3 +2666,58 @@
   (alias runtest)
   (deps effect_compose.t.exe)
   (action (run ./effect_compose.t.exe))))
+
+(subdir clock
+ (rule
+  (targets clock.t.exe)
+  (deps Clock.vo clock.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} clock.t.exe clock.cpp clock.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps clock.t.exe)
+  (action (run ./clock.t.exe))))
+
+(subdir dir
+ (rule
+  (targets dir.t.exe)
+  (deps Dir.vo dir.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dir.t.exe dir.cpp dir.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dir.t.exe)
+  (action (run ./dir.t.exe))))
+
+(subdir env
+ (rule
+  (targets env.t.exe)
+  (deps Env.vo env.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} env.t.exe env.cpp env.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps env.t.exe)
+  (action (run ./env.t.exe))))
+
+(subdir path
+ (rule
+  (targets path.t.exe)
+  (deps Path.vo path.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} path.t.exe path.cpp path.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps path.t.exe)
+  (action (run ./path.t.exe))))
+
+(subdir temp_file
+ (rule
+  (targets temp_file.t.exe)
+  (deps TempFile.vo temp_file.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} temp_file.t.exe temp_file.cpp temp_file.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps temp_file.t.exe)
+  (action (run ./temp_file.t.exe))))
