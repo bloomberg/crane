@@ -2655,3 +2655,14 @@
   (alias runtest)
   (deps block_template_types.t.exe)
   (action (run ./block_template_types.t.exe))))
+
+(subdir effect_compose
+ (rule
+  (targets effect_compose.t.exe)
+  (deps EffectCompose.vo effect_compose.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_compose.t.exe effect_compose.cpp effect_compose.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_compose.t.exe)
+  (action (run ./effect_compose.t.exe))))

@@ -48,30 +48,30 @@ Definition let_use_in_if (n : nat) (flag : bool) : nat :=
 
 (* 6. x <- print "hi" ;; Ret x
    Bind produces unit, continuation returns it *)
-Definition mono_bind_return : itree iIO unit :=
+Definition mono_bind_return : itree ioE unit :=
   x <- print "hello" ;;
   Ret x.
 
 (* 7. x <- print "hi" ;; y <- Ret x ;; Ret tt
    Bind produces unit, rebind it, then discard *)
-Definition mono_bind_rebind : itree iIO unit :=
+Definition mono_bind_rebind : itree ioE unit :=
   x <- print "hi" ;;
   y <- Ret x ;;
   Ret tt.
 
 (* 8. Sequence of unit binds where each depends on previous *)
-Definition mono_chain : itree iIO unit :=
+Definition mono_chain : itree ioE unit :=
   x <- print "a" ;;
   y <- print "b" ;;
   Ret y.
 
 (* 9. Unit bind result used in a match *)
-Definition mono_bind_match : itree iIO nat :=
+Definition mono_bind_match : itree ioE nat :=
   x <- print "test" ;;
   match x with tt => Ret 42 end.
 
 (* 10. Bind result of a non-inline function returning unit *)
-Definition mono_bind_opaque : itree iIO nat :=
+Definition mono_bind_opaque : itree ioE nat :=
   x <- print "setup" ;;
   Ret 99.
 

@@ -68,7 +68,7 @@ Module Tokenizer.
       end) (nat_of_int (length input)) input.
 
 
-  Fixpoint list_to_vec_h {A : Type} (l : list A) : itree iIO (vector A) :=
+  Fixpoint list_to_vec_h {A : Type} (l : list A) : itree ioE (vector A) :=
     match l with
     | [] => emptyVec A
     | a :: l' =>
@@ -77,9 +77,9 @@ Module Tokenizer.
       Ret v
   end.
 
-  Definition list_to_vec {A : Type} (l : list A) : itree iIO (vector A) := list_to_vec_h (rev l).
+  Definition list_to_vec {A : Type} (l : list A) : itree ioE (vector A) := list_to_vec_h (rev l).
 
-  Fixpoint list_to_vec_map_h {A B : Type} (f : A -> B) (l : list A) : itree iIO (vector B) :=
+  Fixpoint list_to_vec_map_h {A B : Type} (f : A -> B) (l : list A) : itree ioE (vector B) :=
     match l with
     | [] => emptyVec B
     | a :: l' =>
@@ -88,7 +88,7 @@ Module Tokenizer.
       Ret v
   end.
 
-  Definition list_to_vec_map {A B : Type} (f : A -> B) (l : list A) : itree iIO (vector B) := list_to_vec_map_h f (rev l).
+  Definition list_to_vec_map {A B : Type} (f : A -> B) (l : list A) : itree ioE (vector B) := list_to_vec_map_h f (rev l).
 
 End Tokenizer.
 

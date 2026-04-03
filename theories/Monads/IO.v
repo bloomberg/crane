@@ -3,8 +3,8 @@
 (**
    IO effect events for the standard library flavor.
 
-   Provides IO effects ([iIO]) as composable inductives with smart constructors
-   and C++ extraction mappings. Use [itree iIO A] as the monadic type.
+   Provides IO effects ([ioE]) as composable inductives with smart constructors
+   and C++ extraction mappings. Use [itree ioE A] as the monadic type.
 
    Smart constructors are polymorphic over the effect type [E] via [-<],
    so they can be used in any composed effect that includes the relevant
@@ -29,8 +29,8 @@ Inductive fileE : Type -> Type :=
 Crane Extract Skip consoleE.
 Crane Extract Skip fileE.
 
-Definition iIO := consoleE +' fileE.
-Crane Extract Skip iIO.
+Definition ioE := consoleE +' fileE.
+Crane Extract Skip ioE.
 
 Definition print {E} `{consoleE -< E} (s : string) : itree E unit := embed (Print s).
 Definition print_endline {E} `{consoleE -< E} (s : string) : itree E unit := embed (PrintEndline s).

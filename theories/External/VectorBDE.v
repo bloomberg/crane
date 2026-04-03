@@ -3,7 +3,7 @@
 (** Mutable vector effects for the BDE flavor.
 
     Provides axioms for [bsl::vector] operations as IO effects.
-    Smart constructors produce [itree iIO] computations. *)
+    Smart constructors produce [itree ioE] computations. *)
 From Corelib Require Import PrimInt63.
 From Crane Require Extraction.
 From Crane Require Import Mapping.BDE Monads.ITree Monads.IOBDE.
@@ -11,25 +11,25 @@ From Crane Require Import Mapping.BDE Monads.ITree Monads.IOBDE.
 Axiom vector : Type -> Type.
 
 Module Vector_axioms.
-  Axiom iemptyVec : forall (A : Type), iIO (vector A).
-  Axiom iget : forall {A}, vector A -> int -> iIO A.
-  Axiom ipush : forall {A}, vector A -> A -> iIO unit.
-  Axiom ipop : forall {A}, vector A -> iIO unit.
-  Axiom isize : forall {A}, vector A -> iIO int.
-  Axiom iisEmpty : forall {A}, vector A -> iIO bool.
-  Axiom iassign : forall {A}, vector A -> int -> A -> iIO (vector A).
+  Axiom iemptyVec : forall (A : Type), ioE (vector A).
+  Axiom iget : forall {A}, vector A -> int -> ioE A.
+  Axiom ipush : forall {A}, vector A -> A -> ioE unit.
+  Axiom ipop : forall {A}, vector A -> ioE unit.
+  Axiom isize : forall {A}, vector A -> ioE int.
+  Axiom iisEmpty : forall {A}, vector A -> ioE bool.
+  Axiom iassign : forall {A}, vector A -> int -> A -> ioE (vector A).
 End Vector_axioms.
 
 Crane Extract Skip Module Vector_axioms.
 Import Vector_axioms.
 
-Definition emptyVec (A : Type) : itree iIO (vector A) := ITree.trigger (iemptyVec A).
-Definition get {A} (v : vector A) (x : int) : itree iIO A := ITree.trigger (iget v x).
-Definition push {A} (v : vector A) (a : A) : itree iIO unit := ITree.trigger (ipush v a).
-Definition pop {A} (v : vector A) : itree iIO unit := ITree.trigger (ipop v).
-Definition size {A} (v : vector A) : itree iIO int := ITree.trigger (isize v).
-Definition isEmpty {A} (v : vector A) : itree iIO bool := ITree.trigger (iisEmpty v).
-Definition assign {A} (v : vector A) (x : int) (a : A) : itree iIO (vector A) := ITree.trigger (iassign v x a).
+Definition emptyVec (A : Type) : itree ioE (vector A) := ITree.trigger (iemptyVec A).
+Definition get {A} (v : vector A) (x : int) : itree ioE A := ITree.trigger (iget v x).
+Definition push {A} (v : vector A) (a : A) : itree ioE unit := ITree.trigger (ipush v a).
+Definition pop {A} (v : vector A) : itree ioE unit := ITree.trigger (ipop v).
+Definition size {A} (v : vector A) : itree ioE int := ITree.trigger (isize v).
+Definition isEmpty {A} (v : vector A) : itree ioE bool := ITree.trigger (iisEmpty v).
+Definition assign {A} (v : vector A) (x : int) (a : A) : itree ioE (vector A) := ITree.trigger (iassign v x a).
 
 Crane Extract Inlined Constant vector => "bsl::vector<%t0>" From "bsl_vector.h".
 Crane Extract Inlined Constant emptyVec => "{}".

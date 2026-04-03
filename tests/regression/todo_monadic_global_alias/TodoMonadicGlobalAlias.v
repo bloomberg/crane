@@ -6,13 +6,13 @@ From Crane Require Import Mapping.Std Monads.ITree Monads.IO.
 
 Module TodoMonadicGlobalAlias.
 
-Definition base : itree iIO nat :=
+Definition base : itree ioE nat :=
   Ret 7.
 
-Definition alias : itree iIO nat :=
+Definition alias : itree ioE nat :=
   base.
 
-Definition rebound : itree iIO nat :=
+Definition rebound : itree ioE nat :=
   x <- base ;;
   Ret (S x).
 

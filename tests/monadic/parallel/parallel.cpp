@@ -1,6 +1,5 @@
 #include <parallel.h>
 
-#include <cstdint>
 #include <functional>
 #include <future>
 #include <type_traits>

@@ -7,21 +7,21 @@ Module iotest.
 
   Definition test1 (s : string) : unit := tt.
 
-  Definition test2 (s : string) : itree iIO unit :=
+  Definition test2 (s : string) : itree ioE unit :=
     print s ;;
     Ret tt.
 
-  Definition test3 (s : string) : itree iIO unit :=
+  Definition test3 (s : string) : itree ioE unit :=
     print_endline s ;;
     Ret tt.
 
-  Definition test4 : itree iIO string :=
+  Definition test4 : itree ioE string :=
     print_endline "what is your name?" ;;
     s2 <- get_line ;;
     print_endline (cat "hello " s2) ;;
     Ret (cat "I read the name " (cat s2 " from the command line!")).
 
-  Definition test5 : itree iIO unit :=
+  Definition test5 : itree ioE unit :=
     s <- read "file.txt" ;;
     print_endline s ;;
     Ret tt.

@@ -55,7 +55,7 @@ Record CHT (K V : Type) := {
 
 (* Total bucket selection *)
 Definition bucket_of {K V} (t : CHT K V) (k : K)
-  :  itree iSTM (TVar (list (K * V))) :=
+  :  itree stmE (TVar (list (K * V))) :=
   let i := mod (t.(cht_hash) k) t.(cht_nbuckets) in
   getSTM t.(cht_buckets) i.
 
@@ -63,13 +63,13 @@ Section STM.
 (* ---- Operations ---- *)
 
 (* Get *)
-Definition stm_get {K V} (t : CHT K V) (k : K) : itree iSTM (option V) :=
+Definition stm_get {K V} (t : CHT K V) (k : K) : itree stmE (option V) :=
   b <- bucket_of t k ;;
   xs <- readTVar b ;;
   Ret (assoc_lookup t.(cht_eqb) k xs).
 
 (* Put / upsert *)
-Definition stm_put {K V} (t : CHT K V) (k : K) (v : V) : itree iSTM unit :=
+Definition stm_put {K V} (t : CHT K V) (k : K) (v : V) : itree stmE unit :=
   b <- bucket_of t k ;;
   xs <- readTVar b ;;
   let xs' := assoc_insert_or_replace t.(cht_eqb) k v xs in
@@ -77,7 +77,7 @@ Definition stm_put {K V} (t : CHT K V) (k : K) (v : V) : itree iSTM unit :=
   Ret tt.
 
 (* Delete; returns previous value if any *)
-Definition stm_delete {K V} (t : CHT K V) (k : K) : itree iSTM (option V) :=
+Definition stm_delete {K V} (t : CHT K V) (k : K) : itree stmE (option V) :=
   b <- bucket_of t k ;;
   xs <- readTVar b ;;
   let p := assoc_remove t.(cht_eqb) k xs in
@@ -90,7 +90,7 @@ Definition stm_delete {K V} (t : CHT K V) (k : K) : itree iSTM (option V) :=
 
 (* Update with a function of the old option; returns the new value *)
 Definition stm_update {K V}
-           (t : CHT K V) (k : K) (f : option V -> V) : itree iSTM V :=
+           (t : CHT K V) (k : K) (f : option V -> V) : itree stmE V :=
   b <- bucket_of t k ;;
   xs <- readTVar b ;;
   let ov := assoc_lookup t.(cht_eqb) k xs in
@@ -101,7 +101,7 @@ Definition stm_update {K V}
 
 (*
 (* Blocking read until key appears *)
-  Definition stm_wait {K V} (t : CHT K V) (k : K) : itree iSTM V :=
+  Definition stm_wait {K V} (t : CHT K V) (k : K) : itree stmE V :=
   b <- bucket_of t k ;;
   xs <- readTVar b ;;
   match assoc_lookup t.(cht_eqb) k xs with
@@ -110,11 +110,11 @@ Definition stm_update {K V}
   end.
 
 (* Try-get with default using orElse *)
-Definition stm_get_or_bad {K V} (t : CHT K V) (k : K) (dflt : V) : itree iSTM V :=
+Definition stm_get_or_bad {K V} (t : CHT K V) (k : K) (dflt : V) : itree stmE V :=
   orElse (stm_wait t k) (Ret dflt).
 *)
 
-Definition stm_get_or {K V} (t : CHT K V) (k : K) (dflt : V) : itree iSTM V :=
+Definition stm_get_or {K V} (t : CHT K V) (k : K) (dflt : V) : itree stmE V :=
   v <- stm_get t k ;;
   match v with
   | Some x => Ret x
@@ -129,7 +129,7 @@ End STM.
 (* ---- IO wrappers (handy for extraction/run) ---- *)
 
 (* Build N empty buckets *)
-Definition mk_buckets {K V} (num : int) : itree iIO (vector (TVar (list (K * V)))) :=
+Definition mk_buckets {K V} (num : int) : itree ioE (vector (TVar (list (K * V)))) :=
   buckets <- (emptyVec (TVar (list (K * V)))) ;;
   (fix f n := match n with
   | 0 => Ret buckets
@@ -142,7 +142,7 @@ Definition mk_buckets {K V} (num : int) : itree iIO (vector (TVar (list (K * V))
 (* Create a new table with at least one bucket; stores eqb/hash in the record *)
 Definition new_hash {K V}
            (eqb : K -> K -> bool) (hash : K -> int) (requested : int)
-  : itree iIO (CHT K V) :=
+  : itree ioE (CHT K V) :=
   let n := max requested 1 in
   bs <- mk_buckets (K:=K) (V:=V) n ;;
   empt <- isEmpty bs ;;
@@ -157,20 +157,20 @@ Definition new_hash {K V}
     Ret {| cht_eqb := eqb; cht_hash := hash;
                 cht_buckets := bs; cht_nbuckets := n; cht_fallback := b |}.
 
-Definition put  {K V} (t : CHT K V) (k : K) (v : V) : itree iIO unit :=
+Definition put  {K V} (t : CHT K V) (k : K) (v : V) : itree ioE unit :=
   atomically (stm_put t k v).
 
-Definition get  {K V} (t : CHT K V) (k : K) : itree iIO (option V) :=
+Definition get  {K V} (t : CHT K V) (k : K) : itree ioE (option V) :=
   atomically (stm_get t k).
 
-Definition hash_delete {K V} (t : CHT K V) (k : K) : itree iIO (option V) :=
+Definition hash_delete {K V} (t : CHT K V) (k : K) : itree ioE (option V) :=
   atomically (stm_delete t k).
 
 Definition hash_update {K V}
-           (t : CHT K V) (k : K) (f : option V -> V) : itree iIO V :=
+           (t : CHT K V) (k : K) (f : option V -> V) : itree ioE V :=
   atomically (stm_update t k f).
 
-Definition get_or {K V} (t : CHT K V) (k : K) (dflt : V) : itree iIO V :=
+Definition get_or {K V} (t : CHT K V) (k : K) (dflt : V) : itree ioE V :=
   atomically (stm_get_or t k dflt).
 
 End CHT.

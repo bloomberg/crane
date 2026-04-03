@@ -29,7 +29,7 @@ struct ITreeReified {
   static std::shared_ptr<ITree<void>> test_direct();
 
   /// Traverse an itree E T, logging at every Tau and Vis node.
-  /// The result lives in itree (iIO +' E) T: original effects on
+  /// The result lives in itree (ioE +' E) T: original effects on
   /// the right, logging effects (IO) on the left.
   template <typename T1 = void, typename T2, typename F0>
   static std::shared_ptr<ITree<T2>> with_logging_body(F0 &&rec,
@@ -78,7 +78,7 @@ struct ITreeReified {
 
   /// A simple tree to instrument.
   static std::shared_ptr<ITree<void>> greet();
-  /// Apply with_logging to greet, producing itree (iIO +' iIO) unit.
+  /// Apply with_logging to greet, producing itree (ioE +' ioE) unit.
   static std::shared_ptr<ITree<void>> test_logging();
   /// ---- Main (auto-wrapper) ----
   static std::shared_ptr<ITree<void>> _main();

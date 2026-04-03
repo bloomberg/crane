@@ -3,8 +3,8 @@
 (**
    STM (Software Transactional Memory) effect events.
 
-   Provides STM effects ([iSTM]) as composable inductives with smart constructors
-   and C++ extraction mappings. Use [itree iSTM A] as the monadic type.
+   Provides STM effects ([stmE]) as composable inductives with smart constructors
+   and C++ extraction mappings. Use [itree stmE A] as the monadic type.
 
    Smart constructors are polymorphic over the effect type [E] via [-<],
    so they can be used in any composed effect that includes the relevant
@@ -34,25 +34,25 @@ Crane Extract Skip tvarE.
 Crane Extract Skip stmVecE.
 Crane Extract Skip stmControlE.
 
-Definition iSTM := tvarE +' stmVecE +' stmControlE.
-Crane Extract Skip iSTM.
+Definition stmE := tvarE +' stmVecE +' stmControlE.
+Crane Extract Skip stmE.
 
-Axiom atomically : forall {A}, itree iSTM A -> itree iIO A.
-Axiom orElse : forall {A}, itree iSTM A -> itree iSTM A -> itree iSTM A.
+Axiom atomically : forall {A}, itree stmE A -> itree ioE A.
+Axiom orElse : forall {A}, itree stmE A -> itree stmE A -> itree stmE A.
 
 Definition newTVar {E} `{tvarE -< E} {A} (a : A) : itree E (TVar A) := embed (NewTVar a).
 Definition readTVar {E} `{tvarE -< E} {A} (v : TVar A) : itree E A := embed (ReadTVar v).
 Definition writeTVar {E} `{tvarE -< E} {A} (v : TVar A) (a : A) : itree E unit := embed (WriteTVar v a).
 
-Definition retry {A} : itree iSTM A := embed (Retry A).
+Definition retry {A} : itree stmE A := embed (Retry A).
 
 Definition getSTM {E} `{stmVecE -< E} {A} (v : vector A) (i : int) : itree E A := embed (GetSTM v i).
 Definition isEmptySTM {E} `{stmVecE -< E} {A} (v : vector A) : itree E bool := embed (IsEmptySTM v).
 
-Definition check (b : bool) : itree iSTM unit :=
+Definition check (b : bool) : itree stmE unit :=
   if b then Ret tt else retry.
 
-Definition modifyTVar {A : Type} (a : TVar A) (f : A -> A) : itree iSTM unit :=
+Definition modifyTVar {A : Type} (a : TVar A) (f : A -> A) : itree stmE unit :=
   val <- readTVar a ;;
   writeTVar a (f val) ;;
   Ret tt.

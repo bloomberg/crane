@@ -2,9 +2,9 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 From Corelib Require Import PrimInt63.
 From Crane Require Extraction.
-From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.Par.
+From Crane Require Import Mapping.Std Mapping.NatIntStd Monads.ITree Monads.Par.
 
-Import ParNotations.
+Open Scope itree_scope.
 
 Module ParallelTest.
 
@@ -22,14 +22,14 @@ Module ParallelTest.
     f (fst p) (snd p).
 
   Definition fast (m n : nat) : nat * nat :=
-    let f _ :=
-    let p := (m, n) in
-    t1 <- mk_thread ack p ;;
-    t2 <- mk_thread ack p ;;
-    r1 <- get_thread t1 ;;
-    r2 <- get_thread t2 ;;
-    Pret (r1, r2) in
-    runPar f.
+    runPar (
+      let p := (m, n) in
+      t1 <- mk_thread ack p ;;
+      t2 <- mk_thread ack p ;;
+      r1 <- get_thread t1 ;;
+      r2 <- get_thread t2 ;;
+      Ret (r1, r2)
+    ).
 
   Definition slow (m n : nat) : nat * nat :=
     let p := (m, n) in

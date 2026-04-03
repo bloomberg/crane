@@ -394,9 +394,9 @@ let is_cpp_unit_type = function
   | _ -> false
 
 (** Extract the innermost result type from a (possibly monadic) ML type.
-    For [nat -> itree iIO unit], returns [unit].
+    For [nat -> itree ioE unit], returns [unit].
     For [nat -> unit], returns [unit].
-    For [itree iIO unit] (zero-arg monadic), returns [unit].
+    For [itree ioE unit] (zero-arg monadic), returns [unit].
     The result type is always the LAST type argument of the monad
     (monads parameterize on the result type as their last type param). *)
 let ml_result_type ty =

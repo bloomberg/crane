@@ -10,7 +10,7 @@ Module MutableVectorTest.
 
   Open Scope int63.
 
-    Definition test1 (x : int) : itree iIO int :=
+    Definition test1 (x : int) : itree ioE int :=
     v <- emptyVec int ;;
     push v 3 ;;
     push v 2 ;;
@@ -20,7 +20,7 @@ Module MutableVectorTest.
     y <- size v ;;
     Ret (sub x y).
 
-  Definition test2 (x : int) : itree iIO (vector int) :=
+  Definition test2 (x : int) : itree ioE (vector int) :=
     v <- emptyVec int ;;
     push v 12 ;;
     push v 23 ;;

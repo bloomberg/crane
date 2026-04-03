@@ -45,7 +45,7 @@ void threadtest::test(const unsigned int m, const unsigned int n) {
   return;
 }
 
-void threadtest::test2(const unsigned int m, const unsigned int n) {
+void threadtest::test_pure(const unsigned int m, const unsigned int n) {
   test(m, n);
   return;
 }
