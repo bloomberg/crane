@@ -198,7 +198,7 @@ struct PageOps {
               const unsigned int addr);
   static inline const unsigned int test_page_base_alignment =
       (page_base(777u) % 256u);
-  static inline const unsigned int test_page_base_next_pc = [](void) {
+  static inline const unsigned int test_page_base_next_pc = []() {
     std::shared_ptr<state> s = std::make_shared<state>(state{511u});
     return (base_for_next1(s) + base_for_next2(s));
   }();
@@ -220,7 +220,7 @@ struct PageOps {
       pc_inc1(std::make_shared<state>(state{max_addr}));
   static inline const unsigned int test_pc_inc2_wrap =
       pc_inc2(std::make_shared<state>(state{max_addr}));
-  static inline const unsigned int test_disassemble_edge = [](void) {
+  static inline const unsigned int test_disassemble_edge = []() {
     if (disassemble(
             List<unsigned int>::cons(
                 0u, List<unsigned int>::cons(

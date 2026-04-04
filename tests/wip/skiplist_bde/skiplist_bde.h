@@ -2,6 +2,7 @@
 #define INCLUDED_SKIPLIST_BDE
 
 #include <bdlf_overloaded.h>
+#include <bdls_filesystemutil.h>
 #include <bsl_concepts.h>
 #include <bsl_functional.h>
 #include <bsl_iostream.h>
@@ -12,8 +13,10 @@
 #include <bsl_type_traits.h>
 #include <bsl_utility.h>
 #include <bsl_variant.h>
+#include <fstream>
 #include <mini_stm.h>
 #include <skipnode.h>
+#include <variant>
 
 using namespace BloombergLP;
 template <class From, class To>
@@ -37,8 +40,6 @@ struct PeanoNat {
   __attribute__((pure)) static bool ltb(const unsigned int n,
                                         const unsigned int m);
 };
-struct STM {};
-struct TVar {};
 template <typename K, typename V> struct SkipList {
   bsl::shared_ptr<SkipNode<K, V>> slHead;
   unsigned int slMaxLevel;
@@ -47,7 +48,7 @@ template <typename K, typename V> struct SkipList {
   template <MapsTo<bool, K, K> F0>
   __attribute__((pure)) SkipPath<K, V> findPath(F0 &&ltK,
                                                 const K target) const {
-    unsigned int lvl = stm::readTVar<unsigned int>(this->SkipList::slLevel);
+    unsigned int lvl = stm::readTVar(this->SkipList::slLevel);
     SkipPath<K, V> path = SkipPath<K, V>{};
     return SkipList<int, int>::template findPath_aux<K, V>(
         ltK, this->SkipList::slHead, target, lvl, path);
@@ -72,10 +73,11 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
-  __attribute__((pure)) void insert(F0 &&ltK, F1 &&eqK, const K k, const V v,
-                                    const unsigned int newLevel) const {
+  __attribute__((pure)) std::monostate
+  insert(F0 &&ltK, F1 &&eqK, const K k, const V v,
+         const unsigned int newLevel) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
-    unsigned int curLvl = stm::readTVar<unsigned int>(this->SkipList::slLevel);
+    unsigned int curLvl = stm::readTVar(this->SkipList::slLevel);
     SkipList<int, int>::template extendPath<K, V>(path, this->SkipList::slHead,
                                                   (newLevel + 1), curLvl);
     bsl::shared_ptr<SkipNode<K, V>> pred0 = path.get(0u);
@@ -84,44 +86,46 @@ template <typename K, typename V> struct SkipList {
     if (nextOpt.has_value()) {
       bsl::shared_ptr<SkipNode<K, V>> existing = *nextOpt;
       if (eqK(existing->key, k)) {
-        return stm::writeTVar<V>(existing->value, v);
+        stm::writeTVar<V>(existing->value, v);
+        return std::monostate{};
       } else {
         bsl::shared_ptr<SkipNode<K, V>> newN =
             SkipNode<K, V>::create(k, v, newLevel);
         SkipList<int, int>::template linkNode<K, V>(
             path, this->SkipList::slHead, newN);
-        [&](void) {
+        [&]() {
           if (PeanoNat::ltb(curLvl, newLevel)) {
-            return stm::writeTVar<unsigned int>(this->SkipList::slLevel,
-                                                newLevel);
+            stm::writeTVar(this->SkipList::slLevel, newLevel);
+            return std::monostate{};
           } else {
-            return;
+            return std::monostate{};
           }
         }();
-        unsigned int len =
-            stm::readTVar<unsigned int>(this->SkipList::slLength);
-        return stm::writeTVar<unsigned int>(this->SkipList::slLength,
-                                            (len + 1));
+        unsigned int len = stm::readTVar(this->SkipList::slLength);
+        stm::writeTVar(this->SkipList::slLength, (len + 1));
+        return std::monostate{};
       }
     } else {
       bsl::shared_ptr<SkipNode<K, V>> newN =
           SkipNode<K, V>::create(k, v, newLevel);
       SkipList<int, int>::template linkNode<K, V>(path, this->SkipList::slHead,
                                                   newN);
-      [&](void) {
+      [&]() {
         if (PeanoNat::ltb(curLvl, newLevel)) {
-          return stm::writeTVar<unsigned int>(this->SkipList::slLevel,
-                                              newLevel);
+          stm::writeTVar(this->SkipList::slLevel, newLevel);
+          return std::monostate{};
         } else {
-          return;
+          return std::monostate{};
         }
       }();
-      unsigned int len = stm::readTVar<unsigned int>(this->SkipList::slLength);
-      return stm::writeTVar<unsigned int>(this->SkipList::slLength, (len + 1));
+      unsigned int len = stm::readTVar(this->SkipList::slLength);
+      stm::writeTVar(this->SkipList::slLength, (len + 1));
+      return std::monostate{};
     }
   }
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
-  __attribute__((pure)) void remove(F0 &&ltK, F1 &&eqK, const K k) const {
+  __attribute__((pure)) std::monostate remove(F0 &&ltK, F1 &&eqK,
+                                              const K k) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
     bsl::shared_ptr<SkipNode<K, V>> pred0 = path.get(0u);
     bsl::optional<bsl::shared_ptr<SkipNode<K, V>>> nextOpt = ptr_to_opt(
@@ -129,20 +133,19 @@ template <typename K, typename V> struct SkipList {
     if (nextOpt.has_value()) {
       bsl::shared_ptr<SkipNode<K, V>> node = *nextOpt;
       if (eqK(node->key, k)) {
-        unsigned int curLvl =
-            stm::readTVar<unsigned int>(this->SkipList::slLevel);
+        unsigned int curLvl = stm::readTVar(this->SkipList::slLevel);
         SkipList<int, int>::template extendPath<K, V>(
             path, this->SkipList::slHead, (node->level + 1), curLvl);
         SkipList<int, int>::template unlinkNode<K, V>(path, node);
-        unsigned int len =
-            stm::readTVar<unsigned int>(this->SkipList::slLength);
-        return stm::writeTVar<unsigned int>(
-            this->SkipList::slLength, (((len - 1u) > len ? 0 : (len - 1u))));
+        unsigned int len = stm::readTVar(this->SkipList::slLength);
+        stm::writeTVar(this->SkipList::slLength,
+                       (((len - 1u) > len ? 0 : (len - 1u))));
+        return std::monostate{};
       } else {
-        return;
+        return std::monostate{};
       }
     } else {
-      return;
+      return std::monostate{};
     }
   }
   __attribute__((pure)) bsl::optional<bsl::pair<K, V>> minimum() const {
@@ -159,26 +162,26 @@ template <typename K, typename V> struct SkipList {
   }
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
   __attribute__((pure)) bool memberFast(F0 &&ltK, F1 &&eqK, const K k) const {
-    unsigned int lvl = stm::readTVar<unsigned int>(this->SkipList::slLevel);
+    unsigned int lvl = stm::readTVar(this->SkipList::slLevel);
     return SkipList<int, int>::template findKey_aux<K, V>(
         ltK, eqK, this->SkipList::slHead, k, lvl);
   }
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
   __attribute__((pure)) bool member(F0 &&ltK, F1 &&eqK, const K k) const {
-    unsigned int lvl = stm::readTVar<unsigned int>(this->SkipList::slLevel);
+    unsigned int lvl = stm::readTVar(this->SkipList::slLevel);
     return SkipList<int, int>::template findKey_aux<K, V>(
         ltK, eqK, this->SkipList::slHead, k, lvl);
   }
   __attribute__((pure)) bool isEmpty() const {
-    unsigned int len = stm::readTVar<unsigned int>(this->SkipList::slLength);
+    unsigned int len = stm::readTVar(this->SkipList::slLength);
     return PeanoNat::eqb(len, 0u);
   }
   __attribute__((pure)) unsigned int length() const {
-    return stm::readTVar<unsigned int>(this->SkipList::slLength);
+    return stm::readTVar(this->SkipList::slLength);
   }
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
   __attribute__((pure)) bool exists_(F0 &&ltK, F1 &&eqK, const K k) const {
-    unsigned int lvl = stm::readTVar<unsigned int>(this->SkipList::slLevel);
+    unsigned int lvl = stm::readTVar(this->SkipList::slLevel);
     return SkipList<int, int>::template findKey_aux<K, V>(
         ltK, eqK, this->SkipList::slHead, k, lvl);
   }
@@ -191,9 +194,9 @@ template <typename K, typename V> struct SkipList {
       SkipList<int, int>::template unlinkFirstFromHead<K, V>(
           this->SkipList::slHead, node, node->level,
           (((16u - 1u) > 16u ? 0 : (16u - 1u))));
-      unsigned int len = stm::readTVar<unsigned int>(this->SkipList::slLength);
-      stm::writeTVar<unsigned int>(this->SkipList::slLength,
-                                   (((len - 1u) > len ? 0 : (len - 1u))));
+      unsigned int len = stm::readTVar(this->SkipList::slLength);
+      stm::writeTVar(this->SkipList::slLength,
+                     (((len - 1u) > len ? 0 : (len - 1u))));
       V v = stm::readTVar<V>(node->value);
       return bsl::make_optional<bsl::pair<K, V>>(bsl::make_pair(node->key, v));
     } else {
@@ -204,15 +207,16 @@ template <typename K, typename V> struct SkipList {
     unsigned int count = SkipList<int, int>::template removeAll_aux<K, V>(
         10000u, this->SkipList::slHead, (((16u - 1u) > 16u ? 0 : (16u - 1u))),
         0u);
-    stm::writeTVar<unsigned int>(this->SkipList::slLength, 0u);
-    stm::writeTVar<unsigned int>(this->SkipList::slLevel, 0u);
+    stm::writeTVar(this->SkipList::slLength, 0u);
+    stm::writeTVar(this->SkipList::slLevel, 0u);
     return count;
   }
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
-  __attribute__((pure)) void add(F0 &&ltK, F1 &&eqK, const K k, const V v,
-                                 const unsigned int newLevel) const {
+  __attribute__((pure)) std::monostate add(F0 &&ltK, F1 &&eqK, const K k,
+                                           const V v,
+                                           const unsigned int newLevel) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
-    unsigned int curLvl = stm::readTVar<unsigned int>(this->SkipList::slLevel);
+    unsigned int curLvl = stm::readTVar(this->SkipList::slLevel);
     SkipList<int, int>::template extendPath<K, V>(path, this->SkipList::slHead,
                                                   (newLevel + 1), curLvl);
     bsl::shared_ptr<SkipNode<K, V>> pred0 = path.get(0u);
@@ -221,47 +225,48 @@ template <typename K, typename V> struct SkipList {
     if (nextOpt.has_value()) {
       bsl::shared_ptr<SkipNode<K, V>> existing = *nextOpt;
       if (eqK(existing->key, k)) {
-        return stm::writeTVar<V>(existing->value, v);
+        stm::writeTVar<V>(existing->value, v);
+        return std::monostate{};
       } else {
         bsl::shared_ptr<SkipNode<K, V>> newN =
             SkipNode<K, V>::create(k, v, newLevel);
         SkipList<int, int>::template linkNode<K, V>(
             path, this->SkipList::slHead, newN);
-        [&](void) {
+        [&]() {
           if (PeanoNat::ltb(curLvl, newLevel)) {
-            return stm::writeTVar<unsigned int>(this->SkipList::slLevel,
-                                                newLevel);
+            stm::writeTVar(this->SkipList::slLevel, newLevel);
+            return std::monostate{};
           } else {
-            return;
+            return std::monostate{};
           }
         }();
-        unsigned int len =
-            stm::readTVar<unsigned int>(this->SkipList::slLength);
-        return stm::writeTVar<unsigned int>(this->SkipList::slLength,
-                                            (len + 1));
+        unsigned int len = stm::readTVar(this->SkipList::slLength);
+        stm::writeTVar(this->SkipList::slLength, (len + 1));
+        return std::monostate{};
       }
     } else {
       bsl::shared_ptr<SkipNode<K, V>> newN =
           SkipNode<K, V>::create(k, v, newLevel);
       SkipList<int, int>::template linkNode<K, V>(path, this->SkipList::slHead,
                                                   newN);
-      [&](void) {
+      [&]() {
         if (PeanoNat::ltb(curLvl, newLevel)) {
-          return stm::writeTVar<unsigned int>(this->SkipList::slLevel,
-                                              newLevel);
+          stm::writeTVar(this->SkipList::slLevel, newLevel);
+          return std::monostate{};
         } else {
-          return;
+          return std::monostate{};
         }
       }();
-      unsigned int len = stm::readTVar<unsigned int>(this->SkipList::slLength);
-      return stm::writeTVar<unsigned int>(this->SkipList::slLength, (len + 1));
+      unsigned int len = stm::readTVar(this->SkipList::slLength);
+      stm::writeTVar(this->SkipList::slLength, (len + 1));
+      return std::monostate{};
     }
   }
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
   __attribute__((pure)) bool addUnique(F0 &&ltK, F1 &&eqK, const K k, const V v,
                                        const unsigned int newLevel) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
-    unsigned int curLvl = stm::readTVar<unsigned int>(this->SkipList::slLevel);
+    unsigned int curLvl = stm::readTVar(this->SkipList::slLevel);
     SkipList<int, int>::template extendPath<K, V>(path, this->SkipList::slHead,
                                                   (newLevel + 1), curLvl);
     bsl::shared_ptr<SkipNode<K, V>> pred0 = path.get(0u);
@@ -276,17 +281,16 @@ template <typename K, typename V> struct SkipList {
             SkipNode<K, V>::create(k, v, newLevel);
         SkipList<int, int>::template linkNode<K, V>(
             path, this->SkipList::slHead, newN);
-        [&](void) {
+        [&]() {
           if (PeanoNat::ltb(curLvl, newLevel)) {
-            return stm::writeTVar<unsigned int>(this->SkipList::slLevel,
-                                                newLevel);
+            stm::writeTVar(this->SkipList::slLevel, newLevel);
+            return std::monostate{};
           } else {
-            return;
+            return std::monostate{};
           }
         }();
-        unsigned int len =
-            stm::readTVar<unsigned int>(this->SkipList::slLength);
-        stm::writeTVar<unsigned int>(this->SkipList::slLength, (len + 1));
+        unsigned int len = stm::readTVar(this->SkipList::slLength);
+        stm::writeTVar(this->SkipList::slLength, (len + 1));
         return true;
       }
     } else {
@@ -294,16 +298,16 @@ template <typename K, typename V> struct SkipList {
           SkipNode<K, V>::create(k, v, newLevel);
       SkipList<int, int>::template linkNode<K, V>(path, this->SkipList::slHead,
                                                   newN);
-      [&](void) {
+      [&]() {
         if (PeanoNat::ltb(curLvl, newLevel)) {
-          return stm::writeTVar<unsigned int>(this->SkipList::slLevel,
-                                              newLevel);
+          stm::writeTVar(this->SkipList::slLevel, newLevel);
+          return std::monostate{};
         } else {
-          return;
+          return std::monostate{};
         }
       }();
-      unsigned int len = stm::readTVar<unsigned int>(this->SkipList::slLength);
-      stm::writeTVar<unsigned int>(this->SkipList::slLength, (len + 1));
+      unsigned int len = stm::readTVar(this->SkipList::slLength);
+      stm::writeTVar(this->SkipList::slLength, (len + 1));
       return true;
     }
   }
@@ -313,7 +317,7 @@ template <typename K, typename V> struct SkipList {
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
   __attribute__((pure)) bool bde_exists(F0 &&ltK, F1 &&eqK,
                                         const K key0) const {
-    unsigned int lvl = stm::readTVar<unsigned int>(this->SkipList::slLevel);
+    unsigned int lvl = stm::readTVar(this->SkipList::slLevel);
     return SkipList<int, int>::template findKey_aux<K, V>(
         ltK, eqK, this->SkipList::slHead, key0, lvl);
   }
@@ -322,7 +326,7 @@ template <typename K, typename V> struct SkipList {
     return this->length();
   }
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static bsl::shared_ptr<SkipNode<T1, T2>>
+  static bsl::shared_ptr<SkipNode<T1, T2>>
   findPred_go(F0 &&ltK, const unsigned int fuel,
               const bsl::shared_ptr<SkipNode<T1, T2>> curr, const T1 target,
               const unsigned int level) {
@@ -347,14 +351,14 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static bsl::shared_ptr<SkipNode<T1, T2>>
+  static bsl::shared_ptr<SkipNode<T1, T2>>
   findPred(F0 &&ltK, const bsl::shared_ptr<SkipNode<T1, T2>> curr,
            const T1 target, const unsigned int level) {
     return SkipList<int, int>::template findPred_go<T1, T2>(ltK, 10000u, curr,
                                                             target, level);
   }
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static SkipPath<T1, T2>
+  static SkipPath<T1, T2>
   findPath_aux(F0 &&ltK, const bsl::shared_ptr<SkipNode<T1, T2>> curr,
                const T1 target, const unsigned int level,
                const SkipPath<T1, T2> path) {
@@ -370,114 +374,117 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
-  linkAtLevel(const bsl::shared_ptr<SkipNode<T1, T2>> pred,
-              const bsl::shared_ptr<SkipNode<T1, T2>> newNode,
-              const unsigned int level) {
+  static void linkAtLevel(const bsl::shared_ptr<SkipNode<T1, T2>> pred,
+                          const bsl::shared_ptr<SkipNode<T1, T2>> newNode,
+                          const unsigned int level) {
     bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> oldNext = ptr_to_opt(
         stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(pred->forward[level]));
     stm::writeTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
         pred->forward[level],
         opt_to_ptr(
             bsl::make_optional<bsl::shared_ptr<SkipNode<T1, T2>>>(newNode)));
-    return stm::writeTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
-        newNode->forward[level], opt_to_ptr(oldNext));
+    stm::writeTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(newNode->forward[level],
+                                                      opt_to_ptr(oldNext));
+    return;
   }
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
-  linkNode_aux(const SkipPath<T1, T2> path,
-               const bsl::shared_ptr<SkipNode<T1, T2>> head,
-               const bsl::shared_ptr<SkipNode<T1, T2>> newNode,
-               const unsigned int level) {
+  static void linkNode_aux(const SkipPath<T1, T2> path,
+                           const bsl::shared_ptr<SkipNode<T1, T2>> head,
+                           const bsl::shared_ptr<SkipNode<T1, T2>> newNode,
+                           const unsigned int level) {
     bsl::shared_ptr<SkipNode<T1, T2>> pred = path.get(level);
     SkipList<int, int>::template linkAtLevel<T1, T2>(pred, newNode, level);
     if (level <= 0) {
       return;
     } else {
       unsigned int level_ = level - 1;
-      return SkipList<int, int>::template linkNode_aux<T1, T2>(
-          path, head, newNode, bsl::move(level_));
+      SkipList<int, int>::template linkNode_aux<T1, T2>(path, head, newNode,
+                                                        bsl::move(level_));
+      return;
     }
   }
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
-  extendPath_aux(const SkipPath<T1, T2> path,
-                 const bsl::shared_ptr<SkipNode<T1, T2>> head,
-                 const unsigned int level, const unsigned int maxLevel) {
+  static void extendPath_aux(const SkipPath<T1, T2> path,
+                             const bsl::shared_ptr<SkipNode<T1, T2>> head,
+                             const unsigned int level,
+                             const unsigned int maxLevel) {
     if (level <= 0) {
-      return path.set(0u, head);
+      path.set(0u, head);
+      return;
     } else {
       unsigned int level_ = level - 1;
       path.set(level, head);
       if (PeanoNat::leb(maxLevel, level_)) {
-        return SkipList<int, int>::template extendPath_aux<T1, T2>(
-            path, head, level_, maxLevel);
+        SkipList<int, int>::template extendPath_aux<T1, T2>(path, head, level_,
+                                                            maxLevel);
+        return;
       } else {
         return;
       }
     }
   }
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
-  extendPath(const SkipPath<T1, T2> path,
-             const bsl::shared_ptr<SkipNode<T1, T2>> head,
-             const unsigned int needed, const unsigned int currentMax) {
+  static void extendPath(const SkipPath<T1, T2> path,
+                         const bsl::shared_ptr<SkipNode<T1, T2>> head,
+                         const unsigned int needed,
+                         const unsigned int currentMax) {
     if (PeanoNat::leb(needed, (currentMax + 1))) {
       return;
     } else {
-      return SkipList<int, int>::template extendPath_aux<T1, T2>(
+      SkipList<int, int>::template extendPath_aux<T1, T2>(
           path, head, (((needed - 1u) > needed ? 0 : (needed - 1u))),
           (bsl::move(currentMax) + 1u));
+      return;
     }
   }
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
-  linkNode(const SkipPath<T1, T2> path,
-           const bsl::shared_ptr<SkipNode<T1, T2>> head,
-           const bsl::shared_ptr<SkipNode<T1, T2>> newNode) {
+  static void linkNode(const SkipPath<T1, T2> path,
+                       const bsl::shared_ptr<SkipNode<T1, T2>> head,
+                       const bsl::shared_ptr<SkipNode<T1, T2>> newNode) {
     unsigned int lvl = newNode->level;
-    return SkipList<int, int>::template linkNode_aux<T1, T2>(
-        path, head, newNode, bsl::move(lvl));
+    SkipList<int, int>::template linkNode_aux<T1, T2>(path, head, newNode,
+                                                      bsl::move(lvl));
+    return;
   }
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
-  unlinkAtLevel(const bsl::shared_ptr<SkipNode<T1, T2>> pred,
-                const bsl::shared_ptr<SkipNode<T1, T2>> target,
-                const unsigned int level) {
+  static void unlinkAtLevel(const bsl::shared_ptr<SkipNode<T1, T2>> pred,
+                            const bsl::shared_ptr<SkipNode<T1, T2>> target,
+                            const unsigned int level) {
     bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> targetNext =
         ptr_to_opt(stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
             target->forward[level]));
-    return stm::writeTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
+    stm::writeTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
         pred->forward[level], opt_to_ptr(bsl::move(targetNext)));
+    return;
   }
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
-  unlinkNode_aux(const SkipPath<T1, T2> path,
-                 const bsl::shared_ptr<SkipNode<T1, T2>> target,
-                 const unsigned int level) {
+  static void unlinkNode_aux(const SkipPath<T1, T2> path,
+                             const bsl::shared_ptr<SkipNode<T1, T2>> target,
+                             const unsigned int level) {
     bsl::shared_ptr<SkipNode<T1, T2>> pred = path.get(level);
     SkipList<int, int>::template unlinkAtLevel<T1, T2>(pred, target, level);
     if (level <= 0) {
       return;
     } else {
       unsigned int level_ = level - 1;
-      return SkipList<int, int>::template unlinkNode_aux<T1, T2>(
-          path, target, bsl::move(level_));
+      SkipList<int, int>::template unlinkNode_aux<T1, T2>(path, target,
+                                                          bsl::move(level_));
+      return;
     }
   }
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
-  unlinkNode(const SkipPath<T1, T2> path,
-             const bsl::shared_ptr<SkipNode<T1, T2>> target) {
+  static void unlinkNode(const SkipPath<T1, T2> path,
+                         const bsl::shared_ptr<SkipNode<T1, T2>> target) {
     unsigned int lvl = target->level;
-    return SkipList<int, int>::template unlinkNode_aux<T1, T2>(path, target,
-                                                               bsl::move(lvl));
+    SkipList<int, int>::template unlinkNode_aux<T1, T2>(path, target,
+                                                        bsl::move(lvl));
+    return;
   }
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0,
             MapsTo<bool, T1, T1> F1>
-  __attribute__((pure)) static bool
-  findKey_aux(F0 &&ltK, F1 &&eqK, const bsl::shared_ptr<SkipNode<T1, T2>> curr,
-              const T1 target, const unsigned int level) {
+  static bool findKey_aux(F0 &&ltK, F1 &&eqK,
+                          const bsl::shared_ptr<SkipNode<T1, T2>> curr,
+                          const T1 target, const unsigned int level) {
     bsl::shared_ptr<SkipNode<T1, T2>> pred =
         SkipList<int, int>::template findPred<T1, T2>(ltK, curr, target, level);
     if (level <= 0) {
@@ -497,7 +504,7 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename T1, typename T2>
-  __attribute__((pure)) static bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>
+  static bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>
   findLast_aux(const unsigned int fuel,
                const bsl::shared_ptr<SkipNode<T1, T2>> curr) {
     if (fuel <= 0) {
@@ -515,28 +522,30 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
-  unlinkFirstFromHead(const bsl::shared_ptr<SkipNode<T1, T2>> head,
-                      const bsl::shared_ptr<SkipNode<T1, T2>> node,
-                      const unsigned int nodeLevel, const unsigned int lvl) {
+  static void unlinkFirstFromHead(const bsl::shared_ptr<SkipNode<T1, T2>> head,
+                                  const bsl::shared_ptr<SkipNode<T1, T2>> node,
+                                  const unsigned int nodeLevel,
+                                  const unsigned int lvl) {
     if (lvl <= 0) {
       bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> nodeNext = ptr_to_opt(
           stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(node->forward[0u]));
-      return stm::writeTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
+      stm::writeTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
           head->forward[0u], opt_to_ptr(bsl::move(nodeNext)));
+      return;
     } else {
       unsigned int lvl_ = lvl - 1;
       bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> headNext = ptr_to_opt(
           stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(head->forward[lvl]));
-      [&](void) {
+      [&]() {
         if (headNext.has_value()) {
           bsl::shared_ptr<SkipNode<T1, T2>> _x = *headNext;
           if (PeanoNat::leb(lvl, nodeLevel)) {
             bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> nodeNext =
                 ptr_to_opt(stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
                     node->forward[lvl]));
-            return stm::writeTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
+            stm::writeTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
                 head->forward[lvl], opt_to_ptr(bsl::move(nodeNext)));
+            return;
           } else {
             return;
           }
@@ -544,25 +553,27 @@ template <typename K, typename V> struct SkipList {
           return;
         }
       }();
-      return SkipList<int, int>::template unlinkFirstFromHead<T1, T2>(
-          head, node, nodeLevel, lvl_);
+      SkipList<int, int>::template unlinkFirstFromHead<T1, T2>(head, node,
+                                                               nodeLevel, lvl_);
+      return;
     }
   }
   template <typename T1, typename T2>
-  __attribute__((pure)) static void
+  static void
   unlinkNodeAtAllLevels(const bsl::shared_ptr<SkipNode<T1, T2>> head,
                         const bsl::shared_ptr<SkipNode<T1, T2>> node,
                         const unsigned int lvl) {
     bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> headNext = ptr_to_opt(
         stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(head->forward[lvl]));
-    [&](void) {
+    [&]() {
       if (headNext.has_value()) {
         bsl::shared_ptr<SkipNode<T1, T2>> _x = *headNext;
         bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> nodeNext =
             ptr_to_opt(stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
                 node->forward[lvl]));
-        return stm::writeTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
+        stm::writeTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
             head->forward[lvl], opt_to_ptr(bsl::move(nodeNext)));
+        return;
       } else {
         return;
       }
@@ -571,12 +582,13 @@ template <typename K, typename V> struct SkipList {
       return;
     } else {
       unsigned int lvl_ = lvl - 1;
-      return SkipList<int, int>::template unlinkNodeAtAllLevels<T1, T2>(
+      SkipList<int, int>::template unlinkNodeAtAllLevels<T1, T2>(
           head, node, bsl::move(lvl_));
+      return;
     }
   }
   template <typename T1, typename T2>
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   removeAll_aux(const unsigned int fuel,
                 const bsl::shared_ptr<SkipNode<T1, T2>> head,
                 const unsigned int maxLvl, const unsigned int acc) {
@@ -598,13 +610,13 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename T1, typename T2>
-  __attribute__((pure)) static bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>
+  static bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>
   next(const bsl::shared_ptr<SkipNode<T1, T2>> pair) {
     return ptr_to_opt(
         stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(pair->forward[0u]));
   }
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>
+  static bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>
   findPrev_aux(F0 &&eqK, const unsigned int fuel,
                const bsl::shared_ptr<SkipNode<T1, T2>> curr,
                const bsl::shared_ptr<SkipNode<T1, T2>> _x, const T1 target) {
@@ -632,8 +644,7 @@ template <typename K, typename V> struct SkipList {
     return _x0->key;
   }
   template <typename T1, typename T2>
-  __attribute__((pure)) static T2
-  data(const bsl::shared_ptr<SkipNode<T1, T2>> _x0) {
+  static T2 data(const bsl::shared_ptr<SkipNode<T1, T2>> _x0) {
     return stm::readTVar<T2>(_x0->value);
   }
   static inline const unsigned int e_SUCCESS = 0u;
@@ -641,8 +652,8 @@ template <typename K, typename V> struct SkipList {
   static inline const unsigned int e_DUPLICATE = 2u;
   static inline const unsigned int e_INVALID = 3u;
   template <typename T1, typename T2>
-  __attribute__((pure)) static bsl::pair<
-      unsigned int, bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>>
+  static bsl::pair<unsigned int,
+                   bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>>
   bde_next(const bsl::shared_ptr<SkipNode<T1, T2>> pair) {
     bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> nextOpt =
         SkipList<int, int>::template next<T1, T2>(pair);
@@ -657,20 +668,18 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename T1, typename T2>
-  __attribute__((pure)) static bsl::shared_ptr<SkipList<T1, T2>>
-  create(const T1 dummyKey, const T2 dummyVal) {
+  static bsl::shared_ptr<SkipList<T1, T2>> create(const T1 dummyKey,
+                                                  const T2 dummyVal) {
     bsl::shared_ptr<SkipNode<T1, T2>> headNode = SkipNode<T1, T2>::create(
         dummyKey, dummyVal, (((16u - 1u) > 16u ? 0 : (16u - 1u))));
-    bsl::shared_ptr<stm::TVar<unsigned int>> lvlTV =
-        stm::newTVar<unsigned int>(0u);
-    bsl::shared_ptr<stm::TVar<unsigned int>> lenTV =
-        stm::newTVar<unsigned int>(0u);
+    bsl::shared_ptr<stm::TVar<unsigned int>> lvlTV = stm::newTVar(0u);
+    bsl::shared_ptr<stm::TVar<unsigned int>> lenTV = stm::newTVar(0u);
     return bsl::make_shared<SkipList<T1, T2>>(
         SkipList<T1, T2>{headNode, 16u, lvlTV, lenTV});
   }
   template <typename T1, typename T2>
-  __attribute__((pure)) static bsl::shared_ptr<SkipList<T1, T2>>
-  createIO(const T1 dummyKey, const T2 dummyVal) {
+  static bsl::shared_ptr<SkipList<T1, T2>> createIO(const T1 dummyKey,
+                                                    const T2 dummyVal) {
     return stm::atomically([&] {
       return SkipList<int, int>::template create<T1, T2>(dummyKey, dummyVal);
     });

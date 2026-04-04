@@ -1,6 +1,9 @@
 #ifndef INCLUDED_STM
 #define INCLUDED_STM
 
+#include <filesystem>
+#include <fstream>
+#include <iostream>
 #include <memory>
 #include <mini_stm.h>
 #include <type_traits>
@@ -82,16 +85,10 @@ public:
   }
 };
 
-struct STM {};
-
-struct TVar {};
-
-template <typename T1, MapsTo<T1, T1> F1>
-void modifyTVar(const std::shared_ptr<stm::TVar<T1>> a, F1 &&f) {
-  T1 val = a->read();
-  a->write(f(val));
-  return;
-}
+struct STMDefs {
+  template <typename T1, MapsTo<T1, T1> F1>
+  static void modifyTVar(const std::shared_ptr<stm::TVar<T1>> a, F1 &&f);
+};
 
 struct stmtest {
   template <typename T1, MapsTo<bool, T1> F1>
@@ -104,7 +101,7 @@ struct stmtest {
     }
   }
 
-  static unsigned int stm_basic_counter();
+  static unsigned int stm_basic_counter(const std::monostate _x);
   static unsigned int io_basic_counter();
   static unsigned int stm_inc(const unsigned int x);
   static unsigned int io_inc(const unsigned int x);
@@ -120,8 +117,15 @@ struct stmtest {
       const unsigned int dflt);
   static unsigned int stm_queue_roundtrip(const unsigned int x);
   static unsigned int io_queue_roundtrip(const unsigned int x);
-  static unsigned int stm_orElse_retry_example();
+  static unsigned int stm_orElse_retry_example(const std::monostate _x);
   static unsigned int io_orElse_retry_example();
 };
+
+template <typename T1, MapsTo<T1, T1> F1>
+void STMDefs::modifyTVar(const std::shared_ptr<stm::TVar<T1>> a, F1 &&f) {
+  T1 val = a->read();
+  a->write(f(val));
+  return;
+}
 
 #endif // INCLUDED_STM

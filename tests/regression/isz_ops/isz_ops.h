@@ -117,18 +117,18 @@ struct IszOps {
   __attribute__((pure)) static bool
   isz_terminates(const std::shared_ptr<state> &s, const unsigned int r);
   static inline const unsigned int test_loop_flags = []() {
-    return [](void) {
+    return []() {
       std::shared_ptr<state> s =
           std::make_shared<state>(state{List<unsigned int>::cons(
               15u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))});
-      return ([&](void) {
+      return ([&]() {
         if (isz_loops(s, 0u)) {
           return 1u;
         } else {
           return 0u;
         }
       }() +
-              [&](void) {
+              [&]() {
                 if (isz_terminates(s, 0u)) {
                   return 1u;
                 } else {

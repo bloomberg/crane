@@ -117,7 +117,7 @@ struct CoindGuard {
     static std::shared_ptr<Stream<t_A>>
     lazy_(std::function<std::shared_ptr<Stream<t_A>>()> thunk) {
       return std::make_shared<Stream<t_A>>(
-          std::function<variant_t()>([=](void) mutable -> variant_t {
+          std::function<variant_t()>([=]() mutable -> variant_t {
             std::shared_ptr<Stream<t_A>> _tmp = thunk();
             return _tmp->v();
           }));
@@ -139,7 +139,7 @@ struct CoindGuard {
 
   template <typename T1>
   static std::shared_ptr<Stream<T1>> tl(const std::shared_ptr<Stream<T1>> &s) {
-    return Stream<T1>::lazy_([=](void) mutable -> std::shared_ptr<Stream<T1>> {
+    return Stream<T1>::lazy_([=]() mutable -> std::shared_ptr<Stream<T1>> {
       return std::visit(
           Overloaded{[](const typename Stream<T1>::Cons _args)
                          -> std::shared_ptr<Stream<T1>> { return _args.d_a1; }},
@@ -149,7 +149,7 @@ struct CoindGuard {
 
   template <typename T1, MapsTo<T1, T1> F0>
   static std::shared_ptr<Stream<T1>> iterate(F0 &&f, const T1 x) {
-    return Stream<T1>::lazy_([=](void) mutable -> std::shared_ptr<Stream<T1>> {
+    return Stream<T1>::lazy_([=]() mutable -> std::shared_ptr<Stream<T1>> {
       return Stream<T1>::cons(x, iterate<T1>(f, f(x)));
     });
   }
@@ -158,7 +158,7 @@ struct CoindGuard {
   static std::shared_ptr<Stream<T3>> zipWith(F0 &&f,
                                              std::shared_ptr<Stream<T1>> s1,
                                              std::shared_ptr<Stream<T2>> s2) {
-    return Stream<T3>::lazy_([=](void) mutable -> std::shared_ptr<Stream<T3>> {
+    return Stream<T3>::lazy_([=]() mutable -> std::shared_ptr<Stream<T3>> {
       return Stream<T3>::cons(f(hd<T1>(s1), hd<T2>(s2)),
                               zipWith<T1, T2, T3>(f, tl<T1>(s1), tl<T2>(s2)));
     });
@@ -167,7 +167,7 @@ struct CoindGuard {
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
   static std::shared_ptr<Stream<T2>> smap(F0 &&f,
                                           std::shared_ptr<Stream<T1>> s) {
-    return Stream<T2>::lazy_([=](void) mutable -> std::shared_ptr<Stream<T2>> {
+    return Stream<T2>::lazy_([=]() mutable -> std::shared_ptr<Stream<T2>> {
       return Stream<T2>::cons(f(hd<T1>(s)), smap<T1, T2>(f, tl<T1>(s)));
     });
   }
@@ -176,7 +176,7 @@ struct CoindGuard {
   static std::shared_ptr<Stream<T1>> unfold(F0 &&f, const T2 seed) {
     T1 a = f(seed).first;
     T2 s_ = f(seed).second;
-    return Stream<T1>::lazy_([=](void) mutable -> std::shared_ptr<Stream<T1>> {
+    return Stream<T1>::lazy_([=]() mutable -> std::shared_ptr<Stream<T1>> {
       return Stream<T1>::cons(a, unfold<T1, T2>(f, s_));
     });
   }

@@ -1,7 +1,10 @@
 #include <stm_hash_map.h>
 
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <mini_stm.h>
 #include <optional>

@@ -137,7 +137,7 @@ struct FetchOps {
   __attribute__((pure)) static std::pair<unsigned int, unsigned int>
   fetch_pair(const std::shared_ptr<List<unsigned int>> &rom_data,
              const unsigned int addr);
-  static inline const unsigned int fetch_pair_test = [](void) {
+  static inline const unsigned int fetch_pair_test = []() {
     std::pair<unsigned int, unsigned int> p = fetch_pair(
         List<unsigned int>::cons(
             1u,
@@ -150,7 +150,7 @@ struct FetchOps {
       pure)) static std::optional<std::pair<unsigned int, unsigned int>>
   fetch_window(const std::shared_ptr<List<unsigned int>> &rom_data,
                const unsigned int addr);
-  static inline const unsigned int fetch_window_test = [](void) {
+  static inline const unsigned int fetch_window_test = []() {
     if (fetch_window(List<unsigned int>::cons(
                          9u, List<unsigned int>::cons(
                                  8u, List<unsigned int>::cons(

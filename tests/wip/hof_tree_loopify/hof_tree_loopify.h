@@ -1178,8 +1178,7 @@ struct HofTreeLoopify {
           },
           0u, small_tree);
   static inline const std::shared_ptr<tree<unsigned int>> deep =
-      depth_tree(Nat::of_num_uint(Uint1::uintdecimal(
-          Uint::d5(Uint::d0(Uint::d0(Uint::d0(Uint::d0(Uint::nil()))))))));
+      depth_tree(50000u);
 };
 
 #endif // INCLUDED_HOF_TREE_LOOPIFY

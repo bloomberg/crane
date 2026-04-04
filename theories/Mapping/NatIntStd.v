@@ -1,9 +1,8 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-From Crane Require Extraction.
-From Crane Require Export Mapping.Std.
+(** Extraction of [nat] (Peano naturals) to [unsigned int] (std flavor).
 
-(** Disclaimer: trying to obtain efficient certified programs
+    Disclaimer: trying to obtain efficient certified programs
     by extracting [nat] into [int] is definitively *not* a good idea:
 
     - This is just a syntactic adaptation, many things can go wrong,
@@ -24,6 +23,8 @@ From Crane Require Export Mapping.Std.
     you are advised to use either Rocq advanced representations
     (positive, Z, N, BigN, BigZ) or modular/axiomatic representation.
 *)
+From Crane Require Extraction.
+From Crane Require Export Mapping.Std.
 
 Crane Extract Inductive nat =>
   "unsigned int"
@@ -43,6 +44,8 @@ Crane Extract Inlined Constant Nat.min => "std::min(%a0, %a1)" From "algorithm".
 Crane Extract Inlined Constant Nat.eqb => "%a0 == %a1".
 Crane Extract Inlined Constant Nat.ltb => "%a0 < %a1".
 Crane Extract Inlined Constant Nat.leb => "%a0 <= %a1".
+Crane Extract Inlined Constant Nat.iter =>
+  "[&]() { auto _acc = %a2; for (unsigned int _i = 0; _i < %a0; _i++) { _acc = %a1(std::move(_acc)); } return _acc; }()".
 
 From Corelib Require Import PrimInt63.
 Axiom nat_of_int : int -> nat.

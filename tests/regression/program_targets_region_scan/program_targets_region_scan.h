@@ -187,7 +187,7 @@ struct ProgramTargetsRegionScan {
   __attribute__((pure)) static bool program_targets_okb(
       const std::shared_ptr<List<std::shared_ptr<instruction>>> &prog,
       const std::shared_ptr<layout> &l);
-  static inline const unsigned int t = [](void) {
+  static inline const unsigned int t = []() {
     std::unique_ptr<layout> l = std::make_unique<layout>(layout{200u, 20u});
     std::unique_ptr<List<std::shared_ptr<instruction>>> p =
         List<std::shared_ptr<instruction>>::cons_uptr(

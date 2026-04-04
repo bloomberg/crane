@@ -192,6 +192,10 @@ let rec lambda_needs_capture
         (collect_from_expr (refs, decls) cond)
         body
     | Sblock stmts -> List.fold_left collect_from_stmt (refs, decls) stmts
+    | Sblock_custom (_, _, id, _, args, _) ->
+      let acc = List.fold_left (fun a e -> collect_from_expr a e) (refs, decls) args in
+      let refs', decls' = acc in
+      (refs', IdSet.add id decls')
     | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _ | Susing _ | Sdecl_init _
     | Scontinue -> (refs, decls)
   in
@@ -275,6 +279,7 @@ and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
     expr scrut || List.exists (fun (_, _, stmts) -> any stmts) branches
   | Swhile (cond, body) -> expr cond || any body
   | Sblock stmts -> any stmts
+  | Sblock_custom (_, _, _, _, args, _) -> List.exists expr args
   | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _ | Susing _
   | Sdecl_init _ | Scontinue -> false
 
@@ -339,7 +344,7 @@ let parse_custom_fixed esc cc s =
       List.rev (CCstring last_chunk :: chunks_rev)
     else
       match
-        (s.[i], i + esc_len + 1 < n)
+        (s.[i], i + esc_len + 1 <= n)
       with
       | '%', true ->
         if esc = String.sub s (i + 1) esc_len then
@@ -407,6 +412,55 @@ let parse_custom_numbered_binders esc1 esc2 f s =
   in
   aux 0 0 []
 
+(** Expand placeholders in a command list using a parser function.
+    For each [CCstring] chunk, apply [parser] to produce new chunks.
+    Non-string chunks are passed through unchanged. *)
+let expand_custom_chunks parser cmds =
+  List.fold_left
+    (fun prev curr ->
+      match curr with
+      | CCstring s -> prev @ parser s
+      | _ -> prev @ [curr] )
+    []
+    cmds
+
+let expand_numbered_args esc f = expand_custom_chunks (parse_numbered_args esc f)
+let expand_custom_binders esc1 esc2 f = expand_custom_chunks (parse_custom_numbered_binders esc1 esc2 f)
+let expand_custom_fixed esc cc = expand_custom_chunks (parse_custom_fixed esc cc)
+
+(** Flatten a command list that is known to contain only [CCstring] chunks
+    back into a single string. *)
+let flatten_custom_strings cmds =
+  String.concat ""
+    (List.map (function CCstring s -> s | _ -> assert false) cmds)
+
+(** Get the number of template type parameters for an inductive reference,
+    defaulting to 2 when unavailable. *)
+let num_ind_params = function
+  | GlobRef.IndRef (kn, _) ->
+    (match Table.get_ind_num_param_vars_opt kn with
+     | Some n -> n | None -> 2)
+  | _ -> 2
+
+(** Generate N placeholder type arguments (comma-separated ["int"]s). *)
+let gen_placeholder_args n =
+  String.concat ", " (List.init n (fun _ -> "int"))
+
+(** Insert ["template "] before the last [::]-separated component of a
+    qualified name.  E.g. ["C::foo"] becomes ["C::template foo"].
+    Returns [name_pp] unchanged if the string contains no [:]. *)
+let insert_template_keyword name_pp name_str =
+  if String.contains name_str ':' then
+    let last_colon_pos = String.rindex name_str ':' in
+    let before = String.sub name_str 0 (last_colon_pos + 1) in
+    let after =
+      String.sub name_str (last_colon_pos + 1)
+        (String.length name_str - last_colon_pos - 1)
+    in
+    str before ++ str "template " ++ str after
+  else
+    name_pp
+
 (** Print a type variable by de Bruijn index, looking up in [vl]. Falls back to
     [T<n>] if index is out of range. *)
 let print_cpp_type_var vl i =
@@ -466,6 +520,9 @@ let rec pp_cpp_type par vl t =
         ++ pp_list (pp_rec false) args
         ++ str ">"
       | _ -> Id.print id ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
+    | Tid_external (id, []) -> Id.print id
+    | Tid_external (id, args) ->
+      Id.print id ++ str "<" ++ pp_list (pp_rec false) args ++ str ">"
     | Tglob (r, tys, args) ->
       (* Erased type/prop/implicit markers (from Tdummy in the ML AST) should
          never reach the C++ output. When they do survive — e.g. as a template
@@ -482,16 +539,7 @@ let rec pp_cpp_type par vl t =
       match find_custom_opt r with
       | Some s when to_inline r ->
         let cmds = parse_numbered_args "a" (fun i -> CCarg i) s in
-        let cmds =
-          List.fold_left
-            (fun prev curr ->
-              match curr with
-              | CCstring s ->
-                prev @ parse_numbered_args "t" (fun i -> CCty_arg i) s
-              | _ -> prev @ [curr] )
-            []
-            cmds
-        in
+        let cmds = expand_numbered_args "t" (fun i -> CCty_arg i) cmds in
         pp_custom
           (Pp.string_of_ppcmds (GlobRef.print r) ^ " := " ^ s)
           (empty_env ())
@@ -518,18 +566,7 @@ let rec pp_cpp_type par vl t =
              templates. E.g., "C::t" + <unsigned int> -> "C::template t<unsigned
              int>" *)
           let type_name_with_template =
-            if String.contains name_str ':' then
-              let last_colon_pos = String.rindex name_str ':' in
-              let before = String.sub name_str 0 (last_colon_pos + 1) in
-              let after =
-                String.sub
-                  name_str
-                  (last_colon_pos + 1)
-                  (String.length name_str - last_colon_pos - 1)
-              in
-              str before ++ str "template " ++ str after
-            else
-              type_name
+            insert_template_keyword type_name name_str
           in
           typename_prefix_for name_str
           ++ struct_qualifier_for r name_str
@@ -658,10 +695,57 @@ let rec pp_cpp_type par vl t =
     partial application). *)
 and pp_cpp_expr env args t =
   let apply st = pp_apply_cpp st args in
+  (* Generate an IIFE wrapper for a block template (%result) in expression
+     position.  [ref_name] is for debug labels, [custom] is the raw template
+     string, [tys] are type args, [val_args] are value args (already reversed
+     for pp_custom). *)
+  let gen_block_iife ref_name custom tys val_args =
+    let ret_ty =
+      try
+        let ml_ty = Table.find_type ref_name in
+        Translation.convert_ml_type_to_cpp_type
+          env Refset'.empty [] (Translation.ml_codomain ml_ty)
+      with _ -> Tauto
+    in
+    let result_str = "_r" in
+    let substituted =
+      flatten_custom_strings
+        (parse_custom_fixed "result" (CCstring result_str) custom)
+    in
+    let cmds = parse_numbered_args "a" (fun i -> CCarg i) substituted in
+    let cmds = expand_numbered_args "t" (fun i -> CCty_arg i) cmds in
+    let body_pp =
+      pp_custom
+        (Pp.string_of_ppcmds (GlobRef.print ref_name) ^ " := " ^ custom)
+        env None None tys [] val_args [] [] cmds
+    in
+    let body_str = Pp.string_of_ppcmds body_pp in
+    let stmts =
+      List.filter (fun s -> String.trim s <> "")
+        (String.split_on_char ';' body_str)
+    in
+    let stmt_lines =
+      String.concat "\n"
+        (List.map (fun s -> "  " ^ String.trim s ^ ";") stmts)
+    in
+    str "[&]() -> " ++ pp_cpp_type false [] ret_ty ++ str " {"
+    ++ fnl ()
+    ++ str ("  " ^ Pp.string_of_ppcmds (pp_cpp_type false [] ret_ty)
+            ^ " " ^ result_str ^ ";")
+    ++ fnl ()
+    ++ str stmt_lines
+    ++ fnl ()
+    ++ str ("  return " ^ result_str ^ ";")
+    ++ fnl ()
+    ++ str "}()"
+  in
   match t with
   | CPPvar id -> Id.print id
   | CPPglob (x, tys, Some ci) when ci.ci_inline <> None ->
     let custom = Option.get ci.ci_inline in
+    if Common.contains_substring custom "%result" then
+      gen_block_iife x custom tys []
+    else
     let cmds = parse_numbered_args "t" (fun i -> CCty_arg i) custom in
     pp_custom
       (Pp.string_of_ppcmds (GlobRef.print x) ^ " := " ^ custom)
@@ -756,17 +840,7 @@ and pp_cpp_expr env args t =
            method. *)
         let struct_name = Common.pp_global_name Type record_ref in
         let func_name = Common.pp_global_name Term x in
-        let num_struct_params =
-          match record_ref with
-          | GlobRef.IndRef (kn, _) ->
-            ( match Table.get_ind_num_param_vars_opt kn with
-            | Some n -> n
-            | None -> 2 )
-          | _ -> 2
-        in
-        let placeholder_args =
-          String.concat ", " (List.init num_struct_params (fun _ -> "int"))
-        in
+        let placeholder_args = gen_placeholder_args (num_ind_params record_ref) in
         let ty_args = pp_list (pp_cpp_type false []) tys in
         str (String.capitalize_ascii struct_name)
         ++ str "<"
@@ -777,22 +851,9 @@ and pp_cpp_expr env args t =
         ++ ty_args
         ++ str ">"
       | Some record_ref, [] ->
-        (* Constant/function inside eponymous template struct with NO type args:
-           This happens for non-parameterized constants like e_SUCCESS. Generate
-           StructName<int, int>::constName as a workaround. *)
         let struct_name = Common.pp_global_name Type record_ref in
         let func_name = Common.pp_global_name Term x in
-        let num_params =
-          match record_ref with
-          | GlobRef.IndRef (kn, _) ->
-            ( match Table.get_ind_num_param_vars_opt kn with
-            | Some n -> n
-            | None -> 2 )
-          | _ -> 2
-        in
-        let placeholder_args =
-          String.concat ", " (List.init num_params (fun _ -> "int"))
-        in
+        let placeholder_args = gen_placeholder_args (num_ind_params record_ref) in
         str (String.capitalize_ascii struct_name)
         ++ str "<"
         ++ str placeholder_args
@@ -832,24 +893,8 @@ and pp_cpp_expr env args t =
            insert "template " before the last component. E.g., "C::empty" +
            <unsigned int> -> "C::template empty<unsigned int>" *)
         let base_name_str = string_of_ppcmds base_name in
-        if String.contains base_name_str ':' then
-          (* Find last occurrence of :: and insert "template " after it *)
-          let last_colon_pos = String.rindex base_name_str ':' in
-          let before = String.sub base_name_str 0 (last_colon_pos + 1) in
-          let after =
-            String.sub
-              base_name_str
-              (last_colon_pos + 1)
-              (String.length base_name_str - last_colon_pos - 1)
-          in
-          str before
-          ++ str "template "
-          ++ str after
-          ++ str "<"
-          ++ ty_args
-          ++ str ">"
-        else
-          base_name ++ str "<" ++ ty_args ++ str ">"
+        insert_template_keyword base_name base_name_str
+        ++ str "<" ++ ty_args ++ str ">"
     in
     let full_name = if is_accessor then full_name ++ str "()" else full_name in
     apply full_name
@@ -858,6 +903,9 @@ and pp_cpp_expr env args t =
     h (name ++ str "::" ++ pp_cpp_expr env args t)
   | CPPfun_call (CPPglob (n, tys, Some ci), ts) when ci.ci_inline <> None ->
     let s = Option.get ci.ci_inline in
+    if Common.contains_substring s "%result" then
+      gen_block_iife n s tys (List.rev ts)
+    else
     let has_placeholder = String.contains s '%' in
     if not has_placeholder then
       let ty_args_s =
@@ -869,16 +917,7 @@ and pp_cpp_expr env args t =
       str s ++ ty_args_s ++ str "(" ++ args_s ++ str ")"
     else
       let cmds = parse_numbered_args "a" (fun i -> CCarg i) s in
-      let cmds =
-        List.fold_left
-          (fun prev curr ->
-            match curr with
-            | CCstring s ->
-              prev @ parse_numbered_args "t" (fun i -> CCty_arg i) s
-            | _ -> prev @ [curr] )
-          []
-          cmds
-      in
+      let cmds = expand_numbered_args "t" (fun i -> CCty_arg i) cmds in
       let arg_types =
         try
           let ml_ty = Table.find_type n in
@@ -980,7 +1019,7 @@ and pp_cpp_expr env args t =
     in
     let params_s, capture =
       match params with
-      | [] -> (str "void", capture_str)
+      | [] -> (mt (), capture_str)
       | _ ->
         ( pp_list
             (fun (ty, id_opt) ->
@@ -1306,39 +1345,47 @@ and pp_cpp_stmt env args = function
     ++ str " = "
     ++ pp_cpp_expr env args e
     ++ str ";"
+  | Sblock_custom (_ref, tmpl, result_var, result_ty, args, tyargs) ->
+    (* Block template: emit a declaration + template-substituted statements.
+       %result → result_var, %aN → value args, %tN → type args *)
+    let result_str = Pp.string_of_ppcmds (Id.print result_var) in
+    (* Substitute %result first *)
+    let flat =
+      flatten_custom_strings
+        (parse_custom_fixed "result" (CCstring result_str) tmpl)
+    in
+    let cmds = parse_numbered_args "a" (fun i -> CCarg i) flat in
+    let cmds = expand_numbered_args "t" (fun i -> CCty_arg i) cmds in
+    (* Render: type declaration + template body as statements *)
+    let decl_pp =
+      pp_cpp_type false [] result_ty
+      ++ str " "
+      ++ Id.print result_var
+      ++ str ";"
+    in
+    let body_pp =
+      pp_custom
+        ("block custom " ^ Pp.string_of_ppcmds (GlobRef.print _ref))
+        env None None tyargs [] args [] [] cmds
+    in
+    (* Split rendered body by ';' and emit each as a statement line *)
+    let body_str = Pp.string_of_ppcmds body_pp in
+    let stmts =
+      List.filter
+        (fun s -> String.trim s <> "")
+        (String.split_on_char ';' body_str)
+    in
+    let stmt_pps =
+      List.map (fun s -> str (String.trim s) ++ str ";") stmts
+    in
+    prlist_with_sep fnl (fun x -> x) (decl_pp :: stmt_pps)
   | Scustom_case (typ, t, tyargs, cases, cmatch) ->
     let cmds = parse_custom_fixed "scrut" CCscrut cmatch in
-    let cmds =
-      List.fold_left
-        (fun prev curr ->
-          match curr with
-          | CCstring s -> prev @ parse_custom_fixed "ty" CCty s
-          | _ -> prev @ [curr] )
-        []
-        cmds
-    in
-    let helper e f cmds =
-      List.fold_left
-        (fun prev curr ->
-          match curr with
-          | CCstring s -> prev @ parse_numbered_args e f s
-          | _ -> prev @ [curr] )
-        []
-        cmds
-    in
-    let cmds = helper "t" (fun i -> CCty_arg i) cmds in
-    let cmds = helper "br" (fun i -> CCbody i) cmds in
-    let helper2 e1 e2 f cmds =
-      List.fold_left
-        (fun prev curr ->
-          match curr with
-          | CCstring s -> prev @ parse_custom_numbered_binders e1 e2 f s
-          | _ -> prev @ [curr] )
-        []
-        cmds
-    in
-    let cmds = helper2 "b" "a" (fun i j -> CCbr_var (i, j)) cmds in
-    let cmds = helper2 "b" "t" (fun i j -> CCbr_var_ty (i, j)) cmds in
+    let cmds = expand_custom_fixed "ty" CCty cmds in
+    let cmds = expand_numbered_args "t" (fun i -> CCty_arg i) cmds in
+    let cmds = expand_numbered_args "br" (fun i -> CCbody i) cmds in
+    let cmds = expand_custom_binders "b" "a" (fun i j -> CCbr_var (i, j)) cmds in
+    let cmds = expand_custom_binders "b" "t" (fun i j -> CCbr_var_ty (i, j)) cmds in
     pp_custom
       ( "custom match for "
       ^ Pp.string_of_ppcmds (pp_cpp_type false [] typ)
@@ -1386,7 +1433,7 @@ and is_constexpr_type = function
   | Tmod (_, t) | Tref t | Tptr t -> is_constexpr_type t
   | Tvariant tys -> List.for_all is_constexpr_type tys
   | Tglob (_, tys, _) -> List.for_all is_constexpr_type tys
-  | Tid (_, tys) -> List.for_all is_constexpr_type tys
+  | Tid (_, tys) | Tid_external (_, tys) -> List.for_all is_constexpr_type tys
   | Tnamespace (_, t) -> is_constexpr_type t
   | Tqualified (t, _) -> is_constexpr_type t
 

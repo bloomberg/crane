@@ -92,6 +92,8 @@ type cpp_type =
       (** Type variable with De Bruijn index and optional name *)
   | Tid of Id.t * cpp_type list
       (** Local type identifier with type arguments, for nested structs *)
+  | Tid_external of Id.t * cpp_type list
+      (** External type from a header — never struct-qualified *)
   | Tglob of GlobRef.t * cpp_type list * cpp_expr list
       (** Global type reference with type and value arguments *)
   | Tfun of cpp_type list * cpp_type
@@ -162,6 +164,15 @@ and cpp_stmt =
       (** While loop: condition and body (used by loopify pass) *)
   | Sblock of cpp_stmt list  (** Scoped block for local declarations *)
   | Scontinue  (** Continue statement for loopified while loops *)
+  | Sblock_custom of
+      GlobRef.t
+      * string
+      * Id.t
+      * cpp_type
+      * cpp_expr list
+      * cpp_type list
+      (** Block template expansion: multi-statement inline custom that
+          substitutes [%result] with the bind target variable name. *)
 
 (** {2 C++ expressions} *)
 

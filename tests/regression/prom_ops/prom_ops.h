@@ -187,7 +187,7 @@ struct PromOps {
                                                   const unsigned int data,
                                                   const bool enable);
   static inline const unsigned int test3 = []() {
-    return [](void) {
+    return []() {
       std::unique_ptr<state3> s = std::make_unique<state3>(state3{
           1u,
           List<unsigned int>::cons(
@@ -201,7 +201,7 @@ struct PromOps {
       std::shared_ptr<state3> s_ =
           set_prom_params3(std::move(s), 21u, 144u, true);
       return ((s_->prom_addr3 +
-               [&](void) {
+               [&]() {
                  if (s_->prom_enable3) {
                    return std::move(s_)->prom_data3;
                  } else {
@@ -212,7 +212,7 @@ struct PromOps {
     }();
   }();
   static inline const unsigned int test4 = []() {
-    return [](void) {
+    return []() {
       std::unique_ptr<state3> s = std::make_unique<state3>(state3{
           1u,
           List<unsigned int>::cons(
@@ -226,7 +226,7 @@ struct PromOps {
       std::shared_ptr<state3> s_ =
           set_prom_params3(std::move(s), 21u, 144u, true);
       return ((s_->prom_addr3 +
-               [&](void) {
+               [&]() {
                  if (s_->prom_enable3) {
                    return std::move(s_)->prom_data3;
                  } else {
@@ -251,7 +251,7 @@ struct PromOps {
                                                   const unsigned int data,
                                                   const bool enable);
   static inline const unsigned int test5 = []() {
-    return [](void) {
+    return []() {
       std::unique_ptr<state5> s = std::make_unique<state5>(state5{
           3u,
           List<unsigned int>::cons(
@@ -263,7 +263,7 @@ struct PromOps {
           0u, 0u, false});
       std::shared_ptr<state5> s_ =
           set_prom_params5(std::move(s), 23u, 77u, true);
-      return ((s_->acc5 + s_->prom_addr5) + [&](void) {
+      return ((s_->acc5 + s_->prom_addr5) + [&]() {
         if (s_->prom_enable5) {
           return std::move(s_)->prom_data5;
         } else {
@@ -421,52 +421,52 @@ struct PromOps {
                               5u, List<unsigned int>::cons(
                                       6u, List<unsigned int>::nil())))),
           5u, 0u, 0u, false});
-  static inline const bool check_pc_bound = [](void) {
+  static inline const bool check_pc_bound = []() {
     std::shared_ptr<state10> after =
         execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
     return std::move(after)->pc10 < 4096u;
   }();
-  static inline const bool check_acc_bound = [](void) {
+  static inline const bool check_acc_bound = []() {
     std::shared_ptr<state10> after =
         execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
     return std::move(after)->acc10 < 16u;
   }();
-  static inline const bool check_bank_bound = [](void) {
+  static inline const bool check_bank_bound = []() {
     std::shared_ptr<state10> after =
         execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
     return std::move(after)->cur_bank10 < 8u;
   }();
-  static inline const bool check_regs_length = [](void) {
+  static inline const bool check_regs_length = []() {
     std::shared_ptr<state10> after =
         execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
     return std::move(after)->regs10->length() == 4u;
   }();
-  static inline const bool check_rom_ports_length = [](void) {
+  static inline const bool check_rom_ports_length = []() {
     std::shared_ptr<state10> after =
         execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
     return std::move(after)->rom_ports10->length() == 4u;
   }();
-  static inline const bool check_sel_rom_bound = [](void) {
+  static inline const bool check_sel_rom_bound = []() {
     std::shared_ptr<state10> after =
         execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
     return std::move(after)->sel_rom10 < 16u;
   }();
-  static inline const bool check_stack_length = [](void) {
+  static inline const bool check_stack_length = []() {
     std::shared_ptr<state10> after =
         execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
     return std::move(after)->stack10->length() <= 3u;
   }();
-  static inline const bool check_prom_addr_bound = [](void) {
+  static inline const bool check_prom_addr_bound = []() {
     std::shared_ptr<state10> after =
         execute_wpm10(set_prom_params10(sample10, 2048u, 99u, true));
     return std::move(after)->prom_addr10 < 4096u;
   }();
-  static inline const bool check_prom_data_bound = [](void) {
+  static inline const bool check_prom_data_bound = []() {
     std::shared_ptr<state10> after =
         execute_wpm10(set_prom_params10(sample10, 3u, 155u, true));
     return std::move(after)->prom_data10 < 256u;
   }();
-  static inline const bool check_rom_length = [](void) {
+  static inline const bool check_rom_length = []() {
     std::shared_ptr<state10> after =
         execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
     return std::move(after)->rom10->length() == 8u;

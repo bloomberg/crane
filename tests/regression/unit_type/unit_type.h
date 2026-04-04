@@ -14,13 +14,11 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-enum class Unit { e_TT };
-
 struct UnitType {
-  static inline const Unit unit_val = Unit::e_TT;
-  __attribute__((pure)) static Unit return_unit(const unsigned int _x);
-  __attribute__((pure)) static unsigned int take_unit(const Unit _x);
-  __attribute__((pure)) static unsigned int match_unit(const Unit u);
+  static inline const std::monostate unit_val = std::monostate{};
+  static void return_unit(const unsigned int _x);
+  __attribute__((pure)) static unsigned int take_unit(const std::monostate _x);
+  __attribute__((pure)) static unsigned int match_unit(const std::monostate u);
 
   template <typename t_A, typename t_B> struct pair {
     // TYPES
@@ -74,20 +72,24 @@ struct UnitType {
         p->v());
   }
 
-  static inline const std::shared_ptr<pair<unsigned int, Unit>> pair_with_unit =
-      pair<unsigned int, Unit>::pair0(3u, Unit::e_TT);
-  static inline const std::shared_ptr<pair<Unit, Unit>> unit_pair =
-      pair<Unit, Unit>::pair0(Unit::e_TT, Unit::e_TT);
-  __attribute__((pure)) static Unit unit_to_unit(const Unit u);
+  static inline const std::shared_ptr<pair<unsigned int, std::monostate>>
+      pair_with_unit =
+          pair<unsigned int, std::monostate>::pair0(3u, std::monostate{});
+  static inline const std::shared_ptr<pair<std::monostate, std::monostate>>
+      unit_pair = pair<std::monostate, std::monostate>::pair0(std::monostate{},
+                                                              std::monostate{});
+  static void unit_to_unit(const std::monostate u);
 
   template <typename T1, typename T2> static T2 seq(const T1 _x, const T2 b) {
     return b;
   }
 
-  static inline const unsigned int sequenced = seq<Unit, unsigned int>(
-      Unit::e_TT, seq<Unit, unsigned int>(Unit::e_TT, 5u));
-  static inline const unsigned int test_take = take_unit(Unit::e_TT);
-  static inline const unsigned int test_match = match_unit(Unit::e_TT);
+  static inline const unsigned int sequenced =
+      seq<std::monostate, unsigned int>(
+          std::monostate{},
+          seq<std::monostate, unsigned int>(std::monostate{}, 5u));
+  static inline const unsigned int test_take = take_unit(std::monostate{});
+  static inline const unsigned int test_match = match_unit(std::monostate{});
   static inline const unsigned int test_seq = sequenced;
 };
 

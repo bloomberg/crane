@@ -6,7 +6,7 @@
  (name CraneTestsMonadic)
  (synopsis "Tests for the rocq-crane plugin")
  (modules :standard)
- (theories Stdlib Crane)
+ (theories Stdlib Crane ITree ExtLib Paco)
  (flags (:standard -output-directory %{project_root}/tests/monadic)))
 
 ; Test rules - compile C++ and run tests
@@ -165,3 +165,26 @@
   (alias runtest)
   (deps monadic.t.exe)
   (action (run ./monadic.t.exe))))
+
+(subdir itree_effects
+ (rule
+  (targets itree_effects.t.exe)
+  (deps ITreeEffects.vo itree_effects.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_effects.t.exe itree_effects.cpp itree_effects.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_effects.t.exe)
+  (action (run ./itree_effects.t.exe))))
+
+(subdir itree_reified
+ (rule
+  (targets itree_reified.t.exe)
+  (deps ITreeReified.vo itree_reified.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_reified.t.exe itree_reified.cpp itree_reified.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_reified.t.exe)
+  (action (run ./itree_reified.t.exe))))
+

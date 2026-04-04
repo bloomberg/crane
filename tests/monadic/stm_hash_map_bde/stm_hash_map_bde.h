@@ -2,6 +2,7 @@
 #define INCLUDED_STM_HASH_MAP_BDE
 
 #include <bdlf_overloaded.h>
+#include <bdls_filesystemutil.h>
 #include <bsl_concepts.h>
 #include <bsl_cstdint.h>
 #include <bsl_functional.h>
@@ -14,7 +15,9 @@
 #include <bsl_utility.h>
 #include <bsl_variant.h>
 #include <bsl_vector.h>
+#include <fstream>
 #include <mini_stm.h>
+#include <variant>
 
 using namespace BloombergLP;
 template <class From, class To>
@@ -74,8 +77,6 @@ public:
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
-struct STM {};
-struct TVar {};
 template <typename K, typename V> struct CHT {
   bsl::function<bool(K, K)> cht_eqb;
   bsl::function<int64_t(K)> cht_hash;
@@ -94,32 +95,29 @@ template <typename K, typename V> struct CHT {
   __attribute__((pure)) bsl::optional<V> stm_get(const K k) const {
     bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>> b =
         this->bucket_of(k);
-    bsl::shared_ptr<List<bsl::pair<K, V>>> xs =
-        stm::readTVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>(b);
+    bsl::shared_ptr<List<bsl::pair<K, V>>> xs = stm::readTVar(b);
     return CHT<int, int>::template assoc_lookup<K, V>(this->CHT::cht_eqb, k,
                                                       xs);
   }
-  __attribute__((pure)) void stm_put(const K k, const V v) const {
+  __attribute__((pure)) std::monostate stm_put(const K k, const V v) const {
     bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>> b =
         this->bucket_of(k);
-    bsl::shared_ptr<List<bsl::pair<K, V>>> xs =
-        stm::readTVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>(b);
+    bsl::shared_ptr<List<bsl::pair<K, V>>> xs = stm::readTVar(b);
     bsl::shared_ptr<List<bsl::pair<K, V>>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
             this->CHT::cht_eqb, k, v, xs);
-    stm::writeTVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>(b, xs_);
-    return;
+    stm::writeTVar(b, xs_);
+    return std::monostate{};
   }
   __attribute__((pure)) bsl::optional<V> stm_delete(const K k) const {
     bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>> b =
         this->bucket_of(k);
-    bsl::shared_ptr<List<bsl::pair<K, V>>> xs =
-        stm::readTVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>(b);
+    bsl::shared_ptr<List<bsl::pair<K, V>>> xs = stm::readTVar(b);
     bsl::pair<bsl::optional<V>, bsl::shared_ptr<List<bsl::pair<K, V>>>> p =
         CHT<int, int>::template assoc_remove<K, V>(this->CHT::cht_eqb, k, xs);
     if (p.first.has_value()) {
       V _x = *p.first;
-      stm::writeTVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>(b, p.second);
+      stm::writeTVar(b, p.second);
       return p.first;
     } else {
       return p.first;
@@ -129,15 +127,14 @@ template <typename K, typename V> struct CHT {
   __attribute__((pure)) V stm_update(const K k, F1 &&f) const {
     bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>> b =
         this->bucket_of(k);
-    bsl::shared_ptr<List<bsl::pair<K, V>>> xs =
-        stm::readTVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>(b);
+    bsl::shared_ptr<List<bsl::pair<K, V>>> xs = stm::readTVar(b);
     bsl::optional<V> ov =
         CHT<int, int>::template assoc_lookup<K, V>(this->CHT::cht_eqb, k, xs);
     V v = f(bsl::move(ov));
     bsl::shared_ptr<List<bsl::pair<K, V>>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
             this->CHT::cht_eqb, k, v, xs);
-    stm::writeTVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>(b, xs_);
+    stm::writeTVar(b, xs_);
     return v;
   }
   __attribute__((pure)) V stm_get_or(const K k, const V dflt) const {
@@ -149,8 +146,13 @@ template <typename K, typename V> struct CHT {
       return dflt;
     }
   }
-  __attribute__((pure)) void put(const K k, const V v) const {
-    return stm::atomically([&] { return this->stm_put(k, v); });
+  __attribute__((pure)) std::monostate put(const K k, const V v) const {
+    return stm::atomically([&] {
+      return [&]() {
+        this->stm_put(k, v);
+        return std::monostate{};
+      }();
+    });
   }
   __attribute__((pure)) bsl::optional<V> get(const K k) const {
     return stm::atomically([&] { return this->stm_get(k); });
@@ -245,7 +247,7 @@ template <typename K, typename V> struct CHT {
         xs->v());
   }
   template <typename T1, typename T2>
-  __attribute__((pure)) static bsl::vector<
+  static bsl::vector<
       bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>>>
   mk_buckets(const int64_t num) {
     bsl::vector<
@@ -262,10 +264,8 @@ template <typename K, typename V> struct CHT {
       } else {
         unsigned int n_ = n - 1;
         bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>> b =
-            stm::atomically([&] {
-              return stm::newTVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>(
-                  List<bsl::pair<T1, T2>>::nil());
-            });
+            stm::atomically(
+                [&] { return stm::newTVar(List<bsl::pair<T1, T2>>::nil()); });
         buckets.push_back(b);
         return f(n_);
       }
@@ -274,28 +274,25 @@ template <typename K, typename V> struct CHT {
   }
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0,
             MapsTo<int64_t, T1> F1>
-  __attribute__((pure)) static bsl::shared_ptr<CHT<T1, T2>>
-  new_hash(F0 &&eqb, F1 &&hash, const int64_t requested) {
-    int64_t n = bsl::max(requested, int64_t(1));
+  static bsl::shared_ptr<CHT<T1, T2>> new_hash(F0 &&eqb, F1 &&hash,
+                                               const int64_t requested) {
+    int64_t n = bsl::max<int64_t>(requested, 1);
     bsl::vector<
         bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>>>
         bs = CHT<int, int>::template mk_buckets<T1, T2>(n);
     bool empt = bs.empty();
     if (empt) {
       bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>> fb =
-          stm::atomically([&] {
-            return stm::newTVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>(
-                List<bsl::pair<T1, T2>>::nil());
-          });
+          stm::atomically(
+              [&] { return stm::newTVar(List<bsl::pair<T1, T2>>::nil()); });
       bsl::vector<
           bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>>>
           v = {};
       v.push_back(fb);
-      return bsl::make_shared<CHT<T1, T2>>(
-          CHT<T1, T2>{eqb, hash, v, int64_t(1), fb});
+      return bsl::make_shared<CHT<T1, T2>>(CHT<T1, T2>{eqb, hash, v, 1, fb});
     } else {
       bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<T1, T2>>>>> b =
-          bs.at(int64_t(0));
+          bs.at(0);
       return bsl::make_shared<CHT<T1, T2>>(CHT<T1, T2>{eqb, hash, bs, n, b});
     }
   }

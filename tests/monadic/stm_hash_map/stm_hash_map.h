@@ -2,7 +2,10 @@
 #define INCLUDED_STM_HASH_MAP
 
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <mini_stm.h>
 #include <optional>
@@ -75,10 +78,6 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
-struct STM {};
-
-struct TVar {};
-
 template <typename K, typename V> struct CHT {
   std::function<bool(K, K)> cht_eqb;
   std::function<int64_t(K)> cht_hash;
@@ -106,7 +105,7 @@ template <typename K, typename V> struct CHT {
                                                       xs);
   }
 
-  __attribute__((pure)) void stm_put(const K k, const V v) const {
+  __attribute__((pure)) std::monostate stm_put(const K k, const V v) const {
     std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<K, V>>>>> b =
         this->bucket_of(k);
     std::shared_ptr<List<std::pair<K, V>>> xs = b->read();
@@ -114,7 +113,7 @@ template <typename K, typename V> struct CHT {
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
             this->CHT::cht_eqb, k, v, xs);
     b->write(xs_);
-    return;
+    return std::monostate{};
   }
 
   __attribute__((pure)) std::optional<V> stm_delete(const K k) const {
@@ -157,8 +156,13 @@ template <typename K, typename V> struct CHT {
     }
   }
 
-  __attribute__((pure)) void put(const K k, const V v) const {
-    return stm::atomically([&] { return this->stm_put(k, v); });
+  __attribute__((pure)) std::monostate put(const K k, const V v) const {
+    return stm::atomically([&] {
+      return [&]() {
+        this->stm_put(k, v);
+        return std::monostate{};
+      }();
+    });
   }
 
   __attribute__((pure)) std::optional<V> get(const K k) const {
@@ -277,10 +281,8 @@ template <typename K, typename V> struct CHT {
       } else {
         unsigned int n_ = n - 1;
         std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>> b =
-            stm::atomically([&] {
-              return stm::newTVar<std::shared_ptr<List<std::pair<T1, T2>>>>(
-                  List<std::pair<T1, T2>>::nil());
-            });
+            stm::atomically(
+                [&] { return stm::newTVar(List<std::pair<T1, T2>>::nil()); });
         buckets.push_back(b);
         return f(n_);
       }
@@ -292,26 +294,23 @@ template <typename K, typename V> struct CHT {
             MapsTo<int64_t, T1> F1>
   static std::shared_ptr<CHT<T1, T2>> new_hash(F0 &&eqb, F1 &&hash,
                                                const int64_t requested) {
-    int64_t n = std::max(requested, int64_t(1));
+    int64_t n = std::max<int64_t>(requested, 1);
     std::vector<
         std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>>>
         bs = CHT<int, int>::template mk_buckets<T1, T2>(n);
     bool empt = bs.empty();
     if (empt) {
       std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>> fb =
-          stm::atomically([&] {
-            return stm::newTVar<std::shared_ptr<List<std::pair<T1, T2>>>>(
-                List<std::pair<T1, T2>>::nil());
-          });
+          stm::atomically(
+              [&] { return stm::newTVar(List<std::pair<T1, T2>>::nil()); });
       std::vector<
           std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>>>
           v = {};
       v.push_back(fb);
-      return std::make_shared<CHT<T1, T2>>(
-          CHT<T1, T2>{eqb, hash, v, int64_t(1), fb});
+      return std::make_shared<CHT<T1, T2>>(CHT<T1, T2>{eqb, hash, v, 1, fb});
     } else {
       std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>> b =
-          bs.at(int64_t(0));
+          bs.at(0);
       return std::make_shared<CHT<T1, T2>>(CHT<T1, T2>{eqb, hash, bs, n, b});
     }
   }

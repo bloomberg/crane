@@ -1,6 +1,7 @@
 #include <stm_hash_map_bde.h>
 
 #include <bdlf_overloaded.h>
+#include <bdls_filesystemutil.h>
 #include <bsl_concepts.h>
 #include <bsl_cstdint.h>
 #include <bsl_functional.h>
@@ -13,6 +14,8 @@
 #include <bsl_utility.h>
 #include <bsl_variant.h>
 #include <bsl_vector.h>
+#include <fstream>
 #include <mini_stm.h>
+#include <variant>
 
 namespace BloombergLP {}

@@ -1,5 +1,12 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(** Bloomberg Development Environment (BDE) extraction mappings.
+
+    Maps [option], [prod], [string], [int63], and [float] to their
+    BDE equivalents ([bsl::optional], [bsl::pair], [bsl::string],
+    [int64_t], [double]).
+
+    Sets the stdlib flavor to ["BDE"]. *)
 From Crane Require Extraction.
 From Crane Require Export Mapping.Shared.
 
@@ -25,7 +32,7 @@ Crane Extract Inlined Constant snd => "%a0.second" From "bsl_utility.h".
 
 From Corelib Require Import PrimString.
 Crane Extract Inlined Constant PrimString.char63 => "char".
-Crane Extract Inlined Constant PrimString.string => "std::string" From "bsl_string.h".
+Crane Extract Inlined Constant PrimString.string => "bsl::string" From "bsl_string.h".
 Crane Extract Inlined Constant PrimString.cat => "%a0 + %a1" From "bsl_string.h".
 Crane Extract Inlined Constant PrimString.get => "%a0[%a1]" From "bsl_string.h".
 Crane Extract Inlined Constant PrimString.sub => "%a0.substr(%a1, %a2)" From "bsl_string.h".
@@ -37,9 +44,15 @@ Crane Extract Inlined Constant PrimInt63.add => "%a0 + %a1".
 Crane Extract Inlined Constant PrimInt63.sub => "%a0 - %a1".
 Crane Extract Inlined Constant PrimInt63.mul => "%a0 * %a1".
 Crane Extract Inlined Constant PrimInt63.mod => "%a0 % %a1".
+Crane Extract Inlined Constant PrimInt63.div => "(%a1 == 0 ? 0 : %a0 / %a1)".
 Crane Extract Inlined Constant PrimInt63.eqb => "%a0 == %a1".
 Crane Extract Inlined Constant PrimInt63.ltb => "%a0 < %a1".
 Crane Extract Inlined Constant PrimInt63.leb => "%a0 <= %a1".
+Crane Extract Inlined Constant PrimInt63.land => "(%a0 & %a1)".
+Crane Extract Inlined Constant PrimInt63.lor => "(%a0 | %a1)".
+Crane Extract Inlined Constant PrimInt63.lxor => "(%a0 ^ %a1)".
+Crane Extract Inlined Constant PrimInt63.lsl => "(%a1 >= 63 ? 0 : (%a0 << %a1))".
+Crane Extract Inlined Constant PrimInt63.lsr => "(%a1 >= 63 ? 0 : (%a0 >> %a1))".
 
 (* PrimFloat - IEEE 754 binary64 (C++ double). *)
 From Corelib Require Import PrimFloat.

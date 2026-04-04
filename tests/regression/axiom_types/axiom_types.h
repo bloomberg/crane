@@ -14,20 +14,19 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-enum class Unit { e_TT };
-
 struct AxiomTypes {
   using MysteryType = std::any /* AXIOM TO BE REALIZED */;
   static MysteryType mystery_value();
   static MysteryType mystery_function(const MysteryType _x0);
-  static MysteryType use_axiom(const Unit _x);
+  static MysteryType use_axiom(const std::monostate _x);
 
   struct AxiomRecord {
     unsigned int normal_field;
     MysteryType axiom_field;
   };
 
-  static std::shared_ptr<AxiomRecord> make_axiom_record(const Unit _x);
+  static std::shared_ptr<AxiomRecord>
+  make_axiom_record(const std::monostate _x);
   static MysteryType extract_axiom_field(const std::shared_ptr<AxiomRecord> &r);
 
   struct AxiomInductive {
@@ -103,9 +102,10 @@ struct AxiomTypes {
         a->v());
   }
 
-  static std::shared_ptr<AxiomInductive> use_axiom_inductive(const Unit _x);
+  static std::shared_ptr<AxiomInductive>
+  use_axiom_inductive(const std::monostate _x);
   static MysteryType axiom_identity(const MysteryType x);
-  static MysteryType nested_axiom(const Unit _x);
+  static MysteryType nested_axiom(const std::monostate _x);
 
   template <typename t_A> struct list {
     // TYPES
@@ -187,11 +187,11 @@ struct AxiomTypes {
         l->v());
   }
 
-  static std::shared_ptr<list<MysteryType>> axiom_list(const Unit _x);
+  static std::shared_ptr<list<MysteryType>> axiom_list(const std::monostate _x);
 
   template <typename T1> static T1 poly_axiom(const T1 x) { return x; }
 
-  static MysteryType use_poly_axiom(const Unit _x);
+  static MysteryType use_poly_axiom(const std::monostate _x);
 };
 
 #endif // INCLUDED_AXIOM_TYPES

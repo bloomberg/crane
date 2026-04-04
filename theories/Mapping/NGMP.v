@@ -26,6 +26,8 @@ Crane Extract Inductive N =>
   [ "mpz_class(0)" "%a0" ]
   "if (%scrut == 0) { %br0 } else { mpz_class %b1a0 = %scrut; %br1 }".
 
+Crane Extract Numeral N => "mpz_class(%n)".
+
 (* Pos operations *)
 Crane Extract Inlined Constant Pos.add => "(%a0 + %a1)".
 Crane Extract Inlined Constant Pos.sub => "(%a0 - %a1)".

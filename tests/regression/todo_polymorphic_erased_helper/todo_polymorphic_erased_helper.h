@@ -16,10 +16,10 @@ template <typename T1> T1 _anon_aux(const T1 x) { return x; }
 
 struct TodoPolymorphicErasedHelper {
   static inline const unsigned int test_value = []() {
-    return [](void) {
+    return []() {
       unsigned int kept_nat = _anon_aux(7u);
       bool kept_bool = _anon_aux(true);
-      return (std::move(kept_nat) + [&](void) {
+      return (std::move(kept_nat) + [&]() {
         if (std::move(kept_bool)) {
           return 1u;
         } else {

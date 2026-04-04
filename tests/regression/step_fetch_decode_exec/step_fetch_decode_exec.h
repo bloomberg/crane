@@ -174,7 +174,7 @@ struct StepFetchDecodeExec {
   static std::shared_ptr<state> execute(std::shared_ptr<state> s,
                                         const std::shared_ptr<instruction> &i);
   static std::shared_ptr<state> step(const std::shared_ptr<state> &s);
-  static inline const unsigned int t = [](void) {
+  static inline const unsigned int t = []() {
     std::shared_ptr<state> s1 = step(std::make_shared<state>(
         state{3u, 0u,
               List<unsigned int>::cons(

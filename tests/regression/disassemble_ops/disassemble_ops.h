@@ -199,7 +199,7 @@ struct DisassembleOps {
       std::pair<std::shared_ptr<instruction>, unsigned int>>
   disassemble1(const std::shared_ptr<List<unsigned int>> &rom0,
                const unsigned int addr);
-  static inline const unsigned int test_disassemble_drop_window = [](void) {
+  static inline const unsigned int test_disassemble_drop_window = []() {
     if (disassemble1(
             List<unsigned int>::cons(
                 1u,
@@ -252,7 +252,7 @@ struct DisassembleOps {
       std::pair<std::shared_ptr<instruction>, unsigned int>>
   disassemble2(const std::shared_ptr<List<unsigned int>> &rom0,
                const unsigned int addr);
-  static inline const unsigned int test_disassemble_next_address = [](void) {
+  static inline const unsigned int test_disassemble_next_address = []() {
     if (disassemble2(
             List<unsigned int>::cons(
                 0u, List<unsigned int>::cons(
@@ -312,7 +312,7 @@ struct DisassembleOps {
       std::make_shared<state>(
           state{ListDef::template repeat<unsigned int>(0u, 16u),
                 ListDef::template repeat<unsigned int>(0u, 4096u)});
-  static inline const unsigned int test_decode_disassemble_1 = [](void) {
+  static inline const unsigned int test_decode_disassemble_1 = []() {
     if (disassemble4(
             List<unsigned int>::cons(
                 0u, List<unsigned int>::cons(
@@ -335,7 +335,7 @@ struct DisassembleOps {
       return 0u;
     }
   }();
-  static inline const unsigned int test_decode_disassemble_2 = [](void) {
+  static inline const unsigned int test_decode_disassemble_2 = []() {
     if (disassemble4(
             List<unsigned int>::cons(
                 0u, List<unsigned int>::cons(

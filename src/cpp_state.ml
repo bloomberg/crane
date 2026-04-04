@@ -655,7 +655,9 @@ let reset_cpp_state () =
   Hashtbl.clear functor_app_sources;
   hoisted_concept_defs := [];
   Common.reset_ctor_field_names ();
-  reset_needed_headers ()
+  reset_needed_headers ();
+  Table.reset_itree_header ();
+  Table.reset_main_function ()
 
 (** Check if a function is a projection for the eponymous record. Such
     projections are redundant when the record fields are merged into the module

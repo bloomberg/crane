@@ -21,7 +21,7 @@ struct Lambda {
                                                           const unsigned int z);
   __attribute__((pure)) static unsigned int make_adder(const unsigned int _x0,
                                                        const unsigned int _x1);
-  static inline const unsigned int with_let = [](void) {
+  static inline const unsigned int with_let = []() {
     unsigned int x = 5u;
     return (std::move(x) * 2u);
   }();

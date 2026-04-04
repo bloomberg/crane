@@ -175,7 +175,7 @@ struct LoadProgram {
   static std::shared_ptr<state_simple>
   load_program_simple(std::shared_ptr<state_simple> s,
                       const std::shared_ptr<List<unsigned int>> &bytes);
-  static inline const bool test_load_program_nil = [](void) {
+  static inline const bool test_load_program_nil = []() {
     std::unique_ptr<state> sample = std::make_unique<state>(
         state{List<unsigned int>::cons(
                   10u, List<unsigned int>::cons(
@@ -190,7 +190,7 @@ struct LoadProgram {
         (after->rom->nth(1u, 0u) == 11u &&
          (after->rom->nth(2u, 0u) == 12u && after->rom->nth(3u, 0u) == 13u)));
   }();
-  static inline const bool test_load_program_cons_rom = [](void) {
+  static inline const bool test_load_program_cons_rom = []() {
     std::unique_ptr<state> sample = std::make_unique<state>(
         state{List<unsigned int>::cons(
                   10u, List<unsigned int>::cons(
@@ -207,7 +207,7 @@ struct LoadProgram {
         (after->rom->nth(1u, 0u) == 99u &&
          (after->rom->nth(2u, 0u) == 88u && after->rom->nth(3u, 0u) == 13u)));
   }();
-  static inline const bool test_load_preserves_rom_length = [](void) {
+  static inline const bool test_load_preserves_rom_length = []() {
     std::unique_ptr<state> sample = std::make_unique<state>(
         state{List<unsigned int>::cons(
                   10u, List<unsigned int>::cons(
@@ -223,25 +223,23 @@ struct LoadProgram {
                                            77u, List<unsigned int>::nil()))));
     return std::move(after)->rom->length() == 4u;
   }();
-  static inline const bool test_load_program_step_preserves_wf_simple =
-      [](void) {
-        std::unique_ptr<state_extended> sample =
-            std::make_unique<state_extended>(state_extended{
-                4u,
-                List<unsigned int>::cons(
-                    10u,
-                    List<unsigned int>::cons(
-                        11u, List<unsigned int>::cons(
-                                 12u, List<unsigned int>::cons(
-                                          13u, List<unsigned int>::nil())))),
-                100u, 2u, 0u, 0u, false});
-        std::shared_ptr<state_extended> after = execute_wpm_ext(
-            set_prom_params_ext(std::move(sample), 1u, 99u, true));
-        return (after->regs_len == 4u &&
-                (after->rom_ext->length() == 4u &&
-                 (after->pc < 4096u && after->stack_len <= 3u)));
-      }();
-  static inline const bool test_load_program_step_rom_length_weak = [](void) {
+  static inline const bool test_load_program_step_preserves_wf_simple = []() {
+    std::unique_ptr<state_extended> sample =
+        std::make_unique<state_extended>(state_extended{
+            4u,
+            List<unsigned int>::cons(
+                10u, List<unsigned int>::cons(
+                         11u, List<unsigned int>::cons(
+                                  12u, List<unsigned int>::cons(
+                                           13u, List<unsigned int>::nil())))),
+            100u, 2u, 0u, 0u, false});
+    std::shared_ptr<state_extended> after =
+        execute_wpm_ext(set_prom_params_ext(std::move(sample), 1u, 99u, true));
+    return (after->regs_len == 4u &&
+            (after->rom_ext->length() == 4u &&
+             (after->pc < 4096u && after->stack_len <= 3u)));
+  }();
+  static inline const bool test_load_program_step_rom_length_weak = []() {
     std::unique_ptr<state> sample = std::make_unique<state>(
         state{List<unsigned int>::cons(
                   10u, List<unsigned int>::cons(
@@ -253,7 +251,7 @@ struct LoadProgram {
         execute_wpm(set_prom_params(std::move(sample), 1u, 99u, true));
     return std::move(after)->rom->length() == 4u;
   }();
-  static inline const bool test_load_program_step_writes_at_base = [](void) {
+  static inline const bool test_load_program_step_writes_at_base = []() {
     std::unique_ptr<state> sample = std::make_unique<state>(
         state{List<unsigned int>::cons(
                   10u, List<unsigned int>::cons(
@@ -265,7 +263,7 @@ struct LoadProgram {
         execute_wpm(set_prom_params(std::move(sample), 1u, 99u, true));
     return std::move(after)->rom->nth(1u, 0u) == 99u;
   }();
-  static inline const unsigned int test_sequential_program_load = [](void) {
+  static inline const unsigned int test_sequential_program_load = []() {
     std::unique_ptr<state_simple> sample =
         std::make_unique<state_simple>(state_simple{
             List<unsigned int>::cons(

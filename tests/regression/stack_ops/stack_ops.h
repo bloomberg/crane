@@ -111,7 +111,7 @@ struct StackOps {
   __attribute__((pure)) static std::pair<std::optional<unsigned int>,
                                          std::shared_ptr<state_with_acc>>
   pop_stack_acc(std::shared_ptr<state_with_acc> s);
-  static inline const unsigned int pop_acc_test = [](void) {
+  static inline const unsigned int pop_acc_test = []() {
     std::optional<unsigned int> o =
         pop_stack_acc(std::make_shared<state_with_acc>(state_with_acc{
                           List<unsigned int>::cons(

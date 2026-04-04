@@ -96,6 +96,8 @@ type cpp_type =
   | Tvar of int * Id.t option
   | Tid of Id.t * cpp_type list
     (* Simple Id-based type, for local names like nested structs *)
+  | Tid_external of Id.t * cpp_type list
+    (* External type from a header — never struct-qualified *)
   | Tglob of GlobRef.t * cpp_type list * cpp_expr list
   | Tfun of cpp_type list * cpp_type
   | Tmod of cpp_tymod * cpp_type
@@ -157,7 +159,16 @@ and cpp_stmt =
   | Sblock of cpp_stmt list
     (* { stmts } — scoped block for local declarations *)
   | Scontinue
-(* continue; — used in loopified while loops *)
+    (* continue; — used in loopified while loops *)
+  | Sblock_custom of
+      GlobRef.t
+      * string (* template string containing %result *)
+      * Id.t (* result variable name *)
+      * cpp_type (* result variable type *)
+      * cpp_expr list (* value args for %a0, %a1, ... *)
+      * cpp_type list (* type args for %t0, %t1, ... *)
+    (* Block template expansion: multi-statement inline custom that
+       substitutes %result with the bind target variable name. *)
 
 (** C++ expressions. *)
 and cpp_expr =
@@ -294,6 +305,7 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   match ty with
   | Tglob (r, tys, args) -> Tglob (r, List.map (map_cpp_type f) tys, args)
   | Tid (id, tys) -> Tid (id, List.map (map_cpp_type f) tys)
+  | Tid_external (id, tys) -> Tid_external (id, List.map (map_cpp_type f) tys)
   | Tfun (dom, cod) -> Tfun (List.map (map_cpp_type f) dom, map_cpp_type f cod)
   | Tmod (m, t) -> Tmod (m, map_cpp_type f t)
   | Tshared_ptr t -> Tshared_ptr (map_cpp_type f t)
@@ -409,6 +421,8 @@ let map_stmt
   | Swhile (cond, body) -> Swhile (fe cond, List.map fs body)
   | Sblock stmts -> Sblock (List.map fs stmts)
   | Scontinue -> s
+  | Sblock_custom (r, tmpl, id, ty, args, tys) ->
+    Sblock_custom (r, tmpl, id, ft ty, List.map fe args, List.map ft tys)
 
 (** C++ top-level declarations. *)
 type cpp_decl =

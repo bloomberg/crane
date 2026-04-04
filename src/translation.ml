@@ -279,7 +279,14 @@ type translation_ctx = {
      [promoted_var_map] fall back to [Tany] (std::any) instead of keeping
      [Tvar(1000, name)] markers, because module-level aliases apply. *)
   mutable in_constructor_expr : bool;
+  (* ITree extraction mode: controls whether itree types are erased (Sequential)
+     or preserved as std::shared_ptr<ITree<R>> (Reified) for observation. *)
+  mutable itree_mode : itree_extraction_mode;
 }
+
+and itree_extraction_mode =
+  | Sequential  (* Default: erase itree E R to R, bind becomes ; *)
+  | Reified     (* Preserve structure: itree E R becomes shared_ptr<ITree<R>> *)
 
 let tctx =
   {
@@ -298,6 +305,7 @@ let tctx =
     match_param_counter = 0;
     promoted_var_map = [];
     in_constructor_expr = false;
+    itree_mode = Sequential;
   }
 
 (** Accessor wrappers — thin layer over tctx fields. *)
@@ -364,6 +372,270 @@ let is_monadic_ml_type ty =
   | Miniml.Tglob (r, _, _) -> Table.is_monad r
   | _ -> false
 
+(** Check if an ML type is void (unit type mapped to C++ void). *)
+let ml_type_is_void (ty : ml_type) : bool =
+  match resolve_tmeta ty with
+  | Tglob (r, _, _) -> is_void r
+  | _ -> false
+
+(** Check if an ML type is Rocq's [unit] type. *)
+let ml_type_is_unit (ty : ml_type) : bool =
+  match resolve_tmeta ty with
+  | Tglob (r, _, _) -> Table.is_unit_type r
+  | _ -> false
+
+(** Check if a C++ type is the Unit enum (from Rocq's [unit]).
+    After [convert_ml_type_to_cpp_type], Rocq's [unit] becomes a [Tnamespace]
+    wrapping a [Tglob] referencing the unit inductive, or a bare [Tglob] for
+    local references.  This detects it for codomain void-ification. *)
+let is_cpp_unit_type = function
+  | Tglob (GlobRef.IndRef _ as r, _, _) -> Table.is_unit_type r
+  | Tnamespace (r, _) -> Table.is_unit_type r
+  | _ -> false
+
+(** Extract the innermost result type from a (possibly monadic) ML type.
+    For [nat -> itree ioE unit], returns [unit].
+    For [nat -> unit], returns [unit].
+    For [itree ioE unit] (zero-arg monadic), returns [unit].
+    The result type is always the LAST type argument of the monad
+    (monads parameterize on the result type as their last type param). *)
+let ml_result_type ty =
+  let cod = ml_codomain ty in
+  match cod with
+  | Miniml.Tglob (r, args, _) when Table.is_monad r ->
+    (match List.rev args with r :: _ -> r | [] -> cod)
+  | _ -> cod
+
+(** Recursively replace Rocq's unit enum type with [Tvoid] in a C++ type.
+    Handles both direct [Unit -> void] (sequential mode) and nested
+    [shared_ptr<ITree<Unit>> -> shared_ptr<ITree<void>>] (reified mode). *)
+let rec voidify_unit_in_type = function
+  | t when is_cpp_unit_type t -> Tvoid
+  | Tglob (r, args, ns) ->
+    Tglob (r, List.map voidify_unit_in_type args, ns)
+  | Tnamespace (r, t) ->
+    Tnamespace (r, voidify_unit_in_type t)
+  | Tshared_ptr t -> Tshared_ptr (voidify_unit_in_type t)
+  | Tunique_ptr t -> Tunique_ptr (voidify_unit_in_type t)
+  | t -> t
+
+(** Check if an ML type represents a void or unit type. *)
+let ml_type_is_unit_or_void ty = ml_type_is_void ty || ml_type_is_unit ty
+
+(** Filter out erased ([Tdummy]) types from a type list. *)
+let filter_value_types = List.filter (fun t -> not (isTdummy t))
+
+(** Check if a monad reference uses the reified ITree extraction mode
+    (i.e. its monad template string contains ["ITree"]). *)
+let is_monad_reified monad_ref =
+  match Table.get_monad_template_opt monad_ref with
+  | Some t ->
+    ( try ignore (Str.search_forward (Str.regexp_string "ITree") t 0); true
+      with Not_found -> false )
+  | None -> false
+
+(** If the codomain of [ty] is a registered monad, return its reference. *)
+let extract_monad_from_codomain ty =
+  match ml_codomain ty with
+  | Miniml.Tglob (monad_ref, _, _) when Table.is_monad monad_ref ->
+    Some monad_ref
+  | _ -> None
+
+(** Collect [Id.t]s for typeclass-typed parameters in an ML arrow type. *)
+let collect_typeclass_param_ids ty =
+  let rec aux acc i = function
+    | Miniml.Tarr (t1, t2) ->
+      if Table.is_typeclass_type t1 then
+        aux (tc_instance_id i :: acc) (i + 1) t2
+      else
+        aux acc i t2
+    | _ -> List.rev acc
+  in
+  match ty with Miniml.Tarr _ -> aux [] 0 ty | _ -> []
+
+(** Apply unit-to-void conversion on a C++ type, respecting reified mode.
+    In reified mode, [Unit] inside [ITree<Unit>] becomes [ITree<void>].
+    In sequential mode, the entire type becomes [Tvoid]. *)
+let apply_unit_void unit_void is_reified ty =
+  if unit_void then
+    if is_reified then voidify_unit_in_type ty
+    else Tvoid
+  else ty
+
+(** Generate the C++ expression for Rocq's [tt] (the unit constructor).
+    Does NOT call [gen_expr] — it checks the extraction table directly. *)
+let mk_tt_expr () =
+  match Table.resolve_tt_ctor () with
+  | Some tt_ref when Table.is_custom tt_ref ->
+    mk_cppglob tt_ref []
+  | Some tt_ref ->
+    let ind_ref =
+      match tt_ref with
+      | GlobRef.ConstructRef ((kn, i), _) -> GlobRef.IndRef (kn, i)
+      | _ ->
+        CErrors.anomaly (Pp.str "mk_tt_expr: tt is not a ConstructRef")
+    in
+    let ctor_name =
+      Id.of_string
+        (Common.enum_ctor_name (Common.pp_global_name Type tt_ref))
+    in
+    CPPenum_val (ind_ref, ctor_name)
+  | None ->
+    CErrors.anomaly (Pp.str "mk_tt_expr: could not resolve core.unit.tt")
+
+(** Check whether a global reference [r] has been void-ified: its ML type
+    is a function (or monad) whose result type is [unit].  When such a
+    function is called in expression context, the C++ call returns [void]
+    and cannot be used as a value — we must wrap it in an IIFE that
+    executes the call for side effects and returns [std::monostate{}]. *)
+let is_void_ified_ref (r : GlobRef.t) : bool =
+  match find_type_opt r with
+  | Some ty ->
+    (match ty with Miniml.Tarr _ -> true
+     | Miniml.Tglob (r, _, _) when Table.is_monad r -> true | _ -> false)
+    && ml_type_is_unit (ml_result_type ty)
+  | None -> false
+
+(** Wrap a void-returning function call expression in an IIFE so it can
+    be used in value context.  Produces:
+      [&]() { void_call(); return std::monostate{}; }()
+    The call is executed for side effects; the IIFE returns the unit value. *)
+let wrap_void_call_as_value (call_expr : cpp_expr) : cpp_expr =
+  CPPfun_call (
+    CPPlambda ([], None,
+      [Sexpr call_expr; Sreturn (Some (mk_tt_expr ()))],
+      false),
+    [])
+
+(** Check whether an ML function expression [f] in [MLapp(f, args)] would
+    produce a void-returning call in C++.  Handles:
+    - [MLglob(r, _)]  — named function, look up type in extraction table
+    - [MLrel(i)]       — variable (e.g. callback), look up type in env
+    - [MLmagic(inner)] — transparent wrapper, recurse *)
+let rec ml_callee_is_void = function
+  | MLglob (r, _) -> is_void_ified_ref r
+  | MLmagic inner -> ml_callee_is_void inner
+  | MLrel i ->
+    ( try
+        let ty = get_env_type i in
+        (match ty with Miniml.Tarr _ -> true
+         | Miniml.Tglob (r, _, _) when Table.is_monad r -> true | _ -> false)
+        && ml_type_is_unit (ml_result_type ty)
+      with _ -> false )
+  | _ -> false
+
+(** {3 Reified ITree helpers}
+
+    In reified mode, [itree E R] extracts to [std::shared_ptr<ITree<R>>]
+    instead of being erased to [R].  The helpers below build C++ AST nodes
+    for ITree types and constructors, and detect whether an ML expression
+    already carries a reified tree value. *)
+
+(** Extract the result type [R] from a monadic ML type [itree E R].
+    Returns the second non-erased type argument, or [Miniml.Tunknown] if
+    the type does not have the expected shape. *)
+let extract_itree_result_ml (ml_ty : ml_type) : ml_type =
+  match resolve_tmeta ml_ty with
+  | Miniml.Tglob (_, _ :: r :: _, _) -> r
+  | _ -> Miniml.Tunknown
+
+(** Build the C++ type [std::shared_ptr<ITree<r_cpp>>]. *)
+let mk_itree_type (r_cpp : cpp_type) : cpp_type =
+  Tshared_ptr (Tid_external (Id.of_string "ITree", [r_cpp]))
+
+(** Render a C++ type as a plain string, for use in raw [ITree<R>]
+    qualified expressions.  Handles the common types that appear as ITree
+    result types; falls back to ["auto"] for unknown shapes. *)
+let rec render_cpp_type_simple = function
+  | Tglob (r, [], _) -> Common.pp_global_name Type r
+  | Tglob (r, ts, _) ->
+    Common.pp_global_name Type r ^ "<" ^
+    String.concat ", " (List.map render_cpp_type_simple ts) ^ ">"
+  | Tid_external (id, []) -> Id.to_string id
+  | Tid_external (id, ts) ->
+    Id.to_string id ^ "<" ^
+    String.concat ", " (List.map render_cpp_type_simple ts) ^ ">"
+  | Tvar (_, Some n) -> Id.to_string n
+  | Tshared_ptr t -> "std::shared_ptr<" ^ render_cpp_type_simple t ^ ">"
+  | Tunique_ptr t -> "std::unique_ptr<" ^ render_cpp_type_simple t ^ ">"
+  | Tvoid -> "void"
+  | _ -> "auto"
+
+(** Build a [CPPfun_call] for [ITree<R>::ret(...)].
+    When [r_cpp] is [Tvoid], generates [ITree<void>::ret()]. *)
+let mk_itree_ret (r_cpp : cpp_type) (args : cpp_expr list) : cpp_expr =
+  let type_str =
+    if r_cpp = Tvoid then "void" else render_cpp_type_simple r_cpp
+  in
+  CPPfun_call (
+    CPPqualified (CPPraw ("ITree<" ^ type_str ^ ">"), Id.of_string "ret"),
+    args)
+
+(** Build [ITree<R>::ret(v)] or [ITree<void>::ret()] depending on whether
+    the result type is void.  [r_cpp] is the C++ result type; [r_ml] is
+    the ML result type (checked with {!ml_type_is_void} for unit-mapped
+    types); [v] is the value expression to wrap. *)
+let mk_itree_ret_for_value r_cpp r_ml v =
+  if r_cpp = Tvoid || ml_type_is_unit_or_void r_ml then
+    mk_itree_ret Tvoid []
+  else
+    mk_itree_ret r_cpp [v]
+
+(** Reify a monadic parameter type for ITree extraction.
+
+    In reified mode, the C++ type for a monadic parameter [itree E R] after
+    monad erasure is just [R].  This function wraps it back into
+    [shared_ptr<ITree<R>>] so the tree can be passed as a first-class value.
+    Does nothing in sequential mode or when [ml_ty] is not monadic. *)
+let reify_monadic_param_type ml_ty cpp_ty =
+  if is_monadic_ml_type ml_ty && tctx.itree_mode = Reified then begin
+    Table.require_itree_header ();
+    let r_ty =
+      match cpp_ty with
+      | Tglob (_, _ :: r :: _, _) -> r
+      | t -> t
+    in
+    (* Voidify unit result type inside ITree params *)
+    let r_ty = if is_cpp_unit_type r_ty then Tvoid else r_ty in
+    mk_itree_type r_ty
+  end
+  else cpp_ty
+
+(** Check whether an ML expression is a de Bruijn reference to a variable
+    whose [env_type] is monadic.  Such variables have been reified to
+    [shared_ptr<ITree<R>>] and need [->run()] to extract the value. *)
+let is_reified_monadic_var ml_expr =
+  match ml_expr with
+  | MLrel i ->
+    (try is_monadic_ml_type (get_env_type i) with _ -> false)
+  | _ -> false
+
+(** Check whether an ML expression already produces a reified monadic value
+    (a [shared_ptr<ITree<R>>]).  Extends {!is_reified_monadic_var} to also
+    cover [MLapp(MLrel f, args)] where [f] is a local function whose return
+    type is monadic.  Such calls already return a tree, so wrapping in
+    [ITree::ret()] would incorrectly double-wrap.
+
+    Does {b not} return [true] for [MLapp(MLglob g, args)] because global
+    inline extractions (e.g. [print_endline]) may produce direct C++
+    expressions that genuinely need Ret wrapping. *)
+let is_reified_monadic_expr ml_expr =
+  match ml_expr with
+  | MLrel i ->
+    (try is_monadic_ml_type (get_env_type i) with _ -> false)
+  | MLapp (MLrel i, _) ->
+    (try is_monadic_ml_type (ml_codomain (get_env_type i)) with _ -> false)
+  | _ -> false
+
+(** If [ml_expr] refers to a reified monadic variable, wrap [cpp_expr] in
+    a [->run()] call to execute the tree and produce the direct value.
+    Otherwise returns [cpp_expr] unchanged. *)
+let deref_reified ml_expr cpp_expr =
+  if is_reified_monadic_var ml_expr then
+    CPPmethod_call (cpp_expr, Id.of_string "run", [])
+  else
+    cpp_expr
+
 (** Convert returned lambdas to capture by value. Lambdas returned from
     functions outlive the function's stack frame, so capturing by reference
     ([&]) would create dangling references. This rewrites
@@ -377,11 +649,6 @@ let return_captures_by_value stmts =
         Sreturn (Some (CPPlambda (args, ret, body, true)))
       | s -> s )
     stmts
-
-(** Check if an ML type is void (unit type mapped to C++ void). *)
-let ml_type_is_void : ml_type -> bool = function
-  | Tglob (r, _, _) -> is_void r
-  | _ -> false
 
 (** Run escape analysis on [body], saving and restoring the analysis state
     around the call to [f]. This is needed because escape analysis runs at
@@ -474,6 +741,14 @@ let is_cpp_dummy_type = function
     type arg in a template argument list is erased, ALL explicit type args must
     be dropped (see filter_erased_type_args). *)
 let is_erased_type t = t = Minicpp.Tany || is_cpp_dummy_type t
+
+(** Check if a C++ type is a skipped type (inline custom with empty string).
+    Such types arise from [Crane Extract Skip] and represent infrastructure
+    (e.g. ReSum) that should be completely erased. *)
+let is_skipped_cpp_type = function
+  | Minicpp.Tglob (r, _, _) ->
+    Table.is_inline_custom r && Table.find_custom_opt r = Some ""
+  | _ -> false
 
 (** Recursively check whether a C++ type contains Tany (std::any). Used to
     detect when a let-binding's type annotation has unresolved carrier
@@ -834,6 +1109,20 @@ and local_var_subst_stmt (target : Id.t) (repl : cpp_expr) (s : cpp_stmt) =
     Fun.id
     s
 
+(** Check whether a variable [target] is referenced in a list of C++ stmts. *)
+let stmts_reference_var (target : Id.t) (stmts : cpp_stmt list) : bool =
+  let exception Found in
+  let rec visit_expr e =
+    ( match e with
+    | CPPvar id when Id.equal id target -> raise Found
+    | _ -> () );
+    map_expr visit_expr visit_stmt Fun.id e
+  and visit_stmt s =
+    map_stmt visit_expr visit_stmt Fun.id s
+  in
+  try List.iter (fun s -> ignore (visit_stmt s)) stmts; false
+  with Found -> true
+
 (** Build extended tvar names covering both signature and body Tvar indices.
     sig_indices: sorted list of Tvar indices from the function signature
     sig_names: corresponding Id.t names for those indices body_tvars:
@@ -895,6 +1184,7 @@ let build_lifted_cpp_params convert_fn base_temps params =
       (fun (x, ty, j) ->
         match ty with
         | Tmod (TMconst, Tfun (dom, cod_f)) ->
+          let cod_f = if is_cpp_unit_type cod_f then Tvoid else cod_f in
           Some (x, TTfun (dom, cod_f), fun_tparam_id j)
         | _ -> None )
       (List.mapi (fun j (x, ty) -> (x, ty, j)) (List.rev cpp_params))
@@ -928,6 +1218,18 @@ let rec get_args_and_ret acc = function
 let ref_returns_typeclass r =
   match find_type_opt r with
   | Some ty -> Table.is_typeclass_type (ml_return_type ty)
+  | None -> false
+
+(** Check if a function returns a skipped type (e.g., ReSum instances whose
+    Class is extracted as a ConstRef, not IndRef, and thus not recognized by
+    [is_typeclass]). Such arguments are infrastructure that should be erased. *)
+let ref_returns_skipped r =
+  match find_type_opt r with
+  | Some ty ->
+    ( match ml_return_type ty with
+    | Tglob (rr, _, _) ->
+      Table.is_inline_custom rr && Table.find_custom_opt rr = Some ""
+    | _ -> false )
   | None -> false
 
 (* Use Common.extract_at_pos for extracting elements at a position *)
@@ -972,6 +1274,7 @@ let rec tvar_erase_type (ty : cpp_type) : cpp_type =
   | Tshared_ptr ty -> Tshared_ptr (tvar_erase_type ty)
   | Tunique_ptr ty -> Tunique_ptr (tvar_erase_type ty)
   | Tid (id, tys) -> Tid (id, List.map tvar_erase_type tys)
+  | Tid_external (id, tys) -> Tid_external (id, List.map tvar_erase_type tys)
   | Tqualified (ty, id) -> Tqualified (tvar_erase_type ty, id)
   | _ -> ty (* Tvoid, Ttodo, Tunknown, Tany *)
 
@@ -991,7 +1294,7 @@ let rec has_unnamed_tvar (ty : cpp_type) : bool =
   | Tvariant tys -> List.exists has_unnamed_tvar tys
   | Tshared_ptr ty -> has_unnamed_tvar ty
   | Tunique_ptr ty -> has_unnamed_tvar ty
-  | Tid (_, tys) -> List.exists has_unnamed_tvar tys
+  | Tid (_, tys) | Tid_external (_, tys) -> List.exists has_unnamed_tvar tys
   | Tqualified (ty, _) -> has_unnamed_tvar ty
   | _ -> false
 
@@ -1121,7 +1424,7 @@ let rec ml_body_returns_erased_field = function
       | Tglob (r, _, _) ->
         let all_field_types = Table.record_field_types r in
         let non_erased =
-          List.filter (fun t -> not (Mlutil.isTdummy t)) all_field_types
+          filter_value_types all_field_types
         in
         ( try
             let field_ty = List.nth non_erased idx in
@@ -1142,6 +1445,9 @@ let rec convert_ml_type_to_cpp_type
   match ml_t with
   | Tarr (t1, t2) ->
     let t1c = convert_ml_type_to_cpp_type env ns tvars t1 in
+    (* Reify monadic domain types: itree E R in parameter position becomes
+       shared_ptr<ITree<R>> so the tree can be passed as a value. *)
+    let t1c = reify_monadic_param_type t1 t1c in
     let t2c = convert_ml_type_to_cpp_type env ns tvars t2 in
     (* Skip erased params: isTdummy catches direct Tdummy, is_cpp_dummy_type
        catches Tdummy wrapped in Tmeta (e.g., Tmeta{contents=Some(Tdummy Kprop)}
@@ -1286,7 +1592,7 @@ let rec convert_ml_type_to_cpp_type
   | Tdummy (Kimplicit _) ->
     Tglob (GlobRef.VarRef (Id.of_string "dummy_implicit"), [], [])
   | Tstring ->
-    CErrors.anomaly (Pp.str "Tstring should not appear in extraction pipeline")
+    Tid_external (Id.of_string_soft "std::string", [])
   | Tunknown -> Tany
   | Taxiom -> Tglob (GlobRef.VarRef (Id.of_string "axiom"), [], [])
 (* let _ = print_endline "TODO: TMETA OR TDUMMY OR TUNKNOWN OR TAXIOM" in assert
@@ -1377,6 +1683,7 @@ and build_template_params env tvars tys =
     @param r   Constructor reference (must be custom-extracted)
     @param ts  ML expression arguments (converted to C++ recursively)
     @return C++ expression applying custom syntax with type/value arguments *)
+
 and gen_expr_custom_cons env (ty : ml_type) r ts =
   (* PROMOTED TYPE VARIABLES in constructor expressions: Use module-level
      aliases (std::any) instead of template-qualified types.
@@ -1424,6 +1731,8 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
   let gen_ctor_arg e =
     match e with
     | MLdummy _ -> CPPraw "std::any{}"
+    | MLapp (f, _) | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
+      wrap_void_call_as_value (gen_expr env e)
     | _ -> gen_expr env e
   in
   let args = List.rev_map gen_ctor_arg ts in
@@ -1506,6 +1815,95 @@ and try_fold_numeral info expr =
   | MLmagic inner -> try_fold_numeral info inner
   | _ -> None
 
+(** Fold a Decimal.uint digit chain into an arbitrary-precision integer.
+    Constructors: Nil(idx=1), D0(idx=2, digit 0), ..., D9(idx=11, digit 9).
+    Digits are processed outside-in (most significant first).
+    Uses [Z.t] from zarith to avoid overflow on large literals. *)
+and try_fold_decimal_uint expr acc =
+  match expr with
+  | MLcons (_, cr, []) ->
+    ( match cr with
+    | GlobRef.ConstructRef (_, 1) -> Some acc
+    | _ -> None )
+  | MLcons (_, cr, [inner]) ->
+    ( match cr with
+    | GlobRef.ConstructRef (_, cidx) when cidx >= 2 && cidx <= 11 ->
+      let digit = Z.of_int (cidx - 2) in
+      try_fold_decimal_uint inner Z.(acc * of_int 10 + digit)
+    | _ -> None )
+  | MLmagic inner -> try_fold_decimal_uint inner acc
+  | _ -> None
+
+(** Fold a Hexadecimal.uint digit chain into an arbitrary-precision integer.
+    Constructors: Nil(idx=1), D0(idx=2, digit 0), ..., Df(idx=17, digit 15).
+    Uses [Z.t] from zarith to avoid overflow on large literals. *)
+and try_fold_hex_uint expr acc =
+  match expr with
+  | MLcons (_, cr, []) ->
+    ( match cr with
+    | GlobRef.ConstructRef (_, 1) -> Some acc
+    | _ -> None )
+  | MLcons (_, cr, [inner]) ->
+    ( match cr with
+    | GlobRef.ConstructRef (_, cidx) when cidx >= 2 && cidx <= 17 ->
+      let digit = Z.of_int (cidx - 2) in
+      try_fold_hex_uint inner Z.(acc * of_int 16 + digit)
+    | _ -> None )
+  | MLmagic inner -> try_fold_hex_uint inner acc
+  | _ -> None
+
+(** Fold a Number.uint (UIntDecimal | UIntHexadecimal) into an
+    arbitrary-precision integer.
+    Constructors: UIntDecimal(idx=1), UIntHexadecimal(idx=2). *)
+and try_fold_num_uint expr =
+  match expr with
+  | MLcons (_, cr, [inner]) ->
+    ( match cr with
+    | GlobRef.ConstructRef (_, 1) -> try_fold_decimal_uint inner Z.zero
+    | GlobRef.ConstructRef (_, 2) -> try_fold_hex_uint inner Z.zero
+    | _ -> None )
+  | MLmagic inner -> try_fold_num_uint inner
+  | _ -> None
+
+(** Fold a Decimal.signed_int (Pos | Neg) wrapping a Decimal.uint chain.
+    Constructors: Pos(idx=1), Neg(idx=2). *)
+and try_fold_signed_decimal_int expr =
+  match expr with
+  | MLcons (_, cr, [inner]) ->
+    ( match cr with
+    | GlobRef.ConstructRef (_, 1) -> try_fold_decimal_uint inner Z.zero
+    | GlobRef.ConstructRef (_, 2) ->
+      Option.map Z.neg (try_fold_decimal_uint inner Z.zero)
+    | _ -> None )
+  | MLmagic inner -> try_fold_signed_decimal_int inner
+  | _ -> None
+
+(** Fold a Hexadecimal.signed_int (Pos | Neg) wrapping a Hexadecimal.uint chain.
+    Constructors: Pos(idx=1), Neg(idx=2). *)
+and try_fold_signed_hex_int expr =
+  match expr with
+  | MLcons (_, cr, [inner]) ->
+    ( match cr with
+    | GlobRef.ConstructRef (_, 1) -> try_fold_hex_uint inner Z.zero
+    | GlobRef.ConstructRef (_, 2) ->
+      Option.map Z.neg (try_fold_hex_uint inner Z.zero)
+    | _ -> None )
+  | MLmagic inner -> try_fold_signed_hex_int inner
+  | _ -> None
+
+(** Fold a Number.signed_int (IntDecimal | IntHexadecimal) into an
+    arbitrary-precision integer.
+    Constructors: IntDecimal(idx=1), IntHexadecimal(idx=2). *)
+and try_fold_num_int expr =
+  match expr with
+  | MLcons (_, cr, [inner]) ->
+    ( match cr with
+    | GlobRef.ConstructRef (_, 1) -> try_fold_signed_decimal_int inner
+    | GlobRef.ConstructRef (_, 2) -> try_fold_signed_hex_int inner
+    | _ -> None )
+  | MLmagic inner -> try_fold_num_int inner
+  | _ -> None
+
 (** Generate C++ expression from ML AST. Main expression compiler - handles
     lambdas, applications, constructors, pattern matching, etc. Monadic
     non-function globals are wrapped in CPPfun_call by the MLglob case below. *)
@@ -1538,11 +1936,46 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     else
       var_expr
   | MLapp (MLmagic t, args) -> gen_expr env (MLapp (t, args))
-  | MLapp (MLglob (r, _), a1 :: l) when is_ret r ->
-    let t = Common.last (a1 :: l) in
-    gen_expr env t
+  | MLapp (MLglob (r, ret_tys), a1 :: l) when is_ret r ->
+    if tctx.itree_mode = Reified then begin
+      (* Reified mode: Ret produces ITree<R>::ret(value). Don't strip it. *)
+      Table.require_itree_header ();
+      let t = Common.last (a1 :: l) in
+      match t with
+      | MLglob (g, _) when is_ghost g ->
+        mk_itree_ret Tvoid []
+      | MLcons (_, cr, []) when Table.is_tt_constructor cr ->
+        mk_itree_ret Tvoid []
+      | _ ->
+        let inner = gen_expr env t in
+        (* Extract R from the monad's type arguments: itree has template "%t1"
+           so the ML type args for Ret are [E, R] where E is typically Tdummy
+           and R is the result type. *)
+        let tvars = get_current_type_vars () in
+        let r_cpp =
+          let non_dummy = filter_value_types ret_tys in
+          match non_dummy with
+          | r_ml :: _ ->
+            convert_ml_type_to_cpp_type env Refset'.empty tvars r_ml
+          | [] -> Tvoid
+        in
+        mk_itree_ret r_cpp [inner]
+    end
+    else begin
+      let t = Common.last (a1 :: l) in
+      gen_expr env t
+    end
   (* | MLapp (MLglob (h, _), a1 :: a2 :: l) when is_hoist h -> gen_expr env
      (MLapp (a1, a2::[])) *)
+  | MLapp (MLglob (r, _), _ :: _ :: _) as a when is_bind r
+      && tctx.itree_mode <> Reified ->
+    (* Sequential mode: bind in expression context (e.g., nested inside
+       another expression). Wrap in IIFE so gen_stmts can sequentialize. *)
+    with_escape_analysis a (fun () ->
+      CPPfun_call
+        ( CPPlambda
+            ([], None, gen_stmts env (fun x -> Sreturn (Some x)) a, false),
+          [] ) )
   | MLapp (MLfix _, _) as a ->
     (* Nested fix application in expression context (e.g., S((fix aux ...) es)).
        Wrap in an IIFE, delegating to gen_stmts which handles MLapp(MLfix
@@ -1559,6 +1992,28 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
        MLapp(MLglob(dcs), [x,f1,f2,l]) lets eta_fun see the complete argument
        list and generate a direct call. *)
     eta_fun env g (inner_args @ outer_args)
+  | MLapp (MLglob (r, _), [arg]) when Table.is_numeral_converter r ->
+    (* Fold Number.uint/signed_int digit chain into a direct integer literal.
+       Tries unsigned (of_num_uint) then signed (of_num_int).
+       Falls through to eta_fun on failure. *)
+    let ind_ref = Option.get (Table.numeral_ind_of_converter r) in
+    ( match Table.get_numeral_info ind_ref with
+    | Some info ->
+      let folded = match try_fold_num_uint arg with
+        | Some _ as r -> r
+        | None -> try_fold_num_int arg
+      in
+      ( match folded with
+      | Some n ->
+        let rendered =
+          Str.global_replace
+            (Str.regexp_string "%n")
+            (Z.to_string n)
+            info.Table.num_fmt
+        in
+        CPPraw rendered
+      | None -> eta_fun env (MLglob (r, [])) [arg] )
+    | None -> eta_fun env (MLglob (r, [])) [arg] )
   | MLapp (f, args) -> eta_fun env f args
   | MLlam _ as a ->
     let args, a = collect_lams a in
@@ -1566,7 +2021,9 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     let args, env = push_vars' lam_params env in
     let saved_env_types = tctx.env_types in
     push_env_types args;
-    let filtered_args = List.filter (fun (_, ty) -> not (isTdummy ty)) args in
+    let filtered_args = List.filter (fun (_, ty) ->
+      not (isTdummy ty) && not (ml_type_is_void ty)
+      && not (tctx.itree_mode = Reified && ml_type_is_unit ty)) args in
     let f =
       with_escape_analysis a (fun () ->
         let tvars = get_current_type_vars () in
@@ -1853,8 +2310,18 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
         (* Body is not a template function ref — wrap in void thunk (old
            behavior). gen_expr env a might produce lambdas with [&] capture
            which fail at static scope, so we use the pre-built capture-free
-           lambda f. *)
-        CPPfun_call (f, []) )
+           lambda f.
+
+           Exception: in reified mode, when the lambda had void-typed params
+           (from monadic result type erasure), keep the lambda as a function
+           object rather than an IIFE. This is needed for itree_bind
+           continuations which expect std::function, not the result of
+           calling the function. *)
+        if tctx.itree_mode = Reified
+           && List.exists (fun (_, ty) -> ml_type_is_unit_or_void ty) lam_params then
+          f
+        else
+          CPPfun_call (f, []) )
     | _ -> f )
   | MLglob (x, tys) when is_inline_custom x ->
     let tvars = get_current_type_vars () in
@@ -2118,6 +2585,8 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       let gen_ctor_arg e =
         match e with
         | MLdummy _ -> CPPraw "std::any{}"
+        | MLapp (f, _) | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
+          wrap_void_call_as_value (gen_expr env e)
         | _ -> gen_expr env e
       in
       let result = gen_ctor_call (List.rev_map gen_ctor_arg ts_updated) in
@@ -2151,7 +2620,11 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       (* Defense-in-depth: same safeguard as for non-record constructors above *)
       let saved_dead = tctx.move_dead_after in
       tctx.move_dead_after <- Escape.IntSet.empty;
-      let result = nstempmod (List.map (gen_expr env) ts) in
+      let result = nstempmod (List.map (fun e ->
+        match e with
+        | MLapp (f, _) | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
+          wrap_void_call_as_value (gen_expr env e)
+        | _ -> gen_expr env e) ts) in
       tctx.move_dead_after <- saved_dead;
       result
     in
@@ -2178,7 +2651,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       | _ -> []
     in
     let non_erased_field_types =
-      List.filter (fun t -> not (isTdummy t)) all_field_types
+      filter_value_types all_field_types
     in
     (* For type classes, use qualified access (::) instead of arrow (->) since
        type class instances are template type parameters, not runtime values *)
@@ -2364,6 +2837,7 @@ and eta_fun env f args =
       ( match find_type_opt r with
       | Some arg_ty -> Table.is_typeclass_type arg_ty
       | None -> false )
+      || ref_returns_skipped r
     | MLrel i ->
       (* Check if the referenced parameter is a type class instance *)
       ( try
@@ -2377,8 +2851,10 @@ and eta_fun env f args =
         with _ -> false )
     | MLapp (MLglob (r, _), _) ->
       (* Parameterized instance application, e.g. numList A H. Check if r's
-         return type (after stripping Tarr) is a typeclass type. *)
-      ref_returns_typeclass r
+         return type (after stripping Tarr) is a typeclass type, or if it
+         returns a skipped type (e.g. ReSum instances where the Class is a
+         ConstRef not recognized by is_typeclass). *)
+      ref_returns_typeclass r || ref_returns_skipped r
     | MLcase (case_ty, _scrutinee, branches) when Array.length branches = 1 ->
       (* Single-branch case = record field projection.  If the projected
          field's type is itself a typeclass, this is a typeclass instance
@@ -2396,7 +2872,7 @@ and eta_fun env f args =
           | Tglob (r, _, _) when Table.is_typeclass r ->
             let field_types = Table.record_field_types r in
             let non_dummy =
-              List.filter (fun t -> not (Mlutil.isTdummy t)) field_types
+              filter_value_types field_types
             in
             ( try
                 let fty = List.nth non_dummy idx in
@@ -2461,14 +2937,23 @@ and eta_fun env f args =
     let rec ml_arg_to_template_type ml_arg =
       match ml_arg with
       | MLglob (r, ts) ->
-        (* Use the instance struct as a type - convert to Tglob *)
-        Tglob (r, build_template_params env [] ts, [])
+        if ref_returns_skipped r then
+          (* Skipped infrastructure (e.g. ReSum_id) — erase to void *)
+          Tvoid
+        else
+          (* Use the instance struct as a type - convert to Tglob *)
+          Tglob (r, build_template_params env [] ts, [])
       | MLrel i ->
         (* The instance is a lambda parameter - look up its name in the env and
            create a Tvar reference to the template parameter *)
         let db, _ = env in
         let name = List.nth db (pred i) in
         Tvar (0, Some name)
+      | MLapp (MLglob (r, _), _) when ref_returns_skipped r ->
+        (* Skipped infrastructure (e.g. ReSum_inl applied to args) — the inner
+           args are complex and cannot be converted to C++ template types.
+           Erase to void since these type args are never referenced. *)
+        Tvoid
       | MLapp (MLglob (r, ts), inner_args) ->
         (* Parameterized instance application, e.g. numList A H. Convert to
            Tglob(r, template_args, []) where template_args are built from the
@@ -2548,12 +3033,34 @@ and eta_fun env f args =
       in
       collect fn_ml_ty_subst
     in
+    (* Non-substituted parameter types: used to detect whether a callback's
+       codomain is a type variable (needs adapter wrapping) vs concrete unit
+       (C++ definition already uses void in MapsTo constraint). *)
+    let fn_param_ml_tys_orig =
+      let rec collect = function
+        | Miniml.Tarr (t, rest) ->
+          (match resolve_tmeta t with Miniml.Tdummy _ -> collect rest | t -> t :: collect rest)
+        | _ -> []
+      in
+      collect fn_ml_ty
+    in
     (* Generate regular args, wrapping with CPPany_cast when the argument
        returns std::any (through an erased record field) but the function's
        parameter type is concrete (not a promoted type var). *)
     let tvars = get_current_type_vars () in
     let args = List.mapi (fun i ml_arg ->
       let expr = gen_expr env ml_arg in
+      (* Wrap void calls as values only when the expression will be used
+         as a value (not in monadic parameter handler which places it in
+         statement position inside a lambda). *)
+      let as_value () =
+        match ml_arg with
+        | MLapp (f, _) when ml_callee_is_void f ->
+          wrap_void_call_as_value expr
+        | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
+          wrap_void_call_as_value expr
+        | _ -> expr
+      in
       match List.nth_opt fn_param_ml_tys i with
       | Some param_ty
         when ml_body_returns_erased_field ml_arg
@@ -2561,8 +3068,75 @@ and eta_fun env f args =
                      | Miniml.Tglob (g, _, _) -> Table.is_promoted_type_var g
                      | _ -> false) ->
         let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars param_ty in
-        CPPany_cast (cpp_ty, expr)
-      | _ -> expr
+        CPPany_cast (cpp_ty, as_value ())
+      (* Monadic parameter (reified mode only): the callee expects
+         [shared_ptr<ITree<R>>].  If the argument already produces a reified
+         tree, pass through as-is; otherwise wrap in [ITree<R>::ret()]. *)
+      | Some param_ty when tctx.itree_mode = Reified
+          && is_monadic_ml_type param_ty
+          && not (is_reified_monadic_expr ml_arg) ->
+        Table.require_itree_header ();
+        let r_ml = extract_itree_result_ml param_ty in
+        let r_cpp = convert_ml_type_to_cpp_type env Refset'.empty tvars r_ml in
+        (* Voidify unit result type in ITree wrapper *)
+        let r_cpp = if ml_type_is_unit r_ml then Tvoid else r_cpp in
+        let itree_ty = mk_itree_type r_cpp in
+        let ret_expr = mk_itree_ret_for_value r_cpp r_ml expr in
+        (* Void/unit effects need their side-effect evaluated before ret(). *)
+        let body =
+          if r_cpp = Tvoid || ml_type_is_unit_or_void r_ml then
+            [Sexpr expr; Sreturn (Some ret_expr)]
+          else
+            [Sreturn (Some ret_expr)]
+        in
+        CPPfun_call (CPPlambda ([], Some itree_ty, body, false), [])
+      (* Void-ified function reference passed as callback to polymorphic
+         HOF where the ORIGINAL (non-substituted) parameter codomain is a
+         type variable (not concrete unit).  The C++ definition uses a
+         template type parameter for MapsTo (e.g. MapsTo<T1, unsigned int>),
+         so the void function needs wrapping to return std::monostate.
+         When the original codomain IS concrete unit, the C++ definition
+         already uses MapsTo<void, ...> which accepts void-returning fns. *)
+      | Some param_ty
+        when (match ml_arg with
+              | MLglob (r, _) | MLmagic (MLglob (r, _)) -> is_void_ified_ref r
+              | _ -> false)
+             && (match param_ty with Miniml.Tarr _ -> true | _ -> false)
+             && ml_type_is_unit (ml_codomain param_ty)
+             && (match List.nth_opt fn_param_ml_tys_orig i with
+                 | Some orig_pt ->
+                   not (ml_type_is_unit (ml_codomain orig_pt))
+                 | None -> false) ->
+        let dom_mls =
+          let rec collect acc = function
+            | Miniml.Tarr (t, rest) ->
+              ( match resolve_tmeta t with
+              | Miniml.Tdummy _ -> collect acc rest
+              | t -> collect (t :: acc) rest )
+            | _ -> List.rev acc
+          in
+          collect [] param_ty
+        in
+        let dom_cpps =
+          List.map
+            (fun t -> convert_ml_type_to_cpp_type env Refset'.empty tvars t)
+            dom_mls
+        in
+        let params =
+          List.mapi
+            (fun j ty ->
+              (Tref (Tmod (TMconst, ty)), Some (Id.of_string (Printf.sprintf "_wa%d" j))))
+            dom_cpps
+        in
+        let args =
+          List.rev_map (fun (_, id) -> CPPvar (Option.get id)) params
+        in
+        let body =
+          [ Sexpr (CPPfun_call (expr, args));
+            Sreturn (Some (mk_tt_expr ())) ]
+        in
+        CPPlambda (List.rev params, None, body, false)
+      | _ -> as_value ()
     ) regular_ml_args in
     let ty = fn_ml_ty_subst in
     let ty = convert_ml_type_to_cpp_type env Refset'.empty tvars ty in
@@ -2666,6 +3240,13 @@ and eta_fun env f args =
        resolution.  No additional template type arguments are needed at
        call sites. *)
     let promoted_type_args = [] in
+    (* Filter out Tvoid entries from typeclass_type_args — these arise from
+       skipped infrastructure (e.g. ReSum instances) that we classified as
+       typeclass args just to remove them from regular_ml_args. They should
+       not become actual template type parameters. *)
+    let typeclass_type_args =
+      List.filter (fun t -> t <> Tvoid) typeclass_type_args
+    in
     let all_type_args =
       typeclass_type_args @ regular_type_args @ promoted_type_args
     in
@@ -2727,7 +3308,9 @@ and eta_fun env f args =
         let dom =
           List.filter
             (fun t ->
-              (not (Table.is_typeclass_type_cpp t)) && not (is_erased_type t) )
+              (not (Table.is_typeclass_type_cpp t))
+              && not (is_erased_type t)
+              && not (is_skipped_cpp_type t) )
             dom
         in
         let missing_args = get_eta_args dom args in
@@ -2740,9 +3323,9 @@ and eta_fun env f args =
            ML-level arity.  The excess args will be chained by [wrap_excess]
            below. *)
         if missing_args == [] || excess_args <> [] then
-          if id_is_typeclass_instance && args = [] then
-            (* Typeclass instance with no regular args — return as a type
-               reference *)
+          if (id_is_typeclass_instance || is_inline_custom id) && args = [] then
+            (* Typeclass instance or zero-arg inline custom — return
+               the glob directly so the template renders as-is. *)
             cglob
           else
             CPPfun_call (cglob, List.rev args)
@@ -2818,8 +3401,22 @@ and eta_fun env f args =
       | _ ->
         if id_is_typeclass_instance && args = [] then
           cglob
+        else if is_inline_custom id && args = [] then
+          (* Zero-arg inline custom: return the glob directly so the
+             template string renders as-is, without an appended (). *)
+          cglob
         else
           CPPfun_call (cglob, args)
+    in
+    (* Collapse identity inline customs (%a0) at AST level.  This prevents
+       unnecessary IIFE wrapping when a void call passes through an identity
+       wrapper (e.g. Ceval) and then appears in statement position. *)
+    let primary_result =
+      match primary_result with
+      | CPPfun_call (CPPglob (_, _, Some ci), [single_arg])
+        when ci.ci_inline = Some "%a0" ->
+        single_arg
+      | _ -> primary_result
     in
     wrap_excess primary_result
   | _ ->
@@ -2835,7 +3432,11 @@ and eta_fun env f args =
           | _ -> true )
         args
     in
-    let args = List.map (fun x -> gen_expr env x) args in
+    let args = List.map (fun x ->
+      match x with
+      | MLapp (f, _) | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
+        wrap_void_call_as_value (gen_expr env x)
+      | _ -> gen_expr env x) args in
     (* Detect over-application: when a local variable's C++ type has fewer
        value-domain arrows than the number of ML args, the call must be split
        into a primary call and a chained application of excess args. Example: [f
@@ -2922,7 +3523,16 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body sname =
   tctx.move_owned_vars <- shifted_outer;
   tctx.move_dead_after <- Escape.IntSet.empty;
   let saved_match_counter = tctx.match_param_counter in
+  let saved_return_type = tctx.current_cpp_return_type in
+  (* Prevent void optimization from leaking into pattern lambdas: when the
+     outer function returns void, gen_stmts generates bare 'return;' for tt,
+     but the pattern lambda returns monostate (not void). Clear the return
+     type to stop this. Don't set to Some ret, as ret may be Ttodo/auto and
+     would break template argument deduction in calls inside the body. *)
+  ( if tctx.current_cpp_return_type = Some Tvoid then
+      tctx.current_cpp_return_type <- None );
   let body_stmts = gen_stmts env (fun x -> Sreturn (Some x)) body in
+  tctx.current_cpp_return_type <- saved_return_type;
   tctx.match_param_counter <- saved_match_counter;
   tctx.move_dead_after <- saved_dead;
   tctx.move_owned_vars <- saved_owned;
@@ -3383,6 +3993,24 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     This produces more readable C++ and avoids interfering with compiler
     optimisations (e.g. copy elision / RVO through a lambda boundary). *)
 
+(** Extract block template info from an inline custom expression.
+    Returns [Some(ref, template, args, tyargs)] if the expression is
+    an inline custom whose template contains [%result]. *)
+and extract_block_template = function
+  | CPPglob (ref, tys, Some ci) -> begin
+    match ci.ci_inline with
+    | Some tmpl when Common.contains_substring tmpl "%result" ->
+      Some (ref, tmpl, [], tys)
+    | _ -> None
+    end
+  | CPPfun_call (CPPglob (ref, tys, Some ci), args) -> begin
+    match ci.ci_inline with
+    | Some tmpl when Common.contains_substring tmpl "%result" ->
+      Some (ref, tmpl, List.rev args, tys)
+    | _ -> None
+    end
+  | _ -> None
+
 (** [inline_iife k expr] checks whether [expr] is an IIFE
     ([CPPfun_call(CPPlambda(\[\], _, body, _), \[\])]).  If so, it replaces
     the final [Sreturn(Some v)] in [body] with [k v] and returns the
@@ -3731,7 +4359,34 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       if x == Dummy then (
         push_env_types [(x_renamed, t)];
         gen_stmts env' k b )
-      else
+      else if tctx.itree_mode = Reified && is_monadic_ml_type t then begin
+        (* Monadic let-binding (reified mode): wrap RHS in an ITree IIFE so
+           the variable has type [shared_ptr<ITree<R>>]. *)
+        Table.require_itree_header ();
+        push_env_types [(x_renamed, t)];
+        let tvars = get_current_type_vars () in
+        let r_ml = extract_itree_result_ml t in
+        let r_cpp = convert_ml_type_to_cpp_type env Refset'.empty tvars r_ml in
+        (* Voidify unit result type in ITree wrapper *)
+        let r_cpp = if ml_type_is_unit r_ml then Tvoid else r_cpp in
+        let reified_ty = mk_itree_type r_cpp in
+        let ret_k v = Sreturn (Some (mk_itree_ret_for_value r_cpp r_ml v)) in
+        let body_stmts = gen_stmts env ret_k a in
+        let iife = CPPfun_call (
+          CPPlambda ([], Some reified_ty, body_stmts, false), []) in
+        (* Shift owned vars and dead-after for the continuation *)
+        let saved_owned_lam = tctx.move_owned_vars in
+        let saved_dead_lam = tctx.move_dead_after in
+        tctx.move_owned_vars <-
+          Escape.IntSet.map (fun i -> i + 1) tctx.move_owned_vars;
+        tctx.move_dead_after <-
+          Escape.IntSet.map (fun i -> i + 1) tctx.move_dead_after;
+        let cont = gen_stmts env' k b in
+        tctx.move_owned_vars <- saved_owned_lam;
+        tctx.move_dead_after <- saved_dead_lam;
+        (* Generate the assignment with reified type *)
+        [Sasgn (x_renamed, Some reified_ty, iife)] @ cont
+      end else
         let afun v = Sasgn (x_renamed, None, v) in
         let asgn = gen_stmts env afun a in
         (* Push env_types AFTER generating the value expression [a]. *)
@@ -4045,6 +4700,31 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     if x == Dummy then (
       push_env_types [(x_renamed, t)];
       gen_stmts env' k b )
+    else if ml_type_is_unit t then (
+      (* Unit-typed let bindings: the RHS may call a void-ified function,
+         so we can't assign its result to a variable.  Execute the RHS for
+         side effects, then declare the variable as Unit::e_TT (its only
+         possible value) so the body can still reference it. *)
+      push_env_types [(x_renamed, t)];
+      let rhs = gen_stmts env (fun e -> Sexpr e) a in
+      (* Drop trivially pure RHS (e.g. Unit::e_TT from tt, variable refs) *)
+      let rhs = List.filter (fun s ->
+        match s with
+        | Sexpr (CPPenum_val _) -> false
+        | Sexpr (CPPvar _) -> false
+        | _ -> true) rhs in
+      (* Generate the body first, then check if the variable is actually
+         referenced in the generated C++ (not just the ML AST, since
+         optimizations like unit-match elimination may drop references). *)
+      let body = gen_stmts env' k b in
+      let decl =
+        if stmts_reference_var x_renamed body then
+          let tvars = get_current_type_vars () in
+          let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars t in
+          [Sasgn (x_renamed, Some cpp_ty, mk_tt_expr ())]
+        else []
+      in
+      rhs @ decl @ body )
     else
       let depth = tctx.current_letin_depth in
       tctx.current_letin_depth <- depth + 1;
@@ -4108,33 +4788,39 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       let tvars = get_current_type_vars () in
       let result =
         match asgn with
-        | [Sasgn (_, None, e)] ->
-          let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars t in
-          (* When the type contains Tany (from erased carrier projections) but
-             the generated expression is a lambda with concrete types, derive
-             the std::function type from the lambda's parameter and return
-             types. *)
-          let cpp_ty =
-            match (cpp_ty, e) with
-            | Tfun (_, _), CPPlambda (params, Some ret_ty, _, _)
-              when has_tany_in_type cpp_ty ->
-              let strip_tmod = function
-                | Tmod (_, t) -> t
-                | t -> t
-              in
-              let param_tys =
-                List.rev_map (fun (ty, _) -> strip_tmod ty) params
-              in
-              Tfun (param_tys, ret_ty)
-            | _ -> cpp_ty
-          in
-          let cpp_ty = if use_unique then shared_to_unique cpp_ty else cpp_ty in
-          let e = if use_unique then shared_expr_to_unique e else e in
-          Sasgn (x_renamed, Some cpp_ty, e) :: gen_stmts env' k b
-        | _ ->
-          let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars t in
-          let cpp_ty = if use_unique then shared_to_unique cpp_ty else cpp_ty in
-          (Sdecl (x_renamed, cpp_ty) :: asgn) @ gen_stmts env' k b
+          | [Sasgn (_, None, e)] ->
+            let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars t in
+            (* When the type contains Tany (from erased carrier projections) but
+               the generated expression is a lambda with concrete types, derive
+               the std::function type from the lambda's parameter and return
+               types. *)
+            let cpp_ty =
+              match (cpp_ty, e) with
+              | Tfun (_, _), CPPlambda (params, Some ret_ty, _, _)
+                when has_tany_in_type cpp_ty ->
+                let strip_tmod = function
+                  | Tmod (_, t) -> t
+                  | t -> t
+                in
+                let param_tys =
+                  List.rev_map (fun (ty, _) -> strip_tmod ty) params
+                in
+                Tfun (param_tys, ret_ty)
+              | _ -> cpp_ty
+            in
+            let cpp_ty = if use_unique then shared_to_unique cpp_ty else cpp_ty in
+            let e = if use_unique then shared_expr_to_unique e else e in
+            begin match extract_block_template e with
+            | Some (ref, tmpl, args, tys) ->
+              Sblock_custom (ref, tmpl, x_renamed, cpp_ty, args, tys)
+              :: gen_stmts env' k b
+            | None ->
+              Sasgn (x_renamed, Some cpp_ty, e) :: gen_stmts env' k b
+            end
+          | _ ->
+            let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars t in
+            let cpp_ty = if use_unique then shared_to_unique cpp_ty else cpp_ty in
+            (Sdecl (x_renamed, cpp_ty) :: asgn) @ gen_stmts env' k b
       in
       tctx.move_owned_vars <- saved_owned;
       result
@@ -4439,9 +5125,18 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
   (* | MLapp (MLglob (h, _), a1 :: a2 :: l) when is_hoist h -> gen_stmts env k
      (MLapp (a1, a2::[])) *)
   | MLapp (MLglob (r, bind_tys), a1 :: a2 :: l) when is_bind r ->
-    let a, f = Common.last_two (a1 :: a2 :: l) in
-    let a = gen_expr env a in
-    let ids', f = collect_lams f in
+    (* Reified mode: bind is a real function call, not desugared. *)
+    if tctx.itree_mode = Reified then
+      let saved_dead = tctx.move_dead_after in
+      let e = gen_tail_expr env ast in
+      let result = inline_iife k e in
+      tctx.move_dead_after <- saved_dead;
+      result
+    else begin
+      (* Sequential mode: desugar bind into sequential statements. *)
+      let a_ml, f = Common.last_two (a1 :: a2 :: l) in
+      let a = gen_expr env a_ml in
+      let ids', f = collect_lams f in
     (* Resolve metas in continuation parameter types using bind's type
        arguments. bind has type forall A B, IO A -> (A -> IO B) -> IO B. The
        first type argument is A, which is the type of the continuation
@@ -4449,7 +5144,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
        Tdummy entries in bind_tys — these come from failed type extractions in
        make_tyargs (e.g., HKT type constructors that can't be extracted).
        Unifying a meta with Tdummy would not resolve it usefully. *)
-    let non_dummy_bind_tys = List.filter (fun t -> not (isTdummy t)) bind_tys in
+    let non_dummy_bind_tys = filter_value_types bind_tys in
     let () =
       match non_dummy_bind_tys with
       | elem_ty :: _ -> List.iter (fun (_, ty) -> try_mgu ty elem_ty) ids'
@@ -4462,17 +5157,82 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     in
     push_env_types ids;
     ( match ids with
-    | (x, ty) :: _ ->
+    | (x, ml_ty) :: _ ->
       let tvars = get_current_type_vars () in
-      let ty = convert_ml_type_to_cpp_type env Refset'.empty tvars ty in
-      if ty == Tvoid || ty == Tunknown then
-        Sexpr a :: gen_stmts env k f
-      else
-        Sasgn (x, Some ty, a) :: gen_stmts env k f
-    | _ -> Sexpr a :: gen_stmts env k f )
+      let ty = convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty in
+      if ty == Tvoid || ty == Tunknown || ml_type_is_unit ml_ty then
+        (* Unit/void bind result: execute the action for side effects,
+           then declare the variable as Unit::e_TT so the continuation
+           can reference it if needed. *)
+        let action_is_pure_ret =
+          match a_ml with
+          | MLapp (MLglob (r, _), _) when is_ret r -> true
+          | _ -> false
+        in
+        let side_effect =
+          match a with
+          | CPPenum_val _ -> []
+          | _ when action_is_pure_ret -> []
+          | _ -> [Sexpr a]
+        in
+        (* Generate the continuation first, then check if the variable is
+           actually referenced in the generated C++ (unit-match elimination
+           and Ret-in-void optimization may drop ML-level references). *)
+        let body = gen_stmts env k f in
+        let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty in
+        let decl =
+          if not (stmts_reference_var x body) then []
+          else if ml_type_is_unit ml_ty && not (is_cpp_unit_type cpp_ty) then
+            []
+          else if ml_type_is_unit ml_ty then
+            [Sasgn (x, Some cpp_ty, mk_tt_expr ())]
+          else
+            []
+        in
+        side_effect @ decl @ body
+      else begin
+        match extract_block_template a with
+        | Some (ref, tmpl, args, tys) ->
+          Sblock_custom (ref, tmpl, x, ty, args, tys)
+          :: gen_stmts env k f
+        | None ->
+          Sasgn (x, Some ty, a) :: gen_stmts env k f
+      end
+    | _ ->
+      (* No lambda parameters (eta-reduced continuation like bare Ret).
+         Execute the action for side effects, then run the continuation. *)
+      let side_effect =
+        match a with CPPenum_val _ -> [] | _ -> [Sexpr a]
+      in
+      ( match f with
+      | MLglob (r, _) when is_ret r ->
+        (* Eta-reduced Ret: bind action Ret = action (monad right identity).
+           In sequential mode, just execute the action and return. *)
+        if tctx.current_cpp_return_type = Some Tvoid then
+          side_effect @ [Sreturn None]
+        else
+          [k a]
+      | _ ->
+        side_effect @ gen_stmts env k f ) )
+    end
   | MLapp (MLglob (r, _), a1 :: l) when is_ret r ->
-    let t = Common.last (a1 :: l) in
-    [k (gen_expr env t)]
+    if tctx.itree_mode = Reified then begin
+      (* Reified mode: Ret is a constructor call, not desugared. *)
+      let saved_dead = tctx.move_dead_after in
+      let e = gen_tail_expr env ast in
+      let result = inline_iife k e in
+      tctx.move_dead_after <- saved_dead;
+      result
+    end
+    else begin
+      (* Sequential mode: eliminate Ret, just use the value. *)
+      let t = Common.last (a1 :: l) in
+      if tctx.current_cpp_return_type = Some Tvoid then
+        (* Void-returning function: discard the value and return. *)
+        [Sreturn None]
+      else
+        [k (gen_expr env t)]
+    end
   | MLcase (typ, t, pv) when is_custom_match pv ->
     (* Set up dead-after for owned variables at their last use, same as the
        default tail-position case below. Without this, unique_ptr variables
@@ -4490,7 +5250,25 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     let result = [gen_custom_cpp_case env k typ t pv] in
     tctx.move_dead_after <- saved_dead;
     result
-  | MLglob (r, _) when is_ghost r -> [Sreturn None]
+  | MLcons (_, r, []) when Table.is_tt_constructor r
+      && tctx.current_cpp_return_type = Some Tvoid ->
+    (* tt (unit constructor) in tail position of a void-returning function *)
+    if tctx.itree_mode = Reified then begin
+      Table.require_itree_header ();
+      [k (mk_itree_ret Tvoid [])]
+    end
+    else
+      [Sreturn None]
+  | MLglob (r, _) when is_ghost r ->
+    if tctx.itree_mode = Reified then begin
+      (* Reified mode: ghost (void value) at tail position must produce
+         ITree<void>::ret() rather than bare return, since the function
+         returns shared_ptr<ITree<void>>. *)
+      Table.require_itree_header ();
+      [k (mk_itree_ret Tvoid [])]
+    end
+    else
+      [Sreturn None]
   | MLexn msg ->
     (* Generate throw statement for unreachable/absurd cases (e.g., empty
        match) *)
@@ -4572,21 +5350,54 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
            (List.combine renamed_ids_fwd ids) );
       asgns @ gen_stmts env' k body
   | t ->
-    (* Tail position: all owned variables used here are at their last use. Set
-       move_dead_after to include all owned variables that occur exactly once in
-       t. Suppress when processing a let-binding RHS to avoid use-after-move. *)
+    (* Tail position: generate expression with dead-after tracking.
+       No deref_reified needed: in sequential mode, monadic variables are
+       direct values (bind desugars to let-binding); in reified mode,
+       they are trees returned as-is. *)
     let saved_dead = tctx.move_dead_after in
-    ( if not tctx.move_suppress_tail then
-        let tail_dead =
-          Escape.IntSet.filter
-            (fun i -> Escape.nb_occur_match i t = 1)
-            tctx.move_owned_vars
-        in
-        tctx.move_dead_after <-
-          Escape.IntSet.union tctx.move_dead_after tail_dead );
-    let result = inline_iife k (gen_expr env t) in
-    tctx.move_dead_after <- saved_dead;
-    result
+    let is_void_tail = match t with
+      | MLapp (f, _) | MLmagic (MLapp (f, _)) -> ml_callee_is_void f
+      | _ -> false
+    in
+    if is_void_tail then begin
+      let e = gen_tail_expr env t in
+      tctx.move_dead_after <- saved_dead;
+      if tctx.current_cpp_return_type = Some Tvoid then
+        [Sexpr e; Sreturn None]
+      else
+        match k (CPPint 0) with
+        | Sexpr _ ->
+          (* Side-effect-only continuation (e.g. from unit let handler).
+             The void call provides the side effect; the caller handles
+             the variable declaration separately.  No value needed. *)
+          [Sexpr e]
+        | _ ->
+          [Sexpr e] @ inline_iife k (mk_tt_expr ())
+    end
+    else begin
+      let e = gen_tail_expr env t in
+      let result = inline_iife k e in
+      tctx.move_dead_after <- saved_dead;
+      result
+    end
+
+(** Generate a C++ expression for [t] in tail position.
+    Marks owned variables that occur exactly once as dead-after (for
+    last-use move semantics).  Callers are responsible for saving and
+    restoring [move_dead_after].
+
+    Used by the default tail case and by reified-mode bind/ret handlers
+    (which bypass monadic desugaring and treat bind/Ret as plain calls). *)
+and gen_tail_expr env t =
+  ( if not tctx.move_suppress_tail then
+      let tail_dead =
+        Escape.IntSet.filter
+          (fun i -> Escape.nb_occur_match i t = 1)
+          tctx.move_owned_vars
+      in
+      tctx.move_dead_after <-
+        Escape.IntSet.union tctx.move_dead_after tail_dead );
+  gen_expr env t
 
 (** Generate a fixpoint (recursive function) definition. Handles both single and
     mutually recursive functions. [all_fix_ids] contains names of all mutual
@@ -4721,7 +5532,7 @@ let count_keep_params sign =
     [gen_record_cpp] and [gen_typeclass_cpp] need the non-erased types only,
     because [select_fields] already drops the corresponding field names. *)
 let non_dummy_constructor_types ind =
-  List.filter (fun t -> not (Mlutil.isTdummy t)) ind.ip_types.(0)
+  filter_value_types ind.ip_types.(0)
 
 (** Generate C++ struct for a record type.
 
@@ -4877,6 +5688,7 @@ let gen_typeclass_cpp name fields ind =
     | Tref t -> Tref (subst_promoted_in_cpp_type t)
     | Tvariant ts -> Tvariant (List.map subst_promoted_in_cpp_type ts)
     | Tid (id, ts) -> Tid (id, List.map subst_promoted_in_cpp_type ts)
+    | Tid_external (id, ts) -> Tid_external (id, List.map subst_promoted_in_cpp_type ts)
     | Tmod (m, t) -> Tmod (m, subst_promoted_in_cpp_type t)
     | t -> t
   in
@@ -5708,6 +6520,45 @@ let is_typeclass_instance (_body : ml_ast) (ty : ml_type) : bool =
   | Tglob (class_ref, _, _) -> Table.is_typeclass class_ref
   | _ -> false
 
+(** Parse a custom template string to find which [%tN] positions are
+    referenced.  Returns the set of 0-based indices that appear in the
+    template.  E.g. ["std::shared_ptr<ITree<%t1>>"] returns [{1}]. *)
+let template_referenced_positions template_str =
+  let len = String.length template_str in
+  let rec scan i acc =
+    if i > len - 3 then acc
+    else if template_str.[i] = '%' && template_str.[i + 1] = 't' then
+      let digit_start = i + 2 in
+      let rec find_digit_end j =
+        if j < len && template_str.[j] >= '0' && template_str.[j] <= '9' then
+          find_digit_end (j + 1)
+        else j
+      in
+      let digit_end = find_digit_end digit_start in
+      if digit_end > digit_start then
+        let idx =
+          int_of_string
+            (String.sub template_str digit_start (digit_end - digit_start))
+        in
+        scan digit_end (IntSet.add idx acc)
+      else scan (i + 1) acc
+    else scan (i + 1) acc
+  in
+  scan 0 IntSet.empty
+
+(** For a custom/monad GlobRef, return the set of type-arg positions that
+    appear in its template string.  Returns [None] if no custom template
+    exists or the template is empty (all positions are implicitly
+    referenced). *)
+let custom_referenced_positions_opt g =
+  let check_template = function
+    | Some s when s <> "" -> Some (template_referenced_positions s)
+    | _ -> None
+  in
+  match check_template (Table.get_monad_template_opt g) with
+  | Some _ as r -> r
+  | None -> check_template (Table.find_custom_opt g)
+
 (** Collect (index, name) pairs for all Tvar occurrences, sorted by index *)
 let get_tvars_indexed t =
   let get_name i n =
@@ -5739,6 +6590,36 @@ let get_tvars_indexed t =
   in
   List.sort (fun (x, _) (y, _) -> Int.compare x y) (aux [] t)
 
+(** Like [get_tvar_indices] but only collects tvars that will actually
+    appear in the rendered C++ type.  For custom types with a template
+    (e.g. [std::shared_ptr<ITree<%t1>>]), only type-arg positions
+    referenced by the template are visited.  Unreferenced positions hold
+    phantom tvars (e.g. E in [itree E R] where the template only uses
+    [%t1] = R) that the C++ compiler cannot deduce. *)
+let get_rendered_tvar_indices t =
+  let rec aux l = function
+    | Tvar (1000, _) -> l
+    | Tvar (i, _) ->
+      if List.mem i l then l else i :: l
+    | Tglob (g, tys, _) ->
+      let tys_to_visit =
+        match custom_referenced_positions_opt g with
+        | Some referenced ->
+          List.filteri (fun i _ -> IntSet.mem i referenced) tys
+        | None -> tys
+      in
+      List.fold_left aux l tys_to_visit
+    | Tfun (tys, ty) -> List.fold_left aux l (ty :: tys)
+    | Tmod (_, ty) -> aux l ty
+    | Tnamespace (_, ty) -> aux l ty
+    | Tref ty -> aux l ty
+    | Tvariant tys -> List.fold_left aux l tys
+    | Tshared_ptr ty -> aux l ty
+    | Tunique_ptr ty -> aux l ty
+    | _ -> l
+  in
+  aux [] t
+
 (** Tvar names, sorted by index *)
 let get_tvars t = List.map snd (get_tvars_indexed t)
 
@@ -5764,9 +6645,35 @@ let primary_tvar_indices dom cod =
   in
   List.fold_left
     (fun acc t ->
-      List.fold_left (fun a i -> IntSet.add i a) acc (get_tvar_indices t) )
+      List.fold_left (fun a i -> IntSet.add i a) acc
+        (get_rendered_tvar_indices t) )
     IntSet.empty
     (cod :: non_fun_dom)
+
+(** Build template parameter list with phantom detection.
+
+    Type variables that appear in the codomain or non-function domain params
+    (i.e. {!primary_tvar_indices}) are emitted as plain [typename T].  All
+    others — phantom tvars from erased HKT positions or custom-template
+    positions that the C++ compiler cannot deduce — are emitted with a
+    [void] default ([typename T = void]).
+
+    We never {i remove} tvars from the list: only default them.  Removing
+    would shift the de Bruijn index-to-name mapping used throughout the
+    pipeline (see {!convert_ml_type_to_cpp_type}). *)
+let phantom_aware_temps cty tvars =
+  match cty with
+  | Tfun (dom, cod) ->
+    let tvars_indexed = get_tvars_indexed cty in
+    let primary = primary_tvar_indices dom cod in
+    List.map
+      (fun (i, id) ->
+        if IntSet.mem i primary then
+          (TTtypename, id)
+        else
+          (TTtypename_default Tvoid, id) )
+      tvars_indexed
+  | _ -> List.map (fun id -> (TTtypename, id)) tvars
 
 (** Substitute [CPPglob id] with [repl] in expressions and statements. Uses
     generic AST visitors for structural recursion. *)
@@ -5910,12 +6817,6 @@ let detect_cps_params (self_ref : GlobRef.t) (n_params : int) (body : ml_ast) :
   walk body;
   Hashtbl.fold (fun k _ acc -> k :: acc) cps_set []
 
-(** Extract the codomain (final return type) of an ML type by stripping
-    arrows. *)
-let rec ml_codomain = function
-  | Miniml.Tarr (_, t2) -> ml_codomain t2
-  | t -> t
-
 (** Generate a C++ function definition from an ML function body.
 
     @param n     the global reference for the function being defined
@@ -5929,16 +6830,41 @@ let gen_dfun n b cty ty temps =
   let dom, cod =
     match cty with Tfun (d, c) -> (d, c) | t -> ([ Tvoid ], t)
   in
+  (* Suppress __attribute__((pure)) for functions whose ML return type is
+     monadic — these perform side effects even though the C++ return type
+     may look pure after type erasure. *)
+  let no_pure = is_monadic_ml_type (ml_codomain ty) in
+  (* Determine itree extraction mode from the monad template string.
+     Reified mode preserves [itree E R] as [shared_ptr<ITree<R>>]; sequential
+     mode erases to [R].  We detect reified by checking whether the monad
+     template contains "ITree" (e.g. ["std::shared_ptr<ITree<%t1>>"]).
+     Must be set BEFORE void-ification so the mode is available. *)
+  let saved_mode = tctx.itree_mode in
+  ( match extract_monad_from_codomain ty with
+  | Some monad_ref ->
+    tctx.itree_mode <-
+      (if is_monad_reified monad_ref then Reified else Sequential)
+  | None -> () );
+  (* Void-ify unit codomain: unit as return type maps to C++ void.
+     Check the ML result type (unwrapping monad if present) to determine
+     if the function returns unit. Then recursively replace the unit enum
+     with Tvoid in the C++ codomain type.
+     - Sequential mode: Unit → void directly (the monad wrapper is erased,
+       so the C++ function literally returns void)
+     - Reified mode: Tglob(itree, [E; Unit]) → Tglob(itree, [E; void])
+       (printed as shared_ptr<ITree<void>> via monad template) *)
+  let unit_void =
+    (match ty with Miniml.Tarr _ -> true
+     | Miniml.Tglob (r, _, _) when Table.is_monad r -> true | _ -> false)
+    && ml_type_is_unit (ml_result_type ty)
+  in
+  let cod = apply_unit_void unit_void (tctx.itree_mode = Reified) cod in
   let rec get_dom l ty =
     match ty with
     | Tarr (t1, t2) -> get_dom (t1 :: l) t2
     | _ -> l
   in
   let mldom = get_dom [] ty in
-  (* Suppress __attribute__((pure)) for functions whose ML return type is
-     monadic — these perform side effects even though the C++ return type
-     may look pure after type erasure. *)
-  let no_pure = is_monadic_ml_type (ml_codomain ty) in
   (* Limit lambda collection to the number of type arrows. When a type alias
      like [State S A = S -> A * S] is used as a return type, the extraction may
      fully uncurry the body (producing more lambdas than the type has arrows),
@@ -6182,7 +7108,7 @@ let gen_dfun n b cty ty temps =
           let fields = Table.get_record_fields class_ref in
           let field_types = Table.record_field_types class_ref in
           let non_dummy =
-            List.filter (fun t -> not (Mlutil.isTdummy t)) field_types
+            filter_value_types field_types
           in
           if List.length fields = List.length non_dummy then
             List.combine fields non_dummy
@@ -6241,6 +7167,7 @@ let gen_dfun n b cty ty temps =
     | Tqualified (b, id) -> Tqualified (resolve_promoted_in_type b, id)
     | Tnamespace (r, t) -> Tnamespace (r, resolve_promoted_in_type t)
     | Tid (id, ts) -> Tid (id, List.map resolve_promoted_in_type ts)
+    | Tid_external (id, ts) -> Tid_external (id, List.map resolve_promoted_in_type ts)
     | Tptr t -> Tptr (resolve_promoted_in_type t)
     | _ -> ty
   in
@@ -6303,6 +7230,8 @@ let gen_dfun n b cty ty temps =
             resolve_promoted_in_type cpp_ty
           else cpp_ty
         in
+        (* Reify monadic parameter types: itree E R → shared_ptr<ITree<R>> *)
+        let cpp_ty = reify_monadic_param_type ty cpp_ty in
         let wrapped = wrap_param_by_ownership ~is_owned:owned cpp_ty in
         (x, wrapped) )
       ids_with_owned
@@ -6360,6 +7289,7 @@ let gen_dfun n b cty ty temps =
           if has_undeclared || has_hkt_erasure (Tfun (fdom, fcod)) then
             Some (x, TTtypename, fun_tparam_id i)
           else
+            let fcod = if is_cpp_unit_type fcod then Tvoid else fcod in
             Some (x, TTfun (fdom, fcod), fun_tparam_id i)
         | _ -> None )
       (List.mapi (fun i (x, ty) -> (x, ty, i)) (List.rev ids))
@@ -6461,6 +7391,17 @@ let gen_dfun n b cty ty temps =
       in
       let thunk = CPPlambda ([], Some ret_cpp, [Sreturn (Some x)], true) in
       Sreturn (Some (CPPfun_call (lazy_factory, [thunk])))
+    else if cod = Tvoid then
+      (* void function: execute expression for side effects, then return.
+         Some tail expressions (like writeTVar) have side effects that must
+         not be discarded. Skip pure expressions (variables, enum values,
+         inline-custom literals like std::monostate{}) to avoid dead-code
+         warnings. *)
+      ( match x with
+      | CPPenum_val _ | CPPvar _ | CPPint _ | CPPfloat _ | CPPraw _ ->
+        Sreturn None
+      | CPPglob (_, _, Some ci) when ci.ci_inline <> None -> Sreturn None
+      | _ -> Sblock [Sexpr x; Sreturn None] )
     else
       Sreturn (Some x)
   in
@@ -6596,6 +7537,34 @@ let gen_dfun n b cty ty temps =
   tctx.current_cpp_return_type <- saved_return_type;
   tctx.current_outer_function_name <- saved_outer_name;
   tctx.promoted_var_map <- saved_promoted_var_map;
+  (* Check if this is a main function with monadic return type - if so,
+     rename to _main and track for wrapper generation *)
+  let inner = match n with
+    | GlobRef.ConstRef c ->
+      let label_str = Label.to_string (Constant.label c) in
+      if label_str = "main" && is_monadic_ml_type (ml_codomain ty) then begin
+        (* Rename to _main *)
+        let new_label = Label.of_id (Id.of_string "_main") in
+        let new_n = GlobRef.ConstRef (Constant.make2 (Constant.modpath c) new_label) in
+        (* Track for wrapper generation — include the struct qualifier *)
+        let struct_name =
+          let mp = Constant.modpath c in
+          match mp with
+          | ModPath.MPdot (_, l) -> Some (Id.of_string (Label.to_string l))
+          | _ -> None
+        in
+        Table.set_main_function (Id.of_string "_main") (ml_codomain ty) struct_name;
+        (* Update the declaration with new name *)
+        match inner with
+        | Dfundef (_, cod, params, body, flags) ->
+          Dfundef ([(new_n, [])], cod, params, body, flags)
+        | d -> d
+      end else
+        inner
+    | _ -> inner
+  in
+  (* Restore saved itree mode *)
+  tctx.itree_mode <- saved_mode;
   match temps with
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)
@@ -6625,6 +7594,8 @@ let gen_sfun n b dom cod temps =
     List.map
       (fun (x, ty, owned) ->
         let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty [] ty in
+        (* Reify monadic parameter types: itree E R → shared_ptr<ITree<R>> *)
+        let cpp_ty = reify_monadic_param_type ty cpp_ty in
         let wrapped = wrap_param_by_ownership ~is_owned:owned cpp_ty in
         (Some x, wrapped) )
       ids_with_owned
@@ -6701,7 +7672,7 @@ let rec expand_tc_typed_carriers
   let fields = Table.get_record_fields class_ref in
   let field_types = Table.record_field_types class_ref in
   let non_dummy =
-    List.filter (fun t -> not (Mlutil.isTdummy t)) field_types
+    filter_value_types field_types
   in
   if List.length fields <> List.length non_dummy then
     carrier_refs
@@ -6827,7 +7798,7 @@ let rewrite_typeclass_projection_type (n : GlobRef.t) (ty : ml_type) : ml_type =
     let proj_map = erased_proj_tvar_map class_ref in
     if proj_map <> [] then (* Check if n is a projection of this typeclass *)
       let non_dummy_types =
-        List.filter (fun t -> not (Mlutil.isTdummy t)) field_types
+        filter_value_types field_types
       in
       let non_dummy_fields_types =
         if List.length fields = List.length non_dummy_types then
@@ -6861,32 +7832,63 @@ let get_erased_proj_map_from_type (ty : ml_type) : (GlobRef.t * int) list =
 
 (** Generate C++ declaration from ML definition (main entry point) *)
 let gen_decl n b ty =
+  (* Set itree extraction mode early — before type conversion — so that
+     reify_monadic_param_type (called inside convert_ml_type_to_cpp_type)
+     can correctly voidify unit result types in ITree parameters. *)
+  let saved_mode = tctx.itree_mode in
+  ( match extract_monad_from_codomain ty with
+  | Some monad_ref ->
+    tctx.itree_mode <-
+      (if is_monad_reified monad_ref then Reified else Sequential)
+  | None -> () );
   let cty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
   let tvars = get_tvars cty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
-  match cty with
-  | Tfun _ ->
-    let f, env = gen_dfun n b cty ty temps in
-    (f, env, tvars)
-  | _ ->
-  match b with
-  | MLaxiom _ ->
-    (* Axiom values become zero-arg functions that throw std::logic_error when
-       called. This avoids throwing during static initialization (which
-       terminates the program before main). *)
-    let body_expr = gen_expr (empty_env ()) b in
-    let inner = Dfundef ([(n, [])], cty, [], [Sreturn (Some body_expr)], false) in
-    ( match temps with
-    | [] -> (inner, empty_env (), tvars)
-    | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
-  | _ ->
-    let saved_return_type = tctx.current_cpp_return_type in
-    tctx.current_cpp_return_type <- Some cty;
-    let inner = Dasgn (n, cty, gen_expr (empty_env ()) b) in
-    tctx.current_cpp_return_type <- saved_return_type;
-    ( match temps with
-    | [] -> (inner, empty_env (), tvars)
-    | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
+  let result =
+    match cty with
+    | Tfun _ ->
+      let f, env = gen_dfun n b cty ty temps in
+      (f, env, tvars)
+    | _ ->
+    match b with
+    | MLaxiom _ ->
+      (* Axiom values become zero-arg functions that throw std::logic_error when
+         called. This avoids throwing during static initialization (which
+         terminates the program before main). *)
+      let body_expr = gen_expr (empty_env ()) b in
+      let inner = Dfundef ([(n, [])], cty, [], [Sreturn (Some body_expr)], false) in
+      ( match temps with
+      | [] -> (inner, empty_env (), tvars)
+      | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
+    | _ ->
+      let saved_return_type = tctx.current_cpp_return_type in
+      tctx.current_cpp_return_type <- Some cty;
+      let body_expr = gen_expr (empty_env ()) b in
+      tctx.current_cpp_return_type <- saved_return_type;
+      (* When a unit-typed constant's body calls a void-ified function,
+         the call produces no value.  Wrap in an IIFE that executes the
+         body for side effects and returns Unit::e_TT. *)
+      let body_expr =
+        if is_cpp_unit_type cty then
+          match body_expr with
+          | CPPenum_val _ -> body_expr  (* already a literal *)
+          | CPPglob (_, _, Some ci) when ci.ci_inline <> None ->
+            body_expr  (* inline custom literal (e.g. std::monostate{}) *)
+          | _ ->
+            CPPfun_call (
+              CPPlambda ([], None,
+                [Sexpr body_expr; Sreturn (Some (mk_tt_expr ()))],
+                false),
+              [])
+        else body_expr
+      in
+      let inner = Dasgn (n, cty, body_expr) in
+      ( match temps with
+      | [] -> (inner, empty_env (), tvars)
+      | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
+  in
+  tctx.itree_mode <- saved_mode;
+  result
 
 (** Generate C++ declaration with pretty-printing adjustments *)
 let gen_decl_for_pp n b ty =
@@ -6906,74 +7908,16 @@ let gen_decl_for_pp n b ty =
   let b = rewrite_ml_ast_types carrier_refs b in
   let cty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
   let tvars = get_tvars cty in
-  (* Filter out HKT-phantom tvars: tvars that appear ONLY in function-typed
-     domain params that contain erased HKT types (Tany or dummy_type from Tdummy
-     Ktype). These cannot be deduced by the C++ compiler and must not appear as
-     template parameters.
-
-     Background: gen_dfun converts every function-typed param (e.g., f : A -> B)
-     into an auto-deduced forwarding parameter (e.g., F1 &&f). This means the
-     original Rocq-level type variables that appear ONLY inside such function
-     params (like A and B in hk_map's f : A -> B) are hidden from C++ template
-     argument deduction — they don't appear anywhere in the generated C++
-     signature. We call these "phantom" tvars.
-
-     primary_tvar_indices collects tvars from the codomain and
-     non-function-typed domain params — positions where C++ CAN deduce the type.
-     We intentionally do NOT add tvars from clean (non-erased) function params,
-     because those are also rendered as auto-deduced Fn params by gen_dfun.
-
-     The fallback (erased_fun_dom = []) handles functions with no HKT erasure at
-     all (e.g., compose): when there are no erased function params, all tvars
-     are kept unconditionally, ensuring MapsTo constraints can reference
-     them. *)
-  let tvars =
-    match cty with
-    | Tfun (dom, cod) ->
-      let tvars_indexed = get_tvars_indexed cty in
-      let primary = primary_tvar_indices dom cod in
-      let fun_dom =
-        List.filter
-          (fun t ->
-            match t with
-            | Tfun _ -> true
-            | _ -> false )
-          dom
-      in
-      let erased_fun_dom = List.filter has_hkt_erasure fun_dom in
-      (* Keep tvars that appear in primary (deducible) positions. If there are
-         no erased function params at all, keep everything — this handles
-         ordinary polymorphic functions that have no HKT erasure. *)
-      List.filter_map
-        (fun (i, id) ->
-          if IntSet.mem i primary then
-            Some id
-          else if erased_fun_dom = [] then
-            Some id
-          else
-            None )
-        tvars_indexed
-    | _ -> tvars
-  in
   (* Count typeclass-typed parameters in the ML domain — these become template
      params inside gen_dfun but aren't reflected in tvars (which comes from the
      C++ type). We need tvars to be non-empty when typeclass params exist so
      callers use the full Dtemplate definition. *)
   let tc_param_ids =
     match ty with
-    | Tarr _ ->
-      let rec collect_tc_ids acc i = function
-        | Miniml.Tarr (t1, t2) ->
-          if Table.is_typeclass_type t1 then
-            collect_tc_ids (tc_instance_id i :: acc) (i + 1) t2
-          else
-            collect_tc_ids acc i t2
-        | _ -> List.rev acc
-      in
-      collect_tc_ids [] 0 ty
+    | Tarr _ -> collect_typeclass_param_ids ty
     | _ -> []
   in
-  let temps = List.map (fun id -> (TTtypename, id)) tvars in
+  let temps = phantom_aware_temps cty tvars in
   match cty with
   | Tfun (dom, _) ->
     let f, e = gen_dfun n b cty ty temps in
@@ -7017,23 +7961,14 @@ let gen_dfun_def n b ty =
   let b = resolve_body_tvars b ty in
   let cty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
   let tvars = get_tvars cty in
-  let temps = List.map (fun id -> (TTtypename, id)) tvars in
+  let temps = phantom_aware_temps cty tvars in
   (* Count typeclass-typed parameters in the ML domain — these become template
      params inside gen_dfun but aren't reflected in tvars (which comes from the
      C++ type). We need tvars to be non-empty when typeclass params exist so
      callers (gen_dfuns_header) use the full Dtemplate definition. *)
   let tc_param_ids =
     match ty with
-    | Tarr _ ->
-      let rec collect_tc_ids acc i = function
-        | Miniml.Tarr (t1, t2) ->
-          if Table.is_typeclass_type t1 then
-            collect_tc_ids (tc_instance_id i :: acc) (i + 1) t2
-          else
-            collect_tc_ids acc i t2
-        | _ -> List.rev acc
-      in
-      collect_tc_ids [] 0 ty
+    | Tarr _ -> collect_typeclass_param_ids ty
     | _ -> []
   in
   match cty with
@@ -7056,11 +7991,21 @@ let gen_dfun_def n b ty =
 (** Generate C++ function specification (for header files) *)
 let gen_spec n b ty =
   let ty = type_simpl ty in
+  let ml_ty = ty in  (* preserve ML type before C++ conversion *)
+  let unit_void =
+    (match ty with Miniml.Tarr _ -> true
+     | Miniml.Tglob (r, _, _) when Table.is_monad r -> true | _ -> false)
+    && ml_type_is_unit (ml_result_type ty) in
+  let is_reified = unit_void &&
+    (match extract_monad_from_codomain ty with
+     | Some mr -> is_monad_reified mr | None -> false) in
   let ty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
   let tvars = get_tvars ty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
   match ty with
-  | Tfun (dom, cod) -> gen_sfun n b dom cod temps
+  | Tfun (dom, cod) ->
+    let cod = apply_unit_void unit_void is_reified cod in
+    gen_sfun n b dom cod temps
   | _ ->
   match b with
   | MLaxiom _ ->
@@ -7104,6 +8049,22 @@ let gen_spec n b ty =
     let b_expr =
       if needs_any_cast then CPPany_cast (ty, b_expr) else b_expr
     in
+    (* When a unit-typed constant's body may call a void-ified function,
+       wrap in an IIFE that executes the body for side effects and
+       returns Unit::e_TT.  Pure enum literals need no wrapping. *)
+    let b_expr =
+      if is_cpp_unit_type ty && ml_type_is_unit ml_ty then
+        match b_expr with
+        | CPPenum_val _ -> b_expr
+        | CPPglob (_, _, Some ci) when ci.ci_inline <> None -> b_expr
+        | _ ->
+          CPPfun_call (
+            CPPlambda ([], None,
+              [Sexpr b_expr; Sreturn (Some (mk_tt_expr ()))],
+              false),
+            [])
+      else b_expr
+    in
     let inner = Dasgn (n, Tmod (TMconst, ty), b_expr) in
     ( match temps with
     | [] -> (inner, empty_env ())
@@ -7115,12 +8076,23 @@ let gen_spec n b ty =
     struct bodies where the full definition is not needed. *)
 let gen_sfun_spec n b ty =
   let ty = type_simpl ty in
+  let unit_void =
+    (match ty with Miniml.Tarr _ -> true
+     | Miniml.Tglob (r, _, _) when Table.is_monad r -> true | _ -> false)
+    && ml_type_is_unit (ml_result_type ty) in
+  let is_reified = unit_void &&
+    (match extract_monad_from_codomain ty with
+     | Some mr -> is_monad_reified mr | None -> false) in
   let ty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
   let tvars = get_tvars ty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
   match ty with
-  | Tfun (dom, cod) -> gen_sfun n b dom cod temps
-  | _ -> gen_sfun n b [Tvoid] ty temps
+  | Tfun (dom, cod) ->
+    let cod = apply_unit_void unit_void is_reified cod in
+    gen_sfun n b dom cod temps
+  | _ ->
+    let ty = apply_unit_void unit_void is_reified ty in
+    gen_sfun n b [Tvoid] ty temps
 
 (** Generate multiple function definitions *)
 let gen_dfuns (ns, bs, tys) =
@@ -7582,7 +8554,9 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
     List.filter_map
       (fun (id, cpp_ty, i, _) ->
         match cpp_ty with
-        | Tfun (dom, cod) -> Some (id, TTfun (dom, cod), fun_tparam_id i)
+        | Tfun (dom, cod) ->
+          let cod = if is_cpp_unit_type cod then Tvoid else cod in
+          Some (id, TTfun (dom, cod), fun_tparam_id i)
         | _ -> None )
       params_with_idx
   in

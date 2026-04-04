@@ -11,7 +11,6 @@ From Crane Require Import Monads.ITree Monads.IO.
 From Crane Require Import External.Vector.
 
 Import ListNotations.
-Import MonadNotations.
 
 Module ToString.
 
@@ -69,7 +68,7 @@ Module Tokenizer.
       end) (nat_of_int (length input)) input.
 
 
-  Fixpoint list_to_vec_h {A : Type} (l : list A) : IO (vector A) :=
+  Fixpoint list_to_vec_h {A : Type} (l : list A) : itree vectorE (vector A) :=
     match l with
     | [] => emptyVec A
     | a :: l' =>
@@ -78,9 +77,9 @@ Module Tokenizer.
       Ret v
   end.
 
-  Definition list_to_vec {A : Type} (l : list A) : IO (vector A) := list_to_vec_h (rev l).
+  Definition list_to_vec {A : Type} (l : list A) : itree vectorE (vector A) := list_to_vec_h (rev l).
 
-  Fixpoint list_to_vec_map_h {A B : Type} (f : A -> B) (l : list A) : IO (vector B) :=
+  Fixpoint list_to_vec_map_h {A B : Type} (f : A -> B) (l : list A) : itree vectorE (vector B) :=
     match l with
     | [] => emptyVec B
     | a :: l' =>
@@ -89,7 +88,7 @@ Module Tokenizer.
       Ret v
   end.
 
-  Definition list_to_vec_map {A B : Type} (f : A -> B) (l : list A) : IO (vector B) := list_to_vec_map_h f (rev l).
+  Definition list_to_vec_map {A B : Type} (f : A -> B) (l : list A) : itree vectorE (vector B) := list_to_vec_map_h f (rev l).
 
 End Tokenizer.
 

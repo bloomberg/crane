@@ -163,7 +163,7 @@ public:
   static std::shared_ptr<Stream<t_A>>
   lazy_(std::function<std::shared_ptr<Stream<t_A>>()> thunk) {
     return std::make_shared<Stream<t_A>>(
-        std::function<variant_t()>([=](void) mutable -> variant_t {
+        std::function<variant_t()>([=]() mutable -> variant_t {
           std::shared_ptr<Stream<t_A>> _tmp = thunk();
           return _tmp->v();
         }));
@@ -192,7 +192,7 @@ public:
 
   std::shared_ptr<Stream<t_A>>
   interleave(std::shared_ptr<Stream<t_A>> sb) const {
-    return Stream<t_A>::lazy_([=, this](void) -> std::shared_ptr<Stream<t_A>> {
+    return Stream<t_A>::lazy_([=, this]() -> std::shared_ptr<Stream<t_A>> {
       return std::visit(Overloaded{[&](const typename Stream<t_A>::Scons _args)
                                        -> std::shared_ptr<Stream<t_A>> {
                           return Stream<t_A>::scons(_args.d_a0,
@@ -203,7 +203,7 @@ public:
   }
 
   template <typename T1> static std::shared_ptr<Stream<T1>> repeat(const T1 x) {
-    return Stream<T1>::lazy_([=](void) mutable -> std::shared_ptr<Stream<T1>> {
+    return Stream<T1>::lazy_([=]() mutable -> std::shared_ptr<Stream<T1>> {
       return Stream<T1>::scons(x, repeat<T1>(x));
     });
   }
@@ -211,7 +211,7 @@ public:
   static std::shared_ptr<Stream<std::shared_ptr<Nat>>>
   nats_from(std::shared_ptr<Nat> n) {
     return Stream<std::shared_ptr<Nat>>::lazy_(
-        [=](void) mutable -> std::shared_ptr<Stream<std::shared_ptr<Nat>>> {
+        [=]() mutable -> std::shared_ptr<Stream<std::shared_ptr<Nat>>> {
           return Stream<std::shared_ptr<Nat>>::scons(n, nats_from(Nat::s(n)));
         });
   }

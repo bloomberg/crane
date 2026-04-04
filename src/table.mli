@@ -189,6 +189,28 @@ val needs_string_literals : unit -> bool
 (** Reset string literals flag. *)
 val reset_needs_string_literals : unit -> unit
 
+(** Mark that [crane_itree.h] is needed (reified ITree types in output). *)
+val require_itree_header : unit -> unit
+
+(** Check whether [crane_itree.h] is needed. *)
+val needs_itree_header : unit -> bool
+
+(** Reset the itree header flag (between extraction units). *)
+val reset_itree_header : unit -> unit
+
+(** Record a [main] function for reified wrapper generation.
+    @param name       the renamed function name (e.g. [_main])
+    @param ret_type   the ML return type
+    @param struct_opt enclosing struct qualifier, if any *)
+val set_main_function : Id.t -> ml_type -> Id.t option -> unit
+
+(** Return the recorded main function, if any:
+    [(name, return_type, struct_qualifier)]. *)
+val get_main_function : unit -> (Id.t * ml_type * Id.t option) option
+
+(** Reset main function tracking (between extraction units). *)
+val reset_main_function : unit -> unit
+
 (** Get record fields for a reference (empty for non-record). *)
 val get_record_fields : GlobRef.t -> GlobRef.t option list
 
@@ -507,11 +529,26 @@ val is_bind : GlobRef.t -> bool
 (** Check if reference is a return operation. *)
 val is_ret : GlobRef.t -> bool
 
+(** Get monad template string if reference is a registered monad. *)
+val get_monad_template_opt : GlobRef.t -> string option
+
 (** Check if reference is void type. *)
 val is_void : GlobRef.t -> bool
 
 (** Check if reference is ghost (erased). *)
 val is_ghost : GlobRef.t -> bool
+
+(** Check if reference is Rocq's [unit] type. *)
+val is_unit_type : GlobRef.t -> bool
+
+(** Check if reference is Rocq's [tt] constructor. *)
+val is_tt_constructor : GlobRef.t -> bool
+
+(** Resolve the GlobRef for Rocq's [unit] type. *)
+val resolve_unit_type : unit -> GlobRef.t option
+
+(** Resolve the GlobRef for Rocq's [tt] constructor. *)
+val resolve_tt_ctor : unit -> GlobRef.t option
 
 (** Check if reference has any kind of custom extraction. *)
 val is_any_custom : GlobRef.t -> bool
@@ -600,6 +637,10 @@ type numeral_info = {
   num_zero_ctor : int;  (** Index of zero constructor *)
   num_succ_ctor : int;  (** Index of successor constructor *)
   num_fmt : string;  (** Format string for numeral *)
+  num_converters : GlobRef.t list;
+    (** Converter functions (e.g. [Nat.of_num_uint]) that parse digit chains
+        into this numeral type.  Resolved automatically from the inductive's
+        module when [Crane Extract Numeral] is processed. *)
 }
 
 (** Check if inductive is numeric. *)
@@ -607,6 +648,14 @@ val is_numeral_inductive : GlobRef.t -> bool
 
 (** Get numeral information if available. *)
 val get_numeral_info : GlobRef.t -> numeral_info option
+
+(** Check if a function is a registered numeral converter (e.g.
+    [Nat.of_num_uint]).  These are resolved from the same module as the
+    numeral inductive during [Crane Extract Numeral] processing. *)
+val is_numeral_converter : GlobRef.t -> bool
+
+(** Return the numeral inductive targeted by a converter function, if any. *)
+val numeral_ind_of_converter : GlobRef.t -> GlobRef.t option
 
 (** Extract numeral inductive. *)
 val extract_numeral : qualid -> string -> unit

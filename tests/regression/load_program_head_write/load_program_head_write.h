@@ -112,7 +112,7 @@ struct LoadProgramHeadWrite {
   static std::shared_ptr<state>
   load_program(std::shared_ptr<state> s, const unsigned int base,
                const std::shared_ptr<List<unsigned int>> &bytes);
-  static inline const unsigned int t = [](void) {
+  static inline const unsigned int t = []() {
     std::unique_ptr<state> s0 = std::make_unique<state>(
         state{List<unsigned int>::cons(
                   0u, List<unsigned int>::cons(

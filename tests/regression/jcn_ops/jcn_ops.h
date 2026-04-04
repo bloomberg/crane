@@ -64,24 +64,24 @@ struct JcnOps {
   static inline const unsigned int JCN_JNC = 10u;
   static inline const unsigned int JCN_JNZ = 12u;
   static inline const unsigned int test_constants = []() {
-    return [](void) {
+    return []() {
       std::shared_ptr<state> s =
           std::make_shared<state>(state{0u, true, false, 0u});
-      return (([&](void) {
+      return (([&]() {
                 if (jcn_condition(s, JCN_JC)) {
                   return 1u;
                 } else {
                   return 0u;
                 }
               }() +
-               [&](void) {
+               [&]() {
                  if (jcn_condition(s, JCN_JZ)) {
                    return 1u;
                  } else {
                    return 0u;
                  }
                }()) +
-              [&](void) {
+              [&]() {
                 if (jcn_condition(s, JCN_JNT)) {
                   return 1u;
                 } else {

@@ -17,14 +17,14 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 struct LetIn {
   static inline const unsigned int simple_let = 5u;
   static inline const unsigned int nested_let = 3u;
-  static inline const unsigned int let_with_add = [](void) {
+  static inline const unsigned int let_with_add = []() {
     unsigned int x = 3u;
     unsigned int y = 4u;
     return (std::move(x) + std::move(y));
   }();
   static inline const unsigned int shadowed_let = 3u;
   __attribute__((pure)) static unsigned int let_in_fun(const unsigned int n);
-  static inline const unsigned int let_fun = [](void) {
+  static inline const unsigned int let_fun = []() {
     unsigned int x = 5u;
     return (std::move(x) + 1u);
   }();
@@ -81,7 +81,7 @@ struct LetIn {
         p->v());
   }
 
-  static inline const unsigned int let_destruct = [](void) {
+  static inline const unsigned int let_destruct = []() {
     std::unique_ptr<pair<unsigned int, unsigned int>> p =
         pair<unsigned int, unsigned int>::pair0_uptr(3u, 4u);
     return std::visit(
@@ -90,7 +90,7 @@ struct LetIn {
                 -> unsigned int { return _args.d_a0; }},
         p->v());
   }();
-  static inline const unsigned int multi_let = [](void) {
+  static inline const unsigned int multi_let = []() {
     unsigned int a = 1u;
     unsigned int b = 2u;
     unsigned int c = 3u;

@@ -386,7 +386,7 @@ struct NestedInd {
                 return expr::lit(f(_args.d_a0));
               },
               [&](const typename expr::Add _args) -> std::shared_ptr<expr> {
-                return expr::add([&](void) {
+                return expr::add([&]() {
                   std::function<std::shared_ptr<List<std::shared_ptr<expr>>>(
                       std::shared_ptr<List<std::shared_ptr<expr>>>)>
                       aux;
@@ -413,7 +413,7 @@ struct NestedInd {
                 }());
               },
               [&](const typename expr::Mul _args) -> std::shared_ptr<expr> {
-                return expr::mul([&](void) {
+                return expr::mul([&]() {
                   std::function<std::shared_ptr<List<std::shared_ptr<expr>>>(
                       std::shared_ptr<List<std::shared_ptr<expr>>>)>
                       aux;
@@ -506,7 +506,7 @@ struct NestedInd {
           Overloaded{
               [](const typename expr::Lit _args) -> unsigned int { return 0u; },
               [](const typename expr::Add _args) -> unsigned int {
-                return ([&](void) {
+                return ([&]() {
                   std::function<unsigned int(
                       std::shared_ptr<List<std::shared_ptr<expr>>>)>
                       aux;
@@ -527,7 +527,7 @@ struct NestedInd {
                 }() + 1);
               },
               [](const typename expr::Mul _args) -> unsigned int {
-                return ([&](void) {
+                return ([&]() {
                   std::function<unsigned int(
                       std::shared_ptr<List<std::shared_ptr<expr>>>)>
                       aux;
@@ -555,7 +555,7 @@ struct NestedInd {
           Overloaded{
               [](const typename expr::Lit _args) -> unsigned int { return 1u; },
               [](const typename expr::Add _args) -> unsigned int {
-                return ([&](void) {
+                return ([&]() {
                   std::function<unsigned int(
                       std::shared_ptr<List<std::shared_ptr<expr>>>)>
                       aux;
@@ -576,7 +576,7 @@ struct NestedInd {
                 }() + 1);
               },
               [](const typename expr::Mul _args) -> unsigned int {
-                return ([&](void) {
+                return ([&]() {
                   std::function<unsigned int(
                       std::shared_ptr<List<std::shared_ptr<expr>>>)>
                       aux;

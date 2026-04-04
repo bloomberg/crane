@@ -966,14 +966,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
   __attribute__((pure)) static bool
   mfi_config_valid(const std::shared_ptr<MFIThresholdConfig> &cfg);
   static inline const std::shared_ptr<MFIThresholdConfig>
-      example_luminex_thresholds =
-          std::make_shared<MFIThresholdConfig>(MFIThresholdConfig{
-              1000u, 3000u,
-              Nat::of_num_uint(Uint1::uintdecimal(
-                  Uint::d8(Uint::d0(Uint::d0(Uint::d0(Uint::nil())))))),
-              Nat::of_num_uint(Uint1::uintdecimal(Uint::d1(
-                  Uint::d2(Uint::d0(Uint::d0(Uint::d0(Uint::nil()))))))),
-              1u, true});
+      example_luminex_thresholds = std::make_shared<MFIThresholdConfig>(
+          MFIThresholdConfig{1000u, 3000u, 8000u, 12000u, 1u, true});
 
   struct ValidatedMFIConfig {
     std::shared_ptr<MFIThresholdConfig> vmc_config;
@@ -1309,17 +1303,11 @@ struct ValidatedVirtualCrossmatchTraceCase {
   static inline const std::shared_ptr<VirtualXMProfile> strong_profile =
       std::make_shared<VirtualXMProfile>(VirtualXMProfile{
           List<std::shared_ptr<EpitopeAntibody>>::cons(
-              std::make_shared<EpitopeAntibody>(EpitopeAntibody{
-                  eplet_65QIA,
-                  Nat::of_num_uint(Uint1::uintdecimal(
-                      Uint::d9(Uint::d0(Uint::d0(Uint::d0(Uint::nil())))))),
-                  true}),
+              std::make_shared<EpitopeAntibody>(
+                  EpitopeAntibody{eplet_65QIA, 9000u, true}),
               List<std::shared_ptr<EpitopeAntibody>>::cons(
-                  std::make_shared<EpitopeAntibody>(EpitopeAntibody{
-                      eplet_142T,
-                      Nat::of_num_uint(Uint1::uintdecimal(
-                          Uint::d6(Uint::d0(Uint::d0(Uint::d0(Uint::nil())))))),
-                      false}),
+                  std::make_shared<EpitopeAntibody>(
+                      EpitopeAntibody{eplet_142T, 6000u, false}),
                   List<std::shared_ptr<EpitopeAntibody>>::nil())),
           95u, 98u, 5u});
   static inline const std::shared_ptr<CrossmatchWithUncertainty>
@@ -1332,7 +1320,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
                                     TestConfidence::e_CONFIDENCE_HIGH});
   __attribute__((pure)) static bool
   risk_acceptable(const TransplantAcceptability a);
-  static inline const bool sample_virtual_zero_negative = [](void) {
+  static inline const bool sample_virtual_zero_negative = []() {
     switch (classify_mfi_safe(validated_luminex, 0u)) {
     case MFIStrength::e_MFI_NEGATIVE: {
       return true;
@@ -1355,7 +1343,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }();
   static inline const unsigned int sample_dedup_count =
       epitope_dedup(typing_epitopes(donor_hla))->length();
-  static inline const bool sample_weak_acceptability = [](void) {
+  static inline const bool sample_weak_acceptability = []() {
     switch (full_virtual_crossmatch_safe(validated_luminex, weak_profile,
                                          donor_hla)) {
     case TransplantAcceptability::e_ACCEPTABLE: {
@@ -1374,7 +1362,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
       std::unreachable();
     }
   }();
-  static inline const bool sample_strong_absolute_contra = [](void) {
+  static inline const bool sample_strong_absolute_contra = []() {
     switch (full_virtual_crossmatch_safe(validated_luminex, strong_profile,
                                          donor_hla)) {
     case TransplantAcceptability::e_ACCEPTABLE: {
@@ -1399,7 +1387,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
       max_dsa_mfi(strong_profile, donor_hla);
   static inline const unsigned int sample_lab_id =
       validated_luminex->vmc_config->mfi_cfg_lab_id;
-  static inline const bool sample_order_created = [](void) {
+  static inline const bool sample_order_created = []() {
     if (create_safe_transfusion_order(
             100u, 200u,
             risk_acceptable(full_virtual_crossmatch_safe(
@@ -1416,7 +1404,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
       return false;
     }
   }();
-  static inline const bool sample_order_blocked = [](void) {
+  static inline const bool sample_order_blocked = []() {
     if (create_safe_transfusion_order(
             100u, 201u,
             risk_acceptable(full_virtual_crossmatch_safe(
@@ -1433,7 +1421,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
       return true;
     }
   }();
-  static inline const bool sample_authorized_order_stays_authorized = [](void) {
+  static inline const bool sample_authorized_order_stays_authorized = []() {
     if (create_safe_transfusion_order(100u, 202u, true, good_crossmatch, 100u,
                                       200u, 88u, false)
             .has_value()) {

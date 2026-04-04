@@ -81,7 +81,7 @@ struct OppositePropertyTransferTraceCase {
                                       std::shared_ptr<RightProperty>>
   dual_property_equiv(const std::shared_ptr<PreStableCategory> &_x);
 
-  template <typename T1, typename T2, typename F0, typename F1>
+  template <typename T1 = void, typename T2, typename F0, typename F1>
   static T2 theorem_doubling_principle_correct(
       F0 &&h_dual, F1 &&h_theorem, const std::shared_ptr<PreStableCategory> &pS,
       const std::shared_ptr<LeftStableWitness> &h_left_op,
@@ -93,14 +93,14 @@ struct OppositePropertyTransferTraceCase {
     return q(h_theorem(opposite_prestable_category(pS), h_left_op, h_tri1_op));
   }
 
-  template <typename T1, typename T2, typename F0, typename F1>
+  template <typename T1 = void, typename T2, typename F0, typename F1>
   static T2 theorem_doubling_principle_final(
       F0 &&h_dual, F1 &&h_theorem, const std::shared_ptr<PreStableCategory> &pS,
       const std::shared_ptr<RightStableWitness> &h_right,
       const std::shared_ptr<Triangle2Witness> &h_tri2) {
     return theorem_doubling_principle_correct<T1, T2>(
         h_dual, h_theorem, pS, right_stable_gives_opposite_left(pS, h_right),
-        [&](void) {
+        [&]() {
           std::pair<std::function<std::shared_ptr<Triangle2Witness>(
                         std::shared_ptr<Triangle1Witness>)>,
                     std::function<std::shared_ptr<Triangle1Witness>(

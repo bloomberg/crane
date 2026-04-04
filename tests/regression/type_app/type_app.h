@@ -35,7 +35,8 @@ struct TypeApp {
   static inline const unsigned int id_int = id<unsigned int>(42u);
   static inline const bool id_bool = id<bool>(true);
 
-  template <typename T1, typename T2, typename T3, typename F0, typename F1>
+  template <typename T1, typename T2 = void, typename T3, typename F0,
+            typename F1>
   static T3 compose(F0 &&g, F1 &&f, const T1 x) {
     return g(f(x));
   }

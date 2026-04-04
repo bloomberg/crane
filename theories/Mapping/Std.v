@@ -1,5 +1,12 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(** Standard-library extraction mappings.
+
+    Maps [option], [prod], [string], [int63], and [float] to their
+    C++ standard library equivalents ([std::optional], [std::pair],
+    [std::string], [int64_t], [double]).
+
+    Sets the stdlib flavor to ["std"] and the clang-format style. *)
 From Crane Require Extraction.
 From Crane Require Export Mapping.Shared.
 

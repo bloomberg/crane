@@ -23,12 +23,12 @@ struct Nat {
 
 struct SPropTest {
   template <typename T1> static const T1 &sFalse_rect() {
-    static const T1 v = [](void) { throw std::logic_error("absurd case"); }();
+    static const T1 v = []() { throw std::logic_error("absurd case"); }();
     return v;
   }
 
   template <typename T1> static const T1 &sFalse_rec() {
-    static const T1 v = [](void) { throw std::logic_error("absurd case"); }();
+    static const T1 v = []() { throw std::logic_error("absurd case"); }();
     return v;
   }
 

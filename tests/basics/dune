@@ -6,7 +6,7 @@
  (name CraneTestsBasics)
  (synopsis "Tests for the rocq-crane plugin")
  (modules :standard)
- (theories Stdlib Crane)
+ (theories Stdlib Crane ITree ExtLib Paco)
  (flags (:standard -output-directory %{project_root}/tests/basics)))
 
 ; Test rules - compile C++ and run tests
