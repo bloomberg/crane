@@ -52,23 +52,22 @@ let build_batch targets =
     | Unix.WEXITED 0 -> true
     | _ -> false
 
-let build_all_tests _config tests =
-  (* Group tests by category. Non-wip categories are expected to compile
-     cleanly, so we batch them into a single dune invocation for parallel C++
-     compilation. Wip tests often have compile errors, so we build those
-     individually to prevent one failure from blocking others. *)
-  let wip, non_wip = List.partition (fun t -> t.category = "wip") tests in
+let build_all_tests config tests =
+  (* Build all tests in a single dune invocation. Dune continues past
+     failures by default (--stop-on-first-error is opt-in), so independent
+     tests still compile even when others fail. We check which .t.exe files
+     were produced afterwards. *)
   let target_of t =
     Printf.sprintf "tests/%s/%s/%s.t.exe" t.category t.name t.name
   in
-  (* Batch-build all non-wip tests in one dune call *)
-  ( if non_wip <> [] then
-      let targets = List.map target_of non_wip in
-      if not (build_batch targets) then
-        (* Unexpected failure — fall back to individual builds *)
-        List.iter (fun t -> ignore (build_batch [target_of t])) non_wip );
-  (* Build wip tests individually *)
-  List.iter (fun t -> ignore (build_batch [target_of t])) wip
+  let targets = List.map target_of tests in
+  if targets <> [] then ignore (build_batch targets);
+  (* Return set of tests that failed to compile *)
+  let exe_path_of t =
+    Printf.sprintf "%s/_build/default/tests/%s/%s/%s.t.exe" config.project_root
+      t.category t.name t.name
+  in
+  List.filter (fun t -> not (Sys.file_exists (exe_path_of t))) tests
 
 let run_test config test =
   let test_dir =
@@ -102,12 +101,32 @@ let partition_list n lst =
 let run_tests_parallel config tests =
   if tests = [] then
     []
-  else (* Phase 1: Build all tests with dune (handles its own parallelism) *)
-    let _ = build_all_tests config tests in
+  else
+    (* Phase 1: Build all tests in one dune call *)
+    let compile_failures = build_all_tests config tests in
+    let compile_fail_set = Hashtbl.create 16 in
+    List.iter
+      (fun t -> Hashtbl.replace compile_fail_set (t.category ^ "/" ^ t.name) true)
+      compile_failures;
+    let runnable =
+      List.filter
+        (fun t -> not (Hashtbl.mem compile_fail_set (t.category ^ "/" ^ t.name)))
+        tests
+    in
+    let compile_fail_results =
+      List.map
+        (fun t ->
+          { test = t;
+            passed = false;
+            output = "Compilation failed";
+            duration = 0.0
+          })
+        compile_failures
+    in
 
     (* Phase 2: Run test executables in parallel *)
-    let num_workers = min config.jobs (List.length tests) in
-    let batches = partition_list num_workers tests in
+    let num_workers = min config.jobs (List.length runnable) in
+    let batches = partition_list num_workers runnable in
     let tmpdir = try Sys.getenv "TMPDIR" with Not_found -> "/tmp" in
 
     let workers =
@@ -148,4 +167,5 @@ let run_tests_parallel config tests =
         workers
     in
 
-    List.sort (fun a b -> compare_test_id a.test b.test) all_results
+    List.sort (fun a b -> compare_test_id a.test b.test)
+      (compile_fail_results @ all_results)
