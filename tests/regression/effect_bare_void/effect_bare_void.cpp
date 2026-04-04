@@ -45,7 +45,7 @@ void EffectBareVoid::set_then_print(const std::string k, const std::string v) {
 
 /// 6. Bare get_line (value-returning effect as sole body)
 std::string EffectBareVoid::just_read() {
-  return [&]() -> std::string {
+  return []() -> std::string {
     std::string _r;
     std::getline(std::cin, _r);
     return _r;

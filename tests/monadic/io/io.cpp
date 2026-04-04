@@ -28,7 +28,7 @@ std::string iotest::test4() {
 }
 
 void iotest::test5() {
-  std::string s = []() -> std::string {
+  std::string s = [&]() -> std::string {
     std::ifstream file("file.txt"s);
     if (!file) {
       std::cerr << "Failed to open file " << "file.txt"s << '\n';

@@ -20,7 +20,7 @@ struct BindEtaReduced {
   /// get_line is bound, then f is applied to the result.
   /// Coq reduces fun line => f line to f, breaking the bind.
   template <typename F0> static std::string with_line(F0 &&f) {
-    [&]() -> std::string {
+    []() -> std::string {
       std::string _r;
       std::getline(std::cin, _r);
       return _r;
@@ -38,7 +38,7 @@ struct BindEtaReduced {
 
   /// Control case: explicit lambda prevents eta-reduction.
   template <typename F0> static std::string with_line_explicit(F0 &&f) {
-    [&]() -> std::string {
+    []() -> std::string {
       std::string _r;
       std::getline(std::cin, _r);
       return _r;

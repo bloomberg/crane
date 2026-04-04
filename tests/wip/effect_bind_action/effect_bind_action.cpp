@@ -15,7 +15,7 @@
 std::string EffectBindAction::conditional_read(const bool use_stdin) {
   return [&]() {
     if (use_stdin) {
-      return [&]() -> std::string {
+      return []() -> std::string {
         std::string _r;
         std::getline(std::cin, _r);
         return _r;

@@ -17,7 +17,7 @@ Crane Extract Inductive consoleE => ""
   From "iostream".
 
 Crane Extract Inductive fileE => ""
-  [ "[]() -> std::string {
+  [ "[&]() -> std::string {
   std::ifstream file(%a0);
   if (!file) {
       std::cerr << ""Failed to open file "" << %a0 << '\n';
@@ -45,7 +45,7 @@ Crane Extract Inlined Constant get_line =>
   "std::getline(std::cin, %result)" From "iostream".
 
 Crane Extract Inlined Constant read =>
-"[]() -> std::string {
+"[&]() -> std::string {
   std::ifstream file(%a0);
   if (!file) {
       std::cerr << ""Failed to open file "" << %a0 << '\n';

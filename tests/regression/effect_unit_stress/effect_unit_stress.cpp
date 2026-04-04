@@ -23,7 +23,7 @@ void EffectUnitStress::ret_tt_after_effect() {
 
 /// 2. Bind where RHS is Ret of the LHS binding
 std::string EffectUnitStress::bind_identity() {
-  return [&]() -> std::string {
+  return []() -> std::string {
     std::string _r;
     std::getline(std::cin, _r);
     return _r;

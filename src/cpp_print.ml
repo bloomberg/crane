@@ -728,7 +728,7 @@ and pp_cpp_expr env args t =
       String.concat "\n"
         (List.map (fun s -> "  " ^ String.trim s ^ ";") stmts)
     in
-    str "[&]() -> " ++ pp_cpp_type false [] ret_ty ++ str " {"
+    str "[]() -> " ++ pp_cpp_type false [] ret_ty ++ str " {"
     ++ fnl ()
     ++ str ("  " ^ Pp.string_of_ppcmds (pp_cpp_type false [] ret_ty)
             ^ " " ^ result_str ^ ";")

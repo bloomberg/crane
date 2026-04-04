@@ -34,7 +34,7 @@ std::optional<std::string> EffectComplexReturn::maybe_read(const bool do_read) {
 /// 3. Void effect followed by value effect
 std::string EffectComplexReturn::print_then_read(const std::string prompt) {
   std::cout << prompt << '\n';
-  return [&]() -> std::string {
+  return []() -> std::string {
     std::string _r;
     std::getline(std::cin, _r);
     return _r;
@@ -115,7 +115,7 @@ std::string EffectComplexReturn::env_or_prompt(const std::string name) {
     return v;
   } else {
     std::cout << "Enter "s + name + ":"s << '\n';
-    return [&]() -> std::string {
+    return []() -> std::string {
       std::string _r;
       std::getline(std::cin, _r);
       return _r;

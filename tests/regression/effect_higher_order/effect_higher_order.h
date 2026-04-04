@@ -102,7 +102,7 @@ struct EffectHigherOrder {
   } /// 3. Callback that returns a value
 
   template <typename F0> static std::string with_line(F0 &&f) {
-    [&]() -> std::string {
+    []() -> std::string {
       std::string _r;
       std::getline(std::cin, _r);
       return _r;

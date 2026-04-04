@@ -18,7 +18,7 @@ void EffectCrossModule::Inner::greet(const std::string name) {
 
 std::string EffectCrossModule::Inner::ask_name() {
   std::cout << "What is your name?"s << '\n';
-  return [&]() -> std::string {
+  return []() -> std::string {
     std::string _r;
     std::getline(std::cin, _r);
     return _r;

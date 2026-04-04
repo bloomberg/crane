@@ -129,7 +129,7 @@ std::string BlockTemplateHygiene::bind_named_underscore_r() {
 /// bind get_line Ret triggers the monad right identity optimization,
 /// placing get_line directly in expression position.
 std::string BlockTemplateHygiene::expr_position_iife() {
-  return [&]() -> std::string {
+  return []() -> std::string {
     std::string _r;
     std::getline(std::cin, _r);
     return _r;

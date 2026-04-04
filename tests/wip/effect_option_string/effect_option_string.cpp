@@ -52,7 +52,7 @@ EffectOptionString::option_effect_or_literal(const std::string name) {
   }();
   if (r.has_value()) {
     std::string _x = *r;
-    return [&]() -> std::string {
+    return []() -> std::string {
       std::string _r;
       std::getline(std::cin, _r);
       return _r;

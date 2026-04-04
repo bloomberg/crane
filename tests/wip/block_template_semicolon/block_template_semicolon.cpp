@@ -9,7 +9,7 @@
 /// String argument with semicolons in expression position (monad right
 /// identity) Tests gen_block_iife semicolon splitting
 std::string BlockTemplateSemicolon::read_semicolon_expr() {
-  return [&]() -> std::string {
+  return []() -> std::string {
     std::string _r;
     { std::ifstream _f("path;
   with;

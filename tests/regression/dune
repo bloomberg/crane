@@ -3018,3 +3018,25 @@
   (alias runtest)
   (deps effect_dir_path.t.exe)
   (action (run ./effect_dir_path.t.exe))))
+
+(subdir block_template_nonlocal
+ (rule
+  (targets block_template_nonlocal.t.exe)
+  (deps BlockTemplateNonlocal.vo block_template_nonlocal.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} block_template_nonlocal.t.exe block_template_nonlocal.cpp block_template_nonlocal.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps block_template_nonlocal.t.exe)
+  (action (run ./block_template_nonlocal.t.exe))))
+
+(subdir read_variable_capture
+ (rule
+  (targets read_variable_capture.t.exe)
+  (deps ReadVariableCapture.vo read_variable_capture.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} read_variable_capture.t.exe read_variable_capture.cpp read_variable_capture.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps read_variable_capture.t.exe)
+  (action (run ./read_variable_capture.t.exe))))

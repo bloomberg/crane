@@ -13,7 +13,7 @@
 /// 1. get_line in both branches of if-then-else
 std::string EffectGetlineStress::get_or_default(const bool ask) {
   if (ask) {
-    return [&]() -> std::string {
+    return []() -> std::string {
       std::string _r;
       std::getline(std::cin, _r);
       return _r;
@@ -30,7 +30,7 @@ std::string EffectGetlineStress::get_nth_line(const unsigned int n) {
   } else {
     unsigned int n0 = n - 1;
     if (n0 <= 0) {
-      return [&]() -> std::string {
+      return []() -> std::string {
         std::string _r;
         std::getline(std::cin, _r);
         return _r;
@@ -39,7 +39,7 @@ std::string EffectGetlineStress::get_nth_line(const unsigned int n) {
       unsigned int _x = n0 - 1;
       std::string _x0;
       std::getline(std::cin, _x0);
-      return [&]() -> std::string {
+      return []() -> std::string {
         std::string _r;
         std::getline(std::cin, _r);
         return _r;

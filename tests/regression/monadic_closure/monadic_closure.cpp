@@ -22,7 +22,7 @@ int64_t MonadicClosure::capture_bind() {
 int64_t MonadicClosure::test_apply_after() {
   return apply_after_effect<std::string, int64_t>(
       [](std::string _x0) -> int64_t { return _x0.length(); },
-      [&]() -> std::string {
+      []() -> std::string {
         std::string _r;
         std::getline(std::cin, _r);
         return _r;

@@ -17,7 +17,7 @@ Crane Extract Inductive consoleE => ""
   From "bsl_iostream.h".
 
 Crane Extract Inductive fileE => ""
-  [ "[]() -> bsl::string {
+  [ "[&]() -> bsl::string {
   bsl::ifstream file(%a0);
   if (!file) {
       bsl::cerr << ""Failed to open file "" << %a0 << '\n';
@@ -45,7 +45,7 @@ Crane Extract Inlined Constant get_line =>
   "bsl::getline(bsl::cin, %result)" From "bsl_iostream.h".
 
 Crane Extract Inlined Constant read =>
-"[]() -> bsl::string {
+"[&]() -> bsl::string {
   bsl::ifstream file(%a0);
   if (!file) {
       bsl::cerr << ""Failed to open file "" << %a0 << '\n';
