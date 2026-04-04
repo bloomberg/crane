@@ -18,6 +18,7 @@ let parse_args () =
   let jobs = ref (get_cpu_count ()) in
   let verbose = ref false in
   let folder = ref None in
+  let changed_only = ref false in
   let specs =
     [
       ("-j", Arg.Set_int jobs, "N Number of parallel jobs (default: CPU count)");
@@ -30,12 +31,14 @@ let parse_args () =
         Arg.String (fun f -> folder := Some f),
         " Run tests only from specified folder (basics, monadic, wip, \
          regression)" );
+      ("--changed", Arg.Set changed_only, " Only compile/run tests with changed files");
     ]
   in
   let usage = "Usage: crane-test-runner [options]" in
   Arg.parse specs (fun _ -> ()) usage;
   let project_root = Sys.getcwd () in
-  {jobs = !jobs; verbose = !verbose; project_root; folder = !folder}
+  {jobs = !jobs; verbose = !verbose; project_root; folder = !folder;
+   changed_only = !changed_only}
 
 let main () =
   let config = parse_args () in
@@ -47,14 +50,28 @@ let main () =
     | Some folder -> List.filter (fun t -> t.category = folder) all_tests
   in
 
-  ( if tests = [] then
-      match
-        config.folder
-      with
-      | None -> Printf.eprintf "No tests found\n"
+  let tests =
+    if config.changed_only then
+      let changed = Discovery.find_changed_tests config.project_root in
+      let changed_set = Hashtbl.create 32 in
+      List.iter (fun t -> Hashtbl.replace changed_set (t.category ^ "/" ^ t.name) true) changed;
+      let filtered = List.filter (fun t -> Hashtbl.mem changed_set (t.category ^ "/" ^ t.name)) tests in
+      Printf.printf "Changed tests: %d / %d\n" (List.length filtered) (List.length tests);
+      filtered
+    else
+      tests
+  in
+
+  ( if tests = [] then (
+      ( match config.folder with
+      | None ->
+        if config.changed_only then
+          Printf.printf "No changed tests to run\n"
+        else
+          Printf.eprintf "No tests found\n"
       | Some folder ->
-        Printf.eprintf "No tests found in folder '%s'\n" folder;
-        exit 0 );
+        Printf.eprintf "No tests found in folder '%s'\n" folder );
+      exit 0 ) );
 
   Output.print_header ();
 

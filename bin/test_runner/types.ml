@@ -15,6 +15,7 @@ type config = {
   verbose : bool;
   project_root : string;
   folder : string option;
+  changed_only : bool;
 }
 
 let compare_test_id a b =

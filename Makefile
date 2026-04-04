@@ -1,4 +1,4 @@
-.PHONY: build install clean test test-verbose test-sequential test-raw test-one test-folder test-folder-verbose test-list theories plugin all extract format
+.PHONY: build install clean test test-quick test-verbose test-sequential test-raw test-one test-folder test-folder-verbose test-list theories plugin all extract format
 
 # Default target: build plugin and theories only (not tests)
 build: plugin theories
@@ -42,6 +42,13 @@ test: extract
 	@./scripts/check-dune-rules.sh --fix
 	@dune build bin/test_runner/main.exe
 	@./_build/default/bin/test_runner/main.exe
+
+# Build and run only tests with changed files (parallel)
+# Full extraction runs first, then git diff determines which tests need C++ compile/run
+test-quick: extract
+	@./scripts/check-dune-rules.sh --fix
+	@dune build bin/test_runner/main.exe
+	@./_build/default/bin/test_runner/main.exe --changed
 
 # Build and run tests with verbose error output (parallel)
 test-verbose: extract
@@ -185,6 +192,7 @@ help:
 	@echo "  make                      - Build plugin and theories (default)"
 	@echo "  make extract              - Build + generate all test C++ files"
 	@echo "  make test                 - Compile and run all tests (parallel)"
+	@echo "  make test-quick           - Extract all, compile/run only changed tests"
 	@echo "  make test-verbose         - Run tests with error details (parallel)"
 	@echo "  make test-sequential      - Run tests sequentially (old bash script)"
 	@echo "  make test-raw             - Run tests with raw dune output"
