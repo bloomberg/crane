@@ -146,5 +146,5 @@ LetMatchType::direction_offset(const LetMatchType::Direction d) {
       std::unreachable();
     }
   }();
-  return std::make_pair(std::move(dx), std::move(dy));
+  return std::make_pair(dx, dy);
 }

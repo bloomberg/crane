@@ -143,11 +143,8 @@ struct SuperfluousMoves {
       std::make_shared<loop_state>(
           loop_state{sample_state, sample_state->pacpos, sample_state->ghosts});
   /// Reduced branch reproducer without the outer option * nat wrapper.
-  static std::pair<bool, std::shared_ptr<loop_state>>
+  __attribute__((pure)) static std::pair<bool, std::shared_ptr<loop_state>>
   bad_branch(std::shared_ptr<loop_state> ls);
 };
-
-/// Standalone entrypoint that forces evaluation of bad_branch.
-int main();
 
 #endif // INCLUDED_SUPERFLUOUS_MOVES

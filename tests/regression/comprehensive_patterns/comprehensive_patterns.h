@@ -17,8 +17,6 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-enum class Unit { e_TT };
-
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -224,8 +222,9 @@ struct ComprehensivePatterns {
   match_record(std::shared_ptr<S> s);
   __attribute__((pure)) static std::pair<std::shared_ptr<S>, unsigned int>
   rebind(std::shared_ptr<S> s1);
-  __attribute__((pure)) static std::pair<std::function<unsigned int(Unit)>,
-                                         std::function<unsigned int(Unit)>>
+  __attribute__((
+      pure)) static std::pair<std::function<unsigned int(std::monostate)>,
+                              std::function<unsigned int(std::monostate)>>
   closure_pair(std::shared_ptr<S> s);
   static std::shared_ptr<Sig<std::shared_ptr<S>>>
   sigma_reuse(std::shared_ptr<S> s);

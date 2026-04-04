@@ -81,14 +81,6 @@ public:
   }
 };
 
-struct Nat {
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-         const unsigned int u);
-  __attribute__((pure)) static unsigned int div(const unsigned int x,
-                                                const unsigned int y);
-};
-
 struct EncodeOps {
   struct instruction1 {
     // TYPES
@@ -250,56 +242,56 @@ struct EncodeOps {
     __attribute__((pure)) std::pair<unsigned int, unsigned int>
     encode1() const {
       return std::visit(
-          Overloaded{[](const typename instruction1::CLB _args)
-                         -> std::pair<unsigned int, unsigned int> {
-                       return std::make_pair(240u, 0u);
-                     },
-                     [](const typename instruction1::CMC _args)
-                         -> std::pair<unsigned int, unsigned int> {
-                       return std::make_pair(243u, 0u);
-                     },
-                     [](const typename instruction1::DAA _args)
-                         -> std::pair<unsigned int, unsigned int> {
-                       return std::make_pair(251u, 0u);
-                     },
-                     [](const typename instruction1::FIM _args)
-                         -> std::pair<unsigned int, unsigned int> {
-                       return std::make_pair(
-                           (32u +
-                            (((_args.d_a0 - (_args.d_a0 % 2u)) > _args.d_a0
-                                  ? 0
-                                  : (_args.d_a0 - (_args.d_a0 % 2u))))),
-                           (_args.d_a1 % 256u));
-                     },
-                     [](const typename instruction1::JUN _args)
-                         -> std::pair<unsigned int, unsigned int> {
-                       return std::make_pair((64u + Nat::div(_args.d_a0, 256u)),
-                                             (_args.d_a0 % 256u));
-                     },
-                     [](const typename instruction1::LDM1 _args)
-                         -> std::pair<unsigned int, unsigned int> {
-                       return std::make_pair((208u + (_args.d_a0 % 16u)), 0u);
-                     },
-                     [](const typename instruction1::NOP1 _args)
-                         -> std::pair<unsigned int, unsigned int> {
-                       return std::make_pair(0u, 0u);
-                     },
-                     [](const typename instruction1::RDM _args)
-                         -> std::pair<unsigned int, unsigned int> {
-                       return std::make_pair(233u, 0u);
-                     },
-                     [](const typename instruction1::TCS _args)
-                         -> std::pair<unsigned int, unsigned int> {
-                       return std::make_pair(249u, 0u);
-                     },
-                     [](const typename instruction1::WPM _args)
-                         -> std::pair<unsigned int, unsigned int> {
-                       return std::make_pair(227u, 0u);
-                     },
-                     [](const typename instruction1::WR0 _args)
-                         -> std::pair<unsigned int, unsigned int> {
-                       return std::make_pair(228u, 0u);
-                     }},
+          Overloaded{
+              [](const typename instruction1::CLB _args)
+                  -> std::pair<unsigned int, unsigned int> {
+                return std::make_pair(240u, 0u);
+              },
+              [](const typename instruction1::CMC _args)
+                  -> std::pair<unsigned int, unsigned int> {
+                return std::make_pair(243u, 0u);
+              },
+              [](const typename instruction1::DAA _args)
+                  -> std::pair<unsigned int, unsigned int> {
+                return std::make_pair(251u, 0u);
+              },
+              [](const typename instruction1::FIM _args)
+                  -> std::pair<unsigned int, unsigned int> {
+                return std::make_pair(
+                    (32u + (((_args.d_a0 - (_args.d_a0 % 2u)) > _args.d_a0
+                                 ? 0
+                                 : (_args.d_a0 - (_args.d_a0 % 2u))))),
+                    (_args.d_a1 % 256u));
+              },
+              [](const typename instruction1::JUN _args)
+                  -> std::pair<unsigned int, unsigned int> {
+                return std::make_pair((64u + (256u ? _args.d_a0 / 256u : 0)),
+                                      (_args.d_a0 % 256u));
+              },
+              [](const typename instruction1::LDM1 _args)
+                  -> std::pair<unsigned int, unsigned int> {
+                return std::make_pair((208u + (_args.d_a0 % 16u)), 0u);
+              },
+              [](const typename instruction1::NOP1 _args)
+                  -> std::pair<unsigned int, unsigned int> {
+                return std::make_pair(0u, 0u);
+              },
+              [](const typename instruction1::RDM _args)
+                  -> std::pair<unsigned int, unsigned int> {
+                return std::make_pair(233u, 0u);
+              },
+              [](const typename instruction1::TCS _args)
+                  -> std::pair<unsigned int, unsigned int> {
+                return std::make_pair(249u, 0u);
+              },
+              [](const typename instruction1::WPM _args)
+                  -> std::pair<unsigned int, unsigned int> {
+                return std::make_pair(227u, 0u);
+              },
+              [](const typename instruction1::WR0 _args)
+                  -> std::pair<unsigned int, unsigned int> {
+                return std::make_pair(228u, 0u);
+              }},
           this->v());
     }
   };

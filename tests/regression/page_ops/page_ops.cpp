@@ -12,7 +12,7 @@ PageOps::addr12_of_nat(const unsigned int n) {
 }
 
 __attribute__((pure)) unsigned int PageOps::page_of(const unsigned int p) {
-  return Nat::div(p, 256u);
+  return (256u ? p / 256u : 0);
 }
 
 __attribute__((pure)) unsigned int PageOps::page_base(const unsigned int p) {
@@ -102,31 +102,5 @@ __attribute__((pure)) unsigned int Nat::pow(const unsigned int n,
   } else {
     unsigned int m0 = m - 1;
     return (n * Nat::pow(n, m0));
-  }
-}
-
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
-Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-            const unsigned int u) {
-  if (x <= 0) {
-    return std::make_pair(q, u);
-  } else {
-    unsigned int x_ = x - 1;
-    if (u <= 0) {
-      return Nat::divmod(std::move(x_), y, (q + 1), y);
-    } else {
-      unsigned int u_ = u - 1;
-      return Nat::divmod(std::move(x_), y, q, std::move(u_));
-    }
-  }
-}
-
-__attribute__((pure)) unsigned int Nat::div(const unsigned int x,
-                                            const unsigned int y) {
-  if (y <= 0) {
-    return std::move(y);
-  } else {
-    unsigned int y_ = y - 1;
-    return Nat::divmod(x, y_, 0u, y_).first;
   }
 }

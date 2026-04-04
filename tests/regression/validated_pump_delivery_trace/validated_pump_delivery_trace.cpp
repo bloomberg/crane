@@ -6,81 +6,14 @@
 #include <utility>
 #include <variant>
 
-__attribute__((pure)) bool PeanoNat::eqb(const unsigned int n,
-                                         const unsigned int m) {
-  if (n <= 0) {
-    if (m <= 0) {
-      return true;
-    } else {
-      unsigned int _x = m - 1;
-      return false;
-    }
-  } else {
-    unsigned int n_ = n - 1;
-    if (m <= 0) {
-      return false;
-    } else {
-      unsigned int m_ = m - 1;
-      return PeanoNat::eqb(n_, m_);
-    }
-  }
-}
-
-__attribute__((pure)) bool PeanoNat::leb(const unsigned int n,
-                                         const unsigned int m) {
-  if (n <= 0) {
-    return true;
-  } else {
-    unsigned int n_ = n - 1;
-    if (m <= 0) {
-      return false;
-    } else {
-      unsigned int m_ = m - 1;
-      return PeanoNat::leb(n_, m_);
-    }
-  }
-}
-
-__attribute__((pure)) bool PeanoNat::ltb(const unsigned int n,
-                                         const unsigned int m) {
-  return PeanoNat::leb((n + 1), m);
-}
-
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
-PeanoNat::divmod(const unsigned int x, const unsigned int y,
-                 const unsigned int q, const unsigned int u) {
-  if (x <= 0) {
-    return std::make_pair(q, u);
-  } else {
-    unsigned int x_ = x - 1;
-    if (u <= 0) {
-      return PeanoNat::divmod(std::move(x_), y, (q + 1), y);
-    } else {
-      unsigned int u_ = u - 1;
-      return PeanoNat::divmod(std::move(x_), y, q, std::move(u_));
-    }
-  }
-}
-
-__attribute__((pure)) unsigned int PeanoNat::div(const unsigned int x,
-                                                 const unsigned int y) {
-  if (y <= 0) {
-    return std::move(y);
-  } else {
-    unsigned int y_ = y - 1;
-    return PeanoNat::divmod(x, y_, 0u, y_).first;
-  }
-}
-
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::bg_in_meter_range(
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &bg) {
-  return (PeanoNat::leb(BG_METER_MIN, bg->mg_dL_val) &&
-          PeanoNat::leb(bg->mg_dL_val, BG_METER_MAX));
+  return (BG_METER_MIN <= bg->mg_dL_val && bg->mg_dL_val <= BG_METER_MAX);
 }
 
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::carbs_reasonable(
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Grams> &carbs) {
-  return PeanoNat::leb(carbs->grams_val, CARBS_SANITY_MAX);
+  return carbs->grams_val <= CARBS_SANITY_MAX;
 }
 
 __attribute__((pure)) unsigned int
@@ -159,17 +92,17 @@ ValidatedPumpDeliveryTraceCase::peak_time(
 __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::div_ceil(const unsigned int a,
                                          const unsigned int b) {
-  if (PeanoNat::eqb(b, 0u)) {
+  if (b == 0u) {
     return 0u;
   } else {
-    return PeanoNat::div(((((a + b) - 1u) > (a + b) ? 0 : ((a + b) - 1u))), b);
+    return (b ? ((((a + b) - 1u) > (a + b) ? 0 : ((a + b) - 1u))) / b : 0);
   }
 }
 
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::event_time_valid(
     const unsigned int now,
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent> &event) {
-  return PeanoNat::leb(event->be_time_minutes, now);
+  return event->be_time_minutes <= now;
 }
 
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::history_times_valid(
@@ -205,7 +138,7 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::history_sorted_from(
               std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons
                   _args) -> bool {
             return (
-                PeanoNat::leb(_args.d_a0->be_time_minutes, prev) &&
+                _args.d_a0->be_time_minutes <= prev &&
                 history_sorted_from(_args.d_a0->be_time_minutes, _args.d_a1));
           }},
       events->v());
@@ -241,27 +174,33 @@ ValidatedPumpDeliveryTraceCase::bilinear_iob_fraction(
     const unsigned int elapsed, const unsigned int dia,
     const ValidatedPumpDeliveryTraceCase::InsulinType itype) {
   unsigned int pt = peak_time(itype, dia);
-  if (PeanoNat::eqb(dia, 0u)) {
+  if (dia == 0u) {
     return 0u;
   } else {
-    if (PeanoNat::leb(dia, elapsed)) {
+    if (dia <= elapsed) {
       return 0u;
     } else {
-      if (PeanoNat::eqb(pt, 0u)) {
+      if (pt == 0u) {
         return 0u;
       } else {
-        if (PeanoNat::leb(elapsed, pt)) {
+        if (elapsed <= pt) {
           return (
-              ((100u - PeanoNat::div((elapsed * 25u), std::move(pt))) > 100u
+              ((100u - (std::move(pt) ? (elapsed * 25u) / std::move(pt) : 0)) >
+                       100u
                    ? 0
-                   : (100u - PeanoNat::div((elapsed * 25u), std::move(pt)))));
+                   : (100u -
+                      (std::move(pt) ? (elapsed * 25u) / std::move(pt) : 0))));
         } else {
-          if (PeanoNat::leb(dia, pt)) {
+          if (dia <= pt) {
             return 0u;
           } else {
-            return PeanoNat::div(
-                ((((dia - elapsed) > dia ? 0 : (dia - elapsed))) * 75u),
-                (((dia - std::move(pt)) > dia ? 0 : (dia - std::move(pt)))));
+            return (
+                (((dia - std::move(pt)) > dia ? 0 : (dia - std::move(pt))))
+                    ? ((((dia - elapsed) > dia ? 0 : (dia - elapsed))) * 75u) /
+                          (((dia - std::move(pt)) > dia
+                                ? 0
+                                : (dia - std::move(pt))))
+                    : 0);
           }
         }
       }
@@ -275,7 +214,7 @@ ValidatedPumpDeliveryTraceCase::bilinear_iob_from_bolus(
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent> &event,
     const unsigned int dia,
     const ValidatedPumpDeliveryTraceCase::InsulinType itype) {
-  if (PeanoNat::ltb(now, event->be_time_minutes)) {
+  if (now < event->be_time_minutes) {
     return 0u;
   } else {
     return div_ceil(
@@ -314,12 +253,12 @@ std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL>
 ValidatedPumpDeliveryTraceCase::apply_sensor_margin(
     std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> bg,
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &target) {
-  if (PeanoNat::leb(target->mg_dL_val, bg->mg_dL_val)) {
-    return std::make_shared<ValidatedPumpDeliveryTraceCase::Mg_dL>(Mg_dL{(
-        ((bg->mg_dL_val - PeanoNat::div((bg->mg_dL_val * 15u), 100u)) >
-                 bg->mg_dL_val
-             ? 0
-             : (bg->mg_dL_val - PeanoNat::div((bg->mg_dL_val * 15u), 100u))))});
+  if (target->mg_dL_val <= bg->mg_dL_val) {
+    return std::make_shared<ValidatedPumpDeliveryTraceCase::Mg_dL>(Mg_dL{
+        (((bg->mg_dL_val - (100u ? (bg->mg_dL_val * 15u) / 100u : 0)) >
+                  bg->mg_dL_val
+              ? 0
+              : (bg->mg_dL_val - (100u ? (bg->mg_dL_val * 15u) / 100u : 0))))});
   } else {
     return std::move(bg);
   }
@@ -329,13 +268,13 @@ __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::adjusted_isf_tenths(
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &bg,
     const unsigned int base_isf_tenths) {
-  if (PeanoNat::ltb(bg->mg_dL_val, 250u)) {
+  if (bg->mg_dL_val < 250u) {
     return std::move(base_isf_tenths);
   } else {
-    if (PeanoNat::ltb(bg->mg_dL_val, 350u)) {
-      return PeanoNat::div((std::move(base_isf_tenths) * 80u), 100u);
+    if (bg->mg_dL_val < 350u) {
+      return (100u ? (std::move(base_isf_tenths) * 80u) / 100u : 0);
     } else {
-      return PeanoNat::div((std::move(base_isf_tenths) * 60u), 100u);
+      return (100u ? (std::move(base_isf_tenths) * 60u) / 100u : 0);
     }
   }
 }
@@ -347,19 +286,20 @@ ValidatedPumpDeliveryTraceCase::correction_twentieths_full(
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &target_bg,
     const unsigned int base_isf_tenths) {
   unsigned int eff_isf = adjusted_isf_tenths(current_bg, base_isf_tenths);
-  if (PeanoNat::eqb(eff_isf, 0u)) {
+  if (eff_isf == 0u) {
     return 0u;
   } else {
-    if (PeanoNat::leb(current_bg->mg_dL_val, target_bg->mg_dL_val)) {
+    if (current_bg->mg_dL_val <= target_bg->mg_dL_val) {
       return 0u;
     } else {
-      return PeanoNat::div(
-          ((((current_bg->mg_dL_val - target_bg->mg_dL_val) >
-                     current_bg->mg_dL_val
-                 ? 0
-                 : (current_bg->mg_dL_val - target_bg->mg_dL_val))) *
-           200u),
-          std::move(eff_isf));
+      return (std::move(eff_isf)
+                  ? ((((current_bg->mg_dL_val - target_bg->mg_dL_val) >
+                               current_bg->mg_dL_val
+                           ? 0
+                           : (current_bg->mg_dL_val - target_bg->mg_dL_val))) *
+                     200u) /
+                        std::move(eff_isf)
+                  : 0);
     }
   }
 }
@@ -370,19 +310,19 @@ ValidatedPumpDeliveryTraceCase::apply_reverse_correction_twentieths(
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &current_bg,
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &target_bg,
     const unsigned int isf_tenths) {
-  if (PeanoNat::ltb(current_bg->mg_dL_val, target_bg->mg_dL_val)) {
+  if (current_bg->mg_dL_val < target_bg->mg_dL_val) {
     unsigned int reverse_drop =
         (((target_bg->mg_dL_val - current_bg->mg_dL_val) > target_bg->mg_dL_val
               ? 0
               : (target_bg->mg_dL_val - current_bg->mg_dL_val)));
     unsigned int reverse_units;
-    if (PeanoNat::eqb(isf_tenths, 0u)) {
+    if (isf_tenths == 0u) {
       reverse_units = 0u;
     } else {
       reverse_units =
-          PeanoNat::div((std::move(reverse_drop) * 200u), isf_tenths);
+          (isf_tenths ? (std::move(reverse_drop) * 200u) / isf_tenths : 0);
     }
-    if (PeanoNat::leb(carb, reverse_units)) {
+    if (carb <= reverse_units) {
       return 0u;
     } else {
       return (((std::move(carb) - std::move(reverse_units)) > std::move(carb)
@@ -397,10 +337,10 @@ ValidatedPumpDeliveryTraceCase::apply_reverse_correction_twentieths(
 __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::predict_bg_drop_tenths(
     const unsigned int iob_twentieths, const unsigned int isf_tenths) {
-  if (PeanoNat::eqb(isf_tenths, 0u)) {
+  if (isf_tenths == 0u) {
     return 0u;
   } else {
-    return PeanoNat::div((iob_twentieths * isf_tenths), 200u);
+    return (200u ? (iob_twentieths * isf_tenths) / 200u : 0);
   }
 }
 
@@ -408,10 +348,10 @@ __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::conservative_cob_rise(
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Config> &cfg,
     const unsigned int cob_grams) {
-  return PeanoNat::div(
-      ((cob_grams * cfg->cfg_conservative_cob_absorption_percent) *
-       cfg->cfg_bg_rise_per_gram),
-      100u);
+  return (100u ? ((cob_grams * cfg->cfg_conservative_cob_absorption_percent) *
+                  cfg->cfg_bg_rise_per_gram) /
+                     100u
+               : 0);
 }
 
 __attribute__((pure)) unsigned int
@@ -423,7 +363,7 @@ ValidatedPumpDeliveryTraceCase::predicted_eventual_bg_tenths(
   unsigned int drop = predict_bg_drop_tenths(iob_twentieths, isf_tenths);
   unsigned int rise = conservative_cob_rise(cfg, cob_grams);
   unsigned int bg_after_drop;
-  if (PeanoNat::leb(current_bg->mg_dL_val, drop)) {
+  if (current_bg->mg_dL_val <= drop) {
     bg_after_drop = 0u;
   } else {
     bg_after_drop = (((current_bg->mg_dL_val - drop) > current_bg->mg_dL_val
@@ -439,19 +379,19 @@ ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &current_bg,
     const unsigned int iob_twentieths, const unsigned int cob_grams,
     const unsigned int isf_tenths, const unsigned int proposed) {
-  if (PeanoNat::eqb(isf_tenths, 0u)) {
+  if (isf_tenths == 0u) {
     return SuspendDecision::suspend_withhold();
   } else {
     unsigned int total_insulin = (iob_twentieths + proposed);
     unsigned int pred = predicted_eventual_bg_tenths(
         cfg, current_bg, std::move(total_insulin), cob_grams, isf_tenths);
-    if (PeanoNat::ltb(pred, BG_LEVEL2_HYPO)) {
+    if (pred < BG_LEVEL2_HYPO) {
       return SuspendDecision::suspend_withhold();
     } else {
-      if (PeanoNat::ltb(std::move(pred), cfg->cfg_suspend_threshold_mg_dl)) {
+      if (std::move(pred) < cfg->cfg_suspend_threshold_mg_dl) {
         unsigned int rise_from_cob = conservative_cob_rise(cfg, cob_grams);
         unsigned int effective_target;
-        if (PeanoNat::leb(cfg->cfg_suspend_threshold_mg_dl, rise_from_cob)) {
+        if (cfg->cfg_suspend_threshold_mg_dl <= rise_from_cob) {
           effective_target = 0u;
         } else {
           effective_target =
@@ -461,7 +401,7 @@ ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
                     : (cfg->cfg_suspend_threshold_mg_dl - rise_from_cob)));
         }
         unsigned int safe_drop;
-        if (PeanoNat::leb(current_bg->mg_dL_val, effective_target)) {
+        if (current_bg->mg_dL_val <= effective_target) {
           safe_drop = 0u;
         } else {
           safe_drop = (((current_bg->mg_dL_val - effective_target) >
@@ -470,8 +410,8 @@ ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
                             : (current_bg->mg_dL_val - effective_target)));
         }
         unsigned int safe_insulin =
-            PeanoNat::div((std::move(safe_drop) * 200u), isf_tenths);
-        if (PeanoNat::leb(safe_insulin, iob_twentieths)) {
+            (isf_tenths ? (std::move(safe_drop) * 200u) / isf_tenths : 0);
+        if (safe_insulin <= iob_twentieths) {
           return SuspendDecision::suspend_withhold();
         } else {
           return SuspendDecision::suspend_reduce(
@@ -499,7 +439,7 @@ ValidatedPumpDeliveryTraceCase::apply_suspend(
           },
           [&](const typename ValidatedPumpDeliveryTraceCase::SuspendDecision::
                   Suspend_Reduce _args) -> unsigned int {
-            if (PeanoNat::leb(proposed, _args.d_a0)) {
+            if (proposed <= _args.d_a0) {
               return std::move(proposed);
             } else {
               return _args.d_a0;
@@ -519,7 +459,7 @@ ValidatedPumpDeliveryTraceCase::pediatric_max_twentieths(
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::cap_pediatric(const unsigned int bolus,
                                               const unsigned int weight_kg) {
-  if (PeanoNat::leb(bolus, pediatric_max_twentieths(weight_kg))) {
+  if (bolus <= pediatric_max_twentieths(weight_kg)) {
     return std::move(bolus);
   } else {
     return pediatric_max_twentieths(weight_kg);
@@ -528,23 +468,22 @@ ValidatedPumpDeliveryTraceCase::cap_pediatric(const unsigned int bolus,
 
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::prec_params_valid(
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionParams> &p) {
-  return (((((((PeanoNat::leb(20u, p->prec_icr_tenths) &&
-                PeanoNat::leb(p->prec_icr_tenths, 1000u)) &&
-               PeanoNat::leb(100u, p->prec_isf_tenths)) &&
-              PeanoNat::leb(p->prec_isf_tenths, 4000u)) &&
-             PeanoNat::leb(BG_HYPO, p->prec_target_bg->mg_dL_val)) &&
-            PeanoNat::leb(p->prec_target_bg->mg_dL_val, BG_HYPER)) &&
-           PeanoNat::leb(120u, p->prec_dia)) &&
-          PeanoNat::leb(p->prec_dia, 360u));
+  return (((((((20u <= p->prec_icr_tenths && p->prec_icr_tenths <= 1000u) &&
+               100u <= p->prec_isf_tenths) &&
+              p->prec_isf_tenths <= 4000u) &&
+             BG_HYPO <= p->prec_target_bg->mg_dL_val) &&
+            p->prec_target_bg->mg_dL_val <= BG_HYPER) &&
+           120u <= p->prec_dia) &&
+          p->prec_dia <= 360u);
 }
 
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::carb_bolus_twentieths(
     const unsigned int carbs_g, const unsigned int icr_tenths) {
-  if (PeanoNat::eqb(icr_tenths, 0u)) {
+  if (icr_tenths == 0u) {
     return 0u;
   } else {
-    return PeanoNat::div((carbs_g * 200u), icr_tenths);
+    return (icr_tenths ? (carbs_g * 200u) / icr_tenths : 0);
   }
 }
 
@@ -554,12 +493,16 @@ ValidatedPumpDeliveryTraceCase::calculate_precision_bolus(
         &input,
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionParams>
         &params) {
-  unsigned int activity_isf = PeanoNat::div(
-      (params->prec_isf_tenths * isf_activity_modifier(input->pi_activity)),
-      100u);
-  unsigned int activity_icr = PeanoNat::div(
-      (params->prec_icr_tenths * icr_activity_modifier(input->pi_activity)),
-      100u);
+  unsigned int activity_isf =
+      (100u ? (params->prec_isf_tenths *
+               isf_activity_modifier(input->pi_activity)) /
+                  100u
+            : 0);
+  unsigned int activity_icr =
+      (100u ? (params->prec_icr_tenths *
+               icr_activity_modifier(input->pi_activity)) /
+                  100u
+            : 0);
   std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> eff_bg;
   if (input->pi_use_sensor_margin) {
     eff_bg = apply_sensor_margin(input->pi_current_bg, params->prec_target_bg);
@@ -577,7 +520,7 @@ ValidatedPumpDeliveryTraceCase::calculate_precision_bolus(
       total_bilinear_iob(input->pi_now, input->pi_bolus_history,
                          params->prec_dia, params->prec_insulin_type);
   unsigned int raw = (std::move(carb_adj) + std::move(corr));
-  if (PeanoNat::leb(raw, iob)) {
+  if (raw <= iob) {
     return 0u;
   } else {
     return (((std::move(raw) - std::move(iob)) > std::move(raw)
@@ -588,7 +531,7 @@ ValidatedPumpDeliveryTraceCase::calculate_precision_bolus(
 
 __attribute__((pure)) bool
 ValidatedPumpDeliveryTraceCase::time_reasonable(const unsigned int now) {
-  return PeanoNat::leb(now, 525600u);
+  return now <= 525600u;
 }
 
 __attribute__((pure)) bool
@@ -597,10 +540,10 @@ ValidatedPumpDeliveryTraceCase::history_extraction_safe(
         List<std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>>
         &events) {
   return (
-      PeanoNat::leb(events->length(), 100u) &&
+      events->length() <= 100u &&
       events->forallb(
           [](std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent> e) {
-            return PeanoNat::leb(e->be_dose_twentieths, 500u);
+            return e->be_dose_twentieths <= 500u;
           }));
 }
 
@@ -612,7 +555,7 @@ ValidatedPumpDeliveryTraceCase::iob_high_threshold(
 
 __attribute__((pure)) bool
 ValidatedPumpDeliveryTraceCase::iob_dangerously_high(const unsigned int iob) {
-  return PeanoNat::leb(iob_high_threshold(default_config), iob);
+  return iob_high_threshold(default_config) <= iob;
 }
 
 __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::bolus_too_soon(
@@ -628,14 +571,12 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::bolus_too_soon(
           [&](const typename List<
               std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons
                   _args) -> bool {
-            if (PeanoNat::ltb(now, _args.d_a0->be_time_minutes)) {
+            if (now < _args.d_a0->be_time_minutes) {
               return false;
             } else {
-              return PeanoNat::ltb(
-                  (((now - _args.d_a0->be_time_minutes) > now
-                        ? 0
-                        : (now - _args.d_a0->be_time_minutes))),
-                  15u);
+              return (((now - _args.d_a0->be_time_minutes) > now
+                           ? 0
+                           : (now - _args.d_a0->be_time_minutes))) < 15u;
             }
           }},
       history->v());
@@ -643,7 +584,7 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::bolus_too_soon(
 
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::cap_twentieths(const unsigned int t) {
-  if (PeanoNat::leb(t, 500u)) {
+  if (t <= 500u) {
     return std::move(t);
   } else {
     return 500u;
@@ -677,14 +618,14 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
               if (input->pi_fault->fault_blocks_bolus()) {
                 return PrecisionResult::precerror(prec_error_fault);
               } else {
-                if (PeanoNat::ltb(input->pi_current_bg->mg_dL_val, BG_HYPO)) {
+                if (input->pi_current_bg->mg_dL_val < BG_HYPO) {
                   return PrecisionResult::precerror(prec_error_hypo);
                 } else {
                   unsigned int iob = total_bilinear_iob(
                       input->pi_now, input->pi_bolus_history, params->prec_dia,
                       params->prec_insulin_type);
                   if ((iob_dangerously_high(iob) &&
-                       PeanoNat::eqb(input->pi_carbs_g->grams_val, 0u))) {
+                       input->pi_carbs_g->grams_val == 0u)) {
                     return PrecisionResult::precerror(prec_error_iob_high);
                   } else {
                     unsigned int tdd_current =
@@ -694,13 +635,11 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                                 std::shared_ptr<
                                     ValidatedPumpDeliveryTraceCase::BolusEvent>
                                     e) mutable {
-                              if ((PeanoNat::leb(
-                                       (((input->pi_now - 1440u) > input->pi_now
-                                             ? 0
-                                             : (input->pi_now - 1440u))),
-                                       e->be_time_minutes) &&
-                                   PeanoNat::leb(e->be_time_minutes,
-                                                 input->pi_now))) {
+                              if (((((input->pi_now - 1440u) > input->pi_now
+                                         ? 0
+                                         : (input->pi_now - 1440u))) <=
+                                       e->be_time_minutes &&
+                                   e->be_time_minutes <= input->pi_now)) {
                                 return (acc + e->be_dose_twentieths);
                               } else {
                                 return acc;
@@ -714,24 +653,25 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                     } else {
                       tdd_limit = 5000u;
                     }
-                    if (PeanoNat::leb(tdd_limit, tdd_current)) {
+                    if (tdd_limit <= tdd_current) {
                       return PrecisionResult::precerror(
                           prec_error_tdd_exceeded);
                     } else {
                       unsigned int raw =
                           calculate_precision_bolus(input, params);
                       unsigned int tdd_capped;
-                      if (PeanoNat::leb((raw + tdd_current), tdd_limit)) {
+                      if ((raw + tdd_current) <= tdd_limit) {
                         tdd_capped = raw;
                       } else {
                         tdd_capped = (((tdd_limit - tdd_current) > tdd_limit
                                            ? 0
                                            : (tdd_limit - tdd_current)));
                       }
-                      unsigned int activity_isf = PeanoNat::div(
-                          (params->prec_isf_tenths *
-                           isf_activity_modifier(input->pi_activity)),
-                          100u);
+                      unsigned int activity_isf =
+                          (100u ? (params->prec_isf_tenths *
+                                   isf_activity_modifier(input->pi_activity)) /
+                                      100u
+                                : 0);
                       std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL>
                           eff_bg;
                       if (input->pi_use_sensor_margin) {
@@ -757,8 +697,7 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                       } else {
                         capped = std::move(adult_capped);
                       }
-                      bool was_modified =
-                          !(PeanoNat::eqb(std::move(raw), capped));
+                      bool was_modified = !(std::move(raw) == capped);
                       return PrecisionResult::precok(capped, was_modified);
                     }
                   }
@@ -792,7 +731,7 @@ ValidatedPumpDeliveryTraceCase::prec_result_twentieths(
 __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::mmol_tenths_to_mg_dL(
     const unsigned int mmol_tenths) {
-  return PeanoNat::div((mmol_tenths * 18u), 10u);
+  return (10u ? (mmol_tenths * 18u) / 10u : 0);
 }
 
 std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionInput>
@@ -820,10 +759,10 @@ ValidatedPumpDeliveryTraceCase::validated_mmol_bolus(
 __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::round_down_to_increment(
     const unsigned int t, const unsigned int increment) {
-  if (PeanoNat::eqb(increment, 0u)) {
+  if (increment == 0u) {
     return std::move(t);
   } else {
-    return (PeanoNat::div(std::move(t), increment) * increment);
+    return ((increment ? std::move(t) / increment : 0) * increment);
   }
 }
 
@@ -873,16 +812,16 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::pump_can_deliver(
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PumpState> &state,
     const unsigned int dose) {
   return (((!(state->ps_occlusion_detected) &&
-            PeanoNat::leb(dose, state->ps_reservoir_twentieths)) &&
-           PeanoNat::leb(dose, 500u)) &&
-          PeanoNat::leb(5u, state->ps_battery_percent));
+            dose <= state->ps_reservoir_twentieths) &&
+           dose <= 500u) &&
+          5u <= state->ps_battery_percent);
 }
 
 __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::reservoir_after_bolus(
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PumpState> &state,
     const unsigned int dose) {
-  if (PeanoNat::leb(dose, state->ps_reservoir_twentieths)) {
+  if (dose <= state->ps_reservoir_twentieths) {
     return (((state->ps_reservoir_twentieths - dose) >
                      state->ps_reservoir_twentieths
                  ? 0

@@ -7,9 +7,9 @@
 __attribute__((pure)) bool
 JcnOps::jcn_condition(const std::shared_ptr<JcnOps::state> &s,
                       const unsigned int cond) {
-  unsigned int c1 = Nat::div(cond, 8u);
-  unsigned int c2 = (Nat::div(cond, 4u) % 2u);
-  unsigned int c3 = (Nat::div(cond, 2u) % 2u);
+  unsigned int c1 = (8u ? cond / 8u : 0);
+  unsigned int c2 = ((4u ? cond / 4u : 0) % 2u);
+  unsigned int c3 = ((2u ? cond / 2u : 0) % 2u);
   unsigned int c4 = (cond % 2u);
   bool base = ((s->acc == 0u && std::move(c2) == 1u) ||
                ((s->carry && std::move(c3) == 1u) ||
@@ -31,7 +31,7 @@ JcnOps::pc_inc2(const std::shared_ptr<JcnOps::state> &s) {
 }
 
 __attribute__((pure)) unsigned int JcnOps::page_of(const unsigned int p) {
-  return Nat::div(p, 256u);
+  return (256u ? p / 256u : 0);
 }
 
 __attribute__((pure)) unsigned int JcnOps::page_base(const unsigned int p) {
@@ -50,31 +50,5 @@ JcnOps::branch_target(const std::shared_ptr<JcnOps::state> &s,
     return addr12_of_nat((base_for_next2(s) + off));
   } else {
     return addr12_of_nat((s->pc + 2u));
-  }
-}
-
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
-Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-            const unsigned int u) {
-  if (x <= 0) {
-    return std::make_pair(q, u);
-  } else {
-    unsigned int x_ = x - 1;
-    if (u <= 0) {
-      return Nat::divmod(std::move(x_), y, (q + 1), y);
-    } else {
-      unsigned int u_ = u - 1;
-      return Nat::divmod(std::move(x_), y, q, std::move(u_));
-    }
-  }
-}
-
-__attribute__((pure)) unsigned int Nat::div(const unsigned int x,
-                                            const unsigned int y) {
-  if (y <= 0) {
-    return std::move(y);
-  } else {
-    unsigned int y_ = y - 1;
-    return Nat::divmod(x, y_, 0u, y_).first;
   }
 }

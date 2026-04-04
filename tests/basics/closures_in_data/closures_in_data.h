@@ -96,14 +96,6 @@ public:
   }
 };
 
-struct Nat {
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-         const unsigned int u);
-  __attribute__((pure)) static unsigned int div(const unsigned int x,
-                                                const unsigned int y);
-};
-
 struct ClosuresInData {
   /// A list of functions: successor, doubling, and squaring.
   static inline const std::shared_ptr<
@@ -132,7 +124,7 @@ struct ClosuresInData {
   static inline const std::shared_ptr<transform> double_transform =
       std::make_shared<transform>(
           transform{[](unsigned int x) { return (x + x); },
-                    [](unsigned int x) { return Nat::div(x, 2u); }});
+                    [](unsigned int x) { return (2u ? x / 2u : 0); }});
   __attribute__((pure)) static unsigned int
   apply_forward(const std::shared_ptr<transform> &t, const unsigned int x);
   __attribute__((pure)) static unsigned int

@@ -70,14 +70,6 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
-struct Nat {
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-         const unsigned int u);
-  __attribute__((pure)) static unsigned int div(const unsigned int x,
-                                                const unsigned int y);
-};
-
 struct LoopifyNumericSequences {
   __attribute__((pure)) static unsigned int
   collatz_length_fuel(const unsigned int fuel, const unsigned int n);

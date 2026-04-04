@@ -640,6 +640,13 @@ Definition unknown_fault_blocks : bool :=
 End ValidatedPumpDeliveryTraceCase.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
+
+(* Override PeanoNat operations with efficient implementations *)
+Crane Extract Inlined Constant Arith.PeanoNat.Nat.div => "(%a1 ? %a0 / %a1 : 0)".
+Crane Extract Inlined Constant Arith.PeanoNat.Nat.modulo => "(%a0 % %a1)".
+Crane Extract Inlined Constant Arith.PeanoNat.Nat.eqb => "%a0 == %a1".
+Crane Extract Inlined Constant Arith.PeanoNat.Nat.leb => "%a0 <= %a1".
+Crane Extract Inlined Constant Arith.PeanoNat.Nat.ltb => "%a0 < %a1".
 
 Crane Extraction "validated_pump_delivery_trace" ValidatedPumpDeliveryTraceCase.

@@ -41,7 +41,7 @@ LoopifyNumericSequences::collatz_length_fuel(const unsigned int fuel,
                        } else {
                          if ((n % 2u) == 0u) {
                            _stack.push_back(_Call1{1u});
-                           _stack.push_back(_Enter{Nat::div(n, 2u), fuel_});
+                           _stack.push_back(_Enter{(2u ? n / 2u : 0), fuel_});
                          } else {
                            _stack.push_back(_Call2{1u});
                            _stack.push_back(_Enter{((3u * n) + 1u), fuel_});
@@ -103,7 +103,7 @@ LoopifyNumericSequences::collatz_sequence_fuel(const unsigned int fuel,
               _head = _cell;
             }
             _last = _cell;
-            unsigned int _next_n = Nat::div(_loop_n, 2u);
+            unsigned int _next_n = (2u ? _loop_n / 2u : 0);
             unsigned int _next_fuel = fuel_;
             _loop_n = std::move(_next_n);
             _loop_fuel = std::move(_next_fuel);
@@ -322,7 +322,7 @@ LoopifyNumericSequences::digitsum_fuel(const unsigned int fuel,
                               } else {
                                 _stack.push_back(_Call1{(n % 10u)});
                                 _stack.push_back(
-                                    _Enter{Nat::div(n, 10u), fuel_});
+                                    _Enter{(10u ? n / 10u : 0), fuel_});
                               }
                             }
                           },
@@ -369,7 +369,7 @@ LoopifyNumericSequences::dec_to_bin_fuel(const unsigned int fuel,
                          _result = 0u;
                        } else {
                          _stack.push_back(_Call1{(n % 2u), 10u});
-                         _stack.push_back(_Enter{Nat::div(n, 2u), fuel_});
+                         _stack.push_back(_Enter{(2u ? n / 2u : 0), fuel_});
                        }
                      }
                    },
@@ -477,56 +477,5 @@ LoopifyNumericSequences::sum_divisors(const unsigned int n) {
     return 0u;
   } else {
     return sum_divisors_aux(n, (((n - 1u) > n ? 0 : (n - 1u))));
-  }
-}
-
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
-Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-            const unsigned int u) {
-  std::pair<unsigned int, unsigned int> _result;
-  unsigned int _loop_u = u;
-  unsigned int _loop_q = q;
-  unsigned int _loop_x = x;
-  bool _continue = true;
-  while (_continue) {
-    if (_loop_x <= 0) {
-      {
-        _result = std::make_pair(_loop_q, _loop_u);
-        _continue = false;
-      }
-    } else {
-      unsigned int x_ = _loop_x - 1;
-      if (_loop_u <= 0) {
-        {
-          unsigned int _next_u = y;
-          unsigned int _next_q = (_loop_q + 1);
-          unsigned int _next_x = std::move(x_);
-          _loop_u = std::move(_next_u);
-          _loop_q = std::move(_next_q);
-          _loop_x = std::move(_next_x);
-          continue;
-        }
-      } else {
-        unsigned int u_ = _loop_u - 1;
-        {
-          unsigned int _next_u = std::move(u_);
-          unsigned int _next_x = std::move(x_);
-          _loop_u = std::move(_next_u);
-          _loop_x = std::move(_next_x);
-          continue;
-        }
-      }
-    }
-  }
-  return _result;
-}
-
-__attribute__((pure)) unsigned int Nat::div(const unsigned int x,
-                                            const unsigned int y) {
-  if (y <= 0) {
-    return std::move(y);
-  } else {
-    unsigned int y_ = y - 1;
-    return Nat::divmod(x, y_, 0u, y_).first;
   }
 }

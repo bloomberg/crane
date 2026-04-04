@@ -33,7 +33,7 @@ std::shared_ptr<List<unsigned int>>
 GetPairBoundProp::set_pair(const std::shared_ptr<GetPairBoundProp::state> &s,
                            const unsigned int r, const unsigned int v) {
   unsigned int base = pair_base(r);
-  unsigned int hi = (Nat::div(v, 16u) % 16u);
+  unsigned int hi = ((16u ? v / 16u : 0) % 16u);
   unsigned int lo = (v % 16u);
   return update_nth<unsigned int>(
       (base + 1), std::move(lo),
@@ -187,7 +187,7 @@ GetPairBoundProp::execute(std::shared_ptr<GetPairBoundProp::state> s,
               carry_bit = 0u;
             }
             return std::make_shared<GetPairBoundProp::state>(
-                state{(Nat::div(s->ex_acc, 2u) + carry_bit), s->ex_regs,
+                state{((2u ? s->ex_acc / 2u : 0) + carry_bit), s->ex_regs,
                       (s->ex_acc % 2u) == 1u, ((s->ex_pc + 1u) % 4096u),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
@@ -276,7 +276,7 @@ GetPairBoundProp::execute(std::shared_ptr<GetPairBoundProp::state> s,
             return std::make_shared<GetPairBoundProp::state>(
                 state{s->ex_acc, s->ex_regs, s->ex_carry,
                       [&]() {
-                        if (std::move(jump)) {
+                        if (jump) {
                           return (_args.d_a % 4096u);
                         } else {
                           return ((std::move(s)->ex_pc + 2u) % 4096u);
@@ -333,30 +333,4 @@ GetPairBoundProp::execute(std::shared_ptr<GetPairBoundProp::state> s,
                       s->ex_pair_bus, s->ex_ports});
           }},
       i->v());
-}
-
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
-Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-            const unsigned int u) {
-  if (x <= 0) {
-    return std::make_pair(q, u);
-  } else {
-    unsigned int x_ = x - 1;
-    if (u <= 0) {
-      return Nat::divmod(std::move(x_), y, (q + 1), y);
-    } else {
-      unsigned int u_ = u - 1;
-      return Nat::divmod(std::move(x_), y, q, std::move(u_));
-    }
-  }
-}
-
-__attribute__((pure)) unsigned int Nat::div(const unsigned int x,
-                                            const unsigned int y) {
-  if (y <= 0) {
-    return std::move(y);
-  } else {
-    unsigned int y_ = y - 1;
-    return Nat::divmod(x, y_, 0u, y_).first;
-  }
 }

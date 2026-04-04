@@ -123,6 +123,5 @@ UnitVoidEdge2::compose_option_unit(const bool b1, const bool b2) {
 
 std::shared_ptr<UnitVoidEdge2::pair<unsigned int, std::monostate>>
 UnitVoidEdge2::make_nat_unit_pair(const unsigned int n) {
-  return pair<unsigned int, std::monostate>::pair0(std::move(n),
-                                                   std::monostate{});
+  return pair<unsigned int, std::monostate>::pair0(n, std::monostate{});
 }

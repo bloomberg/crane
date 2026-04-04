@@ -103,14 +103,6 @@ public:
   }
 };
 
-struct Nat {
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-         const unsigned int u);
-  __attribute__((pure)) static unsigned int div(const unsigned int x,
-                                                const unsigned int y);
-};
-
 /// Consolidated list generator functions.
 struct LoopifyGenerators {
   /// cycle n l repeats the list n times: cycle 2 1,2 -> 1,2,1,2.

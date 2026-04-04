@@ -15,7 +15,7 @@ __attribute__((pure)) unsigned int NestedMod::Outer::Inner::area(
               -> unsigned int { return (_args.d_a0 * _args.d_a0); },
           [](const typename NestedMod::Outer::Inner::shape::Triangle _args)
               -> unsigned int {
-            return Nat::div((_args.d_a0 * _args.d_a1), 2u);
+            return (2u ? (_args.d_a0 * _args.d_a1) / 2u : 0);
           }},
       s->v());
 }
@@ -52,31 +52,5 @@ NestedMod::Outer::color_code(const NestedMod::Outer::Color c) {
   }
   default:
     std::unreachable();
-  }
-}
-
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
-Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-            const unsigned int u) {
-  if (x <= 0) {
-    return std::make_pair(q, u);
-  } else {
-    unsigned int x_ = x - 1;
-    if (u <= 0) {
-      return Nat::divmod(std::move(x_), y, (q + 1), y);
-    } else {
-      unsigned int u_ = u - 1;
-      return Nat::divmod(std::move(x_), y, q, std::move(u_));
-    }
-  }
-}
-
-__attribute__((pure)) unsigned int Nat::div(const unsigned int x,
-                                            const unsigned int y) {
-  if (y <= 0) {
-    return std::move(y);
-  } else {
-    unsigned int y_ = y - 1;
-    return Nat::divmod(x, y_, 0u, y_).first;
   }
 }

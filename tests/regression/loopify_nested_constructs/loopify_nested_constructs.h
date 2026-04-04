@@ -13,14 +13,6 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-struct Nat {
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-         const unsigned int u);
-  __attribute__((pure)) static unsigned int div(const unsigned int x,
-                                                const unsigned int y);
-};
-
 struct LoopifyNestedConstructs {
   __attribute__((pure)) static unsigned int multi_let(const unsigned int n);
   __attribute__((pure)) static unsigned int

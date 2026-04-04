@@ -107,14 +107,6 @@ public:
   }
 };
 
-struct Nat {
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-         const unsigned int u);
-  __attribute__((pure)) static unsigned int div(const unsigned int x,
-                                                const unsigned int y);
-};
-
 /// Consolidated UNIQUE numeric algorithms - no basic arithmetic.
 /// Tests loopification on number theory and recursive sequences.
 struct LoopifyNumbers {

@@ -140,14 +140,6 @@ public:
   }
 };
 
-struct Nat {
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-         const unsigned int u);
-  __attribute__((pure)) static unsigned int div(const unsigned int x,
-                                                const unsigned int y);
-};
-
 struct LoopifySequences {
   /// alternate_sum sign acc l alternating sum with sign flip.
   __attribute__((pure)) static unsigned int

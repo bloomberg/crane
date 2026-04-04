@@ -398,7 +398,8 @@ LoopifyNumbers::collatz_length_fuel(const unsigned int fuel,
                               } else {
                                 if ((n % 2u) == 0u) {
                                   _stack.push_back(_Call1{});
-                                  _stack.push_back(_Enter{Nat::div(n, 2u), f});
+                                  _stack.push_back(
+                                      _Enter{(2u ? n / 2u : 0), f});
                                 } else {
                                   _stack.push_back(_Call2{});
                                   _stack.push_back(_Enter{((3u * n) + 1u), f});
@@ -448,7 +449,8 @@ LoopifyNumbers::digitsum_fuel(const unsigned int fuel, const unsigned int n) {
                               } else {
                                 unsigned int _x = n - 1;
                                 _stack.push_back(_Call1{(n % 10u)});
-                                _stack.push_back(_Enter{Nat::div(n, 10u), f});
+                                _stack.push_back(
+                                    _Enter{(10u ? n / 10u : 0), f});
                               }
                             }
                           },
@@ -494,7 +496,7 @@ LoopifyNumbers::dec_to_bin_fuel(const unsigned int fuel, const unsigned int n) {
                                 unsigned int _x = n - 1;
                                 unsigned int digit = (n % 2u);
                                 _stack.push_back(_Call1{digit});
-                                _stack.push_back(_Enter{Nat::div(n, 2u), f});
+                                _stack.push_back(_Enter{(2u ? n / 2u : 0), f});
                               }
                             }
                           },
@@ -1061,38 +1063,39 @@ LoopifyNumbers::power_mod_fuel(const unsigned int fuel, const unsigned int b,
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(Overloaded{[&](_Enter _f) {
-                            const unsigned int e = _f.e;
-                            const unsigned int fuel = _f.fuel;
-                            if (fuel <= 0) {
-                              _result = 0u;
-                            } else {
-                              unsigned int f = fuel - 1;
-                              if (e == 0u) {
-                                _result = 1u;
-                              } else {
-                                if ((e % 2u) == 0u) {
-                                  _stack.push_back(_Call1{m});
-                                  _stack.push_back(_Enter{Nat::div(e, 2u), f});
-                                } else {
-                                  _stack.push_back(_Call2{b, m});
-                                  _stack.push_back(_Enter{Nat::div(e, 2u), f});
-                                }
-                              }
-                            }
-                          },
-                          [&](_Call1 _f) {
-                            const unsigned int m = _f._s0;
-                            unsigned int half = _result;
-                            _result = ((half * half) % m);
-                          },
-                          [&](_Call2 _f) {
-                            const unsigned int b = _f._s0;
-                            const unsigned int m = _f._s1;
-                            unsigned int half = _result;
-                            _result = ((b * (half * half)) % m);
-                          }},
-               _frame);
+    std::visit(
+        Overloaded{[&](_Enter _f) {
+                     const unsigned int e = _f.e;
+                     const unsigned int fuel = _f.fuel;
+                     if (fuel <= 0) {
+                       _result = 0u;
+                     } else {
+                       unsigned int f = fuel - 1;
+                       if (e == 0u) {
+                         _result = 1u;
+                       } else {
+                         if ((e % 2u) == 0u) {
+                           _stack.push_back(_Call1{m});
+                           _stack.push_back(_Enter{(2u ? e / 2u : 0), f});
+                         } else {
+                           _stack.push_back(_Call2{b, m});
+                           _stack.push_back(_Enter{(2u ? e / 2u : 0), f});
+                         }
+                       }
+                     }
+                   },
+                   [&](_Call1 _f) {
+                     const unsigned int m = _f._s0;
+                     unsigned int half = _result;
+                     _result = ((half * half) % m);
+                   },
+                   [&](_Call2 _f) {
+                     const unsigned int b = _f._s0;
+                     const unsigned int m = _f._s1;
+                     unsigned int half = _result;
+                     _result = ((b * (half * half)) % m);
+                   }},
+        _frame);
   }
   return _result;
 }
@@ -1300,7 +1303,7 @@ LoopifyNumbers::collatz_list_fuel(const unsigned int fuel,
               _head = _cell;
             }
             _last = _cell;
-            unsigned int _next_n = Nat::div(_loop_n, 2u);
+            unsigned int _next_n = (2u ? _loop_n / 2u : 0);
             unsigned int _next_fuel = f;
             _loop_n = std::move(_next_n);
             _loop_fuel = std::move(_next_fuel);
@@ -1317,7 +1320,7 @@ LoopifyNumbers::collatz_list_fuel(const unsigned int fuel,
                 _head = _cell;
               }
               _last = _cell;
-              unsigned int _next_n = Nat::div(_loop_n, 3u);
+              unsigned int _next_n = (3u ? _loop_n / 3u : 0);
               unsigned int _next_fuel = f;
               _loop_n = std::move(_next_n);
               _loop_fuel = std::move(_next_fuel);
@@ -1388,55 +1391,4 @@ LoopifyNumbers::sum_divisible_by(const unsigned int k, const unsigned int n) {
                _frame);
   }
   return _result;
-}
-
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
-Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-            const unsigned int u) {
-  std::pair<unsigned int, unsigned int> _result;
-  unsigned int _loop_u = u;
-  unsigned int _loop_q = q;
-  unsigned int _loop_x = x;
-  bool _continue = true;
-  while (_continue) {
-    if (_loop_x <= 0) {
-      {
-        _result = std::make_pair(_loop_q, _loop_u);
-        _continue = false;
-      }
-    } else {
-      unsigned int x_ = _loop_x - 1;
-      if (_loop_u <= 0) {
-        {
-          unsigned int _next_u = y;
-          unsigned int _next_q = (_loop_q + 1);
-          unsigned int _next_x = std::move(x_);
-          _loop_u = std::move(_next_u);
-          _loop_q = std::move(_next_q);
-          _loop_x = std::move(_next_x);
-          continue;
-        }
-      } else {
-        unsigned int u_ = _loop_u - 1;
-        {
-          unsigned int _next_u = std::move(u_);
-          unsigned int _next_x = std::move(x_);
-          _loop_u = std::move(_next_u);
-          _loop_x = std::move(_next_x);
-          continue;
-        }
-      }
-    }
-  }
-  return _result;
-}
-
-__attribute__((pure)) unsigned int Nat::div(const unsigned int x,
-                                            const unsigned int y) {
-  if (y <= 0) {
-    return std::move(y);
-  } else {
-    unsigned int y_ = y - 1;
-    return Nat::divmod(x, y_, 0u, y_).first;
-  }
 }

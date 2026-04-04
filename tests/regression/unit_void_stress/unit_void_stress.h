@@ -140,7 +140,7 @@ struct UnitVoidStress {
   __attribute__((pure)) static std::optional<std::monostate>
   apply_void_to_option(F0 &&f, const unsigned int n) {
     return std::make_optional<std::monostate>([&]() {
-      f(std::move(n));
+      f(n);
       return std::monostate{};
     }());
   }

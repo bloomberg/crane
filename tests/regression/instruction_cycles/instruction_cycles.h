@@ -81,14 +81,6 @@ public:
   }
 };
 
-struct Nat {
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-         const unsigned int u);
-  __attribute__((pure)) static unsigned int div(const unsigned int x,
-                                                const unsigned int y);
-};
-
 struct InstructionCycles {
   struct state1 {
     unsigned int acc1;
@@ -146,9 +138,9 @@ struct InstructionCycles {
       return std::visit(
           Overloaded{
               [&](const typename instruction1::JCN1 _args) -> unsigned int {
-                unsigned int c1 = Nat::div(_args.d_a0, 8u);
-                unsigned int c2 = (Nat::div(_args.d_a0, 4u) % 2u);
-                unsigned int c3 = (Nat::div(_args.d_a0, 2u) % 2u);
+                unsigned int c1 = (8u ? _args.d_a0 / 8u : 0);
+                unsigned int c2 = ((4u ? _args.d_a0 / 4u : 0) % 2u);
+                unsigned int c3 = ((2u ? _args.d_a0 / 2u : 0) % 2u);
                 unsigned int c4 = (_args.d_a0 % 2u);
                 bool base_cond = ((s->acc1 == 0u && std::move(c2) == 1u) ||
                                   ((s->carry1 && std::move(c3) == 1u) ||
@@ -565,11 +557,11 @@ struct InstructionCycles {
                 return 8u;
               },
               [&](const typename instruction5::JCN5 _args) -> unsigned int {
-                if (Nat::div(_args.d_a0, 8u) == 1u) {
+                if ((8u ? _args.d_a0 / 8u : 0) == 1u) {
                   return 16u;
                 } else {
                   if ((s->acc5 == 0u &&
-                       (Nat::div(_args.d_a0, 4u) % 2u) == 1u)) {
+                       ((4u ? _args.d_a0 / 4u : 0) % 2u) == 1u)) {
                     return 16u;
                   } else {
                     return 8u;

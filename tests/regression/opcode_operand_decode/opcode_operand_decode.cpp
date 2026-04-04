@@ -5,7 +5,7 @@
 
 __attribute__((pure)) OpcodeOperandDecode::Instruction
 OpcodeOperandDecode::decode(const unsigned int b1, const unsigned int _x) {
-  unsigned int opcode = Nat::div(b1, 16u);
+  unsigned int opcode = (16u ? b1 / 16u : 0);
   unsigned int operand = (b1 % 16u);
   if (opcode <= 0) {
     return Instruction::e_NOP_;
@@ -218,31 +218,5 @@ OpcodeOperandDecode::decode(const unsigned int b1, const unsigned int _x) {
         }
       }
     }
-  }
-}
-
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
-Nat::divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-            const unsigned int u) {
-  if (x <= 0) {
-    return std::make_pair(q, u);
-  } else {
-    unsigned int x_ = x - 1;
-    if (u <= 0) {
-      return Nat::divmod(std::move(x_), y, (q + 1), y);
-    } else {
-      unsigned int u_ = u - 1;
-      return Nat::divmod(std::move(x_), y, q, std::move(u_));
-    }
-  }
-}
-
-__attribute__((pure)) unsigned int Nat::div(const unsigned int x,
-                                            const unsigned int y) {
-  if (y <= 0) {
-    return std::move(y);
-  } else {
-    unsigned int y_ = y - 1;
-    return Nat::divmod(x, y_, 0u, y_).first;
   }
 }

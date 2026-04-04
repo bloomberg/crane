@@ -733,19 +733,7 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
-struct PeanoNat {
-  __attribute__((pure)) static bool eqb(const unsigned int n,
-                                        const unsigned int m);
-  __attribute__((pure)) static bool leb(const unsigned int n,
-                                        const unsigned int m);
-  __attribute__((pure)) static bool ltb(const unsigned int n,
-                                        const unsigned int m);
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-         const unsigned int u);
-  __attribute__((pure)) static unsigned int div(const unsigned int x,
-                                                const unsigned int y);
-};
+struct PeanoNat {};
 
 struct Uint1 {
   // TYPES
@@ -1026,7 +1014,7 @@ struct ValidatedPumpDeliveryTraceCase {
                 return true;
               },
               [](const typename FaultStatus::Fault_LowReservoir _args) -> bool {
-                return PeanoNat::ltb(_args.d_a0, 10u);
+                return _args.d_a0 < 10u;
               },
               [](const typename FaultStatus::Fault_BatteryLow _args) -> bool {
                 return false;

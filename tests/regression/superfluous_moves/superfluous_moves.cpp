@@ -20,6 +20,7 @@ std::shared_ptr<SuperfluousMoves::game_state> SuperfluousMoves::lose_one_life(
 }
 
 /// Reduced branch reproducer without the outer option * nat wrapper.
+__attribute__((pure))
 std::pair<bool, std::shared_ptr<SuperfluousMoves::loop_state>>
 SuperfluousMoves::bad_branch(std::shared_ptr<SuperfluousMoves::loop_state> ls) {
   std::shared_ptr<SuperfluousMoves::game_state> gs1 = ls->ls_game;
@@ -35,12 +36,10 @@ SuperfluousMoves::bad_branch(std::shared_ptr<SuperfluousMoves::loop_state> ls) {
     std::shared_ptr<SuperfluousMoves::game_state> gs3 =
         lose_one_life(std::move(gs2));
     if (gs3->lives == 0u) {
-      (void)0;
       return std::make_pair(false,
                             std::make_shared<SuperfluousMoves::loop_state>(
                                 loop_state{gs3, gs3->pacpos, gs3->ghosts}));
     } else {
-      (void)0;
       return std::make_pair(false,
                             std::make_shared<SuperfluousMoves::loop_state>(
                                 loop_state{gs3, gs3->pacpos, gs3->ghosts}));
@@ -52,11 +51,4 @@ SuperfluousMoves::bad_branch(std::shared_ptr<SuperfluousMoves::loop_state> ls) {
   default:
     std::unreachable();
   }
-}
-
-/// Standalone entrypoint that forces evaluation of bad_branch.
-int main() {
-  std::pair<bool, std::shared_ptr<SuperfluousMoves::loop_state>> _x =
-      SuperfluousMoves::bad_branch(SuperfluousMoves::sample_loop);
-  return 0;
 }

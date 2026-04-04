@@ -102,14 +102,6 @@ public:
   }
 };
 
-struct Nat {
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-         const unsigned int u);
-  __attribute__((pure)) static unsigned int div(const unsigned int x,
-                                                const unsigned int y);
-};
-
 struct ListDef {
   template <typename T1>
   static std::shared_ptr<List<T1>> repeat(const T1 x, const unsigned int n);
@@ -871,7 +863,7 @@ struct LoopifyExprVariants {
                     _stack.push_back(_Enter{_args.d_a0.get()});
                   }
                 },
-                [&](_Call6 _f) { _result = Nat::div(_result, _f._s0); }},
+                [&](_Call6 _f) { _result = (_f._s0 ? _result / _f._s0 : 0); }},
             _frame);
       }
       return _result;

@@ -77,7 +77,7 @@ LetMatchType2::cascading_nat(const bool a, const bool b, const bool c) {
 __attribute__((pure)) unsigned int LetMatchType2::let_match_fun(const bool b) {
   unsigned int x = 5u;
   if (b) {
-    return (std::move(x) + 1);
+    return (x + 1);
   } else {
     return std::move(x);
   }

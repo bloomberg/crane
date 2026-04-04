@@ -247,12 +247,12 @@ ComprehensivePatterns::rebind(std::shared_ptr<ComprehensivePatterns::S> s1) {
   return std::make_pair(s1, s1->s_a);
 }
 
-__attribute__((pure))
-std::pair<std::function<unsigned int(Unit)>, std::function<unsigned int(Unit)>>
+__attribute__((pure)) std::pair<std::function<unsigned int(std::monostate)>,
+                                std::function<unsigned int(std::monostate)>>
 ComprehensivePatterns::closure_pair(
     std::shared_ptr<ComprehensivePatterns::S> s) {
-  return std::make_pair([=](Unit _x) mutable { return s->s_a; },
-                        [=](Unit _x) mutable { return s->s_b; });
+  return std::make_pair([=](std::monostate _x) mutable { return s->s_a; },
+                        [=](std::monostate _x) mutable { return s->s_b; });
 }
 
 std::shared_ptr<Sig<std::shared_ptr<ComprehensivePatterns::S>>>
@@ -871,7 +871,7 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::double_proj_nc(
 
 __attribute__((pure)) unsigned int ComprehensivePatterns::multi_positions(
     const std::shared_ptr<ComprehensivePatterns::NC> &r) {
-  return (r->nc_a + [&](void) {
+  return (r->nc_a + [&]() {
     if (r->nc_b == 0u) {
       return r->nc_a;
     } else {

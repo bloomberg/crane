@@ -21,7 +21,7 @@ void UnitVoidStress::discard(const unsigned int _x) { return; }
 __attribute__((pure)) std::pair<unsigned int, std::monostate>
 UnitVoidStress::pair_with_void_call(const unsigned int n) {
   return std::make_pair(42u, [&]() {
-    consume(std::move(n));
+    consume(n);
     return std::monostate{};
   }());
 }
@@ -29,7 +29,7 @@ UnitVoidStress::pair_with_void_call(const unsigned int n) {
 __attribute__((pure)) std::optional<std::monostate>
 UnitVoidStress::some_void_call(const unsigned int n) {
   return std::make_optional<std::monostate>([&]() {
-    consume(std::move(n));
+    consume(n);
     return std::monostate{};
   }());
 }
@@ -101,7 +101,7 @@ UnitVoidStress::option_pair_void(const unsigned int n) {
 
 __attribute__((pure)) std::pair<unsigned int, unsigned int>
 UnitVoidStress::let_void_then_pair(const unsigned int n) {
-  return std::make_pair(std::move(n), 42u);
+  return std::make_pair(n, 42u);
 }
 
 __attribute__((pure)) unsigned int

@@ -23,6 +23,7 @@ Crane Extract Numeral nat => "mpz_class(%n)".
 
 Crane Extract Inlined Constant Nat.add => "(%a0 + %a1)".
 Crane Extract Inlined Constant Nat.mul => "(%a0 * %a1)".
+Crane Extract Inlined Constant Nat.div => "(%a1 ? %a0 / %a1 : mpz_class(0))".
 Crane Extract Inlined Constant Nat.modulo => "(%a0 % %a1)".
 Crane Extract Inlined Constant Nat.double => "(%a0 + %a0)".
 Crane Extract Inlined Constant Nat.pred => "(%a0 > 0 ? %a0 - 1 : %a0)".

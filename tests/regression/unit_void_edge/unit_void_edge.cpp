@@ -94,7 +94,7 @@ UnitVoidEdge::double_match_unit(const std::monostate u1,
 std::shared_ptr<UnitVoidEdge::tagged_nat>
 UnitVoidEdge::make_tagged(const unsigned int n) {
   return std::make_shared<UnitVoidEdge::tagged_nat>(
-      tagged_nat{std::move(n), std::monostate{}});
+      tagged_nat{n, std::monostate{}});
 }
 
 __attribute__((pure)) unsigned int
