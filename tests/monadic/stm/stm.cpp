@@ -45,11 +45,9 @@ void stmtest::stm_enqueue(
     const std::shared_ptr<stm::TVar<std::shared_ptr<List<unsigned int>>>> q,
     const unsigned int x) {
   std::shared_ptr<List<unsigned int>> xs = q->read();
-  {
-    q->write(std::move(xs)->app(
-        List<unsigned int>::cons(x, List<unsigned int>::nil())));
-    return;
-  }
+  q->write(std::move(xs)->app(
+      List<unsigned int>::cons(x, List<unsigned int>::nil())));
+  return;
 }
 
 unsigned int stmtest::stm_dequeue(

@@ -78,7 +78,8 @@ template <typename K, typename V> struct SkipList {
     if (nextOpt.has_value()) {
       std::shared_ptr<SkipNode<K, V>> existing = *nextOpt;
       if (eqK(existing->key, k)) {
-        return stm::writeTVar<V>(existing->value, v);
+        stm::writeTVar<V>(existing->value, v);
+        return std::monostate{};
       } else {
         std::shared_ptr<SkipNode<K, V>> newN =
             SkipNode<K, V>::create(k, v, newLevel);
@@ -86,13 +87,15 @@ template <typename K, typename V> struct SkipList {
             path, this->SkipList::slHead, newN);
         [&]() {
           if (PeanoNat::ltb(curLvl, newLevel)) {
-            return this->SkipList::slLevel->write(newLevel);
+            this->SkipList::slLevel->write(newLevel);
+            return std::monostate{};
           } else {
             return std::monostate{};
           }
         }();
         unsigned int len = this->SkipList::slLength->read();
-        return this->SkipList::slLength->write((len + 1));
+        this->SkipList::slLength->write((len + 1));
+        return std::monostate{};
       }
     } else {
       std::shared_ptr<SkipNode<K, V>> newN =
@@ -101,13 +104,15 @@ template <typename K, typename V> struct SkipList {
                                                   newN);
       [&]() {
         if (PeanoNat::ltb(curLvl, newLevel)) {
-          return this->SkipList::slLevel->write(newLevel);
+          this->SkipList::slLevel->write(newLevel);
+          return std::monostate{};
         } else {
           return std::monostate{};
         }
       }();
       unsigned int len = this->SkipList::slLength->read();
-      return this->SkipList::slLength->write((len + 1));
+      this->SkipList::slLength->write((len + 1));
+      return std::monostate{};
     }
   }
 
@@ -126,8 +131,8 @@ template <typename K, typename V> struct SkipList {
             path, this->SkipList::slHead, (node->level + 1), curLvl);
         SkipList<int, int>::template unlinkNode<K, V>(path, node);
         unsigned int len = this->SkipList::slLength->read();
-        return this->SkipList::slLength->write(
-            (((len - 1u) > len ? 0 : (len - 1u))));
+        this->SkipList::slLength->write((((len - 1u) > len ? 0 : (len - 1u))));
+        return std::monostate{};
       } else {
         return std::monostate{};
       }
@@ -220,7 +225,8 @@ template <typename K, typename V> struct SkipList {
     if (nextOpt.has_value()) {
       std::shared_ptr<SkipNode<K, V>> existing = *nextOpt;
       if (eqK(existing->key, k)) {
-        return stm::writeTVar<V>(existing->value, v);
+        stm::writeTVar<V>(existing->value, v);
+        return std::monostate{};
       } else {
         std::shared_ptr<SkipNode<K, V>> newN =
             SkipNode<K, V>::create(k, v, newLevel);
@@ -228,13 +234,15 @@ template <typename K, typename V> struct SkipList {
             path, this->SkipList::slHead, newN);
         [&]() {
           if (PeanoNat::ltb(curLvl, newLevel)) {
-            return this->SkipList::slLevel->write(newLevel);
+            this->SkipList::slLevel->write(newLevel);
+            return std::monostate{};
           } else {
             return std::monostate{};
           }
         }();
         unsigned int len = this->SkipList::slLength->read();
-        return this->SkipList::slLength->write((len + 1));
+        this->SkipList::slLength->write((len + 1));
+        return std::monostate{};
       }
     } else {
       std::shared_ptr<SkipNode<K, V>> newN =
@@ -243,13 +251,15 @@ template <typename K, typename V> struct SkipList {
                                                   newN);
       [&]() {
         if (PeanoNat::ltb(curLvl, newLevel)) {
-          return this->SkipList::slLevel->write(newLevel);
+          this->SkipList::slLevel->write(newLevel);
+          return std::monostate{};
         } else {
           return std::monostate{};
         }
       }();
       unsigned int len = this->SkipList::slLength->read();
-      return this->SkipList::slLength->write((len + 1));
+      this->SkipList::slLength->write((len + 1));
+      return std::monostate{};
     }
   }
 
@@ -274,7 +284,8 @@ template <typename K, typename V> struct SkipList {
             path, this->SkipList::slHead, newN);
         [&]() {
           if (PeanoNat::ltb(curLvl, newLevel)) {
-            return this->SkipList::slLevel->write(newLevel);
+            this->SkipList::slLevel->write(newLevel);
+            return std::monostate{};
           } else {
             return std::monostate{};
           }
@@ -290,7 +301,8 @@ template <typename K, typename V> struct SkipList {
                                                   newN);
       [&]() {
         if (PeanoNat::ltb(curLvl, newLevel)) {
-          return this->SkipList::slLevel->write(newLevel);
+          this->SkipList::slLevel->write(newLevel);
+          return std::monostate{};
         } else {
           return std::monostate{};
         }
@@ -380,11 +392,9 @@ template <typename K, typename V> struct SkipList {
         pred->forward[level],
         opt_to_ptr(
             std::make_optional<std::shared_ptr<SkipNode<T1, T2>>>(newNode)));
-    {
-      stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(newNode->forward[level],
-                                                        opt_to_ptr(oldNext));
-      return;
-    }
+    stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(newNode->forward[level],
+                                                      opt_to_ptr(oldNext));
+    return;
   }
 
   template <typename T1, typename T2>
@@ -398,11 +408,9 @@ template <typename K, typename V> struct SkipList {
       return;
     } else {
       unsigned int level_ = level - 1;
-      {
-        SkipList<int, int>::template linkNode_aux<T1, T2>(path, head, newNode,
-                                                          std::move(level_));
-        return;
-      }
+      SkipList<int, int>::template linkNode_aux<T1, T2>(path, head, newNode,
+                                                        std::move(level_));
+      return;
     }
   }
 
@@ -412,19 +420,15 @@ template <typename K, typename V> struct SkipList {
                              const unsigned int level,
                              const unsigned int maxLevel) {
     if (level <= 0) {
-      {
-        path.set(0u, head);
-        return;
-      }
+      path.set(0u, head);
+      return;
     } else {
       unsigned int level_ = level - 1;
       path.set(level, head);
       if (PeanoNat::leb(maxLevel, level_)) {
-        {
-          SkipList<int, int>::template extendPath_aux<T1, T2>(path, head,
-                                                              level_, maxLevel);
-          return;
-        }
+        SkipList<int, int>::template extendPath_aux<T1, T2>(path, head, level_,
+                                                            maxLevel);
+        return;
       } else {
         return;
       }
@@ -439,12 +443,10 @@ template <typename K, typename V> struct SkipList {
     if (PeanoNat::leb(needed, (currentMax + 1))) {
       return;
     } else {
-      {
-        SkipList<int, int>::template extendPath_aux<T1, T2>(
-            path, head, (((needed - 1u) > needed ? 0 : (needed - 1u))),
-            (std::move(currentMax) + 1u));
-        return;
-      }
+      SkipList<int, int>::template extendPath_aux<T1, T2>(
+          path, head, (((needed - 1u) > needed ? 0 : (needed - 1u))),
+          (std::move(currentMax) + 1u));
+      return;
     }
   }
 
@@ -453,11 +455,9 @@ template <typename K, typename V> struct SkipList {
                        const std::shared_ptr<SkipNode<T1, T2>> head,
                        const std::shared_ptr<SkipNode<T1, T2>> newNode) {
     unsigned int lvl = newNode->level;
-    {
-      SkipList<int, int>::template linkNode_aux<T1, T2>(path, head, newNode,
-                                                        std::move(lvl));
-      return;
-    }
+    SkipList<int, int>::template linkNode_aux<T1, T2>(path, head, newNode,
+                                                      std::move(lvl));
+    return;
   }
 
   template <typename T1, typename T2>
@@ -467,11 +467,9 @@ template <typename K, typename V> struct SkipList {
     std::optional<std::shared_ptr<SkipNode<T1, T2>>> targetNext =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
             target->forward[level]));
-    {
-      stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-          pred->forward[level], opt_to_ptr(std::move(targetNext)));
-      return;
-    }
+    stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
+        pred->forward[level], opt_to_ptr(std::move(targetNext)));
+    return;
   }
 
   template <typename T1, typename T2>
@@ -484,11 +482,9 @@ template <typename K, typename V> struct SkipList {
       return;
     } else {
       unsigned int level_ = level - 1;
-      {
-        SkipList<int, int>::template unlinkNode_aux<T1, T2>(path, target,
-                                                            std::move(level_));
-        return;
-      }
+      SkipList<int, int>::template unlinkNode_aux<T1, T2>(path, target,
+                                                          std::move(level_));
+      return;
     }
   }
 
@@ -496,11 +492,9 @@ template <typename K, typename V> struct SkipList {
   static void unlinkNode(const SkipPath<T1, T2> path,
                          const std::shared_ptr<SkipNode<T1, T2>> target) {
     unsigned int lvl = target->level;
-    {
-      SkipList<int, int>::template unlinkNode_aux<T1, T2>(path, target,
-                                                          std::move(lvl));
-      return;
-    }
+    SkipList<int, int>::template unlinkNode_aux<T1, T2>(path, target,
+                                                        std::move(lvl));
+    return;
   }
 
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0,
@@ -554,11 +548,9 @@ template <typename K, typename V> struct SkipList {
     if (lvl <= 0) {
       std::optional<std::shared_ptr<SkipNode<T1, T2>>> nodeNext = ptr_to_opt(
           stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(node->forward[0u]));
-      {
-        stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-            head->forward[0u], opt_to_ptr(std::move(nodeNext)));
-        return;
-      }
+      stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
+          head->forward[0u], opt_to_ptr(std::move(nodeNext)));
+      return;
     } else {
       unsigned int lvl_ = lvl - 1;
       std::optional<std::shared_ptr<SkipNode<T1, T2>>> headNext = ptr_to_opt(
@@ -570,8 +562,9 @@ template <typename K, typename V> struct SkipList {
             std::optional<std::shared_ptr<SkipNode<T1, T2>>> nodeNext =
                 ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
                     node->forward[lvl]));
-            return stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
+            stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
                 head->forward[lvl], opt_to_ptr(std::move(nodeNext)));
+            return;
           } else {
             return;
           }
@@ -579,11 +572,9 @@ template <typename K, typename V> struct SkipList {
           return;
         }
       }();
-      {
-        SkipList<int, int>::template unlinkFirstFromHead<T1, T2>(
-            head, node, nodeLevel, lvl_);
-        return;
-      }
+      SkipList<int, int>::template unlinkFirstFromHead<T1, T2>(head, node,
+                                                               nodeLevel, lvl_);
+      return;
     }
   }
 
@@ -600,8 +591,9 @@ template <typename K, typename V> struct SkipList {
         std::optional<std::shared_ptr<SkipNode<T1, T2>>> nodeNext =
             ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
                 node->forward[lvl]));
-        return stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
+        stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
             head->forward[lvl], opt_to_ptr(std::move(nodeNext)));
+        return;
       } else {
         return;
       }
@@ -610,11 +602,9 @@ template <typename K, typename V> struct SkipList {
       return;
     } else {
       unsigned int lvl_ = lvl - 1;
-      {
-        SkipList<int, int>::template unlinkNodeAtAllLevels<T1, T2>(
-            head, node, std::move(lvl_));
-        return;
-      }
+      SkipList<int, int>::template unlinkNodeAtAllLevels<T1, T2>(
+          head, node, std::move(lvl_));
+      return;
     }
   }
 

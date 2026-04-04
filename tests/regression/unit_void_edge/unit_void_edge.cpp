@@ -13,10 +13,8 @@ void UnitVoidEdge::count_down(const unsigned int n) {
     return;
   } else {
     unsigned int n_ = n - 1;
-    {
-      count_down(n_);
-      return;
-    }
+    count_down(n_);
+    return;
   }
 }
 
@@ -106,10 +104,8 @@ UnitVoidEdge::get_value(const std::shared_ptr<UnitVoidEdge::tagged_nat> &t) {
 
 void UnitVoidEdge::make_callback(const unsigned int n,
                                  const std::monostate _x) {
-  {
-    return_unit(n);
-    return;
-  }
+  return_unit(n);
+  return;
 }
 
 void UnitVoidEdge::dummy_bool_void(const bool _x) { return; }

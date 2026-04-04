@@ -11,10 +11,8 @@ void UnitVoidStress::consume(const unsigned int n) {
     return;
   } else {
     unsigned int m = n - 1;
-    {
-      consume(m);
-      return;
-    }
+    consume(m);
+    return;
   }
 }
 
@@ -37,10 +35,8 @@ UnitVoidStress::some_void_call(const unsigned int n) {
 }
 
 void UnitVoidStress::id_void_call(const unsigned int _x0) {
-  {
-    consume(_x0);
-    return;
-  }
+  consume(_x0);
+  return;
 }
 
 __attribute__((pure)) std::pair<unsigned int, std::monostate>
@@ -52,10 +48,8 @@ UnitVoidStress::pair_with_discard(const unsigned int n) {
 }
 
 void UnitVoidStress::store_and_call(const unsigned int _x0) {
-  {
-    consume(_x0);
-    return;
-  }
+  consume(_x0);
+  return;
 }
 
 __attribute__((pure)) std::pair<unsigned int, std::monostate>
@@ -67,15 +61,11 @@ UnitVoidStress::pair_via_let(const unsigned int n) {
 
 void UnitVoidStress::cond_void(const bool b, const unsigned int n) {
   if (b) {
-    {
-      consume(n);
-      return;
-    }
+    consume(n);
+    return;
   } else {
-    {
-      discard(n);
-      return;
-    }
+    discard(n);
+    return;
   }
 }
 
@@ -84,10 +74,8 @@ void UnitVoidStress::match_nat_void(const unsigned int n) {
     return;
   } else {
     unsigned int m = n - 1;
-    {
-      consume(m);
-      return;
-    }
+    consume(m);
+    return;
   }
 }
 
@@ -135,10 +123,8 @@ void UnitVoidStress::even_void(const unsigned int n) {
     return;
   } else {
     unsigned int m = n - 1;
-    {
-      odd_void(m);
-      return;
-    }
+    odd_void(m);
+    return;
   }
 }
 
@@ -147,20 +133,16 @@ void UnitVoidStress::odd_void(const unsigned int n) {
     return;
   } else {
     unsigned int m = n - 1;
-    {
-      even_void(m);
-      return;
-    }
+    even_void(m);
+    return;
   }
 }
 
 void UnitVoidStress::match_opt_void(const std::optional<unsigned int> o) {
   if (o.has_value()) {
     unsigned int n = *o;
-    {
-      consume(n);
-      return;
-    }
+    consume(n);
+    return;
   } else {
     return;
   }

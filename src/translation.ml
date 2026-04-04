@@ -1592,7 +1592,7 @@ let rec convert_ml_type_to_cpp_type
   | Tdummy (Kimplicit _) ->
     Tglob (GlobRef.VarRef (Id.of_string "dummy_implicit"), [], [])
   | Tstring ->
-    CErrors.anomaly (Pp.str "Tstring should not appear in extraction pipeline")
+    Tid_external (Id.of_string_soft "std::string", [])
   | Tunknown -> Tany
   | Taxiom -> Tglob (GlobRef.VarRef (Id.of_string "axiom"), [], [])
 (* let _ = print_endline "TODO: TMETA OR TDUMMY OR TUNKNOWN OR TAXIOM" in assert
@@ -1961,6 +1961,15 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     end
   (* | MLapp (MLglob (h, _), a1 :: a2 :: l) when is_hoist h -> gen_expr env
      (MLapp (a1, a2::[])) *)
+  | MLapp (MLglob (r, _), _ :: _ :: _) as a when is_bind r
+      && tctx.itree_mode <> Reified ->
+    (* Sequential mode: bind in expression context (e.g., nested inside
+       another expression). Wrap in IIFE so gen_stmts can sequentialize. *)
+    with_escape_analysis a (fun () ->
+      CPPfun_call
+        ( CPPlambda
+            ([], None, gen_stmts env (fun x -> Sreturn (Some x)) a, false),
+          [] ) )
   | MLapp (MLfix _, _) as a ->
     (* Nested fix application in expression context (e.g., S((fix aux ...) es)).
        Wrap in an IIFE, delegating to gen_stmts which handles MLapp(MLfix
@@ -3495,7 +3504,16 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body sname =
   tctx.move_owned_vars <- shifted_outer;
   tctx.move_dead_after <- Escape.IntSet.empty;
   let saved_match_counter = tctx.match_param_counter in
+  let saved_return_type = tctx.current_cpp_return_type in
+  (* Prevent void optimization from leaking into pattern lambdas: when the
+     outer function returns void, gen_stmts generates bare 'return;' for tt,
+     but the pattern lambda returns monostate (not void). Clear the return
+     type to stop this. Don't set to Some ret, as ret may be Ttodo/auto and
+     would break template argument deduction in calls inside the body. *)
+  ( if tctx.current_cpp_return_type = Some Tvoid then
+      tctx.current_cpp_return_type <- None );
   let body_stmts = gen_stmts env (fun x -> Sreturn (Some x)) body in
+  tctx.current_cpp_return_type <- saved_return_type;
   tctx.match_param_counter <- saved_match_counter;
   tctx.move_dead_after <- saved_dead;
   tctx.move_owned_vars <- saved_owned;
@@ -5308,10 +5326,31 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
        direct values (bind desugars to let-binding); in reified mode,
        they are trees returned as-is. *)
     let saved_dead = tctx.move_dead_after in
-    let e = gen_tail_expr env t in
-    let result = inline_iife k e in
-    tctx.move_dead_after <- saved_dead;
-    result
+    let is_void_tail = match t with
+      | MLapp (f, _) | MLmagic (MLapp (f, _)) -> ml_callee_is_void f
+      | _ -> false
+    in
+    if is_void_tail then begin
+      let e = gen_tail_expr env t in
+      tctx.move_dead_after <- saved_dead;
+      if tctx.current_cpp_return_type = Some Tvoid then
+        [Sexpr e; Sreturn None]
+      else
+        match k (CPPint 0) with
+        | Sexpr _ ->
+          (* Side-effect-only continuation (e.g. from unit let handler).
+             The void call provides the side effect; the caller handles
+             the variable declaration separately.  No value needed. *)
+          [Sexpr e]
+        | _ ->
+          [Sexpr e] @ inline_iife k (mk_tt_expr ())
+    end
+    else begin
+      let e = gen_tail_expr env t in
+      let result = inline_iife k e in
+      tctx.move_dead_after <- saved_dead;
+      result
+    end
 
 (** Generate a C++ expression for [t] in tail position.
     Marks owned variables that occur exactly once as dead-after (for

@@ -25,10 +25,8 @@ UnitVoidEdge2::let_use_as_arg(const unsigned int n) {
 }
 
 void UnitVoidEdge2::let_return_unit(const unsigned int _x0) {
-  {
-    opaque_unit(_x0);
-    return;
-  }
+  opaque_unit(_x0);
+  return;
 }
 
 __attribute__((pure)) unsigned int
@@ -92,10 +90,8 @@ void UnitVoidEdge2::count_down_unit(const unsigned int n) {
     return;
   } else {
     unsigned int n_ = n - 1;
-    {
-      count_down_unit(n_);
-      return;
-    }
+    count_down_unit(n_);
+    return;
   }
 }
 

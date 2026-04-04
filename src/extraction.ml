@@ -1164,6 +1164,9 @@ and extract_term env sg mle mlt c args =
     MLfloat f
   | String s ->
     assert (args = []);
+    (* Unify expected type with Tstring so let-bound string match
+       variables get the correct C++ type instead of std::any. *)
+    Mlutil.try_mgu mlt Tstring;
     MLstring s
   | Array (_u, t, def, _ty) ->
     assert (args = []);

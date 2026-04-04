@@ -2721,3 +2721,267 @@
   (alias runtest)
   (deps temp_file.t.exe)
   (action (run ./temp_file.t.exe))))
+
+(subdir monadic_void_edge
+ (rule
+  (targets monadic_void_edge.t.exe)
+  (deps MonadicVoidEdge.vo monadic_void_edge.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} monadic_void_edge.t.exe monadic_void_edge.cpp monadic_void_edge.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps monadic_void_edge.t.exe)
+  (action (run ./monadic_void_edge.t.exe))))
+
+(subdir block_template_edge
+ (rule
+  (targets block_template_edge.t.exe)
+  (deps BlockTemplateEdge.vo block_template_edge.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} block_template_edge.t.exe block_template_edge.cpp block_template_edge.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps block_template_edge.t.exe)
+  (action (run ./block_template_edge.t.exe))))
+
+(subdir effect_poly
+ (rule
+  (targets effect_poly.t.exe)
+  (deps EffectPoly.vo effect_poly.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_poly.t.exe effect_poly.cpp effect_poly.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_poly.t.exe)
+  (action (run ./effect_poly.t.exe))))
+
+(subdir effect_unit_stress
+ (rule
+  (targets effect_unit_stress.t.exe)
+  (deps EffectUnitStress.vo effect_unit_stress.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_unit_stress.t.exe effect_unit_stress.cpp effect_unit_stress.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_unit_stress.t.exe)
+  (action (run ./effect_unit_stress.t.exe))))
+
+(subdir numeral_edge
+ (rule
+  (targets numeral_edge.t.exe)
+  (deps NumeralEdge.vo numeral_edge.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} numeral_edge.t.exe numeral_edge.cpp numeral_edge.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps numeral_edge.t.exe)
+  (action (run ./numeral_edge.t.exe))))
+
+(subdir void_callback
+ (rule
+  (targets void_callback.t.exe)
+  (deps VoidCallback.vo void_callback.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} void_callback.t.exe void_callback.cpp void_callback.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps void_callback.t.exe)
+  (action (run ./void_callback.t.exe))))
+
+(subdir match_monadic
+ (rule
+  (targets match_monadic.t.exe)
+  (deps MatchMonadic.vo match_monadic.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} match_monadic.t.exe match_monadic.cpp match_monadic.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps match_monadic.t.exe)
+  (action (run ./match_monadic.t.exe))))
+
+(subdir monadic_closure
+ (rule
+  (targets monadic_closure.t.exe)
+  (deps MonadicClosure.vo monadic_closure.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} monadic_closure.t.exe monadic_closure.cpp monadic_closure.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps monadic_closure.t.exe)
+  (action (run ./monadic_closure.t.exe))))
+
+(subdir recursive_monadic
+ (rule
+  (targets recursive_monadic.t.exe)
+  (deps RecursiveMonadic.vo recursive_monadic.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} recursive_monadic.t.exe recursive_monadic.cpp recursive_monadic.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps recursive_monadic.t.exe)
+  (action (run ./recursive_monadic.t.exe))))
+
+(subdir let_match_type
+ (rule
+  (targets let_match_type.t.exe)
+  (deps LetMatchType.vo let_match_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_match_type.t.exe let_match_type.cpp let_match_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_match_type.t.exe)
+  (action (run ./let_match_type.t.exe))))
+
+(subdir let_match_type2
+ (rule
+  (targets let_match_type2.t.exe)
+  (deps LetMatchType2.vo let_match_type2.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_match_type2.t.exe let_match_type2.cpp let_match_type2.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_match_type2.t.exe)
+  (action (run ./let_match_type2.t.exe))))
+
+(subdir block_template_stress
+ (rule
+  (targets block_template_stress.t.exe)
+  (deps BlockTemplateStress.vo block_template_stress.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} block_template_stress.t.exe block_template_stress.cpp block_template_stress.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps block_template_stress.t.exe)
+  (action (run ./block_template_stress.t.exe))))
+
+(subdir numeral_stress
+ (rule
+  (targets numeral_stress.t.exe)
+  (deps NumeralStress.vo numeral_stress.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} numeral_stress.t.exe numeral_stress.cpp numeral_stress.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps numeral_stress.t.exe)
+  (action (run ./numeral_stress.t.exe))))
+
+(subdir effect_getline_stress
+ (rule
+  (targets effect_getline_stress.t.exe)
+  (deps EffectGetlineStress.vo effect_getline_stress.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_getline_stress.t.exe effect_getline_stress.cpp effect_getline_stress.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_getline_stress.t.exe)
+  (action (run ./effect_getline_stress.t.exe))))
+
+(subdir effect_deep_compose
+ (rule
+  (targets effect_deep_compose.t.exe)
+  (deps EffectDeepCompose.vo effect_deep_compose.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_deep_compose.t.exe effect_deep_compose.cpp effect_deep_compose.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_deep_compose.t.exe)
+  (action (run ./effect_deep_compose.t.exe))))
+
+(subdir effect_cross_module
+ (rule
+  (targets effect_cross_module.t.exe)
+  (deps EffectCrossModule.vo effect_cross_module.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_cross_module.t.exe effect_cross_module.cpp effect_cross_module.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_cross_module.t.exe)
+  (action (run ./effect_cross_module.t.exe))))
+
+(subdir effect_option_match
+ (rule
+  (targets effect_option_match.t.exe)
+  (deps EffectOptionMatch.vo effect_option_match.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_option_match.t.exe effect_option_match.cpp effect_option_match.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_option_match.t.exe)
+  (action (run ./effect_option_match.t.exe))))
+
+(subdir effect_complex_return
+ (rule
+  (targets effect_complex_return.t.exe)
+  (deps EffectComplexReturn.vo effect_complex_return.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_complex_return.t.exe effect_complex_return.cpp effect_complex_return.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_complex_return.t.exe)
+  (action (run ./effect_complex_return.t.exe))))
+
+(subdir effect_higher_order
+ (rule
+  (targets effect_higher_order.t.exe)
+  (deps EffectHigherOrder.vo effect_higher_order.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_higher_order.t.exe effect_higher_order.cpp effect_higher_order.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_higher_order.t.exe)
+  (action (run ./effect_higher_order.t.exe))))
+
+(subdir effect_list_return
+ (rule
+  (targets effect_list_return.t.exe)
+  (deps EffectListReturn.vo effect_list_return.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_list_return.t.exe effect_list_return.cpp effect_list_return.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_list_return.t.exe)
+  (action (run ./effect_list_return.t.exe))))
+
+(subdir effect_workflow
+ (rule
+  (targets effect_workflow.t.exe)
+  (deps EffectWorkflow.vo effect_workflow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_workflow.t.exe effect_workflow.cpp effect_workflow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_workflow.t.exe)
+  (action (run ./effect_workflow.t.exe))))
+
+(subdir effect_bare_void
+ (rule
+  (targets effect_bare_void.t.exe)
+  (deps EffectBareVoid.vo effect_bare_void.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_bare_void.t.exe effect_bare_void.cpp effect_bare_void.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_bare_void.t.exe)
+  (action (run ./effect_bare_void.t.exe))))
+
+(subdir effect_nested_io
+ (rule
+  (targets effect_nested_io.t.exe)
+  (deps EffectNestedIo.vo effect_nested_io.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_nested_io.t.exe effect_nested_io.cpp effect_nested_io.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_nested_io.t.exe)
+  (action (run ./effect_nested_io.t.exe))))
+
+(subdir effect_recursive_list
+ (rule
+  (targets effect_recursive_list.t.exe)
+  (deps EffectRecursiveList.vo effect_recursive_list.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_recursive_list.t.exe effect_recursive_list.cpp effect_recursive_list.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_recursive_list.t.exe)
+  (action (run ./effect_recursive_list.t.exe))))

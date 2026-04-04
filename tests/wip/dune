@@ -56,3 +56,91 @@
   (alias runtest)
   (deps hof_tree_loopify.t.exe)
   (action (run ./hof_tree_loopify.t.exe))))
+
+(subdir block_template_nonlocal
+ (rule
+  (targets block_template_nonlocal.t.exe)
+  (deps BlockTemplateNonlocal.vo block_template_nonlocal.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} block_template_nonlocal.t.exe block_template_nonlocal.cpp block_template_nonlocal.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps block_template_nonlocal.t.exe)
+  (action (run ./block_template_nonlocal.t.exe))))
+
+(subdir block_template_semicolon
+ (rule
+  (targets block_template_semicolon.t.exe)
+  (deps BlockTemplateSemicolon.vo block_template_semicolon.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} block_template_semicolon.t.exe block_template_semicolon.cpp block_template_semicolon.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps block_template_semicolon.t.exe)
+  (action (run ./block_template_semicolon.t.exe))))
+
+(subdir z_overflow
+ (rule
+  (targets z_overflow.t.exe)
+  (deps ZOverflow.vo z_overflow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} z_overflow.t.exe z_overflow.cpp z_overflow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps z_overflow.t.exe)
+  (action (run ./z_overflow.t.exe))))
+
+(subdir read_variable_capture
+ (rule
+  (targets read_variable_capture.t.exe)
+  (deps ReadVariableCapture.vo read_variable_capture.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} read_variable_capture.t.exe read_variable_capture.cpp read_variable_capture.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps read_variable_capture.t.exe)
+  (action (run ./read_variable_capture.t.exe))))
+
+(subdir bind_eta_reduced
+ (rule
+  (targets bind_eta_reduced.t.exe)
+  (deps BindEtaReduced.vo bind_eta_reduced.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bind_eta_reduced.t.exe bind_eta_reduced.cpp bind_eta_reduced.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bind_eta_reduced.t.exe)
+  (action (run ./bind_eta_reduced.t.exe))))
+
+(subdir effect_bind_action
+ (rule
+  (targets effect_bind_action.t.exe)
+  (deps EffectBindAction.vo effect_bind_action.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_bind_action.t.exe effect_bind_action.cpp effect_bind_action.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_bind_action.t.exe)
+  (action (run ./effect_bind_action.t.exe))))
+
+(subdir effect_option_string
+ (rule
+  (targets effect_option_string.t.exe)
+  (deps EffectOptionString.vo effect_option_string.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_option_string.t.exe effect_option_string.cpp effect_option_string.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_option_string.t.exe)
+  (action (run ./effect_option_string.t.exe))))
+
+(subdir effect_hof_void
+ (rule
+  (targets effect_hof_void.t.exe)
+  (deps EffectHofVoid.vo effect_hof_void.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_hof_void.t.exe effect_hof_void.cpp effect_hof_void.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_hof_void.t.exe)
+  (action (run ./effect_hof_void.t.exe))))
