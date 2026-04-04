@@ -144,3 +144,25 @@
   (alias runtest)
   (deps effect_hof_void.t.exe)
   (action (run ./effect_hof_void.t.exe))))
+
+(subdir effect_complex_args
+ (rule
+  (targets effect_complex_args.t.exe)
+  (deps EffectComplexArgs.vo effect_complex_args.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_complex_args.t.exe effect_complex_args.cpp effect_complex_args.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_complex_args.t.exe)
+  (action (run ./effect_complex_args.t.exe))))
+
+(subdir effect_match_arg
+ (rule
+  (targets effect_match_arg.t.exe)
+  (deps EffectMatchArg.vo effect_match_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_match_arg.t.exe effect_match_arg.cpp effect_match_arg.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_match_arg.t.exe)
+  (action (run ./effect_match_arg.t.exe))))

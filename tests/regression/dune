@@ -2985,3 +2985,14 @@
   (alias runtest)
   (deps effect_recursive_list.t.exe)
   (action (run ./effect_recursive_list.t.exe))))
+
+(subdir effect_dir_path
+ (rule
+  (targets effect_dir_path.t.exe)
+  (deps EffectDirPath.vo effect_dir_path.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} effect_dir_path.t.exe effect_dir_path.cpp effect_dir_path.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps effect_dir_path.t.exe)
+  (action (run ./effect_dir_path.t.exe))))
