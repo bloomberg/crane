@@ -88,7 +88,6 @@ template <typename K, typename V> struct CHT {
   std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<K, V>>>>>
       cht_fallback;
 
-  __attribute__((pure))
   std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<K, V>>>>>
   bucket_of(const K k) const {
     int64_t i = (this->CHT::cht_nbuckets == 0
@@ -97,7 +96,7 @@ template <typename K, typename V> struct CHT {
     return this->CHT::cht_buckets.at(i);
   }
 
-  __attribute__((pure)) std::optional<V> stm_get(const K k) const {
+  std::optional<V> stm_get(const K k) const {
     std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<K, V>>>>> b =
         this->bucket_of(k);
     std::shared_ptr<List<std::pair<K, V>>> xs = b->read();
@@ -105,7 +104,7 @@ template <typename K, typename V> struct CHT {
                                                       xs);
   }
 
-  __attribute__((pure)) std::monostate stm_put(const K k, const V v) const {
+  std::monostate stm_put(const K k, const V v) const {
     std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<K, V>>>>> b =
         this->bucket_of(k);
     std::shared_ptr<List<std::pair<K, V>>> xs = b->read();
@@ -116,7 +115,7 @@ template <typename K, typename V> struct CHT {
     return std::monostate{};
   }
 
-  __attribute__((pure)) std::optional<V> stm_delete(const K k) const {
+  std::optional<V> stm_delete(const K k) const {
     std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<K, V>>>>> b =
         this->bucket_of(k);
     std::shared_ptr<List<std::pair<K, V>>> xs = b->read();
@@ -132,7 +131,7 @@ template <typename K, typename V> struct CHT {
   }
 
   template <MapsTo<V, std::optional<V>> F1>
-  __attribute__((pure)) V stm_update(const K k, F1 &&f) const {
+  V stm_update(const K k, F1 &&f) const {
     std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<K, V>>>>> b =
         this->bucket_of(k);
     std::shared_ptr<List<std::pair<K, V>>> xs = b->read();
@@ -146,7 +145,7 @@ template <typename K, typename V> struct CHT {
     return v;
   }
 
-  __attribute__((pure)) V stm_get_or(const K k, const V dflt) const {
+  V stm_get_or(const K k, const V dflt) const {
     std::optional<V> v = this->stm_get(k);
     if (v.has_value()) {
       V x = *v;
@@ -156,7 +155,7 @@ template <typename K, typename V> struct CHT {
     }
   }
 
-  __attribute__((pure)) std::monostate put(const K k, const V v) const {
+  std::monostate put(const K k, const V v) const {
     return stm::atomically([&] {
       return [&]() {
         this->stm_put(k, v);
@@ -165,20 +164,20 @@ template <typename K, typename V> struct CHT {
     });
   }
 
-  __attribute__((pure)) std::optional<V> get(const K k) const {
+  std::optional<V> get(const K k) const {
     return stm::atomically([&] { return this->stm_get(k); });
   }
 
-  __attribute__((pure)) std::optional<V> hash_delete(const K k) const {
+  std::optional<V> hash_delete(const K k) const {
     return stm::atomically([&] { return this->stm_delete(k); });
   }
 
   template <MapsTo<V, std::optional<V>> F1>
-  __attribute__((pure)) V hash_update(const K k, F1 &&f) const {
+  V hash_update(const K k, F1 &&f) const {
     return stm::atomically([&] { return this->stm_update(k, f); });
   }
 
-  __attribute__((pure)) V get_or(const K k, const V dflt) const {
+  V get_or(const K k, const V dflt) const {
     return stm::atomically([&] { return this->stm_get_or(k, dflt); });
   }
 

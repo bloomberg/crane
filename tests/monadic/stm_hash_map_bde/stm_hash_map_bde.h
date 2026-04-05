@@ -86,20 +86,19 @@ template <typename K, typename V> struct CHT {
   int64_t cht_nbuckets;
   bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>>
       cht_fallback;
-  __attribute__((pure))
   bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>>
   bucket_of(const K k) const {
     int64_t i = this->CHT::cht_hash(k) % this->CHT::cht_nbuckets;
     return this->CHT::cht_buckets.at(i);
   }
-  __attribute__((pure)) bsl::optional<V> stm_get(const K k) const {
+  bsl::optional<V> stm_get(const K k) const {
     bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>> b =
         this->bucket_of(k);
     bsl::shared_ptr<List<bsl::pair<K, V>>> xs = stm::readTVar(b);
     return CHT<int, int>::template assoc_lookup<K, V>(this->CHT::cht_eqb, k,
                                                       xs);
   }
-  __attribute__((pure)) std::monostate stm_put(const K k, const V v) const {
+  std::monostate stm_put(const K k, const V v) const {
     bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>> b =
         this->bucket_of(k);
     bsl::shared_ptr<List<bsl::pair<K, V>>> xs = stm::readTVar(b);
@@ -109,7 +108,7 @@ template <typename K, typename V> struct CHT {
     stm::writeTVar(b, xs_);
     return std::monostate{};
   }
-  __attribute__((pure)) bsl::optional<V> stm_delete(const K k) const {
+  bsl::optional<V> stm_delete(const K k) const {
     bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>> b =
         this->bucket_of(k);
     bsl::shared_ptr<List<bsl::pair<K, V>>> xs = stm::readTVar(b);
@@ -124,7 +123,7 @@ template <typename K, typename V> struct CHT {
     }
   }
   template <MapsTo<V, bsl::optional<V>> F1>
-  __attribute__((pure)) V stm_update(const K k, F1 &&f) const {
+  V stm_update(const K k, F1 &&f) const {
     bsl::shared_ptr<stm::TVar<bsl::shared_ptr<List<bsl::pair<K, V>>>>> b =
         this->bucket_of(k);
     bsl::shared_ptr<List<bsl::pair<K, V>>> xs = stm::readTVar(b);
@@ -137,7 +136,7 @@ template <typename K, typename V> struct CHT {
     stm::writeTVar(b, xs_);
     return v;
   }
-  __attribute__((pure)) V stm_get_or(const K k, const V dflt) const {
+  V stm_get_or(const K k, const V dflt) const {
     bsl::optional<V> v = this->stm_get(k);
     if (v.has_value()) {
       V x = *v;
@@ -146,7 +145,7 @@ template <typename K, typename V> struct CHT {
       return dflt;
     }
   }
-  __attribute__((pure)) std::monostate put(const K k, const V v) const {
+  std::monostate put(const K k, const V v) const {
     return stm::atomically([&] {
       return [&]() {
         this->stm_put(k, v);
@@ -154,17 +153,17 @@ template <typename K, typename V> struct CHT {
       }();
     });
   }
-  __attribute__((pure)) bsl::optional<V> get(const K k) const {
+  bsl::optional<V> get(const K k) const {
     return stm::atomically([&] { return this->stm_get(k); });
   }
-  __attribute__((pure)) bsl::optional<V> hash_delete(const K k) const {
+  bsl::optional<V> hash_delete(const K k) const {
     return stm::atomically([&] { return this->stm_delete(k); });
   }
   template <MapsTo<V, bsl::optional<V>> F1>
-  __attribute__((pure)) V hash_update(const K k, F1 &&f) const {
+  V hash_update(const K k, F1 &&f) const {
     return stm::atomically([&] { return this->stm_update(k, f); });
   }
-  __attribute__((pure)) V get_or(const K k, const V dflt) const {
+  V get_or(const K k, const V dflt) const {
     return stm::atomically([&] { return this->stm_get_or(k, dflt); });
   }
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>

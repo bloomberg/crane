@@ -6211,6 +6211,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                   mf_is_const = false;
                   mf_is_static = true;
                   mf_this_pos = 0;
+                  mf_no_pure = false;
                 },
               VPublic,
               SNoTag )
@@ -8707,6 +8708,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
      name them all correctly. *)
   let stmts = List.map (tvar_subst_stmt extended_vars) stmts in
 
+  let no_pure = is_monadic_ml_type ret_ty in
   ( Fmethod
       {
         mf_name = func_name;
@@ -8717,6 +8719,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
         mf_is_const = true;
         mf_is_static = false;
         mf_this_pos = this_pos;
+        mf_no_pure = no_pure;
       },
     VPublic,
     SNoTag )
@@ -9126,6 +9129,7 @@ let gen_ind_header_v2
                 mf_is_const = true;
                 mf_is_static = false;
                 mf_this_pos = 0;
+                mf_no_pure = false;
               },
             VPublic,
             SAccessors )
@@ -9141,6 +9145,7 @@ let gen_ind_header_v2
                 mf_is_const = true;
                 mf_is_static = false;
                 mf_this_pos = 0;
+                mf_no_pure = false;
               },
             VPublic,
             SAccessors )
@@ -9164,6 +9169,7 @@ let gen_ind_header_v2
                   mf_is_const = false;
                   mf_is_static = false;
                   mf_this_pos = 0;
+                  mf_no_pure = false;
                 },
               VPublic,
               SManipulators );

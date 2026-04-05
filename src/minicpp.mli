@@ -290,6 +290,11 @@ and method_field = {
           use the original argument order, so the loopification checker needs
           this to extract the receiver from [CPPglob] calls correctly.
           For most eponymous methods this is [0]. *)
+  mf_no_pure : bool;
+      (** When true, suppress [__attribute__((pure))] / [constexpr] for this
+          method.  Set for methods whose ML return type is monadic — they
+          perform side effects even though the C++ return type may look pure
+          after type erasure. *)
 }
 
 (** {2 Type schemas} *)

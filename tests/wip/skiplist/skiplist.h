@@ -36,8 +36,7 @@ template <typename K, typename V> struct SkipList {
   std::shared_ptr<stm::TVar<unsigned int>> slLength;
 
   template <MapsTo<bool, K, K> F0>
-  __attribute__((pure)) SkipPath<K, V> findPath(F0 &&ltK,
-                                                const K target) const {
+  SkipPath<K, V> findPath(F0 &&ltK, const K target) const {
     unsigned int lvl = this->SkipList::slLevel->read();
     SkipPath<K, V> path = SkipPath<K, V>{};
     return SkipList<int, int>::template findPath_aux<K, V>(
@@ -45,8 +44,7 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
-  __attribute__((pure)) std::optional<V> lookup(F0 &&ltK, F1 &&eqK,
-                                                const K k) const {
+  std::optional<V> lookup(F0 &&ltK, F1 &&eqK, const K k) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
     std::shared_ptr<SkipNode<K, V>> pred0 = path.get(0u);
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt = ptr_to_opt(
@@ -65,9 +63,8 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
-  __attribute__((pure)) std::monostate
-  insert(F0 &&ltK, F1 &&eqK, const K k, const V v,
-         const unsigned int newLevel) const {
+  std::monostate insert(F0 &&ltK, F1 &&eqK, const K k, const V v,
+                        const unsigned int newLevel) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
     unsigned int curLvl = this->SkipList::slLevel->read();
     SkipList<int, int>::template extendPath<K, V>(path, this->SkipList::slHead,
@@ -117,8 +114,7 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
-  __attribute__((pure)) std::monostate remove(F0 &&ltK, F1 &&eqK,
-                                              const K k) const {
+  std::monostate remove(F0 &&ltK, F1 &&eqK, const K k) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
     std::shared_ptr<SkipNode<K, V>> pred0 = path.get(0u);
     std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt = ptr_to_opt(
@@ -141,7 +137,7 @@ template <typename K, typename V> struct SkipList {
     }
   }
 
-  __attribute__((pure)) std::optional<std::pair<K, V>> minimum() const {
+  std::optional<std::pair<K, V>> minimum() const {
     std::optional<std::shared_ptr<SkipNode<K, V>>> firstOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
             this->SkipList::slHead->forward[0u]));
@@ -155,36 +151,34 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
-  __attribute__((pure)) bool memberFast(F0 &&ltK, F1 &&eqK, const K k) const {
+  bool memberFast(F0 &&ltK, F1 &&eqK, const K k) const {
     unsigned int lvl = this->SkipList::slLevel->read();
     return SkipList<int, int>::template findKey_aux<K, V>(
         ltK, eqK, this->SkipList::slHead, k, lvl);
   }
 
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
-  __attribute__((pure)) bool member(F0 &&ltK, F1 &&eqK, const K k) const {
+  bool member(F0 &&ltK, F1 &&eqK, const K k) const {
     unsigned int lvl = this->SkipList::slLevel->read();
     return SkipList<int, int>::template findKey_aux<K, V>(
         ltK, eqK, this->SkipList::slHead, k, lvl);
   }
 
-  __attribute__((pure)) bool isEmpty() const {
+  bool isEmpty() const {
     unsigned int len = this->SkipList::slLength->read();
     return PeanoNat::eqb(len, 0u);
   }
 
-  __attribute__((pure)) unsigned int length() const {
-    return this->SkipList::slLength->read();
-  }
+  unsigned int length() const { return this->SkipList::slLength->read(); }
 
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
-  __attribute__((pure)) bool exists_(F0 &&ltK, F1 &&eqK, const K k) const {
+  bool exists_(F0 &&ltK, F1 &&eqK, const K k) const {
     unsigned int lvl = this->SkipList::slLevel->read();
     return SkipList<int, int>::template findKey_aux<K, V>(
         ltK, eqK, this->SkipList::slHead, k, lvl);
   }
 
-  __attribute__((pure)) std::optional<std::pair<K, V>> popFront() const {
+  std::optional<std::pair<K, V>> popFront() const {
     std::optional<std::shared_ptr<SkipNode<K, V>>> firstOpt =
         ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
             this->SkipList::slHead->forward[0u]));
@@ -202,7 +196,7 @@ template <typename K, typename V> struct SkipList {
     }
   }
 
-  __attribute__((pure)) unsigned int removeAll() const {
+  unsigned int removeAll() const {
     unsigned int count = SkipList<int, int>::template removeAll_aux<K, V>(
         10000u, this->SkipList::slHead, (((16u - 1u) > 16u ? 0 : (16u - 1u))),
         0u);
@@ -212,9 +206,8 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
-  __attribute__((pure)) std::monostate add(F0 &&ltK, F1 &&eqK, const K k,
-                                           const V v,
-                                           const unsigned int newLevel) const {
+  std::monostate add(F0 &&ltK, F1 &&eqK, const K k, const V v,
+                     const unsigned int newLevel) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
     unsigned int curLvl = this->SkipList::slLevel->read();
     SkipList<int, int>::template extendPath<K, V>(path, this->SkipList::slHead,
@@ -264,8 +257,8 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
-  __attribute__((pure)) bool addUnique(F0 &&ltK, F1 &&eqK, const K k, const V v,
-                                       const unsigned int newLevel) const {
+  bool addUnique(F0 &&ltK, F1 &&eqK, const K k, const V v,
+                 const unsigned int newLevel) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
     unsigned int curLvl = this->SkipList::slLevel->read();
     SkipList<int, int>::template extendPath<K, V>(path, this->SkipList::slHead,
@@ -313,23 +306,18 @@ template <typename K, typename V> struct SkipList {
     }
   }
 
-  __attribute__((pure)) unsigned int bde_removeAll() const {
-    return this->removeAll();
-  }
+  unsigned int bde_removeAll() const { return this->removeAll(); }
 
   template <MapsTo<bool, K, K> F0, MapsTo<bool, K, K> F1>
-  __attribute__((pure)) bool bde_exists(F0 &&ltK, F1 &&eqK,
-                                        const K key0) const {
+  bool bde_exists(F0 &&ltK, F1 &&eqK, const K key0) const {
     unsigned int lvl = this->SkipList::slLevel->read();
     return SkipList<int, int>::template findKey_aux<K, V>(
         ltK, eqK, this->SkipList::slHead, key0, lvl);
   }
 
-  __attribute__((pure)) bool bde_isEmpty() const { return this->isEmpty(); }
+  bool bde_isEmpty() const { return this->isEmpty(); }
 
-  __attribute__((pure)) unsigned int bde_length() const {
-    return this->length();
-  }
+  unsigned int bde_length() const { return this->length(); }
 
   template <typename T1, typename T2, MapsTo<bool, T1, T1> F0>
   static std::shared_ptr<SkipNode<T1, T2>>

@@ -276,6 +276,7 @@ and method_field = {
   mf_is_const : bool;
   mf_is_static : bool;
   mf_this_pos : int;
+  mf_no_pure : bool;
 }
 
 (** C++ type schema. The integer is the number of variables in the schema. *)

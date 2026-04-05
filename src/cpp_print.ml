@@ -1682,6 +1682,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
         mf_body;
         mf_is_const;
         mf_is_static;
+        mf_no_pure;
       } ->
     let params_s =
       pp_list
@@ -1707,7 +1708,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     in
     let doc_comment = pp_doc_comment_for_name (Id.to_string mf_name) in
     let qualifier =
-      fun_qualifier ~can_constexpr:mf_is_static ~throws:false ~no_pure:false
+      fun_qualifier ~can_constexpr:mf_is_static ~throws:false ~no_pure:mf_no_pure
         mf_ret_type mf_params
     in
     doc_comment
