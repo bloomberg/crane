@@ -3051,3 +3051,14 @@
   (alias runtest)
   (deps main_entrypoint.t.exe)
   (action (run ./main_entrypoint.t.exe))))
+
+(subdir embed_effect
+ (rule
+  (targets embed_effect.t.exe)
+  (deps EmbedEffect.vo embed_effect.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} embed_effect.t.exe embed_effect.cpp embed_effect.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps embed_effect.t.exe)
+  (action (run ./embed_effect.t.exe))))

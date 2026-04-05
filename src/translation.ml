@@ -750,6 +750,15 @@ let is_skipped_cpp_type = function
     Table.is_inline_custom r && Table.find_custom_opt r = Some ""
   | _ -> false
 
+(** Check if an ML type is a skipped type (inline custom with empty string).
+    Same semantics as [is_skipped_cpp_type] but operates on the ML AST.
+    Used to filter out parameters whose type was [Crane Extract Skip]-ped
+    (e.g. [ReSum]-typed typeclass parameters from the ITree library). *)
+let is_skipped_ml_type = function
+  | Miniml.Tglob (r, _, _) ->
+    Table.is_inline_custom r && Table.find_custom_opt r = Some ""
+  | _ -> false
+
 (** Recursively check whether a C++ type contains Tany (std::any). Used to
     detect when a let-binding's type annotation has unresolved carrier
     projections that should be replaced by concrete types from the generated
@@ -7210,12 +7219,16 @@ let gen_dfun n b cty ty temps =
   let all_ids_with_owned =
     List.map2 (fun (id, ty) owned -> (id, ty, owned)) all_ids owned_flags
   in
-  (* For function signature, use renamed ids but exclude typeclass and void
-     params *)
+  (* For function signature, use renamed ids but exclude typeclass, void,
+     and skipped-type params (e.g. ReSum instances from the ITree library
+     that are not recognized by is_typeclass because ReSum's GlobRef is a
+     ConstRef, not an IndRef registered in inductive_kinds). *)
   let ids_with_owned =
     List.filter
       (fun (_, ty, _) ->
-        (not (Table.is_typeclass_type ty)) && not (ml_type_is_void ty) )
+        (not (Table.is_typeclass_type ty))
+        && not (ml_type_is_void ty)
+        && not (is_skipped_ml_type ty) )
       all_ids_with_owned
   in
   (* Convert ML types to C++ types and wrap with const. Owned shared_ptr params:

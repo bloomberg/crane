@@ -33,6 +33,11 @@ Crane Extract Inlined Constant case_sum1 => "".
 
 Crane Extract Inlined Constant subevent => "%a0".
 
+Crane Extract Skip Embeddable.
+Crane Extract Inlined Constant embed => "%a0".
+Crane Extract Skip Embeddable_itree.
+Crane Extract Skip Embeddable_forall.
+
 Crane Extract Skip ITree.map.
 Crane Extract Skip ITree.trigger.
 Crane Extract Skip ITree.iter.
