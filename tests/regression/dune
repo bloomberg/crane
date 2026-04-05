@@ -3040,3 +3040,14 @@
   (alias runtest)
   (deps read_variable_capture.t.exe)
   (action (run ./read_variable_capture.t.exe))))
+
+(subdir main_entrypoint
+ (rule
+  (targets main_entrypoint.t.exe)
+  (deps MainEntrypoint.vo main_entrypoint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} main_entrypoint.t.exe main_entrypoint.cpp main_entrypoint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps main_entrypoint.t.exe)
+  (action (run ./main_entrypoint.t.exe))))

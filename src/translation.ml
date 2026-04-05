@@ -7546,14 +7546,19 @@ let gen_dfun n b cty ty temps =
         (* Rename to _main *)
         let new_label = Label.of_id (Id.of_string "_main") in
         let new_n = GlobRef.ConstRef (Constant.make2 (Constant.modpath c) new_label) in
-        (* Track for wrapper generation — include the struct qualifier *)
+        (* Track for wrapper generation — include the struct qualifier.
+           needs_run is true only in reified mode (ITree<R> has ->run()). *)
         let struct_name =
           let mp = Constant.modpath c in
           match mp with
           | ModPath.MPdot (_, l) -> Some (Id.of_string (Label.to_string l))
           | _ -> None
         in
-        Table.set_main_function (Id.of_string "_main") (ml_codomain ty) struct_name;
+        let needs_run = match resolve_tmeta (ml_codomain ty) with
+          | Tglob (r, _, _) -> is_monad_reified r
+          | _ -> false
+        in
+        Table.set_main_function (Id.of_string "_main") (ml_codomain ty) struct_name needs_run;
         (* Update the declaration with new name *)
         match inner with
         | Dfundef (_, cod, params, body, flags) ->

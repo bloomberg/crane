@@ -198,15 +198,17 @@ val needs_itree_header : unit -> bool
 (** Reset the itree header flag (between extraction units). *)
 val reset_itree_header : unit -> unit
 
-(** Record a [main] function for reified wrapper generation.
+(** Record a [main] function for wrapper generation.
     @param name       the renamed function name (e.g. [_main])
     @param ret_type   the ML return type
-    @param struct_opt enclosing struct qualifier, if any *)
-val set_main_function : Id.t -> ml_type -> Id.t option -> unit
+    @param struct_opt enclosing struct qualifier, if any
+    @param needs_run  true if the return type is a reified ITree
+                      (needs [->run()]), false if the monad was erased *)
+val set_main_function : Id.t -> ml_type -> Id.t option -> bool -> unit
 
 (** Return the recorded main function, if any:
-    [(name, return_type, struct_qualifier)]. *)
-val get_main_function : unit -> (Id.t * ml_type * Id.t option) option
+    [(name, return_type, struct_qualifier, needs_run)]. *)
+val get_main_function : unit -> (Id.t * ml_type * Id.t option * bool) option
 
 (** Reset main function tracking (between extraction units). *)
 val reset_main_function : unit -> unit

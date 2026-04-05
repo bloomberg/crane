@@ -1038,20 +1038,27 @@ let print_structure_to_file (fn, si, mo) dry struc =
       pp_with ft (header fn ());
       pp_with ft (d.preamble mo comment opened unsafe_needs);
       pp_with ft (d.pp_struct struc);
-      (* Reified ITree mode: if a [main] function returning [itree E R] was
-         found, it was renamed to [_main].  Generate a [main()] wrapper that
-         calls [_main()->run()] to execute the reified tree. *)
+      (* If a [main] function returning a monad was found, it was renamed to
+         [_main].  Generate a [main()] wrapper.  In reified mode the wrapper
+         calls [_main()->run()] to execute the ITree; in sequential mode (monad
+         erased) it just calls [_main()] directly. *)
       ( match Table.get_main_function () with
-      | Some (main_name, _ret_ml_ty, struct_qual) ->
+      | Some (main_name, _ret_ml_ty, struct_qual, needs_run) ->
         let qualified_name =
           match struct_qual with
           | Some sn -> Id.print sn ++ str "::" ++ Id.print main_name
           | None -> Id.print main_name
         in
+        let call =
+          if needs_run then
+            qualified_name ++ str "()->run();"
+          else
+            qualified_name ++ str "();"
+        in
         let wrapper =
           str "\n" ++
           str "int main() {" ++ fnl () ++
-          str "  " ++ qualified_name ++ str "()->run();" ++ fnl () ++
+          str "  " ++ call ++ fnl () ++
           str "  return 0;" ++ fnl () ++
           str "}" ++ fnl ()
         in

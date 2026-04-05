@@ -249,12 +249,15 @@ let needs_itree_header () = !itree_header_needed
 
 let reset_itree_header () = itree_header_needed := false
 
-(** Track if a main function returning itree was encountered in reified mode.
-    Stores (function_name, return_type, struct_qualifier) for wrapper generation. *)
-let main_function_tree : (Id.t * Miniml.ml_type * Id.t option) option ref = ref None
+(** Track if a main function returning a monad was encountered.
+    Stores (function_name, return_type, struct_qualifier, needs_run) for
+    wrapper generation.  [needs_run] is true only in reified ITree mode;
+    when the monad is erased (sequential mode), the wrapper calls [_main()]
+    directly without [->run()]. *)
+let main_function_tree : (Id.t * Miniml.ml_type * Id.t option * bool) option ref = ref None
 
-let set_main_function name ret_type struct_name =
-  main_function_tree := Some (name, ret_type, struct_name)
+let set_main_function name ret_type struct_name needs_run =
+  main_function_tree := Some (name, ret_type, struct_name, needs_run)
 
 let get_main_function () = !main_function_tree
 
