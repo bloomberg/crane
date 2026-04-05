@@ -302,6 +302,49 @@ let std_angle label s =
 (** Print an unqualified angle-bracket type: [label<s>]. *)
 let cpp_angle label s = str label ++ str "<" ++ s ++ str ">"
 
+(** Split a rendered C++ string on semicolons while respecting string
+    literals (double-quoted) and character literals (single-quoted).
+    Escaped quotes inside literals are handled. *)
+let split_on_semicolons (s : string) : string list =
+  let len = String.length s in
+  let buf = Buffer.create 64 in
+  let acc = ref [] in
+  let i = ref 0 in
+  while !i < len do
+    let c = s.[!i] in
+    if c = ';' then begin
+      acc := Buffer.contents buf :: !acc;
+      Buffer.clear buf;
+      incr i
+    end
+    else if c = '"' || c = '\'' then begin
+      (* Inside a string or char literal — consume until matching close *)
+      let quote = c in
+      Buffer.add_char buf c;
+      incr i;
+      while !i < len && s.[!i] <> quote do
+        if s.[!i] = '\\' && !i + 1 < len then begin
+          Buffer.add_char buf s.[!i];
+          Buffer.add_char buf s.[!i + 1];
+          i := !i + 2
+        end else begin
+          Buffer.add_char buf s.[!i];
+          incr i
+        end
+      done;
+      if !i < len then begin
+        Buffer.add_char buf s.[!i]; (* closing quote *)
+        incr i
+      end
+    end
+    else begin
+      Buffer.add_char buf c;
+      incr i
+    end
+  done;
+  let last = Buffer.contents buf in
+  List.rev (if String.trim last = "" then !acc else last :: !acc)
+
 (** Custom extraction syntax placeholder types for template string substitution.
 *)
 type custom_case =
@@ -722,7 +765,7 @@ and pp_cpp_expr env args t =
     let body_str = Pp.string_of_ppcmds body_pp in
     let stmts =
       List.filter (fun s -> String.trim s <> "")
-        (String.split_on_char ';' body_str)
+        (split_on_semicolons body_str)
     in
     let stmt_lines =
       String.concat "\n"
@@ -1373,7 +1416,7 @@ and pp_cpp_stmt env args = function
     let stmts =
       List.filter
         (fun s -> String.trim s <> "")
-        (String.split_on_char ';' body_str)
+        (split_on_semicolons body_str)
     in
     let stmt_pps =
       List.map (fun s -> str (String.trim s) ++ str ";") stmts
@@ -1507,7 +1550,7 @@ and wrap_any_cast_if_needed expr expr_printed expected_ty vl =
     tokens ([CCscrut], [CCty], [CCarg], etc.) with pretty-printed C++ fragments.
 *)
 and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
-  let pp cmd =
+  let pp ?(followed_by_dot=false) cmd =
     match cmd with
     | CCstring s -> str s
     | CCscrut ->
@@ -1574,6 +1617,17 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
         | CPPstring _ -> arg ++ str (sn ()).str_suffix
         | _ -> arg
       in
+      (* Parenthesize compound expressions that would bind incorrectly
+         when followed by member access (.c_str() etc.) in templates. *)
+      let arg =
+        if followed_by_dot then
+          match arg_expr with
+          | CPPbinop _ -> str "(" ++ arg ++ str ")"
+          | CPPfun_call (CPPglob (_, _, Some ci), _) when ci.ci_inline <> None ->
+            str "(" ++ arg ++ str ")"
+          | _ -> arg
+        else arg
+      in
       match List.nth_opt arg_types i with
       | Some expected_ty -> wrap_any_cast_if_needed arg_expr arg expected_ty vl
       | None -> arg
@@ -1581,7 +1635,19 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
       CErrors.anomaly
         Pp.(str "Custom syntax: unbound term argument in: " ++ str custom)
   in
-  List.fold_left (fun prev c -> prev ++ pp c) (mt ()) cmds
+  let next_starts_with_dot = function
+    | CCstring s :: _ ->
+      let s = String.trim s in
+      String.length s > 0 && s.[0] = '.'
+    | _ -> false
+  in
+  let rec fold_cmds acc = function
+    | [] -> acc
+    | cmd :: rest ->
+      let followed_by_dot = next_starts_with_dot rest in
+      fold_cmds (acc ++ pp ~followed_by_dot cmd) rest
+  in
+  fold_cmds (mt ()) cmds
 
 (** Print a template parameter type keyword (typename, concept constraint,
     MapsTo). *)

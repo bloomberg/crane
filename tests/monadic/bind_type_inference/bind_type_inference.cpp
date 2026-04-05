@@ -50,7 +50,7 @@ std::shared_ptr<List<int64_t>> BindTypeInference::test5() {
 
 int64_t BindTypeInference::test6() {
   bool y = true;
-  return [&]() {
+  return [&]() -> int64_t {
     if (y) {
       return int64_t(42);
     } else {

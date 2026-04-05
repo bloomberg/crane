@@ -49,6 +49,6 @@ __attribute__((pure)) mpz_class ZGMPTest::z_sign(const mpz_class z) {
     return mpz_class(1);
   } else {
     mpz_class _x = -z;
-    return (-mpz_class(1));
+    return mpz_class(-1);
   }
 }

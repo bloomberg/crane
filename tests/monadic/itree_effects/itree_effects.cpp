@@ -25,7 +25,7 @@ unsigned int ITreeEffects::roll_dice(const unsigned int sides) {
 
 void ITreeEffects::timed_greeting() {
   unsigned int t = static_cast<unsigned int>(std::time(nullptr));
-  std::cout << [&]() {
+  std::cout << [&]() -> std::string {
     if (t <= 43200u) {
       return "Good morning";
     } else {

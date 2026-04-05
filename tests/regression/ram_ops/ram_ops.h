@@ -680,20 +680,19 @@ struct RamOps {
                      const unsigned int b2, const unsigned int c2,
                      const unsigned int r2, const unsigned int i2);
   static inline const unsigned int test_addr_disjoint_bool =
-      ([]() {
+      ([]() -> unsigned int {
         if (ram_addr_disjointb(0u, 1u, 2u, 3u, 0u, 1u, 2u, 3u)) {
           return 1u;
         } else {
           return 0u;
         }
-      }() +
-       []() {
-         if (ram_addr_disjointb(0u, 1u, 2u, 3u, 0u, 1u, 2u, 4u)) {
-           return 1u;
-         } else {
-           return 0u;
-         }
-       }());
+      }() + []() -> unsigned int {
+        if (ram_addr_disjointb(0u, 1u, 2u, 3u, 0u, 1u, 2u, 4u)) {
+          return 1u;
+        } else {
+          return 0u;
+        }
+      }());
 
   struct reg_nested_bank {
     std::shared_ptr<List<unsigned int>> status_;

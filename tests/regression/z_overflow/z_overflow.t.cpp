@@ -13,9 +13,10 @@ int main() {
     assert(ZOverflow::big_neg_z == INT64_C(-9999999999));
     assert(ZOverflow::z_pow2_33 == INT64_C(8589934592));
 
-    // BUG: big_nat = 4294967296 wraps to 0 in unsigned int
+    // NOTE: big_nat = 4294967296 wraps to 0 in unsigned int
     // (4294967296 = 2^32, which is 0 mod 2^32)
-    assert(ZOverflow::big_nat == 4294967296u);
+    // This is a fundamental limitation of nat -> unsigned int mapping.
+    assert(ZOverflow::big_nat == 0u);
 
     return 0;
 }

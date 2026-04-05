@@ -2245,14 +2245,14 @@ LoopifyLists::minmax(
               unsigned int lo = _result.first;
               unsigned int hi = _result.second;
               _result = std::make_pair(
-                  [&]() {
+                  [&]() -> unsigned int {
                     if (_args.d_a0 <= lo) {
                       return _args.d_a0;
                     } else {
                       return lo;
                     }
                   }(),
-                  [&]() {
+                  [&]() -> unsigned int {
                     if (hi <= _args.d_a0) {
                       return _args.d_a0;
                     } else {

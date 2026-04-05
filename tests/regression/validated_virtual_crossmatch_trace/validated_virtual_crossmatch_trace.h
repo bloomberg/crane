@@ -1320,7 +1320,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
                                     TestConfidence::e_CONFIDENCE_HIGH});
   __attribute__((pure)) static bool
   risk_acceptable(const TransplantAcceptability a);
-  static inline const bool sample_virtual_zero_negative = []() {
+  static inline const bool sample_virtual_zero_negative = []() -> bool {
     switch (classify_mfi_safe(validated_luminex, 0u)) {
     case MFIStrength::e_MFI_NEGATIVE: {
       return true;
@@ -1343,7 +1343,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }();
   static inline const unsigned int sample_dedup_count =
       epitope_dedup(typing_epitopes(donor_hla))->length();
-  static inline const bool sample_weak_acceptability = []() {
+  static inline const bool sample_weak_acceptability = []() -> bool {
     switch (full_virtual_crossmatch_safe(validated_luminex, weak_profile,
                                          donor_hla)) {
     case TransplantAcceptability::e_ACCEPTABLE: {
@@ -1362,7 +1362,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
       std::unreachable();
     }
   }();
-  static inline const bool sample_strong_absolute_contra = []() {
+  static inline const bool sample_strong_absolute_contra = []() -> bool {
     switch (full_virtual_crossmatch_safe(validated_luminex, strong_profile,
                                          donor_hla)) {
     case TransplantAcceptability::e_ACCEPTABLE: {
@@ -1387,7 +1387,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
       max_dsa_mfi(strong_profile, donor_hla);
   static inline const unsigned int sample_lab_id =
       validated_luminex->vmc_config->mfi_cfg_lab_id;
-  static inline const bool sample_order_created = []() {
+  static inline const bool sample_order_created = []() -> bool {
     if (create_safe_transfusion_order(
             100u, 200u,
             risk_acceptable(full_virtual_crossmatch_safe(
@@ -1404,7 +1404,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
       return false;
     }
   }();
-  static inline const bool sample_order_blocked = []() {
+  static inline const bool sample_order_blocked = []() -> bool {
     if (create_safe_transfusion_order(
             100u, 201u,
             risk_acceptable(full_virtual_crossmatch_safe(
@@ -1421,7 +1421,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
       return true;
     }
   }();
-  static inline const bool sample_authorized_order_stays_authorized = []() {
+  static inline const bool sample_authorized_order_stays_authorized =
+      []() -> bool {
     if (create_safe_transfusion_order(100u, 202u, true, good_crossmatch, 100u,
                                       200u, 88u, false)
             .has_value()) {

@@ -88,13 +88,14 @@ GetPairBoundProp::execute(std::shared_ptr<GetPairBoundProp::state> s,
           },
           [&](const typename GetPairBoundProp::instr::ADD _args)
               -> std::shared_ptr<GetPairBoundProp::state> {
-            unsigned int sum = ((s->ex_acc + get_reg(s, _args.d_r)) + [&]() {
-              if (s->ex_carry) {
-                return 1u;
-              } else {
-                return 0u;
-              }
-            }());
+            unsigned int sum =
+                ((s->ex_acc + get_reg(s, _args.d_r)) + [&]() -> unsigned int {
+                  if (s->ex_carry) {
+                    return 1u;
+                  } else {
+                    return 0u;
+                  }
+                }());
             return std::make_shared<GetPairBoundProp::state>(state{
                 (sum % 16u), s->ex_regs, 16u <= sum, ((s->ex_pc + 1u) % 4096u),
                 s->ex_stack, s->ex_pair_bus, s->ex_ports});
@@ -158,16 +159,15 @@ GetPairBoundProp::execute(std::shared_ptr<GetPairBoundProp::state> s,
           },
           [&](const typename GetPairBoundProp::instr::RAL _args)
               -> std::shared_ptr<GetPairBoundProp::state> {
-            unsigned int acc_ = (((2u * s->ex_acc) +
-                                  [&]() {
-                                    if (s->ex_carry) {
-                                      return 1u;
-                                    } else {
-                                      return 0u;
-                                    }
-                                  }()) %
+            unsigned int acc_ = (((2u * s->ex_acc) + [&]() -> unsigned int {
+                                   if (s->ex_carry) {
+                                     return 1u;
+                                   } else {
+                                     return 0u;
+                                   }
+                                 }()) %
                                  16u);
-            bool carry_ = 16u <= ((2u * s->ex_acc) + [&]() {
+            bool carry_ = 16u <= ((2u * s->ex_acc) + [&]() -> unsigned int {
                             if (s->ex_carry) {
                               return 1u;
                             } else {
@@ -194,7 +194,7 @@ GetPairBoundProp::execute(std::shared_ptr<GetPairBoundProp::state> s,
           [&](const typename GetPairBoundProp::instr::TCC _args)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(
-                state{[&]() {
+                state{[&]() -> unsigned int {
                         if (s->ex_carry) {
                           return 1u;
                         } else {
@@ -207,7 +207,7 @@ GetPairBoundProp::execute(std::shared_ptr<GetPairBoundProp::state> s,
           [&](const typename GetPairBoundProp::instr::TCS _args)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(
-                state{[&]() {
+                state{[&]() -> unsigned int {
                         if (s->ex_carry) {
                           return 10u;
                         } else {
@@ -275,7 +275,7 @@ GetPairBoundProp::execute(std::shared_ptr<GetPairBoundProp::state> s,
             bool jump = ((_args.d_c % 2u) == 1u && s->ex_carry);
             return std::make_shared<GetPairBoundProp::state>(
                 state{s->ex_acc, s->ex_regs, s->ex_carry,
-                      [&]() {
+                      [&]() -> unsigned int {
                         if (jump) {
                           return (_args.d_a % 4096u);
                         } else {
@@ -316,7 +316,7 @@ GetPairBoundProp::execute(std::shared_ptr<GetPairBoundProp::state> s,
             unsigned int n = ((get_reg(s, _args.d_r) + 1) % 16u);
             return std::make_shared<GetPairBoundProp::state>(
                 state{s->ex_acc, set_reg(s, _args.d_r, n), s->ex_carry,
-                      [&]() {
+                      [&]() -> unsigned int {
                         if (n == 0u) {
                           return (_args.d_a % 4096u);
                         } else {

@@ -93,7 +93,7 @@ struct MonadicVoidEdge {
   static void deeply_nested_void();
 
   /// 8. Higher-order: pass a monadic void function as callback
-  template <typename F0>
+  template <MapsTo<void, unsigned int> F0>
   static void apply_effect(F0 &&f, const unsigned int _x0) {
     f(std::move(_x0));
     return;

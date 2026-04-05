@@ -150,7 +150,7 @@ struct FetchOps {
       pure)) static std::optional<std::pair<unsigned int, unsigned int>>
   fetch_window(const std::shared_ptr<List<unsigned int>> &rom_data,
                const unsigned int addr);
-  static inline const unsigned int fetch_window_test = []() {
+  static inline const unsigned int fetch_window_test = []() -> unsigned int {
     if (fetch_window(List<unsigned int>::cons(
                          9u, List<unsigned int>::cons(
                                  8u, List<unsigned int>::cons(

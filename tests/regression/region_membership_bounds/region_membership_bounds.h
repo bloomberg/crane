@@ -23,20 +23,19 @@ struct RegionMembershipBounds {
   static inline const unsigned int t = []() {
     return []() {
       std::shared_ptr<layout> l = std::make_shared<layout>(layout{100u, 20u});
-      return ([&]() {
+      return ([&]() -> unsigned int {
         if (addr_in_regionb(110u, l)) {
           return 1u;
         } else {
           return 0u;
         }
-      }() +
-              [&]() {
-                if (addr_in_regionb(121u, l)) {
-                  return 1u;
-                } else {
-                  return 0u;
-                }
-              }());
+      }() + [&]() -> unsigned int {
+        if (addr_in_regionb(121u, l)) {
+          return 1u;
+        } else {
+          return 0u;
+        }
+      }());
     }();
   }();
 };

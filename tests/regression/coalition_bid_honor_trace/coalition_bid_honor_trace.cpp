@@ -633,14 +633,14 @@ CoalitionBidHonorTraceCase::unit_to_metrics(
     std::shared_ptr<CoalitionBidHonorTraceCase::Unit> u) {
   return std::make_shared<CoalitionBidHonorTraceCase::ForceMetrics>(
       ForceMetrics{1u, u->unit_tonnage,
-                   [&]() {
+                   [&]() -> unsigned int {
                      if (u->unit_is_elite) {
                        return 1u;
                      } else {
                        return 0u;
                      }
                    }(),
-                   [&]() {
+                   [&]() -> unsigned int {
                      if (u->unit_is_clan) {
                        return 1u;
                      } else {

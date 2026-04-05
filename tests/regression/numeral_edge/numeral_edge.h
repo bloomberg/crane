@@ -797,89 +797,21 @@ struct NumeralEdge {
   /// 2. Small values
   static inline const unsigned int nat_one = 1u;
   static inline const unsigned int nat_ten = 10u;
-  static inline const int64_t z_neg =
-      (-static_cast<int64_t>((2u * (2u * 1u) + 1u)));
-  static inline const int64_t z_neg_one =
-      (-static_cast<int64_t>(1u)); /// 3. Moderate values
+  static inline const int64_t z_neg = INT64_C(-5);
+  static inline const int64_t z_neg_one = INT64_C(-1);
+  /// 3. Moderate values
   static inline const unsigned int nat_hundred = 100u;
-  static inline const int64_t z_thousand = static_cast<int64_t>(
-      (2u *
-       (2u *
-        (2u * (2u * (2u * (2u * (2u * (2u * (2u * 1u + 1u) + 1u) + 1u) + 1u)) +
-               1u)))));
-  static inline const unsigned int n_large =
-      (2u *
-           (2u *
-                (2u *
-                     (2u *
-                          (2u *
-                               (2u *
-                                    (2u *
-                                         (2u *
-                                              (2u *
-                                                   (2u *
-                                                        (2u *
-                                                             (2u *
-                                                                  (2u *
-                                                                       (2u *
-                                                                            (2u *
-                                                                                 1u +
-                                                                             1u) +
-                                                                        1u) +
-                                                                   1u) +
-                                                              1u) +
-                                                         1u) +
-                                                    1u) +
-                                               1u) +
-                                          1u) +
-                                     1u) +
-                                1u) +
-                           1u) +
-                      1u) +
-                 1u) +
-            1u) +
-       1u); /// 4. Powers of 2
+  static inline const int64_t z_thousand = INT64_C(1000);
+  static inline const unsigned int n_large = 65535u;
+  /// 4. Powers of 2
   static inline const unsigned int nat_pow2_8 = 256u;
   static inline const unsigned int nat_pow2_16 = 65536u;
-  static inline const int64_t z_pow2_30 = static_cast<int64_t>(
-      (2u *
-       (2u *
-        (2u *
-         (2u *
-          (2u *
-           (2u *
-            (2u *
-             (2u *
-              (2u *
-               (2u *
-                (2u *
-                 (2u *
-                  (2u *
-                   (2u *
-                    (2u *
-                     (2u *
-                      (2u *
-                       (2u *
-                        (2u *
-                         (2u *
-                          (2u *
-                           (2u *
-                            (2u *
-                             (2u *
-                              (2u *
-                               (2u *
-                                (2u *
-                                 (2u *
-                                  (2u * (2u * 1u)))))))))))))))))))))))))))))));
+  static inline const int64_t z_pow2_30 = INT64_C(1073741824);
   /// 5. Numerals in arithmetic expressions
   static inline const unsigned int add_numerals = (100u + 200u);
-  static inline const int64_t mul_numerals =
-      (static_cast<int64_t>((2u * (2u * (2u * 1u) + 1u))) *
-       static_cast<int64_t>((2u * (2u * (2u * (2u * 1u) + 1u)))));
-  static inline const int64_t sub_numerals =
-      (static_cast<int64_t>(
-           (2u * (2u * (2u * (2u * (2u * (2u * 1u + 1u))) + 1u)))) -
-       static_cast<int64_t>(1u)); /// 6. Numeral as function argument
+  static inline const int64_t mul_numerals = (INT64_C(10) * INT64_C(20));
+  static inline const int64_t sub_numerals = (INT64_C(100) - INT64_C(1));
+  /// 6. Numeral as function argument
   __attribute__((pure)) static unsigned int take_nat(const unsigned int n);
   static inline const unsigned int test_arg = take_nat(42u);
   /// 7. Numeral in list
@@ -899,20 +831,14 @@ struct NumeralEdge {
   __attribute__((pure)) static bool is_big(const unsigned int n);
   /// 12. Multiple Z values in one function
   static inline const int64_t z_arith =
-      (static_cast<int64_t>((2u * (2u * (2u * 1u) + 1u))) +
-       (static_cast<int64_t>((2u * 1u + 1u)) *
-        static_cast<int64_t>((2u * (2u * 1u + 1u) + 1u))));
+      (INT64_C(10) + (INT64_C(3) * INT64_C(7)));
   /// 13. Negative Z in a pair
-  static inline const std::pair<int64_t, int64_t> z_pair = std::make_pair(
-      (-static_cast<int64_t>((2u * (2u * (2u * (2u * (2u * 1u) + 1u)) + 1u)))),
-      static_cast<int64_t>((2u * (2u * (2u * (2u * (2u * 1u) + 1u)) + 1u))));
+  static inline const std::pair<int64_t, int64_t> z_pair =
+      std::make_pair(INT64_C(-42), INT64_C(42));
 
   /// 14. N conversion
-  static inline const unsigned int n_to_nat_test = static_cast<unsigned int>((
-      2u *
-          (2u * (2u * (2u * (2u * (2u * (2u * 1u + 1u) + 1u) + 1u) + 1u) + 1u) +
-           1u) +
-      1u));
+  static inline const unsigned int n_to_nat_test =
+      static_cast<unsigned int>(255u);
 };
 
 #endif // INCLUDED_NUMERAL_EDGE

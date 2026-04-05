@@ -15,12 +15,7 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-template <typename T1 = void> void bug_create(const std::string title) {
-  {
-    bug_create_impl(title);
-    return;
-  }
-}
+void bug_create(const std::string title);
 
 template <typename T1 = void> int64_t bug_read() { return bug_read_impl(); }
 

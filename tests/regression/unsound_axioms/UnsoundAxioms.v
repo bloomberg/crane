@@ -70,7 +70,7 @@ Definition use_type_eq (n : nat) : bool :=
 (* Use axiom to create "impossible" record *)
 Axiom impossible_rec : Rec.
 
-Definition use_impossible : nat :=
+Definition use_impossible (_ : unit) : nat :=
   match impossible_rec with
   | mkRec a b => a + b
   end.

@@ -334,7 +334,7 @@ LoopifyStructures::ltree_max(std::shared_ptr<LoopifyStructures::ltree> t1,
                         if (t2.use_count() == 1 && t2->v().index() == 0) {
                           auto &_rf = std::get<0>(t2->v_mut());
                           unsigned int y = std::move(_rf.d_a0);
-                          _rf.d_a0 = [&]() {
+                          _rf.d_a0 = [&]() -> unsigned int {
                             if (_args.d_a0 <= y) {
                               return y;
                             } else {
@@ -344,24 +344,25 @@ LoopifyStructures::ltree_max(std::shared_ptr<LoopifyStructures::ltree> t1,
                           _result = t2;
                         } else {
                           _result = std::visit(
-                              Overloaded{[&](const typename LoopifyStructures::
-                                                 ltree::LLeaf _args0)
-                                             -> std::shared_ptr<
-                                                 LoopifyStructures::ltree> {
-                                           return ltree::lleaf([&]() {
-                                             if (_args.d_a0 <= _args0.d_a0) {
-                                               return _args0.d_a0;
-                                             } else {
-                                               return _args.d_a0;
-                                             }
-                                           }());
-                                         },
-                                         [&](const typename LoopifyStructures::
-                                                 ltree::LNode _args0)
-                                             -> std::shared_ptr<
-                                                 LoopifyStructures::ltree> {
-                                           return std::move(t2);
-                                         }},
+                              Overloaded{
+                                  [&](const typename LoopifyStructures::ltree::
+                                          LLeaf _args0)
+                                      -> std::shared_ptr<
+                                          LoopifyStructures::ltree> {
+                                    return ltree::lleaf([&]() -> unsigned int {
+                                      if (_args.d_a0 <= _args0.d_a0) {
+                                        return _args0.d_a0;
+                                      } else {
+                                        return _args.d_a0;
+                                      }
+                                    }());
+                                  },
+                                  [&](const typename LoopifyStructures::ltree::
+                                          LNode _args0)
+                                      -> std::shared_ptr<
+                                          LoopifyStructures::ltree> {
+                                    return std::move(t2);
+                                  }},
                               t2->v());
                         }
                       },

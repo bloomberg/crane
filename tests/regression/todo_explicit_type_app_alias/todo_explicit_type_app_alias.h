@@ -19,7 +19,7 @@ struct TodoExplicitTypeAppAlias {
     return []() {
       unsigned int kept_nat = id(9u);
       bool kept_bool = id(true);
-      return (std::move(kept_nat) + [&]() {
+      return (std::move(kept_nat) + [&]() -> unsigned int {
         if (std::move(kept_bool)) {
           return 1u;
         } else {

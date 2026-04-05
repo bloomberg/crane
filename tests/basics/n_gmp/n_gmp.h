@@ -39,12 +39,8 @@ struct NGMPTest {
   __attribute__((pure)) static mpz_class pred_test(const mpz_class _x0);
   __attribute__((pure)) static mpz_class double_test(const mpz_class _x0);
   static inline const mpz_class zero_val = mpz_class(0);
-  static inline const mpz_class five_val = (2 * (2 * mpz_class(1)) + 1);
-  static inline const mpz_class big_val =
-      (2 *
-       (2 *
-        (2 * (2 * (2 * (2 * (2 * (2 * (2 * mpz_class(1) + 1) + 1) + 1) + 1)) +
-              1))));
+  static inline const mpz_class five_val = mpz_class(5);
+  static inline const mpz_class big_val = mpz_class(1000);
   __attribute__((pure)) static bool is_zero(const mpz_class n);
   __attribute__((pure)) static mpz_class pos_add(const mpz_class _x0,
                                                  const mpz_class _x1);

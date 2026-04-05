@@ -102,7 +102,7 @@ struct VoidCallback {
   }();
 
   /// 2. Monadic for-each: callback returns itree ioE unit
-  template <typename F0>
+  template <MapsTo<void, unsigned int> F0>
   static void for_each_m(F0 &&f,
                          const std::shared_ptr<List<unsigned int>> &xs) {
     {

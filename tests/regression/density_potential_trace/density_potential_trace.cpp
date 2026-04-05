@@ -10,20 +10,20 @@ DensityPotentialTraceCase::sample_activation(const Real z) {
 }
 
 __attribute__((pure)) Real DensityPotentialTraceCase::sample_mu(const Real x) {
-  return r_inv((Real::from_z(static_cast<int64_t>(1u)) + (x * x)));
+  return r_inv((Real::from_z(INT64_C(1)) + (x * x)));
 }
 
 __attribute__((pure)) Real
 DensityPotentialTraceCase::sample_gamma(const Real t) {
-  return (t / Real::from_z(static_cast<int64_t>((2u * 1u))));
+  return (t / Real::from_z(INT64_C(2)));
 }
 
 __attribute__((pure)) Real DensityPotentialTraceCase::sample_v(const Real _x) {
-  return r_inv(Real::from_z(static_cast<int64_t>((2u * (2u * 1u)))));
+  return r_inv(Real::from_z(INT64_C(4)));
 }
 
 __attribute__((pure)) Real DensityPotentialTraceCase::sample_N(const Real x) {
-  return (Real::from_z(static_cast<int64_t>(1u)) + (x * x));
+  return (Real::from_z(INT64_C(1)) + (x * x));
 }
 
 __attribute__((pure)) Real

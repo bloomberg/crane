@@ -31,15 +31,9 @@ struct ZIntTest {
   __attribute__((pure)) static bool leb_test(const int64_t _x0,
                                              const int64_t _x1);
   static inline const int64_t zero_val = INT64_C(0);
-  static inline const int64_t pos_val =
-      static_cast<int64_t>((2u * (2u * (2u * (2u * (2u * 1u) + 1u)) + 1u)));
-  static inline const int64_t neg_val =
-      (-static_cast<int64_t>((2u * (2u * 1u + 1u) + 1u)));
-  static inline const int64_t big_val = static_cast<int64_t>(
-      (2u *
-       (2u *
-        (2u * (2u * (2u * (2u * (2u * (2u * (2u * 1u + 1u) + 1u) + 1u) + 1u)) +
-               1u)))));
+  static inline const int64_t pos_val = INT64_C(42);
+  static inline const int64_t neg_val = INT64_C(-7);
+  static inline const int64_t big_val = INT64_C(1000);
   __attribute__((pure)) static int64_t z_sign(const int64_t z);
 };
 

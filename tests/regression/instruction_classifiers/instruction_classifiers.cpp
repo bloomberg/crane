@@ -16,7 +16,7 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_acc(
           [](const typename List<
               std::shared_ptr<InstructionClassifiers::instr_acc>>::Cons _args)
               -> unsigned int {
-            return ([&]() {
+            return ([&]() -> unsigned int {
               if (_args.d_a0->writes_acc()) {
                 return 1u;
               } else {
@@ -38,7 +38,7 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_ram(
           [](const typename List<
               std::shared_ptr<InstructionClassifiers::instr_ram>>::Cons _args)
               -> unsigned int {
-            return ([&]() {
+            return ([&]() -> unsigned int {
               if (_args.d_a0->writes_ram()) {
                 return 1u;
               } else {
@@ -60,7 +60,7 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_regs(
           [](const typename List<
               std::shared_ptr<InstructionClassifiers::instr_regs>>::Cons _args)
               -> unsigned int {
-            return ([&]() {
+            return ([&]() -> unsigned int {
               if (_args.d_a0->writes_regs()) {
                 return 1u;
               } else {
@@ -82,7 +82,7 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_jumps(
           [](const typename List<
               std::shared_ptr<InstructionClassifiers::instr_jump>>::Cons _args)
               -> unsigned int {
-            return ([&]() {
+            return ([&]() -> unsigned int {
               if (_args.d_a0->is_jump()) {
                 return 1u;
               } else {

@@ -24,7 +24,7 @@ struct SetTestPinUpdate {
     return []() {
       std::shared_ptr<state> s_ =
           set_test_pin(std::make_shared<state>(state{6u, false}), true);
-      return (s_->acc + [&]() {
+      return (s_->acc + [&]() -> unsigned int {
         if (s_->test_pin) {
           return 1u;
         } else {

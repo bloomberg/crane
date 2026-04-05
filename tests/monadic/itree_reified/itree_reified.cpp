@@ -9,16 +9,20 @@
 #include <variant>
 
 /// Pass-through: takes a reified itree and returns it unchanged.
-std::shared_ptr<ITree<void>>
-ITreeReified::run_tree(std::shared_ptr<ITree<void>> t) {
-  return std::move(t);
+void ITreeReified::run_tree(std::shared_ptr<ITree<void>> t) {
+  {
+    std::move(t);
+    return;
+  }
 }
 
 /// Sequence two reified itrees.
-std::shared_ptr<ITree<void>>
-ITreeReified::sequence_trees(const std::shared_ptr<ITree<void>> &t1,
-                             std::shared_ptr<ITree<void>> t2) {
-  return itree_bind(t1, [=]() mutable { return t2; });
+void ITreeReified::sequence_trees(const std::shared_ptr<ITree<void>> &t1,
+                                  std::shared_ptr<ITree<void>> t2) {
+  {
+    itree_bind(t1, [=]() mutable { return t2; });
+    return;
+  }
 }
 
 /// Direct mode (no itree params) should be unchanged.

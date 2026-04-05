@@ -613,7 +613,7 @@ struct LoopifyTrees {
                 [&](_Call2 _f) {
                   unsigned int lh = _f._s0;
                   unsigned int rh = _result;
-                  _result = ([&]() {
+                  _result = ([&]() -> unsigned int {
                     if (lh <= rh) {
                       return std::move(rh);
                     } else {
@@ -945,8 +945,8 @@ struct LoopifyTrees {
                   unsigned int d1 = _f._s0;
                   unsigned int d2 = _f._s1;
                   unsigned int d3 = _result;
-                  _result = ([&]() {
-                    if ([&]() {
+                  _result = ([&]() -> unsigned int {
+                    if ([&]() -> unsigned int {
                           if (d1 <= d2) {
                             return std::move(d2);
                           } else {

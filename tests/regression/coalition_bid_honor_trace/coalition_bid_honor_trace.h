@@ -1622,7 +1622,7 @@ struct CoalitionBidHonorTraceCase {
                        return (
                            (bid_metrics(_args.d_attacker_bid)->fm_total_ecr +
                             bid_metrics(_args.d_defender_bid)->fm_total_ecr) +
-                           [&]() {
+                               [&]() -> unsigned int {
                              switch (_args.d_ready) {
                              case ReadyStatus::e_NEITHERREADY: {
                                return 2u;
@@ -1926,7 +1926,8 @@ struct CoalitionBidHonorTraceCase {
   static inline const std::shared_ptr<BatchallResponse> sample_response =
       std::make_shared<BatchallResponse>(BatchallResponse{
           radick, Clan::e_CLANWOLF, coalition_force(defender_coalition)});
-  static inline const std::shared_ptr<ForceBid> sample_attacker_bid = []() {
+  static inline const std::shared_ptr<ForceBid> sample_attacker_bid =
+      []() -> std::shared_ptr<ForceBid> {
     if (coalition_to_bid(attacker_coalition, Side::e_ATTACKER).has_value()) {
       std::shared_ptr<ForceBid> bid =
           *coalition_to_bid(attacker_coalition, Side::e_ATTACKER);
@@ -1936,7 +1937,8 @@ struct CoalitionBidHonorTraceCase {
           List<std::shared_ptr<Unit>>::nil(), Side::e_ATTACKER, malthus});
     }
   }();
-  static inline const std::shared_ptr<ForceBid> sample_defender_bid = []() {
+  static inline const std::shared_ptr<ForceBid> sample_defender_bid =
+      []() -> std::shared_ptr<ForceBid> {
     if (coalition_to_bid(defender_coalition, Side::e_DEFENDER).has_value()) {
       std::shared_ptr<ForceBid> bid =
           *coalition_to_bid(defender_coalition, Side::e_DEFENDER);
@@ -1955,7 +1957,8 @@ struct CoalitionBidHonorTraceCase {
   static inline const Coalition updated_attacker_coalition =
       apply_coalition_member_bid(attacker_coalition,
                                  sample_coalition_member_bid);
-  static inline const std::shared_ptr<ForceBid> updated_attacker_bid = []() {
+  static inline const std::shared_ptr<ForceBid> updated_attacker_bid =
+      []() -> std::shared_ptr<ForceBid> {
     if (coalition_to_bid(updated_attacker_coalition, Side::e_ATTACKER)
             .has_value()) {
       std::shared_ptr<ForceBid> bid =
@@ -2047,7 +2050,8 @@ struct CoalitionBidHonorTraceCase {
   static inline const bool sample_break_bid_honor_is_minus_ten = BinInt::eqb(
       sample_break_bid_honor,
       Z::zneg(Positive::xo(Positive::xi(Positive::xo(Positive::xh())))));
-  static inline const unsigned int sample_break_bid_actor_id = []() {
+  static inline const unsigned int sample_break_bid_actor_id =
+      []() -> unsigned int {
     if (phase_after_initial_bid
             ->action_actor_in_phase(
                 ProtocolAction::actbreakbid(Side::e_ATTACKER))

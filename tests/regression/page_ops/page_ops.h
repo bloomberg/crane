@@ -215,7 +215,8 @@ struct PageOps {
       pc_inc1(std::make_shared<state>(state{max_addr}));
   static inline const unsigned int test_pc_inc2_wrap =
       pc_inc2(std::make_shared<state>(state{max_addr}));
-  static inline const unsigned int test_disassemble_edge = []() {
+  static inline const unsigned int test_disassemble_edge =
+      []() -> unsigned int {
     if (disassemble(
             List<unsigned int>::cons(
                 0u, List<unsigned int>::cons(

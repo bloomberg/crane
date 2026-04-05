@@ -12,7 +12,7 @@
 void EffectComplexArgs::set_prefixed(const std::string prefix,
                                      const std::string suffix,
                                      const std::string value) {
-  setenv(prefix + suffix.c_str(), value.c_str(), 1);
+  setenv((prefix + suffix).c_str(), value.c_str(), 1);
   return;
 }
 
@@ -20,7 +20,7 @@ void EffectComplexArgs::set_prefixed(const std::string prefix,
 void EffectComplexArgs::set_with_value(const std::string key,
                                        const std::string prefix,
                                        const std::string suffix) {
-  setenv(key.c_str(), prefix + suffix.c_str(), 1);
+  setenv(key.c_str(), (prefix + suffix).c_str(), 1);
   return;
 }
 
@@ -29,7 +29,7 @@ std::optional<std::string>
 EffectComplexArgs::get_prefixed(const std::string prefix,
                                 const std::string suffix) {
   return [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(prefix + suffix.c_str());
+    auto *v = std::getenv((prefix + suffix).c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
 }
@@ -56,7 +56,7 @@ EffectComplexArgs::round_trip(const std::string prefix,
 /// 6. Nested concatenation as argument
 void EffectComplexArgs::deep_concat(const std::string a, const std::string b,
                                     const std::string c) {
-  setenv(a + b + c.c_str(), "value"s.c_str(), 1);
+  setenv((a + b + c).c_str(), "value"s.c_str(), 1);
   return;
 }
 
@@ -68,7 +68,7 @@ void EffectComplexArgs::chain_with_concat(const std::string name) {
   }();
   if (r.has_value()) {
     std::string v = *r;
-    setenv("COPY_"s + name.c_str(), v.c_str(), 1);
+    setenv(("COPY_"s + name).c_str(), v.c_str(), 1);
     return;
   } else {
     return;
@@ -78,6 +78,6 @@ void EffectComplexArgs::chain_with_concat(const std::string name) {
 /// 8. unset_env with concatenated key
 void EffectComplexArgs::unset_prefixed(const std::string prefix,
                                        const std::string suffix) {
-  unsetenv(prefix + suffix.c_str());
+  unsetenv((prefix + suffix).c_str());
   return;
 }

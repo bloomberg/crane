@@ -706,7 +706,7 @@ struct PendantSumtreeRoundtripCase {
                   List<std::shared_ptr<T0<std::shared_ptr<T>>>>::cons0(
                       digits_269,
                       List<std::shared_ptr<T0<std::shared_ptr<T>>>>::nil0())));
-  static inline const bool sample_multi_roundtrip_ok = []() {
+  static inline const bool sample_multi_roundtrip_ok = []() -> bool {
     if (decode_multi(3u, encode_multi(3u, sample_multi_digits)).has_value()) {
       std::shared_ptr<List<std::shared_ptr<T0<std::shared_ptr<T>>>>> decoded =
           *decode_multi(3u, encode_multi(3u, sample_multi_digits));

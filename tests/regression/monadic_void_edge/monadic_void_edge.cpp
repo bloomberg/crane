@@ -42,7 +42,7 @@ void MonadicVoidEdge::unit_chain() {
 /// 5. Match on a value obtained from a bind
 unsigned int MonadicVoidEdge::match_after_bind() {
   bool b = true;
-  return [&]() {
+  return [&]() -> unsigned int {
     if (b) {
       return 1u;
     } else {

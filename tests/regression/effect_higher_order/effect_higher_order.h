@@ -78,13 +78,14 @@ public:
 
 struct EffectHigherOrder {
   /// 1. Higher-order function with effectful callback
-  template <typename F0>
+  template <MapsTo<void, std::string> F0>
   static void apply_effect(F0 &&f, const std::string _x0) {
     f(_x0);
     return;
-  } /// 2. Map-like function over a list with effects
+  }
 
-  template <typename F0>
+  /// 2. Map-like function over a list with effects
+  template <MapsTo<void, std::string> F0>
   static void for_each_str(F0 &&f,
                            const std::shared_ptr<List<std::string>> &xs) {
     {
@@ -102,12 +103,12 @@ struct EffectHigherOrder {
   } /// 3. Callback that returns a value
 
   template <typename F0> static std::string with_line(F0 &&f) {
-    []() -> std::string {
+    std::string _bind_result = []() -> std::string {
       std::string _r;
       std::getline(std::cin, _r);
       return _r;
     }();
-    return f;
+    return f(_bind_result);
   }
 
   /// 4. Nested bind in callback

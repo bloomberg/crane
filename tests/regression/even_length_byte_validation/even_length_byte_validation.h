@@ -95,7 +95,7 @@ public:
 struct EvenLengthByteValidation {
   __attribute__((pure)) static bool
   valid_program(const std::shared_ptr<List<unsigned int>> &bytes);
-  static inline const unsigned int t = []() {
+  static inline const unsigned int t = []() -> unsigned int {
     if (valid_program(List<unsigned int>::cons(
             1u, List<unsigned int>::cons(
                     2u, List<unsigned int>::cons(

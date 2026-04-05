@@ -2202,7 +2202,7 @@ let extract_constant access env kn cb =
           all_args_dummy t2
         else
           false
-      | _ -> true (* no more arrows: all args (if any) were dummy *)
+      | t -> isTdummy t (* only erase if return type is also dummy *)
     in
     let has_args =
       match t with

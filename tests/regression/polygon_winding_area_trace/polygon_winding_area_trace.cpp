@@ -51,12 +51,11 @@ __attribute__((pure)) unsigned int PeanoNat::modulo(const unsigned int x,
 __attribute__((pure)) int64_t BinInt::pow_pos(const int64_t z,
                                               const unsigned int _x0) {
   return Pos::template iter<int64_t>(
-      [&](int64_t _x0) -> int64_t { return (z * _x0); },
-      static_cast<int64_t>(1u), _x0);
+      [&](int64_t _x0) -> int64_t { return (z * _x0); }, INT64_C(1), _x0);
 }
 
 __attribute__((pure)) Real PolygonWindingAreaTraceCase::hav(const Real theta) {
-  return r_sqr(r_sin((theta / Real::from_z(static_cast<int64_t>((2u * 1u))))));
+  return r_sqr(r_sin((theta / Real::from_z(INT64_C(2)))));
 }
 
 __attribute__((pure)) Real PolygonWindingAreaTraceCase::distance(
@@ -65,19 +64,17 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::distance(
   Real dphi = (p2->phi - p1->phi);
   Real dlambda = (p2->lambda - p1->lambda);
   Real a = (hav(dphi) + ((r_cos(p1->phi) * r_cos(p2->phi)) * hav(dlambda)));
-  return ((Real::from_z(static_cast<int64_t>((2u * 1u))) * R_earth) *
-          r_asin(r_sqrt(a)));
+  return ((Real::from_z(INT64_C(2)) * R_earth) * r_asin(r_sqrt(a)));
 }
 
 __attribute__((pure)) Real
 PolygonWindingAreaTraceCase::lon_diff(const Real lon1, const Real lon2) {
   Real raw = (lon2 - lon1);
   if ((Real::pi() < raw)) {
-    return (raw - (Real::from_z(static_cast<int64_t>((2u * 1u))) * Real::pi()));
+    return (raw - (Real::from_z(INT64_C(2)) * Real::pi()));
   } else {
     if ((raw < (-Real::pi()))) {
-      return (raw +
-              (Real::from_z(static_cast<int64_t>((2u * 1u))) * Real::pi()));
+      return (raw + (Real::from_z(INT64_C(2)) * Real::pi()));
     } else {
       return raw;
     }
@@ -127,8 +124,8 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::spherical_shoelace(
 __attribute__((pure)) Real PolygonWindingAreaTraceCase::spherical_polygon_area(
     const std::shared_ptr<
         List<std::shared_ptr<PolygonWindingAreaTraceCase::Point>>> &poly) {
-  return r_abs(((r_sqr(R_earth) * spherical_shoelace(poly)) /
-                Real::from_z(static_cast<int64_t>((2u * 1u)))));
+  return r_abs(
+      ((r_sqr(R_earth) * spherical_shoelace(poly)) / Real::from_z(INT64_C(2))));
 }
 
 __attribute__((pure)) Real
@@ -141,14 +138,12 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::spherical_cosine_arg(
   Real num = (r_cos(cab) - (r_cos(ca) * r_cos(cb)));
   Real denom = (r_sin(ca) * r_sin(cb));
   return r_max(
-      Real::from_z((-static_cast<int64_t>(1u))),
-      r_min(
-          Real::from_z(static_cast<int64_t>(1u)),
-          (num / r_max(r_abs(denom),
-                       (Real::from_z(static_cast<int64_t>(1u)) /
-                        Real::from_z(BinInt::pow_pos(
-                            static_cast<int64_t>((2u * (2u * (2u * 1u) + 1u))),
-                            (2u * (2u * (2u * 1u) + 1u)))))))));
+      Real::from_z(INT64_C(-1)),
+      r_min(Real::from_z(INT64_C(1)),
+            (num / r_max(r_abs(denom),
+                         (Real::from_z(INT64_C(1)) /
+                          Real::from_z(BinInt::pow_pos(
+                              INT64_C(10), (2u * (2u * (2u * 1u) + 1u)))))))));
 }
 
 __attribute__((pure)) Real PolygonWindingAreaTraceCase::law_of_cosines_arg(
@@ -217,8 +212,7 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::winding_number(
     const std::shared_ptr<PolygonWindingAreaTraceCase::Point> &p,
     const std::shared_ptr<
         List<std::shared_ptr<PolygonWindingAreaTraceCase::Point>>> &poly) {
-  return (winding_sum(p, poly) /
-          (Real::from_z(static_cast<int64_t>((2u * 1u))) * Real::pi()));
+  return (winding_sum(p, poly) / (Real::from_z(INT64_C(2)) * Real::pi()));
 }
 
 __attribute__((pure)) bool PolygonWindingAreaTraceCase::inside_by_winding(
@@ -258,8 +252,7 @@ __attribute__((pure)) bool PolygonWindingAreaTraceCase::winding_number_gt_half(
     const std::shared_ptr<PolygonWindingAreaTraceCase::Point> &p,
     const std::shared_ptr<
         List<std::shared_ptr<PolygonWindingAreaTraceCase::Point>>> &poly) {
-  if (((Real::from_z(static_cast<int64_t>(1u)) /
-        Real::from_z(static_cast<int64_t>((2u * 1u)))) <
+  if (((Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(2))) <
        winding_number(p, poly))) {
     return true;
   } else {

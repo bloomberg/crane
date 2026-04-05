@@ -151,7 +151,7 @@ bool skiplist_test::stm_test_update() {
   sl->insert(nat_lt, nat_eq, 5u, 50u, 0u);
   sl->insert(nat_lt, nat_eq, 5u, 500u, 0u);
   std::optional<unsigned int> v = sl->lookup(nat_lt, nat_eq, 5u);
-  return [&]() {
+  return [&]() -> bool {
     if (v.has_value()) {
       unsigned int n = *v;
       return PeanoNat::eqb(n, 500u);
@@ -168,7 +168,7 @@ bool skiplist_test::stm_test_minimum() {
   sl->insert(nat_lt, nat_eq, 3u, 30u, 0u);
   sl->insert(nat_lt, nat_eq, 7u, 70u, 0u);
   std::optional<std::pair<unsigned int, unsigned int>> minOpt = sl->minimum();
-  return [&]() {
+  return [&]() -> bool {
     if (minOpt.has_value()) {
       std::pair<unsigned int, unsigned int> p = *minOpt;
       unsigned int k = p.first;
@@ -546,96 +546,95 @@ unsigned int skiplist_test::run_tests() {
   bool r11 = test_bounds();
   bool r12 = test_removeAll();
   bool r13 = test_bde_api();
-  unsigned int passed = (((((((((((([&]() {
+  unsigned int passed = (((((((((((([&]() -> unsigned int {
                                      if (r1) {
                                        return 1u;
                                      } else {
                                        return 0u;
                                      }
-                                   }() +
-                                    [&]() {
-                                      if (r2) {
-                                        return 1u;
-                                      } else {
-                                        return 0u;
-                                      }
-                                    }()) +
-                                   [&]() {
-                                     if (r3) {
+                                   }() + [&]() -> unsigned int {
+                                     if (r2) {
                                        return 1u;
                                      } else {
                                        return 0u;
                                      }
                                    }()) +
-                                  [&]() {
-                                    if (r4) {
+                                       [&]() -> unsigned int {
+                                    if (r3) {
                                       return 1u;
                                     } else {
                                       return 0u;
                                     }
                                   }()) +
-                                 [&]() {
-                                   if (r5) {
+                                      [&]() -> unsigned int {
+                                   if (r4) {
                                      return 1u;
                                    } else {
                                      return 0u;
                                    }
                                  }()) +
-                                [&]() {
-                                  if (r6) {
+                                     [&]() -> unsigned int {
+                                  if (r5) {
                                     return 1u;
                                   } else {
                                     return 0u;
                                   }
                                 }()) +
-                               [&]() {
-                                 if (r7) {
+                                    [&]() -> unsigned int {
+                                 if (r6) {
                                    return 1u;
                                  } else {
                                    return 0u;
                                  }
                                }()) +
-                              [&]() {
-                                if (r8) {
+                                   [&]() -> unsigned int {
+                                if (r7) {
                                   return 1u;
                                 } else {
                                   return 0u;
                                 }
                               }()) +
-                             [&]() {
-                               if (r9) {
+                                  [&]() -> unsigned int {
+                               if (r8) {
                                  return 1u;
                                } else {
                                  return 0u;
                                }
                              }()) +
-                            [&]() {
-                              if (r10) {
+                                 [&]() -> unsigned int {
+                              if (r9) {
                                 return 1u;
                               } else {
                                 return 0u;
                               }
                             }()) +
-                           [&]() {
-                             if (r11) {
+                                [&]() -> unsigned int {
+                             if (r10) {
                                return 1u;
                              } else {
                                return 0u;
                              }
                            }()) +
-                          [&]() {
-                            if (r12) {
+                               [&]() -> unsigned int {
+                            if (r11) {
                               return 1u;
                             } else {
                               return 0u;
                             }
                           }()) +
-                         [&]() {
-                           if (r13) {
+                              [&]() -> unsigned int {
+                           if (r12) {
                              return 1u;
                            } else {
                              return 0u;
                            }
-                         }());
+                         }()) +
+                             [&]() -> unsigned int {
+    if (r13) {
+      return 1u;
+    } else {
+      return 0u;
+    }
+  }());
   return passed;
 }

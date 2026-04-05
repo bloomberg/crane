@@ -38,12 +38,8 @@ struct NIntTest {
   __attribute__((pure)) static unsigned int pred_test(const unsigned int _x0);
   __attribute__((pure)) static unsigned int double_test(const unsigned int _x0);
   static inline const unsigned int zero_val = 0u;
-  static inline const unsigned int five_val = (2u * (2u * 1u) + 1u);
-  static inline const unsigned int big_val =
-      (2u *
-       (2u *
-        (2u * (2u * (2u * (2u * (2u * (2u * (2u * 1u + 1u) + 1u) + 1u) + 1u)) +
-               1u))));
+  static inline const unsigned int five_val = 5u;
+  static inline const unsigned int big_val = 1000u;
   __attribute__((pure)) static bool is_zero(const unsigned int n);
   __attribute__((pure)) static unsigned int pos_add(const unsigned int _x0,
                                                     const unsigned int _x1);

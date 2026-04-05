@@ -19,7 +19,7 @@ struct TodoPolymorphicErasedHelper {
     return []() {
       unsigned int kept_nat = _anon_aux(7u);
       bool kept_bool = _anon_aux(true);
-      return (std::move(kept_nat) + [&]() {
+      return (std::move(kept_nat) + [&]() -> unsigned int {
         if (std::move(kept_bool)) {
           return 1u;
         } else {

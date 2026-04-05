@@ -92,7 +92,7 @@ LoopifyPatterns::nested_if_fuel(const unsigned int fuel, const unsigned int n) {
             }
           } else {
             {
-              unsigned int _next_n = [&]() {
+              unsigned int _next_n = [&]() -> unsigned int {
                 if (m == 0u) {
                   return 0u;
                 } else {

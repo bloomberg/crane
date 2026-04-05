@@ -203,14 +203,14 @@ LoopifyPairs::min_max(
               unsigned int mn = _result.first;
               unsigned int mx = _result.second;
               _result = std::make_pair(
-                  [&]() {
+                  [&]() -> unsigned int {
                     if (_args.d_a0 <= mn) {
                       return _args.d_a0;
                     } else {
                       return mn;
                     }
                   }(),
-                  [&]() {
+                  [&]() -> unsigned int {
                     if (mx <= _args.d_a0) {
                       return _args.d_a0;
                     } else {

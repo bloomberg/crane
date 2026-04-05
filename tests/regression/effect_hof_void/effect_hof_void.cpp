@@ -11,12 +11,10 @@
 /// 7. Use print_endline as a concrete callback
 std::string EffectHofVoid::concrete_use() {
   return apply_then_return(
-      []() {
-        [](std::string _x0) -> std::monostate {
-          return std::cout << _x0 << '\n';
-        };
-        return std::monostate{};
-      }(),
+      [](std::string _x0) {
+        std::cout << _x0 << '\n';
+        return;
+      },
       "hello");
 }
 
@@ -27,9 +25,10 @@ void EffectHofVoid::set_wrapper(const std::string v, const std::string k) {
 }
 
 void EffectHofVoid::concrete_set() {
-  std::function<std::monostate(std::string)> f;
-  [](std::string _x0) -> std::monostate { return set_wrapper("myval", _x0); };
-  return;
+  std::function<void(std::string)> f = [](std::string _x0) {
+    set_wrapper("myval", _x0);
+    return;
+  };
   {
     f("mykey");
     return;

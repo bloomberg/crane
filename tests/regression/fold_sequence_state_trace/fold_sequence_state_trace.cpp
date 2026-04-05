@@ -36,8 +36,7 @@ FoldSequenceStateTraceCase::line_through(const std::pair<Real, Real> p1,
   Real y2 = p2.second;
   if ((x1 == x2)) {
     return std::make_shared<FoldSequenceStateTraceCase::Line>(
-        Line{Real::from_z(static_cast<int64_t>(1u)), Real::from_z(INT64_C(0)),
-             (-x1)});
+        Line{Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)), (-x1)});
   } else {
     Real a = (y1 - y2);
     Real b = (x2 - x1);
@@ -56,17 +55,16 @@ FoldSequenceStateTraceCase::perp_bisector(const std::pair<Real, Real> p1,
   if ((x1 == x2)) {
     if ((y1 == y2)) {
       return std::make_shared<FoldSequenceStateTraceCase::Line>(
-          Line{Real::from_z(static_cast<int64_t>(1u)), Real::from_z(INT64_C(0)),
-               (-x1)});
+          Line{Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)), (-x1)});
     } else {
       Real a = Real::from_z(INT64_C(0));
-      Real b = (Real::from_z(static_cast<int64_t>((2u * 1u))) * (y2 - y1));
+      Real b = (Real::from_z(INT64_C(2)) * (y2 - y1));
       Real c = ((((x1 * x1) + (y1 * y1)) - (x2 * x2)) - (y2 * y2));
       return std::make_shared<FoldSequenceStateTraceCase::Line>(Line{a, b, c});
     }
   } else {
-    Real a = (Real::from_z(static_cast<int64_t>((2u * 1u))) * (x2 - x1));
-    Real b = (Real::from_z(static_cast<int64_t>((2u * 1u))) * (y2 - y1));
+    Real a = (Real::from_z(INT64_C(2)) * (x2 - x1));
+    Real b = (Real::from_z(INT64_C(2)) * (y2 - y1));
     Real c = ((((x1 * x1) + (y1 * y1)) - (x2 * x2)) - (y2 * y2));
     return std::make_shared<FoldSequenceStateTraceCase::Line>(Line{a, b, c});
   }

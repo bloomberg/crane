@@ -29,7 +29,5 @@ __attribute__((pure)) bool NumeralStress::check_range(const unsigned int n) {
 
 /// 10. Mixed nat and Z in one function
 __attribute__((pure)) int64_t NumeralStress::mixed_arith(const unsigned int n) {
-  return (static_cast<int64_t>(n) +
-          static_cast<int64_t>(
-              (2u * (2u * (2u * (2u * (2u * (2u * 1u + 1u))) + 1u)))));
+  return (static_cast<int64_t>(n) + INT64_C(100));
 }

@@ -23,7 +23,7 @@ struct PrimArray {
   static inline const unsigned int get_modified = arr5_modified.get(int64_t(2));
   static inline const unsigned int get_original = arr5.get(int64_t(2));
   static inline const persistent_array<unsigned int> arr_chain =
-      arr5.set(int64_t(0), 10u).set(int64_t(1), 20u).set(int64_t(2), 30u);
+      ((arr5.set(int64_t(0), 10u)).set(int64_t(1), 20u)).set(int64_t(2), 30u);
   static inline const unsigned int chain_0 = arr_chain.get(int64_t(0));
   static inline const unsigned int chain_1 = arr_chain.get(int64_t(1));
   static inline const unsigned int chain_2 = arr_chain.get(int64_t(2));

@@ -165,18 +165,17 @@ struct FoldSequenceStateTraceCase {
   };
 
   static inline const std::shared_ptr<Line> line_xaxis = std::make_shared<Line>(
-      Line{Real::from_z(INT64_C(0)), Real::from_z(static_cast<int64_t>(1u)),
+      Line{Real::from_z(INT64_C(0)), Real::from_z(INT64_C(1)),
            Real::from_z(INT64_C(0))});
   static inline const std::shared_ptr<Line> line_yaxis = std::make_shared<Line>(
-      Line{Real::from_z(static_cast<int64_t>(1u)), Real::from_z(INT64_C(0)),
+      Line{Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)),
            Real::from_z(INT64_C(0))});
   static inline const Point point_O =
       std::make_pair(Real::from_z(INT64_C(0)), Real::from_z(INT64_C(0)));
-  static inline const Point point_X = std::make_pair(
-      Real::from_z(static_cast<int64_t>(1u)), Real::from_z(INT64_C(0)));
+  static inline const Point point_X =
+      std::make_pair(Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)));
   static inline const Point point_diag =
-      std::make_pair(Real::from_z(static_cast<int64_t>(1u)),
-                     Real::from_z(static_cast<int64_t>(1u)));
+      std::make_pair(Real::from_z(INT64_C(1)), Real::from_z(INT64_C(1)));
   static std::shared_ptr<Line> line_through(const std::pair<Real, Real> p1,
                                             const std::pair<Real, Real> p2);
   static std::shared_ptr<Line> perp_bisector(const std::pair<Real, Real> p1,

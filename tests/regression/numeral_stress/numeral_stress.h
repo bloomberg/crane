@@ -79,19 +79,15 @@ struct NumeralStress {
   static inline const std::optional<unsigned int> opt_100 =
       std::make_optional<unsigned int>(100u);
   static inline const std::optional<int64_t> opt_neg =
-      std::make_optional<int64_t>(
-          (-static_cast<int64_t>((2u * (2u * (2u * (2u * (2u * 1u + 1u))) +
-                                        1u))))); /// 2. Numeral in a pair
+      std::make_optional<int64_t>(INT64_C(-50)); /// 2. Numeral in a pair
   static inline const std::pair<unsigned int, int64_t> pair_nums =
-      std::make_pair(42u, (-static_cast<int64_t>((2u * (2u * 1u + 1u) + 1u))));
+      std::make_pair(42u, INT64_C(-7));
   /// 3. Numeral in a list
   static inline const std::shared_ptr<List<int64_t>> z_list =
       List<int64_t>::cons(
-          static_cast<int64_t>(1u),
-          List<int64_t>::cons(
-              (-static_cast<int64_t>((2u * 1u))),
-              List<int64_t>::cons(static_cast<int64_t>((2u * 1u + 1u)),
-                                  List<int64_t>::nil())));
+          INT64_C(1), List<int64_t>::cons(
+                          INT64_C(-2), List<int64_t>::cons(
+                                           INT64_C(3), List<int64_t>::nil())));
   /// 4. Numeral as argument to Nat.add
   static inline const unsigned int add_big = (1000u + 2000u);
   /// 5. Numeral in match scrutinee
@@ -102,12 +98,7 @@ struct NumeralStress {
   static inline const unsigned int test_count = count_from(100u, 50u);
   /// 7. Z arithmetic with literals
   static inline const int64_t z_complex =
-      ((static_cast<int64_t>(
-            (2u * (2u * (2u * (2u * (2u * (2u * 1u + 1u))) + 1u)))) *
-        static_cast<int64_t>(
-            (2u * (2u * (2u * (2u * (2u * (2u * (2u * 1u + 1u))) + 1u)))))) +
-       (static_cast<int64_t>((2u * (2u * (2u * (2u * (2u * 1u + 1u))) + 1u))) -
-        static_cast<int64_t>((2u * (2u * (2u * (2u * 1u + 1u))) + 1u))));
+      ((INT64_C(100) * INT64_C(200)) + (INT64_C(50) - INT64_C(25)));
 
   /// 8. Multiple numerals in one record
   struct point {

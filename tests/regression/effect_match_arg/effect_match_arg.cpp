@@ -12,14 +12,14 @@
 void EffectMatchArg::set_bool_value(const bool flag, const std::string key) {
   setenv(
       key.c_str(),
-      [&]() {
+      [&]() -> std::string {
         if (flag) {
           return "yes";
         } else {
           return "no";
         }
       }()
-          .c_str(),
+                   .c_str(),
       1);
   return;
 }
@@ -27,14 +27,14 @@ void EffectMatchArg::set_bool_value(const bool flag, const std::string key) {
 /// 2. Bool match as key argument to set_env
 void EffectMatchArg::set_bool_key(const bool flag, const std::string value) {
   setenv(
-      [&]() {
+      [&]() -> std::string {
         if (flag) {
           return "KEY_A";
         } else {
           return "KEY_B";
         }
       }()
-          .c_str(),
+                   .c_str(),
       value.c_str(), 1);
   return;
 }
@@ -44,7 +44,7 @@ void EffectMatchArg::set_option_value(const std::string key,
                                       const std::optional<std::string> r) {
   setenv(
       key.c_str(),
-      [&]() {
+      [&]() -> std::string {
         if (r.has_value()) {
           std::string v = *r;
           return v;
@@ -52,14 +52,14 @@ void EffectMatchArg::set_option_value(const std::string key,
           return "default";
         }
       }()
-          .c_str(),
+                   .c_str(),
       1);
   return;
 }
 
 /// 4. Bool match as argument to print_endline — exercises << precedence
 void EffectMatchArg::print_conditional(const bool flag) {
-  std::cout << [&]() {
+  std::cout << [&]() -> std::string {
     if (flag) {
       return "TRUE";
     } else {
@@ -72,14 +72,14 @@ void EffectMatchArg::print_conditional(const bool flag) {
 /// 5. Bool match as argument to get_env
 std::optional<std::string> EffectMatchArg::get_conditional(const bool flag) {
   return [&]() -> std::optional<std::string> {
-    auto *v = std::getenv([&]() {
+    auto *v = std::getenv([&]() -> std::string {
       if (flag) {
         return "KEY_A";
       } else {
         return "KEY_B";
       }
     }()
-                              .c_str());
+                                       .c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
 }

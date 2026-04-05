@@ -80,7 +80,7 @@ struct EffectRecursiveList {
   static std::shared_ptr<List<std::string>> read_n_lines(const unsigned int n);
 
   /// 2. Map a function over a list with effects
-  template <typename F0>
+  template <MapsTo<void, std::string> F0>
   static void map_effect(F0 &&f, const std::shared_ptr<List<std::string>> &xs) {
     {
       std::visit(Overloaded{[](const typename List<std::string>::Nil _args)

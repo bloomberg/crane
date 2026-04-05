@@ -871,7 +871,7 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::double_proj_nc(
 
 __attribute__((pure)) unsigned int ComprehensivePatterns::multi_positions(
     const std::shared_ptr<ComprehensivePatterns::NC> &r) {
-  return (r->nc_a + [&]() {
+  return (r->nc_a + [&]() -> unsigned int {
     if (r->nc_b == 0u) {
       return r->nc_a;
     } else {

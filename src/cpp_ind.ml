@@ -597,7 +597,8 @@ let pp_cpp_ind_header kn ind =
     declarations instead of implementations. For template functions, generates
     full definitions inline (required by C++). For non-template functions,
     generates forward declarations. *)
-let pp_hdecl = function
+let pp_hdecl d =
+  match d with
   | Dtype (r, _, _) when is_any_inline_custom r -> mt ()
   | Dterm (r, _, _) when is_any_inline_custom r -> mt ()
   | Dterm (r, _, _) when is_eponymous_record_projection r ->

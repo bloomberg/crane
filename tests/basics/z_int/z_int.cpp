@@ -47,9 +47,9 @@ __attribute__((pure)) int64_t ZIntTest::z_sign(const int64_t z) {
     return INT64_C(0);
   } else if (z > 0) {
     unsigned int _x = static_cast<unsigned int>(z);
-    return static_cast<int64_t>(1u);
+    return INT64_C(1);
   } else {
     unsigned int _x = static_cast<unsigned int>(-z);
-    return (-static_cast<int64_t>(1u));
+    return INT64_C(-1);
   }
 }

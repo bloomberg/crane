@@ -20,11 +20,10 @@ template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct ITreeReified {
   /// Pass-through: takes a reified itree and returns it unchanged.
-  static std::shared_ptr<ITree<void>> run_tree(std::shared_ptr<ITree<void>> t);
+  static void run_tree(std::shared_ptr<ITree<void>> t);
   /// Sequence two reified itrees.
-  static std::shared_ptr<ITree<void>>
-  sequence_trees(const std::shared_ptr<ITree<void>> &t1,
-                 std::shared_ptr<ITree<void>> t2);
+  static void sequence_trees(const std::shared_ptr<ITree<void>> &t1,
+                             std::shared_ptr<ITree<void>> t2);
   /// Direct mode (no itree params) should be unchanged.
   static std::shared_ptr<ITree<void>> test_direct();
 

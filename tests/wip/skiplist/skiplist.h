@@ -82,7 +82,7 @@ template <typename K, typename V> struct SkipList {
             SkipNode<K, V>::create(k, v, newLevel);
         SkipList<int, int>::template linkNode<K, V>(
             path, this->SkipList::slHead, newN);
-        [&]() {
+        [&]() -> std::monostate {
           if (PeanoNat::ltb(curLvl, newLevel)) {
             this->SkipList::slLevel->write(newLevel);
             return std::monostate{};
@@ -99,7 +99,7 @@ template <typename K, typename V> struct SkipList {
           SkipNode<K, V>::create(k, v, newLevel);
       SkipList<int, int>::template linkNode<K, V>(path, this->SkipList::slHead,
                                                   newN);
-      [&]() {
+      [&]() -> std::monostate {
         if (PeanoNat::ltb(curLvl, newLevel)) {
           this->SkipList::slLevel->write(newLevel);
           return std::monostate{};
@@ -225,7 +225,7 @@ template <typename K, typename V> struct SkipList {
             SkipNode<K, V>::create(k, v, newLevel);
         SkipList<int, int>::template linkNode<K, V>(
             path, this->SkipList::slHead, newN);
-        [&]() {
+        [&]() -> std::monostate {
           if (PeanoNat::ltb(curLvl, newLevel)) {
             this->SkipList::slLevel->write(newLevel);
             return std::monostate{};
@@ -242,7 +242,7 @@ template <typename K, typename V> struct SkipList {
           SkipNode<K, V>::create(k, v, newLevel);
       SkipList<int, int>::template linkNode<K, V>(path, this->SkipList::slHead,
                                                   newN);
-      [&]() {
+      [&]() -> std::monostate {
         if (PeanoNat::ltb(curLvl, newLevel)) {
           this->SkipList::slLevel->write(newLevel);
           return std::monostate{};
@@ -275,7 +275,7 @@ template <typename K, typename V> struct SkipList {
             SkipNode<K, V>::create(k, v, newLevel);
         SkipList<int, int>::template linkNode<K, V>(
             path, this->SkipList::slHead, newN);
-        [&]() {
+        [&]() -> std::monostate {
           if (PeanoNat::ltb(curLvl, newLevel)) {
             this->SkipList::slLevel->write(newLevel);
             return std::monostate{};
@@ -292,7 +292,7 @@ template <typename K, typename V> struct SkipList {
           SkipNode<K, V>::create(k, v, newLevel);
       SkipList<int, int>::template linkNode<K, V>(path, this->SkipList::slHead,
                                                   newN);
-      [&]() {
+      [&]() -> std::monostate {
         if (PeanoNat::ltb(curLvl, newLevel)) {
           this->SkipList::slLevel->write(newLevel);
           return std::monostate{};
@@ -543,7 +543,7 @@ template <typename K, typename V> struct SkipList {
       unsigned int lvl_ = lvl - 1;
       std::optional<std::shared_ptr<SkipNode<T1, T2>>> headNext = ptr_to_opt(
           stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(head->forward[lvl]));
-      [&]() {
+      [&]() -> std::monostate {
         if (headNext.has_value()) {
           std::shared_ptr<SkipNode<T1, T2>> _x = *headNext;
           if (PeanoNat::leb(lvl, nodeLevel)) {
@@ -573,7 +573,7 @@ template <typename K, typename V> struct SkipList {
                         const unsigned int lvl) {
     std::optional<std::shared_ptr<SkipNode<T1, T2>>> headNext = ptr_to_opt(
         stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(head->forward[lvl]));
-    [&]() {
+    [&]() -> std::monostate {
       if (headNext.has_value()) {
         std::shared_ptr<SkipNode<T1, T2>> _x = *headNext;
         std::optional<std::shared_ptr<SkipNode<T1, T2>>> nodeNext =

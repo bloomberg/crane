@@ -1467,11 +1467,20 @@ let rec convert_ml_type_to_cpp_type
     if isTdummy t1 || is_cpp_dummy_type t1c then
       t2c
     else (
+      (* Void-ify unit codomain: function types returning [unit] (directly
+         or via monadic wrapper like [itree E unit]) should map to [void]
+         to match void-ified function definitions. Check the ML type [t2]
+         since the C++ type may still be a monad Tglob, not bare unit. *)
+      let voidify_cod c =
+        if is_cpp_unit_type c then Tvoid
+        else if ml_type_is_unit (ml_result_type t2) then Tvoid
+        else c
+      in
       match
         t2c
       with
-      | Tfun (l, t) -> Tfun (t1c :: l, t)
-      | _ -> Tfun (t1c :: [], t2c) )
+      | Tfun (l, t) -> Tfun (t1c :: l, voidify_cod t)
+      | _ -> Tfun (t1c :: [], voidify_cod t2c) )
   | Tglob (g, _, _) when is_void g -> Tvoid
   (* PROMOTED TYPE VARIABLES: Handle references to record fields that were
      "promoted" from value-level fields to type-level parameters.
@@ -1694,6 +1703,37 @@ and build_template_params env tvars tys =
     @return C++ expression applying custom syntax with type/value arguments *)
 
 and gen_expr_custom_cons env (ty : ml_type) r ts =
+  (* Try to fold binary positive chains inside Z/N constructors to avoid
+     unsigned-int overflow.  Zpos(xI(xO(...xH...))) and Zneg(...) chains
+     are folded into INT64_C(n) / INT64_C(-n) literals when the parent
+     inductive has a numeral format registered via Crane Extract Numeral. *)
+  let folded =
+    match (r, ts) with
+    | GlobRef.ConstructRef ((kn, i), cidx), [inner] ->
+      let ind_ref = GlobRef.IndRef (kn, i) in
+      ( match Table.get_numeral_info ind_ref with
+      | Some info ->
+        ( match try_fold_positive inner with
+        | Some pos_val ->
+          let z_val =
+            if cidx = 2 then pos_val
+            else if cidx = 3 then Int64.neg pos_val
+            else pos_val
+          in
+          let rendered =
+            Str.global_replace
+              (Str.regexp_string "%n")
+              (Int64.to_string z_val)
+              info.Table.num_fmt
+          in
+          Some (CPPraw rendered)
+        | None -> None )
+      | None -> None )
+    | _ -> None
+  in
+  match folded with
+  | Some e -> e
+  | None ->
   (* PROMOTED TYPE VARIABLES in constructor expressions: Use module-level
      aliases (std::any) instead of template-qualified types.
 
@@ -1822,6 +1862,29 @@ and try_fold_numeral info expr =
       Option.map (fun n -> n + 1) (try_fold_numeral info inner)
     | _ -> None )
   | MLmagic inner -> try_fold_numeral info inner
+  | _ -> None
+
+(** Try to fold a binary positive chain [xI(xO(...xH...))] into an [int64].
+    Returns [Some n] where [n > 0] if the entire chain can be folded, or
+    [None] if any node is not a recognized positive constructor.
+    Constructors: xI(idx=0) = 2*n+1, xO(idx=1) = 2*n, xH(idx=2) = 1.
+
+    Only folds chains whose parent inductive is registered as [is_custom].
+    This is intentionally called from the Z constructor handler, so the
+    result can be rendered as [INT64_C(value)] instead of overflowing
+    unsigned-int arithmetic. *)
+and try_fold_positive expr : int64 option =
+  match expr with
+  | MLcons (_, GlobRef.ConstructRef (_, 3), []) ->
+    (* xH = 1; constructor index 3 (1-based) *)
+    Some 1L
+  | MLcons (_, GlobRef.ConstructRef (_, 1), [inner]) ->
+    (* xI(n) = 2*n + 1; constructor index 1 (1-based) *)
+    Option.map (fun n -> Int64.add (Int64.mul 2L n) 1L) (try_fold_positive inner)
+  | MLcons (_, GlobRef.ConstructRef (_, 2), [inner]) ->
+    (* xO(n) = 2*n; constructor index 2 (1-based) *)
+    Option.map (fun n -> Int64.mul 2L n) (try_fold_positive inner)
+  | MLmagic inner -> try_fold_positive inner
   | _ -> None
 
 (** Fold a Decimal.uint digit chain into an arbitrary-precision integer.
@@ -2386,10 +2449,36 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
         in
         CPPraw rendered
       | None ->
-        (* Not a complete literal; fall through to normal custom handling *)
-        gen_expr_custom_cons env _ty r _ts )
+        (* Peano folding failed.  Try binary positive folding for
+           Z constructors: Zpos(xI(xO(...xH...))) / Zneg(...) chains
+           can overflow unsigned int, so fold into INT64_C(n) literals. *)
+        let z_folded =
+          match (_ts, r) with
+          | [inner], GlobRef.ConstructRef (_, cidx) ->
+            ( match try_fold_positive inner with
+            | Some pos_val ->
+              let z_val =
+                if cidx = 2 then (* Zpos; ctor 2, 1-based *) pos_val
+                else if cidx = 3 then (* Zneg; ctor 3, 1-based *)
+                  Int64.neg pos_val
+                else 0L
+              in
+              let rendered =
+                Str.global_replace
+                  (Str.regexp_string "%n")
+                  (Int64.to_string z_val)
+                  info.Table.num_fmt
+              in
+              Some (CPPraw rendered)
+            | None -> None )
+          | _ -> None
+        in
+        ( match z_folded with
+        | Some e -> e
+        | None -> gen_expr_custom_cons env _ty r _ts ) )
     | None -> gen_expr_custom_cons env _ty r _ts )
-  | MLcons (ty, r, ts) when is_custom r -> gen_expr_custom_cons env ty r ts
+  | MLcons (ty, r, ts) when is_custom r ->
+    gen_expr_custom_cons env ty r ts
   | MLcons (ty, r, ts)
     when ts = []
          &&
@@ -2642,7 +2731,17 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     cons_result
   | MLcase (typ, t, pv) when is_custom_match pv ->
     let cexp = gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv in
-    CPPfun_call (CPPlambda ([], None, [cexp], false), [])
+    let tvars = get_current_type_vars () in
+    let iife_ret =
+      let branch_rty =
+        match Array.to_list pv with
+        | (_, rty, _, _) :: _ -> rty
+        | [] -> typ
+      in
+      let r = convert_ml_type_to_cpp_type env Refset'.empty tvars branch_rty in
+      if is_cpp_unit_type r then Tvoid else r
+    in
+    CPPfun_call (CPPlambda ([], Some iife_ret, [cexp], false), [])
   | MLcase (typ, t, pv)
     when (not (record_fields_of_type typ == [])) && Array.length pv == 1 ->
     let ids, r, pat, body = pv.(0) in
@@ -3065,9 +3164,15 @@ and eta_fun env f args =
       let as_value () =
         match ml_arg with
         | MLapp (f, _) when ml_callee_is_void f ->
-          wrap_void_call_as_value expr
+          (* Don't wrap eta-expanded lambdas (partial applications) — they
+             are function VALUES, not void call results. *)
+          ( match expr with
+          | CPPlambda _ -> expr
+          | _ -> wrap_void_call_as_value expr )
         | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
-          wrap_void_call_as_value expr
+          ( match expr with
+          | CPPlambda _ -> expr
+          | _ -> wrap_void_call_as_value expr )
         | _ -> expr
       in
       match List.nth_opt fn_param_ml_tys i with
@@ -3402,11 +3507,16 @@ and eta_fun env f args =
           let call_args =
             args @ List.mapi (fun i _ -> CPPvar (eta_param_id i)) eta_args
           in
-          CPPlambda
-            ( List.rev eta_args,
-              Some cod,
-              [Sreturn (Some (CPPfun_call (cglob, List.rev call_args)))],
-              false )
+          let call = CPPfun_call (cglob, List.rev call_args) in
+          let ret_ty, body =
+            if cod = Tvoid then
+              (* Void-returning function: execute for side effects, then
+                 return without a value. *)
+              (None, [Sexpr call; Sreturn None])
+            else
+              (Some cod, [Sreturn (Some call)])
+          in
+          CPPlambda (List.rev eta_args, ret_ty, body, false)
       | _ ->
         if id_is_typeclass_instance && args = [] then
           cglob
@@ -3657,8 +3767,18 @@ and gen_cpp_case (typ : ml_type) t env pv =
       | Pwild | Prel _ | Ptuple _ -> gen_enum_branches cs
     in
     let branches = gen_enum_branches (Array.to_list pv) in
+    let tvars = get_current_type_vars () in
+    let iife_ret =
+      let branch_rty =
+        match Array.to_list pv with
+        | (_, rty, _, _) :: _ -> rty
+        | [] -> typ
+      in
+      let r = convert_ml_type_to_cpp_type env Refset'.empty tvars branch_rty in
+      if is_cpp_unit_type r then Tvoid else r
+    in
     CPPfun_call
-      (CPPlambda ([], None, [Sswitch (scrutinee, ind_ref, branches)], false), [])
+      (CPPlambda ([], Some iife_ret, [Sswitch (scrutinee, ind_ref, branches)], false), [])
   else
     (* Phase 3: Check for reuse opportunities (reset/reuse). If the scrutinee is
        an owned shared_ptr variable and there are reuse candidates (branches
@@ -3903,8 +4023,18 @@ and gen_cpp_case (typ : ml_type) t env pv =
       (* Generate IIFE with if-else *)
       let _ = n_fields in
       tctx.env_types <- saved_env_types;
+      let tvars = get_current_type_vars () in
+      let iife_ret =
+        let branch_rty =
+          match Array.to_list pv with
+          | (_, rty, _, _) :: _ -> rty
+          | [] -> typ
+        in
+        let r = convert_ml_type_to_cpp_type env Refset'.empty tvars branch_rty in
+        if is_cpp_unit_type r then Tvoid else r
+      in
       CPPfun_call
-        ( CPPlambda ([], None, [Sif (cond, reuse_stmts, [normal_visit])], false),
+        ( CPPlambda ([], Some iife_ret, [Sif (cond, reuse_stmts, [normal_visit])], false),
           [] ) )
     else
       gen_normal_visit_expr ()
@@ -4033,7 +4163,7 @@ and extract_block_template = function
     @param k     the statement-level continuation (e.g. [Sreturn], [Sasgn])
     @param expr  the expression produced by [gen_expr] *)
 and inline_iife (k : cpp_expr -> cpp_stmt) = function
-  | CPPfun_call (CPPlambda ([], _, body, _), []) when body <> [] ->
+  | CPPfun_call (CPPlambda ([], ret_ty, body, _), []) when body <> [] ->
     let k_is_return =
       match k (CPPint 0) with Sreturn _ -> true | _ -> false
     in
@@ -4041,7 +4171,7 @@ and inline_iife (k : cpp_expr -> cpp_stmt) = function
       (* Non-return continuations (e.g. Sasgn for let-bindings) keep the
          IIFE to prevent name clashes between variables from separately
          inlined IIFEs in the same block scope. *)
-      [k (CPPfun_call (CPPlambda ([], None, body, false), []))]
+      [k (CPPfun_call (CPPlambda ([], ret_ty, body, false), []))]
     else
     (* Replace each [Sreturn(Some v)] in the IIFE body with [k(v)] and
        emit the body statements directly, eliminating the lambda wrapper.
@@ -4092,7 +4222,7 @@ and inline_iife (k : cpp_expr -> cpp_stmt) = function
     in
     ( match replace_last_return body with
     | Some stmts -> stmts
-    | None -> [k (CPPfun_call (CPPlambda ([], None, body, false), []))] )
+    | None -> [k (CPPfun_call (CPPlambda ([], ret_ty, body, false), []))] )
   | expr -> [k expr]
 
 (** Generate C++ statements from an ML AST. The continuation [k] transforms the
@@ -5222,7 +5352,30 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         else
           [k a]
       | _ ->
-        side_effect @ gen_stmts env k f ) )
+        (* Eta-reduced non-Ret continuation: f is a bare function reference.
+           Bind action result to a temp var and apply f to it, instead of
+           discarding the result and returning f unapplied. *)
+        let tvars = get_current_type_vars () in
+        let non_void_ty =
+          match non_dummy_bind_tys with
+          | ty :: _ ->
+            let cpp_ty =
+              convert_ml_type_to_cpp_type env Refset'.empty tvars ty
+            in
+            if cpp_ty = Tvoid || cpp_ty = Tunknown || ml_type_is_unit ty then
+              None
+            else
+              Some cpp_ty
+          | [] -> None
+        in
+        ( match non_void_ty with
+        | Some cpp_ty ->
+          let temp_id = Id.of_string "_bind_result" in
+          let f_expr = gen_expr env f in
+          let app = CPPfun_call (f_expr, [CPPvar temp_id]) in
+          [Sasgn (temp_id, Some cpp_ty, a); k app]
+        | None ->
+          side_effect @ gen_stmts env k f ) ) )
     end
   | MLapp (MLglob (r, _), a1 :: l) when is_ret r ->
     if tctx.itree_mode = Reified then begin
@@ -5365,7 +5518,27 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
        they are trees returned as-is. *)
     let saved_dead = tctx.move_dead_after in
     let is_void_tail = match t with
-      | MLapp (f, _) | MLmagic (MLapp (f, _)) -> ml_callee_is_void f
+      | MLapp (f, args) | MLmagic (MLapp (f, args)) ->
+        ml_callee_is_void f
+        (* Only treat as void if fully applied — partial applications
+           return a function value, not void. *)
+        && ( match f with
+           | MLglob (r, _) ->
+             ( match find_type_opt r with
+             | Some ty ->
+               let rec count_arrows = function
+                 | Miniml.Tarr (t1, rest) ->
+                   if isTdummy t1 then count_arrows rest
+                   else 1 + count_arrows rest
+                 | _ -> 0
+               in
+               let n_non_dummy_args =
+                 List.length (List.filter (fun a ->
+                   match a with MLdummy _ -> false | _ -> true) args)
+               in
+               n_non_dummy_args >= count_arrows ty
+             | None -> true )
+           | _ -> true )
       | _ -> false
     in
     if is_void_tail then begin

@@ -151,44 +151,14 @@ struct PolygonWindingAreaTraceCase {
     Real lambda;
   };
 
-  static inline const Real R_earth_default = Rdefinitions::Q2R(std::make_shared<
-                                                               Q>(Q{
-      static_cast<int64_t>((
-          2u *
+  static inline const Real R_earth_default =
+      Rdefinitions::Q2R(std::make_shared<Q>(
+          Q{INT64_C(3440065),
+            (2u *
+             (2u *
               (2u *
-               (2u *
-                (2u *
-                 (2u *
-                  (2u *
-                   (2u *
-                        (2u *
-                             (2u *
-                                  (2u *
-                                   (2u *
-                                        (2u *
-                                             (2u *
-                                                  (2u *
-                                                       (2u *
-                                                            (2u *
-                                                             (2u *
-                                                              (2u *
-                                                               (2u * (2u *
-                                                                      (2u * 1u +
-                                                                       1u)) +
-                                                                1u)))) +
-                                                        1u) +
-                                                   1u) +
-                                              1u) +
-                                         1u) +
-                                    1u)) +
-                              1u) +
-                         1u) +
-                    1u)))))) +
-          1u)),
-      (2u *
-       (2u *
-        (2u * (2u * (2u * (2u * (2u * (2u * (2u * 1u + 1u) + 1u) + 1u) + 1u)) +
-               1u))))}));
+               (2u * (2u * (2u * (2u * (2u * (2u * 1u + 1u) + 1u) + 1u) + 1u)) +
+                1u))))}));
   static inline const Real R_earth = R_earth_default;
   __attribute__((pure)) static Real hav(const Real theta);
   __attribute__((pure)) static Real distance(const std::shared_ptr<Point> &p1,
@@ -245,13 +215,12 @@ struct PolygonWindingAreaTraceCase {
       std::make_shared<Point>(
           Point{Real::from_z(INT64_C(0)), Real::from_z(INT64_C(0))});
   static inline const std::shared_ptr<Point> test_triangle_v2 =
-      std::make_shared<Point>(Point{Real::from_z(static_cast<int64_t>(1u)),
-                                    Real::from_z(INT64_C(0))});
+      std::make_shared<Point>(
+          Point{Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0))});
   static inline const std::shared_ptr<Point> test_triangle_v3 =
       std::make_shared<Point>(
-          Point{(Real::from_z(static_cast<int64_t>(1u)) /
-                 Real::from_z(static_cast<int64_t>((2u * 1u)))),
-                Real::from_z(static_cast<int64_t>(1u))});
+          Point{(Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(2))),
+                Real::from_z(INT64_C(1))});
   static inline const Polygon test_triangle =
       List<std::shared_ptr<Point>>::cons(
           test_triangle_v1,
@@ -261,19 +230,15 @@ struct PolygonWindingAreaTraceCase {
                   test_triangle_v3, List<std::shared_ptr<Point>>::nil())));
   static inline const std::shared_ptr<Point> test_centroid =
       std::make_shared<Point>(
-          Point{(Real::from_z(static_cast<int64_t>(1u)) /
-                 Real::from_z(static_cast<int64_t>((2u * 1u)))),
-                (Real::from_z(static_cast<int64_t>(1u)) /
-                 Real::from_z(static_cast<int64_t>((2u * 1u + 1u))))});
+          Point{(Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(2))),
+                (Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(3)))});
   static inline const std::shared_ptr<Point> test_exterior =
       std::make_shared<Point>(
-          Point{(Real::from_z(static_cast<int64_t>(1u)) /
-                 Real::from_z(static_cast<int64_t>((2u * 1u)))),
-                Real::from_z((-static_cast<int64_t>(1u)))});
+          Point{(Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(2))),
+                Real::from_z(INT64_C(-1))});
   __attribute__((pure)) static Polygon test_equatorial_square(const Real delta);
   static inline const Real sample_square_delta =
-      (Real::from_z(static_cast<int64_t>(1u)) /
-       Real::from_z(static_cast<int64_t>((2u * (2u * (2u * 1u) + 1u)))));
+      (Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(10)));
   static inline const bool sample_centroid_inside =
       inside_by_winding(test_centroid, test_triangle);
   static inline const bool sample_exterior_inside =

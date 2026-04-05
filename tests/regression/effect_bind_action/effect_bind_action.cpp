@@ -13,7 +13,7 @@
 
 /// 1. Bool match inside bind action: one branch block template
 std::string EffectBindAction::conditional_read(const bool use_stdin) {
-  return [&]() {
+  return [&]() -> std::string {
     if (use_stdin) {
       return []() -> std::string {
         std::string _r;
@@ -28,7 +28,7 @@ std::string EffectBindAction::conditional_read(const bool use_stdin) {
 
 /// 2. Bool match where both branches are effects
 int64_t EffectBindAction::conditional_effect(const bool flag) {
-  return [&]() {
+  return [&]() -> int64_t {
     if (flag) {
       return static_cast<int64_t>(
           std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -47,7 +47,7 @@ std::string EffectBindAction::maybe_override(const std::string name,
     auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
-  return [&]() {
+  return [&]() -> std::string {
     if (r.has_value()) {
       std::string v = *r;
       return v;
@@ -60,7 +60,7 @@ std::string EffectBindAction::maybe_override(const std::string name,
 /// 4. Nested: effect result used in another conditional effect
 std::pair<int64_t, int64_t>
 EffectBindAction::timed_if_needed(const bool measure) {
-  int64_t t1 = [&]() {
+  int64_t t1 = [&]() -> int64_t {
     if (measure) {
       return static_cast<int64_t>(
           std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -70,7 +70,7 @@ EffectBindAction::timed_if_needed(const bool measure) {
       return int64_t(0);
     }
   }();
-  int64_t t2 = [&]() {
+  int64_t t2 = [&]() -> int64_t {
     if (measure) {
       return static_cast<int64_t>(
           std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -87,7 +87,7 @@ EffectBindAction::timed_if_needed(const bool measure) {
 std::string EffectBindAction::echo_if(const bool flag) {
   std::string line;
   std::getline(std::cin, line);
-  [&]() {
+  [&]() -> std::monostate {
     if (flag) {
       std::cout << std::move(line) << '\n';
       return std::monostate{};
@@ -105,7 +105,7 @@ std::string EffectBindAction::helper(const std::string s) {
 }
 
 std::string EffectBindAction::use_helper(const bool flag) {
-  return [&]() {
+  return [&]() -> std::string {
     if (flag) {
       return helper("yes");
     } else {
@@ -129,7 +129,7 @@ std::string EffectBindAction::let_match_then_effect(const unsigned int n) {
 
 /// 8. Discard result of conditional effect
 unsigned int EffectBindAction::discard_conditional(const bool flag) {
-  [&]() {
+  [&]() -> std::monostate {
     if (flag) {
       std::cout << "flagged"s << '\n';
       return std::monostate{};

@@ -121,20 +121,19 @@ struct IszOps {
       std::shared_ptr<state> s =
           std::make_shared<state>(state{List<unsigned int>::cons(
               15u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))});
-      return ([&]() {
+      return ([&]() -> unsigned int {
         if (isz_loops(s, 0u)) {
           return 1u;
         } else {
           return 0u;
         }
-      }() +
-              [&]() {
-                if (isz_terminates(s, 0u)) {
-                  return 1u;
-                } else {
-                  return 0u;
-                }
-              }());
+      }() + [&]() -> unsigned int {
+        if (isz_terminates(s, 0u)) {
+          return 1u;
+        } else {
+          return 0u;
+        }
+      }());
     }();
   }();
   static inline const std::pair<std::pair<unsigned int, unsigned int>,

@@ -11,7 +11,7 @@
 std::string BlockTemplateEdge::block_in_if() {
   bool b;
   b = true;
-  return [&]() {
+  return [&]() -> std::string {
     if (b) {
       return "yes";
     } else {
