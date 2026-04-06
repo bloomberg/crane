@@ -3172,3 +3172,80 @@
   (alias runtest)
   (deps z_overflow.t.exe)
   (action (run ./z_overflow.t.exe))))
+
+(subdir closure_escape_match
+ (rule
+  (targets closure_escape_match.t.exe)
+  (deps ClosureEscapeMatch.vo closure_escape_match.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} closure_escape_match.t.exe closure_escape_match.cpp closure_escape_match.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps closure_escape_match.t.exe)
+  (action (run ./closure_escape_match.t.exe))))
+
+(subdir reuse_alias
+ (rule
+  (targets reuse_alias.t.exe)
+  (deps ReuseAlias.vo reuse_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_alias.t.exe reuse_alias.cpp reuse_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_alias.t.exe)
+  (action (run ./reuse_alias.t.exe))))
+
+(subdir closure_capture_match
+ (rule
+  (targets closure_capture_match.t.exe)
+  (deps ClosureCaptureMatch.vo closure_capture_match.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} closure_capture_match.t.exe closure_capture_match.cpp closure_capture_match.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps closure_capture_match.t.exe)
+  (action (run ./closure_capture_match.t.exe))))
+
+(subdir deep_app
+ (rule
+  (targets deep_app.t.exe)
+  (deps DeepApp.vo deep_app.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deep_app.t.exe deep_app.cpp deep_app.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps deep_app.t.exe)
+  (action (run ./deep_app.t.exe))))
+
+(subdir deep_destruct
+ (rule
+  (targets deep_destruct.t.exe)
+  (deps DeepDestruct.vo deep_destruct.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deep_destruct.t.exe deep_destruct.cpp deep_destruct.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps deep_destruct.t.exe)
+  (action (run ./deep_destruct.t.exe))))
+
+(subdir deep_map
+ (rule
+  (targets deep_map.t.exe)
+  (deps DeepMap.vo deep_map.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deep_map.t.exe deep_map.cpp deep_map.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps deep_map.t.exe)
+  (action (run ./deep_map.t.exe))))
+
+(subdir nat_mod_zero
+ (rule
+  (targets nat_mod_zero.t.exe)
+  (deps NatModZero.vo nat_mod_zero.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nat_mod_zero.t.exe nat_mod_zero.cpp nat_mod_zero.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nat_mod_zero.t.exe)
+  (action (run ./nat_mod_zero.t.exe))))

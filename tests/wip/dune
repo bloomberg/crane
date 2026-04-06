@@ -34,3 +34,69 @@
   (alias runtest)
   (deps skiplist.t.exe)
   (action (run ./skiplist.t.exe))))
+
+(subdir z_abs_min
+ (rule
+  (targets z_abs_min.t.exe)
+  (deps ZAbsMin.vo z_abs_min.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} z_abs_min.t.exe z_abs_min.cpp z_abs_min.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps z_abs_min.t.exe)
+  (action (run ./z_abs_min.t.exe))))
+
+(subdir z_arith_overflow
+ (rule
+  (targets z_arith_overflow.t.exe)
+  (deps ZArithOverflow.vo z_arith_overflow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} z_arith_overflow.t.exe z_arith_overflow.cpp z_arith_overflow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps z_arith_overflow.t.exe)
+  (action (run ./z_arith_overflow.t.exe))))
+
+(subdir move_safety
+ (rule
+  (targets move_safety.t.exe)
+  (deps MoveSafety.vo move_safety.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} move_safety.t.exe move_safety.cpp move_safety.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps move_safety.t.exe)
+  (action (run ./move_safety.t.exe))))
+
+(subdir partial_app_move
+ (rule
+  (targets partial_app_move.t.exe)
+  (deps PartialAppMove.vo partial_app_move.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} partial_app_move.t.exe partial_app_move.cpp partial_app_move.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps partial_app_move.t.exe)
+  (action (run ./partial_app_move.t.exe))))
+
+(subdir z_div_min
+ (rule
+  (targets z_div_min.t.exe)
+  (deps ZDivMin.vo z_div_min.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} z_div_min.t.exe z_div_min.cpp z_div_min.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps z_div_min.t.exe)
+  (action (run ./z_div_min.t.exe))))
+
+(subdir reuse_scrutinee
+ (rule
+  (targets reuse_scrutinee.t.exe)
+  (deps ReuseScrutinee.vo reuse_scrutinee.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_scrutinee.t.exe reuse_scrutinee.cpp reuse_scrutinee.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_scrutinee.t.exe)
+  (action (run ./reuse_scrutinee.t.exe))))
