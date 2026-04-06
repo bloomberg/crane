@@ -14,7 +14,8 @@
 From Crane Require Extraction.
 From Crane Require Export Monads.ITreeBase.
 
-Crane Extract Skip itreeF.
+Crane Extract Inductive itree => "%t1" [ "%a0" ].
+Crane Extract Inductive itreeF => "" [ "%a0" "%a0" "" ].
 Crane Extract Inlined Constant observe => "".
 
 (** The ITree library defines [Ret] as a [Notation]. We shadow it with
