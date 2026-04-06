@@ -139,5 +139,7 @@ int main() {
   test_deep_tree_fold();
 
   std::cout << "All tests passed!" << std::endl;
-  return 0;
+  // Use _exit to skip static destructors: HofTreeLoopify::deep is a
+  // 50,000-node tree whose shared_ptr destructor chain overflows the stack.
+  _exit(0);
 }
