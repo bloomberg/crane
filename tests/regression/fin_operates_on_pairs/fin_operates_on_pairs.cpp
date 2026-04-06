@@ -15,21 +15,23 @@ std::shared_ptr<FinOperatesOnPairs::state>
 FinOperatesOnPairs::set_reg(std::shared_ptr<FinOperatesOnPairs::state> s,
                             const unsigned int r, const unsigned int v) {
   return std::make_shared<FinOperatesOnPairs::state>(
-      state{update_nth<unsigned int>(r, (v % 16u), s->regs), s->rom});
+      state{update_nth<unsigned int>(r, (16u ? v % 16u : v), s->regs), s->rom});
 }
 
 __attribute__((pure)) unsigned int FinOperatesOnPairs::get_reg_pair(
     const std::shared_ptr<FinOperatesOnPairs::state> &s, const unsigned int r) {
-  unsigned int base = (((r - (r % 2u)) > r ? 0 : (r - (r % 2u))));
+  unsigned int base =
+      (((r - (2u ? r % 2u : r)) > r ? 0 : (r - (2u ? r % 2u : r))));
   return ((get_reg(s, base) * 16u) + get_reg(s, (base + 1u)));
 }
 
 std::shared_ptr<FinOperatesOnPairs::state> FinOperatesOnPairs::set_reg_pair(
     const std::shared_ptr<FinOperatesOnPairs::state> &s, const unsigned int r,
     const unsigned int v) {
-  unsigned int base = (((r - (r % 2u)) > r ? 0 : (r - (r % 2u))));
+  unsigned int base =
+      (((r - (2u ? r % 2u : r)) > r ? 0 : (r - (2u ? r % 2u : r))));
   unsigned int hi = (16u ? v / 16u : 0);
-  unsigned int lo = (v % 16u);
+  unsigned int lo = (16u ? v % 16u : v);
   std::shared_ptr<FinOperatesOnPairs::state> s1 =
       set_reg(s, base, std::move(hi));
   return set_reg(std::move(s1), (std::move(base) + 1u), std::move(lo));

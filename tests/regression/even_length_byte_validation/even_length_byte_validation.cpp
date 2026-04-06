@@ -7,6 +7,6 @@
 
 __attribute__((pure)) bool EvenLengthByteValidation::valid_program(
     const std::shared_ptr<List<unsigned int>> &bytes) {
-  return ((bytes->length() % 2u) == 0u &&
+  return ((2u ? bytes->length() % 2u : bytes->length()) == 0u &&
           bytes->forallb([](unsigned int b) { return b < 256u; }));
 }

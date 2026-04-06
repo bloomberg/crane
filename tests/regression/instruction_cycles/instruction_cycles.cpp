@@ -101,7 +101,8 @@ std::shared_ptr<InstructionCycles::state5> InstructionCycles::execute5(
                  [&](const typename InstructionCycles::instruction5::INC5 _args)
                      -> std::shared_ptr<InstructionCycles::state5> {
                    return std::make_shared<InstructionCycles::state5>(
-                       state5{((s->acc5 + 1u) % 16u), s->carry5, s->test5});
+                       state5{(16u ? (s->acc5 + 1u) % 16u : (s->acc5 + 1u)),
+                              s->carry5, s->test5});
                  }},
       i->v());
 }

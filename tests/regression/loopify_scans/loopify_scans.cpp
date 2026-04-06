@@ -263,7 +263,7 @@ LoopifyScans::accumulate_if_even(const unsigned int acc,
               _continue = false;
             },
             [&](const typename List<unsigned int>::Cons _args) {
-              if ((_args.d_a0 % 2u) == 0u) {
+              if ((2u ? _args.d_a0 % 2u : _args.d_a0) == 0u) {
                 auto _cell = List<unsigned int>::cons(_loop_acc, nullptr);
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())

@@ -77,7 +77,7 @@ LoopifySequences::collatz_list_fuel(const unsigned int fuel,
             if (n == 1u) {
               _result = List<unsigned int>::cons(1u, List<unsigned int>::nil());
             } else {
-              if ((n % 2u) == 0u) {
+              if ((2u ? n % 2u : n) == 0u) {
                 _stack.push_back(_Enter{(2u ? n / 2u : 0), std::move(f)});
               } else {
                 _stack.push_back(_Enter{((3u * n) + 1u), std::move(f)});
@@ -1317,7 +1317,8 @@ std::shared_ptr<List<unsigned int>> LoopifySequences::remove_if_sum_even(
             },
             [&](const typename List<unsigned int>::Cons _args) {
               unsigned int next = head_or(0u, _args.d_a1);
-              if (((_args.d_a0 + std::move(next)) % 2u) == 0u) {
+              if ((2u ? (_args.d_a0 + std::move(next)) % 2u
+                      : (_args.d_a0 + std::move(next))) == 0u) {
                 _loop_l = _args.d_a1;
               } else {
                 auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);

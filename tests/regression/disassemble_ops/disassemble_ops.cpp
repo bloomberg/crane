@@ -8,10 +8,10 @@
 
 std::shared_ptr<DisassembleOps::instruction>
 DisassembleOps::decode1(const unsigned int b1, const unsigned int b2) {
-  if ((b1 % 2u) == 0u) {
+  if ((2u ? b1 % 2u : b1) == 0u) {
     return instruction::nop2();
   } else {
-    return instruction::ldm2((b2 % 16u));
+    return instruction::ldm2((16u ? b2 % 16u : b2));
   }
 }
 
@@ -80,7 +80,7 @@ DisassembleOps::decode2(const unsigned int b1, const unsigned int b2) {
   if (b1 == 0u) {
     return instruction::nop();
   } else {
-    return instruction::ldm((b2 % 16u));
+    return instruction::ldm((16u ? b2 % 16u : b2));
   }
 }
 
@@ -129,7 +129,7 @@ DisassembleOps::decode3(const unsigned int b1, const unsigned int b2) {
   if (b1 == 0u) {
     return instruction::nop();
   } else {
-    return instruction::ldm((b2 % 16u));
+    return instruction::ldm((16u ? b2 % 16u : b2));
   }
 }
 
@@ -178,7 +178,7 @@ DisassembleOps::decode4(const unsigned int b1, const unsigned int b2) {
   if (b1 == 0u) {
     return instruction::nop();
   } else {
-    return instruction::ldm((b2 % 16u));
+    return instruction::ldm((16u ? b2 % 16u : b2));
   }
 }
 

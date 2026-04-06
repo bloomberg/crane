@@ -80,7 +80,7 @@ __attribute__((pure)) unsigned int LoopifyLists::step_sum(
                       [&](const typename LoopifyLists::list<unsigned int>::Cons
                               _args) -> void {
                         unsigned int contribution;
-                        if ((_args.d_a0 % 2u) == 0u) {
+                        if ((2u ? _args.d_a0 % 2u : _args.d_a0) == 0u) {
                           contribution = _args.d_a0;
                         } else {
                           contribution = (_args.d_a0 * 2u);
@@ -1769,7 +1769,8 @@ LoopifyLists::remove_if_sum_even(
                       },
                       [&](const typename LoopifyLists::list<unsigned int>::Cons
                               _args0) {
-                        if (((_args.d_a0 + _args0.d_a0) % 2u) == 0u) {
+                        if ((2u ? (_args.d_a0 + _args0.d_a0) % 2u
+                                : (_args.d_a0 + _args0.d_a0)) == 0u) {
                           _loop_l = _args.d_a1;
                         } else {
                           auto _cell =

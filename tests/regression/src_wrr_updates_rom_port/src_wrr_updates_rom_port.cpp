@@ -14,7 +14,8 @@ __attribute__((pure)) unsigned int SrcWrrUpdatesRomPort::get_reg(
 __attribute__((pure)) unsigned int SrcWrrUpdatesRomPort::get_reg_pair(
     const std::shared_ptr<SrcWrrUpdatesRomPort::state> &s,
     const unsigned int r) {
-  unsigned int base = (((r - (r % 2u)) > r ? 0 : (r - (r % 2u))));
+  unsigned int base =
+      (((r - (2u ? r % 2u : r)) > r ? 0 : (r - (2u ? r % 2u : r))));
   return ((get_reg(s, base) * 16u) + get_reg(s, (base + 1u)));
 }
 

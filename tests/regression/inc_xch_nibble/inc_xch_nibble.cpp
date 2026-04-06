@@ -13,13 +13,14 @@ IncXchNibble::get_reg(const std::shared_ptr<IncXchNibble::state> &s,
 
 __attribute__((pure)) unsigned int
 IncXchNibble::nibble_of_nat(const unsigned int n) {
-  return (n % 16u);
+  return (16u ? n % 16u : n);
 }
 
 __attribute__((pure)) unsigned int
 IncXchNibble::get_reg_pair(const std::shared_ptr<IncXchNibble::state> &s,
                            const unsigned int r) {
-  unsigned int base = (((r - (r % 2u)) > r ? 0 : (r - (r % 2u))));
+  unsigned int base =
+      (((r - (2u ? r % 2u : r)) > r ? 0 : (r - (2u ? r % 2u : r))));
   return ((get_reg(s, base) * 16u) + get_reg(s, (base + 1u)));
 }
 

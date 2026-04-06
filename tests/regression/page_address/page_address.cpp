@@ -5,7 +5,7 @@
 
 __attribute__((pure)) unsigned int
 PageAddress::addr12_of_nat(const unsigned int n) {
-  return (n % 4096u);
+  return (4096u ? n % 4096u : n);
 }
 
 __attribute__((pure)) unsigned int PageAddress::page_of(const unsigned int p) {
@@ -19,5 +19,5 @@ PageAddress::page_base(const unsigned int p) {
 
 __attribute__((pure)) unsigned int
 PageAddress::branch_target(const unsigned int pc, const unsigned int off) {
-  return (page_base(addr12_of_nat((pc + 2u))) + (off % 256u));
+  return (page_base(addr12_of_nat((pc + 2u))) + (256u ? off % 256u : off));
 }

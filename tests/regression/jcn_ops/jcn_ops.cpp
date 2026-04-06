@@ -8,9 +8,9 @@ __attribute__((pure)) bool
 JcnOps::jcn_condition(const std::shared_ptr<JcnOps::state> &s,
                       const unsigned int cond) {
   unsigned int c1 = (8u ? cond / 8u : 0);
-  unsigned int c2 = ((4u ? cond / 4u : 0) % 2u);
-  unsigned int c3 = ((2u ? cond / 2u : 0) % 2u);
-  unsigned int c4 = (cond % 2u);
+  unsigned int c2 = (2u ? (4u ? cond / 4u : 0) % 2u : (4u ? cond / 4u : 0));
+  unsigned int c3 = (2u ? (2u ? cond / 2u : 0) % 2u : (2u ? cond / 2u : 0));
+  unsigned int c4 = (2u ? cond % 2u : cond);
   bool base = ((s->acc == 0u && std::move(c2) == 1u) ||
                ((s->carry && std::move(c3) == 1u) ||
                 (!(s->test_pin) && std::move(c4) == 1u)));
@@ -22,7 +22,7 @@ JcnOps::jcn_condition(const std::shared_ptr<JcnOps::state> &s,
 }
 
 __attribute__((pure)) unsigned int JcnOps::addr12_of_nat(const unsigned int n) {
-  return (n % 4096u);
+  return (4096u ? n % 4096u : n);
 }
 
 __attribute__((pure)) unsigned int

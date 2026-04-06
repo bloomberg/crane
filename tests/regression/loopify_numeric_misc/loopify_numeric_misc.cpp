@@ -70,7 +70,7 @@ LoopifyNumericMisc::alternating_ops(const unsigned int n) {
                               _result = 0u;
                             } else {
                               unsigned int n_ = n - 1;
-                              if (((n_ + 1) % 2u) == 0u) {
+                              if ((2u ? (n_ + 1) % 2u : (n_ + 1)) == 0u) {
                                 _stack.push_back(_Call1{(n_ + 1)});
                                 _stack.push_back(_Enter{n_});
                               } else {
@@ -112,7 +112,7 @@ LoopifyNumericMisc::count_even(const std::shared_ptr<List<unsigned int>> &l) {
                                  -> void { _result = 0u; },
                              [&](const typename List<unsigned int>::Cons _args)
                                  -> void {
-                               if ((_args.d_a0 % 2u) == 0u) {
+                               if ((2u ? _args.d_a0 % 2u : _args.d_a0) == 0u) {
                                  _stack.push_back(_Call1{1u});
                                  _stack.push_back(_Enter{_args.d_a1});
                                } else {
@@ -153,7 +153,7 @@ LoopifyNumericMisc::count_odd(const std::shared_ptr<List<unsigned int>> &l) {
                                  -> void { _result = 0u; },
                              [&](const typename List<unsigned int>::Cons _args)
                                  -> void {
-                               if ((_args.d_a0 % 2u) == 1u) {
+                               if ((2u ? _args.d_a0 % 2u : _args.d_a0) == 1u) {
                                  _stack.push_back(_Call1{1u});
                                  _stack.push_back(_Enter{_args.d_a1});
                                } else {

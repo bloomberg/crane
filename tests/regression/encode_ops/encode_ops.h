@@ -258,19 +258,22 @@ struct EncodeOps {
               [](const typename instruction1::FIM _args)
                   -> std::pair<unsigned int, unsigned int> {
                 return std::make_pair(
-                    (32u + (((_args.d_a0 - (_args.d_a0 % 2u)) > _args.d_a0
+                    (32u + (((_args.d_a0 -
+                              (2u ? _args.d_a0 % 2u : _args.d_a0)) > _args.d_a0
                                  ? 0
-                                 : (_args.d_a0 - (_args.d_a0 % 2u))))),
-                    (_args.d_a1 % 256u));
+                                 : (_args.d_a0 -
+                                    (2u ? _args.d_a0 % 2u : _args.d_a0))))),
+                    (256u ? _args.d_a1 % 256u : _args.d_a1));
               },
               [](const typename instruction1::JUN _args)
                   -> std::pair<unsigned int, unsigned int> {
                 return std::make_pair((64u + (256u ? _args.d_a0 / 256u : 0)),
-                                      (_args.d_a0 % 256u));
+                                      (256u ? _args.d_a0 % 256u : _args.d_a0));
               },
               [](const typename instruction1::LDM1 _args)
                   -> std::pair<unsigned int, unsigned int> {
-                return std::make_pair((208u + (_args.d_a0 % 16u)), 0u);
+                return std::make_pair(
+                    (208u + (16u ? _args.d_a0 % 16u : _args.d_a0)), 0u);
               },
               [](const typename instruction1::NOP1 _args)
                   -> std::pair<unsigned int, unsigned int> {
@@ -418,7 +421,8 @@ struct EncodeOps {
                      },
                      [](const typename instruction2::LDM2 _args)
                          -> std::pair<unsigned int, unsigned int> {
-                       return std::make_pair(13u, (_args.d_a0 % 16u));
+                       return std::make_pair(
+                           13u, (16u ? _args.d_a0 % 16u : _args.d_a0));
                      }},
           this->v());
     }
@@ -505,15 +509,16 @@ struct EncodeOps {
     __attribute__((pure)) std::pair<unsigned int, unsigned int>
     encode3() const {
       return std::visit(
-          Overloaded{[](const typename instruction3::NOP3 _args)
-                         -> std::pair<unsigned int, unsigned int> {
-                       return std::make_pair(0u, 0u);
-                     },
-                     [](const typename instruction3::LDM3 _args)
-                         -> std::pair<unsigned int, unsigned int> {
-                       return std::make_pair(((13u * 16u) + (_args.d_a0 % 16u)),
-                                             0u);
-                     }},
+          Overloaded{
+              [](const typename instruction3::NOP3 _args)
+                  -> std::pair<unsigned int, unsigned int> {
+                return std::make_pair(0u, 0u);
+              },
+              [](const typename instruction3::LDM3 _args)
+                  -> std::pair<unsigned int, unsigned int> {
+                return std::make_pair(
+                    ((13u * 16u) + (16u ? _args.d_a0 % 16u : _args.d_a0)), 0u);
+              }},
           this->v());
     }
   };

@@ -10,6 +10,7 @@ WrrPreservesOtherPorts::execute_wrr(
     std::shared_ptr<WrrPreservesOtherPorts::state> s) {
   return std::make_shared<WrrPreservesOtherPorts::state>(
       state{s->acc,
-            update_nth<unsigned int>(s->sel_rom, (s->acc % 16u), s->rom_ports),
+            update_nth<unsigned int>(s->sel_rom, (16u ? s->acc % 16u : s->acc),
+                                     s->rom_ports),
             s->sel_rom});
 }

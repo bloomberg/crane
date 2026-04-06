@@ -188,7 +188,7 @@ LoopifyNumbers::gcd_fuel(const unsigned int fuel, const unsigned int a,
       } else {
         unsigned int _x = _loop_b - 1;
         {
-          unsigned int _next_b = (_loop_a % _loop_b);
+          unsigned int _next_b = (_loop_b ? _loop_a % _loop_b : _loop_a);
           unsigned int _next_a = _loop_b;
           unsigned int _next_fuel = std::move(f);
           _loop_b = std::move(_next_b);
@@ -396,7 +396,7 @@ LoopifyNumbers::collatz_length_fuel(const unsigned int fuel,
                               if (n == 1u) {
                                 _result = 0u;
                               } else {
-                                if ((n % 2u) == 0u) {
+                                if ((2u ? n % 2u : n) == 0u) {
                                   _stack.push_back(_Call1{});
                                   _stack.push_back(
                                       _Enter{(2u ? n / 2u : 0), f});
@@ -427,7 +427,8 @@ LoopifyNumbers::digitsum_fuel(const unsigned int fuel, const unsigned int n) {
   };
 
   struct _Call1 {
-    decltype((std::declval<const unsigned int &>() % 10u)) _s0;
+    decltype((10u ? std::declval<const unsigned int &>() % 10u
+                  : std::declval<const unsigned int &>())) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -448,7 +449,7 @@ LoopifyNumbers::digitsum_fuel(const unsigned int fuel, const unsigned int n) {
                                 _result = 0u;
                               } else {
                                 unsigned int _x = n - 1;
-                                _stack.push_back(_Call1{(n % 10u)});
+                                _stack.push_back(_Call1{(10u ? n % 10u : n)});
                                 _stack.push_back(
                                     _Enter{(10u ? n / 10u : 0), f});
                               }
@@ -494,7 +495,7 @@ LoopifyNumbers::dec_to_bin_fuel(const unsigned int fuel, const unsigned int n) {
                                 _result = 0u;
                               } else {
                                 unsigned int _x = n - 1;
-                                unsigned int digit = (n % 2u);
+                                unsigned int digit = (2u ? n % 2u : n);
                                 _stack.push_back(_Call1{digit});
                                 _stack.push_back(_Enter{(2u ? n / 2u : 0), f});
                               }
@@ -1074,7 +1075,7 @@ LoopifyNumbers::power_mod_fuel(const unsigned int fuel, const unsigned int b,
                        if (e == 0u) {
                          _result = 1u;
                        } else {
-                         if ((e % 2u) == 0u) {
+                         if ((2u ? e % 2u : e) == 0u) {
                            _stack.push_back(_Call1{m});
                            _stack.push_back(_Enter{(2u ? e / 2u : 0), f});
                          } else {
@@ -1087,13 +1088,14 @@ LoopifyNumbers::power_mod_fuel(const unsigned int fuel, const unsigned int b,
                    [&](_Call1 _f) {
                      const unsigned int m = _f._s0;
                      unsigned int half = _result;
-                     _result = ((half * half) % m);
+                     _result = (m ? (half * half) % m : (half * half));
                    },
                    [&](_Call2 _f) {
                      const unsigned int b = _f._s0;
                      const unsigned int m = _f._s1;
                      unsigned int half = _result;
-                     _result = ((b * (half * half)) % m);
+                     _result =
+                         (m ? (b * (half * half)) % m : (b * (half * half)));
                    }},
         _frame);
   }
@@ -1134,7 +1136,7 @@ LoopifyNumbers::sum_divisors_aux(const unsigned int n, const unsigned int k) {
                                 _result = 0u;
                               } else {
                                 unsigned int _x = k_ - 1;
-                                if ((n % k) == 0u) {
+                                if ((k ? n % k : n) == 0u) {
                                   _stack.push_back(_Call1{k});
                                   _stack.push_back(_Enter{k_});
                                 } else {
@@ -1293,7 +1295,7 @@ LoopifyNumbers::collatz_list_fuel(const unsigned int fuel,
           _continue = false;
         }
       } else {
-        if ((_loop_n % 2u) == 0u) {
+        if ((2u ? _loop_n % 2u : _loop_n) == 0u) {
           {
             auto _cell = List<unsigned int>::cons(_loop_n, nullptr);
             if (_last) {
@@ -1310,7 +1312,7 @@ LoopifyNumbers::collatz_list_fuel(const unsigned int fuel,
             continue;
           }
         } else {
-          if ((_loop_n % 3u) == 0u) {
+          if ((3u ? _loop_n % 3u : _loop_n) == 0u) {
             {
               auto _cell = List<unsigned int>::cons(_loop_n, nullptr);
               if (_last) {
@@ -1379,7 +1381,7 @@ LoopifyNumbers::sum_divisible_by(const unsigned int k, const unsigned int n) {
                               _result = 0u;
                             } else {
                               unsigned int m = n - 1;
-                              if ((n % k) == 0u) {
+                              if ((k ? n % k : n) == 0u) {
                                 _stack.push_back(_Call1{n});
                                 _stack.push_back(_Enter{m});
                               } else {

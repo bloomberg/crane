@@ -635,7 +635,7 @@ LoopifyListTransforms::step_sum(const std::shared_ptr<List<unsigned int>> &l) {
                              [&](const typename List<unsigned int>::Cons _args)
                                  -> void {
                                unsigned int contribution;
-                               if ((_args.d_a0 % 2u) == 0u) {
+                               if ((2u ? _args.d_a0 % 2u : _args.d_a0) == 0u) {
                                  contribution = _args.d_a0;
                                } else {
                                  contribution = (_args.d_a0 * 2u);

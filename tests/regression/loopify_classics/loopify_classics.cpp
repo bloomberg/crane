@@ -289,7 +289,8 @@ LoopifyClassics::gcd_fuel(const unsigned int fuel, const unsigned int a,
         }
       } else {
         {
-          unsigned int _next_b = (_loop_a % std::move(_loop_b));
+          unsigned int _next_b =
+              (std::move(_loop_b) ? _loop_a % std::move(_loop_b) : _loop_a);
           unsigned int _next_a = std::move(_loop_b);
           unsigned int _next_fuel = fuel_;
           _loop_b = std::move(_next_b);

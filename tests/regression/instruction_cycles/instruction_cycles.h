@@ -139,9 +139,11 @@ struct InstructionCycles {
           Overloaded{
               [&](const typename instruction1::JCN1 _args) -> unsigned int {
                 unsigned int c1 = (8u ? _args.d_a0 / 8u : 0);
-                unsigned int c2 = ((4u ? _args.d_a0 / 4u : 0) % 2u);
-                unsigned int c3 = ((2u ? _args.d_a0 / 2u : 0) % 2u);
-                unsigned int c4 = (_args.d_a0 % 2u);
+                unsigned int c2 = (2u ? (4u ? _args.d_a0 / 4u : 0) % 2u
+                                      : (4u ? _args.d_a0 / 4u : 0));
+                unsigned int c3 = (2u ? (2u ? _args.d_a0 / 2u : 0) % 2u
+                                      : (2u ? _args.d_a0 / 2u : 0));
+                unsigned int c4 = (2u ? _args.d_a0 % 2u : _args.d_a0);
                 bool base_cond = ((s->acc1 == 0u && std::move(c2) == 1u) ||
                                   ((s->carry1 && std::move(c3) == 1u) ||
                                    (!(s->test_pin1) && std::move(c4) == 1u)));
@@ -561,7 +563,8 @@ struct InstructionCycles {
                   return 16u;
                 } else {
                   if ((s->acc5 == 0u &&
-                       ((4u ? _args.d_a0 / 4u : 0) % 2u) == 1u)) {
+                       (2u ? (4u ? _args.d_a0 / 4u : 0) % 2u
+                           : (4u ? _args.d_a0 / 4u : 0)) == 1u)) {
                     return 16u;
                   } else {
                     return 8u;

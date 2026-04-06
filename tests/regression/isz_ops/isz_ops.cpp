@@ -6,7 +6,7 @@
 #include <variant>
 
 __attribute__((pure)) unsigned int IszOps::nibble_of_nat(const unsigned int n) {
-  return (n % 16u);
+  return (16u ? n % 16u : n);
 }
 
 __attribute__((pure)) unsigned int

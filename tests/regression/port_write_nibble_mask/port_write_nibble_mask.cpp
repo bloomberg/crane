@@ -6,7 +6,7 @@
 
 __attribute__((pure)) unsigned int
 PortWriteNibbleMask::nibble_of_nat(const unsigned int n) {
-  return (n % 16u);
+  return (16u ? n % 16u : n);
 }
 
 std::shared_ptr<PortWriteNibbleMask::ram_chip>

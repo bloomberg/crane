@@ -13,10 +13,10 @@ __attribute__((pure)) unsigned int StepFetchDecodeExec::fetch_byte(
 
 std::shared_ptr<StepFetchDecodeExec::instruction>
 StepFetchDecodeExec::decode(const unsigned int b1, const unsigned int b2) {
-  if ((b1 % 2u) == 0u) {
+  if ((2u ? b1 % 2u : b1) == 0u) {
     return instruction::nop();
   } else {
-    return instruction::add_acc((b2 % 16u));
+    return instruction::add_acc((16u ? b2 % 16u : b2));
   }
 }
 
@@ -32,8 +32,9 @@ std::shared_ptr<StepFetchDecodeExec::state> StepFetchDecodeExec::execute(
           },
           [&](const typename StepFetchDecodeExec::instruction::ADD_ACC _args)
               -> std::shared_ptr<StepFetchDecodeExec::state> {
-            return std::make_shared<StepFetchDecodeExec::state>(
-                state{((s->acc + _args.d_a0) % 16u), (s->pc + 2u), s->rom});
+            return std::make_shared<StepFetchDecodeExec::state>(state{
+                (16u ? (s->acc + _args.d_a0) % 16u : (s->acc + _args.d_a0)),
+                (s->pc + 2u), s->rom});
           }},
       i->v());
 }

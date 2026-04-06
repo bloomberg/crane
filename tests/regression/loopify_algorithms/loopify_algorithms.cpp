@@ -112,7 +112,8 @@ LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
                                       },
                                       [&](const typename List<
                                           unsigned int>::Cons _args0) -> void {
-                                        if ((_args0.d_a0 % p) == 0u) {
+                                        if ((p ? _args0.d_a0 % p
+                                               : _args0.d_a0) == 0u) {
                                           _stack.push_back(_Enter{
                                               _args0.d_a1, std::move(p)});
                                         } else {
@@ -887,7 +888,7 @@ LoopifyAlgorithms::step_sum(const std::shared_ptr<List<unsigned int>> &l) {
                              [&](const typename List<unsigned int>::Cons _args)
                                  -> void {
                                unsigned int contribution;
-                               if ((_args.d_a0 % 2u) == 0u) {
+                               if ((2u ? _args.d_a0 % 2u : _args.d_a0) == 0u) {
                                  contribution = _args.d_a0;
                                } else {
                                  contribution = (_args.d_a0 * 2u);

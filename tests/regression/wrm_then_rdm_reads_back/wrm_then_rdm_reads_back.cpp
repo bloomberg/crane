@@ -14,7 +14,8 @@ __attribute__((pure)) unsigned int WrmThenRdmReadsBack::get_reg(
 __attribute__((pure)) unsigned int WrmThenRdmReadsBack::get_reg_pair(
     const std::shared_ptr<WrmThenRdmReadsBack::state> &s,
     const unsigned int r) {
-  unsigned int base = (((r - (r % 2u)) > r ? 0 : (r - (r % 2u))));
+  unsigned int base =
+      (((r - (2u ? r % 2u : r)) > r ? 0 : (r - (2u ? r % 2u : r))));
   return ((get_reg(s, base) * 16u) + get_reg(s, (base + 1u)));
 }
 
@@ -22,7 +23,8 @@ std::shared_ptr<WrmThenRdmReadsBack::state>
 WrmThenRdmReadsBack::execute_src(std::shared_ptr<WrmThenRdmReadsBack::state> s,
                                  const unsigned int r) {
   return std::make_shared<WrmThenRdmReadsBack::state>(
-      state{s->regs, s->acc, s->ram, (get_reg_pair(s, r) % 16u)});
+      state{s->regs, s->acc, s->ram,
+            (16u ? get_reg_pair(s, r) % 16u : get_reg_pair(s, r))});
 }
 
 std::shared_ptr<WrmThenRdmReadsBack::state> WrmThenRdmReadsBack::execute_wrm(

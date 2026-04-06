@@ -544,7 +544,7 @@ LoopifySearch::collatz_fuel(const unsigned int fuel, const unsigned int n) {
                               if (n == 1u) {
                                 _result = 0u;
                               } else {
-                                if ((n % 2u) == 0u) {
+                                if ((2u ? n % 2u : n) == 0u) {
                                   _stack.push_back(_Call1{});
                                   _stack.push_back(
                                       _Enter{(2u ? n / 2u : 0), f});
@@ -745,7 +745,7 @@ LoopifySearch::sieve_fuel(const unsigned int fuel,
                 _last = _cell;
                 std::shared_ptr<List<unsigned int>> _next_l = filter_impl(
                     [=](unsigned int y) mutable {
-                      return !((y % _args.d_a0) == 0u);
+                      return !((_args.d_a0 ? y % _args.d_a0 : y) == 0u);
                     },
                     _args.d_a1);
                 unsigned int _next_fuel = f;

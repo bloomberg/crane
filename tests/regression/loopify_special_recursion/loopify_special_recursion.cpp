@@ -141,7 +141,8 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::remove_if_sum_even(
                              [](const typename List<unsigned int>::Cons _args0)
                                  -> unsigned int { return _args0.d_a0; }},
                   _args.d_a1->v());
-              if (((_args.d_a0 + std::move(next_val)) % 2u) == 0u) {
+              if ((2u ? (_args.d_a0 + std::move(next_val)) % 2u
+                      : (_args.d_a0 + std::move(next_val))) == 0u) {
                 _loop_l = _args.d_a1;
               } else {
                 auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);
@@ -294,7 +295,7 @@ __attribute__((pure)) unsigned int LoopifySpecialRecursion::sum_odd_indices_aux(
                           -> void { _result = 0u; },
                       [&](const typename List<unsigned int>::Cons _args)
                           -> void {
-                        if ((idx % 2u) == 1u) {
+                        if ((2u ? idx % 2u : idx) == 1u) {
                           _stack.push_back(_Call1{_args.d_a0});
                           _stack.push_back(_Enter{(idx + 1u), _args.d_a1});
                         } else {

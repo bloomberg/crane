@@ -86,8 +86,9 @@ std::shared_ptr<LoadProgramHeadWrite::state> LoadProgramHeadWrite::load_program(
                        set_prom_params(std::move(s), base, _args.d_a0, true);
                    std::shared_ptr<LoadProgramHeadWrite::state> s2 =
                        execute_wpm(std::move(s1));
-                   return load_program(std::move(s2), ((base + 1u) % 4096u),
-                                       _args.d_a1);
+                   return load_program(
+                       std::move(s2),
+                       (4096u ? (base + 1u) % 4096u : (base + 1u)), _args.d_a1);
                  }},
       bytes->v());
 }

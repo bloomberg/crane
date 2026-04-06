@@ -12,8 +12,10 @@ __attribute__((pure)) unsigned int LoopBodyIteration::get_reg0(
 
 std::shared_ptr<LoopBodyIteration::state> LoopBodyIteration::count_loop_body(
     std::shared_ptr<LoopBodyIteration::state> s) {
-  return std::make_shared<LoopBodyIteration::state>(state{
-      update_nth<unsigned int>(0u, ((get_reg0(s) + 1u) % 16u), s->regs_)});
+  return std::make_shared<LoopBodyIteration::state>(
+      state{update_nth<unsigned int>(
+          0u, (16u ? (get_reg0(s) + 1u) % 16u : (get_reg0(s) + 1u)),
+          s->regs_)});
 }
 
 std::shared_ptr<LoopBodyIteration::state>

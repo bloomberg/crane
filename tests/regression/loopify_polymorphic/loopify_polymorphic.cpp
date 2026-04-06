@@ -51,7 +51,7 @@ __attribute__((pure)) bool LoopifyPolymorphic::nat_eq(const unsigned int _x0,
 }
 
 __attribute__((pure)) bool LoopifyPolymorphic::is_even(const unsigned int x) {
-  return (x % 2u) == 0u;
+  return (2u ? x % 2u : x) == 0u;
 }
 
 __attribute__((pure)) bool

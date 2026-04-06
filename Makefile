@@ -39,7 +39,6 @@ install:
 # Build and run tests with formatted summary (parallel)
 # extract first to ensure generated .cpp/.h files exist before compiling tests
 test: extract
-	@./scripts/check-dune-rules.sh --fix
 	@dune build bin/test_runner/main.exe
 	@./_build/default/bin/test_runner/main.exe
 
@@ -84,12 +83,17 @@ test-one:
 	@# Handle category/test format (e.g., basics/list)
 	@case "$(TEST)" in \
 		*/*)  dune build @tests/$(TEST)/runtest ;; \
-		*)    if [ -d "tests/basics/$(TEST)" ]; then \
-		        dune build @tests/basics/$(TEST)/runtest; \
-		      elif [ -d "tests/monadic/$(TEST)" ]; then \
-		        dune build @tests/monadic/$(TEST)/runtest; \
+		*)    found=""; \
+		      for cat in basics monadic regression wip; do \
+		        if [ -d "tests/$$cat/$(TEST)" ]; then \
+		          found="$$cat"; \
+		          break; \
+		        fi; \
+		      done; \
+		      if [ -n "$$found" ]; then \
+		        dune build @tests/$$found/$(TEST)/runtest; \
 		      else \
-		        echo "Test '$(TEST)' not found in tests/basics/ or tests/monadic/"; \
+		        echo "Test '$(TEST)' not found in any category"; \
 		        exit 1; \
 		      fi ;; \
 	esac

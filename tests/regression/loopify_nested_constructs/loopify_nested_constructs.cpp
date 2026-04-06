@@ -66,7 +66,7 @@ LoopifyNestedConstructs::nested_if_fuel(const unsigned int fuel,
             _continue = false;
           }
         } else {
-          if ((_loop_n % 2u) == 0u) {
+          if ((2u ? _loop_n % 2u : _loop_n) == 0u) {
             if (10u < _loop_n) {
               {
                 unsigned int _next_n = (2u ? _loop_n / 2u : 0);
@@ -196,25 +196,28 @@ LoopifyNestedConstructs::mod_pattern_fuel(const unsigned int fuel,
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(
-        Overloaded{[&](_Enter _f) {
-                     const unsigned int n = _f.n;
-                     const unsigned int fuel = _f.fuel;
-                     if (fuel <= 0) {
-                       _result = 1u;
-                     } else {
-                       unsigned int fuel_ = fuel - 1;
-                       if (n <= 1u) {
-                         _result = 1u;
-                       } else {
-                         _stack.push_back(_Call1{n, 1u});
-                         _stack.push_back(
-                             _Enter{(((n - 1u) > n ? 0 : (n - 1u))), fuel_});
-                       }
-                     }
-                   },
-                   [&](_Call1 _f) { _result = (_f._s0 % (_f._s1 + _result)); }},
-        _frame);
+    std::visit(Overloaded{[&](_Enter _f) {
+                            const unsigned int n = _f.n;
+                            const unsigned int fuel = _f.fuel;
+                            if (fuel <= 0) {
+                              _result = 1u;
+                            } else {
+                              unsigned int fuel_ = fuel - 1;
+                              if (n <= 1u) {
+                                _result = 1u;
+                              } else {
+                                _stack.push_back(_Call1{n, 1u});
+                                _stack.push_back(_Enter{
+                                    (((n - 1u) > n ? 0 : (n - 1u))), fuel_});
+                              }
+                            }
+                          },
+                          [&](_Call1 _f) {
+                            _result = ((_f._s1 + _result)
+                                           ? _f._s0 % (_f._s1 + _result)
+                                           : _f._s0);
+                          }},
+               _frame);
   }
   return _result;
 }
@@ -294,7 +297,7 @@ LoopifyNestedConstructs::alternating_ops(const unsigned int n) {
                               _result = 0u;
                             } else {
                               unsigned int n_ = n - 1;
-                              if ((n % 2u) == 0u) {
+                              if ((2u ? n % 2u : n) == 0u) {
                                 _stack.push_back(_Call1{n});
                                 _stack.push_back(_Enter{n_});
                               } else {

@@ -192,7 +192,7 @@ struct PageOps {
   disassemble(const std::shared_ptr<List<unsigned int>> &rom,
               const unsigned int addr);
   static inline const unsigned int test_page_base_alignment =
-      (page_base(777u) % 256u);
+      (256u ? page_base(777u) % 256u : page_base(777u));
   static inline const unsigned int test_page_base_next_pc = []() {
     std::shared_ptr<state> s = std::make_shared<state>(state{511u});
     return (base_for_next1(s) + base_for_next2(s));
@@ -204,7 +204,8 @@ struct PageOps {
   static inline const unsigned int test_base_for_next_page_cross_2 =
       base_for_next2(std::make_shared<state>(state{255u}));
   static inline const bool test_page_decomp_roundtrip =
-      (((256u ? 1027u / 256u : 0) * 256u) + (1027u % 256u)) == 1027u;
+      (((256u ? 1027u / 256u : 0) * 256u) + (256u ? 1027u % 256u : 1027u)) ==
+      1027u;
   static inline const unsigned int test_page_offset_recompose =
       recompose(addr12_of_nat(1027u));
   static inline const unsigned int test_page_recompose =

@@ -4,7 +4,7 @@
 #include <utility>
 
 __attribute__((pure)) unsigned int SetoidRw::mod3(const unsigned int n) {
-  return (n % 3u);
+  return (3u ? n % 3u : n);
 }
 
 __attribute__((pure)) unsigned int

@@ -28,15 +28,17 @@ RamStateOps::get_stat(const std::shared_ptr<RamStateOps::ram_reg> &rg,
 std::shared_ptr<RamStateOps::ram_reg>
 RamStateOps::upd_main_in_reg(std::shared_ptr<RamStateOps::ram_reg> rg,
                              const unsigned int i, const unsigned int v) {
-  return std::make_shared<RamStateOps::ram_reg>(ram_reg{
-      update_nth<unsigned int>(i, (v % 16u), rg->reg_main), rg->reg_status});
+  return std::make_shared<RamStateOps::ram_reg>(
+      ram_reg{update_nth<unsigned int>(i, (16u ? v % 16u : v), rg->reg_main),
+              rg->reg_status});
 }
 
 std::shared_ptr<RamStateOps::ram_reg>
 RamStateOps::upd_stat_in_reg(std::shared_ptr<RamStateOps::ram_reg> rg,
                              const unsigned int i, const unsigned int v) {
-  return std::make_shared<RamStateOps::ram_reg>(ram_reg{
-      rg->reg_main, update_nth<unsigned int>(i, (v % 16u), rg->reg_status)});
+  return std::make_shared<RamStateOps::ram_reg>(
+      ram_reg{rg->reg_main, update_nth<unsigned int>(i, (16u ? v % 16u : v),
+                                                     rg->reg_status)});
 }
 
 std::shared_ptr<RamStateOps::ram_reg>
@@ -58,7 +60,7 @@ std::shared_ptr<RamStateOps::ram_chip>
 RamStateOps::upd_port_in_chip(std::shared_ptr<RamStateOps::ram_chip> ch,
                               const unsigned int v) {
   return std::make_shared<RamStateOps::ram_chip>(
-      ram_chip{ch->chip_regs, (v % 16u)});
+      ram_chip{ch->chip_regs, (16u ? v % 16u : v)});
 }
 
 std::shared_ptr<RamStateOps::ram_chip>

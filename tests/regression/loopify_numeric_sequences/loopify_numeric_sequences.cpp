@@ -39,7 +39,7 @@ LoopifyNumericSequences::collatz_length_fuel(const unsigned int fuel,
                        if (n <= 1u) {
                          _result = 0u;
                        } else {
-                         if ((n % 2u) == 0u) {
+                         if ((2u ? n % 2u : n) == 0u) {
                            _stack.push_back(_Call1{1u});
                            _stack.push_back(_Enter{(2u ? n / 2u : 0), fuel_});
                          } else {
@@ -93,7 +93,7 @@ LoopifyNumericSequences::collatz_sequence_fuel(const unsigned int fuel,
           _continue = false;
         }
       } else {
-        if ((_loop_n % 2u) == 0u) {
+        if ((2u ? _loop_n % 2u : _loop_n) == 0u) {
           {
             auto _cell = List<unsigned int>::cons(_loop_n, nullptr);
             if (_last) {
@@ -300,7 +300,8 @@ LoopifyNumericSequences::digitsum_fuel(const unsigned int fuel,
   };
 
   struct _Call1 {
-    decltype((std::declval<const unsigned int &>() % 10u)) _s0;
+    decltype((10u ? std::declval<const unsigned int &>() % 10u
+                  : std::declval<const unsigned int &>())) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -320,7 +321,7 @@ LoopifyNumericSequences::digitsum_fuel(const unsigned int fuel,
                               if (n <= 0u) {
                                 _result = 0u;
                               } else {
-                                _stack.push_back(_Call1{(n % 10u)});
+                                _stack.push_back(_Call1{(10u ? n % 10u : n)});
                                 _stack.push_back(
                                     _Enter{(10u ? n / 10u : 0), fuel_});
                               }
@@ -346,7 +347,8 @@ LoopifyNumericSequences::dec_to_bin_fuel(const unsigned int fuel,
   };
 
   struct _Call1 {
-    decltype((std::declval<const unsigned int &>() % 2u)) _s0;
+    decltype((2u ? std::declval<const unsigned int &>() % 2u
+                 : std::declval<const unsigned int &>())) _s0;
     decltype(10u) _s1;
   };
 
@@ -368,7 +370,7 @@ LoopifyNumericSequences::dec_to_bin_fuel(const unsigned int fuel,
                        if (n <= 0u) {
                          _result = 0u;
                        } else {
-                         _stack.push_back(_Call1{(n % 2u), 10u});
+                         _stack.push_back(_Call1{(2u ? n % 2u : n), 10u});
                          _stack.push_back(_Enter{(2u ? n / 2u : 0), fuel_});
                        }
                      }
@@ -457,7 +459,7 @@ LoopifyNumericSequences::sum_divisors_aux(const unsigned int n,
                               _result = 0u;
                             } else {
                               unsigned int d_ = d - 1;
-                              if ((n % d) == 0u) {
+                              if ((d ? n % d : n) == 0u) {
                                 _stack.push_back(_Call1{d});
                                 _stack.push_back(_Enter{d_});
                               } else {

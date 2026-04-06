@@ -8,7 +8,7 @@
 
 __attribute__((pure)) unsigned int
 PageOps::addr12_of_nat(const unsigned int n) {
-  return (n % 4096u);
+  return (4096u ? n % 4096u : n);
 }
 
 __attribute__((pure)) unsigned int PageOps::page_of(const unsigned int p) {
@@ -20,7 +20,7 @@ __attribute__((pure)) unsigned int PageOps::page_base(const unsigned int p) {
 }
 
 __attribute__((pure)) unsigned int PageOps::page_offset(const unsigned int p) {
-  return (p % 256u);
+  return (256u ? p % 256u : p);
 }
 
 __attribute__((pure)) unsigned int
@@ -52,7 +52,7 @@ std::shared_ptr<PageOps::instruction> PageOps::decode(const unsigned int b1,
   if (b1 == 0u) {
     return instruction::nop();
   } else {
-    return instruction::ldm((b2 % 16u));
+    return instruction::ldm((16u ? b2 % 16u : b2));
   }
 }
 

@@ -58,7 +58,7 @@ __attribute__((pure)) unsigned int AnonFixpoint::gcd(const unsigned int a,
         return x;
       } else {
         unsigned int _x = y - 1;
-        return go(std::move(f), y, (x % y));
+        return go(std::move(f), y, (y ? x % y : x));
       }
     }
   };

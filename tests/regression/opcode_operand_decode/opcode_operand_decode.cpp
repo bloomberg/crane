@@ -6,7 +6,7 @@
 __attribute__((pure)) OpcodeOperandDecode::Instruction
 OpcodeOperandDecode::decode(const unsigned int b1, const unsigned int _x) {
   unsigned int opcode = (16u ? b1 / 16u : 0);
-  unsigned int operand = (b1 % 16u);
+  unsigned int operand = (16u ? b1 % 16u : b1);
   if (opcode <= 0) {
     return Instruction::e_NOP_;
   } else {

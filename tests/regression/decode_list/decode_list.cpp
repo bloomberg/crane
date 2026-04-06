@@ -10,7 +10,7 @@ DecodeList::decode(const unsigned int b1, const unsigned int b2) {
   if (b1 == 0u) {
     return instruction::nop();
   } else {
-    return instruction::ldm((b2 % 16u));
+    return instruction::ldm((16u ? b2 % 16u : b2));
   }
 }
 

@@ -14,15 +14,17 @@ RamWrite::get_main(const std::shared_ptr<RamWrite::ram_reg> &rg,
 std::shared_ptr<RamWrite::ram_reg>
 RamWrite::upd_main_in_reg(std::shared_ptr<RamWrite::ram_reg> rg,
                           const unsigned int i, const unsigned int v) {
-  return std::make_shared<RamWrite::ram_reg>(ram_reg{
-      update_nth<unsigned int>(i, (v % 16u), rg->reg_main), rg->reg_status});
+  return std::make_shared<RamWrite::ram_reg>(
+      ram_reg{update_nth<unsigned int>(i, (16u ? v % 16u : v), rg->reg_main),
+              rg->reg_status});
 }
 
 std::shared_ptr<RamWrite::ram_reg>
 RamWrite::upd_stat_in_reg(std::shared_ptr<RamWrite::ram_reg> rg,
                           const unsigned int i, const unsigned int v) {
-  return std::make_shared<RamWrite::ram_reg>(ram_reg{
-      rg->reg_main, update_nth<unsigned int>(i, (v % 16u), rg->reg_status)});
+  return std::make_shared<RamWrite::ram_reg>(
+      ram_reg{rg->reg_main, update_nth<unsigned int>(i, (16u ? v % 16u : v),
+                                                     rg->reg_status)});
 }
 
 std::shared_ptr<RamWrite::ram_reg>
