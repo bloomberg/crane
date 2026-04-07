@@ -49,6 +49,23 @@ Crane Extract Inlined Constant Nat.leb => "%a0 <= %a1".
 Crane Extract Inlined Constant Nat.iter =>
   "[&]() { auto _acc = %a2; for (unsigned int _i = 0; _i < %a0; _i++) { _acc = %a1(std::move(_acc)); } return _acc; }()".
 
+From Stdlib Require PeanoNat.
+
+Crane Extract Inlined Constant PeanoNat.Nat.add => "(%a0 + %a1)".
+Crane Extract Inlined Constant PeanoNat.Nat.mul => "(%a0 * %a1)".
+Crane Extract Inlined Constant PeanoNat.Nat.div => "(%a1 ? %a0 / %a1 : 0)".
+Crane Extract Inlined Constant PeanoNat.Nat.modulo => "(%a1 ? %a0 % %a1 : %a0)".
+Crane Extract Inlined Constant PeanoNat.Nat.double => "(%a0 + %a0)".
+Crane Extract Inlined Constant PeanoNat.Nat.pred => "(%a0 ? %a0 - 1 : %a0)".
+Crane Extract Inlined Constant PeanoNat.Nat.sub => "(((%a0 - %a1) > %a0 ? 0 : (%a0 - %a1)))".
+Crane Extract Inlined Constant PeanoNat.Nat.max => "std::max(%a0, %a1)" From "algorithm".
+Crane Extract Inlined Constant PeanoNat.Nat.min => "std::min(%a0, %a1)" From "algorithm".
+Crane Extract Inlined Constant PeanoNat.Nat.eqb => "%a0 == %a1".
+Crane Extract Inlined Constant PeanoNat.Nat.ltb => "%a0 < %a1".
+Crane Extract Inlined Constant PeanoNat.Nat.leb => "%a0 <= %a1".
+
+Crane Extract Inlined Constant PeanoNat.Nat.iter =>
+  "[&]() { auto _acc = %a2; for (unsigned int _i = 0; _i < %a0; _i++) { _acc = %a1(std::move(_acc)); } return _acc; }()".
 
 From Corelib Require Import PrimInt63.
 Axiom nat_of_int : int -> nat.

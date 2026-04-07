@@ -34,6 +34,21 @@ Crane Extract Inlined Constant Nat.eqb => "%a0 == %a1".
 Crane Extract Inlined Constant Nat.ltb => "%a0 < %a1".
 Crane Extract Inlined Constant Nat.leb => "%a0 <= %a1".
 
+From Stdlib Require PeanoNat.
+
+Crane Extract Inlined Constant PeanoNat.Nat.add => "(%a0 + %a1)".
+Crane Extract Inlined Constant PeanoNat.Nat.mul => "(%a0 * %a1)".
+Crane Extract Inlined Constant PeanoNat.Nat.div => "(%a1 ? %a0 / %a1 : mpz_class(0))".
+Crane Extract Inlined Constant PeanoNat.Nat.modulo => "(%a1 ? %a0 % %a1 : %a0)".
+Crane Extract Inlined Constant PeanoNat.Nat.double => "(%a0 + %a0)".
+Crane Extract Inlined Constant PeanoNat.Nat.pred => "(%a0 > 0 ? %a0 - 1 : %a0)".
+Crane Extract Inlined Constant PeanoNat.Nat.sub => "(%a0 >= %a1 ? %a0 - %a1 : mpz_class(0))".
+Crane Extract Inlined Constant PeanoNat.Nat.max => "(%a0 >= %a1 ? %a0 : %a1)".
+Crane Extract Inlined Constant PeanoNat.Nat.min => "(%a0 <= %a1 ? %a0 : %a1)".
+Crane Extract Inlined Constant PeanoNat.Nat.eqb => "%a0 == %a1".
+Crane Extract Inlined Constant PeanoNat.Nat.ltb => "%a0 < %a1".
+Crane Extract Inlined Constant PeanoNat.Nat.leb => "%a0 <= %a1".
+
 From Corelib Require Import PrimInt63.
 Axiom nat_of_int : int -> nat.
 Crane Extract Inlined Constant nat_of_int => "mpz_class(%a0)".
