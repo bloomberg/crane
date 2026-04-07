@@ -100,3 +100,113 @@
   (alias runtest)
   (deps reuse_scrutinee.t.exe)
   (action (run ./reuse_scrutinee.t.exe))))
+
+(subdir match_closure_escape
+ (rule
+  (targets match_closure_escape.t.exe)
+  (deps MatchClosureEscape.vo match_closure_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} match_closure_escape.t.exe match_closure_escape.cpp match_closure_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps match_closure_escape.t.exe)
+  (action (run ./match_closure_escape.t.exe))))
+
+(subdir option_closure_escape
+ (rule
+  (targets option_closure_escape.t.exe)
+  (deps OptionClosureEscape.vo option_closure_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} option_closure_escape.t.exe option_closure_escape.cpp option_closure_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps option_closure_escape.t.exe)
+  (action (run ./option_closure_escape.t.exe))))
+
+(subdir let_closure_escape
+ (rule
+  (targets let_closure_escape.t.exe)
+  (deps LetClosureEscape.vo let_closure_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_closure_escape.t.exe let_closure_escape.cpp let_closure_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_closure_escape.t.exe)
+  (action (run ./let_closure_escape.t.exe))))
+
+(subdir list_closure_escape
+ (rule
+  (targets list_closure_escape.t.exe)
+  (deps ListClosureEscape.vo list_closure_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} list_closure_escape.t.exe list_closure_escape.cpp list_closure_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps list_closure_escape.t.exe)
+  (action (run ./list_closure_escape.t.exe))))
+
+(subdir option_some_escape
+ (rule
+  (targets option_some_escape.t.exe)
+  (deps OptionSomeEscape.vo option_some_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} option_some_escape.t.exe option_some_escape.cpp option_some_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps option_some_escape.t.exe)
+  (action (run ./option_some_escape.t.exe))))
+
+(subdir record_closure_escape
+ (rule
+  (targets record_closure_escape.t.exe)
+  (deps RecordClosureEscape.vo record_closure_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_closure_escape.t.exe record_closure_escape.cpp record_closure_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_closure_escape.t.exe)
+  (action (run ./record_closure_escape.t.exe))))
+
+(subdir hof_closure_escape
+ (rule
+  (targets hof_closure_escape.t.exe)
+  (deps HofClosureEscape.vo hof_closure_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hof_closure_escape.t.exe hof_closure_escape.cpp hof_closure_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hof_closure_escape.t.exe)
+  (action (run ./hof_closure_escape.t.exe))))
+
+(subdir pair_closure_escape
+ (rule
+  (targets pair_closure_escape.t.exe)
+  (deps PairClosureEscape.vo pair_closure_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_closure_escape.t.exe pair_closure_escape.cpp pair_closure_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_closure_escape.t.exe)
+  (action (run ./pair_closure_escape.t.exe))))
+
+(subdir match_ctor_closure
+ (rule
+  (targets match_ctor_closure.t.exe)
+  (deps MatchCtorClosure.vo match_ctor_closure.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} match_ctor_closure.t.exe match_ctor_closure.cpp match_ctor_closure.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps match_ctor_closure.t.exe)
+  (action (run ./match_ctor_closure.t.exe))))
+
+(subdir double_invoke_move
+ (rule
+  (targets double_invoke_move.t.exe)
+  (deps DoubleInvokeMove.vo double_invoke_move.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} double_invoke_move.t.exe double_invoke_move.cpp double_invoke_move.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps double_invoke_move.t.exe)
+  (action (run ./double_invoke_move.t.exe))))
