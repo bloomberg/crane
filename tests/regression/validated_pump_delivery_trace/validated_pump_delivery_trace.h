@@ -1010,18 +1010,13 @@ struct ValidatedPumpDeliveryTraceCase {
               [](const typename FaultStatus::Fault_None _args) -> bool {
                 return false;
               },
-              [](const typename FaultStatus::Fault_Occlusion _args) -> bool {
-                return true;
-              },
               [](const typename FaultStatus::Fault_LowReservoir _args) -> bool {
                 return _args.d_a0 < 10u;
               },
               [](const typename FaultStatus::Fault_BatteryLow _args) -> bool {
                 return false;
               },
-              [](const typename FaultStatus::Fault_Unknown _args) -> bool {
-                return true;
-              }},
+              [](const auto _args) -> bool { return true; }},
           this->v());
     }
   };

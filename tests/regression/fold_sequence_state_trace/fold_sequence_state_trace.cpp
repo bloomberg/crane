@@ -7,26 +7,6 @@
 #include <utility>
 #include <variant>
 
-__attribute__((pure)) bool PeanoNat::eqb(const unsigned int n,
-                                         const unsigned int m) {
-  if (n <= 0) {
-    if (m <= 0) {
-      return true;
-    } else {
-      unsigned int _x = m - 1;
-      return false;
-    }
-  } else {
-    unsigned int n_ = n - 1;
-    if (m <= 0) {
-      return false;
-    } else {
-      unsigned int m_ = m - 1;
-      return PeanoNat::eqb(n_, m_);
-    }
-  }
-}
-
 std::shared_ptr<FoldSequenceStateTraceCase::Line>
 FoldSequenceStateTraceCase::line_through(const std::pair<Real, Real> p1,
                                          const std::pair<Real, Real> p2) {

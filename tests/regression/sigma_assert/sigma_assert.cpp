@@ -2,16 +2,6 @@
 
 #include <cassert>
 #include <type_traits>
-#include <utility>
-
-__attribute__((pure)) unsigned int PeanoNat::pred(const unsigned int n) {
-  if (n <= 0) {
-    return std::move(n);
-  } else {
-    unsigned int u = n - 1;
-    return std::move(u);
-  }
-}
 
 __attribute__((pure)) unsigned int PeanoNat::div2(const unsigned int n) {
   if (n <= 0) {
@@ -30,7 +20,7 @@ __attribute__((pure)) unsigned int PeanoNat::div2(const unsigned int n) {
 __attribute__((pure)) unsigned int
 SigmaAssert::safe_pred(const unsigned int n) { // Precondition: n != 0
   assert(n != 0);
-  return PeanoNat::pred(n);
+  return (n ? n - 1 : n);
 }
 
 __attribute__((pure)) unsigned int

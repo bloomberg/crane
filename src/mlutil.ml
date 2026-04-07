@@ -1184,23 +1184,35 @@ let census_add, census_max, census_clean =
 (* [factor_branches] return the longest possible list of branches that have the
    same factorization, either as a function or as a constant. *)
 
-let is_opt_pat (_, p, _) =
+let is_opt_pat (_, _, p, _) =
   match p with
   | Prel _ | Pwild -> true
   | _ -> false
 
-(** Attempts to factor common branches in a match (currently disabled for C++
-    generation). Returns None unconditionally, skipping the optimization without
-    affecting correctness. *)
-let factor_branches _o _typ _br = None
-(* TODO: FIX EVENTUALLY!!!! if Array.exists is_opt_pat br then None (* already
-   optimized *) else begin census_clean (); for i = 0 to Array.length br - 1 do
-   if o.opt_case_idr then (try census_add (branch_as_fun typ br.(i)) i with
-   Impossible -> ()); if o.opt_case_cst then (try census_add (branch_as_cst
-   br.(i)) i with Impossible -> ()); done; let br_factor, br_set = census_max ()
-   in census_clean (); let n = Int.Set.cardinal br_set in if Int.equal n 0 then
-   None else if Array.length br >= 2 && n < 2 then None else Some (br_factor,
-   br_set) end *)
+(** Attempts to factor common branches in a match. Returns [Some (f, ints)]
+    where [f] is the factored body and [ints] the set of branch indices sharing
+    that body, or [None] if no factoring is possible. Adapted for 4-tuple
+    [ml_branch = (ml_ident * ml_type) list * ml_type * ml_pattern * ml_ast]. *)
+let factor_branches o typ br =
+  if Array.exists is_opt_pat br then None (* already optimized *)
+  else begin
+    census_clean ();
+    for i = 0 to Array.length br - 1 do
+      let (ids, _rty, pat, body) = br.(i) in
+      if o.opt_case_idr then
+        (try census_add (branch_as_fun typ (ids, pat, body), Taxiom) i
+         with Impossible -> ());
+      if o.opt_case_cst then
+        (try census_add (branch_as_cst (ids, pat, body), Taxiom) i
+         with Impossible -> ());
+    done;
+    let br_factor, br_set = census_max () in
+    census_clean ();
+    let n = Int.Set.cardinal br_set in
+    if n = 0 then None
+    else if Array.length br >= 2 && n < 2 then None
+    else Some (br_factor, br_set)
+  end
 
 (** {2 If all branches are functions, try to permute the case and the functions}
 *)
@@ -1435,16 +1447,18 @@ and simpl_case o typ br e =
     then
       MLcase (typ, e, br)
     else
-      MLcase (typ, e, br)
-(* else match factor_branches o typ br with | Some (f,ints) when Int.equal
-   (Int.Set.cardinal ints) (Array.length br) -> (* If all branches have been
-   factorized, we remove the match *) simpl o (MLletin (Tmp anonymous_name, e,
-   f)) | Some (f,ints) -> let last_br = if ast_occurs 1 f then ([Tmp
-   anonymous_name], Prel 1, f) else ([], Pwild, ast_pop f) in let brl =
-   Array.to_list br in let brl_opt = List.filteri (fun i _ -> not (Int.Set.mem i
-   ints)) brl in let brl_opt = brl_opt @ [last_br] in MLcase (typ, e,
-   Array.of_list brl_opt) | None -> MLcase (typ, e, br) | _ -> MLcase (typ, e,
-   br) *)
+      match factor_branches o typ br with
+      | Some ((f, _), ints) when Int.Set.cardinal ints = Array.length br
+                              && not (ast_occurs 1 f) ->
+        (* All branches identical and don't use scrutinee — eliminate match *)
+        simpl o (ast_pop f)
+      | Some ((f, _), ints) when not (ast_occurs 1 f) ->
+        let rty = match br.(0) with (_, rty, _, _) -> rty in
+        let last_br = ([], rty, Pwild, ast_pop f) in
+        let brl = Array.to_list br in
+        let brl_opt = List.filteri (fun i _ -> not (Int.Set.mem i ints)) brl in
+        MLcase (typ, e, Array.of_list (brl_opt @ [last_br]))
+      | _ -> MLcase (typ, e, br)
 
 (** {1 Local prop elimination} *)
 (* We try to eliminate as many [prop] as possible inside an [ml_ast]. *)

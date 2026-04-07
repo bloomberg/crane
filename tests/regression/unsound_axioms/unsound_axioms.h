@@ -1,7 +1,6 @@
 #ifndef INCLUDED_UNSOUND_AXIOMS
 #define INCLUDED_UNSOUND_AXIOMS
 
-#include <any>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -51,7 +50,7 @@ struct UnsoundAxioms {
   __attribute__((pure)) static unsigned int
   use_impossible(const std::monostate _x);
   __attribute__((pure)) static unsigned int
-  from_false(const std::shared_ptr<Rec> &r);
+  from_false(const std::shared_ptr<Rec> &_x);
   static unsigned int prop_as_type();
   __attribute__((pure)) static unsigned int
   use_prop_as_type(const std::shared_ptr<Rec> &r);

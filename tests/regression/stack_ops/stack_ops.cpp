@@ -90,32 +90,13 @@ StackOps::push_stack(const std::shared_ptr<StackOps::state_basic> &s,
                     },
                     [&](const typename List<unsigned int>::Cons _args0)
                         -> std::shared_ptr<StackOps::state_basic> {
-                      return std::visit(
-                          Overloaded{
-                              [&](const typename List<unsigned int>::Nil _args1)
-                                  -> std::shared_ptr<StackOps::state_basic> {
-                                return std::make_shared<StackOps::state_basic>(
-                                    state_basic{List<unsigned int>::cons(
-                                        addr,
+                      return std::make_shared<StackOps::state_basic>(
+                          state_basic{List<unsigned int>::cons(
+                              addr, List<unsigned int>::cons(
+                                        _args.d_a0,
                                         List<unsigned int>::cons(
-                                            _args.d_a0,
-                                            List<unsigned int>::cons(
-                                                _args0.d_a0,
-                                                List<unsigned int>::nil())))});
-                              },
-                              [&](const typename List<unsigned int>::Cons
-                                      _args1)
-                                  -> std::shared_ptr<StackOps::state_basic> {
-                                return std::make_shared<StackOps::state_basic>(
-                                    state_basic{List<unsigned int>::cons(
-                                        addr,
-                                        List<unsigned int>::cons(
-                                            _args.d_a0,
-                                            List<unsigned int>::cons(
-                                                _args0.d_a0,
-                                                List<unsigned int>::nil())))});
-                              }},
-                          _args0.d_a1->v());
+                                            _args0.d_a0,
+                                            List<unsigned int>::nil())))});
                     }},
                 _args.d_a1->v());
           }},
@@ -152,28 +133,12 @@ StackOps::push_stack_cap(const std::shared_ptr<StackOps::state_basic> &s,
                     },
                     [&](const typename List<unsigned int>::Cons _args0)
                         -> std::shared_ptr<List<unsigned int>> {
-                      return std::visit(
-                          Overloaded{
-                              [&](const typename List<unsigned int>::Nil _args1)
-                                  -> std::shared_ptr<List<unsigned int>> {
-                                return List<unsigned int>::cons(
-                                    addr, List<unsigned int>::cons(
-                                              _args.d_a0,
-                                              List<unsigned int>::cons(
-                                                  _args0.d_a0,
-                                                  List<unsigned int>::nil())));
-                              },
-                              [&](const typename List<unsigned int>::Cons
-                                      _args1)
-                                  -> std::shared_ptr<List<unsigned int>> {
-                                return List<unsigned int>::cons(
-                                    addr, List<unsigned int>::cons(
-                                              _args.d_a0,
-                                              List<unsigned int>::cons(
-                                                  _args0.d_a0,
-                                                  List<unsigned int>::nil())));
-                              }},
-                          _args0.d_a1->v());
+                      return List<unsigned int>::cons(
+                          addr,
+                          List<unsigned int>::cons(
+                              _args.d_a0,
+                              List<unsigned int>::cons(
+                                  _args0.d_a0, List<unsigned int>::nil())));
                     }},
                 _args.d_a1->v());
           }},

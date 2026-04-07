@@ -382,7 +382,7 @@ and collect_stmt check ~in_visitor = function
   | Swhile (cond, body) ->
     collect_expr check cond @ collect_stmts check ~in_visitor body
   | Sblock stmts -> collect_stmts check ~in_visitor stmts
-  | Sswitch (scrut, _, branches) ->
+  | Sswitch (scrut, _, branches, _) ->
     collect_expr check scrut
     @ List.concat_map
         (fun (_, body) -> collect_stmts check ~in_visitor body)
@@ -443,7 +443,7 @@ let rec count_calls_stmts (check : call_checker) stmts =
         + count_calls_stmts check then_br
         + count_calls_stmts check else_br
       | Sblock ss -> count_calls_stmts check ss
-      | Sswitch (e, _, branches) ->
+      | Sswitch (e, _, branches, _) ->
         count_calls_expr check e
         + List.fold_left
             (fun acc (_, body) -> acc + count_calls_stmts check body)
@@ -787,10 +787,10 @@ let rec rewrite_visit_stmt check varying shadow_params = function
   | Sif (cond, then_br, else_br) ->
     let rw = rewrite_visit_stmt check varying shadow_params in
     Sif (cond, List.map rw then_br, List.map rw else_br)
-  | Sswitch (scrut, r, branches) ->
+  | Sswitch (scrut, r, branches, default) ->
     let rw = rewrite_visit_stmt check varying shadow_params in
     Sswitch
-      (scrut, r, List.map (fun (id, body) -> (id, List.map rw body)) branches)
+      (scrut, r, List.map (fun (id, body) -> (id, List.map rw body)) branches, default)
   | Scustom_case (ty, scrut, tyargs, branches, err) ->
     let rw = rewrite_visit_stmt check varying shadow_params in
     Scustom_case
@@ -926,7 +926,7 @@ let has_n_call_expr n check body =
     | Sif (_, then_br, else_br) ->
       List.exists check_stmt then_br || List.exists check_stmt else_br
     | Sblock stmts -> List.exists check_stmt stmts
-    | Sswitch (_, _, branches) ->
+    | Sswitch (_, _, branches, _) ->
       List.exists (fun (_, body) -> List.exists check_stmt body) branches
     | Scustom_case (_, _, _, branches, _) ->
       List.exists (fun (_, _, body) -> List.exists check_stmt body) branches
@@ -1548,7 +1548,7 @@ let try_tmc_classify check body =
       scan_lambda_body else_br
     | Scustom_case (_, _, _, branches, _) ->
       List.iter (fun (_, _, body) -> scan_lambda_body body) branches
-    | Sswitch (_, _, branches) ->
+    | Sswitch (_, _, branches, _) ->
       List.iter (fun (_, body) -> scan_lambda_body body) branches
     | Sblock stmts -> scan_lambda_body stmts
     | _ -> ()
@@ -1569,7 +1569,7 @@ let try_tmc_classify check body =
       List.iter scan_stmt else_br
     | Scustom_case (_, _, _, branches, _) ->
       List.iter (fun (_, _, body) -> List.iter scan_stmt body) branches
-    | Sswitch (_, _, branches) ->
+    | Sswitch (_, _, branches, _) ->
       List.iter (fun (_, body) -> List.iter scan_stmt body) branches
     | Sblock stmts -> List.iter scan_stmt stmts
     | _ -> ()
@@ -1853,10 +1853,10 @@ let rec rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params = function
   | Sif (cond, then_br, else_br) ->
     let rw = rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params in
     Sif (cond, List.map rw then_br, List.map rw else_br)
-  | Sswitch (scrut, r, branches) ->
+  | Sswitch (scrut, r, branches, default) ->
     let rw = rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params in
     Sswitch
-      (scrut, r, List.map (fun (id, body) -> (id, List.map rw body)) branches)
+      (scrut, r, List.map (fun (id, body) -> (id, List.map rw body)) branches, default)
   | Scustom_case (ty, scrut, tyargs, branches, err) ->
     let rw = rewrite_tmc_visit_stmt check pp_expr ti varying shadow_params in
     Scustom_case
@@ -2107,7 +2107,7 @@ and free_vars_stmt = function
             (fun id -> not (List.exists (Id.equal id) pat_bound))
             body_fv )
         bs
-  | Sswitch (s, _, bs) ->
+  | Sswitch (s, _, bs, _) ->
     free_vars_expr s
     @ List.concat_map (fun (_, b) -> free_vars_body b) bs
   | Sblock ss -> free_vars_body ss
@@ -2212,7 +2212,7 @@ let rec rewrite_returns_to_result = function
             branches,
           err );
     ]
-  | Sswitch (scrut, ty, branches) ->
+  | Sswitch (scrut, ty, branches, default) ->
     [
       Sswitch
         ( scrut,
@@ -2220,7 +2220,8 @@ let rec rewrite_returns_to_result = function
           List.map
             (fun (lbl, body) ->
               (lbl, List.concat_map rewrite_returns_to_result body) )
-            branches );
+            branches,
+          default );
     ]
   | Sblock ss -> [Sblock (List.concat_map rewrite_returns_to_result ss)]
   | s -> [s]
@@ -4036,7 +4037,7 @@ let rec rewrite_multi_enter check varying = function
             branches,
           err );
     ]
-  | Sswitch (scrut, r, branches) ->
+  | Sswitch (scrut, r, branches, default) ->
     [
       Sswitch
         ( scrut,
@@ -4044,7 +4045,8 @@ let rec rewrite_multi_enter check varying = function
           List.map
             (fun (id, body) ->
               (id, List.concat_map (rewrite_multi_enter check varying) body) )
-            branches );
+            branches,
+          default );
     ]
   | s -> [s]
 
@@ -4075,7 +4077,7 @@ and find_combine_op_stmt check = function
   | Sblock stmts -> find_combine_op check stmts
   | Scustom_case (_, _, _, branches, _) ->
     List.find_map (fun (_, _, body) -> find_combine_op check body) branches
-  | Sswitch (_, _, branches) ->
+  | Sswitch (_, _, branches, _) ->
     List.find_map (fun (_, body) -> find_combine_op check body) branches
   | _ -> None
 
@@ -4429,7 +4431,7 @@ and stmt_has_expr pred = function
   | Scustom_case (_, scrut, _, branches, _) ->
     expr_has pred scrut
     || List.exists (fun (_, _, body) -> body_has_expr pred body) branches
-  | Sswitch (e, _, branches) ->
+  | Sswitch (e, _, branches, _) ->
     expr_has pred e
     || List.exists (fun (_, body) -> body_has_expr pred body) branches
   | Swhile (cond, body) -> expr_has pred cond || body_has_expr pred body
@@ -4827,11 +4829,12 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
             (fun (ps, ret_ty, b) -> (ps, ret_ty, process_stmts b))
             branches,
           err )
-    | Sswitch (scrut, r, branches) ->
+    | Sswitch (scrut, r, branches, default) ->
       Sswitch
         ( process_expr scrut,
           r,
-          List.map (fun (id, body) -> (id, process_stmts body)) branches )
+          List.map (fun (id, body) -> (id, process_stmts body)) branches,
+          default )
     | Swhile (cond, body) -> Swhile (process_expr cond, process_stmts body)
     | Sexpr e -> Sexpr (process_expr e)
     | Sasgn (id, ty, e) -> Sasgn (id, ty, process_expr e)

@@ -6,72 +6,6 @@
 #include <utility>
 #include <variant>
 
-__attribute__((pure)) bool PeanoNat::eqb(const unsigned int n,
-                                         const unsigned int m) {
-  if (n <= 0) {
-    if (m <= 0) {
-      return true;
-    } else {
-      unsigned int _x = m - 1;
-      return false;
-    }
-  } else {
-    unsigned int n_ = n - 1;
-    if (m <= 0) {
-      return false;
-    } else {
-      unsigned int m_ = m - 1;
-      return PeanoNat::eqb(n_, m_);
-    }
-  }
-}
-
-__attribute__((pure)) bool PeanoNat::leb(const unsigned int n,
-                                         const unsigned int m) {
-  if (n <= 0) {
-    return true;
-  } else {
-    unsigned int n_ = n - 1;
-    if (m <= 0) {
-      return false;
-    } else {
-      unsigned int m_ = m - 1;
-      return PeanoNat::leb(n_, m_);
-    }
-  }
-}
-
-__attribute__((pure)) bool PeanoNat::ltb(const unsigned int n,
-                                         const unsigned int m) {
-  return PeanoNat::leb((n + 1), m);
-}
-
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
-PeanoNat::divmod(const unsigned int x, const unsigned int y,
-                 const unsigned int q, const unsigned int u) {
-  if (x <= 0) {
-    return std::make_pair(q, u);
-  } else {
-    unsigned int x_ = x - 1;
-    if (u <= 0) {
-      return PeanoNat::divmod(std::move(x_), y, (q + 1), y);
-    } else {
-      unsigned int u_ = u - 1;
-      return PeanoNat::divmod(std::move(x_), y, q, std::move(u_));
-    }
-  }
-}
-
-__attribute__((pure)) unsigned int PeanoNat::div(const unsigned int x,
-                                                 const unsigned int y) {
-  if (y <= 0) {
-    return std::move(y);
-  } else {
-    unsigned int y_ = y - 1;
-    return PeanoNat::divmod(x, y_, 0u, y_).first;
-  }
-}
-
 std::shared_ptr<Positive> Pos::succ(const std::shared_ptr<Positive> &x) {
   return std::visit(
       Overloaded{
@@ -224,38 +158,23 @@ __attribute__((pure)) bool Pos::eqb(const std::shared_ptr<Positive> &p,
                 Overloaded{[&](const typename Positive::XI _args0) -> bool {
                              return eqb(_args.d_a0, _args0.d_a0);
                            },
-                           [](const typename Positive::XO _args0) -> bool {
-                             return false;
-                           },
-                           [](const typename Positive::XH _args0) -> bool {
-                             return false;
-                           }},
+                           [](const auto _args0) -> bool { return false; }},
                 q->v());
           },
           [&](const typename Positive::XO _args) -> bool {
             return std::visit(
-                Overloaded{[](const typename Positive::XI _args0) -> bool {
-                             return false;
-                           },
-                           [&](const typename Positive::XO _args0) -> bool {
+                Overloaded{[&](const typename Positive::XO _args0) -> bool {
                              return eqb(_args.d_a0, _args0.d_a0);
                            },
-                           [](const typename Positive::XH _args0) -> bool {
-                             return false;
-                           }},
+                           [](const auto _args0) -> bool { return false; }},
                 q->v());
           },
           [&](const typename Positive::XH _args) -> bool {
             return std::visit(
-                Overloaded{[](const typename Positive::XI _args0) -> bool {
-                             return false;
-                           },
-                           [](const typename Positive::XO _args0) -> bool {
-                             return false;
-                           },
-                           [](const typename Positive::XH _args0) -> bool {
+                Overloaded{[](const typename Positive::XH _args0) -> bool {
                              return true;
-                           }},
+                           },
+                           [](const auto _args0) -> bool { return false; }},
                 q->v());
           }},
       p->v());
@@ -419,32 +338,23 @@ __attribute__((pure)) bool BinInt::eqb(const std::shared_ptr<Z> &x,
             return std::visit(
                 Overloaded{
                     [](const typename Z::Z0 _args0) -> bool { return true; },
-                    [](const typename Z::Zpos _args0) -> bool { return false; },
-                    [](const typename Z::Zneg _args0) -> bool {
-                      return false;
-                    }},
+                    [](const auto _args0) -> bool { return false; }},
                 y->v());
           },
           [&](const typename Z::Zpos _args) -> bool {
             return std::visit(
-                Overloaded{
-                    [](const typename Z::Z0 _args0) -> bool { return false; },
-                    [&](const typename Z::Zpos _args0) -> bool {
-                      return Pos::eqb(_args.d_a0, _args0.d_a0);
-                    },
-                    [](const typename Z::Zneg _args0) -> bool {
-                      return false;
-                    }},
+                Overloaded{[&](const typename Z::Zpos _args0) -> bool {
+                             return Pos::eqb(_args.d_a0, _args0.d_a0);
+                           },
+                           [](const auto _args0) -> bool { return false; }},
                 y->v());
           },
           [&](const typename Z::Zneg _args) -> bool {
             return std::visit(
-                Overloaded{
-                    [](const typename Z::Z0 _args0) -> bool { return false; },
-                    [](const typename Z::Zpos _args0) -> bool { return false; },
-                    [&](const typename Z::Zneg _args0) -> bool {
-                      return Pos::eqb(_args.d_a0, _args0.d_a0);
-                    }},
+                Overloaded{[&](const typename Z::Zneg _args0) -> bool {
+                             return Pos::eqb(_args.d_a0, _args0.d_a0);
+                           },
+                           [](const auto _args0) -> bool { return false; }},
                 y->v());
           }},
       x->v());
@@ -459,44 +369,29 @@ __attribute__((pure)) bool CoalitionBidHonorTraceCase::clan_eq_dec(
     case Clan::e_CLANWOLF: {
       return true;
     }
-    case Clan::e_CLANJADEFALCON: {
+    default: {
       return false;
     }
-    case Clan::e_CLANGHOSTBEAR: {
-      return false;
-    }
-    default:
-      std::unreachable();
     }
   }
   case Clan::e_CLANJADEFALCON: {
     switch (c2) {
-    case Clan::e_CLANWOLF: {
-      return false;
-    }
     case Clan::e_CLANJADEFALCON: {
       return true;
     }
-    case Clan::e_CLANGHOSTBEAR: {
+    default: {
       return false;
     }
-    default:
-      std::unreachable();
     }
   }
   case Clan::e_CLANGHOSTBEAR: {
     switch (c2) {
-    case Clan::e_CLANWOLF: {
-      return false;
-    }
-    case Clan::e_CLANJADEFALCON: {
-      return false;
-    }
     case Clan::e_CLANGHOSTBEAR: {
       return true;
     }
-    default:
-      std::unreachable();
+    default: {
+      return false;
+    }
     }
   }
   default:
@@ -534,7 +429,7 @@ __attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::rank_to_nat(
 __attribute__((pure)) bool
 CoalitionBidHonorTraceCase::rank_le(const CoalitionBidHonorTraceCase::Rank r1,
                                     const CoalitionBidHonorTraceCase::Rank r2) {
-  return PeanoNat::leb(rank_to_nat(r1), rank_to_nat(r2));
+  return rank_to_nat(r1) <= rank_to_nat(r2);
 }
 
 __attribute__((pure)) bool CoalitionBidHonorTraceCase::may_issue_batchall(
@@ -584,13 +479,13 @@ __attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::unit_skill(
 
 __attribute__((pure)) unsigned int
 CoalitionBidHonorTraceCase::skill_bv_multiplier_num(const unsigned int skill) {
-  if (PeanoNat::leb(skill, 4u)) {
+  if (skill <= 4u) {
     return 6u;
   } else {
-    if (PeanoNat::leb(skill, 6u)) {
+    if (skill <= 6u) {
       return 5u;
     } else {
-      if (PeanoNat::leb(skill, 8u)) {
+      if (skill <= 8u) {
         return 4u;
       } else {
         return 3u;
@@ -608,7 +503,7 @@ __attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::unit_tech_bv(
     const std::shared_ptr<CoalitionBidHonorTraceCase::Unit> &u) {
   unsigned int base = unit_base_bv(u);
   if (u->unit_is_clan) {
-    return (base + PeanoNat::div(base, 2u));
+    return (base + (2u ? base / 2u : 0));
   } else {
     return std::move(base);
   }
@@ -618,8 +513,9 @@ __attribute__((pure)) unsigned int
 CoalitionBidHonorTraceCase::unit_battle_value(
     const std::shared_ptr<CoalitionBidHonorTraceCase::Unit> &u) {
   unsigned int tech_bv = unit_tech_bv(u);
-  return PeanoNat::div(
-      (std::move(tech_bv) * skill_bv_multiplier_num(unit_skill(u))), 4u);
+  return (4u ? (std::move(tech_bv) * skill_bv_multiplier_num(unit_skill(u))) /
+                   4u
+             : 0);
 }
 
 __attribute__((pure)) unsigned int
@@ -679,7 +575,7 @@ CoalitionBidHonorTraceCase::force_metrics(
 __attribute__((pure)) bool CoalitionBidHonorTraceCase::metrics_total_lt(
     const std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics> &m1,
     const std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics> &m2) {
-  return PeanoNat::ltb(m1->fm_total_ecr, m2->fm_total_ecr);
+  return m1->fm_total_ecr < m2->fm_total_ecr;
 }
 
 __attribute__((pure)) CoalitionBidHonorTraceCase::Force
@@ -826,7 +722,7 @@ CoalitionBidHonorTraceCase::valid_coalition_member_bid_b(
         List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>> &c,
     const std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMemberBid>
         &cbid) {
-  return (PeanoNat::ltb(cbid->cmb_member_index, c->length()) &&
+  return (cbid->cmb_member_index < c->length() &&
           metrics_total_lt(
               force_metrics(cbid->cmb_new_force),
               force_metrics(
@@ -1007,7 +903,7 @@ CoalitionBidHonorTraceCase::ledger_lookup(
                      -> std::shared_ptr<Z> {
                    unsigned int id = _args.d_a0.first;
                    std::shared_ptr<Z> honor = _args.d_a0.second;
-                   if (PeanoNat::eqb(id, warrior_id)) {
+                   if (id == warrior_id) {
                      return honor;
                    } else {
                      return ledger_lookup(_args.d_a1, warrior_id);
@@ -1037,7 +933,7 @@ CoalitionBidHonorTraceCase::ledger_update_by_id(
                   List<std::pair<unsigned int, std::shared_ptr<Z>>>> {
             unsigned int id = _args.d_a0.first;
             std::shared_ptr<Z> honor = _args.d_a0.second;
-            if (PeanoNat::eqb(id, warrior_id)) {
+            if (id == warrior_id) {
               return List<std::pair<unsigned int, std::shared_ptr<Z>>>::cons(
                   std::make_pair(id, new_honor), _args.d_a1);
             } else {
@@ -1092,14 +988,6 @@ CoalitionBidHonorTraceCase::protocol_honor_delta(
                  ActRefuse _args) -> std::shared_ptr<Z> {
             return refusal_honor_delta(_args.d_reason);
           },
-          [](const typename CoalitionBidHonorTraceCase::ProtocolAction::ActBid
-                 _args) -> std::shared_ptr<Z> { return Z::z0(); },
-          [](const typename CoalitionBidHonorTraceCase::ProtocolAction::
-                 ActCoalitionBid _args) -> std::shared_ptr<Z> {
-            return Z::z0();
-          },
-          [](const typename CoalitionBidHonorTraceCase::ProtocolAction::ActPass
-                 _args) -> std::shared_ptr<Z> { return Z::z0(); },
           [](const typename CoalitionBidHonorTraceCase::ProtocolAction::ActClose
                  _args) -> std::shared_ptr<Z> {
             return Z::zpos(Positive::xh());
@@ -1112,7 +1000,8 @@ CoalitionBidHonorTraceCase::protocol_honor_delta(
                  ActBreakBid _args) -> std::shared_ptr<Z> {
             return Z::zneg(
                 Positive::xo(Positive::xi(Positive::xo(Positive::xh()))));
-          }},
+          },
+          [](const auto _args) -> std::shared_ptr<Z> { return Z::z0(); }},
       action->v());
 }
 

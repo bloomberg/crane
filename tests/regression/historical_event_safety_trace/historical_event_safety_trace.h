@@ -1,6 +1,7 @@
 #ifndef INCLUDED_HISTORICAL_EVENT_SAFETY_TRACE
 #define INCLUDED_HISTORICAL_EVENT_SAFETY_TRACE
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <type_traits>
@@ -711,21 +712,7 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
-struct PeanoNat {
-  __attribute__((pure)) static bool eqb(const unsigned int n,
-                                        const unsigned int m);
-  __attribute__((pure)) static bool leb(const unsigned int n,
-                                        const unsigned int m);
-  __attribute__((pure)) static unsigned int max(const unsigned int n,
-                                                const unsigned int m);
-  __attribute__((pure)) static unsigned int min(const unsigned int n,
-                                                const unsigned int m);
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-         const unsigned int u);
-  __attribute__((pure)) static unsigned int div(const unsigned int x,
-                                                const unsigned int y);
-};
+struct PeanoNat {};
 
 struct Uint1 {
   // TYPES
@@ -861,9 +848,9 @@ struct HistoricalEventSafetyTraceCase {
   step_hist(F0 &&inflow, F1 &&ctrl, F2 &&stage_fn,
             const std::shared_ptr<PlantConfig> &pconf, std::shared_ptr<State> s,
             const unsigned int t) {
-    unsigned int out = PeanoNat::min(
-        PeanoNat::div((pconf->gate_capacity_cm * ctrl(s, t)), 100u),
-        (s->reservoir_level_cm + inflow(t)));
+    unsigned int out =
+        std::min((100u ? (pconf->gate_capacity_cm * ctrl(s, t)) / 100u : 0),
+                 (s->reservoir_level_cm + inflow(t)));
     unsigned int new_level =
         ((((s->reservoir_level_cm + inflow(t)) - out) >
                   (s->reservoir_level_cm + inflow(t))
@@ -891,8 +878,8 @@ struct HistoricalEventSafetyTraceCase {
           step_hist(inflow, ctrl, stage_fn, pconf, s, std::move(k));
       return simulate_with_max(
           inflow, ctrl, stage_fn, pconf, std::move(k), s_,
-          PeanoNat::max(std::move(max_level), s_->reservoir_level_cm),
-          PeanoNat::max(std::move(max_stage), s_->downstream_stage_cm));
+          std::max(std::move(max_level), s_->reservoir_level_cm),
+          std::max(std::move(max_stage), s_->downstream_stage_cm));
     }
   }
 

@@ -143,9 +143,9 @@ and cpp_stmt =
           (params, type, body), custom match string *)
   | Sthrow of string
       (** Throw exception with message, for unreachable/absurd cases *)
-  | Sswitch of cpp_expr * GlobRef.t * (Id.t * cpp_stmt list) list
+  | Sswitch of cpp_expr * GlobRef.t * (Id.t * cpp_stmt list) list * cpp_stmt list option
       (** Switch statement: scrutinee, enum type reference, branches
-          (constructor, body) *)
+          (constructor, body), optional default body (None = std::unreachable) *)
   | Sassert of string * string option
       (** Runtime assertion: C++ condition, optional Rocq predicate comment *)
   | Sif of cpp_expr * cpp_stmt list * cpp_stmt list

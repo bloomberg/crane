@@ -19,15 +19,6 @@ __attribute__((pure)) unsigned int InstructionCycles::cycles_jms(
 __attribute__((pure)) unsigned int
 InstructionCycles::cycles_min(const InstructionCycles::Instr3 i) {
   switch (i) {
-  case Instr3::e_NOP3: {
-    return 8u;
-  }
-  case Instr3::e_ADD3: {
-    return 8u;
-  }
-  case Instr3::e_WRM3: {
-    return 8u;
-  }
   case Instr3::e_FIM3: {
     return 16u;
   }
@@ -37,32 +28,18 @@ InstructionCycles::cycles_min(const InstructionCycles::Instr3 i) {
   case Instr3::e_JCNTAKEN3: {
     return 16u;
   }
-  case Instr3::e_JCNNOTTAKEN3: {
-    return 8u;
-  }
   case Instr3::e_ISZTAKEN3: {
     return 16u;
   }
-  case Instr3::e_ISZZERO3: {
+  default: {
     return 8u;
   }
-  default:
-    std::unreachable();
   }
 }
 
 __attribute__((pure)) unsigned int
 InstructionCycles::cycles_max(const InstructionCycles::Instr4 i) {
   switch (i) {
-  case Instr4::e_NOP4: {
-    return 8u;
-  }
-  case Instr4::e_ADD4: {
-    return 8u;
-  }
-  case Instr4::e_WRM4: {
-    return 8u;
-  }
   case Instr4::e_FIM4: {
     return 16u;
   }
@@ -72,17 +49,12 @@ InstructionCycles::cycles_max(const InstructionCycles::Instr4 i) {
   case Instr4::e_JCNTAKEN4: {
     return 16u;
   }
-  case Instr4::e_JCNNOTTAKEN4: {
-    return 8u;
-  }
   case Instr4::e_ISZTAKEN4: {
     return 16u;
   }
-  case Instr4::e_ISZZERO4: {
+  default: {
     return 8u;
   }
-  default:
-    std::unreachable();
   }
 }
 
@@ -90,20 +62,16 @@ std::shared_ptr<InstructionCycles::state5> InstructionCycles::execute5(
     std::shared_ptr<InstructionCycles::state5> s,
     const std::shared_ptr<InstructionCycles::instruction5> &i) {
   return std::visit(
-      Overloaded{[&](const typename InstructionCycles::instruction5::NOP5 _args)
-                     -> std::shared_ptr<InstructionCycles::state5> {
-                   return std::move(s);
-                 },
-                 [&](const typename InstructionCycles::instruction5::JCN5 _args)
-                     -> std::shared_ptr<InstructionCycles::state5> {
-                   return std::move(s);
-                 },
-                 [&](const typename InstructionCycles::instruction5::INC5 _args)
-                     -> std::shared_ptr<InstructionCycles::state5> {
-                   return std::make_shared<InstructionCycles::state5>(
-                       state5{(16u ? (s->acc5 + 1u) % 16u : (s->acc5 + 1u)),
-                              s->carry5, s->test5});
-                 }},
+      Overloaded{
+          [&](const typename InstructionCycles::instruction5::INC5 _args)
+              -> std::shared_ptr<InstructionCycles::state5> {
+            return std::make_shared<InstructionCycles::state5>(
+                state5{(16u ? (s->acc5 + 1u) % 16u : (s->acc5 + 1u)), s->carry5,
+                       s->test5});
+          },
+          [&](const auto _args) -> std::shared_ptr<InstructionCycles::state5> {
+            return std::move(s);
+          }},
       i->v());
 }
 

@@ -7,26 +7,6 @@
 #include <utility>
 #include <variant>
 
-__attribute__((pure)) bool PeanoNat::leb(const unsigned int n,
-                                         const unsigned int m) {
-  if (n <= 0) {
-    return true;
-  } else {
-    unsigned int n_ = n - 1;
-    if (m <= 0) {
-      return false;
-    } else {
-      unsigned int m_ = m - 1;
-      return PeanoNat::leb(n_, m_);
-    }
-  }
-}
-
-__attribute__((pure)) bool PeanoNat::ltb(const unsigned int n,
-                                         const unsigned int m) {
-  return PeanoNat::leb((n + 1), m);
-}
-
 __attribute__((pure)) bool PeanoNat::even(const unsigned int n) {
   if (n <= 0) {
     return true;
@@ -87,7 +67,7 @@ Equations::gcd_unfold(const std::pair<unsigned int, unsigned int> p) {
       return (n1 + 1);
     } else {
       unsigned int n2 = n0 - 1;
-      return gcd_unfold_clause_3(n1, n2, PeanoNat::ltb((n1 + 1), (n2 + 1)));
+      return gcd_unfold_clause_3(n1, n2, (n1 + 1) < (n2 + 1));
     }
   }
 }
@@ -105,7 +85,7 @@ Equations::gcd_graph_correct(const std::pair<unsigned int, unsigned int> x) {
     } else {
       unsigned int n2 = n0 - 1;
       return gcd_graph::gcd_graph_refinement_3(n1, n2, [&]() {
-        bool refine = PeanoNat::ltb((n1 + 1), (n2 + 1));
+        bool refine = (n1 + 1) < (n2 + 1);
         if (std::move(refine)) {
           return gcd_clause_3_graph::gcd_clause_3_graph_equation_1(
               n1, n2, [&]() {

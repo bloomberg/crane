@@ -17,10 +17,6 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct PeanoNat {
-  __attribute__((pure)) static bool leb(const unsigned int n,
-                                        const unsigned int m);
-  __attribute__((pure)) static bool ltb(const unsigned int n,
-                                        const unsigned int m);
   __attribute__((pure)) static bool even(const unsigned int n);
   __attribute__((pure)) static unsigned int div2(const unsigned int n);
 };
@@ -62,7 +58,7 @@ struct Equations {
         return (n1 + 1);
       } else {
         unsigned int n2 = n0 - 1;
-        return gcd_clause_3(n1, n2, PeanoNat::ltb((n1 + 1), (n2 + 1)), gcd0);
+        return gcd_clause_3(n1, n2, (n1 + 1) < (n2 + 1), gcd0);
       }
     }
   }
@@ -280,10 +276,9 @@ struct Equations {
                 return f1(
                     _args.d_n, _args.d_n0, _args.d_hind,
                     f5(_args.d_n, _args.d_n0,
-                       PeanoNat::ltb((_args.d_n + 1), (_args.d_n0 + 1)))(
-                        gcd_unfold_clause_3(
-                            _args.d_n, _args.d_n0,
-                            PeanoNat::ltb((_args.d_n + 1), (_args.d_n0 + 1))),
+                       (_args.d_n + 1) < (_args.d_n0 + 1))(
+                        gcd_unfold_clause_3(_args.d_n, _args.d_n0,
+                                            (_args.d_n + 1) < (_args.d_n0 + 1)),
                         _args.d_hind));
               }},
           g->v());
@@ -361,10 +356,9 @@ struct Equations {
                 return f1(
                     _args.d_n, _args.d_n0, _args.d_hind,
                     f5(_args.d_n, _args.d_n0,
-                       PeanoNat::ltb((_args.d_n + 1), (_args.d_n0 + 1)))(
-                        gcd_unfold_clause_3(
-                            _args.d_n, _args.d_n0,
-                            PeanoNat::ltb((_args.d_n + 1), (_args.d_n0 + 1))),
+                       (_args.d_n + 1) < (_args.d_n0 + 1))(
+                        gcd_unfold_clause_3(_args.d_n, _args.d_n0,
+                                            (_args.d_n + 1) < (_args.d_n0 + 1)),
                         _args.d_hind));
               }},
           g->v());

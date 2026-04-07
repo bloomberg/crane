@@ -1,5 +1,6 @@
 #include <pendant_sumtree_roundtrip.h>
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -7,41 +8,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-__attribute__((pure)) bool PeanoNat::eqb(const unsigned int n,
-                                         const unsigned int m) {
-  if (n <= 0) {
-    if (m <= 0) {
-      return true;
-    } else {
-      unsigned int _x = m - 1;
-      return false;
-    }
-  } else {
-    unsigned int n_ = n - 1;
-    if (m <= 0) {
-      return false;
-    } else {
-      unsigned int m_ = m - 1;
-      return PeanoNat::eqb(n_, m_);
-    }
-  }
-}
-
-__attribute__((pure)) unsigned int PeanoNat::max(const unsigned int n,
-                                                 const unsigned int m) {
-  if (n <= 0) {
-    return std::move(m);
-  } else {
-    unsigned int n_ = n - 1;
-    if (m <= 0) {
-      return n;
-    } else {
-      unsigned int m_ = m - 1;
-      return (PeanoNat::max(n_, m_) + 1);
-    }
-  }
-}
 
 __attribute__((pure)) unsigned int
 PendantSumtreeRoundtripCase::digit_to_nat(const std::shared_ptr<T> &d) {
@@ -301,7 +267,7 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::group_sums_validb(
                 std::make_optional<unsigned int>(0u));
     if (sum_opt.has_value()) {
       unsigned int s = *sum_opt;
-      return PeanoNat::eqb(top_val, std::move(s));
+      return top_val == std::move(s);
     } else {
       return false;
     }
@@ -379,7 +345,11 @@ __attribute__((pure)) unsigned int PendantSumtreeRoundtripCase::sumtree_depth(
                         [&](const std::shared_ptr<
                             PendantSumtreeRoundtripCase::SumTree> &_x0)
                             -> unsigned int { return sumtree_depth(n, _x0); })
-                    ->template fold_right<unsigned int>(PeanoNat::max, 0u) +
+                    ->template fold_right<unsigned int>(
+                        [](unsigned int _x0, unsigned int _x1) -> unsigned int {
+                          return std::max(_x0, _x1);
+                        },
+                        0u) +
                 1);
           }},
       st->v());
@@ -474,7 +444,7 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::nat_list_eqb(
                                -> bool { return false; },
                            [&](const typename List<unsigned int>::Cons0 _args0)
                                -> bool {
-                             return (PeanoNat::eqb(_args.d_a0, _args0.d_a0) &&
+                             return (_args.d_a0 == _args0.d_a0 &&
                                      nat_list_eqb(_args.d_a1, _args0.d_a1));
                            }},
                 ys->v());
@@ -488,7 +458,7 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::option_nat_eqb(
     unsigned int a = *x;
     if (y.has_value()) {
       unsigned int b = *y;
-      return PeanoNat::eqb(a, b);
+      return a == b;
     } else {
       return false;
     }

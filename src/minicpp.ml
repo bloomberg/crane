@@ -135,8 +135,8 @@ and cpp_stmt =
       * ((Id.t * cpp_type) list * cpp_type * cpp_stmt list) list
       * string
   | Sthrow of string (* throw statement for unreachable/absurd cases *)
-  | Sswitch of cpp_expr * GlobRef.t * (Id.t * cpp_stmt list) list
-    (* switch on enum: scrutinee, enum type, branches *)
+  | Sswitch of cpp_expr * GlobRef.t * (Id.t * cpp_stmt list) list * cpp_stmt list option
+    (* switch on enum: scrutinee, enum type, branches, optional default body *)
   | Sassert of string * string option
     (* runtime assert: C++ expression string, optional Rocq predicate comment *)
   | Sif of cpp_expr * cpp_stmt list * cpp_stmt list
@@ -407,9 +407,10 @@ let map_stmt
           branches,
         err )
   | Sthrow _ -> s
-  | Sswitch (scrut, r, branches) ->
+  | Sswitch (scrut, r, branches, default) ->
     Sswitch
-      (fe scrut, r, List.map (fun (id, body) -> (id, List.map fs body)) branches)
+      (fe scrut, r, List.map (fun (id, body) -> (id, List.map fs body)) branches,
+       Option.map (List.map fs) default)
   | Sassert _ -> s
   | Sif (cond, then_br, else_br) ->
     Sif (fe cond, List.map fs then_br, List.map fs else_br)

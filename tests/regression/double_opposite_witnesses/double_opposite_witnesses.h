@@ -112,28 +112,20 @@ struct DoubleOppositeWitnessesCase {
 
   template <typename T1, typename T2>
   static T2 Path_rect(const T1 _x, const T2 f, const T1 _x0,
-                      const std::shared_ptr<Path<T1>> &p) {
-    return std::visit(
-        Overloaded{
-            [&](const typename Path<T1>::Path_refl _args) -> T2 { return f; }},
-        p->v());
+                      const std::shared_ptr<Path<T1>> &_x1) {
+    return f;
   }
 
   template <typename T1, typename T2>
   static T2 Path_rec(const T1 _x, const T2 f, const T1 _x0,
-                     const std::shared_ptr<Path<T1>> &p) {
-    return std::visit(
-        Overloaded{
-            [&](const typename Path<T1>::Path_refl _args) -> T2 { return f; }},
-        p->v());
+                     const std::shared_ptr<Path<T1>> &_x1) {
+    return f;
   }
 
   template <typename T1>
   __attribute__((pure)) static unsigned int
-  path_code(const T1 _x, const T1 _x0, const std::shared_ptr<Path<T1>> &p) {
-    return std::visit(Overloaded{[](const typename Path<T1>::Path_refl _args)
-                                     -> unsigned int { return 1u; }},
-                      p->v());
+  path_code(const T1 _x, const T1 _x0, const std::shared_ptr<Path<T1>> &_x1) {
+    return 1u;
   }
 
   using Obj = std::any;

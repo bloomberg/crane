@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PENDANT_SUMTREE_ROUNDTRIP
 #define INCLUDED_PENDANT_SUMTREE_ROUNDTRIP
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -208,12 +209,7 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
-struct PeanoNat {
-  __attribute__((pure)) static bool eqb(const unsigned int n,
-                                        const unsigned int m);
-  __attribute__((pure)) static unsigned int max(const unsigned int n,
-                                                const unsigned int m);
-};
+struct PeanoNat {};
 
 template <typename t_A> struct T0 {
   // TYPES

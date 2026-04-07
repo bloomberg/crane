@@ -106,15 +106,7 @@ public:
   }
 };
 
-struct PeanoNat {
-  __attribute__((pure)) static unsigned int sub(const unsigned int n,
-                                                const unsigned int m);
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-         const unsigned int u);
-  __attribute__((pure)) static unsigned int modulo(const unsigned int x,
-                                                   const unsigned int y);
-};
+struct PeanoNat {};
 
 struct Pos {
   template <typename T1, MapsTo<T1, T1> F0>
@@ -168,7 +160,7 @@ struct PolygonWindingAreaTraceCase {
   template <typename T1>
   static T1 nth_cyclic(const T1 default0, const std::shared_ptr<List<T1>> &l,
                        const unsigned int i) {
-    return l->nth(PeanoNat::modulo(i, l->length()), default0);
+    return l->nth((l->length() ? i % l->length() : i), default0);
   }
 
   __attribute__((pure)) static Real lon_diff(const Real lon1, const Real lon2);

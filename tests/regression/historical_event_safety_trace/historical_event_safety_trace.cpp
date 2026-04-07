@@ -1,107 +1,17 @@
 #include <historical_event_safety_trace.h>
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
-__attribute__((pure)) bool PeanoNat::eqb(const unsigned int n,
-                                         const unsigned int m) {
-  if (n <= 0) {
-    if (m <= 0) {
-      return true;
-    } else {
-      unsigned int _x = m - 1;
-      return false;
-    }
-  } else {
-    unsigned int n_ = n - 1;
-    if (m <= 0) {
-      return false;
-    } else {
-      unsigned int m_ = m - 1;
-      return PeanoNat::eqb(n_, m_);
-    }
-  }
-}
-
-__attribute__((pure)) bool PeanoNat::leb(const unsigned int n,
-                                         const unsigned int m) {
-  if (n <= 0) {
-    return true;
-  } else {
-    unsigned int n_ = n - 1;
-    if (m <= 0) {
-      return false;
-    } else {
-      unsigned int m_ = m - 1;
-      return PeanoNat::leb(n_, m_);
-    }
-  }
-}
-
-__attribute__((pure)) unsigned int PeanoNat::max(const unsigned int n,
-                                                 const unsigned int m) {
-  if (n <= 0) {
-    return std::move(m);
-  } else {
-    unsigned int n_ = n - 1;
-    if (m <= 0) {
-      return n;
-    } else {
-      unsigned int m_ = m - 1;
-      return (PeanoNat::max(n_, m_) + 1);
-    }
-  }
-}
-
-__attribute__((pure)) unsigned int PeanoNat::min(const unsigned int n,
-                                                 const unsigned int m) {
-  if (n <= 0) {
-    return 0u;
-  } else {
-    unsigned int n_ = n - 1;
-    if (m <= 0) {
-      return 0u;
-    } else {
-      unsigned int m_ = m - 1;
-      return (PeanoNat::min(n_, m_) + 1);
-    }
-  }
-}
-
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
-PeanoNat::divmod(const unsigned int x, const unsigned int y,
-                 const unsigned int q, const unsigned int u) {
-  if (x <= 0) {
-    return std::make_pair(q, u);
-  } else {
-    unsigned int x_ = x - 1;
-    if (u <= 0) {
-      return PeanoNat::divmod(std::move(x_), y, (q + 1), y);
-    } else {
-      unsigned int u_ = u - 1;
-      return PeanoNat::divmod(std::move(x_), y, q, std::move(u_));
-    }
-  }
-}
-
-__attribute__((pure)) unsigned int PeanoNat::div(const unsigned int x,
-                                                 const unsigned int y) {
-  if (y <= 0) {
-    return std::move(y);
-  } else {
-    unsigned int y_ = y - 1;
-    return PeanoNat::divmod(x, y_, 0u, y_).first;
-  }
-}
-
 __attribute__((pure)) bool HistoricalEventSafetyTraceCase::is_safe_bool(
     const std::shared_ptr<HistoricalEventSafetyTraceCase::PlantConfig> &pconf,
     const std::shared_ptr<HistoricalEventSafetyTraceCase::State> &s) {
-  return (PeanoNat::leb(s->reservoir_level_cm, pconf->max_reservoir_cm) &&
-          PeanoNat::leb(s->downstream_stage_cm, pconf->max_downstream_cm));
+  return (s->reservoir_level_cm <= pconf->max_reservoir_cm &&
+          s->downstream_stage_cm <= pconf->max_downstream_cm);
 }
 
 __attribute__((pure)) unsigned int
@@ -118,7 +28,7 @@ HistoricalEventSafetyTraceCase::event_to_inflow(
           [&](const typename List<std::shared_ptr<
                   HistoricalEventSafetyTraceCase::InflowRecord>>::Cons _args)
               -> unsigned int {
-            if (PeanoNat::eqb(t, _args.d_a0->ir_timestep)) {
+            if (t == _args.d_a0->ir_timestep) {
               return _args.d_a0->ir_inflow_cm;
             } else {
               return event_to_inflow(_args.d_a1, std::move(default_inflow), t);
@@ -162,10 +72,10 @@ HistoricalEventSafetyTraceCase::stage_from_table(
             unsigned int q = _args.d_a0.first;
             unsigned int s = _args.d_a0.second;
             unsigned int tail = stage_from_table(_args.d_a1, base_stage, out);
-            if (PeanoNat::leb(out, q)) {
+            if (out <= q) {
               return s;
             } else {
-              return PeanoNat::max(s, std::move(tail));
+              return std::max(s, std::move(tail));
             }
           }},
       tbl->v());
@@ -173,14 +83,14 @@ HistoricalEventSafetyTraceCase::stage_from_table(
 
 __attribute__((pure)) unsigned int
 HistoricalEventSafetyTraceCase::hist_witness_stage(const unsigned int out) {
-  return PeanoNat::div(out, 2u);
+  return (2u ? out / 2u : 0);
 }
 
 __attribute__((pure)) unsigned int
 HistoricalEventSafetyTraceCase::hist_witness_ctrl(
     const std::shared_ptr<HistoricalEventSafetyTraceCase::State> &s,
     const unsigned int _x) {
-  if (PeanoNat::leb(90u, s->reservoir_level_cm)) {
+  if (90u <= s->reservoir_level_cm) {
     return 100u;
   } else {
     return 50u;
@@ -191,16 +101,16 @@ __attribute__((pure)) unsigned int
 HistoricalEventSafetyTraceCase::hoover_controller(
     const std::shared_ptr<HistoricalEventSafetyTraceCase::State> &s,
     const unsigned int _x) {
-  if (PeanoNat::leb(2000u, s->reservoir_level_cm)) {
+  if (2000u <= s->reservoir_level_cm) {
     return 100u;
   } else {
-    if (PeanoNat::leb(1900u, s->reservoir_level_cm)) {
+    if (1900u <= s->reservoir_level_cm) {
       return 75u;
     } else {
-      if (PeanoNat::leb(1800u, s->reservoir_level_cm)) {
+      if (1800u <= s->reservoir_level_cm) {
         return 50u;
       } else {
-        if (PeanoNat::leb(1700u, s->reservoir_level_cm)) {
+        if (1700u <= s->reservoir_level_cm) {
           return 25u;
         } else {
           return 0u;

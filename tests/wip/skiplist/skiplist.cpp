@@ -11,54 +11,14 @@
 #include <utility>
 #include <variant>
 
-__attribute__((pure)) bool PeanoNat::eqb(const unsigned int n,
-                                         const unsigned int m) {
-  if (n <= 0) {
-    if (m <= 0) {
-      return true;
-    } else {
-      unsigned int _x = m - 1;
-      return false;
-    }
-  } else {
-    unsigned int n_ = n - 1;
-    if (m <= 0) {
-      return false;
-    } else {
-      unsigned int m_ = m - 1;
-      return PeanoNat::eqb(n_, m_);
-    }
-  }
-}
-
-__attribute__((pure)) bool PeanoNat::leb(const unsigned int n,
-                                         const unsigned int m) {
-  if (n <= 0) {
-    return true;
-  } else {
-    unsigned int n_ = n - 1;
-    if (m <= 0) {
-      return false;
-    } else {
-      unsigned int m_ = m - 1;
-      return PeanoNat::leb(n_, m_);
-    }
-  }
-}
-
-__attribute__((pure)) bool PeanoNat::ltb(const unsigned int n,
-                                         const unsigned int m) {
-  return PeanoNat::leb((n + 1), m);
-}
-
 __attribute__((pure)) bool skiplist_test::nat_lt(const unsigned int _x0,
                                                  const unsigned int _x1) {
-  return PeanoNat::ltb(_x0, _x1);
+  return _x0 < _x1;
 }
 
 __attribute__((pure)) bool skiplist_test::nat_eq(const unsigned int _x0,
                                                  const unsigned int _x1) {
-  return PeanoNat::eqb(_x0, _x1);
+  return _x0 == _x1;
 }
 
 bool skiplist_test::stm_test_insert_lookup() {
@@ -76,28 +36,28 @@ bool skiplist_test::stm_test_insert_lookup() {
   bool c1;
   if (v5.has_value()) {
     unsigned int n = *v5;
-    c1 = PeanoNat::eqb(n, 50u);
+    c1 = n == 50u;
   } else {
     c1 = false;
   }
   bool c2;
   if (v3.has_value()) {
     unsigned int n = *v3;
-    c2 = PeanoNat::eqb(n, 30u);
+    c2 = n == 30u;
   } else {
     c2 = false;
   }
   bool c3;
   if (v7.has_value()) {
     unsigned int n = *v7;
-    c3 = PeanoNat::eqb(n, 70u);
+    c3 = n == 70u;
   } else {
     c3 = false;
   }
   bool c4;
   if (v1.has_value()) {
     unsigned int n = *v1;
-    c4 = PeanoNat::eqb(n, 10u);
+    c4 = n == 10u;
   } else {
     c4 = false;
   }
@@ -131,14 +91,14 @@ bool skiplist_test::stm_test_delete() {
   bool c2;
   if (v3.has_value()) {
     unsigned int n = *v3;
-    c2 = PeanoNat::eqb(n, 30u);
+    c2 = n == 30u;
   } else {
     c2 = false;
   }
   bool c3;
   if (v7.has_value()) {
     unsigned int n = *v7;
-    c3 = PeanoNat::eqb(n, 70u);
+    c3 = n == 70u;
   } else {
     c3 = false;
   }
@@ -154,7 +114,7 @@ bool skiplist_test::stm_test_update() {
   return [&]() -> bool {
     if (v.has_value()) {
       unsigned int n = *v;
-      return PeanoNat::eqb(n, 500u);
+      return n == 500u;
     } else {
       return false;
     }
@@ -173,7 +133,7 @@ bool skiplist_test::stm_test_minimum() {
       std::pair<unsigned int, unsigned int> p = *minOpt;
       unsigned int k = p.first;
       unsigned int v = p.second;
-      return (PeanoNat::eqb(k, 3u) && PeanoNat::eqb(v, 30u));
+      return (k == 3u && v == 30u);
     } else {
       return false;
     }
@@ -189,9 +149,9 @@ bool skiplist_test::stm_test_length_isEmpty() {
   sl->insert(nat_lt, nat_eq, 3u, 30u, 0u);
   bool empty2 = sl->isEmpty();
   unsigned int len2 = sl->length();
-  bool c2 = PeanoNat::eqb(len1, 0u);
+  bool c2 = len1 == 0u;
   bool c3 = !(empty2);
-  bool c4 = PeanoNat::eqb(len2, 2u);
+  bool c4 = len2 == 2u;
   return (empty1 && (c2 && (c3 && c4)));
 }
 
@@ -208,16 +168,14 @@ bool skiplist_test::stm_test_front_back() {
   bool c1;
   if (frontOpt.has_value()) {
     std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *frontOpt;
-    c1 = PeanoNat::eqb(
-        SkipList<int, int>::template key<unsigned int, unsigned int>(p), 3u);
+    c1 = SkipList<int, int>::template key<unsigned int, unsigned int>(p) == 3u;
   } else {
     c1 = false;
   }
   bool c2;
   if (backOpt.has_value()) {
     std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *backOpt;
-    c2 = PeanoNat::eqb(
-        SkipList<int, int>::template key<unsigned int, unsigned int>(p), 7u);
+    c2 = SkipList<int, int>::template key<unsigned int, unsigned int>(p) == 7u;
   } else {
     c2 = false;
   }
@@ -238,7 +196,7 @@ bool skiplist_test::stm_test_popFront() {
     std::pair<unsigned int, unsigned int> p = *pop1;
     unsigned int k = p.first;
     unsigned int v = p.second;
-    c1 = (PeanoNat::eqb(k, 3u) && PeanoNat::eqb(v, 30u));
+    c1 = (k == 3u && v == 30u);
   } else {
     c1 = false;
   }
@@ -247,11 +205,11 @@ bool skiplist_test::stm_test_popFront() {
     std::pair<unsigned int, unsigned int> p = *pop2;
     unsigned int k = p.first;
     unsigned int v = p.second;
-    c2 = (PeanoNat::eqb(k, 5u) && PeanoNat::eqb(v, 50u));
+    c2 = (k == 5u && v == 50u);
   } else {
     c2 = false;
   }
-  bool c3 = PeanoNat::eqb(len, 1u);
+  bool c3 = len == 1u;
   return (c1 && (c2 && c3));
 }
 
@@ -267,11 +225,11 @@ bool skiplist_test::stm_test_addUnique() {
   bool c4;
   if (v5.has_value()) {
     unsigned int n = *v5;
-    c4 = PeanoNat::eqb(n, 50u);
+    c4 = n == 50u;
   } else {
     c4 = false;
   }
-  bool c5 = PeanoNat::eqb(len, 2u);
+  bool c5 = len == 2u;
   return (r1 && (c2 && (r3 && (c4 && c5))));
 }
 
@@ -289,7 +247,7 @@ bool skiplist_test::stm_test_find() {
     std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *pairOpt;
     unsigned int k =
         SkipList<int, int>::template key<unsigned int, unsigned int>(p);
-    c1 = PeanoNat::eqb(k, 5u);
+    c1 = k == 5u;
   } else {
     c1 = false;
   }
@@ -320,18 +278,15 @@ bool skiplist_test::stm_test_navigation() {
       std::shared_ptr<SkipNode<unsigned int, unsigned int>> second = *nextOpt;
       std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
           prevOpt = sl->previous(nat_eq, second);
-      bool c1 = PeanoNat::eqb(
-          SkipList<int, int>::template key<unsigned int, unsigned int>(first),
-          1u);
-      bool c2 = PeanoNat::eqb(
-          SkipList<int, int>::template key<unsigned int, unsigned int>(second),
-          3u);
+      bool c1 = SkipList<int, int>::template key<unsigned int, unsigned int>(
+                    first) == 1u;
+      bool c2 = SkipList<int, int>::template key<unsigned int, unsigned int>(
+                    second) == 3u;
       bool c3;
       if (prevOpt.has_value()) {
         std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *prevOpt;
-        c3 = PeanoNat::eqb(
-            SkipList<int, int>::template key<unsigned int, unsigned int>(p),
-            1u);
+        c3 = SkipList<int, int>::template key<unsigned int, unsigned int>(p) ==
+             1u;
       } else {
         c3 = false;
       }
@@ -359,24 +314,21 @@ bool skiplist_test::stm_test_bounds() {
   bool c1;
   if (lb3.has_value()) {
     std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *lb3;
-    c1 = PeanoNat::eqb(
-        SkipList<int, int>::template key<unsigned int, unsigned int>(p), 4u);
+    c1 = SkipList<int, int>::template key<unsigned int, unsigned int>(p) == 4u;
   } else {
     c1 = false;
   }
   bool c2;
   if (lb4.has_value()) {
     std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *lb4;
-    c2 = PeanoNat::eqb(
-        SkipList<int, int>::template key<unsigned int, unsigned int>(p), 4u);
+    c2 = SkipList<int, int>::template key<unsigned int, unsigned int>(p) == 4u;
   } else {
     c2 = false;
   }
   bool c3;
   if (ub4.has_value()) {
     std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *ub4;
-    c3 = PeanoNat::eqb(
-        SkipList<int, int>::template key<unsigned int, unsigned int>(p), 6u);
+    c3 = SkipList<int, int>::template key<unsigned int, unsigned int>(p) == 6u;
   } else {
     c3 = false;
   }
@@ -392,8 +344,8 @@ bool skiplist_test::stm_test_removeAll() {
   unsigned int count = sl->removeAll();
   bool empty = sl->isEmpty();
   unsigned int len = sl->length();
-  bool c1 = PeanoNat::eqb(count, 3u);
-  bool c3 = PeanoNat::eqb(len, 0u);
+  bool c1 = count == 3u;
+  bool c3 = len == 0u;
   return (c1 && (empty && c3));
 }
 
@@ -420,7 +372,7 @@ bool skiplist_test::stm_test_bde_api() {
   unsigned int status1 = findResult.first;
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> _x2 =
       findResult.second;
-  bool c4 = PeanoNat::eqb(status1, SkipList<int, int>::e_SUCCESS);
+  bool c4 = status1 == SkipList<int, int>::e_SUCCESS;
   std::pair<
       unsigned int,
       std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>>
@@ -428,7 +380,7 @@ bool skiplist_test::stm_test_bde_api() {
   unsigned int status2 = findResult2.first;
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> _x3 =
       findResult2.second;
-  bool c5 = PeanoNat::eqb(std::move(status2), SkipList<int, int>::e_NOT_FOUND);
+  bool c5 = std::move(status2) == SkipList<int, int>::e_NOT_FOUND;
   std::pair<std::pair<unsigned int, std::optional<std::shared_ptr<
                                         SkipNode<unsigned int, unsigned int>>>>,
             bool>
@@ -441,7 +393,7 @@ bool skiplist_test::stm_test_bde_api() {
   unsigned int status3 = p.first;
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> _x5 =
       p.second;
-  bool c6 = PeanoNat::eqb(std::move(status3), SkipList<int, int>::e_DUPLICATE);
+  bool c6 = std::move(status3) == SkipList<int, int>::e_DUPLICATE;
   std::pair<
       unsigned int,
       std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>>
@@ -449,12 +401,11 @@ bool skiplist_test::stm_test_bde_api() {
   unsigned int status4 = frontResult.first;
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
       frontItem = frontResult.second;
-  bool c7 = PeanoNat::eqb(std::move(status4), SkipList<int, int>::e_SUCCESS);
+  bool c7 = std::move(status4) == SkipList<int, int>::e_SUCCESS;
   bool c8;
   if (frontItem.has_value()) {
     std::shared_ptr<SkipNode<unsigned int, unsigned int>> p0 = *frontItem;
-    c8 = PeanoNat::eqb(
-        SkipList<int, int>::template key<unsigned int, unsigned int>(p0), 3u);
+    c8 = SkipList<int, int>::template key<unsigned int, unsigned int>(p0) == 3u;
   } else {
     c8 = false;
   }
@@ -465,12 +416,12 @@ bool skiplist_test::stm_test_bde_api() {
   unsigned int status5 = backResult.first;
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
       backItem = backResult.second;
-  bool c9 = PeanoNat::eqb(std::move(status5), SkipList<int, int>::e_SUCCESS);
+  bool c9 = std::move(status5) == SkipList<int, int>::e_SUCCESS;
   bool c10;
   if (backItem.has_value()) {
     std::shared_ptr<SkipNode<unsigned int, unsigned int>> p0 = *backItem;
-    c10 = PeanoNat::eqb(
-        SkipList<int, int>::template key<unsigned int, unsigned int>(p0), 7u);
+    c10 =
+        SkipList<int, int>::template key<unsigned int, unsigned int>(p0) == 7u;
   } else {
     c10 = false;
   }

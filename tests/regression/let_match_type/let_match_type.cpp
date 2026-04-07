@@ -112,20 +112,15 @@ __attribute__((pure)) std::pair<unsigned int, unsigned int>
 LetMatchType::direction_offset(const LetMatchType::Direction d) {
   unsigned int dx = [&]() -> unsigned int {
     switch (d) {
-    case Direction::e_NORTH: {
-      return 0u;
-    }
-    case Direction::e_SOUTH: {
-      return 0u;
-    }
     case Direction::e_EAST: {
       return 1u;
     }
     case Direction::e_WEST: {
       return 2u;
     }
-    default:
-      std::unreachable();
+    default: {
+      return 0u;
+    }
     }
   }();
   unsigned int dy = [&]() -> unsigned int {
@@ -136,14 +131,9 @@ LetMatchType::direction_offset(const LetMatchType::Direction d) {
     case Direction::e_SOUTH: {
       return 2u;
     }
-    case Direction::e_EAST: {
+    default: {
       return 0u;
     }
-    case Direction::e_WEST: {
-      return 0u;
-    }
-    default:
-      std::unreachable();
     }
   }();
   return std::make_pair(dx, dy);

@@ -417,35 +417,10 @@ struct InstructionClassifiers {
 
     __attribute__((pure)) bool writes_acc() const {
       return std::visit(
-          Overloaded{
-              [](const typename instr_acc::LDM _args) -> bool { return true; },
-              [](const typename instr_acc::LD _args) -> bool { return true; },
-              [](const typename instr_acc::ADD _args) -> bool { return true; },
-              [](const typename instr_acc::SUB _args) -> bool { return true; },
-              [](const typename instr_acc::INC _args) -> bool { return true; },
-              [](const typename instr_acc::XCH _args) -> bool { return true; },
-              [](const typename instr_acc::BBL _args) -> bool { return true; },
-              [](const typename instr_acc::SBM _args) -> bool { return true; },
-              [](const typename instr_acc::RDM _args) -> bool { return true; },
-              [](const typename instr_acc::RDR _args) -> bool { return true; },
-              [](const typename instr_acc::ADM _args) -> bool { return true; },
-              [](const typename instr_acc::RD0 _args) -> bool { return true; },
-              [](const typename instr_acc::RD1 _args) -> bool { return true; },
-              [](const typename instr_acc::RD2 _args) -> bool { return true; },
-              [](const typename instr_acc::RD3 _args) -> bool { return true; },
-              [](const typename instr_acc::CLB _args) -> bool { return true; },
-              [](const typename instr_acc::CMA _args) -> bool { return true; },
-              [](const typename instr_acc::IAC _args) -> bool { return true; },
-              [](const typename instr_acc::DAC _args) -> bool { return true; },
-              [](const typename instr_acc::RAL _args) -> bool { return true; },
-              [](const typename instr_acc::RAR _args) -> bool { return true; },
-              [](const typename instr_acc::TCC _args) -> bool { return true; },
-              [](const typename instr_acc::TCS _args) -> bool { return true; },
-              [](const typename instr_acc::DAA _args) -> bool { return true; },
-              [](const typename instr_acc::KBP _args) -> bool { return true; },
-              [](const typename instr_acc::NOP_acc _args) -> bool {
-                return false;
-              }},
+          Overloaded{[](const typename instr_acc::NOP_acc _args) -> bool {
+                       return false;
+                     },
+                     [](const auto _args) -> bool { return true; }},
           this->v());
     }
 
@@ -700,19 +675,13 @@ struct InstructionClassifiers {
 
     __attribute__((pure)) bool writes_ram() const {
       return std::visit(
-          Overloaded{
-              [](const typename instr_ram::WRM _args) -> bool { return true; },
-              [](const typename instr_ram::WMP _args) -> bool { return true; },
-              [](const typename instr_ram::WR0 _args) -> bool { return true; },
-              [](const typename instr_ram::WR1 _args) -> bool { return true; },
-              [](const typename instr_ram::WR2 _args) -> bool { return true; },
-              [](const typename instr_ram::WR3 _args) -> bool { return true; },
-              [](const typename instr_ram::NOP_ram _args) -> bool {
-                return false;
-              },
-              [](const typename instr_ram::ADD_ram _args) -> bool {
-                return false;
-              }},
+          Overloaded{[](const typename instr_ram::NOP_ram _args) -> bool {
+                       return false;
+                     },
+                     [](const typename instr_ram::ADD_ram _args) -> bool {
+                       return false;
+                     },
+                     [](const auto _args) -> bool { return true; }},
           this->v());
     }
   };
@@ -891,22 +860,13 @@ struct InstructionClassifiers {
 
     __attribute__((pure)) bool writes_regs() const {
       return std::visit(
-          Overloaded{
-              [](const typename instr_regs::XCH_regs _args) -> bool {
-                return true;
-              },
-              [](const typename instr_regs::INC_regs _args) -> bool {
-                return true;
-              },
-              [](const typename instr_regs::FIM _args) -> bool { return true; },
-              [](const typename instr_regs::FIN _args) -> bool { return true; },
-              [](const typename instr_regs::ISZ _args) -> bool { return true; },
-              [](const typename instr_regs::NOP_regs _args) -> bool {
-                return false;
-              },
-              [](const typename instr_regs::ADD_regs _args) -> bool {
-                return false;
-              }},
+          Overloaded{[](const typename instr_regs::NOP_regs _args) -> bool {
+                       return false;
+                     },
+                     [](const typename instr_regs::ADD_regs _args) -> bool {
+                       return false;
+                     },
+                     [](const auto _args) -> bool { return true; }},
           this->v());
     }
 
@@ -1124,23 +1084,13 @@ struct InstructionClassifiers {
 
     __attribute__((pure)) bool is_jump() const {
       return std::visit(
-          Overloaded{
-              [](const typename instr_jump::JCN _args) -> bool { return true; },
-              [](const typename instr_jump::JUN _args) -> bool { return true; },
-              [](const typename instr_jump::JMS _args) -> bool { return true; },
-              [](const typename instr_jump::JIN _args) -> bool { return true; },
-              [](const typename instr_jump::BBL_jump _args) -> bool {
-                return true;
-              },
-              [](const typename instr_jump::ISZ_jump _args) -> bool {
-                return true;
-              },
-              [](const typename instr_jump::ADD_jump _args) -> bool {
-                return false;
-              },
-              [](const typename instr_jump::NOP_jump _args) -> bool {
-                return false;
-              }},
+          Overloaded{[](const typename instr_jump::ADD_jump _args) -> bool {
+                       return false;
+                     },
+                     [](const typename instr_jump::NOP_jump _args) -> bool {
+                       return false;
+                     },
+                     [](const auto _args) -> bool { return true; }},
           this->v());
     }
 

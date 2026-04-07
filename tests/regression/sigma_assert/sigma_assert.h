@@ -3,7 +3,6 @@
 
 #include <cassert>
 #include <type_traits>
-#include <utility>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
@@ -14,7 +13,6 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct PeanoNat {
-  __attribute__((pure)) static unsigned int pred(const unsigned int n);
   __attribute__((pure)) static unsigned int div2(const unsigned int n);
 };
 

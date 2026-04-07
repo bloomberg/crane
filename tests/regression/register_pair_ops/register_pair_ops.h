@@ -104,23 +104,7 @@ public:
   }
 };
 
-struct PeanoNat {
-  __attribute__((pure)) static unsigned int sub(const unsigned int n,
-                                                const unsigned int m);
-  __attribute__((pure)) static bool eqb(const unsigned int n,
-                                        const unsigned int m);
-  __attribute__((pure)) static bool leb(const unsigned int n,
-                                        const unsigned int m);
-  __attribute__((pure)) static bool ltb(const unsigned int n,
-                                        const unsigned int m);
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  divmod(const unsigned int x, const unsigned int y, const unsigned int q,
-         const unsigned int u);
-  __attribute__((pure)) static unsigned int div(const unsigned int x,
-                                                const unsigned int y);
-  __attribute__((pure)) static unsigned int modulo(const unsigned int x,
-                                                   const unsigned int y);
-};
+struct PeanoNat {};
 
 struct ListDef {
   static std::shared_ptr<List<unsigned int>> seq(const unsigned int start,
@@ -188,22 +172,22 @@ struct RegisterPairOps {
                                   0u, List<unsigned int>::cons(
                                           0u, List<unsigned int>::nil()))))))});
   static inline const bool test_get_reg_pair_from_regs =
-      PeanoNat::eqb(get_reg_pair(sample_from_regs, 2u), 171u);
-  static inline const bool test_get_reg_pair_odd_normalizes = PeanoNat::eqb(
+      get_reg_pair(sample_from_regs, 2u) == 171u;
+  static inline const bool test_get_reg_pair_odd_normalizes =
       get_reg_pair(
           std::make_shared<state>(state{List<unsigned int>::cons(
               0u, List<unsigned int>::cons(
                       1u, List<unsigned int>::cons(
                               10u, List<unsigned int>::cons(
                                        11u, List<unsigned int>::nil()))))}),
-          2u),
+          2u) ==
       get_reg_pair(
           std::make_shared<state>(state{List<unsigned int>::cons(
               0u, List<unsigned int>::cons(
                       1u, List<unsigned int>::cons(
                               10u, List<unsigned int>::cons(
                                        11u, List<unsigned int>::nil()))))}),
-          3u));
+          3u);
   static inline const std::shared_ptr<state> sample_pair_high =
       std::make_shared<state>(state{List<unsigned int>::cons(
           2u,
@@ -215,8 +199,8 @@ struct RegisterPairOps {
                                   8u, List<unsigned int>::cons(
                                           1u, List<unsigned int>::nil()))))))});
   static inline const bool test_set_reg_affects_pair_high =
-      PeanoNat::eqb(get_reg_pair(set_reg(sample_pair_high, 2u, 13u), 2u),
-                    ((13u * 16u) + get_reg(sample_pair_high, 3u)));
+      get_reg_pair(set_reg(sample_pair_high, 2u, 13u), 2u) ==
+      ((13u * 16u) + get_reg(sample_pair_high, 3u));
   static inline const std::shared_ptr<state> sample_pair_low =
       std::make_shared<state>(state{List<unsigned int>::cons(
           2u,
@@ -228,8 +212,8 @@ struct RegisterPairOps {
                                   8u, List<unsigned int>::cons(
                                           1u, List<unsigned int>::nil()))))))});
   static inline const bool test_set_reg_affects_pair_low =
-      PeanoNat::eqb(get_reg_pair(set_reg(sample_pair_low, 3u, 12u), 3u),
-                    ((get_reg(sample_pair_low, 2u) * 16u) + 12u));
+      get_reg_pair(set_reg(sample_pair_low, 3u, 12u), 3u) ==
+      ((get_reg(sample_pair_low, 2u) * 16u) + 12u);
   static inline const std::shared_ptr<state> sample_idempotent =
       std::make_shared<state>(state{List<unsigned int>::cons(
           0u,
@@ -240,10 +224,10 @@ struct RegisterPairOps {
                           0u, List<unsigned int>::cons(
                                   0u, List<unsigned int>::cons(
                                           0u, List<unsigned int>::nil()))))))});
-  static inline const bool test_set_reg_pair_idempotent = PeanoNat::eqb(
+  static inline const bool test_set_reg_pair_idempotent =
       get_reg_pair(
-          set_reg_pair(set_reg_pair(sample_idempotent, 2u, 34u), 2u, 171u), 2u),
-      171u);
+          set_reg_pair(set_reg_pair(sample_idempotent, 2u, 34u), 2u, 171u),
+          2u) == 171u;
   static inline const std::shared_ptr<state> sample_preserves =
       std::make_shared<state>(state{List<unsigned int>::cons(
           1u,
@@ -255,8 +239,8 @@ struct RegisterPairOps {
                                   5u, List<unsigned int>::cons(
                                           6u, List<unsigned int>::nil()))))))});
   static inline const bool test_set_reg_pair_preserves_other_pairs =
-      PeanoNat::eqb(get_reg_pair(set_reg_pair(sample_preserves, 0u, 171u), 2u),
-                    get_reg_pair(sample_preserves, 2u));
+      get_reg_pair(set_reg_pair(sample_preserves, 0u, 171u), 2u) ==
+      get_reg_pair(sample_preserves, 2u);
   __attribute__((pure)) static unsigned int pair_base(const unsigned int r);
   static inline const std::shared_ptr<state> sample_register_pair =
       std::make_shared<state>(state{List<unsigned int>::cons(
@@ -268,14 +252,12 @@ struct RegisterPairOps {
                           0u, List<unsigned int>::cons(
                                   0u, List<unsigned int>::cons(
                                           0u, List<unsigned int>::nil()))))))});
-  static inline const bool test_even_projection =
-      PeanoNat::eqb(pair_base(6u), 6u);
-  static inline const bool test_odd_projection =
-      PeanoNat::eqb(pair_base(7u), 6u);
-  static inline const bool test_set_pair_get_high = PeanoNat::eqb(
-      get_reg(set_reg_pair(sample_register_pair, 2u, 171u), 2u), 10u);
-  static inline const bool test_set_pair_get_low = PeanoNat::eqb(
-      get_reg(set_reg_pair(sample_register_pair, 2u, 171u), 3u), 11u);
+  static inline const bool test_even_projection = pair_base(6u) == 6u;
+  static inline const bool test_odd_projection = pair_base(7u) == 6u;
+  static inline const bool test_set_pair_get_high =
+      get_reg(set_reg_pair(sample_register_pair, 2u, 171u), 2u) == 10u;
+  static inline const bool test_set_pair_get_low =
+      get_reg(set_reg_pair(sample_register_pair, 2u, 171u), 3u) == 11u;
   __attribute__((pure)) static unsigned int pair_index(const unsigned int r);
   __attribute__((pure)) static bool pair_property(const unsigned int r);
   static inline const std::shared_ptr<List<unsigned int>> test_regs =
@@ -304,10 +286,10 @@ struct RegisterPairOps {
                               List<unsigned int>::cons(
                                   0u, List<unsigned int>::cons(
                                           0u, List<unsigned int>::nil()))))))});
-  static inline const bool test_even_same_as_successor = PeanoNat::eqb(
-      get_reg_pair(sample_successor, 2u), get_reg_pair(sample_successor, 3u));
-  static inline const bool test_odd_same_as_predecessor = PeanoNat::eqb(
-      get_reg_pair(sample_successor, 3u), get_reg_pair(sample_successor, 2u));
+  static inline const bool test_even_same_as_successor =
+      get_reg_pair(sample_successor, 2u) == get_reg_pair(sample_successor, 3u);
+  static inline const bool test_odd_same_as_predecessor =
+      get_reg_pair(sample_successor, 3u) == get_reg_pair(sample_successor, 2u);
   static inline const bool test_reg_pair_successor =
       (test_even_same_as_successor && test_odd_same_as_predecessor);
   static inline const std::pair<

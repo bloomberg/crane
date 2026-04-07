@@ -170,11 +170,16 @@ let rec lambda_needs_capture
            (collect_from_expr (refs, decls) cond)
            then_stmts )
         else_stmts
-    | Sswitch (scrut, _, branches) ->
-      List.fold_left
-        (fun acc (_, stmts) -> List.fold_left collect_from_stmt acc stmts)
-        (collect_from_expr (refs, decls) scrut)
-        branches
+    | Sswitch (scrut, _, branches, default) ->
+      let acc =
+        List.fold_left
+          (fun acc (_, stmts) -> List.fold_left collect_from_stmt acc stmts)
+          (collect_from_expr (refs, decls) scrut)
+          branches
+      in
+      ( match default with
+      | Some stmts -> List.fold_left collect_from_stmt acc stmts
+      | None -> acc )
     | Scustom_case (_, scrut, _, branches, _) ->
       List.fold_left
         (fun (r, d) (branch_vars, _, stmts) ->
@@ -273,8 +278,9 @@ and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
   | Sreturn None -> false
   | Sassign_field (obj, _, e) -> expr obj || expr e
   | Sif (cond, then_s, else_s) -> expr cond || any then_s || any else_s
-  | Sswitch (scrut, _, branches) ->
+  | Sswitch (scrut, _, branches, default) ->
     expr scrut || List.exists (fun (_, stmts) -> any stmts) branches
+    || (match default with Some stmts -> any stmts | None -> false)
   | Scustom_case (_, scrut, _, branches, _) ->
     expr scrut || List.exists (fun (_, _, stmts) -> any stmts) branches
   | Swhile (cond, body) -> expr cond || any body
@@ -1300,7 +1306,7 @@ and pp_cpp_stmt env args = function
     ++ str "(\""
     ++ str msg
     ++ str "\");"
-  | Sswitch (scrut, ind, branches) ->
+  | Sswitch (scrut, ind, branches, default) ->
     (* Generate switch statement for enum class matching. Use pp_global_name to
        get the unqualified base name, capitalize to match enum class
        definition. *)
@@ -1323,9 +1329,17 @@ and pp_cpp_stmt env args = function
     ++ fnl ()
     ++ prlist_with_sep fnl pp_branch branches
     ++ fnl ()
-    ++ str "default:"
-    ++ fnl ()
-    ++ str "  std::unreachable();"
+    ++ ( match default with
+       | Some stmts ->
+         str "default: {"
+         ++ fnl ()
+         ++ pp_list_stmt (pp_cpp_stmt env args) stmts
+         ++ fnl ()
+         ++ str "}"
+       | None ->
+         str "default:"
+         ++ fnl ()
+         ++ str "  std::unreachable();" )
     ++ fnl ()
     ++ str "}"
   | Sassert (expr_str, comment_opt) ->

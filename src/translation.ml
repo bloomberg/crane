@@ -3766,7 +3766,18 @@ and gen_cpp_case (typ : ml_type) t env pv =
         (ctor_name, body_stmts) :: gen_enum_branches cs
       | Pwild | Prel _ | Ptuple _ -> gen_enum_branches cs
     in
+    let gen_default_stmts () =
+      let wild_br =
+        Array.to_list pv
+        |> List.find_opt (fun (_, _, p, _) -> match p with Pwild -> true | _ -> false)
+      in
+      match wild_br with
+      | Some (_, _, _, body) ->
+        Some (gen_stmts env (fun x -> Sreturn (Some x)) body)
+      | None -> None
+    in
     let branches = gen_enum_branches (Array.to_list pv) in
+    let default = gen_default_stmts () in
     let tvars = get_current_type_vars () in
     let iife_ret =
       let branch_rty =
@@ -3778,7 +3789,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
       if is_cpp_unit_type r then Tvoid else r
     in
     CPPfun_call
-      (CPPlambda ([], Some iife_ret, [Sswitch (scrutinee, ind_ref, branches)], false), [])
+      (CPPlambda ([], Some iife_ret, [Sswitch (scrutinee, ind_ref, branches, default)], false), [])
   else
     (* Phase 3: Check for reuse opportunities (reset/reuse). If the scrutinee is
        an owned shared_ptr variable and there are reuse candidates (branches
@@ -3839,7 +3850,21 @@ and gen_cpp_case (typ : ml_type) t env pv =
           let br = gen_cpp_pat_lambda env' typ rty r ids' dummies t sname in
           tctx.env_types <- saved_env_types;
           br :: gen_cases cs
-        | Pwild | Prel _ | Ptuple _ -> gen_cases cs
+        | Pwild | Prel _ ->
+          let tvars = get_current_type_vars () in
+          let body_stmts = gen_stmts env (fun x -> Sreturn (Some x)) t in
+          let ret = convert_ml_type_to_cpp_type env Refset'.empty tvars rty in
+          let ret =
+            match ret with
+            | Minicpp.Tvar (_, None) -> Minicpp.Ttodo
+            | Minicpp.Tfun _ -> Minicpp.Ttodo
+            | _ -> ret
+          in
+          let wildcard_lambda =
+            CPPlambda ([(Tmod (TMconst, Tauto), Some sname)], Some ret, body_stmts, false)
+          in
+          [wildcard_lambda]  (* terminal — no more branches after wildcard *)
+        | Ptuple _ -> gen_cases cs
       in
       (* Defense-in-depth: clear move_dead_after when generating std::visit
          scrutinee to prevent std::move(x)->v() use-after-move. The scrutinee
@@ -4193,16 +4218,23 @@ and inline_iife (k : cpp_expr -> cpp_stmt) = function
         ( match (replace_last_return then_br, replace_last_return else_br) with
         | Some then_br', Some else_br' -> Some [Sif (c, then_br', else_br')]
         | _ -> None )
-      | [Sswitch (scrut, ind_ref, branches)] ->
-        ( match try_all_branches
+      | [Sswitch (scrut, ind_ref, branches, default)] ->
+        let default' =
+          match default with
+          | Some stmts -> ( match replace_last_return stmts with
+            | Some stmts' -> Some (Some stmts')
+            | None -> None )
+          | None -> Some None
+        in
+        ( match (try_all_branches
             (fun (id, stmts) ->
               match replace_last_return stmts with
               | Some stmts' -> Some (id, stmts')
               | None -> None )
-            branches
+            branches, default')
         with
-        | Some branches' -> Some [Sswitch (scrut, ind_ref, branches')]
-        | None -> None )
+        | Some branches', Some default' -> Some [Sswitch (scrut, ind_ref, branches', default')]
+        | _ -> None )
       | [Scustom_case (ty, scrut, tyargs, branches, cmatch)] ->
         ( match try_all_branches
             (fun (args, bty, stmts) ->
@@ -8545,14 +8577,15 @@ and replace_return_this_stmt inner_ty = function
             (binds, br_ty, List.map (replace_return_this_stmt inner_ty) stmts) )
           brs,
         tag )
-  | Sswitch (scrut, ind, brs) ->
+  | Sswitch (scrut, ind, brs, default) ->
     Sswitch
       ( scrut,
         ind,
         List.map
           (fun (ctor, stmts) ->
             (ctor, List.map (replace_return_this_stmt inner_ty) stmts) )
-          brs )
+          brs,
+        Option.map (List.map (replace_return_this_stmt inner_ty)) default )
   | Sexpr e -> Sexpr (replace_return_this_expr inner_ty e)
   | s -> s
 
@@ -8575,10 +8608,11 @@ and stmt_has_shared_from_this = function
     List.exists
       (fun (_, _, stmts) -> List.exists stmt_has_shared_from_this stmts)
       brs
-  | Sswitch (_, _, brs) ->
+  | Sswitch (_, _, brs, default) ->
     List.exists
       (fun (_, stmts) -> List.exists stmt_has_shared_from_this stmts)
       brs
+    || (match default with Some stmts -> List.exists stmt_has_shared_from_this stmts | None -> false)
   | _ -> false
 
 (** Generate a single method from a method candidate. name: the containing

@@ -200,18 +200,12 @@ Pos::compare_cont(const Comparison r, const std::shared_ptr<Positive> &x,
                 y->v());
           },
           [&](const typename Positive::XH _args) -> Comparison {
-            return std::visit(
-                Overloaded{
-                    [](const typename Positive::XI _args0) -> Comparison {
-                      return Comparison::e_LT;
-                    },
-                    [](const typename Positive::XO _args0) -> Comparison {
-                      return Comparison::e_LT;
-                    },
-                    [&](const typename Positive::XH _args0) -> Comparison {
-                      return r;
-                    }},
-                y->v());
+            return std::visit(Overloaded{[&](const typename Positive::XH _args0)
+                                             -> Comparison { return r; },
+                                         [](const auto _args0) -> Comparison {
+                                           return Comparison::e_LT;
+                                         }},
+                              y->v());
           }},
       x->v());
 }
@@ -231,38 +225,23 @@ __attribute__((pure)) bool Pos::eqb(const std::shared_ptr<Positive> &p,
                 Overloaded{[&](const typename Positive::XI _args0) -> bool {
                              return eqb(_args.d_a0, _args0.d_a0);
                            },
-                           [](const typename Positive::XO _args0) -> bool {
-                             return false;
-                           },
-                           [](const typename Positive::XH _args0) -> bool {
-                             return false;
-                           }},
+                           [](const auto _args0) -> bool { return false; }},
                 q->v());
           },
           [&](const typename Positive::XO _args) -> bool {
             return std::visit(
-                Overloaded{[](const typename Positive::XI _args0) -> bool {
-                             return false;
-                           },
-                           [&](const typename Positive::XO _args0) -> bool {
+                Overloaded{[&](const typename Positive::XO _args0) -> bool {
                              return eqb(_args.d_a0, _args0.d_a0);
                            },
-                           [](const typename Positive::XH _args0) -> bool {
-                             return false;
-                           }},
+                           [](const auto _args0) -> bool { return false; }},
                 q->v());
           },
           [&](const typename Positive::XH _args) -> bool {
             return std::visit(
-                Overloaded{[](const typename Positive::XI _args0) -> bool {
-                             return false;
-                           },
-                           [](const typename Positive::XO _args0) -> bool {
-                             return false;
-                           },
-                           [](const typename Positive::XH _args0) -> bool {
+                Overloaded{[](const typename Positive::XH _args0) -> bool {
                              return true;
-                           }},
+                           },
+                           [](const auto _args0) -> bool { return false; }},
                 q->v());
           }},
       p->v());
@@ -503,28 +482,22 @@ __attribute__((pure)) Comparison BinInt::compare(const std::shared_ptr<Z> &x,
           },
           [&](const typename Z::Zpos _args) -> Comparison {
             return std::visit(
-                Overloaded{[](const typename Z::Z0 _args0) -> Comparison {
-                             return Comparison::e_GT;
-                           },
-                           [&](const typename Z::Zpos _args0) -> Comparison {
+                Overloaded{[&](const typename Z::Zpos _args0) -> Comparison {
                              return Pos::compare(_args.d_a0, _args0.d_a0);
                            },
-                           [](const typename Z::Zneg _args0) -> Comparison {
+                           [](const auto _args0) -> Comparison {
                              return Comparison::e_GT;
                            }},
                 y->v());
           },
           [&](const typename Z::Zneg _args) -> Comparison {
             return std::visit(
-                Overloaded{[](const typename Z::Z0 _args0) -> Comparison {
-                             return Comparison::e_LT;
-                           },
-                           [](const typename Z::Zpos _args0) -> Comparison {
-                             return Comparison::e_LT;
-                           },
-                           [&](const typename Z::Zneg _args0) -> Comparison {
+                Overloaded{[&](const typename Z::Zneg _args0) -> Comparison {
                              return Datatypes::CompOpp(
                                  Pos::compare(_args.d_a0, _args0.d_a0));
+                           },
+                           [](const auto _args0) -> Comparison {
+                             return Comparison::e_LT;
                            }},
                 y->v());
           }},
@@ -534,34 +507,24 @@ __attribute__((pure)) Comparison BinInt::compare(const std::shared_ptr<Z> &x,
 __attribute__((pure)) bool BinInt::leb(const std::shared_ptr<Z> &x,
                                        const std::shared_ptr<Z> &y) {
   switch (BinInt::compare(x, y)) {
-  case Comparison::e_EQ: {
-    return true;
-  }
-  case Comparison::e_LT: {
-    return true;
-  }
   case Comparison::e_GT: {
     return false;
   }
-  default:
-    std::unreachable();
+  default: {
+    return true;
+  }
   }
 }
 
 __attribute__((pure)) bool BinInt::ltb(const std::shared_ptr<Z> &x,
                                        const std::shared_ptr<Z> &y) {
   switch (BinInt::compare(x, y)) {
-  case Comparison::e_EQ: {
-    return false;
-  }
   case Comparison::e_LT: {
     return true;
   }
-  case Comparison::e_GT: {
+  default: {
     return false;
   }
-  default:
-    std::unreachable();
   }
 }
 
@@ -573,32 +536,23 @@ __attribute__((pure)) bool BinInt::eqb(const std::shared_ptr<Z> &x,
             return std::visit(
                 Overloaded{
                     [](const typename Z::Z0 _args0) -> bool { return true; },
-                    [](const typename Z::Zpos _args0) -> bool { return false; },
-                    [](const typename Z::Zneg _args0) -> bool {
-                      return false;
-                    }},
+                    [](const auto _args0) -> bool { return false; }},
                 y->v());
           },
           [&](const typename Z::Zpos _args) -> bool {
             return std::visit(
-                Overloaded{
-                    [](const typename Z::Z0 _args0) -> bool { return false; },
-                    [&](const typename Z::Zpos _args0) -> bool {
-                      return Pos::eqb(_args.d_a0, _args0.d_a0);
-                    },
-                    [](const typename Z::Zneg _args0) -> bool {
-                      return false;
-                    }},
+                Overloaded{[&](const typename Z::Zpos _args0) -> bool {
+                             return Pos::eqb(_args.d_a0, _args0.d_a0);
+                           },
+                           [](const auto _args0) -> bool { return false; }},
                 y->v());
           },
           [&](const typename Z::Zneg _args) -> bool {
             return std::visit(
-                Overloaded{
-                    [](const typename Z::Z0 _args0) -> bool { return false; },
-                    [](const typename Z::Zpos _args0) -> bool { return false; },
-                    [&](const typename Z::Zneg _args0) -> bool {
-                      return Pos::eqb(_args.d_a0, _args0.d_a0);
-                    }},
+                Overloaded{[&](const typename Z::Zneg _args0) -> bool {
+                             return Pos::eqb(_args.d_a0, _args0.d_a0);
+                           },
+                           [](const auto _args0) -> bool { return false; }},
                 y->v());
           }},
       x->v());
@@ -606,12 +560,10 @@ __attribute__((pure)) bool BinInt::eqb(const std::shared_ptr<Z> &x,
 
 __attribute__((pure)) unsigned int BinInt::to_nat(const std::shared_ptr<Z> &z) {
   return std::visit(
-      Overloaded{
-          [](const typename Z::Z0 _args) -> unsigned int { return 0u; },
-          [](const typename Z::Zpos _args) -> unsigned int {
-            return Pos::to_nat(_args.d_a0);
-          },
-          [](const typename Z::Zneg _args) -> unsigned int { return 0u; }},
+      Overloaded{[](const typename Z::Zpos _args) -> unsigned int {
+                   return Pos::to_nat(_args.d_a0);
+                 },
+                 [](const auto _args) -> unsigned int { return 0u; }},
       z->v());
 }
 
@@ -701,15 +653,7 @@ BinInt::div_eucl(std::shared_ptr<Z> a, std::shared_ptr<Z> b) {
                                        return std::make_pair(BinInt::opp(q),
                                                              Z::z0());
                                      },
-                                     [&](const typename Z::Zpos _args1)
-                                         -> std::pair<std::shared_ptr<Z>,
-                                                      std::shared_ptr<Z>> {
-                                       return std::make_pair(
-                                           BinInt::opp(BinInt::add(
-                                               q, Z::zpos(Positive::xh()))),
-                                           BinInt::add(b, r));
-                                     },
-                                     [&](const typename Z::Zneg _args1)
+                                     [&](const auto _args1)
                                          -> std::pair<std::shared_ptr<Z>,
                                                       std::shared_ptr<Z>> {
                                        return std::make_pair(
@@ -742,15 +686,7 @@ BinInt::div_eucl(std::shared_ptr<Z> a, std::shared_ptr<Z> b) {
                                        return std::make_pair(BinInt::opp(q),
                                                              Z::z0());
                                      },
-                                     [&](const typename Z::Zpos _args1)
-                                         -> std::pair<std::shared_ptr<Z>,
-                                                      std::shared_ptr<Z>> {
-                                       return std::make_pair(
-                                           BinInt::opp(BinInt::add(
-                                               q, Z::zpos(Positive::xh()))),
-                                           BinInt::sub(b, r));
-                                     },
-                                     [&](const typename Z::Zneg _args1)
+                                     [&](const auto _args1)
                                          -> std::pair<std::shared_ptr<Z>,
                                                       std::shared_ptr<Z>> {
                                        return std::make_pair(
@@ -1157,20 +1093,12 @@ __attribute__((pure)) bool EpochCellGlyphTraceCase::category_matches_glyph(
     case DialGlyph::e_GLYPH_SIGMA: {
       return true;
     }
-    case DialGlyph::e_GLYPH_ETA: {
-      return false;
-    }
     case DialGlyph::e_GLYPH_SIGMATOTAL: {
       return true;
     }
-    case DialGlyph::e_GLYPH_ETAANNULAR: {
+    default: {
       return false;
     }
-    case DialGlyph::e_GLYPH_EMPTY: {
-      return false;
-    }
-    default:
-      std::unreachable();
     }
   }
   case EclipseCategory::e_EC_PARTIALLUNAR: {
@@ -1178,87 +1106,34 @@ __attribute__((pure)) bool EpochCellGlyphTraceCase::category_matches_glyph(
     case DialGlyph::e_GLYPH_SIGMA: {
       return true;
     }
-    case DialGlyph::e_GLYPH_ETA: {
+    default: {
       return false;
     }
-    case DialGlyph::e_GLYPH_SIGMATOTAL: {
-      return false;
-    }
-    case DialGlyph::e_GLYPH_ETAANNULAR: {
-      return false;
-    }
-    case DialGlyph::e_GLYPH_EMPTY: {
-      return false;
-    }
-    default:
-      std::unreachable();
-    }
-  }
-  case EclipseCategory::e_EC_TOTALSOLAR: {
-    switch (g) {
-    case DialGlyph::e_GLYPH_SIGMA: {
-      return false;
-    }
-    case DialGlyph::e_GLYPH_ETA: {
-      return true;
-    }
-    case DialGlyph::e_GLYPH_SIGMATOTAL: {
-      return false;
-    }
-    case DialGlyph::e_GLYPH_ETAANNULAR: {
-      return false;
-    }
-    case DialGlyph::e_GLYPH_EMPTY: {
-      return false;
-    }
-    default:
-      std::unreachable();
     }
   }
   case EclipseCategory::e_EC_ANNULARSOLAR: {
     switch (g) {
-    case DialGlyph::e_GLYPH_SIGMA: {
-      return false;
-    }
     case DialGlyph::e_GLYPH_ETA: {
       return true;
-    }
-    case DialGlyph::e_GLYPH_SIGMATOTAL: {
-      return false;
     }
     case DialGlyph::e_GLYPH_ETAANNULAR: {
       return true;
     }
-    case DialGlyph::e_GLYPH_EMPTY: {
+    default: {
       return false;
     }
-    default:
-      std::unreachable();
     }
   }
-  case EclipseCategory::e_EC_PARTIALSOLAR: {
+  default: {
     switch (g) {
-    case DialGlyph::e_GLYPH_SIGMA: {
-      return false;
-    }
     case DialGlyph::e_GLYPH_ETA: {
       return true;
     }
-    case DialGlyph::e_GLYPH_SIGMATOTAL: {
+    default: {
       return false;
     }
-    case DialGlyph::e_GLYPH_ETAANNULAR: {
-      return false;
-    }
-    case DialGlyph::e_GLYPH_EMPTY: {
-      return false;
-    }
-    default:
-      std::unreachable();
     }
   }
-  default:
-    std::unreachable();
   }
 }
 
@@ -1303,20 +1178,9 @@ __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::count_total_lunar(
               case EclipseCategory::e_EC_TOTALLUNAR: {
                 return 1u;
               }
-              case EclipseCategory::e_EC_PARTIALLUNAR: {
+              default: {
                 return 0u;
               }
-              case EclipseCategory::e_EC_TOTALSOLAR: {
-                return 0u;
-              }
-              case EclipseCategory::e_EC_ANNULARSOLAR: {
-                return 0u;
-              }
-              case EclipseCategory::e_EC_PARTIALSOLAR: {
-                return 0u;
-              }
-              default:
-                std::unreachable();
               }
             }();
             return (std::move(count_here) + count_total_lunar(_args.d_a1));
@@ -1346,20 +1210,9 @@ EpochCellGlyphTraceCase::count_visible_total_lunar(
                   return 0u;
                 }
               }
-              case EclipseCategory::e_EC_PARTIALLUNAR: {
+              default: {
                 return 0u;
               }
-              case EclipseCategory::e_EC_TOTALSOLAR: {
-                return 0u;
-              }
-              case EclipseCategory::e_EC_ANNULARSOLAR: {
-                return 0u;
-              }
-              case EclipseCategory::e_EC_PARTIALSOLAR: {
-                return 0u;
-              }
-              default:
-                std::unreachable();
               }
             }();
             return (std::move(count_here) +

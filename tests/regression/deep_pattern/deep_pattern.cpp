@@ -214,11 +214,5 @@ __attribute__((pure)) unsigned int DeepPattern::list_deep_match(
 
 std::shared_ptr<DeepPattern::tree>
 DeepPattern::as_pattern_test(std::shared_ptr<DeepPattern::tree> t) {
-  return std::visit(
-      Overloaded{
-          [&](const typename DeepPattern::tree::Leaf _args)
-              -> std::shared_ptr<DeepPattern::tree> { return std::move(t); },
-          [&](const typename DeepPattern::tree::Node _args)
-              -> std::shared_ptr<DeepPattern::tree> { return std::move(t); }},
-      t->v());
+  return std::move(t);
 }

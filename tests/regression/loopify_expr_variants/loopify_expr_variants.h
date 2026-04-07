@@ -1981,9 +1981,6 @@ struct LoopifyExprVariants {
                   const list_expr *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename list_expr::LNil _args) -> void {
-                            _result = 1u;
-                          },
                           [&](const typename list_expr::LCons _args) -> void {
                             _stack.push_back(_Call1{1u});
                             _stack.push_back(_Enter{_args.d_a1.get()});
@@ -1992,8 +1989,7 @@ struct LoopifyExprVariants {
                             _stack.push_back(_Call2{_args.d_a0.get(), 1u});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename list_expr::LReplicate _args)
-                              -> void { _result = 1u; }},
+                          [&](const auto _args) -> void { _result = 1u; }},
                       _self->v());
                 },
                 [&](_Call1 _f) { _result = (_f._s0 + _result); },

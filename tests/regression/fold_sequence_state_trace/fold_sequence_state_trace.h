@@ -83,10 +83,7 @@ public:
   }
 };
 
-struct PeanoNat {
-  __attribute__((pure)) static bool eqb(const unsigned int n,
-                                        const unsigned int m);
-};
+struct PeanoNat {};
 
 struct FoldSequenceStateTraceCase {
   using Point = std::pair<Real, Real>;
@@ -358,10 +355,8 @@ struct FoldSequenceStateTraceCase {
       line_count_after_sample_sequence(initial_state);
   static inline const unsigned int sample_point_count =
       sample_final_state->state_points->length();
-  static inline const bool sample_lines_nonempty =
-      !(PeanoNat::eqb(sample_line_count, 0u));
-  static inline const bool sample_has_expected_lines =
-      PeanoNat::eqb(sample_line_count, 5u);
+  static inline const bool sample_lines_nonempty = !(sample_line_count == 0u);
+  static inline const bool sample_has_expected_lines = sample_line_count == 5u;
 };
 
 #endif // INCLUDED_FOLD_SEQUENCE_STATE_TRACE

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_VALIDATED_VIRTUAL_CROSSMATCH_TRACE
 #define INCLUDED_VALIDATED_VIRTUAL_CROSSMATCH_TRACE
 
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -758,12 +759,6 @@ public:
 };
 
 struct PeanoNat {
-  __attribute__((pure)) static bool leb(const unsigned int n,
-                                        const unsigned int m);
-  __attribute__((pure)) static bool ltb(const unsigned int n,
-                                        const unsigned int m);
-  __attribute__((pure)) static unsigned int max(const unsigned int n,
-                                                const unsigned int m);
   __attribute__((pure)) static bool eq_dec(const unsigned int n,
                                            const unsigned int m);
 };
@@ -1325,20 +1320,9 @@ struct ValidatedVirtualCrossmatchTraceCase {
     case MFIStrength::e_MFI_NEGATIVE: {
       return true;
     }
-    case MFIStrength::e_MFI_WEAKPOSITIVE: {
+    default: {
       return false;
     }
-    case MFIStrength::e_MFI_MODERATE: {
-      return false;
-    }
-    case MFIStrength::e_MFI_STRONG: {
-      return false;
-    }
-    case MFIStrength::e_MFI_VERYSTRONG: {
-      return false;
-    }
-    default:
-      std::unreachable();
     }
   }();
   static inline const unsigned int sample_dedup_count =
@@ -1346,39 +1330,23 @@ struct ValidatedVirtualCrossmatchTraceCase {
   static inline const bool sample_weak_acceptability = []() -> bool {
     switch (full_virtual_crossmatch_safe(validated_luminex, weak_profile,
                                          donor_hla)) {
-    case TransplantAcceptability::e_ACCEPTABLE: {
-      return false;
-    }
     case TransplantAcceptability::e_ACCEPTABLE_WITH_DESENSITIZATION: {
       return true;
     }
-    case TransplantAcceptability::e_UNACCEPTABLE_HIGH_RISK: {
+    default: {
       return false;
     }
-    case TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION: {
-      return false;
-    }
-    default:
-      std::unreachable();
     }
   }();
   static inline const bool sample_strong_absolute_contra = []() -> bool {
     switch (full_virtual_crossmatch_safe(validated_luminex, strong_profile,
                                          donor_hla)) {
-    case TransplantAcceptability::e_ACCEPTABLE: {
-      return false;
-    }
-    case TransplantAcceptability::e_ACCEPTABLE_WITH_DESENSITIZATION: {
-      return false;
-    }
-    case TransplantAcceptability::e_UNACCEPTABLE_HIGH_RISK: {
-      return false;
-    }
     case TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION: {
       return true;
     }
-    default:
-      std::unreachable();
+    default: {
+      return false;
+    }
     }
   }();
   static inline const bool sample_strong_has_complement_fixing_dsa =

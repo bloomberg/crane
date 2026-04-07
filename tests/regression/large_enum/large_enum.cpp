@@ -60,61 +60,20 @@ __attribute__((pure)) bool LargeEnum::is_warm(const LargeEnum::Color c) {
   case Color::e_YELLOW: {
     return true;
   }
-  case Color::e_GREEN: {
-    return false;
-  }
-  case Color::e_BLUE: {
-    return false;
-  }
-  case Color::e_INDIGO: {
-    return false;
-  }
-  case Color::e_VIOLET: {
-    return false;
-  }
-  case Color::e_BLACK: {
-    return false;
-  }
-  case Color::e_WHITE: {
-    return false;
-  }
-  case Color::e_GRAY: {
-    return false;
-  }
   case Color::e_BROWN: {
     return true;
   }
   case Color::e_PINK: {
     return true;
   }
-  default:
-    std::unreachable();
+  default: {
+    return false;
+  }
   }
 }
 
 __attribute__((pure)) bool LargeEnum::is_neutral(const LargeEnum::Color c) {
   switch (c) {
-  case Color::e_RED: {
-    return false;
-  }
-  case Color::e_ORANGE: {
-    return false;
-  }
-  case Color::e_YELLOW: {
-    return false;
-  }
-  case Color::e_GREEN: {
-    return false;
-  }
-  case Color::e_BLUE: {
-    return false;
-  }
-  case Color::e_INDIGO: {
-    return false;
-  }
-  case Color::e_VIOLET: {
-    return false;
-  }
   case Color::e_BLACK: {
     return true;
   }
@@ -124,14 +83,9 @@ __attribute__((pure)) bool LargeEnum::is_neutral(const LargeEnum::Color c) {
   case Color::e_GRAY: {
     return true;
   }
-  case Color::e_BROWN: {
+  default: {
     return false;
   }
-  case Color::e_PINK: {
-    return false;
-  }
-  default:
-    std::unreachable();
   }
 }
 
@@ -181,10 +135,7 @@ LargeEnum::tok_to_nat(const std::shared_ptr<LargeEnum::tok> &t) {
 __attribute__((pure)) bool
 LargeEnum::is_operator(const std::shared_ptr<LargeEnum::tok> &t) {
   return std::visit(
-      Overloaded{[](const typename LargeEnum::tok::TNum _args) -> bool {
-                   return false;
-                 },
-                 [](const typename LargeEnum::tok::TPlus _args) -> bool {
+      Overloaded{[](const typename LargeEnum::tok::TPlus _args) -> bool {
                    return true;
                  },
                  [](const typename LargeEnum::tok::TMinus _args) -> bool {
@@ -196,26 +147,6 @@ LargeEnum::is_operator(const std::shared_ptr<LargeEnum::tok> &t) {
                  [](const typename LargeEnum::tok::TSlash _args) -> bool {
                    return true;
                  },
-                 [](const typename LargeEnum::tok::TLParen _args) -> bool {
-                   return false;
-                 },
-                 [](const typename LargeEnum::tok::TRParen _args) -> bool {
-                   return false;
-                 },
-                 [](const typename LargeEnum::tok::TEq _args) -> bool {
-                   return false;
-                 },
-                 [](const typename LargeEnum::tok::TBang _args) -> bool {
-                   return false;
-                 },
-                 [](const typename LargeEnum::tok::TSemicolon _args) -> bool {
-                   return false;
-                 },
-                 [](const typename LargeEnum::tok::TIdent _args) -> bool {
-                   return false;
-                 },
-                 [](const typename LargeEnum::tok::TEOF _args) -> bool {
-                   return false;
-                 }},
+                 [](const auto _args) -> bool { return false; }},
       t->v());
 }

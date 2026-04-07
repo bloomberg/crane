@@ -67,23 +67,12 @@ struct OpcodeOperandDecode {
                                                   const unsigned int _x);
   static inline const unsigned int t = []() -> unsigned int {
     switch (decode(224u, 0u)) {
-    case Instruction::e_NOP_: {
-      return 0u;
-    }
     case Instruction::e_WRM_: {
       return 1u;
     }
-    case Instruction::e_WRR_: {
+    default: {
       return 0u;
     }
-    case Instruction::e_RDM_: {
-      return 0u;
-    }
-    case Instruction::e_DCL_: {
-      return 0u;
-    }
-    default:
-      std::unreachable();
     }
   }();
 };

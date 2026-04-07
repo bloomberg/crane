@@ -251,13 +251,10 @@ std::shared_ptr<Pos::mask> Pos::sub_mask(const std::shared_ptr<Positive> &x,
           [&](const typename Positive::XH _args) -> std::shared_ptr<Pos::mask> {
             return std::visit(
                 Overloaded{
-                    [](const typename Positive::XI _args0)
-                        -> std::shared_ptr<Pos::mask> { return mask::isneg(); },
-                    [](const typename Positive::XO _args0)
-                        -> std::shared_ptr<Pos::mask> { return mask::isneg(); },
                     [](const typename Positive::XH _args0)
-                        -> std::shared_ptr<Pos::mask> {
-                      return mask::isnul();
+                        -> std::shared_ptr<Pos::mask> { return mask::isnul(); },
+                    [](const auto _args0) -> std::shared_ptr<Pos::mask> {
+                      return mask::isneg();
                     }},
                 y->v());
           }},
@@ -363,18 +360,12 @@ Pos::compare_cont(const Comparison r, const std::shared_ptr<Positive> &x,
                 y->v());
           },
           [&](const typename Positive::XH _args) -> Comparison {
-            return std::visit(
-                Overloaded{
-                    [](const typename Positive::XI _args0) -> Comparison {
-                      return Comparison::e_LT;
-                    },
-                    [](const typename Positive::XO _args0) -> Comparison {
-                      return Comparison::e_LT;
-                    },
-                    [&](const typename Positive::XH _args0) -> Comparison {
-                      return r;
-                    }},
-                y->v());
+            return std::visit(Overloaded{[&](const typename Positive::XH _args0)
+                                             -> Comparison { return r; },
+                                         [](const auto _args0) -> Comparison {
+                                           return Comparison::e_LT;
+                                         }},
+                              y->v());
           }},
       x->v());
 }
@@ -568,14 +559,13 @@ std::shared_ptr<N> BinNat::sub(std::shared_ptr<N> n,
                       [&](const typename N::Npos _args0) -> std::shared_ptr<N> {
                         return std::visit(
                             Overloaded{
-                                [](const typename Pos::mask::IsNul _args1)
-                                    -> std::shared_ptr<N> { return N::n0(); },
                                 [](const typename Pos::mask::IsPos _args1)
                                     -> std::shared_ptr<N> {
                                   return N::npos(_args1.d_a0);
                                 },
-                                [](const typename Pos::mask::IsNeg _args1)
-                                    -> std::shared_ptr<N> { return N::n0(); }},
+                                [](const auto _args1) -> std::shared_ptr<N> {
+                                  return N::n0();
+                                }},
                             Pos::sub_mask(_args.d_a0, _args0.d_a0)->v());
                       }},
                   m->v());
@@ -905,28 +895,22 @@ __attribute__((pure)) Comparison BinInt::compare(const std::shared_ptr<Z> &x,
           },
           [&](const typename Z::Zpos _args) -> Comparison {
             return std::visit(
-                Overloaded{[](const typename Z::Z0 _args0) -> Comparison {
-                             return Comparison::e_GT;
-                           },
-                           [&](const typename Z::Zpos _args0) -> Comparison {
+                Overloaded{[&](const typename Z::Zpos _args0) -> Comparison {
                              return Pos::compare(_args.d_a0, _args0.d_a0);
                            },
-                           [](const typename Z::Zneg _args0) -> Comparison {
+                           [](const auto _args0) -> Comparison {
                              return Comparison::e_GT;
                            }},
                 y->v());
           },
           [&](const typename Z::Zneg _args) -> Comparison {
             return std::visit(
-                Overloaded{[](const typename Z::Z0 _args0) -> Comparison {
-                             return Comparison::e_LT;
-                           },
-                           [](const typename Z::Zpos _args0) -> Comparison {
-                             return Comparison::e_LT;
-                           },
-                           [&](const typename Z::Zneg _args0) -> Comparison {
+                Overloaded{[&](const typename Z::Zneg _args0) -> Comparison {
                              return Datatypes::CompOpp(
                                  Pos::compare(_args.d_a0, _args0.d_a0));
+                           },
+                           [](const auto _args0) -> Comparison {
+                             return Comparison::e_LT;
                            }},
                 y->v());
           }},
@@ -935,12 +919,10 @@ __attribute__((pure)) Comparison BinInt::compare(const std::shared_ptr<Z> &x,
 
 __attribute__((pure)) unsigned int BinInt::to_nat(const std::shared_ptr<Z> &z) {
   return std::visit(
-      Overloaded{
-          [](const typename Z::Z0 _args) -> unsigned int { return 0u; },
-          [](const typename Z::Zpos _args) -> unsigned int {
-            return Pos::to_nat(_args.d_a0);
-          },
-          [](const typename Z::Zneg _args) -> unsigned int { return 0u; }},
+      Overloaded{[](const typename Z::Zpos _args) -> unsigned int {
+                   return Pos::to_nat(_args.d_a0);
+                 },
+                 [](const auto _args) -> unsigned int { return 0u; }},
       z->v());
 }
 
@@ -961,17 +943,12 @@ std::shared_ptr<Z> BinInt::abs(const std::shared_ptr<Z> &z) {
 std::shared_ptr<N> BinaryNums::n_max(std::shared_ptr<N> a,
                                      std::shared_ptr<N> b) {
   switch (BinNat::compare(a, b)) {
-  case Comparison::e_EQ: {
-    return std::move(a);
-  }
   case Comparison::e_LT: {
     return std::move(b);
   }
-  case Comparison::e_GT: {
+  default: {
     return std::move(a);
   }
-  default:
-    std::unreachable();
   }
 }
 

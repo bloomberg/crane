@@ -20,14 +20,7 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-struct PeanoNat {
-  __attribute__((pure)) static bool eqb(const unsigned int n,
-                                        const unsigned int m);
-  __attribute__((pure)) static bool leb(const unsigned int n,
-                                        const unsigned int m);
-  __attribute__((pure)) static bool ltb(const unsigned int n,
-                                        const unsigned int m);
-};
+struct PeanoNat {};
 
 template <typename K, typename V> struct SkipList {
   std::shared_ptr<SkipNode<K, V>> slHead;
@@ -83,7 +76,7 @@ template <typename K, typename V> struct SkipList {
         SkipList<int, int>::template linkNode<K, V>(
             path, this->SkipList::slHead, newN);
         [&]() -> std::monostate {
-          if (PeanoNat::ltb(curLvl, newLevel)) {
+          if (curLvl < newLevel) {
             this->SkipList::slLevel->write(newLevel);
             return std::monostate{};
           } else {
@@ -100,7 +93,7 @@ template <typename K, typename V> struct SkipList {
       SkipList<int, int>::template linkNode<K, V>(path, this->SkipList::slHead,
                                                   newN);
       [&]() -> std::monostate {
-        if (PeanoNat::ltb(curLvl, newLevel)) {
+        if (curLvl < newLevel) {
           this->SkipList::slLevel->write(newLevel);
           return std::monostate{};
         } else {
@@ -166,7 +159,7 @@ template <typename K, typename V> struct SkipList {
 
   bool isEmpty() const {
     unsigned int len = this->SkipList::slLength->read();
-    return PeanoNat::eqb(len, 0u);
+    return len == 0u;
   }
 
   unsigned int length() const { return this->SkipList::slLength->read(); }
@@ -226,7 +219,7 @@ template <typename K, typename V> struct SkipList {
         SkipList<int, int>::template linkNode<K, V>(
             path, this->SkipList::slHead, newN);
         [&]() -> std::monostate {
-          if (PeanoNat::ltb(curLvl, newLevel)) {
+          if (curLvl < newLevel) {
             this->SkipList::slLevel->write(newLevel);
             return std::monostate{};
           } else {
@@ -243,7 +236,7 @@ template <typename K, typename V> struct SkipList {
       SkipList<int, int>::template linkNode<K, V>(path, this->SkipList::slHead,
                                                   newN);
       [&]() -> std::monostate {
-        if (PeanoNat::ltb(curLvl, newLevel)) {
+        if (curLvl < newLevel) {
           this->SkipList::slLevel->write(newLevel);
           return std::monostate{};
         } else {
@@ -276,7 +269,7 @@ template <typename K, typename V> struct SkipList {
         SkipList<int, int>::template linkNode<K, V>(
             path, this->SkipList::slHead, newN);
         [&]() -> std::monostate {
-          if (PeanoNat::ltb(curLvl, newLevel)) {
+          if (curLvl < newLevel) {
             this->SkipList::slLevel->write(newLevel);
             return std::monostate{};
           } else {
@@ -293,7 +286,7 @@ template <typename K, typename V> struct SkipList {
       SkipList<int, int>::template linkNode<K, V>(path, this->SkipList::slHead,
                                                   newN);
       [&]() -> std::monostate {
-        if (PeanoNat::ltb(curLvl, newLevel)) {
+        if (curLvl < newLevel) {
           this->SkipList::slLevel->write(newLevel);
           return std::monostate{};
         } else {
@@ -413,7 +406,7 @@ template <typename K, typename V> struct SkipList {
     } else {
       unsigned int level_ = level - 1;
       path.set(level, head);
-      if (PeanoNat::leb(maxLevel, level_)) {
+      if (maxLevel <= level_) {
         SkipList<int, int>::template extendPath_aux<T1, T2>(path, head, level_,
                                                             maxLevel);
         return;
@@ -428,7 +421,7 @@ template <typename K, typename V> struct SkipList {
                          const std::shared_ptr<SkipNode<T1, T2>> head,
                          const unsigned int needed,
                          const unsigned int currentMax) {
-    if (PeanoNat::leb(needed, (currentMax + 1))) {
+    if (needed <= (currentMax + 1)) {
       return;
     } else {
       SkipList<int, int>::template extendPath_aux<T1, T2>(
@@ -546,7 +539,7 @@ template <typename K, typename V> struct SkipList {
       [&]() -> std::monostate {
         if (headNext.has_value()) {
           std::shared_ptr<SkipNode<T1, T2>> _x = *headNext;
-          if (PeanoNat::leb(lvl, nodeLevel)) {
+          if (lvl <= nodeLevel) {
             std::optional<std::shared_ptr<SkipNode<T1, T2>>> nodeNext =
                 ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
                     node->forward[lvl]));

@@ -1,45 +1,11 @@
 #include <validated_virtual_crossmatch_trace.h>
 
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-__attribute__((pure)) bool PeanoNat::leb(const unsigned int n,
-                                         const unsigned int m) {
-  if (n <= 0) {
-    return true;
-  } else {
-    unsigned int n_ = n - 1;
-    if (m <= 0) {
-      return false;
-    } else {
-      unsigned int m_ = m - 1;
-      return PeanoNat::leb(n_, m_);
-    }
-  }
-}
-
-__attribute__((pure)) bool PeanoNat::ltb(const unsigned int n,
-                                         const unsigned int m) {
-  return PeanoNat::leb((n + 1), m);
-}
-
-__attribute__((pure)) unsigned int PeanoNat::max(const unsigned int n,
-                                                 const unsigned int m) {
-  if (n <= 0) {
-    return std::move(m);
-  } else {
-    unsigned int n_ = n - 1;
-    if (m <= 0) {
-      return n;
-    } else {
-      unsigned int m_ = m - 1;
-      return (PeanoNat::max(n_, m_) + 1);
-    }
-  }
-}
 
 __attribute__((pure)) bool PeanoNat::eq_dec(const unsigned int n,
                                             const unsigned int m) {
@@ -76,44 +42,29 @@ ValidatedVirtualCrossmatchTraceCase::hla_locus_eq_dec(
     case HLALocus::e_LOCUS_A: {
       return true;
     }
-    case HLALocus::e_LOCUS_B: {
+    default: {
       return false;
     }
-    case HLALocus::e_LOCUS_DR: {
-      return false;
-    }
-    default:
-      std::unreachable();
     }
   }
   case HLALocus::e_LOCUS_B: {
     switch (y) {
-    case HLALocus::e_LOCUS_A: {
-      return false;
-    }
     case HLALocus::e_LOCUS_B: {
       return true;
     }
-    case HLALocus::e_LOCUS_DR: {
+    default: {
       return false;
     }
-    default:
-      std::unreachable();
     }
   }
   case HLALocus::e_LOCUS_DR: {
     switch (y) {
-    case HLALocus::e_LOCUS_A: {
-      return false;
-    }
-    case HLALocus::e_LOCUS_B: {
-      return false;
-    }
     case HLALocus::e_LOCUS_DR: {
       return true;
     }
-    default:
-      std::unreachable();
+    default: {
+      return false;
+    }
     }
   }
   default:
@@ -375,9 +326,9 @@ __attribute__((pure)) bool
 ValidatedVirtualCrossmatchTraceCase::mfi_config_valid(
     const std::shared_ptr<
         ValidatedVirtualCrossmatchTraceCase::MFIThresholdConfig> &cfg) {
-  return ((PeanoNat::ltb(cfg->mfi_cfg_negative, cfg->mfi_cfg_weak_positive) &&
-           PeanoNat::ltb(cfg->mfi_cfg_weak_positive, cfg->mfi_cfg_moderate)) &&
-          PeanoNat::ltb(cfg->mfi_cfg_moderate, cfg->mfi_cfg_strong));
+  return ((cfg->mfi_cfg_negative < cfg->mfi_cfg_weak_positive &&
+           cfg->mfi_cfg_weak_positive < cfg->mfi_cfg_moderate) &&
+          cfg->mfi_cfg_moderate < cfg->mfi_cfg_strong);
 }
 
 __attribute__((pure)) ValidatedVirtualCrossmatchTraceCase::MFIStrength
@@ -385,16 +336,16 @@ ValidatedVirtualCrossmatchTraceCase::classify_mfi_with_config(
     const std::shared_ptr<
         ValidatedVirtualCrossmatchTraceCase::MFIThresholdConfig> &cfg,
     const unsigned int mfi) {
-  if (PeanoNat::leb(mfi, cfg->mfi_cfg_negative)) {
+  if (mfi <= cfg->mfi_cfg_negative) {
     return MFIStrength::e_MFI_NEGATIVE;
   } else {
-    if (PeanoNat::leb(mfi, cfg->mfi_cfg_weak_positive)) {
+    if (mfi <= cfg->mfi_cfg_weak_positive) {
       return MFIStrength::e_MFI_WEAKPOSITIVE;
     } else {
-      if (PeanoNat::leb(mfi, cfg->mfi_cfg_moderate)) {
+      if (mfi <= cfg->mfi_cfg_moderate) {
         return MFIStrength::e_MFI_MODERATE;
       } else {
-        if (PeanoNat::leb(mfi, cfg->mfi_cfg_strong)) {
+        if (mfi <= cfg->mfi_cfg_strong) {
           return MFIStrength::e_MFI_STRONG;
         } else {
           return MFIStrength::e_MFI_VERYSTRONG;
@@ -429,7 +380,7 @@ ValidatedVirtualCrossmatchTraceCase::max_dsa_mfi(
                 [&](const std::shared_ptr<
                     ValidatedVirtualCrossmatchTraceCase::HLAEpitope> &_x0)
                     -> bool { return epitope_eqb(ab->ab_epitope, _x0); })) {
-          return PeanoNat::max(acc, ab->ab_mfi);
+          return std::max(acc, ab->ab_mfi);
         } else {
           return acc;
         }
@@ -449,12 +400,12 @@ ValidatedVirtualCrossmatchTraceCase::has_complement_fixing_dsa(
   return recipient->vxm_epitope_abs->existsb(
       [=](std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody>
               ab) mutable {
-        return ((ab->ab_complement_fixing &&
-                 PeanoNat::ltb(mfi_negative_threshold, ab->ab_mfi)) &&
-                donor_epitopes->existsb(
-                    [&](const std::shared_ptr<
-                        ValidatedVirtualCrossmatchTraceCase::HLAEpitope> &_x0)
-                        -> bool { return epitope_eqb(ab->ab_epitope, _x0); }));
+        return (
+            (ab->ab_complement_fixing && mfi_negative_threshold < ab->ab_mfi) &&
+            donor_epitopes->existsb(
+                [&](const std::shared_ptr<
+                    ValidatedVirtualCrossmatchTraceCase::HLAEpitope> &_x0)
+                    -> bool { return epitope_eqb(ab->ab_epitope, _x0); }));
       });
 }
 
@@ -477,14 +428,9 @@ ValidatedVirtualCrossmatchTraceCase::virtual_crossmatch_safe(
   case MFIStrength::e_MFI_MODERATE: {
     return VirtualXMResult::e_VXM_POSITIVE;
   }
-  case MFIStrength::e_MFI_STRONG: {
+  default: {
     return VirtualXMResult::e_VXM_STRONGPOSITIVE;
   }
-  case MFIStrength::e_MFI_VERYSTRONG: {
-    return VirtualXMResult::e_VXM_STRONGPOSITIVE;
-  }
-  default:
-    std::unreachable();
   }
 }
 
@@ -536,40 +482,26 @@ __attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::safe_to_release(
   switch (xm->xmu_result) {
   case CrossmatchResult::e_XM_COMPATIBLE: {
     switch (xm->xmu_confidence) {
-    case TestConfidence::e_CONFIDENCE_HIGH: {
-      return true;
-    }
-    case TestConfidence::e_CONFIDENCE_MEDIUM: {
-      return true;
-    }
     case TestConfidence::e_CONFIDENCE_LOW: {
       return false;
     }
-    default:
-      std::unreachable();
+    default: {
+      return true;
+    }
     }
   }
-  case CrossmatchResult::e_XM_INCOMPATIBLE: {
+  default: {
     return false;
   }
-  case CrossmatchResult::e_XM_INCONCLUSIVE: {
-    return false;
-  }
-  case CrossmatchResult::e_XM_NOT_DONE: {
-    return false;
-  }
-  default:
-    std::unreachable();
   }
 }
 
 __attribute__((pure)) bool
 ValidatedVirtualCrossmatchTraceCase::order_sample_valid(
     const unsigned int collection_time, const unsigned int current_time) {
-  return PeanoNat::leb((((current_time - collection_time) > current_time
-                             ? 0
-                             : (current_time - collection_time))),
-                       (72u * 3600u));
+  return (((current_time - collection_time) > current_time
+               ? 0
+               : (current_time - collection_time))) <= (72u * 3600u);
 }
 
 __attribute__((pure)) bool
@@ -620,14 +552,9 @@ __attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::risk_acceptable(
   case TransplantAcceptability::e_ACCEPTABLE_WITH_DESENSITIZATION: {
     return true;
   }
-  case TransplantAcceptability::e_UNACCEPTABLE_HIGH_RISK: {
+  default: {
     return false;
   }
-  case TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION: {
-    return false;
-  }
-  default:
-    std::unreachable();
   }
 }
 

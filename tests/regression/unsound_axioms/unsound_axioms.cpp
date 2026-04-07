@@ -1,6 +1,5 @@
 #include <unsound_axioms.h>
 
-#include <any>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -47,9 +46,7 @@ UnsoundAxioms::use_impossible(const std::monostate _x) {
 }
 
 __attribute__((pure)) unsigned int
-UnsoundAxioms::from_false(const std::shared_ptr<UnsoundAxioms::Rec> &r) {
-  std::any _x = r->f1;
-  std::any _x0 = r->f2;
+UnsoundAxioms::from_false(const std::shared_ptr<UnsoundAxioms::Rec> &_x) {
   throw std::logic_error("absurd case");
 }
 

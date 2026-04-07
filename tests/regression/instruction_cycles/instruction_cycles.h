@@ -555,9 +555,6 @@ struct InstructionCycles {
     cycles_sum(const std::shared_ptr<state5> &s) const {
       return std::visit(
           Overloaded{
-              [](const typename instruction5::NOP5 _args) -> unsigned int {
-                return 8u;
-              },
               [&](const typename instruction5::JCN5 _args) -> unsigned int {
                 if ((8u ? _args.d_a0 / 8u : 0) == 1u) {
                   return 16u;
@@ -571,9 +568,7 @@ struct InstructionCycles {
                   }
                 }
               },
-              [](const typename instruction5::INC5 _args) -> unsigned int {
-                return 8u;
-              }},
+              [](const auto _args) -> unsigned int { return 8u; }},
           this->v());
     }
   };
@@ -627,25 +622,13 @@ struct InstructionCycles {
   enum class Instruction6 { e_NOP6 };
 
   template <typename T1>
-  static T1 instruction6_rect(const T1 f, const Instruction6 i) {
-    switch (i) {
-    case Instruction6::e_NOP6: {
-      return f;
-    }
-    default:
-      std::unreachable();
-    }
+  static T1 instruction6_rect(const T1 f, const Instruction6 _x) {
+    return f;
   }
 
   template <typename T1>
-  static T1 instruction6_rec(const T1 f, const Instruction6 i) {
-    switch (i) {
-    case Instruction6::e_NOP6: {
-      return f;
-    }
-    default:
-      std::unreachable();
-    }
+  static T1 instruction6_rec(const T1 f, const Instruction6 _x) {
+    return f;
   }
 
   struct state6 {
@@ -675,25 +658,13 @@ struct InstructionCycles {
   enum class Instruction7 { e_NOP7 };
 
   template <typename T1>
-  static T1 instruction7_rect(const T1 f, const Instruction7 i) {
-    switch (i) {
-    case Instruction7::e_NOP7: {
-      return f;
-    }
-    default:
-      std::unreachable();
-    }
+  static T1 instruction7_rect(const T1 f, const Instruction7 _x) {
+    return f;
   }
 
   template <typename T1>
-  static T1 instruction7_rec(const T1 f, const Instruction7 i) {
-    switch (i) {
-    case Instruction7::e_NOP7: {
-      return f;
-    }
-    default:
-      std::unreachable();
-    }
+  static T1 instruction7_rec(const T1 f, const Instruction7 _x) {
+    return f;
   }
 
   struct state7 {

@@ -75,17 +75,12 @@ ValidatedPumpDeliveryTraceCase::peak_time(
     const ValidatedPumpDeliveryTraceCase::InsulinType itype,
     const unsigned int _x) {
   switch (itype) {
-  case InsulinType::e_INSULIN_HUMALOG: {
-    return 75u;
-  }
   case InsulinType::e_INSULIN_ASPART: {
     return 70u;
   }
-  case InsulinType::e_INSULIN_LISPRO: {
+  default: {
     return 75u;
   }
-  default:
-    std::unreachable();
   }
 }
 

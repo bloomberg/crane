@@ -39,31 +39,21 @@ __attribute__((pure)) unsigned int Comparison::max_nat(const unsigned int a,
   case Cmp::e_CMPLT: {
     return std::move(b);
   }
-  case Cmp::e_CMPEQ: {
+  default: {
     return std::move(a);
   }
-  case Cmp::e_CMPGT: {
-    return std::move(a);
-  }
-  default:
-    std::unreachable();
   }
 }
 
 __attribute__((pure)) unsigned int Comparison::min_nat(const unsigned int a,
                                                        const unsigned int b) {
   switch (compare_nats(a, b)) {
-  case Cmp::e_CMPLT: {
-    return std::move(a);
-  }
-  case Cmp::e_CMPEQ: {
-    return std::move(a);
-  }
   case Cmp::e_CMPGT: {
     return std::move(b);
   }
-  default:
-    std::unreachable();
+  default: {
+    return std::move(a);
+  }
   }
 }
 
@@ -74,38 +64,16 @@ __attribute__((pure)) unsigned int Comparison::clamp(const unsigned int val,
   case Cmp::e_CMPLT: {
     return std::move(lo);
   }
-  case Cmp::e_CMPEQ: {
+  default: {
     switch (compare_nats(val, hi)) {
-    case Cmp::e_CMPLT: {
-      return std::move(val);
-    }
-    case Cmp::e_CMPEQ: {
-      return std::move(val);
-    }
     case Cmp::e_CMPGT: {
       return std::move(hi);
     }
-    default:
-      std::unreachable();
-    }
-  }
-  case Cmp::e_CMPGT: {
-    switch (compare_nats(val, hi)) {
-    case Cmp::e_CMPLT: {
+    default: {
       return std::move(val);
     }
-    case Cmp::e_CMPEQ: {
-      return std::move(val);
-    }
-    case Cmp::e_CMPGT: {
-      return std::move(hi);
-    }
-    default:
-      std::unreachable();
     }
   }
-  default:
-    std::unreachable();
   }
 }
 
