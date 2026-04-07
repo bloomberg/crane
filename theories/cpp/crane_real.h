@@ -28,23 +28,23 @@ public:
 
   // Math (free functions for clean mapping syntax)
   friend Real r_inv(Real x) { return Real(1.0L / x.v_); }
-  friend Real r_abs(Real x) { return Real(std::fabsl(x.v_)); }
-  friend Real r_sqrt(Real x) { return Real(std::sqrtl(x.v_)); }
+  friend Real r_abs(Real x) { return Real(std::fabs(x.v_)); }
+  friend Real r_sqrt(Real x) { return Real(std::sqrt(x.v_)); }
   friend Real r_sqr(Real x) { return Real(x.v_ * x.v_); }
-  friend Real r_sin(Real x) { return Real(std::sinl(x.v_)); }
-  friend Real r_cos(Real x) { return Real(std::cosl(x.v_)); }
-  friend Real r_asin(Real x) { return Real(std::asinl(x.v_)); }
-  friend Real r_acos(Real x) { return Real(std::acosl(x.v_)); }
-  friend Real r_atan(Real x) { return Real(std::atanl(x.v_)); }
-  friend Real r_tan(Real x) { return Real(std::tanl(x.v_)); }
+  friend Real r_sin(Real x) { return Real(std::sin(x.v_)); }
+  friend Real r_cos(Real x) { return Real(std::cos(x.v_)); }
+  friend Real r_asin(Real x) { return Real(std::asin(x.v_)); }
+  friend Real r_acos(Real x) { return Real(std::acos(x.v_)); }
+  friend Real r_atan(Real x) { return Real(std::atan(x.v_)); }
+  friend Real r_tan(Real x) { return Real(std::tan(x.v_)); }
   friend Real r_max(Real a, Real b) { return a.v_ >= b.v_ ? a : b; }
   friend Real r_min(Real a, Real b) { return a.v_ <= b.v_ ? a : b; }
   friend Real r_pow(Real b, unsigned int e) {
-    return Real(std::powl(b.v_, static_cast<long double>(e)));
+    return Real(std::pow(b.v_, static_cast<long double>(e)));
   }
 
   // Constants & conversions
-  static Real pi() { return Real(std::acosl(-1.0L)); }
+  static Real pi() { return Real(std::acos(-1.0L)); }
   static Real from_nat(unsigned int n) { return Real(static_cast<long double>(n)); }
   static Real from_z(int64_t z) { return Real(static_cast<long double>(z)); }
   static Real from_pos(unsigned int p) { return Real(static_cast<long double>(p)); }
