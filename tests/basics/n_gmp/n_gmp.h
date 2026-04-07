@@ -18,8 +18,6 @@ struct Pos {
                                                    const mpz_class y);
 };
 
-struct BinNat {};
-
 struct NGMPTest {
   __attribute__((pure)) static mpz_class add_test(const mpz_class _x0,
                                                   const mpz_class _x1);

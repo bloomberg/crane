@@ -13,8 +13,6 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-struct BinInt {};
-
 struct ZAbsMin {
   /// In Rocq, Z.abs is total: Z.abs z is always non-negative.
   /// ZInt maps Z.abs to std::abs(%a0) (from <cstdlib>).

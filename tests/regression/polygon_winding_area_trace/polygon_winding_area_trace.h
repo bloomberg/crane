@@ -106,8 +106,6 @@ public:
   }
 };
 
-struct PeanoNat {};
-
 struct Pos {
   template <typename T1, MapsTo<T1, T1> F0>
   static T1 iter(F0 &&f, const T1 x, const unsigned int n) {

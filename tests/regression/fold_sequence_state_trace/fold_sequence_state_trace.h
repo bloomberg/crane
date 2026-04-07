@@ -83,8 +83,6 @@ public:
   }
 };
 
-struct PeanoNat {};
-
 struct FoldSequenceStateTraceCase {
   using Point = std::pair<Real, Real>;
 

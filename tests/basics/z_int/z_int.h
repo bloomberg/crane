@@ -13,8 +13,6 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-struct BinInt {};
-
 struct ZIntTest {
   __attribute__((pure)) static int64_t add_test(const int64_t _x0,
                                                 const int64_t _x1);

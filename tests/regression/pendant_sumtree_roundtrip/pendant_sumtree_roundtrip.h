@@ -209,8 +209,6 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
-struct PeanoNat {};
-
 template <typename t_A> struct T0 {
   // TYPES
   struct Nil {};

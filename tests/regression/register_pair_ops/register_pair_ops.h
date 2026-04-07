@@ -104,8 +104,6 @@ public:
   }
 };
 
-struct PeanoNat {};
-
 struct ListDef {
   static std::shared_ptr<List<unsigned int>> seq(const unsigned int start,
                                                  const unsigned int len);

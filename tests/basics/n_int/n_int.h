@@ -17,8 +17,6 @@ struct Pos {
                                                       const unsigned int y);
 };
 
-struct BinNat {};
-
 struct NIntTest {
   __attribute__((pure)) static unsigned int add_test(const unsigned int _x0,
                                                      const unsigned int _x1);

@@ -32,7 +32,6 @@ concept MapsTo = requires(F &f, Args &...a) {
   } -> convertible_to<R>;
 };
 
-struct PeanoNat {};
 template <typename K, typename V> struct SkipList {
   bsl::shared_ptr<SkipNode<K, V>> slHead;
   unsigned int slMaxLevel;

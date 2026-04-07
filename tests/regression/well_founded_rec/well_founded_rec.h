@@ -70,8 +70,6 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
-struct PeanoNat {};
-
 struct WellFoundedRec {
   static std::shared_ptr<List<unsigned int>>
   countdown_acc(const unsigned int n);

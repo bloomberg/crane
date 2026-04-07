@@ -72,8 +72,6 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
-struct BinInt {};
-
 struct NumeralStress {
   /// 1. Numeral inside option
   static inline const std::optional<unsigned int> opt_100 =

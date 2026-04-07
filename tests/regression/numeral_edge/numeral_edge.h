@@ -701,10 +701,6 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 };
 
-struct BinNat {};
-
-struct BinInt {};
-
 struct Uint1 {
   // TYPES
   struct UIntDecimal {

@@ -164,8 +164,6 @@ public:
   }
 };
 
-struct PeanoNat {};
-
 struct Positive {
   // TYPES
   struct XI {

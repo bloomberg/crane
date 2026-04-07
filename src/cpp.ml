@@ -942,6 +942,9 @@ let rec pp_structure_elem ~is_header f = function
               ++ record_fields_pp
               ++ record_methods_pp
               ++ body
+            else if Pp.ismt body && Pp.ismt record_fields_pp
+                    && Pp.ismt record_methods_pp then
+              mt ()
             else
               let struct_def =
                 template_decl
@@ -1495,13 +1498,16 @@ let do_struct_with_decl_tracking ~is_header f s =
               else
                 non_colliding_pp ++ cut2 () ++ colliding_pp
             in
-            str "struct "
-            ++ str parent_name
-            ++ str " {"
-            ++ fnl ()
-            ++ body
-            ++ fnl ()
-            ++ str "};"
+            if Pp.ismt body then
+              mt ()
+            else
+              str "struct "
+              ++ str parent_name
+              ++ str " {"
+              ++ fnl ()
+              ++ body
+              ++ fnl ()
+              ++ str "};"
           else
             let non_colliding_pp, colliding_pp =
               with_render_ctx
