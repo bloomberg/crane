@@ -63,6 +63,15 @@ int main() {
     std::cout << "Test 4 (delay_ret 5 42): PASSED" << std::endl;
   }
 
+  // Test 5: spin and forever are infinite loops (itree _ unit).
+  // Verify they compile and are callable (but don't call them — they never
+  // return).  A game loop or server would use this pattern.
+  {
+    (void)&LoopifyItreeSeq::spin;
+    (void)&LoopifyItreeSeq::forever;
+    std::cout << "Test 5 (spin/forever compile): PASSED" << std::endl;
+  }
+
   if (testStatus == 0) {
     std::cout << "\nAll loopify_itree_seq tests passed!" << std::endl;
   } else {

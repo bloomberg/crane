@@ -27,7 +27,6 @@ std::shared_ptr<DeepDestruct::mylist<unsigned int>> DeepDestruct::build_aux(
         unsigned int _next_n = std::move(n_);
         _loop_acc = std::move(_next_acc);
         _loop_n = std::move(_next_n);
-        continue;
       }
     }
   }

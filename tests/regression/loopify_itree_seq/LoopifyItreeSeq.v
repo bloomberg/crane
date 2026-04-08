@@ -46,6 +46,16 @@ CoFixpoint delay_ret (n : nat) (v : nat) : itree pureE nat :=
   | S n' => Tau (delay_ret n' v)
   end.
 
+(** Infinite loop — a program that runs forever, like a game or server.
+    Since Tau is erased in sequential mode, this should become
+    [void spin() { while (true) {} }]. *)
+CoFixpoint spin : itree pureE unit := Tau spin.
+
+(** Infinite loop with evolving state. Should become
+    [void forever(n) { while (true) { n = n + 1; } }]. *)
+CoFixpoint forever (n : nat) : itree pureE unit :=
+  Tau (forever (S n)).
+
 Definition test_count_5 := count_down 5.
 Definition test_sum_10 := sum_to 10.
 Definition test_clist_4 := countdown_list 4.

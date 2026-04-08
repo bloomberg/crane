@@ -82,6 +82,8 @@ struct LoopifyItreeSeq {
   static std::shared_ptr<List<unsigned int>>
   countdown_list(const unsigned int n);
   static unsigned int delay_ret(const unsigned int n, const unsigned int v);
+  static void spin();
+  static void forever(const unsigned int n);
   static unsigned int test_count_5();
   static unsigned int test_sum_10();
   static std::shared_ptr<List<unsigned int>> test_clist_4();

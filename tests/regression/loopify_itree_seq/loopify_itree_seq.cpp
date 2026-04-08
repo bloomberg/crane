@@ -29,7 +29,6 @@ unsigned int LoopifyItreeSeq::count_down(const unsigned int n) {
           unsigned int _next_k = k_;
           _loop_acc = std::move(_next_acc);
           _loop_k = std::move(_next_k);
-          continue;
         }
       }
     }
@@ -59,7 +58,6 @@ unsigned int LoopifyItreeSeq::sum_to(const unsigned int n) {
           unsigned int _next_k = k_;
           _loop_acc = std::move(_next_acc);
           _loop_k = std::move(_next_k);
-          continue;
         }
       }
     }
@@ -122,11 +120,26 @@ unsigned int LoopifyItreeSeq::delay_ret(const unsigned int n,
       unsigned int n_ = _loop_n - 1;
       {
         _loop_n = n_;
-        continue;
       }
     }
   }
   return _result;
+}
+
+void LoopifyItreeSeq::spin() {
+  while (true) {
+  }
+  return;
+}
+
+void LoopifyItreeSeq::forever(const unsigned int n) {
+  unsigned int _loop_n = n;
+  while (true) {
+    {
+      _loop_n = (_loop_n + 1);
+    }
+  }
+  return;
 }
 
 unsigned int LoopifyItreeSeq::test_count_5() { return count_down(5u); }

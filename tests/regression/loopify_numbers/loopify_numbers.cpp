@@ -194,7 +194,6 @@ LoopifyNumbers::gcd_fuel(const unsigned int fuel, const unsigned int a,
           _loop_b = std::move(_next_b);
           _loop_a = std::move(_next_a);
           _loop_fuel = std::move(_next_fuel);
-          continue;
         }
       }
     }
@@ -615,7 +614,6 @@ LoopifyNumbers::alternating_sum(const bool sign, const unsigned int acc,
         _loop_n = std::move(_next_n);
         _loop_acc = std::move(_next_acc);
         _loop_sign = std::move(_next_sign);
-        continue;
       }
     }
   }
@@ -935,7 +933,6 @@ __attribute__((pure)) bool LoopifyNumbers::is_even_fuel(const unsigned int fuel,
               unsigned int _next_fuel = f;
               _loop_n = std::move(_next_n);
               _loop_fuel = std::move(_next_fuel);
-              continue;
             }
           }
         }
@@ -987,7 +984,6 @@ __attribute__((pure)) bool LoopifyNumbers::is_odd_fuel(const unsigned int fuel,
               unsigned int _next_fuel = f;
               _loop_n = std::move(_next_n);
               _loop_fuel = std::move(_next_fuel);
-              continue;
             }
           }
         }
