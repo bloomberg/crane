@@ -14,13 +14,7 @@ LoopifyDecltype::count_true(const std::shared_ptr<List<bool>> &xs) {
   };
 
   struct _Call1 {
-    decltype([&]() -> unsigned int {
-      if (_args.d_a0) {
-        return 1u;
-      } else {
-        return 0u;
-      }
-    }()) _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
@@ -64,13 +58,7 @@ __attribute__((pure)) unsigned int LoopifyDecltype::sum_flagged(
   };
 
   struct _Call1 {
-    decltype([&]() -> unsigned int {
-      if (_args.d_a0->item_flag) {
-        return _args.d_a0->item_val;
-      } else {
-        return 0u;
-      }
-    }()) _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Call1>;
