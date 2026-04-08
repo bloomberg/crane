@@ -1851,6 +1851,15 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
       app (mk_cppglob r [])
   in
   tctx.in_constructor_expr <- saved_in_ctor;
+  (* Collapse identity inline customs (%a0) for constructors, matching
+     the same collapse done for function applications at gen_expr. *)
+  let result =
+    match result with
+    | CPPfun_call (CPPglob (_, _, Some ci), [single_arg])
+      when ci.ci_inline = Some "%a0" ->
+      single_arg
+    | _ -> result
+  in
   result
 
 (** Try to fold a Peano numeral chain (nested constructors) into an integer *)

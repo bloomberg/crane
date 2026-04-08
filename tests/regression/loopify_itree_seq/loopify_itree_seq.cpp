@@ -109,31 +109,22 @@ LoopifyItreeSeq::countdown_list(const unsigned int n) {
 
 unsigned int LoopifyItreeSeq::delay_ret(const unsigned int n,
                                         const unsigned int v) {
-  struct _Enter {
-    const unsigned int n;
-  };
-
-  struct _Call1 {};
-
-  using _Frame = std::variant<_Enter, _Call1>;
-  unsigned int _result{};
-  std::vector<_Frame> _stack;
-  _stack.push_back(_Enter{n});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    std::visit(Overloaded{[&](_Enter _f) {
-                            const unsigned int n = _f.n;
-                            if (n <= 0) {
-                              _result = std::move(v);
-                            } else {
-                              unsigned int n_ = n - 1;
-                              _stack.push_back(_Call1{});
-                              _stack.push_back(_Enter{n_});
-                            }
-                          },
-                          [&](_Call1 _f) { _result = _result; }},
-               _frame);
+  unsigned int _result;
+  unsigned int _loop_n = n;
+  bool _continue = true;
+  while (_continue) {
+    if (_loop_n <= 0) {
+      {
+        _result = std::move(v);
+        _continue = false;
+      }
+    } else {
+      unsigned int n_ = _loop_n - 1;
+      {
+        _loop_n = n_;
+        continue;
+      }
+    }
   }
   return _result;
 }
