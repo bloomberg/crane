@@ -28,6 +28,16 @@ val analyze : ml_ast -> int list
     maximum over branches (safe conservative estimate). *)
 val nb_occur_match : int -> ml_ast -> int
 
+(** [escapes k t] checks if de Bruijn index [k] escapes in [t] (value outlives
+    its scope). Escaping positions: constructor args, lambda captures, tail
+    position, fixpoint captures, partial-application captures. *)
+val escapes : int -> ml_ast -> bool
+
+(** [is_partial_app head args] returns [true] when [MLapp(head, args)] is a
+    partial application — i.e., fewer non-dummy arguments than the function's
+    value-level arity. Only handles [MLglob] heads. *)
+val is_partial_app : ml_ast -> ml_ast list -> bool
+
 (** {2 Phase 2: owned/borrowed parameter inference} *)
 
 (** [infer_owned_params n body] returns a bool list of length [n]. Element [i]

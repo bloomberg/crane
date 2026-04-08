@@ -197,8 +197,8 @@ struct CpsEscape {
           tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                      tree::node(tree::leaf(), 30u, tree::leaf()));
       std::function<unsigned int(unsigned int)> adder =
-          [=](unsigned int _x0) mutable -> unsigned int {
-        return t->make_adder(_x0);
+          [&](unsigned int _x0) -> unsigned int {
+        return std::move(t)->make_adder(_x0);
       };
       std::shared_ptr<box> b = store_in_box(adder);
       return std::visit(

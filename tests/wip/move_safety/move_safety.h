@@ -326,8 +326,8 @@ struct MoveSafety {
         return t->sum_values(_x0);
       };
       std::function<unsigned int(unsigned int)> g =
-          [=](unsigned int _x0) mutable -> unsigned int {
-        return t->sum_values(_x0);
+          [&](unsigned int _x0) -> unsigned int {
+        return std::move(t)->sum_values(_x0);
       };
       return (f(1u) + g(2u));
     }();

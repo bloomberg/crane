@@ -282,6 +282,10 @@ type translation_ctx = {
   (* ITree extraction mode: controls whether itree types are erased (Sequential)
      or preserved as std::shared_ptr<ITree<R>> (Reified) for observation. *)
   mutable itree_mode : itree_extraction_mode;
+  (* When true, eta_fun keeps CPPmove wrappers on captured args and uses [&]
+     capture instead of [=]. Set by the MLletin handler when it detects the
+     bound variable is used at most once and does not escape. *)
+  mutable eta_keep_moves : bool;
 }
 
 and itree_extraction_mode =
@@ -306,6 +310,7 @@ let tctx =
     promoted_var_map = [];
     in_constructor_expr = false;
     itree_mode = Sequential;
+    eta_keep_moves = false;
   }
 
 (** Accessor wrappers — thin layer over tctx fields. *)
@@ -2992,6 +2997,11 @@ and eta_fun env f args =
       | _ -> false )
     | _ -> false
   in
+  (* Save and clear the single-use closure flag so that nested eta_fun calls
+     (from processing args) do not inherit it. The saved value is used when
+     this eta_fun constructs a partial-application lambda. *)
+  let eta_keep_moves = tctx.eta_keep_moves in
+  tctx.eta_keep_moves <- false;
   match f with
   | MLglob (id, tys) ->
     (* When the call has more args than the function's ML value-domain, the
@@ -3504,13 +3514,13 @@ and eta_fun env f args =
                 (wrapped, Some (eta_param_id i)) )
               missing_args
           in
-          (* Strip CPPmove from captured args: they are placed inside a
-             lambda body that may be called multiple times, so the captured
-             variables must not be consumed on each invocation. *)
+          (* When eta_keep_moves is set (single-use closure from MLletin),
+             keep CPPmove wrappers and capture by reference for zero-copy.
+             Otherwise strip CPPmove: the closure may be called multiple
+             times, so captured variables must not be consumed. *)
           let captured_args =
-            List.map
-              (function CPPmove inner -> inner | e -> e)
-              args
+            if eta_keep_moves then args
+            else List.map (function CPPmove inner -> inner | e -> e) args
           in
           let call_args =
             captured_args
@@ -3525,7 +3535,7 @@ and eta_fun env f args =
             else
               (Some cod, [Sreturn (Some call)])
           in
-          CPPlambda (List.rev eta_args, ret_ty, body, true)
+          CPPlambda (List.rev eta_args, ret_ty, body, not eta_keep_moves)
       | _ ->
         if id_is_typeclass_instance && args = [] then
           cglob
@@ -4939,8 +4949,27 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       tctx.move_dead_after <- Escape.IntSet.union dead_in_a dead_from_above;
       let saved_suppress = tctx.move_suppress_tail in
       tctx.move_suppress_tail <- true;
+      (* Single-use partial application optimization: when the RHS is a partial
+         application and the bound variable is used at most once in the
+         continuation without escaping, AND all free variables of the RHS are
+         dead in the continuation (so [&] capture references stay valid),
+         tell eta_fun to keep CPPmove wrappers and use [&] capture for
+         zero-copy closure generation. *)
+      let is_single_use_partial_app =
+        (match a with
+         | MLapp (head, ml_args) | MLmagic (MLapp (head, ml_args)) ->
+           Escape.is_partial_app head ml_args
+         | _ -> false)
+        && Escape.nb_occur_match 1 b <= 1
+        && not (Escape.escapes 1 b)
+        && Escape.IntSet.is_empty
+             (Escape.IntSet.inter (Escape.free_rels 0 a) cont_free)
+      in
+      let saved_eta_keep = tctx.eta_keep_moves in
+      if is_single_use_partial_app then tctx.eta_keep_moves <- true;
       let afun v = Sasgn (x_renamed, None, v) in
       let asgn = gen_stmts env afun a in
+      tctx.eta_keep_moves <- saved_eta_keep;
       (* Push env_types AFTER generating the value expression [a] — [a] uses de
          Bruijn indices that don't include the new let binding.  The body [b]
          (generated below) does include it. *)

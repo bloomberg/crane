@@ -82,7 +82,7 @@ struct ClosureCaptureMatch {
     /// the original data structure is dropped.
     __attribute__((pure)) unsigned int capture_and_drop() const {
       std::function<std::shared_ptr<tree>(unsigned int)> f =
-          [=, this](unsigned int _x0) -> std::shared_ptr<tree> {
+          [&](unsigned int _x0) -> std::shared_ptr<tree> {
         return this->make_inserter(_x0);
       };
       return std::visit(

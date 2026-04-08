@@ -890,8 +890,8 @@ struct HistoricalEventSafetyTraceCase {
       const std::shared_ptr<State> &initial_state, const unsigned int horizon,
       const unsigned int event_id) {
     std::function<unsigned int(unsigned int)> inflow =
-        [=](unsigned int _x0) mutable -> unsigned int {
-      return event_to_inflow(event, default_inflow, _x0);
+        [&](unsigned int _x0) -> unsigned int {
+      return event_to_inflow(std::move(event), std::move(default_inflow), _x0);
     };
     bool initial_safe = is_safe_bool(pconf, initial_state);
     std::pair<std::shared_ptr<State>, unsigned int> p =

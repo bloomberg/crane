@@ -213,12 +213,12 @@ struct MethodPartialApp {
       std::shared_ptr<tree> t1 = tree::node(tree::leaf(), 10u, tree::leaf());
       std::shared_ptr<tree> t2 = tree::node(tree::leaf(), 20u, tree::leaf());
       std::function<unsigned int(unsigned int)> f1 =
-          [=](unsigned int _x0) mutable -> unsigned int {
-        return t1->add_to_sum(_x0);
+          [&](unsigned int _x0) -> unsigned int {
+        return std::move(t1)->add_to_sum(_x0);
       };
       std::function<unsigned int(unsigned int)> f2 =
-          [=](unsigned int _x0) mutable -> unsigned int {
-        return t2->add_to_sum(_x0);
+          [&](unsigned int _x0) -> unsigned int {
+        return std::move(t2)->add_to_sum(_x0);
       };
       return (f1(0u) + f2(0u));
     }();
