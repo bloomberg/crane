@@ -4877,6 +4877,91 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
   in
   process_stmts body
 
+(** {2 Cofixpoint detection}
+
+    Cofixpoints (corecursive definitions) returning a standard coinductive type
+    are wrapped in a [lazy_] thunk by [cofix_wrap] in [translation.ml].  This
+    wrapping defers evaluation so the infinite corecursive structure is built
+    on demand rather than eagerly.
+
+    {b Why loopification is unnecessary.}  The [lazy_] wrapper means the
+    generated C++ function has this shape:
+
+    {v
+      shared_ptr<Stream<T>> smap(F f, shared_ptr<Stream<T>> s) {
+        return Stream<T>::lazy_([=]() mutable -> shared_ptr<Stream<T>> {
+          return Stream<T>::cons(f(hd(s)), smap(f, tl(s)));
+        });
+      }
+    v}
+
+    The entire body — including any recursive calls like [smap(f, tl(s))] —
+    is captured inside a [[\=\]] lambda.  When [smap] is called, it {e never
+    executes} the recursive call; it just constructs the closure and passes
+    it to [lazy_()], which stores it as a thunk.  The function returns in
+    O(1) stack frames.  The recursive call is only executed later, when a
+    consumer forces the thunk (e.g. via [.v()]).  At that point the original
+    call frame is long gone, so there is no stack accumulation.
+
+    Even cofixpoints with multiple recursive calls (e.g. a coinductive tree
+    with [Node n (infinite_tree (n+1)) (infinite_tree (n+2))]) are safe: each
+    recursive call itself returns a [lazy_] thunk in O(1), so the total stack
+    depth when the outer thunk is forced is still bounded.
+
+    {b Why loopification would be incorrect.}  The TMC (Tail Modulo Cons)
+    transform patches cons cells in place via [v_mut()], but coinductive
+    types store their variant inside [crane::lazy<variant_t>] and expose
+    only the immutable [v()] accessor.  Applying TMC to these bodies
+    generates invalid C++ that references the nonexistent [v_mut()] method.
+
+    {b Custom-extracted coinductive types} (e.g. [itree] in reified mode)
+    bypass the [lazy_] wrapping because [Table.is_coinductive_type] returns
+    [false] for custom inductives.  Their bodies are normal (non-lazy) and
+    flow through the standard loopification path.
+
+    The post-pass {!loopify_inner_lambdas} is still applied to the full body
+    so that any nested [std::function] fixpoints inside the thunk are
+    loopified independently. *)
+
+(** Detect a [lazy_]-wrapped cofixpoint body.
+
+    Matches the AST pattern produced by [cofix_wrap] in [translation.ml]
+    (lines ~7620--7650 and ~8878--8883).  The pattern is:
+
+    {v
+      Sreturn(Some(
+        CPPfun_call(
+          CPPqualified(type_expr, "lazy_"),
+          [CPPlambda([], Some ret_ty, inner_body, capture)])))
+    v}
+
+    This appears as the {e last} statement in the function body.  Cofixpoints
+    with [let ... in] bindings before the return (e.g. [unfold]) have prefix
+    statements before the [lazy_] return, so we check only the final statement.
+
+    For cofixpoints whose body branches (e.g. an [Sif] at the top level),
+    [cofix_wrap] wraps each return expression individually, so the last
+    statement is the branch, not a [lazy_] return.  In that case we return
+    [false] and the function falls through unchanged — this is safe because
+    each branch still returns a [lazy_] thunk (no stack growth), and the
+    loopify pass would see recursive calls inside lambdas and classify the
+    function as [No_recursion], producing no transformation.
+
+    @param body  The statement list comprising the function body.
+    @return [true] if the last statement matches the [lazy_] factory pattern. *)
+let has_lazy_body body =
+  let rec last_stmt = function
+    | [] -> None
+    | [s] -> Some s
+    | _ :: rest -> last_stmt rest
+  in
+  match last_stmt body with
+  | Some (Sreturn (Some (CPPfun_call (
+      CPPqualified (_, lazy_id),
+      [CPPlambda ([], Some _, _, _)]))))
+    when Id.to_string lazy_id = "lazy_" -> true
+  | _ -> false
+
 (** Transform a top-level function definition by loopifying its body.
 
     This is the main entry point for loopifying a [Dfundef]. The transformation
@@ -4892,6 +4977,13 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
     + Post-pass with {!loopify_inner_lambdas} to loopify any self-recursive
       [std::function] lambdas nested within the body.
 
+    For cofixpoints returning a coinductive type, the body is wrapped in a
+    [lazy_] thunk by [cofix_wrap].  The recursive calls are captured inside
+    the closure and never executed at call time, so the function returns in
+    O(1) stack frames and loopification is unnecessary.  We detect the
+    [lazy_] pattern via {!has_lazy_body} and skip the main loopification
+    pass.  See the {!has_lazy_body} section header for the full rationale.
+
     @param pp_type  Type pretty-printer
     @param pp_expr  Expression pretty-printer
     @param tparams  Type parameters of the function
@@ -4906,25 +4998,38 @@ let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure
   (* Try to inline mutual recursion partners *)
   let body = try_inline_mutual_into names body in
   let check = fn_checker names in
-  let kind = classify check body in
+  (* Cofixpoint guard: if this function body ends with a [lazy_] return,
+     it is a cofixpoint returning a standard coinductive type.  The entire
+     body (including recursive calls) is captured inside a [=] lambda and
+     never executed at call time — the function returns a thunk in O(1)
+     stack frames.  Loopification is unnecessary and TMC would generate
+     invalid [v_mut()] calls (see the {!has_lazy_body} section header for
+     the full rationale).  We still run [loopify_inner_lambdas] to handle
+     any nested [std::function] fixpoints inside the lazy thunk. *)
   let body =
-    match kind with
-    | No_recursion -> body
-    | Tail_recursion -> transform_tail check pp_type params ret_ty body
-    | Nontail_recursion ->
-      ( match try_tmc_classify check body with
-      | Some ti ->
-        transform_tmc check pp_expr ti params ret_ty body
-      | None ->
-        if has_multi_call_expr check body
-           && not (has_triple_call_expr check body)
-        then
-          transform_multi check pp_type params ret_ty body
-        else
-          transform_nontail check pp_type pp_expr tparams params ret_ty body )
+    if has_lazy_body body then
+      loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body
+    else
+      (* Normal (non-lazy) function — existing path *)
+      let kind = classify check body in
+      let body =
+        match kind with
+        | No_recursion -> body
+        | Tail_recursion -> transform_tail check pp_type params ret_ty body
+        | Nontail_recursion ->
+          ( match try_tmc_classify check body with
+          | Some ti ->
+            transform_tmc check pp_expr ti params ret_ty body
+          | None ->
+            if has_multi_call_expr check body
+               && not (has_triple_call_expr check body)
+            then
+              transform_multi check pp_type params ret_ty body
+            else
+              transform_nontail check pp_type pp_expr tparams params ret_ty body )
+      in
+      loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body
   in
-  (* Post-pass: loopify any self-recursive std::function lambdas *)
-  let body = loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body in
   Dfundef (names, ret_ty, params, body, no_pure)
 
 (** Transform a struct method by loopifying its body.
@@ -4955,77 +5060,73 @@ let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure
 let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
   let n_params = List.length mf.mf_params in
   let this_pos = mf.mf_this_pos in
-  let basic_check = method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_name in
-  match classify basic_check mf.mf_body with
-  | No_recursion -> Fmethod mf
-  | (Tail_recursion | Nontail_recursion) as kind ->
-    (* Methods that recurse on subtrees need a synthetic [_self] parameter so
-       the loop tracks which node is being processed (instead of always
-       revisiting [this]). We add [_self] to the param list, replace [CPPthis]
-       with [CPPvar _self], and prepend an initializer. *)
-    let self_id = Id.of_string "_self" in
-    let body_with_self = List.map (this_to_self_stmt self_id) mf.mf_body in
-    let self_param = (self_id, self_ty) in
-    let augmented_params = self_param :: mf.mf_params in
-    let self_check = method_checker ~n_params ~has_self_param:true ~this_pos mf.mf_name in
-    let body', needs_init_self =
-      match kind with
-      | Tail_recursion ->
-        (* For tail recursion, initialize the shadow variable directly from
-           [this] instead of going through an intermediate [_self = this]
-           decl. *)
-        ( transform_tail
-            ~param_inits:[(self_id, CPPthis)]
-            self_check
-            pp_type
-            augmented_params
-            mf.mf_ret_type
-            body_with_self,
-          false )
-      | Nontail_recursion ->
-        ( match try_tmc_classify self_check body_with_self with
-        | Some ti ->
-          (* TMC: initialize shadow variable directly from [this],
-             same as tail recursion — no [_self = this] line needed. *)
-          ( transform_tmc
+  (* Cofixpoint guard: same reasoning as {!transform_fundef} — if the
+     method body is [lazy_]-wrapped, the entire body is deferred inside a
+     closure and the method returns in O(1) stack frames.  Loopification
+     is unnecessary and TMC would be invalid.  See {!has_lazy_body}. *)
+  if has_lazy_body mf.mf_body then
+    Fmethod mf
+  else
+    let basic_check = method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_name in
+    ( match classify basic_check mf.mf_body with
+    | No_recursion -> Fmethod mf
+    | (Tail_recursion | Nontail_recursion) as kind ->
+      let self_id = Id.of_string "_self" in
+      let body_with_self = List.map (this_to_self_stmt self_id) mf.mf_body in
+      let self_param = (self_id, self_ty) in
+      let augmented_params = self_param :: mf.mf_params in
+      let self_check = method_checker ~n_params ~has_self_param:true ~this_pos mf.mf_name in
+      let body', needs_init_self =
+        match kind with
+        | Tail_recursion ->
+          ( transform_tail
               ~param_inits:[(self_id, CPPthis)]
               self_check
-              pp_expr
-              ti
+              pp_type
               augmented_params
               mf.mf_ret_type
               body_with_self,
             false )
-        | None ->
-          (* Non-TMC nontail: we need [_self = this] because the _Enter
-             frame initialization uses the param name [_self] directly. *)
-          ( ( if
-                has_multi_call_expr self_check body_with_self
-                && not (has_triple_call_expr self_check body_with_self)
-              then
-                transform_multi
-                  self_check
-                  pp_type
-                  augmented_params
-                  mf.mf_ret_type
-                  body_with_self
-              else
-                transform_nontail
-                  self_check
-                  pp_type
-                  pp_expr
-                  tparams
-                  augmented_params
-                  mf.mf_ret_type
-                  body_with_self ),
-            true ) )
-      | No_recursion -> assert false
-    in
-    if needs_init_self then
-      let init_self = Sasgn (self_id, Some self_ty, CPPthis) in
-      Fmethod {mf with mf_body = init_self :: body'}
-    else
-      Fmethod {mf with mf_body = body'}
+        | Nontail_recursion ->
+          ( match try_tmc_classify self_check body_with_self with
+          | Some ti ->
+            ( transform_tmc
+                ~param_inits:[(self_id, CPPthis)]
+                self_check
+                pp_expr
+                ti
+                augmented_params
+                mf.mf_ret_type
+                body_with_self,
+              false )
+          | None ->
+            ( ( if
+                  has_multi_call_expr self_check body_with_self
+                  && not (has_triple_call_expr self_check body_with_self)
+                then
+                  transform_multi
+                    self_check
+                    pp_type
+                    augmented_params
+                    mf.mf_ret_type
+                    body_with_self
+                else
+                  transform_nontail
+                    self_check
+                    pp_type
+                    pp_expr
+                    tparams
+                    augmented_params
+                    mf.mf_ret_type
+                    body_with_self ),
+              true ) )
+        | No_recursion -> assert false
+      in
+      if needs_init_self then
+        let init_self = Sasgn (self_id, Some self_ty, CPPthis) in
+        Fmethod {mf with mf_body = init_self :: body'}
+      else
+        Fmethod {mf with mf_body = body'} )
 
 (** Transform a single struct field, loopifying it if it is a method.
 

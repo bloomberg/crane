@@ -3283,3 +3283,47 @@
   (deps double_invoke_move.t.exe)
   (action (run ./double_invoke_move.t.exe))))
 
+
+(subdir loopify_coind_colist
+ (rule
+  (targets loopify_coind_colist.t.exe)
+  (deps LoopifyCoindColist.vo loopify_coind_colist.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_coind_colist.t.exe loopify_coind_colist.cpp loopify_coind_colist.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_coind_colist.t.exe)
+  (action (run ./loopify_coind_colist.t.exe))))
+
+(subdir loopify_coind_stream
+ (rule
+  (targets loopify_coind_stream.t.exe)
+  (deps LoopifyCoindStream.vo loopify_coind_stream.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_coind_stream.t.exe loopify_coind_stream.cpp loopify_coind_stream.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_coind_stream.t.exe)
+  (action (run ./loopify_coind_stream.t.exe))))
+
+(subdir loopify_itree_reified
+ (rule
+  (targets loopify_itree_reified.t.exe)
+  (deps LoopifyItreeReified.vo loopify_itree_reified.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_itree_reified.t.exe loopify_itree_reified.cpp loopify_itree_reified.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_itree_reified.t.exe)
+  (action (run ./loopify_itree_reified.t.exe))))
+
+(subdir loopify_itree_seq
+ (rule
+  (targets loopify_itree_seq.t.exe)
+  (deps LoopifyItreeSeq.vo loopify_itree_seq.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_itree_seq.t.exe loopify_itree_seq.cpp loopify_itree_seq.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_itree_seq.t.exe)
+  (action (run ./loopify_itree_seq.t.exe))))
