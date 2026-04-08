@@ -206,7 +206,7 @@ struct PartialAppMove {
   /// then t is passed to a constructor (actually moved via rvalue ref),
   /// then the lambda accesses the moved-from t.
   __attribute__((pure)) static unsigned int
-  trigger_bug(const std::shared_ptr<tree> &t);
+  trigger_bug(std::shared_ptr<tree> t);
   /// Build a tree and trigger the bug.
   static inline const unsigned int run_bug =
       trigger_bug(tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
@@ -219,7 +219,9 @@ struct PartialAppMove {
           tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                      tree::node(tree::leaf(), 30u, tree::leaf()));
       std::function<unsigned int(unsigned int)> f =
-          [&](unsigned int _x0) -> unsigned int { return sum_values(t, _x0); };
+          [=](unsigned int _x0) mutable -> unsigned int {
+        return sum_values(t, _x0);
+      };
       std::unique_ptr<tree> w = tree::node_uptr(t, 42u, tree::leaf());
       return std::visit(
           Overloaded{[&](const typename tree::Leaf _args) -> unsigned int {
@@ -238,7 +240,9 @@ struct PartialAppMove {
           tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                      tree::node(tree::leaf(), 30u, tree::leaf()));
       std::function<unsigned int(unsigned int)> f =
-          [&](unsigned int _x0) -> unsigned int { return sum_values(t, _x0); };
+          [=](unsigned int _x0) mutable -> unsigned int {
+        return sum_values(t, _x0);
+      };
       std::shared_ptr<tree> w = wrap(std::move(t));
       return std::visit(
           Overloaded{[&](const typename tree::Leaf _args) -> unsigned int {

@@ -10,7 +10,8 @@
 __attribute__((pure)) int64_t BinInt::pow_pos(const int64_t z,
                                               const unsigned int _x0) {
   return Pos::template iter<int64_t>(
-      [&](int64_t _x0) -> int64_t { return (z * _x0); }, INT64_C(1), _x0);
+      [=](int64_t _x0) mutable -> int64_t { return (z * _x0); }, INT64_C(1),
+      std::move(_x0));
 }
 
 __attribute__((pure)) Real PolygonWindingAreaTraceCase::hav(const Real theta) {

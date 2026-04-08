@@ -55,10 +55,12 @@ PartialAppMove::wrap(std::shared_ptr<PartialAppMove::tree> t) {
 /// then t is passed to a constructor (actually moved via rvalue ref),
 /// then the lambda accesses the moved-from t.
 __attribute__((pure)) unsigned int
-PartialAppMove::trigger_bug(const std::shared_ptr<PartialAppMove::tree> &t) {
+PartialAppMove::trigger_bug(std::shared_ptr<PartialAppMove::tree> t) {
   std::function<unsigned int(unsigned int)> f =
-      [&](unsigned int _x0) -> unsigned int { return sum_values(t, _x0); };
-  std::shared_ptr<PartialAppMove::tree> w = wrap(t);
+      [=](unsigned int _x0) mutable -> unsigned int {
+    return sum_values(t, _x0);
+  };
+  std::shared_ptr<PartialAppMove::tree> w = wrap(std::move(t));
   return std::visit(
       Overloaded{
           [&](const typename PartialAppMove::tree::Leaf _args) -> unsigned int {

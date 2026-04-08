@@ -200,17 +200,6 @@
   (deps match_ctor_closure.t.exe)
   (action (run ./match_ctor_closure.t.exe))))
 
-(subdir double_invoke_move
- (rule
-  (targets double_invoke_move.t.exe)
-  (deps DoubleInvokeMove.vo double_invoke_move.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} double_invoke_move.t.exe double_invoke_move.cpp double_invoke_move.t.cpp)))
- (rule
-  (alias runtest)
-  (deps double_invoke_move.t.exe)
-  (action (run ./double_invoke_move.t.exe))))
-
 (subdir cps_escape
  (rule
   (targets cps_escape.t.exe)
@@ -277,17 +266,6 @@
   (deps shared_uptr_escape.t.exe)
   (action (run ./shared_uptr_escape.t.exe))))
 
-(subdir closure_chain
- (rule
-  (targets closure_chain.t.exe)
-  (deps ClosureChain.vo closure_chain.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} closure_chain.t.exe closure_chain.cpp closure_chain.t.cpp)))
- (rule
-  (alias runtest)
-  (deps closure_chain.t.exe)
-  (action (run ./closure_chain.t.exe))))
-
 (subdir fix_partial_app
  (rule
   (targets fix_partial_app.t.exe)
@@ -309,25 +287,3 @@
   (alias runtest)
   (deps method_partial_app.t.exe)
   (action (run ./method_partial_app.t.exe))))
-
-(subdir loopify_match_arg
- (rule
-  (targets loopify_match_arg.t.exe)
-  (deps LoopifyMatchArg.vo loopify_match_arg.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_match_arg.t.exe loopify_match_arg.cpp loopify_match_arg.t.cpp)))
- (rule
-  (alias runtest)
-  (deps loopify_match_arg.t.exe)
-  (action (run ./loopify_match_arg.t.exe))))
-
-(subdir loopify_decltype
- (rule
-  (targets loopify_decltype.t.exe)
-  (deps LoopifyDecltype.vo loopify_decltype.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_decltype.t.exe loopify_decltype.cpp loopify_decltype.t.cpp)))
- (rule
-  (alias runtest)
-  (deps loopify_decltype.t.exe)
-  (action (run ./loopify_decltype.t.exe))))

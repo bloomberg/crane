@@ -282,6 +282,10 @@ type translation_ctx = {
   (* ITree extraction mode: controls whether itree types are erased (Sequential)
      or preserved as std::shared_ptr<ITree<R>> (Reified) for observation. *)
   mutable itree_mode : itree_extraction_mode;
+  (* When true, eta_fun keeps CPPmove wrappers on captured args and uses [&]
+     capture instead of [=]. Set by the MLletin handler when it detects the
+     bound variable is used at most once and does not escape. *)
+  mutable eta_keep_moves : bool;
 }
 
 and itree_extraction_mode =
@@ -306,6 +310,7 @@ let tctx =
     promoted_var_map = [];
     in_constructor_expr = false;
     itree_mode = Sequential;
+    eta_keep_moves = false;
   }
 
 (** Accessor wrappers — thin layer over tctx fields. *)
@@ -1846,6 +1851,15 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
       app (mk_cppglob r [])
   in
   tctx.in_constructor_expr <- saved_in_ctor;
+  (* Collapse identity inline customs (%a0) for constructors, matching
+     the same collapse done for function applications at gen_expr. *)
+  let result =
+    match result with
+    | CPPfun_call (CPPglob (_, _, Some ci), [single_arg])
+      when ci.ci_inline = Some "%a0" ->
+      single_arg
+    | _ -> result
+  in
   result
 
 (** Try to fold a Peano numeral chain (nested constructors) into an integer *)
@@ -2992,6 +3006,11 @@ and eta_fun env f args =
       | _ -> false )
     | _ -> false
   in
+  (* Save and clear the single-use closure flag so that nested eta_fun calls
+     (from processing args) do not inherit it. The saved value is used when
+     this eta_fun constructs a partial-application lambda. *)
+  let eta_keep_moves = tctx.eta_keep_moves in
+  tctx.eta_keep_moves <- false;
   match f with
   | MLglob (id, tys) ->
     (* When the call has more args than the function's ML value-domain, the
@@ -3009,6 +3028,11 @@ and eta_fun env f args =
         | MLdummy _ -> false
         | _ -> true
       in
+      let is_value_dom t =
+        match resolve_tmeta t with
+        | Miniml.Tdummy _ -> false
+        | _ -> true
+      in
       let rec collect_tarr_dom acc = function
         | Miniml.Tarr (t1, t2) -> collect_tarr_dom (resolve_tmeta t1 :: acc) t2
         | _ -> List.rev acc
@@ -3016,21 +3040,26 @@ and eta_fun env f args =
       match find_type_opt id with
       | Some ml_ty ->
         let all_dom = collect_tarr_dom [] ml_ty in
-        (* Skip leading Tdummy Ktype positions — these correspond to type args
-           (tys), not value args. *)
-        let rec skip_type_params = function
-          | Miniml.Tdummy Miniml.Ktype :: rest -> skip_type_params rest
-          | dom -> dom
-        in
-        let n_value_dom = List.length (skip_type_params all_dom) in
-        let n_args = List.length args in
-        if n_args > n_value_dom then
-          let primary = List.filteri (fun i _ -> i < n_value_dom) args in
-          let excess = List.filteri (fun i _ -> i >= n_value_dom) args in
-          (List.filter is_value_arg primary, List.filter is_value_arg excess)
+        (* Count value-domain entries by filtering out ALL [Tdummy] positions
+           (both [Ktype] for erased type params and [Kprop] for erased proofs).
+           Symmetrically, filter the arg list to exclude [MLdummy] entries.
+           Comparing these two filtered counts avoids false excess detection
+           when erased params appear in [args] as [MLdummy] instead of (or in
+           addition to) being carried in [tys]. *)
+        let n_value_dom = List.length (List.filter is_value_dom all_dom) in
+        let value_args = List.filter is_value_arg args in
+        let n_value_args = List.length value_args in
+        if n_value_args > n_value_dom then
+          let primary =
+            List.filteri (fun i _ -> i < n_value_dom) value_args
+          in
+          let excess =
+            List.filteri (fun i _ -> i >= n_value_dom) value_args
+          in
+          (primary, excess)
         else
-          (args, [])
-      | None -> (args, [])
+          (value_args, [])
+      | None -> (List.filter is_value_arg args, [])
     in
     (* Partition args into type class instances and regular args *)
     let typeclass_ml_args, regular_ml_args =
@@ -3152,12 +3181,139 @@ and eta_fun env f args =
       in
       collect fn_ml_ty
     in
-    (* Generate regular args, wrapping with CPPany_cast when the argument
-       returns std::any (through an erased record field) but the function's
-       parameter type is concrete (not a promoted type var). *)
+    (* {b Concrete T1 for excess-arg calls.}  When [tys = []] and there
+       are excess args, the callee's polymorphic return type [Tvar i] can't
+       be resolved by substitution.  We compute the concrete type [T1]
+       from the enclosing function's return type and the excess args' types:
+       [T1 = excess_arg_types -> enclosing_return_type].
+
+       This value is used in two places:
+       1. Lambda arity limiting: to annotate the split outer lambda's
+          return type (needed for [is_invocable_r_v] concept checking).
+       2. Template arg recovery: as an explicit template argument at the
+          call site (C++ can't deduce [T1] from lambda args). *)
     let tvars = get_current_type_vars () in
+    let concrete_tvar_type =
+      if tys <> [] || excess_args = [] then
+        None
+      else
+        let resolve_tmeta_local = function
+          | Miniml.Tmeta {contents = Some t} -> t
+          | t -> t
+        in
+        match tctx.current_cpp_return_type with
+        | None -> None
+        | Some ret_ty ->
+          match find_type_opt id with
+          | None -> None
+          | Some ml_ty_orig ->
+            let ret = resolve_tmeta_local (ml_return_type ml_ty_orig) in
+            ( match ret with
+            | Miniml.Tvar _ | Miniml.Tvar' _ ->
+              (* Compute excess arg C++ types from de Bruijn lookup. *)
+              let excess_cpp_tys =
+                List.filter_map
+                  (fun ml_arg ->
+                    match ml_arg with
+                    | MLrel i ->
+                      ( match get_param_type_by_index i with
+                      | Some ml_ty ->
+                        Some (convert_ml_type_to_cpp_type
+                                env Refset'.empty tvars ml_ty)
+                      | None -> None )
+                    | _ -> None )
+                  excess_args
+              in
+              if List.length excess_cpp_tys = List.length excess_args then
+                Some (Tfun (excess_cpp_tys, ret_ty))
+              else
+                None
+            | _ -> None )
+    in
     let args = List.mapi (fun i ml_arg ->
+      (* {b Lambda arity limiting.}  When a lambda argument has more binders
+         than the callee's parameter type has top-level arrows, the extra
+         binders come from the return type being a function (instantiated
+         from a type variable).  For example, [fold_right]'s callback type
+         is [B -> A -> A]; when [A = nat -> nat], the lambda
+         [fun t acc => fun x => body] has 3 binders but the parameter has
+         only 2 arrows.  Flattening all 3 into a single C++ lambda produces
+         a 3-arg function, which doesn't match the 2-arg [MapsTo] concept.
+
+         Fix: insert an [MLmagic] barrier after the expected number of
+         binders so that [collect_lams] in [gen_expr] stops there.  The
+         inner binders become a returned inner lambda.  We use the
+         {i non-substituted} parameter type to count arrows, because type
+         variable substitution would inflate the count (e.g. [Tvar A]
+         becoming [Tarr(nat, nat)] adds a spurious arrow).
+
+         Additionally, annotate the outer lambda with an explicit return
+         type derived from the {i substituted} parameter type's codomain.
+         Without this, the deduced return type is the inner lambda's
+         unique closure type, and [is_invocable_r_v<std::function<...>,
+         closure_type>] may evaluate to [false] in concept checking
+         (C++ lambda-to-[std::function] conversion is not recognized
+         during SFINAE in some implementations). *)
+      let ml_arg, split_ret_ty =
+        match ml_arg with
+        | MLlam _ ->
+          ( match List.nth_opt fn_param_ml_tys_orig i with
+          | Some param_ty ->
+            let rec count_arrows = function
+              | Miniml.Tarr (_, rest) -> 1 + count_arrows rest
+              | _ -> 0
+            in
+            let expected = count_arrows param_ty in
+            let actual = Mlutil.nb_lams ml_arg in
+            if expected > 0 && actual > expected then
+              let outer_ids, inner_body =
+                Mlutil.collect_n_lams expected ml_arg
+              in
+              let barrier =
+                Mlutil.named_lams outer_ids (MLmagic inner_body)
+              in
+              (* Compute the return type from the substituted param type by
+                 stripping [expected] top-level arrows.  The remaining type
+                 is the function-typed codomain that the inner lambda
+                 implements.
+
+                 When the substituted codomain is still a [Tvar] (happens
+                 when [tys = []] so substitution is a no-op), use the
+                 [concrete_tvar_type] computed above — it holds the
+                 concrete [T1] type derived from the excess args and the
+                 enclosing function's return type. *)
+              let ret_ty =
+                match List.nth_opt fn_param_ml_tys i with
+                | Some subst_pt ->
+                  let rec codomain_after n = function
+                    | Miniml.Tarr (_, rest) when n > 0 ->
+                      codomain_after (n - 1) rest
+                    | ty -> ty
+                  in
+                  let ret_ml = codomain_after expected subst_pt in
+                  ( match resolve_tmeta ret_ml with
+                  | Miniml.Tvar _ | Miniml.Tvar' _ -> concrete_tvar_type
+                  | _ ->
+                    Some (convert_ml_type_to_cpp_type
+                            env Refset'.empty tvars ret_ml) )
+                | None -> None
+              in
+              (barrier, ret_ty)
+            else
+              (ml_arg, None)
+          | None -> (ml_arg, None) )
+        | _ -> (ml_arg, None)
+      in
       let expr = gen_expr env ml_arg in
+      (* Annotate the outer lambda with the explicit return type computed
+         during the split, so that C++ concept checking sees the concrete
+         [std::function<...>] return type instead of the raw closure type. *)
+      let expr =
+        match split_ret_ty, expr with
+        | Some ret_ty, CPPlambda (params, None, body, cap) ->
+          CPPlambda (params, Some ret_ty, body, cap)
+        | _ -> expr
+      in
       (* Wrap void calls as values only when the expression will be used
          as a value (not in monadic parameter handler which places it in
          statement position inside a lambda). *)
@@ -3332,16 +3488,26 @@ and eta_fun env f args =
         | None -> filtered
       else if tys = [] then
         (* Case (b): tys is empty — synthesize type args from scratch. Build one
-           entry per Tdummy Ktype domain position. As in case (a), only attempt
-           recovery when there are no value args — if there are value args, C++
-           can deduce the types. *)
+           entry per Tdummy Ktype domain position.
+
+           Recovery is attempted when:
+           - [args = []] — no value args, so C++ can't deduce types.
+           - [concrete_tvar_type <> None] — the callee's return type [Tvar]
+             was resolved from excess args + enclosing return type. *)
+        let should_recover = args = [] || concrete_tvar_type <> None in
           match
-            if args = [] then try_recover_erased_return_type () else None
+            if should_recover then try_recover_erased_return_type () else None
           with
-        | Some (_idx, ret_ty, all_dom) ->
+        | Some (_idx, _ret_ty, all_dom) ->
+          (* Use [concrete_tvar_type] when available (excess args case),
+             otherwise fall back to the enclosing function's return type. *)
+          let t1 = match concrete_tvar_type with
+            | Some t -> t
+            | None -> _ret_ty
+          in
           List.filter_map
             (function
-              | Miniml.Tdummy Miniml.Ktype -> Some ret_ty
+              | Miniml.Tdummy Miniml.Ktype -> Some t1
               | _ -> None )
             all_dom
         | None -> filtered
@@ -3371,37 +3537,61 @@ and eta_fun env f args =
        generating numOption<numNat, unsigned int>() instead of numOption<numNat,
        unsigned int> for qualified access like ::to_nat. *)
     let id_is_typeclass_instance = ref_returns_typeclass id in
-    (* Curried excess args (see split above) occur when a function returns a
-       function-typed alias (e.g. State S A = S -> A * S) and the call site
-       applies the result immediately. Generate a chained call:
-       f(primary_args)(excess_args).
+    (* {b Curried excess args.}  When a call site provides more value args
+       than the callee's ML type has arrows, the extras are curried onto the
+       result: [f(primary_args)(excess_args)].
 
-       Only generate the chained call when the callee's return type is a
-       concrete function type (indicating a type alias like State). When the
-       return type is a type variable (e.g. T1 in div2_rect), the excess args
-       likely arise from proof-certificate functions (Function vernac _correct
-       terms) that are never called at runtime. For those, generate an abort
-       placeholder since inner lambdas would have wrong arities. *)
+       This is valid when the callee genuinely returns a function:
+       - Its codomain is a type alias ([Tglob]) that may expand to [Tarr]
+         (e.g. [State S A = S -> A * S]).
+       - Its codomain is a type variable ([Tvar]) that, after instantiation
+         with the call-site type args [tys], becomes [Tarr] (e.g.
+         [fold_right] with [B = nat -> nat]).
+       - It is an inlined custom constant (e.g. [fst], [snd]).
+
+       When the codomain is a type variable that instantiates to a
+       non-function type (e.g. [div2_rect] with [T1 = R_div2]), the excess
+       args come from proof-certificate functions ([Function] vernacular
+       [_correct] terms) that are never called at runtime.  We emit an abort
+       placeholder for those. *)
     let wrap_excess base =
       if excess_args = [] then
         base
       else (
-        (* A [Tglob] codomain indicates a type alias (e.g. [State S A]) that may
-           expand to a function type — chained calls are valid. A [Tvar]
-           codomain (e.g. [T1] in [div2_rect]) signals a polymorphic return
-           where excess args come from proof-certificate terms; these are never
-           called at runtime so we emit an abort placeholder.
-
-           Exception: inlined custom constants (e.g. [fst], [snd]) may have a
-           polymorphic return type that is instantiated to a function type at
-           the call site. Their excess args are valid chained calls. *)
         let ret_is_chainable =
           is_inline_custom id
           ||
           match find_type_opt id with
           | Some ml_ty ->
-            ( match ml_codomain ml_ty with
+            let cod = ml_codomain ml_ty in
+            ( match resolve_tmeta cod with
             | Miniml.Tglob _ -> true
+            | Miniml.Tarr _ -> true
+            | Miniml.Tvar _ ->
+              (* Type variable: instantiate with the call-site type args to
+                 determine if the return type is actually a function.
+                 [cod] is already the function's codomain (all arrows
+                 stripped), so after substitution we check [cod_inst]
+                 directly — NOT [ml_codomain cod_inst], which would strip
+                 another layer of arrows and reject valid cases like
+                 [fold_right] instantiated at [A = nat -> nat].
+
+                 When [tys] is empty (type args carried as [MLdummy] in
+                 [args] rather than in the [MLglob] type-arg list),
+                 substitution is a no-op and the [Tvar] stays unresolved.
+                 In this case, chain unconditionally: Rocq's type system
+                 guarantees that excess {i value} args (non-[MLdummy]) can
+                 only exist when the return type instantiates to a function.
+                 Proof-level excess args are already removed by the
+                 [MLdummy] filter above. *)
+              if tys = [] then
+                true
+              else
+                let cod_inst = Mlutil.type_subst_list tys cod in
+                ( match resolve_tmeta cod_inst with
+                | Miniml.Tarr _ -> true
+                | Miniml.Tglob _ -> true
+                | _ -> false )
             | _ -> false )
           | None -> false
         in
@@ -3504,8 +3694,17 @@ and eta_fun env f args =
                 (wrapped, Some (eta_param_id i)) )
               missing_args
           in
+          (* When eta_keep_moves is set (single-use closure from MLletin),
+             keep CPPmove wrappers and capture by reference for zero-copy.
+             Otherwise strip CPPmove: the closure may be called multiple
+             times, so captured variables must not be consumed. *)
+          let captured_args =
+            if eta_keep_moves then args
+            else List.map (function CPPmove inner -> inner | e -> e) args
+          in
           let call_args =
-            args @ List.mapi (fun i _ -> CPPvar (eta_param_id i)) eta_args
+            captured_args
+            @ List.mapi (fun i _ -> CPPvar (eta_param_id i)) eta_args
           in
           let call = CPPfun_call (cglob, List.rev call_args) in
           let ret_ty, body =
@@ -3516,7 +3715,7 @@ and eta_fun env f args =
             else
               (Some cod, [Sreturn (Some call)])
           in
-          CPPlambda (List.rev eta_args, ret_ty, body, false)
+          CPPlambda (List.rev eta_args, ret_ty, body, not eta_keep_moves)
       | _ ->
         if id_is_typeclass_instance && args = [] then
           cglob
@@ -3567,7 +3766,66 @@ and eta_fun env f args =
       | _ -> List.length args
     in
     let n_args = List.length args in
-    if n_args > n_value_dom && n_value_dom > 0 then
+    if n_args = 0 then
+      (* All args were erased (MLdummy): no function call, just the
+         expression itself.  This arises when erased proof arguments
+         (e.g. [le n 0] in [Function]-generated [_rect] bodies) are
+         applied to a local variable — the proofs are filtered out,
+         leaving an empty arg list.  Generating [f()] would be wrong
+         because the C++ type has no 0-arg overload. *)
+      gen_expr env f
+    else if n_args < n_value_dom && n_value_dom > 0 then
+      (* Under-application (partial application due to proof erasure).
+         The callee expects [n_value_dom] args but only [n_args] are
+         provided — the rest were erased proofs in the same
+         [MLapp] that have been filtered out.
+
+         Generate a lambda wrapper that captures the provided args and
+         forwards them along with fresh parameters for the remaining
+         args.  E.g., [f2(n1)] where [f2 : (nat, T1) -> T1] becomes:
+         [[&](T1 _pa0) { return f2(n1, _pa0); }]. *)
+      let remaining_ml_tys =
+        match f with
+        | MLrel i ->
+          ( try
+              let ml_ty = get_env_type i in
+              (* Skip [n_args] non-dummy domain entries to find the
+                 remaining value-domain types. *)
+              let rec skip_and_collect n = function
+                | Miniml.Tarr (t, rest) ->
+                  ( match resolve_tmeta t with
+                  | Miniml.Tdummy _ -> skip_and_collect n rest
+                  | t ->
+                    if n > 0 then skip_and_collect (n - 1) rest
+                    else t :: skip_and_collect 0 rest )
+                | Miniml.Tmeta {contents = Some t} -> skip_and_collect n t
+                | _ -> []
+              in
+              skip_and_collect n_args ml_ty
+            with _ -> [] )
+        | _ -> []
+      in
+      if remaining_ml_tys <> [] then
+        let callee = gen_expr env f in
+        let tvars = get_current_type_vars () in
+        let pa_params = List.mapi (fun j ml_ty ->
+          let cpp_ty = convert_ml_type_to_cpp_type
+                         env Refset'.empty tvars ml_ty in
+          (cpp_ty, Some (Id.of_string (Printf.sprintf "_pa%d" j))) )
+          remaining_ml_tys
+        in
+        let pa_exprs = List.map (fun (_, id_opt) ->
+          CPPvar (Option.get id_opt)) pa_params in
+        (* CPPlambda stores params in reverse (de Bruijn) order;
+           the printer reverses them for display.  Reverse pa_params
+           so the printed output matches source order. *)
+        CPPlambda (List.rev pa_params, None,
+          [Sreturn (Some (CPPfun_call (callee,
+              List.rev (args @ pa_exprs))))],
+          true)
+      else
+        CPPfun_call (gen_expr env f, List.rev args)
+    else if n_args > n_value_dom && n_value_dom > 0 then
       let primary = List.rev (safe_firstn n_value_dom args) in
       let excess = List.rev (List.skipn n_value_dom args) in
       CPPfun_call (CPPfun_call (gen_expr env f, primary), excess)
@@ -4930,8 +5188,27 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       tctx.move_dead_after <- Escape.IntSet.union dead_in_a dead_from_above;
       let saved_suppress = tctx.move_suppress_tail in
       tctx.move_suppress_tail <- true;
+      (* Single-use partial application optimization: when the RHS is a partial
+         application and the bound variable is used at most once in the
+         continuation without escaping, AND all free variables of the RHS are
+         dead in the continuation (so [&] capture references stay valid),
+         tell eta_fun to keep CPPmove wrappers and use [&] capture for
+         zero-copy closure generation. *)
+      let is_single_use_partial_app =
+        (match a with
+         | MLapp (head, ml_args) | MLmagic (MLapp (head, ml_args)) ->
+           Escape.is_partial_app head ml_args
+         | _ -> false)
+        && Escape.nb_occur_match 1 b <= 1
+        && not (Escape.escapes 1 b)
+        && Escape.IntSet.is_empty
+             (Escape.IntSet.inter (Escape.free_rels 0 a) cont_free)
+      in
+      let saved_eta_keep = tctx.eta_keep_moves in
+      if is_single_use_partial_app then tctx.eta_keep_moves <- true;
       let afun v = Sasgn (x_renamed, None, v) in
       let asgn = gen_stmts env afun a in
+      tctx.eta_keep_moves <- saved_eta_keep;
       (* Push env_types AFTER generating the value expression [a] — [a] uses de
          Bruijn indices that don't include the new let binding.  The body [b]
          (generated below) does include it. *)
@@ -7756,17 +8033,36 @@ let gen_dfun n b cty ty temps =
   tctx.current_cpp_return_type <- saved_return_type;
   tctx.current_outer_function_name <- saved_outer_name;
   tctx.promoted_var_map <- saved_promoted_var_map;
-  (* Check if this is a main function with monadic return type - if so,
-     rename to _main and track for wrapper generation *)
+  (* {b Entry point detection for monadic [main].}
+
+     When a Rocq definition named [main] has a monadic return type, it is
+     treated as the program entry point.  The generated C++ must provide a
+     standard [int main()] — the handling depends on two factors:
+
+     {b 1. Inside a struct} ([struct_name = Some _]):
+       The function keeps its original name.  [Struct::main()] does not
+       collide with the free [int main()] because C++ member functions
+       occupy a separate scope.  A wrapper [int main() \{ Struct::main(); \}]
+       is generated by {!Extract_env.print_impl_module} from the
+       {!Table.set_main_function} registration.
+
+     {b 2. Top-level, sequential mode} ([struct_name = None, needs_run = false]):
+       The monad is erased (sequential ITree mode), so the function body is
+       plain imperative C++ returning [void].  Instead of emitting a separate
+       [_main] + wrapper, we convert the definition directly into
+       [int main()] by changing the return type to [int] and replacing every
+       [Sreturn None] (i.e. [return;]) with [Sreturn (Some (CPPint 0))]
+       (i.e. [return 0;]).  No wrapper is needed.
+
+     {b 3. Top-level, reified mode} ([struct_name = None, needs_run = true]):
+       The function returns [shared_ptr<ITree<R>>] and must be called with
+       [->run()] to execute the interaction tree.  We rename the function to
+       [_main] (to avoid colliding with the free [int main()]) and register
+       it for wrapper generation: [int main() \{ _main()->run(); return 0; \}]. *)
   let inner = match n with
     | GlobRef.ConstRef c ->
       let label_str = Label.to_string (Constant.label c) in
       if label_str = "main" && is_monadic_ml_type (ml_codomain ty) then begin
-        (* Rename to _main *)
-        let new_label = Label.of_id (Id.of_string "_main") in
-        let new_n = GlobRef.ConstRef (Constant.make2 (Constant.modpath c) new_label) in
-        (* Track for wrapper generation — include the struct qualifier.
-           needs_run is true only in reified mode (ITree<R> has ->run()). *)
         let struct_name =
           let mp = Constant.modpath c in
           match mp with
@@ -7777,12 +8073,38 @@ let gen_dfun n b cty ty temps =
           | Tglob (r, _, _) -> is_monad_reified r
           | _ -> false
         in
-        Table.set_main_function (Id.of_string "_main") (ml_codomain ty) struct_name needs_run;
-        (* Update the declaration with new name *)
-        match inner with
-        | Dfundef (_, cod, params, body, flags) ->
-          Dfundef ([(new_n, [])], cod, params, body, flags)
-        | d -> d
+        match struct_name, needs_run with
+        | Some _, _ ->
+          (* Case 1: inside a struct — keep name, register for wrapper *)
+          Table.set_main_function (Id.of_string "main") (ml_codomain ty) struct_name needs_run;
+          inner
+        | None, false ->
+          (* Case 2: top-level sequential — emit [int main()] directly.
+             Replace [Tvoid] return type with [int] and every [Sreturn None]
+             with [Sreturn (Some (CPPint 0))]. *)
+          let int_ty = Tvar (0, Some (Id.of_string "int")) in
+          let rec void_return_to_zero = function
+            | Sreturn None -> Sreturn (Some (CPPint 0))
+            | Sif (c, t, e) ->
+              Sif (c, List.map void_return_to_zero t,
+                      List.map void_return_to_zero e)
+            | Sblock ss -> Sblock (List.map void_return_to_zero ss)
+            | s -> s
+          in
+          ( match inner with
+          | Dfundef (names, _cod, params, body, flags) ->
+            Dfundef (names, int_ty, params, List.map void_return_to_zero body, flags)
+          | d -> d )
+        | None, true ->
+          (* Case 3: top-level reified — rename to [_main], register for
+             wrapper that calls [_main()->run()] *)
+          let new_label = Label.of_id (Id.of_string "_main") in
+          let new_n = GlobRef.ConstRef (Constant.make2 (Constant.modpath c) new_label) in
+          Table.set_main_function (Id.of_string "_main") (ml_codomain ty) None needs_run;
+          ( match inner with
+          | Dfundef (_, cod, params, body, flags) ->
+            Dfundef ([(new_n, [])], cod, params, body, flags)
+          | d -> d )
       end else
         inner
     | _ -> inner

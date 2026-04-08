@@ -19,9 +19,10 @@ std::shared_ptr<MatchCtorClosure::fn_box> MatchCtorClosure::match_and_box(
                  },
                  [](const typename MatchCtorClosure::tree::Node _args)
                      -> std::shared_ptr<MatchCtorClosure::fn_box> {
-                   return fn_box::box([&](unsigned int _x0) -> unsigned int {
-                     return _args.d_a0->sum_values(_x0);
-                   });
+                   return fn_box::box(
+                       [=](unsigned int _x0) mutable -> unsigned int {
+                         return _args.d_a0->sum_values(_x0);
+                       });
                  }},
       t->v());
 }

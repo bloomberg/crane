@@ -7,12 +7,12 @@
 #include <type_traits>
 #include <variant>
 
-void MainEntrypoint::_main() {
+void MainEntrypoint::main() {
   std::cout << "hello from main"s << '\n';
   return;
 }
 
 int main() {
-  MainEntrypoint::_main();
+  MainEntrypoint::main();
   return 0;
 }

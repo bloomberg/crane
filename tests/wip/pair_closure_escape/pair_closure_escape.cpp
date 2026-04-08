@@ -46,7 +46,10 @@ __attribute__((pure))
 std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
 PairClosureEscape::pair_escape(std::shared_ptr<PairClosureEscape::tree> t) {
   return std::make_pair(
-      [&](unsigned int _x0) -> unsigned int { return sum_values(t, _x0); }, 0u);
+      [=](unsigned int _x0) mutable -> unsigned int {
+        return sum_values(t, _x0);
+      },
+      0u);
 }
 
 __attribute__((pure)) unsigned int PairClosureEscape::use_pair(

@@ -46,8 +46,8 @@ __attribute__((pure)) bool ProgramTargetsRegionScan::target_in_layoutb(
 __attribute__((pure)) bool ProgramTargetsRegionScan::program_targets_okb(
     const std::shared_ptr<
         List<std::shared_ptr<ProgramTargetsRegionScan::instruction>>> &prog,
-    const std::shared_ptr<ProgramTargetsRegionScan::layout> &l) {
+    std::shared_ptr<ProgramTargetsRegionScan::layout> l) {
   return prog->forallb(
-      [&](const std::shared_ptr<ProgramTargetsRegionScan::instruction> &_x0)
-          -> bool { return target_in_layoutb(l, _x0); });
+      [=](const std::shared_ptr<ProgramTargetsRegionScan::instruction>
+              &_x0) mutable -> bool { return target_in_layoutb(l, _x0); });
 }

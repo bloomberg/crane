@@ -83,13 +83,14 @@ PendantSumtreeRoundtripCase::encode_multi(
     const unsigned int n,
     const std::shared_ptr<List<std::shared_ptr<T0<std::shared_ptr<T>>>>>
         &nums) {
-  return nums->template map<
-      std::shared_ptr<List<PendantSumtreeRoundtripCase::digit>>>(
-      [&](const std::shared_ptr<T0<PendantSumtreeRoundtripCase::digit>> &_x0)
-          -> std::shared_ptr<List<PendantSumtreeRoundtripCase::digit>> {
-        return Vector::template to_list<PendantSumtreeRoundtripCase::digit>(
-            n, _x0);
-      });
+  return nums
+      ->template map<std::shared_ptr<List<PendantSumtreeRoundtripCase::digit>>>(
+          [=](const std::shared_ptr<T0<PendantSumtreeRoundtripCase::digit>>
+                  &_x0) mutable
+              -> std::shared_ptr<List<PendantSumtreeRoundtripCase::digit>> {
+            return Vector::template to_list<PendantSumtreeRoundtripCase::digit>(
+                n, _x0);
+          });
 }
 
 __attribute__((pure)) std::optional<std::shared_ptr<
@@ -101,8 +102,8 @@ PendantSumtreeRoundtripCase::decode_multi(
   std::shared_ptr<List<std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>>>>
       decoded = segments->template map<std::optional<
           std::shared_ptr<T0<PendantSumtreeRoundtripCase::digit>>>>(
-          [&](const std::shared_ptr<List<PendantSumtreeRoundtripCase::digit>>
-                  &_x0)
+          [=](const std::shared_ptr<List<PendantSumtreeRoundtripCase::digit>>
+                  &_x0) mutable
               -> std::optional<
                   std::shared_ptr<T0<PendantSumtreeRoundtripCase::digit>>> {
             return list_to_vector_opt(n, _x0);
@@ -196,8 +197,8 @@ PendantSumtreeRoundtripCase::pendant_value(
     const std::shared_ptr<PendantSumtreeRoundtripCase::CertifiedPendant> &p) {
   return Datatypes::template option_map<
       std::shared_ptr<T0<PendantSumtreeRoundtripCase::digit>>, unsigned int>(
-      [&](const std::shared_ptr<T0<PendantSumtreeRoundtripCase::digit>> &_x0)
-          -> unsigned int { return value_digits(n, _x0); },
+      [=](const std::shared_ptr<T0<PendantSumtreeRoundtripCase::digit>>
+              &_x0) mutable -> unsigned int { return value_digits(n, _x0); },
       pendant_digits(n, p));
 }
 
@@ -241,9 +242,9 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::group_sums_validb(
   if (pendant_value(n, g->pg_top).has_value()) {
     unsigned int top_val = *pendant_value(n, g->pg_top);
     std::shared_ptr<List<std::optional<unsigned int>>> pendant_vals =
-        g->pg_pendants->template map<std::optional<unsigned int>>(
-            [&](const std::shared_ptr<
-                PendantSumtreeRoundtripCase::CertifiedPendant> &_x0)
+        std::move(g)->pg_pendants->template map<std::optional<unsigned int>>(
+            [=](const std::shared_ptr<
+                PendantSumtreeRoundtripCase::CertifiedPendant> &_x0) mutable
                 -> std::optional<unsigned int> {
               return pendant_value(n, _x0);
             });
@@ -267,7 +268,7 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::group_sums_validb(
                 std::make_optional<unsigned int>(0u));
     if (sum_opt.has_value()) {
       unsigned int s = *sum_opt;
-      return top_val == std::move(s);
+      return std::move(top_val) == std::move(s);
     } else {
       return false;
     }
@@ -318,8 +319,8 @@ PendantSumtreeRoundtripCase::sumtree_leaves(
             return _args.d_a1
                 ->template map<std::shared_ptr<List<std::shared_ptr<
                     PendantSumtreeRoundtripCase::CertifiedPendant>>>>(
-                    [&](const std::shared_ptr<
-                        PendantSumtreeRoundtripCase::SumTree> &_x0)
+                    [=](const std::shared_ptr<
+                        PendantSumtreeRoundtripCase::SumTree> &_x0) mutable
                         -> std::shared_ptr<List<std::shared_ptr<
                             PendantSumtreeRoundtripCase::CertifiedPendant>>> {
                       return sumtree_leaves(n, _x0);
@@ -342,8 +343,8 @@ __attribute__((pure)) unsigned int PendantSumtreeRoundtripCase::sumtree_depth(
             return (
                 _args.d_a1
                     ->template map<unsigned int>(
-                        [&](const std::shared_ptr<
-                            PendantSumtreeRoundtripCase::SumTree> &_x0)
+                        [=](const std::shared_ptr<
+                            PendantSumtreeRoundtripCase::SumTree> &_x0) mutable
                             -> unsigned int { return sumtree_depth(n, _x0); })
                     ->template fold_right<unsigned int>(
                         [](unsigned int _x0, unsigned int _x1) -> unsigned int {
@@ -372,8 +373,8 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::sumtree_validb_aux(
                   PendantSumtreeRoundtripCase::CertifiedPendant>>>
                   child_tops = _args.d_a1->template map<std::shared_ptr<
                       PendantSumtreeRoundtripCase::CertifiedPendant>>(
-                      [&](const std::shared_ptr<
-                          PendantSumtreeRoundtripCase::SumTree> &_x0)
+                      [=](const std::shared_ptr<
+                          PendantSumtreeRoundtripCase::SumTree> &_x0) mutable
                           -> std::shared_ptr<
                               PendantSumtreeRoundtripCase::CertifiedPendant> {
                         return sumtree_top(n, _x0);
@@ -384,8 +385,9 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::sumtree_validb_aux(
               return (
                   group_sums_validb(n, std::move(g)) &&
                   _args.d_a1->forallb(
-                      [&](const std::shared_ptr<
-                          PendantSumtreeRoundtripCase::SumTree> &_x0) -> bool {
+                      [=](const std::shared_ptr<
+                          PendantSumtreeRoundtripCase::SumTree> &_x0) mutable
+                          -> bool {
                         return sumtree_validb_aux(n, fuel_, _x0);
                       }));
             }},
@@ -405,8 +407,8 @@ PendantSumtreeRoundtripCase::sumtree_leaf_total(
     const std::shared_ptr<PendantSumtreeRoundtripCase::SumTree> &st) {
   std::shared_ptr<List<std::optional<unsigned int>>> vals =
       sumtree_leaves(n, st)->template map<std::optional<unsigned int>>(
-          [&](const std::shared_ptr<
-              PendantSumtreeRoundtripCase::CertifiedPendant> &_x0)
+          [=](const std::shared_ptr<
+              PendantSumtreeRoundtripCase::CertifiedPendant> &_x0) mutable
               -> std::optional<unsigned int> { return pendant_value(n, _x0); });
   return std::move(vals)->template fold_right<std::optional<unsigned int>>(
       [](std::optional<unsigned int> ov, std::optional<unsigned int> acc) {

@@ -199,11 +199,10 @@ struct MapPartialApp {
   /// 13 = 36
   static inline const unsigned int map_partial_bug = []() {
     return []() {
-      std::unique_ptr<tree> t =
-          tree::node_uptr(tree::leaf(), 10u, tree::leaf());
+      std::shared_ptr<tree> t = tree::node(tree::leaf(), 10u, tree::leaf());
       std::function<std::shared_ptr<tree>(unsigned int)> f =
-          [&](unsigned int _x0) -> std::shared_ptr<tree> {
-        return wrap(std::move(t), _x0);
+          [=](unsigned int _x0) mutable -> std::shared_ptr<tree> {
+        return wrap(t, _x0);
       };
       std::shared_ptr<List<unsigned int>> results =
           List<unsigned int>::cons(
@@ -219,11 +218,10 @@ struct MapPartialApp {
   /// Extra indirection through pair.
   static inline const unsigned int map_partial_pair = []() {
     return []() {
-      std::unique_ptr<tree> t =
-          tree::node_uptr(tree::leaf(), 10u, tree::leaf());
+      std::shared_ptr<tree> t = tree::node(tree::leaf(), 10u, tree::leaf());
       std::function<std::shared_ptr<tree>(unsigned int)> f =
-          [&](unsigned int _x0) -> std::shared_ptr<tree> {
-        return wrap(std::move(t), _x0);
+          [=](unsigned int _x0) mutable -> std::shared_ptr<tree> {
+        return wrap(t, _x0);
       };
       std::pair<std::function<std::shared_ptr<tree>(unsigned int)>,
                 unsigned int>
@@ -241,17 +239,15 @@ struct MapPartialApp {
   /// Variation: two closures mapped over same list.
   static inline const unsigned int map_two_closures = []() {
     return []() {
-      std::unique_ptr<tree> t1 =
-          tree::node_uptr(tree::leaf(), 10u, tree::leaf());
-      std::unique_ptr<tree> t2 =
-          tree::node_uptr(tree::leaf(), 20u, tree::leaf());
+      std::shared_ptr<tree> t1 = tree::node(tree::leaf(), 10u, tree::leaf());
+      std::shared_ptr<tree> t2 = tree::node(tree::leaf(), 20u, tree::leaf());
       std::function<std::shared_ptr<tree>(unsigned int)> f1 =
-          [&](unsigned int _x0) -> std::shared_ptr<tree> {
-        return wrap(std::move(t1), _x0);
+          [=](unsigned int _x0) mutable -> std::shared_ptr<tree> {
+        return wrap(t1, _x0);
       };
       std::function<std::shared_ptr<tree>(unsigned int)> f2 =
-          [&](unsigned int _x0) -> std::shared_ptr<tree> {
-        return wrap(std::move(t2), _x0);
+          [=](unsigned int _x0) mutable -> std::shared_ptr<tree> {
+        return wrap(t2, _x0);
       };
       std::shared_ptr<List<unsigned int>> r1 =
           List<unsigned int>::cons(

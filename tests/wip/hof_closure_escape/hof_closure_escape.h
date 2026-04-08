@@ -127,7 +127,7 @@ struct HofClosureEscape {
   /// When hof_escape returns, captured t is destroyed.
   __attribute__((
       pure)) static std::optional<std::function<unsigned int(unsigned int)>>
-  hof_escape(const std::shared_ptr<tree> &t);
+  hof_escape(std::shared_ptr<tree> t);
   __attribute__((pure)) static unsigned int
   apply_option(const std::optional<std::function<unsigned int(unsigned int)>> o,
                const unsigned int x); /// Clobber stack, then use the closure.

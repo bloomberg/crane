@@ -48,7 +48,9 @@ OptionSomeEscape::sum_values(const std::shared_ptr<OptionSomeEscape::tree> &t,
 __attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
 OptionSomeEscape::option_escape(std::shared_ptr<OptionSomeEscape::tree> t) {
   return std::make_optional<std::function<unsigned int(unsigned int)>>(
-      [&](unsigned int _x0) -> unsigned int { return sum_values(t, _x0); });
+      [=](unsigned int _x0) mutable -> unsigned int {
+        return sum_values(t, _x0);
+      });
 }
 
 __attribute__((pure)) unsigned int OptionSomeEscape::apply_option(

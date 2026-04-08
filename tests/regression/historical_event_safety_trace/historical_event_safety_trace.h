@@ -885,13 +885,13 @@ struct HistoricalEventSafetyTraceCase {
             MapsTo<unsigned int, unsigned int> F4>
   static std::shared_ptr<TestResult> run_historical_test(
       const std::shared_ptr<PlantConfig> &pconf,
-      const std::shared_ptr<List<std::shared_ptr<InflowRecord>>> &event,
+      std::shared_ptr<List<std::shared_ptr<InflowRecord>>> event,
       const unsigned int default_inflow, F3 &&ctrl, F4 &&stage_fn,
       const std::shared_ptr<State> &initial_state, const unsigned int horizon,
       const unsigned int event_id) {
     std::function<unsigned int(unsigned int)> inflow =
         [&](unsigned int _x0) -> unsigned int {
-      return event_to_inflow(event, default_inflow, _x0);
+      return event_to_inflow(std::move(event), std::move(default_inflow), _x0);
     };
     bool initial_safe = is_safe_bool(pconf, initial_state);
     std::pair<std::shared_ptr<State>, unsigned int> p =

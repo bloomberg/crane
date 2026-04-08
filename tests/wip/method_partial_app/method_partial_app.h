@@ -128,12 +128,12 @@ struct MethodPartialApp {
   /// Direct partial app stored in let, called twice.
   static inline const unsigned int method_partial_bug = []() {
     return []() {
-      std::unique_ptr<tree> t =
-          tree::node_uptr(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                          tree::node(tree::leaf(), 30u, tree::leaf()));
+      std::shared_ptr<tree> t =
+          tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                     tree::node(tree::leaf(), 30u, tree::leaf()));
       std::function<unsigned int(unsigned int)> f =
-          [&](unsigned int _x0) -> unsigned int {
-        return std::move(t)->add_to_sum(_x0);
+          [=](unsigned int _x0) mutable -> unsigned int {
+        return t->add_to_sum(_x0);
       };
       return (f(5u) + f(10u));
     }();
@@ -196,8 +196,10 @@ struct MethodPartialApp {
       std::shared_ptr<tree> t =
           tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                      tree::node(tree::leaf(), 30u, tree::leaf()));
-      std::unique_ptr<box> b = box::box0_uptr(
-          [&](unsigned int _x0) -> unsigned int { return t->add_to_sum(_x0); });
+      std::unique_ptr<box> b =
+          box::box0_uptr([=](unsigned int _x0) mutable -> unsigned int {
+            return t->add_to_sum(_x0);
+          });
       return std::visit(
           Overloaded{[](const typename box::Box0 _args) -> unsigned int {
             return (_args.d_a0(5u) + _args.d_a0(10u));
@@ -208,10 +210,8 @@ struct MethodPartialApp {
   /// Two partial apps from different trees.
   static inline const unsigned int method_partial_two = []() {
     return []() {
-      std::unique_ptr<tree> t1 =
-          tree::node_uptr(tree::leaf(), 10u, tree::leaf());
-      std::unique_ptr<tree> t2 =
-          tree::node_uptr(tree::leaf(), 20u, tree::leaf());
+      std::shared_ptr<tree> t1 = tree::node(tree::leaf(), 10u, tree::leaf());
+      std::shared_ptr<tree> t2 = tree::node(tree::leaf(), 20u, tree::leaf());
       std::function<unsigned int(unsigned int)> f1 =
           [&](unsigned int _x0) -> unsigned int {
         return std::move(t1)->add_to_sum(_x0);

@@ -202,7 +202,7 @@ struct LetClosureEscape {
   /// f := sum_values t creates a & lambda bound to a variable.
   /// Box f stores the variable (not a direct lambda) in a constructor.
   /// When let_escape returns, t is destroyed → dangling reference in Box.
-  static std::shared_ptr<fn_box> let_escape(const std::shared_ptr<tree> &t);
+  static std::shared_ptr<fn_box> let_escape(std::shared_ptr<tree> t);
   /// Clobber stack after let_escape returns, then use the closure.
   static inline const unsigned int bug_let_clobber = []() {
     std::unique_ptr<tree> t1 =

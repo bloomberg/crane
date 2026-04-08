@@ -127,14 +127,14 @@ struct NestedPartialApp {
   /// Leaf = (10 + 42 + 1) + (10 + 42 + 2) = 53 + 54 = 107
   static inline const unsigned int nested_partial_bug = []() {
     return []() {
-      std::unique_ptr<tree> t1 =
-          tree::node_uptr(tree::leaf(), 10u, tree::leaf());
+      std::shared_ptr<tree> t1 = tree::node(tree::leaf(), 10u, tree::leaf());
       std::function<std::shared_ptr<tree>(unsigned int, std::shared_ptr<tree>)>
           g = [&](unsigned int _x0,
                   const std::shared_ptr<tree> &_x1) -> std::shared_ptr<tree> {
         return build_node(std::move(t1), _x0, _x1);
       };
-      std::function<std::shared_ptr<tree>(std::shared_ptr<tree>)> h = g(42u);
+      std::function<std::shared_ptr<tree>(std::shared_ptr<tree>)> h =
+          [=](std::shared_ptr<tree> _pa0) mutable { return g(42u, _pa0); };
       std::shared_ptr<tree> r1 = h(tree::node(tree::leaf(), 1u, tree::leaf()));
       std::shared_ptr<tree> r2 = h(tree::node(tree::leaf(), 2u, tree::leaf()));
       return (tree_sum(std::move(r1)) + tree_sum(std::move(r2)));
@@ -144,15 +144,14 @@ struct NestedPartialApp {
   /// partial application. Tests if g's capture of t1 survives.
   static inline const unsigned int nested_partial_reuse = []() {
     return []() {
-      std::unique_ptr<tree> t1 =
-          tree::node_uptr(tree::leaf(), 10u, tree::leaf());
+      std::shared_ptr<tree> t1 = tree::node(tree::leaf(), 10u, tree::leaf());
       std::function<std::shared_ptr<tree>(unsigned int, std::shared_ptr<tree>)>
-          g = [&](unsigned int _x0,
-                  const std::shared_ptr<tree> &_x1) -> std::shared_ptr<tree> {
-        return build_node(std::move(t1), _x0, _x1);
-      };
-      std::function<std::shared_ptr<tree>(std::shared_ptr<tree>)> h1 = g(42u);
-      std::function<std::shared_ptr<tree>(std::shared_ptr<tree>)> h2 = g(99u);
+          g = [=](unsigned int _x0, const std::shared_ptr<tree> &_x1) mutable
+          -> std::shared_ptr<tree> { return build_node(t1, _x0, _x1); };
+      std::function<std::shared_ptr<tree>(std::shared_ptr<tree>)> h1 =
+          [=](std::shared_ptr<tree> _pa0) mutable { return g(42u, _pa0); };
+      std::function<std::shared_ptr<tree>(std::shared_ptr<tree>)> h2 =
+          [=](std::shared_ptr<tree> _pa0) mutable { return g(99u, _pa0); };
       std::shared_ptr<tree> r1 = h1(tree::node(tree::leaf(), 1u, tree::leaf()));
       std::shared_ptr<tree> r2 = h2(tree::node(tree::leaf(), 2u, tree::leaf()));
       return (tree_sum(std::move(r1)) + tree_sum(std::move(r2)));
@@ -164,8 +163,7 @@ struct NestedPartialApp {
           const unsigned int c, const std::shared_ptr<tree> &d);
   static inline const unsigned int triple_partial = []() {
     return []() {
-      std::unique_ptr<tree> t =
-          tree::node_uptr(tree::leaf(), 10u, tree::leaf());
+      std::shared_ptr<tree> t = tree::node(tree::leaf(), 10u, tree::leaf());
       std::function<unsigned int(unsigned int, unsigned int,
                                  std::shared_ptr<tree>)>
           f1 = [&](unsigned int _x0, unsigned int _x1,
@@ -173,8 +171,11 @@ struct NestedPartialApp {
         return quad_fn(std::move(t), _x0, _x1, _x2);
       };
       std::function<unsigned int(unsigned int, std::shared_ptr<tree>)> f2 =
-          f1(20u);
-      std::function<unsigned int(std::shared_ptr<tree>)> f3 = f2(30u);
+          [=](unsigned int _pa0, std::shared_ptr<tree> _pa1) mutable {
+            return f1(20u, _pa0, _pa1);
+          };
+      std::function<unsigned int(std::shared_ptr<tree>)> f3 =
+          [=](std::shared_ptr<tree> _pa0) mutable { return f2(30u, _pa0); };
       unsigned int r1 = f3(tree::node(tree::leaf(), 1u, tree::leaf()));
       unsigned int r2 = f3(tree::node(tree::leaf(), 2u, tree::leaf()));
       return (std::move(r1) + std::move(r2));

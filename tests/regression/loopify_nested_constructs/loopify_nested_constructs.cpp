@@ -73,7 +73,6 @@ LoopifyNestedConstructs::nested_if_fuel(const unsigned int fuel,
                 unsigned int _next_fuel = fuel_;
                 _loop_n = std::move(_next_n);
                 _loop_fuel = std::move(_next_fuel);
-                continue;
               }
             } else {
               {
@@ -82,7 +81,6 @@ LoopifyNestedConstructs::nested_if_fuel(const unsigned int fuel,
                 unsigned int _next_fuel = fuel_;
                 _loop_n = std::move(_next_n);
                 _loop_fuel = std::move(_next_fuel);
-                continue;
               }
             }
           } else {
@@ -92,7 +90,6 @@ LoopifyNestedConstructs::nested_if_fuel(const unsigned int fuel,
               unsigned int _next_fuel = fuel_;
               _loop_n = std::move(_next_n);
               _loop_fuel = std::move(_next_fuel);
-              continue;
             }
           }
         }

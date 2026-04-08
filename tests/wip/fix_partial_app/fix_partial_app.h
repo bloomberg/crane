@@ -143,12 +143,12 @@ struct FixPartialApp {
   /// So count_nodes tree 0 = 3
   static inline const unsigned int fix_partial_bug = []() {
     return []() {
-      std::unique_ptr<tree> t =
-          tree::node_uptr(tree::node(tree::leaf(), 0u, tree::leaf()), 0u,
-                          tree::node(tree::leaf(), 0u, tree::leaf()));
+      std::shared_ptr<tree> t =
+          tree::node(tree::node(tree::leaf(), 0u, tree::leaf()), 0u,
+                     tree::node(tree::leaf(), 0u, tree::leaf()));
       std::function<unsigned int(unsigned int)> f =
-          [&](unsigned int _x0) -> unsigned int {
-        return count_nodes(std::move(t), _x0);
+          [=](unsigned int _x0) mutable -> unsigned int {
+        return count_nodes(t, _x0);
       };
       return (f(0u) + f(100u));
     }();
@@ -156,12 +156,12 @@ struct FixPartialApp {
   /// Same but store partial app in pair
   static inline const unsigned int fix_partial_pair = []() {
     return []() {
-      std::unique_ptr<tree> t =
-          tree::node_uptr(tree::node(tree::leaf(), 0u, tree::leaf()), 0u,
-                          tree::node(tree::leaf(), 0u, tree::leaf()));
+      std::shared_ptr<tree> t =
+          tree::node(tree::node(tree::leaf(), 0u, tree::leaf()), 0u,
+                     tree::node(tree::leaf(), 0u, tree::leaf()));
       std::function<unsigned int(unsigned int)> f =
-          [&](unsigned int _x0) -> unsigned int {
-        return count_nodes(std::move(t), _x0);
+          [=](unsigned int _x0) mutable -> unsigned int {
+        return count_nodes(t, _x0);
       };
       std::pair<std::function<unsigned int(unsigned int)>, unsigned int> p =
           std::make_pair(f, 42u);
