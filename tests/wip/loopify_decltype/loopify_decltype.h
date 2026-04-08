@@ -71,9 +71,12 @@ public:
 };
 
 struct LoopifyDecltype {
+  /// Minimal trigger: fold over a list with a conditional per-element
+  /// contribution.
   __attribute__((pure)) static unsigned int
   count_true(const std::shared_ptr<List<bool>> &xs);
 
+  /// Same pattern with a record field access inside the conditional.
   struct item {
     bool item_flag;
     unsigned int item_val;

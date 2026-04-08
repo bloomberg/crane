@@ -3249,3 +3249,15 @@
   (alias runtest)
   (deps nat_mod_zero.t.exe)
   (action (run ./nat_mod_zero.t.exe))))
+
+(subdir loopify_match_arg
+ (rule
+  (targets loopify_match_arg.t.exe)
+  (deps LoopifyMatchArg.vo loopify_match_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_match_arg.t.exe loopify_match_arg.cpp loopify_match_arg.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_match_arg.t.exe)
+  (action (run ./loopify_match_arg.t.exe))))
+

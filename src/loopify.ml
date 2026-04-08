@@ -3573,6 +3573,39 @@ let rec rewrite_enter_lambda_return
       | _ ->
         (* Cannot decompose — execute inline *)
         [Sasgn (id, ty_opt, e)] )
+  | Sswitch (scrut, r, branches, default) ->
+    let rw_stmts =
+      rewrite_enter_stmts
+        check
+        varying
+        tparams
+        env
+        ret_ty
+        pp_type
+        call_counter
+        frames_ref
+        varying_param_types
+    in
+    let rw_branches =
+      List.map
+        (fun (id, body) ->
+          let lenv = collect_type_env body @ env in
+          ( id,
+            rewrite_enter_stmts
+              check
+              varying
+              tparams
+              lenv
+              ret_ty
+              pp_type
+              call_counter
+              frames_ref
+              varying_param_types
+              body ) )
+        branches
+    in
+    let rw_default = Option.map rw_stmts default in
+    [Sswitch (scrut, r, rw_branches, rw_default)]
   | s -> [s]
 
 (** Process a sequence of statements using continuation-passing to handle
