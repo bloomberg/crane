@@ -1,5 +1,5 @@
-#ifndef INCLUDED_MAIN_ENTRYPOINT
-#define INCLUDED_MAIN_ENTRYPOINT
+#ifndef INCLUDED_MAIN_TOPLEVEL
+#define INCLUDED_MAIN_TOPLEVEL
 
 #include <filesystem>
 #include <fstream>
@@ -17,8 +17,10 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-struct MainEntrypoint {
-  static void main();
+struct Greeter {
+  static void greet();
 };
 
-#endif // INCLUDED_MAIN_ENTRYPOINT
+int main();
+
+#endif // INCLUDED_MAIN_TOPLEVEL

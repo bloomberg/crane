@@ -3327,3 +3327,14 @@
   (alias runtest)
   (deps loopify_itree_seq.t.exe)
   (action (run ./loopify_itree_seq.t.exe))))
+
+(subdir main_toplevel
+ (rule
+  (targets main_toplevel.t.exe)
+  (deps MainToplevel.vo main_toplevel.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} main_toplevel.t.exe main_toplevel.cpp main_toplevel.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps main_toplevel.t.exe)
+  (action (run ./main_toplevel.t.exe))))

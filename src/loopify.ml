@@ -755,13 +755,28 @@ let rec rewrite_lambda_return check varying shadow_params = function
     [Sblock (List.concat_map rw stmts)]
   | s -> [s]
 
-(** Rewrite a statement that contains a std::visit return or direct tail call.
-    Visit lambdas become void; base cases set [_continue = false]. *)
+(** Rewrite a single statement for tail-call loopification.
+
+    Handles three kinds of [Sreturn]:
+    - {b Direct tail call} ([check] succeeds): replace with shadow variable
+      updates wrapped in an [Sblock].  No [Scontinue] is emitted because the
+      update block is always the terminal statement in its branch; control
+      naturally falls through to the end of the [while] body and loops back.
+    - {b Visit tail call}: rewrite the [std::visit] lambdas to update shadow
+      variables (recursive branches) or set [_result] and [_continue = false]
+      (base branches).
+    - {b Direct base return}: assign [_result] and stop the loop.
+
+    Branching statements ([Sif], [Sswitch], [Scustom_case], [Sblock]) delegate
+    to {!rewrite_visit_stmts} for list-level rewriting, which also detects the
+    void tail-call pattern ([Sexpr call; Sreturn None]). *)
 let rec rewrite_visit_stmt check varying shadow_params = function
   | Sreturn (Some e) ->
     ( match check e with
     | Some cs ->
-      (* Direct tail call — no std::visit involved *)
+      (* Direct tail call — replace with shadow updates.  No Scontinue:
+         the block is terminal in its branch, so control falls through
+         to the while-loop test naturally. *)
       let assigns =
         make_shadow_updates shadow_params (filter_by_mask varying cs.cs_args)
       in
@@ -817,9 +832,17 @@ let rec rewrite_visit_stmt check varying shadow_params = function
     Sblock (rewrite_visit_stmts check varying shadow_params stmts)
   | s -> s
 
-(** Rewrite a list of statements, detecting the void tail-call pattern
-    [Sexpr call; Sreturn None] when [call] is a direct recursive call.
-    Delegates to {!rewrite_visit_stmt}. *)
+(** Rewrite a list of statements for tail-call loopification.
+
+    In addition to delegating each statement to {!rewrite_visit_stmt}, this
+    detects the void tail-call pattern:
+
+    {v  Sexpr call; Sreturn None   (* call(); return; *)  v}
+
+    which is semantically equivalent to [Sreturn (Some call)] — the call is
+    in tail position even though C++ syntax splits it into two statements.
+    This pattern is produced by [cofix_wrap] and [gen_stmts] for void
+    cofixpoints and void-returning recursive functions. *)
 and rewrite_visit_stmts check varying shadow_params = function
   | Sexpr e :: Sreturn None :: rest when check e <> None ->
     (* Void tail-call: [call(); return;] → rewrite as [return call();] *)
@@ -832,36 +855,47 @@ and rewrite_visit_stmts check varying shadow_params = function
 
 (** Transform a tail-recursive function body into a [while] loop with shadow variables.
 
-    Tail recursion is the simplest loopification case. Since no work happens after
-    the recursive call, we can convert it directly into iteration:
+    Tail recursion is the simplest loopification case.  Since no work happens
+    after the recursive call, we can convert it directly into iteration.
+
+    {b Non-void functions} use a [_continue] guard variable and a [_result]
+    accumulator:
 
     {v
     let rec f x = if base(x) then result else f(next(x))
-
-    becomes:
-
-    let f x_init =
-      let _result = ... in
-      let x = x_init in        (* shadow variable *)
-      let _continue = true in
-      while _continue do
-        if base(x) then (_result := result; _continue := false)
-        else x := next(x)  (* update shadow and continue *)
-      done;
-      _result
+    →
+    T _result;
+    auto _loop_x = x;
+    bool _continue = true;
+    while (_continue) {
+      if (base(_loop_x)) { _result = result; _continue = false; }
+      else { _loop_x = next(_loop_x); }
+    }
+    return _result;
     v}
 
-    Algorithm:
-    1. Declare [_result] variable with the function's return type
-    2. Create mutable shadow copies of varying parameters (those that change across calls)
-    3. Substitute parameter references with shadow variables in the body
-    4. Rewrite recursive calls to reassign shadow variables and continue the loop
-    5. Wrap everything in a [while (_continue)] loop
+    {b Void functions} (e.g. cofixpoint [spin], [forever]) never set
+    [_continue = false] — their base cases exit via [return;] (which becomes
+    [Sreturn None]) rather than assigning a result.  So [_continue] and
+    [_result] are unnecessary and the loop simplifies to [while (true)]:
+
+    {v
+    CoFixpoint forever n := Tau (forever (S n))
+    →
+    auto _loop_n = n;
+    while (true) { _loop_n = _loop_n + 1; }
+    return;
+    v}
+
+    After rewriting, {!strip_empty_blocks} removes any empty [Sblock]s left
+    by tail-call rewrites that produced no shadow updates (e.g. a
+    zero-parameter cofixpoint like [spin] whose only recursive call has no
+    arguments to update).
 
     @param param_inits Optional custom initializers for shadow variables
                        (default: copy from original parameter)
     @param check Call checker for identifying recursive calls
-    @param pp_type Type pretty-printer
+    @param pp_type Type pretty-printer (unused, kept for signature uniformity)
     @param params Function parameters [(id, type)] list
     @param ret_ty Return type of the function
     @param body Function body statements
@@ -896,8 +930,18 @@ let transform_tail ?(param_inits = []) check _pp_type params ret_ty body =
   let body'' =
     rewrite_visit_stmts check varying shadow_params body'
   in
-  (* Strip empty blocks left over after tail-call rewrites that produced
-     no shadow updates (e.g. zero-parameter spin). *)
+  (* Recursively strip empty [Sblock]s from the while body.
+
+     When a tail-call rewrite produces no shadow updates (because the
+     function has no varying parameters), {!rewrite_visit_stmt} returns
+     [Sblock \[\]].  If the original body wrapped statements in an [Sblock]
+     (common for cofixpoint bodies), the result is nested empty blocks like
+     [Sblock [Sblock \[\]]].  This pass collapses them:
+
+     - [Sblock \[\]] at any nesting level is dropped entirely.
+     - [Sblock stmts] where [stmts] becomes empty after stripping is also
+       dropped.
+     - Non-empty [Sblock]s and other statements are kept. *)
   let rec strip_empty_blocks = function
     | Sblock stmts :: rest ->
       let stmts' = strip_empty_blocks stmts in
@@ -913,7 +957,13 @@ let transform_tail ?(param_inits = []) check _pp_type params ret_ty body =
            Some (Tvar (0, Some (Id.of_string "bool"))),
            CPPbool true)
   in
-  (* For void functions, skip _result declaration and return *)
+  (* Assemble the loop body.
+     - Non-void: [T _result; ... bool _continue = true; while (_continue) { ... } return _result;]
+     - Void:     [... while (true) { ... } return;]
+     Void functions never assign [_result] or set [_continue = false] — their
+     base cases exit via [Sreturn None] (plain [return;]), so both variables
+     are unnecessary.  Using [while (true)] makes the infinite-loop intent
+     explicit (e.g. for cofixpoints like [spin] and [forever]). *)
   (if is_void then [] else [Sdecl (Id.of_string "_result", ret_ty)])
   @ shadow_decls
   @ (if is_void then [] else [continue_decl])

@@ -1,4 +1,4 @@
-#include <main_entrypoint.h>
+#include <main_toplevel.h>
 
 #include <filesystem>
 #include <fstream>
@@ -7,12 +7,14 @@
 #include <type_traits>
 #include <variant>
 
-void MainEntrypoint::main() {
-  std::cout << "hello from main"s << '\n';
+void Greeter::greet() {
+  std::cout << "hello from toplevel main"s << '\n';
   return;
 }
 
 int main() {
-  MainEntrypoint::main();
-  return 0;
+  {
+    Greeter::greet();
+    return 0;
+  }
 }

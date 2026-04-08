@@ -80,7 +80,7 @@ struct ITreeReified {
   /// Apply with_logging to greet, producing itree (ioE +' ioE) unit.
   static std::shared_ptr<ITree<void>> test_logging();
   /// ---- Main (auto-wrapper) ----
-  static std::shared_ptr<ITree<void>> _main();
+  static std::shared_ptr<ITree<void>> main();
 };
 
 #endif // INCLUDED_ITREE_REIFIED

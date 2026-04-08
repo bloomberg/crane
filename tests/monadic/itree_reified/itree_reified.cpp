@@ -61,7 +61,7 @@ std::shared_ptr<ITree<void>> ITreeReified::test_logging() {
 }
 
 /// ---- Main (auto-wrapper) ----
-std::shared_ptr<ITree<void>> ITreeReified::_main() {
+std::shared_ptr<ITree<void>> ITreeReified::main() {
   return itree_bind(
       []() -> std::shared_ptr<ITree<void>> {
         std::cout << "=== Starting ==="s << '\n';
@@ -103,6 +103,6 @@ std::shared_ptr<ITree<void>> ITreeReified::_main() {
 }
 
 int main() {
-  ITreeReified::_main()->run();
+  ITreeReified::main()->run();
   return 0;
 }
