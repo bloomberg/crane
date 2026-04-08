@@ -309,14 +309,3 @@
   (alias runtest)
   (deps method_partial_app.t.exe)
   (action (run ./method_partial_app.t.exe))))
-
-(subdir loopify_decltype
- (rule
-  (targets loopify_decltype.t.exe)
-  (deps LoopifyDecltype.vo loopify_decltype.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_decltype.t.exe loopify_decltype.cpp loopify_decltype.t.cpp)))
- (rule
-  (alias runtest)
-  (deps loopify_decltype.t.exe)
-  (action (run ./loopify_decltype.t.exe))))

@@ -2043,6 +2043,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
       ( match lookup_var_type env f with
       | Some (Tfun (_, cod)) -> cod
       | _ -> Tunknown )
+    | CPPfun_call (CPPlambda (_, Some ret_ty, _, _), _) -> ret_ty
     | CPPfun_call (CPPglob _, _) -> Tunknown
     | CPPfun_call (CPPmember (inner, id), [])
       when String.equal (Id.to_string id) "get" ->
