@@ -22,9 +22,10 @@ std::shared_ptr<MatchClosureEscape::fn_box> MatchClosureEscape::match_arm_box(
                  },
                  [](const typename MatchClosureEscape::tree::Node _args)
                      -> std::shared_ptr<MatchClosureEscape::fn_box> {
-                   return fn_box::box([&](unsigned int _x0) -> unsigned int {
-                     return _args.d_a0->sum_values(_x0);
-                   });
+                   return fn_box::box(
+                       [=](unsigned int _x0) mutable -> unsigned int {
+                         return _args.d_a0->sum_values(_x0);
+                       });
                  }},
       t->v());
 }

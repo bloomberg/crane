@@ -3271,3 +3271,15 @@
   (alias runtest)
   (deps loopify_decltype.t.exe)
   (action (run ./loopify_decltype.t.exe))))
+
+(subdir double_invoke_move
+ (rule
+  (targets double_invoke_move.t.exe)
+  (deps DoubleInvokeMove.vo double_invoke_move.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} double_invoke_move.t.exe double_invoke_move.cpp double_invoke_move.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps double_invoke_move.t.exe)
+  (action (run ./double_invoke_move.t.exe))))
+

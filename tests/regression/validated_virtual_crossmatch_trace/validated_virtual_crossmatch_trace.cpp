@@ -309,9 +309,11 @@ ValidatedVirtualCrossmatchTraceCase::epitope_dedup(
               -> std::shared_ptr<List<std::shared_ptr<
                   ValidatedVirtualCrossmatchTraceCase::HLAEpitope>>> {
             if (_args.d_a1->existsb(
-                    [&](const std::shared_ptr<
-                        ValidatedVirtualCrossmatchTraceCase::HLAEpitope> &_x0)
-                        -> bool { return epitope_eqb(_args.d_a0, _x0); })) {
+                    [=](const std::shared_ptr<
+                        ValidatedVirtualCrossmatchTraceCase::HLAEpitope>
+                            &_x0) mutable -> bool {
+                      return epitope_eqb(_args.d_a0, _x0);
+                    })) {
               return epitope_dedup(_args.d_a1);
             } else {
               return List<std::shared_ptr<
@@ -377,9 +379,11 @@ ValidatedVirtualCrossmatchTraceCase::max_dsa_mfi(
           std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody>
               ab) mutable {
         if (donor_epitopes->existsb(
-                [&](const std::shared_ptr<
-                    ValidatedVirtualCrossmatchTraceCase::HLAEpitope> &_x0)
-                    -> bool { return epitope_eqb(ab->ab_epitope, _x0); })) {
+                [=](const std::shared_ptr<
+                    ValidatedVirtualCrossmatchTraceCase::HLAEpitope>
+                        &_x0) mutable -> bool {
+                  return epitope_eqb(ab->ab_epitope, _x0);
+                })) {
           return std::max(acc, ab->ab_mfi);
         } else {
           return acc;
@@ -403,9 +407,11 @@ ValidatedVirtualCrossmatchTraceCase::has_complement_fixing_dsa(
         return (
             (ab->ab_complement_fixing && mfi_negative_threshold < ab->ab_mfi) &&
             donor_epitopes->existsb(
-                [&](const std::shared_ptr<
-                    ValidatedVirtualCrossmatchTraceCase::HLAEpitope> &_x0)
-                    -> bool { return epitope_eqb(ab->ab_epitope, _x0); }));
+                [=](const std::shared_ptr<
+                    ValidatedVirtualCrossmatchTraceCase::HLAEpitope>
+                        &_x0) mutable -> bool {
+                  return epitope_eqb(ab->ab_epitope, _x0);
+                }));
       });
 }
 

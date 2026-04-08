@@ -13,8 +13,10 @@ std::shared_ptr<ListClosureEscape::fn_list>
 ListClosureEscape::build_fns(std::shared_ptr<ListClosureEscape::tree> t1,
                              std::shared_ptr<ListClosureEscape::tree> t2) {
   return fn_list::fcons(
-      [&](unsigned int _x0) -> unsigned int { return t1->sum_values(_x0); },
-      fn_list::fcons(
-          [&](unsigned int _x0) -> unsigned int { return t2->sum_values(_x0); },
-          fn_list::fnil()));
+      [=](unsigned int _x0) mutable -> unsigned int {
+        return t1->sum_values(_x0);
+      },
+      fn_list::fcons([=](unsigned int _x0) mutable
+                         -> unsigned int { return t2->sum_values(_x0); },
+                     fn_list::fnil()));
 }

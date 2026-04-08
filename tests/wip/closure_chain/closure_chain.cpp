@@ -39,8 +39,8 @@ ClosureChain::make_chain(const unsigned int n,
     } else {
       unsigned int n_ = n - 1;
       std::function<unsigned int(unsigned int)> f =
-          [&](unsigned int _x0) -> unsigned int {
-        return make_chain(std::move(n_), t, _x0);
+          [=](unsigned int _x0) mutable -> unsigned int {
+        return make_chain(n_, t, _x0);
       };
       return [=](unsigned int x) mutable { return f((x + 1u)); };
     }

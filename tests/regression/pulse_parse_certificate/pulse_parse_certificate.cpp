@@ -96,7 +96,7 @@ std::shared_ptr<List<PulseParseCertificateCase::PulseClass>>
 PulseParseCertificateCase::classify_runs_with_base(
     const unsigned int base, const std::shared_ptr<List<unsigned int>> &rs) {
   return rs->template map<PulseParseCertificateCase::PulseClass>(
-      [&](unsigned int _x0) -> PulseParseCertificateCase::PulseClass {
+      [=](unsigned int _x0) mutable -> PulseParseCertificateCase::PulseClass {
         return classify_run_with_base(base, _x0);
       });
 }

@@ -248,7 +248,7 @@ struct Cotree {
                   g(_args.d_a0),
                   comap<std::shared_ptr<cotree<t_A>>,
                         std::shared_ptr<cotree<T1>>>(
-                      [&](const std::shared_ptr<cotree<t_A>> &_x0)
+                      [=](const std::shared_ptr<cotree<t_A>> &_x0) mutable
                           -> std::shared_ptr<cotree<T1>> {
                         return _x0->template comap_cotree<T1>(g);
                       },
@@ -361,12 +361,12 @@ struct Cotree {
   template <typename T1, MapsTo<std::shared_ptr<colist<T1>>, T1> F0>
   static std::shared_ptr<cotree<T1>> unfold_cotree(F0 &&next, const T1 init) {
     return cotree<T1>::lazy_([=]() mutable -> std::shared_ptr<cotree<T1>> {
-      return cotree<T1>::conode(init,
-                                comap<T1, std::shared_ptr<cotree<T1>>>(
-                                    [&](T1 _x0) -> std::shared_ptr<cotree<T1>> {
-                                      return unfold_cotree<T1>(next, _x0);
-                                    },
-                                    next(init)));
+      return cotree<T1>::conode(
+          init, comap<T1, std::shared_ptr<cotree<T1>>>(
+                    [=](T1 _x0) mutable -> std::shared_ptr<cotree<T1>> {
+                      return unfold_cotree<T1>(next, _x0);
+                    },
+                    next(init)));
     });
   }
 
@@ -407,7 +407,7 @@ struct Cotree {
                 _args.d_a0,
                 list_of_colist<std::shared_ptr<cotree<T1>>>(fuel, _args.d_a1)
                     ->template map<std::shared_ptr<tree<T1>>>(
-                        [&](const std::shared_ptr<cotree<T1>> &_x0)
+                        [=](const std::shared_ptr<cotree<T1>> &_x0) mutable
                             -> std::shared_ptr<tree<T1>> {
                           return tree_of_cotree<T1>(fuel_, _x0);
                         }));

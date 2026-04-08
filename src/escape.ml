@@ -87,6 +87,33 @@ let rec occurs k = function
    |MLfloat _
    |MLstring _ -> false
 
+(** Check if [MLapp(head, args)] is a partial application. A partial
+    application creates a closure that captures the provided args, so those
+    args effectively escape. Returns [true] when the function's value-level
+    arity exceeds the number of non-dummy arguments. *)
+let is_partial_app head args =
+  let find_type_opt r =
+    try Some (find_type r) with Not_found -> None
+  in
+  match head with
+  | MLglob (r, _) ->
+    ( match find_type_opt r with
+    | Some ty ->
+      let rec count_value_dom = function
+        | Tarr (Tdummy _, rest) -> count_value_dom rest
+        | Tarr (_, rest) -> 1 + count_value_dom rest
+        | Tmeta {contents = Some t} -> count_value_dom t
+        | _ -> 0
+      in
+      let n_dom = count_value_dom ty in
+      let n_args =
+        List.length
+          (List.filter (function MLdummy _ -> false | _ -> true) args)
+      in
+      n_args < n_dom
+    | None -> false )
+  | _ -> false
+
 (** {2 Phase 1: Escape analysis for unique_ptr promotion} *)
 
 (** Check if de Bruijn index [k] escapes in [t].
@@ -118,7 +145,10 @@ let escapes k t =
       check k false rhs || check (k + 1) in_tail cont
     | MLlam (_, _, body) -> occurs (k + 1) body (* Lambda capture → escape *)
     | MLapp (head, args) ->
-      check k false head || List.exists (check k false) args
+      check k false head
+      || List.exists (check k false) args
+      || (* Partial application: args are captured by the generated closure *)
+      (is_partial_app head args && List.exists (occurs k) args)
     | MLfix (_, ids, bodies, _) ->
       let k' = k + Array.length ids in
       Array.exists (occurs k') bodies (* Fixpoint capture → escape *)
@@ -193,7 +223,10 @@ let analyze_occur_escape k t =
       if occurs (k + 1) body then escaped := true
     | MLapp (head, args) ->
       check k false head;
-      List.iter (check k false) args
+      List.iter (check k false) args;
+      (* Partial application: args are captured by the generated closure *)
+      if is_partial_app head args then
+        List.iter (fun arg -> if occurs k arg then escaped := true) args
     | MLfix (_, ids, bodies, _) ->
       (* Fixpoint capture → escape. Need to check if variable occurs. *)
       let k' = k + Array.length ids in

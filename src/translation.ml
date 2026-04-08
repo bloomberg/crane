@@ -3504,8 +3504,17 @@ and eta_fun env f args =
                 (wrapped, Some (eta_param_id i)) )
               missing_args
           in
+          (* Strip CPPmove from captured args: they are placed inside a
+             lambda body that may be called multiple times, so the captured
+             variables must not be consumed on each invocation. *)
+          let captured_args =
+            List.map
+              (function CPPmove inner -> inner | e -> e)
+              args
+          in
           let call_args =
-            args @ List.mapi (fun i _ -> CPPvar (eta_param_id i)) eta_args
+            captured_args
+            @ List.mapi (fun i _ -> CPPvar (eta_param_id i)) eta_args
           in
           let call = CPPfun_call (cglob, List.rev call_args) in
           let ret_ty, body =
@@ -3516,7 +3525,7 @@ and eta_fun env f args =
             else
               (Some cod, [Sreturn (Some call)])
           in
-          CPPlambda (List.rev eta_args, ret_ty, body, false)
+          CPPlambda (List.rev eta_args, ret_ty, body, true)
       | _ ->
         if id_is_typeclass_instance && args = [] then
           cglob

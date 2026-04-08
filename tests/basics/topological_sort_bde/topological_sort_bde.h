@@ -413,8 +413,7 @@ struct TopologicalSort {
   template <typename T1, MapsTo<bool, T1, T1> F0>
   static bsl::shared_ptr<List<T1>> cycle_extract_aux(
       F0 &&eqb_node,
-      const bsl::shared_ptr<List<bsl::pair<T1, bsl::shared_ptr<List<T1>>>>>
-          &graph0,
+      bsl::shared_ptr<List<bsl::pair<T1, bsl::shared_ptr<List<T1>>>>> graph0,
       const unsigned int counter, const T1 elem,
       bsl::shared_ptr<List<T1>> cycl) {
     if (counter <= 0) {
@@ -426,10 +425,9 @@ struct TopologicalSort {
       } else {
         return graph_lookup<T1>(eqb_node, elem, graph0)
             ->template fold_right<bsl::shared_ptr<List<T1>>>(
-                [&](T1 _x0, const bsl::shared_ptr<List<T1>> &_x1)
-                    -> bsl::shared_ptr<List<T1>> {
-                  return cycle_extract_aux<T1>(eqb_node, graph0, bsl::move(c),
-                                               _x0, _x1);
+                [=](T1 _x0, const bsl::shared_ptr<List<T1>> &_x1) mutable
+                -> bsl::shared_ptr<List<T1>> {
+                  return cycle_extract_aux<T1>(eqb_node, graph0, c, _x0, _x1);
                 },
                 List<T1>::cons(elem, cycl));
       }

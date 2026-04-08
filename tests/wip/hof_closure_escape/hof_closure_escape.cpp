@@ -46,9 +46,10 @@ HofClosureEscape::sum_values(const std::shared_ptr<HofClosureEscape::tree> &t,
 /// the & lambda was created in hof_escape's stack frame.
 /// When hof_escape returns, captured t is destroyed.
 __attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
-HofClosureEscape::hof_escape(const std::shared_ptr<HofClosureEscape::tree> &t) {
-  return wrap_some(
-      [&](unsigned int _x0) -> unsigned int { return sum_values(t, _x0); });
+HofClosureEscape::hof_escape(std::shared_ptr<HofClosureEscape::tree> t) {
+  return wrap_some([=](unsigned int _x0) mutable -> unsigned int {
+    return sum_values(t, _x0);
+  });
 }
 
 __attribute__((pure)) unsigned int HofClosureEscape::apply_option(

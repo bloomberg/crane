@@ -142,11 +142,10 @@ struct ClosureChain {
   /// the second call through clobbered stack would give wrong result.
   static inline const unsigned int chain_double_call = []() {
     return []() {
-      std::unique_ptr<tree> t =
-          tree::node_uptr(tree::leaf(), 10u, tree::leaf());
+      std::shared_ptr<tree> t = tree::node(tree::leaf(), 10u, tree::leaf());
       std::function<unsigned int(unsigned int)> f =
-          [&](unsigned int _x0) -> unsigned int {
-        return make_chain(2u, std::move(t), _x0);
+          [=](unsigned int _x0) mutable -> unsigned int {
+        return make_chain(2u, t, _x0);
       };
       return (f(0u) + f(100u));
     }();
