@@ -13,8 +13,8 @@
 #include <bsl_utility.h>
 #include <bsl_variant.h>
 #include <fstream>
-#include <mini_stm.h>
 #include <skipnode.h>
+#include <stm_adapter.h>
 #include <variant>
 
 namespace BloombergLP {}
