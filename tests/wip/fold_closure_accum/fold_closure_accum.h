@@ -186,7 +186,7 @@ struct FoldClosureAccum {
   /// captures the previous closure (acc) and the current tree (t).
   /// If captures are by reference, the previous closure is stack-local
   /// and dies when the fold step returns, creating a dangling chain.
-  static unsigned int
+  __attribute__((pure)) static unsigned int
   compose_adders(const std::shared_ptr<List<std::shared_ptr<tree>>> &trees,
                  const unsigned int _x0);
   /// Test: compose adders from 3 trees.

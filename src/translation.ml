@@ -3176,7 +3176,80 @@ and eta_fun env f args =
        parameter type is concrete (not a promoted type var). *)
     let tvars = get_current_type_vars () in
     let args = List.mapi (fun i ml_arg ->
+      (* {b Lambda arity limiting.}  When a lambda argument has more binders
+         than the callee's parameter type has top-level arrows, the extra
+         binders come from the return type being a function (instantiated
+         from a type variable).  For example, [fold_right]'s callback type
+         is [B -> A -> A]; when [A = nat -> nat], the lambda
+         [fun t acc => fun x => body] has 3 binders but the parameter has
+         only 2 arrows.  Flattening all 3 into a single C++ lambda produces
+         a 3-arg function, which doesn't match the 2-arg [MapsTo] concept.
+
+         Fix: insert an [MLmagic] barrier after the expected number of
+         binders so that [collect_lams] in [gen_expr] stops there.  The
+         inner binders become a returned inner lambda.  We use the
+         {i non-substituted} parameter type to count arrows, because type
+         variable substitution would inflate the count (e.g. [Tvar A]
+         becoming [Tarr(nat, nat)] adds a spurious arrow).
+
+         Additionally, annotate the outer lambda with an explicit return
+         type derived from the {i substituted} parameter type's codomain.
+         Without this, the deduced return type is the inner lambda's
+         unique closure type, and [is_invocable_r_v<std::function<...>,
+         closure_type>] may evaluate to [false] in concept checking
+         (C++ lambda-to-[std::function] conversion is not recognized
+         during SFINAE in some implementations). *)
+      let ml_arg, split_ret_ty =
+        match ml_arg with
+        | MLlam _ ->
+          ( match List.nth_opt fn_param_ml_tys_orig i with
+          | Some param_ty ->
+            let rec count_arrows = function
+              | Miniml.Tarr (_, rest) -> 1 + count_arrows rest
+              | _ -> 0
+            in
+            let expected = count_arrows param_ty in
+            let actual = Mlutil.nb_lams ml_arg in
+            if expected > 0 && actual > expected then
+              let outer_ids, inner_body =
+                Mlutil.collect_n_lams expected ml_arg
+              in
+              let barrier =
+                Mlutil.named_lams outer_ids (MLmagic inner_body)
+              in
+              (* Compute the return type from the substituted param type by
+                 stripping [expected] top-level arrows.  The remaining type
+                 is the function-typed codomain that the inner lambda
+                 implements. *)
+              let ret_ty =
+                match List.nth_opt fn_param_ml_tys i with
+                | Some subst_pt ->
+                  let rec codomain_after n = function
+                    | Miniml.Tarr (_, rest) when n > 0 ->
+                      codomain_after (n - 1) rest
+                    | ty -> ty
+                  in
+                  let ret_ml = codomain_after expected subst_pt in
+                  Some (convert_ml_type_to_cpp_type
+                          env Refset'.empty tvars ret_ml)
+                | None -> None
+              in
+              (barrier, ret_ty)
+            else
+              (ml_arg, None)
+          | None -> (ml_arg, None) )
+        | _ -> (ml_arg, None)
+      in
       let expr = gen_expr env ml_arg in
+      (* Annotate the outer lambda with the explicit return type computed
+         during the split, so that C++ concept checking sees the concrete
+         [std::function<...>] return type instead of the raw closure type. *)
+      let expr =
+        match split_ret_ty, expr with
+        | Some ret_ty, CPPlambda (params, None, body, cap) ->
+          CPPlambda (params, Some ret_ty, body, cap)
+        | _ -> expr
+      in
       (* Wrap void calls as values only when the expression will be used
          as a value (not in monadic parameter handler which places it in
          statement position inside a lambda). *)
@@ -3390,37 +3463,49 @@ and eta_fun env f args =
        generating numOption<numNat, unsigned int>() instead of numOption<numNat,
        unsigned int> for qualified access like ::to_nat. *)
     let id_is_typeclass_instance = ref_returns_typeclass id in
-    (* Curried excess args (see split above) occur when a function returns a
-       function-typed alias (e.g. State S A = S -> A * S) and the call site
-       applies the result immediately. Generate a chained call:
-       f(primary_args)(excess_args).
+    (* {b Curried excess args.}  When a call site provides more value args
+       than the callee's ML type has arrows, the extras are curried onto the
+       result: [f(primary_args)(excess_args)].
 
-       Only generate the chained call when the callee's return type is a
-       concrete function type (indicating a type alias like State). When the
-       return type is a type variable (e.g. T1 in div2_rect), the excess args
-       likely arise from proof-certificate functions (Function vernac _correct
-       terms) that are never called at runtime. For those, generate an abort
-       placeholder since inner lambdas would have wrong arities. *)
+       This is valid when the callee genuinely returns a function:
+       - Its codomain is a type alias ([Tglob]) that may expand to [Tarr]
+         (e.g. [State S A = S -> A * S]).
+       - Its codomain is a type variable ([Tvar]) that, after instantiation
+         with the call-site type args [tys], becomes [Tarr] (e.g.
+         [fold_right] with [B = nat -> nat]).
+       - It is an inlined custom constant (e.g. [fst], [snd]).
+
+       When the codomain is a type variable that instantiates to a
+       non-function type (e.g. [div2_rect] with [T1 = R_div2]), the excess
+       args come from proof-certificate functions ([Function] vernacular
+       [_correct] terms) that are never called at runtime.  We emit an abort
+       placeholder for those. *)
     let wrap_excess base =
       if excess_args = [] then
         base
       else (
-        (* A [Tglob] codomain indicates a type alias (e.g. [State S A]) that may
-           expand to a function type — chained calls are valid. A [Tvar]
-           codomain (e.g. [T1] in [div2_rect]) signals a polymorphic return
-           where excess args come from proof-certificate terms; these are never
-           called at runtime so we emit an abort placeholder.
-
-           Exception: inlined custom constants (e.g. [fst], [snd]) may have a
-           polymorphic return type that is instantiated to a function type at
-           the call site. Their excess args are valid chained calls. *)
         let ret_is_chainable =
           is_inline_custom id
           ||
           match find_type_opt id with
           | Some ml_ty ->
-            ( match ml_codomain ml_ty with
+            let cod = ml_codomain ml_ty in
+            ( match resolve_tmeta cod with
             | Miniml.Tglob _ -> true
+            | Miniml.Tarr _ -> true
+            | Miniml.Tvar _ ->
+              (* Type variable: instantiate with the call-site type args to
+                 determine if the return type is actually a function.
+                 [cod] is already the function's codomain (all arrows
+                 stripped), so after substitution we check [cod_inst]
+                 directly — NOT [ml_codomain cod_inst], which would strip
+                 another layer of arrows and reject valid cases like
+                 [fold_right] instantiated at [A = nat -> nat]. *)
+              let cod_inst = Mlutil.type_subst_list tys cod in
+              ( match resolve_tmeta cod_inst with
+              | Miniml.Tarr _ -> true
+              | Miniml.Tglob _ -> true
+              | _ -> false )
             | _ -> false )
           | None -> false
         in
