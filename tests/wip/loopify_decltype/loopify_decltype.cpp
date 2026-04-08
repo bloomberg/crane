@@ -5,6 +5,8 @@
 #include <utility>
 #include <variant>
 
+/// Minimal trigger: fold over a list with a conditional per-element
+/// contribution.
 __attribute__((pure)) unsigned int
 LoopifyDecltype::count_true(const std::shared_ptr<List<bool>> &xs) {
   struct _Enter {

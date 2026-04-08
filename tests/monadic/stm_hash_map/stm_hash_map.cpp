@@ -6,8 +6,8 @@
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <mini_stm.h>
 #include <optional>
+#include <stm_adapter.h>
 #include <type_traits>
 #include <utility>
 #include <variant>
