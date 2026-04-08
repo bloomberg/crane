@@ -291,37 +291,46 @@ struct Equations {
                       Gcd_clause_3_graph_equation_1 _args0) -> T2 {
                 return f2(
                     _args0.d_n, _args0.d_n0, _args0.d_hind,
-                    f4(std::make_pair(
-                           (_args0.d_n + 1),
-                           ((((_args0.d_n0 + 1) - (_args0.d_n + 1)) >
-                                     (_args0.d_n0 + 1)
-                                 ? 0
-                                 : ((_args0.d_n0 + 1) - (_args0.d_n + 1))))),
-                       gcd(std::make_pair(
-                           (_args0.d_n + 1),
-                           ((((_args0.d_n0 + 1) - (_args0.d_n + 1)) >
-                                     (_args0.d_n0 + 1)
-                                 ? 0
-                                 : ((_args0.d_n0 + 1) - (_args0.d_n + 1)))))),
-                       _args0.d_hind));
+                    [=](unsigned int _pa0,
+                        std::shared_ptr<gcd_clause_3_graph> _pa1) mutable {
+                      return f4(
+                          std::make_pair(
+                              (_args0.d_n + 1),
+                              ((((_args0.d_n0 + 1) - (_args0.d_n + 1)) >
+                                        (_args0.d_n0 + 1)
+                                    ? 0
+                                    : ((_args0.d_n0 + 1) - (_args0.d_n + 1))))),
+                          gcd(std::make_pair(
+                              (_args0.d_n + 1),
+                              ((((_args0.d_n0 + 1) - (_args0.d_n + 1)) >
+                                        (_args0.d_n0 + 1)
+                                    ? 0
+                                    : ((_args0.d_n0 + 1) -
+                                       (_args0.d_n + 1)))))),
+                          _args0.d_hind, _pa0, _pa1);
+                    });
               },
               [&](const typename gcd_clause_3_graph::
                       Gcd_clause_3_graph_equation_2 _args0) -> T2 {
                 return f3(
                     _args0.d_n, _args0.d_n0, _args0.d_hind,
-                    f4(std::make_pair(
-                           ((((_args0.d_n + 1) - (_args0.d_n0 + 1)) >
-                                     (_args0.d_n + 1)
-                                 ? 0
-                                 : ((_args0.d_n + 1) - (_args0.d_n0 + 1)))),
-                           (_args0.d_n0 + 1)),
-                       gcd(std::make_pair(
-                           ((((_args0.d_n + 1) - (_args0.d_n0 + 1)) >
-                                     (_args0.d_n + 1)
-                                 ? 0
-                                 : ((_args0.d_n + 1) - (_args0.d_n0 + 1)))),
-                           (_args0.d_n0 + 1))),
-                       _args0.d_hind));
+                    [=](unsigned int _pa0,
+                        std::shared_ptr<gcd_clause_3_graph> _pa1) mutable {
+                      return f4(
+                          std::make_pair(
+                              ((((_args0.d_n + 1) - (_args0.d_n0 + 1)) >
+                                        (_args0.d_n + 1)
+                                    ? 0
+                                    : ((_args0.d_n + 1) - (_args0.d_n0 + 1)))),
+                              (_args0.d_n0 + 1)),
+                          gcd(std::make_pair(
+                              ((((_args0.d_n + 1) - (_args0.d_n0 + 1)) >
+                                        (_args0.d_n + 1)
+                                    ? 0
+                                    : ((_args0.d_n + 1) - (_args0.d_n0 + 1)))),
+                              (_args0.d_n0 + 1))),
+                          _args0.d_hind, _pa0, _pa1);
+                    });
               }},
           g->v());
     };
@@ -371,37 +380,46 @@ struct Equations {
                       Gcd_clause_3_graph_equation_1 _args0) -> T2 {
                 return f2(
                     _args0.d_n, _args0.d_n0, _args0.d_hind,
-                    f4(std::make_pair(
-                           (_args0.d_n + 1),
-                           ((((_args0.d_n0 + 1) - (_args0.d_n + 1)) >
-                                     (_args0.d_n0 + 1)
-                                 ? 0
-                                 : ((_args0.d_n0 + 1) - (_args0.d_n + 1))))),
-                       gcd(std::make_pair(
-                           (_args0.d_n + 1),
-                           ((((_args0.d_n0 + 1) - (_args0.d_n + 1)) >
-                                     (_args0.d_n0 + 1)
-                                 ? 0
-                                 : ((_args0.d_n0 + 1) - (_args0.d_n + 1)))))),
-                       _args0.d_hind));
+                    [=](unsigned int _pa0,
+                        std::shared_ptr<gcd_clause_3_graph> _pa1) mutable {
+                      return f4(
+                          std::make_pair(
+                              (_args0.d_n + 1),
+                              ((((_args0.d_n0 + 1) - (_args0.d_n + 1)) >
+                                        (_args0.d_n0 + 1)
+                                    ? 0
+                                    : ((_args0.d_n0 + 1) - (_args0.d_n + 1))))),
+                          gcd(std::make_pair(
+                              (_args0.d_n + 1),
+                              ((((_args0.d_n0 + 1) - (_args0.d_n + 1)) >
+                                        (_args0.d_n0 + 1)
+                                    ? 0
+                                    : ((_args0.d_n0 + 1) -
+                                       (_args0.d_n + 1)))))),
+                          _args0.d_hind, _pa0, _pa1);
+                    });
               },
               [&](const typename gcd_clause_3_graph::
                       Gcd_clause_3_graph_equation_2 _args0) -> T2 {
                 return f3(
                     _args0.d_n, _args0.d_n0, _args0.d_hind,
-                    f4(std::make_pair(
-                           ((((_args0.d_n + 1) - (_args0.d_n0 + 1)) >
-                                     (_args0.d_n + 1)
-                                 ? 0
-                                 : ((_args0.d_n + 1) - (_args0.d_n0 + 1)))),
-                           (_args0.d_n0 + 1)),
-                       gcd(std::make_pair(
-                           ((((_args0.d_n + 1) - (_args0.d_n0 + 1)) >
-                                     (_args0.d_n + 1)
-                                 ? 0
-                                 : ((_args0.d_n + 1) - (_args0.d_n0 + 1)))),
-                           (_args0.d_n0 + 1))),
-                       _args0.d_hind));
+                    [=](unsigned int _pa0,
+                        std::shared_ptr<gcd_clause_3_graph> _pa1) mutable {
+                      return f4(
+                          std::make_pair(
+                              ((((_args0.d_n + 1) - (_args0.d_n0 + 1)) >
+                                        (_args0.d_n + 1)
+                                    ? 0
+                                    : ((_args0.d_n + 1) - (_args0.d_n0 + 1)))),
+                              (_args0.d_n0 + 1)),
+                          gcd(std::make_pair(
+                              ((((_args0.d_n + 1) - (_args0.d_n0 + 1)) >
+                                        (_args0.d_n + 1)
+                                    ? 0
+                                    : ((_args0.d_n + 1) - (_args0.d_n0 + 1)))),
+                              (_args0.d_n0 + 1))),
+                          _args0.d_hind, _pa0, _pa1);
+                    });
               }},
           g->v());
     };
@@ -432,19 +450,19 @@ struct Equations {
             std::shared_ptr<gcd_clause_3_graph> _x1, T1 x) mutable {
           unsigned int _x2 = p.first;
           unsigned int _x3 = p.second;
-          return x();
+          return x;
         },
         [=](unsigned int n1, unsigned int n2,
             std::shared_ptr<gcd_graph> _x) mutable {
           unsigned int _x0 = p.first;
           unsigned int _x1 = p.second;
-          return f2(n1, n2);
+          return [=](T1 _pa0) mutable { return f2(n1, n2, _pa0); };
         },
         [=](unsigned int n1, unsigned int n2,
             std::shared_ptr<gcd_graph> _x) mutable {
           unsigned int _x0 = p.first;
           unsigned int _x1 = p.second;
-          return f3(n1, n2);
+          return [=](T1 _pa0) mutable { return f3(n1, n2, _pa0); };
         },
         p, gcd(p), gcd_graph_correct(p));
   }
@@ -734,16 +752,22 @@ struct Equations {
               [&](const typename collatz_steps_clause_3_graph::
                       Collatz_steps_clause_3_graph_equation_1 _args0) -> T2 {
                 return f2(_args0.d_n, _args0.d_hind,
-                          f4(PeanoNat::div2(_args0.d_n),
-                             collatz_steps(PeanoNat::div2(_args0.d_n)),
-                             _args0.d_hind));
+                          [=](std::shared_ptr<collatz_steps_clause_3_graph>
+                                  _pa0) mutable {
+                            return f4(PeanoNat::div2(_args0.d_n),
+                                      collatz_steps(PeanoNat::div2(_args0.d_n)),
+                                      _args0.d_hind, _pa0);
+                          });
               },
               [&](const typename collatz_steps_clause_3_graph::
                       Collatz_steps_clause_3_graph_equation_2 _args0) -> T2 {
                 return f3(_args0.d_n, _args0.d_hind,
-                          f4(((3u * _args0.d_n) + 1u),
-                             collatz_steps(((3u * _args0.d_n) + 1u)),
-                             _args0.d_hind));
+                          [=](std::shared_ptr<collatz_steps_clause_3_graph>
+                                  _pa0) mutable {
+                            return f4(((3u * _args0.d_n) + 1u),
+                                      collatz_steps(((3u * _args0.d_n) + 1u)),
+                                      _args0.d_hind, _pa0);
+                          });
               }},
           c->v());
     };
@@ -795,16 +819,22 @@ struct Equations {
               [&](const typename collatz_steps_clause_3_graph::
                       Collatz_steps_clause_3_graph_equation_1 _args0) -> T2 {
                 return f2(_args0.d_n, _args0.d_hind,
-                          f4(PeanoNat::div2(_args0.d_n),
-                             collatz_steps(PeanoNat::div2(_args0.d_n)),
-                             _args0.d_hind));
+                          [=](std::shared_ptr<collatz_steps_clause_3_graph>
+                                  _pa0) mutable {
+                            return f4(PeanoNat::div2(_args0.d_n),
+                                      collatz_steps(PeanoNat::div2(_args0.d_n)),
+                                      _args0.d_hind, _pa0);
+                          });
               },
               [&](const typename collatz_steps_clause_3_graph::
                       Collatz_steps_clause_3_graph_equation_2 _args0) -> T2 {
                 return f3(_args0.d_n, _args0.d_hind,
-                          f4(((3u * _args0.d_n) + 1u),
-                             collatz_steps(((3u * _args0.d_n) + 1u)),
-                             _args0.d_hind));
+                          [=](std::shared_ptr<collatz_steps_clause_3_graph>
+                                  _pa0) mutable {
+                            return f4(((3u * _args0.d_n) + 1u),
+                                      collatz_steps(((3u * _args0.d_n) + 1u)),
+                                      _args0.d_hind, _pa0);
+                          });
               }},
           c->v());
     };
@@ -832,12 +862,12 @@ struct Equations {
     return collatz_steps_graph_mut(
         f, f0,
         [](unsigned int _x, std::shared_ptr<collatz_steps_clause_3_graph> _x0,
-           T1 x) { return x(); },
+           T1 x) { return x; },
         [=](unsigned int n0, std::shared_ptr<collatz_steps_graph> _x) mutable {
-          return f2(n0);
+          return [=](T1 _pa0) mutable { return f2(n0, _pa0); };
         },
         [=](unsigned int n0, std::shared_ptr<collatz_steps_graph> _x) mutable {
-          return f3(n0);
+          return [=](T1 _pa0) mutable { return f3(n0, _pa0); };
         },
         n, collatz_steps(n), collatz_steps_graph_correct(n));
   }

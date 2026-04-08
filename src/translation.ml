@@ -3028,6 +3028,11 @@ and eta_fun env f args =
         | MLdummy _ -> false
         | _ -> true
       in
+      let is_value_dom t =
+        match resolve_tmeta t with
+        | Miniml.Tdummy _ -> false
+        | _ -> true
+      in
       let rec collect_tarr_dom acc = function
         | Miniml.Tarr (t1, t2) -> collect_tarr_dom (resolve_tmeta t1 :: acc) t2
         | _ -> List.rev acc
@@ -3035,21 +3040,26 @@ and eta_fun env f args =
       match find_type_opt id with
       | Some ml_ty ->
         let all_dom = collect_tarr_dom [] ml_ty in
-        (* Skip leading Tdummy Ktype positions — these correspond to type args
-           (tys), not value args. *)
-        let rec skip_type_params = function
-          | Miniml.Tdummy Miniml.Ktype :: rest -> skip_type_params rest
-          | dom -> dom
-        in
-        let n_value_dom = List.length (skip_type_params all_dom) in
-        let n_args = List.length args in
-        if n_args > n_value_dom then
-          let primary = List.filteri (fun i _ -> i < n_value_dom) args in
-          let excess = List.filteri (fun i _ -> i >= n_value_dom) args in
-          (List.filter is_value_arg primary, List.filter is_value_arg excess)
+        (* Count value-domain entries by filtering out ALL [Tdummy] positions
+           (both [Ktype] for erased type params and [Kprop] for erased proofs).
+           Symmetrically, filter the arg list to exclude [MLdummy] entries.
+           Comparing these two filtered counts avoids false excess detection
+           when erased params appear in [args] as [MLdummy] instead of (or in
+           addition to) being carried in [tys]. *)
+        let n_value_dom = List.length (List.filter is_value_dom all_dom) in
+        let value_args = List.filter is_value_arg args in
+        let n_value_args = List.length value_args in
+        if n_value_args > n_value_dom then
+          let primary =
+            List.filteri (fun i _ -> i < n_value_dom) value_args
+          in
+          let excess =
+            List.filteri (fun i _ -> i >= n_value_dom) value_args
+          in
+          (primary, excess)
         else
-          (args, [])
-      | None -> (args, [])
+          (value_args, [])
+      | None -> (List.filter is_value_arg args, [])
     in
     (* Partition args into type class instances and regular args *)
     let typeclass_ml_args, regular_ml_args =
@@ -3171,10 +3181,55 @@ and eta_fun env f args =
       in
       collect fn_ml_ty
     in
-    (* Generate regular args, wrapping with CPPany_cast when the argument
-       returns std::any (through an erased record field) but the function's
-       parameter type is concrete (not a promoted type var). *)
+    (* {b Concrete T1 for excess-arg calls.}  When [tys = []] and there
+       are excess args, the callee's polymorphic return type [Tvar i] can't
+       be resolved by substitution.  We compute the concrete type [T1]
+       from the enclosing function's return type and the excess args' types:
+       [T1 = excess_arg_types -> enclosing_return_type].
+
+       This value is used in two places:
+       1. Lambda arity limiting: to annotate the split outer lambda's
+          return type (needed for [is_invocable_r_v] concept checking).
+       2. Template arg recovery: as an explicit template argument at the
+          call site (C++ can't deduce [T1] from lambda args). *)
     let tvars = get_current_type_vars () in
+    let concrete_tvar_type =
+      if tys <> [] || excess_args = [] then
+        None
+      else
+        let resolve_tmeta_local = function
+          | Miniml.Tmeta {contents = Some t} -> t
+          | t -> t
+        in
+        match tctx.current_cpp_return_type with
+        | None -> None
+        | Some ret_ty ->
+          match find_type_opt id with
+          | None -> None
+          | Some ml_ty_orig ->
+            let ret = resolve_tmeta_local (ml_return_type ml_ty_orig) in
+            ( match ret with
+            | Miniml.Tvar _ | Miniml.Tvar' _ ->
+              (* Compute excess arg C++ types from de Bruijn lookup. *)
+              let excess_cpp_tys =
+                List.filter_map
+                  (fun ml_arg ->
+                    match ml_arg with
+                    | MLrel i ->
+                      ( match get_param_type_by_index i with
+                      | Some ml_ty ->
+                        Some (convert_ml_type_to_cpp_type
+                                env Refset'.empty tvars ml_ty)
+                      | None -> None )
+                    | _ -> None )
+                  excess_args
+              in
+              if List.length excess_cpp_tys = List.length excess_args then
+                Some (Tfun (excess_cpp_tys, ret_ty))
+              else
+                None
+            | _ -> None )
+    in
     let args = List.mapi (fun i ml_arg ->
       (* {b Lambda arity limiting.}  When a lambda argument has more binders
          than the callee's parameter type has top-level arrows, the extra
@@ -3220,7 +3275,13 @@ and eta_fun env f args =
               (* Compute the return type from the substituted param type by
                  stripping [expected] top-level arrows.  The remaining type
                  is the function-typed codomain that the inner lambda
-                 implements. *)
+                 implements.
+
+                 When the substituted codomain is still a [Tvar] (happens
+                 when [tys = []] so substitution is a no-op), use the
+                 [concrete_tvar_type] computed above — it holds the
+                 concrete [T1] type derived from the excess args and the
+                 enclosing function's return type. *)
               let ret_ty =
                 match List.nth_opt fn_param_ml_tys i with
                 | Some subst_pt ->
@@ -3230,8 +3291,11 @@ and eta_fun env f args =
                     | ty -> ty
                   in
                   let ret_ml = codomain_after expected subst_pt in
-                  Some (convert_ml_type_to_cpp_type
-                          env Refset'.empty tvars ret_ml)
+                  ( match resolve_tmeta ret_ml with
+                  | Miniml.Tvar _ | Miniml.Tvar' _ -> concrete_tvar_type
+                  | _ ->
+                    Some (convert_ml_type_to_cpp_type
+                            env Refset'.empty tvars ret_ml) )
                 | None -> None
               in
               (barrier, ret_ty)
@@ -3424,16 +3488,26 @@ and eta_fun env f args =
         | None -> filtered
       else if tys = [] then
         (* Case (b): tys is empty — synthesize type args from scratch. Build one
-           entry per Tdummy Ktype domain position. As in case (a), only attempt
-           recovery when there are no value args — if there are value args, C++
-           can deduce the types. *)
+           entry per Tdummy Ktype domain position.
+
+           Recovery is attempted when:
+           - [args = []] — no value args, so C++ can't deduce types.
+           - [concrete_tvar_type <> None] — the callee's return type [Tvar]
+             was resolved from excess args + enclosing return type. *)
+        let should_recover = args = [] || concrete_tvar_type <> None in
           match
-            if args = [] then try_recover_erased_return_type () else None
+            if should_recover then try_recover_erased_return_type () else None
           with
-        | Some (_idx, ret_ty, all_dom) ->
+        | Some (_idx, _ret_ty, all_dom) ->
+          (* Use [concrete_tvar_type] when available (excess args case),
+             otherwise fall back to the enclosing function's return type. *)
+          let t1 = match concrete_tvar_type with
+            | Some t -> t
+            | None -> _ret_ty
+          in
           List.filter_map
             (function
-              | Miniml.Tdummy Miniml.Ktype -> Some ret_ty
+              | Miniml.Tdummy Miniml.Ktype -> Some t1
               | _ -> None )
             all_dom
         | None -> filtered
@@ -3500,12 +3574,24 @@ and eta_fun env f args =
                  stripped), so after substitution we check [cod_inst]
                  directly — NOT [ml_codomain cod_inst], which would strip
                  another layer of arrows and reject valid cases like
-                 [fold_right] instantiated at [A = nat -> nat]. *)
-              let cod_inst = Mlutil.type_subst_list tys cod in
-              ( match resolve_tmeta cod_inst with
-              | Miniml.Tarr _ -> true
-              | Miniml.Tglob _ -> true
-              | _ -> false )
+                 [fold_right] instantiated at [A = nat -> nat].
+
+                 When [tys] is empty (type args carried as [MLdummy] in
+                 [args] rather than in the [MLglob] type-arg list),
+                 substitution is a no-op and the [Tvar] stays unresolved.
+                 In this case, chain unconditionally: Rocq's type system
+                 guarantees that excess {i value} args (non-[MLdummy]) can
+                 only exist when the return type instantiates to a function.
+                 Proof-level excess args are already removed by the
+                 [MLdummy] filter above. *)
+              if tys = [] then
+                true
+              else
+                let cod_inst = Mlutil.type_subst_list tys cod in
+                ( match resolve_tmeta cod_inst with
+                | Miniml.Tarr _ -> true
+                | Miniml.Tglob _ -> true
+                | _ -> false )
             | _ -> false )
           | None -> false
         in
@@ -3680,7 +3766,66 @@ and eta_fun env f args =
       | _ -> List.length args
     in
     let n_args = List.length args in
-    if n_args > n_value_dom && n_value_dom > 0 then
+    if n_args = 0 then
+      (* All args were erased (MLdummy): no function call, just the
+         expression itself.  This arises when erased proof arguments
+         (e.g. [le n 0] in [Function]-generated [_rect] bodies) are
+         applied to a local variable — the proofs are filtered out,
+         leaving an empty arg list.  Generating [f()] would be wrong
+         because the C++ type has no 0-arg overload. *)
+      gen_expr env f
+    else if n_args < n_value_dom && n_value_dom > 0 then
+      (* Under-application (partial application due to proof erasure).
+         The callee expects [n_value_dom] args but only [n_args] are
+         provided — the rest were erased proofs in the same
+         [MLapp] that have been filtered out.
+
+         Generate a lambda wrapper that captures the provided args and
+         forwards them along with fresh parameters for the remaining
+         args.  E.g., [f2(n1)] where [f2 : (nat, T1) -> T1] becomes:
+         [[&](T1 _pa0) { return f2(n1, _pa0); }]. *)
+      let remaining_ml_tys =
+        match f with
+        | MLrel i ->
+          ( try
+              let ml_ty = get_env_type i in
+              (* Skip [n_args] non-dummy domain entries to find the
+                 remaining value-domain types. *)
+              let rec skip_and_collect n = function
+                | Miniml.Tarr (t, rest) ->
+                  ( match resolve_tmeta t with
+                  | Miniml.Tdummy _ -> skip_and_collect n rest
+                  | t ->
+                    if n > 0 then skip_and_collect (n - 1) rest
+                    else t :: skip_and_collect 0 rest )
+                | Miniml.Tmeta {contents = Some t} -> skip_and_collect n t
+                | _ -> []
+              in
+              skip_and_collect n_args ml_ty
+            with _ -> [] )
+        | _ -> []
+      in
+      if remaining_ml_tys <> [] then
+        let callee = gen_expr env f in
+        let tvars = get_current_type_vars () in
+        let pa_params = List.mapi (fun j ml_ty ->
+          let cpp_ty = convert_ml_type_to_cpp_type
+                         env Refset'.empty tvars ml_ty in
+          (cpp_ty, Some (Id.of_string (Printf.sprintf "_pa%d" j))) )
+          remaining_ml_tys
+        in
+        let pa_exprs = List.map (fun (_, id_opt) ->
+          CPPvar (Option.get id_opt)) pa_params in
+        (* CPPlambda stores params in reverse (de Bruijn) order;
+           the printer reverses them for display.  Reverse pa_params
+           so the printed output matches source order. *)
+        CPPlambda (List.rev pa_params, None,
+          [Sreturn (Some (CPPfun_call (callee,
+              List.rev (args @ pa_exprs))))],
+          true)
+      else
+        CPPfun_call (gen_expr env f, List.rev args)
+    else if n_args > n_value_dom && n_value_dom > 0 then
       let primary = List.rev (safe_firstn n_value_dom args) in
       let excess = List.rev (List.skipn n_value_dom args) in
       CPPfun_call (CPPfun_call (gen_expr env f, primary), excess)

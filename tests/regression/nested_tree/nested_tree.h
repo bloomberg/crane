@@ -188,24 +188,22 @@ struct NestedTree {
   template <typename T1, typename T2, typename F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree<T2>> &t) {
     return std::visit(
-        Overloaded{
-            [&](const typename tree<T2>::Leaf _args) -> T1 { return f(); },
-            [&](const typename tree<T2>::Node _args) -> T1 {
-              return f0(_args.d_a0, _args.d_a1,
-                        tree_rect<T1, T2>(f, f0, _args.d_a1));
-            }},
+        Overloaded{[&](const typename tree<T2>::Leaf _args) -> T1 { return f; },
+                   [&](const typename tree<T2>::Node _args) -> T1 {
+                     return f0(_args.d_a0, _args.d_a1,
+                               tree_rect<T1, T2>(f, f0, _args.d_a1));
+                   }},
         t->v());
   }
 
   template <typename T1, typename T2, typename F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree<T2>> &t) {
     return std::visit(
-        Overloaded{
-            [&](const typename tree<T2>::Leaf _args) -> T1 { return f(); },
-            [&](const typename tree<T2>::Node _args) -> T1 {
-              return f0(_args.d_a0, _args.d_a1,
-                        tree_rec<T1, T2>(f, f0, _args.d_a1));
-            }},
+        Overloaded{[&](const typename tree<T2>::Leaf _args) -> T1 { return f; },
+                   [&](const typename tree<T2>::Node _args) -> T1 {
+                     return f0(_args.d_a0, _args.d_a1,
+                               tree_rec<T1, T2>(f, f0, _args.d_a1));
+                   }},
         t->v());
   }
 
