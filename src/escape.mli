@@ -33,10 +33,21 @@ val nb_occur_match : int -> ml_ast -> int
     position, fixpoint captures, partial-application captures. *)
 val escapes : int -> ml_ast -> bool
 
+(** [partial_app_remaining head args] returns [Some remaining] when
+    [MLapp(head, args)] is a partial application with [remaining] args still
+    needed.  Returns [None] when fully applied.  Only handles [MLglob]
+    heads. *)
+val partial_app_remaining : ml_ast -> ml_ast list -> int option
+
 (** [is_partial_app head args] returns [true] when [MLapp(head, args)] is a
     partial application — i.e., fewer non-dummy arguments than the function's
     value-level arity. Only handles [MLglob] heads. *)
 val is_partial_app : ml_ast -> ml_ast list -> bool
+
+(** [single_use_nargs k t] finds the single use of [MLrel k] in [t] and
+    returns how many non-dummy args it is applied to (0 if bare).
+    Precondition: [k] occurs at most once in [t]. *)
+val single_use_nargs : int -> ml_ast -> int
 
 (** {2 Phase 2: owned/borrowed parameter inference} *)
 

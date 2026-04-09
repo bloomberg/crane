@@ -87,11 +87,12 @@ let rec occurs k = function
    |MLfloat _
    |MLstring _ -> false
 
-(** Check if [MLapp(head, args)] is a partial application. A partial
-    application creates a closure that captures the provided args, so those
-    args effectively escape. Returns [true] when the function's value-level
-    arity exceeds the number of non-dummy arguments. *)
-let is_partial_app head args =
+(** Return the remaining arity of a partial application, or [None] if fully
+    applied. A partial application creates a closure that captures the provided
+    args, so those args effectively escape. Returns [Some remaining] when
+    the function's value-level arity exceeds the number of non-dummy
+    arguments. *)
+let partial_app_remaining head args =
   let find_type_opt r =
     try Some (find_type r) with Not_found -> None
   in
@@ -110,9 +111,14 @@ let is_partial_app head args =
         List.length
           (List.filter (function MLdummy _ -> false | _ -> true) args)
       in
-      n_args < n_dom
-    | None -> false )
-  | _ -> false
+      if n_args < n_dom then Some (n_dom - n_args) else None
+    | None -> None )
+  | _ -> None
+
+(** Check if [MLapp(head, args)] is a partial application. Delegates to
+    [partial_app_remaining]. *)
+let is_partial_app head args =
+  partial_app_remaining head args <> None
 
 (** {2 Phase 1: Escape analysis for unique_ptr promotion} *)
 
@@ -313,6 +319,48 @@ let free_rels depth t =
   in
   collect depth t;
   !free
+
+(** Find the single use of [MLrel k] in [t] and return how many non-dummy
+    args it is applied to (0 if it appears bare, not as head of MLapp).
+    Precondition: [k] occurs at most once in [t]. *)
+let single_use_nargs k t =
+  let result = ref 0 in
+  let rec search k = function
+    | MLapp (MLrel i, args) when i = k ->
+      result :=
+        List.length
+          (List.filter (function MLdummy _ -> false | _ -> true) args)
+    | MLapp (MLmagic (MLrel i), args) when i = k ->
+      result :=
+        List.length
+          (List.filter (function MLdummy _ -> false | _ -> true) args)
+    | MLrel _ -> ()
+    | MLletin (_, _, rhs, cont) ->
+      search k rhs;
+      search (k + 1) cont
+    | MLcase (_, scrut, branches) ->
+      search k scrut;
+      Array.iter
+        (fun (ids, _, _, body) -> search (k + List.length ids) body)
+        branches
+    | MLlam (_, _, body) -> search (k + 1) body
+    | MLfix (_, ids, bodies, _) ->
+      Array.iter (search (k + Array.length ids)) bodies
+    | MLapp (head, args) ->
+      search k head;
+      List.iter (search k) args
+    | MLcons (_, _, args) -> List.iter (search k) args
+    | MLtuple args -> List.iter (search k) args
+    | MLmagic a -> search k a
+    | MLparray (elts, def) ->
+      Array.iter (search k) elts;
+      search k def
+    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _
+    | MLstring _ ->
+      ()
+  in
+  search k t;
+  !result
 
 (** Check if [ty] is a non-enum, non-coinductive inductive (wrapped in
     shared_ptr in C++). Resolves Tmeta chains. *)

@@ -3547,3 +3547,14 @@
   (alias runtest)
   (deps reuse_scrutinee.t.exe)
   (action (run ./reuse_scrutinee.t.exe))))
+
+(subdir nested_partial_app
+ (rule
+  (targets nested_partial_app.t.exe)
+  (deps NestedPartialApp.vo nested_partial_app.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_partial_app.t.exe nested_partial_app.cpp nested_partial_app.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_partial_app.t.exe)
+  (action (run ./nested_partial_app.t.exe))))

@@ -68,17 +68,6 @@
   (deps z_div_min.t.exe)
   (action (run ./z_div_min.t.exe))))
 
-(subdir nested_partial_app
- (rule
-  (targets nested_partial_app.t.exe)
-  (deps NestedPartialApp.vo nested_partial_app.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_partial_app.t.exe nested_partial_app.cpp nested_partial_app.t.cpp)))
- (rule
-  (alias runtest)
-  (deps nested_partial_app.t.exe)
-  (action (run ./nested_partial_app.t.exe))))
-
 (subdir shared_uptr_escape
  (rule
   (targets shared_uptr_escape.t.exe)

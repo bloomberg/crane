@@ -129,10 +129,8 @@ struct NestedPartialApp {
     return []() {
       std::shared_ptr<tree> t1 = tree::node(tree::leaf(), 10u, tree::leaf());
       std::function<std::shared_ptr<tree>(unsigned int, std::shared_ptr<tree>)>
-          g = [&](unsigned int _x0,
-                  const std::shared_ptr<tree> &_x1) -> std::shared_ptr<tree> {
-        return build_node(std::move(t1), _x0, _x1);
-      };
+          g = [=](unsigned int _x0, const std::shared_ptr<tree> &_x1) mutable
+          -> std::shared_ptr<tree> { return build_node(t1, _x0, _x1); };
       std::function<std::shared_ptr<tree>(std::shared_ptr<tree>)> h =
           [=](std::shared_ptr<tree> _pa0) mutable { return g(42u, _pa0); };
       std::shared_ptr<tree> r1 = h(tree::node(tree::leaf(), 1u, tree::leaf()));
@@ -166,9 +164,9 @@ struct NestedPartialApp {
       std::shared_ptr<tree> t = tree::node(tree::leaf(), 10u, tree::leaf());
       std::function<unsigned int(unsigned int, unsigned int,
                                  std::shared_ptr<tree>)>
-          f1 = [&](unsigned int _x0, unsigned int _x1,
-                   const std::shared_ptr<tree> &_x2) -> unsigned int {
-        return quad_fn(std::move(t), _x0, _x1, _x2);
+          f1 = [=](unsigned int _x0, unsigned int _x1,
+                   const std::shared_ptr<tree> &_x2) mutable -> unsigned int {
+        return quad_fn(t, _x0, _x1, _x2);
       };
       std::function<unsigned int(unsigned int, std::shared_ptr<tree>)> f2 =
           [=](unsigned int _pa0, std::shared_ptr<tree> _pa1) mutable {

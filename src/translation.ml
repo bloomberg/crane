@@ -5195,14 +5195,17 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
          tell eta_fun to keep CPPmove wrappers and use [&] capture for
          zero-copy closure generation. *)
       let is_single_use_partial_app =
-        (match a with
-         | MLapp (head, ml_args) | MLmagic (MLapp (head, ml_args)) ->
-           Escape.is_partial_app head ml_args
-         | _ -> false)
-        && Escape.nb_occur_match 1 b <= 1
-        && not (Escape.escapes 1 b)
-        && Escape.IntSet.is_empty
-             (Escape.IntSet.inter (Escape.free_rels 0 a) cont_free)
+        match a with
+        | MLapp (head, ml_args) | MLmagic (MLapp (head, ml_args)) ->
+          (match Escape.partial_app_remaining head ml_args with
+           | Some remaining ->
+             Escape.nb_occur_match 1 b <= 1
+             && not (Escape.escapes 1 b)
+             && Escape.IntSet.is_empty
+                  (Escape.IntSet.inter (Escape.free_rels 0 a) cont_free)
+             && Escape.single_use_nargs 1 b >= remaining
+           | None -> false)
+        | _ -> false
       in
       let saved_eta_keep = tctx.eta_keep_moves in
       if is_single_use_partial_app then tctx.eta_keep_moves <- true;
