@@ -2,6 +2,8 @@
 
 Crane comes with a base library of mappings, and types for monadic effects. The library can be found [here](https://github.com/bloomberg/crane/tree/main/theories).
 
+**Architecture note:** Most effect modules follow a shared-definitions pattern. A `*Defs.v` file contains the flavor-independent effect inductives and smart constructors, while flavor-specific files (e.g., `IO.v` for standard library, `IOBDE.v` for BDE) re-export the definitions and add C++ extraction mappings.
+
 ---
 
 ## Core
@@ -57,7 +59,7 @@ Imports and re-exports `Mapping/Shared.v`.
 
 ### `Mapping/NatIntStd.v`
 
-Maps Rocq's `nat` type to `unsigned int` with std library operations.
+Maps Rocq's `nat` type to `unsigned int` with std library operations. Uses numeral folding (`Crane Extract Numeral nat => "%nu"`) to compile Peano chains into unsigned integer literals.
 
 Imports and re-exports `Mapping/Std.v`.
 
@@ -76,121 +78,212 @@ Imports and re-exports `Mapping/BDE.v`.
 
 Same structure and warnings as `NatIntStd.v`, but uses BDE library functions (`bsl::max`, `bsl::min`, etc.).
 
+### `Mapping/NInt.v`
+
+Maps Rocq's `N` (binary natural numbers) and `positive` to `unsigned int` with native C++ arithmetic. Provides all `N` and `Pos` operations (add, sub, mul, div, comparisons, etc.).
+
+Imports and re-exports `Mapping/Std.v`.
+
+### `Mapping/NIntBDE.v`
+
+BDE variant of `NInt.v`. Maps `N` and `positive` to `unsigned int` using BDE library functions.
+
+Imports and re-exports `Mapping/BDE.v`.
+
+### `Mapping/ZInt.v`
+
+Maps Rocq's `Z` (binary integers) to `int64_t` with native C++ arithmetic. Uses numeral folding (`Crane Extract Numeral Z => "INT64_C(%n)"`) for large integer literals.
+
+Imports and re-exports `Mapping/NInt.v`.
+
+### `Mapping/ZIntBDE.v`
+
+BDE variant of `ZInt.v`. Maps `Z` to `int64_t` using BDE library functions.
+
+Imports and re-exports `Mapping/NIntBDE.v`.
+
+### `Mapping/NatGMP.v`
+
+Maps Rocq's `nat` to GMP arbitrary-precision integers (`mpz_class`). Useful when `unsigned int` overflow is a concern.
+
+### `Mapping/NGMP.v`
+
+Maps Rocq's `N` to GMP arbitrary-precision integers (`mpz_class`).
+
+### `Mapping/ZGMP.v`
+
+Maps Rocq's `Z` to GMP arbitrary-precision integers (`mpz_class`).
+
+### `Mapping/Real.v`
+
+Maps Rocq's `R` (axiomatized reals) to a C++ `Real` class wrapping `long double` (defined in `crane_real.h`).
+
+Imports and re-exports `Mapping/ZInt.v`.
+
+**Mapped operations:**
+- Core field: `R0`, `R1`, `Rplus`, `Rmult`, `Ropp`, `Rinv`, `Rminus`, `Rdiv`
+- Utility: `Rabs`, `Rsqr`, `Rmax`, `Rmin`
+- Power/sqrt: `pow`, `sqrt`
+- Trigonometry: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `PI`
+- Decisions: `Rle_dec`, `Rlt_dec`, `Req_EM_T`
+- Coercions: `INR`, `IZR`, `IPR`
+
 ---
 
-## Monad Definitions
+## Effect Definitions
 
-### `Monads/ITree.v`
+All effect modules are built on interaction trees (ITrees). Each effect defines an inductive type representing its operations and smart constructors for invoking them.
 
-Defines the interaction tree monad, a coinductive type for representing effectful computations.
+Crane provides two ITree extraction modes. Use **erased mode** (the default) when your program simply runs effects — IO, STM, threads, etc. — and you never need to inspect the tree structure itself. This produces the most natural C++: monadic binds become sequential statements, and the ITree wrapper disappears entirely. Use **reified mode** when your Rocq code pattern-matches on `observe`, defines CoFixpoint-based servers or interpreters, or otherwise needs to traverse the ITree as a data structure. In reified mode the tree is preserved as a `std::shared_ptr<ITree<R>>` value that can be inspected, transformed, and eventually executed.
 
-- **`itreeF (E : Type → Type) (R : Type) (itree : Type) : Type`** — Functor for tree nodes: return, tau step, or visible effect
-- **`itree (E : Type → Type) (R : Type) : Type`** — Coinductive interaction tree over effect type E with result type R
-- **`Ret {E : Type → Type} {R : Type} (x : R) : itree E R`** — Return value x
-- **`Tau {E : Type → Type} {R : Type} (t : itree E R) : itree E R`** — Internal choice (tau step)
-- **`Vis {E : Type → Type} {R : Type} {X : Type} (e : E X) (k : X → itree E R) : itree E R`** — Visible effect e with continuation k
-- **`bind {E : Type → Type} {T U : Type} (u : itree E T) (k : T → itree E U) : itree E U`** — Monadic bind
-- **`trigger {E : Type → Type} {T : Type} (e : E T) : itree E T`** — Trigger an effect
-- **`hoist {E1 E2 : Type → Type} {R : Type} (t : ∀ X : Type, E1 X → E2 X) (tr : itree E1 R) : itree E2 R`** — Transform effect types in a tree
+To select a mode, import one of the two modules (they are mutually exclusive):
+
+```coq
+From Crane Require Import Monads.ITree.          (* erased mode — default *)
+From Crane Require Import Monads.ITreeReified.    (* reified mode *)
+```
+
+### `Monads/ITree.v` (Erased mode)
+
+The default ITree extraction mode. `itree E R` extracts to just `R` — the monadic wrapper is completely erased. `bind` becomes sequential statements and `Ret` disappears. Effect events are dispatched via inline customs on the smart constructors.
+
+Re-exports `ITreeBase.v` (shared library erasure directives).
+
+- **`itree (E : Type → Type) (R : Type) : Type`** — Coinductive interaction tree
+- **`bind`** — Monadic bind (erased to sequential statements)
+- **`Ret`**, **`Tau`**, **`Vis`** — Constructors (erased in this mode)
+- **`trigger`** — Trigger an effect
+- **`hoist`** — Transform effect types in a tree
 
 Supports monadic notation: `e1 ;; e2` for sequencing and `x <- c1 ;; c2` for binding.
 
-### `Monads/IO.v`
+### `Monads/ITreeReified.v` (Reified mode)
 
-Defines the IO monad for input/output operations.
+Alternative ITree extraction mode for programs that need to observe or traverse ITree structure — CoFixpoint servers, interpreters that pattern-match on `observe`, schedulers, etc.
 
-- **`IO (A : Type) : Type`** — Type `itree iIO A` representing I/O computations
-- **`print (s : string) : IO void`** — Print string without newline
-- **`print_endline (s : string) : IO void`** — Print string with newline
-- **`get_line : IO string`** — Read line from standard input
-- **`read (s : string) : IO string`** — Read contents of file named s
+Import this module instead of `Monads.ITree`.
 
-### `Monads/IOBDE.v`
+- **`itree E R`** extracts to `std::shared_ptr<ITree<R>>`
+- **`bind`** extracts to actual function calls (not sequential statements)
+- **`Ret`/`Tau`/`Vis`** extract to constructors (not erased)
+- **`observe`** extracts to method call for pattern matching on `Ret`/`Tau`/`Vis`
+- Functions named `main` returning `itree E R` are extracted as `_main` with an automatic wrapper that calls `->run()`
 
-BDE variant of the IO monad with identical structure.
+### `Monads/IO.v` / `Monads/IOBDE.v`
 
-### `Monads/STM.v`
+IO effects for console and file operations. Shared definitions are in `IODefs.v`.
 
-Defines the Software Transactional Memory monad for concurrent, atomic operations.
+**Console effects (`consoleE`):**
+- **`print (s : string)`** — Print string without newline
+- **`print_endline (s : string)`** — Print string with newline
+- **`get_line`** — Read line from standard input
 
-- **`STM (A : Type) : Type`** — Type `itree iSTM A` representing transactional computations
-- **`atomically {A : Type} (t : STM A) : IO A`** — Execute STM transaction atomically
-- **`retry {A : Type} : STM A`** — Retry the current transaction
-- **`orElse {A : Type} (l : STM A) (r : STM A) : STM A`** — Alternative transaction
-- **`check (b : bool) : STM void`** — Assert condition or retry
-- **`getSTM {A : Type} (v : vector A) (i : int) : STM A`** — Get element from vector
-- **`isEmptySTM {A : Type} (v : vector A) : STM bool`** — Check if vector is empty
-- **`TVar (A : Type) : Type`** — Transactional variable of type A
-- **`newTVar {A : Type} (a : A) : STM (TVar A)`** — Create new transactional variable
-- **`readTVar {A : Type} (v : TVar A) : STM A`** — Read value from transactional variable
-- **`writeTVar {A : Type} (v : TVar A) (a : A) : STM void`** — Write value to transactional variable
-- **`modifyTVar {A : Type} (a : TVar A) (f : A → A) : STM void`** — Atomically modify a transactional variable
+**File effects (`fileE`):**
+- **`read (path : string)`** — Read contents of a file
+- **`write_file (path content : string)`** — Write content to a file
+- **`append_file (path content : string)`** — Append content to a file
+- **`file_exists (path : string)`** — Check if a file exists
+- **`remove_file (path : string)`** — Remove a file
 
-### `Monads/STMBDE.v`
+### `Monads/STM.v` / `Monads/STMBDE.v`
 
-BDE variant of the STM monad with similar structure to `STM.v`, using BDE library types.
+Software Transactional Memory effects. Shared definitions are in `STMDefs.v`. Both flavors use `stm_adapter.h` for the C++ implementation, backed by `crane-stm/`.
 
-**Differences from STM.v:**
-- Uses `bsl::shared_ptr` instead of `std::shared_ptr` for TVar
-- TVar operations (`readTVar`, `writeTVar`) extracted as standalone functions instead of member functions
-- `orElse` extraction is commented out
+- **`TVar (A : Type) : Type`** — Transactional variable (axiom)
+- **`newTVar {A} (a : A)`** — Create new transactional variable
+- **`readTVar {A} (v : TVar A)`** — Read value from transactional variable
+- **`writeTVar {A} (v : TVar A) (a : A)`** — Write value to transactional variable
+- **`atomically {A} (t : itree stmE A) : itree ioE A`** — Execute STM transaction atomically
+- **`orElse {A} (l r : itree stmE A) : itree stmE A`** — Alternative transaction
+- **`retry {A}`** — Retry the current transaction
+- **`check (b : bool)`** — Assert condition or retry
+- **`getSTM {A} (v : vector A) (i : int)`** — Transactional vector access
+- **`isEmptySTM {A} (v : vector A)`** — Transactional vector empty check
+- **`modifyTVar {A} (a : TVar A) (f : A → A)`** — Atomically modify a variable
 
-### `Monads/Thread.v`
+### `Monads/Thread.v` / `Monads/ThreadBDE.v`
 
-Defines the Conc monad for thread-based concurrency with cost tracking.
+Thread-based concurrency effects. Shared definitions are in `ThreadDefs.v`.
 
-- **`Conc {z : int} (A : Type) : Type`** — Concurrent computation with cost z
-- **`Cret {A : Type} (a : A) : Conc {0} A`** — Return value with zero cost
-- **`Cbind {x y : int} {A B : Type} (c : Conc {x} A) (f : A → Conc {y} B) : Conc {x + y} B`** — Bind with cost addition
-- **`Ceval {A : Type} (c : Conc {0} A) : A`** — Evaluate a zero-cost computation
-- **`thread : Type`** — Thread type
-- **`mk_thread {A B : Type} (f : A → B) (a : A) : Conc {1} thread`** — Create and run a new thread
-- **`join (t : thread) : Conc {-1} void`** — Wait for thread to complete
-- **`sleep (ms : int) : Conc {0} void`** — Sleep for milliseconds
-- **`print_endline (s : string) : Conc {0} void`** — Print string with newline
+- **`thread : Type`** — Thread handle (axiom)
+- **`spawn {A B} (f : A → B) (a : A)`** — Create and start a new thread (axiom)
+- **`join (t : thread)`** — Wait for thread to complete
+- **`sleep (d : int)`** — Sleep for milliseconds
+- **`runConc {A} (c : itree concE A) : A`** — Execute a concurrent computation
 
-Supports monadic notation via `ConcNotations`.
+The `concE` effect composes `threadE` (join, sleep) with `consoleE` (print operations).
 
-### `Monads/Par.v`
+### `Monads/Par.v` / `Monads/ParBDE.v`
 
-Defines the Par monad for parallel computation with cost tracking.
+Parallel computation effects using futures. Shared definitions are in `ParDefs.v`.
 
-- **`Par (S : Type) {z : int} (A : Type) : Type`** — Parallel computation with cost z
-- **`Pret {S : Type} {A : Type} (a : A) : Par S {0} A`** — Return value with zero cost
-- **`Pbind {S : Type} {x y : int} {A B : Type} (p : Par S {x} A) (f : A → Par S {y} B) : Par S {x + y} B`** — Bind with cost addition
-- **`runPar {A : Type} (p : ∀ S : Type, Par S {0} A) : A`** — Execute a zero-cost parallel computation
-- **`thread (S : Type) (B : Type) : Type`** — Future type for parallel result
-- **`mk_thread {S : Type} {A B : Type} (f : A → B) (a : A) : Par S {1} (thread S B)`** — Spawn async task
-- **`get_thread {S : Type} {B : Type} (t : thread S B) : Par S {-1} B`** — Wait for task result
+- **`future (B : Type) : Type`** — Future handle for async result (axiom)
+- **`async {A B} (f : A → B) (a : A)`** — Spawn async task, returns `future B`
+- **`get_thread {B} (t : future B)`** — Wait for task result (extracts to `.get()`)
+- **`runPar {A} (c : itree parE A) : A`** — Execute a parallel computation
 
-**Warning**: Current axioms allow getting the same thread twice, which is unsound.
+### `Monads/Clock.v` / `Monads/ClockBDE.v`
 
-Supports monadic notation via `ParNotations`.
+Clock/time effects. Shared definitions are in `ClockDefs.v`. All timestamps are `int` (int63) representing milliseconds.
+
+- **`steady_now`** — Monotonic clock time
+- **`system_now`** — Wall-clock time
+- **`now`** — Alias for `system_now`
+
+### `Monads/Dir.v` / `Monads/DirBDE.v`
+
+Directory operations. Shared definitions are in `DirDefs.v`.
+
+- **`create_directory (path : string) : bool`** — Create a directory
+- **`remove_directory (path : string) : bool`** — Remove a directory
+- **`list_directory (path : string) : list string`** — List directory contents
+- **`current_path : string`** — Get current working directory
+
+### `Monads/Env.v` / `Monads/EnvBDE.v`
+
+Environment variable operations. Shared definitions are in `EnvDefs.v`.
+
+- **`get_env (name : string) : option string`** — Get environment variable
+- **`set_env (name value : string)`** — Set environment variable (POSIX `setenv`)
+- **`unset_env (name : string)`** — Unset environment variable (POSIX `unsetenv`)
+
+### `Monads/Path.v` / `Monads/PathBDE.v`
+
+Filesystem path operations. Shared definitions are in `PathDefs.v`.
+
+- **`canonical (path : string) : string`** — Canonicalize path
+- **`relative (path : string) : string`** — Make path relative
+- **`absolute (path : string) : string`** — Make path absolute
+- **`is_directory (path : string) : bool`** — Check if path is a directory
+- **`is_regular_file (path : string) : bool`** — Check if path is a regular file
+
+### `Monads/TempFile.v` / `Monads/TempFileBDE.v`
+
+Temporary file/directory creation. Shared definitions are in `TempFileDefs.v`.
+
+- **`create_temp_file (prefix : string) : string`** — Create a temporary file, returns path
+- **`create_temp_dir (prefix : string) : string`** — Create a temporary directory, returns path
 
 ---
 
 ## External Types
 
-### `External/Vector.v`
+### `External/Vector.v` / `External/VectorBDE.v`
 
-Defines a dynamic vector type backed by the IO monad.
+Defines a dynamic vector type. Shared definitions are in `VectorDefs.v`.
 
 - **`vector (A : Type) : Type`** — Dynamic vector of type A
-- **`emptyVec (A : Type) : IO (vector A)`** — Create empty vector
-- **`get {A : Type} (v : vector A) (x : int) : IO A`** — Get element at index
-- **`push {A : Type} (v : vector A) (a : A) : IO void`** — Append element
-- **`pop {A : Type} (v : vector A) : IO void`** — Remove last element
-- **`size {A : Type} (v : vector A) : IO int`** — Get vector length
-- **`isEmpty {A : Type} (v : vector A) : IO bool`** — Check if empty
-- **`assign {A : Type} (v : vector A) (x : int) (a : A) : IO (vector A)`** — Set element at index
+- **`emptyVec (A : Type)`** — Create empty vector
+- **`get {A} (v : vector A) (x : int)`** — Get element at index
+- **`push {A} (v : vector A) (a : A)`** — Append element
+- **`pop {A} (v : vector A)`** — Remove last element
+- **`size {A} (v : vector A)`** — Get vector length
+- **`isEmpty {A} (v : vector A)`** — Check if empty
+- **`assign {A} (v : vector A) (x : int) (a : A)`** — Set element at index
 
-### `External/VectorBDE.v`
+### `External/StringViewStd.v` / `External/StringViewBDE.v`
 
-BDE variant of the vector type with identical structure.
-
-### `External/StringViewStd.v`
-
-Defines a string view type for non-owning string references with axiomatic properties.
+Defines a string view type for non-owning string references with axiomatic properties. Shared definitions are in `StringViewDefs.v`.
 
 **Basic operations:**
 - **`string_view : Type`** — Non-owning string view (extracts to `std::basic_string_view<char>`)
@@ -205,16 +298,40 @@ Defines a string view type for non-owning string references with axiomatic prope
 - **`contains (sv : string_view) (c : char63) : bool`** — Check if view contains character
 
 **Axiomatic properties:**
-- **`sv_eq_rel : relation string_view`** — Equivalence relation on string views
-- **`sv_eq_rel_equiv : equivalence string_view sv_eq_rel`** — String view equality is an equivalence relation
-- **`empty_substr (sv : string_view) (i : int) : empty (substr sv i 0) = true`** — Zero-length substring is always empty
-- **`empty_length (sv : string_view) : empty sv = true ↔ length sv = 0`** — View is empty iff its length is zero
-- **`length_of_string (s : string) : length (sv_of_string s) = PrimString.length s`** — String view length equals string length
-- **`substr_of_string_comm (s : string) (i j : int) : compare i j <> Gt → compare j (PrimString.length s) <> Gt → substr (sv_of_string s) i (sub j i) = sv_of_string (PrimString.sub s i j)`** — Substring operations commute with string conversion
-- **`contains_iff_exists_get (sv : string_view) (c : char63) : contains sv c = true ↔ ∃ i, leb 0 i = true ∧ ltb i (length sv) = true ∧ sv_get sv i = c`** — A string_view contains a character iff that character appears at some valid position
-- **`sv_get_substr (sv : string_view) (start len i : int) : leb 0 i = true → ltb i len = true → ltb (add start i) (length sv) = true → sv_get (substr sv start len) i = sv_get sv (add start i)`** — Characters in a prefix substr are exactly those in the corresponding positions of the original
-- **`length_substr (sv : string_view) (start len : int) : leb 0 start = true → leb 0 len = true → length (substr sv start len) = if ltb (add start len) (length sv) then len else if leb start (length sv) then sub (length sv) start else 0`** — Length of a substr is bounded by the requested length
-- **`length_substr_prefix (sv : string_view) (len : int) : leb 0 len = true → leb len (length sv) = true → length (substr sv 0 len) = len`** — Simpler axiom for prefix case: length of substr from 0
-- **`contains_substr_prefix_false (sv : string_view) (n : int) (c : char63) : leb 0 n = true → leb n (length sv) = true → (∀ i, leb 0 i = true → ltb i n = true → sv_get sv i <> c) → contains (substr sv 0 n) c = false`** — If no position in [0, n) contains a character c, then contains returns false
-- **`contains_substr_prefix_true (sv : string_view) (n c i : int) : leb 0 n = true → leb n (length sv) = true → leb 0 i = true → ltb i n = true → sv_get sv i = c → contains (substr sv 0 n) c = true`** — Conversely, if some position contains c, then contains returns true
-- **`length_nonneg (sv : string_view) : leb 0 (length sv) = true`** — Length is always non-negative
+- **`sv_eq_rel`** — Equivalence relation on string views
+- **`empty_substr`** — Zero-length substring is always empty
+- **`empty_length`** — View is empty iff its length is zero
+- **`length_of_string`** — String view length equals string length
+- **`substr_of_string_comm`** — Substring operations commute with string conversion
+- **`contains_iff_exists_get`** — A view contains a character iff it appears at some valid position
+- **`sv_get_substr`** — Characters in a substr match the original at offset positions
+- **`length_substr`** — Length of a substr is bounded by the requested length
+- **`length_substr_prefix`** — Prefix case: length of substr from 0
+- **`contains_substr_prefix_false`** / **`contains_substr_prefix_true`** — Contains correctness for prefixes
+- **`length_nonneg`** — Length is always non-negative
+
+---
+
+## C++ Runtime Headers
+
+Crane includes C++ header files that support extracted code at runtime. These are located in `theories/cpp/`.
+
+### `crane_itree.h`
+
+C++ runtime for reified interaction trees. Defines the `ITree<R>` template class with `Ret`, `Tau`, and `Vis` variants, `observe()` for pattern matching, `run()` for execution, and `itree_bind` for monadic composition.
+
+### `crane_real.h`
+
+C++ `Real` class wrapping `long double`, used by `Mapping/Real.v`. Provides arithmetic operators, trigonometric functions, and conversion utilities.
+
+### `stm_adapter.h`
+
+Adapter header providing the `stm::` namespace API (`newTVar`, `readTVar`, `writeTVar`, `atomically`, `orElse`, `retry`) that STM extraction mappings target.
+
+### `crane-stm/`
+
+Full C++ implementation of Software Transactional Memory with transaction logs, control blocks, and conflict detection. This is the backend that `stm_adapter.h` delegates to.
+
+### `persistent_array.h`
+
+Copy-on-write persistent array implementation used by `PrimArray` extraction.

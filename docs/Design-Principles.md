@@ -55,8 +55,8 @@ for invariants, and review diffs in code review.
 Rocq programs are fundamentally functional. Crane keeps that structure visible,
 but renders it in idiomatic modern C++:
 
-- algebraic data types become `std::variant`-like shapes,
-- pattern matches become structured conditionals,
+- algebraic data types become inheritance-based structs with static factory methods,
+- pattern matches become `switch` statements or structured conditionals,
 - higher-order functions become lambdas and callable objects,
 - monadic effects become libraries with concrete C++ APIs.
 

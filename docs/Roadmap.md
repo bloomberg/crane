@@ -6,12 +6,11 @@ Crane is an evolving extraction system for lowering verified Rocq programs into 
 
 ## 1. Broader Rocq Language Coverage
 
-Crane currently handles a large subset of Rocq's functional core.
-Upcoming work includes expanding support for:
+Crane handles a large subset of Rocq's functional core, including modules, type classes, and coinductive types. Ongoing work includes expanding support for:
 
-* modules (see [#1](/bloomberg/crane/issues/1)),
-* type classes (see [#2](/bloomberg/crane/issues/2)),
-* coinductive types,
+* more complex module and functor patterns,
+* advanced type class features,
+* universe polymorphism edge cases,
 * other currently unsupported features.
 
 The goal is to enable extraction of a wider range of Rocq developments without requiring user workarounds.
@@ -34,13 +33,12 @@ Work is ongoing to expand this pipeline and automate the detection of discrepanc
 
 ## 3. Enhanced Concurrency and Effects
 
-Crane supports user-defined monadic effects, including **software transactional memory (STM)**.
-Future extensions include:
+Crane includes a growing library of monadic effects built on [interaction trees](https://github.com/DeepSpec/InteractionTrees), including IO (console + file), STM, threads, parallelism, clock, directory, environment, path, and temporary file operations. Future extensions include:
 
-* additional standard effect libraries (`IO`, state, nondeterminism, etc.),
+* additional effect libraries (state, nondeterminism, etc.),
 * streamlined interfaces for defining custom effects,
 * richer concurrency abstractions,
-* improved performance of the STM backend and its extracted C++ realizations,
+* improved performance of the STM backend,
 * techniques for reasoning about monadic code.
 
 ---

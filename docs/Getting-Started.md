@@ -11,12 +11,17 @@ opam install . --deps-only
 To install OCaml (at least 4.14.0) and Rocq (at least 9.0.0). You can then build and install the project by running
 
 ```bash
-dune build -p rocq-crane && dune install
+make build && make install
 ```
 
 You will also need [Clang](https://clang.llvm.org/) 19 or higher to run the tests, and [clang-format](https://clang.llvm.org/docs/ClangFormat.html) for standard formatting.
 
-To preview the project easily and quickly, you can run `dune build` to run the tests and see if the plugin is working properly on your machine, and find the generated files (such as `list.cpp` for `List.v`) in the `tests` directory. **Currently not all tests in the directory are expected to pass (and thus some failing does not mean the plugin is installed incorrectly)**.
+To run the tests, use:
+
+```bash
+make test              # Run all tests
+make test-one TEST=list  # Run a single test
+```
 
 To run the `Crane Benchmark` command, you will need to have [hyperfine](https://github.com/sharkdp/hyperfine) installed.
 

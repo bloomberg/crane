@@ -289,6 +289,90 @@ Crane Extract Skip iatomically.
 
 ---
 
+## `Crane Extract Skip Module`
+
+Exclude an entire Rocq module from extraction. Use this for modules containing axioms, proof terms, or internal implementation details that should not appear in the generated C++.
+
+### Syntax
+
+```coq
+Crane Extract Skip Module <Rocq module>.
+```
+
+* **`<Rocq module>`**
+  The qualified name of the Rocq module to omit from generated C++.
+
+### Example
+
+```coq
+Crane Extract Skip Module Rdefinitions.RbaseSymbolsImpl.
+Crane Extract Skip Module Random_axioms.
+```
+
+---
+
+## `Set Crane Loopify` / `Crane Loopify`
+
+Control the loopification optimization, which transforms recursive functions into iterative C++ using explicit stacks.
+
+### Global flag
+
+```coq
+Set Crane Loopify.    (* Enable loopification for all eligible functions *)
+Unset Crane Loopify.  (* Disable loopification (default) *)
+```
+
+When enabled, Crane automatically transforms eligible recursive functions (tail-recursive, tail-modulo-cons, and multi-recursive patterns) into `while` loops with explicit stack frames.
+
+### Per-function control
+
+```coq
+Crane Loopify <function0> <function1> ...    (* Enable for specific functions *)
+Crane NoLoopify <function0> <function1> ...  (* Disable for specific functions *)
+Crane Reset Loopify.                         (* Reset all loopification settings *)
+```
+
+### Example
+
+```coq
+Set Crane Loopify.
+Crane Extraction "my_module" MyModule.
+```
+
+---
+
+## `Crane Extract Numeral`
+
+Register a Peano-style or binary numeric inductive type for numeral folding. When registered, chains of constructors like `S(S(S(O)))` are folded into integer literals (e.g., `3u`) in the generated C++.
+
+### Syntax
+
+```coq
+Crane Extract Numeral <Rocq inductive type> => "<format string>".
+```
+
+* **`<Rocq inductive type>`**
+  The name of the Rocq inductive type to register (e.g., `nat`, `N`, `Z`). Must be an inductive type with a recognizable zero/successor pattern (for Peano types) or a binary numeric type.
+
+* **`"<format string>"`**
+  A C++ expression template where `%n` is replaced by the folded integer value.
+
+### Placeholder Table
+
+| Placeholder | Meaning                               |
+| ----------- | ------------------------------------- |
+| `%n`        | The folded integer value              |
+
+### Examples
+
+```coq
+Crane Extract Numeral nat => "%nu".    (* nat: S(S(S(O))) → 3u *)
+Crane Extract Numeral N => "%nu".      (* N: binary nat → unsigned literal *)
+Crane Extract Numeral Z => "INT64_C(%n)".  (* Z: binary integer → INT64_C(42) *)
+```
+
+---
+
 ## `Crane Extract Monad`
 
 Define how a Rocq monad should be mapped to a C++ monad type, and tell Crane which Rocq identifiers implement `bind` and `ret`. This enables correct translation of monadic notation and do-notation.
