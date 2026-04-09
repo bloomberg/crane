@@ -287,3 +287,25 @@
   (alias runtest)
   (deps method_partial_app.t.exe)
   (action (run ./method_partial_app.t.exe))))
+
+(subdir loopify_decltype
+ (rule
+  (targets loopify_decltype.t.exe)
+  (deps LoopifyDecltype.vo loopify_decltype.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_decltype.t.exe loopify_decltype.cpp loopify_decltype.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_decltype.t.exe)
+  (action (run ./loopify_decltype.t.exe))))
+
+(subdir record_use_after_move
+ (rule
+  (targets record_use_after_move.t.exe)
+  (deps RecordUseAfterMove.vo record_use_after_move.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_use_after_move.t.exe record_use_after_move.cpp record_use_after_move.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_use_after_move.t.exe)
+  (action (run ./record_use_after_move.t.exe))))
