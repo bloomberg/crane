@@ -29,8 +29,14 @@ FoldClosureAccum::tree_sum(const std::shared_ptr<FoldClosureAccum::tree> &t) {
 /// captures the previous closure (acc) and the current tree (t).
 /// If captures are by reference, the previous closure is stack-local
 /// and dies when the fold step returns, creating a dangling chain.
-unsigned int FoldClosureAccum::compose_adders(
+__attribute__((pure)) unsigned int FoldClosureAccum::compose_adders(
     const std::shared_ptr<List<std::shared_ptr<FoldClosureAccum::tree>>> &trees,
     const unsigned int _x0) {
-  throw std::logic_error("untranslatable curried proof term");
+  return trees->template fold_right<std::function<unsigned int(unsigned int)>>(
+      [](std::shared_ptr<FoldClosureAccum::tree> t,
+         std::function<unsigned int(unsigned int)> acc)
+          -> std::function<unsigned int(unsigned int)> {
+        return [=](unsigned int x) mutable { return (acc(x) + tree_sum(t)); };
+      },
+      [](unsigned int x) { return x; })(_x0);
 }

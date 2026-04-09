@@ -46,7 +46,9 @@ __attribute__((pure))
 std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
 OptionClosureEscape::pair_escape(std::shared_ptr<OptionClosureEscape::tree> t) {
   return std::make_pair(
-      [&](unsigned int _x0) -> unsigned int { return sum_values(t, _x0); },
+      [=](unsigned int _x0) mutable -> unsigned int {
+        return sum_values(t, _x0);
+      },
       42u);
 }
 
@@ -65,7 +67,7 @@ OptionClosureEscape::match_pair(
                      -> std::pair<std::function<unsigned int(unsigned int)>,
                                   unsigned int> {
                    return std::make_pair(
-                       [&](unsigned int _x0) -> unsigned int {
+                       [=](unsigned int _x0) mutable -> unsigned int {
                          return sum_values(_args.d_a0, _x0);
                        },
                        _args.d_a1);

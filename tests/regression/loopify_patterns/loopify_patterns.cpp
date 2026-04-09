@@ -79,7 +79,6 @@ LoopifyPatterns::nested_if_fuel(const unsigned int fuel, const unsigned int n) {
                 unsigned int _next_fuel = f;
                 _loop_n = std::move(_next_n);
                 _loop_fuel = std::move(_next_fuel);
-                continue;
               }
             } else {
               {
@@ -87,7 +86,6 @@ LoopifyPatterns::nested_if_fuel(const unsigned int fuel, const unsigned int n) {
                 unsigned int _next_fuel = f;
                 _loop_n = std::move(_next_n);
                 _loop_fuel = std::move(_next_fuel);
-                continue;
               }
             }
           } else {
@@ -102,7 +100,6 @@ LoopifyPatterns::nested_if_fuel(const unsigned int fuel, const unsigned int n) {
               unsigned int _next_fuel = f;
               _loop_n = std::move(_next_n);
               _loop_fuel = std::move(_next_fuel);
-              continue;
             }
           }
         }

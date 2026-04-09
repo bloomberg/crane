@@ -15,7 +15,7 @@
 #include <bsl_variant.h>
 #include <bsl_vector.h>
 #include <fstream>
-#include <mini_stm.h>
+#include <stm_adapter.h>
 #include <variant>
 
 namespace BloombergLP {}

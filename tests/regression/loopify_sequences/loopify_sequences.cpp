@@ -694,7 +694,6 @@ __attribute__((pure)) bool LoopifySequences::is_palindrome_fuel(
               unsigned int _next_fuel = f;
               _loop_s = std::move(_next_s);
               _loop_fuel = std::move(_next_fuel);
-              continue;
             }
           } else {
             {

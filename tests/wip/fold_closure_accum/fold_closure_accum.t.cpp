@@ -20,10 +20,11 @@ int main() {
   assert(r2 == 67u);
 
   // fold_bug_double: composed function called twice
-  // Expected: 30 + 0 + 30 + 100 = 130
+  // f = compose_adders [t1; t2] = fun x => x + 30
+  // f(0) + f(100) = 30 + 130 = 160
   auto r3 = FCA::fold_bug_double;
   std::cout << "fold_bug_double = " << r3 << std::endl;
-  assert(r3 == 130u);
+  assert(r3 == 160u);
 
   std::cout << "All fold_closure_accum tests passed!" << std::endl;
   return 0;

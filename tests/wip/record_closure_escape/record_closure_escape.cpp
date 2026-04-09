@@ -46,9 +46,11 @@ __attribute__((pure)) unsigned int RecordClosureEscape::sum_values(
 std::shared_ptr<RecordClosureEscape::fn_record>
 RecordClosureEscape::record_escape(
     std::shared_ptr<RecordClosureEscape::tree> t) {
-  return std::make_shared<RecordClosureEscape::fn_record>(fn_record{
-      [&](unsigned int _x0) -> unsigned int { return sum_values(t, _x0); },
-      42u});
+  return std::make_shared<RecordClosureEscape::fn_record>(
+      fn_record{[=](unsigned int _x0) mutable -> unsigned int {
+                  return sum_values(t, _x0);
+                },
+                42u});
 }
 
 __attribute__((pure)) unsigned int RecordClosureEscape::use_record(

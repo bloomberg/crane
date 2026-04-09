@@ -134,12 +134,12 @@ struct DoubleInvokeMove {
   /// Total: 40
   static inline const unsigned int bug_double_invoke = []() {
     return []() {
-      std::unique_ptr<tree> t =
-          tree::node_uptr(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                          tree::node(tree::leaf(), 30u, tree::leaf()));
+      std::shared_ptr<tree> t =
+          tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                     tree::node(tree::leaf(), 30u, tree::leaf()));
       std::function<std::shared_ptr<tree>(unsigned int)> f =
-          [&](unsigned int _x0) -> std::shared_ptr<tree> {
-        return wrap_with(std::move(t), _x0);
+          [=](unsigned int _x0) mutable -> std::shared_ptr<tree> {
+        return wrap_with(t, _x0);
       };
       std::shared_ptr<tree> w1 = f(0u);
       std::shared_ptr<tree> w2 = f(1u);

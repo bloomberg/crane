@@ -3261,3 +3261,91 @@
   (deps loopify_match_arg.t.exe)
   (action (run ./loopify_match_arg.t.exe))))
 
+(subdir loopify_decltype
+ (rule
+  (targets loopify_decltype.t.exe)
+  (deps LoopifyDecltype.vo loopify_decltype.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_decltype.t.exe loopify_decltype.cpp loopify_decltype.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_decltype.t.exe)
+  (action (run ./loopify_decltype.t.exe))))
+
+(subdir double_invoke_move
+ (rule
+  (targets double_invoke_move.t.exe)
+  (deps DoubleInvokeMove.vo double_invoke_move.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} double_invoke_move.t.exe double_invoke_move.cpp double_invoke_move.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps double_invoke_move.t.exe)
+  (action (run ./double_invoke_move.t.exe))))
+
+
+(subdir loopify_coind_colist
+ (rule
+  (targets loopify_coind_colist.t.exe)
+  (deps LoopifyCoindColist.vo loopify_coind_colist.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_coind_colist.t.exe loopify_coind_colist.cpp loopify_coind_colist.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_coind_colist.t.exe)
+  (action (run ./loopify_coind_colist.t.exe))))
+
+(subdir loopify_coind_stream
+ (rule
+  (targets loopify_coind_stream.t.exe)
+  (deps LoopifyCoindStream.vo loopify_coind_stream.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_coind_stream.t.exe loopify_coind_stream.cpp loopify_coind_stream.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_coind_stream.t.exe)
+  (action (run ./loopify_coind_stream.t.exe))))
+
+(subdir loopify_itree_reified
+ (rule
+  (targets loopify_itree_reified.t.exe)
+  (deps LoopifyItreeReified.vo loopify_itree_reified.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_itree_reified.t.exe loopify_itree_reified.cpp loopify_itree_reified.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_itree_reified.t.exe)
+  (action (run ./loopify_itree_reified.t.exe))))
+
+(subdir loopify_itree_seq
+ (rule
+  (targets loopify_itree_seq.t.exe)
+  (deps LoopifyItreeSeq.vo loopify_itree_seq.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_itree_seq.t.exe loopify_itree_seq.cpp loopify_itree_seq.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_itree_seq.t.exe)
+  (action (run ./loopify_itree_seq.t.exe))))
+
+(subdir main_toplevel
+ (rule
+  (targets main_toplevel.t.exe)
+  (deps MainToplevel.vo main_toplevel.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} main_toplevel.t.exe main_toplevel.cpp main_toplevel.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps main_toplevel.t.exe)
+  (action (run ./main_toplevel.t.exe))))
+
+(subdir closure_chain
+ (rule
+  (targets closure_chain.t.exe)
+  (deps ClosureChain.vo closure_chain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} closure_chain.t.exe closure_chain.cpp closure_chain.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps closure_chain.t.exe)
+  (action (run ./closure_chain.t.exe))))

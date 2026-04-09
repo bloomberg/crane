@@ -106,7 +106,6 @@ struct LoopifyNumericSequences {
           unsigned int _next_n = std::move(n_);
           _loop_x = std::move(_next_x);
           _loop_n = std::move(_next_n);
-          continue;
         }
       }
     }

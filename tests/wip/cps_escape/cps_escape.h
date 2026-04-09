@@ -193,9 +193,9 @@ struct CpsEscape {
   /// adder 5 = 60 + 5 = 65
   static inline const unsigned int cps_escape = []() {
     return []() {
-      std::unique_ptr<tree> t =
-          tree::node_uptr(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                          tree::node(tree::leaf(), 30u, tree::leaf()));
+      std::shared_ptr<tree> t =
+          tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                     tree::node(tree::leaf(), 30u, tree::leaf()));
       std::function<unsigned int(unsigned int)> adder =
           [&](unsigned int _x0) -> unsigned int {
         return std::move(t)->make_adder(_x0);
@@ -212,12 +212,12 @@ struct CpsEscape {
   /// The closure goes directly from make_adder into store_in_box.
   static inline const unsigned int cps_escape_inline = []() {
     return []() {
-      std::unique_ptr<tree> t =
-          tree::node_uptr(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                          tree::node(tree::leaf(), 30u, tree::leaf()));
+      std::shared_ptr<tree> t =
+          tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                     tree::node(tree::leaf(), 30u, tree::leaf()));
       std::shared_ptr<box> b =
-          store_in_box([&](unsigned int _x0) -> unsigned int {
-            return std::move(t)->make_adder(_x0);
+          store_in_box([=](unsigned int _x0) mutable -> unsigned int {
+            return t->make_adder(_x0);
           });
       return std::visit(
           Overloaded{[](const typename box::Box0 _args) -> unsigned int {
@@ -230,18 +230,17 @@ struct CpsEscape {
   /// Build two adders from different trees and store both.
   static inline const unsigned int cps_escape_two = []() {
     return []() {
-      std::unique_ptr<tree> t1 =
-          tree::node_uptr(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                          tree::node(tree::leaf(), 30u, tree::leaf()));
-      std::unique_ptr<tree> t2 =
-          tree::node_uptr(tree::leaf(), 100u, tree::leaf());
+      std::shared_ptr<tree> t1 =
+          tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                     tree::node(tree::leaf(), 30u, tree::leaf()));
+      std::shared_ptr<tree> t2 = tree::node(tree::leaf(), 100u, tree::leaf());
       std::shared_ptr<box> b1 =
-          store_in_box([&](unsigned int _x0) -> unsigned int {
-            return std::move(t1)->make_adder(_x0);
+          store_in_box([=](unsigned int _x0) mutable -> unsigned int {
+            return t1->make_adder(_x0);
           });
       std::shared_ptr<box> b2 =
-          store_in_box([&](unsigned int _x0) -> unsigned int {
-            return std::move(t2)->make_adder(_x0);
+          store_in_box([=](unsigned int _x0) mutable -> unsigned int {
+            return t2->make_adder(_x0);
           });
       return std::visit(
           Overloaded{[&](const typename box::Box0 _args) -> unsigned int {

@@ -170,7 +170,6 @@ struct LoopifyNumbers {
           unsigned int _next_n = std::move(m);
           _loop_x = std::move(_next_x);
           _loop_n = std::move(_next_n);
-          continue;
         }
       }
     }

@@ -29,7 +29,6 @@ DeepMap::build_right(const unsigned int n,
         unsigned int _next_n = std::move(n_);
         _loop_acc = std::move(_next_acc);
         _loop_n = std::move(_next_n);
-        continue;
       }
     }
   }

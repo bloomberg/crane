@@ -14,8 +14,8 @@
 #include <bsl_utility.h>
 #include <bsl_variant.h>
 #include <fstream>
-#include <mini_stm.h>
 #include <skipnode.h>
+#include <stm_adapter.h>
 #include <variant>
 
 using namespace BloombergLP;
@@ -35,8 +35,8 @@ concept MapsTo = requires(F &f, Args &...a) {
 template <typename K, typename V> struct SkipList {
   bsl::shared_ptr<SkipNode<K, V>> slHead;
   unsigned int slMaxLevel;
-  bsl::shared_ptr<stm::TVar<unsigned int>> slLevel;
-  bsl::shared_ptr<stm::TVar<unsigned int>> slLength;
+  stm::TVar<unsigned int> slLevel;
+  stm::TVar<unsigned int> slLength;
   template <MapsTo<bool, K, K> F0>
   SkipPath<K, V> findPath(F0 &&ltK, const K target) const {
     unsigned int lvl = stm::readTVar(this->SkipList::slLevel);
@@ -654,8 +654,8 @@ template <typename K, typename V> struct SkipList {
                                                   const T2 dummyVal) {
     bsl::shared_ptr<SkipNode<T1, T2>> headNode = SkipNode<T1, T2>::create(
         dummyKey, dummyVal, (((16u - 1u) > 16u ? 0 : (16u - 1u))));
-    bsl::shared_ptr<stm::TVar<unsigned int>> lvlTV = stm::newTVar(0u);
-    bsl::shared_ptr<stm::TVar<unsigned int>> lenTV = stm::newTVar(0u);
+    stm::TVar<unsigned int> lvlTV = stm::newTVar(0u);
+    stm::TVar<unsigned int> lenTV = stm::newTVar(0u);
     return bsl::make_shared<SkipList<T1, T2>>(
         SkipList<T1, T2>{headNode, 16u, lvlTV, lenTV});
   }

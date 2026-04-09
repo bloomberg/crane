@@ -253,18 +253,21 @@ struct FunctionVernac {
             MapsTo<T1, unsigned int> F1,
             MapsTo<T1, unsigned int, unsigned int, T1> F2>
   static T1 div2_rect(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int n) {
-    std::function<T1(unsigned int, T1)> f2 = f1(n);
+    std::function<T1(unsigned int, T1)> f2 =
+        [=](unsigned int _pa0, T1 _pa1) mutable { return f1(n, _pa0, _pa1); };
     T1 f3 = f0(n);
     T1 f4 = f(n);
     if (n <= 0) {
-      return f4();
+      return f4;
     } else {
       unsigned int n0 = n - 1;
       if (n0 <= 0) {
-        return f3();
+        return f3;
       } else {
         unsigned int n1 = n0 - 1;
-        std::function<T1(T1)> f5 = f2(n1);
+        std::function<T1(T1)> f5 = [=](T1 _pa0) mutable {
+          return f2(n1, _pa0);
+        };
         T1 hrec = div2_rect<T1>(f, f0, f1, n1);
         return f5(hrec);
       }
@@ -436,14 +439,17 @@ struct FunctionVernac {
   static T1 list_sum_rect(F0 &&f, F1 &&f0,
                           const std::shared_ptr<List<unsigned int>> &l) {
     std::function<T1(unsigned int, std::shared_ptr<List<unsigned int>>, T1)>
-        f1 = f0(l);
+        f1 = [=](unsigned int _pa0, std::shared_ptr<List<unsigned int>> _pa1,
+                 T1 _pa2) mutable { return f0(l, _pa0, _pa1, _pa2); };
     T1 f2 = f(l);
     return std::visit(
         Overloaded{[&](const typename List<unsigned int>::Nil _args) -> auto {
-                     return f2();
+                     return f2;
                    },
                    [&](const typename List<unsigned int>::Cons _args) -> auto {
-                     std::function<T1(T1)> f3 = f1(_args.d_a0, _args.d_a1);
+                     std::function<T1(T1)> f3 = [=](T1 _pa0) mutable {
+                       return f1(_args.d_a0, _args.d_a1, _pa0);
+                     };
                      T1 hrec = list_sum_rect<T1>(f, f0, _args.d_a1);
                      return f3(hrec);
                    }},

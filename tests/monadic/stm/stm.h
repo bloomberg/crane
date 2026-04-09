@@ -5,7 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include <mini_stm.h>
+#include <stm_adapter.h>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -87,13 +87,13 @@ public:
 
 struct STMDefs {
   template <typename T1, MapsTo<T1, T1> F1>
-  static void modifyTVar(const std::shared_ptr<stm::TVar<T1>> a, F1 &&f);
+  static void modifyTVar(const stm::TVar<T1> a, F1 &&f);
 };
 
 struct stmtest {
   template <typename T1, MapsTo<bool, T1> F1>
-  static T1 readOrRetry(const std::shared_ptr<stm::TVar<T1>> tv, F1 &&ok) {
-    T1 x = tv->read();
+  static T1 readOrRetry(const stm::TVar<T1> tv, F1 &&ok) {
+    T1 x = stm::readTVar(tv);
     if (ok(x)) {
       return x;
     } else {
@@ -107,14 +107,14 @@ struct stmtest {
   static unsigned int io_inc(const unsigned int x);
   static unsigned int stm_add_self(const unsigned int x);
   static unsigned int io_add_self(const unsigned int x);
-  static void stm_enqueue(
-      const std::shared_ptr<stm::TVar<std::shared_ptr<List<unsigned int>>>> q,
-      const unsigned int x);
-  static unsigned int stm_dequeue(
-      const std::shared_ptr<stm::TVar<std::shared_ptr<List<unsigned int>>>> q);
-  static unsigned int stm_tryDequeue(
-      const std::shared_ptr<stm::TVar<std::shared_ptr<List<unsigned int>>>> q,
-      const unsigned int dflt);
+  static void
+  stm_enqueue(const stm::TVar<std::shared_ptr<List<unsigned int>>> q,
+              const unsigned int x);
+  static unsigned int
+  stm_dequeue(const stm::TVar<std::shared_ptr<List<unsigned int>>> q);
+  static unsigned int
+  stm_tryDequeue(const stm::TVar<std::shared_ptr<List<unsigned int>>> q,
+                 const unsigned int dflt);
   static unsigned int stm_queue_roundtrip(const unsigned int x);
   static unsigned int io_queue_roundtrip(const unsigned int x);
   static unsigned int stm_orElse_retry_example(const std::monostate _x);
@@ -122,9 +122,9 @@ struct stmtest {
 };
 
 template <typename T1, MapsTo<T1, T1> F1>
-void STMDefs::modifyTVar(const std::shared_ptr<stm::TVar<T1>> a, F1 &&f) {
-  T1 val = a->read();
-  a->write(f(val));
+void STMDefs::modifyTVar(const stm::TVar<T1> a, F1 &&f) {
+  T1 val = stm::readTVar(a);
+  stm::writeTVar(a, f(val));
   return;
 }
 

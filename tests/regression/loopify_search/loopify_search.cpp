@@ -404,7 +404,6 @@ __attribute__((pure)) bool LoopifySearch::binary_search_fuel(
               unsigned int _next_fuel = f;
               _loop_l = std::move(_next_l);
               _loop_fuel = std::move(_next_fuel);
-              continue;
             }
           } else {
             {
@@ -413,7 +412,6 @@ __attribute__((pure)) bool LoopifySearch::binary_search_fuel(
               unsigned int _next_fuel = f;
               _loop_l = std::move(_next_l);
               _loop_fuel = std::move(_next_fuel);
-              continue;
             }
           }
         }

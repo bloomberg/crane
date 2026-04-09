@@ -7,8 +7,8 @@
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <mini_stm.h>
 #include <optional>
+#include <stm_adapter.h>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -81,15 +81,11 @@ public:
 template <typename K, typename V> struct CHT {
   std::function<bool(K, K)> cht_eqb;
   std::function<int64_t(K)> cht_hash;
-  std::vector<
-      std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<K, V>>>>>>
-      cht_buckets;
+  std::vector<stm::TVar<std::shared_ptr<List<std::pair<K, V>>>>> cht_buckets;
   int64_t cht_nbuckets;
-  std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<K, V>>>>>
-      cht_fallback;
+  stm::TVar<std::shared_ptr<List<std::pair<K, V>>>> cht_fallback;
 
-  std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<K, V>>>>>
-  bucket_of(const K k) const {
+  stm::TVar<std::shared_ptr<List<std::pair<K, V>>>> bucket_of(const K k) const {
     int64_t i = (this->CHT::cht_nbuckets == 0
                      ? 0
                      : this->CHT::cht_hash(k) % this->CHT::cht_nbuckets);
@@ -97,33 +93,30 @@ template <typename K, typename V> struct CHT {
   }
 
   std::optional<V> stm_get(const K k) const {
-    std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<K, V>>>>> b =
-        this->bucket_of(k);
-    std::shared_ptr<List<std::pair<K, V>>> xs = b->read();
+    stm::TVar<std::shared_ptr<List<std::pair<K, V>>>> b = this->bucket_of(k);
+    std::shared_ptr<List<std::pair<K, V>>> xs = stm::readTVar(b);
     return CHT<int, int>::template assoc_lookup<K, V>(this->CHT::cht_eqb, k,
                                                       xs);
   }
 
   std::monostate stm_put(const K k, const V v) const {
-    std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<K, V>>>>> b =
-        this->bucket_of(k);
-    std::shared_ptr<List<std::pair<K, V>>> xs = b->read();
+    stm::TVar<std::shared_ptr<List<std::pair<K, V>>>> b = this->bucket_of(k);
+    std::shared_ptr<List<std::pair<K, V>>> xs = stm::readTVar(b);
     std::shared_ptr<List<std::pair<K, V>>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
             this->CHT::cht_eqb, k, v, xs);
-    b->write(xs_);
+    stm::writeTVar(b, xs_);
     return std::monostate{};
   }
 
   std::optional<V> stm_delete(const K k) const {
-    std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<K, V>>>>> b =
-        this->bucket_of(k);
-    std::shared_ptr<List<std::pair<K, V>>> xs = b->read();
+    stm::TVar<std::shared_ptr<List<std::pair<K, V>>>> b = this->bucket_of(k);
+    std::shared_ptr<List<std::pair<K, V>>> xs = stm::readTVar(b);
     std::pair<std::optional<V>, std::shared_ptr<List<std::pair<K, V>>>> p =
         CHT<int, int>::template assoc_remove<K, V>(this->CHT::cht_eqb, k, xs);
     if (p.first.has_value()) {
       V _x = *p.first;
-      b->write(p.second);
+      stm::writeTVar(b, p.second);
       return p.first;
     } else {
       return p.first;
@@ -132,16 +125,15 @@ template <typename K, typename V> struct CHT {
 
   template <MapsTo<V, std::optional<V>> F1>
   V stm_update(const K k, F1 &&f) const {
-    std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<K, V>>>>> b =
-        this->bucket_of(k);
-    std::shared_ptr<List<std::pair<K, V>>> xs = b->read();
+    stm::TVar<std::shared_ptr<List<std::pair<K, V>>>> b = this->bucket_of(k);
+    std::shared_ptr<List<std::pair<K, V>>> xs = stm::readTVar(b);
     std::optional<V> ov =
         CHT<int, int>::template assoc_lookup<K, V>(this->CHT::cht_eqb, k, xs);
     V v = f(std::move(ov));
     std::shared_ptr<List<std::pair<K, V>>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
             this->CHT::cht_eqb, k, v, xs);
-    b->write(xs_);
+    stm::writeTVar(b, xs_);
     return v;
   }
 
@@ -263,25 +255,21 @@ template <typename K, typename V> struct CHT {
   }
 
   template <typename T1, typename T2>
-  static std::vector<
-      std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>>>
+  static std::vector<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>>
   mk_buckets(const int64_t num) {
-    std::vector<
-        std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>>>
-        buckets = {};
-    std::function<std::vector<std::shared_ptr<
-        stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>>>(unsigned int)>
+    std::vector<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>> buckets =
+        {};
+    std::function<std::vector<
+        stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>>(unsigned int)>
         f;
     f = [&](unsigned int n)
-        -> std::vector<std::shared_ptr<
-            stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>>> {
+        -> std::vector<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>> {
       if (n <= 0) {
         return buckets;
       } else {
         unsigned int n_ = n - 1;
-        std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>> b =
-            stm::atomically(
-                [&] { return stm::newTVar(List<std::pair<T1, T2>>::nil()); });
+        stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>> b = stm::atomically(
+            [&] { return stm::newTVar(List<std::pair<T1, T2>>::nil()); });
         buckets.push_back(b);
         return f(n_);
       }
@@ -294,22 +282,17 @@ template <typename K, typename V> struct CHT {
   static std::shared_ptr<CHT<T1, T2>> new_hash(F0 &&eqb, F1 &&hash,
                                                const int64_t requested) {
     int64_t n = std::max<int64_t>(requested, 1);
-    std::vector<
-        std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>>>
-        bs = CHT<int, int>::template mk_buckets<T1, T2>(n);
+    std::vector<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>> bs =
+        CHT<int, int>::template mk_buckets<T1, T2>(n);
     bool empt = bs.empty();
     if (empt) {
-      std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>> fb =
-          stm::atomically(
-              [&] { return stm::newTVar(List<std::pair<T1, T2>>::nil()); });
-      std::vector<
-          std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>>>
-          v = {};
+      stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>> fb = stm::atomically(
+          [&] { return stm::newTVar(List<std::pair<T1, T2>>::nil()); });
+      std::vector<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>> v = {};
       v.push_back(fb);
       return std::make_shared<CHT<T1, T2>>(CHT<T1, T2>{eqb, hash, v, 1, fb});
     } else {
-      std::shared_ptr<stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>>> b =
-          bs.at(0);
+      stm::TVar<std::shared_ptr<List<std::pair<T1, T2>>>> b = bs.at(0);
       return std::make_shared<CHT<T1, T2>>(CHT<T1, T2>{eqb, hash, bs, n, b});
     }
   }

@@ -322,7 +322,9 @@ struct MoveSafety {
           tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                      tree::node(tree::leaf(), 30u, tree::leaf()));
       std::function<unsigned int(unsigned int)> f =
-          [&](unsigned int _x0) -> unsigned int { return t->sum_values(_x0); };
+          [=](unsigned int _x0) mutable -> unsigned int {
+        return t->sum_values(_x0);
+      };
       std::function<unsigned int(unsigned int)> g =
           [&](unsigned int _x0) -> unsigned int {
         return std::move(t)->sum_values(_x0);
@@ -339,7 +341,9 @@ struct MoveSafety {
           tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                      tree::node(tree::leaf(), 30u, tree::leaf()));
       std::function<unsigned int(unsigned int)> f =
-          [&](unsigned int _x0) -> unsigned int { return t->sum_values(_x0); };
+          [=](unsigned int _x0) mutable -> unsigned int {
+        return t->sum_values(_x0);
+      };
       std::shared_ptr<tree> t2 = tree_id(std::move(t));
       return std::visit(
           Overloaded{[&](const typename tree::Leaf _args) -> unsigned int {

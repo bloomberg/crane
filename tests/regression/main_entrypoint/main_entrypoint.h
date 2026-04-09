@@ -18,7 +18,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct MainEntrypoint {
-  static void _main();
+  static void main();
 };
 
 #endif // INCLUDED_MAIN_ENTRYPOINT
