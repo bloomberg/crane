@@ -3349,3 +3349,201 @@
   (alias runtest)
   (deps closure_chain.t.exe)
   (action (run ./closure_chain.t.exe))))
+
+(subdir cps_escape
+ (rule
+  (targets cps_escape.t.exe)
+  (deps CpsEscape.vo cps_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cps_escape.t.exe cps_escape.cpp cps_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps cps_escape.t.exe)
+  (action (run ./cps_escape.t.exe))))
+
+(subdir fix_partial_app
+ (rule
+  (targets fix_partial_app.t.exe)
+  (deps FixPartialApp.vo fix_partial_app.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_partial_app.t.exe fix_partial_app.cpp fix_partial_app.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_partial_app.t.exe)
+  (action (run ./fix_partial_app.t.exe))))
+
+(subdir fold_closure_accum
+ (rule
+  (targets fold_closure_accum.t.exe)
+  (deps FoldClosureAccum.vo fold_closure_accum.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fold_closure_accum.t.exe fold_closure_accum.cpp fold_closure_accum.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fold_closure_accum.t.exe)
+  (action (run ./fold_closure_accum.t.exe))))
+
+(subdir hof_closure_escape
+ (rule
+  (targets hof_closure_escape.t.exe)
+  (deps HofClosureEscape.vo hof_closure_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hof_closure_escape.t.exe hof_closure_escape.cpp hof_closure_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hof_closure_escape.t.exe)
+  (action (run ./hof_closure_escape.t.exe))))
+
+(subdir let_closure_escape
+ (rule
+  (targets let_closure_escape.t.exe)
+  (deps LetClosureEscape.vo let_closure_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_closure_escape.t.exe let_closure_escape.cpp let_closure_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_closure_escape.t.exe)
+  (action (run ./let_closure_escape.t.exe))))
+
+(subdir list_closure_escape
+ (rule
+  (targets list_closure_escape.t.exe)
+  (deps ListClosureEscape.vo list_closure_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} list_closure_escape.t.exe list_closure_escape.cpp list_closure_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps list_closure_escape.t.exe)
+  (action (run ./list_closure_escape.t.exe))))
+
+(subdir map_partial_app
+ (rule
+  (targets map_partial_app.t.exe)
+  (deps MapPartialApp.vo map_partial_app.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} map_partial_app.t.exe map_partial_app.cpp map_partial_app.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps map_partial_app.t.exe)
+  (action (run ./map_partial_app.t.exe))))
+
+(subdir match_closure_escape
+ (rule
+  (targets match_closure_escape.t.exe)
+  (deps MatchClosureEscape.vo match_closure_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} match_closure_escape.t.exe match_closure_escape.cpp match_closure_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps match_closure_escape.t.exe)
+  (action (run ./match_closure_escape.t.exe))))
+
+(subdir match_ctor_closure
+ (rule
+  (targets match_ctor_closure.t.exe)
+  (deps MatchCtorClosure.vo match_ctor_closure.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} match_ctor_closure.t.exe match_ctor_closure.cpp match_ctor_closure.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps match_ctor_closure.t.exe)
+  (action (run ./match_ctor_closure.t.exe))))
+
+(subdir method_partial_app
+ (rule
+  (targets method_partial_app.t.exe)
+  (deps MethodPartialApp.vo method_partial_app.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} method_partial_app.t.exe method_partial_app.cpp method_partial_app.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps method_partial_app.t.exe)
+  (action (run ./method_partial_app.t.exe))))
+
+(subdir move_safety
+ (rule
+  (targets move_safety.t.exe)
+  (deps MoveSafety.vo move_safety.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} move_safety.t.exe move_safety.cpp move_safety.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps move_safety.t.exe)
+  (action (run ./move_safety.t.exe))))
+
+(subdir option_closure_escape
+ (rule
+  (targets option_closure_escape.t.exe)
+  (deps OptionClosureEscape.vo option_closure_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} option_closure_escape.t.exe option_closure_escape.cpp option_closure_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps option_closure_escape.t.exe)
+  (action (run ./option_closure_escape.t.exe))))
+
+(subdir option_some_escape
+ (rule
+  (targets option_some_escape.t.exe)
+  (deps OptionSomeEscape.vo option_some_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} option_some_escape.t.exe option_some_escape.cpp option_some_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps option_some_escape.t.exe)
+  (action (run ./option_some_escape.t.exe))))
+
+(subdir pair_closure_escape
+ (rule
+  (targets pair_closure_escape.t.exe)
+  (deps PairClosureEscape.vo pair_closure_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_closure_escape.t.exe pair_closure_escape.cpp pair_closure_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_closure_escape.t.exe)
+  (action (run ./pair_closure_escape.t.exe))))
+
+(subdir partial_app_move
+ (rule
+  (targets partial_app_move.t.exe)
+  (deps PartialAppMove.vo partial_app_move.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} partial_app_move.t.exe partial_app_move.cpp partial_app_move.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps partial_app_move.t.exe)
+  (action (run ./partial_app_move.t.exe))))
+
+(subdir record_closure_escape
+ (rule
+  (targets record_closure_escape.t.exe)
+  (deps RecordClosureEscape.vo record_closure_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_closure_escape.t.exe record_closure_escape.cpp record_closure_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_closure_escape.t.exe)
+  (action (run ./record_closure_escape.t.exe))))
+
+(subdir record_use_after_move
+ (rule
+  (targets record_use_after_move.t.exe)
+  (deps RecordUseAfterMove.vo record_use_after_move.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_use_after_move.t.exe record_use_after_move.cpp record_use_after_move.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_use_after_move.t.exe)
+  (action (run ./record_use_after_move.t.exe))))
+
+(subdir reuse_scrutinee
+ (rule
+  (targets reuse_scrutinee.t.exe)
+  (deps ReuseScrutinee.vo reuse_scrutinee.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_scrutinee.t.exe reuse_scrutinee.cpp reuse_scrutinee.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_scrutinee.t.exe)
+  (action (run ./reuse_scrutinee.t.exe))))
