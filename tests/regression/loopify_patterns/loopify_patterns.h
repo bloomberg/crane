@@ -52,20 +52,6 @@ struct LoopifyPatterns {
       return std::make_shared<list<t_A>>(Cons{std::move(a0), std::move(a1)});
     }
 
-    static std::unique_ptr<list<t_A>> nil_uptr() {
-      return std::make_unique<list<t_A>>(Nil{});
-    }
-
-    static std::unique_ptr<list<t_A>>
-    cons_uptr(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
-      return std::make_unique<list<t_A>>(Cons{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<list<t_A>>
-    cons_uptr(t_A a0, std::shared_ptr<list<t_A>> &&a1) {
-      return std::make_unique<list<t_A>>(Cons{std::move(a0), std::move(a1)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -438,9 +424,9 @@ struct LoopifyPatterns {
                             if (_last) {
                               std::get<typename list<unsigned int>::Cons>(
                                   _last->v_mut())
-                                  .d_a1 = _loop_l1;
+                                  .d_a1 = std::move(_loop_l1);
                             } else {
-                              _head = _loop_l1;
+                              _head = std::move(_loop_l1);
                             }
                             _continue = false;
                           },

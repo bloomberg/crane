@@ -88,19 +88,27 @@ __attribute__((pure)) bool LoopifyListRelations::is_suffix_of(
           }
         } else {
           unsigned int n_ = _loop_n - 1;
-          std::visit(
-              Overloaded{[&](const typename List<unsigned int>::Nil _args) {
-                           _result = List<unsigned int>::nil();
-                           _continue = false;
-                         },
-                         [&](const typename List<unsigned int>::Cons _args) {
-                           std::shared_ptr<List<unsigned int>> _next_xs =
-                               _args.d_a1;
-                           unsigned int _next_n = n_;
-                           _loop_xs = std::move(_next_xs);
-                           _loop_n = std::move(_next_n);
-                         }},
-              _loop_xs->v());
+          if (_loop_xs.use_count() == 1 && _loop_xs->v().index() == 0) {
+            auto &_rf = std::get<0>(_loop_xs->v_mut());
+            {
+              _result = _loop_xs;
+              _continue = false;
+            }
+          } else {
+            std::visit(
+                Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+                             _result = List<unsigned int>::nil();
+                             _continue = false;
+                           },
+                           [&](const typename List<unsigned int>::Cons _args) {
+                             std::shared_ptr<List<unsigned int>> _next_xs =
+                                 _args.d_a1;
+                             unsigned int _next_n = n_;
+                             _loop_xs = std::move(_next_xs);
+                             _loop_n = std::move(_next_n);
+                           }},
+                _loop_xs->v());
+          }
         }
       }
       return _result;
@@ -641,9 +649,9 @@ LoopifyListRelations::merge_fuel(const unsigned int fuel,
                           if (_last) {
                             std::get<typename List<unsigned int>::Cons>(
                                 _last->v_mut())
-                                .d_a1 = _loop_l1;
+                                .d_a1 = std::move(_loop_l1);
                           } else {
-                            _head = _loop_l1;
+                            _head = std::move(_loop_l1);
                           }
                           _continue = false;
                         },

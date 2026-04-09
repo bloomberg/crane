@@ -112,7 +112,7 @@ struct OppositePropertyTransferTraceCase {
           std::function<std::shared_ptr<Triangle1Witness>(
               std::shared_ptr<Triangle2Witness>)>
               s = e.second;
-          return std::move(s)(h_tri2);
+          return s(h_tri2);
         }());
   }
 

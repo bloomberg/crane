@@ -39,11 +39,6 @@ public:
         ExistT{std::move(x), std::move(a1)});
   }
 
-  static std::unique_ptr<SigT<t_A, t_P>> existt_uptr(t_A x, t_P a1) {
-    return std::make_unique<SigT<t_A, t_P>>(
-        ExistT{std::move(x), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

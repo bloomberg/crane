@@ -50,20 +50,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -100,10 +86,6 @@ public:
 
   static std::shared_ptr<Sig<t_A>> exist(t_A x) {
     return std::make_shared<Sig<t_A>>(Exist{std::move(x)});
-  }
-
-  static std::unique_ptr<Sig<t_A>> exist_uptr(t_A x) {
-    return std::make_unique<Sig<t_A>>(Exist{std::move(x)});
   }
 
   // MANIPULATORS

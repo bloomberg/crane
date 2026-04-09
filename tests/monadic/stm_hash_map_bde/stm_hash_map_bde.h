@@ -61,17 +61,6 @@ public:
                                          bsl::shared_ptr<List<t_A>> &&a1) {
     return bsl::make_shared<List<t_A>>(Cons{bsl::move(a0), bsl::move(a1)});
   }
-  static bsl::unique_ptr<List<t_A>> nil_uptr() {
-    return bsl::make_unique<List<t_A>>(Nil{});
-  }
-  static bsl::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const bsl::shared_ptr<List<t_A>> &a1) {
-    return bsl::make_unique<List<t_A>>(Cons{bsl::move(a0), a1});
-  }
-  static bsl::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              bsl::shared_ptr<List<t_A>> &&a1) {
-    return bsl::make_unique<List<t_A>>(Cons{bsl::move(a0), bsl::move(a1)});
-  }
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
   // ACCESSORS
@@ -229,7 +218,7 @@ template <typename K, typename V> struct CHT {
                 bsl::pair<bsl::optional<T2>,
                           bsl::shared_ptr<List<bsl::pair<T1, T2>>>>
                     q = CHT<int, int>::template assoc_remove<T1, T2>(
-                        eqb, k, bsl::move(_args.d_a1));
+                        eqb, k, _args.d_a1);
                 return bsl::make_pair(q.first,
                                       List<bsl::pair<T1, T2>>::cons(
                                           bsl::make_pair(k_, v_), q.second));

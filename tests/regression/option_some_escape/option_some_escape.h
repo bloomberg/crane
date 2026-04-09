@@ -56,23 +56,6 @@ struct OptionSomeEscape {
           Node{std::move(a0), std::move(a1), std::move(a2)});
     }
 
-    static std::unique_ptr<tree> leaf_uptr() {
-      return std::make_unique<tree>(Leaf{});
-    }
-
-    static std::unique_ptr<tree> node_uptr(const std::shared_ptr<tree> &a0,
-                                           unsigned int a1,
-                                           const std::shared_ptr<tree> &a2) {
-      return std::make_unique<tree>(Node{a0, std::move(a1), a2});
-    }
-
-    static std::unique_ptr<tree> node_uptr(std::shared_ptr<tree> &&a0,
-                                           unsigned int a1,
-                                           std::shared_ptr<tree> &&a2) {
-      return std::make_unique<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -122,9 +105,9 @@ struct OptionSomeEscape {
                const unsigned int
                    x); /// Clobber stack, then use the closure from the option.
   static inline const unsigned int bug_option_some = []() {
-    std::unique_ptr<tree> t1 =
-        tree::node_uptr(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                        tree::node(tree::leaf(), 30u, tree::leaf()));
+    std::shared_ptr<tree> t1 =
+        tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                   tree::node(tree::leaf(), 30u, tree::leaf()));
     std::optional<std::function<unsigned int(unsigned int)>> o1 =
         option_escape(std::move(t1));
     return apply_option(std::move(o1), 0u);

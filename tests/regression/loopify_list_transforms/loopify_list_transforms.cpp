@@ -371,18 +371,27 @@ LoopifyListTransforms::drop(const unsigned int n,
       }
     } else {
       unsigned int n_ = _loop_n - 1;
-      std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
-                              _result = List<unsigned int>::nil();
-                              _continue = false;
-                            },
-                            [&](const typename List<unsigned int>::Cons _args) {
-                              std::shared_ptr<List<unsigned int>> _next_l =
-                                  _args.d_a1;
-                              unsigned int _next_n = std::move(n_);
-                              _loop_l = std::move(_next_l);
-                              _loop_n = std::move(_next_n);
-                            }},
-                 _loop_l->v());
+      if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
+        auto &_rf = std::get<0>(_loop_l->v_mut());
+        {
+          _result = _loop_l;
+          _continue = false;
+        }
+      } else {
+        std::visit(
+            Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+                         _result = List<unsigned int>::nil();
+                         _continue = false;
+                       },
+                       [&](const typename List<unsigned int>::Cons _args) {
+                         std::shared_ptr<List<unsigned int>> _next_l =
+                             _args.d_a1;
+                         unsigned int _next_n = n_;
+                         _loop_l = std::move(_next_l);
+                         _loop_n = std::move(_next_n);
+                       }},
+            _loop_l->v());
+      }
     }
   }
   return _result;
@@ -489,29 +498,37 @@ LoopifyListTransforms::rotate_left_fuel(const unsigned int fuel,
       unsigned int fuel_ = _loop_fuel - 1;
       if (_loop_n <= 0u) {
         {
-          _result = _loop_l;
+          _result = std::move(_loop_l);
           _continue = false;
         }
       } else {
-        std::visit(
-            Overloaded{[&](const typename List<unsigned int>::Nil _args) {
-                         _result = List<unsigned int>::nil();
-                         _continue = false;
-                       },
-                       [&](const typename List<unsigned int>::Cons _args) {
-                         std::shared_ptr<List<unsigned int>> rotated =
-                             _args.d_a1->app(List<unsigned int>::cons(
-                                 _args.d_a0, List<unsigned int>::nil()));
-                         std::shared_ptr<List<unsigned int>> _next_l =
-                             std::move(rotated);
-                         unsigned int _next_n =
-                             (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-                         unsigned int _next_fuel = std::move(fuel_);
-                         _loop_l = std::move(_next_l);
-                         _loop_n = std::move(_next_n);
-                         _loop_fuel = std::move(_next_fuel);
-                       }},
-            _loop_l->v());
+        if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
+          auto &_rf = std::get<0>(_loop_l->v_mut());
+          {
+            _result = _loop_l;
+            _continue = false;
+          }
+        } else {
+          std::visit(
+              Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+                           _result = List<unsigned int>::nil();
+                           _continue = false;
+                         },
+                         [&](const typename List<unsigned int>::Cons _args) {
+                           std::shared_ptr<List<unsigned int>> rotated =
+                               _args.d_a1->app(List<unsigned int>::cons(
+                                   _args.d_a0, List<unsigned int>::nil()));
+                           std::shared_ptr<List<unsigned int>> _next_l =
+                               std::move(rotated);
+                           unsigned int _next_n = ((
+                               (_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
+                           unsigned int _next_fuel = fuel_;
+                           _loop_l = std::move(_next_l);
+                           _loop_n = std::move(_next_n);
+                           _loop_fuel = std::move(_next_fuel);
+                         }},
+              _loop_l->v());
+        }
       }
     }
   }

@@ -236,54 +236,6 @@ struct LargeEnum {
 
     static std::shared_ptr<tok> teof() { return std::make_shared<tok>(TEOF{}); }
 
-    static std::unique_ptr<tok> tnum_uptr(unsigned int a0) {
-      return std::make_unique<tok>(TNum{std::move(a0)});
-    }
-
-    static std::unique_ptr<tok> tplus_uptr() {
-      return std::make_unique<tok>(TPlus{});
-    }
-
-    static std::unique_ptr<tok> tminus_uptr() {
-      return std::make_unique<tok>(TMinus{});
-    }
-
-    static std::unique_ptr<tok> tstar_uptr() {
-      return std::make_unique<tok>(TStar{});
-    }
-
-    static std::unique_ptr<tok> tslash_uptr() {
-      return std::make_unique<tok>(TSlash{});
-    }
-
-    static std::unique_ptr<tok> tlparen_uptr() {
-      return std::make_unique<tok>(TLParen{});
-    }
-
-    static std::unique_ptr<tok> trparen_uptr() {
-      return std::make_unique<tok>(TRParen{});
-    }
-
-    static std::unique_ptr<tok> teq_uptr() {
-      return std::make_unique<tok>(TEq{});
-    }
-
-    static std::unique_ptr<tok> tbang_uptr() {
-      return std::make_unique<tok>(TBang{});
-    }
-
-    static std::unique_ptr<tok> tsemicolon_uptr() {
-      return std::make_unique<tok>(TSemicolon{});
-    }
-
-    static std::unique_ptr<tok> tident_uptr(unsigned int a0) {
-      return std::make_unique<tok>(TIdent{std::move(a0)});
-    }
-
-    static std::unique_ptr<tok> teof_uptr() {
-      return std::make_unique<tok>(TEOF{});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

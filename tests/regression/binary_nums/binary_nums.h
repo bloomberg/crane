@@ -62,28 +62,6 @@ public:
     return std::make_shared<Positive>(XH{});
   }
 
-  static std::unique_ptr<Positive>
-  xi_uptr(const std::shared_ptr<Positive> &a0) {
-    return std::make_unique<Positive>(XI{a0});
-  }
-
-  static std::unique_ptr<Positive> xi_uptr(std::shared_ptr<Positive> &&a0) {
-    return std::make_unique<Positive>(XI{std::move(a0)});
-  }
-
-  static std::unique_ptr<Positive>
-  xo_uptr(const std::shared_ptr<Positive> &a0) {
-    return std::make_unique<Positive>(XO{a0});
-  }
-
-  static std::unique_ptr<Positive> xo_uptr(std::shared_ptr<Positive> &&a0) {
-    return std::make_unique<Positive>(XO{std::move(a0)});
-  }
-
-  static std::unique_ptr<Positive> xh_uptr() {
-    return std::make_unique<Positive>(XH{});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -119,16 +97,6 @@ public:
 
   static std::shared_ptr<N> npos(std::shared_ptr<Positive> &&a0) {
     return std::make_shared<N>(Npos{std::move(a0)});
-  }
-
-  static std::unique_ptr<N> n0_uptr() { return std::make_unique<N>(N0{}); }
-
-  static std::unique_ptr<N> npos_uptr(const std::shared_ptr<Positive> &a0) {
-    return std::make_unique<N>(Npos{a0});
-  }
-
-  static std::unique_ptr<N> npos_uptr(std::shared_ptr<Positive> &&a0) {
-    return std::make_unique<N>(Npos{std::move(a0)});
   }
 
   // MANIPULATORS
@@ -180,24 +148,6 @@ public:
 
   static std::shared_ptr<Z> zneg(std::shared_ptr<Positive> &&a0) {
     return std::make_shared<Z>(Zneg{std::move(a0)});
-  }
-
-  static std::unique_ptr<Z> z0_uptr() { return std::make_unique<Z>(Z0{}); }
-
-  static std::unique_ptr<Z> zpos_uptr(const std::shared_ptr<Positive> &a0) {
-    return std::make_unique<Z>(Zpos{a0});
-  }
-
-  static std::unique_ptr<Z> zpos_uptr(std::shared_ptr<Positive> &&a0) {
-    return std::make_unique<Z>(Zpos{std::move(a0)});
-  }
-
-  static std::unique_ptr<Z> zneg_uptr(const std::shared_ptr<Positive> &a0) {
-    return std::make_unique<Z>(Zneg{a0});
-  }
-
-  static std::unique_ptr<Z> zneg_uptr(std::shared_ptr<Positive> &&a0) {
-    return std::make_unique<Z>(Zneg{std::move(a0)});
   }
 
   // MANIPULATORS
@@ -256,23 +206,6 @@ struct Pos {
 
     static std::shared_ptr<mask> isneg() {
       return std::make_shared<mask>(IsNeg{});
-    }
-
-    static std::unique_ptr<mask> isnul_uptr() {
-      return std::make_unique<mask>(IsNul{});
-    }
-
-    static std::unique_ptr<mask>
-    ispos_uptr(const std::shared_ptr<Positive> &a0) {
-      return std::make_unique<mask>(IsPos{a0});
-    }
-
-    static std::unique_ptr<mask> ispos_uptr(std::shared_ptr<Positive> &&a0) {
-      return std::make_unique<mask>(IsPos{std::move(a0)});
-    }
-
-    static std::unique_ptr<mask> isneg_uptr() {
-      return std::make_unique<mask>(IsNeg{});
     }
 
     // MANIPULATORS

@@ -49,20 +49,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -176,7 +162,7 @@ struct LoadProgram {
   load_program_simple(std::shared_ptr<state_simple> s,
                       const std::shared_ptr<List<unsigned int>> &bytes);
   static inline const bool test_load_program_nil = []() {
-    std::unique_ptr<state> sample = std::make_unique<state>(
+    std::shared_ptr<state> sample = std::make_shared<state>(
         state{List<unsigned int>::cons(
                   10u, List<unsigned int>::cons(
                            11u, List<unsigned int>::cons(
@@ -191,7 +177,7 @@ struct LoadProgram {
          (after->rom->nth(2u, 0u) == 12u && after->rom->nth(3u, 0u) == 13u)));
   }();
   static inline const bool test_load_program_cons_rom = []() {
-    std::unique_ptr<state> sample = std::make_unique<state>(
+    std::shared_ptr<state> sample = std::make_shared<state>(
         state{List<unsigned int>::cons(
                   10u, List<unsigned int>::cons(
                            11u, List<unsigned int>::cons(
@@ -208,7 +194,7 @@ struct LoadProgram {
          (after->rom->nth(2u, 0u) == 88u && after->rom->nth(3u, 0u) == 13u)));
   }();
   static inline const bool test_load_preserves_rom_length = []() {
-    std::unique_ptr<state> sample = std::make_unique<state>(
+    std::shared_ptr<state> sample = std::make_shared<state>(
         state{List<unsigned int>::cons(
                   10u, List<unsigned int>::cons(
                            11u, List<unsigned int>::cons(
@@ -224,8 +210,8 @@ struct LoadProgram {
     return std::move(after)->rom->length() == 4u;
   }();
   static inline const bool test_load_program_step_preserves_wf_simple = []() {
-    std::unique_ptr<state_extended> sample =
-        std::make_unique<state_extended>(state_extended{
+    std::shared_ptr<state_extended> sample =
+        std::make_shared<state_extended>(state_extended{
             4u,
             List<unsigned int>::cons(
                 10u, List<unsigned int>::cons(
@@ -240,7 +226,7 @@ struct LoadProgram {
              (after->pc < 4096u && after->stack_len <= 3u)));
   }();
   static inline const bool test_load_program_step_rom_length_weak = []() {
-    std::unique_ptr<state> sample = std::make_unique<state>(
+    std::shared_ptr<state> sample = std::make_shared<state>(
         state{List<unsigned int>::cons(
                   10u, List<unsigned int>::cons(
                            11u, List<unsigned int>::cons(
@@ -252,7 +238,7 @@ struct LoadProgram {
     return std::move(after)->rom->length() == 4u;
   }();
   static inline const bool test_load_program_step_writes_at_base = []() {
-    std::unique_ptr<state> sample = std::make_unique<state>(
+    std::shared_ptr<state> sample = std::make_shared<state>(
         state{List<unsigned int>::cons(
                   10u, List<unsigned int>::cons(
                            11u, List<unsigned int>::cons(
@@ -264,8 +250,8 @@ struct LoadProgram {
     return std::move(after)->rom->nth(1u, 0u) == 99u;
   }();
   static inline const unsigned int test_sequential_program_load = []() {
-    std::unique_ptr<state_simple> sample =
-        std::make_unique<state_simple>(state_simple{
+    std::shared_ptr<state_simple> sample =
+        std::make_shared<state_simple>(state_simple{
             List<unsigned int>::cons(
                 0u,
                 List<unsigned int>::cons(

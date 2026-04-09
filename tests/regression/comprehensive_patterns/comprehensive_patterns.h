@@ -52,20 +52,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -91,10 +77,6 @@ public:
 
   static std::shared_ptr<Sig<t_A>> exist(t_A x) {
     return std::make_shared<Sig<t_A>>(Exist{std::move(x)});
-  }
-
-  static std::unique_ptr<Sig<t_A>> exist_uptr(t_A x) {
-    return std::make_unique<Sig<t_A>>(Exist{std::move(x)});
   }
 
   // MANIPULATORS
@@ -264,18 +246,6 @@ struct ComprehensivePatterns {
 
     static std::shared_ptr<Either> right_n(unsigned int n) {
       return std::make_shared<Either>(Right_N{std::move(n)});
-    }
-
-    static std::unique_ptr<Either> left_s_uptr(const std::shared_ptr<S> &s) {
-      return std::make_unique<Either>(Left_S{s});
-    }
-
-    static std::unique_ptr<Either> left_s_uptr(std::shared_ptr<S> &&s) {
-      return std::make_unique<Either>(Left_S{std::move(s)});
-    }
-
-    static std::unique_ptr<Either> right_n_uptr(unsigned int n) {
-      return std::make_unique<Either>(Right_N{std::move(n)});
     }
 
     // MANIPULATORS
@@ -672,23 +642,6 @@ struct ComprehensivePatterns {
           Node{std::move(a0), std::move(a1), std::move(a2)});
     }
 
-    static std::unique_ptr<Tree> leaf_uptr(unsigned int a0) {
-      return std::make_unique<Tree>(Leaf{std::move(a0)});
-    }
-
-    static std::unique_ptr<Tree> node_uptr(const std::shared_ptr<Tree> &a0,
-                                           unsigned int a1,
-                                           const std::shared_ptr<Tree> &a2) {
-      return std::make_unique<Tree>(Node{a0, std::move(a1), a2});
-    }
-
-    static std::unique_ptr<Tree> node_uptr(std::shared_ptr<Tree> &&a0,
-                                           unsigned int a1,
-                                           std::shared_ptr<Tree> &&a2) {
-      return std::make_unique<Tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -990,19 +943,6 @@ struct ComprehensivePatterns {
 
     static std::shared_ptr<Container> full(std::shared_ptr<StateRO> &&a0) {
       return std::make_shared<Container>(Full{std::move(a0)});
-    }
-
-    static std::unique_ptr<Container> empty_uptr() {
-      return std::make_unique<Container>(Empty{});
-    }
-
-    static std::unique_ptr<Container>
-    full_uptr(const std::shared_ptr<StateRO> &a0) {
-      return std::make_unique<Container>(Full{a0});
-    }
-
-    static std::unique_ptr<Container> full_uptr(std::shared_ptr<StateRO> &&a0) {
-      return std::make_unique<Container>(Full{std::move(a0)});
     }
 
     // MANIPULATORS

@@ -57,7 +57,7 @@ __attribute__((pure)) unsigned int HofClosureEscape::apply_option(
     const unsigned int x) {
   if (o.has_value()) {
     std::function<unsigned int(unsigned int)> f = *o;
-    return std::move(f)(x);
+    return f(std::move(x));
   } else {
     return std::move(x);
   }

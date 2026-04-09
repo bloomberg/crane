@@ -74,25 +74,6 @@ struct LoopifyMultiRecursion {
           QQuad{std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
     }
 
-    static std::unique_ptr<quadtree> qleaf_uptr(unsigned int a0) {
-      return std::make_unique<quadtree>(QLeaf{std::move(a0)});
-    }
-
-    static std::unique_ptr<quadtree>
-    qquad_uptr(const std::shared_ptr<quadtree> &a0,
-               const std::shared_ptr<quadtree> &a1,
-               const std::shared_ptr<quadtree> &a2,
-               const std::shared_ptr<quadtree> &a3) {
-      return std::make_unique<quadtree>(QQuad{a0, a1, a2, a3});
-    }
-
-    static std::unique_ptr<quadtree>
-    qquad_uptr(std::shared_ptr<quadtree> &&a0, std::shared_ptr<quadtree> &&a1,
-               std::shared_ptr<quadtree> &&a2, std::shared_ptr<quadtree> &&a3) {
-      return std::make_unique<quadtree>(
-          QQuad{std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

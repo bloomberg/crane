@@ -25,21 +25,17 @@ exception TODO
     the original PascalCase is kept with a trailing underscore (e.g.,
     [Char] → ["Char_"]).
 
-    @param uptr      if [true], produces the unique_ptr variant
-                     (e.g., ["cons_uptr"], ["Char_uptr"])
     @param type_name the enclosing inductive type's C++ name, for same-name
                      collision detection (default [""])
     @return the factory method name as a string *)
-let factory_name_of_ctor ?(uptr = false) ?(type_name = "") ctor_struct_name =
+let factory_name_of_ctor ?(type_name = "") ctor_struct_name =
   let lc = String.lowercase_ascii ctor_struct_name in
   let collides =
     Id.Set.mem (Id.of_string lc) (get_keywords ())
     || lc = String.lowercase_ascii type_name
   in
-  let stem = if collides then ctor_struct_name else lc in
-  if uptr then stem ^ "_uptr"
-  else if collides then stem ^ "_"
-  else stem
+  if collides then ctor_struct_name ^ "_"
+  else lc
 
 (** {2 Named Constructor Fields}
 
@@ -257,7 +253,6 @@ type translation_ctx = {
   mutable current_cpp_return_type : cpp_type option;
   mutable env_types : (Id.t * ml_type) list;
   mutable pending_lifted_decls : cpp_decl list;
-  mutable unique_bindings : int list;
   mutable current_letin_depth : int;
   mutable move_owned_vars : Escape.IntSet.t;
   mutable move_dead_after : Escape.IntSet.t;
@@ -300,7 +295,6 @@ let tctx =
     current_cpp_return_type = None;
     env_types = [];
     pending_lifted_decls = [];
-    unique_bindings = [];
     current_letin_depth = 0;
     move_owned_vars = Escape.IntSet.empty;
     move_dead_after = Escape.IntSet.empty;
@@ -660,52 +654,23 @@ let return_captures_by_value stmts =
     multiple nesting levels (lambdas, let-in expressions, top-level functions)
     and each level has its own set of safe bindings. *)
 let with_escape_analysis body f =
-  let saved_ub = tctx.unique_bindings in
   let saved_depth = tctx.current_letin_depth in
   let saved_dead = tctx.move_dead_after in
   let saved_owned = tctx.move_owned_vars in
   let saved_nparams = tctx.move_n_params in
   let saved_match_counter = tctx.match_param_counter in
-  tctx.unique_bindings <- Escape.analyze body;
   tctx.current_letin_depth <- 0;
   tctx.move_dead_after <- Escape.IntSet.empty;
   tctx.move_owned_vars <- Escape.IntSet.empty;
   tctx.move_n_params <- 0;
   tctx.match_param_counter <- 0;
   let result = f () in
-  tctx.unique_bindings <- saved_ub;
   tctx.current_letin_depth <- saved_depth;
   tctx.move_dead_after <- saved_dead;
   tctx.move_owned_vars <- saved_owned;
   tctx.move_n_params <- saved_nparams;
   tctx.match_param_counter <- saved_match_counter;
   result
-
-(** Swap shared_ptr to unique_ptr in a C++ type. *)
-let shared_to_unique = function
-  | Tshared_ptr inner -> Tunique_ptr inner
-  | other -> other
-
-(** Swap shared_ptr construction to unique_ptr construction in a C++ expression.
-    Handles three patterns: 1. shared_ptr<T>(expr) -> unique_ptr<T>(expr) 2.
-    make_shared<T>(args) -> make_unique<T>(args) 3. Type::factory(args) ->
-    Type::factory_uptr(args) for constructor factories. *)
-let shared_expr_to_unique = function
-  | CPPshared_ptr_ctor (ty, e) -> CPPunique_ptr_ctor (ty, e)
-  | CPPfun_call (CPPmk_shared ty, args) -> CPPfun_call (CPPmk_unique ty, args)
-  | CPPfun_call (CPPqualified (type_expr, factory_id), args) ->
-    let factory_str = Names.Id.to_string factory_id in
-    (* For collision names like "Char_", strip trailing _ before adding _uptr *)
-    let base =
-      let n = String.length factory_str in
-      if n > 0 && factory_str.[n - 1] = '_' then
-        String.sub factory_str 0 (n - 1)
-      else factory_str
-    in
-    let uptr_name = base ^ "_uptr" in
-    CPPfun_call
-      (CPPqualified (type_expr, Names.Id.of_string uptr_name), args)
-  | e -> e
 
 (* ============================================================================
    Shared helpers for method generation (used by gen_ind_header_v2 and
@@ -4383,10 +4348,23 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
              ids )
           env
       in
+      let n_pat_vars = List.length ids in
       let saved_env_types = tctx.env_types in
+      let saved_owned = tctx.move_owned_vars in
+      let saved_dead = tctx.move_dead_after in
       push_env_types ids';
+      (* Shift move tracking sets: pattern variables add binders, so existing
+         de Bruijn indices must be adjusted to stay in sync with the branch
+         body's coordinate system. Without this shift, last-use move generation
+         fails for variables whose index is shifted by pattern bindings. *)
+      tctx.move_owned_vars <-
+        Escape.IntSet.map (fun i -> i + n_pat_vars) tctx.move_owned_vars;
+      tctx.move_dead_after <-
+        Escape.IntSet.map (fun i -> i + n_pat_vars) tctx.move_dead_after;
       let br = gen_cpp_custom_body env' k rty ids' t in
       tctx.env_types <- saved_env_types;
+      tctx.move_owned_vars <- saved_owned;
+      tctx.move_dead_after <- saved_dead;
       br :: gen_cases cs
     | Pwild | Prel _ | Ptuple _ -> gen_cases cs
   in
@@ -5157,7 +5135,6 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     else
       let depth = tctx.current_letin_depth in
       tctx.current_letin_depth <- depth + 1;
-      let use_unique = List.mem depth tctx.unique_bindings in
       (* Phase 2: set up dead-after info for move insertion. Compute free vars
          of the continuation [b] (shifted by 1 because [b] is under the let
          binder). A variable at de Bruijn index [i] in [a] is dead-after if
@@ -5259,8 +5236,6 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
                 Tfun (param_tys, ret_ty)
               | _ -> cpp_ty
             in
-            let cpp_ty = if use_unique then shared_to_unique cpp_ty else cpp_ty in
-            let e = if use_unique then shared_expr_to_unique e else e in
             begin match extract_block_template e with
             | Some (ref, tmpl, args, tys) ->
               Sblock_custom (ref, tmpl, x_renamed, cpp_ty, args, tys)
@@ -5270,7 +5245,6 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
             end
           | _ ->
             let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars t in
-            let cpp_ty = if use_unique then shared_to_unique cpp_ty else cpp_ty in
             (Sdecl (x_renamed, cpp_ty) :: asgn) @ gen_stmts env' k b
       in
       tctx.move_owned_vars <- saved_owned;
@@ -7951,7 +7925,6 @@ let gen_dfun n b cty ty temps =
               Some (Sassert ("true", Some comment)) )
         assertions
   in
-  tctx.unique_bindings <- Escape.analyze b;
   tctx.current_letin_depth <- 0;
   tctx.match_param_counter <- 0;
   (* Phase 2: Initialize owned-variable tracking for move insertion. Parameters
@@ -8914,6 +8887,16 @@ and replace_return_this_stmt inner_ty = function
   | Sexpr e -> Sexpr (replace_return_this_expr inner_ty e)
   | s -> s
 
+(** Check if a C++ type contains [Tshared_ptr] anywhere. *)
+let rec contains_shared_ptr = function
+  | Tshared_ptr _ -> true
+  | Tref t | Tmod (_, t) | Tunique_ptr t | Tptr t -> contains_shared_ptr t
+  | Tid (_, args) | Tid_external (_, args) | Tglob (_, args, _) ->
+    List.exists contains_shared_ptr args
+  | Tfun (args, ret) ->
+    List.exists contains_shared_ptr args || contains_shared_ptr ret
+  | _ -> false
+
 (** Check if any expression or statement contains [CPPshared_from_this]. *)
 let rec expr_has_shared_from_this = function
   | CPPshared_from_this _ -> true
@@ -9182,7 +9165,6 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   tctx.move_owned_vars <- Escape.IntSet.empty;
   tctx.move_n_params <- 0;
   tctx.match_param_counter <- 0;
-  tctx.unique_bindings <- Escape.analyze inner_body;
   tctx.current_letin_depth <- 0;
   (* Set current type vars to include both the inductive's type vars and extra
      tvars. This ensures gen_expr/eta_fun correctly convert Tvars to named C++
@@ -9226,13 +9208,21 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
     | Some id -> List.map (var_subst_stmt id CPPthis) stmts
     | None -> stmts
   in
-  (* Replace [return this;] with [return shared_from_this()] when the return
-     type is a shared_ptr. This handles methods that return the receiver
-     unchanged (e.g., skipn's base case). *)
+  (* Replace [CPPthis] with [CPPshared_from_this] in return expressions.  When a
+     method body returns or stores [this] in a position that expects [shared_ptr]
+     (e.g. [return this;], [return std::make_pair(this, this);]), the raw pointer
+     cannot convert to [shared_ptr].  Using [shared_from_this()] produces a valid
+     [shared_ptr] from the raw pointer.  Only applied when the return type
+     contains [shared_ptr] (e.g. [shared_ptr<T>], [pair<shared_ptr, shared_ptr>])
+     to avoid replacing [this] in method calls that just forward the receiver. *)
   let stmts =
-    match ret_cpp with
-    | Tshared_ptr inner_ty -> List.map (replace_return_this_stmt inner_ty) stmts
-    | _ -> stmts
+    if contains_shared_ptr ret_cpp then
+      let self_type_args =
+        List.mapi (fun i vname -> Tvar (i, Some vname)) vars
+      in
+      let self_type = Tglob (name, self_type_args, []) in
+      List.map (replace_return_this_stmt self_type) stmts
+    else stmts
   in
   (* Apply tvar_subst_stmt with the extended vars list (defined above).
      extended_vars covers positions 1..num_ind_vars (inductive vars) and
@@ -9489,9 +9479,8 @@ let gen_ind_header_v2
          - Lvalue overload: pointer params as const T& (cheap borrow)
          - Rvalue overload: pointer params as T&& (avoids atomic refcount ops)
 
-         Uses std::make_shared / std::make_unique (single allocation)
+         Uses std::make_shared (single allocation)
          since the variant constructors are public. *)
-      let self_uty = ind_ty_uptr name ty_vars in
       let inner_ty = Tglob (name, ty_vars, []) in
       let is_ptr_type = function
         | Tshared_ptr _ | Tunique_ptr _ -> true
@@ -9500,11 +9489,11 @@ let gen_ind_header_v2
 
       let ind_type_name = Common.pp_global_name Type name in
 
-      let mk_factory_methods ~uptr ret_ty wrap_expr i tys_list =
+      let mk_factory_methods ret_ty wrap_expr i tys_list =
         let c = cnames.(i) in
         let cname = ctor_struct_name_of_ref ~fallback_idx:i c in
         let fname =
-          factory_name_of_ctor ~uptr ~type_name:ind_type_name cname
+          factory_name_of_ctor ~type_name:ind_type_name cname
         in
         let factory_name = Id.of_string fname in
         (* Convert ML types to C++ types *)
@@ -9578,16 +9567,8 @@ let gen_ind_header_v2
         List.flatten
           (Array.to_list
              (Array.mapi
-                (mk_factory_methods ~uptr:false self_ty (fun s ->
+                (mk_factory_methods self_ty (fun s ->
                    CPPfun_call (CPPmk_shared inner_ty, [s]) ) )
-                tys ) )
-      in
-      let uptr_factory_methods =
-        List.flatten
-          (Array.to_list
-             (Array.mapi
-                (mk_factory_methods ~uptr:true self_uty (fun s ->
-                   CPPfun_call (CPPmk_unique inner_ty, [s]) ) )
                 tys ) )
       in
 
@@ -9757,7 +9738,6 @@ let gen_ind_header_v2
         @ public_ctors
         @ lazy_ctor
         @ factory_methods
-        @ uptr_factory_methods
         @ lazy_factory
         @ v_mut_accessor
         @ method_manipulators

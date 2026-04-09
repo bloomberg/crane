@@ -54,23 +54,6 @@ struct DeepMap {
           Node{std::move(a0), std::move(a1), std::move(a2)});
     }
 
-    static std::unique_ptr<tree<t_A>> leaf_uptr() {
-      return std::make_unique<tree<t_A>>(Leaf{});
-    }
-
-    static std::unique_ptr<tree<t_A>>
-    node_uptr(const std::shared_ptr<tree<t_A>> &a0, t_A a1,
-              const std::shared_ptr<tree<t_A>> &a2) {
-      return std::make_unique<tree<t_A>>(Node{a0, std::move(a1), a2});
-    }
-
-    static std::unique_ptr<tree<t_A>>
-    node_uptr(std::shared_ptr<tree<t_A>> &&a0, t_A a1,
-              std::shared_ptr<tree<t_A>> &&a2) {
-      return std::make_unique<tree<t_A>>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

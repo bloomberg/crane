@@ -67,20 +67,6 @@ template <Elem E> struct MutualTree {
       return std::make_shared<tree>(Node{std::move(a0), std::move(a1)});
     }
 
-    static std::unique_ptr<tree> leaf_uptr(unsigned int a0) {
-      return std::make_unique<tree>(Leaf{std::move(a0)});
-    }
-
-    static std::unique_ptr<tree> node_uptr(unsigned int a0,
-                                           const std::shared_ptr<forest> &a1) {
-      return std::make_unique<tree>(Node{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<tree> node_uptr(unsigned int a0,
-                                           std::shared_ptr<forest> &&a1) {
-      return std::make_unique<tree>(Node{std::move(a0), std::move(a1)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -121,21 +107,6 @@ template <Elem E> struct MutualTree {
     static std::shared_ptr<forest> fcons(std::shared_ptr<tree> &&a0,
                                          std::shared_ptr<forest> &&a1) {
       return std::make_shared<forest>(FCons{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<forest> fnil_uptr() {
-      return std::make_unique<forest>(FNil{});
-    }
-
-    static std::unique_ptr<forest>
-    fcons_uptr(const std::shared_ptr<tree> &a0,
-               const std::shared_ptr<forest> &a1) {
-      return std::make_unique<forest>(FCons{a0, a1});
-    }
-
-    static std::unique_ptr<forest> fcons_uptr(std::shared_ptr<tree> &&a0,
-                                              std::shared_ptr<forest> &&a1) {
-      return std::make_unique<forest>(FCons{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS

@@ -30,7 +30,7 @@ MutualRecursion::sum_even_indices(const unsigned int n,
     return std::move(acc);
   } else {
     unsigned int n_ = n - 1;
-    return sum_odd_indices(std::move(n_), acc);
+    return sum_odd_indices(n_, std::move(acc));
   }
 }
 
@@ -40,7 +40,7 @@ MutualRecursion::sum_odd_indices(const unsigned int n, const unsigned int acc) {
     return std::move(acc);
   } else {
     unsigned int n_ = n - 1;
-    return sum_even_indices(std::move(n_), (acc + n));
+    return sum_even_indices(n_, (std::move(acc) + n));
   }
 }
 
@@ -50,7 +50,7 @@ MutualRecursion::process_a(const unsigned int n, const unsigned int m) {
     return std::move(m);
   } else {
     unsigned int n_ = n - 1;
-    return (process_b(std::move(n_), m) + n);
+    return (process_b(n_, std::move(m)) + n);
   }
 }
 
@@ -60,7 +60,7 @@ MutualRecursion::process_b(const unsigned int n, const unsigned int m) {
     return std::move(m);
   } else {
     unsigned int n_ = n - 1;
-    return (process_a(std::move(n_), m) + m);
+    return (process_a(n_, m) + m);
   }
 }
 

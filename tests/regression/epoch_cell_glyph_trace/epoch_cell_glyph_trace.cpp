@@ -922,7 +922,7 @@ EpochCellGlyphTraceCase::step_n(
     return std::move(s);
   } else {
     unsigned int rest = n - 1;
-    return step_n(std::move(rest), step(s));
+    return step_n(rest, step(std::move(s)));
   }
 }
 

@@ -282,16 +282,16 @@ LoopifyClassics::gcd_fuel(const unsigned int fuel, const unsigned int a,
       }
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
-      if (std::move(_loop_b) == 0u) {
+      if (_loop_b == 0u) {
         {
-          _result = _loop_a;
+          _result = std::move(_loop_a);
           _continue = false;
         }
       } else {
         {
           unsigned int _next_b =
-              (std::move(_loop_b) ? _loop_a % std::move(_loop_b) : _loop_a);
-          unsigned int _next_a = std::move(_loop_b);
+              (_loop_b ? std::move(_loop_a) % _loop_b : std::move(_loop_a));
+          unsigned int _next_a = _loop_b;
           unsigned int _next_fuel = fuel_;
           _loop_b = std::move(_next_b);
           _loop_a = std::move(_next_a);

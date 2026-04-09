@@ -49,20 +49,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -205,7 +191,7 @@ struct WpmOps {
 
   static std::shared_ptr<state4> execute_wpm4(std::shared_ptr<state4> s);
   static inline const unsigned int test_wpm_update_gate = []() {
-    std::unique_ptr<state4> s = std::make_unique<state4>(state4{
+    std::shared_ptr<state4> s = std::make_shared<state4>(state4{
         List<unsigned int>::cons(
             10u,
             List<unsigned int>::cons(

@@ -97,23 +97,6 @@ template <OrderedType K, BaseType V> struct MakeMap {
           Node{std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
     }
 
-    static std::unique_ptr<tree> empty_uptr() {
-      return std::make_unique<tree>(Empty{});
-    }
-
-    static std::unique_ptr<tree> node_uptr(const std::shared_ptr<tree> &a0,
-                                           key a1, value a2,
-                                           const std::shared_ptr<tree> &a3) {
-      return std::make_unique<tree>(Node{a0, std::move(a1), std::move(a2), a3});
-    }
-
-    static std::unique_ptr<tree> node_uptr(std::shared_ptr<tree> &&a0, key a1,
-                                           value a2,
-                                           std::shared_ptr<tree> &&a3) {
-      return std::make_unique<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

@@ -158,9 +158,9 @@ LoopifyComparators::merge_by_fuel(const unsigned int fuel,
                           if (_last) {
                             std::get<typename List<unsigned int>::Cons>(
                                 _last->v_mut())
-                                .d_a1 = _loop_l1;
+                                .d_a1 = std::move(_loop_l1);
                           } else {
-                            _head = _loop_l1;
+                            _head = std::move(_loop_l1);
                           }
                           _continue = false;
                         },

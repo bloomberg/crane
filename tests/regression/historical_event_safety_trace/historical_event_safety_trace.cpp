@@ -71,7 +71,8 @@ HistoricalEventSafetyTraceCase::stage_from_table(
                   _args) -> unsigned int {
             unsigned int q = _args.d_a0.first;
             unsigned int s = _args.d_a0.second;
-            unsigned int tail = stage_from_table(_args.d_a1, base_stage, out);
+            unsigned int tail =
+                stage_from_table(_args.d_a1, std::move(base_stage), out);
             if (out <= q) {
               return s;
             } else {
@@ -174,7 +175,7 @@ __attribute__((pure)) unsigned int Nat::tail_add(const unsigned int n,
     return std::move(m);
   } else {
     unsigned int n0 = n - 1;
-    return Nat::tail_add(std::move(n0), (m + 1));
+    return Nat::tail_add(n0, (m + 1));
   }
 }
 
@@ -185,7 +186,7 @@ __attribute__((pure)) unsigned int Nat::tail_addmul(const unsigned int r,
     return std::move(r);
   } else {
     unsigned int n0 = n - 1;
-    return Nat::tail_addmul(Nat::tail_add(m, r), n0, m);
+    return Nat::tail_addmul(Nat::tail_add(m, std::move(r)), n0, m);
   }
 }
 

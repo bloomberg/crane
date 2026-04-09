@@ -57,20 +57,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -245,7 +231,7 @@ template <typename K, typename V> struct CHT {
                        std::pair<std::optional<T2>,
                                  std::shared_ptr<List<std::pair<T1, T2>>>>
                            q = CHT<int, int>::template assoc_remove<T1, T2>(
-                               eqb, k, std::move(_args.d_a1));
+                               eqb, k, _args.d_a1);
                        return std::make_pair(
                            q.first, List<std::pair<T1, T2>>::cons(
                                         std::make_pair(k_, v_), q.second));

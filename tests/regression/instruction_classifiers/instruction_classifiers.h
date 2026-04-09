@@ -49,20 +49,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -305,110 +291,6 @@ struct InstructionClassifiers {
       return std::make_shared<instr_acc>(NOP_acc{});
     }
 
-    static std::unique_ptr<instr_acc> ldm_uptr(unsigned int a0) {
-      return std::make_unique<instr_acc>(LDM{std::move(a0)});
-    }
-
-    static std::unique_ptr<instr_acc> ld_uptr(unsigned int a0) {
-      return std::make_unique<instr_acc>(LD{std::move(a0)});
-    }
-
-    static std::unique_ptr<instr_acc> add_uptr(unsigned int a0) {
-      return std::make_unique<instr_acc>(ADD{std::move(a0)});
-    }
-
-    static std::unique_ptr<instr_acc> sub_uptr(unsigned int a0) {
-      return std::make_unique<instr_acc>(SUB{std::move(a0)});
-    }
-
-    static std::unique_ptr<instr_acc> inc_uptr(unsigned int a0) {
-      return std::make_unique<instr_acc>(INC{std::move(a0)});
-    }
-
-    static std::unique_ptr<instr_acc> xch_uptr(unsigned int a0) {
-      return std::make_unique<instr_acc>(XCH{std::move(a0)});
-    }
-
-    static std::unique_ptr<instr_acc> bbl_uptr(unsigned int a0) {
-      return std::make_unique<instr_acc>(BBL{std::move(a0)});
-    }
-
-    static std::unique_ptr<instr_acc> sbm_uptr() {
-      return std::make_unique<instr_acc>(SBM{});
-    }
-
-    static std::unique_ptr<instr_acc> rdm_uptr() {
-      return std::make_unique<instr_acc>(RDM{});
-    }
-
-    static std::unique_ptr<instr_acc> rdr_uptr() {
-      return std::make_unique<instr_acc>(RDR{});
-    }
-
-    static std::unique_ptr<instr_acc> adm_uptr() {
-      return std::make_unique<instr_acc>(ADM{});
-    }
-
-    static std::unique_ptr<instr_acc> rd0_uptr() {
-      return std::make_unique<instr_acc>(RD0{});
-    }
-
-    static std::unique_ptr<instr_acc> rd1_uptr() {
-      return std::make_unique<instr_acc>(RD1{});
-    }
-
-    static std::unique_ptr<instr_acc> rd2_uptr() {
-      return std::make_unique<instr_acc>(RD2{});
-    }
-
-    static std::unique_ptr<instr_acc> rd3_uptr() {
-      return std::make_unique<instr_acc>(RD3{});
-    }
-
-    static std::unique_ptr<instr_acc> clb_uptr() {
-      return std::make_unique<instr_acc>(CLB{});
-    }
-
-    static std::unique_ptr<instr_acc> cma_uptr() {
-      return std::make_unique<instr_acc>(CMA{});
-    }
-
-    static std::unique_ptr<instr_acc> iac_uptr() {
-      return std::make_unique<instr_acc>(IAC{});
-    }
-
-    static std::unique_ptr<instr_acc> dac_uptr() {
-      return std::make_unique<instr_acc>(DAC{});
-    }
-
-    static std::unique_ptr<instr_acc> ral_uptr() {
-      return std::make_unique<instr_acc>(RAL{});
-    }
-
-    static std::unique_ptr<instr_acc> rar_uptr() {
-      return std::make_unique<instr_acc>(RAR{});
-    }
-
-    static std::unique_ptr<instr_acc> tcc_uptr() {
-      return std::make_unique<instr_acc>(TCC{});
-    }
-
-    static std::unique_ptr<instr_acc> tcs_uptr() {
-      return std::make_unique<instr_acc>(TCS{});
-    }
-
-    static std::unique_ptr<instr_acc> daa_uptr() {
-      return std::make_unique<instr_acc>(DAA{});
-    }
-
-    static std::unique_ptr<instr_acc> kbp_uptr() {
-      return std::make_unique<instr_acc>(KBP{});
-    }
-
-    static std::unique_ptr<instr_acc> nop_acc_uptr() {
-      return std::make_unique<instr_acc>(NOP_acc{});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -635,38 +517,6 @@ struct InstructionClassifiers {
       return std::make_shared<instr_ram>(ADD_ram{std::move(a0)});
     }
 
-    static std::unique_ptr<instr_ram> wrm_uptr() {
-      return std::make_unique<instr_ram>(WRM{});
-    }
-
-    static std::unique_ptr<instr_ram> wmp_uptr() {
-      return std::make_unique<instr_ram>(WMP{});
-    }
-
-    static std::unique_ptr<instr_ram> wr0_uptr() {
-      return std::make_unique<instr_ram>(WR0{});
-    }
-
-    static std::unique_ptr<instr_ram> wr1_uptr() {
-      return std::make_unique<instr_ram>(WR1{});
-    }
-
-    static std::unique_ptr<instr_ram> wr2_uptr() {
-      return std::make_unique<instr_ram>(WR2{});
-    }
-
-    static std::unique_ptr<instr_ram> wr3_uptr() {
-      return std::make_unique<instr_ram>(WR3{});
-    }
-
-    static std::unique_ptr<instr_ram> nop_ram_uptr() {
-      return std::make_unique<instr_ram>(NOP_ram{});
-    }
-
-    static std::unique_ptr<instr_ram> add_ram_uptr(unsigned int a0) {
-      return std::make_unique<instr_ram>(ADD_ram{std::move(a0)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -820,36 +670,6 @@ struct InstructionClassifiers {
 
     static std::shared_ptr<instr_regs> add_regs(unsigned int a0) {
       return std::make_shared<instr_regs>(ADD_regs{std::move(a0)});
-    }
-
-    static std::unique_ptr<instr_regs> xch_regs_uptr(unsigned int a0) {
-      return std::make_unique<instr_regs>(XCH_regs{std::move(a0)});
-    }
-
-    static std::unique_ptr<instr_regs> inc_regs_uptr(unsigned int a0) {
-      return std::make_unique<instr_regs>(INC_regs{std::move(a0)});
-    }
-
-    static std::unique_ptr<instr_regs> fim_uptr(unsigned int a0,
-                                                unsigned int a1) {
-      return std::make_unique<instr_regs>(FIM{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<instr_regs> fin_uptr(unsigned int a0) {
-      return std::make_unique<instr_regs>(FIN{std::move(a0)});
-    }
-
-    static std::unique_ptr<instr_regs> isz_uptr(unsigned int a0,
-                                                unsigned int a1) {
-      return std::make_unique<instr_regs>(ISZ{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<instr_regs> nop_regs_uptr() {
-      return std::make_unique<instr_regs>(NOP_regs{});
-    }
-
-    static std::unique_ptr<instr_regs> add_regs_uptr(unsigned int a0) {
-      return std::make_unique<instr_regs>(ADD_regs{std::move(a0)});
     }
 
     // MANIPULATORS
@@ -1039,41 +859,6 @@ struct InstructionClassifiers {
 
     static std::shared_ptr<instr_jump> nop_jump() {
       return std::make_shared<instr_jump>(NOP_jump{});
-    }
-
-    static std::unique_ptr<instr_jump> jcn_uptr(unsigned int a0,
-                                                unsigned int a1) {
-      return std::make_unique<instr_jump>(JCN{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<instr_jump> jun_uptr(unsigned int a0) {
-      return std::make_unique<instr_jump>(JUN{std::move(a0)});
-    }
-
-    static std::unique_ptr<instr_jump> jms_uptr(unsigned int a0) {
-      return std::make_unique<instr_jump>(JMS{std::move(a0)});
-    }
-
-    static std::unique_ptr<instr_jump> jin_uptr(unsigned int a0) {
-      return std::make_unique<instr_jump>(JIN{std::move(a0)});
-    }
-
-    static std::unique_ptr<instr_jump> bbl_jump_uptr(unsigned int a0) {
-      return std::make_unique<instr_jump>(BBL_jump{std::move(a0)});
-    }
-
-    static std::unique_ptr<instr_jump> isz_jump_uptr(unsigned int a0,
-                                                     unsigned int a1) {
-      return std::make_unique<instr_jump>(
-          ISZ_jump{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<instr_jump> add_jump_uptr(unsigned int a0) {
-      return std::make_unique<instr_jump>(ADD_jump{std::move(a0)});
-    }
-
-    static std::unique_ptr<instr_jump> nop_jump_uptr() {
-      return std::make_unique<instr_jump>(NOP_jump{});
     }
 
     // MANIPULATORS

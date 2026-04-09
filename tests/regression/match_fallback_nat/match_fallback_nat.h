@@ -43,14 +43,6 @@ struct MatchFallbackNat {
       return std::make_shared<maybe_nat>(NoneNat{});
     }
 
-    static std::unique_ptr<maybe_nat> somenat_uptr(unsigned int a0) {
-      return std::make_unique<maybe_nat>(SomeNat{std::move(a0)});
-    }
-
-    static std::unique_ptr<maybe_nat> nonenat_uptr() {
-      return std::make_unique<maybe_nat>(NoneNat{});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

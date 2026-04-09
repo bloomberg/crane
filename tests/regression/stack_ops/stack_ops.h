@@ -50,20 +50,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -128,9 +114,9 @@ struct StackOps {
             .second;
     if (o.has_value()) {
       unsigned int a = *o;
-      return ((std::move(a) + s_->stack_with_acc->length()) + s_->acc);
+      return ((a + s_->stack_with_acc->length()) + s_->acc);
     } else {
-      return std::move(s_)->acc;
+      return s_->acc;
     }
   }();
   static std::shared_ptr<state_basic>

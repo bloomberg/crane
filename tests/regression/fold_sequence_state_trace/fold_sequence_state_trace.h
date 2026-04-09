@@ -51,20 +51,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -115,16 +101,6 @@ struct FoldSequenceStateTraceCase {
 
     static std::shared_ptr<Fold> fold_line_ctor(std::shared_ptr<Line> &&a0) {
       return std::make_shared<Fold>(Fold_line_ctor{std::move(a0)});
-    }
-
-    static std::unique_ptr<Fold>
-    fold_line_ctor_uptr(const std::shared_ptr<Line> &a0) {
-      return std::make_unique<Fold>(Fold_line_ctor{a0});
-    }
-
-    static std::unique_ptr<Fold>
-    fold_line_ctor_uptr(std::shared_ptr<Line> &&a0) {
-      return std::make_unique<Fold>(Fold_line_ctor{std::move(a0)});
     }
 
     // MANIPULATORS
@@ -231,24 +207,6 @@ struct FoldSequenceStateTraceCase {
     static std::shared_ptr<FoldStep> fs_o4(Point a0,
                                            std::shared_ptr<Line> &&a1) {
       return std::make_shared<FoldStep>(FS_O4{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<FoldStep> fs_o1_uptr(Point a0, Point a1) {
-      return std::make_unique<FoldStep>(FS_O1{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<FoldStep> fs_o2_uptr(Point a0, Point a1) {
-      return std::make_unique<FoldStep>(FS_O2{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<FoldStep>
-    fs_o4_uptr(Point a0, const std::shared_ptr<Line> &a1) {
-      return std::make_unique<FoldStep>(FS_O4{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<FoldStep> fs_o4_uptr(Point a0,
-                                                std::shared_ptr<Line> &&a1) {
-      return std::make_unique<FoldStep>(FS_O4{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS

@@ -16,10 +16,10 @@ ParallelTest::ack(const std::pair<unsigned int, unsigned int> p) {
       } else {
         unsigned int pm = m - 1;
         if (n0 <= 0) {
-          return f(std::move(pm), Nat::one);
+          return f(pm, Nat::one);
         } else {
           unsigned int pn = n0 - 1;
-          return f(pm, ack_m(std::move(pn)));
+          return f(pm, ack_m(pn));
         }
       }
     };

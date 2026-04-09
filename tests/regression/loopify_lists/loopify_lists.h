@@ -54,20 +54,6 @@ struct LoopifyLists {
       return std::make_shared<list<t_A>>(Cons{std::move(a0), std::move(a1)});
     }
 
-    static std::unique_ptr<list<t_A>> nil_uptr() {
-      return std::make_unique<list<t_A>>(Nil{});
-    }
-
-    static std::unique_ptr<list<t_A>>
-    cons_uptr(t_A a0, const std::shared_ptr<list<t_A>> &a1) {
-      return std::make_unique<list<t_A>>(Cons{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<list<t_A>>
-    cons_uptr(t_A a0, std::shared_ptr<list<t_A>> &&a1) {
-      return std::make_unique<list<t_A>>(Cons{std::move(a0), std::move(a1)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -805,7 +791,7 @@ struct LoopifyLists {
                                     [&](const typename list<T1>::Cons _args0) {
                                       std::shared_ptr<list<T1>> _next_lst =
                                           _args0.d_a1;
-                                      unsigned int _next_k = std::move(m);
+                                      unsigned int _next_k = m;
                                       _loop_lst = std::move(_next_lst);
                                       _loop_k = std::move(_next_k);
                                     }},
@@ -828,7 +814,7 @@ struct LoopifyLists {
                 },
                 [&](const typename list<T1>::Cons _args1) {
                   std::shared_ptr<list<T1>> chunk = take(n, _loop_l);
-                  std::shared_ptr<list<T1>> rest = drop0(n, std::move(_loop_l));
+                  std::shared_ptr<list<T1>> rest = drop0(n, _loop_l);
                   std::visit(
                       Overloaded{[&](const typename list<T1>::Nil _args2) {
                                    if (_last) {

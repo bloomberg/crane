@@ -49,20 +49,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -165,35 +151,6 @@ struct LoopifyExprVariants {
                                            std::shared_ptr<cond_expr> &&a1,
                                            std::shared_ptr<cond_expr> &&a2) {
       return std::make_shared<cond_expr>(
-          Cond{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
-    static std::unique_ptr<cond_expr> lit_uptr(unsigned int a0) {
-      return std::make_unique<cond_expr>(Lit{std::move(a0)});
-    }
-
-    static std::unique_ptr<cond_expr>
-    add_uptr(const std::shared_ptr<cond_expr> &a0,
-             const std::shared_ptr<cond_expr> &a1) {
-      return std::make_unique<cond_expr>(Add{a0, a1});
-    }
-
-    static std::unique_ptr<cond_expr>
-    add_uptr(std::shared_ptr<cond_expr> &&a0, std::shared_ptr<cond_expr> &&a1) {
-      return std::make_unique<cond_expr>(Add{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<cond_expr>
-    cond_uptr(const std::shared_ptr<cond_expr> &a0,
-              const std::shared_ptr<cond_expr> &a1,
-              const std::shared_ptr<cond_expr> &a2) {
-      return std::make_unique<cond_expr>(Cond{a0, a1, a2});
-    }
-
-    static std::unique_ptr<cond_expr>
-    cond_uptr(std::shared_ptr<cond_expr> &&a0, std::shared_ptr<cond_expr> &&a1,
-              std::shared_ptr<cond_expr> &&a2) {
-      return std::make_unique<cond_expr>(
           Cond{std::move(a0), std::move(a1), std::move(a2)});
     }
 
@@ -640,46 +597,6 @@ struct LoopifyExprVariants {
     static std::shared_ptr<arith_expr> adiv(std::shared_ptr<arith_expr> &&a0,
                                             std::shared_ptr<arith_expr> &&a1) {
       return std::make_shared<arith_expr>(ADiv{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<arith_expr> anum_uptr(unsigned int a0) {
-      return std::make_unique<arith_expr>(ANum{std::move(a0)});
-    }
-
-    static std::unique_ptr<arith_expr>
-    aadd_uptr(const std::shared_ptr<arith_expr> &a0,
-              const std::shared_ptr<arith_expr> &a1) {
-      return std::make_unique<arith_expr>(AAdd{a0, a1});
-    }
-
-    static std::unique_ptr<arith_expr>
-    aadd_uptr(std::shared_ptr<arith_expr> &&a0,
-              std::shared_ptr<arith_expr> &&a1) {
-      return std::make_unique<arith_expr>(AAdd{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<arith_expr>
-    amul_uptr(const std::shared_ptr<arith_expr> &a0,
-              const std::shared_ptr<arith_expr> &a1) {
-      return std::make_unique<arith_expr>(AMul{a0, a1});
-    }
-
-    static std::unique_ptr<arith_expr>
-    amul_uptr(std::shared_ptr<arith_expr> &&a0,
-              std::shared_ptr<arith_expr> &&a1) {
-      return std::make_unique<arith_expr>(AMul{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<arith_expr>
-    adiv_uptr(const std::shared_ptr<arith_expr> &a0,
-              const std::shared_ptr<arith_expr> &a1) {
-      return std::make_unique<arith_expr>(ADiv{a0, a1});
-    }
-
-    static std::unique_ptr<arith_expr>
-    adiv_uptr(std::shared_ptr<arith_expr> &&a0,
-              std::shared_ptr<arith_expr> &&a1) {
-      return std::make_unique<arith_expr>(ADiv{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS
@@ -1177,47 +1094,6 @@ struct LoopifyExprVariants {
 
     static std::shared_ptr<bool_expr> bnot(std::shared_ptr<bool_expr> &&a0) {
       return std::make_shared<bool_expr>(BNot{std::move(a0)});
-    }
-
-    static std::unique_ptr<bool_expr> btrue_uptr() {
-      return std::make_unique<bool_expr>(BTrue{});
-    }
-
-    static std::unique_ptr<bool_expr> bfalse_uptr() {
-      return std::make_unique<bool_expr>(BFalse{});
-    }
-
-    static std::unique_ptr<bool_expr>
-    band_uptr(const std::shared_ptr<bool_expr> &a0,
-              const std::shared_ptr<bool_expr> &a1) {
-      return std::make_unique<bool_expr>(BAnd{a0, a1});
-    }
-
-    static std::unique_ptr<bool_expr>
-    band_uptr(std::shared_ptr<bool_expr> &&a0,
-              std::shared_ptr<bool_expr> &&a1) {
-      return std::make_unique<bool_expr>(BAnd{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<bool_expr>
-    bor_uptr(const std::shared_ptr<bool_expr> &a0,
-             const std::shared_ptr<bool_expr> &a1) {
-      return std::make_unique<bool_expr>(BOr{a0, a1});
-    }
-
-    static std::unique_ptr<bool_expr>
-    bor_uptr(std::shared_ptr<bool_expr> &&a0, std::shared_ptr<bool_expr> &&a1) {
-      return std::make_unique<bool_expr>(BOr{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<bool_expr>
-    bnot_uptr(const std::shared_ptr<bool_expr> &a0) {
-      return std::make_unique<bool_expr>(BNot{a0});
-    }
-
-    static std::unique_ptr<bool_expr>
-    bnot_uptr(std::shared_ptr<bool_expr> &&a0) {
-      return std::make_unique<bool_expr>(BNot{std::move(a0)});
     }
 
     // MANIPULATORS
@@ -1905,38 +1781,6 @@ struct LoopifyExprVariants {
     static std::shared_ptr<list_expr> lreplicate(unsigned int a0,
                                                  unsigned int a1) {
       return std::make_shared<list_expr>(
-          LReplicate{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<list_expr> lnil_uptr() {
-      return std::make_unique<list_expr>(LNil{});
-    }
-
-    static std::unique_ptr<list_expr>
-    lcons_uptr(unsigned int a0, const std::shared_ptr<list_expr> &a1) {
-      return std::make_unique<list_expr>(LCons{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<list_expr>
-    lcons_uptr(unsigned int a0, std::shared_ptr<list_expr> &&a1) {
-      return std::make_unique<list_expr>(LCons{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<list_expr>
-    lappend_uptr(const std::shared_ptr<list_expr> &a0,
-                 const std::shared_ptr<list_expr> &a1) {
-      return std::make_unique<list_expr>(LAppend{a0, a1});
-    }
-
-    static std::unique_ptr<list_expr>
-    lappend_uptr(std::shared_ptr<list_expr> &&a0,
-                 std::shared_ptr<list_expr> &&a1) {
-      return std::make_unique<list_expr>(LAppend{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<list_expr> lreplicate_uptr(unsigned int a0,
-                                                      unsigned int a1) {
-      return std::make_unique<list_expr>(
           LReplicate{std::move(a0), std::move(a1)});
     }
 

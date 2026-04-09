@@ -53,20 +53,6 @@ public:
     return std::make_shared<List<t_A>>(Cons0{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil0_uptr() {
-    return std::make_unique<List<t_A>>(Nil0{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons0_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons0{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons0_uptr(t_A a0, std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons0{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -164,10 +150,6 @@ public:
     return std::make_shared<Sig<t_A>>(Exist{std::move(x)});
   }
 
-  static std::unique_ptr<Sig<t_A>> exist_uptr(t_A x) {
-    return std::make_unique<Sig<t_A>>(Exist{std::move(x)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -194,11 +176,6 @@ public:
 
   static std::shared_ptr<SigT<t_A, t_P>> existt(t_A x, t_P a1) {
     return std::make_shared<SigT<t_A, t_P>>(
-        ExistT{std::move(x), std::move(a1)});
-  }
-
-  static std::unique_ptr<SigT<t_A, t_P>> existt_uptr(t_A x, t_P a1) {
-    return std::make_unique<SigT<t_A, t_P>>(
         ExistT{std::move(x), std::move(a1)});
   }
 
@@ -246,21 +223,6 @@ public:
         Cons{std::move(h), std::move(n), std::move(a2)});
   }
 
-  static std::unique_ptr<T0<t_A>> nil_uptr() {
-    return std::make_unique<T0<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<T0<t_A>>
-  cons_uptr(t_A h, unsigned int n, const std::shared_ptr<T0<t_A>> &a2) {
-    return std::make_unique<T0<t_A>>(Cons{std::move(h), std::move(n), a2});
-  }
-
-  static std::unique_ptr<T0<t_A>> cons_uptr(t_A h, unsigned int n,
-                                            std::shared_ptr<T0<t_A>> &&a2) {
-    return std::make_unique<T0<t_A>>(
-        Cons{std::move(h), std::move(n), std::move(a2)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -301,19 +263,6 @@ public:
 
   static std::shared_ptr<T> fs(unsigned int n, std::shared_ptr<T> &&a1) {
     return std::make_shared<T>(FS{std::move(n), std::move(a1)});
-  }
-
-  static std::unique_ptr<T> f1_uptr(unsigned int n) {
-    return std::make_unique<T>(F1{std::move(n)});
-  }
-
-  static std::unique_ptr<T> fs_uptr(unsigned int n,
-                                    const std::shared_ptr<T> &a1) {
-    return std::make_unique<T>(FS{std::move(n), a1});
-  }
-
-  static std::unique_ptr<T> fs_uptr(unsigned int n, std::shared_ptr<T> &&a1) {
-    return std::make_unique<T>(FS{std::move(n), std::move(a1)});
   }
 
   // MANIPULATORS
@@ -568,28 +517,6 @@ struct PendantSumtreeRoundtripCase {
       return std::make_shared<SumTree>(SumNode{std::move(a0), std::move(a1)});
     }
 
-    static std::unique_ptr<SumTree>
-    sumleaf_uptr(const std::shared_ptr<CertifiedPendant> &a0) {
-      return std::make_unique<SumTree>(SumLeaf{a0});
-    }
-
-    static std::unique_ptr<SumTree>
-    sumleaf_uptr(std::shared_ptr<CertifiedPendant> &&a0) {
-      return std::make_unique<SumTree>(SumLeaf{std::move(a0)});
-    }
-
-    static std::unique_ptr<SumTree>
-    sumnode_uptr(const std::shared_ptr<CertifiedPendant> &a0,
-                 const std::shared_ptr<List<std::shared_ptr<SumTree>>> &a1) {
-      return std::make_unique<SumTree>(SumNode{a0, a1});
-    }
-
-    static std::unique_ptr<SumTree>
-    sumnode_uptr(std::shared_ptr<CertifiedPendant> &&a0,
-                 std::shared_ptr<List<std::shared_ptr<SumTree>>> &&a1) {
-      return std::make_unique<SumTree>(SumNode{std::move(a0), std::move(a1)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -705,7 +632,7 @@ struct PendantSumtreeRoundtripCase {
       std::shared_ptr<List<std::shared_ptr<T0<std::shared_ptr<T>>>>> decoded =
           *decode_multi(3u, encode_multi(3u, sample_multi_digits));
       return nat_list_eqb(
-          std::move(decoded)->template map<unsigned int>(
+          decoded->template map<unsigned int>(
               [](const std::shared_ptr<T0<digit>> &_x0) -> unsigned int {
                 return value_digits(3u, _x0);
               }),

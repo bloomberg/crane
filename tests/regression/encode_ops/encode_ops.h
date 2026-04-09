@@ -49,20 +49,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -186,51 +172,6 @@ struct EncodeOps {
 
     static std::shared_ptr<instruction1> wr0() {
       return std::make_shared<instruction1>(WR0{});
-    }
-
-    static std::unique_ptr<instruction1> clb_uptr() {
-      return std::make_unique<instruction1>(CLB{});
-    }
-
-    static std::unique_ptr<instruction1> cmc_uptr() {
-      return std::make_unique<instruction1>(CMC{});
-    }
-
-    static std::unique_ptr<instruction1> daa_uptr() {
-      return std::make_unique<instruction1>(DAA{});
-    }
-
-    static std::unique_ptr<instruction1> fim_uptr(unsigned int a0,
-                                                  unsigned int a1) {
-      return std::make_unique<instruction1>(FIM{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<instruction1> jun_uptr(unsigned int a0) {
-      return std::make_unique<instruction1>(JUN{std::move(a0)});
-    }
-
-    static std::unique_ptr<instruction1> ldm1_uptr(unsigned int a0) {
-      return std::make_unique<instruction1>(LDM1{std::move(a0)});
-    }
-
-    static std::unique_ptr<instruction1> nop1_uptr() {
-      return std::make_unique<instruction1>(NOP1{});
-    }
-
-    static std::unique_ptr<instruction1> rdm_uptr() {
-      return std::make_unique<instruction1>(RDM{});
-    }
-
-    static std::unique_ptr<instruction1> tcs_uptr() {
-      return std::make_unique<instruction1>(TCS{});
-    }
-
-    static std::unique_ptr<instruction1> wpm_uptr() {
-      return std::make_unique<instruction1>(WPM{});
-    }
-
-    static std::unique_ptr<instruction1> wr0_uptr() {
-      return std::make_unique<instruction1>(WR0{});
     }
 
     // MANIPULATORS
@@ -398,14 +339,6 @@ struct EncodeOps {
       return std::make_shared<instruction2>(LDM2{std::move(a0)});
     }
 
-    static std::unique_ptr<instruction2> nop2_uptr() {
-      return std::make_unique<instruction2>(NOP2{});
-    }
-
-    static std::unique_ptr<instruction2> ldm2_uptr(unsigned int a0) {
-      return std::make_unique<instruction2>(LDM2{std::move(a0)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -490,14 +423,6 @@ struct EncodeOps {
 
     static std::shared_ptr<instruction3> ldm3(unsigned int a0) {
       return std::make_shared<instruction3>(LDM3{std::move(a0)});
-    }
-
-    static std::unique_ptr<instruction3> nop3_uptr() {
-      return std::make_unique<instruction3>(NOP3{});
-    }
-
-    static std::unique_ptr<instruction3> ldm3_uptr(unsigned int a0) {
-      return std::make_unique<instruction3>(LDM3{std::move(a0)});
     }
 
     // MANIPULATORS

@@ -49,20 +49,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -277,9 +263,9 @@ struct LoopifySorting {
                             if (_last) {
                               std::get<typename List<unsigned int>::Cons>(
                                   _last->v_mut())
-                                  .d_a1 = _loop_l1;
+                                  .d_a1 = std::move(_loop_l1);
                             } else {
-                              _head = _loop_l1;
+                              _head = std::move(_loop_l1);
                             }
                             _continue = false;
                           },

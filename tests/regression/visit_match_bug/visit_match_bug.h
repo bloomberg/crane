@@ -56,23 +56,6 @@ struct VisitMatchBug {
           Node{std::move(a0), std::move(a1), std::move(a2)});
     }
 
-    static std::unique_ptr<Tree> leaf_uptr(unsigned int a0) {
-      return std::make_unique<Tree>(Leaf{std::move(a0)});
-    }
-
-    static std::unique_ptr<Tree> node_uptr(const std::shared_ptr<Tree> &a0,
-                                           unsigned int a1,
-                                           const std::shared_ptr<Tree> &a2) {
-      return std::make_unique<Tree>(Node{a0, std::move(a1), a2});
-    }
-
-    static std::unique_ptr<Tree> node_uptr(std::shared_ptr<Tree> &&a0,
-                                           unsigned int a1,
-                                           std::shared_ptr<Tree> &&a2) {
-      return std::make_unique<Tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

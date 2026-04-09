@@ -50,20 +50,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -108,18 +94,6 @@ struct ProgramWfProp {
 
     static std::shared_ptr<instruction> nop() {
       return std::make_shared<instruction>(NOP{});
-    }
-
-    static std::unique_ptr<instruction> jun_uptr(unsigned int a0) {
-      return std::make_unique<instruction>(JUN{std::move(a0)});
-    }
-
-    static std::unique_ptr<instruction> jms_uptr(unsigned int a0) {
-      return std::make_unique<instruction>(JMS{std::move(a0)});
-    }
-
-    static std::unique_ptr<instruction> nop_uptr() {
-      return std::make_unique<instruction>(NOP{});
     }
 
     // MANIPULATORS

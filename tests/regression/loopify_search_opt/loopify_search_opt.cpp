@@ -88,7 +88,7 @@ std::shared_ptr<List<unsigned int>> LoopifySearchOpt::longest_run_fuel(
                 unsigned int len_curr = _loop_current->length();
                 unsigned int len_best = _loop_best->length();
                 if (std::move(len_best) < std::move(len_curr)) {
-                  _result = _loop_current;
+                  _result = std::move(_loop_current);
                   _continue = false;
                 } else {
                   _result = std::move(_loop_best);
@@ -131,7 +131,7 @@ std::shared_ptr<List<unsigned int>> LoopifySearchOpt::longest_run_fuel(
                             unsigned int len_best = _loop_best->length();
                             std::shared_ptr<List<unsigned int>> new_best;
                             if (std::move(len_best) < std::move(len_curr)) {
-                              new_best = _loop_current;
+                              new_best = std::move(_loop_current);
                             } else {
                               new_best = std::move(_loop_best);
                             }
@@ -543,22 +543,31 @@ __attribute__((pure)) bool LoopifySearchOpt::binary_search_fuel(
                         }
                       } else {
                         unsigned int n_ = _loop_n - 1;
-                        std::visit(
-                            Overloaded{
-                                [&](const typename List<unsigned int>::Nil
-                                        _args4) {
-                                  _result = List<unsigned int>::nil();
-                                  _continue = false;
-                                },
-                                [&](const typename List<unsigned int>::Cons
-                                        _args4) {
-                                  std::shared_ptr<List<unsigned int>> _next_xs =
-                                      _args4.d_a1;
-                                  unsigned int _next_n = n_;
-                                  _loop_xs = std::move(_next_xs);
-                                  _loop_n = std::move(_next_n);
-                                }},
-                            _loop_xs->v());
+                        if (_loop_xs.use_count() == 1 &&
+                            _loop_xs->v().index() == 0) {
+                          auto &_rf = std::get<0>(_loop_xs->v_mut());
+                          {
+                            _result = _loop_xs;
+                            _continue = false;
+                          }
+                        } else {
+                          std::visit(
+                              Overloaded{
+                                  [&](const typename List<unsigned int>::Nil
+                                          _args4) {
+                                    _result = List<unsigned int>::nil();
+                                    _continue = false;
+                                  },
+                                  [&](const typename List<unsigned int>::Cons
+                                          _args4) {
+                                    std::shared_ptr<List<unsigned int>>
+                                        _next_xs = _args4.d_a1;
+                                    unsigned int _next_n = n_;
+                                    _loop_xs = std::move(_next_xs);
+                                    _loop_n = std::move(_next_n);
+                                  }},
+                              _loop_xs->v());
+                        }
                       }
                     }
                     return _result;

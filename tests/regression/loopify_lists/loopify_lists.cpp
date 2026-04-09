@@ -735,7 +735,7 @@ LoopifyLists::windows_aux(
                   _continue = false;
                 } else {
                   std::shared_ptr<LoopifyLists::list<unsigned int>> window =
-                      take_n(n, std::move(_loop_l));
+                      take_n(n, _loop_l);
                   std::visit(
                       Overloaded{
                           [&](const typename LoopifyLists::list<
@@ -841,6 +841,7 @@ std::shared_ptr<LoopifyLists::list<unsigned int>> LoopifyLists::lookup_all(
   std::shared_ptr<LoopifyLists::list<unsigned int>> _last{};
   std::shared_ptr<LoopifyLists::list<std::pair<unsigned int, unsigned int>>>
       _loop_l = l;
+  unsigned int _loop_key = key;
   bool _continue = true;
   while (_continue) {
     std::visit(
@@ -859,7 +860,7 @@ std::shared_ptr<LoopifyLists::list<unsigned int>> LoopifyLists::lookup_all(
                 std::pair<unsigned int, unsigned int>>::Cons _args) {
               unsigned int k = _args.d_a0.first;
               unsigned int v = _args.d_a0.second;
-              if (k == key) {
+              if (k == _loop_key) {
                 auto _cell = list<unsigned int>::cons(v, nullptr);
                 if (_last) {
                   std::get<typename list<unsigned int>::Cons>(_last->v_mut())
@@ -870,7 +871,12 @@ std::shared_ptr<LoopifyLists::list<unsigned int>> LoopifyLists::lookup_all(
                 _last = _cell;
                 _loop_l = _args.d_a1;
               } else {
-                _loop_l = _args.d_a1;
+                std::shared_ptr<
+                    LoopifyLists::list<std::pair<unsigned int, unsigned int>>>
+                    _next_l = _args.d_a1;
+                unsigned int _next_key = std::move(_loop_key);
+                _loop_l = std::move(_next_l);
+                _loop_key = std::move(_next_key);
               }
             }},
         _loop_l->v());
@@ -2286,31 +2292,39 @@ LoopifyLists::rotate_left_fuel(
       unsigned int f = _loop_fuel - 1;
       if (_loop_n == 0u) {
         {
-          _result = _loop_l;
+          _result = std::move(_loop_l);
           _continue = false;
         }
       } else {
-        std::visit(
-            Overloaded{
-                [&](const typename LoopifyLists::list<unsigned int>::Nil
-                        _args) {
-                  _result = list<unsigned int>::nil();
-                  _continue = false;
-                },
-                [&](const typename LoopifyLists::list<unsigned int>::Cons
-                        _args) {
-                  std::shared_ptr<LoopifyLists::list<unsigned int>> _next_l =
-                      app_helper(_args.d_a1,
-                                 list<unsigned int>::cons(
-                                     _args.d_a0, list<unsigned int>::nil()));
-                  unsigned int _next_n =
-                      (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-                  unsigned int _next_fuel = std::move(f);
-                  _loop_l = std::move(_next_l);
-                  _loop_n = std::move(_next_n);
-                  _loop_fuel = std::move(_next_fuel);
-                }},
-            _loop_l->v());
+        if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
+          auto &_rf = std::get<0>(_loop_l->v_mut());
+          {
+            _result = _loop_l;
+            _continue = false;
+          }
+        } else {
+          std::visit(
+              Overloaded{
+                  [&](const typename LoopifyLists::list<unsigned int>::Nil
+                          _args) {
+                    _result = list<unsigned int>::nil();
+                    _continue = false;
+                  },
+                  [&](const typename LoopifyLists::list<unsigned int>::Cons
+                          _args) {
+                    std::shared_ptr<LoopifyLists::list<unsigned int>> _next_l =
+                        app_helper(_args.d_a1,
+                                   list<unsigned int>::cons(
+                                       _args.d_a0, list<unsigned int>::nil()));
+                    unsigned int _next_n =
+                        (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
+                    unsigned int _next_fuel = f;
+                    _loop_l = std::move(_next_l);
+                    _loop_n = std::move(_next_n);
+                    _loop_fuel = std::move(_next_fuel);
+                  }},
+              _loop_l->v());
+        }
       }
     }
   }

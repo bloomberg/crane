@@ -55,23 +55,6 @@ struct PartialAppMove {
           Node{std::move(a0), std::move(a1), std::move(a2)});
     }
 
-    static std::unique_ptr<tree> leaf_uptr() {
-      return std::make_unique<tree>(Leaf{});
-    }
-
-    static std::unique_ptr<tree> node_uptr(const std::shared_ptr<tree> &a0,
-                                           unsigned int a1,
-                                           const std::shared_ptr<tree> &a2) {
-      return std::make_unique<tree>(Node{a0, std::move(a1), a2});
-    }
-
-    static std::unique_ptr<tree> node_uptr(std::shared_ptr<tree> &&a0,
-                                           unsigned int a1,
-                                           std::shared_ptr<tree> &&a2) {
-      return std::make_unique<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -222,7 +205,7 @@ struct PartialAppMove {
           [=](unsigned int _x0) mutable -> unsigned int {
         return sum_values(t, _x0);
       };
-      std::unique_ptr<tree> w = tree::node_uptr(t, 42u, tree::leaf());
+      std::shared_ptr<tree> w = tree::node(t, 42u, tree::leaf());
       return std::visit(
           Overloaded{[&](const typename tree::Leaf _args) -> unsigned int {
                        return f(0u);

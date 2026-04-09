@@ -89,14 +89,6 @@ struct InductiveInModule {
           return std::make_shared<option<t_A>>(Some{std::move(a0)});
         }
 
-        static std::unique_ptr<option<t_A>> none_uptr() {
-          return std::make_unique<option<t_A>>(None{});
-        }
-
-        static std::unique_ptr<option<t_A>> some_uptr(t_A a0) {
-          return std::make_unique<option<t_A>>(Some{std::move(a0)});
-        }
-
         // MANIPULATORS
         __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

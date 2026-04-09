@@ -49,20 +49,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -166,8 +152,8 @@ struct LoopifyNumbers {
       } else {
         unsigned int m = _loop_n - 1;
         {
-          unsigned int _next_x = f(_loop_x);
-          unsigned int _next_n = std::move(m);
+          unsigned int _next_x = f(std::move(_loop_x));
+          unsigned int _next_n = m;
           _loop_x = std::move(_next_x);
           _loop_n = std::move(_next_n);
         }
@@ -186,6 +172,7 @@ struct LoopifyNumbers {
   __attribute__((pure)) static unsigned int
   nest_apply(const unsigned int n, F1 &&f, const unsigned int x) {
     struct _Enter {
+      const unsigned int x;
       const unsigned int n;
     };
 
@@ -194,22 +181,23 @@ struct LoopifyNumbers {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{n});
+    _stack.push_back(_Enter{x, n});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       std::visit(Overloaded{[&](_Enter _f) {
+                              const unsigned int x = _f.x;
                               const unsigned int n = _f.n;
                               if (n <= 0) {
                                 _result = std::move(x);
                               } else {
                                 unsigned int n_ = n - 1;
                                 if (n_ <= 0) {
-                                  _result = f(x);
+                                  _result = f(std::move(x));
                                 } else {
                                   unsigned int _x = n_ - 1;
                                   _stack.push_back(_Call1{});
-                                  _stack.push_back(_Enter{n_});
+                                  _stack.push_back(_Enter{std::move(x), n_});
                                 }
                               }
                             },

@@ -69,30 +69,6 @@ struct WhereClause {
       return std::make_shared<Expr>(Times{std::move(a0), std::move(a1)});
     }
 
-    static std::unique_ptr<Expr> num_uptr(unsigned int a0) {
-      return std::make_unique<Expr>(Num{std::move(a0)});
-    }
-
-    static std::unique_ptr<Expr> plus_uptr(const std::shared_ptr<Expr> &a0,
-                                           const std::shared_ptr<Expr> &a1) {
-      return std::make_unique<Expr>(Plus{a0, a1});
-    }
-
-    static std::unique_ptr<Expr> plus_uptr(std::shared_ptr<Expr> &&a0,
-                                           std::shared_ptr<Expr> &&a1) {
-      return std::make_unique<Expr>(Plus{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<Expr> times_uptr(const std::shared_ptr<Expr> &a0,
-                                            const std::shared_ptr<Expr> &a1) {
-      return std::make_unique<Expr>(Times{a0, a1});
-    }
-
-    static std::unique_ptr<Expr> times_uptr(std::shared_ptr<Expr> &&a0,
-                                            std::shared_ptr<Expr> &&a1) {
-      return std::make_unique<Expr>(Times{std::move(a0), std::move(a1)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -251,42 +227,6 @@ struct WhereClause {
       return std::make_shared<BExpr>(BNot{std::move(a0)});
     }
 
-    static std::unique_ptr<BExpr> btrue_uptr() {
-      return std::make_unique<BExpr>(BTrue{});
-    }
-
-    static std::unique_ptr<BExpr> bfalse_uptr() {
-      return std::make_unique<BExpr>(BFalse{});
-    }
-
-    static std::unique_ptr<BExpr> band_uptr(const std::shared_ptr<BExpr> &a0,
-                                            const std::shared_ptr<BExpr> &a1) {
-      return std::make_unique<BExpr>(BAnd{a0, a1});
-    }
-
-    static std::unique_ptr<BExpr> band_uptr(std::shared_ptr<BExpr> &&a0,
-                                            std::shared_ptr<BExpr> &&a1) {
-      return std::make_unique<BExpr>(BAnd{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<BExpr> bor_uptr(const std::shared_ptr<BExpr> &a0,
-                                           const std::shared_ptr<BExpr> &a1) {
-      return std::make_unique<BExpr>(BOr{a0, a1});
-    }
-
-    static std::unique_ptr<BExpr> bor_uptr(std::shared_ptr<BExpr> &&a0,
-                                           std::shared_ptr<BExpr> &&a1) {
-      return std::make_unique<BExpr>(BOr{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<BExpr> bnot_uptr(const std::shared_ptr<BExpr> &a0) {
-      return std::make_unique<BExpr>(BNot{a0});
-    }
-
-    static std::unique_ptr<BExpr> bnot_uptr(std::shared_ptr<BExpr> &&a0) {
-      return std::make_unique<BExpr>(BNot{std::move(a0)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -424,33 +364,6 @@ struct WhereClause {
                                       std::shared_ptr<AExpr> &&a1,
                                       std::shared_ptr<AExpr> &&a2) {
       return std::make_shared<AExpr>(
-          AIf{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
-    static std::unique_ptr<AExpr> anum_uptr(unsigned int a0) {
-      return std::make_unique<AExpr>(ANum{std::move(a0)});
-    }
-
-    static std::unique_ptr<AExpr> aplus_uptr(const std::shared_ptr<AExpr> &a0,
-                                             const std::shared_ptr<AExpr> &a1) {
-      return std::make_unique<AExpr>(APlus{a0, a1});
-    }
-
-    static std::unique_ptr<AExpr> aplus_uptr(std::shared_ptr<AExpr> &&a0,
-                                             std::shared_ptr<AExpr> &&a1) {
-      return std::make_unique<AExpr>(APlus{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<AExpr> aif_uptr(const std::shared_ptr<BExpr> &a0,
-                                           const std::shared_ptr<AExpr> &a1,
-                                           const std::shared_ptr<AExpr> &a2) {
-      return std::make_unique<AExpr>(AIf{a0, a1, a2});
-    }
-
-    static std::unique_ptr<AExpr> aif_uptr(std::shared_ptr<BExpr> &&a0,
-                                           std::shared_ptr<AExpr> &&a1,
-                                           std::shared_ptr<AExpr> &&a2) {
-      return std::make_unique<AExpr>(
           AIf{std::move(a0), std::move(a1), std::move(a2)});
     }
 

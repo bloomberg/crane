@@ -35,10 +35,6 @@ public:
     return std::make_shared<Sig<t_A>>(Exist{std::move(x)});
   }
 
-  static std::unique_ptr<Sig<t_A>> exist_uptr(t_A x) {
-    return std::make_unique<Sig<t_A>>(Exist{std::move(x)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

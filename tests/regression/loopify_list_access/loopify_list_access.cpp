@@ -161,6 +161,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListAccess::lookup_all(
   std::shared_ptr<List<unsigned int>> _head{};
   std::shared_ptr<List<unsigned int>> _last{};
   std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> _loop_l = l;
+  unsigned int _loop_key = key;
   bool _continue = true;
   while (_continue) {
     std::visit(
@@ -179,7 +180,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListAccess::lookup_all(
                     _args) {
               unsigned int k = _args.d_a0.first;
               unsigned int v = _args.d_a0.second;
-              if (k == key) {
+              if (k == _loop_key) {
                 auto _cell = List<unsigned int>::cons(v, nullptr);
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
@@ -190,7 +191,11 @@ std::shared_ptr<List<unsigned int>> LoopifyListAccess::lookup_all(
                 _last = _cell;
                 _loop_l = _args.d_a1;
               } else {
-                _loop_l = _args.d_a1;
+                std::shared_ptr<List<std::pair<unsigned int, unsigned int>>>
+                    _next_l = _args.d_a1;
+                unsigned int _next_key = std::move(_loop_key);
+                _loop_l = std::move(_next_l);
+                _loop_key = std::move(_next_key);
               }
             }},
         _loop_l->v());

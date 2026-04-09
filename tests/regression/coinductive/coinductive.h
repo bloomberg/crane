@@ -48,16 +48,6 @@ struct Coinductive {
       return std::make_shared<stream>(Cons{std::move(a0), std::move(a1)});
     }
 
-    static std::unique_ptr<stream>
-    cons_uptr(unsigned int a0, const std::shared_ptr<stream> &a1) {
-      return std::make_unique<stream>(Cons{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<stream> cons_uptr(unsigned int a0,
-                                             std::shared_ptr<stream> &&a1) {
-      return std::make_unique<stream>(Cons{std::move(a0), std::move(a1)});
-    }
-
     static std::shared_ptr<stream>
     lazy_(std::function<std::shared_ptr<stream>()> thunk) {
       return std::make_shared<stream>(
@@ -142,23 +132,6 @@ struct Coinductive {
                                       std::shared_ptr<tree> &&a1,
                                       std::shared_ptr<tree> &&a2) {
       return std::make_shared<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
-    static std::unique_ptr<tree> leaf_uptr(unsigned int a0) {
-      return std::make_unique<tree>(Leaf{std::move(a0)});
-    }
-
-    static std::unique_ptr<tree> node_uptr(unsigned int a0,
-                                           const std::shared_ptr<tree> &a1,
-                                           const std::shared_ptr<tree> &a2) {
-      return std::make_unique<tree>(Node{std::move(a0), a1, a2});
-    }
-
-    static std::unique_ptr<tree> node_uptr(unsigned int a0,
-                                           std::shared_ptr<tree> &&a1,
-                                           std::shared_ptr<tree> &&a2) {
-      return std::make_unique<tree>(
           Node{std::move(a0), std::move(a1), std::move(a2)});
     }
 

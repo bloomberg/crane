@@ -100,18 +100,27 @@ LoopifyListWindows::drop(const unsigned int m,
       }
     } else {
       unsigned int m_ = _loop_m - 1;
-      std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
-                              _result = List<unsigned int>::nil();
-                              _continue = false;
-                            },
-                            [&](const typename List<unsigned int>::Cons _args) {
-                              std::shared_ptr<List<unsigned int>> _next_xs =
-                                  _args.d_a1;
-                              unsigned int _next_m = std::move(m_);
-                              _loop_xs = std::move(_next_xs);
-                              _loop_m = std::move(_next_m);
-                            }},
-                 _loop_xs->v());
+      if (_loop_xs.use_count() == 1 && _loop_xs->v().index() == 0) {
+        auto &_rf = std::get<0>(_loop_xs->v_mut());
+        {
+          _result = _loop_xs;
+          _continue = false;
+        }
+      } else {
+        std::visit(
+            Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+                         _result = List<unsigned int>::nil();
+                         _continue = false;
+                       },
+                       [&](const typename List<unsigned int>::Cons _args) {
+                         std::shared_ptr<List<unsigned int>> _next_xs =
+                             _args.d_a1;
+                         unsigned int _next_m = m_;
+                         _loop_xs = std::move(_next_xs);
+                         _loop_m = std::move(_next_m);
+                       }},
+            _loop_xs->v());
+      }
     }
   }
   return _result;
@@ -586,8 +595,7 @@ LoopifyListWindows::chunks_fuel(const unsigned int fuel, const unsigned int n,
               },
               [&](const typename List<unsigned int>::Cons _args) {
                 std::shared_ptr<List<unsigned int>> chunk = take(n, _loop_l);
-                std::shared_ptr<List<unsigned int>> rest =
-                    drop(n, std::move(_loop_l));
+                std::shared_ptr<List<unsigned int>> rest = drop(n, _loop_l);
                 auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
                     chunk, nullptr);
                 if (_last) {

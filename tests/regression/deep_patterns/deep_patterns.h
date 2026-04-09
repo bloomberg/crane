@@ -50,20 +50,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -128,18 +114,6 @@ struct DeepPatterns {
       return std::make_shared<outer>(ORight{std::move(a0)});
     }
 
-    static std::unique_ptr<outer> oleft_uptr(const std::shared_ptr<inner> &a0) {
-      return std::make_unique<outer>(OLeft{a0});
-    }
-
-    static std::unique_ptr<outer> oleft_uptr(std::shared_ptr<inner> &&a0) {
-      return std::make_unique<outer>(OLeft{std::move(a0)});
-    }
-
-    static std::unique_ptr<outer> oright_uptr(unsigned int a0) {
-      return std::make_unique<outer>(ORight{std::move(a0)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -175,14 +149,6 @@ struct DeepPatterns {
 
     static std::shared_ptr<inner> iright(bool a0) {
       return std::make_shared<inner>(IRight{std::move(a0)});
-    }
-
-    static std::unique_ptr<inner> ileft_uptr(unsigned int a0) {
-      return std::make_unique<inner>(ILeft{std::move(a0)});
-    }
-
-    static std::unique_ptr<inner> iright_uptr(bool a0) {
-      return std::make_unique<inner>(IRight{std::move(a0)});
     }
 
     // MANIPULATORS
@@ -269,11 +235,6 @@ struct DeepPatterns {
           Pair0{std::move(a0), std::move(a1)});
     }
 
-    static std::unique_ptr<pair<t_A, t_B>> pair0_uptr(t_A a0, t_B a1) {
-      return std::make_unique<pair<t_A, t_B>>(
-          Pair0{std::move(a0), std::move(a1)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -330,20 +291,6 @@ struct DeepPatterns {
     static std::shared_ptr<mylist<t_A>>
     cons(t_A a0, std::shared_ptr<mylist<t_A>> &&a1) {
       return std::make_shared<mylist<t_A>>(Cons{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<mylist<t_A>> nil_uptr() {
-      return std::make_unique<mylist<t_A>>(Nil{});
-    }
-
-    static std::unique_ptr<mylist<t_A>>
-    cons_uptr(t_A a0, const std::shared_ptr<mylist<t_A>> &a1) {
-      return std::make_unique<mylist<t_A>>(Cons{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<mylist<t_A>>
-    cons_uptr(t_A a0, std::shared_ptr<mylist<t_A>> &&a1) {
-      return std::make_unique<mylist<t_A>>(Cons{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS

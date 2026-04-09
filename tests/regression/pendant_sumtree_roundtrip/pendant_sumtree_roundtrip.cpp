@@ -242,7 +242,7 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::group_sums_validb(
   if (pendant_value(n, g->pg_top).has_value()) {
     unsigned int top_val = *pendant_value(n, g->pg_top);
     std::shared_ptr<List<std::optional<unsigned int>>> pendant_vals =
-        std::move(g)->pg_pendants->template map<std::optional<unsigned int>>(
+        g->pg_pendants->template map<std::optional<unsigned int>>(
             [=](const std::shared_ptr<
                 PendantSumtreeRoundtripCase::CertifiedPendant> &_x0) mutable
                 -> std::optional<unsigned int> {
@@ -268,7 +268,7 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::group_sums_validb(
                 std::make_optional<unsigned int>(0u));
     if (sum_opt.has_value()) {
       unsigned int s = *sum_opt;
-      return std::move(top_val) == std::move(s);
+      return top_val == s;
     } else {
       return false;
     }
@@ -379,8 +379,8 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::sumtree_validb_aux(
                               PendantSumtreeRoundtripCase::CertifiedPendant> {
                         return sumtree_top(n, _x0);
                       });
-              std::unique_ptr<PendantSumtreeRoundtripCase::PendantGroup> g =
-                  std::make_unique<PendantSumtreeRoundtripCase::PendantGroup>(
+              std::shared_ptr<PendantSumtreeRoundtripCase::PendantGroup> g =
+                  std::make_shared<PendantSumtreeRoundtripCase::PendantGroup>(
                       PendantGroup{_args.d_a0, child_tops});
               return (
                   group_sums_validb(n, std::move(g)) &&

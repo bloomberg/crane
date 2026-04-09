@@ -60,14 +60,6 @@ struct ConstrainedPoly {
       return std::make_shared<UOption<t_A>>(UNone{});
     }
 
-    static std::unique_ptr<UOption<t_A>> usome_uptr(t_A a0) {
-      return std::make_unique<UOption<t_A>>(USome{std::move(a0)});
-    }
-
-    static std::unique_ptr<UOption<t_A>> unone_uptr() {
-      return std::make_unique<UOption<t_A>>(UNone{});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

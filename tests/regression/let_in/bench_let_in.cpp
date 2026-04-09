@@ -7,8 +7,8 @@
 
 __attribute__((pure)) unsigned int BenchLetIn::swap_snd(const unsigned int a,
                                                         const unsigned int b) {
-  std::unique_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p =
-      pair<unsigned int, unsigned int>::pair0_uptr(a, b);
+  std::shared_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p =
+      pair<unsigned int, unsigned int>::pair0(a, b);
   return std::visit(
       Overloaded{
           [](const typename BenchLetIn::pair<unsigned int, unsigned int>::Pair0
@@ -18,8 +18,8 @@ __attribute__((pure)) unsigned int BenchLetIn::swap_snd(const unsigned int a,
 
 __attribute__((pure)) unsigned int
 BenchLetIn::add_via_pair(const unsigned int a, const unsigned int b) {
-  std::unique_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p =
-      pair<unsigned int, unsigned int>::pair0_uptr(a, b);
+  std::shared_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p =
+      pair<unsigned int, unsigned int>::pair0(a, b);
   return std::visit(
       Overloaded{
           [](const typename BenchLetIn::pair<unsigned int, unsigned int>::Pair0
@@ -30,10 +30,10 @@ BenchLetIn::add_via_pair(const unsigned int a, const unsigned int b) {
 __attribute__((pure)) unsigned int
 BenchLetIn::nested_swap(const unsigned int a, const unsigned int b,
                         const unsigned int c, const unsigned int d) {
-  std::unique_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p1 =
-      pair<unsigned int, unsigned int>::pair0_uptr(a, b);
-  std::unique_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p2 =
-      pair<unsigned int, unsigned int>::pair0_uptr(c, d);
+  std::shared_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p1 =
+      pair<unsigned int, unsigned int>::pair0(a, b);
+  std::shared_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p2 =
+      pair<unsigned int, unsigned int>::pair0(c, d);
   return std::visit(
       Overloaded{[&](const typename BenchLetIn::pair<
                      unsigned int, unsigned int>::Pair0 _args) -> unsigned int {
@@ -53,8 +53,8 @@ BenchLetIn::sum_via_pairs(const unsigned int n) {
     return 0u;
   } else {
     unsigned int m = n - 1;
-    std::unique_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p =
-        pair<unsigned int, unsigned int>::pair0_uptr(n, m);
+    std::shared_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p =
+        pair<unsigned int, unsigned int>::pair0(n, m);
     return std::visit(
         Overloaded{
             [](const typename BenchLetIn::pair<
@@ -68,9 +68,8 @@ BenchLetIn::sum_via_pairs(const unsigned int n) {
 __attribute__((pure)) unsigned int BenchLetIn::mid3(const unsigned int a,
                                                     const unsigned int b,
                                                     const unsigned int c) {
-  std::unique_ptr<BenchLetIn::triple<unsigned int, unsigned int, unsigned int>>
-      t = triple<unsigned int, unsigned int, unsigned int>::triple0_uptr(a, b,
-                                                                         c);
+  std::shared_ptr<BenchLetIn::triple<unsigned int, unsigned int, unsigned int>>
+      t = triple<unsigned int, unsigned int, unsigned int>::triple0(a, b, c);
   return std::visit(
       Overloaded{
           [](const typename BenchLetIn::triple<unsigned int, unsigned int,
@@ -82,9 +81,8 @@ __attribute__((pure)) unsigned int BenchLetIn::mid3(const unsigned int a,
 __attribute__((pure)) unsigned int BenchLetIn::sum3(const unsigned int a,
                                                     const unsigned int b,
                                                     const unsigned int c) {
-  std::unique_ptr<BenchLetIn::triple<unsigned int, unsigned int, unsigned int>>
-      t = triple<unsigned int, unsigned int, unsigned int>::triple0_uptr(a, b,
-                                                                         c);
+  std::shared_ptr<BenchLetIn::triple<unsigned int, unsigned int, unsigned int>>
+      t = triple<unsigned int, unsigned int, unsigned int>::triple0(a, b, c);
   return std::visit(
       Overloaded{
           [](const typename BenchLetIn::triple<unsigned int, unsigned int,
@@ -98,13 +96,13 @@ __attribute__((pure)) unsigned int BenchLetIn::sum3(const unsigned int a,
 __attribute__((pure)) unsigned int
 BenchLetIn::chain_pairs(const unsigned int a, const unsigned int b,
                         const unsigned int c) {
-  std::unique_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p1 =
-      pair<unsigned int, unsigned int>::pair0_uptr(a, b);
+  std::shared_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p1 =
+      pair<unsigned int, unsigned int>::pair0(a, b);
   return std::visit(
       Overloaded{[&](const typename BenchLetIn::pair<
                      unsigned int, unsigned int>::Pair0 _args) -> unsigned int {
-        std::unique_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p2 =
-            pair<unsigned int, unsigned int>::pair0_uptr(_args.d_a0, c);
+        std::shared_ptr<BenchLetIn::pair<unsigned int, unsigned int>> p2 =
+            pair<unsigned int, unsigned int>::pair0(_args.d_a0, c);
         return std::visit(
             Overloaded{
                 [](const typename BenchLetIn::pair<unsigned int,

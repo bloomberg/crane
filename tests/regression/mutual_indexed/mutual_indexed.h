@@ -55,22 +55,6 @@ struct MutualIndexed {
           ENode{std::move(n), std::move(a1), std::move(a2)});
     }
 
-    static std::unique_ptr<EvenTree> eleaf_uptr() {
-      return std::make_unique<EvenTree>(ELeaf{});
-    }
-
-    static std::unique_ptr<EvenTree>
-    enode_uptr(unsigned int n, unsigned int a1,
-               const std::shared_ptr<OddTree> &a2) {
-      return std::make_unique<EvenTree>(ENode{std::move(n), std::move(a1), a2});
-    }
-
-    static std::unique_ptr<EvenTree> enode_uptr(unsigned int n, unsigned int a1,
-                                                std::shared_ptr<OddTree> &&a2) {
-      return std::make_unique<EvenTree>(
-          ENode{std::move(n), std::move(a1), std::move(a2)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -104,18 +88,6 @@ struct MutualIndexed {
     static std::shared_ptr<OddTree> onode(unsigned int n, unsigned int a1,
                                           std::shared_ptr<EvenTree> &&a2) {
       return std::make_shared<OddTree>(
-          ONode{std::move(n), std::move(a1), std::move(a2)});
-    }
-
-    static std::unique_ptr<OddTree>
-    onode_uptr(unsigned int n, unsigned int a1,
-               const std::shared_ptr<EvenTree> &a2) {
-      return std::make_unique<OddTree>(ONode{std::move(n), std::move(a1), a2});
-    }
-
-    static std::unique_ptr<OddTree> onode_uptr(unsigned int n, unsigned int a1,
-                                               std::shared_ptr<EvenTree> &&a2) {
-      return std::make_unique<OddTree>(
           ONode{std::move(n), std::move(a1), std::move(a2)});
     }
 

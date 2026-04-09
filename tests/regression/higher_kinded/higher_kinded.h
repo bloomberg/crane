@@ -60,22 +60,6 @@ struct HigherKinded {
       return std::make_shared<Tree<t_A>>(Branch{std::move(a0), std::move(a1)});
     }
 
-    static std::unique_ptr<Tree<t_A>> leaf_uptr(t_A a0) {
-      return std::make_unique<Tree<t_A>>(Leaf{std::move(a0)});
-    }
-
-    static std::unique_ptr<Tree<t_A>>
-    branch_uptr(const std::shared_ptr<Tree<t_A>> &a0,
-                const std::shared_ptr<Tree<t_A>> &a1) {
-      return std::make_unique<Tree<t_A>>(Branch{a0, a1});
-    }
-
-    static std::unique_ptr<Tree<t_A>>
-    branch_uptr(std::shared_ptr<Tree<t_A>> &&a0,
-                std::shared_ptr<Tree<t_A>> &&a1) {
-      return std::make_unique<Tree<t_A>>(Branch{std::move(a0), std::move(a1)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

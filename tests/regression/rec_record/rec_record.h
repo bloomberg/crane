@@ -51,20 +51,6 @@ struct RecRecord {
       return std::make_shared<rlist<t_A>>(Rcons{std::move(a0), std::move(a1)});
     }
 
-    static std::unique_ptr<rlist<t_A>> rnil_uptr() {
-      return std::make_unique<rlist<t_A>>(Rnil{});
-    }
-
-    static std::unique_ptr<rlist<t_A>>
-    rcons_uptr(t_A a0, const std::shared_ptr<rlist<t_A>> &a1) {
-      return std::make_unique<rlist<t_A>>(Rcons{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<rlist<t_A>>
-    rcons_uptr(t_A a0, std::shared_ptr<rlist<t_A>> &&a1) {
-      return std::make_unique<rlist<t_A>>(Rcons{std::move(a0), std::move(a1)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

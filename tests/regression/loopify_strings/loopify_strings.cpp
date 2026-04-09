@@ -160,7 +160,7 @@ LoopifyStrings::repeat_with_sep(std::shared_ptr<List<unsigned int>> s,
                             } else {
                               unsigned int n_ = n - 1;
                               if (n_ <= 0) {
-                                _result = s;
+                                _result = std::move(s);
                               } else {
                                 unsigned int _x = n_ - 1;
                                 _stack.push_back(_Call1{s, sep});

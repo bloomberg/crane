@@ -51,20 +51,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -117,21 +103,6 @@ struct NestedInd {
     static std::shared_ptr<custom_list<t_A>>
     ccons(t_A a0, std::shared_ptr<custom_list<t_A>> &&a1) {
       return std::make_shared<custom_list<t_A>>(
-          Ccons{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<custom_list<t_A>> cnil_uptr() {
-      return std::make_unique<custom_list<t_A>>(Cnil{});
-    }
-
-    static std::unique_ptr<custom_list<t_A>>
-    ccons_uptr(t_A a0, const std::shared_ptr<custom_list<t_A>> &a1) {
-      return std::make_unique<custom_list<t_A>>(Ccons{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<custom_list<t_A>>
-    ccons_uptr(t_A a0, std::shared_ptr<custom_list<t_A>> &&a1) {
-      return std::make_unique<custom_list<t_A>>(
           Ccons{std::move(a0), std::move(a1)});
     }
 
@@ -209,18 +180,6 @@ struct NestedInd {
     node(t_A a0,
          std::shared_ptr<custom_list<std::shared_ptr<rose<t_A>>>> &&a1) {
       return std::make_shared<rose<t_A>>(Node{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<rose<t_A>> node_uptr(
-        t_A a0,
-        const std::shared_ptr<custom_list<std::shared_ptr<rose<t_A>>>> &a1) {
-      return std::make_unique<rose<t_A>>(Node{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<rose<t_A>>
-    node_uptr(t_A a0,
-              std::shared_ptr<custom_list<std::shared_ptr<rose<t_A>>>> &&a1) {
-      return std::make_unique<rose<t_A>>(Node{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS
@@ -346,30 +305,6 @@ struct NestedInd {
     static std::shared_ptr<expr>
     mul(std::shared_ptr<List<std::shared_ptr<expr>>> &&a0) {
       return std::make_shared<expr>(Mul{std::move(a0)});
-    }
-
-    static std::unique_ptr<expr> lit_uptr(unsigned int a0) {
-      return std::make_unique<expr>(Lit{std::move(a0)});
-    }
-
-    static std::unique_ptr<expr>
-    add_uptr(const std::shared_ptr<List<std::shared_ptr<expr>>> &a0) {
-      return std::make_unique<expr>(Add{a0});
-    }
-
-    static std::unique_ptr<expr>
-    add_uptr(std::shared_ptr<List<std::shared_ptr<expr>>> &&a0) {
-      return std::make_unique<expr>(Add{std::move(a0)});
-    }
-
-    static std::unique_ptr<expr>
-    mul_uptr(const std::shared_ptr<List<std::shared_ptr<expr>>> &a0) {
-      return std::make_unique<expr>(Mul{a0});
-    }
-
-    static std::unique_ptr<expr>
-    mul_uptr(std::shared_ptr<List<std::shared_ptr<expr>>> &&a0) {
-      return std::make_unique<expr>(Mul{std::move(a0)});
     }
 
     // MANIPULATORS

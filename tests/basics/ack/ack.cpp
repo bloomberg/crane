@@ -2,7 +2,6 @@
 
 #include <functional>
 #include <type_traits>
-#include <utility>
 
 __attribute__((pure)) unsigned int Ack::ack(const unsigned int m,
                                             const unsigned int n) {
@@ -13,10 +12,10 @@ __attribute__((pure)) unsigned int Ack::ack(const unsigned int m,
     } else {
       unsigned int pm = m - 1;
       if (n0 <= 0) {
-        return ack(std::move(pm), Nat::one);
+        return ack(pm, Nat::one);
       } else {
         unsigned int pn = n0 - 1;
-        return ack(pm, ack_m(std::move(pn)));
+        return ack(pm, ack_m(pn));
       }
     }
   };

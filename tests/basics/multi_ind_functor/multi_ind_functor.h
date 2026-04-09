@@ -55,14 +55,6 @@ template <Elem E> struct Container {
       return std::make_shared<maybe>(Just{std::move(a0)});
     }
 
-    static std::unique_ptr<maybe> nothing_uptr() {
-      return std::make_unique<maybe>(Nothing{});
-    }
-
-    static std::unique_ptr<maybe> just_uptr(unsigned int a0) {
-      return std::make_unique<maybe>(Just{std::move(a0)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -123,20 +115,6 @@ template <Elem E> struct Container {
     static std::shared_ptr<mlist> mcons(std::shared_ptr<maybe> &&a0,
                                         std::shared_ptr<mlist> &&a1) {
       return std::make_shared<mlist>(MCons{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<mlist> mnil_uptr() {
-      return std::make_unique<mlist>(MNil{});
-    }
-
-    static std::unique_ptr<mlist> mcons_uptr(const std::shared_ptr<maybe> &a0,
-                                             const std::shared_ptr<mlist> &a1) {
-      return std::make_unique<mlist>(MCons{a0, a1});
-    }
-
-    static std::unique_ptr<mlist> mcons_uptr(std::shared_ptr<maybe> &&a0,
-                                             std::shared_ptr<mlist> &&a1) {
-      return std::make_unique<mlist>(MCons{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS
@@ -206,22 +184,6 @@ template <Elem E> struct Container {
 
     static std::shared_ptr<mtree> node(std::shared_ptr<mlist> &&a0) {
       return std::make_shared<mtree>(Node{std::move(a0)});
-    }
-
-    static std::unique_ptr<mtree> leaf_uptr(const std::shared_ptr<maybe> &a0) {
-      return std::make_unique<mtree>(Leaf{a0});
-    }
-
-    static std::unique_ptr<mtree> leaf_uptr(std::shared_ptr<maybe> &&a0) {
-      return std::make_unique<mtree>(Leaf{std::move(a0)});
-    }
-
-    static std::unique_ptr<mtree> node_uptr(const std::shared_ptr<mlist> &a0) {
-      return std::make_unique<mtree>(Node{a0});
-    }
-
-    static std::unique_ptr<mtree> node_uptr(std::shared_ptr<mlist> &&a0) {
-      return std::make_unique<mtree>(Node{std::move(a0)});
     }
 
     // MANIPULATORS

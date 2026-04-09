@@ -53,20 +53,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -289,7 +275,7 @@ struct TopologicalSort {
                   T1 _x = *f1;
                   if (f2.has_value()) {
                     T1 _x0 = *f2;
-                    return get_elems_aux(_args.d_a1, h);
+                    return get_elems_aux(_args.d_a1, std::move(h));
                   } else {
                     return get_elems_aux(_args.d_a1, List<T1>::cons(e2, h));
                   }
@@ -299,11 +285,10 @@ struct TopologicalSort {
                     return get_elems_aux(_args.d_a1, List<T1>::cons(e1, h));
                   } else {
                     if (eqb_node(e1, e2)) {
-                      return get_elems_aux(std::move(_args.d_a1),
-                                           List<T1>::cons(e1, h));
+                      return get_elems_aux(_args.d_a1, List<T1>::cons(e1, h));
                     } else {
                       return get_elems_aux(
-                          std::move(_args.d_a1),
+                          _args.d_a1,
                           List<T1>::cons(e1, List<T1>::cons(e2, h)));
                     }
                   }
@@ -393,17 +378,15 @@ struct TopologicalSort {
         return elem;
       } else {
         unsigned int c = counter - 1;
-        std::shared_ptr<List<T1>> l =
-            graph_lookup<T1>(eqb_node, std::move(elem), graph0);
+        std::shared_ptr<List<T1>> l = graph_lookup<T1>(eqb_node, elem, graph0);
         return std::visit(
-            Overloaded{[&](const typename List<T1>::Nil _args) -> T1 {
-                         return std::move(elem);
-                       },
-                       [&](const typename List<T1>::Cons _args) -> T1 {
-                         return cycle_entry_aux<T1>(eqb_node, graph0,
-                                                    List<T1>::cons(elem, seens),
-                                                    _args.d_a0, c);
-                       }},
+            Overloaded{
+                [&](const typename List<T1>::Nil _args) -> T1 { return elem; },
+                [&](const typename List<T1>::Cons _args) -> T1 {
+                  return cycle_entry_aux<T1>(eqb_node, graph0,
+                                             List<T1>::cons(elem, seens),
+                                             _args.d_a0, c);
+                }},
             l->v());
       }
     }
@@ -440,7 +423,7 @@ struct TopologicalSort {
     } else {
       unsigned int c = counter - 1;
       if (contains<T1>(eqb_node, elem, cycl)) {
-        return cycl;
+        return std::move(cycl);
       } else {
         return graph_lookup<T1>(eqb_node, elem, graph0)
             ->template fold_right<std::shared_ptr<List<T1>>>(

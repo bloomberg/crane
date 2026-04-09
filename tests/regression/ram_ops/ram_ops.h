@@ -49,20 +49,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -177,7 +163,7 @@ struct RamOps {
     std::shared_ptr<ram_bank_main> bk0 = std::make_shared<ram_bank_main>(
         ram_bank_main{List<std::shared_ptr<ram_chip_main>>::cons(
             ch0, List<std::shared_ptr<ram_chip_main>>::nil())});
-    std::unique_ptr<state_main> s = std::make_unique<state_main>(
+    std::shared_ptr<state_main> s = std::make_shared<state_main>(
         state_main{List<std::shared_ptr<ram_bank_main>>::cons(
                        bk0, List<std::shared_ptr<ram_bank_main>>::nil()),
                    0u, 0u, 0u, 1u});
@@ -259,7 +245,7 @@ struct RamOps {
     std::shared_ptr<bank_port> bk0 = std::make_shared<bank_port>(
         bank_port{List<std::shared_ptr<chip_port>>::cons(
             ch0, List<std::shared_ptr<chip_port>>::nil())});
-    std::unique_ptr<state_port> s = std::make_unique<state_port>(
+    std::shared_ptr<state_port> s = std::make_shared<state_port>(
         state_port{List<std::shared_ptr<bank_port>>::cons(
                        bk0, List<std::shared_ptr<bank_port>>::nil()),
                    0u, 0u});
@@ -360,7 +346,7 @@ struct RamOps {
     std::shared_ptr<ram_bank_status> bk0 = std::make_shared<ram_bank_status>(
         ram_bank_status{List<std::shared_ptr<ram_chip_status>>::cons(
             ch0, List<std::shared_ptr<ram_chip_status>>::nil())});
-    std::unique_ptr<state_status> s = std::make_unique<state_status>(
+    std::shared_ptr<state_status> s = std::make_shared<state_status>(
         state_status{List<std::shared_ptr<ram_bank_status>>::cons(
                          bk0, List<std::shared_ptr<ram_bank_status>>::nil()),
                      0u, 0u, 0u});

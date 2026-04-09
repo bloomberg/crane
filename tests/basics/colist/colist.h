@@ -46,16 +46,6 @@ public:
     return std::make_shared<Nat>(S{std::move(a0)});
   }
 
-  static std::unique_ptr<Nat> o_uptr() { return std::make_unique<Nat>(O{}); }
-
-  static std::unique_ptr<Nat> s_uptr(const std::shared_ptr<Nat> &a0) {
-    return std::make_unique<Nat>(S{a0});
-  }
-
-  static std::unique_ptr<Nat> s_uptr(std::shared_ptr<Nat> &&a0) {
-    return std::make_unique<Nat>(S{std::move(a0)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -96,20 +86,6 @@ public:
   static std::shared_ptr<List<t_A>> cons(t_A a0,
                                          std::shared_ptr<List<t_A>> &&a1) {
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
   // MANIPULATORS
@@ -157,20 +133,6 @@ public:
   static std::shared_ptr<Colist<t_A>>
   cocons(t_A a0, std::shared_ptr<Colist<t_A>> &&a1) {
     return std::make_shared<Colist<t_A>>(Cocons{std::move(a0), std::move(a1)});
-  }
-
-  static std::unique_ptr<Colist<t_A>> conil_uptr() {
-    return std::make_unique<Colist<t_A>>(Conil{});
-  }
-
-  static std::unique_ptr<Colist<t_A>>
-  cocons_uptr(t_A a0, const std::shared_ptr<Colist<t_A>> &a1) {
-    return std::make_unique<Colist<t_A>>(Cocons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<Colist<t_A>>
-  cocons_uptr(t_A a0, std::shared_ptr<Colist<t_A>> &&a1) {
-    return std::make_unique<Colist<t_A>>(Cocons{std::move(a0), std::move(a1)});
   }
 
   static std::shared_ptr<Colist<t_A>>

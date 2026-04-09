@@ -15,7 +15,7 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 struct SharedUptrEscape {
-  struct tree {
+  struct tree : public std::enable_shared_from_this<tree> {
     // TYPES
     struct Leaf {};
 
@@ -54,23 +54,6 @@ struct SharedUptrEscape {
           Node{std::move(a0), std::move(a1), std::move(a2)});
     }
 
-    static std::unique_ptr<tree> leaf_uptr() {
-      return std::make_unique<tree>(Leaf{});
-    }
-
-    static std::unique_ptr<tree> node_uptr(const std::shared_ptr<tree> &a0,
-                                           unsigned int a1,
-                                           const std::shared_ptr<tree> &a2) {
-      return std::make_unique<tree>(Node{a0, std::move(a1), a2});
-    }
-
-    static std::unique_ptr<tree> node_uptr(std::shared_ptr<tree> &&a0,
-                                           unsigned int a1,
-                                           std::shared_ptr<tree> &&a2) {
-      return std::make_unique<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -102,7 +85,9 @@ struct SharedUptrEscape {
     __attribute__((pure))
     std::pair<std::shared_ptr<tree>, std::shared_ptr<tree>>
     dup() const {
-      return std::make_pair(this, this);
+      return std::make_pair(
+          std::const_pointer_cast<tree>(this->shared_from_this()),
+          std::const_pointer_cast<tree>(this->shared_from_this()));
     }
 
     __attribute__((pure)) unsigned int tree_sum() const {
@@ -156,9 +141,9 @@ struct SharedUptrEscape {
   __attribute__((pure)) static unsigned int
   conditional_share(const unsigned int flag);
   static inline const unsigned int use_extracted_twice = []() {
-    std::unique_ptr<tree> t =
-        tree::node_uptr(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                        tree::node(tree::leaf(), 30u, tree::leaf()));
+    std::shared_ptr<tree> t =
+        tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                   tree::node(tree::leaf(), 30u, tree::leaf()));
     std::shared_ptr<tree> sub = std::move(t)->extract_subtree(0u);
     return (sub->tree_sum() + sub->tree_sum());
   }();
@@ -189,14 +174,6 @@ struct SharedUptrEscape {
       return std::make_shared<wrapper>(Wrap{std::move(a0)});
     }
 
-    static std::unique_ptr<wrapper> wrap_uptr(const std::shared_ptr<tree> &a0) {
-      return std::make_unique<wrapper>(Wrap{a0});
-    }
-
-    static std::unique_ptr<wrapper> wrap_uptr(std::shared_ptr<tree> &&a0) {
-      return std::make_unique<wrapper>(Wrap{std::move(a0)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -222,7 +199,7 @@ struct SharedUptrEscape {
 
   static std::shared_ptr<wrapper> wrap_tree(std::shared_ptr<tree> t);
   static inline const unsigned int unwrap_and_dup = []() {
-    std::unique_ptr<tree> t = tree::node_uptr(tree::leaf(), 42u, tree::leaf());
+    std::shared_ptr<tree> t = tree::node(tree::leaf(), 42u, tree::leaf());
     std::shared_ptr<wrapper> w = wrap_tree(std::move(t));
     return std::visit(
         Overloaded{[](const typename wrapper::Wrap _args) -> unsigned int {

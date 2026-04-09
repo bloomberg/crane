@@ -18,16 +18,16 @@ SharedUptrEscape::identity(std::shared_ptr<SharedUptrEscape::tree> t) {
 /// one branch, the other branch's sharing crashes.
 __attribute__((pure)) unsigned int
 SharedUptrEscape::conditional_share(const unsigned int flag) {
-  std::unique_ptr<SharedUptrEscape::tree> t =
-      tree::node_uptr(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                      tree::node(tree::leaf(), 30u, tree::leaf()));
+  std::shared_ptr<SharedUptrEscape::tree> t =
+      tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                 tree::node(tree::leaf(), 30u, tree::leaf()));
   if (flag <= 0) {
     return identity(std::move(t))->tree_sum();
   } else {
     unsigned int _x = flag - 1;
     std::pair<std::shared_ptr<SharedUptrEscape::tree>,
               std::shared_ptr<SharedUptrEscape::tree>>
-        p = t->dup();
+        p = std::move(t)->dup();
     return (p.first->tree_sum() + p.second->tree_sum());
   }
 }

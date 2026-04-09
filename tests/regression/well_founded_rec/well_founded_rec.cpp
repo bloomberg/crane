@@ -41,7 +41,7 @@ WellFoundedRec::gcd_wf(const unsigned int x, const unsigned int b) {
     return std::move(b);
   } else {
     unsigned int a_ = x - 1;
-    unsigned int y = ((a_ + 1) ? b % (a_ + 1) : b);
+    unsigned int y = ((a_ + 1) ? std::move(b) % (a_ + 1) : std::move(b));
     return gcd_wf(std::move(y), (a_ + 1));
   }
 }

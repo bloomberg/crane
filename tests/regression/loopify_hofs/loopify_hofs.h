@@ -51,20 +51,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -605,53 +591,68 @@ struct LoopifyHofs {
         }
       } else {
         unsigned int g = _loop_fuel - 1;
-        std::visit(
-            Overloaded{
-                [&](const typename List<unsigned int>::Nil _args) {
-                  if (_last) {
-                    std::get<typename List<unsigned int>::Cons>(_last->v_mut())
-                        .d_a1 = List<unsigned int>::nil();
-                  } else {
-                    _head = List<unsigned int>::nil();
-                  }
-                  _continue = false;
-                },
-                [&](const typename List<unsigned int>::Cons _args) {
-                  std::visit(
-                      Overloaded{
-                          [&](const typename List<unsigned int>::Nil _args0) {
-                            if (_last) {
-                              std::get<typename List<unsigned int>::Cons>(
-                                  _last->v_mut())
-                                  .d_a1 = List<unsigned int>::cons(
-                                  _args.d_a0, List<unsigned int>::nil());
-                            } else {
-                              _head = List<unsigned int>::cons(
-                                  _args.d_a0, List<unsigned int>::nil());
-                            }
-                            _continue = false;
-                          },
-                          [&](const typename List<unsigned int>::Cons _args0) {
-                            auto _cell =
-                                List<unsigned int>::cons(_args.d_a0, nullptr);
-                            if (_last) {
-                              std::get<typename List<unsigned int>::Cons>(
-                                  _last->v_mut())
-                                  .d_a1 = _cell;
-                            } else {
-                              _head = _cell;
-                            }
-                            _last = _cell;
-                            std::shared_ptr<List<unsigned int>> _next_l =
-                                List<unsigned int>::cons(
-                                    f(_args.d_a0, _args0.d_a0), _args0.d_a1);
-                            unsigned int _next_fuel = g;
-                            _loop_l = std::move(_next_l);
-                            _loop_fuel = std::move(_next_fuel);
-                          }},
-                      _args.d_a1->v());
-                }},
-            _loop_l->v());
+        if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
+          auto &_rf = std::get<0>(_loop_l->v_mut());
+          {
+            if (_last) {
+              std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
+                  _loop_l;
+            } else {
+              _head = _loop_l;
+            }
+            _continue = false;
+          }
+        } else {
+          std::visit(
+              Overloaded{
+                  [&](const typename List<unsigned int>::Nil _args) {
+                    if (_last) {
+                      std::get<typename List<unsigned int>::Cons>(
+                          _last->v_mut())
+                          .d_a1 = List<unsigned int>::nil();
+                    } else {
+                      _head = List<unsigned int>::nil();
+                    }
+                    _continue = false;
+                  },
+                  [&](const typename List<unsigned int>::Cons _args) {
+                    std::visit(
+                        Overloaded{
+                            [&](const typename List<unsigned int>::Nil _args0) {
+                              if (_last) {
+                                std::get<typename List<unsigned int>::Cons>(
+                                    _last->v_mut())
+                                    .d_a1 = List<unsigned int>::cons(
+                                    _args.d_a0, List<unsigned int>::nil());
+                              } else {
+                                _head = List<unsigned int>::cons(
+                                    _args.d_a0, List<unsigned int>::nil());
+                              }
+                              _continue = false;
+                            },
+                            [&](const typename List<unsigned int>::Cons
+                                    _args0) {
+                              auto _cell =
+                                  List<unsigned int>::cons(_args.d_a0, nullptr);
+                              if (_last) {
+                                std::get<typename List<unsigned int>::Cons>(
+                                    _last->v_mut())
+                                    .d_a1 = _cell;
+                              } else {
+                                _head = _cell;
+                              }
+                              _last = _cell;
+                              std::shared_ptr<List<unsigned int>> _next_l =
+                                  List<unsigned int>::cons(
+                                      f(_args.d_a0, _args0.d_a0), _args0.d_a1);
+                              unsigned int _next_fuel = g;
+                              _loop_l = std::move(_next_l);
+                              _loop_fuel = std::move(_next_fuel);
+                            }},
+                        _args.d_a1->v());
+                  }},
+              _loop_l->v());
+        }
       }
     }
     return _head;
@@ -1004,9 +1005,9 @@ struct LoopifyHofs {
                             if (_last) {
                               std::get<typename List<unsigned int>::Cons>(
                                   _last->v_mut())
-                                  .d_a1 = _loop_l1;
+                                  .d_a1 = std::move(_loop_l1);
                             } else {
-                              _head = _loop_l1;
+                              _head = std::move(_loop_l1);
                             }
                             _continue = false;
                           },

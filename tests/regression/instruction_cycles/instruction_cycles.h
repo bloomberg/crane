@@ -49,20 +49,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -116,15 +102,6 @@ struct InstructionCycles {
 
     static std::shared_ptr<instruction1> nop1() {
       return std::make_shared<instruction1>(NOP1{});
-    }
-
-    static std::unique_ptr<instruction1> jcn1_uptr(unsigned int a0,
-                                                   unsigned int a1) {
-      return std::make_unique<instruction1>(JCN1{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<instruction1> nop1_uptr() {
-      return std::make_unique<instruction1>(NOP1{});
     }
 
     // MANIPULATORS
@@ -220,14 +197,6 @@ struct InstructionCycles {
 
     static std::shared_ptr<instruction2> nop2() {
       return std::make_shared<instruction2>(NOP2{});
-    }
-
-    static std::unique_ptr<instruction2> jms2_uptr(unsigned int a0) {
-      return std::make_unique<instruction2>(JMS2{std::move(a0)});
-    }
-
-    static std::unique_ptr<instruction2> nop2_uptr() {
-      return std::make_unique<instruction2>(NOP2{});
     }
 
     // MANIPULATORS
@@ -531,18 +500,6 @@ struct InstructionCycles {
 
     static std::shared_ptr<instruction5> inc5(unsigned int a0) {
       return std::make_shared<instruction5>(INC5{std::move(a0)});
-    }
-
-    static std::unique_ptr<instruction5> nop5_uptr() {
-      return std::make_unique<instruction5>(NOP5{});
-    }
-
-    static std::unique_ptr<instruction5> jcn5_uptr(unsigned int a0) {
-      return std::make_unique<instruction5>(JCN5{std::move(a0)});
-    }
-
-    static std::unique_ptr<instruction5> inc5_uptr(unsigned int a0) {
-      return std::make_unique<instruction5>(INC5{std::move(a0)});
     }
 
     // MANIPULATORS

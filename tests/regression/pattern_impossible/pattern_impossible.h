@@ -88,21 +88,6 @@ struct PatternImpossible {
       return std::make_shared<nested>(Node{std::move(a0), std::move(a1)});
     }
 
-    static std::unique_ptr<nested> leaf_uptr(unsigned int a0) {
-      return std::make_unique<nested>(Leaf{std::move(a0)});
-    }
-
-    static std::unique_ptr<nested>
-    node_uptr(const std::shared_ptr<nested> &a0,
-              const std::shared_ptr<nested> &a1) {
-      return std::make_unique<nested>(Node{a0, a1});
-    }
-
-    static std::unique_ptr<nested> node_uptr(std::shared_ptr<nested> &&a0,
-                                             std::shared_ptr<nested> &&a1) {
-      return std::make_unique<nested>(Node{std::move(a0), std::move(a1)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

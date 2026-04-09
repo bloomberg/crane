@@ -25,6 +25,6 @@ LoopBodyIteration::iterate_body(const unsigned int n,
     return std::move(s);
   } else {
     unsigned int n_ = n - 1;
-    return iterate_body(std::move(n_), count_loop_body(s));
+    return iterate_body(n_, count_loop_body(std::move(s)));
   }
 }

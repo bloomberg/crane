@@ -55,23 +55,6 @@ struct ListClosureEscape {
           Node{std::move(a0), std::move(a1), std::move(a2)});
     }
 
-    static std::unique_ptr<tree> leaf_uptr() {
-      return std::make_unique<tree>(Leaf{});
-    }
-
-    static std::unique_ptr<tree> node_uptr(const std::shared_ptr<tree> &a0,
-                                           unsigned int a1,
-                                           const std::shared_ptr<tree> &a2) {
-      return std::make_unique<tree>(Node{a0, std::move(a1), a2});
-    }
-
-    static std::unique_ptr<tree> node_uptr(std::shared_ptr<tree> &&a0,
-                                           unsigned int a1,
-                                           std::shared_ptr<tree> &&a2) {
-      return std::make_unique<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -177,22 +160,6 @@ struct ListClosureEscape {
       return std::make_shared<fn_list>(FCons{std::move(a0), std::move(a1)});
     }
 
-    static std::unique_ptr<fn_list> fnil_uptr() {
-      return std::make_unique<fn_list>(FNil{});
-    }
-
-    static std::unique_ptr<fn_list>
-    fcons_uptr(std::function<unsigned int(unsigned int)> a0,
-               const std::shared_ptr<fn_list> &a1) {
-      return std::make_unique<fn_list>(FCons{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<fn_list>
-    fcons_uptr(std::function<unsigned int(unsigned int)> a0,
-               std::shared_ptr<fn_list> &&a1) {
-      return std::make_unique<fn_list>(FCons{std::move(a0), std::move(a1)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -245,12 +212,12 @@ struct ListClosureEscape {
   static std::shared_ptr<fn_list> build_fns(std::shared_ptr<tree> t1,
                                             std::shared_ptr<tree> t2);
   static inline const unsigned int bug_list_clobber = []() {
-    std::unique_ptr<tree> t1 =
-        tree::node_uptr(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                        tree::node(tree::leaf(), 30u, tree::leaf()));
-    std::unique_ptr<tree> t2 =
-        tree::node_uptr(tree::node(tree::leaf(), 77u, tree::leaf()), 88u,
-                        tree::node(tree::leaf(), 99u, tree::leaf()));
+    std::shared_ptr<tree> t1 =
+        tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                   tree::node(tree::leaf(), 30u, tree::leaf()));
+    std::shared_ptr<tree> t2 =
+        tree::node(tree::node(tree::leaf(), 77u, tree::leaf()), 88u,
+                   tree::node(tree::leaf(), 99u, tree::leaf()));
     std::shared_ptr<fn_list> fns = build_fns(std::move(t1), std::move(t2));
     return std::move(fns)->apply_first(0u);
   }();

@@ -49,20 +49,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -113,14 +99,6 @@ struct UniversePoly {
 
     static std::shared_ptr<poption<t_A>> psome(t_A a0) {
       return std::make_shared<poption<t_A>>(Psome{std::move(a0)});
-    }
-
-    static std::unique_ptr<poption<t_A>> pnone_uptr() {
-      return std::make_unique<poption<t_A>>(Pnone{});
-    }
-
-    static std::unique_ptr<poption<t_A>> psome_uptr(t_A a0) {
-      return std::make_unique<poption<t_A>>(Psome{std::move(a0)});
     }
 
     // MANIPULATORS

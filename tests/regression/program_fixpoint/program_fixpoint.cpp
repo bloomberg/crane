@@ -15,13 +15,13 @@ std::shared_ptr<List<unsigned int>> ProgFix::interleave_func(
       std::shared_ptr<List<unsigned int>>, std::shared_ptr<List<unsigned int>>)>
       interleave0 = [](std::shared_ptr<List<unsigned int>> l3,
                        std::shared_ptr<List<unsigned int>> l4) {
-        std::unique_ptr<
+        std::shared_ptr<
             Sig<std::shared_ptr<SigT<std::shared_ptr<List<unsigned int>>,
                                      std::shared_ptr<List<unsigned int>>>>>>
             y = Sig<
                 std::shared_ptr<SigT<std::shared_ptr<List<unsigned int>>,
                                      std::shared_ptr<List<unsigned int>>>>>::
-                exist_uptr(
+                exist(
                     SigT<std::shared_ptr<List<unsigned int>>,
                          std::shared_ptr<List<unsigned int>>>::existt(l3, l4));
         return interleave_func(std::visit(

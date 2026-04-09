@@ -50,20 +50,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -325,7 +311,7 @@ struct LoopifyListGenerators {
                              unsigned int idx_ = idx - 1;
                              _stack.push_back(_Call1{List<unsigned int>::cons(
                                  f(idx), List<unsigned int>::nil())});
-                             _stack.push_back(_Enter{std::move(idx_)});
+                             _stack.push_back(_Enter{idx_});
                            }
                          },
                          [&](_Call1 _f) { _result = _result->app(_f._s0); }},

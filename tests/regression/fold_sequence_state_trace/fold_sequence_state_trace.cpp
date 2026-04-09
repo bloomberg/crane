@@ -56,7 +56,7 @@ FoldSequenceStateTraceCase::perp_through(
     std::shared_ptr<FoldSequenceStateTraceCase::Line> l) {
   Real x = p.first;
   Real y = p.second;
-  Real c = ((l->A * std::move(y)) - (l->B * x));
+  Real c = ((l->A * y) - (l->B * x));
   return std::make_shared<FoldSequenceStateTraceCase::Line>(
       Line{l->B, (-l->A), c});
 }

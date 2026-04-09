@@ -43,14 +43,6 @@ struct IifeNameClash {
       return std::make_shared<wrapper>(Empty{});
     }
 
-    static std::unique_ptr<wrapper> wrap_uptr(unsigned int n) {
-      return std::make_unique<wrapper>(Wrap{std::move(n)});
-    }
-
-    static std::unique_ptr<wrapper> empty_uptr() {
-      return std::make_unique<wrapper>(Empty{});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

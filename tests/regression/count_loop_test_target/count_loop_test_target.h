@@ -44,15 +44,6 @@ struct CountLoopTestTarget {
       return std::make_shared<instruction>(NOP{});
     }
 
-    static std::unique_ptr<instruction> isz_uptr(unsigned int a0,
-                                                 unsigned int a1) {
-      return std::make_unique<instruction>(ISZ{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<instruction> nop_uptr() {
-      return std::make_unique<instruction>(NOP{});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

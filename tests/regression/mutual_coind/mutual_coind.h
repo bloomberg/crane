@@ -51,20 +51,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -105,17 +91,6 @@ struct MutualCoind {
     static std::shared_ptr<streamA<t_A>>
     consa(t_A a0, std::shared_ptr<streamB<t_A>> &&a1) {
       return std::make_shared<streamA<t_A>>(
-          ConsA{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<streamA<t_A>>
-    consa_uptr(t_A a0, const std::shared_ptr<streamB<t_A>> &a1) {
-      return std::make_unique<streamA<t_A>>(ConsA{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<streamA<t_A>>
-    consa_uptr(t_A a0, std::shared_ptr<streamB<t_A>> &&a1) {
-      return std::make_unique<streamA<t_A>>(
           ConsA{std::move(a0), std::move(a1)});
     }
 
@@ -163,17 +138,6 @@ struct MutualCoind {
     static std::shared_ptr<streamB<t_A>>
     consb(t_A a0, std::shared_ptr<streamA<t_A>> &&a1) {
       return std::make_shared<streamB<t_A>>(
-          ConsB{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<streamB<t_A>>
-    consb_uptr(t_A a0, const std::shared_ptr<streamA<t_A>> &a1) {
-      return std::make_unique<streamB<t_A>>(ConsB{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<streamB<t_A>>
-    consb_uptr(t_A a0, std::shared_ptr<streamA<t_A>> &&a1) {
-      return std::make_unique<streamB<t_A>>(
           ConsB{std::move(a0), std::move(a1)});
     }
 

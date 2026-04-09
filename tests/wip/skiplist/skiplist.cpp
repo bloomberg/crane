@@ -380,7 +380,7 @@ bool skiplist_test::stm_test_bde_api() {
   unsigned int status2 = findResult2.first;
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> _x3 =
       findResult2.second;
-  bool c5 = std::move(status2) == SkipList<int, int>::e_NOT_FOUND;
+  bool c5 = status2 == SkipList<int, int>::e_NOT_FOUND;
   std::pair<std::pair<unsigned int, std::optional<std::shared_ptr<
                                         SkipNode<unsigned int, unsigned int>>>>,
             bool>
@@ -393,7 +393,7 @@ bool skiplist_test::stm_test_bde_api() {
   unsigned int status3 = p.first;
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> _x5 =
       p.second;
-  bool c6 = std::move(status3) == SkipList<int, int>::e_DUPLICATE;
+  bool c6 = status3 == SkipList<int, int>::e_DUPLICATE;
   std::pair<
       unsigned int,
       std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>>
@@ -401,7 +401,7 @@ bool skiplist_test::stm_test_bde_api() {
   unsigned int status4 = frontResult.first;
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
       frontItem = frontResult.second;
-  bool c7 = std::move(status4) == SkipList<int, int>::e_SUCCESS;
+  bool c7 = status4 == SkipList<int, int>::e_SUCCESS;
   bool c8;
   if (frontItem.has_value()) {
     std::shared_ptr<SkipNode<unsigned int, unsigned int>> p0 = *frontItem;
@@ -416,7 +416,7 @@ bool skiplist_test::stm_test_bde_api() {
   unsigned int status5 = backResult.first;
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
       backItem = backResult.second;
-  bool c9 = std::move(status5) == SkipList<int, int>::e_SUCCESS;
+  bool c9 = status5 == SkipList<int, int>::e_SUCCESS;
   bool c10;
   if (backItem.has_value()) {
     std::shared_ptr<SkipNode<unsigned int, unsigned int>> p0 = *backItem;
@@ -427,8 +427,8 @@ bool skiplist_test::stm_test_bde_api() {
   }
   return (front1 &&
           (front2 &&
-           (c3 && (c4 && (c5 && (c6 && (std::move(c7) &&
-                                        (std::move(c8) && (c9 && c10)))))))));
+           (c3 && (c4 && (std::move(c5) &&
+                          (c6 && (c7 && (std::move(c8) && (c9 && c10)))))))));
 }
 
 bool skiplist_test::test_insert_lookup() {

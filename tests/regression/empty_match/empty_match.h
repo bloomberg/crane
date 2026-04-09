@@ -66,14 +66,6 @@ struct EmptyMatch {
       return std::make_shared<either<t_A, t_B>>(Right{std::move(a0)});
     }
 
-    static std::unique_ptr<either<t_A, t_B>> left_uptr(t_A a0) {
-      return std::make_unique<either<t_A, t_B>>(Left{std::move(a0)});
-    }
-
-    static std::unique_ptr<either<t_A, t_B>> right_uptr(t_B a0) {
-      return std::make_unique<either<t_A, t_B>>(Right{std::move(a0)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

@@ -328,9 +328,9 @@ template <typename K, typename V> struct SkipList {
               curr->forward[level]));
       if (nextOpt.has_value()) {
         std::shared_ptr<SkipNode<T1, T2>> next0 = *nextOpt;
-        if (ltK(std::move(next0)->key, target)) {
+        if (ltK(next0->key, target)) {
           return SkipList<int, int>::template findPred_go<T1, T2>(
-              ltK, fuel_, std::move(next0), target, level);
+              ltK, std::move(fuel_), next0, target, level);
         } else {
           return curr;
         }
@@ -361,7 +361,7 @@ template <typename K, typename V> struct SkipList {
     } else {
       unsigned int level_ = level - 1;
       return SkipList<int, int>::template findPath_aux<T1, T2>(
-          ltK, pred, target, level_, path);
+          ltK, std::move(pred), target, level_, path);
     }
   }
 
@@ -392,7 +392,7 @@ template <typename K, typename V> struct SkipList {
     } else {
       unsigned int level_ = level - 1;
       SkipList<int, int>::template linkNode_aux<T1, T2>(path, head, newNode,
-                                                        std::move(level_));
+                                                        level_);
       return;
     }
   }
@@ -409,8 +409,8 @@ template <typename K, typename V> struct SkipList {
       unsigned int level_ = level - 1;
       path.set(level, head);
       if (maxLevel <= level_) {
-        SkipList<int, int>::template extendPath_aux<T1, T2>(path, head, level_,
-                                                            maxLevel);
+        SkipList<int, int>::template extendPath_aux<T1, T2>(
+            path, head, std::move(level_), maxLevel);
         return;
       } else {
         return;
@@ -465,8 +465,7 @@ template <typename K, typename V> struct SkipList {
       return;
     } else {
       unsigned int level_ = level - 1;
-      SkipList<int, int>::template unlinkNode_aux<T1, T2>(path, target,
-                                                          std::move(level_));
+      SkipList<int, int>::template unlinkNode_aux<T1, T2>(path, target, level_);
       return;
     }
   }
@@ -493,14 +492,14 @@ template <typename K, typename V> struct SkipList {
               std::move(pred)->forward[0u]));
       if (nextOpt.has_value()) {
         std::shared_ptr<SkipNode<T1, T2>> node = *nextOpt;
-        return eqK(std::move(node)->key, target);
+        return eqK(node->key, target);
       } else {
         return false;
       }
     } else {
       unsigned int level_ = level - 1;
       return SkipList<int, int>::template findKey_aux<T1, T2>(
-          ltK, eqK, pred, target, std::move(level_));
+          ltK, eqK, std::move(pred), target, level_);
     }
   }
 
@@ -546,7 +545,7 @@ template <typename K, typename V> struct SkipList {
                 ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
                     node->forward[lvl]));
             stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-                head->forward[lvl], opt_to_ptr(std::move(nodeNext)));
+                head->forward[lvl], opt_to_ptr(nodeNext));
             return;
           } else {
             return;
@@ -555,8 +554,8 @@ template <typename K, typename V> struct SkipList {
           return;
         }
       }();
-      SkipList<int, int>::template unlinkFirstFromHead<T1, T2>(head, node,
-                                                               nodeLevel, lvl_);
+      SkipList<int, int>::template unlinkFirstFromHead<T1, T2>(
+          head, node, nodeLevel, std::move(lvl_));
       return;
     }
   }
@@ -574,8 +573,8 @@ template <typename K, typename V> struct SkipList {
         std::optional<std::shared_ptr<SkipNode<T1, T2>>> nodeNext =
             ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
                 node->forward[lvl]));
-        stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-            head->forward[lvl], opt_to_ptr(std::move(nodeNext)));
+        stm::writeTVar<std::shared_ptr<SkipNode<T1, T2>>>(head->forward[lvl],
+                                                          opt_to_ptr(nodeNext));
         return;
       } else {
         return;
@@ -585,8 +584,8 @@ template <typename K, typename V> struct SkipList {
       return;
     } else {
       unsigned int lvl_ = lvl - 1;
-      SkipList<int, int>::template unlinkNodeAtAllLevels<T1, T2>(
-          head, node, std::move(lvl_));
+      SkipList<int, int>::template unlinkNodeAtAllLevels<T1, T2>(head, node,
+                                                                 lvl_);
       return;
     }
   }
@@ -604,12 +603,12 @@ template <typename K, typename V> struct SkipList {
           stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(head->forward[0u]));
       if (firstOpt.has_value()) {
         std::shared_ptr<SkipNode<T1, T2>> node = *firstOpt;
-        SkipList<int, int>::template unlinkNodeAtAllLevels<T1, T2>(
-            head, std::move(node), maxLvl);
+        SkipList<int, int>::template unlinkNodeAtAllLevels<T1, T2>(head, node,
+                                                                   maxLvl);
         return SkipList<int, int>::template removeAll_aux<T1, T2>(
-            fuel_, head, maxLvl, (acc + 1));
+            std::move(fuel_), head, maxLvl, (acc + 1));
       } else {
-        return acc;
+        return std::move(acc);
       }
     }
   }

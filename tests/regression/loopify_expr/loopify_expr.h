@@ -50,20 +50,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -159,51 +145,6 @@ struct LoopifyExpr {
                                       std::shared_ptr<expr> &&a1,
                                       std::shared_ptr<expr> &&a2) {
       return std::make_shared<expr>(
-          Cond{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
-    static std::unique_ptr<expr> val_uptr(unsigned int a0) {
-      return std::make_unique<expr>(Val{std::move(a0)});
-    }
-
-    static std::unique_ptr<expr> succ_uptr(const std::shared_ptr<expr> &a0) {
-      return std::make_unique<expr>(Succ{a0});
-    }
-
-    static std::unique_ptr<expr> succ_uptr(std::shared_ptr<expr> &&a0) {
-      return std::make_unique<expr>(Succ{std::move(a0)});
-    }
-
-    static std::unique_ptr<expr> add_uptr(const std::shared_ptr<expr> &a0,
-                                          const std::shared_ptr<expr> &a1) {
-      return std::make_unique<expr>(Add{a0, a1});
-    }
-
-    static std::unique_ptr<expr> add_uptr(std::shared_ptr<expr> &&a0,
-                                          std::shared_ptr<expr> &&a1) {
-      return std::make_unique<expr>(Add{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<expr> mul_uptr(const std::shared_ptr<expr> &a0,
-                                          const std::shared_ptr<expr> &a1) {
-      return std::make_unique<expr>(Mul{a0, a1});
-    }
-
-    static std::unique_ptr<expr> mul_uptr(std::shared_ptr<expr> &&a0,
-                                          std::shared_ptr<expr> &&a1) {
-      return std::make_unique<expr>(Mul{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<expr> cond_uptr(const std::shared_ptr<expr> &a0,
-                                           const std::shared_ptr<expr> &a1,
-                                           const std::shared_ptr<expr> &a2) {
-      return std::make_unique<expr>(Cond{a0, a1, a2});
-    }
-
-    static std::unique_ptr<expr> cond_uptr(std::shared_ptr<expr> &&a0,
-                                           std::shared_ptr<expr> &&a1,
-                                           std::shared_ptr<expr> &&a2) {
-      return std::make_unique<expr>(
           Cond{std::move(a0), std::move(a1), std::move(a2)});
     }
 
@@ -336,8 +277,8 @@ struct LoopifyExpr {
                               _result = expr::val(0u);
                             } else {
                               unsigned int _x = _args1.d_a0 - 1;
-                              if (std::move(_args1.d_a0) == 1u) {
-                                _result = s1;
+                              if (_args1.d_a0 == 1u) {
+                                _result = std::move(s1);
                               } else {
                                 _result = expr::mul(s1, expr::val(_args1.d_a0));
                               }
@@ -370,8 +311,8 @@ struct LoopifyExpr {
                               _result = expr::val(0u);
                             } else {
                               unsigned int _x = _args1.d_a0 - 1;
-                              if (std::move(_args1.d_a0) == 1u) {
-                                _result = s1;
+                              if (_args1.d_a0 == 1u) {
+                                _result = std::move(s1);
                               } else {
                                 _result = expr::mul(s1, expr::val(_args1.d_a0));
                               }
@@ -404,8 +345,8 @@ struct LoopifyExpr {
                               _result = expr::val(0u);
                             } else {
                               unsigned int _x = _args1.d_a0 - 1;
-                              if (std::move(_args1.d_a0) == 1u) {
-                                _result = s1;
+                              if (_args1.d_a0 == 1u) {
+                                _result = std::move(s1);
                               } else {
                                 _result = expr::mul(s1, expr::val(_args1.d_a0));
                               }
@@ -438,8 +379,8 @@ struct LoopifyExpr {
                               _result = expr::val(0u);
                             } else {
                               unsigned int _x = _args1.d_a0 - 1;
-                              if (std::move(_args1.d_a0) == 1u) {
-                                _result = s1;
+                              if (_args1.d_a0 == 1u) {
+                                _result = std::move(s1);
                               } else {
                                 _result = expr::mul(s1, expr::val(_args1.d_a0));
                               }
@@ -1498,37 +1439,6 @@ struct LoopifyExpr {
           IfPos{std::move(a0), std::move(a1), std::move(a2)});
     }
 
-    static std::unique_ptr<simple_expr> lit_uptr(unsigned int a0) {
-      return std::make_unique<simple_expr>(Lit{std::move(a0)});
-    }
-
-    static std::unique_ptr<simple_expr>
-    plus_uptr(const std::shared_ptr<simple_expr> &a0,
-              const std::shared_ptr<simple_expr> &a1) {
-      return std::make_unique<simple_expr>(Plus{a0, a1});
-    }
-
-    static std::unique_ptr<simple_expr>
-    plus_uptr(std::shared_ptr<simple_expr> &&a0,
-              std::shared_ptr<simple_expr> &&a1) {
-      return std::make_unique<simple_expr>(Plus{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<simple_expr>
-    ifpos_uptr(const std::shared_ptr<simple_expr> &a0,
-               const std::shared_ptr<simple_expr> &a1,
-               const std::shared_ptr<simple_expr> &a2) {
-      return std::make_unique<simple_expr>(IfPos{a0, a1, a2});
-    }
-
-    static std::unique_ptr<simple_expr>
-    ifpos_uptr(std::shared_ptr<simple_expr> &&a0,
-               std::shared_ptr<simple_expr> &&a1,
-               std::shared_ptr<simple_expr> &&a2) {
-      return std::make_unique<simple_expr>(
-          IfPos{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -1938,18 +1848,6 @@ struct LoopifyExpr {
       return std::make_shared<shape>(Triangle{std::move(a0)});
     }
 
-    static std::unique_ptr<shape> circle_uptr(unsigned int a0) {
-      return std::make_unique<shape>(Circle{std::move(a0)});
-    }
-
-    static std::unique_ptr<shape> square_uptr(unsigned int a0) {
-      return std::make_unique<shape>(Square{std::move(a0)});
-    }
-
-    static std::unique_ptr<shape> triangle_uptr(unsigned int a0) {
-      return std::make_unique<shape>(Triangle{std::move(a0)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -2057,36 +1955,6 @@ struct LoopifyExpr {
                                             std::shared_ptr<cond_expr> &&a1,
                                             std::shared_ptr<cond_expr> &&a2) {
       return std::make_shared<cond_expr>(
-          CCond{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
-    static std::unique_ptr<cond_expr> clit_uptr(unsigned int a0) {
-      return std::make_unique<cond_expr>(CLit{std::move(a0)});
-    }
-
-    static std::unique_ptr<cond_expr>
-    cplus_uptr(const std::shared_ptr<cond_expr> &a0,
-               const std::shared_ptr<cond_expr> &a1) {
-      return std::make_unique<cond_expr>(CPlus{a0, a1});
-    }
-
-    static std::unique_ptr<cond_expr>
-    cplus_uptr(std::shared_ptr<cond_expr> &&a0,
-               std::shared_ptr<cond_expr> &&a1) {
-      return std::make_unique<cond_expr>(CPlus{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<cond_expr>
-    ccond_uptr(const std::shared_ptr<cond_expr> &a0,
-               const std::shared_ptr<cond_expr> &a1,
-               const std::shared_ptr<cond_expr> &a2) {
-      return std::make_unique<cond_expr>(CCond{a0, a1, a2});
-    }
-
-    static std::unique_ptr<cond_expr>
-    ccond_uptr(std::shared_ptr<cond_expr> &&a0, std::shared_ptr<cond_expr> &&a1,
-               std::shared_ptr<cond_expr> &&a2) {
-      return std::make_unique<cond_expr>(
           CCond{std::move(a0), std::move(a1), std::move(a2)});
     }
 

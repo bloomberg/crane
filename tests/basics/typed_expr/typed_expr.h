@@ -103,47 +103,6 @@ public:
         EIf{std::move(t), std::move(a1), std::move(a2), std::move(a3)});
   }
 
-  static std::unique_ptr<Expr> enat_uptr(unsigned int a0) {
-    return std::make_unique<Expr>(ENat{std::move(a0)});
-  }
-
-  static std::unique_ptr<Expr> ebool_uptr(bool a0) {
-    return std::make_unique<Expr>(EBool{std::move(a0)});
-  }
-
-  static std::unique_ptr<Expr> eadd_uptr(const std::shared_ptr<Expr> &a0,
-                                         const std::shared_ptr<Expr> &a1) {
-    return std::make_unique<Expr>(EAdd{a0, a1});
-  }
-
-  static std::unique_ptr<Expr> eadd_uptr(std::shared_ptr<Expr> &&a0,
-                                         std::shared_ptr<Expr> &&a1) {
-    return std::make_unique<Expr>(EAdd{std::move(a0), std::move(a1)});
-  }
-
-  static std::unique_ptr<Expr> eeq_uptr(const std::shared_ptr<Expr> &a0,
-                                        const std::shared_ptr<Expr> &a1) {
-    return std::make_unique<Expr>(EEq{a0, a1});
-  }
-
-  static std::unique_ptr<Expr> eeq_uptr(std::shared_ptr<Expr> &&a0,
-                                        std::shared_ptr<Expr> &&a1) {
-    return std::make_unique<Expr>(EEq{std::move(a0), std::move(a1)});
-  }
-
-  static std::unique_ptr<Expr> eif_uptr(Ty t, const std::shared_ptr<Expr> &a1,
-                                        const std::shared_ptr<Expr> &a2,
-                                        const std::shared_ptr<Expr> &a3) {
-    return std::make_unique<Expr>(EIf{std::move(t), a1, a2, a3});
-  }
-
-  static std::unique_ptr<Expr> eif_uptr(Ty t, std::shared_ptr<Expr> &&a1,
-                                        std::shared_ptr<Expr> &&a2,
-                                        std::shared_ptr<Expr> &&a3) {
-    return std::make_unique<Expr>(
-        EIf{std::move(t), std::move(a1), std::move(a2), std::move(a3)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

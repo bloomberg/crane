@@ -97,20 +97,6 @@ struct NestedMod {
               Triangle{std::move(a0), std::move(a1), std::move(a2)});
         }
 
-        static std::unique_ptr<shape> circle_uptr(unsigned int a0) {
-          return std::make_unique<shape>(Circle{std::move(a0)});
-        }
-
-        static std::unique_ptr<shape> square_uptr(unsigned int a0) {
-          return std::make_unique<shape>(Square{std::move(a0)});
-        }
-
-        static std::unique_ptr<shape>
-        triangle_uptr(unsigned int a0, unsigned int a1, unsigned int a2) {
-          return std::make_unique<shape>(
-              Triangle{std::move(a0), std::move(a1), std::move(a2)});
-        }
-
         // MANIPULATORS
         __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

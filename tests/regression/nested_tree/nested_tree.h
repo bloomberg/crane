@@ -44,16 +44,6 @@ public:
     return std::make_shared<Nat>(S{std::move(a0)});
   }
 
-  static std::unique_ptr<Nat> o_uptr() { return std::make_unique<Nat>(O{}); }
-
-  static std::unique_ptr<Nat> s_uptr(const std::shared_ptr<Nat> &a0) {
-    return std::make_unique<Nat>(S{a0});
-  }
-
-  static std::unique_ptr<Nat> s_uptr(std::shared_ptr<Nat> &&a0) {
-    return std::make_unique<Nat>(S{std::move(a0)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -94,20 +84,6 @@ public:
   static std::shared_ptr<List<t_A>> cons(t_A a0,
                                          std::shared_ptr<List<t_A>> &&a1) {
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
   // MANIPULATORS
@@ -162,20 +138,6 @@ struct NestedTree {
     static std::shared_ptr<tree<t_A>>
     node(t_A a0, std::shared_ptr<tree<std::pair<t_A, t_A>>> &&a1) {
       return std::make_shared<tree<t_A>>(Node{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<tree<t_A>> leaf_uptr() {
-      return std::make_unique<tree<t_A>>(Leaf{});
-    }
-
-    static std::unique_ptr<tree<t_A>>
-    node_uptr(t_A a0, const std::shared_ptr<tree<std::pair<t_A, t_A>>> &a1) {
-      return std::make_unique<tree<t_A>>(Node{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<tree<t_A>>
-    node_uptr(t_A a0, std::shared_ptr<tree<std::pair<t_A, t_A>>> &&a1) {
-      return std::make_unique<tree<t_A>>(Node{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS

@@ -49,20 +49,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -117,28 +103,6 @@ public:
     return std::make_shared<Positive>(XH{});
   }
 
-  static std::unique_ptr<Positive>
-  xi_uptr(const std::shared_ptr<Positive> &a0) {
-    return std::make_unique<Positive>(XI{a0});
-  }
-
-  static std::unique_ptr<Positive> xi_uptr(std::shared_ptr<Positive> &&a0) {
-    return std::make_unique<Positive>(XI{std::move(a0)});
-  }
-
-  static std::unique_ptr<Positive>
-  xo_uptr(const std::shared_ptr<Positive> &a0) {
-    return std::make_unique<Positive>(XO{a0});
-  }
-
-  static std::unique_ptr<Positive> xo_uptr(std::shared_ptr<Positive> &&a0) {
-    return std::make_unique<Positive>(XO{std::move(a0)});
-  }
-
-  static std::unique_ptr<Positive> xh_uptr() {
-    return std::make_unique<Positive>(XH{});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -188,24 +152,6 @@ public:
 
   static std::shared_ptr<Z> zneg(std::shared_ptr<Positive> &&a0) {
     return std::make_shared<Z>(Zneg{std::move(a0)});
-  }
-
-  static std::unique_ptr<Z> z0_uptr() { return std::make_unique<Z>(Z0{}); }
-
-  static std::unique_ptr<Z> zpos_uptr(const std::shared_ptr<Positive> &a0) {
-    return std::make_unique<Z>(Zpos{a0});
-  }
-
-  static std::unique_ptr<Z> zpos_uptr(std::shared_ptr<Positive> &&a0) {
-    return std::make_unique<Z>(Zpos{std::move(a0)});
-  }
-
-  static std::unique_ptr<Z> zneg_uptr(const std::shared_ptr<Positive> &a0) {
-    return std::make_unique<Z>(Zneg{a0});
-  }
-
-  static std::unique_ptr<Z> zneg_uptr(std::shared_ptr<Positive> &&a0) {
-    return std::make_unique<Z>(Zneg{std::move(a0)});
   }
 
   // MANIPULATORS

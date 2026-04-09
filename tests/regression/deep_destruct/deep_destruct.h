@@ -51,21 +51,6 @@ struct DeepDestruct {
           Mycons{std::move(a0), std::move(a1)});
     }
 
-    static std::unique_ptr<mylist<t_A>> mynil_uptr() {
-      return std::make_unique<mylist<t_A>>(Mynil{});
-    }
-
-    static std::unique_ptr<mylist<t_A>>
-    mycons_uptr(t_A a0, const std::shared_ptr<mylist<t_A>> &a1) {
-      return std::make_unique<mylist<t_A>>(Mycons{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<mylist<t_A>>
-    mycons_uptr(t_A a0, std::shared_ptr<mylist<t_A>> &&a1) {
-      return std::make_unique<mylist<t_A>>(
-          Mycons{std::move(a0), std::move(a1)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

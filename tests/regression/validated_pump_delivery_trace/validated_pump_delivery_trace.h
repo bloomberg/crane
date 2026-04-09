@@ -50,20 +50,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -258,90 +244,6 @@ public:
 
   static std::shared_ptr<Uint> d9(std::shared_ptr<Uint> &&a0) {
     return std::make_shared<Uint>(D9{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint> nil_uptr() {
-    return std::make_unique<Uint>(Nil{});
-  }
-
-  static std::unique_ptr<Uint> d0_uptr(const std::shared_ptr<Uint> &a0) {
-    return std::make_unique<Uint>(D0{a0});
-  }
-
-  static std::unique_ptr<Uint> d0_uptr(std::shared_ptr<Uint> &&a0) {
-    return std::make_unique<Uint>(D0{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint> d1_uptr(const std::shared_ptr<Uint> &a0) {
-    return std::make_unique<Uint>(D1{a0});
-  }
-
-  static std::unique_ptr<Uint> d1_uptr(std::shared_ptr<Uint> &&a0) {
-    return std::make_unique<Uint>(D1{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint> d2_uptr(const std::shared_ptr<Uint> &a0) {
-    return std::make_unique<Uint>(D2{a0});
-  }
-
-  static std::unique_ptr<Uint> d2_uptr(std::shared_ptr<Uint> &&a0) {
-    return std::make_unique<Uint>(D2{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint> d3_uptr(const std::shared_ptr<Uint> &a0) {
-    return std::make_unique<Uint>(D3{a0});
-  }
-
-  static std::unique_ptr<Uint> d3_uptr(std::shared_ptr<Uint> &&a0) {
-    return std::make_unique<Uint>(D3{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint> d4_uptr(const std::shared_ptr<Uint> &a0) {
-    return std::make_unique<Uint>(D4{a0});
-  }
-
-  static std::unique_ptr<Uint> d4_uptr(std::shared_ptr<Uint> &&a0) {
-    return std::make_unique<Uint>(D4{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint> d5_uptr(const std::shared_ptr<Uint> &a0) {
-    return std::make_unique<Uint>(D5{a0});
-  }
-
-  static std::unique_ptr<Uint> d5_uptr(std::shared_ptr<Uint> &&a0) {
-    return std::make_unique<Uint>(D5{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint> d6_uptr(const std::shared_ptr<Uint> &a0) {
-    return std::make_unique<Uint>(D6{a0});
-  }
-
-  static std::unique_ptr<Uint> d6_uptr(std::shared_ptr<Uint> &&a0) {
-    return std::make_unique<Uint>(D6{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint> d7_uptr(const std::shared_ptr<Uint> &a0) {
-    return std::make_unique<Uint>(D7{a0});
-  }
-
-  static std::unique_ptr<Uint> d7_uptr(std::shared_ptr<Uint> &&a0) {
-    return std::make_unique<Uint>(D7{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint> d8_uptr(const std::shared_ptr<Uint> &a0) {
-    return std::make_unique<Uint>(D8{a0});
-  }
-
-  static std::unique_ptr<Uint> d8_uptr(std::shared_ptr<Uint> &&a0) {
-    return std::make_unique<Uint>(D8{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint> d9_uptr(const std::shared_ptr<Uint> &a0) {
-    return std::make_unique<Uint>(D9{a0});
-  }
-
-  static std::unique_ptr<Uint> d9_uptr(std::shared_ptr<Uint> &&a0) {
-    return std::make_unique<Uint>(D9{std::move(a0)});
   }
 
   // MANIPULATORS
@@ -594,138 +496,6 @@ public:
     return std::make_shared<Uint0>(Df{std::move(a0)});
   }
 
-  static std::unique_ptr<Uint0> nil0_uptr() {
-    return std::make_unique<Uint0>(Nil0{});
-  }
-
-  static std::unique_ptr<Uint0> d10_uptr(const std::shared_ptr<Uint0> &a0) {
-    return std::make_unique<Uint0>(D10{a0});
-  }
-
-  static std::unique_ptr<Uint0> d10_uptr(std::shared_ptr<Uint0> &&a0) {
-    return std::make_unique<Uint0>(D10{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint0> d11_uptr(const std::shared_ptr<Uint0> &a0) {
-    return std::make_unique<Uint0>(D11{a0});
-  }
-
-  static std::unique_ptr<Uint0> d11_uptr(std::shared_ptr<Uint0> &&a0) {
-    return std::make_unique<Uint0>(D11{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint0> d12_uptr(const std::shared_ptr<Uint0> &a0) {
-    return std::make_unique<Uint0>(D12{a0});
-  }
-
-  static std::unique_ptr<Uint0> d12_uptr(std::shared_ptr<Uint0> &&a0) {
-    return std::make_unique<Uint0>(D12{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint0> d13_uptr(const std::shared_ptr<Uint0> &a0) {
-    return std::make_unique<Uint0>(D13{a0});
-  }
-
-  static std::unique_ptr<Uint0> d13_uptr(std::shared_ptr<Uint0> &&a0) {
-    return std::make_unique<Uint0>(D13{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint0> d14_uptr(const std::shared_ptr<Uint0> &a0) {
-    return std::make_unique<Uint0>(D14{a0});
-  }
-
-  static std::unique_ptr<Uint0> d14_uptr(std::shared_ptr<Uint0> &&a0) {
-    return std::make_unique<Uint0>(D14{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint0> d15_uptr(const std::shared_ptr<Uint0> &a0) {
-    return std::make_unique<Uint0>(D15{a0});
-  }
-
-  static std::unique_ptr<Uint0> d15_uptr(std::shared_ptr<Uint0> &&a0) {
-    return std::make_unique<Uint0>(D15{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint0> d16_uptr(const std::shared_ptr<Uint0> &a0) {
-    return std::make_unique<Uint0>(D16{a0});
-  }
-
-  static std::unique_ptr<Uint0> d16_uptr(std::shared_ptr<Uint0> &&a0) {
-    return std::make_unique<Uint0>(D16{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint0> d17_uptr(const std::shared_ptr<Uint0> &a0) {
-    return std::make_unique<Uint0>(D17{a0});
-  }
-
-  static std::unique_ptr<Uint0> d17_uptr(std::shared_ptr<Uint0> &&a0) {
-    return std::make_unique<Uint0>(D17{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint0> d18_uptr(const std::shared_ptr<Uint0> &a0) {
-    return std::make_unique<Uint0>(D18{a0});
-  }
-
-  static std::unique_ptr<Uint0> d18_uptr(std::shared_ptr<Uint0> &&a0) {
-    return std::make_unique<Uint0>(D18{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint0> d19_uptr(const std::shared_ptr<Uint0> &a0) {
-    return std::make_unique<Uint0>(D19{a0});
-  }
-
-  static std::unique_ptr<Uint0> d19_uptr(std::shared_ptr<Uint0> &&a0) {
-    return std::make_unique<Uint0>(D19{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint0> da_uptr(const std::shared_ptr<Uint0> &a0) {
-    return std::make_unique<Uint0>(Da{a0});
-  }
-
-  static std::unique_ptr<Uint0> da_uptr(std::shared_ptr<Uint0> &&a0) {
-    return std::make_unique<Uint0>(Da{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint0> db_uptr(const std::shared_ptr<Uint0> &a0) {
-    return std::make_unique<Uint0>(Db{a0});
-  }
-
-  static std::unique_ptr<Uint0> db_uptr(std::shared_ptr<Uint0> &&a0) {
-    return std::make_unique<Uint0>(Db{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint0> dc_uptr(const std::shared_ptr<Uint0> &a0) {
-    return std::make_unique<Uint0>(Dc{a0});
-  }
-
-  static std::unique_ptr<Uint0> dc_uptr(std::shared_ptr<Uint0> &&a0) {
-    return std::make_unique<Uint0>(Dc{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint0> dd_uptr(const std::shared_ptr<Uint0> &a0) {
-    return std::make_unique<Uint0>(Dd{a0});
-  }
-
-  static std::unique_ptr<Uint0> dd_uptr(std::shared_ptr<Uint0> &&a0) {
-    return std::make_unique<Uint0>(Dd{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint0> de_uptr(const std::shared_ptr<Uint0> &a0) {
-    return std::make_unique<Uint0>(De{a0});
-  }
-
-  static std::unique_ptr<Uint0> de_uptr(std::shared_ptr<Uint0> &&a0) {
-    return std::make_unique<Uint0>(De{std::move(a0)});
-  }
-
-  static std::unique_ptr<Uint0> df_uptr(const std::shared_ptr<Uint0> &a0) {
-    return std::make_unique<Uint0>(Df{a0});
-  }
-
-  static std::unique_ptr<Uint0> df_uptr(std::shared_ptr<Uint0> &&a0) {
-    return std::make_unique<Uint0>(Df{std::move(a0)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -770,25 +540,6 @@ public:
 
   static std::shared_ptr<Uint1> uinthexadecimal(std::shared_ptr<Uint0> &&u) {
     return std::make_shared<Uint1>(UIntHexadecimal{std::move(u)});
-  }
-
-  static std::unique_ptr<Uint1>
-  uintdecimal_uptr(const std::shared_ptr<Uint> &u) {
-    return std::make_unique<Uint1>(UIntDecimal{u});
-  }
-
-  static std::unique_ptr<Uint1> uintdecimal_uptr(std::shared_ptr<Uint> &&u) {
-    return std::make_unique<Uint1>(UIntDecimal{std::move(u)});
-  }
-
-  static std::unique_ptr<Uint1>
-  uinthexadecimal_uptr(const std::shared_ptr<Uint0> &u) {
-    return std::make_unique<Uint1>(UIntHexadecimal{u});
-  }
-
-  static std::unique_ptr<Uint1>
-  uinthexadecimal_uptr(std::shared_ptr<Uint0> &&u) {
-    return std::make_unique<Uint1>(UIntHexadecimal{std::move(u)});
   }
 
   // MANIPULATORS
@@ -973,27 +724,6 @@ struct ValidatedPumpDeliveryTraceCase {
 
     static std::shared_ptr<FaultStatus> fault_unknown() {
       return std::make_shared<FaultStatus>(Fault_Unknown{});
-    }
-
-    static std::unique_ptr<FaultStatus> fault_none_uptr() {
-      return std::make_unique<FaultStatus>(Fault_None{});
-    }
-
-    static std::unique_ptr<FaultStatus> fault_occlusion_uptr() {
-      return std::make_unique<FaultStatus>(Fault_Occlusion{});
-    }
-
-    static std::unique_ptr<FaultStatus>
-    fault_lowreservoir_uptr(unsigned int a0) {
-      return std::make_unique<FaultStatus>(Fault_LowReservoir{std::move(a0)});
-    }
-
-    static std::unique_ptr<FaultStatus> fault_batterylow_uptr() {
-      return std::make_unique<FaultStatus>(Fault_BatteryLow{});
-    }
-
-    static std::unique_ptr<FaultStatus> fault_unknown_uptr() {
-      return std::make_unique<FaultStatus>(Fault_Unknown{});
     }
 
     // MANIPULATORS
@@ -1198,19 +928,6 @@ struct ValidatedPumpDeliveryTraceCase {
       return std::make_shared<SuspendDecision>(Suspend_Withhold{});
     }
 
-    static std::unique_ptr<SuspendDecision> suspend_none_uptr() {
-      return std::make_unique<SuspendDecision>(Suspend_None{});
-    }
-
-    static std::unique_ptr<SuspendDecision>
-    suspend_reduce_uptr(Insulin_twentieth a0) {
-      return std::make_unique<SuspendDecision>(Suspend_Reduce{std::move(a0)});
-    }
-
-    static std::unique_ptr<SuspendDecision> suspend_withhold_uptr() {
-      return std::make_unique<SuspendDecision>(Suspend_Withhold{});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -1344,16 +1061,6 @@ struct ValidatedPumpDeliveryTraceCase {
 
     static std::shared_ptr<PrecisionResult> precerror(unsigned int a0) {
       return std::make_shared<PrecisionResult>(PrecError{std::move(a0)});
-    }
-
-    static std::unique_ptr<PrecisionResult> precok_uptr(Insulin_twentieth a0,
-                                                        bool a1) {
-      return std::make_unique<PrecisionResult>(
-          PrecOK{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<PrecisionResult> precerror_uptr(unsigned int a0) {
-      return std::make_unique<PrecisionResult>(PrecError{std::move(a0)});
     }
 
     // MANIPULATORS

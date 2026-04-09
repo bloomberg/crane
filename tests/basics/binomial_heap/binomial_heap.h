@@ -51,20 +51,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -110,22 +96,6 @@ struct BinomialHeap {
 
     static std::shared_ptr<tree> leaf() {
       return std::make_shared<tree>(Leaf{});
-    }
-
-    static std::unique_ptr<tree> node_uptr(key a0,
-                                           const std::shared_ptr<tree> &a1,
-                                           const std::shared_ptr<tree> &a2) {
-      return std::make_unique<tree>(Node{std::move(a0), a1, a2});
-    }
-
-    static std::unique_ptr<tree> node_uptr(key a0, std::shared_ptr<tree> &&a1,
-                                           std::shared_ptr<tree> &&a2) {
-      return std::make_unique<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
-    static std::unique_ptr<tree> leaf_uptr() {
-      return std::make_unique<tree>(Leaf{});
     }
 
     // MANIPULATORS

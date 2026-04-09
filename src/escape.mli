@@ -3,26 +3,15 @@
 
 (** Smart pointer optimization for MiniML AST.
 
-    Three-phase optimization strategy:
+    Two-phase optimization strategy:
 
-    Phase 1 (unique_ptr): Promote local shared_ptr to unique_ptr when safe
-    (single use, no escape).
-
-    Phase 2 (owned/borrowed): Infer whether function parameters need ownership
+    Phase 1 (owned/borrowed): Infer whether function parameters need ownership
     (pass by value) or can borrow (pass by const reference).
 
-    Phase 3 (reset/reuse): Reuse memory cells in pattern matches when
+    Phase 2 (reset/reuse): Reuse memory cells in pattern matches when
     use_count() == 1. *)
 
 open Miniml
-
-(** {2 Phase 1: unique_ptr optimization} *)
-
-(** [analyze body] returns MLletin depth indices (0-based) whose bindings are
-    safe to convert from shared_ptr to unique_ptr. Safe when: (1) non-enum,
-    non-coinductive inductive type, (2) not Dummy, (3) occurs ≤ 1 time in
-    continuation (max over branches), (4) does not escape. *)
-val analyze : ml_ast -> int list
 
 (** [nb_occur_match k t] counts occurrences of de Bruijn index [k] in [t], using
     maximum over branches (safe conservative estimate). *)

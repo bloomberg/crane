@@ -11,7 +11,7 @@ __attribute__((pure)) unsigned int AnonFixpoint::sum_to(const unsigned int n) {
       return std::move(acc);
     } else {
       unsigned int p = m - 1;
-      return go(std::move(p), (m + acc));
+      return go(p, (m + std::move(acc)));
     }
   };
   return go(n, 0u);
@@ -55,10 +55,10 @@ __attribute__((pure)) unsigned int AnonFixpoint::gcd(const unsigned int a,
     } else {
       unsigned int f = fuel - 1;
       if (y <= 0) {
-        return x;
+        return std::move(x);
       } else {
         unsigned int _x = y - 1;
-        return go(std::move(f), y, (y ? x % y : x));
+        return go(f, y, (y ? std::move(x) % y : std::move(x)));
       }
     }
   };

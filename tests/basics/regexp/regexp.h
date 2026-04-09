@@ -50,20 +50,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -165,50 +151,6 @@ struct Matcher {
 
     static std::shared_ptr<regexp> star(std::shared_ptr<regexp> &&r) {
       return std::make_shared<regexp>(Star{std::move(r)});
-    }
-
-    static std::unique_ptr<regexp> any_uptr() {
-      return std::make_unique<regexp>(Any{});
-    }
-
-    static std::unique_ptr<regexp> Char_uptr(int64_t c) {
-      return std::make_unique<regexp>(Char{std::move(c)});
-    }
-
-    static std::unique_ptr<regexp> eps_uptr() {
-      return std::make_unique<regexp>(Eps{});
-    }
-
-    static std::unique_ptr<regexp> cat_uptr(const std::shared_ptr<regexp> &r1,
-                                            const std::shared_ptr<regexp> &r2) {
-      return std::make_unique<regexp>(Cat{r1, r2});
-    }
-
-    static std::unique_ptr<regexp> cat_uptr(std::shared_ptr<regexp> &&r1,
-                                            std::shared_ptr<regexp> &&r2) {
-      return std::make_unique<regexp>(Cat{std::move(r1), std::move(r2)});
-    }
-
-    static std::unique_ptr<regexp> alt_uptr(const std::shared_ptr<regexp> &r1,
-                                            const std::shared_ptr<regexp> &r2) {
-      return std::make_unique<regexp>(Alt{r1, r2});
-    }
-
-    static std::unique_ptr<regexp> alt_uptr(std::shared_ptr<regexp> &&r1,
-                                            std::shared_ptr<regexp> &&r2) {
-      return std::make_unique<regexp>(Alt{std::move(r1), std::move(r2)});
-    }
-
-    static std::unique_ptr<regexp> zero_uptr() {
-      return std::make_unique<regexp>(Zero{});
-    }
-
-    static std::unique_ptr<regexp> star_uptr(const std::shared_ptr<regexp> &r) {
-      return std::make_unique<regexp>(Star{r});
-    }
-
-    static std::unique_ptr<regexp> star_uptr(std::shared_ptr<regexp> &&r) {
-      return std::make_unique<regexp>(Star{std::move(r)});
     }
 
     // MANIPULATORS

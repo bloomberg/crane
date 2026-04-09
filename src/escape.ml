@@ -4,17 +4,13 @@
 (** Smart pointer optimization for MiniML AST.
 
     This module performs escape analysis on MiniML terms to determine ownership
-    and uniqueness of values, enabling three optimizations:
+    of values, enabling two optimizations:
 
-    1. unique_ptr promotion: Values that are constructed and consumed linearly
-    (used exactly once, never aliased) can use std::unique_ptr instead of
-    std::shared_ptr, avoiding reference-counting overhead.
-
-    2. Owned/borrowed inference: Function parameters are classified as "owned"
+    1. Owned/borrowed inference: Function parameters are classified as "owned"
     (caller transfers ownership) or "borrowed" (caller retains ownership, callee
     receives const&), reducing unnecessary copies and reference-count bumps.
 
-    3. Memory reuse optimization: Destructive pattern matches on values with
+    2. Memory reuse optimization: Destructive pattern matches on values with
     use_count() == 1 can reuse the existing allocation by mutating fields
     in-place rather than allocating a new object.
 
@@ -120,7 +116,7 @@ let partial_app_remaining head args =
 let is_partial_app head args =
   partial_app_remaining head args <> None
 
-(** {2 Phase 1: Escape analysis for unique_ptr promotion} *)
+(** {2 Escape analysis} *)
 
 (** Check if de Bruijn index [k] escapes in [t].
 
@@ -130,7 +126,7 @@ let is_partial_app head args =
     - Tail position → returned to caller (caller owns it)
     - Fixpoint body (MLfix) → captured by recursive closure
 
-    Non-escaping positions (safe for unique_ptr):
+    Non-escaping positions:
     - Case scrutinee (MLcase) → destructured immediately
     - Under MLmagic → transparent wrapper
     - Function arguments (MLapp) → callee's responsibility *)
@@ -173,92 +169,7 @@ let escapes k t =
   in
   check k true t
 
-(** {2 Combined analysis: occurrence counting + escape analysis} *)
-
-(** Combined analysis result for a specific de Bruijn index. *)
-type occur_escape_result = {
-  count : int; (* Number of occurrences *)
-  escapes : bool; (* Whether the variable escapes *)
-}
-
-(** Analyze both occurrence count and escape status in a single traversal. This
-    is more efficient than calling nb_occur_match and escapes separately, as it
-    only walks the AST once instead of twice. *)
-let analyze_occur_escape k t =
-  let count = ref 0 in
-  let escaped = ref false in
-
-  (* [check k in_tail t]: traverse [t] to count occurrences and check escape.
-     [in_tail]: are we in tail position (return value)? *)
-  let rec check k in_tail = function
-    | MLrel i ->
-      if i = k then (
-        count := !count + 1;
-        if in_tail then escaped := true )
-    | MLcase (_, scrut, branches) ->
-      (* Scrutinee is safe (destructured). Count occurrences there. *)
-      ( match scrut with
-      | MLrel i when i = k -> count := !count + 1
-      | _ -> check k false scrut );
-      (* Branches inherit tail position. Use max for count. *)
-      let branch_results =
-        Array.map
-          (fun (ids, _, _, body) ->
-            let saved_count = !count in
-            let saved_escaped = !escaped in
-            count := 0;
-            check (k + List.length ids) in_tail body;
-            let result = (!count, !escaped) in
-            count := saved_count;
-            escaped := saved_escaped;
-            result )
-          branches
-      in
-      (* For count: use max over branches (conservative estimate) *)
-      let max_branch_count =
-        Array.fold_left (fun acc (c, _) -> max acc c) 0 branch_results
-      in
-      count := !count + max_branch_count;
-      (* For escape: any branch escaping means the variable escapes *)
-      Array.iter (fun (_, e) -> if e then escaped := true) branch_results
-    | MLletin (_, _, rhs, cont) ->
-      check k false rhs;
-      check (k + 1) in_tail cont
-    | MLlam (_, _, body) ->
-      (* Lambda capture → escape. Need to check if variable occurs. *)
-      if occurs (k + 1) body then escaped := true
-    | MLapp (head, args) ->
-      check k false head;
-      List.iter (check k false) args;
-      (* Partial application: args are captured by the generated closure *)
-      if is_partial_app head args then
-        List.iter (fun arg -> if occurs k arg then escaped := true) args
-    | MLfix (_, ids, bodies, _) ->
-      (* Fixpoint capture → escape. Need to check if variable occurs. *)
-      let k' = k + Array.length ids in
-      Array.iter (fun body -> if occurs k' body then escaped := true) bodies
-    | MLcons (_, _, args) ->
-      (* Constructor storage → escape if occurs *)
-      List.iter (fun arg -> if occurs k arg then escaped := true) args
-    | MLtuple args ->
-      List.iter (fun arg -> if occurs k arg then escaped := true) args
-    | MLmagic a -> check k in_tail a
-    | MLparray (elts, def) ->
-      (* Array storage → escape if occurs *)
-      Array.iter (fun elt -> if occurs k elt then escaped := true) elts;
-      if occurs k def then escaped := true
-    | MLglob _
-     |MLexn _
-     |MLdummy _
-     |MLaxiom _
-     |MLuint _
-     |MLfloat _
-     |MLstring _ -> ()
-  in
-  check k true t;
-  {count = !count; escapes = !escaped}
-
-(** {2 Phase 2: Owned/borrowed parameter inference} *)
+(** {2 Owned/borrowed parameter inference} *)
 
 (** Determine if parameters need ownership (pass by value) or can borrow (pass
     by const ref).
@@ -373,59 +284,6 @@ let rec is_shared_ptr_type = function
     | _ -> false )
   | Tmeta {contents = Some ty} -> is_shared_ptr_type ty
   | _ -> false
-
-(** Analyze [body] to find MLletin bindings safe for unique_ptr.
-
-    Returns list of letin depth indices (0-based) where binding satisfies: 1.
-    Non-enum, non-coinductive inductive type (shared_ptr candidate) 2. Not Dummy
-    3. RHS is constructor application (not function call) 4. Occurs ≤ 1 time in
-    continuation (max over branches) 5. Does not escape in continuation *)
-let analyze body =
-  let safe = ref [] in
-
-  let rec walk depth = function
-    | MLletin (id, ty, rhs, cont) ->
-      (* Check if safe for unique_ptr *)
-      ( if id <> Dummy && is_shared_ptr_type ty then
-          let is_ctor =
-            match rhs with
-            | MLcons _ | MLmagic (MLcons _) -> true
-            | _ -> false
-          in
-          let analysis = analyze_occur_escape 1 cont in
-          if is_ctor && analysis.count <= 1 && not analysis.escapes then
-            safe := depth :: !safe );
-      walk_subterm depth rhs;
-      walk (depth + 1) cont
-    | t -> walk_subterm depth t
-  (* Walk subterms without incrementing depth *)
-  and walk_subterm depth = function
-    | MLletin _ as t -> walk depth t
-    | MLcase (_, scrut, branches) ->
-      walk_subterm depth scrut;
-      Array.iter (fun (_, _, _, body) -> walk_subterm depth body) branches
-    | MLlam (_, _, body) -> walk_subterm depth body
-    | MLapp (head, args) ->
-      walk_subterm depth head;
-      List.iter (walk_subterm depth) args
-    | MLfix (_, _, bodies, _) -> Array.iter (walk_subterm depth) bodies
-    | MLcons (_, _, args) | MLtuple args -> List.iter (walk_subterm depth) args
-    | MLmagic a -> walk_subterm depth a
-    | MLparray (elts, def) ->
-      Array.iter (walk_subterm depth) elts;
-      walk_subterm depth def
-    | MLrel _
-     |MLglob _
-     |MLexn _
-     |MLdummy _
-     |MLaxiom _
-     |MLuint _
-     |MLfloat _
-     |MLstring _ -> ()
-  in
-
-  walk 0 body;
-  List.rev !safe
 
 (** {2 Phase 3: Reset/reuse optimization} *)
 

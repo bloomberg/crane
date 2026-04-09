@@ -78,9 +78,9 @@ LoopifySequences::collatz_list_fuel(const unsigned int fuel,
               _result = List<unsigned int>::cons(1u, List<unsigned int>::nil());
             } else {
               if ((2u ? n % 2u : n) == 0u) {
-                _stack.push_back(_Enter{(2u ? n / 2u : 0), std::move(f)});
+                _stack.push_back(_Enter{(2u ? std::move(n) / 2u : 0), f});
               } else {
-                _stack.push_back(_Enter{((3u * n) + 1u), std::move(f)});
+                _stack.push_back(_Enter{((3u * std::move(n)) + 1u), f});
               }
             }
           }
@@ -161,27 +161,35 @@ LoopifySequences::rotate_left_fuel(const unsigned int fuel,
       unsigned int f = _loop_fuel - 1;
       if (_loop_n == 0u) {
         {
-          _result = _loop_l;
+          _result = std::move(_loop_l);
           _continue = false;
         }
       } else {
-        std::visit(
-            Overloaded{[&](const typename List<unsigned int>::Nil _args) {
-                         _result = List<unsigned int>::nil();
-                         _continue = false;
-                       },
-                       [&](const typename List<unsigned int>::Cons _args) {
-                         std::shared_ptr<List<unsigned int>> _next_l =
-                             _args.d_a1->app(List<unsigned int>::cons(
-                                 _args.d_a0, List<unsigned int>::nil()));
-                         unsigned int _next_n =
-                             (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-                         unsigned int _next_fuel = std::move(f);
-                         _loop_l = std::move(_next_l);
-                         _loop_n = std::move(_next_n);
-                         _loop_fuel = std::move(_next_fuel);
-                       }},
-            _loop_l->v());
+        if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
+          auto &_rf = std::get<0>(_loop_l->v_mut());
+          {
+            _result = _loop_l;
+            _continue = false;
+          }
+        } else {
+          std::visit(
+              Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+                           _result = List<unsigned int>::nil();
+                           _continue = false;
+                         },
+                         [&](const typename List<unsigned int>::Cons _args) {
+                           std::shared_ptr<List<unsigned int>> _next_l =
+                               _args.d_a1->app(List<unsigned int>::cons(
+                                   _args.d_a0, List<unsigned int>::nil()));
+                           unsigned int _next_n = ((
+                               (_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
+                           unsigned int _next_fuel = f;
+                           _loop_l = std::move(_next_l);
+                           _loop_n = std::move(_next_n);
+                           _loop_fuel = std::move(_next_fuel);
+                         }},
+              _loop_l->v());
+        }
       }
     }
   }
@@ -282,7 +290,7 @@ std::shared_ptr<List<unsigned int>> LoopifySequences::repeat_with_sep(
                             } else {
                               unsigned int m = n - 1;
                               if (m <= 0) {
-                                _result = s;
+                                _result = std::move(s);
                               } else {
                                 unsigned int _x = m - 1;
                                 _stack.push_back(_Call1{s, sep});

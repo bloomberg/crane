@@ -55,23 +55,6 @@ struct MoveSafety {
           Node{std::move(a0), std::move(a1), std::move(a2)});
     }
 
-    static std::unique_ptr<tree> leaf_uptr() {
-      return std::make_unique<tree>(Leaf{});
-    }
-
-    static std::unique_ptr<tree> node_uptr(const std::shared_ptr<tree> &a0,
-                                           unsigned int a1,
-                                           const std::shared_ptr<tree> &a2) {
-      return std::make_unique<tree>(Node{a0, std::move(a1), a2});
-    }
-
-    static std::unique_ptr<tree> node_uptr(std::shared_ptr<tree> &&a0,
-                                           unsigned int a1,
-                                           std::shared_ptr<tree> &&a2) {
-      return std::make_unique<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -254,11 +237,6 @@ struct MoveSafety {
       return std::make_shared<fn_box>(Box{std::move(a0)});
     }
 
-    static std::unique_ptr<fn_box>
-    box_uptr(std::function<unsigned int(unsigned int)> a0) {
-      return std::make_unique<fn_box>(Box{std::move(a0)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -297,9 +275,9 @@ struct MoveSafety {
   /// Then wrap_tree takes t by value, so std::move(t) is generated.
   /// The lambda then holds a dangling reference.
   static inline const unsigned int bug_partial_then_wrap = []() {
-    std::unique_ptr<tree> t =
-        tree::node_uptr(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                        tree::node(tree::leaf(), 30u, tree::leaf()));
+    std::shared_ptr<tree> t =
+        tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                   tree::node(tree::leaf(), 30u, tree::leaf()));
     return std::move(t)->sum_values(99u);
   }();
   /// TEST 2: Store partial application in a Box.
@@ -308,9 +286,9 @@ struct MoveSafety {
   /// function returns.
   static std::shared_ptr<fn_box> make_box(std::shared_ptr<tree> t);
   static inline const unsigned int bug_box_escape = []() {
-    std::unique_ptr<tree> t =
-        tree::node_uptr(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                        tree::node(tree::leaf(), 30u, tree::leaf()));
+    std::shared_ptr<tree> t =
+        tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                   tree::node(tree::leaf(), 30u, tree::leaf()));
     std::shared_ptr<fn_box> b = make_box(std::move(t));
     return std::move(b)->apply_box(99u);
   }();

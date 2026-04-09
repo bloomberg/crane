@@ -48,13 +48,6 @@ public:
   static bsl::shared_ptr<Nat> s(bsl::shared_ptr<Nat> &&n) {
     return bsl::make_shared<Nat>(S{bsl::move(n)});
   }
-  static bsl::unique_ptr<Nat> o_uptr() { return bsl::make_unique<Nat>(O{}); }
-  static bsl::unique_ptr<Nat> s_uptr(const bsl::shared_ptr<Nat> &n) {
-    return bsl::make_unique<Nat>(S{n});
-  }
-  static bsl::unique_ptr<Nat> s_uptr(bsl::shared_ptr<Nat> &&n) {
-    return bsl::make_unique<Nat>(S{bsl::move(n)});
-  }
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
   // ACCESSORS

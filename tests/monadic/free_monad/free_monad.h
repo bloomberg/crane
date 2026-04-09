@@ -77,30 +77,6 @@ struct FreeMonad {
       return std::make_shared<IO>(Print{std::move(a0)});
     }
 
-    static std::unique_ptr<IO> pure_uptr(std::any a) {
-      return std::make_unique<IO>(Pure{std::move(a)});
-    }
-
-    static std::unique_ptr<IO>
-    bind_uptr(const std::shared_ptr<IO> &a,
-              std::function<std::shared_ptr<IO>(std::any)> b) {
-      return std::make_unique<IO>(Bind{a, std::move(b)});
-    }
-
-    static std::unique_ptr<IO>
-    bind_uptr(std::shared_ptr<IO> &&a,
-              std::function<std::shared_ptr<IO>(std::any)> b) {
-      return std::make_unique<IO>(Bind{std::move(a), std::move(b)});
-    }
-
-    static std::unique_ptr<IO> get_line_uptr() {
-      return std::make_unique<IO>(Get_line{});
-    }
-
-    static std::unique_ptr<IO> print_uptr(std::string a0) {
-      return std::make_unique<IO>(Print{std::move(a0)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

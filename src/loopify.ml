@@ -1521,11 +1521,9 @@ let has_triple_call_expr check body = has_n_call_expr 3 check body
 let is_ctor_factory_call = function
   | CPPfun_call (CPPqualified (type_expr, factory_id), args) ->
     let factory_s = Id.to_string factory_id in
-    (* Skip _uptr variants — TMC only works with shared_ptr factories *)
     let n = String.length factory_s in
-    if n > 5 && String.sub factory_s (n - 5) 5 = "_uptr" then None
     (* Skip built-in accessors and other non-factory qualified calls *)
-    else if factory_s = "v" || factory_s = "v_mut" || factory_s = "lazy_"
+    if factory_s = "v" || factory_s = "v_mut" || factory_s = "lazy_"
     then None
     else
       (* Strip trailing underscore (collision escape) before capitalizing *)

@@ -57,25 +57,6 @@ struct LoopifyTreeVariants {
           TNode{std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
     }
 
-    static std::unique_ptr<ternary> tleaf_uptr() {
-      return std::make_unique<ternary>(TLeaf{});
-    }
-
-    static std::unique_ptr<ternary>
-    tnode_uptr(const std::shared_ptr<ternary> &a0, unsigned int a1,
-               const std::shared_ptr<ternary> &a2,
-               const std::shared_ptr<ternary> &a3) {
-      return std::make_unique<ternary>(TNode{a0, std::move(a1), a2, a3});
-    }
-
-    static std::unique_ptr<ternary> tnode_uptr(std::shared_ptr<ternary> &&a0,
-                                               unsigned int a1,
-                                               std::shared_ptr<ternary> &&a2,
-                                               std::shared_ptr<ternary> &&a3) {
-      return std::make_unique<ternary>(
-          TNode{std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -416,26 +397,6 @@ struct LoopifyTreeVariants {
           Quad{std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
     }
 
-    static std::unique_ptr<quadtree> qleaf_uptr(unsigned int a0) {
-      return std::make_unique<quadtree>(QLeaf{std::move(a0)});
-    }
-
-    static std::unique_ptr<quadtree>
-    quad_uptr(const std::shared_ptr<quadtree> &a0,
-              const std::shared_ptr<quadtree> &a1,
-              const std::shared_ptr<quadtree> &a2,
-              const std::shared_ptr<quadtree> &a3) {
-      return std::make_unique<quadtree>(Quad{a0, a1, a2, a3});
-    }
-
-    static std::unique_ptr<quadtree> quad_uptr(std::shared_ptr<quadtree> &&a0,
-                                               std::shared_ptr<quadtree> &&a1,
-                                               std::shared_ptr<quadtree> &&a2,
-                                               std::shared_ptr<quadtree> &&a3) {
-      return std::make_unique<quadtree>(
-          Quad{std::move(a0), std::move(a1), std::move(a2), std::move(a3)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -756,22 +717,6 @@ struct LoopifyTreeVariants {
     static std::shared_ptr<leaf_tree> lnode(std::shared_ptr<leaf_tree> &&a0,
                                             std::shared_ptr<leaf_tree> &&a1) {
       return std::make_shared<leaf_tree>(LNode{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<leaf_tree> lleaf_uptr(unsigned int a0) {
-      return std::make_unique<leaf_tree>(LLeaf{std::move(a0)});
-    }
-
-    static std::unique_ptr<leaf_tree>
-    lnode_uptr(const std::shared_ptr<leaf_tree> &a0,
-               const std::shared_ptr<leaf_tree> &a1) {
-      return std::make_unique<leaf_tree>(LNode{a0, a1});
-    }
-
-    static std::unique_ptr<leaf_tree>
-    lnode_uptr(std::shared_ptr<leaf_tree> &&a0,
-               std::shared_ptr<leaf_tree> &&a1) {
-      return std::make_unique<leaf_tree>(LNode{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS

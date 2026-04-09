@@ -84,33 +84,6 @@ struct MutualRecursion {
       return std::make_shared<expr>(UnOp{std::move(a0), std::move(a1)});
     }
 
-    static std::unique_ptr<expr> val_uptr(unsigned int a0) {
-      return std::make_unique<expr>(Val{std::move(a0)});
-    }
-
-    static std::unique_ptr<expr> binop_uptr(unsigned int a0,
-                                            const std::shared_ptr<expr> &a1,
-                                            const std::shared_ptr<expr> &a2) {
-      return std::make_unique<expr>(BinOp{std::move(a0), a1, a2});
-    }
-
-    static std::unique_ptr<expr> binop_uptr(unsigned int a0,
-                                            std::shared_ptr<expr> &&a1,
-                                            std::shared_ptr<expr> &&a2) {
-      return std::make_unique<expr>(
-          BinOp{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
-    static std::unique_ptr<expr> unop_uptr(unsigned int a0,
-                                           const std::shared_ptr<expr> &a1) {
-      return std::make_unique<expr>(UnOp{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<expr> unop_uptr(unsigned int a0,
-                                           std::shared_ptr<expr> &&a1) {
-      return std::make_unique<expr>(UnOp{std::move(a0), std::move(a1)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

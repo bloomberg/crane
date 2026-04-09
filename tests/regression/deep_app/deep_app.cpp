@@ -24,7 +24,7 @@ DeepApp::build(const unsigned int n,
       {
         std::shared_ptr<DeepApp::mylist<unsigned int>> _next_acc =
             mylist<unsigned int>::mycons(_loop_n, _loop_acc);
-        unsigned int _next_n = std::move(n_);
+        unsigned int _next_n = n_;
         _loop_acc = std::move(_next_acc);
         _loop_n = std::move(_next_n);
       }

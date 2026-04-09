@@ -22,16 +22,21 @@ DisassembleOps::drop_(const unsigned int n,
     return std::move(l);
   } else {
     unsigned int n_ = n - 1;
-    return std::visit(
-        Overloaded{[](const typename List<unsigned int>::Nil _args)
-                       -> std::shared_ptr<List<unsigned int>> {
-                     return List<unsigned int>::nil();
-                   },
-                   [&](const typename List<unsigned int>::Cons _args)
-                       -> std::shared_ptr<List<unsigned int>> {
-                     return drop_(std::move(n_), _args.d_a1);
-                   }},
-        l->v());
+    if (l.use_count() == 1 && l->v().index() == 0) {
+      auto &_rf = std::get<0>(l->v_mut());
+      return l;
+    } else {
+      return std::visit(
+          Overloaded{[](const typename List<unsigned int>::Nil _args)
+                         -> std::shared_ptr<List<unsigned int>> {
+                       return List<unsigned int>::nil();
+                     },
+                     [&](const typename List<unsigned int>::Cons _args)
+                         -> std::shared_ptr<List<unsigned int>> {
+                       return drop_(n_, _args.d_a1);
+                     }},
+          l->v());
+    }
   }
 }
 

@@ -51,11 +51,6 @@ struct LetIn {
           Pair0{std::move(a0), std::move(a1)});
     }
 
-    static std::unique_ptr<pair<t_A, t_B>> pair0_uptr(t_A a0, t_B a1) {
-      return std::make_unique<pair<t_A, t_B>>(
-          Pair0{std::move(a0), std::move(a1)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -82,8 +77,8 @@ struct LetIn {
   }
 
   static inline const unsigned int let_destruct = []() {
-    std::unique_ptr<pair<unsigned int, unsigned int>> p =
-        pair<unsigned int, unsigned int>::pair0_uptr(3u, 4u);
+    std::shared_ptr<pair<unsigned int, unsigned int>> p =
+        pair<unsigned int, unsigned int>::pair0(3u, 4u);
     return std::visit(
         Overloaded{
             [](const typename pair<unsigned int, unsigned int>::Pair0 _args)

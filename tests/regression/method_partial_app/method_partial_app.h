@@ -55,23 +55,6 @@ struct MethodPartialApp {
           Node{std::move(a0), std::move(a1), std::move(a2)});
     }
 
-    static std::unique_ptr<tree> leaf_uptr() {
-      return std::make_unique<tree>(Leaf{});
-    }
-
-    static std::unique_ptr<tree> node_uptr(const std::shared_ptr<tree> &a0,
-                                           unsigned int a1,
-                                           const std::shared_ptr<tree> &a2) {
-      return std::make_unique<tree>(Node{a0, std::move(a1), a2});
-    }
-
-    static std::unique_ptr<tree> node_uptr(std::shared_ptr<tree> &&a0,
-                                           unsigned int a1,
-                                           std::shared_ptr<tree> &&a2) {
-      return std::make_unique<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -161,11 +144,6 @@ struct MethodPartialApp {
       return std::make_shared<box>(Box0{std::move(a0)});
     }
 
-    static std::unique_ptr<box>
-    box0_uptr(std::function<unsigned int(unsigned int)> a0) {
-      return std::make_unique<box>(Box0{std::move(a0)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -196,8 +174,8 @@ struct MethodPartialApp {
       std::shared_ptr<tree> t =
           tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                      tree::node(tree::leaf(), 30u, tree::leaf()));
-      std::unique_ptr<box> b =
-          box::box0_uptr([=](unsigned int _x0) mutable -> unsigned int {
+      std::shared_ptr<box> b =
+          box::box0([=](unsigned int _x0) mutable -> unsigned int {
             return t->add_to_sum(_x0);
           });
       return std::visit(

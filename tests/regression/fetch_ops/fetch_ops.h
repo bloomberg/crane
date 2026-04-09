@@ -50,20 +50,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -122,15 +108,20 @@ struct FetchOps {
       return std::move(l);
     } else {
       unsigned int n_ = n - 1;
-      return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::nil();
-                                   },
-                                   [&](const typename List<T1>::Cons _args)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return drop<T1>(std::move(n_), _args.d_a1);
-                                   }},
-                        l->v());
+      if (l.use_count() == 1 && l->v().index() == 0) {
+        auto &_rf = std::get<0>(l->v_mut());
+        return l;
+      } else {
+        return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
+                                         -> std::shared_ptr<List<T1>> {
+                                       return List<T1>::nil();
+                                     },
+                                     [&](const typename List<T1>::Cons _args)
+                                         -> std::shared_ptr<List<T1>> {
+                                       return drop<T1>(n_, _args.d_a1);
+                                     }},
+                          l->v());
+      }
     }
   }
 
@@ -165,7 +156,7 @@ struct FetchOps {
           0u);
       unsigned int _x = p.first;
       unsigned int next = p.second;
-      return std::move(next);
+      return next;
     } else {
       return 0u;
     }

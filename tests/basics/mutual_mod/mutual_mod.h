@@ -53,20 +53,6 @@ struct EvenOdd {
       return std::make_shared<even_list>(ECons{std::move(a0), std::move(a1)});
     }
 
-    static std::unique_ptr<even_list> enil_uptr() {
-      return std::make_unique<even_list>(ENil{});
-    }
-
-    static std::unique_ptr<even_list>
-    econs_uptr(unsigned int a0, const std::shared_ptr<odd_list> &a1) {
-      return std::make_unique<even_list>(ECons{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<even_list>
-    econs_uptr(unsigned int a0, std::shared_ptr<odd_list> &&a1) {
-      return std::make_unique<even_list>(ECons{std::move(a0), std::move(a1)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -99,16 +85,6 @@ struct EvenOdd {
     static std::shared_ptr<odd_list> ocons(unsigned int a0,
                                            std::shared_ptr<even_list> &&a1) {
       return std::make_shared<odd_list>(OCons{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<odd_list>
-    ocons_uptr(unsigned int a0, const std::shared_ptr<even_list> &a1) {
-      return std::make_unique<odd_list>(OCons{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<odd_list>
-    ocons_uptr(unsigned int a0, std::shared_ptr<even_list> &&a1) {
-      return std::make_unique<odd_list>(OCons{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS

@@ -45,14 +45,6 @@ struct ForwardSpecAscii {
       return std::make_shared<node>(BNode{std::move(a0)});
     }
 
-    static std::unique_ptr<node> anode_uptr(unsigned int a0) {
-      return std::make_unique<node>(ANode{std::move(a0)});
-    }
-
-    static std::unique_ptr<node> bnode_uptr(unsigned int a0) {
-      return std::make_unique<node>(BNode{std::move(a0)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 

@@ -55,23 +55,6 @@ struct ClosureChain {
           Node{std::move(a0), std::move(a1), std::move(a2)});
     }
 
-    static std::unique_ptr<tree> leaf_uptr() {
-      return std::make_unique<tree>(Leaf{});
-    }
-
-    static std::unique_ptr<tree> node_uptr(const std::shared_ptr<tree> &a0,
-                                           unsigned int a1,
-                                           const std::shared_ptr<tree> &a2) {
-      return std::make_unique<tree>(Node{a0, std::move(a1), a2});
-    }
-
-    static std::unique_ptr<tree> node_uptr(std::shared_ptr<tree> &&a0,
-                                           unsigned int a1,
-                                           std::shared_ptr<tree> &&a2) {
-      return std::make_unique<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -124,17 +107,17 @@ struct ClosureChain {
              const unsigned int _x0);
   /// Test: make_chain 0 t 5 = tree_sum(t) + 5 = 10 + 5 = 15
   static inline const unsigned int chain_0 = []() {
-    std::unique_ptr<tree> t = tree::node_uptr(tree::leaf(), 10u, tree::leaf());
+    std::shared_ptr<tree> t = tree::node(tree::leaf(), 10u, tree::leaf());
     return make_chain(0u, std::move(t), 5u);
   }();
   /// Test: make_chain 1 t 5 = (make_chain 0 t) (5 + 1) = 10 + 6 = 16
   static inline const unsigned int chain_1 = []() {
-    std::unique_ptr<tree> t = tree::node_uptr(tree::leaf(), 10u, tree::leaf());
+    std::shared_ptr<tree> t = tree::node(tree::leaf(), 10u, tree::leaf());
     return make_chain(1u, std::move(t), 5u);
   }();
   /// Test: make_chain 3 t 0 = (make_chain 0 t) 3 = 10 + 3 = 13
   static inline const unsigned int chain_3 = []() {
-    std::unique_ptr<tree> t = tree::node_uptr(tree::leaf(), 10u, tree::leaf());
+    std::shared_ptr<tree> t = tree::node(tree::leaf(), 10u, tree::leaf());
     return make_chain(3u, std::move(t), 0u);
   }();
   /// Store the chain result and call it twice.

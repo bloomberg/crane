@@ -50,20 +50,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -317,17 +303,26 @@ struct LoopifyPolymorphic {
         }
       } else {
         unsigned int n_ = _loop_n - 1;
-        std::visit(Overloaded{[&](const typename List<T1>::Nil _args) {
-                                _result = List<T1>::nil();
-                                _continue = false;
-                              },
-                              [&](const typename List<T1>::Cons _args) {
-                                std::shared_ptr<List<T1>> _next_l = _args.d_a1;
-                                unsigned int _next_n = std::move(n_);
-                                _loop_l = std::move(_next_l);
-                                _loop_n = std::move(_next_n);
-                              }},
-                   _loop_l->v());
+        if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
+          auto &_rf = std::get<0>(_loop_l->v_mut());
+          {
+            _result = _loop_l;
+            _continue = false;
+          }
+        } else {
+          std::visit(Overloaded{[&](const typename List<T1>::Nil _args) {
+                                  _result = List<T1>::nil();
+                                  _continue = false;
+                                },
+                                [&](const typename List<T1>::Cons _args) {
+                                  std::shared_ptr<List<T1>> _next_l =
+                                      _args.d_a1;
+                                  unsigned int _next_n = n_;
+                                  _loop_l = std::move(_next_l);
+                                  _loop_n = std::move(_next_n);
+                                }},
+                     _loop_l->v());
+        }
       }
     }
     return _result;

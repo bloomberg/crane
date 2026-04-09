@@ -37,11 +37,6 @@ struct BenchLetIn {
           Pair0{std::move(a0), std::move(a1)});
     }
 
-    static std::unique_ptr<pair<t_A, t_B>> pair0_uptr(t_A a0, t_B a1) {
-      return std::make_unique<pair<t_A, t_B>>(
-          Pair0{std::move(a0), std::move(a1)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -96,12 +91,6 @@ struct BenchLetIn {
     static std::shared_ptr<triple<t_A, t_B, t_C>> triple0(t_A a0, t_B a1,
                                                           t_C a2) {
       return std::make_shared<triple<t_A, t_B, t_C>>(
-          Triple0{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
-    static std::unique_ptr<triple<t_A, t_B, t_C>> triple0_uptr(t_A a0, t_B a1,
-                                                               t_C a2) {
-      return std::make_unique<triple<t_A, t_B, t_C>>(
           Triple0{std::move(a0), std::move(a1), std::move(a2)});
     }
 

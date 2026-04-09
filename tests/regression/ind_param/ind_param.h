@@ -62,20 +62,6 @@ struct IndParam {
         return std::make_shared<result>(Err{std::move(a0)});
       }
 
-      static std::unique_ptr<result>
-      ok_uptr(const std::shared_ptr<typename C::t> &a0) {
-        return std::make_unique<result>(Ok{a0});
-      }
-
-      static std::unique_ptr<result>
-      ok_uptr(std::shared_ptr<typename C::t> &&a0) {
-        return std::make_unique<result>(Ok{std::move(a0)});
-      }
-
-      static std::unique_ptr<result> err_uptr(unsigned int a0) {
-        return std::make_unique<result>(Err{std::move(a0)});
-      }
-
       // MANIPULATORS
       __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -177,18 +163,6 @@ struct IndParam {
 
       static std::shared_ptr<t> pair(elem a0, elem a1) {
         return std::make_shared<t>(Pair{std::move(a0), std::move(a1)});
-      }
-
-      static std::unique_ptr<t> empty_uptr() {
-        return std::make_unique<t>(Empty{});
-      }
-
-      static std::unique_ptr<t> single_uptr(elem a0) {
-        return std::make_unique<t>(Single{std::move(a0)});
-      }
-
-      static std::unique_ptr<t> pair_uptr(elem a0, elem a1) {
-        return std::make_unique<t>(Pair{std::move(a0), std::move(a1)});
       }
 
       // MANIPULATORS

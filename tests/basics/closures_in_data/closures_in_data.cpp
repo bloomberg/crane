@@ -47,7 +47,7 @@ __attribute__((pure)) unsigned int ClosuresInData::maybe_apply(
     const unsigned int x) {
   if (mf.has_value()) {
     std::function<unsigned int(unsigned int)> f = *mf;
-    return std::move(f)(x);
+    return f(std::move(x));
   } else {
     return std::move(x);
   }

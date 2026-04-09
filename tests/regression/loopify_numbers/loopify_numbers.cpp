@@ -182,15 +182,16 @@ LoopifyNumbers::gcd_fuel(const unsigned int fuel, const unsigned int a,
       unsigned int f = _loop_fuel - 1;
       if (_loop_b <= 0) {
         {
-          _result = _loop_a;
+          _result = std::move(_loop_a);
           _continue = false;
         }
       } else {
         unsigned int _x = _loop_b - 1;
         {
-          unsigned int _next_b = (_loop_b ? _loop_a % _loop_b : _loop_a);
+          unsigned int _next_b =
+              (_loop_b ? std::move(_loop_a) % _loop_b : std::move(_loop_a));
           unsigned int _next_a = _loop_b;
-          unsigned int _next_fuel = std::move(f);
+          unsigned int _next_fuel = f;
           _loop_b = std::move(_next_b);
           _loop_a = std::move(_next_a);
           _loop_fuel = std::move(_next_fuel);
@@ -343,12 +344,11 @@ LoopifyNumbers::ackermann_fuel(const unsigned int fuel, const unsigned int m,
                               } else {
                                 unsigned int m_ = m - 1;
                                 if (n <= 0) {
-                                  _stack.push_back(
-                                      _Enter{1u, std::move(m_), f});
+                                  _stack.push_back(_Enter{1u, m_, f});
                                 } else {
                                   unsigned int n_ = n - 1;
                                   _stack.push_back(_Call1{m_, f});
-                                  _stack.push_back(_Enter{std::move(n_), m, f});
+                                  _stack.push_back(_Enter{n_, m, f});
                                 }
                               }
                             }
@@ -601,11 +601,11 @@ LoopifyNumbers::alternating_sum(const bool sign, const unsigned int acc,
       unsigned int m = _loop_n - 1;
       unsigned int new_acc;
       if (_loop_sign) {
-        new_acc = (_loop_acc + std::move(_loop_n));
+        new_acc = (std::move(_loop_acc) + _loop_n);
       } else {
-        new_acc = (((_loop_acc - std::move(_loop_n)) > _loop_acc
+        new_acc = (((std::move(_loop_acc) - _loop_n) > std::move(_loop_acc)
                         ? 0
-                        : (_loop_acc - std::move(_loop_n))));
+                        : (std::move(_loop_acc) - _loop_n)));
       }
       {
         unsigned int _next_n = m;

@@ -688,7 +688,7 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                       unsigned int capped;
                       if (input->pi_weight_kg.has_value()) {
                         unsigned int w = *input->pi_weight_kg;
-                        capped = cap_pediatric(adult_capped, std::move(w));
+                        capped = cap_pediatric(std::move(adult_capped), w);
                       } else {
                         capped = std::move(adult_capped);
                       }
@@ -831,7 +831,7 @@ ValidatedPumpDeliveryTraceCase::option_nat_default(
     const std::optional<unsigned int> x, const unsigned int d) {
   if (x.has_value()) {
     unsigned int v = *x;
-    return std::move(v);
+    return v;
   } else {
     return std::move(d);
   }
@@ -868,7 +868,7 @@ __attribute__((pure)) unsigned int Nat::tail_add(const unsigned int n,
     return std::move(m);
   } else {
     unsigned int n0 = n - 1;
-    return Nat::tail_add(std::move(n0), (m + 1));
+    return Nat::tail_add(n0, (m + 1));
   }
 }
 
@@ -879,7 +879,7 @@ __attribute__((pure)) unsigned int Nat::tail_addmul(const unsigned int r,
     return std::move(r);
   } else {
     unsigned int n0 = n - 1;
-    return Nat::tail_addmul(Nat::tail_add(m, r), n0, m);
+    return Nat::tail_addmul(Nat::tail_add(m, std::move(r)), n0, m);
   }
 }
 

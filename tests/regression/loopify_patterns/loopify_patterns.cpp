@@ -816,16 +816,22 @@ LoopifyPatterns::process_twice_fuel(
                 _result = std::move(l);
               } else {
                 unsigned int f = fuel - 1;
-                std::visit(Overloaded{[&](const typename LoopifyPatterns::list<
-                                          unsigned int>::Nil _args) -> void {
-                                        _result = list<unsigned int>::nil();
-                                      },
-                                      [&](const typename LoopifyPatterns::list<
-                                          unsigned int>::Cons _args) -> void {
-                                        _stack.push_back(_Call1{_args, f});
-                                        _stack.push_back(_Enter{_args.d_a1, f});
-                                      }},
-                           l->v());
+                if (l.use_count() == 1 && l->v().index() == 0) {
+                  auto &_rf = std::get<0>(l->v_mut());
+                  _result = l;
+                } else {
+                  std::visit(
+                      Overloaded{[&](const typename LoopifyPatterns::list<
+                                     unsigned int>::Nil _args) -> void {
+                                   _result = list<unsigned int>::nil();
+                                 },
+                                 [&](const typename LoopifyPatterns::list<
+                                     unsigned int>::Cons _args) -> void {
+                                   _stack.push_back(_Call1{_args, f});
+                                   _stack.push_back(_Enter{_args.d_a1, f});
+                                 }},
+                      l->v());
+                }
               }
             },
             [&](_Call1 _f) {
@@ -835,7 +841,7 @@ LoopifyPatterns::process_twice_fuel(
               std::shared_ptr<LoopifyPatterns::list<unsigned int>> first =
                   _result;
               _stack.push_back(_Call2{_args});
-              _stack.push_back(_Enter{std::move(first), std::move(f)});
+              _stack.push_back(_Enter{std::move(first), f});
             },
             [&](_Call2 _f) {
               const typename LoopifyPatterns::list<unsigned int>::Cons _args =
@@ -892,8 +898,8 @@ LoopifyPatterns::as_guard_fuel(
               },
               [&](const typename LoopifyPatterns::list<unsigned int>::Cons
                       _args) {
-                std::unique_ptr<LoopifyPatterns::list<unsigned int>> all =
-                    list<unsigned int>::cons_uptr(_args.d_a0, _args.d_a1);
+                std::shared_ptr<LoopifyPatterns::list<unsigned int>> all =
+                    list<unsigned int>::cons(_args.d_a0, _args.d_a1);
                 if (3u < list_len(std::move(all))) {
                   auto _cell = list<unsigned int>::cons(_args.d_a0, nullptr);
                   if (_last) {
@@ -1200,16 +1206,22 @@ LoopifyPatterns::process_twice_alt_fuel(
                 _result = std::move(l);
               } else {
                 unsigned int f = fuel - 1;
-                std::visit(Overloaded{[&](const typename LoopifyPatterns::list<
-                                          unsigned int>::Nil _args) -> void {
-                                        _result = list<unsigned int>::nil();
-                                      },
-                                      [&](const typename LoopifyPatterns::list<
-                                          unsigned int>::Cons _args) -> void {
-                                        _stack.push_back(_Call1{_args, f});
-                                        _stack.push_back(_Enter{_args.d_a1, f});
-                                      }},
-                           l->v());
+                if (l.use_count() == 1 && l->v().index() == 0) {
+                  auto &_rf = std::get<0>(l->v_mut());
+                  _result = l;
+                } else {
+                  std::visit(
+                      Overloaded{[&](const typename LoopifyPatterns::list<
+                                     unsigned int>::Nil _args) -> void {
+                                   _result = list<unsigned int>::nil();
+                                 },
+                                 [&](const typename LoopifyPatterns::list<
+                                     unsigned int>::Cons _args) -> void {
+                                   _stack.push_back(_Call1{_args, f});
+                                   _stack.push_back(_Enter{_args.d_a1, f});
+                                 }},
+                      l->v());
+                }
               }
             },
             [&](_Call1 _f) {
@@ -1219,7 +1231,7 @@ LoopifyPatterns::process_twice_alt_fuel(
               std::shared_ptr<LoopifyPatterns::list<unsigned int>> once =
                   _result;
               _stack.push_back(_Call2{_args});
-              _stack.push_back(_Enter{std::move(once), std::move(f)});
+              _stack.push_back(_Enter{std::move(once), f});
             },
             [&](_Call2 _f) {
               const typename LoopifyPatterns::list<unsigned int>::Cons _args =

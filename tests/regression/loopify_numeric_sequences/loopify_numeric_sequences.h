@@ -49,20 +49,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -102,8 +88,8 @@ struct LoopifyNumericSequences {
       } else {
         unsigned int n_ = _loop_n - 1;
         {
-          unsigned int _next_x = f(_loop_x);
-          unsigned int _next_n = std::move(n_);
+          unsigned int _next_x = f(std::move(_loop_x));
+          unsigned int _next_n = n_;
           _loop_x = std::move(_next_x);
           _loop_n = std::move(_next_n);
         }

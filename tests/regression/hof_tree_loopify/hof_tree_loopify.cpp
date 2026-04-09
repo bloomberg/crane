@@ -58,7 +58,7 @@ __attribute__((pure)) unsigned int Nat::tail_add(const unsigned int n,
       unsigned int n0 = _loop_n - 1;
       {
         unsigned int _next_m = (_loop_m + 1);
-        unsigned int _next_n = std::move(n0);
+        unsigned int _next_n = n0;
         _loop_m = std::move(_next_m);
         _loop_n = std::move(_next_n);
       }
@@ -84,7 +84,7 @@ __attribute__((pure)) unsigned int Nat::tail_addmul(const unsigned int r,
       unsigned int n0 = _loop_n - 1;
       {
         unsigned int _next_n = n0;
-        unsigned int _next_r = Nat::tail_add(m, _loop_r);
+        unsigned int _next_r = Nat::tail_add(m, std::move(_loop_r));
         _loop_n = std::move(_next_n);
         _loop_r = std::move(_next_r);
       }

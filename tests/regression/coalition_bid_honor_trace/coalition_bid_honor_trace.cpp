@@ -883,7 +883,7 @@ CoalitionBidHonorTraceCase::coalition_state_force(
     std::shared_ptr<
         List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>>
         c = *cs;
-    return coalition_force(std::move(c));
+    return coalition_force(c);
   } else {
     return std::move(fallback);
   }

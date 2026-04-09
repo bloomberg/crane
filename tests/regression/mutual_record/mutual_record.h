@@ -49,20 +49,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -104,19 +90,6 @@ struct MutualRecord {
           Mk_department{std::move(a0), std::move(a1)});
     }
 
-    static std::unique_ptr<department> mk_department_uptr(
-        unsigned int a0,
-        const std::shared_ptr<List<std::shared_ptr<employee>>> &a1) {
-      return std::make_unique<department>(Mk_department{std::move(a0), a1});
-    }
-
-    static std::unique_ptr<department>
-    mk_department_uptr(unsigned int a0,
-                       std::shared_ptr<List<std::shared_ptr<employee>>> &&a1) {
-      return std::make_unique<department>(
-          Mk_department{std::move(a0), std::move(a1)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -144,12 +117,6 @@ struct MutualRecord {
     static std::shared_ptr<employee> mk_employee(unsigned int a0,
                                                  unsigned int a1) {
       return std::make_shared<employee>(
-          Mk_employee{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<employee> mk_employee_uptr(unsigned int a0,
-                                                      unsigned int a1) {
-      return std::make_unique<employee>(
           Mk_employee{std::move(a0), std::move(a1)});
     }
 

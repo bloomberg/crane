@@ -55,23 +55,6 @@ struct PairClosureEscape {
           Node{std::move(a0), std::move(a1), std::move(a2)});
     }
 
-    static std::unique_ptr<tree> leaf_uptr() {
-      return std::make_unique<tree>(Leaf{});
-    }
-
-    static std::unique_ptr<tree> node_uptr(const std::shared_ptr<tree> &a0,
-                                           unsigned int a1,
-                                           const std::shared_ptr<tree> &a2) {
-      return std::make_unique<tree>(Node{a0, std::move(a1), a2});
-    }
-
-    static std::unique_ptr<tree> node_uptr(std::shared_ptr<tree> &&a0,
-                                           unsigned int a1,
-                                           std::shared_ptr<tree> &&a2) {
-      return std::make_unique<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -118,9 +101,9 @@ struct PairClosureEscape {
       const std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
           p); /// Clobber stack after pair_escape returns.
   static inline const unsigned int bug_pair_escape = []() {
-    std::unique_ptr<tree> t1 =
-        tree::node_uptr(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                        tree::node(tree::leaf(), 30u, tree::leaf()));
+    std::shared_ptr<tree> t1 =
+        tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                   tree::node(tree::leaf(), 30u, tree::leaf()));
     std::pair<std::function<unsigned int(unsigned int)>, unsigned int> p1 =
         pair_escape(std::move(t1));
     return use_pair(std::move(p1));

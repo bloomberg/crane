@@ -57,17 +57,6 @@ public:
                                          bsl::shared_ptr<List<t_A>> &&a1) {
     return bsl::make_shared<List<t_A>>(Cons{bsl::move(a0), bsl::move(a1)});
   }
-  static bsl::unique_ptr<List<t_A>> nil_uptr() {
-    return bsl::make_unique<List<t_A>>(Nil{});
-  }
-  static bsl::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const bsl::shared_ptr<List<t_A>> &a1) {
-    return bsl::make_unique<List<t_A>>(Cons{bsl::move(a0), a1});
-  }
-  static bsl::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              bsl::shared_ptr<List<t_A>> &&a1) {
-    return bsl::make_unique<List<t_A>>(Cons{bsl::move(a0), bsl::move(a1)});
-  }
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
   // ACCESSORS
@@ -278,7 +267,7 @@ struct TopologicalSort {
                   T1 _x = *f1;
                   if (f2.has_value()) {
                     T1 _x0 = *f2;
-                    return get_elems_aux(_args.d_a1, h);
+                    return get_elems_aux(_args.d_a1, bsl::move(h));
                   } else {
                     return get_elems_aux(_args.d_a1, List<T1>::cons(e2, h));
                   }
@@ -288,11 +277,10 @@ struct TopologicalSort {
                     return get_elems_aux(_args.d_a1, List<T1>::cons(e1, h));
                   } else {
                     if (eqb_node(e1, e2)) {
-                      return get_elems_aux(bsl::move(_args.d_a1),
-                                           List<T1>::cons(e1, h));
+                      return get_elems_aux(_args.d_a1, List<T1>::cons(e1, h));
                     } else {
                       return get_elems_aux(
-                          bsl::move(_args.d_a1),
+                          _args.d_a1,
                           List<T1>::cons(e1, List<T1>::cons(e2, h)));
                     }
                   }
@@ -377,17 +365,15 @@ struct TopologicalSort {
         return elem;
       } else {
         unsigned int c = counter - 1;
-        bsl::shared_ptr<List<T1>> l =
-            graph_lookup<T1>(eqb_node, bsl::move(elem), graph0);
+        bsl::shared_ptr<List<T1>> l = graph_lookup<T1>(eqb_node, elem, graph0);
         return bsl::visit(
-            bdlf::Overloaded{[&](const typename List<T1>::Nil _args) -> T1 {
-                               return bsl::move(elem);
-                             },
-                             [&](const typename List<T1>::Cons _args) -> T1 {
-                               return cycle_entry_aux<T1>(
-                                   eqb_node, graph0,
-                                   List<T1>::cons(elem, seens), _args.d_a0, c);
-                             }},
+            bdlf::Overloaded{
+                [&](const typename List<T1>::Nil _args) -> T1 { return elem; },
+                [&](const typename List<T1>::Cons _args) -> T1 {
+                  return cycle_entry_aux<T1>(eqb_node, graph0,
+                                             List<T1>::cons(elem, seens),
+                                             _args.d_a0, c);
+                }},
             l->v());
       }
     }
@@ -421,7 +407,7 @@ struct TopologicalSort {
     } else {
       unsigned int c = counter - 1;
       if (contains<T1>(eqb_node, elem, cycl)) {
-        return cycl;
+        return bsl::move(cycl);
       } else {
         return graph_lookup<T1>(eqb_node, elem, graph0)
             ->template fold_right<bsl::shared_ptr<List<T1>>>(

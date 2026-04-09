@@ -49,20 +49,6 @@ public:
     return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
   }
 
-  static std::unique_ptr<List<t_A>> nil_uptr() {
-    return std::make_unique<List<t_A>>(Nil{});
-  }
-
-  static std::unique_ptr<List<t_A>>
-  cons_uptr(t_A a0, const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), a1});
-  }
-
-  static std::unique_ptr<List<t_A>> cons_uptr(t_A a0,
-                                              std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_unique<List<t_A>>(Cons{std::move(a0), std::move(a1)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -113,7 +99,7 @@ struct LoadProgramHeadWrite {
   load_program(std::shared_ptr<state> s, const unsigned int base,
                const std::shared_ptr<List<unsigned int>> &bytes);
   static inline const unsigned int t = []() {
-    std::unique_ptr<state> s0 = std::make_unique<state>(
+    std::shared_ptr<state> s0 = std::make_shared<state>(
         state{List<unsigned int>::cons(
                   0u, List<unsigned int>::cons(
                           0u, List<unsigned int>::cons(

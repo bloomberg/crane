@@ -16,7 +16,7 @@ SectionsModules::count_down_from_x(const unsigned int x, const unsigned int y,
     return std::move(x);
   } else {
     unsigned int n_ = n - 1;
-    return (count_down_from_x(x, std::move(y), n_) + std::move(y));
+    return (count_down_from_x(std::move(x), y, n_) + y);
   }
 }
 

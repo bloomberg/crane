@@ -55,20 +55,6 @@ struct MutualRecursion {
       return std::make_shared<tree<t_A>>(Node{std::move(a0)});
     }
 
-    static std::unique_ptr<tree<t_A>> leaf_uptr(t_A a0) {
-      return std::make_unique<tree<t_A>>(Leaf{std::move(a0)});
-    }
-
-    static std::unique_ptr<tree<t_A>>
-    node_uptr(const std::shared_ptr<forest<t_A>> &a0) {
-      return std::make_unique<tree<t_A>>(Node{a0});
-    }
-
-    static std::unique_ptr<tree<t_A>>
-    node_uptr(std::shared_ptr<forest<t_A>> &&a0) {
-      return std::make_unique<tree<t_A>>(Node{std::move(a0)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -110,22 +96,6 @@ struct MutualRecursion {
     static std::shared_ptr<forest<t_A>>
     trees(std::shared_ptr<tree<t_A>> &&a0, std::shared_ptr<forest<t_A>> &&a1) {
       return std::make_shared<forest<t_A>>(Trees{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<forest<t_A>> empty_uptr() {
-      return std::make_unique<forest<t_A>>(Empty{});
-    }
-
-    static std::unique_ptr<forest<t_A>>
-    trees_uptr(const std::shared_ptr<tree<t_A>> &a0,
-               const std::shared_ptr<forest<t_A>> &a1) {
-      return std::make_unique<forest<t_A>>(Trees{a0, a1});
-    }
-
-    static std::unique_ptr<forest<t_A>>
-    trees_uptr(std::shared_ptr<tree<t_A>> &&a0,
-               std::shared_ptr<forest<t_A>> &&a1) {
-      return std::make_unique<forest<t_A>>(Trees{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS

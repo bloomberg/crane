@@ -44,16 +44,6 @@ public:
     return std::make_shared<Nat>(S{std::move(a0)});
   }
 
-  static std::unique_ptr<Nat> o_uptr() { return std::make_unique<Nat>(O{}); }
-
-  static std::unique_ptr<Nat> s_uptr(const std::shared_ptr<Nat> &a0) {
-    return std::make_unique<Nat>(S{a0});
-  }
-
-  static std::unique_ptr<Nat> s_uptr(std::shared_ptr<Nat> &&a0) {
-    return std::make_unique<Nat>(S{std::move(a0)});
-  }
-
   // MANIPULATORS
   __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -80,10 +70,6 @@ public:
 
   static std::shared_ptr<Prod<t_A, t_B>> pair(t_A a0, t_B a1) {
     return std::make_shared<Prod<t_A, t_B>>(Pair{std::move(a0), std::move(a1)});
-  }
-
-  static std::unique_ptr<Prod<t_A, t_B>> pair_uptr(t_A a0, t_B a1) {
-    return std::make_unique<Prod<t_A, t_B>>(Pair{std::move(a0), std::move(a1)});
   }
 
   // MANIPULATORS

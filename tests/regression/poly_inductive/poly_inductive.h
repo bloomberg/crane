@@ -35,10 +35,6 @@ struct PolyInductive {
       return std::make_shared<pbox<t_A>>(PBox{std::move(a0)});
     }
 
-    static std::unique_ptr<pbox<t_A>> PBox_uptr(t_A a0) {
-      return std::make_unique<pbox<t_A>>(PBox{std::move(a0)});
-    }
-
     // MANIPULATORS
     __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
@@ -89,11 +85,6 @@ struct PolyInductive {
 
     static std::shared_ptr<ppair<t_A, t_B>> PPair_(t_A a0, t_B a1) {
       return std::make_shared<ppair<t_A, t_B>>(
-          PPair{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<ppair<t_A, t_B>> PPair_uptr(t_A a0, t_B a1) {
-      return std::make_unique<ppair<t_A, t_B>>(
           PPair{std::move(a0), std::move(a1)});
     }
 
@@ -163,14 +154,6 @@ struct PolyInductive {
 
     static std::shared_ptr<pmaybe<t_A>> pjust(t_A a0) {
       return std::make_shared<pmaybe<t_A>>(PJust{std::move(a0)});
-    }
-
-    static std::unique_ptr<pmaybe<t_A>> pnothing_uptr() {
-      return std::make_unique<pmaybe<t_A>>(PNothing{});
-    }
-
-    static std::unique_ptr<pmaybe<t_A>> pjust_uptr(t_A a0) {
-      return std::make_unique<pmaybe<t_A>>(PJust{std::move(a0)});
     }
 
     // MANIPULATORS
@@ -265,22 +248,6 @@ struct PolyInductive {
     static std::shared_ptr<ptree<t_A>> pnode(std::shared_ptr<ptree<t_A>> &&a0,
                                              std::shared_ptr<ptree<t_A>> &&a1) {
       return std::make_shared<ptree<t_A>>(PNode{std::move(a0), std::move(a1)});
-    }
-
-    static std::unique_ptr<ptree<t_A>> pleaf_uptr(t_A a0) {
-      return std::make_unique<ptree<t_A>>(PLeaf{std::move(a0)});
-    }
-
-    static std::unique_ptr<ptree<t_A>>
-    pnode_uptr(const std::shared_ptr<ptree<t_A>> &a0,
-               const std::shared_ptr<ptree<t_A>> &a1) {
-      return std::make_unique<ptree<t_A>>(PNode{a0, a1});
-    }
-
-    static std::unique_ptr<ptree<t_A>>
-    pnode_uptr(std::shared_ptr<ptree<t_A>> &&a0,
-               std::shared_ptr<ptree<t_A>> &&a1) {
-      return std::make_unique<ptree<t_A>>(PNode{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS
