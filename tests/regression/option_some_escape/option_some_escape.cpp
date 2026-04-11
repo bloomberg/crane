@@ -13,26 +13,26 @@ OptionSomeEscape::sum_values(const std::shared_ptr<OptionSomeEscape::tree> &t,
   return std::visit(
       Overloaded{
           [&](const typename OptionSomeEscape::tree::Leaf _args)
-              -> unsigned int { return std::move(x); },
+              -> unsigned int { return x; },
           [&](const typename OptionSomeEscape::tree::Node _args)
               -> unsigned int {
             return std::visit(
                 Overloaded{
                     [&](const typename OptionSomeEscape::tree::Leaf _args0)
-                        -> unsigned int { return (_args.d_a1 + std::move(x)); },
+                        -> unsigned int { return (_args.d_a1 + x); },
                     [&](const typename OptionSomeEscape::tree::Node _args0)
                         -> unsigned int {
                       return std::visit(
                           Overloaded{
                               [&](const typename OptionSomeEscape::tree::Leaf
                                       _args1) -> unsigned int {
-                                return (_args0.d_a1 + std::move(x));
+                                return (_args0.d_a1 + x);
                               },
                               [&](const typename OptionSomeEscape::tree::Node
                                       _args1) -> unsigned int {
                                 return (
                                     ((_args0.d_a1 + _args1.d_a1) + _args.d_a1) +
-                                    std::move(x));
+                                    x);
                               }},
                           _args.d_a2->v());
                     }},
@@ -58,8 +58,8 @@ __attribute__((pure)) unsigned int OptionSomeEscape::apply_option(
     const unsigned int x) {
   if (o.has_value()) {
     std::function<unsigned int(unsigned int)> f = *o;
-    return f(std::move(x));
+    return f(x);
   } else {
-    return std::move(x);
+    return x;
   }
 }

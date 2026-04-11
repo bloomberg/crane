@@ -605,7 +605,7 @@ struct HistoricalEventSafetyTraceCase {
                   (s->reservoir_level_cm + inflow(t))
               ? 0
               : ((s->reservoir_level_cm + inflow(t)) - out)));
-    unsigned int new_stage = stage_fn(std::move(out));
+    unsigned int new_stage = stage_fn(out);
     return std::make_shared<State>(State{new_level, new_stage, ctrl(s, t)});
   }
 
@@ -625,10 +625,9 @@ struct HistoricalEventSafetyTraceCase {
       unsigned int k = horizon - 1;
       std::shared_ptr<State> s_ =
           step_hist(inflow, ctrl, stage_fn, pconf, std::move(s), k);
-      return simulate_with_max(
-          inflow, ctrl, stage_fn, pconf, k, s_,
-          std::max(std::move(max_level), s_->reservoir_level_cm),
-          std::max(std::move(max_stage), s_->downstream_stage_cm));
+      return simulate_with_max(inflow, ctrl, stage_fn, pconf, k, s_,
+                               std::max(max_level, s_->reservoir_level_cm),
+                               std::max(max_stage, s_->downstream_stage_cm));
     }
   }
 

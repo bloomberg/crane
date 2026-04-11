@@ -20,5 +20,5 @@ IifeNameClash::double_get(const std::shared_ptr<IifeNameClash::wrapper> &w1,
                  [](const typename IifeNameClash::wrapper::Empty _args0)
                      -> unsigned int { return 0u; }},
       w2->v());
-  return (std::move(x) + std::move(y));
+  return (x + y);
 }

@@ -104,36 +104,35 @@ LoopifyClassics::ack_fuel(const unsigned int fuel, const unsigned int m,
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     std::visit(
-        Overloaded{
-            [&](_Enter _f) {
-              const unsigned int n = _f.n;
-              const unsigned int m = _f.m;
-              const unsigned int fuel = _f.fuel;
-              if (fuel <= 0) {
-                _result = (n + 1u);
-              } else {
-                unsigned int fuel_ = fuel - 1;
-                if (m == 0u) {
-                  _result = (n + 1u);
-                } else {
-                  if (n == 0u) {
-                    _stack.push_back(
-                        _Enter{1u, (((m - 1u) > m ? 0 : (m - 1u))), fuel_});
-                  } else {
-                    _stack.push_back(_Call1{fuel_, m});
-                    _stack.push_back(
-                        _Enter{(((n - 1u) > n ? 0 : (n - 1u))), m, fuel_});
-                  }
-                }
-              }
-            },
-            [&](_Call1 _f) {
-              unsigned int fuel_ = _f._s0;
-              const unsigned int m = _f._s1;
-              unsigned int inner = _result;
-              _stack.push_back(_Enter{std::move(inner),
-                                      (((m - 1u) > m ? 0 : (m - 1u))), fuel_});
-            }},
+        Overloaded{[&](_Enter _f) {
+                     const unsigned int n = _f.n;
+                     const unsigned int m = _f.m;
+                     const unsigned int fuel = _f.fuel;
+                     if (fuel <= 0) {
+                       _result = (n + 1u);
+                     } else {
+                       unsigned int fuel_ = fuel - 1;
+                       if (m == 0u) {
+                         _result = (n + 1u);
+                       } else {
+                         if (n == 0u) {
+                           _stack.push_back(_Enter{
+                               1u, (((m - 1u) > m ? 0 : (m - 1u))), fuel_});
+                         } else {
+                           _stack.push_back(_Call1{fuel_, m});
+                           _stack.push_back(_Enter{
+                               (((n - 1u) > n ? 0 : (n - 1u))), m, fuel_});
+                         }
+                       }
+                     }
+                   },
+                   [&](_Call1 _f) {
+                     unsigned int fuel_ = _f._s0;
+                     const unsigned int m = _f._s1;
+                     unsigned int inner = _result;
+                     _stack.push_back(
+                         _Enter{inner, (((m - 1u) > m ? 0 : (m - 1u))), fuel_});
+                   }},
         _frame);
   }
   return _result;
@@ -277,20 +276,19 @@ LoopifyClassics::gcd_fuel(const unsigned int fuel, const unsigned int a,
   while (_continue) {
     if (_loop_fuel <= 0) {
       {
-        _result = std::move(_loop_a);
+        _result = _loop_a;
         _continue = false;
       }
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
       if (_loop_b == 0u) {
         {
-          _result = std::move(_loop_a);
+          _result = _loop_a;
           _continue = false;
         }
       } else {
         {
-          unsigned int _next_b =
-              (_loop_b ? std::move(_loop_a) % _loop_b : std::move(_loop_a));
+          unsigned int _next_b = (_loop_b ? _loop_a % _loop_b : _loop_a);
           unsigned int _next_a = _loop_b;
           unsigned int _next_fuel = fuel_;
           _loop_b = std::move(_next_b);

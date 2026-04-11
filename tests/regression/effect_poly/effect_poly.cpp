@@ -29,10 +29,7 @@ bool EffectPoly::test_lift_bool() {
 
 void EffectPoly::when_(const bool b, const std::monostate action) {
   if (b) {
-    {
-      std::move(action);
-      return;
-    }
+    return;
   } else {
     return;
   }
@@ -50,10 +47,7 @@ void EffectPoly::unless(const bool b, const std::monostate action) {
   if (b) {
     return;
   } else {
-    {
-      std::move(action);
-      return;
-    }
+    return;
   }
 }
 

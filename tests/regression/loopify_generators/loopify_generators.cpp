@@ -248,7 +248,7 @@ LoopifyGenerators::build_list_fuel(const unsigned int fuel,
                                   unsigned int _x = n_ - 1;
                                   unsigned int half = (2u ? n_ / 2u : 0);
                                   _stack.push_back(_Call1{n_});
-                                  _stack.push_back(_Enter{std::move(half), f});
+                                  _stack.push_back(_Enter{half, f});
                                 }
                               }
                             }

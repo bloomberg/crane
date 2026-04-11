@@ -144,7 +144,7 @@ struct UnitVoidStress {
 
   template <typename T1, MapsTo<T1, unsigned int> F0>
   static T1 apply_result(F0 &&f, const unsigned int _x0) {
-    return f(std::move(_x0));
+    return f(_x0);
   }
 
   static inline const std::monostate test_apply_result_void = []() {

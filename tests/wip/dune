@@ -78,14 +78,3 @@
   (alias runtest)
   (deps shared_uptr_escape.t.exe)
   (action (run ./shared_uptr_escape.t.exe))))
-
-(subdir crane_move_hunt
- (rule
-  (targets crane_move_hunt.t.exe)
-  (deps CraneMoveHunt.vo crane_move_hunt.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} crane_move_hunt.t.exe crane_move_hunt.cpp crane_move_hunt.t.cpp)))
- (rule
-  (alias runtest)
-  (deps crane_move_hunt.t.exe)
-  (action (run ./crane_move_hunt.t.exe))))

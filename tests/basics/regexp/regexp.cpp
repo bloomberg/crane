@@ -8,7 +8,7 @@
 
 __attribute__((pure)) bool Matcher::char_eq(const int64_t x, const int64_t y) {
   bool b = x == y;
-  if (std::move(b)) {
+  if (b) {
     return true;
   } else {
     return false;
@@ -312,7 +312,7 @@ __attribute__((pure)) bool
 Matcher::parse(const std::shared_ptr<Matcher::regexp> &r,
                const std::shared_ptr<List<int64_t>> &cs) {
   bool b = deriv_parse(r, cs);
-  if (std::move(b)) {
+  if (b) {
     return true;
   } else {
     return false;

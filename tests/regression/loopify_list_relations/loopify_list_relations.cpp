@@ -67,9 +67,7 @@ __attribute__((pure)) bool LoopifyListRelations::is_suffix_of(
   if (len2 < len1) {
     return false;
   } else {
-    unsigned int diff = (((std::move(len2) - std::move(len1)) > std::move(len2)
-                              ? 0
-                              : (std::move(len2) - std::move(len1))));
+    unsigned int diff = (((len2 - len1) > len2 ? 0 : (len2 - len1)));
     std::shared_ptr<List<unsigned int>> suffix;
     std::function<std::shared_ptr<List<unsigned int>>(
         unsigned int, std::shared_ptr<List<unsigned int>>)>
@@ -113,7 +111,7 @@ __attribute__((pure)) bool LoopifyListRelations::is_suffix_of(
       }
       return _result;
     };
-    suffix = drop(std::move(diff), l2);
+    suffix = drop(diff, l2);
     std::function<bool(std::shared_ptr<List<unsigned int>>,
                        std::shared_ptr<List<unsigned int>>)>
         eq;
@@ -240,7 +238,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListRelations::find_sublists_aux(
                 _loop_idx = std::move(_next_idx);
                 _loop_haystack = std::move(_next_haystack);
               } else {
-                unsigned int _next_idx = (std::move(_loop_idx) + 1u);
+                unsigned int _next_idx = (_loop_idx + 1u);
                 std::shared_ptr<List<unsigned int>> _next_haystack = _args.d_a1;
                 std::shared_ptr<List<unsigned int>> _next_needle =
                     std::move(_loop_needle);
@@ -703,7 +701,7 @@ LoopifyListRelations::merge(const std::shared_ptr<List<unsigned int>> &l1,
                             const std::shared_ptr<List<unsigned int>> &l2) {
   unsigned int len1 = l1->length();
   unsigned int len2 = l2->length();
-  return merge_fuel((std::move(len1) + std::move(len2)), l1, l2);
+  return merge_fuel((len1 + len2), l1, l2);
 }
 
 std::shared_ptr<List<unsigned int>>

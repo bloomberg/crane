@@ -15,10 +15,10 @@ LetFix::local_sum(const std::shared_ptr<List<unsigned int>> &l) {
     return std::visit(
         Overloaded{
             [&](const typename List<unsigned int>::Nil _args) -> unsigned int {
-              return std::move(acc);
+              return acc;
             },
             [&](const typename List<unsigned int>::Cons _args) -> unsigned int {
-              return go((std::move(acc) + _args.d_a0), _args.d_a1);
+              return go((acc + _args.d_a0), _args.d_a1);
             }},
         xs->v());
   };

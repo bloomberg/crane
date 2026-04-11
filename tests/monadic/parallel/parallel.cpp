@@ -42,6 +42,6 @@ __attribute__((pure)) std::pair<unsigned int, unsigned int>
 ParallelTest::slow(const unsigned int m, const unsigned int n) {
   std::pair<unsigned int, unsigned int> p = std::make_pair(m, n);
   unsigned int r1 = ack(p);
-  unsigned int r2 = ack(std::move(p));
+  unsigned int r2 = ack(p);
   return std::make_pair(r1, r2);
 }

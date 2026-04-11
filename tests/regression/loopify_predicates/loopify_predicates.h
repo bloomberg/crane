@@ -423,8 +423,7 @@ struct LoopifyPredicates {
                                     std::make_optional<unsigned int>(_loop_idx);
                                 _continue = false;
                               } else {
-                                unsigned int _next_idx =
-                                    (std::move(_loop_idx) + 1u);
+                                unsigned int _next_idx = (_loop_idx + 1u);
                                 std::shared_ptr<List<unsigned int>> _next_l =
                                     _args.d_a1;
                                 _loop_idx = std::move(_next_idx);
@@ -478,7 +477,7 @@ struct LoopifyPredicates {
                   _loop_idx = std::move(_next_idx);
                   _loop_l = std::move(_next_l);
                 } else {
-                  unsigned int _next_idx = (std::move(_loop_idx) + 1u);
+                  unsigned int _next_idx = (_loop_idx + 1u);
                   std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
                   _loop_idx = std::move(_next_idx);
                   _loop_l = std::move(_next_l);

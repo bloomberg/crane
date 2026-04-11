@@ -114,7 +114,7 @@ UnitVoidStress::void_in_one_branch(const bool b, const unsigned int n) {
   if (b) {
     return 42u;
   } else {
-    return std::move(n);
+    return n;
   }
 }
 

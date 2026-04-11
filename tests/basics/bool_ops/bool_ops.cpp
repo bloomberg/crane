@@ -1,7 +1,6 @@
 #include <bool_ops.h>
 
 #include <type_traits>
-#include <utility>
 
 __attribute__((pure)) bool BoolOps::my_negb(const bool b) {
   if (b) {
@@ -13,7 +12,7 @@ __attribute__((pure)) bool BoolOps::my_negb(const bool b) {
 
 __attribute__((pure)) bool BoolOps::my_andb(const bool a, const bool b) {
   if (a) {
-    return std::move(b);
+    return b;
   } else {
     return false;
   }
@@ -23,7 +22,7 @@ __attribute__((pure)) bool BoolOps::my_orb(const bool a, const bool b) {
   if (a) {
     return true;
   } else {
-    return std::move(b);
+    return b;
   }
 }
 
@@ -46,9 +45,9 @@ __attribute__((pure)) bool BoolOps::my_xorb(const bool a, const bool b) {
 __attribute__((pure)) unsigned int
 BoolOps::if_nat(const bool b, const unsigned int t, const unsigned int f) {
   if (b) {
-    return std::move(t);
+    return t;
   } else {
-    return std::move(f);
+    return f;
   }
 }
 

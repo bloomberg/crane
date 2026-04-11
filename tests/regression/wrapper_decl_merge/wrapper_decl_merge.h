@@ -2,7 +2,6 @@
 #define INCLUDED_WRAPPER_DECL_MERGE
 
 #include <type_traits>
-#include <utility>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;

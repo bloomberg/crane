@@ -4,7 +4,6 @@
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
-#include <utility>
 #include <variant>
 
 template <typename F, typename R, typename... Args>

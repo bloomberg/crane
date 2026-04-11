@@ -121,16 +121,16 @@ struct InstructionCycles {
                 unsigned int c3 = (2u ? (2u ? _args.d_a0 / 2u : 0) % 2u
                                       : (2u ? _args.d_a0 / 2u : 0));
                 unsigned int c4 = (2u ? _args.d_a0 % 2u : _args.d_a0);
-                bool base_cond = ((s->acc1 == 0u && std::move(c2) == 1u) ||
-                                  ((s->carry1 && std::move(c3) == 1u) ||
-                                   (!(s->test_pin1) && std::move(c4) == 1u)));
+                bool base_cond = ((s->acc1 == 0u && c2 == 1u) ||
+                                  ((s->carry1 && c3 == 1u) ||
+                                   (!(s->test_pin1) && c4 == 1u)));
                 bool jump;
-                if (std::move(c1) == 1u) {
-                  jump = !(std::move(base_cond));
+                if (c1 == 1u) {
+                  jump = !(base_cond);
                 } else {
-                  jump = std::move(base_cond);
+                  jump = base_cond;
                 }
-                if (std::move(jump)) {
+                if (jump) {
                   return 16u;
                 } else {
                   return 8u;

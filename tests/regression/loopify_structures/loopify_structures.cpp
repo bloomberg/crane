@@ -154,7 +154,7 @@ __attribute__((pure)) unsigned int LoopifyStructures::depth_nested_list_fuel(
             [&](_Call1 _f) {
               unsigned int rest_max = _result;
               if (0u <= rest_max) {
-                _result = std::move(rest_max);
+                _result = rest_max;
               } else {
                 _result = 0u;
               }
@@ -172,9 +172,9 @@ __attribute__((pure)) unsigned int LoopifyStructures::depth_nested_list_fuel(
               unsigned int d = _f._s0;
               unsigned int rest_max = _result;
               if (d <= rest_max) {
-                _result = std::move(rest_max);
+                _result = rest_max;
               } else {
-                _result = std::move(d);
+                _result = d;
               }
             }},
         _frame);

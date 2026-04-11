@@ -273,14 +273,17 @@ let single_use_nargs k t =
   search k t;
   !result
 
-(** Check if [ty] is a non-enum, non-coinductive inductive (wrapped in
-    shared_ptr in C++). Resolves Tmeta chains. *)
+(** Check if [ty] is a non-enum, non-coinductive, non-custom inductive
+    (wrapped in shared_ptr in C++). Custom-extracted inductives (e.g., prod
+    mapped to std::pair) are value types, not wrapped in shared_ptr.
+    Resolves Tmeta chains. *)
 let rec is_shared_ptr_type = function
   | Tglob (r, _, _) ->
     ( match r with
     | Names.GlobRef.IndRef _ ->
       (not (is_enum_inductive r))
       && not (is_coinductive_type (Tglob (r, [], [])))
+      && not (is_custom r)
     | _ -> false )
   | Tmeta {contents = Some ty} -> is_shared_ptr_type ty
   | _ -> false

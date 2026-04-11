@@ -51,7 +51,7 @@ __attribute__((pure)) unsigned int Nat::tail_add(const unsigned int n,
   while (_continue) {
     if (_loop_n <= 0) {
       {
-        _result = std::move(_loop_m);
+        _result = _loop_m;
         _continue = false;
       }
     } else {
@@ -77,14 +77,14 @@ __attribute__((pure)) unsigned int Nat::tail_addmul(const unsigned int r,
   while (_continue) {
     if (_loop_n <= 0) {
       {
-        _result = std::move(_loop_r);
+        _result = _loop_r;
         _continue = false;
       }
     } else {
       unsigned int n0 = _loop_n - 1;
       {
         unsigned int _next_n = n0;
-        unsigned int _next_r = Nat::tail_add(m, std::move(_loop_r));
+        unsigned int _next_r = Nat::tail_add(m, _loop_r);
         _loop_n = std::move(_next_n);
         _loop_r = std::move(_next_r);
       }
@@ -108,11 +108,11 @@ Nat::of_uint_acc(const std::shared_ptr<Uint> &d, const unsigned int acc) {
     std::visit(
         Overloaded{
             [&](const typename Uint::Nil _args) {
-              _result = std::move(_loop_acc);
+              _result = _loop_acc;
               _continue = false;
             },
             [&](const typename Uint::D0 _args) {
-              unsigned int _next_acc = Nat::tail_mul(10u, std::move(_loop_acc));
+              unsigned int _next_acc = Nat::tail_mul(10u, _loop_acc);
               std::shared_ptr<Uint> _next_d = _args.d_a0;
               _loop_acc = std::move(_next_acc);
               _loop_d = std::move(_next_d);
@@ -212,11 +212,11 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
     std::visit(
         Overloaded{
             [&](const typename Uint0::Nil0 _args) {
-              _result = std::move(_loop_acc);
+              _result = _loop_acc;
               _continue = false;
             },
             [&](const typename Uint0::D10 _args) {
-              unsigned int _next_acc = Nat::tail_mul(16u, std::move(_loop_acc));
+              unsigned int _next_acc = Nat::tail_mul(16u, _loop_acc);
               std::shared_ptr<Uint0> _next_d = _args.d_a0;
               _loop_acc = std::move(_next_acc);
               _loop_d = std::move(_next_d);

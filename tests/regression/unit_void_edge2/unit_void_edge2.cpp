@@ -31,7 +31,7 @@ void UnitVoidEdge2::let_return_unit(const unsigned int _x0) {
 
 __attribute__((pure)) unsigned int
 UnitVoidEdge2::let_match_unit(const unsigned int n) {
-  opaque_unit(std::move(n));
+  opaque_unit(n);
   std::monostate x = std::monostate{};
   {
     return n;
@@ -118,7 +118,7 @@ __attribute__((pure)) unsigned int
 UnitVoidEdge2::compose_option_unit(const bool b1, const bool b2) {
   std::optional<std::monostate> o1 = make_some_unit(b1);
   std::optional<std::monostate> o2 = make_some_unit(b2);
-  return (use_option_unit(std::move(o1)) + use_option_unit(std::move(o2)));
+  return (use_option_unit(o1) + use_option_unit(o2));
 }
 
 std::shared_ptr<UnitVoidEdge2::pair<unsigned int, std::monostate>>

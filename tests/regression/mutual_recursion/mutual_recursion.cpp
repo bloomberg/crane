@@ -27,37 +27,37 @@ __attribute__((pure)) unsigned int
 MutualRecursion::sum_even_indices(const unsigned int n,
                                   const unsigned int acc) {
   if (n <= 0) {
-    return std::move(acc);
+    return acc;
   } else {
     unsigned int n_ = n - 1;
-    return sum_odd_indices(n_, std::move(acc));
+    return sum_odd_indices(n_, acc);
   }
 }
 
 __attribute__((pure)) unsigned int
 MutualRecursion::sum_odd_indices(const unsigned int n, const unsigned int acc) {
   if (n <= 0) {
-    return std::move(acc);
+    return acc;
   } else {
     unsigned int n_ = n - 1;
-    return sum_even_indices(n_, (std::move(acc) + n));
+    return sum_even_indices(n_, (acc + n));
   }
 }
 
 __attribute__((pure)) unsigned int
 MutualRecursion::process_a(const unsigned int n, const unsigned int m) {
   if (n <= 0) {
-    return std::move(m);
+    return m;
   } else {
     unsigned int n_ = n - 1;
-    return (process_b(n_, std::move(m)) + n);
+    return (process_b(n_, m) + n);
   }
 }
 
 __attribute__((pure)) unsigned int
 MutualRecursion::process_b(const unsigned int n, const unsigned int m) {
   if (n <= 0) {
-    return std::move(m);
+    return m;
   } else {
     unsigned int n_ = n - 1;
     return (process_a(n_, m) + m);

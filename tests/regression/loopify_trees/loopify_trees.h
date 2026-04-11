@@ -584,9 +584,9 @@ struct LoopifyTrees {
                   unsigned int rh = _result;
                   _result = ([&]() -> unsigned int {
                     if (lh <= rh) {
-                      return std::move(rh);
+                      return rh;
                     } else {
-                      return std::move(lh);
+                      return lh;
                     }
                   }() + 1);
                 }},
@@ -898,17 +898,17 @@ struct LoopifyTrees {
                   _result = ([&]() -> unsigned int {
                     if ([&]() -> unsigned int {
                           if (d1 <= d2) {
-                            return std::move(d2);
+                            return d2;
                           } else {
-                            return std::move(d1);
+                            return d1;
                           }
                         }() <= d3) {
-                      return std::move(d3);
+                      return d3;
                     } else {
                       if (d1 <= d2) {
-                        return std::move(d2);
+                        return d2;
                       } else {
-                        return std::move(d1);
+                        return d1;
                       }
                     }
                   }() + 1);

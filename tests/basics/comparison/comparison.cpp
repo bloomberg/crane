@@ -37,10 +37,10 @@ __attribute__((pure)) unsigned int Comparison::max_nat(const unsigned int a,
                                                        const unsigned int b) {
   switch (compare_nats(a, b)) {
   case Cmp::e_CMPLT: {
-    return std::move(b);
+    return b;
   }
   default: {
-    return std::move(a);
+    return a;
   }
   }
 }
@@ -49,10 +49,10 @@ __attribute__((pure)) unsigned int Comparison::min_nat(const unsigned int a,
                                                        const unsigned int b) {
   switch (compare_nats(a, b)) {
   case Cmp::e_CMPGT: {
-    return std::move(b);
+    return b;
   }
   default: {
-    return std::move(a);
+    return a;
   }
   }
 }
@@ -62,15 +62,15 @@ __attribute__((pure)) unsigned int Comparison::clamp(const unsigned int val,
                                                      const unsigned int hi) {
   switch (compare_nats(val, lo)) {
   case Cmp::e_CMPLT: {
-    return std::move(lo);
+    return lo;
   }
   default: {
     switch (compare_nats(val, hi)) {
     case Cmp::e_CMPGT: {
-      return std::move(hi);
+      return hi;
     }
     default: {
-      return std::move(val);
+      return val;
     }
     }
   }

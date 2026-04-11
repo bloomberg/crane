@@ -70,7 +70,7 @@ struct UnitVoidEdge {
 
   template <MapsTo<void, unsigned int> F0>
   static void apply_unit_fn(F0 &&f, const unsigned int _x0) {
-    f(std::move(_x0));
+    f(_x0);
     return;
   }
 
@@ -121,7 +121,7 @@ struct UnitVoidEdge {
 
   template <MapsTo<void, unsigned int> F0>
   static void apply_and_discard(F0 &&f, const unsigned int _x0) {
-    f(std::move(_x0));
+    f(_x0);
     return;
   }
 

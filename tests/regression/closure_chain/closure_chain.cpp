@@ -44,5 +44,5 @@ ClosureChain::make_chain(const unsigned int n,
       };
       return [=](unsigned int x) mutable { return f((x + 1u)); };
     }
-  }()(std::move(_x0));
+  }()(_x0);
 }

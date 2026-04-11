@@ -8,10 +8,10 @@ __attribute__((pure)) unsigned int AnonFixpoint::sum_to(const unsigned int n) {
   std::function<unsigned int(unsigned int, unsigned int)> go;
   go = [&](unsigned int m, unsigned int acc) -> unsigned int {
     if (m <= 0) {
-      return std::move(acc);
+      return acc;
     } else {
       unsigned int p = m - 1;
-      return go(p, (m + std::move(acc)));
+      return go(p, (m + acc));
     }
   };
   return go(n, 0u);
@@ -51,14 +51,14 @@ __attribute__((pure)) unsigned int AnonFixpoint::gcd(const unsigned int a,
   std::function<unsigned int(unsigned int, unsigned int, unsigned int)> go;
   go = [&](unsigned int fuel, unsigned int x, unsigned int y) -> unsigned int {
     if (fuel <= 0) {
-      return std::move(x);
+      return x;
     } else {
       unsigned int f = fuel - 1;
       if (y <= 0) {
-        return std::move(x);
+        return x;
       } else {
         unsigned int _x = y - 1;
-        return go(f, y, (y ? std::move(x) % y : std::move(x)));
+        return go(f, y, (y ? x % y : x));
       }
     }
   };

@@ -108,12 +108,11 @@ effect_pair_frame(const std::shared_ptr<CraneMoveHunt::state> &s0) {
   std::shared_ptr<CraneMoveHunt::state> s1 = handled.second;
   tick(s1);
   tick(s1);
-  std::shared_ptr<CraneMoveHunt::state> s2 =
-      CraneMoveHunt::resolve_state(std::move(s1));
-  tick(std::move(s1));
+  std::shared_ptr<CraneMoveHunt::state> s2 = CraneMoveHunt::resolve_state(s1);
+  tick(s1);
   tick(s2);
   if (quit) {
-    return s2;
+    return std::move(s2);
   } else {
     return s1;
   }
@@ -164,7 +163,7 @@ axiom_nat_pair_frame(const std::shared_ptr<CraneMoveHunt::state> &s0) {
   std::shared_ptr<CraneMoveHunt::state> s1 = handled.second;
   std::shared_ptr<CraneMoveHunt::state> s2 = CraneMoveHunt::resolve_state(s1);
   unsigned int n = toy_tick_nat(s1);
-  if ((quit || std::move(n) == 0u)) {
+  if ((quit || n == 0u)) {
     return std::move(s2);
   } else {
     return s1;

@@ -535,11 +535,9 @@ LoopifyStrings::run_length_aux(const unsigned int current,
             [&](const typename List<unsigned int>::Cons _args) {
               if (_args.d_a0 == _loop_current) {
                 std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                unsigned int _next_count = (std::move(_loop_count) + 1u);
-                unsigned int _next_current = std::move(_loop_current);
+                unsigned int _next_count = (_loop_count + 1u);
                 _loop_l = std::move(_next_l);
                 _loop_count = std::move(_next_count);
-                _loop_current = std::move(_next_current);
               } else {
                 if (_loop_count == 0u) {
                   std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;

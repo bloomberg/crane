@@ -37,8 +37,7 @@ GetPairBoundProp::set_pair(const std::shared_ptr<GetPairBoundProp::state> &s,
   unsigned int hi = (16u ? (16u ? v / 16u : 0) % 16u : (16u ? v / 16u : 0));
   unsigned int lo = (16u ? v % 16u : v);
   return update_nth<unsigned int>(
-      (base + 1), std::move(lo),
-      update_nth<unsigned int>(base, std::move(hi), s->ex_regs));
+      (base + 1), lo, update_nth<unsigned int>(base, hi, s->ex_regs));
 }
 
 std::shared_ptr<List<unsigned int>>

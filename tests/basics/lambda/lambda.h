@@ -2,7 +2,6 @@
 #define INCLUDED_LAMBDA
 
 #include <type_traits>
-#include <utility>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
@@ -23,13 +22,13 @@ struct Lambda {
                                                        const unsigned int _x1);
   static inline const unsigned int with_let = []() {
     unsigned int x = 5u;
-    return (std::move(x) * 2u);
+    return (x * 2u);
   }();
 
   template <MapsTo<unsigned int, unsigned int> F0>
   __attribute__((pure)) static unsigned int apply_fn(F0 &&f,
                                                      const unsigned int _x0) {
-    return f(std::move(_x0));
+    return f(_x0);
   }
 
   static inline const unsigned int use_apply =

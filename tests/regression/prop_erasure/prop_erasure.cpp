@@ -1,11 +1,10 @@
 #include <prop_erasure.h>
 
 #include <type_traits>
-#include <utility>
 
 __attribute__((pure)) unsigned int
 PropErasure::with_proof_arg(const unsigned int n) {
-  return std::move(n);
+  return n;
 }
 
 __attribute__((pure)) unsigned int

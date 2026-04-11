@@ -1,7 +1,6 @@
 #include <sections_modules.h>
 
 #include <type_traits>
-#include <utility>
 
 __attribute__((pure)) unsigned int
 SectionsModules::add_params(const unsigned int x, const unsigned int y,
@@ -13,10 +12,10 @@ __attribute__((pure)) unsigned int
 SectionsModules::count_down_from_x(const unsigned int x, const unsigned int y,
                                    const unsigned int n) {
   if (n <= 0) {
-    return std::move(x);
+    return x;
   } else {
     unsigned int n_ = n - 1;
-    return (count_down_from_x(std::move(x), y, n_) + y);
+    return (count_down_from_x(x, y, n_) + y);
   }
 }
 

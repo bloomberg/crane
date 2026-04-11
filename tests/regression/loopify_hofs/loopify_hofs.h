@@ -765,7 +765,7 @@ struct LoopifyHofs {
                 const unsigned int acc = _f._s1;
                 F0 f = _f._s2;
                 std::shared_ptr<List<unsigned int>> rest = _result;
-                unsigned int h = head_default(std::move(acc), rest);
+                unsigned int h = head_default(acc, rest);
                 _result = List<unsigned int>::cons(f(_args.d_a0, h), rest);
               }},
           _frame);
@@ -1112,9 +1112,9 @@ struct LoopifyHofs {
                 unsigned int rest_max = _result;
                 unsigned int fx = f(_args.d_a0);
                 if (rest_max <= fx) {
-                  _result = std::move(fx);
+                  _result = fx;
                 } else {
-                  _result = std::move(rest_max);
+                  _result = rest_max;
                 }
               }},
           _frame);
@@ -1216,7 +1216,7 @@ struct LoopifyHofs {
                 if (0u <= cmp(_args.d_a0, m)) {
                   _result = _args.d_a0;
                 } else {
-                  _result = std::move(m);
+                  _result = m;
                 }
               }},
           _frame);
@@ -1230,7 +1230,6 @@ struct LoopifyHofs {
   fold_right(F0 &&f, const std::shared_ptr<List<unsigned int>> &l,
              const unsigned int acc) {
     struct _Enter {
-      const unsigned int acc;
       const std::shared_ptr<List<unsigned int>> l;
     };
 
@@ -1242,23 +1241,22 @@ struct LoopifyHofs {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{acc, l});
+    _stack.push_back(_Enter{l});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       std::visit(
           Overloaded{
               [&](_Enter _f) {
-                const unsigned int acc = _f.acc;
                 const std::shared_ptr<List<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
                         [&](const typename List<unsigned int>::Nil _args)
-                            -> void { _result = std::move(acc); },
+                            -> void { _result = acc; },
                         [&](const typename List<unsigned int>::Cons _args)
                             -> void {
                           _stack.push_back(_Call1{_args.d_a0});
-                          _stack.push_back(_Enter{std::move(acc), _args.d_a1});
+                          _stack.push_back(_Enter{_args.d_a1});
                         }},
                     l->v());
               },

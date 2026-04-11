@@ -1,11 +1,10 @@
 #include <wrapper_collision_pos.h>
 
 #include <type_traits>
-#include <utility>
 
 __attribute__((pure)) unsigned int
 WrapperCollisionPos::Left::Pos::id_left(const unsigned int n) {
-  return std::move(n);
+  return n;
 }
 
 __attribute__((pure)) unsigned int

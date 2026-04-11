@@ -26,7 +26,7 @@ SuperfluousMoves::bad_branch(std::shared_ptr<SuperfluousMoves::loop_state> ls) {
   std::shared_ptr<SuperfluousMoves::game_state> gs1 = ls->ls_game;
   bool do_tick = true;
   std::shared_ptr<SuperfluousMoves::game_state> gs2;
-  if (std::move(do_tick)) {
+  if (do_tick) {
     gs2 = tick(std::move(gs1));
   } else {
     gs2 = std::move(gs1);

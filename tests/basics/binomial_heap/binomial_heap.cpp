@@ -442,7 +442,7 @@ __attribute__((pure)) BinomialHeap::key BinomialHeap::find_max_helper(
   return std::visit(
       Overloaded{
           [&](const typename List<std::shared_ptr<BinomialHeap::tree>>::Nil
-                  _args) -> unsigned int { return std::move(current); },
+                  _args) -> unsigned int { return current; },
           [&](const typename List<std::shared_ptr<BinomialHeap::tree>>::Cons
                   _args) -> unsigned int {
             return std::visit(
@@ -453,15 +453,14 @@ __attribute__((pure)) BinomialHeap::key BinomialHeap::find_max_helper(
                                    if (current < _args0.d_a0) {
                                      return _args0.d_a0;
                                    } else {
-                                     return std::move(current);
+                                     return current;
                                    }
                                  }(),
                                  _args.d_a1);
                            },
                            [&](const typename BinomialHeap::tree::Leaf _args0)
                                -> unsigned int {
-                             return find_max_helper(std::move(current),
-                                                    _args.d_a1);
+                             return find_max_helper(current, _args.d_a1);
                            }},
                 _args.d_a0->v());
           }},

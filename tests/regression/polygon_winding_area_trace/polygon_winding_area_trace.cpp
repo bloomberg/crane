@@ -11,7 +11,7 @@ __attribute__((pure)) int64_t BinInt::pow_pos(const int64_t z,
                                               const unsigned int _x0) {
   return Pos::template iter<int64_t>(
       [=](int64_t _x0) mutable -> int64_t { return (z * _x0); }, INT64_C(1),
-      std::move(_x0));
+      _x0);
 }
 
 __attribute__((pure)) Real PolygonWindingAreaTraceCase::hav(const Real theta) {
@@ -59,9 +59,7 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::spherical_shoelace_aux(
             Real lambda_prev =
                 nth_cyclic<std::shared_ptr<PolygonWindingAreaTraceCase::Point>>(
                     _args.d_a0, all_pts,
-                    ((((idx + std::move(n)) - 1u) > (idx + std::move(n))
-                          ? 0
-                          : ((idx + std::move(n)) - 1u))))
+                    ((((idx + n) - 1u) > (idx + n) ? 0 : ((idx + n) - 1u))))
                     ->lambda;
             Real lambda_next =
                 nth_cyclic<std::shared_ptr<PolygonWindingAreaTraceCase::Point>>(

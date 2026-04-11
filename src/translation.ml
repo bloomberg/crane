@@ -5106,7 +5106,17 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     let x_renamed = fst (List.hd ids_renamed) in
     if x == Dummy then (
       push_env_types [(x_renamed, t)];
-      gen_stmts env' k b )
+      (* Shift move tracking: the erased binding adds a de Bruijn level. *)
+      let saved_owned_dummy = tctx.move_owned_vars in
+      let saved_dead_dummy = tctx.move_dead_after in
+      tctx.move_owned_vars <-
+        Escape.IntSet.map (fun i -> i + 1) tctx.move_owned_vars;
+      tctx.move_dead_after <-
+        Escape.IntSet.map (fun i -> i + 1) tctx.move_dead_after;
+      let result = gen_stmts env' k b in
+      tctx.move_owned_vars <- saved_owned_dummy;
+      tctx.move_dead_after <- saved_dead_dummy;
+      result )
     else if ml_type_is_unit t then (
       (* Unit-typed let bindings: the RHS may call a void-ified function,
          so we can't assign its result to a variable.  Execute the RHS for
@@ -5120,10 +5130,19 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         | Sexpr (CPPenum_val _) -> false
         | Sexpr (CPPvar _) -> false
         | _ -> true) rhs in
+      (* Shift move tracking: the unit binding adds a de Bruijn level. *)
+      let saved_owned_unit = tctx.move_owned_vars in
+      let saved_dead_unit = tctx.move_dead_after in
+      tctx.move_owned_vars <-
+        Escape.IntSet.map (fun i -> i + 1) tctx.move_owned_vars;
+      tctx.move_dead_after <-
+        Escape.IntSet.map (fun i -> i + 1) tctx.move_dead_after;
       (* Generate the body first, then check if the variable is actually
          referenced in the generated C++ (not just the ML AST, since
          optimizations like unit-match elimination may drop references). *)
       let body = gen_stmts env' k b in
+      tctx.move_owned_vars <- saved_owned_unit;
+      tctx.move_dead_after <- saved_dead_unit;
       let decl =
         if stmts_reference_var x_renamed body then
           let tvars = get_current_type_vars () in
@@ -5581,6 +5600,27 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         env
     in
     push_env_types ids;
+    (* The continuation's lambda parameter adds one de Bruijn level.
+       Shift move tracking sets so that parent-scope owned-variable indices
+       stay in sync with the body's coordinate system.  Without this shift,
+       after N bind continuations the indices drift by N, causing spurious
+       collisions that produce incorrect std::move (use-after-move). *)
+    let saved_owned_bind = tctx.move_owned_vars in
+    let saved_dead_bind = tctx.move_dead_after in
+    let shifted_owned =
+      Escape.IntSet.map (fun i -> i + 1) tctx.move_owned_vars
+    in
+    let bind_param_ml_ty = match ids with (_, ty) :: _ -> Some ty | _ -> None in
+    let owned_for_bind =
+      match bind_param_ml_ty with
+      | Some ty when Escape.is_shared_ptr_type ty ->
+        Escape.IntSet.add 1 shifted_owned
+      | _ -> shifted_owned
+    in
+    tctx.move_owned_vars <- owned_for_bind;
+    tctx.move_dead_after <-
+      Escape.IntSet.map (fun i -> i + 1) tctx.move_dead_after;
+    let result =
     ( match ids with
     | (x, ml_ty) :: _ ->
       let tvars = get_current_type_vars () in
@@ -5662,6 +5702,10 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           [Sasgn (temp_id, Some cpp_ty, a); k app]
         | None ->
           side_effect @ gen_stmts env k f ) ) )
+    in
+    tctx.move_owned_vars <- saved_owned_bind;
+    tctx.move_dead_after <- saved_dead_bind;
+    result
     end
   | MLapp (MLglob (r, _), a1 :: l) when is_ret r ->
     if tctx.itree_mode = Reified then begin

@@ -11,13 +11,12 @@ JcnOps::jcn_condition(const std::shared_ptr<JcnOps::state> &s,
   unsigned int c2 = (2u ? (4u ? cond / 4u : 0) % 2u : (4u ? cond / 4u : 0));
   unsigned int c3 = (2u ? (2u ? cond / 2u : 0) % 2u : (2u ? cond / 2u : 0));
   unsigned int c4 = (2u ? cond % 2u : cond);
-  bool base = ((s->acc == 0u && std::move(c2) == 1u) ||
-               ((s->carry && std::move(c3) == 1u) ||
-                (!(s->test_pin) && std::move(c4) == 1u)));
-  if (std::move(c1) == 1u) {
-    return !(std::move(base));
+  bool base = ((s->acc == 0u && c2 == 1u) ||
+               ((s->carry && c3 == 1u) || (!(s->test_pin) && c4 == 1u)));
+  if (c1 == 1u) {
+    return !(base);
   } else {
-    return std::move(base);
+    return base;
   }
 }
 

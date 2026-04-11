@@ -90,7 +90,7 @@ template <typename K, typename V> struct CHT {
     std::shared_ptr<List<std::pair<K, V>>> xs = stm::readTVar(b);
     std::shared_ptr<List<std::pair<K, V>>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
-            this->CHT::cht_eqb, k, v, xs);
+            this->CHT::cht_eqb, k, v, std::move(xs));
     stm::writeTVar(b, xs_);
     return std::monostate{};
   }
@@ -99,7 +99,8 @@ template <typename K, typename V> struct CHT {
     stm::TVar<std::shared_ptr<List<std::pair<K, V>>>> b = this->bucket_of(k);
     std::shared_ptr<List<std::pair<K, V>>> xs = stm::readTVar(b);
     std::pair<std::optional<V>, std::shared_ptr<List<std::pair<K, V>>>> p =
-        CHT<int, int>::template assoc_remove<K, V>(this->CHT::cht_eqb, k, xs);
+        CHT<int, int>::template assoc_remove<K, V>(this->CHT::cht_eqb, k,
+                                                   std::move(xs));
     if (p.first.has_value()) {
       V _x = *p.first;
       stm::writeTVar(b, p.second);
@@ -115,10 +116,10 @@ template <typename K, typename V> struct CHT {
     std::shared_ptr<List<std::pair<K, V>>> xs = stm::readTVar(b);
     std::optional<V> ov =
         CHT<int, int>::template assoc_lookup<K, V>(this->CHT::cht_eqb, k, xs);
-    V v = f(std::move(ov));
+    V v = f(ov);
     std::shared_ptr<List<std::pair<K, V>>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
-            this->CHT::cht_eqb, k, v, xs);
+            this->CHT::cht_eqb, k, v, std::move(xs));
     stm::writeTVar(b, xs_);
     return v;
   }

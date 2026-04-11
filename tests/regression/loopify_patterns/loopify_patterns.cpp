@@ -32,8 +32,8 @@ LoopifyPatterns::multi_let(const unsigned int n) {
                             } else {
                               unsigned int m = n - 1;
                               unsigned int b = (m * 2u);
-                              unsigned int c = (std::move(b) + 3u);
-                              _stack.push_back(_Call1{std::move(c)});
+                              unsigned int c = (b + 3u);
+                              _stack.push_back(_Call1{c});
                               _stack.push_back(_Enter{m});
                             }
                           },
@@ -333,9 +333,8 @@ LoopifyPatterns::sum_prod_count(
             [&](const typename LoopifyPatterns::list<unsigned int>::Cons
                     _args) {
               unsigned int _next_a_count = (_loop_a_count + 1);
-              unsigned int _next_a_prod =
-                  (std::move(_loop_a_prod) * _args.d_a0);
-              unsigned int _next_a_sum = (std::move(_loop_a_sum) + _args.d_a0);
+              unsigned int _next_a_prod = (_loop_a_prod * _args.d_a0);
+              unsigned int _next_a_sum = (_loop_a_sum + _args.d_a0);
               std::shared_ptr<LoopifyPatterns::list<unsigned int>> _next_l =
                   _args.d_a1;
               _loop_a_count = std::move(_next_a_count);
@@ -422,7 +421,7 @@ __attribute__((pure)) unsigned int LoopifyPatterns::guard_accum(
     std::visit(
         Overloaded{
             [&](const typename LoopifyPatterns::list<unsigned int>::Nil _args) {
-              _result = std::move(_loop_acc);
+              _result = _loop_acc;
               _continue = false;
             },
             [&](const typename LoopifyPatterns::list<unsigned int>::Cons
@@ -430,14 +429,14 @@ __attribute__((pure)) unsigned int LoopifyPatterns::guard_accum(
               if (100u < _args.d_a0) {
                 std::shared_ptr<LoopifyPatterns::list<unsigned int>> _next_l =
                     _args.d_a1;
-                unsigned int _next_acc = (std::move(_loop_acc) * 2u);
+                unsigned int _next_acc = (_loop_acc * 2u);
                 _loop_l = std::move(_next_l);
                 _loop_acc = std::move(_next_acc);
               } else {
                 if (50u < _args.d_a0) {
                   std::shared_ptr<LoopifyPatterns::list<unsigned int>> _next_l =
                       _args.d_a1;
-                  unsigned int _next_acc = (std::move(_loop_acc) + _args.d_a0);
+                  unsigned int _next_acc = (_loop_acc + _args.d_a0);
                   _loop_l = std::move(_next_l);
                   _loop_acc = std::move(_next_acc);
                 } else {
@@ -448,11 +447,7 @@ __attribute__((pure)) unsigned int LoopifyPatterns::guard_accum(
                     _loop_l = std::move(_next_l);
                     _loop_acc = std::move(_next_acc);
                   } else {
-                    std::shared_ptr<LoopifyPatterns::list<unsigned int>>
-                        _next_l = _args.d_a1;
-                    unsigned int _next_acc = std::move(_loop_acc);
-                    _loop_l = std::move(_next_l);
-                    _loop_acc = std::move(_next_acc);
+                    _loop_l = _args.d_a1;
                   }
                 }
               }
@@ -733,7 +728,7 @@ LoopifyPatterns::let_nested(const unsigned int n) {
                             } else {
                               unsigned int m = n - 1;
                               unsigned int a = (m + 1);
-                              _stack.push_back(_Call1{std::move(a)});
+                              _stack.push_back(_Call1{a});
                               _stack.push_back(_Enter{m});
                             }
                           },
@@ -1067,12 +1062,12 @@ __attribute__((pure)) unsigned int LoopifyPatterns::multi_guard(
                   _f._s0;
               unsigned int rest = _result;
               if (10u < _args.d_a0) {
-                _result = (_args.d_a0 + std::move(rest));
+                _result = (_args.d_a0 + rest);
               } else {
                 if (0u < _args.d_a0) {
-                  _result = std::move(rest);
+                  _result = rest;
                 } else {
-                  _result = (1u + std::move(rest));
+                  _result = (1u + rest);
                 }
               }
             }},
@@ -1290,9 +1285,9 @@ __attribute__((pure)) unsigned int LoopifyPatterns::sum_if_positive_else_double(
                   _f._s0;
               unsigned int rest = _result;
               if (_args.d_a0 == 0u) {
-                _result = ((2u * _args.d_a0) + std::move(rest));
+                _result = ((2u * _args.d_a0) + rest);
               } else {
-                _result = (_args.d_a0 + std::move(rest));
+                _result = (_args.d_a0 + rest);
               }
             }},
         _frame);

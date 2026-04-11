@@ -249,9 +249,9 @@ __attribute__((pure)) unsigned int LoopifyNumericMisc::sum_of_squares(
 __attribute__((pure)) unsigned int
 LoopifyNumericMisc::max_two(const unsigned int a, const unsigned int b) {
   if (a < b) {
-    return std::move(b);
+    return b;
   } else {
-    return std::move(a);
+    return a;
   }
 }
 
@@ -352,7 +352,7 @@ LoopifyNumericMisc::list_min(const std::shared_ptr<List<unsigned int>> &l) {
               if (_args.d_a0 < min_rest) {
                 _result = _args.d_a0;
               } else {
-                _result = std::move(min_rest);
+                _result = min_rest;
               }
             }},
         _frame);

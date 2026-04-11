@@ -91,7 +91,6 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::lookup_all(
   std::shared_ptr<List<unsigned int>> _head{};
   std::shared_ptr<List<unsigned int>> _last{};
   std::shared_ptr<List<std::pair<unsigned int, unsigned int>>> _loop_l = l;
-  unsigned int _loop_key = key;
   bool _continue = true;
   while (_continue) {
     std::visit(
@@ -110,7 +109,7 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::lookup_all(
                     _args) {
               unsigned int k = _args.d_a0.first;
               unsigned int v = _args.d_a0.second;
-              if (_loop_key == k) {
+              if (key == k) {
                 auto _cell = List<unsigned int>::cons(v, nullptr);
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
@@ -121,11 +120,7 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::lookup_all(
                 _last = _cell;
                 _loop_l = _args.d_a1;
               } else {
-                std::shared_ptr<List<std::pair<unsigned int, unsigned int>>>
-                    _next_l = _args.d_a1;
-                unsigned int _next_key = std::move(_loop_key);
-                _loop_l = std::move(_next_l);
-                _loop_key = std::move(_next_key);
+                _loop_l = _args.d_a1;
               }
             }},
         _loop_l->v());
@@ -210,23 +205,24 @@ LoopifyOptionMaybe::find_index_even_aux(
   std::shared_ptr<List<unsigned int>> _loop_l = l;
   bool _continue = true;
   while (_continue) {
-    std::visit(
-        Overloaded{[&](const typename List<unsigned int>::Nil _args) {
-                     _result = std::optional<unsigned int>();
-                     _continue = false;
-                   },
-                   [&](const typename List<unsigned int>::Cons _args) {
-                     if ((2u ? _args.d_a0 % 2u : _args.d_a0) == 0u) {
-                       _result = std::make_optional<unsigned int>(_loop_idx);
-                       _continue = false;
-                     } else {
-                       unsigned int _next_idx = (std::move(_loop_idx) + 1u);
-                       std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                       _loop_idx = std::move(_next_idx);
-                       _loop_l = std::move(_next_l);
-                     }
-                   }},
-        _loop_l->v());
+    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+                            _result = std::optional<unsigned int>();
+                            _continue = false;
+                          },
+                          [&](const typename List<unsigned int>::Cons _args) {
+                            if ((2u ? _args.d_a0 % 2u : _args.d_a0) == 0u) {
+                              _result =
+                                  std::make_optional<unsigned int>(_loop_idx);
+                              _continue = false;
+                            } else {
+                              unsigned int _next_idx = (_loop_idx + 1u);
+                              std::shared_ptr<List<unsigned int>> _next_l =
+                                  _args.d_a1;
+                              _loop_idx = std::move(_next_idx);
+                              _loop_l = std::move(_next_l);
+                            }
+                          }},
+               _loop_l->v());
   }
   return _result;
 }

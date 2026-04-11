@@ -159,7 +159,7 @@ struct NestedPartialApp {
           [=](std::shared_ptr<tree> _pa0) mutable { return f2(30u, _pa0); };
       unsigned int r1 = f3(tree::node(tree::leaf(), 1u, tree::leaf()));
       unsigned int r2 = f3(tree::node(tree::leaf(), 2u, tree::leaf()));
-      return (std::move(r1) + std::move(r2));
+      return (r1 + r2);
     }();
   }();
 };

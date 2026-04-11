@@ -15,26 +15,26 @@ PartialAppMove::sum_values(const std::shared_ptr<PartialAppMove::tree> &t,
   return std::visit(
       Overloaded{
           [&](const typename PartialAppMove::tree::Leaf _args) -> auto {
-            return std::move(x);
+            return x;
           },
           [&](const typename PartialAppMove::tree::Node _args) -> auto {
             return std::visit(
                 Overloaded{
                     [&](const typename PartialAppMove::tree::Leaf _args0)
-                        -> auto { return (_args.d_a1 + std::move(x)); },
+                        -> auto { return (_args.d_a1 + x); },
                     [&](const typename PartialAppMove::tree::Node _args0)
                         -> auto {
                       return std::visit(
                           Overloaded{
                               [&](const typename PartialAppMove::tree::Leaf
                                       _args1) -> auto {
-                                return (_args0.d_a1 + std::move(x));
+                                return (_args0.d_a1 + x);
                               },
                               [&](const typename PartialAppMove::tree::Node
                                       _args1) -> auto {
                                 return (
                                     ((_args0.d_a1 + _args1.d_a1) + _args.d_a1) +
-                                    std::move(x));
+                                    x);
                               }},
                           _args.d_a2->v());
                     }},

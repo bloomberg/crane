@@ -32,9 +32,8 @@ std::shared_ptr<FimOperatesOnPairs::state> FimOperatesOnPairs::set_reg_pair(
       (((r - (2u ? r % 2u : r)) > r ? 0 : (r - (2u ? r % 2u : r))));
   unsigned int hi = (16u ? v / 16u : 0);
   unsigned int lo = (16u ? v % 16u : v);
-  std::shared_ptr<FimOperatesOnPairs::state> s1 =
-      set_reg(s, base, std::move(hi));
-  return set_reg(std::move(s1), (std::move(base) + 1u), std::move(lo));
+  std::shared_ptr<FimOperatesOnPairs::state> s1 = set_reg(s, base, hi);
+  return set_reg(std::move(s1), (base + 1u), lo);
 }
 
 std::shared_ptr<FimOperatesOnPairs::state> FimOperatesOnPairs::execute_fim(

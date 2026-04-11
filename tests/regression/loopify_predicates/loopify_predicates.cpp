@@ -12,7 +12,6 @@ LoopifyPredicates::remove_all(const unsigned int x,
   std::shared_ptr<List<unsigned int>> _head{};
   std::shared_ptr<List<unsigned int>> _last{};
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  unsigned int _loop_x = x;
   bool _continue = true;
   while (_continue) {
     std::visit(
@@ -27,11 +26,8 @@ LoopifyPredicates::remove_all(const unsigned int x,
               _continue = false;
             },
             [&](const typename List<unsigned int>::Cons _args) {
-              if (_loop_x == _args.d_a0) {
-                std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                unsigned int _next_x = std::move(_loop_x);
-                _loop_l = std::move(_next_l);
-                _loop_x = std::move(_next_x);
+              if (x == _args.d_a0) {
+                _loop_l = _args.d_a1;
               } else {
                 auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);
                 if (_last) {

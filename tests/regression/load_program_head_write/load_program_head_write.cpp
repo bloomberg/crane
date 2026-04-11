@@ -34,7 +34,7 @@ LoadProgramHeadWrite::update_nth(const unsigned int n, const unsigned int x,
       unsigned int y = std::move(_rf.d_a0);
       std::shared_ptr<List<unsigned int>> ys = std::move(_rf.d_a1);
       _rf.d_a0 = y;
-      _rf.d_a1 = update_nth(std::move(n_), x, ys);
+      _rf.d_a1 = update_nth(n_, x, ys);
       return l;
     } else {
       return std::visit(

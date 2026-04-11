@@ -43,5 +43,5 @@ std::shared_ptr<StepFetchDecodeExec::state> StepFetchDecodeExec::step(
     const std::shared_ptr<StepFetchDecodeExec::state> &s) {
   unsigned int b1 = fetch_byte(s, s->pc);
   unsigned int b2 = fetch_byte(s, (s->pc + 1u));
-  return execute(s, decode(std::move(b1), std::move(b2)));
+  return execute(s, decode(b1, b2));
 }

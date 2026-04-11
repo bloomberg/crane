@@ -28,8 +28,8 @@ LoopifyNestedConstructs::multi_let(const unsigned int n) {
                             } else {
                               unsigned int n_ = n - 1;
                               unsigned int b = (n_ * 2u);
-                              unsigned int c = (std::move(b) + 3u);
-                              _stack.push_back(_Call1{std::move(c)});
+                              unsigned int c = (b + 3u);
+                              _stack.push_back(_Call1{c});
                               _stack.push_back(_Enter{n_});
                             }
                           },
@@ -131,8 +131,8 @@ LoopifyNestedConstructs::deep_nest(const unsigned int n) {
                           },
                           [&](_Call1 _f) {
                             unsigned int inner = _result;
-                            unsigned int mid = (std::move(inner) + 1u);
-                            _result = (std::move(mid) * 2u);
+                            unsigned int mid = (inner + 1u);
+                            _result = (mid * 2u);
                           }},
                _frame);
   }
@@ -163,7 +163,7 @@ LoopifyNestedConstructs::let_nested(const unsigned int n) {
                             } else {
                               unsigned int n_ = n - 1;
                               unsigned int a = (n_ + 1u);
-                              _stack.push_back(_Call1{std::move(a)});
+                              _stack.push_back(_Call1{a});
                               _stack.push_back(_Enter{n_});
                             }
                           },
@@ -416,8 +416,8 @@ LoopifyNestedConstructs::compute_with_lets(const unsigned int n) {
                           [&](_Call2 _f) {
                             unsigned int x = _f._s0;
                             unsigned int y = _result;
-                            unsigned int z = (std::move(x) + std::move(y));
-                            _result = (std::move(z) * 2u);
+                            unsigned int z = (x + y);
+                            _result = (z * 2u);
                           }},
                _frame);
   }

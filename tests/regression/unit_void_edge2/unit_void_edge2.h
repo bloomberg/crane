@@ -47,7 +47,7 @@ struct UnitVoidEdge2 {
   template <MapsTo<void, unsigned int> F0>
   __attribute__((pure)) static unsigned int
   call_and_discard(F0 &&_x, const unsigned int n) {
-    return std::move(n);
+    return n;
   }
 
   template <MapsTo<void, unsigned int> F0>

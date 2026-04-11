@@ -1,11 +1,10 @@
 #include <identifier_escape_param.h>
 
 #include <type_traits>
-#include <utility>
 
 __attribute__((pure)) unsigned int
 IdentifierEscapeParam::id_from_param(const unsigned int double0) {
-  return std::move(double0);
+  return double0;
 }
 
 __attribute__((pure)) unsigned int

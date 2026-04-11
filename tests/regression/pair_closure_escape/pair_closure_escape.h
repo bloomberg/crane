@@ -106,7 +106,7 @@ struct PairClosureEscape {
                    tree::node(tree::leaf(), 30u, tree::leaf()));
     std::pair<std::function<unsigned int(unsigned int)>, unsigned int> p1 =
         pair_escape(std::move(t1));
-    return use_pair(std::move(p1));
+    return use_pair(p1);
   }();
 };
 

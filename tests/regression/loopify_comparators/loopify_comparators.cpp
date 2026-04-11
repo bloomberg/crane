@@ -53,7 +53,7 @@ LoopifyComparators::maximum_by(const std::shared_ptr<List<unsigned int>> &l) {
               if (m < _args.d_a0) {
                 _result = _args.d_a0;
               } else {
-                _result = std::move(m);
+                _result = m;
               }
             }},
         _frame);
@@ -109,7 +109,7 @@ LoopifyComparators::minimum_by(const std::shared_ptr<List<unsigned int>> &l) {
               if (_args.d_a0 < m) {
                 _result = _args.d_a0;
               } else {
-                _result = std::move(m);
+                _result = m;
               }
             }},
         _frame);
@@ -212,7 +212,7 @@ LoopifyComparators::merge_by(const std::shared_ptr<List<unsigned int>> &l1,
                              const std::shared_ptr<List<unsigned int>> &l2) {
   unsigned int len1 = l1->length();
   unsigned int len2 = l2->length();
-  return merge_by_fuel((std::move(len1) + std::move(len2)), l1, l2);
+  return merge_by_fuel((len1 + len2), l1, l2);
 }
 
 std::shared_ptr<List<unsigned int>>
@@ -351,5 +351,5 @@ __attribute__((pure)) bool LoopifyComparators::is_sorted_fuel(
 __attribute__((pure)) bool
 LoopifyComparators::is_sorted(const std::shared_ptr<List<unsigned int>> &l) {
   unsigned int len = l->length();
-  return is_sorted_fuel(std::move(len), l);
+  return is_sorted_fuel(len, l);
 }

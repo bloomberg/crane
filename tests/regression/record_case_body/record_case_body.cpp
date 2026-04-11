@@ -42,13 +42,13 @@ RecordCaseBody::let_in_body(const std::shared_ptr<RecordCaseBody::Rec> &r) {
   unsigned int b = r->f2;
   unsigned int c = r->f3;
   unsigned int x = (a + b);
-  unsigned int y = (std::move(x) + c);
-  unsigned int z = (std::move(y) * 2u);
+  unsigned int y = (x + c);
+  unsigned int z = (y * 2u);
   if (z <= 0) {
     return 0u;
   } else {
     unsigned int _x = z - 1;
-    return std::move(z);
+    return z;
   }
 }
 

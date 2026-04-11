@@ -106,8 +106,8 @@ EffectDirPath::count_entries(const std::shared_ptr<List<std::string>> &dirs,
               }
               return result;
             }();
-            unsigned int n = files->length();
-            return count_entries(_args.d_a1, (acc + std::move(n)));
+            unsigned int n = std::move(files)->length();
+            return count_entries(_args.d_a1, (acc + n));
           }},
       dirs->v());
 }

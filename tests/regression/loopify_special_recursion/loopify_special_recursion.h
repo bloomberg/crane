@@ -303,7 +303,6 @@ struct LoopifySpecialRecursion {
   __attribute__((pure)) static unsigned int
   nest_apply(const unsigned int n, F1 &&f, const unsigned int x) {
     struct _Enter {
-      const unsigned int x;
       const unsigned int n;
     };
 
@@ -312,19 +311,18 @@ struct LoopifySpecialRecursion {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{x, n});
+    _stack.push_back(_Enter{n});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       std::visit(Overloaded{[&](_Enter _f) {
-                              const unsigned int x = _f.x;
                               const unsigned int n = _f.n;
                               if (n <= 0) {
-                                _result = std::move(x);
+                                _result = x;
                               } else {
                                 unsigned int n_ = n - 1;
                                 _stack.push_back(_Call1{});
-                                _stack.push_back(_Enter{std::move(x), n_});
+                                _stack.push_back(_Enter{n_});
                               }
                             },
                             [&](_Call1 _f) { _result = f(_result); }},

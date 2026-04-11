@@ -38,7 +38,6 @@ LoopifyTail::nth(const unsigned int n,
                  const std::shared_ptr<LoopifyTail::list<unsigned int>> &l,
                  const unsigned int default0) {
   unsigned int _result;
-  unsigned int _loop_default0 = default0;
   std::shared_ptr<LoopifyTail::list<unsigned int>> _loop_l = l;
   unsigned int _loop_n = n;
   bool _continue = true;
@@ -46,7 +45,7 @@ LoopifyTail::nth(const unsigned int n,
     std::visit(
         Overloaded{
             [&](const typename LoopifyTail::list<unsigned int>::Nil _args) {
-              _result = std::move(_loop_default0);
+              _result = default0;
               _continue = false;
             },
             [&](const typename LoopifyTail::list<unsigned int>::Cons _args) {
@@ -54,12 +53,10 @@ LoopifyTail::nth(const unsigned int n,
                 _result = _args.d_a0;
                 _continue = false;
               } else {
-                unsigned int _next_default0 = std::move(_loop_default0);
                 std::shared_ptr<LoopifyTail::list<unsigned int>> _next_l =
                     _args.d_a1;
                 unsigned int _next_n =
                     (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-                _loop_default0 = std::move(_next_default0);
                 _loop_l = std::move(_next_l);
                 _loop_n = std::move(_next_n);
               }

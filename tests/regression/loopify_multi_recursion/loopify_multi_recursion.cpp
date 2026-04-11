@@ -382,43 +382,40 @@ LoopifyMultiRecursion::hofstadter_q_fuel(const unsigned int fuel,
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     std::visit(
-        Overloaded{
-            [&](_Enter _f) {
-              const unsigned int n = _f.n;
-              const unsigned int fuel = _f.fuel;
-              if (fuel <= 0) {
-                _result = 1u;
-              } else {
-                unsigned int fuel_ = fuel - 1;
-                if (n <= 0u) {
-                  _result = 0u;
-                } else {
-                  if (n == 1u) {
-                    _result = 1u;
-                  } else {
-                    if (n == 2u) {
-                      _result = 1u;
-                    } else {
-                      unsigned int q1 = hofstadter_q_fuel(
-                          fuel_, (((n - 1u) > n ? 0 : (n - 1u))));
-                      unsigned int q2 = hofstadter_q_fuel(
-                          fuel_, (((n - 2u) > n ? 0 : (n - 2u))));
-                      _stack.push_back(_After{
-                          (((n - std::move(q1)) > n ? 0 : (n - std::move(q1)))),
-                          fuel_});
-                      _stack.push_back(_Enter{
-                          (((n - std::move(q2)) > n ? 0 : (n - std::move(q2)))),
-                          fuel_});
-                    }
-                  }
-                }
-              }
-            },
-            [&](_After _f) {
-              _stack.push_back(_Combine{_result});
-              _stack.push_back(_Enter{_f._a0, _f._a1});
-            },
-            [&](_Combine _f) { _result = (_result + _f._left); }},
+        Overloaded{[&](_Enter _f) {
+                     const unsigned int n = _f.n;
+                     const unsigned int fuel = _f.fuel;
+                     if (fuel <= 0) {
+                       _result = 1u;
+                     } else {
+                       unsigned int fuel_ = fuel - 1;
+                       if (n <= 0u) {
+                         _result = 0u;
+                       } else {
+                         if (n == 1u) {
+                           _result = 1u;
+                         } else {
+                           if (n == 2u) {
+                             _result = 1u;
+                           } else {
+                             unsigned int q1 = hofstadter_q_fuel(
+                                 fuel_, (((n - 1u) > n ? 0 : (n - 1u))));
+                             unsigned int q2 = hofstadter_q_fuel(
+                                 fuel_, (((n - 2u) > n ? 0 : (n - 2u))));
+                             _stack.push_back(_After{
+                                 (((n - q1) > n ? 0 : (n - q1))), fuel_});
+                             _stack.push_back(_Enter{
+                                 (((n - q2) > n ? 0 : (n - q2))), fuel_});
+                           }
+                         }
+                       }
+                     }
+                   },
+                   [&](_After _f) {
+                     _stack.push_back(_Combine{_result});
+                     _stack.push_back(_Enter{_f._a0, _f._a1});
+                   },
+                   [&](_Combine _f) { _result = (_result + _f._left); }},
         _frame);
   }
   return _result;

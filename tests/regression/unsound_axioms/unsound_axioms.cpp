@@ -3,7 +3,6 @@
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
-#include <utility>
 #include <variant>
 
 __attribute__((pure)) unsigned int
@@ -18,7 +17,7 @@ UnsoundAxioms::choose_in_match(const std::shared_ptr<UnsoundAxioms::Rec> &r) {
   unsigned int a = r->f1;
   unsigned int b = r->f2;
   unsigned int witness = choose<unsigned int>();
-  return ((a + b) + std::move(witness));
+  return ((a + b) + witness);
 }
 
 __attribute__((pure)) unsigned int UnsoundAxioms::extract_proof_computation(
@@ -29,7 +28,7 @@ __attribute__((pure)) unsigned int UnsoundAxioms::extract_proof_computation(
 }
 
 __attribute__((pure)) bool UnsoundAxioms::use_type_eq(const unsigned int n) {
-  return std::move(n);
+  return n;
 }
 
 std::shared_ptr<UnsoundAxioms::Rec> UnsoundAxioms::impossible_rec() {

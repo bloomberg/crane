@@ -73,12 +73,12 @@ RamOps::ram_write_main_sys(const std::shared_ptr<RamOps::state_main> &s,
   std::shared_ptr<RamOps::ram_chip_main> ch = get_chip_main(bk, c);
   std::shared_ptr<RamOps::ram_reg_main> rg = get_reg_main(ch, r);
   std::shared_ptr<RamOps::ram_reg_main> rg_ =
-      upd_main_in_reg(std::move(rg), std::move(i), v);
+      upd_main_in_reg(std::move(rg), i, v);
   std::shared_ptr<RamOps::ram_chip_main> ch_ =
-      upd_reg_in_chip_main(std::move(ch), std::move(r), std::move(rg_));
+      upd_reg_in_chip_main(std::move(ch), r, std::move(rg_));
   std::shared_ptr<RamOps::ram_bank_main> bk_ =
-      upd_chip_in_bank_main(std::move(bk), std::move(c), std::move(ch_));
-  return upd_bank_in_sys_main(s, std::move(b), std::move(bk_));
+      upd_chip_in_bank_main(std::move(bk), c, std::move(ch_));
+  return upd_bank_in_sys_main(s, b, std::move(bk_));
 }
 
 std::shared_ptr<RamOps::bank_port>
@@ -128,8 +128,8 @@ RamOps::ram_write_port_sys(const std::shared_ptr<RamOps::state_port> &s,
   std::shared_ptr<RamOps::chip_port> ch = get_chip_port(bk, c);
   std::shared_ptr<RamOps::chip_port> ch_ = upd_port_in_chip(std::move(ch), v);
   std::shared_ptr<RamOps::bank_port> bk_ =
-      upd_chip_in_bank_port(std::move(bk), std::move(c), std::move(ch_));
-  return upd_bank_in_sys_port(s, std::move(b), std::move(bk_));
+      upd_chip_in_bank_port(std::move(bk), c, std::move(ch_));
+  return upd_bank_in_sys_port(s, b, std::move(bk_));
 }
 
 std::shared_ptr<RamOps::ram_bank_status>
@@ -201,10 +201,10 @@ RamOps::ram_write_status_sys(const std::shared_ptr<RamOps::state_status> &s,
   std::shared_ptr<RamOps::ram_reg_status> rg_ =
       upd_status_in_reg(std::move(rg), idx, v);
   std::shared_ptr<RamOps::ram_chip_status> ch_ =
-      upd_reg_in_chip_status(std::move(ch), std::move(r), std::move(rg_));
+      upd_reg_in_chip_status(std::move(ch), r, std::move(rg_));
   std::shared_ptr<RamOps::ram_bank_status> bk_ =
-      upd_chip_in_bank_status(std::move(bk), std::move(c), std::move(ch_));
-  return upd_bank_in_sys_status(s, std::move(b), std::move(bk_));
+      upd_chip_in_bank_status(std::move(bk), c, std::move(ch_));
+  return upd_bank_in_sys_status(s, b, std::move(bk_));
 }
 
 std::shared_ptr<RamOps::ram_bank_sel>

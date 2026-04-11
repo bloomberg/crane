@@ -398,7 +398,7 @@ __attribute__((pure)) bool LoopifySearch::binary_search_fuel(
         }
       } else {
         unsigned int _x = n - 1;
-        unsigned int mid = (2u ? std::move(n) / 2u : 0);
+        unsigned int mid = (2u ? n / 2u : 0);
         unsigned int mid_val = nth_impl(mid, _loop_l);
         if (target == mid_val) {
           {
@@ -406,10 +406,10 @@ __attribute__((pure)) bool LoopifySearch::binary_search_fuel(
             _continue = false;
           }
         } else {
-          if (target < std::move(mid_val)) {
+          if (target < mid_val) {
             {
               std::shared_ptr<List<unsigned int>> _next_l =
-                  take_impl(std::move(mid), _loop_l);
+                  take_impl(mid, _loop_l);
               unsigned int _next_fuel = f;
               _loop_l = std::move(_next_l);
               _loop_fuel = std::move(_next_fuel);
@@ -683,7 +683,7 @@ LoopifySearch::subset_sum_fuel(const unsigned int fuel,
               unsigned int f = _f._s1;
               const unsigned int target = _f._s2;
               bool without = _result;
-              if (std::move(without)) {
+              if (without) {
                 _result = true;
               } else {
                 if (_args.d_a0 <= target) {
@@ -1564,7 +1564,6 @@ LoopifySearch::all_indices_aux(const unsigned int x,
   std::shared_ptr<List<unsigned int>> _last{};
   unsigned int _loop_idx = idx;
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  unsigned int _loop_x = x;
   bool _continue = true;
   while (_continue) {
     std::visit(
@@ -1579,7 +1578,7 @@ LoopifySearch::all_indices_aux(const unsigned int x,
               _continue = false;
             },
             [&](const typename List<unsigned int>::Cons _args) {
-              if (_loop_x == _args.d_a0) {
+              if (x == _args.d_a0) {
                 auto _cell = List<unsigned int>::cons(_loop_idx, nullptr);
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
@@ -1595,10 +1594,8 @@ LoopifySearch::all_indices_aux(const unsigned int x,
               } else {
                 unsigned int _next_idx = (_loop_idx + 1);
                 std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                unsigned int _next_x = std::move(_loop_x);
                 _loop_idx = std::move(_next_idx);
                 _loop_l = std::move(_next_l);
-                _loop_x = std::move(_next_x);
               }
             }},
         _loop_l->v());
@@ -1661,7 +1658,7 @@ LoopifySearch::min_element(const std::shared_ptr<List<unsigned int>> &l) {
               if (_args.d_a0 <= min_rest) {
                 _result = _args.d_a0;
               } else {
-                _result = std::move(min_rest);
+                _result = min_rest;
               }
             }},
         _frame);

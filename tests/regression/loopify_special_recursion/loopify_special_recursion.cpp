@@ -141,8 +141,8 @@ std::shared_ptr<List<unsigned int>> LoopifySpecialRecursion::remove_if_sum_even(
                              [](const typename List<unsigned int>::Cons _args0)
                                  -> unsigned int { return _args0.d_a0; }},
                   _args.d_a1->v());
-              if ((2u ? (_args.d_a0 + std::move(next_val)) % 2u
-                      : (_args.d_a0 + std::move(next_val))) == 0u) {
+              if ((2u ? (_args.d_a0 + next_val) % 2u
+                      : (_args.d_a0 + next_val)) == 0u) {
                 _loop_l = _args.d_a1;
               } else {
                 auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);
@@ -378,8 +378,6 @@ LoopifySpecialRecursion::between(const unsigned int lo, const unsigned int hi,
   std::shared_ptr<List<unsigned int>> _head{};
   std::shared_ptr<List<unsigned int>> _last{};
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  unsigned int _loop_hi = hi;
-  unsigned int _loop_lo = lo;
   bool _continue = true;
   while (_continue) {
     std::visit(
@@ -394,8 +392,8 @@ LoopifySpecialRecursion::between(const unsigned int lo, const unsigned int hi,
               _continue = false;
             },
             [&](const typename List<unsigned int>::Cons _args) {
-              if (_loop_lo <= _args.d_a0) {
-                if (_args.d_a0 <= _loop_hi) {
+              if (lo <= _args.d_a0) {
+                if (_args.d_a0 <= hi) {
                   auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);
                   if (_last) {
                     std::get<typename List<unsigned int>::Cons>(_last->v_mut())
@@ -406,20 +404,10 @@ LoopifySpecialRecursion::between(const unsigned int lo, const unsigned int hi,
                   _last = _cell;
                   _loop_l = _args.d_a1;
                 } else {
-                  std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                  unsigned int _next_hi = std::move(_loop_hi);
-                  unsigned int _next_lo = std::move(_loop_lo);
-                  _loop_l = std::move(_next_l);
-                  _loop_hi = std::move(_next_hi);
-                  _loop_lo = std::move(_next_lo);
+                  _loop_l = _args.d_a1;
                 }
               } else {
-                std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                unsigned int _next_hi = std::move(_loop_hi);
-                unsigned int _next_lo = std::move(_loop_lo);
-                _loop_l = std::move(_next_l);
-                _loop_hi = std::move(_next_hi);
-                _loop_lo = std::move(_next_lo);
+                _loop_l = _args.d_a1;
               }
             }},
         _loop_l->v());

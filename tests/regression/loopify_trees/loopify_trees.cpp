@@ -354,9 +354,9 @@ __attribute__((pure)) unsigned int LoopifyTrees::sum_of_max_branches(
               unsigned int rsum = _result;
               _result = (_args.d_a1 + [&]() -> unsigned int {
                 if (lsum <= rsum) {
-                  return std::move(rsum);
+                  return rsum;
                 } else {
-                  return std::move(lsum);
+                  return lsum;
                 }
               }());
             }},
@@ -577,9 +577,9 @@ __attribute__((pure)) unsigned int LoopifyTrees::depth_rose_list_fuel(
               unsigned int d = _f._s0;
               unsigned int rest_max = _result;
               if (d <= rest_max) {
-                _result = std::move(rest_max);
+                _result = rest_max;
               } else {
-                _result = std::move(d);
+                _result = d;
               }
             }},
         _frame);
@@ -1255,27 +1255,27 @@ LoopifyTrees::max4_impl(const unsigned int a, const unsigned int b,
                         const unsigned int c, const unsigned int d) {
   if ([&]() -> unsigned int {
         if (a <= b) {
-          return std::move(b);
+          return b;
         } else {
-          return std::move(a);
+          return a;
         }
       }() <= [&]() -> unsigned int {
         if (c <= d) {
-          return std::move(d);
+          return d;
         } else {
-          return std::move(c);
+          return c;
         }
       }()) {
     if (c <= d) {
-      return std::move(d);
+      return d;
     } else {
-      return std::move(c);
+      return c;
     }
   } else {
     if (a <= b) {
-      return std::move(b);
+      return b;
     } else {
-      return std::move(a);
+      return a;
     }
   }
 }
@@ -1286,15 +1286,15 @@ __attribute__((pure)) unsigned int LoopifyTrees::min3(const unsigned int a,
                                                       const unsigned int c) {
   if (a <= b) {
     if (a <= c) {
-      return std::move(a);
+      return a;
     } else {
-      return std::move(c);
+      return c;
     }
   } else {
     if (b <= c) {
-      return std::move(b);
+      return b;
     } else {
-      return std::move(c);
+      return c;
     }
   }
 }
@@ -1305,15 +1305,15 @@ __attribute__((pure)) unsigned int LoopifyTrees::max3(const unsigned int a,
                                                       const unsigned int c) {
   if (b <= a) {
     if (c <= a) {
-      return std::move(a);
+      return a;
     } else {
-      return std::move(c);
+      return c;
     }
   } else {
     if (c <= b) {
-      return std::move(b);
+      return b;
     } else {
-      return std::move(c);
+      return c;
     }
   }
 }
@@ -1436,12 +1436,11 @@ __attribute__((pure)) unsigned int LoopifyTrees::all_paths_sum(
                            Overloaded{
                                [&](const typename LoopifyTrees::tree<
                                    unsigned int>::Leaf _args) -> void {
-                                 _result = std::move(acc);
+                                 _result = acc;
                                },
                                [&](const typename LoopifyTrees::tree<
                                    unsigned int>::Node _args) -> void {
-                                 unsigned int new_acc =
-                                     (std::move(acc) + _args.d_a1);
+                                 unsigned int new_acc = (acc + _args.d_a1);
                                  _stack.push_back(_Call1{_args.d_a0, new_acc});
                                  _stack.push_back(_Enter{_args.d_a2, new_acc});
                                }},

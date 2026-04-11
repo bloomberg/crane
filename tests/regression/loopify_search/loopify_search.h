@@ -201,7 +201,7 @@ struct LoopifySearch {
                 if (cmp(_args.d_a0, m) == 1u) {
                   _result = _args.d_a0;
                 } else {
-                  _result = std::move(m);
+                  _result = m;
                 }
               }},
           _frame);

@@ -46,13 +46,13 @@ struct RecordUseAfterMove {
   static inline const unsigned int double_let = []() {
     unsigned int x = initial_box->payload;
     unsigned int y = initial_box->payload;
-    return (std::move(x) + std::move(y));
+    return (x + y);
   }();
   /// Record passed to two different functions.
   static inline const unsigned int two_consumers = []() {
     unsigned int p = use_box(initial_box);
     unsigned int q = use_box(initial_box);
-    return (std::move(p) + std::move(q));
+    return (p + q);
   }();
 };
 

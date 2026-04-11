@@ -87,7 +87,7 @@ std::shared_ptr<List<unsigned int>> LoopifySearchOpt::longest_run_fuel(
               [&](const typename List<unsigned int>::Nil _args) {
                 unsigned int len_curr = _loop_current->length();
                 unsigned int len_best = _loop_best->length();
-                if (std::move(len_best) < std::move(len_curr)) {
+                if (len_best < len_curr) {
                   _result = std::move(_loop_current);
                   _continue = false;
                 } else {
@@ -130,7 +130,7 @@ std::shared_ptr<List<unsigned int>> LoopifySearchOpt::longest_run_fuel(
                             unsigned int len_curr = _loop_current->length();
                             unsigned int len_best = _loop_best->length();
                             std::shared_ptr<List<unsigned int>> new_best;
-                            if (std::move(len_best) < std::move(len_curr)) {
+                            if (len_best < len_curr) {
                               new_best = std::move(_loop_current);
                             } else {
                               new_best = std::move(_loop_best);
@@ -415,7 +415,7 @@ __attribute__((pure)) bool LoopifySearchOpt::binary_search_fuel(
                       _loop_l->v());
                   _continue = false;
                 } else {
-                  unsigned int mid = (2u ? std::move(len) / 2u : 0);
+                  unsigned int mid = (2u ? len / 2u : 0);
                   unsigned int mid_val;
                   std::function<unsigned int(
                       unsigned int, std::shared_ptr<List<unsigned int>>)>
@@ -572,7 +572,7 @@ __attribute__((pure)) bool LoopifySearchOpt::binary_search_fuel(
                     }
                     return _result;
                   };
-                  right = drop((std::move(mid) + 1u), _loop_l);
+                  right = drop((mid + 1u), _loop_l);
                   if (target < mid_val) {
                     std::shared_ptr<List<unsigned int>> _next_l =
                         std::move(left);
@@ -580,7 +580,7 @@ __attribute__((pure)) bool LoopifySearchOpt::binary_search_fuel(
                     _loop_l = std::move(_next_l);
                     _loop_fuel = std::move(_next_fuel);
                   } else {
-                    if (std::move(mid_val) < target) {
+                    if (mid_val < target) {
                       std::shared_ptr<List<unsigned int>> _next_l =
                           std::move(right);
                       unsigned int _next_fuel = fuel_;

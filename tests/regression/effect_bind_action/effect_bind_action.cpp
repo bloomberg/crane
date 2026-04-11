@@ -89,7 +89,7 @@ std::string EffectBindAction::echo_if(const bool flag) {
   std::getline(std::cin, line);
   [&]() -> std::monostate {
     if (flag) {
-      std::cout << std::move(line) << '\n';
+      std::cout << line << '\n';
       return std::monostate{};
     } else {
       return std::monostate{};

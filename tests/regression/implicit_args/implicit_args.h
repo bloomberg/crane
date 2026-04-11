@@ -135,7 +135,7 @@ struct ImplicitArgs {
   template <MapsTo<unsigned int, unsigned int> F0>
   __attribute__((pure)) static unsigned int
   apply_implicit(F0 &&f, const unsigned int _x0) {
-    return f(std::move(_x0));
+    return f(_x0);
   }
 
   static inline const unsigned int use_apply_implicit = apply_implicit(

@@ -38,10 +38,10 @@ WellFoundedRec::div2_wf(const unsigned int x) {
 __attribute__((pure)) unsigned int
 WellFoundedRec::gcd_wf(const unsigned int x, const unsigned int b) {
   if (x <= 0) {
-    return std::move(b);
+    return b;
   } else {
     unsigned int a_ = x - 1;
-    unsigned int y = ((a_ + 1) ? std::move(b) % (a_ + 1) : std::move(b));
-    return gcd_wf(std::move(y), (a_ + 1));
+    unsigned int y = ((a_ + 1) ? b % (a_ + 1) : b);
+    return gcd_wf(y, (a_ + 1));
   }
 }

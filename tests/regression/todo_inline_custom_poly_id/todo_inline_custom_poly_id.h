@@ -3,7 +3,6 @@
 
 #include <todo_inline_custom_poly_id_support.h>
 #include <type_traits>
-#include <utility>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
@@ -17,7 +16,7 @@ struct TodoInlineCustomPolyId {
   static inline const unsigned int test_value = []() {
     unsigned int kept_nat = inline_id_impl(4u);
     bool kept_bool = inline_id_impl(true);
-    if (std::move(kept_bool)) {
+    if (kept_bool) {
       return (kept_nat + 1);
     } else {
       return 0u;

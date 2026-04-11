@@ -1183,7 +1183,7 @@ __attribute__((pure)) unsigned int EpochCellGlyphTraceCase::count_total_lunar(
               }
               }
             }();
-            return (std::move(count_here) + count_total_lunar(_args.d_a1));
+            return (count_here + count_total_lunar(_args.d_a1));
           }},
       es->v());
 }
@@ -1215,8 +1215,7 @@ EpochCellGlyphTraceCase::count_visible_total_lunar(
               }
               }
             }();
-            return (std::move(count_here) +
-                    count_visible_total_lunar(_args.d_a1));
+            return (count_here + count_visible_total_lunar(_args.d_a1));
           }},
       es->v());
 }
@@ -1240,7 +1239,7 @@ EpochCellGlyphTraceCase::visible_series_checksum(
             } else {
               term = 0u;
             }
-            return (std::move(term) + visible_series_checksum(_args.d_a1));
+            return (term + visible_series_checksum(_args.d_a1));
           }},
       es->v());
 }

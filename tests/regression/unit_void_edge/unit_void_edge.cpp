@@ -44,18 +44,13 @@ UnitVoidEdge::return_some_tt(const unsigned int n) {
   }
 }
 
-void UnitVoidEdge::unit_chain(const std::monostate u) {
-  {
-    std::move(u);
-    return;
-  }
-}
+void UnitVoidEdge::unit_chain(const std::monostate u) { return; }
 
 void UnitVoidEdge::helper_void(const unsigned int _x) { return; }
 
 __attribute__((pure)) unsigned int
 UnitVoidEdge::use_helper(const unsigned int n) {
-  return std::move(n);
+  return n;
 }
 
 __attribute__((pure)) unsigned int

@@ -4,7 +4,6 @@
 #include <memory>
 #include <optional>
 #include <type_traits>
-#include <utility>
 
 __attribute__((pure)) unsigned int
 Option::get_or_default(const std::optional<unsigned int> o,
@@ -13,7 +12,7 @@ Option::get_or_default(const std::optional<unsigned int> o,
     unsigned int x = *o;
     return x;
   } else {
-    return std::move(default0);
+    return default0;
   }
 }
 
@@ -32,8 +31,8 @@ Option::chain_options(const std::optional<unsigned int> o1,
                       const std::optional<unsigned int> o2) {
   if (o1.has_value()) {
     unsigned int _x = *o1;
-    return std::move(o1);
+    return o1;
   } else {
-    return std::move(o2);
+    return o2;
   }
 }

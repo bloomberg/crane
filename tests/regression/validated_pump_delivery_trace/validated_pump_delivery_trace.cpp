@@ -179,22 +179,17 @@ ValidatedPumpDeliveryTraceCase::bilinear_iob_fraction(
         return 0u;
       } else {
         if (elapsed <= pt) {
-          return (
-              ((100u - (std::move(pt) ? (elapsed * 25u) / std::move(pt) : 0)) >
-                       100u
-                   ? 0
-                   : (100u -
-                      (std::move(pt) ? (elapsed * 25u) / std::move(pt) : 0))));
+          return (((100u - (pt ? (elapsed * 25u) / pt : 0)) > 100u
+                       ? 0
+                       : (100u - (pt ? (elapsed * 25u) / pt : 0))));
         } else {
           if (dia <= pt) {
             return 0u;
           } else {
             return (
-                (((dia - std::move(pt)) > dia ? 0 : (dia - std::move(pt))))
+                (((dia - pt) > dia ? 0 : (dia - pt)))
                     ? ((((dia - elapsed) > dia ? 0 : (dia - elapsed))) * 75u) /
-                          (((dia - std::move(pt)) > dia
-                                ? 0
-                                : (dia - std::move(pt))))
+                          (((dia - pt) > dia ? 0 : (dia - pt)))
                     : 0);
           }
         }
@@ -264,12 +259,12 @@ ValidatedPumpDeliveryTraceCase::adjusted_isf_tenths(
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &bg,
     const unsigned int base_isf_tenths) {
   if (bg->mg_dL_val < 250u) {
-    return std::move(base_isf_tenths);
+    return base_isf_tenths;
   } else {
     if (bg->mg_dL_val < 350u) {
-      return (100u ? (std::move(base_isf_tenths) * 80u) / 100u : 0);
+      return (100u ? (base_isf_tenths * 80u) / 100u : 0);
     } else {
-      return (100u ? (std::move(base_isf_tenths) * 60u) / 100u : 0);
+      return (100u ? (base_isf_tenths * 60u) / 100u : 0);
     }
   }
 }
@@ -287,13 +282,13 @@ ValidatedPumpDeliveryTraceCase::correction_twentieths_full(
     if (current_bg->mg_dL_val <= target_bg->mg_dL_val) {
       return 0u;
     } else {
-      return (std::move(eff_isf)
+      return (eff_isf
                   ? ((((current_bg->mg_dL_val - target_bg->mg_dL_val) >
                                current_bg->mg_dL_val
                            ? 0
                            : (current_bg->mg_dL_val - target_bg->mg_dL_val))) *
                      200u) /
-                        std::move(eff_isf)
+                        eff_isf
                   : 0);
     }
   }
@@ -314,18 +309,15 @@ ValidatedPumpDeliveryTraceCase::apply_reverse_correction_twentieths(
     if (isf_tenths == 0u) {
       reverse_units = 0u;
     } else {
-      reverse_units =
-          (isf_tenths ? (std::move(reverse_drop) * 200u) / isf_tenths : 0);
+      reverse_units = (isf_tenths ? (reverse_drop * 200u) / isf_tenths : 0);
     }
     if (carb <= reverse_units) {
       return 0u;
     } else {
-      return (((std::move(carb) - std::move(reverse_units)) > std::move(carb)
-                   ? 0
-                   : (std::move(carb) - std::move(reverse_units))));
+      return (((carb - reverse_units) > carb ? 0 : (carb - reverse_units)));
     }
   } else {
-    return std::move(carb);
+    return carb;
   }
 }
 
@@ -365,7 +357,7 @@ ValidatedPumpDeliveryTraceCase::predicted_eventual_bg_tenths(
                           ? 0
                           : (current_bg->mg_dL_val - drop)));
   }
-  return (std::move(bg_after_drop) + std::move(rise));
+  return (bg_after_drop + rise);
 }
 
 std::shared_ptr<ValidatedPumpDeliveryTraceCase::SuspendDecision>
@@ -379,11 +371,11 @@ ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
   } else {
     unsigned int total_insulin = (iob_twentieths + proposed);
     unsigned int pred = predicted_eventual_bg_tenths(
-        cfg, current_bg, std::move(total_insulin), cob_grams, isf_tenths);
+        cfg, current_bg, total_insulin, cob_grams, isf_tenths);
     if (pred < BG_LEVEL2_HYPO) {
       return SuspendDecision::suspend_withhold();
     } else {
-      if (std::move(pred) < cfg->cfg_suspend_threshold_mg_dl) {
+      if (pred < cfg->cfg_suspend_threshold_mg_dl) {
         unsigned int rise_from_cob = conservative_cob_rise(cfg, cob_grams);
         unsigned int effective_target;
         if (cfg->cfg_suspend_threshold_mg_dl <= rise_from_cob) {
@@ -405,7 +397,7 @@ ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
                             : (current_bg->mg_dL_val - effective_target)));
         }
         unsigned int safe_insulin =
-            (isf_tenths ? (std::move(safe_drop) * 200u) / isf_tenths : 0);
+            (isf_tenths ? (safe_drop * 200u) / isf_tenths : 0);
         if (safe_insulin <= iob_twentieths) {
           return SuspendDecision::suspend_withhold();
         } else {
@@ -429,13 +421,11 @@ ValidatedPumpDeliveryTraceCase::apply_suspend(
   return std::visit(
       Overloaded{
           [&](const typename ValidatedPumpDeliveryTraceCase::SuspendDecision::
-                  Suspend_None _args) -> unsigned int {
-            return std::move(proposed);
-          },
+                  Suspend_None _args) -> unsigned int { return proposed; },
           [&](const typename ValidatedPumpDeliveryTraceCase::SuspendDecision::
                   Suspend_Reduce _args) -> unsigned int {
             if (proposed <= _args.d_a0) {
-              return std::move(proposed);
+              return proposed;
             } else {
               return _args.d_a0;
             }
@@ -455,7 +445,7 @@ __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::cap_pediatric(const unsigned int bolus,
                                               const unsigned int weight_kg) {
   if (bolus <= pediatric_max_twentieths(weight_kg)) {
-    return std::move(bolus);
+    return bolus;
   } else {
     return pediatric_max_twentieths(weight_kg);
   }
@@ -504,23 +494,20 @@ ValidatedPumpDeliveryTraceCase::calculate_precision_bolus(
   } else {
     eff_bg = input->pi_current_bg;
   }
-  unsigned int carb = carb_bolus_twentieths(input->pi_carbs_g->grams_val,
-                                            std::move(activity_icr));
+  unsigned int carb =
+      carb_bolus_twentieths(input->pi_carbs_g->grams_val, activity_icr);
   unsigned int carb_adj = apply_reverse_correction_twentieths(
-      std::move(carb), eff_bg, params->prec_target_bg, activity_isf);
+      carb, eff_bg, params->prec_target_bg, activity_isf);
   unsigned int corr = correction_twentieths_full(
-      input->pi_now, std::move(eff_bg), params->prec_target_bg,
-      std::move(activity_isf));
+      input->pi_now, std::move(eff_bg), params->prec_target_bg, activity_isf);
   unsigned int iob =
       total_bilinear_iob(input->pi_now, input->pi_bolus_history,
                          params->prec_dia, params->prec_insulin_type);
-  unsigned int raw = (std::move(carb_adj) + std::move(corr));
+  unsigned int raw = (carb_adj + corr);
   if (raw <= iob) {
     return 0u;
   } else {
-    return (((std::move(raw) - std::move(iob)) > std::move(raw)
-                 ? 0
-                 : (std::move(raw) - std::move(iob))));
+    return (((raw - iob) > raw ? 0 : (raw - iob)));
   }
 }
 
@@ -580,7 +567,7 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::bolus_too_soon(
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::cap_twentieths(const unsigned int t) {
   if (t <= 500u) {
-    return std::move(t);
+    return t;
   } else {
     return 500u;
   }
@@ -678,21 +665,20 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                       std::shared_ptr<
                           ValidatedPumpDeliveryTraceCase::SuspendDecision>
                           suspend_decision = suspend_check_tenths_with_cob(
-                              default_config, std::move(eff_bg), std::move(iob),
-                              input->pi_carbs_g->grams_val,
-                              std::move(activity_isf), tdd_capped);
+                              default_config, std::move(eff_bg), iob,
+                              input->pi_carbs_g->grams_val, activity_isf,
+                              tdd_capped);
                       unsigned int suspended = apply_suspend(
-                          std::move(tdd_capped), std::move(suspend_decision));
-                      unsigned int adult_capped =
-                          cap_twentieths(std::move(suspended));
+                          tdd_capped, std::move(suspend_decision));
+                      unsigned int adult_capped = cap_twentieths(suspended);
                       unsigned int capped;
                       if (input->pi_weight_kg.has_value()) {
                         unsigned int w = *input->pi_weight_kg;
-                        capped = cap_pediatric(std::move(adult_capped), w);
+                        capped = cap_pediatric(adult_capped, w);
                       } else {
-                        capped = std::move(adult_capped);
+                        capped = adult_capped;
                       }
-                      bool was_modified = !(std::move(raw) == capped);
+                      bool was_modified = !(raw == capped);
                       return PrecisionResult::precok(capped, was_modified);
                     }
                   }
@@ -755,9 +741,9 @@ __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::round_down_to_increment(
     const unsigned int t, const unsigned int increment) {
   if (increment == 0u) {
-    return std::move(t);
+    return t;
   } else {
-    return ((increment ? std::move(t) / increment : 0) * increment);
+    return ((increment ? t / increment : 0) * increment);
   }
 }
 
@@ -767,16 +753,16 @@ ValidatedPumpDeliveryTraceCase::apply_rounding(
     const unsigned int t) {
   switch (mode) {
   case RoundingMode::e_ROUNDTWENTIETH: {
-    return std::move(t);
+    return t;
   }
   case RoundingMode::e_ROUNDTENTH: {
-    return round_down_to_increment(std::move(t), 2u);
+    return round_down_to_increment(t, 2u);
   }
   case RoundingMode::e_ROUNDHALF: {
-    return round_down_to_increment(std::move(t), 10u);
+    return round_down_to_increment(t, 10u);
   }
   case RoundingMode::e_ROUNDUNIT: {
-    return round_down_to_increment(std::move(t), ONE_UNIT);
+    return round_down_to_increment(t, ONE_UNIT);
   }
   default:
     std::unreachable();
@@ -833,7 +819,7 @@ ValidatedPumpDeliveryTraceCase::option_nat_default(
     unsigned int v = *x;
     return v;
   } else {
-    return std::move(d);
+    return d;
   }
 }
 
@@ -865,7 +851,7 @@ ValidatedPumpDeliveryTraceCase::pump_reservoir_after_result(
 __attribute__((pure)) unsigned int Nat::tail_add(const unsigned int n,
                                                  const unsigned int m) {
   if (n <= 0) {
-    return std::move(m);
+    return m;
   } else {
     unsigned int n0 = n - 1;
     return Nat::tail_add(n0, (m + 1));
@@ -876,10 +862,10 @@ __attribute__((pure)) unsigned int Nat::tail_addmul(const unsigned int r,
                                                     const unsigned int n,
                                                     const unsigned int m) {
   if (n <= 0) {
-    return std::move(r);
+    return r;
   } else {
     unsigned int n0 = n - 1;
-    return Nat::tail_addmul(Nat::tail_add(m, std::move(r)), n0, m);
+    return Nat::tail_addmul(Nat::tail_add(m, r), n0, m);
   }
 }
 
@@ -892,12 +878,9 @@ __attribute__((pure)) unsigned int
 Nat::of_uint_acc(const std::shared_ptr<Uint> &d, const unsigned int acc) {
   return std::visit(
       Overloaded{
-          [&](const typename Uint::Nil _args) -> unsigned int {
-            return std::move(acc);
-          },
+          [&](const typename Uint::Nil _args) -> unsigned int { return acc; },
           [&](const typename Uint::D0 _args) -> unsigned int {
-            return Nat::of_uint_acc(_args.d_a0,
-                                    Nat::tail_mul(10u, std::move(acc)));
+            return Nat::of_uint_acc(_args.d_a0, Nat::tail_mul(10u, acc));
           },
           [&](const typename Uint::D1 _args) -> unsigned int {
             return Nat::of_uint_acc(_args.d_a0, (Nat::tail_mul(10u, acc) + 1));
@@ -957,12 +940,9 @@ __attribute__((pure)) unsigned int
 Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
   return std::visit(
       Overloaded{
-          [&](const typename Uint0::Nil0 _args) -> unsigned int {
-            return std::move(acc);
-          },
+          [&](const typename Uint0::Nil0 _args) -> unsigned int { return acc; },
           [&](const typename Uint0::D10 _args) -> unsigned int {
-            return Nat::of_hex_uint_acc(_args.d_a0,
-                                        Nat::tail_mul(16u, std::move(acc)));
+            return Nat::of_hex_uint_acc(_args.d_a0, Nat::tail_mul(16u, acc));
           },
           [&](const typename Uint0::D11 _args) -> unsigned int {
             return Nat::of_hex_uint_acc(_args.d_a0,

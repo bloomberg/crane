@@ -110,7 +110,7 @@ struct OptionSomeEscape {
                    tree::node(tree::leaf(), 30u, tree::leaf()));
     std::optional<std::function<unsigned int(unsigned int)>> o1 =
         option_escape(std::move(t1));
-    return apply_option(std::move(o1), 0u);
+    return apply_option(o1, 0u);
   }();
 };
 

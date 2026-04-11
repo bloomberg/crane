@@ -2,7 +2,6 @@
 #define INCLUDED_TODO_POLYMORPHIC_ERASED_HELPER
 
 #include <type_traits>
-#include <utility>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
@@ -19,8 +18,8 @@ struct TodoPolymorphicErasedHelper {
     return []() {
       unsigned int kept_nat = _anon_aux(7u);
       bool kept_bool = _anon_aux(true);
-      return (std::move(kept_nat) + [&]() -> unsigned int {
-        if (std::move(kept_bool)) {
+      return (kept_nat + [&]() -> unsigned int {
+        if (kept_bool) {
           return 1u;
         } else {
           return 0u;

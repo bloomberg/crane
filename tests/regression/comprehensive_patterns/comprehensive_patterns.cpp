@@ -717,7 +717,7 @@ ComprehensivePatterns::proj_through_option(
 
 __attribute__((pure)) unsigned int
 ComprehensivePatterns::use_proj(const unsigned int n) {
-  return std::move(n);
+  return n;
 }
 
 __attribute__((pure)) unsigned int ComprehensivePatterns::proj_as_arg(
@@ -739,7 +739,7 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::let_proj_then_base(
     const std::shared_ptr<ComprehensivePatterns::NC> &r) {
   unsigned int x = r->nc_a;
   unsigned int y = r->nc_b;
-  return (std::move(x) + std::move(y));
+  return (x + y);
 }
 
 __attribute__((pure)) unsigned int ComprehensivePatterns::base_then_multi_proj(
@@ -861,7 +861,7 @@ ComprehensivePatterns::chained_lets_same_base(
   unsigned int x = r->nc_a;
   unsigned int y = r->nc_b;
   unsigned int z = r->nc_c;
-  return ((std::move(x) + std::move(y)) + std::move(z));
+  return ((x + y) + z);
 }
 
 __attribute__((pure)) unsigned int ComprehensivePatterns::double_proj_nc(
@@ -948,7 +948,7 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::bug_three_args(
 __attribute__((pure)) unsigned int ComprehensivePatterns::take_state_and_val(
     const std::shared_ptr<ComprehensivePatterns::State> &_x,
     const unsigned int n) {
-  return std::move(n);
+  return n;
 }
 
 __attribute__((pure)) unsigned int ComprehensivePatterns::bug_state_and_proj(
@@ -977,7 +977,7 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::bug_in_condition(
 
 __attribute__((pure)) unsigned int
 ComprehensivePatterns::f1_fc(const unsigned int n) {
-  return std::move(n);
+  return n;
 }
 
 __attribute__((pure)) unsigned int
@@ -1017,21 +1017,21 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::two_proj_sequence(
     const std::shared_ptr<ComprehensivePatterns::State> &s) {
   unsigned int v = s->state_value;
   unsigned int d = s->state_data;
-  return (std::move(v) + std::move(d));
+  return (v + d);
 }
 
 __attribute__((pure)) unsigned int ComprehensivePatterns::let_multi_proj(
     const std::shared_ptr<ComprehensivePatterns::State> &s) {
   unsigned int v = s->state_value;
   unsigned int d = s->state_data;
-  return (std::move(v) + std::move(d));
+  return (v + d);
 }
 
 __attribute__((pure)) unsigned int ComprehensivePatterns::nested_lets_same_base(
     const std::shared_ptr<ComprehensivePatterns::State> &s) {
   unsigned int v = s->state_value;
   unsigned int d = s->state_data;
-  return (std::move(v) + std::move(d));
+  return (v + d);
 }
 
 __attribute__((pure)) unsigned int ComprehensivePatterns::if_with_proj(

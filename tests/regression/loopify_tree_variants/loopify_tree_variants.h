@@ -772,9 +772,9 @@ struct LoopifyTreeVariants {
                   unsigned int lmax = _f._s0;
                   unsigned int rmax = _result;
                   if (lmax < rmax) {
-                    _result = std::move(rmax);
+                    _result = rmax;
                   } else {
-                    _result = std::move(lmax);
+                    _result = lmax;
                   }
                 }},
             _frame);

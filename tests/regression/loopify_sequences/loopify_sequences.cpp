@@ -17,19 +17,17 @@ LoopifySequences::alternate_sum(const unsigned int sign, const unsigned int acc,
   bool _continue = true;
   while (_continue) {
     std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
-                            _result = std::move(_loop_acc);
+                            _result = _loop_acc;
                             _continue = false;
                           },
                           [&](const typename List<unsigned int>::Cons _args) {
                             unsigned int new_acc;
                             if (_loop_sign == 1u) {
-                              new_acc = (std::move(_loop_acc) + _args.d_a0);
+                              new_acc = (_loop_acc + _args.d_a0);
                             } else {
-                              new_acc =
-                                  (((std::move(_loop_acc) - _args.d_a0) >
-                                            std::move(_loop_acc)
-                                        ? 0
-                                        : (std::move(_loop_acc) - _args.d_a0)));
+                              new_acc = (((_loop_acc - _args.d_a0) > _loop_acc
+                                              ? 0
+                                              : (_loop_acc - _args.d_a0)));
                             }
                             unsigned int new_sign;
                             if (_loop_sign == 1u) {
@@ -39,8 +37,8 @@ LoopifySequences::alternate_sum(const unsigned int sign, const unsigned int acc,
                             }
                             std::shared_ptr<List<unsigned int>> _next_l =
                                 _args.d_a1;
-                            unsigned int _next_acc = std::move(new_acc);
-                            unsigned int _next_sign = std::move(new_sign);
+                            unsigned int _next_acc = new_acc;
+                            unsigned int _next_sign = new_sign;
                             _loop_l = std::move(_next_l);
                             _loop_acc = std::move(_next_acc);
                             _loop_sign = std::move(_next_sign);
@@ -66,26 +64,26 @@ LoopifySequences::collatz_list_fuel(const unsigned int fuel,
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(
-        Overloaded{[&](_Enter _f) {
-          const unsigned int n = _f.n;
-          const unsigned int fuel = _f.fuel;
-          if (fuel <= 0) {
-            _result = List<unsigned int>::nil();
-          } else {
-            unsigned int f = fuel - 1;
-            if (n == 1u) {
-              _result = List<unsigned int>::cons(1u, List<unsigned int>::nil());
-            } else {
-              if ((2u ? n % 2u : n) == 0u) {
-                _stack.push_back(_Enter{(2u ? std::move(n) / 2u : 0), f});
-              } else {
-                _stack.push_back(_Enter{((3u * std::move(n)) + 1u), f});
-              }
-            }
-          }
-        }},
-        _frame);
+    std::visit(Overloaded{[&](_Enter _f) {
+                 const unsigned int n = _f.n;
+                 const unsigned int fuel = _f.fuel;
+                 if (fuel <= 0) {
+                   _result = List<unsigned int>::nil();
+                 } else {
+                   unsigned int f = fuel - 1;
+                   if (n == 1u) {
+                     _result = List<unsigned int>::cons(
+                         1u, List<unsigned int>::nil());
+                   } else {
+                     if ((2u ? n % 2u : n) == 0u) {
+                       _stack.push_back(_Enter{(2u ? n / 2u : 0), f});
+                     } else {
+                       _stack.push_back(_Enter{((3u * n) + 1u), f});
+                     }
+                   }
+                 }
+               }},
+               _frame);
   }
   return _result;
 }
@@ -212,14 +210,13 @@ LoopifySequences::sum_acc(const unsigned int acc,
   bool _continue = true;
   while (_continue) {
     std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
-                            _result = std::move(_loop_acc);
+                            _result = _loop_acc;
                             _continue = false;
                           },
                           [&](const typename List<unsigned int>::Cons _args) {
                             std::shared_ptr<List<unsigned int>> _next_l =
                                 _args.d_a1;
-                            unsigned int _next_acc =
-                                (std::move(_loop_acc) + _args.d_a0);
+                            unsigned int _next_acc = (_loop_acc + _args.d_a0);
                             _loop_l = std::move(_next_l);
                             _loop_acc = std::move(_next_acc);
                           }},
@@ -1079,7 +1076,6 @@ LoopifySequences::filter_ne(const unsigned int x,
   std::shared_ptr<List<unsigned int>> _head{};
   std::shared_ptr<List<unsigned int>> _last{};
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  unsigned int _loop_x = x;
   bool _continue = true;
   while (_continue) {
     std::visit(
@@ -1094,11 +1090,8 @@ LoopifySequences::filter_ne(const unsigned int x,
               _continue = false;
             },
             [&](const typename List<unsigned int>::Cons _args) {
-              if (_loop_x == _args.d_a0) {
-                std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                unsigned int _next_x = std::move(_loop_x);
-                _loop_l = std::move(_next_l);
-                _loop_x = std::move(_next_x);
+              if (x == _args.d_a0) {
+                _loop_l = _args.d_a1;
               } else {
                 auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);
                 if (_last) {
@@ -1292,15 +1285,11 @@ LoopifySequences::group(const std::shared_ptr<List<unsigned int>> &l) {
 __attribute__((pure)) unsigned int
 LoopifySequences::head_or(const unsigned int default0,
                           const std::shared_ptr<List<unsigned int>> &l) {
-  return std::visit(
-      Overloaded{
-          [&](const typename List<unsigned int>::Nil _args) -> unsigned int {
-            return std::move(default0);
-          },
-          [](const typename List<unsigned int>::Cons _args) -> unsigned int {
-            return _args.d_a0;
-          }},
-      l->v());
+  return std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args)
+                                   -> unsigned int { return default0; },
+                               [](const typename List<unsigned int>::Cons _args)
+                                   -> unsigned int { return _args.d_a0; }},
+                    l->v());
 }
 
 /// remove_if_sum_even l removes elements where sum with next is even.
@@ -1324,8 +1313,7 @@ std::shared_ptr<List<unsigned int>> LoopifySequences::remove_if_sum_even(
             },
             [&](const typename List<unsigned int>::Cons _args) {
               unsigned int next = head_or(0u, _args.d_a1);
-              if ((2u ? (_args.d_a0 + std::move(next)) % 2u
-                      : (_args.d_a0 + std::move(next))) == 0u) {
+              if ((2u ? (_args.d_a0 + next) % 2u : (_args.d_a0 + next)) == 0u) {
                 _loop_l = _args.d_a1;
               } else {
                 auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);
@@ -1453,8 +1441,6 @@ LoopifySequences::between(const unsigned int lo, const unsigned int hi,
   std::shared_ptr<List<unsigned int>> _head{};
   std::shared_ptr<List<unsigned int>> _last{};
   std::shared_ptr<List<unsigned int>> _loop_l = l;
-  unsigned int _loop_hi = hi;
-  unsigned int _loop_lo = lo;
   bool _continue = true;
   while (_continue) {
     std::visit(
@@ -1469,7 +1455,7 @@ LoopifySequences::between(const unsigned int lo, const unsigned int hi,
               _continue = false;
             },
             [&](const typename List<unsigned int>::Cons _args) {
-              if ((_loop_lo <= _args.d_a0 && _args.d_a0 <= _loop_hi)) {
+              if ((lo <= _args.d_a0 && _args.d_a0 <= hi)) {
                 auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
@@ -1480,12 +1466,7 @@ LoopifySequences::between(const unsigned int lo, const unsigned int hi,
                 _last = _cell;
                 _loop_l = _args.d_a1;
               } else {
-                std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                unsigned int _next_hi = std::move(_loop_hi);
-                unsigned int _next_lo = std::move(_loop_lo);
-                _loop_l = std::move(_next_l);
-                _loop_hi = std::move(_next_hi);
-                _loop_lo = std::move(_next_lo);
+                _loop_l = _args.d_a1;
               }
             }},
         _loop_l->v());

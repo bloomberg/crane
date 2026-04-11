@@ -106,7 +106,7 @@ struct OptionClosureEscape {
                    tree::node(tree::leaf(), 30u, tree::leaf()));
     std::pair<std::function<unsigned int(unsigned int)>, unsigned int> p1 =
         pair_escape(std::move(t1));
-    return std::move(p1).first(0u);
+    return p1.first(0u);
   }();
   /// BUG: match_pair — & captures _args from visit scope.
   __attribute__((pure)) static std::pair<
@@ -118,7 +118,7 @@ struct OptionClosureEscape {
                    tree::node(tree::leaf(), 30u, tree::leaf()));
     std::pair<std::function<unsigned int(unsigned int)>, unsigned int> p1 =
         match_pair(std::move(t1));
-    return std::move(p1).first(0u);
+    return p1.first(0u);
   }();
 };
 

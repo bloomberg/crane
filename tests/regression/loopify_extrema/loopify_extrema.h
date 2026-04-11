@@ -115,9 +115,9 @@ struct LoopifyExtrema {
                 unsigned int rest_max = _result;
                 unsigned int fx = f(_args.d_a0);
                 if (rest_max < fx) {
-                  _result = std::move(fx);
+                  _result = fx;
                 } else {
-                  _result = std::move(rest_max);
+                  _result = rest_max;
                 }
               }},
           _frame);
@@ -175,9 +175,9 @@ struct LoopifyExtrema {
                 unsigned int rest_min = _result;
                 unsigned int fx = f(_args.d_a0);
                 if (fx < rest_min) {
-                  _result = std::move(fx);
+                  _result = fx;
                 } else {
-                  _result = std::move(rest_min);
+                  _result = rest_min;
                 }
               }},
           _frame);
@@ -235,10 +235,10 @@ struct LoopifyExtrema {
                 unsigned int rest_best = _result;
                 unsigned int fx = f(_args.d_a0);
                 unsigned int f_rest = f(rest_best);
-                if (std::move(f_rest) < std::move(fx)) {
+                if (f_rest < fx) {
                   _result = _args.d_a0;
                 } else {
-                  _result = std::move(rest_best);
+                  _result = rest_best;
                 }
               }},
           _frame);
@@ -296,10 +296,10 @@ struct LoopifyExtrema {
                 unsigned int rest_best = _result;
                 unsigned int fx = f(_args.d_a0);
                 unsigned int f_rest = f(rest_best);
-                if (std::move(fx) < std::move(f_rest)) {
+                if (fx < f_rest) {
                   _result = _args.d_a0;
                 } else {
-                  _result = std::move(rest_best);
+                  _result = rest_best;
                 }
               }},
           _frame);

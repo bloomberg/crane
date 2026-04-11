@@ -19,9 +19,4 @@ UnitType::match_unit(const std::monostate u) {
   }
 }
 
-void UnitType::unit_to_unit(const std::monostate u) {
-  {
-    std::move(u);
-    return;
-  }
-}
+void UnitType::unit_to_unit(const std::monostate u) { return; }

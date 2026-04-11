@@ -15,7 +15,7 @@ NumeralStress::count_from(const unsigned int n, const unsigned int target) {
   } else {
     unsigned int n_ = n - 1;
     if (n == target) {
-      return std::move(n);
+      return n;
     } else {
       return count_from(n_, target);
     }

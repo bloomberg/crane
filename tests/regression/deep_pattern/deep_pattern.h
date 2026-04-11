@@ -83,9 +83,9 @@ struct DeepPattern {
                           return 0u;
                         }},
                     _args.d_a1->v());
-                unsigned int c = (std::move(a) + std::move(b));
-                unsigned int d = (std::move(c) * 2u);
-                return (std::move(d) + 1u);
+                unsigned int c = (a + b);
+                unsigned int d = (c * 2u);
+                return (d + 1u);
               }},
           this->v());
     }
@@ -156,7 +156,7 @@ struct DeepPattern {
                           return 0u;
                         }},
                     _args.d_a1->v());
-                return (std::move(x) + std::move(y));
+                return (x + y);
               }},
           this->v());
     }

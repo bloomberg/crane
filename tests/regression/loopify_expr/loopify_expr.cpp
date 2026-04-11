@@ -53,7 +53,7 @@ __attribute__((pure)) unsigned int LoopifyExpr::sum_shapes(
                                   return _args0.d_a0;
                                 }},
                             _args.d_a0->v());
-                        _stack.push_back(_Call1{std::move(val)});
+                        _stack.push_back(_Call1{val});
                         _stack.push_back(_Enter{_args.d_a1});
                       }},
                   l->v());

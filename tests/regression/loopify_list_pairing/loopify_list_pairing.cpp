@@ -305,7 +305,7 @@ LoopifyListPairing::zip_longest(const std::shared_ptr<List<unsigned int>> &l1,
   } else {
     maxlen = len1;
   }
-  return zip_longest_fuel(std::move(maxlen), l1, l2, default0);
+  return zip_longest_fuel(maxlen, l1, l2, default0);
 }
 
 std::shared_ptr<List<unsigned int>>

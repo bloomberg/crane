@@ -13,11 +13,11 @@ FixPartialApp::count_nodes(const std::shared_ptr<FixPartialApp::tree> &t,
   return std::visit(
       Overloaded{
           [&](const typename FixPartialApp::tree::Leaf _args) -> unsigned int {
-            return std::move(base);
+            return base;
           },
           [&](const typename FixPartialApp::tree::Node _args) -> unsigned int {
             return count_nodes(_args.d_a0,
-                               count_nodes(_args.d_a2, (std::move(base) + 1u)));
+                               count_nodes(_args.d_a2, (base + 1u)));
           }},
       t->v());
 }

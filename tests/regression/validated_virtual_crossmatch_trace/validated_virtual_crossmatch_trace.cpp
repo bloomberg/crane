@@ -23,7 +23,7 @@ __attribute__((pure)) bool PeanoNat::eq_dec(const unsigned int n,
     } else {
       unsigned int n1 = m - 1;
       bool s = PeanoNat::eq_dec(n0, n1);
-      if (std::move(s)) {
+      if (s) {
         return true;
       } else {
         return false;
@@ -424,7 +424,7 @@ ValidatedVirtualCrossmatchTraceCase::virtual_crossmatch_safe(
     const std::shared_ptr<ValidatedVirtualCrossmatchTraceCase::HLATyping>
         &donor) {
   unsigned int max_mfi = max_dsa_mfi(recipient, donor);
-  switch (classify_mfi_safe(vcfg, std::move(max_mfi))) {
+  switch (classify_mfi_safe(vcfg, max_mfi)) {
   case MFIStrength::e_MFI_NEGATIVE: {
     return VirtualXMResult::e_VXM_NEGATIVE;
   }
@@ -479,7 +479,7 @@ ValidatedVirtualCrossmatchTraceCase::full_virtual_crossmatch_safe(
   ValidatedVirtualCrossmatchTraceCase::VirtualXMResult vxm =
       virtual_crossmatch_safe(vcfg, recipient, donor);
   bool cf = has_complement_fixing_dsa(recipient, donor);
-  return transplant_acceptability(vxm, std::move(cf));
+  return transplant_acceptability(vxm, cf);
 }
 
 __attribute__((pure)) bool ValidatedVirtualCrossmatchTraceCase::safe_to_release(
@@ -520,9 +520,7 @@ ValidatedVirtualCrossmatchTraceCase::transfusion_order_authorized(
   bool sample_ok =
       order_sample_valid(order->sto_sample_collection_time, current_time);
   bool emergency = order->sto_emergency_release;
-  return (
-      ((std::move(compat_ok) && std::move(xm_ok)) && std::move(sample_ok)) ||
-      std::move(emergency));
+  return (((compat_ok && xm_ok) && sample_ok) || emergency);
 }
 
 __attribute__((pure)) std::optional<
@@ -583,7 +581,7 @@ __attribute__((pure)) bool Bool::bool_dec(const bool b1, const bool b2) {
 __attribute__((pure)) unsigned int Nat::tail_add(const unsigned int n,
                                                  const unsigned int m) {
   if (n <= 0) {
-    return std::move(m);
+    return m;
   } else {
     unsigned int n0 = n - 1;
     return Nat::tail_add(n0, (m + 1));
@@ -594,10 +592,10 @@ __attribute__((pure)) unsigned int Nat::tail_addmul(const unsigned int r,
                                                     const unsigned int n,
                                                     const unsigned int m) {
   if (n <= 0) {
-    return std::move(r);
+    return r;
   } else {
     unsigned int n0 = n - 1;
-    return Nat::tail_addmul(Nat::tail_add(m, std::move(r)), n0, m);
+    return Nat::tail_addmul(Nat::tail_add(m, r), n0, m);
   }
 }
 
@@ -610,12 +608,9 @@ __attribute__((pure)) unsigned int
 Nat::of_uint_acc(const std::shared_ptr<Uint> &d, const unsigned int acc) {
   return std::visit(
       Overloaded{
-          [&](const typename Uint::Nil _args) -> unsigned int {
-            return std::move(acc);
-          },
+          [&](const typename Uint::Nil _args) -> unsigned int { return acc; },
           [&](const typename Uint::D0 _args) -> unsigned int {
-            return Nat::of_uint_acc(_args.d_a0,
-                                    Nat::tail_mul(10u, std::move(acc)));
+            return Nat::of_uint_acc(_args.d_a0, Nat::tail_mul(10u, acc));
           },
           [&](const typename Uint::D1 _args) -> unsigned int {
             return Nat::of_uint_acc(_args.d_a0, (Nat::tail_mul(10u, acc) + 1));
@@ -675,12 +670,9 @@ __attribute__((pure)) unsigned int
 Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
   return std::visit(
       Overloaded{
-          [&](const typename Uint0::Nil0 _args) -> unsigned int {
-            return std::move(acc);
-          },
+          [&](const typename Uint0::Nil0 _args) -> unsigned int { return acc; },
           [&](const typename Uint0::D10 _args) -> unsigned int {
-            return Nat::of_hex_uint_acc(_args.d_a0,
-                                        Nat::tail_mul(16u, std::move(acc)));
+            return Nat::of_hex_uint_acc(_args.d_a0, Nat::tail_mul(16u, acc));
           },
           [&](const typename Uint0::D11 _args) -> unsigned int {
             return Nat::of_hex_uint_acc(_args.d_a0,

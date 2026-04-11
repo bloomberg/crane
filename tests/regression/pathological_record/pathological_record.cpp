@@ -3,7 +3,6 @@
 #include <any>
 #include <memory>
 #include <type_traits>
-#include <utility>
 
 __attribute__((pure)) unsigned int PathologicalRecord::hof_access(
     const std::shared_ptr<PathologicalRecord::Rec> &r) {
@@ -58,7 +57,7 @@ __attribute__((pure)) unsigned int PathologicalRecord::double_match(
   unsigned int x = (a1 + a2);
   unsigned int y = (b1 + b2);
   unsigned int z = (c1 + c2);
-  return ((std::move(x) + std::move(y)) * std::move(z));
+  return ((x + y) * z);
 }
 
 __attribute__((pure)) unsigned int PathologicalRecord::closure_over_fields(

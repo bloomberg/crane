@@ -135,7 +135,7 @@ struct VoidCallback {
   /// 5. Nested void callbacks
   template <MapsTo<void, unsigned int> F0>
   static void apply_twice(F0 &&f, const unsigned int _x0) {
-    f(std::move(_x0));
+    f(_x0);
     return;
   }
 

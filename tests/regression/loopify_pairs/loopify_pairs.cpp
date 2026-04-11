@@ -332,7 +332,6 @@ std::shared_ptr<LoopifyPairs::list<unsigned int>> LoopifyPairs::lookup_all(
   std::shared_ptr<LoopifyPairs::list<unsigned int>> _last{};
   std::shared_ptr<LoopifyPairs::list<std::pair<unsigned int, unsigned int>>>
       _loop_l = l;
-  unsigned int _loop_key = key;
   bool _continue = true;
   while (_continue) {
     std::visit(
@@ -351,7 +350,7 @@ std::shared_ptr<LoopifyPairs::list<unsigned int>> LoopifyPairs::lookup_all(
                 std::pair<unsigned int, unsigned int>>::Cons _args) {
               unsigned int k = _args.d_a0.first;
               unsigned int v = _args.d_a0.second;
-              if (k == _loop_key) {
+              if (k == key) {
                 auto _cell = list<unsigned int>::cons(v, nullptr);
                 if (_last) {
                   std::get<typename list<unsigned int>::Cons>(_last->v_mut())
@@ -362,12 +361,7 @@ std::shared_ptr<LoopifyPairs::list<unsigned int>> LoopifyPairs::lookup_all(
                 _last = _cell;
                 _loop_l = _args.d_a1;
               } else {
-                std::shared_ptr<
-                    LoopifyPairs::list<std::pair<unsigned int, unsigned int>>>
-                    _next_l = _args.d_a1;
-                unsigned int _next_key = std::move(_loop_key);
-                _loop_l = std::move(_next_l);
-                _loop_key = std::move(_next_key);
+                _loop_l = _args.d_a1;
               }
             }},
         _loop_l->v());

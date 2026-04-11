@@ -97,7 +97,6 @@ LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
                       -> std::shared_ptr<List<unsigned int>> {
                     struct _Enter {
                       std::shared_ptr<List<unsigned int>> rest;
-                      unsigned int p;
                     };
                     struct _Call1 {
                       decltype(std::declval<
@@ -107,7 +106,7 @@ LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
                     using _Frame = std::variant<_Enter, _Call1>;
                     std::shared_ptr<List<unsigned int>> _result{};
                     std::vector<_Frame> _stack;
-                    _stack.push_back(_Enter{rest, p});
+                    _stack.push_back(_Enter{rest});
                     while (!_stack.empty()) {
                       _Frame _frame = std::move(_stack.back());
                       _stack.pop_back();
@@ -116,7 +115,6 @@ LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
                               [&](_Enter _f) {
                                 std::shared_ptr<List<unsigned int>> rest =
                                     _f.rest;
-                                unsigned int p = _f.p;
                                 std::visit(
                                     Overloaded{
                                         [&](const typename List<
@@ -127,13 +125,13 @@ LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
                                                 Cons _args0) -> void {
                                           if ((p ? _args0.d_a0 % p
                                                  : _args0.d_a0) == 0u) {
-                                            _stack.push_back(_Enter{
-                                                _args0.d_a1, std::move(p)});
+                                            _stack.push_back(
+                                                _Enter{_args0.d_a1});
                                           } else {
                                             _stack.push_back(
                                                 _Call1{_args0.d_a0});
                                             _stack.push_back(
-                                                _Enter{_args0.d_a1, p});
+                                                _Enter{_args0.d_a1});
                                           }
                                         }},
                                     rest->v());
@@ -447,7 +445,6 @@ LoopifyAlgorithms::nub_aux(const std::shared_ptr<List<unsigned int>> &l,
                     -> std::shared_ptr<List<unsigned int>> {
                   struct _Enter {
                     std::shared_ptr<List<unsigned int>> rest;
-                    unsigned int val;
                   };
                   struct _Call1 {
                     decltype(std::declval<
@@ -457,7 +454,7 @@ LoopifyAlgorithms::nub_aux(const std::shared_ptr<List<unsigned int>> &l,
                   using _Frame = std::variant<_Enter, _Call1>;
                   std::shared_ptr<List<unsigned int>> _result{};
                   std::vector<_Frame> _stack;
-                  _stack.push_back(_Enter{rest, val});
+                  _stack.push_back(_Enter{rest});
                   while (!_stack.empty()) {
                     _Frame _frame = std::move(_stack.back());
                     _stack.pop_back();
@@ -466,7 +463,6 @@ LoopifyAlgorithms::nub_aux(const std::shared_ptr<List<unsigned int>> &l,
                             [&](_Enter _f) {
                               std::shared_ptr<List<unsigned int>> rest =
                                   _f.rest;
-                              unsigned int val = _f.val;
                               std::visit(
                                   Overloaded{
                                       [&](const typename List<unsigned int>::Nil
@@ -476,12 +472,10 @@ LoopifyAlgorithms::nub_aux(const std::shared_ptr<List<unsigned int>> &l,
                                       [&](const typename List<
                                           unsigned int>::Cons _args0) -> void {
                                         if (val == _args0.d_a0) {
-                                          _stack.push_back(_Enter{
-                                              _args0.d_a1, std::move(val)});
+                                          _stack.push_back(_Enter{_args0.d_a1});
                                         } else {
                                           _stack.push_back(_Call1{_args0.d_a0});
-                                          _stack.push_back(
-                                              _Enter{_args0.d_a1, val});
+                                          _stack.push_back(_Enter{_args0.d_a1});
                                         }
                                       }},
                                   rest->v());
@@ -829,9 +823,9 @@ __attribute__((pure)) unsigned int LoopifyAlgorithms::max_prefix_sum(
                        _result = 0u;
                      } else {
                        if (rest < sum) {
-                         _result = std::move(sum);
+                         _result = sum;
                        } else {
-                         _result = std::move(rest);
+                         _result = rest;
                        }
                      }
                    }},
@@ -916,8 +910,7 @@ LoopifyAlgorithms::step_sum(const std::shared_ptr<List<unsigned int>> &l) {
                                } else {
                                  contribution = (_args.d_a0 * 2u);
                                }
-                               _stack.push_back(
-                                   _Call1{std::move(contribution)});
+                               _stack.push_back(_Call1{contribution});
                                _stack.push_back(_Enter{_args.d_a1});
                              }},
                          l->v());
@@ -933,7 +926,7 @@ __attribute__((pure)) unsigned int
 LoopifyAlgorithms::head_nat(const unsigned int d,
                             const std::shared_ptr<List<unsigned int>> &l) {
   return std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args)
-                                   -> unsigned int { return std::move(d); },
+                                   -> unsigned int { return d; },
                                [](const typename List<unsigned int>::Cons _args)
                                    -> unsigned int { return _args.d_a0; }},
                     l->v());

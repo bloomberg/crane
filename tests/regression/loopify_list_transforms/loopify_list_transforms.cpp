@@ -217,7 +217,7 @@ std::shared_ptr<List<std::pair<unsigned int, unsigned int>>>
 LoopifyListTransforms::sliding_pairs(
     const std::shared_ptr<List<unsigned int>> &l) {
   unsigned int len = l->length();
-  return sliding_pairs_fuel(std::move(len), l);
+  return sliding_pairs_fuel(len, l);
 }
 
 __attribute__((pure)) unsigned int
@@ -301,7 +301,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListTransforms::differences_fuel(
 std::shared_ptr<List<unsigned int>> LoopifyListTransforms::differences(
     const std::shared_ptr<List<unsigned int>> &l) {
   unsigned int len = l->length();
-  return differences_fuel(std::move(len), l);
+  return differences_fuel(len, l);
 }
 
 std::shared_ptr<List<unsigned int>>
@@ -476,7 +476,7 @@ std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
 LoopifyListTransforms::chunks_of(const unsigned int n,
                                  const std::shared_ptr<List<unsigned int>> &l) {
   unsigned int len = l->length();
-  return chunks_of_fuel(std::move(len), n, l);
+  return chunks_of_fuel(len, n, l);
 }
 
 std::shared_ptr<List<unsigned int>>
@@ -622,7 +622,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListTransforms::uniq_sorted_fuel(
 std::shared_ptr<List<unsigned int>> LoopifyListTransforms::uniq_sorted(
     const std::shared_ptr<List<unsigned int>> &l) {
   unsigned int len = l->length();
-  return uniq_sorted_fuel(std::move(len), l);
+  return uniq_sorted_fuel(len, l);
 }
 
 __attribute__((pure)) unsigned int
@@ -657,8 +657,7 @@ LoopifyListTransforms::step_sum(const std::shared_ptr<List<unsigned int>> &l) {
                                } else {
                                  contribution = (_args.d_a0 * 2u);
                                }
-                               _stack.push_back(
-                                   _Call1{std::move(contribution)});
+                               _stack.push_back(_Call1{contribution});
                                _stack.push_back(_Enter{_args.d_a1});
                              }},
                          l->v());

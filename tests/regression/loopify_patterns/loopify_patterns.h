@@ -241,9 +241,9 @@ struct LoopifyPatterns {
                 unsigned int rest_max = _result;
                 unsigned int fx = f(_args.d_a0);
                 if (fx < rest_max) {
-                  _result = std::move(rest_max);
+                  _result = rest_max;
                 } else {
-                  _result = std::move(fx);
+                  _result = fx;
                 }
               }},
           _frame);

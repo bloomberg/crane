@@ -146,13 +146,13 @@ struct LoopifyNumbers {
     while (_continue) {
       if (_loop_n <= 0) {
         {
-          _result = std::move(_loop_x);
+          _result = _loop_x;
           _continue = false;
         }
       } else {
         unsigned int m = _loop_n - 1;
         {
-          unsigned int _next_x = f(std::move(_loop_x));
+          unsigned int _next_x = f(_loop_x);
           unsigned int _next_n = m;
           _loop_x = std::move(_next_x);
           _loop_n = std::move(_next_n);
@@ -172,7 +172,6 @@ struct LoopifyNumbers {
   __attribute__((pure)) static unsigned int
   nest_apply(const unsigned int n, F1 &&f, const unsigned int x) {
     struct _Enter {
-      const unsigned int x;
       const unsigned int n;
     };
 
@@ -181,23 +180,22 @@ struct LoopifyNumbers {
     using _Frame = std::variant<_Enter, _Call1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.push_back(_Enter{x, n});
+    _stack.push_back(_Enter{n});
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       std::visit(Overloaded{[&](_Enter _f) {
-                              const unsigned int x = _f.x;
                               const unsigned int n = _f.n;
                               if (n <= 0) {
-                                _result = std::move(x);
+                                _result = x;
                               } else {
                                 unsigned int n_ = n - 1;
                                 if (n_ <= 0) {
-                                  _result = f(std::move(x));
+                                  _result = f(x);
                                 } else {
                                   unsigned int _x = n_ - 1;
                                   _stack.push_back(_Call1{});
-                                  _stack.push_back(_Enter{std::move(x), n_});
+                                  _stack.push_back(_Enter{n_});
                                 }
                               }
                             },

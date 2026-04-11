@@ -56,7 +56,7 @@ void ITreeEffects::echo_loop(const unsigned int n) {
 __attribute__((pure)) unsigned int Nat::tail_add(const unsigned int n,
                                                  const unsigned int m) {
   if (n <= 0) {
-    return std::move(m);
+    return m;
   } else {
     unsigned int n0 = n - 1;
     return Nat::tail_add(n0, (m + 1));
@@ -67,10 +67,10 @@ __attribute__((pure)) unsigned int Nat::tail_addmul(const unsigned int r,
                                                     const unsigned int n,
                                                     const unsigned int m) {
   if (n <= 0) {
-    return std::move(r);
+    return r;
   } else {
     unsigned int n0 = n - 1;
-    return Nat::tail_addmul(Nat::tail_add(m, std::move(r)), n0, m);
+    return Nat::tail_addmul(Nat::tail_add(m, r), n0, m);
   }
 }
 
@@ -83,12 +83,9 @@ __attribute__((pure)) unsigned int
 Nat::of_uint_acc(const std::shared_ptr<Uint> &d, const unsigned int acc) {
   return std::visit(
       Overloaded{
-          [&](const typename Uint::Nil _args) -> unsigned int {
-            return std::move(acc);
-          },
+          [&](const typename Uint::Nil _args) -> unsigned int { return acc; },
           [&](const typename Uint::D0 _args) -> unsigned int {
-            return Nat::of_uint_acc(_args.d_a0,
-                                    Nat::tail_mul(10u, std::move(acc)));
+            return Nat::of_uint_acc(_args.d_a0, Nat::tail_mul(10u, acc));
           },
           [&](const typename Uint::D1 _args) -> unsigned int {
             return Nat::of_uint_acc(_args.d_a0, (Nat::tail_mul(10u, acc) + 1));
@@ -148,12 +145,9 @@ __attribute__((pure)) unsigned int
 Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
   return std::visit(
       Overloaded{
-          [&](const typename Uint0::Nil0 _args) -> unsigned int {
-            return std::move(acc);
-          },
+          [&](const typename Uint0::Nil0 _args) -> unsigned int { return acc; },
           [&](const typename Uint0::D10 _args) -> unsigned int {
-            return Nat::of_hex_uint_acc(_args.d_a0,
-                                        Nat::tail_mul(16u, std::move(acc)));
+            return Nat::of_hex_uint_acc(_args.d_a0, Nat::tail_mul(16u, acc));
           },
           [&](const typename Uint0::D11 _args) -> unsigned int {
             return Nat::of_hex_uint_acc(_args.d_a0,

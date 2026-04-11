@@ -395,42 +395,43 @@ __attribute__((pure)) unsigned int LoopifyNumericSequences::alternate_sum(
   bool _loop_sign = sign;
   bool _continue = true;
   while (_continue) {
-    std::visit(
-        Overloaded{
-            [&](const typename List<unsigned int>::Nil _args) {
-              _result = std::move(_loop_acc);
-              _continue = false;
-            },
-            [&](const typename List<unsigned int>::Cons _args) {
-              if (_loop_sign) {
-                std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                unsigned int _next_acc = (std::move(_loop_acc) + _args.d_a0);
-                bool _next_sign = false;
-                _loop_l = std::move(_next_l);
-                _loop_acc = std::move(_next_acc);
-                _loop_sign = std::move(_next_sign);
-              } else {
-                if (_args.d_a0 <= _loop_acc) {
-                  std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                  unsigned int _next_acc = ((
-                      (std::move(_loop_acc) - _args.d_a0) > std::move(_loop_acc)
-                          ? 0
-                          : (std::move(_loop_acc) - _args.d_a0)));
-                  bool _next_sign = true;
-                  _loop_l = std::move(_next_l);
-                  _loop_acc = std::move(_next_acc);
-                  _loop_sign = std::move(_next_sign);
-                } else {
-                  std::shared_ptr<List<unsigned int>> _next_l = _args.d_a1;
-                  unsigned int _next_acc = 0u;
-                  bool _next_sign = true;
-                  _loop_l = std::move(_next_l);
-                  _loop_acc = std::move(_next_acc);
-                  _loop_sign = std::move(_next_sign);
-                }
-              }
-            }},
-        _loop_l->v());
+    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+                            _result = _loop_acc;
+                            _continue = false;
+                          },
+                          [&](const typename List<unsigned int>::Cons _args) {
+                            if (_loop_sign) {
+                              std::shared_ptr<List<unsigned int>> _next_l =
+                                  _args.d_a1;
+                              unsigned int _next_acc = (_loop_acc + _args.d_a0);
+                              bool _next_sign = false;
+                              _loop_l = std::move(_next_l);
+                              _loop_acc = std::move(_next_acc);
+                              _loop_sign = std::move(_next_sign);
+                            } else {
+                              if (_args.d_a0 <= _loop_acc) {
+                                std::shared_ptr<List<unsigned int>> _next_l =
+                                    _args.d_a1;
+                                unsigned int _next_acc =
+                                    (((_loop_acc - _args.d_a0) > _loop_acc
+                                          ? 0
+                                          : (_loop_acc - _args.d_a0)));
+                                bool _next_sign = true;
+                                _loop_l = std::move(_next_l);
+                                _loop_acc = std::move(_next_acc);
+                                _loop_sign = std::move(_next_sign);
+                              } else {
+                                std::shared_ptr<List<unsigned int>> _next_l =
+                                    _args.d_a1;
+                                unsigned int _next_acc = 0u;
+                                bool _next_sign = true;
+                                _loop_l = std::move(_next_l);
+                                _loop_acc = std::move(_next_acc);
+                                _loop_sign = std::move(_next_sign);
+                              }
+                            }
+                          }},
+               _loop_l->v());
   }
   return _result;
 }

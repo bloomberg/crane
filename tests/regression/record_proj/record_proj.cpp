@@ -2,14 +2,13 @@
 
 #include <memory>
 #include <type_traits>
-#include <utility>
 
 __attribute__((pure)) unsigned int
 RecordProj::weird_access(const std::shared_ptr<RecordProj::Point> &p) {
   unsigned int a = p->x;
   unsigned int b = p->y;
   unsigned int sum = (a + b);
-  return (std::move(sum) + a);
+  return (sum + a);
 }
 
 __attribute__((pure)) unsigned int RecordProj::complex_access(

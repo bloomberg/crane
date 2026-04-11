@@ -86,14 +86,14 @@ Equations::gcd_graph_correct(const std::pair<unsigned int, unsigned int> x) {
       unsigned int n2 = n0 - 1;
       return gcd_graph::gcd_graph_refinement_3(n1, n2, [&]() {
         bool refine = (n1 + 1) < (n2 + 1);
-        if (std::move(refine)) {
+        if (refine) {
           return gcd_clause_3_graph::gcd_clause_3_graph_equation_1(
               n1, n2, [&]() {
                 std::pair<unsigned int, unsigned int> y =
                     std::make_pair((n1 + 1), ((((n2 + 1) - (n1 + 1)) > (n2 + 1)
                                                    ? 0
                                                    : ((n2 + 1) - (n1 + 1)))));
-                return gcd_graph_correct(std::move(y));
+                return gcd_graph_correct(y);
               }());
         } else {
           return gcd_clause_3_graph::gcd_clause_3_graph_equation_2(
@@ -103,7 +103,7 @@ Equations::gcd_graph_correct(const std::pair<unsigned int, unsigned int> x) {
                                          ? 0
                                          : ((n1 + 1) - (n2 + 1)))),
                                    (n2 + 1));
-                return gcd_graph_correct(std::move(y));
+                return gcd_graph_correct(y);
               }());
         }
       }());
@@ -154,17 +154,17 @@ Equations::collatz_steps_graph_correct(const unsigned int x) {
       unsigned int n0 = n - 1;
       return collatz_steps_graph::collatz_steps_graph_refinement_3(n0, [&]() {
         bool refine = PeanoNat::even(((n0 + 1) + 1));
-        if (std::move(refine)) {
+        if (refine) {
           return collatz_steps_clause_3_graph::
               collatz_steps_clause_3_graph_equation_1(n0, [&]() {
                 unsigned int y = PeanoNat::div2(n0);
-                return collatz_steps_graph_correct(std::move(y));
+                return collatz_steps_graph_correct(y);
               }());
         } else {
           return collatz_steps_clause_3_graph::
               collatz_steps_clause_3_graph_equation_2(n0, [&]() {
                 unsigned int y = ((3u * n0) + 1u);
-                return collatz_steps_graph_correct(std::move(y));
+                return collatz_steps_graph_correct(y);
               }());
         }
       }());

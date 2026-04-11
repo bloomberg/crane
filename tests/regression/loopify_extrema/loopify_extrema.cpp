@@ -54,7 +54,7 @@ LoopifyExtrema::maximum(const std::shared_ptr<List<unsigned int>> &l) {
               if (max_rest < _args.d_a0) {
                 _result = _args.d_a0;
               } else {
-                _result = std::move(max_rest);
+                _result = max_rest;
               }
             }},
         _frame);
@@ -110,7 +110,7 @@ LoopifyExtrema::minimum(const std::shared_ptr<List<unsigned int>> &l) {
               if (_args.d_a0 < min_rest) {
                 _result = _args.d_a0;
               } else {
-                _result = std::move(min_rest);
+                _result = min_rest;
               }
             }},
         _frame);

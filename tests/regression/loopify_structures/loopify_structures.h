@@ -422,27 +422,27 @@ struct LoopifyStructures {
                   _result = ([&]() -> unsigned int {
                     if ([&]() -> unsigned int {
                           if (d1 <= d2) {
-                            return std::move(d2);
+                            return d2;
                           } else {
-                            return std::move(d1);
+                            return d1;
                           }
                         }() <= [&]() -> unsigned int {
                           if (d3 <= d4) {
-                            return std::move(d4);
+                            return d4;
                           } else {
-                            return std::move(d3);
+                            return d3;
                           }
                         }()) {
                       if (d3 <= d4) {
-                        return std::move(d4);
+                        return d4;
                       } else {
-                        return std::move(d3);
+                        return d3;
                       }
                     } else {
                       if (d1 <= d2) {
-                        return std::move(d2);
+                        return d2;
                       } else {
-                        return std::move(d1);
+                        return d1;
                       }
                     }
                   }() + 1);

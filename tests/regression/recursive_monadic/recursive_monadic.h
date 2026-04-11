@@ -92,7 +92,7 @@ struct RecursiveMonadic {
                        std::cout << "keep"s << '\n';
                        return List<unsigned int>::cons(_args.d_a0, rest_);
                      } else {
-                       return rest_;
+                       return std::move(rest_);
                      }
                    }},
         xs->v());

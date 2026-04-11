@@ -10,7 +10,7 @@
 __attribute__((pure)) unsigned int DocComments::add(const unsigned int n,
                                                     const unsigned int m) {
   if (n <= 0) {
-    return std::move(m);
+    return m;
   } else {
     unsigned int p = n - 1;
     return (add(p, m) + 1);
@@ -19,7 +19,7 @@ __attribute__((pure)) unsigned int DocComments::add(const unsigned int n,
 
 __attribute__((pure)) unsigned int
 DocComments::no_doc_comment(const unsigned int x) {
-  return std::move(x);
+  return x;
 }
 
 /// double n returns 2 * n.

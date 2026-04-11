@@ -44,7 +44,7 @@ LetMatchType::let_match_option(const std::optional<unsigned int> o) {
   } else {
     x = 0u;
   }
-  return (std::move(x) + 1u);
+  return (x + 1u);
 }
 
 /// 4. let-bound nested bool match
@@ -80,7 +80,7 @@ __attribute__((pure)) unsigned int LetMatchType::multi_let_match(const bool a,
   } else {
     y = 0u;
   }
-  return (std::move(x) + std::move(y));
+  return (x + y);
 }
 
 /// 6. let-bound match used in function argument

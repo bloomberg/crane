@@ -1,10 +1,9 @@
 #include <lambda.h>
 
 #include <type_traits>
-#include <utility>
 
 __attribute__((pure)) unsigned int Lambda::simple_lambda(const unsigned int x) {
-  return std::move(x);
+  return x;
 }
 
 __attribute__((pure)) unsigned int Lambda::multi_arg(const unsigned int _x0,

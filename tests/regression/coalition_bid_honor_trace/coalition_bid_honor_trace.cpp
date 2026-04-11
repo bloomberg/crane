@@ -505,7 +505,7 @@ __attribute__((pure)) unsigned int CoalitionBidHonorTraceCase::unit_tech_bv(
   if (u->unit_is_clan) {
     return (base + (2u ? base / 2u : 0));
   } else {
-    return std::move(base);
+    return base;
   }
 }
 
@@ -513,9 +513,7 @@ __attribute__((pure)) unsigned int
 CoalitionBidHonorTraceCase::unit_battle_value(
     const std::shared_ptr<CoalitionBidHonorTraceCase::Unit> &u) {
   unsigned int tech_bv = unit_tech_bv(u);
-  return (4u ? (std::move(tech_bv) * skill_bv_multiplier_num(unit_skill(u))) /
-                   4u
-             : 0);
+  return (4u ? (tech_bv * skill_bv_multiplier_num(unit_skill(u))) / 4u : 0);
 }
 
 __attribute__((pure)) unsigned int

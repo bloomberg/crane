@@ -49,7 +49,7 @@ __attribute__((pure)) bool ComputationalProof::le_dec(const unsigned int n,
     } else {
       unsigned int n1 = m - 1;
       bool s = le_dec(n0, n1);
-      if (std::move(s)) {
+      if (s) {
         return true;
       } else {
         return false;
@@ -70,18 +70,18 @@ ComputationalProof::nat_leb_dec(const unsigned int n, const unsigned int m) {
 __attribute__((pure)) unsigned int
 ComputationalProof::min_dec(const unsigned int n, const unsigned int m) {
   if (le_dec(n, m)) {
-    return std::move(n);
+    return n;
   } else {
-    return std::move(m);
+    return m;
   }
 }
 
 __attribute__((pure)) unsigned int
 ComputationalProof::max_dec(const unsigned int n, const unsigned int m) {
   if (le_dec(n, m)) {
-    return std::move(m);
+    return m;
   } else {
-    return std::move(n);
+    return n;
   }
 }
 

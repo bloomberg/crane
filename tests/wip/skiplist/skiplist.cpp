@@ -277,7 +277,7 @@ bool skiplist_test::stm_test_navigation() {
     if (nextOpt.has_value()) {
       std::shared_ptr<SkipNode<unsigned int, unsigned int>> second = *nextOpt;
       std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
-          prevOpt = sl->previous(nat_eq, second);
+          prevOpt = std::move(sl)->previous(nat_eq, second);
       bool c1 = SkipList<int, int>::template key<unsigned int, unsigned int>(
                     first) == 1u;
       bool c2 = SkipList<int, int>::template key<unsigned int, unsigned int>(
@@ -412,7 +412,7 @@ bool skiplist_test::stm_test_bde_api() {
   std::pair<
       unsigned int,
       std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>>
-      backResult = sl->bde_back();
+      backResult = std::move(sl)->bde_back();
   unsigned int status5 = backResult.first;
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
       backItem = backResult.second;
@@ -425,10 +425,9 @@ bool skiplist_test::stm_test_bde_api() {
   } else {
     c10 = false;
   }
-  return (front1 &&
-          (front2 &&
-           (c3 && (c4 && (std::move(c5) &&
-                          (c6 && (c7 && (std::move(c8) && (c9 && c10)))))))));
+  return (
+      front1 &&
+      (front2 && (c3 && (c4 && (c5 && (c6 && (c7 && (c8 && (c9 && c10)))))))));
 }
 
 bool skiplist_test::test_insert_lookup() {

@@ -15,7 +15,7 @@ __attribute__((pure)) bool LetMatchType2::let_match_bool(const unsigned int n) {
     unsigned int _x = n - 1;
     b = false;
   }
-  return !(std::move(b));
+  return !(b);
 }
 
 /// 2. Match returning pair — might trigger std::any
@@ -70,7 +70,7 @@ LetMatchType2::cascading_nat(const bool a, const bool b, const bool c) {
   } else {
     z = 0u;
   }
-  return ((std::move(x) + std::move(y)) + std::move(z));
+  return ((x + y) + z);
 }
 
 /// 6. Match returning function type
@@ -79,7 +79,7 @@ __attribute__((pure)) unsigned int LetMatchType2::let_match_fun(const bool b) {
   if (b) {
     return (x + 1);
   } else {
-    return std::move(x);
+    return x;
   }
 }
 

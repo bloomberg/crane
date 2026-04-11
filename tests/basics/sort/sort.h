@@ -114,7 +114,7 @@ struct Sort {
   static T2 div_conq(F0 &&splitF, const T2 x, F2 &&x0, F3 &&x1,
                      const std::shared_ptr<List<T1>> &ls) {
     bool s = Compare_dec::le_lt_dec(2u, ls->length());
-    if (std::move(s)) {
+    if (s) {
       return x1(ls, div_conq<T1, T2>(splitF, x, x0, x1, splitF(ls).first),
                 div_conq<T1, T2>(splitF, x, x0, x1, splitF(ls).second));
     } else {
