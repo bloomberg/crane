@@ -78,14 +78,3 @@
   (alias runtest)
   (deps shared_uptr_escape.t.exe)
   (action (run ./shared_uptr_escape.t.exe))))
-
-(subdir option_let_none_bug
- (rule
-  (targets option_let_none_bug.t.exe)
-  (deps OptionLetNoneBug.vo option_let_none_bug.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} option_let_none_bug.t.exe option_let_none_bug.cpp option_let_none_bug.t.cpp)))
- (rule
-  (alias runtest)
-  (deps option_let_none_bug.t.exe)
-  (action (run ./option_let_none_bug.t.exe))))

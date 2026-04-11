@@ -1792,22 +1792,30 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
       in
       (* Step 2: Convert ML types to C++ types *)
       let temps = build_template_params env [] tys in
-      (* Step 3: Filter erased type args (dummy_type from Tdummy Ktype).
-
-         Custom syntax requires concrete type arguments. If any type arg is
-         erased (e.g., from a failed extraction or HKT type constructor), we
-         must drop ALL type args to avoid misalignment.
-
-         [filter_erased_type_args] implements the "all or nothing" rule:
-         - If no erased types: keep all type args
-         - If any erased type: drop all type args (return [])
-
-         When all args are dropped, the custom syntax in cpp_print.ml will
-         either use default template arguments or the renderer will deduce
-         them from context. For example, [std::make_optional(5u)] deduces
-         [std::optional<unsigned int>] from the argument type. *)
       let temps = filter_erased_type_args temps in
-      (* Step 4: Apply custom syntax template with filtered type args *)
+      (* Step 2b: Recover type args from the return type when unresolved metas
+         caused all type args to be erased.  This happens for nullary custom
+         constructors (e.g., None) inside let-bindings: the extraction phase
+         uses a fresh meta as the expected type, so the constructor's type
+         parameter meta never gets unified with the concrete type.  If the
+         enclosing function/constant return type matches the same inductive,
+         extract the type args from there. *)
+      let temps =
+        if temps = [] && tys <> []
+           && List.exists (function Miniml.Tmeta {contents = None} -> true | _ -> false) tys
+        then
+          match tctx.current_cpp_return_type with
+          | Some (Minicpp.Tglob (ret_r, ret_tys, _))
+            when Names.GlobRef.CanOrd.equal n ret_r
+                 && List.length ret_tys = List.length tys ->
+            filter_erased_type_args ret_tys
+          | Some (Minicpp.Tshared_ptr (Minicpp.Tglob (ret_r, ret_tys, _)))
+            when Names.GlobRef.CanOrd.equal n ret_r
+                 && List.length ret_tys = List.length tys ->
+            filter_erased_type_args ret_tys
+          | _ -> temps
+        else temps
+      in
       app (mk_cppglob r temps)
     | _ ->
       (* Type is not a Tglob - no type args to pass.
