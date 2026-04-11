@@ -89,7 +89,7 @@ std::shared_ptr<List<unsigned int>>
 ComputationalProof::insert_dec(const unsigned int x,
                                const std::shared_ptr<List<unsigned int>> &l) {
   return std::visit(
-      Overloaded{[&](const typename List<unsigned int>::Nil _args)
+      Overloaded{[&](const typename List<unsigned int>::Nil)
                      -> std::shared_ptr<List<unsigned int>> {
                    return List<unsigned int>::cons(x,
                                                    List<unsigned int>::nil());
@@ -109,7 +109,7 @@ ComputationalProof::insert_dec(const unsigned int x,
 
 std::shared_ptr<List<unsigned int>>
 ComputationalProof::isort_dec(const std::shared_ptr<List<unsigned int>> &l) {
-  return std::visit(Overloaded{[](const typename List<unsigned int>::Nil _args)
+  return std::visit(Overloaded{[](const typename List<unsigned int>::Nil)
                                    -> std::shared_ptr<List<unsigned int>> {
                                  return List<unsigned int>::nil();
                                },

@@ -58,11 +58,10 @@ public:
   template <MapsTo<bool, t_A> F0>
   __attribute__((pure)) bool forallb(F0 &&f) const {
     return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil _args) -> bool { return true; },
-            [&](const typename List<t_A>::Cons _args) -> bool {
-              return (f(_args.d_a0) && _args.d_a1->forallb(f));
-            }},
+        Overloaded{[](const typename List<t_A>::Nil) -> bool { return true; },
+                   [&](const typename List<t_A>::Cons _args) -> bool {
+                     return (f(_args.d_a0) && _args.d_a1->forallb(f));
+                   }},
         this->v());
   }
 };
@@ -136,7 +135,7 @@ struct InstructionCycles {
                   return 8u;
                 }
               },
-              [](const typename instruction1::NOP1 _args) -> unsigned int {
+              [](const typename instruction1::NOP1) -> unsigned int {
                 return 8u;
               }},
           this->v());
@@ -145,24 +144,22 @@ struct InstructionCycles {
     template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
     T1 instruction1_rec(F0 &&f, const T1 f0) const {
       return std::visit(
-          Overloaded{[&](const typename instruction1::JCN1 _args) -> T1 {
-                       return f(_args.d_a0, _args.d_a1);
-                     },
-                     [&](const typename instruction1::NOP1 _args) -> T1 {
-                       return f0;
-                     }},
+          Overloaded{
+              [&](const typename instruction1::JCN1 _args) -> T1 {
+                return f(_args.d_a0, _args.d_a1);
+              },
+              [&](const typename instruction1::NOP1) -> T1 { return f0; }},
           this->v());
     }
 
     template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
     T1 instruction1_rect(F0 &&f, const T1 f0) const {
       return std::visit(
-          Overloaded{[&](const typename instruction1::JCN1 _args) -> T1 {
-                       return f(_args.d_a0, _args.d_a1);
-                     },
-                     [&](const typename instruction1::NOP1 _args) -> T1 {
-                       return f0;
-                     }},
+          Overloaded{
+              [&](const typename instruction1::JCN1 _args) -> T1 {
+                return f(_args.d_a0, _args.d_a1);
+              },
+              [&](const typename instruction1::NOP1) -> T1 { return f0; }},
           this->v());
     }
   };
@@ -208,24 +205,22 @@ struct InstructionCycles {
     template <typename T1, MapsTo<T1, unsigned int> F0>
     T1 instruction2_rec(F0 &&f, const T1 f0) const {
       return std::visit(
-          Overloaded{[&](const typename instruction2::JMS2 _args) -> T1 {
-                       return f(_args.d_a0);
-                     },
-                     [&](const typename instruction2::NOP2 _args) -> T1 {
-                       return f0;
-                     }},
+          Overloaded{
+              [&](const typename instruction2::JMS2 _args) -> T1 {
+                return f(_args.d_a0);
+              },
+              [&](const typename instruction2::NOP2) -> T1 { return f0; }},
           this->v());
     }
 
     template <typename T1, MapsTo<T1, unsigned int> F0>
     T1 instruction2_rect(F0 &&f, const T1 f0) const {
       return std::visit(
-          Overloaded{[&](const typename instruction2::JMS2 _args) -> T1 {
-                       return f(_args.d_a0);
-                     },
-                     [&](const typename instruction2::NOP2 _args) -> T1 {
-                       return f0;
-                     }},
+          Overloaded{
+              [&](const typename instruction2::JMS2 _args) -> T1 {
+                return f(_args.d_a0);
+              },
+              [&](const typename instruction2::NOP2) -> T1 { return f0; }},
           this->v());
     }
   };
@@ -525,7 +520,7 @@ struct InstructionCycles {
                   }
                 }
               },
-              [](const auto _args) -> unsigned int { return 8u; }},
+              [](const auto) -> unsigned int { return 8u; }},
           this->v());
     }
   };
@@ -535,14 +530,13 @@ struct InstructionCycles {
   static T1 instruction5_rect(const T1 f, F1 &&f0, F2 &&f1,
                               const std::shared_ptr<instruction5> &i) {
     return std::visit(
-        Overloaded{
-            [&](const typename instruction5::NOP5 _args) -> T1 { return f; },
-            [&](const typename instruction5::JCN5 _args) -> T1 {
-              return f0(_args.d_a0);
-            },
-            [&](const typename instruction5::INC5 _args) -> T1 {
-              return f1(_args.d_a0);
-            }},
+        Overloaded{[&](const typename instruction5::NOP5) -> T1 { return f; },
+                   [&](const typename instruction5::JCN5 _args) -> T1 {
+                     return f0(_args.d_a0);
+                   },
+                   [&](const typename instruction5::INC5 _args) -> T1 {
+                     return f1(_args.d_a0);
+                   }},
         i->v());
   }
 
@@ -551,14 +545,13 @@ struct InstructionCycles {
   static T1 instruction5_rec(const T1 f, F1 &&f0, F2 &&f1,
                              const std::shared_ptr<instruction5> &i) {
     return std::visit(
-        Overloaded{
-            [&](const typename instruction5::NOP5 _args) -> T1 { return f; },
-            [&](const typename instruction5::JCN5 _args) -> T1 {
-              return f0(_args.d_a0);
-            },
-            [&](const typename instruction5::INC5 _args) -> T1 {
-              return f1(_args.d_a0);
-            }},
+        Overloaded{[&](const typename instruction5::NOP5) -> T1 { return f; },
+                   [&](const typename instruction5::JCN5 _args) -> T1 {
+                     return f0(_args.d_a0);
+                   },
+                   [&](const typename instruction5::INC5 _args) -> T1 {
+                     return f1(_args.d_a0);
+                   }},
         i->v());
   }
 
@@ -579,12 +572,12 @@ struct InstructionCycles {
   enum class Instruction6 { e_NOP6 };
 
   template <typename T1>
-  static T1 instruction6_rect(const T1 f, const Instruction6 _x) {
+  static T1 instruction6_rect(const T1 f, const Instruction6) {
     return f;
   }
 
   template <typename T1>
-  static T1 instruction6_rec(const T1 f, const Instruction6 _x) {
+  static T1 instruction6_rec(const T1 f, const Instruction6) {
     return f;
   }
 
@@ -615,12 +608,12 @@ struct InstructionCycles {
   enum class Instruction7 { e_NOP7 };
 
   template <typename T1>
-  static T1 instruction7_rect(const T1 f, const Instruction7 _x) {
+  static T1 instruction7_rect(const T1 f, const Instruction7) {
     return f;
   }
 
   template <typename T1>
-  static T1 instruction7_rec(const T1 f, const Instruction7 _x) {
+  static T1 instruction7_rec(const T1 f, const Instruction7) {
     return f;
   }
 

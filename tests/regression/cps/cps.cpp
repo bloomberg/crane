@@ -29,7 +29,7 @@ CPS::count_evens(const std::shared_ptr<List<unsigned int>> &l) {
   return partition_cps(
       Nat::even, l,
       [](std::shared_ptr<List<unsigned int>> yes,
-         std::shared_ptr<List<unsigned int>> _x) { return yes->length(); });
+         std::shared_ptr<List<unsigned int>>) { return yes->length(); });
 }
 
 __attribute__((pure)) bool Nat::even(const unsigned int n) {

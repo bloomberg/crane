@@ -44,7 +44,7 @@ void EffectCrossModule::greet_all(
   {
     std::visit(
         Overloaded{
-            [](const typename List<std::string>::Nil _args) -> std::monostate {
+            [](const typename List<std::string>::Nil) -> std::monostate {
               return std::monostate{};
             },
             [](const typename List<std::string>::Cons _args) -> std::monostate {

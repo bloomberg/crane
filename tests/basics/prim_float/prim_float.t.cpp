@@ -68,8 +68,8 @@ int main() {
   ASSERT(PrimFloat::test_leb(2.0, 1.0) == false);
 
   // ---- IEEE 754 special values ----
-  constexpr double inf = std::numeric_limits<double>::infinity();
-  constexpr double nan_val = std::numeric_limits<double>::quiet_NaN();
+  [[maybe_unused]] constexpr double inf = std::numeric_limits<double>::infinity();
+  [[maybe_unused]] constexpr double nan_val = std::numeric_limits<double>::quiet_NaN();
 
   // Division by zero produces infinity.
   ASSERT(std::isinf(PrimFloat::test_div(1.0, 0.0)));

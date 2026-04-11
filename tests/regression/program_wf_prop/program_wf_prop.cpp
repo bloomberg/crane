@@ -17,7 +17,7 @@ __attribute__((pure)) std::optional<unsigned int> ProgramWfProp::jump_target(
                      -> std::optional<unsigned int> {
                    return std::make_optional<unsigned int>(_args.d_a0);
                  },
-                 [](const typename ProgramWfProp::instruction::NOP _args)
+                 [](const typename ProgramWfProp::instruction::NOP)
                      -> std::optional<unsigned int> {
                    return std::optional<unsigned int>();
                  }},

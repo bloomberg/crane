@@ -6,10 +6,10 @@
 #include <variant>
 
 __attribute__((pure)) unsigned int
-MutualIndexed::even_val(const unsigned int _x,
+MutualIndexed::even_val(const unsigned int,
                         const std::shared_ptr<MutualIndexed::EvenTree> &t) {
   return std::visit(
-      Overloaded{[](const typename MutualIndexed::EvenTree::ELeaf _args)
+      Overloaded{[](const typename MutualIndexed::EvenTree::ELeaf)
                      -> unsigned int { return 0u; },
                  [](const typename MutualIndexed::EvenTree::ENode _args)
                      -> unsigned int { return _args.d_a1; }},
@@ -17,7 +17,7 @@ MutualIndexed::even_val(const unsigned int _x,
 }
 
 __attribute__((pure)) unsigned int
-MutualIndexed::odd_val(const unsigned int _x,
+MutualIndexed::odd_val(const unsigned int,
                        const std::shared_ptr<MutualIndexed::OddTree> &t) {
   return std::visit(
       Overloaded{[](const typename MutualIndexed::OddTree::ONode _args)

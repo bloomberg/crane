@@ -351,7 +351,7 @@ struct LargeMutual {
                      return f2(_args.d_a0, _args.d_a1,
                                stmt_rect<T1>(f, f0, f1, f2, f3, _args.d_a1));
                    },
-                   [&](const typename stmt::SSkip _args) -> T1 { return f3; }},
+                   [&](const typename stmt::SSkip) -> T1 { return f3; }},
         s->v());
   }
 
@@ -383,7 +383,7 @@ struct LargeMutual {
                      return f2(_args.d_a0, _args.d_a1,
                                stmt_rec<T1>(f, f0, f1, f2, f3, _args.d_a1));
                    },
-                   [&](const typename stmt::SSkip _args) -> T1 { return f3; }},
+                   [&](const typename stmt::SSkip) -> T1 { return f3; }},
         s->v());
   }
 
@@ -469,8 +469,8 @@ struct LargeMutual {
                        F5 &&f4, F6 &&f5, const std::shared_ptr<bexpr> &b) {
     return std::visit(
         Overloaded{
-            [&](const typename bexpr::BTrue _args) -> T1 { return f; },
-            [&](const typename bexpr::BFalse _args) -> T1 { return f0; },
+            [&](const typename bexpr::BTrue) -> T1 { return f; },
+            [&](const typename bexpr::BFalse) -> T1 { return f0; },
             [&](const typename bexpr::BEq _args) -> T1 {
               return f1(_args.d_a0, _args.d_a1);
             },
@@ -506,8 +506,8 @@ struct LargeMutual {
                       F5 &&f4, F6 &&f5, const std::shared_ptr<bexpr> &b) {
     return std::visit(
         Overloaded{
-            [&](const typename bexpr::BTrue _args) -> T1 { return f; },
-            [&](const typename bexpr::BFalse _args) -> T1 { return f0; },
+            [&](const typename bexpr::BTrue) -> T1 { return f; },
+            [&](const typename bexpr::BFalse) -> T1 { return f0; },
             [&](const typename bexpr::BEq _args) -> T1 {
               return f1(_args.d_a0, _args.d_a1);
             },

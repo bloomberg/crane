@@ -16,7 +16,7 @@ OppositePropertyTransferTraceCase::opposite_prestable_category(
 __attribute__((pure)) OppositePropertyTransferTraceCase::is_left_semi_stable
 OppositePropertyTransferTraceCase::right_stable_gives_opposite_left(
     const std::shared_ptr<OppositePropertyTransferTraceCase::PreStableCategory>
-        &_x,
+        &,
     const std::shared_ptr<OppositePropertyTransferTraceCase::RightStableWitness>
         &h) {
   unsigned int rsw_seed0 = h->rsw_seed;
@@ -30,7 +30,7 @@ __attribute__((pure)) OppositePropertyTransferTraceCase::EquivT<
     OppositePropertyTransferTraceCase::satisfies_triangle_2>
 OppositePropertyTransferTraceCase::triangle_identity_duality(
     const std::shared_ptr<OppositePropertyTransferTraceCase::PreStableCategory>
-        &_x) {
+        &) {
   return std::make_pair(
       [](std::shared_ptr<OppositePropertyTransferTraceCase::Triangle1Witness>
              h) {
@@ -56,7 +56,7 @@ OppositePropertyTransferTraceCase::sample_left_property(
     const std::shared_ptr<OppositePropertyTransferTraceCase::LeftStableWitness>
         &h_left,
     const std::shared_ptr<OppositePropertyTransferTraceCase::Triangle1Witness>
-        &_x) {
+        &) {
   unsigned int lsw_seed0 = h_left->lsw_seed;
   unsigned int lsw_value0 = h_left->lsw_value;
   return std::make_shared<OppositePropertyTransferTraceCase::LeftProperty>(
@@ -69,7 +69,7 @@ __attribute__((pure)) OppositePropertyTransferTraceCase::EquivT<
     std::shared_ptr<OppositePropertyTransferTraceCase::RightProperty>>
 OppositePropertyTransferTraceCase::dual_property_equiv(
     const std::shared_ptr<OppositePropertyTransferTraceCase::PreStableCategory>
-        &_x) {
+        &) {
   return std::make_pair(
       [](std::shared_ptr<OppositePropertyTransferTraceCase::LeftProperty> h) {
         unsigned int lp_seed0 = h->lp_seed;

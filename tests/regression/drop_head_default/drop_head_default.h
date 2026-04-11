@@ -61,22 +61,23 @@ struct DropHeadDefault {
   static std::shared_ptr<List<T1>> drop(const unsigned int n,
                                         std::shared_ptr<List<T1>> l) {
     if (n <= 0) {
-      return std::move(l);
+      return l;
     } else {
       unsigned int n_ = n - 1;
       if (l.use_count() == 1 && l->v().index() == 0) {
         auto &_rf = std::get<0>(l->v_mut());
         return l;
       } else {
-        return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
-                                         -> std::shared_ptr<List<T1>> {
-                                       return List<T1>::nil();
-                                     },
-                                     [&](const typename List<T1>::Cons _args)
-                                         -> std::shared_ptr<List<T1>> {
-                                       return drop<T1>(n_, _args.d_a1);
-                                     }},
-                          l->v());
+        return std::visit(
+            Overloaded{
+                [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+                  return List<T1>::nil();
+                },
+                [&](const typename List<T1>::Cons _args)
+                    -> std::shared_ptr<List<T1>> {
+                  return drop<T1>(n_, _args.d_a1);
+                }},
+            l->v());
       }
     }
   }

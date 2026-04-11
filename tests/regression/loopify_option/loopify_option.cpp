@@ -18,7 +18,7 @@ __attribute__((pure)) std::optional<unsigned int> LoopifyOption::lookup_opt(
   while (_continue) {
     std::visit(
         Overloaded{[&](const typename LoopifyOption::list<
-                       std::pair<unsigned int, unsigned int>>::Nil _args) {
+                       std::pair<unsigned int, unsigned int>>::Nil) {
                      _result = std::optional<unsigned int>();
                      _continue = false;
                    },

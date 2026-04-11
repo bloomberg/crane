@@ -21,7 +21,7 @@ std::optional<std::string> EffectDirPath::first_file(const std::string path) {
     }
     return result;
   }();
-  return std::visit(Overloaded{[](const typename List<std::string>::Nil _args)
+  return std::visit(Overloaded{[](const typename List<std::string>::Nil)
                                    -> std::optional<std::string> {
                                  return std::optional<std::string>();
                                },
@@ -92,7 +92,7 @@ EffectDirPath::count_entries(const std::shared_ptr<List<std::string>> &dirs,
                              const unsigned int acc) {
   return std::visit(
       Overloaded{
-          [&](const typename List<std::string>::Nil _args) -> unsigned int {
+          [&](const typename List<std::string>::Nil) -> unsigned int {
             return acc;
           },
           [&](const typename List<std::string>::Cons _args) -> unsigned int {

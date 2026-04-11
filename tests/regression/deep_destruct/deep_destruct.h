@@ -84,7 +84,7 @@ struct DeepDestruct {
                 const std::shared_ptr<mylist<T1>> m = _f.m;
                 std::visit(
                     Overloaded{
-                        [&](const typename mylist<T1>::Mynil _args) -> void {
+                        [&](const typename mylist<T1>::Mynil) -> void {
                           _result = f;
                         },
                         [&](const typename mylist<T1>::Mycons _args) -> void {
@@ -125,7 +125,7 @@ struct DeepDestruct {
                 const std::shared_ptr<mylist<T1>> m = _f.m;
                 std::visit(
                     Overloaded{
-                        [&](const typename mylist<T1>::Mynil _args) -> void {
+                        [&](const typename mylist<T1>::Mynil) -> void {
                           _result = f;
                         },
                         [&](const typename mylist<T1>::Mycons _args) -> void {

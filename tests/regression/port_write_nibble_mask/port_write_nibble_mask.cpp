@@ -11,7 +11,7 @@ PortWriteNibbleMask::nibble_of_nat(const unsigned int n) {
 
 std::shared_ptr<PortWriteNibbleMask::ram_chip>
 PortWriteNibbleMask::upd_port_in_chip(
-    const std::shared_ptr<PortWriteNibbleMask::ram_chip> &_x,
+    const std::shared_ptr<PortWriteNibbleMask::ram_chip> &,
     const unsigned int v) {
   return std::make_shared<PortWriteNibbleMask::ram_chip>(
       ram_chip{nibble_of_nat(v)});

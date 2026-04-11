@@ -11,12 +11,12 @@ __attribute__((pure)) unsigned int
 ReuseScrutinee::left_val(const std::shared_ptr<ReuseScrutinee::tree> &t) {
   return std::visit(
       Overloaded{
-          [](const typename ReuseScrutinee::tree::Leaf _args) -> unsigned int {
+          [](const typename ReuseScrutinee::tree::Leaf) -> unsigned int {
             return 0u;
           },
           [](const typename ReuseScrutinee::tree::Node _args) -> unsigned int {
             return std::visit(
-                Overloaded{[](const typename ReuseScrutinee::tree::Leaf _args0)
+                Overloaded{[](const typename ReuseScrutinee::tree::Leaf)
                                -> unsigned int { return 0u; },
                            [](const typename ReuseScrutinee::tree::Node _args0)
                                -> unsigned int { return _args0.d_a1; }},
@@ -30,12 +30,12 @@ __attribute__((pure)) unsigned int
 ReuseScrutinee::right_val(const std::shared_ptr<ReuseScrutinee::tree> &t) {
   return std::visit(
       Overloaded{
-          [](const typename ReuseScrutinee::tree::Leaf _args) -> unsigned int {
+          [](const typename ReuseScrutinee::tree::Leaf) -> unsigned int {
             return 0u;
           },
           [](const typename ReuseScrutinee::tree::Node _args) -> unsigned int {
             return std::visit(
-                Overloaded{[](const typename ReuseScrutinee::tree::Leaf _args0)
+                Overloaded{[](const typename ReuseScrutinee::tree::Leaf)
                                -> unsigned int { return 0u; },
                            [](const typename ReuseScrutinee::tree::Node _args0)
                                -> unsigned int { return _args0.d_a1; }},

@@ -55,6 +55,14 @@ if [ -d "$HB_LLVM" ]; then
         -nostdlib++
         -stdlib=libc++
         -I"$HB_LLVM/include/c++/v1"
+        -Wall -Wextra -Wpedantic -Wconversion -Wfloat-conversion
+        -Wsign-conversion -Wstring-compare -Wformat-overflow
+        -Wno-stringop-overflow -Wstringop-overflow -Wstringop-overflow=4
+        -Wno-unknown-warning-option -Wno-unused-function
+        -Wno-unused-local-typedef -Wno-shorten-64-to-32
+        -Wno-unused-variable -Wno-unused-value
+        -Wno-constant-conversion -Wno-sign-conversion
+        -Wno-implicit-int-conversion -Werror
     )
     LINK_FLAGS=(
         -L"$HB_LLVM/lib"
@@ -71,6 +79,14 @@ else
         -fbracket-depth=1024
         -I .
         -I "$THEORIES_CPP"
+        -Wall -Wextra -Wpedantic -Wconversion -Wfloat-conversion
+        -Wsign-conversion -Wstring-compare -Wformat-overflow
+        -Wno-stringop-overflow -Wstringop-overflow -Wstringop-overflow=4
+        -Wno-unknown-warning-option -Wno-unused-function
+        -Wno-unused-local-typedef -Wno-shorten-64-to-32
+        -Wno-unused-variable -Wno-unused-value
+        -Wno-constant-conversion -Wno-sign-conversion
+        -Wno-implicit-int-conversion -Werror
     )
     LINK_FLAGS=()
 fi

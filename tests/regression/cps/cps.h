@@ -58,12 +58,11 @@ public:
 
   __attribute__((pure)) unsigned int length() const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
-                     return 0u;
-                   },
-                   [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     return (_args.d_a1->length() + 1);
-                   }},
+        Overloaded{
+            [](const typename List<t_A>::Nil) -> unsigned int { return 0u; },
+            [](const typename List<t_A>::Cons _args) -> unsigned int {
+              return (_args.d_a1->length() + 1);
+            }},
         this->v());
   }
 };
@@ -206,7 +205,7 @@ struct CPS {
           const std::function<unsigned int(unsigned int)> k) {
     return std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil _args) -> unsigned int {
+            [&](const typename List<unsigned int>::Nil) -> unsigned int {
               return k(0u);
             },
             [&](const typename List<unsigned int>::Cons _args) -> unsigned int {
@@ -228,7 +227,7 @@ struct CPS {
           k) {
     return std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil _args) -> unsigned int {
+            [&](const typename List<unsigned int>::Nil) -> unsigned int {
               return k(List<unsigned int>::nil(), List<unsigned int>::nil());
             },
             [&](const typename List<unsigned int>::Cons _args) -> unsigned int {

@@ -11,7 +11,7 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_acc(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<InstructionClassifiers::instr_acc>>::Nil _args)
+              std::shared_ptr<InstructionClassifiers::instr_acc>>::Nil)
               -> unsigned int { return 0u; },
           [](const typename List<
               std::shared_ptr<InstructionClassifiers::instr_acc>>::Cons _args)
@@ -33,7 +33,7 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_ram(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<InstructionClassifiers::instr_ram>>::Nil _args)
+              std::shared_ptr<InstructionClassifiers::instr_ram>>::Nil)
               -> unsigned int { return 0u; },
           [](const typename List<
               std::shared_ptr<InstructionClassifiers::instr_ram>>::Cons _args)
@@ -55,7 +55,7 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_regs(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<InstructionClassifiers::instr_regs>>::Nil _args)
+              std::shared_ptr<InstructionClassifiers::instr_regs>>::Nil)
               -> unsigned int { return 0u; },
           [](const typename List<
               std::shared_ptr<InstructionClassifiers::instr_regs>>::Cons _args)
@@ -77,7 +77,7 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_jumps(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<InstructionClassifiers::instr_jump>>::Nil _args)
+              std::shared_ptr<InstructionClassifiers::instr_jump>>::Nil)
               -> unsigned int { return 0u; },
           [](const typename List<
               std::shared_ptr<InstructionClassifiers::instr_jump>>::Cons _args)

@@ -53,45 +53,43 @@ public:
 
   /// Convert a Peano nat to a machine int.
   __attribute__((pure)) int nat_to_int() const {
-    return std::visit(
-        Overloaded{[](const typename Nat::O _args) -> int { return 0; },
-                   [](const typename Nat::S _args) -> int {
-                     return 1 + _args.d_n->nat_to_int();
-                   }},
-        this->v());
+    return std::visit(Overloaded{[](const typename Nat::O) -> int { return 0; },
+                                 [](const typename Nat::S _args) -> int {
+                                   return 1 + _args.d_n->nat_to_int();
+                                 }},
+                      this->v());
   }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<Nat>, T1> F1>
   T1 nat_rec(const T1 f, F1 &&f0) const {
-    return std::visit(
-        Overloaded{[&](const typename Nat::O _args) -> T1 { return f; },
-                   [&](const typename Nat::S _args) -> T1 {
-                     return f0(_args.d_n,
-                               _args.d_n->template nat_rec<T1>(f, f0));
-                   }},
-        this->v());
+    return std::visit(Overloaded{[&](const typename Nat::O) -> T1 { return f; },
+                                 [&](const typename Nat::S _args) -> T1 {
+                                   return f0(
+                                       _args.d_n,
+                                       _args.d_n->template nat_rec<T1>(f, f0));
+                                 }},
+                      this->v());
   }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<Nat>, T1> F1>
   T1 nat_rect(const T1 f, F1 &&f0) const {
-    return std::visit(
-        Overloaded{[&](const typename Nat::O _args) -> T1 { return f; },
-                   [&](const typename Nat::S _args) -> T1 {
-                     return f0(_args.d_n,
-                               _args.d_n->template nat_rect<T1>(f, f0));
-                   }},
-        this->v());
+    return std::visit(Overloaded{[&](const typename Nat::O) -> T1 { return f; },
+                                 [&](const typename Nat::S _args) -> T1 {
+                                   return f0(
+                                       _args.d_n,
+                                       _args.d_n->template nat_rect<T1>(f, f0));
+                                 }},
+                      this->v());
   }
 
   /// add m n computes the sum of m and n by recursion on m.
   std::shared_ptr<Nat> add(std::shared_ptr<Nat> n) const {
     return std::visit(
-        Overloaded{[&](const typename Nat::O _args) -> std::shared_ptr<Nat> {
-                     return n;
-                   },
-                   [&](const typename Nat::S _args) -> std::shared_ptr<Nat> {
-                     return Nat::s(_args.d_n->add(n));
-                   }},
+        Overloaded{
+            [&](const typename Nat::O) -> std::shared_ptr<Nat> { return n; },
+            [&](const typename Nat::S _args) -> std::shared_ptr<Nat> {
+              return Nat::s(_args.d_n->add(n));
+            }},
         this->v());
   }
 };

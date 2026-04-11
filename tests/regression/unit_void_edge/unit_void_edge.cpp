@@ -6,7 +6,7 @@
 #include <utility>
 #include <variant>
 
-void UnitVoidEdge::return_unit(const unsigned int _x) { return; }
+void UnitVoidEdge::return_unit(const unsigned int) { return; }
 
 void UnitVoidEdge::count_down(const unsigned int n) {
   if (n <= 0) {
@@ -18,7 +18,7 @@ void UnitVoidEdge::count_down(const unsigned int n) {
   }
 }
 
-void UnitVoidEdge::id_unit_fn(const unsigned int _x) {
+void UnitVoidEdge::id_unit_fn(const unsigned int) {
   {
     id<std::monostate>(std::monostate{});
     return;
@@ -44,9 +44,9 @@ UnitVoidEdge::return_some_tt(const unsigned int n) {
   }
 }
 
-void UnitVoidEdge::unit_chain(const std::monostate u) { return; }
+void UnitVoidEdge::unit_chain(const std::monostate) { return; }
 
-void UnitVoidEdge::helper_void(const unsigned int _x) { return; }
+void UnitVoidEdge::helper_void(const unsigned int) { return; }
 
 __attribute__((pure)) unsigned int
 UnitVoidEdge::use_helper(const unsigned int n) {
@@ -54,19 +54,19 @@ UnitVoidEdge::use_helper(const unsigned int n) {
 }
 
 __attribute__((pure)) unsigned int
-UnitVoidEdge::match_unit_nontail(const std::monostate u) {
+UnitVoidEdge::match_unit_nontail(const std::monostate) {
   {
     return 7u;
   }
 }
 
-void UnitVoidEdge::unit_to_unit_with_work(const std::monostate u) {
+void UnitVoidEdge::unit_to_unit_with_work(const std::monostate) {
   {
     return;
   }
 }
 
-void UnitVoidEdge::seq_voids(const unsigned int _x) { return; }
+void UnitVoidEdge::seq_voids(const unsigned int) { return; }
 
 void UnitVoidEdge::conditional_unit(const bool b) {
   if (b) {
@@ -77,8 +77,7 @@ void UnitVoidEdge::conditional_unit(const bool b) {
 }
 
 __attribute__((pure)) unsigned int
-UnitVoidEdge::double_match_unit(const std::monostate u1,
-                                const std::monostate u2) {
+UnitVoidEdge::double_match_unit(const std::monostate, const std::monostate) {
   {
     {
       return 99u;
@@ -97,10 +96,9 @@ UnitVoidEdge::get_value(const std::shared_ptr<UnitVoidEdge::tagged_nat> &t) {
   return t->tn_value;
 }
 
-void UnitVoidEdge::make_callback(const unsigned int n,
-                                 const std::monostate _x) {
+void UnitVoidEdge::make_callback(const unsigned int n, const std::monostate) {
   return_unit(n);
   return;
 }
 
-void UnitVoidEdge::dummy_bool_void(const bool _x) { return; }
+void UnitVoidEdge::dummy_bool_void(const bool) { return; }

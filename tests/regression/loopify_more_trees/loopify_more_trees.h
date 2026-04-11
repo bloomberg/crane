@@ -64,7 +64,7 @@ public:
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil _args) {
+              [&](const typename List<t_A>::Nil) {
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
                 } else {
@@ -170,15 +170,13 @@ struct LoopifyMoreTrees {
               [&](_Enter _f) {
                 const std::shared_ptr<tree> t = _f.t;
                 std::visit(
-                    Overloaded{[&](const typename tree::Leaf _args) -> void {
-                                 _result = f;
-                               },
-                               [&](const typename tree::Node _args) -> void {
-                                 _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
-                                                         _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a2});
-                               }},
+                    Overloaded{
+                        [&](const typename tree::Leaf) -> void { _result = f; },
+                        [&](const typename tree::Node _args) -> void {
+                          _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
+                                                  _args.d_a1, _args.d_a0});
+                          _stack.push_back(_Enter{_args.d_a2});
+                        }},
                     t->v());
               },
               [&](_Call1 _f) {
@@ -227,15 +225,13 @@ struct LoopifyMoreTrees {
               [&](_Enter _f) {
                 const std::shared_ptr<tree> t = _f.t;
                 std::visit(
-                    Overloaded{[&](const typename tree::Leaf _args) -> void {
-                                 _result = f;
-                               },
-                               [&](const typename tree::Node _args) -> void {
-                                 _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
-                                                         _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a2});
-                               }},
+                    Overloaded{
+                        [&](const typename tree::Leaf) -> void { _result = f; },
+                        [&](const typename tree::Node _args) -> void {
+                          _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
+                                                  _args.d_a1, _args.d_a0});
+                          _stack.push_back(_Enter{_args.d_a2});
+                        }},
                     t->v());
               },
               [&](_Call1 _f) {

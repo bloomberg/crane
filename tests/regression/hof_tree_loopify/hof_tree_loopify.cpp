@@ -107,7 +107,7 @@ Nat::of_uint_acc(const std::shared_ptr<Uint> &d, const unsigned int acc) {
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename Uint::Nil _args) {
+            [&](const typename Uint::Nil) {
               _result = _loop_acc;
               _continue = false;
             },
@@ -211,7 +211,7 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename Uint0::Nil0 _args) {
+            [&](const typename Uint0::Nil0) {
               _result = _loop_acc;
               _continue = false;
             },

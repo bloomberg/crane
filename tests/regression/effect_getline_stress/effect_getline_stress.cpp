@@ -53,7 +53,7 @@ std::shared_ptr<List<std::string>>
 EffectGetlineStress::read_lines(const unsigned int n,
                                 std::shared_ptr<List<std::string>> acc) {
   if (n <= 0) {
-    return std::move(acc);
+    return acc;
   } else {
     unsigned int n_ = n - 1;
     std::string line;

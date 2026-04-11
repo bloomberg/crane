@@ -60,22 +60,21 @@ public:
   template <MapsTo<bool, t_A> F0>
   __attribute__((pure)) bool existsb(F0 &&f) const {
     return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil _args) -> bool { return false; },
-            [&](const typename List<t_A>::Cons _args) -> bool {
-              return (f(_args.d_a0) || _args.d_a1->existsb(f));
-            }},
+        Overloaded{[](const typename List<t_A>::Nil) -> bool { return false; },
+                   [&](const typename List<t_A>::Cons _args) -> bool {
+                     return (f(_args.d_a0) || _args.d_a1->existsb(f));
+                   }},
         this->v());
   }
 
   template <typename T1, MapsTo<T1, T1, t_A> F0>
   T1 fold_left(F0 &&f, const T1 a0) const {
     return std::visit(
-        Overloaded{
-            [&](const typename List<t_A>::Nil _args) -> T1 { return a0; },
-            [&](const typename List<t_A>::Cons _args) -> T1 {
-              return _args.d_a1->template fold_left<T1>(f, f(a0, _args.d_a0));
-            }},
+        Overloaded{[&](const typename List<t_A>::Nil) -> T1 { return a0; },
+                   [&](const typename List<t_A>::Cons _args) -> T1 {
+                     return _args.d_a1->template fold_left<T1>(
+                         f, f(a0, _args.d_a0));
+                   }},
         this->v());
   }
 
@@ -83,8 +82,9 @@ public:
   std::shared_ptr<List<T1>> flat_map(F0 &&f) const {
     return std::visit(
         Overloaded{
-            [](const typename List<t_A>::Nil _args)
-                -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
+            [](const typename List<t_A>::Nil) -> std::shared_ptr<List<T1>> {
+              return List<T1>::nil();
+            },
             [&](const typename List<t_A>::Cons _args)
                 -> std::shared_ptr<List<T1>> {
               return f(_args.d_a0)->app(_args.d_a1->template flat_map<T1>(f));
@@ -94,18 +94,17 @@ public:
 
   __attribute__((pure)) unsigned int length() const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
-                     return 0u;
-                   },
-                   [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     return (_args.d_a1->length() + 1);
-                   }},
+        Overloaded{
+            [](const typename List<t_A>::Nil) -> unsigned int { return 0u; },
+            [](const typename List<t_A>::Cons _args) -> unsigned int {
+              return (_args.d_a1->length() + 1);
+            }},
         this->v());
   }
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
     return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil _args)
+        Overloaded{[&](const typename List<t_A>::Nil)
                        -> std::shared_ptr<List<t_A>> { return m; },
                    [&](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {

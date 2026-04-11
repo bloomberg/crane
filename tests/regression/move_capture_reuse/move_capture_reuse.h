@@ -58,7 +58,7 @@ public:
   template <typename T1, MapsTo<T1, t_A> F0>
   std::shared_ptr<List<T1>> map(F0 &&f) const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil _args)
+        Overloaded{[](const typename List<t_A>::Nil)
                        -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
                    [&](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<T1>> {
@@ -70,18 +70,17 @@ public:
 
   __attribute__((pure)) unsigned int length() const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
-                     return 0u;
-                   },
-                   [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     return (_args.d_a1->length() + 1);
-                   }},
+        Overloaded{
+            [](const typename List<t_A>::Nil) -> unsigned int { return 0u; },
+            [](const typename List<t_A>::Cons _args) -> unsigned int {
+              return (_args.d_a1->length() + 1);
+            }},
         this->v());
   }
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
     return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil _args)
+        Overloaded{[&](const typename List<t_A>::Nil)
                        -> std::shared_ptr<List<t_A>> { return m; },
                    [&](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {
@@ -106,14 +105,14 @@ struct MoveCaptureReuse {
   static inline const unsigned int len_sum = []() {
     return std::visit(
         Overloaded{
-            [](const typename List<std::shared_ptr<List<unsigned int>>>::Nil
-                   _args) -> unsigned int { return 0u; },
+            [](const typename List<std::shared_ptr<List<unsigned int>>>::Nil)
+                -> unsigned int { return 0u; },
             [](const typename List<std::shared_ptr<List<unsigned int>>>::Cons
                    _args) -> unsigned int {
               return std::visit(
                   Overloaded{
                       [](const typename List<
-                          std::shared_ptr<List<unsigned int>>>::Nil _args0)
+                          std::shared_ptr<List<unsigned int>>>::Nil)
                           -> unsigned int { return 0u; },
                       [&](const typename List<
                           std::shared_ptr<List<unsigned int>>>::Cons _args0)

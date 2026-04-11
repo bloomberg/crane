@@ -54,11 +54,10 @@ struct MatchFallbackNat {
   static T1 maybe_nat_rect(F0 &&f, const T1 f0,
                            const std::shared_ptr<maybe_nat> &m) {
     return std::visit(
-        Overloaded{
-            [&](const typename maybe_nat::SomeNat _args) -> T1 {
-              return f(_args.d_a0);
-            },
-            [&](const typename maybe_nat::NoneNat _args) -> T1 { return f0; }},
+        Overloaded{[&](const typename maybe_nat::SomeNat _args) -> T1 {
+                     return f(_args.d_a0);
+                   },
+                   [&](const typename maybe_nat::NoneNat) -> T1 { return f0; }},
         m->v());
   }
 
@@ -66,11 +65,10 @@ struct MatchFallbackNat {
   static T1 maybe_nat_rec(F0 &&f, const T1 f0,
                           const std::shared_ptr<maybe_nat> &m) {
     return std::visit(
-        Overloaded{
-            [&](const typename maybe_nat::SomeNat _args) -> T1 {
-              return f(_args.d_a0);
-            },
-            [&](const typename maybe_nat::NoneNat _args) -> T1 { return f0; }},
+        Overloaded{[&](const typename maybe_nat::SomeNat _args) -> T1 {
+                     return f(_args.d_a0);
+                   },
+                   [&](const typename maybe_nat::NoneNat) -> T1 { return f0; }},
         m->v());
   }
 

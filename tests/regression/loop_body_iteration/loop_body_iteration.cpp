@@ -22,7 +22,7 @@ std::shared_ptr<LoopBodyIteration::state>
 LoopBodyIteration::iterate_body(const unsigned int n,
                                 std::shared_ptr<LoopBodyIteration::state> s) {
   if (n <= 0) {
-    return std::move(s);
+    return s;
   } else {
     unsigned int n_ = n - 1;
     return iterate_body(n_, count_loop_body(std::move(s)));

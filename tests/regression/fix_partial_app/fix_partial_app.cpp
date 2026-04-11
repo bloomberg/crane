@@ -12,7 +12,7 @@ FixPartialApp::count_nodes(const std::shared_ptr<FixPartialApp::tree> &t,
                            const unsigned int base) {
   return std::visit(
       Overloaded{
-          [&](const typename FixPartialApp::tree::Leaf _args) -> unsigned int {
+          [&](const typename FixPartialApp::tree::Leaf) -> unsigned int {
             return base;
           },
           [&](const typename FixPartialApp::tree::Node _args) -> unsigned int {
@@ -26,7 +26,7 @@ __attribute__((pure)) unsigned int
 FixPartialApp::tree_sum(const std::shared_ptr<FixPartialApp::tree> &t) {
   return std::visit(
       Overloaded{
-          [](const typename FixPartialApp::tree::Leaf _args) -> unsigned int {
+          [](const typename FixPartialApp::tree::Leaf) -> unsigned int {
             return 0u;
           },
           [](const typename FixPartialApp::tree::Node _args) -> unsigned int {

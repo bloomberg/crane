@@ -11,11 +11,11 @@
 #include <variant>
 
 __attribute__((pure)) unsigned int
-UnitVoidEdge2::take_unit(const std::monostate _x) {
+UnitVoidEdge2::take_unit(const std::monostate) {
   return 42u;
 }
 
-void UnitVoidEdge2::opaque_unit(const unsigned int _x) { return; }
+void UnitVoidEdge2::opaque_unit(const unsigned int) { return; }
 
 __attribute__((pure)) unsigned int
 UnitVoidEdge2::let_use_as_arg(const unsigned int n) {

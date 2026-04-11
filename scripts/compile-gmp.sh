@@ -81,6 +81,15 @@ if [ -d "$HB_LLVM" ]; then
         -nostdlib++
         -stdlib=libc++
         -I"$HB_LLVM/include/c++/v1"
+        -Wall -Wextra -Wpedantic -Wconversion -Wfloat-conversion
+        -Wsign-conversion -Wstring-compare -Wformat-overflow
+        -Wno-stringop-overflow -Wstringop-overflow -Wstringop-overflow=4
+        -Wno-unknown-warning-option -Wno-unused-function
+        -Wno-unused-local-typedef -Wno-shorten-64-to-32
+        -Wno-unused-variable -Wno-unused-value
+        -Wno-constant-conversion -Wno-sign-conversion
+        -Wno-deprecated-literal-operator
+        -Wno-deprecated-declarations -Werror
     )
     LINK_FLAGS=(
         -L"$HB_LLVM/lib"
@@ -100,6 +109,15 @@ else
         -I .
         -I "$THEORIES_CPP"
         -I "$GMP_PREFIX/include"
+        -Wall -Wextra -Wpedantic -Wconversion -Wfloat-conversion
+        -Wsign-conversion -Wstring-compare -Wformat-overflow
+        -Wno-stringop-overflow -Wstringop-overflow -Wstringop-overflow=4
+        -Wno-unknown-warning-option -Wno-unused-function
+        -Wno-unused-local-typedef -Wno-shorten-64-to-32
+        -Wno-unused-variable -Wno-unused-value
+        -Wno-constant-conversion -Wno-sign-conversion
+        -Wno-deprecated-literal-operator
+        -Wno-deprecated-declarations -Werror
     )
     LINK_FLAGS=(
         -L"$GMP_PREFIX/lib"

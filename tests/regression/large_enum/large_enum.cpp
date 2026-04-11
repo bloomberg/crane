@@ -92,61 +92,52 @@ __attribute__((pure)) bool LargeEnum::is_neutral(const LargeEnum::Color c) {
 __attribute__((pure)) unsigned int
 LargeEnum::tok_to_nat(const std::shared_ptr<LargeEnum::tok> &t) {
   return std::visit(
-      Overloaded{
-          [](const typename LargeEnum::tok::TNum _args) -> unsigned int {
-            return _args.d_a0;
-          },
-          [](const typename LargeEnum::tok::TPlus _args) -> unsigned int {
-            return 100u;
-          },
-          [](const typename LargeEnum::tok::TMinus _args) -> unsigned int {
-            return 101u;
-          },
-          [](const typename LargeEnum::tok::TStar _args) -> unsigned int {
-            return 102u;
-          },
-          [](const typename LargeEnum::tok::TSlash _args) -> unsigned int {
-            return 103u;
-          },
-          [](const typename LargeEnum::tok::TLParen _args) -> unsigned int {
-            return 104u;
-          },
-          [](const typename LargeEnum::tok::TRParen _args) -> unsigned int {
-            return 105u;
-          },
-          [](const typename LargeEnum::tok::TEq _args) -> unsigned int {
-            return 106u;
-          },
-          [](const typename LargeEnum::tok::TBang _args) -> unsigned int {
-            return 107u;
-          },
-          [](const typename LargeEnum::tok::TSemicolon _args) -> unsigned int {
-            return 108u;
-          },
-          [](const typename LargeEnum::tok::TIdent _args) -> unsigned int {
-            return (200u + _args.d_a0);
-          },
-          [](const typename LargeEnum::tok::TEOF _args) -> unsigned int {
-            return 999u;
-          }},
+      Overloaded{[](const typename LargeEnum::tok::TNum _args) -> unsigned int {
+                   return _args.d_a0;
+                 },
+                 [](const typename LargeEnum::tok::TPlus) -> unsigned int {
+                   return 100u;
+                 },
+                 [](const typename LargeEnum::tok::TMinus) -> unsigned int {
+                   return 101u;
+                 },
+                 [](const typename LargeEnum::tok::TStar) -> unsigned int {
+                   return 102u;
+                 },
+                 [](const typename LargeEnum::tok::TSlash) -> unsigned int {
+                   return 103u;
+                 },
+                 [](const typename LargeEnum::tok::TLParen) -> unsigned int {
+                   return 104u;
+                 },
+                 [](const typename LargeEnum::tok::TRParen) -> unsigned int {
+                   return 105u;
+                 },
+                 [](const typename LargeEnum::tok::TEq) -> unsigned int {
+                   return 106u;
+                 },
+                 [](const typename LargeEnum::tok::TBang) -> unsigned int {
+                   return 107u;
+                 },
+                 [](const typename LargeEnum::tok::TSemicolon) -> unsigned int {
+                   return 108u;
+                 },
+                 [](const typename LargeEnum::tok::TIdent _args)
+                     -> unsigned int { return (200u + _args.d_a0); },
+                 [](const typename LargeEnum::tok::TEOF) -> unsigned int {
+                   return 999u;
+                 }},
       t->v());
 }
 
 __attribute__((pure)) bool
 LargeEnum::is_operator(const std::shared_ptr<LargeEnum::tok> &t) {
   return std::visit(
-      Overloaded{[](const typename LargeEnum::tok::TPlus _args) -> bool {
-                   return true;
-                 },
-                 [](const typename LargeEnum::tok::TMinus _args) -> bool {
-                   return true;
-                 },
-                 [](const typename LargeEnum::tok::TStar _args) -> bool {
-                   return true;
-                 },
-                 [](const typename LargeEnum::tok::TSlash _args) -> bool {
-                   return true;
-                 },
-                 [](const auto _args) -> bool { return false; }},
+      Overloaded{
+          [](const typename LargeEnum::tok::TPlus) -> bool { return true; },
+          [](const typename LargeEnum::tok::TMinus) -> bool { return true; },
+          [](const typename LargeEnum::tok::TStar) -> bool { return true; },
+          [](const typename LargeEnum::tok::TSlash) -> bool { return true; },
+          [](const auto) -> bool { return false; }},
       t->v());
 }

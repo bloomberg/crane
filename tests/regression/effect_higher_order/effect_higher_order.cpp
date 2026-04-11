@@ -43,7 +43,7 @@ std::string EffectHigherOrder::lookup_or_ask(const std::string name) {
 /// 7. Chain of lookups
 std::shared_ptr<List<std::string>>
 EffectHigherOrder::lookup_all(const std::shared_ptr<List<std::string>> &names) {
-  return std::visit(Overloaded{[](const typename List<std::string>::Nil _args)
+  return std::visit(Overloaded{[](const typename List<std::string>::Nil)
                                    -> std::shared_ptr<List<std::string>> {
                                  return List<std::string>::nil();
                                },

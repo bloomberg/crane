@@ -58,34 +58,31 @@ public:
   t_A nth(const unsigned int n, const t_A default0) const {
     if (n <= 0) {
       return std::visit(
-          Overloaded{[&](const typename List<t_A>::Nil _args) -> t_A {
-                       return default0;
-                     },
-                     [](const typename List<t_A>::Cons _args) -> t_A {
-                       return _args.d_a0;
-                     }},
+          Overloaded{
+              [&](const typename List<t_A>::Nil) -> t_A { return default0; },
+              [](const typename List<t_A>::Cons _args) -> t_A {
+                return _args.d_a0;
+              }},
           this->v());
     } else {
       unsigned int m = n - 1;
       return std::visit(
-          Overloaded{[&](const typename List<t_A>::Nil _args0) -> t_A {
-                       return default0;
-                     },
-                     [&](const typename List<t_A>::Cons _args0) -> t_A {
-                       return _args0.d_a1->nth(m, default0);
-                     }},
+          Overloaded{
+              [&](const typename List<t_A>::Nil) -> t_A { return default0; },
+              [&](const typename List<t_A>::Cons _args0) -> t_A {
+                return _args0.d_a1->nth(m, default0);
+              }},
           this->v());
     }
   }
 
   __attribute__((pure)) unsigned int length() const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
-                     return 0u;
-                   },
-                   [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     return (_args.d_a1->length() + 1);
-                   }},
+        Overloaded{
+            [](const typename List<t_A>::Nil) -> unsigned int { return 0u; },
+            [](const typename List<t_A>::Cons _args) -> unsigned int {
+              return (_args.d_a1->length() + 1);
+            }},
         this->v());
   }
 };

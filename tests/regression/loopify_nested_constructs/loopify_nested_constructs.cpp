@@ -129,7 +129,7 @@ LoopifyNestedConstructs::deep_nest(const unsigned int n) {
                               _stack.push_back(_Enter{n_});
                             }
                           },
-                          [&](_Call1 _f) {
+                          [&](_Call1) {
                             unsigned int inner = _result;
                             unsigned int mid = (inner + 1u);
                             _result = (mid * 2u);

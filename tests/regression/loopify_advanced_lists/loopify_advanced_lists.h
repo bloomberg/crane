@@ -64,7 +64,7 @@ public:
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil _args) {
+              [&](const typename List<t_A>::Nil) {
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
                 } else {
@@ -128,8 +128,9 @@ struct LoopifyAdvancedLists {
                 const std::shared_ptr<List<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil _args)
-                            -> void { _result = List<unsigned int>::nil(); },
+                        [&](const typename List<unsigned int>::Nil) -> void {
+                          _result = List<unsigned int>::nil();
+                        },
                         [&](const typename List<unsigned int>::Cons _args)
                             -> void {
                           _stack.push_back(_Call1{f(_args.d_a0)});
@@ -167,8 +168,9 @@ struct LoopifyAdvancedLists {
                 const std::shared_ptr<List<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil _args)
-                            -> void { _result = true; },
+                        [&](const typename List<unsigned int>::Nil) -> void {
+                          _result = true;
+                        },
                         [&](const typename List<unsigned int>::Cons _args)
                             -> void {
                           _stack.push_back(_Call1{p(_args.d_a0)});
@@ -206,8 +208,9 @@ struct LoopifyAdvancedLists {
                 const std::shared_ptr<List<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil _args)
-                            -> void { _result = false; },
+                        [&](const typename List<unsigned int>::Nil) -> void {
+                          _result = false;
+                        },
                         [&](const typename List<unsigned int>::Cons _args)
                             -> void {
                           _stack.push_back(_Call1{p(_args.d_a0)});
@@ -228,7 +231,7 @@ struct LoopifyAdvancedLists {
     std::shared_ptr<List<unsigned int>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+      std::visit(Overloaded{[&](const typename List<unsigned int>::Nil) {
                               _result = std::optional<unsigned int>();
                               _continue = false;
                             },

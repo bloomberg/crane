@@ -109,7 +109,7 @@ public:
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  std::any eval(const Ty _x) const {
+  std::any eval(const Ty) const {
     return std::visit(
         Overloaded{
             [](const typename Expr::ENat _args) -> std::any {

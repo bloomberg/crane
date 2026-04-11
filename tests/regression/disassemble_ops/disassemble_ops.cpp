@@ -19,7 +19,7 @@ std::shared_ptr<List<unsigned int>>
 DisassembleOps::drop_(const unsigned int n,
                       std::shared_ptr<List<unsigned int>> l) {
   if (n <= 0) {
-    return std::move(l);
+    return l;
   } else {
     unsigned int n_ = n - 1;
     if (l.use_count() == 1 && l->v().index() == 0) {
@@ -27,7 +27,7 @@ DisassembleOps::drop_(const unsigned int n,
       return l;
     } else {
       return std::visit(
-          Overloaded{[](const typename List<unsigned int>::Nil _args)
+          Overloaded{[](const typename List<unsigned int>::Nil)
                          -> std::shared_ptr<List<unsigned int>> {
                        return List<unsigned int>::nil();
                      },
@@ -46,7 +46,7 @@ DisassembleOps::disassemble1(const std::shared_ptr<List<unsigned int>> &rom0,
                              const unsigned int addr) {
   return std::visit(
       Overloaded{
-          [](const typename List<unsigned int>::Nil _args)
+          [](const typename List<unsigned int>::Nil)
               -> std::optional<std::pair<
                   std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
             return std::optional<std::pair<
@@ -56,7 +56,7 @@ DisassembleOps::disassemble1(const std::shared_ptr<List<unsigned int>> &rom0,
               -> std::optional<std::pair<
                   std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
             return std::visit(
-                Overloaded{[](const typename List<unsigned int>::Nil _args0)
+                Overloaded{[](const typename List<unsigned int>::Nil)
                                -> std::optional<std::pair<
                                    std::shared_ptr<DisassembleOps::instruction>,
                                    unsigned int>> {
@@ -95,7 +95,7 @@ DisassembleOps::disassemble2(const std::shared_ptr<List<unsigned int>> &rom0,
                              const unsigned int addr) {
   return std::visit(
       Overloaded{
-          [](const typename List<unsigned int>::Nil _args)
+          [](const typename List<unsigned int>::Nil)
               -> std::optional<std::pair<
                   std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
             return std::optional<std::pair<
@@ -105,7 +105,7 @@ DisassembleOps::disassemble2(const std::shared_ptr<List<unsigned int>> &rom0,
               -> std::optional<std::pair<
                   std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
             return std::visit(
-                Overloaded{[](const typename List<unsigned int>::Nil _args0)
+                Overloaded{[](const typename List<unsigned int>::Nil)
                                -> std::optional<std::pair<
                                    std::shared_ptr<DisassembleOps::instruction>,
                                    unsigned int>> {
@@ -144,7 +144,7 @@ DisassembleOps::disassemble3(const std::shared_ptr<List<unsigned int>> &rom0,
                              const unsigned int addr) {
   return std::visit(
       Overloaded{
-          [](const typename List<unsigned int>::Nil _args)
+          [](const typename List<unsigned int>::Nil)
               -> std::optional<std::pair<
                   std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
             return std::optional<std::pair<
@@ -154,7 +154,7 @@ DisassembleOps::disassemble3(const std::shared_ptr<List<unsigned int>> &rom0,
               -> std::optional<std::pair<
                   std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
             return std::visit(
-                Overloaded{[](const typename List<unsigned int>::Nil _args0)
+                Overloaded{[](const typename List<unsigned int>::Nil)
                                -> std::optional<std::pair<
                                    std::shared_ptr<DisassembleOps::instruction>,
                                    unsigned int>> {
@@ -193,7 +193,7 @@ DisassembleOps::disassemble4(const std::shared_ptr<List<unsigned int>> &rom0,
                              const unsigned int addr) {
   return std::visit(
       Overloaded{
-          [](const typename List<unsigned int>::Nil _args)
+          [](const typename List<unsigned int>::Nil)
               -> std::optional<std::pair<
                   std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
             return std::optional<std::pair<
@@ -203,7 +203,7 @@ DisassembleOps::disassemble4(const std::shared_ptr<List<unsigned int>> &rom0,
               -> std::optional<std::pair<
                   std::shared_ptr<DisassembleOps::instruction>, unsigned int>> {
             return std::visit(
-                Overloaded{[](const typename List<unsigned int>::Nil _args0)
+                Overloaded{[](const typename List<unsigned int>::Nil)
                                -> std::optional<std::pair<
                                    std::shared_ptr<DisassembleOps::instruction>,
                                    unsigned int>> {

@@ -81,7 +81,7 @@ unsigned int
 MatchMonadic::tree_sum(const std::shared_ptr<Tree<unsigned int>> &t) {
   return std::visit(
       Overloaded{
-          [](const typename Tree<unsigned int>::Leaf _args) -> unsigned int {
+          [](const typename Tree<unsigned int>::Leaf) -> unsigned int {
             return 0u;
           },
           [](const typename Tree<unsigned int>::Node _args) -> unsigned int {

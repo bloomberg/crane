@@ -16,7 +16,7 @@ LoopifyScans::scanl(const unsigned int acc,
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil _args) {
+            [&](const typename List<unsigned int>::Nil) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::cons(_loop_acc,
@@ -57,7 +57,7 @@ LoopifyScans::scanl_mult(const unsigned int acc,
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil _args) {
+            [&](const typename List<unsigned int>::Nil) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::cons(_loop_acc,
@@ -98,7 +98,7 @@ LoopifyScans::running_max(const unsigned int current,
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil _args) {
+            [&](const typename List<unsigned int>::Nil) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::cons(_loop_current,
@@ -145,7 +145,7 @@ LoopifyScans::running_min(const unsigned int current,
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil _args) {
+            [&](const typename List<unsigned int>::Nil) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::cons(_loop_current,
@@ -192,7 +192,7 @@ LoopifyScans::pairwise_diff(const unsigned int prev,
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil _args) {
+            [&](const typename List<unsigned int>::Nil) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::nil();
@@ -251,7 +251,7 @@ LoopifyScans::accumulate_if_even(const unsigned int acc,
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil _args) {
+            [&](const typename List<unsigned int>::Nil) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::cons(_loop_acc,

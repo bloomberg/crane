@@ -38,14 +38,14 @@ std::shared_ptr<UnsoundAxioms::Rec> UnsoundAxioms::impossible_rec() {
 }
 
 __attribute__((pure)) unsigned int
-UnsoundAxioms::use_impossible(const std::monostate _x) {
+UnsoundAxioms::use_impossible(const std::monostate) {
   unsigned int a = impossible_rec()->f1;
   unsigned int b = impossible_rec()->f2;
   return (a + b);
 }
 
 __attribute__((pure)) unsigned int
-UnsoundAxioms::from_false(const std::shared_ptr<UnsoundAxioms::Rec> &_x) {
+UnsoundAxioms::from_false(const std::shared_ptr<UnsoundAxioms::Rec> &) {
   throw std::logic_error("absurd case");
 }
 

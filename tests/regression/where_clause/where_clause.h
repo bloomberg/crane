@@ -78,7 +78,7 @@ struct WhereClause {
     __attribute__((pure)) unsigned int expr_size() const {
       return std::visit(
           Overloaded{
-              [](const typename Expr::Num _args) -> unsigned int { return 1u; },
+              [](const typename Expr::Num) -> unsigned int { return 1u; },
               [](const typename Expr::Plus _args) -> unsigned int {
                 return ((1u + _args.d_a0->expr_size()) +
                         _args.d_a1->expr_size());
@@ -235,18 +235,17 @@ struct WhereClause {
 
     __attribute__((pure)) bool beval() const {
       return std::visit(
-          Overloaded{
-              [](const typename BExpr::BTrue _args) -> bool { return true; },
-              [](const typename BExpr::BFalse _args) -> bool { return false; },
-              [](const typename BExpr::BAnd _args) -> bool {
-                return (_args.d_a0->beval() && _args.d_a1->beval());
-              },
-              [](const typename BExpr::BOr _args) -> bool {
-                return (_args.d_a0->beval() || _args.d_a1->beval());
-              },
-              [](const typename BExpr::BNot _args) -> bool {
-                return !(_args.d_a0->beval());
-              }},
+          Overloaded{[](const typename BExpr::BTrue) -> bool { return true; },
+                     [](const typename BExpr::BFalse) -> bool { return false; },
+                     [](const typename BExpr::BAnd _args) -> bool {
+                       return (_args.d_a0->beval() && _args.d_a1->beval());
+                     },
+                     [](const typename BExpr::BOr _args) -> bool {
+                       return (_args.d_a0->beval() || _args.d_a1->beval());
+                     },
+                     [](const typename BExpr::BNot _args) -> bool {
+                       return !(_args.d_a0->beval());
+                     }},
           this->v());
     }
   };
@@ -259,8 +258,8 @@ struct WhereClause {
   static T1 BExpr_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3,
                        const std::shared_ptr<BExpr> &b) {
     return std::visit(
-        Overloaded{[&](const typename BExpr::BTrue _args) -> T1 { return f; },
-                   [&](const typename BExpr::BFalse _args) -> T1 { return f0; },
+        Overloaded{[&](const typename BExpr::BTrue) -> T1 { return f; },
+                   [&](const typename BExpr::BFalse) -> T1 { return f0; },
                    [&](const typename BExpr::BAnd _args) -> T1 {
                      return f1(_args.d_a0,
                                BExpr_rect<T1>(f, f0, f1, f2, f3, _args.d_a0),
@@ -288,8 +287,8 @@ struct WhereClause {
   static T1 BExpr_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3,
                       const std::shared_ptr<BExpr> &b) {
     return std::visit(
-        Overloaded{[&](const typename BExpr::BTrue _args) -> T1 { return f; },
-                   [&](const typename BExpr::BFalse _args) -> T1 { return f0; },
+        Overloaded{[&](const typename BExpr::BTrue) -> T1 { return f; },
+                   [&](const typename BExpr::BFalse) -> T1 { return f0; },
                    [&](const typename BExpr::BAnd _args) -> T1 {
                      return f1(_args.d_a0,
                                BExpr_rec<T1>(f, f0, f1, f2, f3, _args.d_a0),

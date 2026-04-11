@@ -61,15 +61,16 @@ public:
       return std::const_pointer_cast<List<t_A>>(this->shared_from_this());
     } else {
       unsigned int n0 = n - 1;
-      return std::visit(Overloaded{[](const typename List<t_A>::Nil _args)
-                                       -> std::shared_ptr<List<t_A>> {
-                                     return List<t_A>::nil();
-                                   },
-                                   [&](const typename List<t_A>::Cons _args)
-                                       -> std::shared_ptr<List<t_A>> {
-                                     return _args.d_a1->skipn(n0);
-                                   }},
-                        this->v());
+      return std::visit(
+          Overloaded{
+              [](const typename List<t_A>::Nil) -> std::shared_ptr<List<t_A>> {
+                return List<t_A>::nil();
+              },
+              [&](const typename List<t_A>::Cons _args)
+                  -> std::shared_ptr<List<t_A>> {
+                return _args.d_a1->skipn(n0);
+              }},
+          this->v());
     }
   }
 
@@ -80,8 +81,9 @@ public:
       unsigned int n0 = n - 1;
       return std::visit(
           Overloaded{
-              [](const typename List<t_A>::Nil _args)
-                  -> std::shared_ptr<List<t_A>> { return List<t_A>::nil(); },
+              [](const typename List<t_A>::Nil) -> std::shared_ptr<List<t_A>> {
+                return List<t_A>::nil();
+              },
               [&](const typename List<t_A>::Cons _args)
                   -> std::shared_ptr<List<t_A>> {
                 return List<t_A>::cons(_args.d_a0, _args.d_a1->firstn(n0));
@@ -93,22 +95,20 @@ public:
   t_A nth(const unsigned int n, const t_A default0) const {
     if (n <= 0) {
       return std::visit(
-          Overloaded{[&](const typename List<t_A>::Nil _args) -> t_A {
-                       return default0;
-                     },
-                     [](const typename List<t_A>::Cons _args) -> t_A {
-                       return _args.d_a0;
-                     }},
+          Overloaded{
+              [&](const typename List<t_A>::Nil) -> t_A { return default0; },
+              [](const typename List<t_A>::Cons _args) -> t_A {
+                return _args.d_a0;
+              }},
           this->v());
     } else {
       unsigned int m = n - 1;
       return std::visit(
-          Overloaded{[&](const typename List<t_A>::Nil _args0) -> t_A {
-                       return default0;
-                     },
-                     [&](const typename List<t_A>::Cons _args0) -> t_A {
-                       return _args0.d_a1->nth(m, default0);
-                     }},
+          Overloaded{
+              [&](const typename List<t_A>::Nil) -> t_A { return default0; },
+              [&](const typename List<t_A>::Cons _args0) -> t_A {
+                return _args0.d_a1->nth(m, default0);
+              }},
           this->v());
     }
   }
@@ -120,21 +120,23 @@ struct GetPairBoundProp {
   update_nth(const unsigned int n, const T1 x,
              const std::shared_ptr<List<T1>> &l) {
     if (n <= 0) {
-      return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::nil();
-                                   },
-                                   [&](const typename List<T1>::Cons _args)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::cons(x, _args.d_a1);
-                                   }},
-                        l->v());
+      return std::visit(
+          Overloaded{
+              [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+                return List<T1>::nil();
+              },
+              [&](const typename List<T1>::Cons _args)
+                  -> std::shared_ptr<List<T1>> {
+                return List<T1>::cons(x, _args.d_a1);
+              }},
+          l->v());
     } else {
       unsigned int n_ = n - 1;
       return std::visit(
           Overloaded{
-              [](const typename List<T1>::Nil _args0)
-                  -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
+              [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+                return List<T1>::nil();
+              },
               [&](const typename List<T1>::Cons _args0)
                   -> std::shared_ptr<List<T1>> {
                 return List<T1>::cons(_args0.d_a0,
@@ -471,7 +473,7 @@ struct GetPairBoundProp {
                        F27 &&f26, F28 &&f27, const std::shared_ptr<instr> &i) {
     return std::visit(
         Overloaded{
-            [&](const typename instr::NOP _args) -> T1 { return f; },
+            [&](const typename instr::NOP) -> T1 { return f; },
             [&](const typename instr::LDM _args) -> T1 {
               return f0(_args.d_n);
             },
@@ -488,19 +490,19 @@ struct GetPairBoundProp {
             [&](const typename instr::SUB _args) -> T1 {
               return f5(_args.d_r);
             },
-            [&](const typename instr::IAC _args) -> T1 { return f6; },
-            [&](const typename instr::DAC _args) -> T1 { return f7; },
-            [&](const typename instr::CLC _args) -> T1 { return f8; },
-            [&](const typename instr::STC _args) -> T1 { return f9; },
-            [&](const typename instr::CMC _args) -> T1 { return f10; },
-            [&](const typename instr::CMA _args) -> T1 { return f11; },
-            [&](const typename instr::CLB _args) -> T1 { return f12; },
-            [&](const typename instr::RAL _args) -> T1 { return f13; },
-            [&](const typename instr::RAR _args) -> T1 { return f14; },
-            [&](const typename instr::TCC _args) -> T1 { return f15; },
-            [&](const typename instr::TCS _args) -> T1 { return f16; },
-            [&](const typename instr::DAA _args) -> T1 { return f17; },
-            [&](const typename instr::KBP _args) -> T1 { return f18; },
+            [&](const typename instr::IAC) -> T1 { return f6; },
+            [&](const typename instr::DAC) -> T1 { return f7; },
+            [&](const typename instr::CLC) -> T1 { return f8; },
+            [&](const typename instr::STC) -> T1 { return f9; },
+            [&](const typename instr::CMC) -> T1 { return f10; },
+            [&](const typename instr::CMA) -> T1 { return f11; },
+            [&](const typename instr::CLB) -> T1 { return f12; },
+            [&](const typename instr::RAL) -> T1 { return f13; },
+            [&](const typename instr::RAR) -> T1 { return f14; },
+            [&](const typename instr::TCC) -> T1 { return f15; },
+            [&](const typename instr::TCS) -> T1 { return f16; },
+            [&](const typename instr::DAA) -> T1 { return f17; },
+            [&](const typename instr::KBP) -> T1 { return f18; },
             [&](const typename instr::JUN _args) -> T1 {
               return f19(_args.d_a);
             },
@@ -549,7 +551,7 @@ struct GetPairBoundProp {
                       F27 &&f26, F28 &&f27, const std::shared_ptr<instr> &i) {
     return std::visit(
         Overloaded{
-            [&](const typename instr::NOP _args) -> T1 { return f; },
+            [&](const typename instr::NOP) -> T1 { return f; },
             [&](const typename instr::LDM _args) -> T1 {
               return f0(_args.d_n);
             },
@@ -566,19 +568,19 @@ struct GetPairBoundProp {
             [&](const typename instr::SUB _args) -> T1 {
               return f5(_args.d_r);
             },
-            [&](const typename instr::IAC _args) -> T1 { return f6; },
-            [&](const typename instr::DAC _args) -> T1 { return f7; },
-            [&](const typename instr::CLC _args) -> T1 { return f8; },
-            [&](const typename instr::STC _args) -> T1 { return f9; },
-            [&](const typename instr::CMC _args) -> T1 { return f10; },
-            [&](const typename instr::CMA _args) -> T1 { return f11; },
-            [&](const typename instr::CLB _args) -> T1 { return f12; },
-            [&](const typename instr::RAL _args) -> T1 { return f13; },
-            [&](const typename instr::RAR _args) -> T1 { return f14; },
-            [&](const typename instr::TCC _args) -> T1 { return f15; },
-            [&](const typename instr::TCS _args) -> T1 { return f16; },
-            [&](const typename instr::DAA _args) -> T1 { return f17; },
-            [&](const typename instr::KBP _args) -> T1 { return f18; },
+            [&](const typename instr::IAC) -> T1 { return f6; },
+            [&](const typename instr::DAC) -> T1 { return f7; },
+            [&](const typename instr::CLC) -> T1 { return f8; },
+            [&](const typename instr::STC) -> T1 { return f9; },
+            [&](const typename instr::CMC) -> T1 { return f10; },
+            [&](const typename instr::CMA) -> T1 { return f11; },
+            [&](const typename instr::CLB) -> T1 { return f12; },
+            [&](const typename instr::RAL) -> T1 { return f13; },
+            [&](const typename instr::RAR) -> T1 { return f14; },
+            [&](const typename instr::TCC) -> T1 { return f15; },
+            [&](const typename instr::TCS) -> T1 { return f16; },
+            [&](const typename instr::DAA) -> T1 { return f17; },
+            [&](const typename instr::KBP) -> T1 { return f18; },
             [&](const typename instr::JUN _args) -> T1 {
               return f19(_args.d_a);
             },

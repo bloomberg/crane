@@ -22,6 +22,6 @@ JmsBblRoundtrip::execute_bbl(std::shared_ptr<JmsBblRoundtrip::state> s) {
     return std::make_shared<JmsBblRoundtrip::state>(
         state{s->ret, s->ret, false});
   } else {
-    return std::move(s);
+    return s;
   }
 }

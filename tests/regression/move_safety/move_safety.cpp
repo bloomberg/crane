@@ -21,5 +21,5 @@ MoveSafety::make_box(std::shared_ptr<MoveSafety::tree> t) {
 /// that takes by value (returns its argument).
 std::shared_ptr<MoveSafety::tree>
 MoveSafety::tree_id(std::shared_ptr<MoveSafety::tree> t) {
-  return std::move(t);
+  return t;
 }

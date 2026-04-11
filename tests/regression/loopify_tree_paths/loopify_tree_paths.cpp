@@ -18,8 +18,7 @@ LoopifyTreePaths::map_cons(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<std::shared_ptr<List<unsigned int>>>::Nil
-                    _args) {
+            [&](const typename List<std::shared_ptr<List<unsigned int>>>::Nil) {
               if (_last) {
                 std::get<
                     typename List<std::shared_ptr<List<unsigned int>>>::Cons>(

@@ -15,7 +15,7 @@ __attribute__((pure)) unsigned int CountLoopTestTarget::target_of(
   return std::visit(
       Overloaded{[](const typename CountLoopTestTarget::instruction::ISZ _args)
                      -> unsigned int { return _args.d_a1; },
-                 [](const typename CountLoopTestTarget::instruction::NOP _args)
+                 [](const typename CountLoopTestTarget::instruction::NOP)
                      -> unsigned int { return 0u; }},
       i->v());
 }

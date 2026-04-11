@@ -10,7 +10,7 @@ __attribute__((pure)) unsigned int MatchFallbackNat::fallback(
   return std::visit(
       Overloaded{[](const typename MatchFallbackNat::maybe_nat::SomeNat _args)
                      -> unsigned int { return _args.d_a0; },
-                 [](const typename MatchFallbackNat::maybe_nat::NoneNat _args)
+                 [](const typename MatchFallbackNat::maybe_nat::NoneNat)
                      -> unsigned int { return 0u; }},
       x->v());
 }

@@ -64,7 +64,7 @@ public:
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil _args) {
+              [&](const typename List<t_A>::Nil) {
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
                 } else {
@@ -152,12 +152,11 @@ struct LoopifyStructures {
     /// nested_depth n computes maximum nesting depth.
     __attribute__((pure)) unsigned int nested_depth() const {
       return std::visit(
-          Overloaded{[](const typename nested::Elem _args) -> unsigned int {
-                       return 0u;
-                     },
-                     [](const typename nested::NList _args) -> unsigned int {
-                       return (depth_nested_list_fuel(1000u, _args.d_a0) + 1);
-                     }},
+          Overloaded{
+              [](const typename nested::Elem) -> unsigned int { return 0u; },
+              [](const typename nested::NList _args) -> unsigned int {
+                return (depth_nested_list_fuel(1000u, _args.d_a0) + 1);
+              }},
           this->v());
     }
 
@@ -384,7 +383,7 @@ struct LoopifyStructures {
                   const quadtree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename quadtree::QLeaf _args) -> void {
+                          [&](const typename quadtree::QLeaf) -> void {
                             _result = 0u;
                           },
                           [&](const typename quadtree::Quad _args) -> void {
@@ -739,7 +738,7 @@ struct LoopifyStructures {
     std::shared_ptr<List<unsigned int>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+      std::visit(Overloaded{[&](const typename List<unsigned int>::Nil) {
                               _result = std::optional<unsigned int>();
                               _continue = false;
                             },
@@ -768,7 +767,7 @@ struct LoopifyStructures {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil _args) {
+              [&](const typename List<unsigned int>::Nil) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = List<unsigned int>::nil();
@@ -810,7 +809,7 @@ struct LoopifyStructures {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil _args) {
+              [&](const typename List<unsigned int>::Nil) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = List<unsigned int>::nil();

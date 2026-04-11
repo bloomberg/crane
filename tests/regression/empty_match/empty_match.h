@@ -20,16 +20,15 @@ struct EmptyMatch {
     empty() = delete;
   };
 
-  template <typename T1>
-  static T1 empty_rect(const std::shared_ptr<empty> &_x) {
+  template <typename T1> static T1 empty_rect(const std::shared_ptr<empty> &) {
     throw std::logic_error("absurd case");
   }
 
-  template <typename T1> static T1 empty_rec(const std::shared_ptr<empty> &_x) {
+  template <typename T1> static T1 empty_rec(const std::shared_ptr<empty> &) {
     throw std::logic_error("absurd case");
   }
 
-  template <typename T1> static T1 absurd(const std::shared_ptr<empty> &_x) {
+  template <typename T1> static T1 absurd(const std::shared_ptr<empty> &) {
     throw std::logic_error("absurd case");
   }
 
@@ -121,7 +120,7 @@ struct EmptyMatch {
 
   template <typename T1, typename T2>
   static std::shared_ptr<either<T1, T2>>
-  complex_absurd(const std::shared_ptr<empty> &_x) {
+  complex_absurd(const std::shared_ptr<empty> &) {
     throw std::logic_error("absurd case");
   }
 };

@@ -34,12 +34,12 @@ struct RecordUseAfterMove {
     std::shared_ptr<box> b2 = clone_box(b);
     if (keep_box(b)->enabled) {
       if (std::move(b)->enabled) {
-        return std::move(b2);
+        return b2;
       } else {
-        return std::move(b1);
+        return b1;
       }
     } else {
-      return std::move(b1);
+      return b1;
     }
   }();
   /// Simple case: same record used twice in let bindings.

@@ -7,7 +7,7 @@
 
 std::shared_ptr<VisitMatchBug::Tree>
 VisitMatchBug::consume(std::shared_ptr<VisitMatchBug::Tree> t) {
-  return std::move(t);
+  return t;
 }
 
 __attribute__((pure)) unsigned int VisitMatchBug::match_after_consume(

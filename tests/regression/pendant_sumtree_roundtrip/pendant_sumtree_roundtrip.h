@@ -62,29 +62,28 @@ public:
   template <MapsTo<bool, t_A> F0>
   __attribute__((pure)) bool forallb(F0 &&f) const {
     return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil0 _args) -> bool { return true; },
-            [&](const typename List<t_A>::Cons0 _args) -> bool {
-              return (f(_args.d_a0) && _args.d_a1->forallb(f));
-            }},
+        Overloaded{[](const typename List<t_A>::Nil0) -> bool { return true; },
+                   [&](const typename List<t_A>::Cons0 _args) -> bool {
+                     return (f(_args.d_a0) && _args.d_a1->forallb(f));
+                   }},
         this->v());
   }
 
   template <typename T1, MapsTo<T1, t_A, T1> F0>
   T1 fold_right(F0 &&f, const T1 a0) const {
     return std::visit(
-        Overloaded{
-            [&](const typename List<t_A>::Nil0 _args) -> T1 { return a0; },
-            [&](const typename List<t_A>::Cons0 _args) -> T1 {
-              return f(_args.d_a0, _args.d_a1->template fold_right<T1>(f, a0));
-            }},
+        Overloaded{[&](const typename List<t_A>::Nil0) -> T1 { return a0; },
+                   [&](const typename List<t_A>::Cons0 _args) -> T1 {
+                     return f(_args.d_a0,
+                              _args.d_a1->template fold_right<T1>(f, a0));
+                   }},
         this->v());
   }
 
   template <typename T1> std::shared_ptr<List<T1>> concat() const {
     return std::visit(
         Overloaded{
-            [](const typename List<std::shared_ptr<List<T1>>>::Nil0 _args)
+            [](const typename List<std::shared_ptr<List<T1>>>::Nil0)
                 -> std::shared_ptr<List<T1>> { return List<T1>::nil0(); },
             [](const typename List<std::shared_ptr<List<T1>>>::Cons0 _args)
                 -> std::shared_ptr<List<T1>> {
@@ -97,8 +96,9 @@ public:
   std::shared_ptr<List<T1>> map(F0 &&f) const {
     return std::visit(
         Overloaded{
-            [](const typename List<t_A>::Nil0 _args)
-                -> std::shared_ptr<List<T1>> { return List<T1>::nil0(); },
+            [](const typename List<t_A>::Nil0) -> std::shared_ptr<List<T1>> {
+              return List<T1>::nil0();
+            },
             [&](const typename List<t_A>::Cons0 _args)
                 -> std::shared_ptr<List<T1>> {
               return List<T1>::cons0(f(_args.d_a0),
@@ -109,18 +109,17 @@ public:
 
   __attribute__((pure)) unsigned int length() const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil0 _args) -> unsigned int {
-                     return 0u;
-                   },
-                   [](const typename List<t_A>::Cons0 _args) -> unsigned int {
-                     return (_args.d_a1->length() + 1);
-                   }},
+        Overloaded{
+            [](const typename List<t_A>::Nil0) -> unsigned int { return 0u; },
+            [](const typename List<t_A>::Cons0 _args) -> unsigned int {
+              return (_args.d_a1->length() + 1);
+            }},
         this->v());
   }
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
     return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil0 _args)
+        Overloaded{[&](const typename List<t_A>::Nil0)
                        -> std::shared_ptr<List<t_A>> { return m; },
                    [&](const typename List<t_A>::Cons0 _args)
                        -> std::shared_ptr<List<t_A>> {
@@ -271,11 +270,10 @@ public:
   // ACCESSORS
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
 
-  std::shared_ptr<Sig<unsigned int>> to_nat(const unsigned int _x) const {
+  std::shared_ptr<Sig<unsigned int>> to_nat(const unsigned int) const {
     return std::visit(
         Overloaded{
-            [](const typename T::F1 _args)
-                -> std::shared_ptr<Sig<unsigned int>> {
+            [](const typename T::F1) -> std::shared_ptr<Sig<unsigned int>> {
               return Sig<unsigned int>::exist(0u);
             },
             [](const typename T::FS _args)
@@ -528,7 +526,7 @@ struct PendantSumtreeRoundtripCase {
             MapsTo<T1, std::shared_ptr<CertifiedPendant>,
                    std::shared_ptr<List<std::shared_ptr<SumTree>>>>
                 F2>
-  static T1 SumTree_rect(const unsigned int _x, F1 &&f, F2 &&f0,
+  static T1 SumTree_rect(const unsigned int, F1 &&f, F2 &&f0,
                          const std::shared_ptr<SumTree> &s) {
     return std::visit(
         Overloaded{[&](const typename SumTree::SumLeaf _args) -> T1 {
@@ -544,7 +542,7 @@ struct PendantSumtreeRoundtripCase {
             MapsTo<T1, std::shared_ptr<CertifiedPendant>,
                    std::shared_ptr<List<std::shared_ptr<SumTree>>>>
                 F2>
-  static T1 SumTree_rec(const unsigned int _x, F1 &&f, F2 &&f0,
+  static T1 SumTree_rec(const unsigned int, F1 &&f, F2 &&f0,
                         const std::shared_ptr<SumTree> &s) {
     return std::visit(
         Overloaded{[&](const typename SumTree::SumLeaf _args) -> T1 {
@@ -716,11 +714,11 @@ std::shared_ptr<List<T1>> Vector::to_list(const unsigned int n,
                                           std::shared_ptr<List<T1>>)>
       fold_right_fix;
   fold_right_fix =
-      [&](unsigned int _x, std::shared_ptr<T0<T1>> v0,
+      [&](unsigned int, std::shared_ptr<T0<T1>> v0,
           std::shared_ptr<List<T1>> b) -> std::shared_ptr<List<T1>> {
     return std::visit(
-        Overloaded{[&](const typename T0<T1>::Nil _args)
-                       -> std::shared_ptr<List<T1>> { return std::move(b); },
+        Overloaded{[&](const typename T0<T1>::Nil)
+                       -> std::shared_ptr<List<T1>> { return b; },
                    [&](const typename T0<T1>::Cons _args)
                        -> std::shared_ptr<List<T1>> {
                      return List<T1>::cons0(

@@ -14,7 +14,7 @@ std::shared_ptr<StepsCounterUnroll::state>
 StepsCounterUnroll::steps(const unsigned int n,
                           std::shared_ptr<StepsCounterUnroll::state> s) {
   if (n <= 0) {
-    return std::move(s);
+    return s;
   } else {
     unsigned int n_ = n - 1;
     return steps(n_, step(std::move(s)));

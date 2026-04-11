@@ -84,7 +84,7 @@ struct LoopifyPatterns {
                 const std::shared_ptr<list<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename list<T1>::Nil _args) -> void {
+                        [&](const typename list<T1>::Nil) -> void {
                           _result = f;
                         },
                         [&](const typename list<T1>::Cons _args) -> void {
@@ -124,7 +124,7 @@ struct LoopifyPatterns {
                 const std::shared_ptr<list<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename list<T1>::Nil _args) -> void {
+                        [&](const typename list<T1>::Nil) -> void {
                           _result = f;
                         },
                         [&](const typename list<T1>::Cons _args) -> void {
@@ -216,18 +216,17 @@ struct LoopifyPatterns {
                 const std::shared_ptr<list<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename list<unsigned int>::Nil _args)
-                            -> void { _result = 0u; },
+                        [&](const typename list<unsigned int>::Nil) -> void {
+                          _result = 0u;
+                        },
                         [&](const typename list<unsigned int>::Cons _args)
                             -> void {
                           std::visit(
                               Overloaded{
-                                  [&](const typename list<unsigned int>::Nil
-                                          _args0) -> void {
-                                    _result = f(_args.d_a0);
-                                  },
-                                  [&](const typename list<unsigned int>::Cons
-                                          _args0) -> void {
+                                  [&](const typename list<unsigned int>::Nil)
+                                      -> void { _result = f(_args.d_a0); },
+                                  [&](const typename list<unsigned int>::Cons)
+                                      -> void {
                                     _stack.push_back(_Call1{_args, f});
                                     _stack.push_back(_Enter{_args.d_a1});
                                   }},
@@ -292,7 +291,7 @@ struct LoopifyPatterns {
                 const std::shared_ptr<list<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename list<T1>::Nil _args) -> void {
+                        [&](const typename list<T1>::Nil) -> void {
                           _result = list<std::shared_ptr<list<T1>>>::cons(
                               list<T1>::cons(x, list<T1>::nil()),
                               list<std::shared_ptr<list<T1>>>::nil());
@@ -336,7 +335,7 @@ struct LoopifyPatterns {
                                             Overloaded{
                                                 [&](const typename list<
                                                     std::shared_ptr<list<T1>>>::
-                                                        Nil _args0) -> void {
+                                                        Nil) -> void {
                                                   _result =
                                                       list<std::shared_ptr<
                                                           list<T1>>>::nil();
@@ -408,7 +407,7 @@ struct LoopifyPatterns {
         unsigned int f = _loop_fuel - 1;
         std::visit(
             Overloaded{
-                [&](const typename list<unsigned int>::Nil _args) {
+                [&](const typename list<unsigned int>::Nil) {
                   if (_last) {
                     std::get<typename list<unsigned int>::Cons>(_last->v_mut())
                         .d_a1 = std::move(_loop_l2);
@@ -420,7 +419,7 @@ struct LoopifyPatterns {
                 [&](const typename list<unsigned int>::Cons _args) {
                   std::visit(
                       Overloaded{
-                          [&](const typename list<unsigned int>::Nil _args0) {
+                          [&](const typename list<unsigned int>::Nil) {
                             if (_last) {
                               std::get<typename list<unsigned int>::Cons>(
                                   _last->v_mut())
@@ -527,7 +526,7 @@ struct LoopifyPatterns {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename list<unsigned int>::Nil _args) {
+              [&](const typename list<unsigned int>::Nil) {
                 if (_last) {
                   std::get<typename list<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = list<unsigned int>::nil();
@@ -595,8 +594,7 @@ struct LoopifyPatterns {
                 const std::shared_ptr<list<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename list<unsigned int>::Nil _args)
-                            -> void {
+                        [&](const typename list<unsigned int>::Nil) -> void {
                           _result = std::make_pair(
                               std::make_pair(list<unsigned int>::nil(),
                                              list<unsigned int>::nil()),
@@ -662,7 +660,7 @@ struct LoopifyPatterns {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename list<unsigned int>::Nil _args) {
+              [&](const typename list<unsigned int>::Nil) {
                 if (_last) {
                   std::get<typename list<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = list<unsigned int>::nil();

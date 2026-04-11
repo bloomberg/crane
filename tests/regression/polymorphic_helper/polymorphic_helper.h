@@ -52,12 +52,11 @@ public:
 
   std::shared_ptr<Nat> add(std::shared_ptr<Nat> m) const {
     return std::visit(
-        Overloaded{[&](const typename Nat::O _args) -> std::shared_ptr<Nat> {
-                     return m;
-                   },
-                   [&](const typename Nat::S _args) -> std::shared_ptr<Nat> {
-                     return Nat::s(_args.d_a0->add(m));
-                   }},
+        Overloaded{
+            [&](const typename Nat::O) -> std::shared_ptr<Nat> { return m; },
+            [&](const typename Nat::S _args) -> std::shared_ptr<Nat> {
+              return Nat::s(_args.d_a0->add(m));
+            }},
         this->v());
   }
 };
@@ -106,7 +105,7 @@ public:
   std::shared_ptr<Nat> length() const {
     return std::visit(
         Overloaded{
-            [](const typename List<t_A>::Nil _args) -> std::shared_ptr<Nat> {
+            [](const typename List<t_A>::Nil) -> std::shared_ptr<Nat> {
               return Nat::o();
             },
             [](const typename List<t_A>::Cons _args) -> std::shared_ptr<Nat> {
@@ -133,7 +132,7 @@ template <typename T1>
 std::shared_ptr<List<T1>> ListDef::repeat(const T1 x,
                                           const std::shared_ptr<Nat> &n) {
   return std::visit(
-      Overloaded{[](const typename Nat::O _args) -> std::shared_ptr<List<T1>> {
+      Overloaded{[](const typename Nat::O) -> std::shared_ptr<List<T1>> {
                    return List<T1>::nil();
                  },
                  [&](const typename Nat::S _args) -> std::shared_ptr<List<T1>> {

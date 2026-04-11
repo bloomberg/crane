@@ -19,7 +19,7 @@ ProgramTargetsRegionScan::jump_target(
               -> std::optional<unsigned int> {
             return std::make_optional<unsigned int>(_args.d_a0);
           },
-          [](const typename ProgramTargetsRegionScan::instruction::NOP _args)
+          [](const typename ProgramTargetsRegionScan::instruction::NOP)
               -> std::optional<unsigned int> {
             return std::optional<unsigned int>();
           }},

@@ -10,7 +10,7 @@ __attribute__((pure)) unsigned int
 ClosureChain::tree_sum(const std::shared_ptr<ClosureChain::tree> &t) {
   return std::visit(
       Overloaded{
-          [](const typename ClosureChain::tree::Leaf _args) -> unsigned int {
+          [](const typename ClosureChain::tree::Leaf) -> unsigned int {
             return 0u;
           },
           [](const typename ClosureChain::tree::Node _args) -> unsigned int {

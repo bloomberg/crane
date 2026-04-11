@@ -29,7 +29,7 @@ EffectRecursiveList::fold_effect(const std::shared_ptr<List<std::string>> &xs,
                                  const std::string acc) {
   return std::visit(
       Overloaded{
-          [&](const typename List<std::string>::Nil _args) -> std::string {
+          [&](const typename List<std::string>::Nil) -> std::string {
             return acc;
           },
           [&](const typename List<std::string>::Cons _args) -> std::string {
@@ -59,7 +59,7 @@ std::shared_ptr<List<std::optional<std::string>>>
 EffectRecursiveList::collect_envs(
     const std::shared_ptr<List<std::string>> &names) {
   return std::visit(
-      Overloaded{[](const typename List<std::string>::Nil _args)
+      Overloaded{[](const typename List<std::string>::Nil)
                      -> std::shared_ptr<List<std::optional<std::string>>> {
                    return List<std::optional<std::string>>::nil();
                  },

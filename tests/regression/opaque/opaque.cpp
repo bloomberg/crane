@@ -52,9 +52,9 @@ __attribute__((pure)) bool Opaque::are_equal(const unsigned int n,
   }
 }
 
-std::shared_ptr<Sig<unsigned int>> Opaque::bounded_add(const unsigned int _x0,
-                                                       const unsigned int _x1,
-                                                       const unsigned int _x2) {
+std::shared_ptr<Sig<unsigned int>> Opaque::bounded_add(const unsigned int,
+                                                       const unsigned int,
+                                                       const unsigned int) {
   throw std::logic_error(
       "unrealized axiom: "
       "CraneTestsRegression.opaque.Opaque.Opaque.bounded_add");

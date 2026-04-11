@@ -96,15 +96,13 @@ struct PartialAppMove {
               [&](_Enter _f) {
                 const std::shared_ptr<tree> t = _f.t;
                 std::visit(
-                    Overloaded{[&](const typename tree::Leaf _args) -> void {
-                                 _result = f;
-                               },
-                               [&](const typename tree::Node _args) -> void {
-                                 _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
-                                                         _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a2});
-                               }},
+                    Overloaded{
+                        [&](const typename tree::Leaf) -> void { _result = f; },
+                        [&](const typename tree::Node _args) -> void {
+                          _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
+                                                  _args.d_a1, _args.d_a0});
+                          _stack.push_back(_Enter{_args.d_a2});
+                        }},
                     t->v());
               },
               [&](_Call1 _f) {
@@ -153,15 +151,13 @@ struct PartialAppMove {
               [&](_Enter _f) {
                 const std::shared_ptr<tree> t = _f.t;
                 std::visit(
-                    Overloaded{[&](const typename tree::Leaf _args) -> void {
-                                 _result = f;
-                               },
-                               [&](const typename tree::Node _args) -> void {
-                                 _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
-                                                         _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a2});
-                               }},
+                    Overloaded{
+                        [&](const typename tree::Leaf) -> void { _result = f; },
+                        [&](const typename tree::Node _args) -> void {
+                          _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
+                                                  _args.d_a1, _args.d_a0});
+                          _stack.push_back(_Enter{_args.d_a2});
+                        }},
                     t->v());
               },
               [&](_Call1 _f) {
@@ -207,12 +203,11 @@ struct PartialAppMove {
       };
       std::shared_ptr<tree> w = tree::node(t, 42u, tree::leaf());
       return std::visit(
-          Overloaded{[&](const typename tree::Leaf _args) -> unsigned int {
-                       return f(0u);
-                     },
-                     [&](const typename tree::Node _args) -> unsigned int {
-                       return f(99u);
-                     }},
+          Overloaded{
+              [&](const typename tree::Leaf) -> unsigned int { return f(0u); },
+              [&](const typename tree::Node) -> unsigned int {
+                return f(99u);
+              }},
           w->v());
     }();
   }();
@@ -228,12 +223,11 @@ struct PartialAppMove {
       };
       std::shared_ptr<tree> w = wrap(std::move(t));
       return std::visit(
-          Overloaded{[&](const typename tree::Leaf _args) -> unsigned int {
-                       return f(0u);
-                     },
-                     [&](const typename tree::Node _args) -> unsigned int {
-                       return f(99u);
-                     }},
+          Overloaded{
+              [&](const typename tree::Leaf) -> unsigned int { return f(0u); },
+              [&](const typename tree::Node) -> unsigned int {
+                return f(99u);
+              }},
           w->v());
     }();
   }();

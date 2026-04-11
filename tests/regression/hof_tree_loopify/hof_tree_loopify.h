@@ -575,7 +575,7 @@ struct HofTreeLoopify {
                 const std::shared_ptr<tree<T1>> t = _f.t;
                 std::visit(
                     Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
+                        [&](const typename tree<T1>::Leaf) -> void {
                           _result = f;
                         },
                         [&](const typename tree<T1>::Node _args) -> void {
@@ -633,7 +633,7 @@ struct HofTreeLoopify {
                 const std::shared_ptr<tree<T1>> t = _f.t;
                 std::visit(
                     Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
+                        [&](const typename tree<T1>::Leaf) -> void {
                           _result = f;
                         },
                         [&](const typename tree<T1>::Node _args) -> void {
@@ -687,7 +687,7 @@ struct HofTreeLoopify {
                 const std::shared_ptr<tree<T1>> t = _f.t;
                 std::visit(
                     Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
+                        [&](const typename tree<T1>::Leaf) -> void {
                           _result = tree<T2>::leaf();
                         },
                         [&](const typename tree<T1>::Node _args) -> void {
@@ -738,7 +738,7 @@ struct HofTreeLoopify {
                 const std::shared_ptr<tree<T1>> t = _f.t;
                 std::visit(
                     Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
+                        [&](const typename tree<T1>::Leaf) -> void {
                           _result = base;
                         },
                         [&](const typename tree<T1>::Node _args) -> void {
@@ -791,14 +791,15 @@ struct HofTreeLoopify {
                 const std::shared_ptr<tree<T1>> t1 = _f.t1;
                 std::visit(
                     Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
+                        [&](const typename tree<T1>::Leaf) -> void {
                           _result = tree<T3>::leaf();
                         },
                         [&](const typename tree<T1>::Node _args) -> void {
                           std::visit(
                               Overloaded{
-                                  [&](const typename tree<T2>::Leaf _args0)
-                                      -> void { _result = tree<T3>::leaf(); },
+                                  [&](const typename tree<T2>::Leaf) -> void {
+                                    _result = tree<T3>::leaf();
+                                  },
                                   [&](const typename tree<T2>::Node _args0)
                                       -> void {
                                     _stack.push_back(
@@ -856,7 +857,7 @@ struct HofTreeLoopify {
                 const T3 acc = _f.acc;
                 std::visit(
                     Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
+                        [&](const typename tree<T1>::Leaf) -> void {
                           _result = std::make_pair(acc, tree<T2>::leaf());
                         },
                         [&](const typename tree<T1>::Node _args) -> void {

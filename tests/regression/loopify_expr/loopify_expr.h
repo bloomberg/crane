@@ -267,7 +267,7 @@ struct LoopifyExpr {
                                  }},
                       _self->v());
                 },
-                [&](_Call1 _f) { _result = expr::succ(_result); },
+                [&](_Call1) { _result = expr::succ(_result); },
                 [&](_Call10 _f) {
                   std::shared_ptr<expr> s1 = _f._s0;
                   std::visit(
@@ -761,7 +761,7 @@ struct LoopifyExpr {
                          const expr *_self = _f._self;
                          std::visit(
                              Overloaded{
-                                 [&](const typename expr::Val _args) -> void {
+                                 [&](const typename expr::Val) -> void {
                                    _result = 1u;
                                  },
                                  [&](const typename expr::Succ _args) -> void {
@@ -783,7 +783,7 @@ struct LoopifyExpr {
                                  }},
                              _self->v());
                        },
-                       [&](_Call1 _f) { _result = (_result + 1); },
+                       [&](_Call1) { _result = (_result + 1); },
                        [&](_Call2 _f) {
                          _stack.push_back(_Call3{_result});
                          _stack.push_back(_Enter{_f._s0});
@@ -862,7 +862,7 @@ struct LoopifyExpr {
                 [&](_Enter _f) {
                   const expr *_self = _f._self;
                   std::visit(
-                      Overloaded{[&](const typename expr::Val _args) -> void {
+                      Overloaded{[&](const typename expr::Val) -> void {
                                    _result = 1u;
                                  },
                                  [&](const typename expr::Succ _args) -> void {
@@ -961,7 +961,7 @@ struct LoopifyExpr {
                 [&](_Enter _f) {
                   const expr *_self = _f._self;
                   std::visit(
-                      Overloaded{[&](const typename expr::Val _args) -> void {
+                      Overloaded{[&](const typename expr::Val) -> void {
                                    _result = 0u;
                                  },
                                  [&](const typename expr::Succ _args) -> void {
@@ -983,7 +983,7 @@ struct LoopifyExpr {
                                  }},
                       _self->v());
                 },
-                [&](_Call1 _f) { _result = (_result + 1); },
+                [&](_Call1) { _result = (_result + 1); },
                 [&](_Call2 _f) {
                   _stack.push_back(_Call3{_result});
                   _stack.push_back(_Enter{_f._s0});
@@ -1074,7 +1074,7 @@ struct LoopifyExpr {
                                  }},
                              _self->v());
                        },
-                       [&](_Call1 _f) { _result = (_result + 1); },
+                       [&](_Call1) { _result = (_result + 1); },
                        [&](_Call2 _f) {
                          _stack.push_back(_Call3{_result});
                          _stack.push_back(_Enter{_f._s0});
@@ -1491,7 +1491,7 @@ struct LoopifyExpr {
                   const simple_expr *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename simple_expr::Lit _args) -> void {
+                          [&](const typename simple_expr::Lit) -> void {
                             _result = 0u;
                           },
                           [&](const typename simple_expr::Plus _args) -> void {
@@ -2010,7 +2010,7 @@ struct LoopifyExpr {
                   const cond_expr *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename cond_expr::CLit _args) -> void {
+                          [&](const typename cond_expr::CLit) -> void {
                             _result = 0u;
                           },
                           [&](const typename cond_expr::CPlus _args) -> void {

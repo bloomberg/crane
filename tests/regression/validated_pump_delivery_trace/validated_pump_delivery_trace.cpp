@@ -73,7 +73,7 @@ ValidatedPumpDeliveryTraceCase::icr_activity_modifier(
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Minutes
 ValidatedPumpDeliveryTraceCase::peak_time(
     const ValidatedPumpDeliveryTraceCase::InsulinType itype,
-    const unsigned int _x) {
+    const unsigned int) {
   switch (itype) {
   case InsulinType::e_INSULIN_ASPART: {
     return 70u;
@@ -108,8 +108,8 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::history_times_valid(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil
-                 _args) -> bool { return true; },
+              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil)
+              -> bool { return true; },
           [&](const typename List<
               std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons
                   _args) -> bool {
@@ -127,8 +127,8 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::history_sorted_from(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil
-                 _args) -> bool { return true; },
+              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil)
+              -> bool { return true; },
           [&](const typename List<
               std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons
                   _args) -> bool {
@@ -146,8 +146,8 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::history_sorted_desc(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil
-                 _args) -> bool { return true; },
+              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil)
+              -> bool { return true; },
           [](const typename List<
               std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons
                  _args) -> bool {
@@ -228,8 +228,8 @@ ValidatedPumpDeliveryTraceCase::total_bilinear_iob(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil
-                 _args) -> unsigned int { return 0u; },
+              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil)
+              -> unsigned int { return 0u; },
           [&](const typename List<
               std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons
                   _args) -> unsigned int {
@@ -250,7 +250,7 @@ ValidatedPumpDeliveryTraceCase::apply_sensor_margin(
               ? 0
               : (bg->mg_dL_val - (100u ? (bg->mg_dL_val * 15u) / 100u : 0))))});
   } else {
-    return std::move(bg);
+    return bg;
   }
 }
 
@@ -271,7 +271,7 @@ ValidatedPumpDeliveryTraceCase::adjusted_isf_tenths(
 
 __attribute__((pure)) ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::correction_twentieths_full(
-    const unsigned int _x,
+    const unsigned int,
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &current_bg,
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::Mg_dL> &target_bg,
     const unsigned int base_isf_tenths) {
@@ -421,7 +421,7 @@ ValidatedPumpDeliveryTraceCase::apply_suspend(
   return std::visit(
       Overloaded{
           [&](const typename ValidatedPumpDeliveryTraceCase::SuspendDecision::
-                  Suspend_None _args) -> unsigned int { return proposed; },
+                  Suspend_None) -> unsigned int { return proposed; },
           [&](const typename ValidatedPumpDeliveryTraceCase::SuspendDecision::
                   Suspend_Reduce _args) -> unsigned int {
             if (proposed <= _args.d_a0) {
@@ -431,7 +431,7 @@ ValidatedPumpDeliveryTraceCase::apply_suspend(
             }
           },
           [](const typename ValidatedPumpDeliveryTraceCase::SuspendDecision::
-                 Suspend_Withhold _args) -> unsigned int { return 0u; }},
+                 Suspend_Withhold) -> unsigned int { return 0u; }},
       decision->v());
 }
 
@@ -548,8 +548,8 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::bolus_too_soon(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil
-                 _args) -> bool { return false; },
+              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil)
+              -> bool { return false; },
           [&](const typename List<
               std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons
                   _args) -> bool {
@@ -703,7 +703,7 @@ ValidatedPumpDeliveryTraceCase::prec_result_twentieths(
             return std::make_optional<unsigned int>(_args.d_a0);
           },
           [](const typename ValidatedPumpDeliveryTraceCase::PrecisionResult::
-                 PrecError _args) -> std::optional<unsigned int> {
+                 PrecError) -> std::optional<unsigned int> {
             return std::optional<unsigned int>();
           }},
       r->v());
@@ -783,7 +783,7 @@ ValidatedPumpDeliveryTraceCase::final_delivery(
                 apply_rounding(mode, _args.d_a0));
           },
           [](const typename ValidatedPumpDeliveryTraceCase::PrecisionResult::
-                 PrecError _args) -> std::optional<unsigned int> {
+                 PrecError) -> std::optional<unsigned int> {
             return std::optional<unsigned int>();
           }},
       result->v());
@@ -878,7 +878,7 @@ __attribute__((pure)) unsigned int
 Nat::of_uint_acc(const std::shared_ptr<Uint> &d, const unsigned int acc) {
   return std::visit(
       Overloaded{
-          [&](const typename Uint::Nil _args) -> unsigned int { return acc; },
+          [&](const typename Uint::Nil) -> unsigned int { return acc; },
           [&](const typename Uint::D0 _args) -> unsigned int {
             return Nat::of_uint_acc(_args.d_a0, Nat::tail_mul(10u, acc));
           },
@@ -940,7 +940,7 @@ __attribute__((pure)) unsigned int
 Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
   return std::visit(
       Overloaded{
-          [&](const typename Uint0::Nil0 _args) -> unsigned int { return acc; },
+          [&](const typename Uint0::Nil0) -> unsigned int { return acc; },
           [&](const typename Uint0::D10 _args) -> unsigned int {
             return Nat::of_hex_uint_acc(_args.d_a0, Nat::tail_mul(16u, acc));
           },

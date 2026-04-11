@@ -64,7 +64,7 @@ public:
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil _args) {
+              [&](const typename List<t_A>::Nil) {
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
                 } else {
@@ -171,7 +171,7 @@ struct LoopifyTrees {
                   const tree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename tree<t_A>::Leaf _args) -> void {
+                          [&](const typename tree<t_A>::Leaf) -> void {
                             _result = tree<T1>::leaf();
                           },
                           [&](const typename tree<t_A>::Node _args) -> void {
@@ -229,19 +229,21 @@ struct LoopifyTrees {
                   const std::shared_ptr<tree<t_A>> t2 = _f.t2;
                   std::visit(
                       Overloaded{
-                          [&](const typename tree<t_A>::Leaf _args) -> void {
+                          [&](const typename tree<t_A>::Leaf) -> void {
                             _result = std::visit(
                                 Overloaded{
-                                    [](const typename tree<t_A>::Leaf _args0)
-                                        -> bool { return true; },
-                                    [](const typename tree<t_A>::Node _args0)
-                                        -> bool { return false; }},
+                                    [](const typename tree<t_A>::Leaf) -> bool {
+                                      return true;
+                                    },
+                                    [](const typename tree<t_A>::Node) -> bool {
+                                      return false;
+                                    }},
                                 t2->v());
                           },
                           [&](const typename tree<t_A>::Node _args) -> void {
                             std::visit(
                                 Overloaded{
-                                    [&](const typename tree<t_A>::Leaf _args0)
+                                    [&](const typename tree<t_A>::Leaf)
                                         -> void { _result = false; },
                                     [&](const typename tree<t_A>::Node _args0)
                                         -> void {
@@ -296,7 +298,7 @@ struct LoopifyTrees {
                   const tree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename tree<t_A>::Leaf _args) -> void {
+                          [&](const typename tree<t_A>::Leaf) -> void {
                             _result = List<t_A>::nil();
                           },
                           [&](const typename tree<t_A>::Node _args) -> void {
@@ -348,7 +350,7 @@ struct LoopifyTrees {
                   const tree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename tree<t_A>::Leaf _args) -> void {
+                          [&](const typename tree<t_A>::Leaf) -> void {
                             _result = 1u;
                           },
                           [&](const typename tree<t_A>::Node _args) -> void {
@@ -397,20 +399,23 @@ struct LoopifyTrees {
                   const std::shared_ptr<tree<T1>> t2 = _f.t2;
                   std::visit(
                       Overloaded{
-                          [&](const typename tree<t_A>::Leaf _args) -> void {
+                          [&](const typename tree<t_A>::Leaf) -> void {
                             _result = std::visit(
                                 Overloaded{
-                                    [](const typename tree<T1>::Leaf _args0)
-                                        -> bool { return true; },
-                                    [](const typename tree<T1>::Node _args0)
-                                        -> bool { return false; }},
+                                    [](const typename tree<T1>::Leaf) -> bool {
+                                      return true;
+                                    },
+                                    [](const typename tree<T1>::Node) -> bool {
+                                      return false;
+                                    }},
                                 t2->v());
                           },
                           [&](const typename tree<t_A>::Node _args) -> void {
                             std::visit(
                                 Overloaded{
-                                    [&](const typename tree<T1>::Leaf _args0)
-                                        -> void { _result = false; },
+                                    [&](const typename tree<T1>::Leaf) -> void {
+                                      _result = false;
+                                    },
                                     [&](const typename tree<T1>::Node _args0)
                                         -> void {
                                       _stack.push_back(_Call1{_args0, _args});
@@ -466,7 +471,7 @@ struct LoopifyTrees {
                   const tree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename tree<t_A>::Leaf _args) -> void {
+                          [&](const typename tree<t_A>::Leaf) -> void {
                             _result = tree<t_A>::leaf();
                           },
                           [&](const typename tree<t_A>::Node _args) -> void {
@@ -517,7 +522,7 @@ struct LoopifyTrees {
                   const tree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename tree<t_A>::Leaf _args) -> void {
+                          [&](const typename tree<t_A>::Leaf) -> void {
                             _result = 0u;
                           },
                           [&](const typename tree<t_A>::Node _args) -> void {
@@ -564,7 +569,7 @@ struct LoopifyTrees {
                   const tree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename tree<t_A>::Leaf _args) -> void {
+                          [&](const typename tree<t_A>::Leaf) -> void {
                             _result = 0u;
                           },
                           [&](const typename tree<t_A>::Node _args) -> void {
@@ -632,7 +637,7 @@ struct LoopifyTrees {
                 const std::shared_ptr<tree<T1>> t = _f.t;
                 std::visit(
                     Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
+                        [&](const typename tree<T1>::Leaf) -> void {
                           _result = f;
                         },
                         [&](const typename tree<T1>::Node _args) -> void {
@@ -690,7 +695,7 @@ struct LoopifyTrees {
                 const std::shared_ptr<tree<T1>> t = _f.t;
                 std::visit(
                     Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
+                        [&](const typename tree<T1>::Leaf) -> void {
                           _result = f;
                         },
                         [&](const typename tree<T1>::Node _args) -> void {
@@ -723,20 +728,19 @@ struct LoopifyTrees {
     bool _continue = true;
     while (_continue) {
       std::visit(
-          Overloaded{[&](const typename tree<T1>::Leaf _args) {
+          Overloaded{[&](const typename tree<T1>::Leaf) {
                        _result = default0;
                        _continue = false;
                      },
                      [&](const typename tree<T1>::Node _args) {
                        std::visit(
-                           Overloaded{
-                               [&](const typename tree<T1>::Leaf _args0) {
-                                 _result = _args.d_a1;
-                                 _continue = false;
-                               },
-                               [&](const typename tree<T1>::Node _args0) {
-                                 _loop_t = _args.d_a0;
-                               }},
+                           Overloaded{[&](const typename tree<T1>::Leaf) {
+                                        _result = _args.d_a1;
+                                        _continue = false;
+                                      },
+                                      [&](const typename tree<T1>::Node) {
+                                        _loop_t = _args.d_a0;
+                                      }},
                            _args.d_a0->v());
                      }},
           _loop_t->v());
@@ -751,20 +755,19 @@ struct LoopifyTrees {
     bool _continue = true;
     while (_continue) {
       std::visit(
-          Overloaded{[&](const typename tree<T1>::Leaf _args) {
+          Overloaded{[&](const typename tree<T1>::Leaf) {
                        _result = default0;
                        _continue = false;
                      },
                      [&](const typename tree<T1>::Node _args) {
                        std::visit(
-                           Overloaded{
-                               [&](const typename tree<T1>::Leaf _args0) {
-                                 _result = _args.d_a1;
-                                 _continue = false;
-                               },
-                               [&](const typename tree<T1>::Node _args0) {
-                                 _loop_t = _args.d_a2;
-                               }},
+                           Overloaded{[&](const typename tree<T1>::Leaf) {
+                                        _result = _args.d_a1;
+                                        _continue = false;
+                                      },
+                                      [&](const typename tree<T1>::Node) {
+                                        _loop_t = _args.d_a2;
+                                      }},
                            _args.d_a2->v());
                      }},
           _loop_t->v());
@@ -869,7 +872,7 @@ struct LoopifyTrees {
                   const ternary *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename ternary::TLeaf _args) -> void {
+                          [&](const typename ternary::TLeaf) -> void {
                             _result = 0u;
                           },
                           [&](const typename ternary::TNode _args) -> void {
@@ -956,7 +959,7 @@ struct LoopifyTrees {
                   const ternary *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename ternary::TLeaf _args) -> void {
+                          [&](const typename ternary::TLeaf) -> void {
                             _result = 0u;
                           },
                           [&](const typename ternary::TNode _args) -> void {
@@ -1034,7 +1037,7 @@ struct LoopifyTrees {
                 const std::shared_ptr<ternary> t = _f.t;
                 std::visit(
                     Overloaded{
-                        [&](const typename ternary::TLeaf _args) -> void {
+                        [&](const typename ternary::TLeaf) -> void {
                           _result = f;
                         },
                         [&](const typename ternary::TNode _args) -> void {
@@ -1114,7 +1117,7 @@ struct LoopifyTrees {
                 const std::shared_ptr<ternary> t = _f.t;
                 std::visit(
                     Overloaded{
-                        [&](const typename ternary::TLeaf _args) -> void {
+                        [&](const typename ternary::TLeaf) -> void {
                           _result = f;
                         },
                         [&](const typename ternary::TNode _args) -> void {
@@ -1286,8 +1289,8 @@ struct LoopifyTrees {
                   unsigned int g = fuel - 1;
                   std::visit(
                       Overloaded{
-                          [&](const typename List<std::shared_ptr<rose>>::Nil
-                                  _args) -> void {
+                          [&](const typename List<std::shared_ptr<rose>>::Nil)
+                              -> void {
                             _result = List<std::shared_ptr<rose>>::nil();
                           },
                           [&](const typename List<std::shared_ptr<rose>>::Cons
@@ -1402,8 +1405,9 @@ struct LoopifyTrees {
                 const std::shared_ptr<tree<unsigned int>> t = _f.t;
                 std::visit(
                     Overloaded{
-                        [&](const typename tree<unsigned int>::Leaf _args)
-                            -> void { _result = false; },
+                        [&](const typename tree<unsigned int>::Leaf) -> void {
+                          _result = false;
+                        },
                         [&](const typename tree<unsigned int>::Node _args)
                             -> void {
                           if (p(_args.d_a1)) {
@@ -1520,7 +1524,7 @@ struct LoopifyTrees {
                   const quadtree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename quadtree::QLeaf _args) -> void {
+                          [&](const typename quadtree::QLeaf) -> void {
                             _result = 0u;
                           },
                           [&](const typename quadtree::Quad _args) -> void {

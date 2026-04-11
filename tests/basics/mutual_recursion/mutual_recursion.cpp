@@ -38,7 +38,7 @@ __attribute__((pure)) unsigned int MutualRecursion::forest_sum(
     const std::shared_ptr<MutualRecursion::forest<unsigned int>> &f) {
   return std::visit(
       Overloaded{
-          [](const typename MutualRecursion::forest<unsigned int>::Empty _args)
+          [](const typename MutualRecursion::forest<unsigned int>::Empty)
               -> unsigned int { return 0u; },
           [](const typename MutualRecursion::forest<unsigned int>::Trees _args)
               -> unsigned int {

@@ -69,16 +69,14 @@ struct LetFix {
         go;
     go = [&](std::shared_ptr<List<T1>> acc,
              std::shared_ptr<List<T1>> xs) -> std::shared_ptr<List<T1>> {
-      return std::visit(Overloaded{[&](const typename List<T1>::Nil _args)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return std::move(acc);
-                                   },
-                                   [&](const typename List<T1>::Cons _args)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return go(List<T1>::cons(_args.d_a0, acc),
-                                               _args.d_a1);
-                                   }},
-                        xs->v());
+      return std::visit(
+          Overloaded{[&](const typename List<T1>::Nil)
+                         -> std::shared_ptr<List<T1>> { return acc; },
+                     [&](const typename List<T1>::Cons _args)
+                         -> std::shared_ptr<List<T1>> {
+                       return go(List<T1>::cons(_args.d_a0, acc), _args.d_a1);
+                     }},
+          xs->v());
     };
     return go(List<T1>::nil(), l);
   }
@@ -92,12 +90,11 @@ struct LetFix {
   __attribute__((pure)) static unsigned int
   local_length(const std::shared_ptr<List<T1>> &xs) {
     return std::visit(
-        Overloaded{[](const typename List<T1>::Nil _args) -> unsigned int {
-                     return 0u;
-                   },
-                   [](const typename List<T1>::Cons _args) -> unsigned int {
-                     return (local_length<T1>(_args.d_a1) + 1);
-                   }},
+        Overloaded{
+            [](const typename List<T1>::Nil) -> unsigned int { return 0u; },
+            [](const typename List<T1>::Cons _args) -> unsigned int {
+              return (local_length<T1>(_args.d_a1) + 1);
+            }},
         xs->v());
   }
 

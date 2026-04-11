@@ -395,7 +395,7 @@ __attribute__((pure)) unsigned int LoopifyNumericSequences::alternate_sum(
   bool _loop_sign = sign;
   bool _continue = true;
   while (_continue) {
-    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil) {
                             _result = _loop_acc;
                             _continue = false;
                           },

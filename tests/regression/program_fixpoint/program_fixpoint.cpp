@@ -45,10 +45,8 @@ std::shared_ptr<List<unsigned int>> ProgFix::interleave_func(
     return l1;
   } else {
     return std::visit(
-        Overloaded{[&](const typename List<unsigned int>::Nil _args)
-                       -> std::shared_ptr<List<unsigned int>> {
-                     return std::move(l2);
-                   },
+        Overloaded{[&](const typename List<unsigned int>::Nil)
+                       -> std::shared_ptr<List<unsigned int>> { return l2; },
                    [&](const typename List<unsigned int>::Cons _args)
                        -> std::shared_ptr<List<unsigned int>> {
                      return List<unsigned int>::cons(

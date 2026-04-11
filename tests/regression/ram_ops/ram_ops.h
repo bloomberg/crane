@@ -58,22 +58,20 @@ public:
   t_A nth(const unsigned int n, const t_A default0) const {
     if (n <= 0) {
       return std::visit(
-          Overloaded{[&](const typename List<t_A>::Nil _args) -> t_A {
-                       return default0;
-                     },
-                     [](const typename List<t_A>::Cons _args) -> t_A {
-                       return _args.d_a0;
-                     }},
+          Overloaded{
+              [&](const typename List<t_A>::Nil) -> t_A { return default0; },
+              [](const typename List<t_A>::Cons _args) -> t_A {
+                return _args.d_a0;
+              }},
           this->v());
     } else {
       unsigned int m = n - 1;
       return std::visit(
-          Overloaded{[&](const typename List<t_A>::Nil _args0) -> t_A {
-                       return default0;
-                     },
-                     [&](const typename List<t_A>::Cons _args0) -> t_A {
-                       return _args0.d_a1->nth(m, default0);
-                     }},
+          Overloaded{
+              [&](const typename List<t_A>::Nil) -> t_A { return default0; },
+              [&](const typename List<t_A>::Cons _args0) -> t_A {
+                return _args0.d_a1->nth(m, default0);
+              }},
           this->v());
     }
   }
@@ -105,21 +103,23 @@ struct RamOps {
   update_nth_main(const unsigned int n, const T1 x,
                   const std::shared_ptr<List<T1>> &l) {
     if (n <= 0) {
-      return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::nil();
-                                   },
-                                   [&](const typename List<T1>::Cons _args)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::cons(x, _args.d_a1);
-                                   }},
-                        l->v());
+      return std::visit(
+          Overloaded{
+              [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+                return List<T1>::nil();
+              },
+              [&](const typename List<T1>::Cons _args)
+                  -> std::shared_ptr<List<T1>> {
+                return List<T1>::cons(x, _args.d_a1);
+              }},
+          l->v());
     } else {
       unsigned int n_ = n - 1;
       return std::visit(
           Overloaded{
-              [](const typename List<T1>::Nil _args0)
-                  -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
+              [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+                return List<T1>::nil();
+              },
               [&](const typename List<T1>::Cons _args0)
                   -> std::shared_ptr<List<T1>> {
                 return List<T1>::cons(_args0.d_a0,
@@ -200,21 +200,23 @@ struct RamOps {
   update_nth_port(const unsigned int n, const T1 x,
                   const std::shared_ptr<List<T1>> &l) {
     if (n <= 0) {
-      return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::nil();
-                                   },
-                                   [&](const typename List<T1>::Cons _args)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::cons(x, _args.d_a1);
-                                   }},
-                        l->v());
+      return std::visit(
+          Overloaded{
+              [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+                return List<T1>::nil();
+              },
+              [&](const typename List<T1>::Cons _args)
+                  -> std::shared_ptr<List<T1>> {
+                return List<T1>::cons(x, _args.d_a1);
+              }},
+          l->v());
     } else {
       unsigned int n_ = n - 1;
       return std::visit(
           Overloaded{
-              [](const typename List<T1>::Nil _args0)
-                  -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
+              [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+                return List<T1>::nil();
+              },
               [&](const typename List<T1>::Cons _args0)
                   -> std::shared_ptr<List<T1>> {
                 return List<T1>::cons(_args0.d_a0,
@@ -283,21 +285,23 @@ struct RamOps {
   update_nth_status(const unsigned int n, const T1 x,
                     const std::shared_ptr<List<T1>> &l) {
     if (n <= 0) {
-      return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::nil();
-                                   },
-                                   [&](const typename List<T1>::Cons _args)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::cons(x, _args.d_a1);
-                                   }},
-                        l->v());
+      return std::visit(
+          Overloaded{
+              [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+                return List<T1>::nil();
+              },
+              [&](const typename List<T1>::Cons _args)
+                  -> std::shared_ptr<List<T1>> {
+                return List<T1>::cons(x, _args.d_a1);
+              }},
+          l->v());
     } else {
       unsigned int n_ = n - 1;
       return std::visit(
           Overloaded{
-              [](const typename List<T1>::Nil _args0)
-                  -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
+              [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+                return List<T1>::nil();
+              },
               [&](const typename List<T1>::Cons _args0)
                   -> std::shared_ptr<List<T1>> {
                 return List<T1>::cons(
@@ -527,21 +531,23 @@ struct RamOps {
   update_nth_frame(const unsigned int n, const T1 x,
                    const std::shared_ptr<List<T1>> &l) {
     if (n <= 0) {
-      return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::nil();
-                                   },
-                                   [&](const typename List<T1>::Cons _args)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::cons(x, _args.d_a1);
-                                   }},
-                        l->v());
+      return std::visit(
+          Overloaded{
+              [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+                return List<T1>::nil();
+              },
+              [&](const typename List<T1>::Cons _args)
+                  -> std::shared_ptr<List<T1>> {
+                return List<T1>::cons(x, _args.d_a1);
+              }},
+          l->v());
     } else {
       unsigned int n_ = n - 1;
       return std::visit(
           Overloaded{
-              [](const typename List<T1>::Nil _args0)
-                  -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
+              [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+                return List<T1>::nil();
+              },
               [&](const typename List<T1>::Cons _args0)
                   -> std::shared_ptr<List<T1>> {
                 return List<T1>::cons(_args0.d_a0,
@@ -616,21 +622,23 @@ struct RamOps {
   update_nth_preserve(const unsigned int n, const T1 x,
                       const std::shared_ptr<List<T1>> &l) {
     if (n <= 0) {
-      return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::nil();
-                                   },
-                                   [&](const typename List<T1>::Cons _args)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::cons(x, _args.d_a1);
-                                   }},
-                        l->v());
+      return std::visit(
+          Overloaded{
+              [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+                return List<T1>::nil();
+              },
+              [&](const typename List<T1>::Cons _args)
+                  -> std::shared_ptr<List<T1>> {
+                return List<T1>::cons(x, _args.d_a1);
+              }},
+          l->v());
     } else {
       unsigned int n_ = n - 1;
       return std::visit(
           Overloaded{
-              [](const typename List<T1>::Nil _args0)
-                  -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
+              [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+                return List<T1>::nil();
+              },
               [&](const typename List<T1>::Cons _args0)
                   -> std::shared_ptr<List<T1>> {
                 return List<T1>::cons(
@@ -701,21 +709,23 @@ struct RamOps {
   update_nth_nested_bank(const unsigned int n, const T1 x,
                          const std::shared_ptr<List<T1>> &l) {
     if (n <= 0) {
-      return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::nil();
-                                   },
-                                   [&](const typename List<T1>::Cons _args)
-                                       -> std::shared_ptr<List<T1>> {
-                                     return List<T1>::cons(x, _args.d_a1);
-                                   }},
-                        l->v());
+      return std::visit(
+          Overloaded{
+              [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+                return List<T1>::nil();
+              },
+              [&](const typename List<T1>::Cons _args)
+                  -> std::shared_ptr<List<T1>> {
+                return List<T1>::cons(x, _args.d_a1);
+              }},
+          l->v());
     } else {
       unsigned int n_ = n - 1;
       return std::visit(
           Overloaded{
-              [](const typename List<T1>::Nil _args0)
-                  -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
+              [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+                return List<T1>::nil();
+              },
               [&](const typename List<T1>::Cons _args0)
                   -> std::shared_ptr<List<T1>> {
                 return List<T1>::cons(_args0.d_a0, update_nth_nested_bank<T1>(

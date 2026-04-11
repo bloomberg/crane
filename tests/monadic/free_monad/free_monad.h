@@ -96,7 +96,7 @@ struct FreeMonad {
                           return IO_rect<T1>(f, f0, f1, f2, _args.d_b(a));
                         });
             },
-            [&](const typename IO::Get_line _args) -> T1 { return f1; },
+            [&](const typename IO::Get_line) -> T1 { return f1; },
             [&](const typename IO::Print _args) -> T1 {
               return f2(_args.d_a0);
             }},
@@ -115,7 +115,7 @@ struct FreeMonad {
                           return IO_rec<T1>(f, f0, f1, f2, _args.d_b(a));
                         });
             },
-            [&](const typename IO::Get_line _args) -> T1 { return f1; },
+            [&](const typename IO::Get_line) -> T1 { return f1; },
             [&](const typename IO::Print _args) -> T1 {
               return f2(_args.d_a0);
             }},

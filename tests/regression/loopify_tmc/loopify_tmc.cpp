@@ -69,7 +69,7 @@ std::shared_ptr<LoopifyTmc::list<unsigned int>> LoopifyTmc::prefix_sums(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename LoopifyTmc::list<unsigned int>::Nil _args) {
+            [&](const typename LoopifyTmc::list<unsigned int>::Nil) {
               if (_last) {
                 std::get<typename list<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = list<unsigned int>::nil();

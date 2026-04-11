@@ -12,7 +12,7 @@ std::shared_ptr<List<unsigned int>> JumpTargets::collect_targets(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<JumpTargets::instr_collection>>::Nil _args)
+              std::shared_ptr<JumpTargets::instr_collection>>::Nil)
               -> std::shared_ptr<List<unsigned int>> {
             return List<unsigned int>::nil();
           },

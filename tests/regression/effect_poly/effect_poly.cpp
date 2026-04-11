@@ -27,7 +27,7 @@ bool EffectPoly::test_lift_bool() {
   return lift_pure<bool>(true);
 } /// 3. Monadic when / guard
 
-void EffectPoly::when_(const bool b, const std::monostate action) {
+void EffectPoly::when_(const bool b, const std::monostate) {
   if (b) {
     return;
   } else {
@@ -43,7 +43,7 @@ void EffectPoly::test_when() {
   return;
 } /// 4. Monadic unless
 
-void EffectPoly::unless(const bool b, const std::monostate action) {
+void EffectPoly::unless(const bool b, const std::monostate) {
   if (b) {
     return;
   } else {
@@ -63,7 +63,7 @@ void EffectPoly::test_unless() {
 void EffectPoly::sequence_void(
     const std::shared_ptr<List<std::monostate>> &actions) {
   {
-    std::visit(Overloaded{[](const typename List<std::monostate>::Nil _args)
+    std::visit(Overloaded{[](const typename List<std::monostate>::Nil)
                               -> std::monostate { return std::monostate{}; },
                           [](const typename List<std::monostate>::Cons _args)
                               -> std::monostate {

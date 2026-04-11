@@ -8,7 +8,7 @@
 /// Identity tick so the reproducer stays minimal while keeping the same shape.
 std::shared_ptr<SuperfluousMoves::game_state>
 SuperfluousMoves::tick(std::shared_ptr<SuperfluousMoves::game_state> gs) {
-  return std::move(gs);
+  return gs;
 }
 
 /// Life loss used to create the branch-local gs3 value.

@@ -18,7 +18,7 @@ std::shared_ptr<List<std::shared_ptr<DecodeList::instruction>>>
 DecodeList::decode_list(const std::shared_ptr<List<unsigned int>> &bytes) {
   return std::visit(
       Overloaded{
-          [](const typename List<unsigned int>::Nil _args)
+          [](const typename List<unsigned int>::Nil)
               -> std::shared_ptr<
                   List<std::shared_ptr<DecodeList::instruction>>> {
             return List<std::shared_ptr<DecodeList::instruction>>::nil();
@@ -28,7 +28,7 @@ DecodeList::decode_list(const std::shared_ptr<List<unsigned int>> &bytes) {
                   List<std::shared_ptr<DecodeList::instruction>>> {
             return std::visit(
                 Overloaded{
-                    [](const typename List<unsigned int>::Nil _args0)
+                    [](const typename List<unsigned int>::Nil)
                         -> std::shared_ptr<
                             List<std::shared_ptr<DecodeList::instruction>>> {
                       return List<

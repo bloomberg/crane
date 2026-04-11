@@ -58,12 +58,11 @@ public:
 
   __attribute__((pure)) unsigned int length() const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
-                     return 0u;
-                   },
-                   [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     return (_args.d_a1->length() + 1);
-                   }},
+        Overloaded{
+            [](const typename List<t_A>::Nil) -> unsigned int { return 0u; },
+            [](const typename List<t_A>::Cons _args) -> unsigned int {
+              return (_args.d_a1->length() + 1);
+            }},
         this->v());
   }
 };
@@ -305,12 +304,11 @@ struct DeepPatterns {
   static T2 mylist_rect(const T2 f, F1 &&f0,
                         const std::shared_ptr<mylist<T1>> &m) {
     return std::visit(
-        Overloaded{
-            [&](const typename mylist<T1>::Nil _args) -> T2 { return f; },
-            [&](const typename mylist<T1>::Cons _args) -> T2 {
-              return f0(_args.d_a0, _args.d_a1,
-                        mylist_rect<T1, T2>(f, f0, _args.d_a1));
-            }},
+        Overloaded{[&](const typename mylist<T1>::Nil) -> T2 { return f; },
+                   [&](const typename mylist<T1>::Cons _args) -> T2 {
+                     return f0(_args.d_a0, _args.d_a1,
+                               mylist_rect<T1, T2>(f, f0, _args.d_a1));
+                   }},
         m->v());
   }
 
@@ -319,12 +317,11 @@ struct DeepPatterns {
   static T2 mylist_rec(const T2 f, F1 &&f0,
                        const std::shared_ptr<mylist<T1>> &m) {
     return std::visit(
-        Overloaded{
-            [&](const typename mylist<T1>::Nil _args) -> T2 { return f; },
-            [&](const typename mylist<T1>::Cons _args) -> T2 {
-              return f0(_args.d_a0, _args.d_a1,
-                        mylist_rec<T1, T2>(f, f0, _args.d_a1));
-            }},
+        Overloaded{[&](const typename mylist<T1>::Nil) -> T2 { return f; },
+                   [&](const typename mylist<T1>::Cons _args) -> T2 {
+                     return f0(_args.d_a0, _args.d_a1,
+                               mylist_rec<T1, T2>(f, f0, _args.d_a1));
+                   }},
         m->v());
   }
 

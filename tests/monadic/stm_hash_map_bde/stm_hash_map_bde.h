@@ -154,7 +154,7 @@ template <typename K, typename V> struct CHT {
                const bsl::shared_ptr<List<bsl::pair<T1, T2>>> &xs) {
     return bsl::visit(
         bdlf::Overloaded{
-            [](const typename List<bsl::pair<T1, T2>>::Nil _args)
+            [](const typename List<bsl::pair<T1, T2>>::Nil)
                 -> bsl::optional<T2> { return bsl::optional<T2>(); },
             [&](const typename List<bsl::pair<T1, T2>>::Cons _args)
                 -> bsl::optional<T2> {
@@ -175,7 +175,7 @@ template <typename K, typename V> struct CHT {
                           const bsl::shared_ptr<List<bsl::pair<T1, T2>>> &xs) {
     return bsl::visit(
         bdlf::Overloaded{
-            [&](const typename List<bsl::pair<T1, T2>>::Nil _args)
+            [&](const typename List<bsl::pair<T1, T2>>::Nil)
                 -> bsl::shared_ptr<List<bsl::pair<T1, T2>>> {
               return List<bsl::pair<T1, T2>>::cons(
                   bsl::make_pair(k, v), List<bsl::pair<T1, T2>>::nil());
@@ -203,7 +203,7 @@ template <typename K, typename V> struct CHT {
                bsl::shared_ptr<List<bsl::pair<T1, T2>>> xs) {
     return bsl::visit(
         bdlf::Overloaded{
-            [&](const typename List<bsl::pair<T1, T2>>::Nil _args)
+            [&](const typename List<bsl::pair<T1, T2>>::Nil)
                 -> bsl::pair<bsl::optional<T2>,
                              bsl::shared_ptr<List<bsl::pair<T1, T2>>>> {
               return bsl::make_pair(bsl::optional<T2>(), xs);

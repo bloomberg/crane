@@ -60,11 +60,11 @@ public:
   template <typename T1, MapsTo<T1, T1, t_A> F0>
   T1 fold_left(F0 &&f, const T1 a0) const {
     return std::visit(
-        Overloaded{
-            [&](const typename List<t_A>::Nil _args) -> T1 { return a0; },
-            [&](const typename List<t_A>::Cons _args) -> T1 {
-              return _args.d_a1->template fold_left<T1>(f, f(a0, _args.d_a0));
-            }},
+        Overloaded{[&](const typename List<t_A>::Nil) -> T1 { return a0; },
+                   [&](const typename List<t_A>::Cons _args) -> T1 {
+                     return _args.d_a1->template fold_left<T1>(
+                         f, f(a0, _args.d_a0));
+                   }},
         this->v());
   }
 };
@@ -118,7 +118,7 @@ struct Monadic {
 
   template <typename T1>
   __attribute__((pure)) static State<T1, std::monostate> state_put(const T1 s) {
-    return [=](T1 _x) mutable { return std::make_pair(std::monostate{}, s); };
+    return [=](T1) mutable { return std::make_pair(std::monostate{}, s); };
   }
 
   template <typename T1>
@@ -127,14 +127,14 @@ struct Monadic {
     return l->template fold_left<State<unsigned int, unsigned int>>(
         [](std::function<std::pair<unsigned int, unsigned int>(unsigned int)>
                acc,
-           T1 _x) {
+           T1) {
           return state_bind<unsigned int, unsigned int,
-                            unsigned int>(acc, [](unsigned int _x0) {
+                            unsigned int>(acc, [](unsigned int) {
             return state_bind<unsigned int, unsigned int, unsigned int>(
                 state_get<unsigned int>(), [](unsigned int n) {
                   return state_bind<unsigned int, std::monostate, unsigned int>(
                       state_put<unsigned int>((n + 1)),
-                      [=](std::monostate _x1) mutable {
+                      [=](std::monostate) mutable {
                         return state_return<unsigned int, unsigned int>(n);
                       });
                 });

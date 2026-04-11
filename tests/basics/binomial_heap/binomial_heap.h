@@ -115,7 +115,7 @@ struct BinomialHeap {
                               tree_rect<T1>(f, f0, _args.d_a1), _args.d_a2,
                               tree_rect<T1>(f, f0, _args.d_a2));
                    },
-                   [&](const typename tree::Leaf _args) -> T1 { return f0; }},
+                   [&](const typename tree::Leaf) -> T1 { return f0; }},
         t->v());
   }
 
@@ -129,7 +129,7 @@ struct BinomialHeap {
                               tree_rec<T1>(f, f0, _args.d_a1), _args.d_a2,
                               tree_rec<T1>(f, f0, _args.d_a2));
                    },
-                   [&](const typename tree::Leaf _args) -> T1 { return f0; }},
+                   [&](const typename tree::Leaf) -> T1 { return f0; }},
         t->v());
   }
 
@@ -166,7 +166,7 @@ struct BinomialHeap {
                          };
                      return unzip(_args.d_a2, f);
                    },
-                   [&](const typename tree::Leaf _args)
+                   [&](const typename tree::Leaf)
                        -> std::shared_ptr<List<std::shared_ptr<tree>>> {
                      return cont(List<std::shared_ptr<tree>>::nil());
                    }},

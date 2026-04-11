@@ -101,7 +101,7 @@ struct LoopifyTreeVariants {
                   const ternary *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename ternary::TLeaf _args) -> void {
+                          [&](const typename ternary::TLeaf) -> void {
                             _result = 0u;
                           },
                           [&](const typename ternary::TNode _args) -> void {
@@ -165,7 +165,7 @@ struct LoopifyTreeVariants {
                   const ternary *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename ternary::TLeaf _args) -> void {
+                          [&](const typename ternary::TLeaf) -> void {
                             _result = 0u;
                           },
                           [&](const typename ternary::TNode _args) -> void {
@@ -243,7 +243,7 @@ struct LoopifyTreeVariants {
                 const std::shared_ptr<ternary> t = _f.t;
                 std::visit(
                     Overloaded{
-                        [&](const typename ternary::TLeaf _args) -> void {
+                        [&](const typename ternary::TLeaf) -> void {
                           _result = f;
                         },
                         [&](const typename ternary::TNode _args) -> void {
@@ -323,7 +323,7 @@ struct LoopifyTreeVariants {
                 const std::shared_ptr<ternary> t = _f.t;
                 std::visit(
                     Overloaded{
-                        [&](const typename ternary::TLeaf _args) -> void {
+                        [&](const typename ternary::TLeaf) -> void {
                           _result = f;
                         },
                         [&](const typename ternary::TNode _args) -> void {

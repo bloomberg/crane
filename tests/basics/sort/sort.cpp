@@ -8,11 +8,11 @@
 
 std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
 Sort::sort_cons_prog(const unsigned int a,
-                     const std::shared_ptr<List<unsigned int>> &_x,
+                     const std::shared_ptr<List<unsigned int>> &,
                      const std::shared_ptr<List<unsigned int>> &l_) {
   return std::visit(
       Overloaded{
-          [&](const typename List<unsigned int>::Nil _args) -> auto {
+          [&](const typename List<unsigned int>::Nil) -> auto {
             return Sig<std::shared_ptr<List<unsigned int>>>::exist(
                 List<unsigned int>::cons(a, List<unsigned int>::nil()));
           },
@@ -45,7 +45,7 @@ std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
 Sort::isort(const std::shared_ptr<List<unsigned int>> &l) {
   return std::visit(
       Overloaded{
-          [](const typename List<unsigned int>::Nil _args) -> auto {
+          [](const typename List<unsigned int>::Nil) -> auto {
             return Sig<std::shared_ptr<List<unsigned int>>>::exist(
                 List<unsigned int>::nil());
           },
@@ -73,15 +73,13 @@ Sort::merge(std::shared_ptr<List<unsigned int>> l1,
       -> std::shared_ptr<List<unsigned int>> {
     return std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil _args)
-                -> std::shared_ptr<List<unsigned int>> {
-              return std::move(l3);
-            },
+            [&](const typename List<unsigned int>::Nil)
+                -> std::shared_ptr<List<unsigned int>> { return l3; },
             [&](const typename List<unsigned int>::Cons _args)
                 -> std::shared_ptr<List<unsigned int>> {
               return std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil _args0)
+                      [&](const typename List<unsigned int>::Nil)
                           -> std::shared_ptr<List<unsigned int>> { return l1; },
                       [&](const typename List<unsigned int>::Cons _args0)
                           -> std::shared_ptr<List<unsigned int>> {
@@ -101,7 +99,7 @@ Sort::merge(std::shared_ptr<List<unsigned int>> l1,
 }
 
 std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
-Sort::merge_prog(const std::shared_ptr<List<unsigned int>> &_x,
+Sort::merge_prog(const std::shared_ptr<List<unsigned int>> &,
                  std::shared_ptr<List<unsigned int>> l1,
                  std::shared_ptr<List<unsigned int>> l2) {
   return Sig<std::shared_ptr<List<unsigned int>>>::exist(merge(l1, l2));
@@ -140,8 +138,8 @@ Sort::msort(const std::shared_ptr<List<unsigned int>> &_x0) {
 }
 
 std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
-Sort::pair_merge_prog(const unsigned int _x, const unsigned int _x0,
-                      const std::shared_ptr<List<unsigned int>> &_x1,
+Sort::pair_merge_prog(const unsigned int, const unsigned int,
+                      const std::shared_ptr<List<unsigned int>> &,
                       std::shared_ptr<List<unsigned int>> l_,
                       std::shared_ptr<List<unsigned int>> l_0) {
   return Sig<std::shared_ptr<List<unsigned int>>>::exist(merge(l_0, l_));
@@ -199,7 +197,7 @@ Sort::qsort(const std::shared_ptr<List<unsigned int>> &_x0) {
       Compare_dec::le_dec,
       Sig<std::shared_ptr<List<unsigned int>>>::exist(
           List<unsigned int>::nil()),
-      [](unsigned int a, std::shared_ptr<List<unsigned int>> _x,
+      [](unsigned int a, std::shared_ptr<List<unsigned int>>,
          std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>> x,
          std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>> x0) {
         return std::visit(

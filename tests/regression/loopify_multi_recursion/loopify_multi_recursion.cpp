@@ -86,7 +86,7 @@ LoopifyMultiRecursion::mixed_arith(const unsigned int n) {
 }
 
 __attribute__((pure)) bool LoopifyMultiRecursion::bool_or_chain_fuel(
-    const unsigned int fuel, const unsigned int n, const unsigned int target) {
+    const unsigned int fuel, const unsigned int n, const unsigned int) {
   struct _Enter {
     const unsigned int n;
     const unsigned int fuel;
@@ -249,8 +249,8 @@ __attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_count_leaves(
               const std::shared_ptr<LoopifyMultiRecursion::quadtree> t = _f.t;
               std::visit(
                   Overloaded{
-                      [&](const typename LoopifyMultiRecursion::quadtree::QLeaf
-                              _args) -> void { _result = 1u; },
+                      [&](const typename LoopifyMultiRecursion::quadtree::QLeaf)
+                          -> void { _result = 1u; },
                       [&](const typename LoopifyMultiRecursion::quadtree::QQuad
                               _args) -> void {
                         _stack.push_back(
@@ -326,8 +326,8 @@ __attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_depth(
               const std::shared_ptr<LoopifyMultiRecursion::quadtree> t = _f.t;
               std::visit(
                   Overloaded{
-                      [&](const typename LoopifyMultiRecursion::quadtree::QLeaf
-                              _args) -> void { _result = 0u; },
+                      [&](const typename LoopifyMultiRecursion::quadtree::QLeaf)
+                          -> void { _result = 0u; },
                       [&](const typename LoopifyMultiRecursion::quadtree::QQuad
                               _args) -> void {
                         _stack.push_back(

@@ -24,9 +24,9 @@ PendantSumtreeRoundtripCase::digit_of_nat(const unsigned int n) {
 }
 
 __attribute__((pure)) unsigned int PendantSumtreeRoundtripCase::value_digits(
-    const unsigned int _x, const std::shared_ptr<T0<std::shared_ptr<T>>> &ds) {
+    const unsigned int, const std::shared_ptr<T0<std::shared_ptr<T>>> &ds) {
   return std::visit(
-      Overloaded{[](const typename T0<std::shared_ptr<T>>::Nil _args)
+      Overloaded{[](const typename T0<std::shared_ptr<T>>::Nil)
                      -> unsigned int { return 0u; },
                  [](const typename T0<std::shared_ptr<T>>::Cons _args)
                      -> unsigned int {
@@ -43,13 +43,13 @@ PendantSumtreeRoundtripCase::list_to_vector_opt(
   if (n <= 0) {
     return std::visit(
         Overloaded{
-            [](const typename List<std::shared_ptr<T>>::Nil0 _args)
+            [](const typename List<std::shared_ptr<T>>::Nil0)
                 -> std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>> {
               return std::make_optional<
                   std::shared_ptr<T0<std::shared_ptr<T>>>>(
                   T0<std::shared_ptr<T>>::nil());
             },
-            [](const typename List<std::shared_ptr<T>>::Cons0 _args)
+            [](const typename List<std::shared_ptr<T>>::Cons0)
                 -> std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>> {
               return std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>>();
             }},
@@ -58,7 +58,7 @@ PendantSumtreeRoundtripCase::list_to_vector_opt(
     unsigned int n_ = n - 1;
     return std::visit(
         Overloaded{
-            [](const typename List<std::shared_ptr<T>>::Nil0 _args0)
+            [](const typename List<std::shared_ptr<T>>::Nil0)
                 -> std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>> {
               return std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>>();
             },
@@ -159,7 +159,7 @@ PendantSumtreeRoundtripCase::pendant_digits(
     return std::visit(
         Overloaded{
             [](const typename List<
-                std::shared_ptr<T0<std::shared_ptr<T>>>>::Nil0 _args)
+                std::shared_ptr<T0<std::shared_ptr<T>>>>::Nil0)
                 -> std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>> {
               return std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>>();
             },
@@ -169,15 +169,15 @@ PendantSumtreeRoundtripCase::pendant_digits(
               return std::visit(
                   Overloaded{
                       [&](const typename List<
-                          std::shared_ptr<T0<std::shared_ptr<T>>>>::Nil0 _args0)
+                          std::shared_ptr<T0<std::shared_ptr<T>>>>::Nil0)
                           -> std::optional<
                               std::shared_ptr<T0<std::shared_ptr<T>>>> {
                         return std::make_optional<
                             std::shared_ptr<T0<std::shared_ptr<T>>>>(
                             _args.d_a0);
                       },
-                      [](const typename List<std::shared_ptr<
-                             T0<std::shared_ptr<T>>>>::Cons0 _args0)
+                      [](const typename List<
+                          std::shared_ptr<T0<std::shared_ptr<T>>>>::Cons0)
                           -> std::optional<
                               std::shared_ptr<T0<std::shared_ptr<T>>>> {
                         return std::optional<
@@ -212,8 +212,8 @@ PendantSumtreeRoundtripCase::ledger_values(
       Overloaded{
           [](const typename List<std::shared_ptr<SigT<
                  unsigned int, std::shared_ptr<PendantSumtreeRoundtripCase::
-                                                   CertifiedPendant>>>>::Nil0
-                 _args) -> std::shared_ptr<List<std::optional<unsigned int>>> {
+                                                   CertifiedPendant>>>>::Nil0)
+              -> std::shared_ptr<List<std::optional<unsigned int>>> {
             return List<std::optional<unsigned int>>::nil0();
           },
           [](const typename List<std::shared_ptr<SigT<
@@ -279,7 +279,7 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::group_sums_validb(
 
 std::shared_ptr<PendantSumtreeRoundtripCase::CertifiedPendant>
 PendantSumtreeRoundtripCase::sumtree_top(
-    const unsigned int _x,
+    const unsigned int,
     const std::shared_ptr<PendantSumtreeRoundtripCase::SumTree> &st) {
   return std::visit(
       Overloaded{
@@ -336,7 +336,7 @@ __attribute__((pure)) unsigned int PendantSumtreeRoundtripCase::sumtree_depth(
     const std::shared_ptr<PendantSumtreeRoundtripCase::SumTree> &st) {
   return std::visit(
       Overloaded{
-          [](const typename PendantSumtreeRoundtripCase::SumTree::SumLeaf _args)
+          [](const typename PendantSumtreeRoundtripCase::SumTree::SumLeaf)
               -> unsigned int { return 1u; },
           [&](const typename PendantSumtreeRoundtripCase::SumTree::SumNode
                   _args) -> unsigned int {
@@ -365,8 +365,8 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::sumtree_validb_aux(
     unsigned int fuel_ = fuel - 1;
     return std::visit(
         Overloaded{
-            [](const typename PendantSumtreeRoundtripCase::SumTree::SumLeaf
-                   _args) -> bool { return true; },
+            [](const typename PendantSumtreeRoundtripCase::SumTree::SumLeaf)
+                -> bool { return true; },
             [&](const typename PendantSumtreeRoundtripCase::SumTree::SumNode
                     _args) -> bool {
               std::shared_ptr<List<std::shared_ptr<
@@ -432,18 +432,20 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::nat_list_eqb(
     const std::shared_ptr<List<unsigned int>> &ys) {
   return std::visit(
       Overloaded{
-          [&](const typename List<unsigned int>::Nil0 _args) -> bool {
+          [&](const typename List<unsigned int>::Nil0) -> bool {
             return std::visit(
-                Overloaded{[](const typename List<unsigned int>::Nil0 _args0)
-                               -> bool { return true; },
-                           [](const typename List<unsigned int>::Cons0 _args0)
+                Overloaded{[](const typename List<unsigned int>::Nil0) -> bool {
+                             return true;
+                           },
+                           [](const typename List<unsigned int>::Cons0)
                                -> bool { return false; }},
                 ys->v());
           },
           [&](const typename List<unsigned int>::Cons0 _args) -> bool {
             return std::visit(
-                Overloaded{[](const typename List<unsigned int>::Nil0 _args0)
-                               -> bool { return false; },
+                Overloaded{[](const typename List<unsigned int>::Nil0) -> bool {
+                             return false;
+                           },
                            [&](const typename List<unsigned int>::Cons0 _args0)
                                -> bool {
                              return (_args.d_a0 == _args0.d_a0 &&

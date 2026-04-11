@@ -77,7 +77,7 @@ public:
                 const List *_self = _f._self;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<t_A>::Nil _args) -> void {
+                        [&](const typename List<t_A>::Nil) -> void {
                           _result = 0u;
                         },
                         [&](const typename List<t_A>::Cons _args) -> void {
@@ -86,7 +86,7 @@ public:
                         }},
                     _self->v());
               },
-              [&](_Call1 _f) { _result = (_result + 1); }},
+              [&](_Call1) { _result = (_result + 1); }},
           _frame);
     }
     return _result;
@@ -100,7 +100,7 @@ public:
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil _args) {
+              [&](const typename List<t_A>::Nil) {
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
                 } else {

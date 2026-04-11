@@ -59,12 +59,11 @@ public:
 
   __attribute__((pure)) unsigned int length() const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
-                     return 0u;
-                   },
-                   [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     return (_args.d_a1->length() + 1);
-                   }},
+        Overloaded{
+            [](const typename List<t_A>::Nil) -> unsigned int { return 0u; },
+            [](const typename List<t_A>::Cons _args) -> unsigned int {
+              return (_args.d_a1->length() + 1);
+            }},
         this->v());
   }
 };
@@ -768,7 +767,7 @@ struct HistoricalEventSafetyTraceCase {
   static inline const std::shared_ptr<PlantConfig> hist_witness_plant =
       std::make_shared<PlantConfig>(
           PlantConfig{500u, 500u, 500u, 1u, 5u, 10u, 100u, 100u,
-                      [](unsigned int _x) { return 100u; }, 100u, 1u});
+                      [](unsigned int) { return 100u; }, 100u, 1u});
   __attribute__((pure)) static unsigned int
   hist_witness_stage(const unsigned int out);
   __attribute__((pure)) static unsigned int
@@ -786,7 +785,7 @@ struct HistoricalEventSafetyTraceCase {
   static inline const std::shared_ptr<PlantConfig> hoover_dam_config =
       std::make_shared<PlantConfig>(
           PlantConfig{2200u, 100u, 500u, 15u, 5u, 10u, 1000u, 1000u,
-                      [](unsigned int _x) { return 1000u; }, 200u, 60u});
+                      [](unsigned int) { return 1000u; }, 200u, 60u});
   static inline const std::shared_ptr<State> hoover_initial_state =
       std::make_shared<State>(State{1500u, 20u, 0u});
   __attribute__((pure)) static unsigned int

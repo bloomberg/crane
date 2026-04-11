@@ -62,7 +62,7 @@ PageOps::disassemble(const std::shared_ptr<List<unsigned int>> &rom,
                      const unsigned int addr) {
   return std::visit(
       Overloaded{
-          [](const typename List<unsigned int>::Nil _args)
+          [](const typename List<unsigned int>::Nil)
               -> std::optional<std::pair<std::shared_ptr<PageOps::instruction>,
                                          unsigned int>> {
             return std::optional<std::pair<
@@ -73,7 +73,7 @@ PageOps::disassemble(const std::shared_ptr<List<unsigned int>> &rom,
                                          unsigned int>> {
             return std::visit(
                 Overloaded{
-                    [](const typename List<unsigned int>::Nil _args0)
+                    [](const typename List<unsigned int>::Nil)
                         -> std::optional<
                             std::pair<std::shared_ptr<PageOps::instruction>,
                                       unsigned int>> {

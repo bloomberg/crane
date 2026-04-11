@@ -90,18 +90,17 @@ struct LoopifyExtrema {
                 const std::shared_ptr<List<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil _args)
-                            -> void { _result = 0u; },
+                        [&](const typename List<unsigned int>::Nil) -> void {
+                          _result = 0u;
+                        },
                         [&](const typename List<unsigned int>::Cons _args)
                             -> void {
                           std::visit(
                               Overloaded{
-                                  [&](const typename List<unsigned int>::Nil
-                                          _args0) -> void {
-                                    _result = f(_args.d_a0);
-                                  },
-                                  [&](const typename List<unsigned int>::Cons
-                                          _args0) -> void {
+                                  [&](const typename List<unsigned int>::Nil)
+                                      -> void { _result = f(_args.d_a0); },
+                                  [&](const typename List<unsigned int>::Cons)
+                                      -> void {
                                     _stack.push_back(_Call1{_args, f});
                                     _stack.push_back(_Enter{_args.d_a1});
                                   }},
@@ -150,18 +149,17 @@ struct LoopifyExtrema {
                 const std::shared_ptr<List<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil _args)
-                            -> void { _result = 0u; },
+                        [&](const typename List<unsigned int>::Nil) -> void {
+                          _result = 0u;
+                        },
                         [&](const typename List<unsigned int>::Cons _args)
                             -> void {
                           std::visit(
                               Overloaded{
-                                  [&](const typename List<unsigned int>::Nil
-                                          _args0) -> void {
-                                    _result = f(_args.d_a0);
-                                  },
-                                  [&](const typename List<unsigned int>::Cons
-                                          _args0) -> void {
+                                  [&](const typename List<unsigned int>::Nil)
+                                      -> void { _result = f(_args.d_a0); },
+                                  [&](const typename List<unsigned int>::Cons)
+                                      -> void {
                                     _stack.push_back(_Call1{_args, f});
                                     _stack.push_back(_Enter{_args.d_a1});
                                   }},
@@ -210,18 +208,17 @@ struct LoopifyExtrema {
                 const std::shared_ptr<List<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil _args)
-                            -> void { _result = 0u; },
+                        [&](const typename List<unsigned int>::Nil) -> void {
+                          _result = 0u;
+                        },
                         [&](const typename List<unsigned int>::Cons _args)
                             -> void {
                           std::visit(
                               Overloaded{
-                                  [&](const typename List<unsigned int>::Nil
-                                          _args0) -> void {
-                                    _result = _args.d_a0;
-                                  },
-                                  [&](const typename List<unsigned int>::Cons
-                                          _args0) -> void {
+                                  [&](const typename List<unsigned int>::Nil)
+                                      -> void { _result = _args.d_a0; },
+                                  [&](const typename List<unsigned int>::Cons)
+                                      -> void {
                                     _stack.push_back(_Call1{_args, f});
                                     _stack.push_back(_Enter{_args.d_a1});
                                   }},
@@ -271,18 +268,17 @@ struct LoopifyExtrema {
                 const std::shared_ptr<List<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil _args)
-                            -> void { _result = 0u; },
+                        [&](const typename List<unsigned int>::Nil) -> void {
+                          _result = 0u;
+                        },
                         [&](const typename List<unsigned int>::Cons _args)
                             -> void {
                           std::visit(
                               Overloaded{
-                                  [&](const typename List<unsigned int>::Nil
-                                          _args0) -> void {
-                                    _result = _args.d_a0;
-                                  },
-                                  [&](const typename List<unsigned int>::Cons
-                                          _args0) -> void {
+                                  [&](const typename List<unsigned int>::Nil)
+                                      -> void { _result = _args.d_a0; },
+                                  [&](const typename List<unsigned int>::Cons)
+                                      -> void {
                                     _stack.push_back(_Call1{_args, f});
                                     _stack.push_back(_Enter{_args.d_a1});
                                   }},
@@ -324,14 +320,14 @@ struct LoopifyExtrema {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil _args) {
+              [&](const typename List<unsigned int>::Nil) {
                 _result = true;
                 _continue = false;
               },
               [&](const typename List<unsigned int>::Cons _args) {
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil _args0) {
+                        [&](const typename List<unsigned int>::Nil) {
                           _result = true;
                           _continue = false;
                         },

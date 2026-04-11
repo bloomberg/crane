@@ -101,11 +101,9 @@ FoldSequenceStateTraceCase::execute_sequence(
   return std::visit(
       Overloaded{
           [&](const typename List<
-              std::shared_ptr<FoldSequenceStateTraceCase::FoldStep>>::Nil _args)
+              std::shared_ptr<FoldSequenceStateTraceCase::FoldStep>>::Nil)
               -> std::shared_ptr<
-                  FoldSequenceStateTraceCase::ConstructionState> {
-            return std::move(st);
-          },
+                  FoldSequenceStateTraceCase::ConstructionState> { return st; },
           [&](const typename List<std::shared_ptr<
                   FoldSequenceStateTraceCase::FoldStep>>::Cons _args)
               -> std::shared_ptr<

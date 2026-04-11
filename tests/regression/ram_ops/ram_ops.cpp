@@ -97,7 +97,7 @@ RamOps::get_chip_port(const std::shared_ptr<RamOps::bank_port> &bk,
 }
 
 std::shared_ptr<RamOps::chip_port>
-RamOps::upd_port_in_chip(const std::shared_ptr<RamOps::chip_port> &_x,
+RamOps::upd_port_in_chip(const std::shared_ptr<RamOps::chip_port> &,
                          const unsigned int v) {
   return std::make_shared<RamOps::chip_port>(chip_port{(16u ? v % 16u : v)});
 }

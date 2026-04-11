@@ -164,16 +164,15 @@ struct PolyInductive {
 
     template <typename T1, MapsTo<T1, t_A> F0>
     std::shared_ptr<pmaybe<T1>> pmaybe_map(F0 &&f) const {
-      return std::visit(
-          Overloaded{[](const typename pmaybe<t_A>::PNothing _args)
-                         -> std::shared_ptr<pmaybe<T1>> {
-                       return pmaybe<T1>::pnothing();
-                     },
-                     [&](const typename pmaybe<t_A>::PJust _args)
-                         -> std::shared_ptr<pmaybe<T1>> {
-                       return pmaybe<T1>::pjust(f(_args.d_a0));
-                     }},
-          this->v());
+      return std::visit(Overloaded{[](const typename pmaybe<t_A>::PNothing)
+                                       -> std::shared_ptr<pmaybe<T1>> {
+                                     return pmaybe<T1>::pnothing();
+                                   },
+                                   [&](const typename pmaybe<t_A>::PJust _args)
+                                       -> std::shared_ptr<pmaybe<T1>> {
+                                     return pmaybe<T1>::pjust(f(_args.d_a0));
+                                   }},
+                        this->v());
     }
   };
 
@@ -181,11 +180,10 @@ struct PolyInductive {
   static T2 pmaybe_rect(const T2 f, F1 &&f0,
                         const std::shared_ptr<pmaybe<T1>> &p) {
     return std::visit(
-        Overloaded{
-            [&](const typename pmaybe<T1>::PNothing _args) -> T2 { return f; },
-            [&](const typename pmaybe<T1>::PJust _args) -> T2 {
-              return f0(_args.d_a0);
-            }},
+        Overloaded{[&](const typename pmaybe<T1>::PNothing) -> T2 { return f; },
+                   [&](const typename pmaybe<T1>::PJust _args) -> T2 {
+                     return f0(_args.d_a0);
+                   }},
         p->v());
   }
 
@@ -193,22 +191,20 @@ struct PolyInductive {
   static T2 pmaybe_rec(const T2 f, F1 &&f0,
                        const std::shared_ptr<pmaybe<T1>> &p) {
     return std::visit(
-        Overloaded{
-            [&](const typename pmaybe<T1>::PNothing _args) -> T2 { return f; },
-            [&](const typename pmaybe<T1>::PJust _args) -> T2 {
-              return f0(_args.d_a0);
-            }},
+        Overloaded{[&](const typename pmaybe<T1>::PNothing) -> T2 { return f; },
+                   [&](const typename pmaybe<T1>::PJust _args) -> T2 {
+                     return f0(_args.d_a0);
+                   }},
         p->v());
   }
 
   template <typename T1>
   static T1 pmaybe_default(const T1 d, const std::shared_ptr<pmaybe<T1>> &m) {
     return std::visit(
-        Overloaded{
-            [&](const typename pmaybe<T1>::PNothing _args) -> T1 { return d; },
-            [](const typename pmaybe<T1>::PJust _args) -> T1 {
-              return _args.d_a0;
-            }},
+        Overloaded{[&](const typename pmaybe<T1>::PNothing) -> T1 { return d; },
+                   [](const typename pmaybe<T1>::PJust _args) -> T1 {
+                     return _args.d_a0;
+                   }},
         m->v());
   }
 
@@ -259,7 +255,7 @@ struct PolyInductive {
     __attribute__((pure)) unsigned int ptree_size() const {
       return std::visit(
           Overloaded{
-              [](const typename ptree<t_A>::PLeaf _args) -> unsigned int {
+              [](const typename ptree<t_A>::PLeaf) -> unsigned int {
                 return 1u;
               },
               [](const typename ptree<t_A>::PNode _args) -> unsigned int {

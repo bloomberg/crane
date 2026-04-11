@@ -33,8 +33,9 @@ __attribute__((pure)) unsigned int LoopifyExpr::sum_shapes(
               std::visit(
                   Overloaded{
                       [&](const typename List<
-                          std::shared_ptr<LoopifyExpr::shape>>::Nil _args)
-                          -> void { _result = 0u; },
+                          std::shared_ptr<LoopifyExpr::shape>>::Nil) -> void {
+                        _result = 0u;
+                      },
                       [&](const typename List<
                           std::shared_ptr<LoopifyExpr::shape>>::Cons _args)
                           -> void {
@@ -92,8 +93,7 @@ LoopifyExpr::count_by_shape(
               std::visit(
                   Overloaded{
                       [&](const typename List<
-                          std::shared_ptr<LoopifyExpr::shape>>::Nil _args)
-                          -> void {
+                          std::shared_ptr<LoopifyExpr::shape>>::Nil) -> void {
                         _result = std::make_pair(std::make_pair(0u, 0u), 0u);
                       },
                       [&](const typename List<
@@ -113,17 +113,17 @@ LoopifyExpr::count_by_shape(
               unsigned int sq = p.second;
               _result = std::visit(
                   Overloaded{
-                      [&](const typename LoopifyExpr::shape::Circle _args0)
+                      [&](const typename LoopifyExpr::shape::Circle)
                           -> std::pair<std::pair<unsigned int, unsigned int>,
                                        unsigned int> {
                         return std::make_pair(std::make_pair((c + 1), sq), t);
                       },
-                      [&](const typename LoopifyExpr::shape::Square _args0)
+                      [&](const typename LoopifyExpr::shape::Square)
                           -> std::pair<std::pair<unsigned int, unsigned int>,
                                        unsigned int> {
                         return std::make_pair(std::make_pair(c, (sq + 1)), t);
                       },
-                      [&](const typename LoopifyExpr::shape::Triangle _args0)
+                      [&](const typename LoopifyExpr::shape::Triangle)
                           -> std::pair<std::pair<unsigned int, unsigned int>,
                                        unsigned int> {
                         return std::make_pair(std::make_pair(c, sq), (t + 1));

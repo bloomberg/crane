@@ -75,8 +75,8 @@ struct UnitVoidEdge {
   }
 
   template <MapsTo<void, unsigned int> F0>
-  __attribute__((pure)) static unsigned int
-  map_to_unit(F0 &&_x, const unsigned int _x0) {
+  __attribute__((pure)) static unsigned int map_to_unit(F0 &&,
+                                                        const unsigned int) {
     return 42u;
   }
 
@@ -106,7 +106,7 @@ struct UnitVoidEdge {
   static void conditional_unit(const bool b);
 
   template <typename T1>
-  __attribute__((pure)) static unsigned int poly_take(const T1 _x) {
+  __attribute__((pure)) static unsigned int poly_take(const T1) {
     return 42u;
   }
 
@@ -149,8 +149,8 @@ struct UnitVoidEdge {
   }();
 
   template <MapsTo<void, unsigned int> F0, MapsTo<void, bool> F1>
-  static void multi_void_callbacks(F0 &&_x, F1 &&_x0, const unsigned int _x1,
-                                   const bool _x2) {
+  static void multi_void_callbacks(F0 &&, F1 &&, const unsigned int,
+                                   const bool) {
     return;
   }
 

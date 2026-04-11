@@ -11,7 +11,7 @@ RecordUseAfterMove::clone_box(std::shared_ptr<RecordUseAfterMove::box> b) {
 
 std::shared_ptr<RecordUseAfterMove::box>
 RecordUseAfterMove::keep_box(std::shared_ptr<RecordUseAfterMove::box> b) {
-  return std::move(b);
+  return b;
 }
 
 __attribute__((pure)) unsigned int

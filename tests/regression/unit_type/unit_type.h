@@ -75,7 +75,7 @@ struct UnitType {
                                                               std::monostate{});
   static void unit_to_unit(const std::monostate u);
 
-  template <typename T1, typename T2> static T2 seq(const T1 _x, const T2 b) {
+  template <typename T1, typename T2> static T2 seq(const T1, const T2 b) {
     return b;
   }
 

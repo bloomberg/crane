@@ -63,14 +63,16 @@ concept Magma = requires(typename I::carrier a0, typename I::carrier a1) {
   { I::op(a0, a1) } -> std::convertible_to<typename I::carrier>;
 };
 template <typename I>
-concept Monoid = requires(typename I::m_carrier a0, typename I::m_carrier a1) {
+concept Monoid = requires (typename I::m_carrier a0, typename I::m_carrier
+a1) {
   typename I::m_carrier;
-  { I::m_op(a0, a1) } -> std::convertible_to<typename I::m_carrier>;
-} && requires {
+  { I::m_op(a0,
+a1) } -> std::convertible_to<typename I::m_carrier>;
+} && (requires {
   { I::m_id() } -> std::convertible_to<typename I::m_carrier>;
 } || requires {
   { I::m_id } -> std::convertible_to<typename I::m_carrier>;
-};
+});
 
 struct DepRecord {
   using carrier = std::any;
@@ -123,7 +125,7 @@ struct DepRecord {
   mfold(const std::shared_ptr<List<typename _tcI0::m_carrier>> &l) {
     return std::visit(
         Overloaded{
-            [&](const typename List<typename _tcI0::m_carrier>::Nil _args) ->
+            [&](const typename List<typename _tcI0::m_carrier>::Nil) ->
             typename _tcI0::m_carrier { return _tcI0::m_id(); },
             [&](const typename List<typename _tcI0::m_carrier>::Cons _args) ->
             typename _tcI0::m_carrier {

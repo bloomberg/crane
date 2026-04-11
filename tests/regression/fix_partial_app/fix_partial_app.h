@@ -67,7 +67,7 @@ struct FixPartialApp {
                              F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree::Leaf _args) -> T1 { return f; },
+        Overloaded{[&](const typename tree::Leaf) -> T1 { return f; },
                    [&](const typename tree::Node _args) -> T1 {
                      return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
                                _args.d_a1, _args.d_a2,
@@ -81,7 +81,7 @@ struct FixPartialApp {
                              F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree::Leaf _args) -> T1 { return f; },
+        Overloaded{[&](const typename tree::Leaf) -> T1 { return f; },
                    [&](const typename tree::Node _args) -> T1 {
                      return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
                                _args.d_a1, _args.d_a2,
@@ -158,7 +158,7 @@ struct FixPartialApp {
                                         const std::shared_ptr<tree> &t) {
     return std::visit(
         Overloaded{
-            [](const typename tree::Leaf _args) -> std::shared_ptr<tree> {
+            [](const typename tree::Leaf) -> std::shared_ptr<tree> {
               return tree::leaf();
             },
             [&](const typename tree::Node _args) -> std::shared_ptr<tree> {

@@ -58,12 +58,11 @@ public:
 
   __attribute__((pure)) unsigned int length() const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
-                     return 0u;
-                   },
-                   [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     return (_args.d_a1->length() + 1);
-                   }},
+        Overloaded{
+            [](const typename List<t_A>::Nil) -> unsigned int { return 0u; },
+            [](const typename List<t_A>::Cons _args) -> unsigned int {
+              return (_args.d_a1->length() + 1);
+            }},
         this->v());
   }
 };
@@ -119,11 +118,10 @@ struct Sort {
                 div_conq<T1, T2>(splitF, x, x0, x1, splitF(ls).second));
     } else {
       return std::visit(
-          Overloaded{
-              [&](const typename List<T1>::Nil _args) -> auto { return x; },
-              [&](const typename List<T1>::Cons _args) -> auto {
-                return x0(_args.d_a0);
-              }},
+          Overloaded{[&](const typename List<T1>::Nil) -> auto { return x; },
+                     [&](const typename List<T1>::Cons _args) -> auto {
+                       return x0(_args.d_a0);
+                     }},
           ls->v());
     }
   }
@@ -133,7 +131,7 @@ struct Sort {
                                          std::shared_ptr<List<T1>>>
   split(const std::shared_ptr<List<T1>> &ls) {
     return std::visit(
-        Overloaded{[](const typename List<T1>::Nil _args)
+        Overloaded{[](const typename List<T1>::Nil)
                        -> std::pair<std::shared_ptr<List<T1>>,
                                     std::shared_ptr<List<T1>>> {
                      return std::make_pair(List<T1>::nil(), List<T1>::nil());
@@ -143,7 +141,7 @@ struct Sort {
                                     std::shared_ptr<List<T1>>> {
                      return std::visit(
                          Overloaded{
-                             [&](const typename List<T1>::Nil _args0)
+                             [&](const typename List<T1>::Nil)
                                  -> std::pair<std::shared_ptr<List<T1>>,
                                               std::shared_ptr<List<T1>>> {
                                return std::make_pair(
@@ -178,11 +176,11 @@ struct Sort {
   static T2 div_conq_pair(const T2 x, F1 &&x0, F2 &&x1, F3 &&x2,
                           const std::shared_ptr<List<T1>> &l) {
     return std::visit(
-        Overloaded{
-            [&](const typename List<T1>::Nil _args) -> auto { return x; },
-            [&](const typename List<T1>::Cons _args) -> auto {
-              return std::visit(
-                  Overloaded{[&](const typename List<T1>::Nil _args0) -> auto {
+        Overloaded{[&](const typename List<T1>::Nil) -> auto { return x; },
+                   [&](const typename List<T1>::Cons _args) -> auto {
+                     return std::visit(
+                         Overloaded{
+                             [&](const typename List<T1>::Nil) -> auto {
                                return x0(_args.d_a0);
                              },
                              [&](const typename List<T1>::Cons _args0) -> auto {
@@ -191,8 +189,8 @@ struct Sort {
                                          div_conq_pair<T1, T2>(x, x0, x1, x2,
                                                                _args0.d_a1));
                              }},
-                  _args.d_a1->v());
-            }},
+                         _args.d_a1->v());
+                   }},
         l->v());
   }
 
@@ -203,7 +201,7 @@ struct Sort {
               const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{
-            [](const typename List<T1>::Nil _args)
+            [](const typename List<T1>::Nil)
                 -> std::pair<std::shared_ptr<List<T1>>,
                              std::shared_ptr<List<T1>>> {
               return std::make_pair(List<T1>::nil(), List<T1>::nil());
@@ -230,7 +228,7 @@ struct Sort {
                            const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{
-            [&](const typename List<T1>::Nil _args) -> auto { return x; },
+            [&](const typename List<T1>::Nil) -> auto { return x; },
             [&](const typename List<T1>::Cons _args) -> auto {
               return x0(
                   _args.d_a0, _args.d_a1,

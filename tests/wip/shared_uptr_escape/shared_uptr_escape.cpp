@@ -9,7 +9,7 @@
 /// The tree enters as owned and leaves as owned.
 std::shared_ptr<SharedUptrEscape::tree>
 SharedUptrEscape::identity(std::shared_ptr<SharedUptrEscape::tree> t) {
-  return std::move(t);
+  return t;
 }
 
 /// BUG: Build a tree, then conditionally either return it once

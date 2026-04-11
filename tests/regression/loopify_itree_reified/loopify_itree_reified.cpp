@@ -58,7 +58,7 @@ LoopifyItreeReified::count_taus(const unsigned int fuel,
                     t->observe());
               }
             },
-            [&](_Call1 _f) { _result = (_result + 1); }},
+            [&](_Call1) { _result = (_result + 1); }},
         _frame);
   }
   return _result;

@@ -69,13 +69,12 @@ struct MethodPartialApp {
 
     __attribute__((pure)) unsigned int tree_sum() const {
       return std::visit(
-          Overloaded{[](const typename tree::Leaf _args) -> unsigned int {
-                       return 0u;
-                     },
-                     [](const typename tree::Node _args) -> unsigned int {
-                       return ((_args.d_a0->tree_sum() + _args.d_a1) +
-                               _args.d_a2->tree_sum());
-                     }},
+          Overloaded{
+              [](const typename tree::Leaf) -> unsigned int { return 0u; },
+              [](const typename tree::Node _args) -> unsigned int {
+                return ((_args.d_a0->tree_sum() + _args.d_a1) +
+                        _args.d_a2->tree_sum());
+              }},
           this->v());
     }
   };
@@ -85,7 +84,7 @@ struct MethodPartialApp {
                              F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree::Leaf _args) -> T1 { return f; },
+        Overloaded{[&](const typename tree::Leaf) -> T1 { return f; },
                    [&](const typename tree::Node _args) -> T1 {
                      return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
                                _args.d_a1, _args.d_a2,
@@ -99,7 +98,7 @@ struct MethodPartialApp {
                              F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree::Leaf _args) -> T1 { return f; },
+        Overloaded{[&](const typename tree::Leaf) -> T1 { return f; },
                    [&](const typename tree::Node _args) -> T1 {
                      return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
                                _args.d_a1, _args.d_a2,

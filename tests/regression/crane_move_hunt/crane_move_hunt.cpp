@@ -13,7 +13,7 @@ CraneMoveHunt::clone_box(std::shared_ptr<CraneMoveHunt::box> b) {
 
 std::shared_ptr<CraneMoveHunt::box>
 CraneMoveHunt::keep_box(std::shared_ptr<CraneMoveHunt::box> b) {
-  return std::move(b);
+  return b;
 }
 
 __attribute__((pure)) unsigned int
@@ -51,12 +51,12 @@ CraneMoveHunt::record_function(const std::shared_ptr<CraneMoveHunt::box> &b0) {
   std::shared_ptr<CraneMoveHunt::box> b2 = clone_box(b);
   if (keep_box(b)->enabled) {
     if (std::move(b)->enabled) {
-      return std::move(b2);
+      return b2;
     } else {
-      return std::move(b1);
+      return b1;
     }
   } else {
-    return std::move(b1);
+    return b1;
   }
 }
 
@@ -73,12 +73,12 @@ CraneMoveHunt::match_reuse(const std::shared_ptr<CraneMoveHunt::state> &s0) {
   if (s1->visible) {
     std::shared_ptr<CraneMoveHunt::state> s2 = resolve_state(s1);
     if (s1->visible) {
-      return std::move(s2);
+      return s2;
     } else {
-      return std::move(s1);
+      return s1;
     }
   } else {
-    return std::move(s1);
+    return s1;
   }
 }
 
@@ -112,7 +112,7 @@ effect_pair_frame(const std::shared_ptr<CraneMoveHunt::state> &s0) {
   tick(s1);
   tick(s2);
   if (quit) {
-    return std::move(s2);
+    return s2;
   } else {
     return s1;
   }
@@ -127,9 +127,9 @@ pure_pair_frame(const std::shared_ptr<CraneMoveHunt::state> &s0) {
   std::shared_ptr<CraneMoveHunt::state> s2 = CraneMoveHunt::resolve_state(s1);
   std::shared_ptr<CraneMoveHunt::state> s3 = CraneMoveHunt::render_state(s1);
   if (quit) {
-    return std::move(s2);
+    return s2;
   } else {
-    return std::move(s3);
+    return s3;
   }
 }
 
@@ -149,7 +149,7 @@ axiom_pair_frame(const std::shared_ptr<CraneMoveHunt::state> &s0) {
   std::shared_ptr<CraneMoveHunt::state> s1 = handled.second;
   std::shared_ptr<CraneMoveHunt::state> s2 = CraneMoveHunt::resolve_state(s1);
   if (quit) {
-    return std::move(s2);
+    return s2;
   } else {
     return s1;
   }
@@ -164,7 +164,7 @@ axiom_nat_pair_frame(const std::shared_ptr<CraneMoveHunt::state> &s0) {
   std::shared_ptr<CraneMoveHunt::state> s2 = CraneMoveHunt::resolve_state(s1);
   unsigned int n = toy_tick_nat(s1);
   if ((quit || n == 0u)) {
-    return std::move(s2);
+    return s2;
   } else {
     return s1;
   }

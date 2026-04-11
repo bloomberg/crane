@@ -15,7 +15,7 @@ LoopifyTail::member(const unsigned int x,
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename LoopifyTail::list<unsigned int>::Nil _args) {
+            [&](const typename LoopifyTail::list<unsigned int>::Nil) {
               _result = false;
               _continue = false;
             },
@@ -44,7 +44,7 @@ LoopifyTail::nth(const unsigned int n,
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename LoopifyTail::list<unsigned int>::Nil _args) {
+            [&](const typename LoopifyTail::list<unsigned int>::Nil) {
               _result = default0;
               _continue = false;
             },
@@ -78,7 +78,7 @@ __attribute__((pure)) unsigned int LoopifyTail::lookup(
   while (_continue) {
     std::visit(
         Overloaded{[&](const typename LoopifyTail::list<
-                       std::pair<unsigned int, unsigned int>>::Nil _args) {
+                       std::pair<unsigned int, unsigned int>>::Nil) {
                      _result = 0u;
                      _continue = false;
                    },

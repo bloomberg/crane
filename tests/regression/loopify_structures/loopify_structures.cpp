@@ -54,8 +54,8 @@ __attribute__((pure)) unsigned int LoopifyStructures::sum_nested_list_fuel(
                 std::visit(
                     Overloaded{
                         [&](const typename List<
-                            std::shared_ptr<LoopifyStructures::nested>>::Nil
-                                _args) -> void { _result = 0u; },
+                            std::shared_ptr<LoopifyStructures::nested>>::Nil)
+                            -> void { _result = 0u; },
                         [&](const typename List<
                             std::shared_ptr<LoopifyStructures::nested>>::Cons
                                 _args) -> void {
@@ -129,15 +129,15 @@ __attribute__((pure)) unsigned int LoopifyStructures::depth_nested_list_fuel(
                 std::visit(
                     Overloaded{
                         [&](const typename List<
-                            std::shared_ptr<LoopifyStructures::nested>>::Nil
-                                _args) -> void { _result = 0u; },
+                            std::shared_ptr<LoopifyStructures::nested>>::Nil)
+                            -> void { _result = 0u; },
                         [&](const typename List<
                             std::shared_ptr<LoopifyStructures::nested>>::Cons
                                 _args) -> void {
                           std::visit(
                               Overloaded{
                                   [&](const typename LoopifyStructures::nested::
-                                          Elem _args0) -> void {
+                                          Elem) -> void {
                                     _stack.push_back(_Call1{});
                                     _stack.push_back(_Enter{_args.d_a1, f});
                                   },
@@ -151,7 +151,7 @@ __attribute__((pure)) unsigned int LoopifyStructures::depth_nested_list_fuel(
                     l->v());
               }
             },
-            [&](_Call1 _f) {
+            [&](_Call1) {
               unsigned int rest_max = _result;
               if (0u <= rest_max) {
                 _result = rest_max;
@@ -228,10 +228,8 @@ std::shared_ptr<List<unsigned int>> LoopifyStructures::flatten_nested_list_fuel(
                 std::visit(
                     Overloaded{
                         [&](const typename List<
-                            std::shared_ptr<LoopifyStructures::nested>>::Nil
-                                _args) -> void {
-                          _result = List<unsigned int>::nil();
-                        },
+                            std::shared_ptr<LoopifyStructures::nested>>::Nil)
+                            -> void { _result = List<unsigned int>::nil(); },
                         [&](const typename List<
                             std::shared_ptr<LoopifyStructures::nested>>::Cons
                                 _args) -> void {
@@ -275,7 +273,7 @@ LoopifyStructures::find_first_some(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<std::optional<unsigned int>>::Nil _args) {
+            [&](const typename List<std::optional<unsigned int>>::Nil) {
               _result = std::optional<unsigned int>();
               _continue = false;
             },
@@ -338,7 +336,7 @@ LoopifyStructures::ltree_max(std::shared_ptr<LoopifyStructures::ltree> t1,
                             if (_args.d_a0 <= y) {
                               return y;
                             } else {
-                              return std::move(_args.d_a0);
+                              return _args.d_a0;
                             }
                           }();
                           _result = t2;
@@ -358,10 +356,10 @@ LoopifyStructures::ltree_max(std::shared_ptr<LoopifyStructures::ltree> t1,
                                     }());
                                   },
                                   [&](const typename LoopifyStructures::ltree::
-                                          LNode _args0)
+                                          LNode)
                                       -> std::shared_ptr<
                                           LoopifyStructures::ltree> {
-                                    return std::move(t2);
+                                    return t2;
                                   }},
                               t2->v());
                         }
@@ -370,7 +368,7 @@ LoopifyStructures::ltree_max(std::shared_ptr<LoopifyStructures::ltree> t1,
                           -> void {
                         std::visit(
                             Overloaded{[&](const typename LoopifyStructures::
-                                               ltree::LLeaf _args0) -> void {
+                                               ltree::LLeaf) -> void {
                                          _result = std::move(t1);
                                        },
                                        [&](const typename LoopifyStructures::

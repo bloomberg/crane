@@ -84,7 +84,7 @@ struct DeepApp {
                 const std::shared_ptr<mylist<T1>> m = _f.m;
                 std::visit(
                     Overloaded{
-                        [&](const typename mylist<T1>::Mynil _args) -> void {
+                        [&](const typename mylist<T1>::Mynil) -> void {
                           _result = f;
                         },
                         [&](const typename mylist<T1>::Mycons _args) -> void {
@@ -125,7 +125,7 @@ struct DeepApp {
                 const std::shared_ptr<mylist<T1>> m = _f.m;
                 std::visit(
                     Overloaded{
-                        [&](const typename mylist<T1>::Mynil _args) -> void {
+                        [&](const typename mylist<T1>::Mynil) -> void {
                           _result = f;
                         },
                         [&](const typename mylist<T1>::Mycons _args) -> void {
@@ -157,7 +157,7 @@ struct DeepApp {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename mylist<T1>::Mynil _args) {
+              [&](const typename mylist<T1>::Mynil) {
                 if (_last) {
                   std::get<typename mylist<T1>::Mycons>(_last->v_mut()).d_a1 =
                       std::move(l2);
@@ -192,7 +192,7 @@ struct DeepApp {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename mylist<T1>::Mynil _args) {
+              [&](const typename mylist<T1>::Mynil) {
                 if (_last) {
                   std::get<typename mylist<T2>::Mycons>(_last->v_mut()).d_a1 =
                       mylist<T2>::mynil();
@@ -249,7 +249,7 @@ struct DeepApp {
                 const std::shared_ptr<mylist<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename mylist<T1>::Mynil _args) -> void {
+                        [&](const typename mylist<T1>::Mynil) -> void {
                           _result = 0u;
                         },
                         [&](const typename mylist<T1>::Mycons _args) -> void {
@@ -258,7 +258,7 @@ struct DeepApp {
                         }},
                     l->v());
               },
-              [&](_Call1 _f) { _result = (_result + 1); }},
+              [&](_Call1) { _result = (_result + 1); }},
           _frame);
     }
     return _result;

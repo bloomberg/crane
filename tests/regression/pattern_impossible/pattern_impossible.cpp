@@ -40,11 +40,11 @@ __attribute__((pure)) unsigned int PatternImpossible::nested_match(
                                       _args1) -> unsigned int {
                                 return (_args0.d_a0 + _args1.d_a0);
                               },
-                              [](const typename PatternImpossible::nested::Node
-                                     _args1) -> unsigned int { return 0u; }},
+                              [](const typename PatternImpossible::nested::Node)
+                                  -> unsigned int { return 0u; }},
                           _args.d_a1->v());
                     },
-                    [](const typename PatternImpossible::nested::Node _args0)
+                    [](const typename PatternImpossible::nested::Node)
                         -> unsigned int { return 0u; }},
                 _args.d_a0->v());
           }},
@@ -85,8 +85,9 @@ __attribute__((pure)) unsigned int PatternImpossible::multi_arg_pattern(
     const std::shared_ptr<PatternImpossible::nested> &n) {
   return std::visit(
       Overloaded{
-          [](const typename PatternImpossible::nested::Leaf _args)
-              -> unsigned int { return 0u; },
+          [](const typename PatternImpossible::nested::Leaf) -> unsigned int {
+            return 0u;
+          },
           [](const typename PatternImpossible::nested::Node _args)
               -> unsigned int {
             return std::visit(
@@ -95,8 +96,8 @@ __attribute__((pure)) unsigned int PatternImpossible::multi_arg_pattern(
                         -> unsigned int {
                       return std::visit(
                           Overloaded{
-                              [](const typename PatternImpossible::nested::Leaf
-                                     _args1) -> unsigned int { return 0u; },
+                              [](const typename PatternImpossible::nested::Leaf)
+                                  -> unsigned int { return 0u; },
                               [&](const typename PatternImpossible::nested::Node
                                       _args1) -> unsigned int {
                                 return std::visit(
@@ -114,20 +115,21 @@ __attribute__((pure)) unsigned int PatternImpossible::multi_arg_pattern(
                                                             _args3.d_a0);
                                                   },
                                                   [](const typename PatternImpossible::
-                                                         nested::Node _args3)
+                                                         nested::Node)
                                                       -> unsigned int {
                                                     return 0u;
                                                   }},
                                               _args1.d_a1->v());
                                         },
                                         [](const typename PatternImpossible::
-                                               nested::Node _args2)
-                                            -> unsigned int { return 0u; }},
+                                               nested::Node) -> unsigned int {
+                                          return 0u;
+                                        }},
                                     _args1.d_a0->v());
                               }},
                           _args.d_a1->v());
                     },
-                    [](const typename PatternImpossible::nested::Node _args0)
+                    [](const typename PatternImpossible::nested::Node)
                         -> unsigned int { return 0u; }},
                 _args.d_a0->v());
           }},

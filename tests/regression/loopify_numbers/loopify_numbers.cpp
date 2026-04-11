@@ -405,8 +405,8 @@ LoopifyNumbers::collatz_length_fuel(const unsigned int fuel,
                               }
                             }
                           },
-                          [&](_Call1 _f) { _result = (_result + 1); },
-                          [&](_Call2 _f) { _result = (_result + 1); }},
+                          [&](_Call1) { _result = (_result + 1); },
+                          [&](_Call2) { _result = (_result + 1); }},
                _frame);
   }
   return _result;
@@ -788,7 +788,7 @@ LoopifyNumbers::count_down_by_fuel(const unsigned int fuel,
                               }
                             }
                           },
-                          [&](_Call1 _f) { _result = (_result + 1); }},
+                          [&](_Call1) { _result = (_result + 1); }},
                _frame);
   }
   return _result;
@@ -1171,7 +1171,7 @@ __attribute__((pure)) unsigned int LoopifyNumbers::sum_odd_indices_fuel(
     unsigned int f = fuel - 1;
     return std::visit(
         Overloaded{
-            [](const typename List<unsigned int>::Nil _args) -> unsigned int {
+            [](const typename List<unsigned int>::Nil) -> unsigned int {
               return 0u;
             },
             [&](const typename List<unsigned int>::Cons _args) -> unsigned int {
@@ -1211,8 +1211,9 @@ __attribute__((pure)) unsigned int LoopifyNumbers::sum_even_indices_fuel(
                 unsigned int f = fuel - 1;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil _args)
-                            -> void { _result = 0u; },
+                        [&](const typename List<unsigned int>::Nil) -> void {
+                          _result = 0u;
+                        },
                         [&](const typename List<unsigned int>::Cons _args)
                             -> void {
                           {
@@ -1225,8 +1226,10 @@ __attribute__((pure)) unsigned int LoopifyNumbers::sum_even_indices_fuel(
                               unsigned int f = _inl_fuel - 1;
                               std::visit(
                                   Overloaded{
-                                      [&](const typename List<unsigned int>::Nil
-                                              _args) -> void { _result = 0u; },
+                                      [&](const typename List<
+                                          unsigned int>::Nil) -> void {
+                                        _result = 0u;
+                                      },
                                       [&](const typename List<
                                           unsigned int>::Cons _args) -> void {
                                         _stack.push_back(_Call1{_args.d_a0});

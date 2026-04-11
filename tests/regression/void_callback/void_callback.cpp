@@ -10,11 +10,11 @@
 #include <utility>
 #include <variant>
 
-void VoidCallback::print_nat(const unsigned int _x) { return; }
+void VoidCallback::print_nat(const unsigned int) { return; }
 
 void VoidCallback::test_for_each_m() {
   for_each_m(
-      [](unsigned int _x) {
+      [](unsigned int) {
         std::cout << "item"s << '\n';
         return;
       },
@@ -24,7 +24,7 @@ void VoidCallback::test_for_each_m() {
 }
 
 /// 3. Pure function returning unit, used in let
-void VoidCallback::side_effect_pure(const unsigned int _x) { return; }
+void VoidCallback::side_effect_pure(const unsigned int) { return; }
 
 /// 7. Void returning function in a match arm
 void VoidCallback::void_in_match(const bool b) {

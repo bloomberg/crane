@@ -63,12 +63,11 @@ struct RecRecord {
   static T2 rlist_rect(const T2 f, F1 &&f0,
                        const std::shared_ptr<rlist<T1>> &r) {
     return std::visit(
-        Overloaded{
-            [&](const typename rlist<T1>::Rnil _args) -> T2 { return f; },
-            [&](const typename rlist<T1>::Rcons _args) -> T2 {
-              return f0(_args.d_a0, _args.d_a1,
-                        rlist_rect<T1, T2>(f, f0, _args.d_a1));
-            }},
+        Overloaded{[&](const typename rlist<T1>::Rnil) -> T2 { return f; },
+                   [&](const typename rlist<T1>::Rcons _args) -> T2 {
+                     return f0(_args.d_a0, _args.d_a1,
+                               rlist_rect<T1, T2>(f, f0, _args.d_a1));
+                   }},
         r->v());
   }
 
@@ -77,12 +76,11 @@ struct RecRecord {
   static T2 rlist_rec(const T2 f, F1 &&f0,
                       const std::shared_ptr<rlist<T1>> &r) {
     return std::visit(
-        Overloaded{
-            [&](const typename rlist<T1>::Rnil _args) -> T2 { return f; },
-            [&](const typename rlist<T1>::Rcons _args) -> T2 {
-              return f0(_args.d_a0, _args.d_a1,
-                        rlist_rec<T1, T2>(f, f0, _args.d_a1));
-            }},
+        Overloaded{[&](const typename rlist<T1>::Rnil) -> T2 { return f; },
+                   [&](const typename rlist<T1>::Rcons _args) -> T2 {
+                     return f0(_args.d_a0, _args.d_a1,
+                               rlist_rec<T1, T2>(f, f0, _args.d_a1));
+                   }},
         r->v());
   }
 
@@ -122,12 +120,11 @@ struct RecRecord {
   __attribute__((pure)) static unsigned int
   rlist_length(const std::shared_ptr<rlist<T1>> &l) {
     return std::visit(
-        Overloaded{[](const typename rlist<T1>::Rnil _args) -> unsigned int {
-                     return 0u;
-                   },
-                   [](const typename rlist<T1>::Rcons _args) -> unsigned int {
-                     return (rlist_length<T1>(_args.d_a1) + 1);
-                   }},
+        Overloaded{
+            [](const typename rlist<T1>::Rnil) -> unsigned int { return 0u; },
+            [](const typename rlist<T1>::Rcons _args) -> unsigned int {
+              return (rlist_length<T1>(_args.d_a1) + 1);
+            }},
         l->v());
   }
 

@@ -16,7 +16,7 @@ void UnitVoidStress::consume(const unsigned int n) {
   }
 }
 
-void UnitVoidStress::discard(const unsigned int _x) { return; }
+void UnitVoidStress::discard(const unsigned int) { return; }
 
 __attribute__((pure)) std::pair<unsigned int, std::monostate>
 UnitVoidStress::pair_with_void_call(const unsigned int n) {
@@ -105,7 +105,7 @@ UnitVoidStress::let_void_then_pair(const unsigned int n) {
 }
 
 __attribute__((pure)) unsigned int
-UnitVoidStress::seq_voids_value(const unsigned int _x) {
+UnitVoidStress::seq_voids_value(const unsigned int) {
   return 42u;
 }
 

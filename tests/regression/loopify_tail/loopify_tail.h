@@ -82,7 +82,7 @@ struct LoopifyTail {
                 const std::shared_ptr<list<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename list<T1>::Nil _args) -> void {
+                        [&](const typename list<T1>::Nil) -> void {
                           _result = f;
                         },
                         [&](const typename list<T1>::Cons _args) -> void {
@@ -122,7 +122,7 @@ struct LoopifyTail {
                 const std::shared_ptr<list<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename list<T1>::Nil _args) -> void {
+                        [&](const typename list<T1>::Nil) -> void {
                           _result = f;
                         },
                         [&](const typename list<T1>::Cons _args) -> void {
@@ -144,7 +144,7 @@ struct LoopifyTail {
     T1 _loop_x = x;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename list<T1>::Nil _args) {
+      std::visit(Overloaded{[&](const typename list<T1>::Nil) {
                               _result = _loop_x;
                               _continue = false;
                             },
@@ -167,7 +167,7 @@ struct LoopifyTail {
     unsigned int _loop_acc = acc;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename list<T1>::Nil _args) {
+      std::visit(Overloaded{[&](const typename list<T1>::Nil) {
                               _result = _loop_acc;
                               _continue = false;
                             },
@@ -205,7 +205,7 @@ struct LoopifyTail {
     T2 _loop_acc = acc;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename list<T1>::Nil _args) {
+      std::visit(Overloaded{[&](const typename list<T1>::Nil) {
                               _result = _loop_acc;
                               _continue = false;
                             },

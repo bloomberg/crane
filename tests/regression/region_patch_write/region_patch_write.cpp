@@ -11,7 +11,7 @@ RegionPatchWrite::update_region(const std::shared_ptr<List<unsigned int>> &rom,
                                 std::shared_ptr<List<unsigned int>> bytes) {
   return std::visit(
       Overloaded{
-          [](const typename List<unsigned int>::Nil _args)
+          [](const typename List<unsigned int>::Nil)
               -> std::shared_ptr<List<unsigned int>> {
             return List<unsigned int>::nil();
           },
@@ -29,7 +29,7 @@ RegionPatchWrite::update_region(const std::shared_ptr<List<unsigned int>> &rom,
               } else {
                 return std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil _args0)
+                        [&](const typename List<unsigned int>::Nil)
                             -> std::shared_ptr<List<unsigned int>> {
                           return List<unsigned int>::cons(_args.d_a0,
                                                           _args.d_a1);

@@ -597,7 +597,7 @@ template <typename K, typename V> struct SkipList {
   static bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>
   findPrev_aux(F0 &&eqK, const unsigned int fuel,
                const bsl::shared_ptr<SkipNode<T1, T2>> curr,
-               const bsl::shared_ptr<SkipNode<T1, T2>> _x, const T1 target) {
+               const bsl::shared_ptr<SkipNode<T1, T2>>, const T1 target) {
     if (fuel <= 0) {
       return bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>();
     } else {

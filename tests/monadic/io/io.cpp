@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <variant>
 
-void iotest::test1(const std::string _x) { return; }
+void iotest::test1(const std::string) { return; }
 
 void iotest::test2(const std::string s) {
   std::cout << s;

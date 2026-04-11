@@ -4,7 +4,7 @@
 #include <utility>
 
 __attribute__((pure)) OpcodeOperandDecode::Instruction
-OpcodeOperandDecode::decode(const unsigned int b1, const unsigned int _x) {
+OpcodeOperandDecode::decode(const unsigned int b1, const unsigned int) {
   unsigned int opcode = (16u ? b1 / 16u : 0);
   unsigned int operand = (16u ? b1 % 16u : b1);
   if (opcode <= 0) {

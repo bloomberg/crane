@@ -141,7 +141,7 @@ public:
   std::shared_ptr<List<t_A>> take(const std::shared_ptr<Nat> &n) const {
     return std::visit(
         Overloaded{
-            [](const typename Nat::O _args) -> std::shared_ptr<List<t_A>> {
+            [](const typename Nat::O) -> std::shared_ptr<List<t_A>> {
               return List<t_A>::nil();
             },
             [&](const typename Nat::S _args) -> std::shared_ptr<List<t_A>> {

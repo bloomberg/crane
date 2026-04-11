@@ -65,7 +65,7 @@ public:
 struct MonadicClosure {
   /// 1. Lambda capturing a bind result
   template <typename T1>
-  __attribute__((pure)) static int64_t _capture_bind_f(const T1 _x,
+  __attribute__((pure)) static int64_t _capture_bind_f(const T1,
                                                        const std::string line) {
     return line.length();
   }
@@ -100,7 +100,7 @@ struct MonadicClosure {
   count_matching(F0 &&pred, const std::shared_ptr<List<std::string>> &xs) {
     return std::visit(
         Overloaded{
-            [](const typename List<std::string>::Nil _args) -> unsigned int {
+            [](const typename List<std::string>::Nil) -> unsigned int {
               return 0u;
             },
             [&](const typename List<std::string>::Cons _args) -> unsigned int {

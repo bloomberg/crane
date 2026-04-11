@@ -50,7 +50,7 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::spherical_shoelace_aux(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil _args)
+              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil)
               -> Real { return Real::from_z(INT64_C(0)); },
           [&](const typename List<
               std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons _args)
@@ -130,7 +130,7 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::winding_sum_aux(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil _args)
+              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil)
               -> Real { return Real::from_z(INT64_C(0)); },
           [&](const typename List<
               std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons _args)
@@ -138,8 +138,9 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::winding_sum_aux(
             return std::visit(
                 Overloaded{
                     [&](const typename List<std::shared_ptr<
-                            PolygonWindingAreaTraceCase::Point>>::Nil _args0)
-                        -> Real { return segment_angle(p, _args.d_a0, first); },
+                            PolygonWindingAreaTraceCase::Point>>::Nil) -> Real {
+                      return segment_angle(p, _args.d_a0, first);
+                    },
                     [&](const typename List<std::shared_ptr<
                             PolygonWindingAreaTraceCase::Point>>::Cons _args0)
                         -> Real {
@@ -158,7 +159,7 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::winding_sum(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil _args)
+              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil)
               -> Real { return Real::from_z(INT64_C(0)); },
           [&](const typename List<
               std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons _args)

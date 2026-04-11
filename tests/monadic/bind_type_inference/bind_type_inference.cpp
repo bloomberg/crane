@@ -16,12 +16,12 @@ int64_t BindTypeInference::test1() {
 
 int64_t BindTypeInference::test2() {
   return transform<std::monostate, int64_t>(
-      std::monostate{}, [](std::monostate _x) { return int64_t(42); });
+      std::monostate{}, [](std::monostate) { return int64_t(42); });
 }
 
 int64_t BindTypeInference::test3() {
   return nested<std::monostate, bool, int64_t>(
-      std::monostate{}, [](std::monostate _x) { return true; },
+      std::monostate{}, [](std::monostate) { return true; },
       [](bool b) {
         if (b) {
           return int64_t(1);

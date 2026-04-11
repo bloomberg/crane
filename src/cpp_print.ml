@@ -49,7 +49,59 @@ let is_axiom_type_ref (r : GlobRef.t) = Hashtbl.mem axiom_type_refs r
 
     Also checks recursively: if a nested lambda captures from the outer lambda's
     scope, that counts as the outer lambda needing capture. *)
-let rec lambda_needs_capture
+(** Check if an identifier is referenced in a list of statements.
+    Used to decide whether a parameter or variable needs [[maybe_unused]]. *)
+let stmts_reference_id target_id body =
+  let open Minicpp in
+  let found = ref false in
+  let rec check_expr = function
+    | CPPvar id when Id.equal id target_id -> found := true
+    | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _
+    | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
+    | CPPabort _ | CPPenum_val _ | CPPraw _ | CPPbool _ | CPPint _
+    | CPPbrace_init | CPPthis | CPPunop _ -> ()
+    | CPPfun_call (f, args) -> check_expr f; List.iter check_expr args
+    | CPPnamespace (_, e) | CPPderef e | CPPmove e | CPPforward (_, e)
+    | CPPget (e, _) | CPPget' (e, _) | CPPmember (e, _) | CPParrow (e, _)
+    | CPPqualified (e, _) | CPPshared_ptr_ctor (_, e)
+    | CPPunique_ptr_ctor (_, e) | CPPany_cast (_, e) -> check_expr e
+    | CPPshared_from_this _ -> ()
+    | CPPlambda (_, _, stmts, _) -> List.iter check_stmt stmts
+    | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
+    | CPPstruct_id (_, _, es) | CPPnew (_, es) ->
+      List.iter check_expr es
+    | CPPparray (arr, e) -> Array.iter check_expr arr; check_expr e
+    | CPPmethod_call (obj, _, args) ->
+      check_expr obj; List.iter check_expr args
+    | CPPrequires (_, constraints, _) ->
+      List.iter (fun (e, _) -> check_expr e) constraints
+    | CPPbinop (_, l, r) -> check_expr l; check_expr r
+  and check_stmt = function
+    | Sreturn (Some e) | Sexpr e -> check_expr e
+    | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _
+    | Sstruct_def _ | Susing _ | Sdecl_init _ | Scontinue -> ()
+    | Sasgn (_, _, e) -> check_expr e
+    | Sif (c, t, f) ->
+      check_expr c; List.iter check_stmt t; List.iter check_stmt f
+    | Sswitch (e, _, branches, def) ->
+      check_expr e;
+      List.iter (fun (_, stmts) -> List.iter check_stmt stmts) branches;
+      Option.iter (List.iter check_stmt) def
+    | Scustom_case (_, e, _, branches, template) ->
+      (* Only count scrutinee as a reference when the template actually uses it.
+         E.g., unit match template "{ %br0 }" ignores the scrutinee, while nat
+         template "if (%scrut <= 0) { ... }" uses it. *)
+      if Common.contains_substring template "%scrut" then check_expr e;
+      List.iter (fun (_, _, stmts) -> List.iter check_stmt stmts) branches
+    | Sassign_field (o, _, e) -> check_expr o; check_expr e
+    | Swhile (c, stmts) -> check_expr c; List.iter check_stmt stmts
+    | Sblock stmts -> List.iter check_stmt stmts
+    | Sblock_custom (_, _, _, _, args, _) -> List.iter check_expr args
+  in
+  List.iter check_stmt body;
+  !found
+
+let[@warning "-39"] rec lambda_needs_capture
     (params : (Minicpp.cpp_type * Names.Id.t option) list)
     (body : Minicpp.cpp_stmt list) : bool * bool =
   let open Minicpp in
@@ -1066,22 +1118,24 @@ and pp_cpp_expr env args t =
       else
         mt ()
     in
+    let body_s = pp_list_stmt (pp_cpp_stmt env args) body in
     let params_s, capture =
       match params with
       | [] -> (mt (), capture_str)
       | _ ->
         ( pp_list
             (fun (ty, id_opt) ->
-              let id_s =
-                match id_opt with
-                | None -> str ""
-                | Some id -> Id.print id
-              in
-              pp_cpp_type false [] ty ++ spc () ++ id_s )
+              match id_opt with
+              | None -> pp_cpp_type false [] ty
+              | Some id when not (stmts_reference_id id body) ->
+                (* Unused parameter: omit the name entirely — the idiomatic
+                   C++ way to signal an intentionally unused parameter. *)
+                pp_cpp_type false [] ty
+              | Some id ->
+                pp_cpp_type false [] ty ++ spc () ++ Id.print id )
             (List.rev params),
           capture_str )
     in
-    let body_s = pp_list_stmt (pp_cpp_stmt env args) body in
     ( match ret_ty with
     | Some ty ->
       h
@@ -1259,11 +1313,21 @@ and pp_cpp_expr env args t =
   (* Low-level constructs for reuse optimization *)
   | CPPraw code -> str code
   | CPPbinop (op, lhs, rhs) ->
-    pp_cpp_expr env args lhs
+    (* Parenthesize && subexpressions inside || to avoid
+       -Wlogical-op-parentheses warnings. *)
+    let paren_child child =
+      match child with
+      | CPPbinop ("&&", _, _) when op = "||" ->
+        str "(" ++ pp_cpp_expr env args child ++ str ")"
+      | CPPbinop ("||", _, _) when op = "&&" ->
+        str "(" ++ pp_cpp_expr env args child ++ str ")"
+      | _ -> pp_cpp_expr env args child
+    in
+    paren_child lhs
     ++ str " "
     ++ str op
     ++ str " "
-    ++ pp_cpp_expr env args rhs
+    ++ paren_child rhs
   | CPPbool b -> str (if b then "true" else "false")
   | CPPint n -> str (string_of_int n)
   | CPPbrace_init -> str "{}"
@@ -1286,7 +1350,13 @@ and pp_cpp_stmt env args = function
     ++ str "(\""
     ++ str msg
     ++ str "\");"
-  | Sreturn (Some e) -> str "return " ++ pp_cpp_expr env args e ++ str ";"
+  | Sreturn (Some e) ->
+    (* Strip std::move from return statements — C++ applies implicit move
+       on local variables in return statements.  Explicit std::move prevents
+       NRVO (Named Return Value Optimization) and triggers
+       -Wpessimizing-move / -Wredundant-move warnings. *)
+    let e = match e with CPPmove inner -> inner | _ -> e in
+    str "return " ++ pp_cpp_expr env args e ++ str ";"
   | Sdecl (id, ty) ->
     pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str ";"
   | Sasgn (id, Some ty, e) ->
@@ -1366,7 +1436,10 @@ and pp_cpp_stmt env args = function
     ++ pp_list_stmt (pp_cpp_stmt env args) else_stmts
     ++ fnl ()
     ++ str "}"
-  | Sraw code -> str code
+  | Sraw code ->
+    if Common.contains_substring code "std::vector" then
+      require_header "vector";
+    str code
   | Sstruct_def (name, fields) ->
     str "struct "
     ++ Id.print name
@@ -1764,11 +1837,6 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
         mf_is_static;
         mf_no_pure;
       } ->
-    let params_s =
-      pp_list
-        (fun (id, ty) -> pp_cpp_type false [] ty ++ str " " ++ Id.print id)
-        mf_params
-    in
     let const_s = if mf_is_const then str " const" else mt () in
     let static_s = if mf_is_static then str "static " else mt () in
     let saved_any_params = !current_any_typed_params in
@@ -1778,6 +1846,15 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
           match ty with Tany -> Id.Set.add id acc | _ -> acc)
         Id.Set.empty mf_params;
     let body_s = pp_list_stmt (pp_cpp_stmt env []) mf_body in
+    let params_s =
+      pp_list
+        (fun (id, ty) ->
+          if not (stmts_reference_id id mf_body) then
+            pp_cpp_type false [] ty
+          else
+            pp_cpp_type false [] ty ++ str " " ++ Id.print id)
+        mf_params
+    in
     current_any_typed_params := saved_any_params;
     let template_s =
       match mf_tparams with
@@ -2133,7 +2210,11 @@ and pp_cpp_decl_raw env = function
   | Dfundef (ids, ret_ty, params, body, no_pure) ->
     let params_s =
       pp_list
-        (fun (id, ty) -> pp_cpp_type false [] ty ++ str " " ++ Id.print id)
+        (fun (id, ty) ->
+          if not (stmts_reference_id id body) then
+            pp_cpp_type false [] ty
+          else
+            pp_cpp_type false [] ty ++ str " " ++ Id.print id)
         (List.rev params)
     in
     let base_name =

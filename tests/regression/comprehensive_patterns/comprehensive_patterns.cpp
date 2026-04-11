@@ -75,7 +75,7 @@ __attribute__((pure)) std::pair<std::function<unsigned int(unsigned int)>,
                                 std::shared_ptr<ComprehensivePatterns::S>>
 ComprehensivePatterns::lambda_proj(
     std::shared_ptr<ComprehensivePatterns::S> s) {
-  return std::make_pair([=](unsigned int _x) mutable { return s->s_a; }, s);
+  return std::make_pair([=](unsigned int) mutable { return s->s_a; }, s);
 }
 
 __attribute__((pure))
@@ -251,8 +251,8 @@ __attribute__((pure)) std::pair<std::function<unsigned int(std::monostate)>,
                                 std::function<unsigned int(std::monostate)>>
 ComprehensivePatterns::closure_pair(
     std::shared_ptr<ComprehensivePatterns::S> s) {
-  return std::make_pair([=](std::monostate _x) mutable { return s->s_a; },
-                        [=](std::monostate _x) mutable { return s->s_b; });
+  return std::make_pair([=](std::monostate) mutable { return s->s_a; },
+                        [=](std::monostate) mutable { return s->s_b; });
 }
 
 std::shared_ptr<Sig<std::shared_ptr<ComprehensivePatterns::S>>>
@@ -946,7 +946,7 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::bug_three_args(
 }
 
 __attribute__((pure)) unsigned int ComprehensivePatterns::take_state_and_val(
-    const std::shared_ptr<ComprehensivePatterns::State> &_x,
+    const std::shared_ptr<ComprehensivePatterns::State> &,
     const unsigned int n) {
   return n;
 }
@@ -1063,7 +1063,7 @@ ComprehensivePatterns::bind_proj_use_base(
 
 std::shared_ptr<ComprehensivePatterns::RSeq> ComprehensivePatterns::side_effect(
     std::shared_ptr<ComprehensivePatterns::RSeq> r) {
-  return std::move(r);
+  return r;
 }
 
 __attribute__((pure)) unsigned int ComprehensivePatterns::after_side_effect(
@@ -1304,7 +1304,7 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::accum_with_state(
 
 std::shared_ptr<ComprehensivePatterns::StateOP> ComprehensivePatterns::identity(
     std::shared_ptr<ComprehensivePatterns::StateOP> s) {
-  return std::move(s);
+  return s;
 }
 
 __attribute__((pure)) unsigned int ComprehensivePatterns::extract_via_match(
@@ -1315,7 +1315,7 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::extract_via_match(
 std::shared_ptr<ComprehensivePatterns::StateOP>
 ComprehensivePatterns::consume_state(
     std::shared_ptr<ComprehensivePatterns::StateOP> s) {
-  return std::move(s);
+  return s;
 }
 
 __attribute__((pure)) unsigned int ComprehensivePatterns::match_consumed(

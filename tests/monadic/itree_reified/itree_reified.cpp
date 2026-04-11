@@ -8,7 +8,7 @@
 #include <variant>
 
 /// Pass-through: takes a reified itree and returns it unchanged.
-void ITreeReified::run_tree(std::shared_ptr<ITree<void>> t) { return; }
+void ITreeReified::run_tree(std::shared_ptr<ITree<void>>) { return; }
 
 /// Sequence two reified itrees.
 void ITreeReified::sequence_trees(const std::shared_ptr<ITree<void>> &t1,

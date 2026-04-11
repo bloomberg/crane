@@ -81,10 +81,10 @@ struct Sum {
 
     __attribute__((pure)) bool is_left() const {
       return std::visit(
-          Overloaded{[](const typename either<t_A, t_B>::Left _args) -> bool {
+          Overloaded{[](const typename either<t_A, t_B>::Left) -> bool {
                        return true;
                      },
-                     [](const typename either<t_A, t_B>::Right _args) -> bool {
+                     [](const typename either<t_A, t_B>::Right) -> bool {
                        return false;
                      }},
           this->v());

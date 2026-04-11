@@ -17,8 +17,8 @@ std::shared_ptr<List<unsigned int>> EncodeOps::encode_list2(
         &prog) {
   return std::visit(
       Overloaded{
-          [](const typename List<std::shared_ptr<EncodeOps::instruction2>>::Nil
-                 _args) -> std::shared_ptr<List<unsigned int>> {
+          [](const typename List<std::shared_ptr<EncodeOps::instruction2>>::Nil)
+              -> std::shared_ptr<List<unsigned int>> {
             return List<unsigned int>::nil();
           },
           [](const typename List<std::shared_ptr<EncodeOps::instruction2>>::Cons
@@ -36,8 +36,8 @@ std::shared_ptr<List<unsigned int>> EncodeOps::encode_list3(
         &prog) {
   return std::visit(
       Overloaded{
-          [](const typename List<std::shared_ptr<EncodeOps::instruction3>>::Nil
-                 _args) -> std::shared_ptr<List<unsigned int>> {
+          [](const typename List<std::shared_ptr<EncodeOps::instruction3>>::Nil)
+              -> std::shared_ptr<List<unsigned int>> {
             return List<unsigned int>::nil();
           },
           [](const typename List<std::shared_ptr<EncodeOps::instruction3>>::Cons

@@ -97,7 +97,7 @@ struct DeepMap {
                 const std::shared_ptr<tree<T1>> t = _f.t;
                 std::visit(
                     Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
+                        [&](const typename tree<T1>::Leaf) -> void {
                           _result = f;
                         },
                         [&](const typename tree<T1>::Node _args) -> void {
@@ -155,7 +155,7 @@ struct DeepMap {
                 const std::shared_ptr<tree<T1>> t = _f.t;
                 std::visit(
                     Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
+                        [&](const typename tree<T1>::Leaf) -> void {
                           _result = f;
                         },
                         [&](const typename tree<T1>::Node _args) -> void {
@@ -213,7 +213,7 @@ struct DeepMap {
                 const std::shared_ptr<tree<T1>> t = _f.t;
                 std::visit(
                     Overloaded{
-                        [&](const typename tree<T1>::Leaf _args) -> void {
+                        [&](const typename tree<T1>::Leaf) -> void {
                           _result = tree<T2>::leaf();
                         },
                         [&](const typename tree<T1>::Node _args) -> void {

@@ -21,13 +21,15 @@ struct PeanoNat {
   __attribute__((pure)) static unsigned int div2(const unsigned int n);
 };
 
-template <typename I, typename t_A>
-concept FunctionalInduction =
-    requires { typename I::fun_ind_prf_ty; } && requires {
-      { I::fun_ind_prf() } -> std::convertible_to<typename I::fun_ind_prf_ty>;
-    } || requires {
-      { I::fun_ind_prf } -> std::convertible_to<typename I::fun_ind_prf_ty>;
-    };
+template <typename I, typename
+t_A>
+concept FunctionalInduction = requires {
+  typename I::fun_ind_prf_ty;
+} && (requires {
+  { I::fun_ind_prf() } -> std::convertible_to<typename I::fun_ind_prf_ty>;
+} || requires {
+  { I::fun_ind_prf } -> std::convertible_to<typename I::fun_ind_prf_ty>;
+});
 
 struct Equations {
   template <MapsTo<unsigned int, std::pair<unsigned int, unsigned int>> F3>
@@ -209,7 +211,7 @@ struct Equations {
     std::function<T2(unsigned int, unsigned int, bool, unsigned int,
                      std::shared_ptr<gcd_clause_3_graph>)>
         f4;
-    f5 = [&](std::pair<unsigned int, unsigned int> _x, unsigned int _x3,
+    f5 = [&](std::pair<unsigned int, unsigned int>, unsigned int,
              std::shared_ptr<gcd_graph> g) -> T1 {
       return std::visit(
           Overloaded{
@@ -231,7 +233,7 @@ struct Equations {
               }},
           g->v());
     };
-    f4 = [&](unsigned int _x, unsigned int _x3, bool _x4, unsigned int _x5,
+    f4 = [&](unsigned int, unsigned int, bool, unsigned int,
              std::shared_ptr<gcd_clause_3_graph> g) -> T2 {
       return std::visit(
           Overloaded{
@@ -298,7 +300,7 @@ struct Equations {
     std::function<T2(unsigned int, unsigned int, bool, unsigned int,
                      std::shared_ptr<gcd_clause_3_graph>)>
         f4;
-    f5 = [&](std::pair<unsigned int, unsigned int> _x, unsigned int _x5,
+    f5 = [&](std::pair<unsigned int, unsigned int>, unsigned int,
              std::shared_ptr<gcd_graph> g) -> T1 {
       return std::visit(
           Overloaded{
@@ -320,7 +322,7 @@ struct Equations {
               }},
           g->v());
     };
-    f4 = [&](unsigned int _x, unsigned int _x5, bool _x6, unsigned int _x7,
+    f4 = [&](unsigned int, unsigned int, bool, unsigned int,
              std::shared_ptr<gcd_clause_3_graph> g) -> T2 {
       return std::visit(
           Overloaded{
@@ -394,20 +396,20 @@ struct Equations {
                      const std::pair<unsigned int, unsigned int> p) {
     return gcd_graph_mut(
         f, f0,
-        [=](unsigned int _x, unsigned int _x0,
-            std::shared_ptr<gcd_clause_3_graph> _x1, T1 x) mutable {
+        [=](unsigned int, unsigned int, std::shared_ptr<gcd_clause_3_graph>,
+            T1 x) mutable {
           unsigned int _x2 = p.first;
           unsigned int _x3 = p.second;
           return x;
         },
         [=](unsigned int n1, unsigned int n2,
-            std::shared_ptr<gcd_graph> _x) mutable {
+            std::shared_ptr<gcd_graph>) mutable {
           unsigned int _x0 = p.first;
           unsigned int _x1 = p.second;
           return [=](T1 _pa0) mutable { return f2(n1, n2, _pa0); };
         },
         [=](unsigned int n1, unsigned int n2,
-            std::shared_ptr<gcd_graph> _x) mutable {
+            std::shared_ptr<gcd_graph>) mutable {
           unsigned int _x0 = p.first;
           unsigned int _x1 = p.second;
           return [=](T1 _pa0) mutable { return f3(n1, n2, _pa0); };
@@ -615,16 +617,14 @@ struct Equations {
     std::function<T2(unsigned int, bool, unsigned int,
                      std::shared_ptr<collatz_steps_clause_3_graph>)>
         f4;
-    f5 = [&](unsigned int _x, unsigned int _x3,
+    f5 = [&](unsigned int, unsigned int,
              std::shared_ptr<collatz_steps_graph> c) -> T1 {
       return std::visit(
           Overloaded{
               [&](const typename collatz_steps_graph::
-                      Collatz_steps_graph_equation_1 _args) -> T1 { return f; },
+                      Collatz_steps_graph_equation_1) -> T1 { return f; },
               [&](const typename collatz_steps_graph::
-                      Collatz_steps_graph_equation_2 _args) -> T1 {
-                return f0;
-              },
+                      Collatz_steps_graph_equation_2) -> T1 { return f0; },
               [&](const typename collatz_steps_graph::
                       Collatz_steps_graph_refinement_3 _args) -> T1 {
                 return f1(
@@ -636,7 +636,7 @@ struct Equations {
               }},
           c->v());
     };
-    f4 = [&](unsigned int _x, bool _x3, unsigned int _x4,
+    f4 = [&](unsigned int, bool, unsigned int,
              std::shared_ptr<collatz_steps_clause_3_graph> c) -> T2 {
       return std::visit(
           Overloaded{
@@ -682,16 +682,14 @@ struct Equations {
     std::function<T2(unsigned int, bool, unsigned int,
                      std::shared_ptr<collatz_steps_clause_3_graph>)>
         f4;
-    f5 = [&](unsigned int _x, unsigned int _x4,
+    f5 = [&](unsigned int, unsigned int,
              std::shared_ptr<collatz_steps_graph> c) -> T1 {
       return std::visit(
           Overloaded{
               [&](const typename collatz_steps_graph::
-                      Collatz_steps_graph_equation_1 _args) -> T1 { return f; },
+                      Collatz_steps_graph_equation_1) -> T1 { return f; },
               [&](const typename collatz_steps_graph::
-                      Collatz_steps_graph_equation_2 _args) -> T1 {
-                return f0;
-              },
+                      Collatz_steps_graph_equation_2) -> T1 { return f0; },
               [&](const typename collatz_steps_graph::
                       Collatz_steps_graph_refinement_3 _args) -> T1 {
                 return f1(
@@ -703,7 +701,7 @@ struct Equations {
               }},
           c->v());
     };
-    f4 = [&](unsigned int _x, bool _x4, unsigned int _x5,
+    f4 = [&](unsigned int, bool, unsigned int,
              std::shared_ptr<collatz_steps_clause_3_graph> c) -> T2 {
       return std::visit(
           Overloaded{
@@ -752,12 +750,13 @@ struct Equations {
                                const unsigned int n) {
     return collatz_steps_graph_mut(
         f, f0,
-        [](unsigned int _x, std::shared_ptr<collatz_steps_clause_3_graph> _x0,
-           T1 x) { return x; },
-        [=](unsigned int n0, std::shared_ptr<collatz_steps_graph> _x) mutable {
+        [](unsigned int, std::shared_ptr<collatz_steps_clause_3_graph>, T1 x) {
+          return x;
+        },
+        [=](unsigned int n0, std::shared_ptr<collatz_steps_graph>) mutable {
           return [=](T1 _pa0) mutable { return f2(n0, _pa0); };
         },
-        [=](unsigned int n0, std::shared_ptr<collatz_steps_graph> _x) mutable {
+        [=](unsigned int n0, std::shared_ptr<collatz_steps_graph>) mutable {
           return [=](T1 _pa0) mutable { return f3(n0, _pa0); };
         },
         n, collatz_steps(n), collatz_steps_graph_correct(n));

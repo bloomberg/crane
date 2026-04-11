@@ -58,11 +58,11 @@ public:
   template <typename T1, MapsTo<T1, T1, t_A> F0>
   T1 fold_left(F0 &&f, const T1 a0) const {
     return std::visit(
-        Overloaded{
-            [&](const typename List<t_A>::Nil _args) -> T1 { return a0; },
-            [&](const typename List<t_A>::Cons _args) -> T1 {
-              return _args.d_a1->template fold_left<T1>(f, f(a0, _args.d_a0));
-            }},
+        Overloaded{[&](const typename List<t_A>::Nil) -> T1 { return a0; },
+                   [&](const typename List<t_A>::Cons _args) -> T1 {
+                     return _args.d_a1->template fold_left<T1>(
+                         f, f(a0, _args.d_a0));
+                   }},
         this->v());
   }
 };

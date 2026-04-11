@@ -102,20 +102,20 @@ struct DoubleOppositeWitnessesCase {
   };
 
   template <typename T1, typename T2>
-  static T2 Path_rect(const T1 _x, const T2 f, const T1 _x0,
-                      const std::shared_ptr<Path<T1>> &_x1) {
+  static T2 Path_rect(const T1, const T2 f, const T1,
+                      const std::shared_ptr<Path<T1>> &) {
     return f;
   }
 
   template <typename T1, typename T2>
-  static T2 Path_rec(const T1 _x, const T2 f, const T1 _x0,
-                     const std::shared_ptr<Path<T1>> &_x1) {
+  static T2 Path_rec(const T1, const T2 f, const T1,
+                     const std::shared_ptr<Path<T1>> &) {
     return f;
   }
 
   template <typename T1>
   __attribute__((pure)) static unsigned int
-  path_code(const T1 _x, const T1 _x0, const std::shared_ptr<Path<T1>> &_x1) {
+  path_code(const T1, const T1, const std::shared_ptr<Path<T1>> &) {
     return 1u;
   }
 
@@ -160,9 +160,9 @@ struct DoubleOppositeWitnessesCase {
   struct nat_category {
     using Obj = unsigned int;
 
-    static std::any identity(unsigned int x) { return std::move(x); }
+    static std::any identity(unsigned int x) { return x; }
 
-    static std::any compose(unsigned int _x, unsigned int _x0, unsigned int _x1,
+    static std::any compose(unsigned int, unsigned int, unsigned int,
                             std::any f, std::any g) {
       return (std::any_cast<unsigned int>(std::move(f)) +
               std::any_cast<unsigned int>(std::move(g)));
@@ -186,14 +186,14 @@ struct DoubleOppositeWitnessesCase {
   static std::shared_ptr<Functor> into_double_opposite_functor() {
     return std::make_shared<Functor>(
         Functor{[](std::any x) { return x; },
-                [](std::any _x, std::any _x0, std::any f) { return f; }});
+                [](std::any, std::any, std::any f) { return f; }});
   }
 
   template <PreCategory _tcI0>
   static std::shared_ptr<Functor> out_of_double_opposite_functor() {
     return std::make_shared<Functor>(
         Functor{[](std::any x) { return x; },
-                [](std::any _x, std::any _x0, std::any f) { return f; }});
+                [](std::any, std::any, std::any f) { return f; }});
   }
 
   template <PreStableCategory _tcI0>
@@ -230,11 +230,11 @@ struct DoubleOppositeWitnessesCase {
                     out_of_double_opposite_functor<
                         typename _tcI0::base_category>(),
                     std::make_pair(
-                        [](typename _tcI0::base_category::Obj _x) {
+                        [](typename _tcI0::base_category::Obj) {
                           return Path<
                               typename _tcI0::base_category::Obj>::path_refl();
                         },
-                        [](typename _tcI0::base_category::Obj _x) {
+                        [](typename _tcI0::base_category::Obj) {
                           return Path<
                               typename _tcI0::base_category::Obj>::path_refl();
                         })));

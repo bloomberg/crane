@@ -88,6 +88,14 @@ exec clang++ \
     $SYSROOT_FLAGS \
     -I . \
     -I "$THEORIES_CPP_BDE" \
+    -Wall -Wextra -Wpedantic -Wconversion -Wfloat-conversion \
+    -Wsign-conversion -Wstring-compare -Wformat-overflow \
+    -Wno-stringop-overflow -Wstringop-overflow -Wstringop-overflow=4 \
+    -Wno-unknown-warning-option -Wno-unused-function \
+    -Wno-unused-local-typedef -Wno-shorten-64-to-32 \
+    -Wno-unused-variable -Wno-unused-value \
+    -Wno-constant-conversion -Wno-sign-conversion \
+    -Wno-c11-extensions -Wno-dtor-name -Werror \
     $BDE_CFLAGS \
     $SOURCES \
     $BDE_LIBS \

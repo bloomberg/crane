@@ -56,8 +56,8 @@ __attribute__((pure)) unsigned int MutualRecord::emp_list_salary(
     const std::shared_ptr<List<std::shared_ptr<MutualRecord::employee>>> &l) {
   return std::visit(
       Overloaded{
-          [](const typename List<std::shared_ptr<MutualRecord::employee>>::Nil
-                 _args) -> unsigned int { return 0u; },
+          [](const typename List<std::shared_ptr<MutualRecord::employee>>::Nil)
+              -> unsigned int { return 0u; },
           [](const typename List<std::shared_ptr<MutualRecord::employee>>::Cons
                  _args) -> unsigned int {
             return (emp_salary(_args.d_a0) + emp_list_salary(_args.d_a1));
@@ -78,8 +78,8 @@ __attribute__((pure)) unsigned int MutualRecord::emp_list_count(
     const std::shared_ptr<List<std::shared_ptr<MutualRecord::employee>>> &l) {
   return std::visit(
       Overloaded{
-          [](const typename List<std::shared_ptr<MutualRecord::employee>>::Nil
-                 _args) -> unsigned int { return 0u; },
+          [](const typename List<std::shared_ptr<MutualRecord::employee>>::Nil)
+              -> unsigned int { return 0u; },
           [](const typename List<std::shared_ptr<MutualRecord::employee>>::Cons
                  _args) -> unsigned int {
             return (1u + emp_list_count(_args.d_a1));

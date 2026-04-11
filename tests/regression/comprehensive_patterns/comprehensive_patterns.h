@@ -953,7 +953,7 @@ struct ComprehensivePatterns {
 
     __attribute__((pure)) unsigned int extract_from_container() const {
       return std::visit(
-          Overloaded{[](const typename Container::Empty _args) -> unsigned int {
+          Overloaded{[](const typename Container::Empty) -> unsigned int {
                        return 0u;
                      },
                      [](const typename Container::Full _args) -> unsigned int {
@@ -967,11 +967,10 @@ struct ComprehensivePatterns {
   static T1 Container_rect(const T1 f, F1 &&f0,
                            const std::shared_ptr<Container> &c) {
     return std::visit(
-        Overloaded{
-            [&](const typename Container::Empty _args) -> T1 { return f; },
-            [&](const typename Container::Full _args) -> T1 {
-              return f0(_args.d_a0);
-            }},
+        Overloaded{[&](const typename Container::Empty) -> T1 { return f; },
+                   [&](const typename Container::Full _args) -> T1 {
+                     return f0(_args.d_a0);
+                   }},
         c->v());
   }
 
@@ -979,11 +978,10 @@ struct ComprehensivePatterns {
   static T1 Container_rec(const T1 f, F1 &&f0,
                           const std::shared_ptr<Container> &c) {
     return std::visit(
-        Overloaded{
-            [&](const typename Container::Empty _args) -> T1 { return f; },
-            [&](const typename Container::Full _args) -> T1 {
-              return f0(_args.d_a0);
-            }},
+        Overloaded{[&](const typename Container::Empty) -> T1 { return f; },
+                   [&](const typename Container::Full _args) -> T1 {
+                     return f0(_args.d_a0);
+                   }},
         c->v());
   }
 

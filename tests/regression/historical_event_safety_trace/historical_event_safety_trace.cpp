@@ -23,7 +23,7 @@ HistoricalEventSafetyTraceCase::event_to_inflow(
   return std::visit(
       Overloaded{
           [&](const typename List<std::shared_ptr<
-                  HistoricalEventSafetyTraceCase::InflowRecord>>::Nil _args)
+                  HistoricalEventSafetyTraceCase::InflowRecord>>::Nil)
               -> unsigned int { return default_inflow; },
           [&](const typename List<std::shared_ptr<
                   HistoricalEventSafetyTraceCase::InflowRecord>>::Cons _args)
@@ -49,8 +49,8 @@ __attribute__((pure)) bool HistoricalEventSafetyTraceCase::all_tests_pass(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<HistoricalEventSafetyTraceCase::TestResult>>::Nil
-                 _args) -> bool { return true; },
+              std::shared_ptr<HistoricalEventSafetyTraceCase::TestResult>>::Nil)
+              -> bool { return true; },
           [](const typename List<
               std::shared_ptr<HistoricalEventSafetyTraceCase::TestResult>>::Cons
                  _args) -> bool {
@@ -65,8 +65,8 @@ HistoricalEventSafetyTraceCase::stage_from_table(
     const unsigned int base_stage, const unsigned int out) {
   return std::visit(
       Overloaded{
-          [&](const typename List<std::pair<unsigned int, unsigned int>>::Nil
-                  _args) -> unsigned int { return base_stage; },
+          [&](const typename List<std::pair<unsigned int, unsigned int>>::Nil)
+              -> unsigned int { return base_stage; },
           [&](const typename List<std::pair<unsigned int, unsigned int>>::Cons
                   _args) -> unsigned int {
             unsigned int q = _args.d_a0.first;
@@ -89,7 +89,7 @@ HistoricalEventSafetyTraceCase::hist_witness_stage(const unsigned int out) {
 __attribute__((pure)) unsigned int
 HistoricalEventSafetyTraceCase::hist_witness_ctrl(
     const std::shared_ptr<HistoricalEventSafetyTraceCase::State> &s,
-    const unsigned int _x) {
+    const unsigned int) {
   if (90u <= s->reservoir_level_cm) {
     return 100u;
   } else {
@@ -100,7 +100,7 @@ HistoricalEventSafetyTraceCase::hist_witness_ctrl(
 __attribute__((pure)) unsigned int
 HistoricalEventSafetyTraceCase::hoover_controller(
     const std::shared_ptr<HistoricalEventSafetyTraceCase::State> &s,
-    const unsigned int _x) {
+    const unsigned int) {
   if (2000u <= s->reservoir_level_cm) {
     return 100u;
   } else {
@@ -198,7 +198,7 @@ __attribute__((pure)) unsigned int
 Nat::of_uint_acc(const std::shared_ptr<Uint> &d, const unsigned int acc) {
   return std::visit(
       Overloaded{
-          [&](const typename Uint::Nil _args) -> unsigned int { return acc; },
+          [&](const typename Uint::Nil) -> unsigned int { return acc; },
           [&](const typename Uint::D0 _args) -> unsigned int {
             return Nat::of_uint_acc(_args.d_a0, Nat::tail_mul(10u, acc));
           },
@@ -260,7 +260,7 @@ __attribute__((pure)) unsigned int
 Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
   return std::visit(
       Overloaded{
-          [&](const typename Uint0::Nil0 _args) -> unsigned int { return acc; },
+          [&](const typename Uint0::Nil0) -> unsigned int { return acc; },
           [&](const typename Uint0::D10 _args) -> unsigned int {
             return Nat::of_hex_uint_acc(_args.d_a0, Nat::tail_mul(16u, acc));
           },

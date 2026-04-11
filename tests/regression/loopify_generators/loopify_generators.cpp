@@ -70,10 +70,10 @@ LoopifyGenerators::zip_longest_aux(
       unsigned int f = _loop_fuel - 1;
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil _args) {
+              [&](const typename List<unsigned int>::Nil) {
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil _args0) {
+                        [&](const typename List<unsigned int>::Nil) {
                           if (_last) {
                             std::get<typename List<
                                 std::pair<unsigned int, unsigned int>>::Cons>(
@@ -114,7 +114,7 @@ LoopifyGenerators::zip_longest_aux(
               [&](const typename List<unsigned int>::Cons _args) {
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil _args0) {
+                        [&](const typename List<unsigned int>::Nil) {
                           auto _cell =
                               List<std::pair<unsigned int, unsigned int>>::cons(
                                   std::make_pair(_args.d_a0, default0),
@@ -188,7 +188,7 @@ LoopifyGenerators::len_impl(const std::shared_ptr<List<unsigned int>> &l) {
                      const std::shared_ptr<List<unsigned int>> l = _f.l;
                      std::visit(
                          Overloaded{
-                             [&](const typename List<unsigned int>::Nil _args)
+                             [&](const typename List<unsigned int>::Nil)
                                  -> void { _result = 0u; },
                              [&](const typename List<unsigned int>::Cons _args)
                                  -> void {
@@ -197,7 +197,7 @@ LoopifyGenerators::len_impl(const std::shared_ptr<List<unsigned int>> &l) {
                              }},
                          l->v());
                    },
-                   [&](_Call1 _f) { _result = (_result + 1); }},
+                   [&](_Call1) { _result = (_result + 1); }},
         _frame);
   }
   return _result;
@@ -282,7 +282,7 @@ LoopifyGenerators::take(const unsigned int n,
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil _args) {
+            [&](const typename List<unsigned int>::Nil) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::nil();
@@ -423,8 +423,9 @@ std::shared_ptr<List<unsigned int>> LoopifyGenerators::replicate_each(
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil _args)
-                          -> void { _result = List<unsigned int>::nil(); },
+                      [&](const typename List<unsigned int>::Nil) -> void {
+                        _result = List<unsigned int>::nil();
+                      },
                       [&](const typename List<unsigned int>::Cons _args)
                           -> void {
                         _stack.push_back(

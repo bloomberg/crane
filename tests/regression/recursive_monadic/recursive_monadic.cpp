@@ -27,7 +27,7 @@ unsigned int
 RecursiveMonadic::sum_list(const std::shared_ptr<List<unsigned int>> &xs) {
   return std::visit(
       Overloaded{
-          [](const typename List<unsigned int>::Nil _args) -> unsigned int {
+          [](const typename List<unsigned int>::Nil) -> unsigned int {
             return 0u;
           },
           [](const typename List<unsigned int>::Cons _args) -> unsigned int {
@@ -41,7 +41,7 @@ RecursiveMonadic::sum_list(const std::shared_ptr<List<unsigned int>> &xs) {
 /// 3. Recursive collect: transforms each element with effect
 std::shared_ptr<List<int64_t>> RecursiveMonadic::collect_lengths(
     const std::shared_ptr<List<std::string>> &xs) {
-  return std::visit(Overloaded{[](const typename List<std::string>::Nil _args)
+  return std::visit(Overloaded{[](const typename List<std::string>::Nil)
                                    -> std::shared_ptr<List<int64_t>> {
                                  return List<int64_t>::nil();
                                },

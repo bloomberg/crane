@@ -10,20 +10,21 @@ __attribute__((pure)) unsigned int RecordClosureEscape::sum_values(
     const std::shared_ptr<RecordClosureEscape::tree> &t, const unsigned int x) {
   return std::visit(
       Overloaded{
-          [&](const typename RecordClosureEscape::tree::Leaf _args)
-              -> unsigned int { return x; },
+          [&](const typename RecordClosureEscape::tree::Leaf) -> unsigned int {
+            return x;
+          },
           [&](const typename RecordClosureEscape::tree::Node _args)
               -> unsigned int {
             return std::visit(
                 Overloaded{
-                    [&](const typename RecordClosureEscape::tree::Leaf _args0)
+                    [&](const typename RecordClosureEscape::tree::Leaf)
                         -> unsigned int { return (_args.d_a1 + x); },
                     [&](const typename RecordClosureEscape::tree::Node _args0)
                         -> unsigned int {
                       return std::visit(
                           Overloaded{
-                              [&](const typename RecordClosureEscape::tree::Leaf
-                                      _args1) -> unsigned int {
+                              [&](const typename RecordClosureEscape::tree::
+                                      Leaf) -> unsigned int {
                                 return (_args0.d_a1 + x);
                               },
                               [&](const typename RecordClosureEscape::tree::Node

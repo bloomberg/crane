@@ -65,15 +65,15 @@ int main() {
   auto nats_list = NatStream::first_five_nats();
   auto vec = list_to_vec<std::shared_ptr<Nat>>(nats_list);
   ASSERT(vec.size() == 5);
-  for (int i = 0; i < 5; i++) {
-    ASSERT(nat_to_int(vec[i]) == i);
+  for (size_t i = 0; i < 5; i++) {
+    ASSERT(nat_to_int(vec[i]) == static_cast<int>(i));
   }
 
   // Test 2: first_five_ones should be [1, 1, 1, 1, 1]
   auto ones_list = NatStream::first_five_ones();
   auto vec_ones = list_to_vec<std::shared_ptr<Nat>>(ones_list);
   ASSERT(vec_ones.size() == 5);
-  for (int i = 0; i < 5; i++) {
+  for (size_t i = 0; i < 5; i++) {
     ASSERT(nat_to_int(vec_ones[i]) == 1);
   }
 

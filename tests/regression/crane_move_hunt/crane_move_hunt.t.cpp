@@ -4,8 +4,6 @@
 #include <iostream>
 
 int main() {
-  using CMH = CraneMoveHunt;
-
   // record_constant: keep_box + clone_box reuse of same binding
   auto r1 = exported_record_constant;
   std::cout << "record_constant.payload = " << r1->payload << std::endl;

@@ -105,12 +105,11 @@ struct IndParam {
     __attribute__((pure)) static unsigned int
     get_size(const std::shared_ptr<result> &r) {
       return std::visit(
-          Overloaded{[](const typename result::Ok _args) -> unsigned int {
-                       return C::size(_args.d_a0);
-                     },
-                     [](const typename result::Err _args) -> unsigned int {
-                       return 0u;
-                     }},
+          Overloaded{
+              [](const typename result::Ok _args) -> unsigned int {
+                return C::size(_args.d_a0);
+              },
+              [](const typename result::Err) -> unsigned int { return 0u; }},
           r->v());
     }
 
@@ -177,7 +176,7 @@ struct IndParam {
     static T1 t_rect(const T1 f, F1 &&f0, F2 &&f1,
                      const std::shared_ptr<t> &t0) {
       return std::visit(
-          Overloaded{[&](const typename t::Empty _args) -> T1 { return f; },
+          Overloaded{[&](const typename t::Empty) -> T1 { return f; },
                      [&](const typename t::Single _args) -> T1 {
                        return f0(_args.d_a0);
                      },
@@ -192,7 +191,7 @@ struct IndParam {
     static T1 t_rec(const T1 f, F1 &&f0, F2 &&f1,
                     const std::shared_ptr<t> &t0) {
       return std::visit(
-          Overloaded{[&](const typename t::Empty _args) -> T1 { return f; },
+          Overloaded{[&](const typename t::Empty) -> T1 { return f; },
                      [&](const typename t::Single _args) -> T1 {
                        return f0(_args.d_a0);
                      },

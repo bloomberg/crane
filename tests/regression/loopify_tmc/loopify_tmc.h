@@ -85,7 +85,7 @@ struct LoopifyTmc {
                 const std::shared_ptr<list<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename list<T1>::Nil _args) -> void {
+                        [&](const typename list<T1>::Nil) -> void {
                           _result = f;
                         },
                         [&](const typename list<T1>::Cons _args) -> void {
@@ -125,7 +125,7 @@ struct LoopifyTmc {
                 const std::shared_ptr<list<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename list<T1>::Nil _args) -> void {
+                        [&](const typename list<T1>::Nil) -> void {
                           _result = f;
                         },
                         [&](const typename list<T1>::Cons _args) -> void {
@@ -151,7 +151,7 @@ struct LoopifyTmc {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename list<T1>::Nil _args) {
+              [&](const typename list<T1>::Nil) {
                 if (_last) {
                   std::get<typename list<T1>::Cons>(_last->v_mut()).d_a1 =
                       std::move(l2);
@@ -187,7 +187,7 @@ struct LoopifyTmc {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename list<T1>::Nil _args) {
+              [&](const typename list<T1>::Nil) {
                 if (_last) {
                   std::get<typename list<T2>::Cons>(_last->v_mut()).d_a1 =
                       list<T2>::nil();
@@ -223,7 +223,7 @@ struct LoopifyTmc {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename list<T1>::Nil _args) {
+              [&](const typename list<T1>::Nil) {
                 if (_last) {
                   std::get<typename list<T1>::Cons>(_last->v_mut()).d_a1 =
                       list<T1>::nil();
@@ -263,7 +263,7 @@ struct LoopifyTmc {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename list<T1>::Nil _args) {
+              [&](const typename list<T1>::Nil) {
                 if (_last) {
                   std::get<typename list<T1>::Cons>(_last->v_mut()).d_a1 =
                       list<T1>::cons(x, list<T1>::nil());
@@ -341,7 +341,7 @@ struct LoopifyTmc {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename list<T1>::Nil _args) {
+              [&](const typename list<T1>::Nil) {
                 if (_last) {
                   std::get<typename list<T3>::Cons>(_last->v_mut()).d_a1 =
                       list<T3>::nil();
@@ -353,7 +353,7 @@ struct LoopifyTmc {
               [&](const typename list<T1>::Cons _args) {
                 std::visit(
                     Overloaded{
-                        [&](const typename list<T2>::Nil _args0) {
+                        [&](const typename list<T2>::Nil) {
                           if (_last) {
                             std::get<typename list<T3>::Cons>(_last->v_mut())
                                 .d_a1 = list<T3>::nil();
@@ -399,7 +399,7 @@ struct LoopifyTmc {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename list<T1>::Nil _args) {
+              [&](const typename list<T1>::Nil) {
                 if (_last) {
                   std::get<typename list<T1>::Cons>(_last->v_mut()).d_a1 =
                       list<T1>::nil();

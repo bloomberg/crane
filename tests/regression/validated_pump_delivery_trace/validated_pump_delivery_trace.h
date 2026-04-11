@@ -59,33 +59,31 @@ public:
   template <MapsTo<bool, t_A> F0>
   __attribute__((pure)) bool forallb(F0 &&f) const {
     return std::visit(
-        Overloaded{
-            [](const typename List<t_A>::Nil _args) -> bool { return true; },
-            [&](const typename List<t_A>::Cons _args) -> bool {
-              return (f(_args.d_a0) && _args.d_a1->forallb(f));
-            }},
+        Overloaded{[](const typename List<t_A>::Nil) -> bool { return true; },
+                   [&](const typename List<t_A>::Cons _args) -> bool {
+                     return (f(_args.d_a0) && _args.d_a1->forallb(f));
+                   }},
         this->v());
   }
 
   template <typename T1, MapsTo<T1, T1, t_A> F0>
   T1 fold_left(F0 &&f, const T1 a0) const {
     return std::visit(
-        Overloaded{
-            [&](const typename List<t_A>::Nil _args) -> T1 { return a0; },
-            [&](const typename List<t_A>::Cons _args) -> T1 {
-              return _args.d_a1->template fold_left<T1>(f, f(a0, _args.d_a0));
-            }},
+        Overloaded{[&](const typename List<t_A>::Nil) -> T1 { return a0; },
+                   [&](const typename List<t_A>::Cons _args) -> T1 {
+                     return _args.d_a1->template fold_left<T1>(
+                         f, f(a0, _args.d_a0));
+                   }},
         this->v());
   }
 
   __attribute__((pure)) unsigned int length() const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
-                     return 0u;
-                   },
-                   [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     return (_args.d_a1->length() + 1);
-                   }},
+        Overloaded{
+            [](const typename List<t_A>::Nil) -> unsigned int { return 0u; },
+            [](const typename List<t_A>::Cons _args) -> unsigned int {
+              return (_args.d_a1->length() + 1);
+            }},
         this->v());
   }
 };
@@ -734,17 +732,15 @@ struct ValidatedPumpDeliveryTraceCase {
 
     __attribute__((pure)) bool fault_blocks_bolus() const {
       return std::visit(
-          Overloaded{
-              [](const typename FaultStatus::Fault_None _args) -> bool {
-                return false;
-              },
-              [](const typename FaultStatus::Fault_LowReservoir _args) -> bool {
-                return _args.d_a0 < 10u;
-              },
-              [](const typename FaultStatus::Fault_BatteryLow _args) -> bool {
-                return false;
-              },
-              [](const auto _args) -> bool { return true; }},
+          Overloaded{[](const typename FaultStatus::Fault_None) -> bool {
+                       return false;
+                     },
+                     [](const typename FaultStatus::Fault_LowReservoir _args)
+                         -> bool { return _args.d_a0 < 10u; },
+                     [](const typename FaultStatus::Fault_BatteryLow) -> bool {
+                       return false;
+                     },
+                     [](const auto) -> bool { return true; }},
           this->v());
     }
   };
@@ -755,19 +751,17 @@ struct ValidatedPumpDeliveryTraceCase {
                              const std::shared_ptr<FaultStatus> &f4) {
     return std::visit(
         Overloaded{
-            [&](const typename FaultStatus::Fault_None _args) -> T1 {
-              return f;
-            },
-            [&](const typename FaultStatus::Fault_Occlusion _args) -> T1 {
+            [&](const typename FaultStatus::Fault_None) -> T1 { return f; },
+            [&](const typename FaultStatus::Fault_Occlusion) -> T1 {
               return f0;
             },
             [&](const typename FaultStatus::Fault_LowReservoir _args) -> T1 {
               return f1(_args.d_a0);
             },
-            [&](const typename FaultStatus::Fault_BatteryLow _args) -> T1 {
+            [&](const typename FaultStatus::Fault_BatteryLow) -> T1 {
               return f2;
             },
-            [&](const typename FaultStatus::Fault_Unknown _args) -> T1 {
+            [&](const typename FaultStatus::Fault_Unknown) -> T1 {
               return f3;
             }},
         f4->v());
@@ -779,19 +773,17 @@ struct ValidatedPumpDeliveryTraceCase {
                             const std::shared_ptr<FaultStatus> &f4) {
     return std::visit(
         Overloaded{
-            [&](const typename FaultStatus::Fault_None _args) -> T1 {
-              return f;
-            },
-            [&](const typename FaultStatus::Fault_Occlusion _args) -> T1 {
+            [&](const typename FaultStatus::Fault_None) -> T1 { return f; },
+            [&](const typename FaultStatus::Fault_Occlusion) -> T1 {
               return f0;
             },
             [&](const typename FaultStatus::Fault_LowReservoir _args) -> T1 {
               return f1(_args.d_a0);
             },
-            [&](const typename FaultStatus::Fault_BatteryLow _args) -> T1 {
+            [&](const typename FaultStatus::Fault_BatteryLow) -> T1 {
               return f2;
             },
-            [&](const typename FaultStatus::Fault_Unknown _args) -> T1 {
+            [&](const typename FaultStatus::Fault_Unknown) -> T1 {
               return f3;
             }},
         f4->v());
@@ -939,16 +931,14 @@ struct ValidatedPumpDeliveryTraceCase {
   static T1 SuspendDecision_rect(const T1 f, F1 &&f0, const T1 f1,
                                  const std::shared_ptr<SuspendDecision> &s) {
     return std::visit(
-        Overloaded{
-            [&](const typename SuspendDecision::Suspend_None _args) -> T1 {
-              return f;
-            },
-            [&](const typename SuspendDecision::Suspend_Reduce _args) -> T1 {
-              return f0(_args.d_a0);
-            },
-            [&](const typename SuspendDecision::Suspend_Withhold _args) -> T1 {
-              return f1;
-            }},
+        Overloaded{[&](const typename SuspendDecision::Suspend_None) -> T1 {
+                     return f;
+                   },
+                   [&](const typename SuspendDecision::Suspend_Reduce _args)
+                       -> T1 { return f0(_args.d_a0); },
+                   [&](const typename SuspendDecision::Suspend_Withhold) -> T1 {
+                     return f1;
+                   }},
         s->v());
   }
 
@@ -956,16 +946,14 @@ struct ValidatedPumpDeliveryTraceCase {
   static T1 SuspendDecision_rec(const T1 f, F1 &&f0, const T1 f1,
                                 const std::shared_ptr<SuspendDecision> &s) {
     return std::visit(
-        Overloaded{
-            [&](const typename SuspendDecision::Suspend_None _args) -> T1 {
-              return f;
-            },
-            [&](const typename SuspendDecision::Suspend_Reduce _args) -> T1 {
-              return f0(_args.d_a0);
-            },
-            [&](const typename SuspendDecision::Suspend_Withhold _args) -> T1 {
-              return f1;
-            }},
+        Overloaded{[&](const typename SuspendDecision::Suspend_None) -> T1 {
+                     return f;
+                   },
+                   [&](const typename SuspendDecision::Suspend_Reduce _args)
+                       -> T1 { return f0(_args.d_a0); },
+                   [&](const typename SuspendDecision::Suspend_Withhold) -> T1 {
+                     return f1;
+                   }},
         s->v());
   }
 
@@ -1074,14 +1062,15 @@ struct ValidatedPumpDeliveryTraceCase {
           Overloaded{[](const typename PrecisionResult::PrecOK _args) -> bool {
                        return _args.d_a1;
                      },
-                     [](const typename PrecisionResult::PrecError _args)
-                         -> bool { return false; }},
+                     [](const typename PrecisionResult::PrecError) -> bool {
+                       return false;
+                     }},
           this->v());
     }
 
     __attribute__((pure)) unsigned int precision_result_code() const {
       return std::visit(
-          Overloaded{[](const typename PrecisionResult::PrecOK _args)
+          Overloaded{[](const typename PrecisionResult::PrecOK)
                          -> unsigned int { return 0u; },
                      [](const typename PrecisionResult::PrecError _args)
                          -> unsigned int { return _args.d_a0; }},

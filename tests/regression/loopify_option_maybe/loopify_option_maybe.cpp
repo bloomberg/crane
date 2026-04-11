@@ -12,7 +12,7 @@ LoopifyOptionMaybe::find_even(const std::shared_ptr<List<unsigned int>> &l) {
   std::shared_ptr<List<unsigned int>> _loop_l = l;
   bool _continue = true;
   while (_continue) {
-    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil) {
                             _result = std::optional<unsigned int>();
                             _continue = false;
                           },
@@ -37,7 +37,7 @@ LoopifyOptionMaybe::find_greater(const unsigned int threshold,
   std::shared_ptr<List<unsigned int>> _loop_l = l;
   bool _continue = true;
   while (_continue) {
-    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil) {
                             _result = std::optional<unsigned int>();
                             _continue = false;
                           },
@@ -64,8 +64,8 @@ __attribute__((pure)) std::optional<unsigned int> LoopifyOptionMaybe::lookup(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<std::pair<unsigned int, unsigned int>>::Nil
-                    _args) {
+            [&](const typename List<
+                std::pair<unsigned int, unsigned int>>::Nil) {
               _result = std::optional<unsigned int>();
               _continue = false;
             },
@@ -95,8 +95,8 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::lookup_all(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<std::pair<unsigned int, unsigned int>>::Nil
-                    _args) {
+            [&](const typename List<
+                std::pair<unsigned int, unsigned int>>::Nil) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::nil();
@@ -130,7 +130,7 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::lookup_all(
 
 __attribute__((pure)) std::optional<unsigned int>
 LoopifyOptionMaybe::safe_head(const std::shared_ptr<List<unsigned int>> &l) {
-  return std::visit(Overloaded{[](const typename List<unsigned int>::Nil _args)
+  return std::visit(Overloaded{[](const typename List<unsigned int>::Nil)
                                    -> std::optional<unsigned int> {
                                  return std::optional<unsigned int>();
                                },
@@ -146,7 +146,7 @@ __attribute__((pure)) std::optional<std::shared_ptr<List<unsigned int>>>
 LoopifyOptionMaybe::safe_tail(const std::shared_ptr<List<unsigned int>> &l) {
   return std::visit(
       Overloaded{
-          [](const typename List<unsigned int>::Nil _args)
+          [](const typename List<unsigned int>::Nil)
               -> std::optional<std::shared_ptr<List<unsigned int>>> {
             return std::optional<std::shared_ptr<List<unsigned int>>>();
           },
@@ -167,7 +167,7 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::catMaybes(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<std::optional<unsigned int>>::Nil _args) {
+            [&](const typename List<std::optional<unsigned int>>::Nil) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::nil();
@@ -205,7 +205,7 @@ LoopifyOptionMaybe::find_index_even_aux(
   std::shared_ptr<List<unsigned int>> _loop_l = l;
   bool _continue = true;
   while (_continue) {
-    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil) {
                             _result = std::optional<unsigned int>();
                             _continue = false;
                           },

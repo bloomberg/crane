@@ -61,15 +61,16 @@ public:
       return std::const_pointer_cast<List<t_A>>(this->shared_from_this());
     } else {
       unsigned int n0 = n - 1;
-      return std::visit(Overloaded{[](const typename List<t_A>::Nil _args)
-                                       -> std::shared_ptr<List<t_A>> {
-                                     return List<t_A>::nil();
-                                   },
-                                   [&](const typename List<t_A>::Cons _args)
-                                       -> std::shared_ptr<List<t_A>> {
-                                     return _args.d_a1->skipn(n0);
-                                   }},
-                        this->v());
+      return std::visit(
+          Overloaded{
+              [](const typename List<t_A>::Nil) -> std::shared_ptr<List<t_A>> {
+                return List<t_A>::nil();
+              },
+              [&](const typename List<t_A>::Cons _args)
+                  -> std::shared_ptr<List<t_A>> {
+                return _args.d_a1->skipn(n0);
+              }},
+          this->v());
     }
   }
 
@@ -80,8 +81,9 @@ public:
       unsigned int n0 = n - 1;
       return std::visit(
           Overloaded{
-              [](const typename List<t_A>::Nil _args)
-                  -> std::shared_ptr<List<t_A>> { return List<t_A>::nil(); },
+              [](const typename List<t_A>::Nil) -> std::shared_ptr<List<t_A>> {
+                return List<t_A>::nil();
+              },
               [&](const typename List<t_A>::Cons _args)
                   -> std::shared_ptr<List<t_A>> {
                 return List<t_A>::cons(_args.d_a0, _args.d_a1->firstn(n0));
@@ -92,18 +94,17 @@ public:
 
   __attribute__((pure)) unsigned int length() const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
-                     return 0u;
-                   },
-                   [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     return (_args.d_a1->length() + 1);
-                   }},
+        Overloaded{
+            [](const typename List<t_A>::Nil) -> unsigned int { return 0u; },
+            [](const typename List<t_A>::Cons _args) -> unsigned int {
+              return (_args.d_a1->length() + 1);
+            }},
         this->v());
   }
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
     return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil _args)
+        Overloaded{[&](const typename List<t_A>::Nil)
                        -> std::shared_ptr<List<t_A>> { return m; },
                    [&](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {
@@ -120,7 +121,7 @@ struct UpdateNthBounds {
     if (n < l->length()) {
       return l->firstn(n)->app(List<T1>::cons(x, l->skipn((n + 1))));
     } else {
-      return std::move(l);
+      return l;
     }
   }
 

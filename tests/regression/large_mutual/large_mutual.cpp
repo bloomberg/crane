@@ -20,7 +20,7 @@ LargeMutual::expr_size(const std::shared_ptr<LargeMutual::expr> &e) {
                      expr_size(_args.d_a2)) +
                     1);
           },
-          [](const auto _args) -> unsigned int { return 1u; }},
+          [](const auto) -> unsigned int { return 1u; }},
       e->v());
 }
 
@@ -43,7 +43,7 @@ LargeMutual::bexpr_size(const std::shared_ptr<LargeMutual::bexpr> &b) {
           [](const typename LargeMutual::bexpr::BNot _args) -> unsigned int {
             return (bexpr_size(_args.d_a0) + 1);
           },
-          [](const auto _args) -> unsigned int { return 1u; }},
+          [](const auto) -> unsigned int { return 1u; }},
       b->v());
 }
 
@@ -65,7 +65,7 @@ LargeMutual::stmt_size(const std::shared_ptr<LargeMutual::stmt> &s) {
           [](const typename LargeMutual::stmt::SWhile _args) -> unsigned int {
             return ((bexpr_size(_args.d_a0) + stmt_size(_args.d_a1)) + 1);
           },
-          [](const typename LargeMutual::stmt::SSkip _args) -> unsigned int {
+          [](const typename LargeMutual::stmt::SSkip) -> unsigned int {
             return 1u;
           }},
       s->v());

@@ -190,7 +190,7 @@ struct Pos {
                    [&](const typename Positive::XO _args) -> T1 {
                      return iter_op<T1>(op, _args.d_a0, op(a, a));
                    },
-                   [&](const typename Positive::XH _args) -> T1 { return a; }},
+                   [&](const typename Positive::XH) -> T1 { return a; }},
         p->v());
   }
 

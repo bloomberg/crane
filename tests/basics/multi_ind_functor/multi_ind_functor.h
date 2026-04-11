@@ -65,7 +65,7 @@ template <Elem E> struct Container {
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 maybe_rect(const T1 f, F1 &&f0, const std::shared_ptr<maybe> &m) {
     return std::visit(
-        Overloaded{[&](const typename maybe::Nothing _args) -> T1 { return f; },
+        Overloaded{[&](const typename maybe::Nothing) -> T1 { return f; },
                    [&](const typename maybe::Just _args) -> T1 {
                      return f0(_args.d_a0);
                    }},
@@ -75,7 +75,7 @@ template <Elem E> struct Container {
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 maybe_rec(const T1 f, F1 &&f0, const std::shared_ptr<maybe> &m) {
     return std::visit(
-        Overloaded{[&](const typename maybe::Nothing _args) -> T1 { return f; },
+        Overloaded{[&](const typename maybe::Nothing) -> T1 { return f; },
                    [&](const typename maybe::Just _args) -> T1 {
                      return f0(_args.d_a0);
                    }},
@@ -128,7 +128,7 @@ template <Elem E> struct Container {
             MapsTo<T1, std::shared_ptr<maybe>, std::shared_ptr<mlist>, T1> F1>
   static T1 mlist_rect(const T1 f, F1 &&f0, const std::shared_ptr<mlist> &m) {
     return std::visit(
-        Overloaded{[&](const typename mlist::MNil _args) -> T1 { return f; },
+        Overloaded{[&](const typename mlist::MNil) -> T1 { return f; },
                    [&](const typename mlist::MCons _args) -> T1 {
                      return f0(_args.d_a0, _args.d_a1,
                                mlist_rect<T1>(f, f0, _args.d_a1));
@@ -140,7 +140,7 @@ template <Elem E> struct Container {
             MapsTo<T1, std::shared_ptr<maybe>, std::shared_ptr<mlist>, T1> F1>
   static T1 mlist_rec(const T1 f, F1 &&f0, const std::shared_ptr<mlist> &m) {
     return std::visit(
-        Overloaded{[&](const typename mlist::MNil _args) -> T1 { return f; },
+        Overloaded{[&](const typename mlist::MNil) -> T1 { return f; },
                    [&](const typename mlist::MCons _args) -> T1 {
                      return f0(_args.d_a0, _args.d_a1,
                                mlist_rec<T1>(f, f0, _args.d_a1));
@@ -220,9 +220,8 @@ template <Elem E> struct Container {
   __attribute__((pure)) static bool
   is_nothing(const std::shared_ptr<maybe> &m) {
     return std::visit(
-        Overloaded{
-            [](const typename maybe::Nothing _args) -> bool { return true; },
-            [](const typename maybe::Just _args) -> bool { return false; }},
+        Overloaded{[](const typename maybe::Nothing) -> bool { return true; },
+                   [](const typename maybe::Just) -> bool { return false; }},
         m->v());
   }
 
@@ -230,7 +229,7 @@ template <Elem E> struct Container {
   mlist_length(const std::shared_ptr<mlist> &l) {
     return std::visit(
         Overloaded{
-            [](const typename mlist::MNil _args) -> unsigned int { return 0u; },
+            [](const typename mlist::MNil) -> unsigned int { return 0u; },
             [](const typename mlist::MCons _args) -> unsigned int {
               return (mlist_length(_args.d_a1) + 1);
             }},

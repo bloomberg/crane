@@ -38,19 +38,19 @@ FunctionVernac::R_div2_correct(const unsigned int n, const unsigned int _res) {
       [](unsigned int y)
           -> std::function<std::shared_ptr<FunctionVernac::R_div2>(
               unsigned int)> {
-        return [=](unsigned int _x0) mutable { return R_div2::r_div2_0(y); };
+        return [=](unsigned int) mutable { return R_div2::r_div2_0(y); };
       },
       [](unsigned int y)
           -> std::function<std::shared_ptr<FunctionVernac::R_div2>(
               unsigned int)> {
-        return [=](unsigned int _x0) mutable { return R_div2::r_div2_1(y); };
+        return [=](unsigned int) mutable { return R_div2::r_div2_1(y); };
       },
       [](unsigned int y, unsigned int y0,
          std::function<std::shared_ptr<FunctionVernac::R_div2>(unsigned int)>
              y2)
           -> std::function<std::shared_ptr<FunctionVernac::R_div2>(
               unsigned int)> {
-        return [=](unsigned int _x0) mutable {
+        return [=](unsigned int) mutable {
           return R_div2::r_div2_2(y, y0, div2(y0), y2(div2(y0)));
         };
       },
@@ -61,7 +61,7 @@ std::shared_ptr<Sig<unsigned int>> FunctionVernac::list_sum_terminate(
     const std::shared_ptr<List<unsigned int>> &l) {
   return std::visit(
       Overloaded{
-          [](const typename List<unsigned int>::Nil _args)
+          [](const typename List<unsigned int>::Nil)
               -> std::shared_ptr<Sig<unsigned int>> {
             return Sig<unsigned int>::exist(0u);
           },
@@ -92,9 +92,8 @@ FunctionVernac::R_list_sum_correct(const std::shared_ptr<List<unsigned int>> &l,
       [](std::shared_ptr<List<unsigned int>> y)
           -> std::function<std::shared_ptr<FunctionVernac::R_list_sum>(
               unsigned int)> {
-        return [=](unsigned int _x0) mutable {
-          return R_list_sum::r_list_sum_0(y);
-        };
+        return
+            [=](unsigned int) mutable { return R_list_sum::r_list_sum_0(y); };
       },
       [](std::shared_ptr<List<unsigned int>> y, unsigned int y0,
          std::shared_ptr<List<unsigned int>> y1,
@@ -103,7 +102,7 @@ FunctionVernac::R_list_sum_correct(const std::shared_ptr<List<unsigned int>> &l,
              y3)
           -> std::function<std::shared_ptr<FunctionVernac::R_list_sum>(
               unsigned int)> {
-        return [=](unsigned int _x0) mutable {
+        return [=](unsigned int) mutable {
           return R_list_sum::r_list_sum_1(y, y0, y1, list_sum(y1),
                                           y3(list_sum(y1)));
         };

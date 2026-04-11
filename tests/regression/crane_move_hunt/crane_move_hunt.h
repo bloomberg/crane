@@ -50,12 +50,12 @@ struct CraneMoveHunt {
     std::shared_ptr<box> b2 = clone_box(b);
     if (keep_box(b)->enabled) {
       if (std::move(b)->enabled) {
-        return std::move(b2);
+        return b2;
       } else {
-        return std::move(b1);
+        return b1;
       }
     } else {
-      return std::move(b1);
+      return b1;
     }
   }();
   static std::shared_ptr<box> record_function(const std::shared_ptr<box> &b0);

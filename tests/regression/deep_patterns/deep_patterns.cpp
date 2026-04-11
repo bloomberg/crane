@@ -43,19 +43,19 @@ __attribute__((pure)) unsigned int
 DeepPatterns::list_shape(const std::shared_ptr<List<unsigned int>> &l) {
   return std::visit(
       Overloaded{
-          [](const typename List<unsigned int>::Nil _args) -> unsigned int {
+          [](const typename List<unsigned int>::Nil) -> unsigned int {
             return 0u;
           },
           [](const typename List<unsigned int>::Cons _args) -> unsigned int {
             return std::visit(
                 Overloaded{
-                    [&](const typename List<unsigned int>::Nil _args0)
+                    [&](const typename List<unsigned int>::Nil)
                         -> unsigned int { return _args.d_a0; },
                     [&](const typename List<unsigned int>::Cons _args0)
                         -> unsigned int {
                       return std::visit(
                           Overloaded{
-                              [&](const typename List<unsigned int>::Nil _args1)
+                              [&](const typename List<unsigned int>::Nil)
                                   -> unsigned int {
                                 return (_args.d_a0 + _args0.d_a0);
                               },
@@ -64,7 +64,7 @@ DeepPatterns::list_shape(const std::shared_ptr<List<unsigned int>> &l) {
                                 return std::visit(
                                     Overloaded{
                                         [&](const typename List<unsigned int>::
-                                                Nil _args2) -> unsigned int {
+                                                Nil) -> unsigned int {
                                           return ((_args.d_a0 + _args0.d_a0) +
                                                   _args1.d_a0);
                                         },
@@ -117,12 +117,12 @@ __attribute__((pure)) unsigned int DeepPatterns::complex_match(
     std::shared_ptr<List<unsigned int>> l = p.second;
     return std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil _args) -> unsigned int {
+            [&](const typename List<unsigned int>::Nil) -> unsigned int {
               return n;
             },
             [&](const typename List<unsigned int>::Cons _args) -> unsigned int {
               return std::visit(
-                  Overloaded{[&](const typename List<unsigned int>::Nil _args0)
+                  Overloaded{[&](const typename List<unsigned int>::Nil)
                                  -> unsigned int { return (n + _args.d_a0); },
                              [&](const typename List<unsigned int>::Cons _args0)
                                  -> unsigned int {
@@ -154,7 +154,7 @@ __attribute__((pure)) unsigned int DeepPatterns::match_pair_list(
   return std::visit(
       Overloaded{
           [](const typename DeepPatterns::mylist<std::shared_ptr<
-                 DeepPatterns::pair<unsigned int, unsigned int>>>::Nil _args)
+                 DeepPatterns::pair<unsigned int, unsigned int>>>::Nil)
               -> unsigned int { return 0u; },
           [](const typename DeepPatterns::mylist<std::shared_ptr<
                  DeepPatterns::pair<unsigned int, unsigned int>>>::Cons _args)
@@ -172,7 +172,7 @@ __attribute__((pure)) unsigned int DeepPatterns::match_two(
     const std::shared_ptr<DeepPatterns::mylist<unsigned int>> &l) {
   return std::visit(
       Overloaded{
-          [](const typename DeepPatterns::mylist<unsigned int>::Nil _args)
+          [](const typename DeepPatterns::mylist<unsigned int>::Nil)
               -> unsigned int { return 0u; },
           [](const typename DeepPatterns::mylist<unsigned int>::Cons _args)
               -> unsigned int { return _args.d_a0; }},
@@ -187,8 +187,8 @@ __attribute__((pure)) unsigned int DeepPatterns::match_triple(
       Overloaded{
           [](const typename DeepPatterns::mylist<
               std::shared_ptr<DeepPatterns::mylist<
-                  std::shared_ptr<DeepPatterns::mylist<unsigned int>>>>>::Nil
-                 _args) -> unsigned int { return 0u; },
+                  std::shared_ptr<DeepPatterns::mylist<unsigned int>>>>>::Nil)
+              -> unsigned int { return 0u; },
           [](const typename DeepPatterns::mylist<
               std::shared_ptr<DeepPatterns::mylist<
                   std::shared_ptr<DeepPatterns::mylist<unsigned int>>>>>::Cons
@@ -196,7 +196,7 @@ __attribute__((pure)) unsigned int DeepPatterns::match_triple(
             return std::visit(
                 Overloaded{
                     [](const typename DeepPatterns::mylist<std::shared_ptr<
-                           DeepPatterns::mylist<unsigned int>>>::Nil _args0)
+                           DeepPatterns::mylist<unsigned int>>>::Nil)
                         -> unsigned int { return 1u; },
                     [](const typename DeepPatterns::mylist<std::shared_ptr<
                            DeepPatterns::mylist<unsigned int>>>::Cons _args0)
@@ -204,7 +204,7 @@ __attribute__((pure)) unsigned int DeepPatterns::match_triple(
                       return std::visit(
                           Overloaded{
                               [](const typename DeepPatterns::mylist<
-                                  unsigned int>::Nil _args1) -> unsigned int {
+                                  unsigned int>::Nil) -> unsigned int {
                                 return 2u;
                               },
                               [](const typename DeepPatterns::mylist<

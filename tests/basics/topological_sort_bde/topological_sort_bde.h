@@ -66,7 +66,7 @@ public:
   combine(const bsl::shared_ptr<List<T1>> &l_) const {
     return bsl::visit(
         bdlf::Overloaded{
-            [](const typename List<t_A>::Nil _args)
+            [](const typename List<t_A>::Nil)
                 -> bsl::shared_ptr<List<bsl::pair<t_A, T1>>> {
               return List<bsl::pair<t_A, T1>>::nil();
             },
@@ -74,7 +74,7 @@ public:
                 -> bsl::shared_ptr<List<bsl::pair<t_A, T1>>> {
               return bsl::visit(
                   bdlf::Overloaded{
-                      [](const typename List<T1>::Nil _args0)
+                      [](const typename List<T1>::Nil)
                           -> bsl::shared_ptr<List<bsl::pair<t_A, T1>>> {
                         return List<bsl::pair<t_A, T1>>::nil();
                       },
@@ -92,7 +92,7 @@ public:
   __attribute__((pure)) bsl::optional<t_A> find(F0 &&f) const {
     return bsl::visit(
         bdlf::Overloaded{
-            [](const typename List<t_A>::Nil _args) -> bsl::optional<t_A> {
+            [](const typename List<t_A>::Nil) -> bsl::optional<t_A> {
               return bsl::optional<t_A>();
             },
             [&](const typename List<t_A>::Cons _args) -> bsl::optional<t_A> {
@@ -108,8 +108,9 @@ public:
   bsl::shared_ptr<List<t_A>> filter(F0 &&f) const {
     return bsl::visit(
         bdlf::Overloaded{
-            [](const typename List<t_A>::Nil _args)
-                -> bsl::shared_ptr<List<t_A>> { return List<t_A>::nil(); },
+            [](const typename List<t_A>::Nil) -> bsl::shared_ptr<List<t_A>> {
+              return List<t_A>::nil();
+            },
             [&](const typename List<t_A>::Cons _args)
                 -> bsl::shared_ptr<List<t_A>> {
               if (f(_args.d_a0)) {
@@ -124,7 +125,7 @@ public:
   T1 fold_right(F0 &&f, const T1 a0) const {
     return bsl::visit(
         bdlf::Overloaded{
-            [&](const typename List<t_A>::Nil _args) -> T1 { return a0; },
+            [&](const typename List<t_A>::Nil) -> T1 { return a0; },
             [&](const typename List<t_A>::Cons _args) -> T1 {
               return f(_args.d_a0, _args.d_a1->template fold_right<T1>(f, a0));
             }},
@@ -133,7 +134,7 @@ public:
   template <typename T1> bsl::shared_ptr<List<T1>> concat() const {
     return bsl::visit(
         bdlf::Overloaded{
-            [](const typename List<bsl::shared_ptr<List<T1>>>::Nil _args)
+            [](const typename List<bsl::shared_ptr<List<T1>>>::Nil)
                 -> bsl::shared_ptr<List<T1>> { return List<T1>::nil(); },
             [](const typename List<bsl::shared_ptr<List<T1>>>::Cons _args)
                 -> bsl::shared_ptr<List<T1>> {
@@ -145,8 +146,9 @@ public:
   bsl::shared_ptr<List<T1>> map(F0 &&f) const {
     return bsl::visit(
         bdlf::Overloaded{
-            [](const typename List<t_A>::Nil _args)
-                -> bsl::shared_ptr<List<T1>> { return List<T1>::nil(); },
+            [](const typename List<t_A>::Nil) -> bsl::shared_ptr<List<T1>> {
+              return List<T1>::nil();
+            },
             [&](const typename List<t_A>::Cons _args)
                 -> bsl::shared_ptr<List<T1>> {
               return List<T1>::cons(f(_args.d_a0),
@@ -157,9 +159,7 @@ public:
   __attribute__((pure)) unsigned int length() const {
     return bsl::visit(
         bdlf::Overloaded{
-            [](const typename List<t_A>::Nil _args) -> unsigned int {
-              return 0u;
-            },
+            [](const typename List<t_A>::Nil) -> unsigned int { return 0u; },
             [](const typename List<t_A>::Cons _args) -> unsigned int {
               return (_args.d_a1->length() + 1);
             }},
@@ -167,13 +167,14 @@ public:
   }
   bsl::shared_ptr<List<t_A>> app(bsl::shared_ptr<List<t_A>> m) const {
     return bsl::visit(
-        bdlf::Overloaded{[&](const typename List<t_A>::Nil _args)
-                             -> bsl::shared_ptr<List<t_A>> { return m; },
-                         [&](const typename List<t_A>::Cons _args)
-                             -> bsl::shared_ptr<List<t_A>> {
-                           return List<t_A>::cons(_args.d_a0,
-                                                  _args.d_a1->app(m));
-                         }},
+        bdlf::Overloaded{
+            [&](const typename List<t_A>::Nil) -> bsl::shared_ptr<List<t_A>> {
+              return m;
+            },
+            [&](const typename List<t_A>::Cons _args)
+                -> bsl::shared_ptr<List<t_A>> {
+              return List<t_A>::cons(_args.d_a0, _args.d_a1->app(m));
+            }},
         this->v());
   }
 };
@@ -196,16 +197,14 @@ struct ToString {
               const bsl::shared_ptr<List<T1>> &l) {
     return bsl::visit(
         bdlf::Overloaded{
-            [](const typename List<T1>::Nil _args) -> bsl::string {
-              return "";
-            },
+            [](const typename List<T1>::Nil) -> bsl::string { return ""; },
             [&](const typename List<T1>::Cons _args) -> bsl::string {
               return bsl::visit(
                   bdlf::Overloaded{
-                      [&](const typename List<T1>::Nil _args0) -> bsl::string {
+                      [&](const typename List<T1>::Nil) -> bsl::string {
                         return sep + p(_args.d_a0);
                       },
-                      [&](const typename List<T1>::Cons _args0) -> bsl::string {
+                      [&](const typename List<T1>::Cons) -> bsl::string {
                         return sep + p(_args.d_a0) +
                                intersperse<T1>(p, sep, _args.d_a1);
                       }},
@@ -218,16 +217,14 @@ struct ToString {
   list_to_string(F0 &&p, const bsl::shared_ptr<List<T1>> &l) {
     return bsl::visit(
         bdlf::Overloaded{
-            [](const typename List<T1>::Nil _args) -> bsl::string {
-              return "[]";
-            },
+            [](const typename List<T1>::Nil) -> bsl::string { return "[]"; },
             [&](const typename List<T1>::Cons _args) -> bsl::string {
               return bsl::visit(
                   bdlf::Overloaded{
-                      [&](const typename List<T1>::Nil _args0) -> bsl::string {
+                      [&](const typename List<T1>::Nil) -> bsl::string {
                         return "["_s + p(_args.d_a0) + "]"_s;
                       },
-                      [&](const typename List<T1>::Cons _args0) -> bsl::string {
+                      [&](const typename List<T1>::Cons) -> bsl::string {
                         return "["_s + p(_args.d_a0) +
                                intersperse<T1>(p, "; ", _args.d_a1) + "]"_s;
                       }},
@@ -253,8 +250,8 @@ struct TopologicalSort {
             bsl::shared_ptr<List<T1>> h) -> bsl::shared_ptr<List<T1>> {
       return bsl::visit(
           bdlf::Overloaded{
-              [&](const typename List<bsl::pair<T1, T1>>::Nil _args)
-                  -> bsl::shared_ptr<List<T1>> { return bsl::move(h); },
+              [&](const typename List<bsl::pair<T1, T1>>::Nil)
+                  -> bsl::shared_ptr<List<T1>> { return h; },
               [&](const typename List<bsl::pair<T1, T1>>::Cons _args)
                   -> bsl::shared_ptr<List<T1>> {
                 T1 e1 = _args.d_a0.first;
@@ -368,7 +365,7 @@ struct TopologicalSort {
         bsl::shared_ptr<List<T1>> l = graph_lookup<T1>(eqb_node, elem, graph0);
         return bsl::visit(
             bdlf::Overloaded{
-                [&](const typename List<T1>::Nil _args) -> T1 { return elem; },
+                [&](const typename List<T1>::Nil) -> T1 { return elem; },
                 [&](const typename List<T1>::Cons _args) -> T1 {
                   return cycle_entry_aux<T1>(eqb_node, graph0,
                                              List<T1>::cons(elem, seens),
@@ -384,9 +381,8 @@ struct TopologicalSort {
       bsl::shared_ptr<List<bsl::pair<T1, bsl::shared_ptr<List<T1>>>>> graph0) {
     return bsl::visit(
         bdlf::Overloaded{
-            [](const typename List<
-                bsl::pair<T1, bsl::shared_ptr<List<T1>>>>::Nil _args)
-                -> bsl::optional<T1> { return bsl::optional<T1>(); },
+            [](const typename List<bsl::pair<T1, bsl::shared_ptr<List<T1>>>>::
+                   Nil) -> bsl::optional<T1> { return bsl::optional<T1>(); },
             [&](const typename List<bsl::pair<T1, bsl::shared_ptr<List<T1>>>>::
                     Cons _args) -> bsl::optional<T1> {
               T1 e = _args.d_a0.first;
@@ -403,11 +399,11 @@ struct TopologicalSort {
       const unsigned int counter, const T1 elem,
       bsl::shared_ptr<List<T1>> cycl) {
     if (counter <= 0) {
-      return bsl::move(cycl);
+      return cycl;
     } else {
       unsigned int c = counter - 1;
       if (contains<T1>(eqb_node, elem, cycl)) {
-        return bsl::move(cycl);
+        return cycl;
       } else {
         return graph_lookup<T1>(eqb_node, elem, graph0)
             ->template fold_right<bsl::shared_ptr<List<T1>>>(
@@ -436,8 +432,8 @@ struct TopologicalSort {
   __attribute__((pure)) static bool null(const bsl::shared_ptr<List<T1>> &xs) {
     return bsl::visit(
         bdlf::Overloaded{
-            [](const typename List<T1>::Nil _args) -> bool { return true; },
-            [](const typename List<T1>::Cons _args) -> bool { return false; }},
+            [](const typename List<T1>::Nil) -> bool { return true; },
+            [](const typename List<T1>::Cons) -> bool { return false; }},
         xs->v());
   }
   template <typename T1, MapsTo<bool, T1, T1> F0>

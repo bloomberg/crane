@@ -62,7 +62,7 @@ __attribute__((pure)) unsigned int
 Nat::of_uint_acc(const std::shared_ptr<Uint> &d, const unsigned int acc) {
   return std::visit(
       Overloaded{
-          [&](const typename Uint::Nil _args) -> unsigned int { return acc; },
+          [&](const typename Uint::Nil) -> unsigned int { return acc; },
           [&](const typename Uint::D0 _args) -> unsigned int {
             return Nat::of_uint_acc(_args.d_a0, Nat::tail_mul(10u, acc));
           },
@@ -124,7 +124,7 @@ __attribute__((pure)) unsigned int
 Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
   return std::visit(
       Overloaded{
-          [&](const typename Uint0::Nil0 _args) -> unsigned int { return acc; },
+          [&](const typename Uint0::Nil0) -> unsigned int { return acc; },
           [&](const typename Uint0::D10 _args) -> unsigned int {
             return Nat::of_hex_uint_acc(_args.d_a0, Nat::tail_mul(16u, acc));
           },

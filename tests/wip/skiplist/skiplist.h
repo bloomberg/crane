@@ -621,7 +621,7 @@ template <typename K, typename V> struct SkipList {
   static std::optional<std::shared_ptr<SkipNode<T1, T2>>>
   findPrev_aux(F0 &&eqK, const unsigned int fuel,
                const std::shared_ptr<SkipNode<T1, T2>> curr,
-               const std::shared_ptr<SkipNode<T1, T2>> _x, const T1 target) {
+               const std::shared_ptr<SkipNode<T1, T2>>, const T1 target) {
     if (fuel <= 0) {
       return std::optional<std::shared_ptr<SkipNode<T1, T2>>>();
     } else {

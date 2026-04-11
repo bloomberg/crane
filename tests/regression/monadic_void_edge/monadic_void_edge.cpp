@@ -71,7 +71,7 @@ void MonadicVoidEdge::deeply_nested_void() {
 
 void MonadicVoidEdge::test_apply_effect() {
   apply_effect(
-      [](unsigned int _x) {
+      [](unsigned int) {
         std::cout << "applied"s << '\n';
         return;
       },
@@ -116,7 +116,7 @@ unsigned int MonadicVoidEdge::mixed_binds() {
 
 /// 13. Function that takes itree as argument and sequences
 void MonadicVoidEdge::sequence_effects(const std::monostate e1,
-                                       const std::monostate e2) {
+                                       const std::monostate) {
   e1;
   return;
 }

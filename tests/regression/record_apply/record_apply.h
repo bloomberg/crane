@@ -23,7 +23,7 @@ struct RecordApply {
   apply_record(const std::shared_ptr<R> &r0, const unsigned int a,
                const unsigned int b);
   static inline const std::shared_ptr<R> r = std::make_shared<R>(
-      R{[](unsigned int x, unsigned int _x) { return x; }, 3u});
+      R{[](unsigned int x, unsigned int) { return x; }, 3u});
   static inline const unsigned int three = r->f(3u, 0u);
 };
 

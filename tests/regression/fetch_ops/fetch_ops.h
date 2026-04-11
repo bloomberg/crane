@@ -59,22 +59,20 @@ public:
   t_A nth(const unsigned int n, const t_A default0) const {
     if (n <= 0) {
       return std::visit(
-          Overloaded{[&](const typename List<t_A>::Nil _args) -> t_A {
-                       return default0;
-                     },
-                     [](const typename List<t_A>::Cons _args) -> t_A {
-                       return _args.d_a0;
-                     }},
+          Overloaded{
+              [&](const typename List<t_A>::Nil) -> t_A { return default0; },
+              [](const typename List<t_A>::Cons _args) -> t_A {
+                return _args.d_a0;
+              }},
           this->v());
     } else {
       unsigned int m = n - 1;
       return std::visit(
-          Overloaded{[&](const typename List<t_A>::Nil _args0) -> t_A {
-                       return default0;
-                     },
-                     [&](const typename List<t_A>::Cons _args0) -> t_A {
-                       return _args0.d_a1->nth(m, default0);
-                     }},
+          Overloaded{
+              [&](const typename List<t_A>::Nil) -> t_A { return default0; },
+              [&](const typename List<t_A>::Cons _args0) -> t_A {
+                return _args0.d_a1->nth(m, default0);
+              }},
           this->v());
     }
   }
@@ -105,22 +103,23 @@ struct FetchOps {
   static std::shared_ptr<List<T1>> drop(const unsigned int n,
                                         std::shared_ptr<List<T1>> l) {
     if (n <= 0) {
-      return std::move(l);
+      return l;
     } else {
       unsigned int n_ = n - 1;
       if (l.use_count() == 1 && l->v().index() == 0) {
         auto &_rf = std::get<0>(l->v_mut());
         return l;
       } else {
-        return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
-                                         -> std::shared_ptr<List<T1>> {
-                                       return List<T1>::nil();
-                                     },
-                                     [&](const typename List<T1>::Cons _args)
-                                         -> std::shared_ptr<List<T1>> {
-                                       return drop<T1>(n_, _args.d_a1);
-                                     }},
-                          l->v());
+        return std::visit(
+            Overloaded{
+                [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+                  return List<T1>::nil();
+                },
+                [&](const typename List<T1>::Cons _args)
+                    -> std::shared_ptr<List<T1>> {
+                  return drop<T1>(n_, _args.d_a1);
+                }},
+            l->v());
       }
     }
   }

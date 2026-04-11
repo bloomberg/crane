@@ -69,12 +69,11 @@ struct ClosureCaptureMatch {
         return this->make_inserter(_x0);
       };
       return std::visit(
-          Overloaded{[](const typename tree::Leaf _args) -> unsigned int {
-                       return 0u;
-                     },
-                     [](const typename tree::Node _args) -> unsigned int {
-                       return _args.d_a1;
-                     }},
+          Overloaded{
+              [](const typename tree::Leaf) -> unsigned int { return 0u; },
+              [](const typename tree::Node _args) -> unsigned int {
+                return _args.d_a1;
+              }},
           f(42u)->v());
     }
 
@@ -84,18 +83,19 @@ struct ClosureCaptureMatch {
     deep_capture(const unsigned int x) const {
       return std::visit(
           Overloaded{
-              [&](const typename tree::Leaf _args) -> auto { return x; },
+              [&](const typename tree::Leaf) -> auto { return x; },
               [&](const typename tree::Node _args) -> auto {
                 return std::visit(
                     Overloaded{
-                        [&](const typename tree::Leaf _args0) -> auto {
+                        [&](const typename tree::Leaf) -> auto {
                           return (_args.d_a1 + x);
                         },
                         [&](const typename tree::Node _args0) -> auto {
                           return std::visit(
                               Overloaded{
-                                  [&](const typename tree::Leaf _args1)
-                                      -> auto { return (_args0.d_a1 + x); },
+                                  [&](const typename tree::Leaf) -> auto {
+                                    return (_args0.d_a1 + x);
+                                  },
                                   [&](const typename tree::Node _args1)
                                       -> auto {
                                     return (((_args0.d_a1 + _args1.d_a1) +
@@ -115,7 +115,7 @@ struct ClosureCaptureMatch {
     /// would have dangling references after the match lambda returns.
     std::shared_ptr<tree> make_inserter(const unsigned int v) const {
       return std::visit(
-          Overloaded{[&](const typename tree::Leaf _args) -> auto {
+          Overloaded{[&](const typename tree::Leaf) -> auto {
                        return tree::node(tree::leaf(), v, tree::leaf());
                      },
                      [&](const typename tree::Node _args) -> auto {
@@ -159,15 +159,13 @@ struct ClosureCaptureMatch {
               [&](_Enter _f) {
                 const std::shared_ptr<tree> t = _f.t;
                 std::visit(
-                    Overloaded{[&](const typename tree::Leaf _args) -> void {
-                                 _result = f;
-                               },
-                               [&](const typename tree::Node _args) -> void {
-                                 _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
-                                                         _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a2});
-                               }},
+                    Overloaded{
+                        [&](const typename tree::Leaf) -> void { _result = f; },
+                        [&](const typename tree::Node _args) -> void {
+                          _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
+                                                  _args.d_a1, _args.d_a0});
+                          _stack.push_back(_Enter{_args.d_a2});
+                        }},
                     t->v());
               },
               [&](_Call1 _f) {
@@ -216,15 +214,13 @@ struct ClosureCaptureMatch {
               [&](_Enter _f) {
                 const std::shared_ptr<tree> t = _f.t;
                 std::visit(
-                    Overloaded{[&](const typename tree::Leaf _args) -> void {
-                                 _result = f;
-                               },
-                               [&](const typename tree::Node _args) -> void {
-                                 _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
-                                                         _args.d_a1,
-                                                         _args.d_a0});
-                                 _stack.push_back(_Enter{_args.d_a2});
-                               }},
+                    Overloaded{
+                        [&](const typename tree::Leaf) -> void { _result = f; },
+                        [&](const typename tree::Node _args) -> void {
+                          _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
+                                                  _args.d_a1, _args.d_a0});
+                          _stack.push_back(_Enter{_args.d_a2});
+                        }},
                     t->v());
               },
               [&](_Call1 _f) {

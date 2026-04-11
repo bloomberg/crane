@@ -40,10 +40,10 @@ std::shared_ptr<List<unsigned int>> LoopifyListGenerators::cycle_fuel(
                   unsigned int n_ = n - 1;
                   std::visit(
                       Overloaded{
-                          [&](const typename List<unsigned int>::Nil _args)
-                              -> void { _result = List<unsigned int>::nil(); },
-                          [&](const typename List<unsigned int>::Cons _args)
-                              -> void {
+                          [&](const typename List<unsigned int>::Nil) -> void {
+                            _result = List<unsigned int>::nil();
+                          },
+                          [&](const typename List<unsigned int>::Cons) -> void {
                             _stack.push_back(_Call1{l});
                             _stack.push_back(_Enter{n_, fuel_});
                           }},
@@ -164,8 +164,9 @@ std::shared_ptr<List<unsigned int>> LoopifyListGenerators::replicate_each(
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil _args)
-                          -> void { _result = List<unsigned int>::nil(); },
+                      [&](const typename List<unsigned int>::Nil) -> void {
+                        _result = List<unsigned int>::nil();
+                      },
                       [&](const typename List<unsigned int>::Cons _args)
                           -> void {
                         std::shared_ptr<List<unsigned int>> reps =
@@ -192,7 +193,7 @@ LoopifyListGenerators::enumerate_aux(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil _args) {
+            [&](const typename List<unsigned int>::Nil) {
               if (_last) {
                 std::get<
                     typename List<std::pair<unsigned int, unsigned int>>::Cons>(

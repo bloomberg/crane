@@ -10,13 +10,14 @@
 __attribute__((pure)) unsigned int
 FoldClosureAccum::tree_sum(const std::shared_ptr<FoldClosureAccum::tree> &t) {
   return std::visit(
-      Overloaded{[](const typename FoldClosureAccum::tree::Leaf _args)
-                     -> unsigned int { return 0u; },
-                 [](const typename FoldClosureAccum::tree::Node _args)
-                     -> unsigned int {
-                   return ((tree_sum(_args.d_a0) + _args.d_a1) +
-                           tree_sum(_args.d_a2));
-                 }},
+      Overloaded{
+          [](const typename FoldClosureAccum::tree::Leaf) -> unsigned int {
+            return 0u;
+          },
+          [](const typename FoldClosureAccum::tree::Node _args)
+              -> unsigned int {
+            return ((tree_sum(_args.d_a0) + _args.d_a1) + tree_sum(_args.d_a2));
+          }},
       t->v());
 }
 

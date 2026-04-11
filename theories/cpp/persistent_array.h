@@ -59,7 +59,7 @@ public:
     // Matches PrimArray.get (which returns the array's default on OOB).
     T get(int64_t i) const {
         if (i >= 0 && i < static_cast<int64_t>(data_->size()))
-            return (*data_)[i];
+            return (*data_)[static_cast<size_t>(i)];
         return default_;
     }
 
@@ -74,7 +74,7 @@ public:
         // Always deep-copy: the caller still holds `this`, so we must not
         // mutate the shared vector.
         auto new_data = std::make_shared<std::vector<T>>(*data_);
-        (*new_data)[i] = std::move(val);
+        (*new_data)[static_cast<size_t>(i)] = std::move(val);
         persistent_array result;
         result.data_ = std::move(new_data);
         result.default_ = default_;
@@ -90,13 +90,13 @@ public:
 
         if (data_.use_count() == 1) {
             // Sole owner of a temporary — safe to mutate in-place.
-            (*data_)[i] = std::move(val);
+            (*data_)[static_cast<size_t>(i)] = std::move(val);
             return std::move(*this);
         }
 
         // Shared even though we're a temporary (rare). Deep-copy.
         auto new_data = std::make_shared<std::vector<T>>(*data_);
-        (*new_data)[i] = std::move(val);
+        (*new_data)[static_cast<size_t>(i)] = std::move(val);
         persistent_array result;
         result.data_ = std::move(new_data);
         result.default_ = default_;

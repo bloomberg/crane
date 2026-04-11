@@ -10,20 +10,21 @@ __attribute__((pure)) unsigned int OptionClosureEscape::sum_values(
     const std::shared_ptr<OptionClosureEscape::tree> &t, const unsigned int x) {
   return std::visit(
       Overloaded{
-          [&](const typename OptionClosureEscape::tree::Leaf _args)
-              -> unsigned int { return x; },
+          [&](const typename OptionClosureEscape::tree::Leaf) -> unsigned int {
+            return x;
+          },
           [&](const typename OptionClosureEscape::tree::Node _args)
               -> unsigned int {
             return std::visit(
                 Overloaded{
-                    [&](const typename OptionClosureEscape::tree::Leaf _args0)
+                    [&](const typename OptionClosureEscape::tree::Leaf)
                         -> unsigned int { return (_args.d_a1 + x); },
                     [&](const typename OptionClosureEscape::tree::Node _args0)
                         -> unsigned int {
                       return std::visit(
                           Overloaded{
-                              [&](const typename OptionClosureEscape::tree::Leaf
-                                      _args1) -> unsigned int {
+                              [&](const typename OptionClosureEscape::tree::
+                                      Leaf) -> unsigned int {
                                 return (_args0.d_a1 + x);
                               },
                               [&](const typename OptionClosureEscape::tree::Node
@@ -58,7 +59,7 @@ std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
 OptionClosureEscape::match_pair(
     const std::shared_ptr<OptionClosureEscape::tree> &t) {
   return std::visit(
-      Overloaded{[](const typename OptionClosureEscape::tree::Leaf _args)
+      Overloaded{[](const typename OptionClosureEscape::tree::Leaf)
                      -> std::pair<std::function<unsigned int(unsigned int)>,
                                   unsigned int> {
                    return std::make_pair([](unsigned int x) { return x; }, 0u);

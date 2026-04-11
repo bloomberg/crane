@@ -9,7 +9,7 @@
 
 std::shared_ptr<ConstructorBugs::source_state>
 ConstructorBugs::step(std::shared_ptr<ConstructorBugs::source_state> s) {
-  return std::move(s);
+  return s;
 }
 
 __attribute__((pure))
@@ -73,7 +73,7 @@ ConstructorBugs::bad_nested(
 
 std::shared_ptr<ConstructorBugs::source_state_list> ConstructorBugs::step_list(
     std::shared_ptr<ConstructorBugs::source_state_list> s) {
-  return std::move(s);
+  return s;
 }
 
 __attribute__((pure))

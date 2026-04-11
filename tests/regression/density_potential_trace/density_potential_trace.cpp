@@ -18,7 +18,7 @@ DensityPotentialTraceCase::sample_gamma(const Real t) {
   return (t / Real::from_z(INT64_C(2)));
 }
 
-__attribute__((pure)) Real DensityPotentialTraceCase::sample_v(const Real _x) {
+__attribute__((pure)) Real DensityPotentialTraceCase::sample_v(const Real) {
   return r_inv(Real::from_z(INT64_C(4)));
 }
 

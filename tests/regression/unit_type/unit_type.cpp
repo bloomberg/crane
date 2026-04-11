@@ -5,18 +5,16 @@
 #include <utility>
 #include <variant>
 
-void UnitType::return_unit(const unsigned int _x) { return; }
+void UnitType::return_unit(const unsigned int) { return; }
 
-__attribute__((pure)) unsigned int
-UnitType::take_unit(const std::monostate _x) {
+__attribute__((pure)) unsigned int UnitType::take_unit(const std::monostate) {
   return 5u;
 }
 
-__attribute__((pure)) unsigned int
-UnitType::match_unit(const std::monostate u) {
+__attribute__((pure)) unsigned int UnitType::match_unit(const std::monostate) {
   {
     return 7u;
   }
 }
 
-void UnitType::unit_to_unit(const std::monostate u) { return; }
+void UnitType::unit_to_unit(const std::monostate) { return; }

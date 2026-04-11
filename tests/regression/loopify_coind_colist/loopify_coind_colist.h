@@ -119,7 +119,7 @@ struct LoopifyCoindColist {
   static std::shared_ptr<colist<T2>>
   comap(F0 &&f, const std::shared_ptr<colist<T1>> &l) {
     return colist<T2>::lazy_([=]() mutable -> std::shared_ptr<colist<T2>> {
-      return std::visit(Overloaded{[](const typename colist<T1>::Conil _args)
+      return std::visit(Overloaded{[](const typename colist<T1>::Conil)
                                        -> std::shared_ptr<colist<T2>> {
                                      return colist<T2>::conil();
                                    },
@@ -161,7 +161,7 @@ struct LoopifyCoindColist {
               _result = colist<T1>::lazy_(
                   [=]() mutable -> std::shared_ptr<colist<T1>> {
                     return std::visit(
-                        Overloaded{[](const typename colist<T1>::Conil _args)
+                        Overloaded{[](const typename colist<T1>::Conil)
                                        -> std::shared_ptr<colist<T1>> {
                                      return colist<T1>::conil();
                                    },
@@ -184,16 +184,17 @@ struct LoopifyCoindColist {
   static std::shared_ptr<colist<T1>>
   from_list(const std::shared_ptr<List<T1>> &l) {
     return colist<T1>::lazy_([=]() mutable -> std::shared_ptr<colist<T1>> {
-      return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
-                                       -> std::shared_ptr<colist<T1>> {
-                                     return colist<T1>::conil();
-                                   },
-                                   [](const typename List<T1>::Cons _args)
-                                       -> std::shared_ptr<colist<T1>> {
-                                     return colist<T1>::cocons(
-                                         _args.d_a0, from_list<T1>(_args.d_a1));
-                                   }},
-                        l->v());
+      return std::visit(
+          Overloaded{
+              [](const typename List<T1>::Nil) -> std::shared_ptr<colist<T1>> {
+                return colist<T1>::conil();
+              },
+              [](const typename List<T1>::Cons _args)
+                  -> std::shared_ptr<colist<T1>> {
+                return colist<T1>::cocons(_args.d_a0,
+                                          from_list<T1>(_args.d_a1));
+              }},
+          l->v());
     });
   }
 
@@ -220,7 +221,7 @@ struct LoopifyCoindColist {
         unsigned int f = _loop_fuel - 1;
         std::visit(
             Overloaded{
-                [&](const typename colist<T1>::Conil _args) {
+                [&](const typename colist<T1>::Conil) {
                   if (_last) {
                     std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 =
                         List<T1>::nil();

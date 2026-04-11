@@ -10,7 +10,7 @@ __attribute__((pure)) unsigned int
 RecRecord::rlist_sum(const std::shared_ptr<RecRecord::rlist<unsigned int>> &l) {
   return std::visit(
       Overloaded{
-          [](const typename RecRecord::rlist<unsigned int>::Rnil _args)
+          [](const typename RecRecord::rlist<unsigned int>::Rnil)
               -> unsigned int { return 0u; },
           [](const typename RecRecord::rlist<unsigned int>::Rcons _args)
               -> unsigned int { return (_args.d_a0 + rlist_sum(_args.d_a1)); }},

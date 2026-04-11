@@ -30,7 +30,7 @@ __attribute__((pure)) unsigned int LoopifyMatchArg::count_dots(
               const std::shared_ptr<List<LoopifyMatchArg::Cell>> xs = _f.xs;
               std::visit(
                   Overloaded{
-                      [&](const typename List<LoopifyMatchArg::Cell>::Nil _args)
+                      [&](const typename List<LoopifyMatchArg::Cell>::Nil)
                           -> void { _result = 0u; },
                       [&](const typename List<LoopifyMatchArg::Cell>::Cons
                               _args) -> void {
@@ -77,7 +77,7 @@ __attribute__((pure)) unsigned int LoopifyMatchArg::my_length(
               const std::shared_ptr<List<LoopifyMatchArg::Cell>> xs = _f.xs;
               std::visit(
                   Overloaded{
-                      [&](const typename List<LoopifyMatchArg::Cell>::Nil _args)
+                      [&](const typename List<LoopifyMatchArg::Cell>::Nil)
                           -> void { _result = 0u; },
                       [&](const typename List<LoopifyMatchArg::Cell>::Cons
                               _args) -> void {

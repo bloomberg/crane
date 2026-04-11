@@ -87,8 +87,9 @@ public:
   std::shared_ptr<List<t_A>> rev() const {
     return std::visit(
         Overloaded{
-            [](const typename List<t_A>::Nil _args)
-                -> std::shared_ptr<List<t_A>> { return List<t_A>::nil(); },
+            [](const typename List<t_A>::Nil) -> std::shared_ptr<List<t_A>> {
+              return List<t_A>::nil();
+            },
             [](const typename List<t_A>::Cons _args)
                 -> std::shared_ptr<List<t_A>> {
               return _args.d_a1->rev()->app(
@@ -99,7 +100,7 @@ public:
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
     return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil _args)
+        Overloaded{[&](const typename List<t_A>::Nil)
                        -> std::shared_ptr<List<t_A>> { return m; },
                    [&](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<t_A>> {
@@ -122,7 +123,7 @@ better_zip(const std::shared_ptr<List<T1>> &la,
       -> std::shared_ptr<List<std::shared_ptr<Prod<T1, T2>>>> {
     return std::visit(
         Overloaded{
-            [&](const typename List<T1>::Nil _args)
+            [&](const typename List<T1>::Nil)
                 -> std::shared_ptr<List<std::shared_ptr<Prod<T1, T2>>>> {
               return std::move(acc)->rev();
             },
@@ -130,7 +131,7 @@ better_zip(const std::shared_ptr<List<T1>> &la,
                 -> std::shared_ptr<List<std::shared_ptr<Prod<T1, T2>>>> {
               return std::visit(
                   Overloaded{
-                      [&](const typename List<T2>::Nil _args0)
+                      [&](const typename List<T2>::Nil)
                           -> std::shared_ptr<
                               List<std::shared_ptr<Prod<T1, T2>>>> {
                         return std::move(acc)->rev();

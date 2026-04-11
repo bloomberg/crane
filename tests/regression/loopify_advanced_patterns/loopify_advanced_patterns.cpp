@@ -27,7 +27,7 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::len_impl(
                      const std::shared_ptr<List<unsigned int>> l = _f.l;
                      std::visit(
                          Overloaded{
-                             [&](const typename List<unsigned int>::Nil _args)
+                             [&](const typename List<unsigned int>::Nil)
                                  -> void { _result = 0u; },
                              [&](const typename List<unsigned int>::Cons _args)
                                  -> void {
@@ -51,7 +51,7 @@ std::shared_ptr<List<unsigned int>> LoopifyAdvancedPatterns::as_guard(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil _args) {
+            [&](const typename List<unsigned int>::Nil) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::nil();
@@ -107,7 +107,7 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::multi_guard(
                      const std::shared_ptr<List<unsigned int>> l = _f.l;
                      std::visit(
                          Overloaded{
-                             [&](const typename List<unsigned int>::Nil _args)
+                             [&](const typename List<unsigned int>::Nil)
                                  -> void { _result = 0u; },
                              [&](const typename List<unsigned int>::Cons _args)
                                  -> void {
@@ -159,29 +159,31 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::four_elem(
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil _args)
-                          -> void { _result = 0u; },
+                      [&](const typename List<unsigned int>::Nil) -> void {
+                        _result = 0u;
+                      },
                       [&](const typename List<unsigned int>::Cons _args)
                           -> void {
                         std::visit(
                             Overloaded{
-                                [&](const typename List<unsigned int>::Nil
-                                        _args0) -> void { _result = 1u; },
+                                [&](const typename List<unsigned int>::Nil)
+                                    -> void { _result = 1u; },
                                 [&](const typename List<unsigned int>::Cons
                                         _args0) -> void {
                                   std::visit(
                                       Overloaded{
                                           [&](const typename List<
-                                              unsigned int>::Nil _args1)
-                                              -> void { _result = 2u; },
+                                              unsigned int>::Nil) -> void {
+                                            _result = 2u;
+                                          },
                                           [&](const typename List<
                                               unsigned int>::Cons _args1)
                                               -> void {
                                             std::visit(
                                                 Overloaded{
                                                     [&](const typename List<
-                                                        unsigned int>::Nil
-                                                            _args2) -> void {
+                                                        unsigned int>::Nil)
+                                                        -> void {
                                                       _result = 3u;
                                                     },
                                                     [&](const typename List<
@@ -242,7 +244,7 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::nested_pattern(
                   Overloaded{
                       [&](const typename List<
                           std::pair<std::pair<unsigned int, unsigned int>,
-                                    unsigned int>>::Nil _args) -> void {
+                                    unsigned int>>::Nil) -> void {
                         _result = 0u;
                       },
                       [&](const typename List<
@@ -271,7 +273,7 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::guard_accum(
   unsigned int _loop_acc = acc;
   bool _continue = true;
   while (_continue) {
-    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil) {
                             _result = _loop_acc;
                             _continue = false;
                           },
@@ -318,7 +320,7 @@ std::shared_ptr<List<unsigned int>> LoopifyAdvancedPatterns::cons_computed(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil _args) {
+            [&](const typename List<unsigned int>::Nil) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::nil();
@@ -396,8 +398,8 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::sum_shapes(
               std::visit(
                   Overloaded{
                       [&](const typename List<
-                          std::shared_ptr<LoopifyAdvancedPatterns::shape>>::Nil
-                              _args) -> void { _result = 0u; },
+                          std::shared_ptr<LoopifyAdvancedPatterns::shape>>::Nil)
+                          -> void { _result = 0u; },
                       [&](const typename List<
                           std::shared_ptr<LoopifyAdvancedPatterns::shape>>::Cons
                               _args) -> void {
@@ -443,8 +445,8 @@ LoopifyAdvancedPatterns::count_by_shape(
               std::visit(
                   Overloaded{
                       [&](const typename List<
-                          std::shared_ptr<LoopifyAdvancedPatterns::shape>>::Nil
-                              _args) -> void {
+                          std::shared_ptr<LoopifyAdvancedPatterns::shape>>::Nil)
+                          -> void {
                         _result = std::make_pair(std::make_pair(0u, 0u), 0u);
                       },
                       [&](const typename List<
@@ -465,22 +467,20 @@ LoopifyAdvancedPatterns::count_by_shape(
               unsigned int squares = p.second;
               _result = std::visit(
                   Overloaded{
-                      [&](const typename LoopifyAdvancedPatterns::shape::Circle
-                              _args0)
+                      [&](const typename LoopifyAdvancedPatterns::shape::Circle)
                           -> std::pair<std::pair<unsigned int, unsigned int>,
                                        unsigned int> {
                         return std::make_pair(
                             std::make_pair((circles + 1u), squares), triangles);
                       },
-                      [&](const typename LoopifyAdvancedPatterns::shape::Square
-                              _args0)
+                      [&](const typename LoopifyAdvancedPatterns::shape::Square)
                           -> std::pair<std::pair<unsigned int, unsigned int>,
                                        unsigned int> {
                         return std::make_pair(
                             std::make_pair(circles, (squares + 1u)), triangles);
                       },
                       [&](const typename LoopifyAdvancedPatterns::shape::
-                              Triangle _args0)
+                              Triangle)
                           -> std::pair<std::pair<unsigned int, unsigned int>,
                                        unsigned int> {
                         return std::make_pair(std::make_pair(circles, squares),
@@ -504,7 +504,7 @@ std::shared_ptr<List<unsigned int>> LoopifyAdvancedPatterns::replace_at(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil _args) {
+            [&](const typename List<unsigned int>::Nil) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::nil();

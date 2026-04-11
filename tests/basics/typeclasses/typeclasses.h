@@ -108,9 +108,7 @@ struct Typeclasses {
       sum = [&](std::shared_ptr<List<T1>> l) -> unsigned int {
         return std::visit(
             Overloaded{
-                [](const typename List<T1>::Nil _args) -> unsigned int {
-                  return 0u;
-                },
+                [](const typename List<T1>::Nil) -> unsigned int { return 0u; },
                 [&](const typename List<T1>::Cons _args) -> unsigned int {
                   return (_tcI0::to_nat(_args.d_a0) + sum(_args.d_a1));
                 }},

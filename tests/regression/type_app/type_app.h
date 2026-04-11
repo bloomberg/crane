@@ -91,7 +91,7 @@ struct TypeApp {
             MapsTo<T2, T1, std::shared_ptr<list<T1>>, T2> F1>
   static T2 list_rect(const T2 f, F1 &&f0, const std::shared_ptr<list<T1>> &l) {
     return std::visit(
-        Overloaded{[&](const typename list<T1>::Nil _args) -> T2 { return f; },
+        Overloaded{[&](const typename list<T1>::Nil) -> T2 { return f; },
                    [&](const typename list<T1>::Cons _args) -> T2 {
                      return f0(_args.d_a0, _args.d_a1,
                                list_rect<T1, T2>(f, f0, _args.d_a1));
@@ -103,7 +103,7 @@ struct TypeApp {
             MapsTo<T2, T1, std::shared_ptr<list<T1>>, T2> F1>
   static T2 list_rec(const T2 f, F1 &&f0, const std::shared_ptr<list<T1>> &l) {
     return std::visit(
-        Overloaded{[&](const typename list<T1>::Nil _args) -> T2 { return f; },
+        Overloaded{[&](const typename list<T1>::Nil) -> T2 { return f; },
                    [&](const typename list<T1>::Cons _args) -> T2 {
                      return f0(_args.d_a0, _args.d_a1,
                                list_rec<T1, T2>(f, f0, _args.d_a1));
@@ -115,13 +115,14 @@ struct TypeApp {
   static std::shared_ptr<list<T2>> map(F0 &&f,
                                        const std::shared_ptr<list<T1>> &l) {
     return std::visit(
-        Overloaded{[](const typename list<T1>::Nil _args)
-                       -> std::shared_ptr<list<T2>> { return list<T2>::nil(); },
-                   [&](const typename list<T1>::Cons _args)
-                       -> std::shared_ptr<list<T2>> {
-                     return list<T2>::cons(f(_args.d_a0),
-                                           map<T1, T2>(f, _args.d_a1));
-                   }},
+        Overloaded{
+            [](const typename list<T1>::Nil) -> std::shared_ptr<list<T2>> {
+              return list<T2>::nil();
+            },
+            [&](const typename list<T1>::Cons _args)
+                -> std::shared_ptr<list<T2>> {
+              return list<T2>::cons(f(_args.d_a0), map<T1, T2>(f, _args.d_a1));
+            }},
         l->v());
   }
 

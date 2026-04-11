@@ -30,7 +30,7 @@ LoopifyDecltype::count_true(const std::shared_ptr<List<bool>> &xs) {
               const std::shared_ptr<List<bool>> xs = _f.xs;
               std::visit(
                   Overloaded{
-                      [&](const typename List<bool>::Nil _args) -> void {
+                      [&](const typename List<bool>::Nil) -> void {
                         _result = 0u;
                       },
                       [&](const typename List<bool>::Cons _args) -> void {
@@ -77,7 +77,7 @@ __attribute__((pure)) unsigned int LoopifyDecltype::sum_flagged(
               std::visit(
                   Overloaded{
                       [&](const typename List<
-                          std::shared_ptr<LoopifyDecltype::item>>::Nil _args)
+                          std::shared_ptr<LoopifyDecltype::item>>::Nil)
                           -> void { _result = 0u; },
                       [&](const typename List<
                           std::shared_ptr<LoopifyDecltype::item>>::Cons _args)

@@ -43,7 +43,7 @@ __attribute__((pure)) unsigned int DeepDestruct::head_or_zero(
     const std::shared_ptr<DeepDestruct::mylist<unsigned int>> &l) {
   return std::visit(
       Overloaded{
-          [](const typename DeepDestruct::mylist<unsigned int>::Mynil _args)
+          [](const typename DeepDestruct::mylist<unsigned int>::Mynil)
               -> unsigned int { return 0u; },
           [](const typename DeepDestruct::mylist<unsigned int>::Mycons _args)
               -> unsigned int { return _args.d_a0; }},

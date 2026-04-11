@@ -77,7 +77,7 @@ public:
                 const List *_self = _f._self;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<t_A>::Nil _args) -> void {
+                        [&](const typename List<t_A>::Nil) -> void {
                           _result = 0u;
                         },
                         [&](const typename List<t_A>::Cons _args) -> void {
@@ -86,7 +86,7 @@ public:
                         }},
                     _self->v());
               },
-              [&](_Call1 _f) { _result = (_result + 1); }},
+              [&](_Call1) { _result = (_result + 1); }},
           _frame);
     }
     return _result;
@@ -103,7 +103,7 @@ struct LoopifyFolds {
     unsigned int _loop_acc = acc;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+      std::visit(Overloaded{[&](const typename List<unsigned int>::Nil) {
                               _result = _loop_acc;
                               _continue = false;
                             },
@@ -145,8 +145,9 @@ struct LoopifyFolds {
                 const std::shared_ptr<List<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil _args)
-                            -> void { _result = acc; },
+                        [&](const typename List<unsigned int>::Nil) -> void {
+                          _result = acc;
+                        },
                         [&](const typename List<unsigned int>::Cons _args)
                             -> void {
                           _stack.push_back(_Call1{_args.d_a0});
@@ -172,7 +173,7 @@ struct LoopifyFolds {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil _args) {
+              [&](const typename List<unsigned int>::Nil) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = List<unsigned int>::cons(
@@ -229,8 +230,7 @@ struct LoopifyFolds {
                 const std::shared_ptr<List<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil _args)
-                            -> void {
+                        [&](const typename List<unsigned int>::Nil) -> void {
                           _result = List<unsigned int>::cons(
                               acc, List<unsigned int>::nil());
                         },
@@ -247,8 +247,7 @@ struct LoopifyFolds {
                 const typename List<unsigned int>::Cons _args = _f._s2;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil _args0)
-                            -> void {
+                        [&](const typename List<unsigned int>::Nil) -> void {
                           _result = List<unsigned int>::cons(
                               acc, List<unsigned int>::nil());
                         },
@@ -282,14 +281,14 @@ struct LoopifyFolds {
         unsigned int fuel_ = _loop_fuel - 1;
         std::visit(
             Overloaded{
-                [&](const typename List<unsigned int>::Nil _args) {
+                [&](const typename List<unsigned int>::Nil) {
                   _result = 0u;
                   _continue = false;
                 },
                 [&](const typename List<unsigned int>::Cons _args) {
                   std::visit(
                       Overloaded{
-                          [&](const typename List<unsigned int>::Nil _args0) {
+                          [&](const typename List<unsigned int>::Nil) {
                             _result = _args.d_a0;
                             _continue = false;
                           },
@@ -340,18 +339,17 @@ struct LoopifyFolds {
                 const std::shared_ptr<List<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil _args)
-                            -> void { _result = 0u; },
+                        [&](const typename List<unsigned int>::Nil) -> void {
+                          _result = 0u;
+                        },
                         [&](const typename List<unsigned int>::Cons _args)
                             -> void {
                           std::visit(
                               Overloaded{
-                                  [&](const typename List<unsigned int>::Nil
-                                          _args0) -> void {
-                                    _result = _args.d_a0;
-                                  },
-                                  [&](const typename List<unsigned int>::Cons
-                                          _args0) -> void {
+                                  [&](const typename List<unsigned int>::Nil)
+                                      -> void { _result = _args.d_a0; },
+                                  [&](const typename List<unsigned int>::Cons)
+                                      -> void {
                                     _stack.push_back(_Call1{_args.d_a0});
                                     _stack.push_back(_Enter{_args.d_a1});
                                   }},
@@ -395,8 +393,7 @@ struct LoopifyFolds {
                 const unsigned int acc = _f.acc;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil _args)
-                            -> void {
+                        [&](const typename List<unsigned int>::Nil) -> void {
                           _result =
                               std::make_pair(acc, List<unsigned int>::nil());
                         },

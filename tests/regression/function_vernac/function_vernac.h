@@ -169,8 +169,8 @@ struct FunctionVernac {
               MapsTo<T1, unsigned int, unsigned int, unsigned int,
                      std::shared_ptr<R_div2>, T1>
                   F2>
-    T1 R_div2_rec(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int _x,
-                  const unsigned int _x0) const {
+    T1 R_div2_rec(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int,
+                  const unsigned int) const {
       return std::visit(
           Overloaded{[&](const typename R_div2::R_div2_0 _args) -> T1 {
                        return f(_args.d_n);
@@ -191,8 +191,8 @@ struct FunctionVernac {
               MapsTo<T1, unsigned int, unsigned int, unsigned int,
                      std::shared_ptr<R_div2>, T1>
                   F2>
-    T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int _x,
-                   const unsigned int _x0) const {
+    T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int,
+                   const unsigned int) const {
       return std::visit(
           Overloaded{[&](const typename R_div2::R_div2_0 _args) -> T1 {
                        return f(_args.d_n);
@@ -249,7 +249,7 @@ struct FunctionVernac {
   list_sum_F(F0 &&list_sum0, const std::shared_ptr<List<unsigned int>> &l) {
     return std::visit(
         Overloaded{
-            [](const typename List<unsigned int>::Nil _args) -> unsigned int {
+            [](const typename List<unsigned int>::Nil) -> unsigned int {
               return 0u;
             },
             [&](const typename List<unsigned int>::Cons _args) -> unsigned int {
@@ -328,8 +328,8 @@ struct FunctionVernac {
                      std::shared_ptr<R_list_sum>, T1>
                   F1>
     T1 R_list_sum_rec(F0 &&f, F1 &&f0,
-                      const std::shared_ptr<List<unsigned int>> &_x,
-                      const unsigned int _x0) const {
+                      const std::shared_ptr<List<unsigned int>> &,
+                      const unsigned int) const {
       return std::visit(
           Overloaded{[&](const typename R_list_sum::R_list_sum_0 _args) -> T1 {
                        return f(_args.d_l);
@@ -349,8 +349,8 @@ struct FunctionVernac {
                      std::shared_ptr<R_list_sum>, T1>
                   F1>
     T1 R_list_sum_rect(F0 &&f, F1 &&f0,
-                       const std::shared_ptr<List<unsigned int>> &_x,
-                       const unsigned int _x0) const {
+                       const std::shared_ptr<List<unsigned int>> &,
+                       const unsigned int) const {
       return std::visit(
           Overloaded{[&](const typename R_list_sum::R_list_sum_0 _args) -> T1 {
                        return f(_args.d_l);
@@ -376,16 +376,15 @@ struct FunctionVernac {
                  T1 _pa2) mutable { return f0(l, _pa0, _pa1, _pa2); };
     T1 f2 = f(l);
     return std::visit(
-        Overloaded{[&](const typename List<unsigned int>::Nil _args) -> auto {
-                     return f2;
-                   },
-                   [&](const typename List<unsigned int>::Cons _args) -> auto {
-                     std::function<T1(T1)> f3 = [=](T1 _pa0) mutable {
-                       return f1(_args.d_a0, _args.d_a1, _pa0);
-                     };
-                     T1 hrec = list_sum_rect<T1>(f, f0, _args.d_a1);
-                     return f3(hrec);
-                   }},
+        Overloaded{
+            [&](const typename List<unsigned int>::Nil) -> auto { return f2; },
+            [&](const typename List<unsigned int>::Cons _args) -> auto {
+              std::function<T1(T1)> f3 = [=](T1 _pa0) mutable {
+                return f1(_args.d_a0, _args.d_a1, _pa0);
+              };
+              T1 hrec = list_sum_rect<T1>(f, f0, _args.d_a1);
+              return f3(hrec);
+            }},
         l->v());
   }
 

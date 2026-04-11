@@ -138,7 +138,7 @@ struct HigherKinded {
   __attribute__((pure)) static unsigned int
   tree_size(const std::shared_ptr<Tree<T1>> &t) {
     return tree_fold<T1, unsigned int>(
-        [](T1 _x) { return 1u; },
+        [](T1) { return 1u; },
         [](unsigned int _x0, unsigned int _x1) -> unsigned int {
           return (_x0 + _x1);
         },

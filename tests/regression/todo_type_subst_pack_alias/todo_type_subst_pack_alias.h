@@ -14,14 +14,15 @@ template <class... Ts> struct Overloaded : Ts... {
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 template <typename I>
-concept Pack = requires(typename I::carrier a0) {
+concept Pack = requires (typename I::carrier
+a0) {
   typename I::carrier;
   { I::step(a0) } -> std::convertible_to<typename I::carrier>;
-} && requires {
+} && (requires {
   { I::seed() } -> std::convertible_to<typename I::carrier>;
 } || requires {
   { I::seed } -> std::convertible_to<typename I::carrier>;
-};
+});
 
 struct TodoTypeSubstPackAlias {
   using carrier = std::any;

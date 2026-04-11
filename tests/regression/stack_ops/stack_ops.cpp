@@ -10,7 +10,7 @@ __attribute__((pure))
 std::pair<std::optional<unsigned int>, std::shared_ptr<StackOps::state_basic>>
 StackOps::pop_stack(std::shared_ptr<StackOps::state_basic> s) {
   return std::visit(
-      Overloaded{[&](const typename List<unsigned int>::Nil _args)
+      Overloaded{[&](const typename List<unsigned int>::Nil)
                      -> std::pair<std::optional<unsigned int>,
                                   std::shared_ptr<StackOps::state_basic>> {
                    return std::make_pair(std::optional<unsigned int>(), s);
@@ -50,7 +50,7 @@ __attribute__((pure)) std::pair<std::optional<unsigned int>,
                                 std::shared_ptr<StackOps::state_with_acc>>
 StackOps::pop_stack_acc(std::shared_ptr<StackOps::state_with_acc> s) {
   return std::visit(
-      Overloaded{[&](const typename List<unsigned int>::Nil _args)
+      Overloaded{[&](const typename List<unsigned int>::Nil)
                      -> std::pair<std::optional<unsigned int>,
                                   std::shared_ptr<StackOps::state_with_acc>> {
                    return std::make_pair(std::optional<unsigned int>(), s);
@@ -71,7 +71,7 @@ StackOps::push_stack(const std::shared_ptr<StackOps::state_basic> &s,
                      const unsigned int addr) {
   return std::visit(
       Overloaded{
-          [&](const typename List<unsigned int>::Nil _args)
+          [&](const typename List<unsigned int>::Nil)
               -> std::shared_ptr<StackOps::state_basic> {
             return std::make_shared<StackOps::state_basic>(state_basic{
                 List<unsigned int>::cons(addr, List<unsigned int>::nil())});
@@ -80,7 +80,7 @@ StackOps::push_stack(const std::shared_ptr<StackOps::state_basic> &s,
               -> std::shared_ptr<StackOps::state_basic> {
             return std::visit(
                 Overloaded{
-                    [&](const typename List<unsigned int>::Nil _args0)
+                    [&](const typename List<unsigned int>::Nil)
                         -> std::shared_ptr<StackOps::state_basic> {
                       return std::make_shared<StackOps::state_basic>(
                           state_basic{List<unsigned int>::cons(
@@ -105,11 +105,13 @@ StackOps::push_stack(const std::shared_ptr<StackOps::state_basic> &s,
 
 __attribute__((pure)) unsigned int
 StackOps::top_or_zero(const std::shared_ptr<StackOps::state_basic> &s) {
-  return std::visit(Overloaded{[](const typename List<unsigned int>::Nil _args)
-                                   -> unsigned int { return 0u; },
-                               [](const typename List<unsigned int>::Cons _args)
-                                   -> unsigned int { return _args.d_a0; }},
-                    s->stack_basic->v());
+  return std::visit(
+      Overloaded{[](const typename List<unsigned int>::Nil) -> unsigned int {
+                   return 0u;
+                 },
+                 [](const typename List<unsigned int>::Cons _args)
+                     -> unsigned int { return _args.d_a0; }},
+      s->stack_basic->v());
 }
 
 std::shared_ptr<StackOps::state_basic>
@@ -117,7 +119,7 @@ StackOps::push_stack_cap(const std::shared_ptr<StackOps::state_basic> &s,
                          const unsigned int addr) {
   std::shared_ptr<List<unsigned int>> new_stack = std::visit(
       Overloaded{
-          [&](const typename List<unsigned int>::Nil _args)
+          [&](const typename List<unsigned int>::Nil)
               -> std::shared_ptr<List<unsigned int>> {
             return List<unsigned int>::cons(addr, List<unsigned int>::nil());
           },
@@ -125,7 +127,7 @@ StackOps::push_stack_cap(const std::shared_ptr<StackOps::state_basic> &s,
               -> std::shared_ptr<List<unsigned int>> {
             return std::visit(
                 Overloaded{
-                    [&](const typename List<unsigned int>::Nil _args0)
+                    [&](const typename List<unsigned int>::Nil)
                         -> std::shared_ptr<List<unsigned int>> {
                       return List<unsigned int>::cons(
                           addr, List<unsigned int>::cons(

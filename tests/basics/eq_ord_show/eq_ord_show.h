@@ -57,7 +57,7 @@ struct NatOrd {
 static_assert(Ord<NatOrd, unsigned int>);
 
 struct NatShow {
-  constexpr static std::string show(unsigned int _x) { return "<nat>"; }
+  constexpr static std::string show(unsigned int) { return "<nat>"; }
 };
 
 static_assert(Show<NatShow, unsigned int>);

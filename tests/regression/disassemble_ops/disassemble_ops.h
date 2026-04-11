@@ -58,12 +58,11 @@ public:
 
   __attribute__((pure)) unsigned int length() const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil _args) -> unsigned int {
-                     return 0u;
-                   },
-                   [](const typename List<t_A>::Cons _args) -> unsigned int {
-                     return (_args.d_a1->length() + 1);
-                   }},
+        Overloaded{
+            [](const typename List<t_A>::Nil) -> unsigned int { return 0u; },
+            [](const typename List<t_A>::Cons _args) -> unsigned int {
+              return (_args.d_a1->length() + 1);
+            }},
         this->v());
   }
 };
@@ -132,15 +131,14 @@ struct DisassembleOps {
   static T1 instruction_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2,
                              const std::shared_ptr<instruction> &i) {
     return std::visit(
-        Overloaded{
-            [&](const typename instruction::NOP _args) -> T1 { return f; },
-            [&](const typename instruction::NOP2 _args) -> T1 { return f0; },
-            [&](const typename instruction::LDM _args) -> T1 {
-              return f1(_args.d_a0);
-            },
-            [&](const typename instruction::LDM2 _args) -> T1 {
-              return f2(_args.d_a0);
-            }},
+        Overloaded{[&](const typename instruction::NOP) -> T1 { return f; },
+                   [&](const typename instruction::NOP2) -> T1 { return f0; },
+                   [&](const typename instruction::LDM _args) -> T1 {
+                     return f1(_args.d_a0);
+                   },
+                   [&](const typename instruction::LDM2 _args) -> T1 {
+                     return f2(_args.d_a0);
+                   }},
         i->v());
   }
 
@@ -149,15 +147,14 @@ struct DisassembleOps {
   static T1 instruction_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2,
                             const std::shared_ptr<instruction> &i) {
     return std::visit(
-        Overloaded{
-            [&](const typename instruction::NOP _args) -> T1 { return f; },
-            [&](const typename instruction::NOP2 _args) -> T1 { return f0; },
-            [&](const typename instruction::LDM _args) -> T1 {
-              return f1(_args.d_a0);
-            },
-            [&](const typename instruction::LDM2 _args) -> T1 {
-              return f2(_args.d_a0);
-            }},
+        Overloaded{[&](const typename instruction::NOP) -> T1 { return f; },
+                   [&](const typename instruction::NOP2) -> T1 { return f0; },
+                   [&](const typename instruction::LDM _args) -> T1 {
+                     return f1(_args.d_a0);
+                   },
+                   [&](const typename instruction::LDM2 _args) -> T1 {
+                     return f2(_args.d_a0);
+                   }},
         i->v());
   }
 
@@ -204,22 +201,23 @@ struct DisassembleOps {
   static std::shared_ptr<List<T1>> drop(const unsigned int n,
                                         std::shared_ptr<List<T1>> l) {
     if (n <= 0) {
-      return std::move(l);
+      return l;
     } else {
       unsigned int n_ = n - 1;
       if (l.use_count() == 1 && l->v().index() == 0) {
         auto &_rf = std::get<0>(l->v_mut());
         return l;
       } else {
-        return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
-                                         -> std::shared_ptr<List<T1>> {
-                                       return List<T1>::nil();
-                                     },
-                                     [&](const typename List<T1>::Cons _args)
-                                         -> std::shared_ptr<List<T1>> {
-                                       return drop<T1>(n_, _args.d_a1);
-                                     }},
-                          l->v());
+        return std::visit(
+            Overloaded{
+                [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+                  return List<T1>::nil();
+                },
+                [&](const typename List<T1>::Cons _args)
+                    -> std::shared_ptr<List<T1>> {
+                  return drop<T1>(n_, _args.d_a1);
+                }},
+            l->v());
       }
     }
   }

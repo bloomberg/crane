@@ -67,7 +67,7 @@ struct VoidCallback {
   template <MapsTo<void, unsigned int> F0>
   static void for_each(F0 &&f, const std::shared_ptr<List<unsigned int>> &xs) {
     {
-      std::visit(Overloaded{[](const typename List<unsigned int>::Nil _args)
+      std::visit(Overloaded{[](const typename List<unsigned int>::Nil)
                                 -> std::monostate { return std::monostate{}; },
                             [&](const typename List<unsigned int>::Cons _args)
                                 -> std::monostate {
@@ -92,7 +92,7 @@ struct VoidCallback {
   static void for_each_m(F0 &&f,
                          const std::shared_ptr<List<unsigned int>> &xs) {
     {
-      std::visit(Overloaded{[](const typename List<unsigned int>::Nil _args)
+      std::visit(Overloaded{[](const typename List<unsigned int>::Nil)
                                 -> std::monostate { return std::monostate{}; },
                             [&](const typename List<unsigned int>::Cons _args)
                                 -> std::monostate {
@@ -116,7 +116,7 @@ struct VoidCallback {
   ignore_and_count(F0 &&f, const std::shared_ptr<List<unsigned int>> &xs) {
     return std::visit(
         Overloaded{
-            [](const typename List<unsigned int>::Nil _args) -> unsigned int {
+            [](const typename List<unsigned int>::Nil) -> unsigned int {
               return 0u;
             },
             [&](const typename List<unsigned int>::Cons _args) -> unsigned int {

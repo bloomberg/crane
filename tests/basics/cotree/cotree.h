@@ -60,7 +60,7 @@ public:
   template <typename T1, MapsTo<T1, t_A> F0>
   std::shared_ptr<List<T1>> map(F0 &&f) const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil _args)
+        Overloaded{[](const typename List<t_A>::Nil)
                        -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
                    [&](const typename List<t_A>::Cons _args)
                        -> std::shared_ptr<List<T1>> {
@@ -283,7 +283,7 @@ struct Cotree {
   static std::shared_ptr<colist<T2>>
   comap(F0 &&f, const std::shared_ptr<colist<T1>> &l) {
     return colist<T2>::lazy_([=]() mutable -> std::shared_ptr<colist<T2>> {
-      return std::visit(Overloaded{[](const typename colist<T1>::Conil _args)
+      return std::visit(Overloaded{[](const typename colist<T1>::Conil)
                                        -> std::shared_ptr<colist<T2>> {
                                      return colist<T2>::conil();
                                    },
@@ -327,7 +327,7 @@ struct Cotree {
       unsigned int fuel_ = fuel - 1;
       return std::visit(
           Overloaded{
-              [](const typename colist<T1>::Conil _args)
+              [](const typename colist<T1>::Conil)
                   -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
               [&](const typename colist<T1>::Cocons _args)
                   -> std::shared_ptr<List<T1>> {
@@ -376,8 +376,8 @@ struct Cotree {
                 -> unsigned int {
               return std::visit(
                   Overloaded{
-                      [](const typename List<std::shared_ptr<tree<T1>>>::Nil
-                             _args) -> unsigned int { return 0u; },
+                      [](const typename List<std::shared_ptr<tree<T1>>>::Nil)
+                          -> unsigned int { return 0u; },
                       [&](const typename List<std::shared_ptr<tree<T1>>>::Cons
                               _args) -> unsigned int {
                         return (tree_size<T1>(_args.d_a0) + aux(_args.d_a1));

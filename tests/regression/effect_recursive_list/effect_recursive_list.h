@@ -69,7 +69,7 @@ struct EffectRecursiveList {
   template <MapsTo<void, std::string> F0>
   static void map_effect(F0 &&f, const std::shared_ptr<List<std::string>> &xs) {
     {
-      std::visit(Overloaded{[](const typename List<std::string>::Nil _args)
+      std::visit(Overloaded{[](const typename List<std::string>::Nil)
                                 -> std::monostate { return std::monostate{}; },
                             [&](const typename List<std::string>::Cons _args)
                                 -> std::monostate {

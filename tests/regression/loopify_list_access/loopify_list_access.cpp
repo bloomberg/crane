@@ -14,7 +14,7 @@ LoopifyListAccess::nth(const unsigned int n,
   bool _continue = true;
   while (_continue) {
     std::visit(
-        Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+        Overloaded{[&](const typename List<unsigned int>::Nil) {
                      _result = 0u;
                      _continue = false;
                    },
@@ -42,23 +42,22 @@ LoopifyListAccess::last(const std::shared_ptr<List<unsigned int>> &l) {
   bool _continue = true;
   while (_continue) {
     std::visit(
-        Overloaded{
-            [&](const typename List<unsigned int>::Nil _args) {
-              _result = 0u;
-              _continue = false;
-            },
-            [&](const typename List<unsigned int>::Cons _args) {
-              std::visit(
-                  Overloaded{
-                      [&](const typename List<unsigned int>::Nil _args0) {
-                        _result = _args.d_a0;
-                        _continue = false;
-                      },
-                      [&](const typename List<unsigned int>::Cons _args0) {
-                        _loop_l = _args.d_a1;
-                      }},
-                  _args.d_a1->v());
-            }},
+        Overloaded{[&](const typename List<unsigned int>::Nil) {
+                     _result = 0u;
+                     _continue = false;
+                   },
+                   [&](const typename List<unsigned int>::Cons _args) {
+                     std::visit(
+                         Overloaded{
+                             [&](const typename List<unsigned int>::Nil) {
+                               _result = _args.d_a0;
+                               _continue = false;
+                             },
+                             [&](const typename List<unsigned int>::Cons) {
+                               _loop_l = _args.d_a1;
+                             }},
+                         _args.d_a1->v());
+                   }},
         _loop_l->v());
   }
   return _result;
@@ -73,7 +72,7 @@ LoopifyListAccess::index_of_aux(const unsigned int x,
   std::shared_ptr<List<unsigned int>> _loop_l = l;
   bool _continue = true;
   while (_continue) {
-    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil) {
                             _result = 0u;
                             _continue = false;
                           },
@@ -107,7 +106,7 @@ LoopifyListAccess::member(const unsigned int x,
   std::shared_ptr<List<unsigned int>> _loop_l = l;
   bool _continue = true;
   while (_continue) {
-    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil) {
                             _result = false;
                             _continue = false;
                           },
@@ -133,8 +132,8 @@ __attribute__((pure)) unsigned int LoopifyListAccess::lookup(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<std::pair<unsigned int, unsigned int>>::Nil
-                    _args) {
+            [&](const typename List<
+                std::pair<unsigned int, unsigned int>>::Nil) {
               _result = 0u;
               _continue = false;
             },
@@ -164,8 +163,8 @@ std::shared_ptr<List<unsigned int>> LoopifyListAccess::lookup_all(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<std::pair<unsigned int, unsigned int>>::Nil
-                    _args) {
+            [&](const typename List<
+                std::pair<unsigned int, unsigned int>>::Nil) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::nil();
@@ -220,7 +219,7 @@ LoopifyListAccess::count(const unsigned int x,
                      const std::shared_ptr<List<unsigned int>> l = _f.l;
                      std::visit(
                          Overloaded{
-                             [&](const typename List<unsigned int>::Nil _args)
+                             [&](const typename List<unsigned int>::Nil)
                                  -> void { _result = 0u; },
                              [&](const typename List<unsigned int>::Cons _args)
                                  -> void {
@@ -248,7 +247,7 @@ LoopifyListAccess::elem_at_eq(const unsigned int idx, const unsigned int val,
   bool _continue = true;
   while (_continue) {
     std::visit(
-        Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+        Overloaded{[&](const typename List<unsigned int>::Nil) {
                      _result = false;
                      _continue = false;
                    },
@@ -280,7 +279,7 @@ LoopifyListAccess::nth_default(const unsigned int n,
   bool _continue = true;
   while (_continue) {
     std::visit(
-        Overloaded{[&](const typename List<unsigned int>::Nil _args) {
+        Overloaded{[&](const typename List<unsigned int>::Nil) {
                      _result = default0;
                      _continue = false;
                    },

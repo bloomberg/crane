@@ -51,7 +51,7 @@ __attribute__((pure)) unsigned int ImplicitArgs::sum_with_init(
     const std::shared_ptr<ImplicitArgs::mylist<unsigned int>> &l) {
   return std::visit(
       Overloaded{
-          [&](const typename ImplicitArgs::mylist<unsigned int>::Mynil _args)
+          [&](const typename ImplicitArgs::mylist<unsigned int>::Mynil)
               -> unsigned int { return init; },
           [&](const typename ImplicitArgs::mylist<unsigned int>::Mycons _args)
               -> unsigned int {

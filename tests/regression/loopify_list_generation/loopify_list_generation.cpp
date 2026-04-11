@@ -50,7 +50,7 @@ LoopifyListGeneration::stutter(const std::shared_ptr<List<unsigned int>> &l) {
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil _args) {
+            [&](const typename List<unsigned int>::Nil) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::nil();
@@ -177,8 +177,9 @@ std::shared_ptr<List<unsigned int>> LoopifyListGeneration::replicate_list(
               std::visit(
                   Overloaded{
                       [&](const typename List<
-                          std::pair<unsigned int, unsigned int>>::Nil _args)
-                          -> void { _result = List<unsigned int>::nil(); },
+                          std::pair<unsigned int, unsigned int>>::Nil) -> void {
+                        _result = List<unsigned int>::nil();
+                      },
                       [&](const typename List<
                           std::pair<unsigned int, unsigned int>>::Cons _args)
                           -> void {

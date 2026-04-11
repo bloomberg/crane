@@ -65,8 +65,8 @@ std::shared_ptr<List<T1>> better_rev(const std::shared_ptr<List<T1>> &l) {
   go = [&](std::shared_ptr<List<T1>> l0,
            std::shared_ptr<List<T1>> acc) -> std::shared_ptr<List<T1>> {
     return std::visit(
-        Overloaded{[&](const typename List<T1>::Nil _args)
-                       -> std::shared_ptr<List<T1>> { return std::move(acc); },
+        Overloaded{[&](const typename List<T1>::Nil)
+                       -> std::shared_ptr<List<T1>> { return acc; },
                    [&](const typename List<T1>::Cons _args)
                        -> std::shared_ptr<List<T1>> {
                      return go(_args.d_a1, List<T1>::cons(_args.d_a0, acc));

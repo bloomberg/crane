@@ -64,18 +64,16 @@ struct ListClosureEscape {
     __attribute__((pure)) unsigned int sum_values(const unsigned int x) const {
       return std::visit(
           Overloaded{
-              [&](const typename tree::Leaf _args) -> unsigned int {
-                return x;
-              },
+              [&](const typename tree::Leaf) -> unsigned int { return x; },
               [&](const typename tree::Node _args) -> unsigned int {
                 return std::visit(
                     Overloaded{
-                        [&](const typename tree::Leaf _args0) -> unsigned int {
+                        [&](const typename tree::Leaf) -> unsigned int {
                           return (_args.d_a1 + x);
                         },
                         [&](const typename tree::Node _args0) -> unsigned int {
                           return std::visit(
-                              Overloaded{[&](const typename tree::Leaf _args1)
+                              Overloaded{[&](const typename tree::Leaf)
                                              -> unsigned int {
                                            return (_args0.d_a1 + x);
                                          },
@@ -99,7 +97,7 @@ struct ListClosureEscape {
                              F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree::Leaf _args) -> T1 { return f; },
+        Overloaded{[&](const typename tree::Leaf) -> T1 { return f; },
                    [&](const typename tree::Node _args) -> T1 {
                      return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
                                _args.d_a1, _args.d_a2,
@@ -113,7 +111,7 @@ struct ListClosureEscape {
                              F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree::Leaf _args) -> T1 { return f; },
+        Overloaded{[&](const typename tree::Leaf) -> T1 { return f; },
                    [&](const typename tree::Node _args) -> T1 {
                      return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
                                _args.d_a1, _args.d_a2,
@@ -168,12 +166,11 @@ struct ListClosureEscape {
 
     __attribute__((pure)) unsigned int apply_first(const unsigned int x) const {
       return std::visit(
-          Overloaded{[&](const typename fn_list::FNil _args) -> unsigned int {
-                       return x;
-                     },
-                     [&](const typename fn_list::FCons _args) -> unsigned int {
-                       return _args.d_a0(x);
-                     }},
+          Overloaded{
+              [&](const typename fn_list::FNil) -> unsigned int { return x; },
+              [&](const typename fn_list::FCons _args) -> unsigned int {
+                return _args.d_a0(x);
+              }},
           this->v());
     }
   };
@@ -184,7 +181,7 @@ struct ListClosureEscape {
   static T1 fn_list_rect(const T1 f, F1 &&f0,
                          const std::shared_ptr<fn_list> &f1) {
     return std::visit(
-        Overloaded{[&](const typename fn_list::FNil _args) -> T1 { return f; },
+        Overloaded{[&](const typename fn_list::FNil) -> T1 { return f; },
                    [&](const typename fn_list::FCons _args) -> T1 {
                      return f0(_args.d_a0, _args.d_a1,
                                fn_list_rect<T1>(f, f0, _args.d_a1));
@@ -198,7 +195,7 @@ struct ListClosureEscape {
   static T1 fn_list_rec(const T1 f, F1 &&f0,
                         const std::shared_ptr<fn_list> &f1) {
     return std::visit(
-        Overloaded{[&](const typename fn_list::FNil _args) -> T1 { return f; },
+        Overloaded{[&](const typename fn_list::FNil) -> T1 { return f; },
                    [&](const typename fn_list::FCons _args) -> T1 {
                      return f0(_args.d_a0, _args.d_a1,
                                fn_list_rec<T1>(f, f0, _args.d_a1));

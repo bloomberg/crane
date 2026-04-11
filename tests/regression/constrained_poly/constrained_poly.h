@@ -71,11 +71,10 @@ struct ConstrainedPoly {
   static T2 UOption_rect(F0 &&f, const T2 f0,
                          const std::shared_ptr<UOption<T1>> &u) {
     return std::visit(
-        Overloaded{
-            [&](const typename UOption<T1>::USome _args) -> T2 {
-              return f(_args.d_a0);
-            },
-            [&](const typename UOption<T1>::UNone _args) -> T2 { return f0; }},
+        Overloaded{[&](const typename UOption<T1>::USome _args) -> T2 {
+                     return f(_args.d_a0);
+                   },
+                   [&](const typename UOption<T1>::UNone) -> T2 { return f0; }},
         u->v());
   }
 
@@ -83,11 +82,10 @@ struct ConstrainedPoly {
   static T2 UOption_rec(F0 &&f, const T2 f0,
                         const std::shared_ptr<UOption<T1>> &u) {
     return std::visit(
-        Overloaded{
-            [&](const typename UOption<T1>::USome _args) -> T2 {
-              return f(_args.d_a0);
-            },
-            [&](const typename UOption<T1>::UNone _args) -> T2 { return f0; }},
+        Overloaded{[&](const typename UOption<T1>::USome _args) -> T2 {
+                     return f(_args.d_a0);
+                   },
+                   [&](const typename UOption<T1>::UNone) -> T2 { return f0; }},
         u->v());
   }
 
@@ -98,7 +96,7 @@ struct ConstrainedPoly {
                                      -> std::shared_ptr<UOption<T2>> {
                                    return UOption<T2>::usome(f(_args.d_a0));
                                  },
-                                 [](const typename UOption<T1>::UNone _args)
+                                 [](const typename UOption<T1>::UNone)
                                      -> std::shared_ptr<UOption<T2>> {
                                    return UOption<T2>::unone();
                                  }},

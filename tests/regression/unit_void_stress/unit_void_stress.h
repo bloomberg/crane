@@ -100,7 +100,7 @@ struct UnitVoidStress {
   template <typename T1, MapsTo<void, T1> F0>
   static std::shared_ptr<List<std::monostate>>
   map_void(F0 &&f, const std::shared_ptr<List<T1>> &l) {
-    return std::visit(Overloaded{[](const typename List<T1>::Nil _args)
+    return std::visit(Overloaded{[](const typename List<T1>::Nil)
                                      -> std::shared_ptr<List<std::monostate>> {
                                    return List<std::monostate>::nil();
                                  },

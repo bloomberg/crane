@@ -59,11 +59,11 @@ public:
   template <typename T1, MapsTo<T1, t_A, T1> F0>
   T1 fold_right(F0 &&f, const T1 a0) const {
     return std::visit(
-        Overloaded{
-            [&](const typename List<t_A>::Nil _args) -> T1 { return a0; },
-            [&](const typename List<t_A>::Cons _args) -> T1 {
-              return f(_args.d_a0, _args.d_a1->template fold_right<T1>(f, a0));
-            }},
+        Overloaded{[&](const typename List<t_A>::Nil) -> T1 { return a0; },
+                   [&](const typename List<t_A>::Cons _args) -> T1 {
+                     return f(_args.d_a0,
+                              _args.d_a1->template fold_right<T1>(f, a0));
+                   }},
         this->v());
   }
 };
@@ -120,7 +120,7 @@ struct FoldClosureAccum {
                              F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree::Leaf _args) -> T1 { return f; },
+        Overloaded{[&](const typename tree::Leaf) -> T1 { return f; },
                    [&](const typename tree::Node _args) -> T1 {
                      return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
                                _args.d_a1, _args.d_a2,
@@ -134,7 +134,7 @@ struct FoldClosureAccum {
                              F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree::Leaf _args) -> T1 { return f; },
+        Overloaded{[&](const typename tree::Leaf) -> T1 { return f; },
                    [&](const typename tree::Node _args) -> T1 {
                      return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
                                _args.d_a1, _args.d_a2,

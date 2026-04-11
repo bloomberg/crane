@@ -80,7 +80,7 @@ struct RecursiveMonadic {
   static std::shared_ptr<List<unsigned int>>
   filter_print(F0 &&pred, const std::shared_ptr<List<unsigned int>> &xs) {
     return std::visit(
-        Overloaded{[](const typename List<unsigned int>::Nil _args)
+        Overloaded{[](const typename List<unsigned int>::Nil)
                        -> std::shared_ptr<List<unsigned int>> {
                      return List<unsigned int>::nil();
                    },
@@ -92,7 +92,7 @@ struct RecursiveMonadic {
                        std::cout << "keep"s << '\n';
                        return List<unsigned int>::cons(_args.d_a0, rest_);
                      } else {
-                       return std::move(rest_);
+                       return rest_;
                      }
                    }},
         xs->v());
@@ -109,7 +109,7 @@ struct RecursiveMonadic {
   static std::optional<unsigned int>
   find_first(F0 &&pred, const std::shared_ptr<List<unsigned int>> &xs) {
     return std::visit(
-        Overloaded{[](const typename List<unsigned int>::Nil _args)
+        Overloaded{[](const typename List<unsigned int>::Nil)
                        -> std::optional<unsigned int> {
                      return std::optional<unsigned int>();
                    },
