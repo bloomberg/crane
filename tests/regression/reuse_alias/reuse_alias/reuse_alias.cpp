@@ -9,7 +9,7 @@ __attribute__((pure)) unsigned int
 ReuseAlias::tree_sum(const std::shared_ptr<ReuseAlias::tree> &t) {
   return std::visit(
       Overloaded{
-          [](const typename ReuseAlias::tree::Leaf _args) -> unsigned int {
+          [](const typename ReuseAlias::tree::Leaf) -> unsigned int {
             return 0u;
           },
           [](const typename ReuseAlias::tree::Node _args) -> unsigned int {
@@ -33,7 +33,7 @@ ReuseAlias::transform_tree(std::shared_ptr<ReuseAlias::tree> t) {
   } else {
     return std::visit(
         Overloaded{
-            [](const typename ReuseAlias::tree::Leaf _args)
+            [](const typename ReuseAlias::tree::Leaf)
                 -> std::shared_ptr<ReuseAlias::tree> { return tree::leaf(); },
             [&](const typename ReuseAlias::tree::Node _args)
                 -> std::shared_ptr<ReuseAlias::tree> {
@@ -55,7 +55,7 @@ ReuseAlias::nested_match_reuse(std::shared_ptr<ReuseAlias::tree> t,
   } else {
     return std::visit(
         Overloaded{
-            [](const typename ReuseAlias::tree::Leaf _args)
+            [](const typename ReuseAlias::tree::Leaf)
                 -> std::shared_ptr<ReuseAlias::tree> { return tree::leaf(); },
             [&](const typename ReuseAlias::tree::Node _args)
                 -> std::shared_ptr<ReuseAlias::tree> {
@@ -82,7 +82,7 @@ ReuseAlias::annotate_sum(std::shared_ptr<ReuseAlias::tree> t) {
   } else {
     return std::visit(
         Overloaded{
-            [](const typename ReuseAlias::tree::Leaf _args)
+            [](const typename ReuseAlias::tree::Leaf)
                 -> std::shared_ptr<ReuseAlias::tree> { return tree::leaf(); },
             [&](const typename ReuseAlias::tree::Node _args)
                 -> std::shared_ptr<ReuseAlias::tree> {

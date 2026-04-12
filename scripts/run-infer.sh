@@ -79,14 +79,63 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 
 REPORT="$PROJECT_ROOT/infer-out/report.txt"
 
+# Known false positives: Infer v1.2.0 cannot trace variable reads through
+# [&] captures in std::visit lambdas, so it reports DEAD_STORE on:
+#   - _loop_*  : loopify shadow variables (tail-recursion loop state)
+#   - _x, _x0  : nat/N/Z custom match predecessor bindings in unused branches
+#   - n_, m_, fuel_ : similar predecessor bindings in loopified code
+#   - f        : function shadow variables in loopified HOFs
+# These are all genuinely used but only via lambda captures Infer can't see.
+SUPPRESS_PATTERN='DEAD_STORE.*"(&_loop_|&_x[0-9]*`|&n_`|&m_`|&fuel_`|&f`)"'
+
 if [ -f "$REPORT" ] && [ -s "$REPORT" ]; then
-    warning_count=$(wc -l < "$REPORT" | tr -d ' ')
-    echo -e "${BOLD}${RED}Infer warnings:${NC}"
-    echo ""
-    cat "$REPORT"
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo -e "${BOLD}${RED}${warning_count} warning(s) found${NC}"
+    # Filter the report: remove suppressed false positives and their context blocks.
+    # Each issue in report.txt is a numbered block starting with "#N\n<file>: error:".
+    # We suppress blocks whose "written to" line matches the false-positive pattern.
+    FILTERED="$PROJECT_ROOT/infer-out/report.filtered.txt"
+    python3 - "$REPORT" "$FILTERED" << 'PYEOF'
+import sys, re
+
+infile, outfile = sys.argv[1], sys.argv[2]
+
+with open(infile) as f:
+    content = f.read()
+
+# Split into issue blocks (each starts with #N on its own line)
+blocks = re.split(r'(?=^#\d+$)', content, flags=re.MULTILINE)
+
+# False-positive DEAD_STORE patterns: variable names from [&] lambda capture context
+FP_VAR_RE = re.compile(
+    r"written to `&(_loop_\w+|_x\d*|n_|m_|fuel_|f)`",
+)
+
+kept = []
+for block in blocks:
+    if block.strip() == '':
+        continue
+    # Check if this is a DEAD_STORE false positive
+    if 'Dead Store' in block and FP_VAR_RE.search(block):
+        continue  # suppress
+    kept.append(block)
+
+with open(outfile, 'w') as f:
+    f.write(''.join(kept))
+PYEOF
+
+    warning_count=$(grep -c '^#[0-9]' "$FILTERED" 2>/dev/null || echo 0)
+    suppressed=$(grep -c '^#[0-9]' "$REPORT" 2>/dev/null || echo 0)
+    suppressed=$((suppressed - warning_count))
+
+    if [ "$warning_count" -gt 0 ]; then
+        echo -e "${BOLD}${RED}Infer warnings:${NC}"
+        echo ""
+        cat "$FILTERED"
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo -e "${BOLD}${RED}${warning_count} warning(s) found${NC} (${suppressed} known false positives suppressed)"
+    else
+        echo -e "${BOLD}${GREEN}No warnings found${NC} (${suppressed} known false positives suppressed)"
+    fi
 else
     echo -e "${BOLD}${GREEN}No warnings found${NC}"
 fi
