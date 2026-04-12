@@ -4165,13 +4165,13 @@ and gen_cpp_case (typ : ml_type) t env pv =
       tctx.move_dead_after <- saved_dead_reuse;
       let tvars = get_current_type_vars () in
       (* For now, handle the first reuse candidate only. *)
-      let branch_idx, matched_ctor, arity, _tail_ctor, tail_args =
+      let pv_idx, variant_idx, matched_ctor, arity, _tail_ctor, tail_args =
         List.hd reuse_candidates
       in
       let reuse_ctor_struct_name =
         ctor_struct_name_of_ref matched_ctor
       in
-      let ids, _rty, _pat, body = pv.(branch_idx) in
+      let ids, _rty, _pat, body = pv.(pv_idx) in
       let n_fields = arity in
       (* Build the condition: scrut.use_count() == 1 && scrut->v().index() == N
          Using proper AST nodes (CPPbinop, CPPmember, CPPmethod_call) so that
@@ -4190,7 +4190,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
         CPPbinop
           ( "&&",
             CPPbinop ("==", use_count_call, CPPint 1),
-            CPPbinop ("==", index_call, CPPint branch_idx) )
+            CPPbinop ("==", index_call, CPPint variant_idx) )
       in
       (* Build the reuse body *)
       (* 1. Get mutable reference to the variant alternative:
@@ -4201,7 +4201,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
           ( rf_var,
             Some (Tref Ttodo),
             CPPfun_call
-              ( CPPraw ("std::get<" ^ string_of_int branch_idx ^ ">"),
+              ( CPPraw ("std::get<" ^ string_of_int variant_idx ^ ">"),
                 [CPPmethod_call (scrut_expr, Id.of_string "v_mut", [])] ) )
       in
       (* 2. Push pattern variables into the environment, same as normal path *)

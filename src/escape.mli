@@ -56,11 +56,14 @@ val infer_owned_params : int -> ml_ast -> bool list
     constructor arity as the matched pattern. When the scrutinee has use_count()
     == 1, we can reuse its memory cell instead of allocating.
 
-    Returns: [(branch_idx, matched_ctor, arity, tail_ctor, tail_args)] *)
+    Returns: [(pv_idx, variant_idx, matched_ctor, arity, tail_ctor, tail_args)]
+    where [pv_idx] is the position in the pattern vector (for array access) and
+    [variant_idx] is the constructor's 0-based index in the C++ variant (for the
+    [use_count()==1 && v().index()==N] runtime check). *)
 val find_reuse_candidates :
   ml_type ->
   ml_branch array ->
-  (int * Names.GlobRef.t * int * Names.GlobRef.t * ml_ast list) list
+  (int * int * Names.GlobRef.t * int * Names.GlobRef.t * ml_ast list) list
 
 (** {2 Utility functions} *)
 

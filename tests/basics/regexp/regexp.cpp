@@ -111,7 +111,7 @@ Matcher::regexp_eq(const std::shared_ptr<Matcher::regexp> &r,
 std::shared_ptr<Matcher::regexp>
 Matcher::OptCat(std::shared_ptr<Matcher::regexp> r2,
                 std::shared_ptr<Matcher::regexp> r3) {
-  if (r2.use_count() == 1 && r2->v().index() == 1) {
+  if (r2.use_count() == 1 && r2->v().index() == 5) {
     return r2;
   } else {
     return std::visit(
@@ -121,7 +121,7 @@ Matcher::OptCat(std::shared_ptr<Matcher::regexp> r2,
             [](const typename Matcher::regexp::Zero &)
                 -> std::shared_ptr<Matcher::regexp> { return regexp::zero(); },
             [&](const auto &) -> std::shared_ptr<Matcher::regexp> {
-              if (r3.use_count() == 1 && r3->v().index() == 1) {
+              if (r3.use_count() == 1 && r3->v().index() == 5) {
                 return r3;
               } else {
                 return std::visit(

@@ -323,15 +323,25 @@ let same_inductive t1 t2 =
 let find_reuse_candidates scrutinee_type branches =
   Array.to_list
     (Array.mapi
-       (fun idx (ids, _, pat, body) ->
+       (fun _idx (ids, _, pat, body) ->
          match pat with
          | Pusual matched_ctor ->
            let matched_arity = List.length ids in
+           (* Use the constructor's 0-based index in the inductive type (ctor_nb
+              is 1-based in Rocq's AST), not its position in the pattern vector.
+              For full matches these are equal, but for partial matches (with
+              wildcards) the pv position diverges from the variant index, causing
+              the wrong constructor to be tested in the generated use_count check. *)
+           let variant_idx =
+             match matched_ctor with
+             | Names.GlobRef.ConstructRef (_, ctor_nb) -> ctor_nb - 1
+             | _ -> _idx
+           in
            ( match tail_constructor body with
            | Some (cons_ty, tail_ctor, tail_args)
              when same_inductive scrutinee_type cons_ty
                   && List.length tail_args = matched_arity ->
-             Some (idx, matched_ctor, matched_arity, tail_ctor, tail_args)
+             Some (_idx, variant_idx, matched_ctor, matched_arity, tail_ctor, tail_args)
            | _ -> None )
          | _ -> None )
        branches )
