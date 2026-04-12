@@ -72,7 +72,7 @@ CustomInlineBug::pair_if(const bool b,
   if (b) {
     return std::make_pair(s, s->value);
   } else {
-    return std::make_pair(s, 0u);
+    return std::make_pair(std::move(s), 0u);
   }
 }
 
@@ -81,7 +81,7 @@ std::optional<std::pair<std::shared_ptr<CustomInlineBug::State>, unsigned int>>
 CustomInlineBug::pair_match(
     const std::optional<std::shared_ptr<CustomInlineBug::State>> o) {
   if (o.has_value()) {
-    std::shared_ptr<CustomInlineBug::State> s = *o;
+    const std::shared_ptr<CustomInlineBug::State> &s = *o;
     return std::make_optional<
         std::pair<std::shared_ptr<CustomInlineBug::State>, unsigned int>>(
         std::make_pair(s, s->value));

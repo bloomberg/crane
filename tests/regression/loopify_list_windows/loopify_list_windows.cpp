@@ -162,16 +162,16 @@ LoopifyListWindows::span_eq(const unsigned int first,
                           _stack.push_back(_Call1{_args});
                           _stack.push_back(_Enter{_args.d_a1});
                         } else {
-                          _result =
-                              std::make_pair(List<unsigned int>::nil(), lst);
+                          _result = std::make_pair(List<unsigned int>::nil(),
+                                                   std::move(lst));
                         }
                       }},
                   lst->v());
             },
             [&](_Call1 _f) {
               const typename List<unsigned int>::Cons _args = _f._s0;
-              std::shared_ptr<List<unsigned int>> s = _result.first;
-              std::shared_ptr<List<unsigned int>> r = _result.second;
+              const std::shared_ptr<List<unsigned int>> &s = _result.first;
+              const std::shared_ptr<List<unsigned int>> &r = _result.second;
               _result =
                   std::make_pair(List<unsigned int>::cons(_args.d_a0, s), r);
             }},
@@ -656,8 +656,8 @@ LoopifyListWindows::group_fuel(const unsigned int fuel,
               },
               [&](const typename List<unsigned int>::Cons &_args) {
                 auto _cs = span_eq(_args.d_a0, _args.d_a1);
-                std::shared_ptr<List<unsigned int>> same = _cs.first;
-                std::shared_ptr<List<unsigned int>> rest = _cs.second;
+                const std::shared_ptr<List<unsigned int>> &same = _cs.first;
+                const std::shared_ptr<List<unsigned int>> &rest = _cs.second;
                 auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
                     List<unsigned int>::cons(_args.d_a0, same), nullptr);
                 if (_last) {

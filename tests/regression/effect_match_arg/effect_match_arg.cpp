@@ -46,7 +46,7 @@ void EffectMatchArg::set_option_value(const std::string key,
       key.c_str(),
       [&]() -> std::string {
         if (r.has_value()) {
-          std::string v = *r;
+          const std::string &v = *r;
           return v;
         } else {
           return "default";

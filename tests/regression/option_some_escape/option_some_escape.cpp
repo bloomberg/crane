@@ -56,7 +56,7 @@ __attribute__((pure)) unsigned int OptionSomeEscape::apply_option(
     const std::optional<std::function<unsigned int(unsigned int)>> o,
     const unsigned int x) {
   if (o.has_value()) {
-    std::function<unsigned int(unsigned int)> f = *o;
+    const std::function<unsigned int(unsigned int)> &f = *o;
     return f(x);
   } else {
     return x;

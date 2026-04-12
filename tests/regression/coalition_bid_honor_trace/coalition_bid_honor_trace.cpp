@@ -692,7 +692,7 @@ CoalitionBidHonorTraceCase::coalition_to_bid(
     const CoalitionBidHonorTraceCase::Side side) {
   auto _cs = coalition_lead_commander(c);
   if (_cs.has_value()) {
-    std::shared_ptr<CoalitionBidHonorTraceCase::Commander> cmd = *_cs;
+    const std::shared_ptr<CoalitionBidHonorTraceCase::Commander> &cmd = *_cs;
     return std::make_optional<
         std::shared_ptr<CoalitionBidHonorTraceCase::ForceBid>>(
         std::make_shared<CoalitionBidHonorTraceCase::ForceBid>(
@@ -876,9 +876,9 @@ CoalitionBidHonorTraceCase::coalition_state_force(
     std::shared_ptr<List<std::shared_ptr<CoalitionBidHonorTraceCase::Unit>>>
         fallback) {
   if (cs.has_value()) {
-    std::shared_ptr<
-        List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>>
-        c = *cs;
+    const std::shared_ptr<
+        List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>> &c =
+        *cs;
     return coalition_force(c);
   } else {
     return fallback;
@@ -897,8 +897,8 @@ CoalitionBidHonorTraceCase::ledger_lookup(
                  [&](const typename List<
                      std::pair<unsigned int, std::shared_ptr<Z>>>::Cons &_args)
                      -> std::shared_ptr<Z> {
-                   unsigned int id = _args.d_a0.first;
-                   std::shared_ptr<Z> honor = _args.d_a0.second;
+                   const unsigned int &id = _args.d_a0.first;
+                   const std::shared_ptr<Z> &honor = _args.d_a0.second;
                    if (id == warrior_id) {
                      return honor;
                    } else {
@@ -927,8 +927,8 @@ CoalitionBidHonorTraceCase::ledger_update_by_id(
               std::pair<unsigned int, std::shared_ptr<Z>>>::Cons &_args)
               -> std::shared_ptr<
                   List<std::pair<unsigned int, std::shared_ptr<Z>>>> {
-            unsigned int id = _args.d_a0.first;
-            std::shared_ptr<Z> honor = _args.d_a0.second;
+            const unsigned int &id = _args.d_a0.first;
+            const std::shared_ptr<Z> &honor = _args.d_a0.second;
             if (id == warrior_id) {
               return List<std::pair<unsigned int, std::shared_ptr<Z>>>::cons(
                   std::make_pair(id, new_honor), _args.d_a1);
@@ -1005,7 +1005,7 @@ CoalitionBidHonorTraceCase::apply_action_honor(
     const std::shared_ptr<CoalitionBidHonorTraceCase::ProtocolAction> &action) {
   auto _cs = state->bs_phase->action_actor_in_phase(action);
   if (_cs.has_value()) {
-    std::shared_ptr<CoalitionBidHonorTraceCase::Commander> actor = *_cs;
+    const std::shared_ptr<CoalitionBidHonorTraceCase::Commander> &actor = *_cs;
     return update_honor(state->bs_honor, actor, protocol_honor_delta(action));
   } else {
     return state->bs_honor;

@@ -101,10 +101,10 @@ struct StackOps {
         List<unsigned int>::cons(
             9u, List<unsigned int>::cons(8u, List<unsigned int>::nil())),
         3u}));
-    std::optional<unsigned int> o = _cs.first;
-    std::shared_ptr<state_with_acc> s_ = _cs.second;
+    const std::optional<unsigned int> &o = _cs.first;
+    const std::shared_ptr<state_with_acc> &s_ = _cs.second;
     if (o.has_value()) {
-      unsigned int a = *o;
+      const unsigned int &a = *o;
       return ((a + s_->stack_with_acc->length()) + s_->acc);
     } else {
       return s_->acc;

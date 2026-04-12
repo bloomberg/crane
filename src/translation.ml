@@ -1788,11 +1788,9 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
      [std::make_pair] are evaluated eagerly so a throw would crash at
      runtime.  This mirrors the [gen_ctor_arg] in the [MLcons] case of
      {!gen_expr}. *)
-  (* Defense-in-depth: clear move_dead_after when generating custom constructor
-     arguments (std::make_pair, std::make_optional, etc.) to prevent use-after-move.
-     While escape analysis already handles this, this safeguard ensures correctness. *)
-  let saved_dead = tctx.move_dead_after in
-  tctx.move_dead_after <- Escape.IntSet.empty;
+  (* Generate constructor arguments with live move_dead_after so the move
+     analysis can fire for single-use variables (nb_occur_match = 1 already
+     prevents moving variables that appear more than once across all args). *)
   let gen_ctor_arg e =
     match e with
     | MLdummy _ -> CPPraw "std::any{}"
@@ -1801,7 +1799,6 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
     | _ -> gen_expr env e
   in
   let args = List.rev_map gen_ctor_arg ts in
-  tctx.move_dead_after <- saved_dead;
   (* Helper to wrap expression in function call syntax if it has arguments *)
   let app x =
     match args with
@@ -5285,7 +5282,28 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       let shifted_owned =
         Escape.IntSet.map (fun i -> i + 1) tctx.move_owned_vars
       in
-      let new_is_shared = Escape.is_shared_ptr_type t in
+      (* Const-ref binding optimisation: when the RHS [a] is a record-field
+         access (single-branch MLcase) on a BORROWED source variable — i.e., a
+         variable that is not in [move_owned_vars] (passed by const ref, not
+         owned) — we can bind the result as [const T&] instead of [T].  This
+         avoids an unnecessary shared_ptr refcount increment at the binding
+         site; any subsequent owned uses still copy from the reference.
+
+         The source is borrowed iff its de Bruijn index is NOT in the current
+         (pre-shift) [move_owned_vars].  We only apply this when the type is a
+         shared_ptr so that primitive types (int, bool) are left unchanged. *)
+      let use_const_ref =
+        Escape.is_shared_ptr_type t
+        &&
+        ( match a with
+          | MLcase (_, MLrel k, pv)
+            when Array.length pv = 1
+                 && (match pv.(0) with (_, _, _, MLrel _) -> true | _ -> false)
+                 && not (Escape.IntSet.mem k tctx.move_owned_vars) ->
+            true
+          | _ -> false )
+      in
+      let new_is_shared = Escape.is_shared_ptr_type t && not use_const_ref in
       let owned_for_b =
         if new_is_shared then
           Escape.IntSet.add 1 shifted_owned
@@ -5315,6 +5333,11 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
                 in
                 Tfun (param_tys, ret_ty)
               | _ -> cpp_ty
+            in
+            (* Apply const-ref binding when safe. *)
+            let cpp_ty =
+              if use_const_ref then Tref (Tmod (TMconst, cpp_ty))
+              else cpp_ty
             in
             begin match extract_block_template e with
             | Some (ref, tmpl, args, tys) ->

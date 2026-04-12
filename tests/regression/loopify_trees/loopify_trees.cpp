@@ -916,8 +916,8 @@ LoopifyTrees::count_nodes(
             [&](_Call1 _f) {
               const typename LoopifyTrees::tree<unsigned int>::Node _args =
                   _f._s0;
-              unsigned int lc = _result.first;
-              unsigned int ls = _result.second;
+              const unsigned int &lc = _result.first;
+              const unsigned int &ls = _result.second;
               _stack.push_back(_Call2{ls, _args, lc});
               _stack.push_back(_Enter{_args.d_a2});
             },
@@ -926,8 +926,8 @@ LoopifyTrees::count_nodes(
               const typename LoopifyTrees::tree<unsigned int>::Node _args =
                   _f._s1;
               unsigned int lc = _f._s2;
-              unsigned int rc = _result.first;
-              unsigned int rs = _result.second;
+              const unsigned int &rc = _result.first;
+              const unsigned int &rs = _result.second;
               _result =
                   std::make_pair(((lc + rc) + 1), (_args.d_a1 + (ls + rs)));
             }},
@@ -1360,8 +1360,8 @@ LoopifyTrees::tree_min_max(
             [&](_Call1 _f) {
               const typename LoopifyTrees::tree<unsigned int>::Node _args =
                   _f._s0;
-              unsigned int lmin = _result.first;
-              unsigned int lmax = _result.second;
+              const unsigned int &lmin = _result.first;
+              const unsigned int &lmax = _result.second;
               _stack.push_back(_Call2{_args, lmax, lmin});
               _stack.push_back(_Enter{_args.d_a2});
             },
@@ -1370,8 +1370,8 @@ LoopifyTrees::tree_min_max(
                   _f._s0;
               unsigned int lmax = _f._s1;
               unsigned int lmin = _f._s2;
-              unsigned int rmin = _result.first;
-              unsigned int rmax = _result.second;
+              const unsigned int &rmin = _result.first;
+              const unsigned int &rmax = _result.second;
               _result = std::make_pair(min3(
                                            [&]() -> unsigned int {
                                              if (lmin == 0u) {

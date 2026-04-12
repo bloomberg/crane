@@ -38,7 +38,7 @@ struct Option {
   __attribute__((pure)) static std::optional<T2>
   apply_if_some(const std::optional<std::function<T2(T1)>> f, const T1 x) {
     if (f.has_value()) {
-      std::function<T2(T1)> g = *f;
+      const std::function<T2(T1)> &g = *f;
       return std::make_optional<T2>(g(x));
     } else {
       return std::optional<T2>();

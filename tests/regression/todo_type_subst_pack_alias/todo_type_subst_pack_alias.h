@@ -4,6 +4,7 @@
 #include <any>
 #include <functional>
 #include <type_traits>
+#include <utility>
 
 template <typename F, typename R, typename... Args>
 concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
@@ -46,7 +47,9 @@ struct TodoTypeSubstPackAlias {
 
     constexpr static unsigned int seed() { return 3u; }
 
-    constexpr static unsigned int step(unsigned int x) { return (x + 1); }
+    constexpr static unsigned int step(unsigned int x) {
+      return (std::move(x) + 1);
+    }
   };
 
   static_assert(Pack<nat_pack>);

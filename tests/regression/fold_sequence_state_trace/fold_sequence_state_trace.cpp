@@ -10,10 +10,10 @@
 std::shared_ptr<FoldSequenceStateTraceCase::Line>
 FoldSequenceStateTraceCase::line_through(const std::pair<Real, Real> p1,
                                          const std::pair<Real, Real> p2) {
-  Real x1 = p1.first;
-  Real y1 = p1.second;
-  Real x2 = p2.first;
-  Real y2 = p2.second;
+  const Real &x1 = p1.first;
+  const Real &y1 = p1.second;
+  const Real &x2 = p2.first;
+  const Real &y2 = p2.second;
   if ((x1 == x2)) {
     return std::make_shared<FoldSequenceStateTraceCase::Line>(
         Line{Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)), (-x1)});
@@ -28,10 +28,10 @@ FoldSequenceStateTraceCase::line_through(const std::pair<Real, Real> p1,
 std::shared_ptr<FoldSequenceStateTraceCase::Line>
 FoldSequenceStateTraceCase::perp_bisector(const std::pair<Real, Real> p1,
                                           const std::pair<Real, Real> p2) {
-  Real x1 = p1.first;
-  Real y1 = p1.second;
-  Real x2 = p2.first;
-  Real y2 = p2.second;
+  const Real &x1 = p1.first;
+  const Real &y1 = p1.second;
+  const Real &x2 = p2.first;
+  const Real &y2 = p2.second;
   if ((x1 == x2)) {
     if ((y1 == y2)) {
       return std::make_shared<FoldSequenceStateTraceCase::Line>(
@@ -54,8 +54,8 @@ std::shared_ptr<FoldSequenceStateTraceCase::Line>
 FoldSequenceStateTraceCase::perp_through(
     const std::pair<Real, Real> p,
     const std::shared_ptr<FoldSequenceStateTraceCase::Line> &l) {
-  Real x = p.first;
-  Real y = p.second;
+  const Real &x = p.first;
+  const Real &y = p.second;
   Real c = ((l->A * y) - (l->B * x));
   return std::make_shared<FoldSequenceStateTraceCase::Line>(
       Line{l->B, (-l->A), c});

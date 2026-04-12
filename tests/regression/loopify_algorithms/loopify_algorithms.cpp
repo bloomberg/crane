@@ -222,8 +222,8 @@ LoopifyAlgorithms::run_length_encode(
                       [&](const typename List<
                           std::pair<unsigned int, unsigned int>>::Cons &_args0)
                           -> void {
-                        unsigned int y = _args0.d_a0.first;
-                        unsigned int n = _args0.d_a0.second;
+                        const unsigned int &y = _args0.d_a0.first;
+                        const unsigned int &n = _args0.d_a0.second;
                         if (_args.d_a0 == y) {
                           _result =
                               List<std::pair<unsigned int, unsigned int>>::cons(

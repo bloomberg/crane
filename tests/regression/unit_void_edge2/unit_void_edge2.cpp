@@ -107,7 +107,7 @@ UnitVoidEdge2::make_some_unit(const bool b) {
 __attribute__((pure)) unsigned int
 UnitVoidEdge2::use_option_unit(const std::optional<std::monostate> o) {
   if (o.has_value()) {
-    std::monostate u = *o;
+    const std::monostate &u = *o;
     return take_unit(u);
   } else {
     return 0u;

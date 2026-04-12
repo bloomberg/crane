@@ -151,8 +151,8 @@ struct CoindGuard {
   template <typename T1, typename T2, MapsTo<std::pair<T1, T2>, T2> F0>
   static std::shared_ptr<Stream<T1>> unfold(F0 &&f, const T2 seed) {
     auto _cs = f(seed);
-    T1 a = _cs.first;
-    T2 s_ = _cs.second;
+    const T1 &a = _cs.first;
+    const T2 &s_ = _cs.second;
     return Stream<T1>::lazy_([=]() mutable -> std::shared_ptr<Stream<T1>> {
       return Stream<T1>::cons(a, unfold<T1, T2>(f, s_));
     });
@@ -177,8 +177,8 @@ struct CoindGuard {
   static inline const std::shared_ptr<Stream<unsigned int>> fibs =
       unfold<unsigned int, std::pair<unsigned int, unsigned int>>(
           [](std::pair<unsigned int, unsigned int> pat) {
-            unsigned int a = pat.first;
-            unsigned int b = pat.second;
+            const unsigned int &a = pat.first;
+            const unsigned int &b = pat.second;
             return std::make_pair(a, std::make_pair(b, (a + b)));
           },
           std::make_pair(0u, 1u));

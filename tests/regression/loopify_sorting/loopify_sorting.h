@@ -183,8 +183,8 @@ struct LoopifySorting {
               [&](_Call1 _f) {
                 const typename List<T1>::Cons _args0 = _f._s0;
                 const typename List<T1>::Cons _args = _f._s1;
-                std::shared_ptr<List<T1>> l1 = _result.first;
-                std::shared_ptr<List<T1>> l2 = _result.second;
+                const std::shared_ptr<List<T1>> &l1 = _result.first;
+                const std::shared_ptr<List<T1>> &l2 = _result.second;
                 _result = std::make_pair(List<T1>::cons(_args.d_a0, l1),
                                          List<T1>::cons(_args0.d_a0, l2));
               }},

@@ -65,8 +65,8 @@ __attribute__((pure)) unsigned int LoopifySearch::knapsack_fuel(
                         [&](const typename List<
                             std::pair<unsigned int, unsigned int>>::Cons &_args)
                             -> void {
-                          unsigned int weight = _args.d_a0.first;
-                          unsigned int value = _args.d_a0.second;
+                          const unsigned int &weight = _args.d_a0.first;
+                          const unsigned int &value = _args.d_a0.second;
                           if (capacity < weight) {
                             _stack.push_back(_Enter{_args.d_a1, capacity, f});
                           } else {
@@ -163,8 +163,8 @@ LoopifySearch::majority(const std::shared_ptr<List<unsigned int>> &l) {
                    },
                    [&](_Call1 _f) {
                      const typename List<unsigned int>::Cons _args = _f._s0;
-                     unsigned int cand = _result.first;
-                     unsigned int count = _result.second;
+                     const unsigned int &cand = _result.first;
+                     const unsigned int &count = _result.second;
                      if (_args.d_a0 == cand) {
                        _result = std::make_pair(cand, (count + 1));
                      } else {
@@ -1108,8 +1108,8 @@ LoopifySearch::split_list(const std::shared_ptr<List<unsigned int>> &l) {
             [&](_Call1 _f) {
               const typename List<unsigned int>::Cons _args0 = _f._s0;
               const typename List<unsigned int>::Cons _args = _f._s1;
-              std::shared_ptr<List<unsigned int>> a = _result.first;
-              std::shared_ptr<List<unsigned int>> b = _result.second;
+              const std::shared_ptr<List<unsigned int>> &a = _result.first;
+              const std::shared_ptr<List<unsigned int>> &b = _result.second;
               _result =
                   std::make_pair(List<unsigned int>::cons(_args.d_a0, a),
                                  List<unsigned int>::cons(_args0.d_a0, b));
@@ -1269,10 +1269,10 @@ LoopifySearch::merge_sort_fuel(const unsigned int fuel,
                                     [&](const typename List<unsigned int>::Cons
                                             &) -> void {
                                       auto _cs = split_list(l);
-                                      std::shared_ptr<List<unsigned int>> a =
-                                          _cs.first;
-                                      std::shared_ptr<List<unsigned int>> b =
-                                          _cs.second;
+                                      const std::shared_ptr<List<unsigned int>>
+                                          &a = _cs.first;
+                                      const std::shared_ptr<List<unsigned int>>
+                                          &b = _cs.second;
                                       _stack.push_back(_Call1{a, f});
                                       _stack.push_back(_Enter{b, f});
                                     }},

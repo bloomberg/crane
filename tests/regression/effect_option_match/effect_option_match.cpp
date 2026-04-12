@@ -17,7 +17,7 @@ std::string EffectOptionMatch::show_or_default(const std::string name,
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   if (mv.has_value()) {
-    std::string v = *mv;
+    const std::string &v = *mv;
     return v;
   } else {
     return default0;
@@ -31,7 +31,7 @@ std::string EffectOptionMatch::show_or_ask(const std::string name) {
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   if (mv.has_value()) {
-    std::string v = *mv;
+    const std::string &v = *mv;
     return v;
   } else {
     std::cout << "Not set, enter value:"s << '\n';
@@ -59,7 +59,7 @@ std::string EffectOptionMatch::get_first_set(
                        : std::optional<std::string>();
             }();
             if (mv.has_value()) {
-              std::string v = *mv;
+              const std::string &v = *mv;
               return v;
             } else {
               return std::visit(
@@ -74,7 +74,7 @@ std::string EffectOptionMatch::get_first_set(
                                           : std::optional<std::string>();
                                }();
                                if (mv2.has_value()) {
-                                 std::string v2 = *mv2;
+                                 const std::string &v2 = *mv2;
                                  return v2;
                                } else {
                                  return "none";
@@ -95,7 +95,7 @@ bool EffectOptionMatch::set_and_verify(const std::string name,
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   if (mv.has_value()) {
-    std::string _x0 = *mv;
+    const std::string &_x0 = *mv;
     return true;
   } else {
     return false;
@@ -118,7 +118,7 @@ std::optional<std::string> EffectOptionMatch::find_env_value(
                                             : std::optional<std::string>();
                                  }();
                                  if (mv.has_value()) {
-                                   std::string v = *mv;
+                                   const std::string &v = *mv;
                                    return std::make_optional<std::string>(v);
                                  } else {
                                    return find_env_value(_args.d_a1);

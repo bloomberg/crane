@@ -146,9 +146,9 @@ struct FetchOps {
                 8u, List<unsigned int>::cons(7u, List<unsigned int>::nil()))),
         0u);
     if (_cs.has_value()) {
-      std::pair<unsigned int, unsigned int> p = *_cs;
-      unsigned int _x = p.first;
-      unsigned int next = p.second;
+      const std::pair<unsigned int, unsigned int> &p = *_cs;
+      const unsigned int &_x = p.first;
+      const unsigned int &next = p.second;
       return next;
     } else {
       return 0u;

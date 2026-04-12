@@ -71,8 +71,8 @@ __attribute__((pure)) std::optional<unsigned int> LoopifyOptionMaybe::lookup(
             },
             [&](const typename List<std::pair<unsigned int, unsigned int>>::Cons
                     &_args) {
-              unsigned int k = _args.d_a0.first;
-              unsigned int v = _args.d_a0.second;
+              const unsigned int &k = _args.d_a0.first;
+              const unsigned int &v = _args.d_a0.second;
               if (key == k) {
                 _result = std::make_optional<unsigned int>(v);
                 _continue = false;
@@ -107,8 +107,8 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::lookup_all(
             },
             [&](const typename List<std::pair<unsigned int, unsigned int>>::Cons
                     &_args) {
-              unsigned int k = _args.d_a0.first;
-              unsigned int v = _args.d_a0.second;
+              const unsigned int &k = _args.d_a0.first;
+              const unsigned int &v = _args.d_a0.second;
               if (key == k) {
                 auto _cell = List<unsigned int>::cons(v, nullptr);
                 if (_last) {
@@ -178,7 +178,7 @@ std::shared_ptr<List<unsigned int>> LoopifyOptionMaybe::catMaybes(
             },
             [&](const typename List<std::optional<unsigned int>>::Cons &_args) {
               if (_args.d_a0.has_value()) {
-                unsigned int x = *_args.d_a0;
+                const unsigned int &x = *_args.d_a0;
                 auto _cell = List<unsigned int>::cons(x, nullptr);
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())

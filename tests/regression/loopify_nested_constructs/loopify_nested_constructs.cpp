@@ -255,10 +255,11 @@ LoopifyNestedConstructs::tuple_constr(const unsigned int n) {
                    },
                    [&](_Call1 _f) {
                      const unsigned int n = _f._s0;
-                     std::pair<unsigned int, unsigned int> p = _result.first;
-                     unsigned int c = _result.second;
-                     unsigned int a = p.first;
-                     unsigned int b = p.second;
+                     const std::pair<unsigned int, unsigned int> &p =
+                         _result.first;
+                     const unsigned int &c = _result.second;
+                     const unsigned int &a = p.first;
+                     const unsigned int &b = p.second;
                      _result = std::make_pair(std::make_pair((a + 1u), (b + n)),
                                               (c + (n * n)));
                    }},

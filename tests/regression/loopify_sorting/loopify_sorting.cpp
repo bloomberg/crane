@@ -240,10 +240,10 @@ LoopifySorting::merge_sort_fuel(const unsigned int fuel,
                                     [&](const typename List<unsigned int>::Cons
                                             &) -> void {
                                       auto _cs = split<unsigned int>(l);
-                                      std::shared_ptr<List<unsigned int>> l1 =
-                                          _cs.first;
-                                      std::shared_ptr<List<unsigned int>> l2 =
-                                          _cs.second;
+                                      const std::shared_ptr<List<unsigned int>>
+                                          &l1 = _cs.first;
+                                      const std::shared_ptr<List<unsigned int>>
+                                          &l2 = _cs.second;
                                       _stack.push_back(_Call1{l1, f});
                                       _stack.push_back(_Enter{l2, f});
                                     }},
@@ -310,8 +310,8 @@ LoopifySorting::partition(const unsigned int pivot,
             [&](_Call1 _f) {
               const unsigned int pivot = _f._s0;
               const typename List<unsigned int>::Cons _args = _f._s1;
-              std::shared_ptr<List<unsigned int>> lo = _result.first;
-              std::shared_ptr<List<unsigned int>> hi = _result.second;
+              const std::shared_ptr<List<unsigned int>> &lo = _result.first;
+              const std::shared_ptr<List<unsigned int>> &hi = _result.second;
               if (_args.d_a0 <= pivot) {
                 _result = std::make_pair(
                     List<unsigned int>::cons(_args.d_a0, lo), hi);
@@ -372,8 +372,10 @@ LoopifySorting::quicksort_fuel(const unsigned int fuel,
                           [&](const typename List<unsigned int>::Cons &_args)
                               -> void {
                             auto _cs = partition(_args.d_a0, _args.d_a1);
-                            std::shared_ptr<List<unsigned int>> lo = _cs.first;
-                            std::shared_ptr<List<unsigned int>> hi = _cs.second;
+                            const std::shared_ptr<List<unsigned int>> &lo =
+                                _cs.first;
+                            const std::shared_ptr<List<unsigned int>> &hi =
+                                _cs.second;
                             _stack.push_back(_Call1{lo, f, _args.d_a0});
                             _stack.push_back(_Enter{hi, f});
                           }},

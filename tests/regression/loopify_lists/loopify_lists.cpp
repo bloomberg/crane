@@ -852,8 +852,8 @@ std::shared_ptr<LoopifyLists::list<unsigned int>> LoopifyLists::lookup_all(
             },
             [&](const typename LoopifyLists::list<
                 std::pair<unsigned int, unsigned int>>::Cons &_args) {
-              unsigned int k = _args.d_a0.first;
-              unsigned int v = _args.d_a0.second;
+              const unsigned int &k = _args.d_a0.first;
+              const unsigned int &v = _args.d_a0.second;
               if (k == key) {
                 auto _cell = list<unsigned int>::cons(v, nullptr);
                 if (_last) {
@@ -1291,9 +1291,9 @@ LoopifyLists::swizzle(
             [&](_Call1 _f) {
               const typename LoopifyLists::list<unsigned int>::Cons _args =
                   _f._s0;
-              std::shared_ptr<LoopifyLists::list<unsigned int>> odds =
+              const std::shared_ptr<LoopifyLists::list<unsigned int>> &odds =
                   _result.first;
-              std::shared_ptr<LoopifyLists::list<unsigned int>> evens =
+              const std::shared_ptr<LoopifyLists::list<unsigned int>> &evens =
                   _result.second;
               _result = std::make_pair(
                   list<unsigned int>::cons(_args.d_a0, evens), odds);
@@ -1426,8 +1426,8 @@ __attribute__((pure)) unsigned int LoopifyLists::lookup(
                    },
                    [&](const typename LoopifyLists::list<
                        std::pair<unsigned int, unsigned int>>::Cons &_args) {
-                     unsigned int k = _args.d_a0.first;
-                     unsigned int v = _args.d_a0.second;
+                     const unsigned int &k = _args.d_a0.first;
+                     const unsigned int &v = _args.d_a0.second;
                      if (k == key) {
                        _result = v;
                        _continue = false;
@@ -1828,8 +1828,8 @@ LoopifyLists::split_at(const unsigned int n,
                       [&](const typename LoopifyLists::list<unsigned int>::Cons
                               &_args) -> void {
                         if (n == 0u) {
-                          _result =
-                              std::make_pair(list<unsigned int>::nil(), l);
+                          _result = std::make_pair(list<unsigned int>::nil(),
+                                                   std::move(l));
                         } else {
                           _stack.push_back(_Call1{_args});
                           _stack.push_back(_Enter{
@@ -1841,9 +1841,9 @@ LoopifyLists::split_at(const unsigned int n,
             [&](_Call1 _f) {
               const typename LoopifyLists::list<unsigned int>::Cons _args =
                   _f._s0;
-              std::shared_ptr<LoopifyLists::list<unsigned int>> a =
+              const std::shared_ptr<LoopifyLists::list<unsigned int>> &a =
                   _result.first;
-              std::shared_ptr<LoopifyLists::list<unsigned int>> b =
+              const std::shared_ptr<LoopifyLists::list<unsigned int>> &b =
                   _result.second;
               _result =
                   std::make_pair(list<unsigned int>::cons(_args.d_a0, a), b);
@@ -1897,8 +1897,8 @@ LoopifyLists::unzip(
                       [&](const typename LoopifyLists::list<
                           std::pair<unsigned int, unsigned int>>::Cons &_args)
                           -> void {
-                        unsigned int a = _args.d_a0.first;
-                        unsigned int b = _args.d_a0.second;
+                        const unsigned int &a = _args.d_a0.first;
+                        const unsigned int &b = _args.d_a0.second;
                         _stack.push_back(_Call1{b, a});
                         _stack.push_back(_Enter{_args.d_a1});
                       }},
@@ -1907,9 +1907,9 @@ LoopifyLists::unzip(
             [&](_Call1 _f) {
               unsigned int b = _f._s0;
               unsigned int a = _f._s1;
-              std::shared_ptr<LoopifyLists::list<unsigned int>> xs =
+              const std::shared_ptr<LoopifyLists::list<unsigned int>> &xs =
                   _result.first;
-              std::shared_ptr<LoopifyLists::list<unsigned int>> ys =
+              const std::shared_ptr<LoopifyLists::list<unsigned int>> &ys =
                   _result.second;
               _result = std::make_pair(list<unsigned int>::cons(a, xs),
                                        list<unsigned int>::cons(b, ys));
@@ -2225,8 +2225,8 @@ LoopifyLists::minmax(
             [&](_Call1 _f) {
               const typename LoopifyLists::list<unsigned int>::Cons _args =
                   _f._s0;
-              unsigned int lo = _result.first;
-              unsigned int hi = _result.second;
+              const unsigned int &lo = _result.first;
+              const unsigned int &hi = _result.second;
               _result = std::make_pair(
                   [&]() -> unsigned int {
                     if (_args.d_a0 <= lo) {
@@ -2426,8 +2426,8 @@ LoopifyLists::majority(
             [&](_Call1 _f) {
               const typename LoopifyLists::list<unsigned int>::Cons _args =
                   _f._s0;
-              unsigned int cand = _result.first;
-              unsigned int cnt = _result.second;
+              const unsigned int &cand = _result.first;
+              const unsigned int &cnt = _result.second;
               if (_args.d_a0 == cand) {
                 _result = std::make_pair(cand, (cnt + 1));
               } else {
@@ -2595,8 +2595,8 @@ LoopifyLists::sum_and_count(
             [&](_Call1 _f) {
               const typename LoopifyLists::list<unsigned int>::Cons _args =
                   _f._s0;
-              unsigned int s = _result.first;
-              unsigned int c = _result.second;
+              const unsigned int &s = _result.first;
+              const unsigned int &c = _result.second;
               _result = std::make_pair((_args.d_a0 + s), (c + 1));
             }},
         _frame);

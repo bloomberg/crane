@@ -49,7 +49,7 @@ std::string EffectBindAction::maybe_override(const std::string name,
   }();
   return [&]() -> std::string {
     if (r.has_value()) {
-      std::string v = *r;
+      const std::string &v = *r;
       return v;
     } else {
       return default0;

@@ -17,13 +17,13 @@ Crane Extract Inductive option =>
   "std::optional<%t0>"
   [ "std::make_optional<%t0>(%a0)"
     "std::optional<%t0>()" ]
-  "if (%scrut.has_value()) { %t0 %b0a0 = *%scrut; %br0 } else { %br1 }"
+  "if (%scrut.has_value()) { const %t0& %b0a0 = *%scrut; %br0 } else { %br1 }"
   From "optional" "memory".
 
 Crane Extract Inductive prod =>
   "std::pair<%t0, %t1>"
   [ "std::make_pair(%a0, %a1)" ]
-  "%t0 %b0a0 = %scrut.first; %t1 %b0a1 = %scrut.second; %br0"
+  "const %t0& %b0a0 = %scrut.first; const %t1& %b0a1 = %scrut.second; %br0"
   From "utility".
 Crane Extract Inlined Constant fst => "%a0.first" From "utility".
 Crane Extract Inlined Constant snd => "%a0.second" From "utility".

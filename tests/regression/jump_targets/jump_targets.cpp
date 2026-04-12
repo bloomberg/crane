@@ -21,7 +21,7 @@ std::shared_ptr<List<unsigned int>> JumpTargets::collect_targets(
               -> std::shared_ptr<List<unsigned int>> {
             auto _cs = _args.d_a0->jump_target_collection();
             if (_cs.has_value()) {
-              unsigned int a = *_cs;
+              const unsigned int &a = *_cs;
               return List<unsigned int>::cons(a, collect_targets(_args.d_a1));
             } else {
               return collect_targets(_args.d_a1);
@@ -41,7 +41,7 @@ JumpTargets::in_layout(const std::shared_ptr<JumpTargets::layout> &l,
                        const std::shared_ptr<JumpTargets::instr_region> &i) {
   auto _cs = i->jump_target_region();
   if (_cs.has_value()) {
-    unsigned int a = *_cs;
+    const unsigned int &a = *_cs;
     return addr_in_region(a, l);
   } else {
     return true;
@@ -51,7 +51,7 @@ JumpTargets::in_layout(const std::shared_ptr<JumpTargets::layout> &l,
 __attribute__((pure)) unsigned int
 JumpTargets::option_nat_or_zero(const std::optional<unsigned int> o) {
   if (o.has_value()) {
-    unsigned int n = *o;
+    const unsigned int &n = *o;
     return n;
   } else {
     return 0u;
@@ -61,7 +61,7 @@ JumpTargets::option_nat_or_zero(const std::optional<unsigned int> o) {
 __attribute__((pure)) unsigned int
 JumpTargets::target_default(const std::optional<unsigned int> o) {
   if (o.has_value()) {
-    unsigned int a = *o;
+    const unsigned int &a = *o;
     return a;
   } else {
     return 0u;

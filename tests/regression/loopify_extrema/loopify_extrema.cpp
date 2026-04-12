@@ -162,8 +162,8 @@ LoopifyExtrema::minmax(const std::shared_ptr<List<unsigned int>> &l) {
             },
             [&](_Call1 _f) {
               const typename List<unsigned int>::Cons _args = _f._s0;
-              unsigned int lo = _result.first;
-              unsigned int hi = _result.second;
+              const unsigned int &lo = _result.first;
+              const unsigned int &hi = _result.second;
               _result = std::make_pair(std::min(_args.d_a0, lo),
                                        std::max(_args.d_a0, hi));
             }},

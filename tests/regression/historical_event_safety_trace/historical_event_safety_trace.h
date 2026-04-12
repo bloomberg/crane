@@ -619,7 +619,7 @@ struct HistoricalEventSafetyTraceCase {
                     const unsigned int max_level,
                     const unsigned int max_stage) {
     if (horizon <= 0) {
-      return std::make_pair(std::make_pair(s, max_level), max_stage);
+      return std::make_pair(std::make_pair(std::move(s), max_level), max_stage);
     } else {
       unsigned int k = horizon - 1;
       std::shared_ptr<State> s_ =
@@ -645,10 +645,10 @@ struct HistoricalEventSafetyTraceCase {
     bool initial_safe = is_safe_bool(pconf, initial_state);
     auto _cs = simulate_with_max(inflow, ctrl, stage_fn, pconf, horizon,
                                  initial_state, 0u, 0u);
-    std::pair<std::shared_ptr<State>, unsigned int> p = _cs.first;
-    unsigned int max_stg = _cs.second;
-    std::shared_ptr<State> final_state = p.first;
-    unsigned int max_lev = p.second;
+    const std::pair<std::shared_ptr<State>, unsigned int> &p = _cs.first;
+    const unsigned int &max_stg = _cs.second;
+    const std::shared_ptr<State> &final_state = p.first;
+    const unsigned int &max_lev = p.second;
     bool final_safe = is_safe_bool(pconf, final_state);
     return std::make_shared<TestResult>(
         TestResult{event_id, initial_safe, final_safe, max_lev, max_stg});

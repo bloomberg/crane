@@ -182,8 +182,8 @@ std::shared_ptr<List<unsigned int>> LoopifyListGeneration::replicate_list(
                       [&](const typename List<
                           std::pair<unsigned int, unsigned int>>::Cons &_args)
                           -> void {
-                        unsigned int n = _args.d_a0.first;
-                        unsigned int x = _args.d_a0.second;
+                        const unsigned int &n = _args.d_a0.first;
+                        const unsigned int &x = _args.d_a0.second;
                         std::shared_ptr<List<unsigned int>> rep =
                             replicate(n, x);
                         _stack.push_back(_Call1{std::move(rep)});

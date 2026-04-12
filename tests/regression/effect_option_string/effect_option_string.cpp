@@ -18,7 +18,7 @@ std::string EffectOptionString::let_option_match(const std::string name) {
   }();
   std::string s;
   if (r.has_value()) {
-    std::string v = *r;
+    const std::string &v = *r;
     s = v;
   } else {
     s = "unknown";
@@ -35,7 +35,7 @@ std::string EffectOptionString::bind_option_match(const std::string name) {
   }();
   return [&]() -> std::string {
     if (r.has_value()) {
-      std::string v = *r;
+      const std::string &v = *r;
       return v;
     } else {
       return "fallback";
@@ -51,7 +51,7 @@ EffectOptionString::option_effect_or_literal(const std::string name) {
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   if (r.has_value()) {
-    std::string _x = *r;
+    const std::string &_x = *r;
     return []() -> std::string {
       std::string _r;
       std::getline(std::cin, _r);
@@ -71,13 +71,13 @@ std::string EffectOptionString::nested_option(const std::string n1,
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   if (r1.has_value()) {
-    std::string v1 = *r1;
+    const std::string &v1 = *r1;
     std::optional<std::string> r2 = [&]() -> std::optional<std::string> {
       auto *v = std::getenv(n2.c_str());
       return v ? std::optional<std::string>(v) : std::optional<std::string>();
     }();
     if (r2.has_value()) {
-      std::string v2 = *r2;
+      const std::string &v2 = *r2;
       return v1 + "/"s + v2;
     } else {
       return v1;
@@ -95,7 +95,7 @@ void EffectOptionString::option_then_effect(const std::string name) {
   }();
   std::string msg;
   if (r.has_value()) {
-    std::string v = *r;
+    const std::string &v = *r;
     msg = v;
   } else {
     msg = "not_set";
@@ -112,7 +112,7 @@ int64_t EffectOptionString::option_int(const std::string name) {
   }();
   int64_t len;
   if (r.has_value()) {
-    std::string v = *r;
+    const std::string &v = *r;
     len = v.length();
   } else {
     len = int64_t(0);

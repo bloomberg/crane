@@ -44,8 +44,8 @@ FunctorComp::Queue::push(const unsigned int x,
                          const std::pair<std::shared_ptr<List<unsigned int>>,
                                          std::shared_ptr<List<unsigned int>>>
                              q) {
-  std::shared_ptr<List<unsigned int>> front = q.first;
-  std::shared_ptr<List<unsigned int>> back = q.second;
+  const std::shared_ptr<List<unsigned int>> &front = q.first;
+  const std::shared_ptr<List<unsigned int>> &back = q.second;
   return std::make_pair(front, List<unsigned int>::cons(x, back));
 }
 
@@ -54,8 +54,8 @@ std::optional<std::pair<unsigned int, FunctorComp::Queue::t>>
 FunctorComp::Queue::pop(const std::pair<std::shared_ptr<List<unsigned int>>,
                                         std::shared_ptr<List<unsigned int>>>
                             q) {
-  std::shared_ptr<List<unsigned int>> front = q.first;
-  std::shared_ptr<List<unsigned int>> back = q.second;
+  const std::shared_ptr<List<unsigned int>> &front = q.first;
+  const std::shared_ptr<List<unsigned int>> &back = q.second;
   return std::visit(
       Overloaded{
           [&](const typename List<unsigned int>::Nil &)
@@ -108,7 +108,7 @@ __attribute__((pure)) unsigned int
 FunctorComp::Queue::size(const std::pair<std::shared_ptr<List<unsigned int>>,
                                          std::shared_ptr<List<unsigned int>>>
                              q) {
-  std::shared_ptr<List<unsigned int>> front = q.first;
-  std::shared_ptr<List<unsigned int>> back = q.second;
+  const std::shared_ptr<List<unsigned int>> &front = q.first;
+  const std::shared_ptr<List<unsigned int>> &back = q.second;
   return (front->length() + back->length());
 }

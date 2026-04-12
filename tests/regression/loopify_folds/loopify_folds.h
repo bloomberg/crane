@@ -400,8 +400,8 @@ struct LoopifyFolds {
                         [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
                           auto _cs = f(acc, _args.d_a0);
-                          unsigned int acc_ = _cs.first;
-                          unsigned int y = _cs.second;
+                          const unsigned int &acc_ = _cs.first;
+                          const unsigned int &y = _cs.second;
                           _stack.push_back(_Call1{y});
                           _stack.push_back(_Enter{_args.d_a1, acc_});
                         }},
@@ -409,8 +409,8 @@ struct LoopifyFolds {
               },
               [&](_Call1 _f) {
                 unsigned int y = _f._s0;
-                unsigned int final_acc = _result.first;
-                std::shared_ptr<List<unsigned int>> ys = _result.second;
+                const unsigned int &final_acc = _result.first;
+                const std::shared_ptr<List<unsigned int>> &ys = _result.second;
                 _result =
                     std::make_pair(final_acc, List<unsigned int>::cons(y, ys));
               }},
@@ -482,8 +482,8 @@ struct LoopifyFolds {
       } else {
         unsigned int fuel_ = _loop_fuel - 1;
         auto _cs = f(_loop_seed);
-        unsigned int x = _cs.first;
-        unsigned int next_seed = _cs.second;
+        const unsigned int &x = _cs.first;
+        const unsigned int &next_seed = _cs.second;
         {
           auto _cell = List<unsigned int>::cons(x, nullptr);
           if (_last) {

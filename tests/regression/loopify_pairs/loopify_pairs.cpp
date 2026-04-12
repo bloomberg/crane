@@ -50,8 +50,8 @@ LoopifyPairs::unzip(
                       [&](const typename LoopifyPairs::list<
                           std::pair<unsigned int, unsigned int>>::Cons &_args)
                           -> void {
-                        unsigned int x = _args.d_a0.first;
-                        unsigned int y = _args.d_a0.second;
+                        const unsigned int &x = _args.d_a0.first;
+                        const unsigned int &y = _args.d_a0.second;
                         _stack.push_back(_Call1{y, x});
                         _stack.push_back(_Enter{_args.d_a1});
                       }},
@@ -60,9 +60,9 @@ LoopifyPairs::unzip(
             [&](_Call1 _f) {
               unsigned int y = _f._s0;
               unsigned int x = _f._s1;
-              std::shared_ptr<LoopifyPairs::list<unsigned int>> xs =
+              const std::shared_ptr<LoopifyPairs::list<unsigned int>> &xs =
                   _result.first;
-              std::shared_ptr<LoopifyPairs::list<unsigned int>> ys =
+              const std::shared_ptr<LoopifyPairs::list<unsigned int>> &ys =
                   _result.second;
               _result = std::make_pair(list<unsigned int>::cons(x, xs),
                                        list<unsigned int>::cons(y, ys));
@@ -123,13 +123,15 @@ LoopifyPairs::partition3(
               const unsigned int pivot = _f._s0;
               const typename LoopifyPairs::list<unsigned int>::Cons _args =
                   _f._s1;
-              std::shared_ptr<LoopifyPairs::list<unsigned int>> lt =
+              const std::shared_ptr<LoopifyPairs::list<unsigned int>> &lt =
                   _result.first;
-              std::pair<std::shared_ptr<LoopifyPairs::list<unsigned int>>,
-                        std::shared_ptr<LoopifyPairs::list<unsigned int>>>
-                  p = _result.second;
-              std::shared_ptr<LoopifyPairs::list<unsigned int>> eq = p.first;
-              std::shared_ptr<LoopifyPairs::list<unsigned int>> gt = p.second;
+              const std::pair<std::shared_ptr<LoopifyPairs::list<unsigned int>>,
+                              std::shared_ptr<LoopifyPairs::list<unsigned int>>>
+                  &p = _result.second;
+              const std::shared_ptr<LoopifyPairs::list<unsigned int>> &eq =
+                  p.first;
+              const std::shared_ptr<LoopifyPairs::list<unsigned int>> &gt =
+                  p.second;
               if (_args.d_a0 < pivot) {
                 _result =
                     std::make_pair(list<unsigned int>::cons(_args.d_a0, lt),
@@ -198,8 +200,8 @@ LoopifyPairs::min_max(
             [&](_Call1 _f) {
               const typename LoopifyPairs::list<unsigned int>::Cons _args =
                   _f._s0;
-              unsigned int mn = _result.first;
-              unsigned int mx = _result.second;
+              const unsigned int &mn = _result.first;
+              const unsigned int &mx = _result.second;
               _result = std::make_pair(
                   [&]() -> unsigned int {
                     if (_args.d_a0 <= mn) {
@@ -258,8 +260,8 @@ LoopifyPairs::sum_and_count(
             [&](_Call1 _f) {
               const typename LoopifyPairs::list<unsigned int>::Cons _args =
                   _f._s0;
-              unsigned int s = _result.first;
-              unsigned int c = _result.second;
+              const unsigned int &s = _result.first;
+              const unsigned int &c = _result.second;
               _result = std::make_pair((_args.d_a0 + s), (c + 1));
             }},
         _frame);
@@ -307,10 +309,10 @@ LoopifyPairs::sum_prod_count(
             [&](_Call1 _f) {
               const typename LoopifyPairs::list<unsigned int>::Cons _args =
                   _f._s0;
-              unsigned int s = _result.first;
-              std::pair<unsigned int, unsigned int> p0 = _result.second;
-              unsigned int p = p0.first;
-              unsigned int c = p0.second;
+              const unsigned int &s = _result.first;
+              const std::pair<unsigned int, unsigned int> &p0 = _result.second;
+              const unsigned int &p = p0.first;
+              const unsigned int &c = p0.second;
               _result = std::make_pair(
                   (_args.d_a0 + s), std::make_pair((_args.d_a0 * p), (c + 1)));
             }},
@@ -344,8 +346,8 @@ std::shared_ptr<LoopifyPairs::list<unsigned int>> LoopifyPairs::lookup_all(
             },
             [&](const typename LoopifyPairs::list<
                 std::pair<unsigned int, unsigned int>>::Cons &_args) {
-              unsigned int k = _args.d_a0.first;
-              unsigned int v = _args.d_a0.second;
+              const unsigned int &k = _args.d_a0.first;
+              const unsigned int &v = _args.d_a0.second;
               if (k == key) {
                 auto _cell = list<unsigned int>::cons(v, nullptr);
                 if (_last) {
@@ -394,8 +396,8 @@ LoopifyPairs::swap_pairs(
             },
             [&](const typename LoopifyPairs::list<
                 std::pair<unsigned int, unsigned int>>::Cons &_args) {
-              unsigned int a = _args.d_a0.first;
-              unsigned int b = _args.d_a0.second;
+              const unsigned int &a = _args.d_a0.first;
+              const unsigned int &b = _args.d_a0.second;
               auto _cell = list<std::pair<unsigned int, unsigned int>>::cons(
                   std::make_pair(b, a), nullptr);
               if (_last) {

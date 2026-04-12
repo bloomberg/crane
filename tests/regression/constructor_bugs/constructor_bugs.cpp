@@ -163,7 +163,7 @@ std::optional<std::pair<std::shared_ptr<ConstructorBugs::state>, unsigned int>>
 ConstructorBugs::match_test(
     const std::optional<std::shared_ptr<ConstructorBugs::state>> o) {
   if (o.has_value()) {
-    std::shared_ptr<ConstructorBugs::state> s = *o;
+    const std::shared_ptr<ConstructorBugs::state> &s = *o;
     return std::make_optional<
         std::pair<std::shared_ptr<ConstructorBugs::state>, unsigned int>>(
         std::make_pair(s, s->value));
@@ -263,7 +263,7 @@ std::optional<std::pair<std::shared_ptr<ConstructorBugs::Inner>, unsigned int>>
 ConstructorBugs::match_option_record(
     const std::optional<std::shared_ptr<ConstructorBugs::Inner>> o) {
   if (o.has_value()) {
-    std::shared_ptr<ConstructorBugs::Inner> i = *o;
+    const std::shared_ptr<ConstructorBugs::Inner> &i = *o;
     return std::make_optional<
         std::pair<std::shared_ptr<ConstructorBugs::Inner>, unsigned int>>(
         std::make_pair(i, i->inner_val));
@@ -317,8 +317,8 @@ std::pair<std::pair<std::shared_ptr<ConstructorBugs::Outer>,
           unsigned int>
 ConstructorBugs::deep_proj(
     const std::shared_ptr<ConstructorBugs::Container> &c) {
-  std::shared_ptr<ConstructorBugs::Outer> o = c->cont_outer;
-  std::shared_ptr<ConstructorBugs::Inner> i = o->outer_inner;
+  const std::shared_ptr<ConstructorBugs::Outer> &o = c->cont_outer;
+  const std::shared_ptr<ConstructorBugs::Inner> &i = o->outer_inner;
   return std::make_pair(std::make_pair(o, i), i->inner_val);
 }
 
@@ -342,7 +342,7 @@ ConstructorBugs::tail_pair(std::shared_ptr<ConstructorBugs::Inner> i,
   if (b) {
     return std::make_pair(i, i->inner_val);
   } else {
-    return std::make_pair(i, 0u);
+    return std::make_pair(std::move(i), 0u);
   }
 }
 
@@ -360,7 +360,7 @@ std::pair<std::optional<std::shared_ptr<ConstructorBugs::Inner>>, unsigned int>
 ConstructorBugs::match_both_branches(
     const std::optional<std::shared_ptr<ConstructorBugs::Inner>> o) {
   if (o.has_value()) {
-    std::shared_ptr<ConstructorBugs::Inner> i = *o;
+    const std::shared_ptr<ConstructorBugs::Inner> &i = *o;
     return std::make_pair(
         std::make_optional<std::shared_ptr<ConstructorBugs::Inner>>(i),
         i->inner_val);
@@ -439,7 +439,7 @@ std::optional<std::pair<std::shared_ptr<ConstructorBugs::State>, unsigned int>>
 ConstructorBugs::inline_match(
     const std::optional<std::shared_ptr<ConstructorBugs::State>> o) {
   if (o.has_value()) {
-    std::shared_ptr<ConstructorBugs::State> s = *o;
+    const std::shared_ptr<ConstructorBugs::State> &s = *o;
     return std::make_optional<
         std::pair<std::shared_ptr<ConstructorBugs::State>, unsigned int>>(
         std::make_pair(s, s->value_inline));
@@ -456,7 +456,7 @@ ConstructorBugs::inline_if(const bool b,
   if (b) {
     return std::make_pair(s, s->value_inline);
   } else {
-    return std::make_pair(s, 0u);
+    return std::make_pair(std::move(s), 0u);
   }
 }
 

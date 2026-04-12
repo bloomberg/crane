@@ -46,8 +46,11 @@ ComprehensivePatterns::deep_nest(
   return std::make_pair(
       std::make_pair(
           std::make_pair(
-              std::make_pair(std::make_pair(std::make_pair(l5, l4), l3), l2),
-              l1),
+              std::make_pair(
+                  std::make_pair(std::make_pair(std::move(l5), std::move(l4)),
+                                 std::move(l3)),
+                  std::move(l2)),
+              std::move(l1)),
           s),
       s->s_a);
 }
@@ -87,7 +90,7 @@ ComprehensivePatterns::proj_chain(std::shared_ptr<ComprehensivePatterns::S> s) {
   unsigned int a = s->s_a;
   unsigned int b = s->s_b;
   unsigned int c = s->s_c;
-  return std::make_pair(std::make_pair(std::make_pair(s, a), b), c);
+  return std::make_pair(std::make_pair(std::make_pair(std::move(s), a), b), c);
 }
 
 __attribute__((pure))
@@ -122,8 +125,8 @@ std::pair<std::pair<std::shared_ptr<ComprehensivePatterns::S>, unsigned int>,
 ComprehensivePatterns::match_pair(
     const std::pair<std::shared_ptr<ComprehensivePatterns::S>, unsigned int>
         p) {
-  std::shared_ptr<ComprehensivePatterns::S> s = p.first;
-  unsigned int n = p.second;
+  const std::shared_ptr<ComprehensivePatterns::S> &s = p.first;
+  const unsigned int &n = p.second;
   return std::make_pair(std::make_pair(s, n), s->s_a);
 }
 
@@ -185,9 +188,9 @@ ComprehensivePatterns::multi_match(
     const std::optional<std::shared_ptr<ComprehensivePatterns::S>> o1,
     const std::optional<std::shared_ptr<ComprehensivePatterns::S>> o2) {
   if (o1.has_value()) {
-    std::shared_ptr<ComprehensivePatterns::S> s1 = *o1;
+    const std::shared_ptr<ComprehensivePatterns::S> &s1 = *o1;
     if (o2.has_value()) {
-      std::shared_ptr<ComprehensivePatterns::S> _x = *o2;
+      const std::shared_ptr<ComprehensivePatterns::S> &_x = *o2;
       return std::make_optional<
           std::pair<std::shared_ptr<ComprehensivePatterns::S>,
                     std::shared_ptr<ComprehensivePatterns::S>>>(
@@ -284,7 +287,9 @@ ComprehensivePatterns::hard_proj_chain(
     std::shared_ptr<ComprehensivePatterns::R3> r3) {
   std::shared_ptr<ComprehensivePatterns::R2> r2 = r3->r3_r2;
   std::shared_ptr<ComprehensivePatterns::R1> r1 = r2->r2_inner;
-  return std::make_pair(std::make_pair(std::make_pair(r3, r2), r1), r1->r1_val);
+  return std::make_pair(
+      std::make_pair(std::make_pair(std::move(r3), std::move(r2)), r1),
+      r1->r1_val);
 }
 
 __attribute__((pure))
@@ -304,7 +309,7 @@ std::pair<std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
 ComprehensivePatterns::let_proj(std::shared_ptr<ComprehensivePatterns::R2> r2) {
   std::shared_ptr<ComprehensivePatterns::R1> r1 = r2->r2_inner;
   unsigned int n = r1->r1_val;
-  return std::make_pair(std::make_pair(r2, r1), n);
+  return std::make_pair(std::make_pair(std::move(r2), std::move(r1)), n);
 }
 
 __attribute__((pure)) unsigned int ComprehensivePatterns::extract_val(
@@ -339,7 +344,7 @@ ComprehensivePatterns::match_proj(
   return std::make_optional<
       std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
                 std::shared_ptr<ComprehensivePatterns::R1>>>(
-      std::make_pair(r2, r1));
+      std::make_pair(std::move(r2), std::move(r1)));
 }
 
 __attribute__((pure))
@@ -347,7 +352,7 @@ std::pair<std::pair<std::shared_ptr<ComprehensivePatterns::R1>, unsigned int>,
           unsigned int>
 ComprehensivePatterns::proj_multi_use(
     const std::shared_ptr<ComprehensivePatterns::R2> &r2) {
-  std::shared_ptr<ComprehensivePatterns::R1> r1 = r2->r2_inner;
+  const std::shared_ptr<ComprehensivePatterns::R1> &r1 = r2->r2_inner;
   return std::make_pair(std::make_pair(r1, r1->r1_val), r1->r1_val);
 }
 
@@ -384,7 +389,8 @@ std::pair<std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
 ComprehensivePatterns::pair_of_pairs(
     std::shared_ptr<ComprehensivePatterns::R2> r2) {
   std::shared_ptr<ComprehensivePatterns::R1> r1 = r2->r2_inner;
-  return std::make_pair(std::make_pair(r2, r1), std::make_pair(r1, r1->r1_val));
+  return std::make_pair(std::make_pair(std::move(r2), r1),
+                        std::make_pair(r1, r1->r1_val));
 }
 
 __attribute__((pure)) std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
@@ -461,7 +467,8 @@ ComprehensivePatterns::nested_lets(
     std::shared_ptr<ComprehensivePatterns::R3> r3) {
   std::shared_ptr<ComprehensivePatterns::R2> r2 = r3->r3_r2;
   std::shared_ptr<ComprehensivePatterns::R1> r1 = r2->r2_inner;
-  return std::make_pair(std::make_pair(r3, r2), r1);
+  return std::make_pair(std::make_pair(std::move(r3), std::move(r2)),
+                        std::move(r1));
 }
 
 __attribute__((pure))
@@ -478,7 +485,7 @@ std::pair<std::pair<std::shared_ptr<ComprehensivePatterns::R3>,
 ComprehensivePatterns::mixed_access(
     std::shared_ptr<ComprehensivePatterns::R3> r3) {
   std::shared_ptr<ComprehensivePatterns::R2> r2 = r3->r3_r2;
-  return std::make_pair(std::make_pair(r3, r2), r3->r3_r2);
+  return std::make_pair(std::make_pair(r3, std::move(r2)), r3->r3_r2);
 }
 
 __attribute__((pure)) std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
@@ -504,7 +511,7 @@ __attribute__((pure)) std::pair<std::shared_ptr<ComprehensivePatterns::R1>,
                                 std::shared_ptr<ComprehensivePatterns::R1>>
 ComprehensivePatterns::let_and_proj(
     const std::shared_ptr<ComprehensivePatterns::R2> &r2) {
-  std::shared_ptr<ComprehensivePatterns::R1> r1 = r2->r2_inner;
+  const std::shared_ptr<ComprehensivePatterns::R1> &r1 = r2->r2_inner;
   return std::make_pair(r1, r2->r2_inner);
 }
 
@@ -516,7 +523,7 @@ ComprehensivePatterns::multi_construct(
       std::make_shared<ComprehensivePatterns::R2>(R2{r1, 0u});
   std::shared_ptr<ComprehensivePatterns::R2> r2b =
       std::make_shared<ComprehensivePatterns::R2>(R2{r1, 1u});
-  return std::make_pair(r2a, r2b);
+  return std::make_pair(std::move(r2a), std::move(r2b));
 }
 
 __attribute__((pure))
@@ -525,7 +532,7 @@ std::optional<std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
 ComprehensivePatterns::option_proj(
     const std::optional<std::shared_ptr<ComprehensivePatterns::R2>> o) {
   if (o.has_value()) {
-    std::shared_ptr<ComprehensivePatterns::R2> r2 = *o;
+    const std::shared_ptr<ComprehensivePatterns::R2> &r2 = *o;
     return std::make_optional<
         std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
                   std::shared_ptr<ComprehensivePatterns::R1>>>(
@@ -577,7 +584,7 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::multi_let_same(
 __attribute__((pure)) unsigned int ComprehensivePatterns::option_unwrap_proj(
     const std::optional<std::shared_ptr<ComprehensivePatterns::R>> o) {
   if (o.has_value()) {
-    std::shared_ptr<ComprehensivePatterns::R> r = *o;
+    const std::shared_ptr<ComprehensivePatterns::R> &r = *o;
     return (r->val + r->dat);
   } else {
     return 0u;
@@ -596,7 +603,7 @@ __attribute__((pure)) std::optional<unsigned int>
 ComprehensivePatterns::match_multi_use(
     const std::optional<std::shared_ptr<ComprehensivePatterns::R>> o) {
   if (o.has_value()) {
-    std::shared_ptr<ComprehensivePatterns::R> r = *o;
+    const std::shared_ptr<ComprehensivePatterns::R> &r = *o;
     return std::make_optional<unsigned int>((r->val + r->dat));
   } else {
     return std::optional<unsigned int>();
@@ -683,9 +690,9 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::nested_match(
     const std::optional<std::shared_ptr<ComprehensivePatterns::R>> o1,
     const std::optional<std::shared_ptr<ComprehensivePatterns::R>> o2) {
   if (o1.has_value()) {
-    std::shared_ptr<ComprehensivePatterns::R> r1 = *o1;
+    const std::shared_ptr<ComprehensivePatterns::R> &r1 = *o1;
     if (o2.has_value()) {
-      std::shared_ptr<ComprehensivePatterns::R> r2 = *o2;
+      const std::shared_ptr<ComprehensivePatterns::R> &r2 = *o2;
       return (r1->val + r2->val);
     } else {
       return r1->val;
@@ -1011,7 +1018,7 @@ std::pair<std::shared_ptr<ComprehensivePatterns::State>, unsigned int>
 ComprehensivePatterns::let_then_use_base(
     std::shared_ptr<ComprehensivePatterns::State> s) {
   unsigned int v = s->state_value;
-  return std::make_pair(s, v);
+  return std::make_pair(std::move(s), v);
 }
 
 __attribute__((pure)) unsigned int ComprehensivePatterns::two_proj_sequence(
@@ -1059,7 +1066,7 @@ std::pair<std::shared_ptr<ComprehensivePatterns::State>, unsigned int>
 ComprehensivePatterns::bind_proj_use_base(
     std::shared_ptr<ComprehensivePatterns::State> s) {
   unsigned int v = s->state_value;
-  return std::make_pair(s, v);
+  return std::make_pair(std::move(s), v);
 }
 
 std::shared_ptr<ComprehensivePatterns::RSeq> ComprehensivePatterns::side_effect(
@@ -1196,14 +1203,14 @@ ComprehensivePatterns::branch_different(
   if (b) {
     return std::make_pair(r, r->cf_val);
   } else {
-    return std::make_pair(r, 0u);
+    return std::make_pair(std::move(r), 0u);
   }
 }
 
 __attribute__((pure)) unsigned int ComprehensivePatterns::match_with_wild(
     const std::optional<std::shared_ptr<ComprehensivePatterns::RCF>> o) {
   if (o.has_value()) {
-    std::shared_ptr<ComprehensivePatterns::RCF> r = *o;
+    const std::shared_ptr<ComprehensivePatterns::RCF> &r = *o;
     return r->cf_val;
   } else {
     return 0u;
@@ -1329,7 +1336,7 @@ std::pair<std::shared_ptr<ComprehensivePatterns::StateOP>, unsigned int>
 ComprehensivePatterns::force_owned(
     std::shared_ptr<ComprehensivePatterns::StateOP> s) {
   unsigned int result = s->op_value;
-  return std::make_pair(s, result);
+  return std::make_pair(std::move(s), result);
 }
 
 __attribute__((pure))

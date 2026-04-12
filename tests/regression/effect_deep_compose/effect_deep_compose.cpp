@@ -48,7 +48,7 @@ void EffectDeepCompose::show_env(const std::string name) {
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   if (mv.has_value()) {
-    std::string v = *mv;
+    const std::string &v = *mv;
     std::cout << v << '\n';
     return;
   } else {

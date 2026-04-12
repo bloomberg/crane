@@ -630,7 +630,7 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                             0u);
                     unsigned int tdd_limit;
                     if (input->pi_weight_kg.has_value()) {
-                      unsigned int w = *input->pi_weight_kg;
+                      const unsigned int &w = *input->pi_weight_kg;
                       tdd_limit = (w * ONE_UNIT);
                     } else {
                       tdd_limit = 5000u;
@@ -673,7 +673,7 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                       unsigned int adult_capped = cap_twentieths(suspended);
                       unsigned int capped;
                       if (input->pi_weight_kg.has_value()) {
-                        unsigned int w = *input->pi_weight_kg;
+                        const unsigned int &w = *input->pi_weight_kg;
                         capped = cap_pediatric(adult_capped, w);
                       } else {
                         capped = adult_capped;
@@ -817,7 +817,7 @@ __attribute__((pure)) unsigned int
 ValidatedPumpDeliveryTraceCase::option_nat_default(
     const std::optional<unsigned int> x, const unsigned int d) {
   if (x.has_value()) {
-    unsigned int v = *x;
+    const unsigned int &v = *x;
     return v;
   } else {
     return d;
@@ -830,7 +830,7 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::pump_accepts_result(
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionResult> &r) {
   auto _cs = final_delivery(mode, r);
   if (_cs.has_value()) {
-    unsigned int dose = *_cs;
+    const unsigned int &dose = *_cs;
     return pump_can_deliver(pump, dose);
   } else {
     return false;
@@ -844,7 +844,7 @@ ValidatedPumpDeliveryTraceCase::pump_reservoir_after_result(
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionResult> &r) {
   auto _cs = final_delivery(mode, r);
   if (_cs.has_value()) {
-    unsigned int dose = *_cs;
+    const unsigned int &dose = *_cs;
     return reservoir_after_bolus(pump, dose);
   } else {
     return pump->ps_reservoir_twentieths;

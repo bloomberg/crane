@@ -84,7 +84,7 @@ CraneMoveHunt::match_reuse(const std::shared_ptr<CraneMoveHunt::state> &s0) {
 
 void tick(std::shared_ptr<CraneMoveHunt::state> s) {
   {
-    toy_tick(s);
+    toy_tick(std::move(s));
     return;
   }
 }
@@ -104,8 +104,8 @@ std::shared_ptr<CraneMoveHunt::state>
 effect_pair_frame(const std::shared_ptr<CraneMoveHunt::state> &s0) {
   std::pair<bool, std::shared_ptr<CraneMoveHunt::state>> handled =
       CraneMoveHunt::handle_state(s0);
-  bool quit = handled.first;
-  std::shared_ptr<CraneMoveHunt::state> s1 = handled.second;
+  const bool &quit = handled.first;
+  const std::shared_ptr<CraneMoveHunt::state> &s1 = handled.second;
   tick(s1);
   tick(s1);
   std::shared_ptr<CraneMoveHunt::state> s2 = CraneMoveHunt::resolve_state(s1);
@@ -122,8 +122,8 @@ std::shared_ptr<CraneMoveHunt::state>
 pure_pair_frame(const std::shared_ptr<CraneMoveHunt::state> &s0) {
   std::pair<bool, std::shared_ptr<CraneMoveHunt::state>> handled =
       CraneMoveHunt::handle_state(s0);
-  bool quit = handled.first;
-  std::shared_ptr<CraneMoveHunt::state> s1 = handled.second;
+  const bool &quit = handled.first;
+  const std::shared_ptr<CraneMoveHunt::state> &s1 = handled.second;
   std::shared_ptr<CraneMoveHunt::state> s2 = CraneMoveHunt::resolve_state(s1);
   std::shared_ptr<CraneMoveHunt::state> s3 = CraneMoveHunt::render_state(s1);
   if (quit) {
@@ -145,8 +145,8 @@ std::shared_ptr<CraneMoveHunt::state>
 axiom_pair_frame(const std::shared_ptr<CraneMoveHunt::state> &s0) {
   std::pair<bool, std::shared_ptr<CraneMoveHunt::state>> handled =
       CraneMoveHunt::handle_state(s0);
-  bool quit = handled.first;
-  std::shared_ptr<CraneMoveHunt::state> s1 = handled.second;
+  const bool &quit = handled.first;
+  const std::shared_ptr<CraneMoveHunt::state> &s1 = handled.second;
   std::shared_ptr<CraneMoveHunt::state> s2 = CraneMoveHunt::resolve_state(s1);
   if (quit) {
     return s2;
@@ -159,8 +159,8 @@ std::shared_ptr<CraneMoveHunt::state>
 axiom_nat_pair_frame(const std::shared_ptr<CraneMoveHunt::state> &s0) {
   std::pair<bool, std::shared_ptr<CraneMoveHunt::state>> handled =
       CraneMoveHunt::handle_state(s0);
-  bool quit = handled.first;
-  std::shared_ptr<CraneMoveHunt::state> s1 = handled.second;
+  const bool &quit = handled.first;
+  const std::shared_ptr<CraneMoveHunt::state> &s1 = handled.second;
   std::shared_ptr<CraneMoveHunt::state> s2 = CraneMoveHunt::resolve_state(s1);
   unsigned int n = toy_tick_nat(s1);
   if ((quit || n == 0u)) {

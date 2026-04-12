@@ -1586,7 +1586,7 @@ struct CoalitionBidHonorTraceCase {
       []() -> std::shared_ptr<ForceBid> {
     auto _cs = coalition_to_bid(attacker_coalition, Side::e_ATTACKER);
     if (_cs.has_value()) {
-      std::shared_ptr<ForceBid> bid = *_cs;
+      const std::shared_ptr<ForceBid> &bid = *_cs;
       return bid;
     } else {
       return std::make_shared<ForceBid>(ForceBid{
@@ -1597,7 +1597,7 @@ struct CoalitionBidHonorTraceCase {
       []() -> std::shared_ptr<ForceBid> {
     auto _cs = coalition_to_bid(defender_coalition, Side::e_DEFENDER);
     if (_cs.has_value()) {
-      std::shared_ptr<ForceBid> bid = *_cs;
+      const std::shared_ptr<ForceBid> &bid = *_cs;
       return bid;
     } else {
       return std::make_shared<ForceBid>(ForceBid{
@@ -1617,7 +1617,7 @@ struct CoalitionBidHonorTraceCase {
       []() -> std::shared_ptr<ForceBid> {
     auto _cs = coalition_to_bid(updated_attacker_coalition, Side::e_ATTACKER);
     if (_cs.has_value()) {
-      std::shared_ptr<ForceBid> bid = *_cs;
+      const std::shared_ptr<ForceBid> &bid = *_cs;
       return bid;
     } else {
       return sample_attacker_bid;
@@ -1710,7 +1710,7 @@ struct CoalitionBidHonorTraceCase {
     auto _cs = phase_after_initial_bid->action_actor_in_phase(
         ProtocolAction::actbreakbid(Side::e_ATTACKER));
     if (_cs.has_value()) {
-      std::shared_ptr<Commander> cmd = *_cs;
+      const std::shared_ptr<Commander> &cmd = *_cs;
       return cmd->cmd_id;
     } else {
       return 0u;

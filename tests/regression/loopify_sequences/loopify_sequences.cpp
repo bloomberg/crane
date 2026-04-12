@@ -375,7 +375,8 @@ LoopifySequences::split_by_sign(const std::shared_ptr<List<unsigned int>> &l,
   while (_continue) {
     std::visit(
         Overloaded{[&](const typename List<unsigned int>::Nil &) {
-                     _result = std::make_pair(_loop_pos, _loop_neg);
+                     _result = std::make_pair(std::move(_loop_pos),
+                                              std::move(_loop_neg));
                      _continue = false;
                    },
                    [&](const typename List<unsigned int>::Cons &_args) {
@@ -1403,8 +1404,8 @@ LoopifySequences::run_length_encode_fuel(
                       [&](const typename List<
                           std::pair<unsigned int, unsigned int>>::Cons &_args1)
                           -> void {
-                        unsigned int y = _args1.d_a0.first;
-                        unsigned int n = _args1.d_a0.second;
+                        const unsigned int &y = _args1.d_a0.first;
+                        const unsigned int &n = _args1.d_a0.second;
                         if (_args.d_a0 == y) {
                           _result =
                               List<std::pair<unsigned int, unsigned int>>::cons(

@@ -28,7 +28,7 @@ void UnitVoidEdge::id_unit_fn(const unsigned int) {
 __attribute__((pure)) unsigned int
 UnitVoidEdge::match_option_unit(const std::optional<std::monostate> o) {
   if (o.has_value()) {
-    std::monostate _x = *o;
+    const std::monostate &_x = *o;
     return 1u;
   } else {
     return 0u;

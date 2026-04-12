@@ -326,7 +326,8 @@ LoopifyListSubsequences::split_at(const unsigned int n,
               std::shared_ptr<List<unsigned int>> l = _f.l;
               const unsigned int n = _f.n;
               if (n <= 0) {
-                _result = std::make_pair(List<unsigned int>::nil(), l);
+                _result =
+                    std::make_pair(List<unsigned int>::nil(), std::move(l));
               } else {
                 unsigned int n_ = n - 1;
                 std::visit(
@@ -345,8 +346,8 @@ LoopifyListSubsequences::split_at(const unsigned int n,
             },
             [&](_Call1 _f) {
               const typename List<unsigned int>::Cons _args = _f._s0;
-              std::shared_ptr<List<unsigned int>> before = _result.first;
-              std::shared_ptr<List<unsigned int>> after = _result.second;
+              const std::shared_ptr<List<unsigned int>> &before = _result.first;
+              const std::shared_ptr<List<unsigned int>> &after = _result.second;
               _result = std::make_pair(
                   List<unsigned int>::cons(_args.d_a0, before), after);
             }},

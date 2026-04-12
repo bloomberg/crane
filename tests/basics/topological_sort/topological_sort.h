@@ -190,8 +190,8 @@ struct ToString {
             MapsTo<std::string, T2> F1>
   __attribute__((pure)) static std::string
   pair_to_string(F0 &&p1, F1 &&p2, const std::pair<T1, T2> x) {
-    T1 a = x.first;
-    T2 b = x.second;
+    const T1 &a = x.first;
+    const T2 &b = x.second;
     return "("s + p1(a) + ", "s + p2(b) + ")"s;
   }
 
@@ -261,23 +261,23 @@ struct TopologicalSort {
                   -> std::shared_ptr<List<T1>> { return h; },
               [&](const typename List<std::pair<T1, T1>>::Cons &_args)
                   -> std::shared_ptr<List<T1>> {
-                T1 e1 = _args.d_a0.first;
-                T1 e2 = _args.d_a0.second;
+                const T1 &e1 = _args.d_a0.first;
+                const T1 &e2 = _args.d_a0.second;
                 std::optional<T1> f1 =
                     h->find([=](T1 x) mutable { return eqb_node(e1, x); });
                 std::optional<T1> f2 =
                     h->find([=](T1 x) mutable { return eqb_node(e2, x); });
                 if (f1.has_value()) {
-                  T1 _x = *f1;
+                  const T1 &_x = *f1;
                   if (f2.has_value()) {
-                    T1 _x0 = *f2;
+                    const T1 &_x0 = *f2;
                     return get_elems_aux(_args.d_a1, std::move(h));
                   } else {
                     return get_elems_aux(_args.d_a1, List<T1>::cons(e2, h));
                   }
                 } else {
                   if (f2.has_value()) {
-                    T1 _x = *f2;
+                    const T1 &_x = *f2;
                     return get_elems_aux(_args.d_a1, List<T1>::cons(e1, h));
                   } else {
                     if (eqb_node(e1, e2)) {
@@ -336,9 +336,9 @@ struct TopologicalSort {
           return eqb_node(elem, entry0.first);
         });
     if (_cs.has_value()) {
-      std::pair<T1, std::shared_ptr<List<T1>>> p = *_cs;
-      T1 _x = p.first;
-      std::shared_ptr<List<T1>> es = p.second;
+      const std::pair<T1, std::shared_ptr<List<T1>>> &p = *_cs;
+      const T1 &_x = p.first;
+      const std::shared_ptr<List<T1>> &es = p.second;
       return es;
     } else {
       return List<T1>::nil();
@@ -350,7 +350,7 @@ struct TopologicalSort {
   contains(F0 &&eqb_node, const T1 elem, const std::shared_ptr<List<T1>> &es) {
     auto _cs = es->find([=](T1 x) mutable { return eqb_node(elem, x); });
     if (_cs.has_value()) {
-      T1 _x = *_cs;
+      const T1 &_x = *_cs;
       return true;
     } else {
       return false;
@@ -397,8 +397,8 @@ struct TopologicalSort {
                    [&](const typename List<
                        std::pair<T1, std::shared_ptr<List<T1>>>>::Cons &_args)
                        -> std::optional<T1> {
-                     T1 e = _args.d_a0.first;
-                     std::shared_ptr<List<T1>> _x0 = _args.d_a0.second;
+                     const T1 &e = _args.d_a0.first;
+                     const std::shared_ptr<List<T1>> &_x0 = _args.d_a0.second;
                      return std::make_optional<T1>(
                          cycle_entry_aux<T1>(eqb_node, graph0, List<T1>::nil(),
                                              e, graph0->length()));
@@ -437,7 +437,7 @@ struct TopologicalSort {
           &graph0) {
     auto _cs = cycle_entry<T1>(eqb_node, graph0);
     if (_cs.has_value()) {
-      T1 elem = *_cs;
+      const T1 &elem = *_cs;
       return cycle_extract_aux<T1>(eqb_node, graph0, graph0->length(), elem,
                                    List<T1>::nil());
     } else {
@@ -533,8 +533,8 @@ struct TopologicalSort {
         ->template combine<unsigned int>(ListDef::seq(0u, lorder->length()))
         ->template map<std::shared_ptr<List<std::pair<T1, unsigned int>>>>(
             [](std::pair<std::shared_ptr<List<T1>>, unsigned int> x) {
-              std::shared_ptr<List<T1>> fs = x.first;
-              unsigned int rk = x.second;
+              const std::shared_ptr<List<T1>> &fs = x.first;
+              const unsigned int &rk = x.second;
               return fs->template map<std::pair<T1, unsigned int>>(
                   [=](T1 f) mutable { return std::make_pair(f, rk); });
             })

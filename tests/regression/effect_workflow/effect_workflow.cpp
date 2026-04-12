@@ -81,7 +81,7 @@ std::string EffectWorkflow::env_or_create(const std::string name,
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   if (r.has_value()) {
-    std::string v = *r;
+    const std::string &v = *r;
     return v;
   } else {
     bool _x = std::filesystem::create_directories(std::filesystem::path(path));

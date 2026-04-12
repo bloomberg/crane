@@ -256,8 +256,8 @@ struct LoopifyGenerators {
           }
         } else {
           auto _cs = f(_loop_seed);
-          unsigned int val = _cs.first;
-          unsigned int next_seed = _cs.second;
+          const unsigned int &val = _cs.first;
+          const unsigned int &next_seed = _cs.second;
           {
             auto _cell = List<unsigned int>::cons(val, nullptr);
             if (_last) {

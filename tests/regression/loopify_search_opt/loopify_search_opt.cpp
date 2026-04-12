@@ -212,8 +212,8 @@ __attribute__((pure)) unsigned int LoopifySearchOpt::knapsack_fuel(
                         [&](const typename List<
                             std::pair<unsigned int, unsigned int>>::Cons &_args)
                             -> void {
-                          unsigned int weight = _args.d_a0.first;
-                          unsigned int value = _args.d_a0.second;
+                          const unsigned int &weight = _args.d_a0.first;
+                          const unsigned int &value = _args.d_a0.second;
                           if (capacity < weight) {
                             _stack.push_back(
                                 _Enter{_args.d_a1, capacity, fuel_});
@@ -355,8 +355,8 @@ LoopifySearchOpt::majority(const std::shared_ptr<List<unsigned int>> &l) {
                    },
                    [&](_Call1 _f) {
                      const typename List<unsigned int>::Cons _args = _f._s0;
-                     unsigned int cand = _result.first;
-                     unsigned int count = _result.second;
+                     const unsigned int &cand = _result.first;
+                     const unsigned int &count = _result.second;
                      if (_args.d_a0 == cand) {
                        _result = std::make_pair(cand, (count + 1u));
                      } else {

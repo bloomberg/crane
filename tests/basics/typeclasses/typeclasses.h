@@ -93,7 +93,7 @@ struct Typeclasses {
   template <typename _tcI0, typename T1> struct numOption {
     __attribute__((pure)) static unsigned int to_nat(std::optional<T1> o) {
       if (o.has_value()) {
-        T1 x = *o;
+        const T1 &x = *o;
         return (_tcI0::to_nat(x) + 1);
       } else {
         return 0u;

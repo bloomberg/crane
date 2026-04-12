@@ -57,8 +57,8 @@ Equations::gcd_unfold_clause_3(const unsigned int n, const unsigned int n0,
 
 __attribute__((pure)) unsigned int
 Equations::gcd_unfold(const std::pair<unsigned int, unsigned int> p) {
-  unsigned int n = p.first;
-  unsigned int n0 = p.second;
+  const unsigned int &n = p.first;
+  const unsigned int &n0 = p.second;
   if (n <= 0) {
     return n0;
   } else {
@@ -74,8 +74,8 @@ Equations::gcd_unfold(const std::pair<unsigned int, unsigned int> p) {
 
 std::shared_ptr<Equations::gcd_graph>
 Equations::gcd_graph_correct(const std::pair<unsigned int, unsigned int> x) {
-  unsigned int n = x.first;
-  unsigned int n0 = x.second;
+  const unsigned int &n = x.first;
+  const unsigned int &n0 = x.second;
   if (n <= 0) {
     return gcd_graph::gcd_graph_equation_1(n0);
   } else {

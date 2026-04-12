@@ -1113,7 +1113,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
                                                      weak_profile, donor_hla)),
         good_crossmatch, 0u, 1000u, 77u, false);
     if (_cs.has_value()) {
-      std::shared_ptr<SafeTransfusionOrder> _x = *_cs;
+      const std::shared_ptr<SafeTransfusionOrder> &_x = *_cs;
       return true;
     } else {
       return false;
@@ -1126,7 +1126,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
             validated_luminex, strong_profile, donor_hla)),
         bad_crossmatch, 0u, 1000u, 77u, false);
     if (_cs.has_value()) {
-      std::shared_ptr<SafeTransfusionOrder> _x = *_cs;
+      const std::shared_ptr<SafeTransfusionOrder> &_x = *_cs;
       return false;
     } else {
       return true;
@@ -1137,7 +1137,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
     auto _cs = create_safe_transfusion_order(100u, 202u, true, good_crossmatch,
                                              100u, 200u, 88u, false);
     if (_cs.has_value()) {
-      std::shared_ptr<SafeTransfusionOrder> order = *_cs;
+      const std::shared_ptr<SafeTransfusionOrder> &order = *_cs;
       return transfusion_order_authorized(order, 200u);
     } else {
       return false;

@@ -66,7 +66,7 @@ PendantSumtreeRoundtripCase::list_to_vector_opt(
                 -> std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>> {
               auto _cs = list_to_vector_opt(n_, _args0.d_a1);
               if (_cs.has_value()) {
-                std::shared_ptr<T0<std::shared_ptr<T>>> v = *_cs;
+                const std::shared_ptr<T0<std::shared_ptr<T>>> &v = *_cs;
                 return std::make_optional<
                     std::shared_ptr<T0<std::shared_ptr<T>>>>(
                     T0<std::shared_ptr<T>>::cons(_args0.d_a0, n_, v));
@@ -116,10 +116,10 @@ PendantSumtreeRoundtripCase::decode_multi(
                  std::shared_ptr<List<std::shared_ptr<T0<std::shared_ptr<T>>>>>>
                  acc) {
             if (ov.has_value()) {
-              std::shared_ptr<T0<std::shared_ptr<T>>> v = *ov;
+              const std::shared_ptr<T0<std::shared_ptr<T>>> &v = *ov;
               if (acc.has_value()) {
-                std::shared_ptr<List<std::shared_ptr<T0<std::shared_ptr<T>>>>>
-                    vs = *acc;
+                const std::shared_ptr<
+                    List<std::shared_ptr<T0<std::shared_ptr<T>>>>> &vs = *acc;
                 return std::make_optional<std::shared_ptr<
                     List<std::shared_ptr<T0<std::shared_ptr<T>>>>>>(
                     List<std::shared_ptr<T0<std::shared_ptr<T>>>>::cons0(v,
@@ -149,7 +149,8 @@ PendantSumtreeRoundtripCase::pendant_digits(
                     p->cp_digits,
                     List<std::shared_ptr<T0<std::shared_ptr<T>>>>::nil0())));
   if (_cs.has_value()) {
-    std::shared_ptr<List<std::shared_ptr<T0<std::shared_ptr<T>>>>> l = *_cs;
+    const std::shared_ptr<List<std::shared_ptr<T0<std::shared_ptr<T>>>>> &l =
+        *_cs;
     return std::visit(
         Overloaded{
             [](const typename List<
@@ -235,7 +236,7 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::group_sums_validb(
     const std::shared_ptr<PendantSumtreeRoundtripCase::PendantGroup> &g) {
   auto _cs = pendant_value(n, g->pg_top);
   if (_cs.has_value()) {
-    unsigned int top_val = *_cs;
+    const unsigned int &top_val = *_cs;
     std::shared_ptr<List<std::optional<unsigned int>>> pendant_vals =
         g->pg_pendants->template map<std::optional<unsigned int>>(
             [=](const std::shared_ptr<
@@ -249,9 +250,9 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::group_sums_validb(
                 [](std::optional<unsigned int> ov,
                    std::optional<unsigned int> acc) {
                   if (ov.has_value()) {
-                    unsigned int v = *ov;
+                    const unsigned int &v = *ov;
                     if (acc.has_value()) {
-                      unsigned int a = *acc;
+                      const unsigned int &a = *acc;
                       return std::make_optional<unsigned int>((v + a));
                     } else {
                       return std::optional<unsigned int>();
@@ -262,7 +263,7 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::group_sums_validb(
                 },
                 std::make_optional<unsigned int>(0u));
     if (sum_opt.has_value()) {
-      unsigned int s = *sum_opt;
+      const unsigned int &s = *sum_opt;
       return top_val == s;
     } else {
       return false;
@@ -410,9 +411,9 @@ PendantSumtreeRoundtripCase::sumtree_leaf_total(
   return std::move(vals)->template fold_right<std::optional<unsigned int>>(
       [](std::optional<unsigned int> ov, std::optional<unsigned int> acc) {
         if (ov.has_value()) {
-          unsigned int v = *ov;
+          const unsigned int &v = *ov;
           if (acc.has_value()) {
-            unsigned int a = *acc;
+            const unsigned int &a = *acc;
             return std::make_optional<unsigned int>((v + a));
           } else {
             return std::optional<unsigned int>();
@@ -457,16 +458,16 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::nat_list_eqb(
 __attribute__((pure)) bool PendantSumtreeRoundtripCase::option_nat_eqb(
     const std::optional<unsigned int> x, const std::optional<unsigned int> y) {
   if (x.has_value()) {
-    unsigned int a = *x;
+    const unsigned int &a = *x;
     if (y.has_value()) {
-      unsigned int b = *y;
+      const unsigned int &b = *y;
       return a == b;
     } else {
       return false;
     }
   } else {
     if (y.has_value()) {
-      unsigned int _x = *y;
+      const unsigned int &_x = *y;
       return false;
     } else {
       return true;
@@ -477,7 +478,7 @@ __attribute__((pure)) bool PendantSumtreeRoundtripCase::option_nat_eqb(
 __attribute__((pure)) bool PendantSumtreeRoundtripCase::option_nat_is_some(
     const std::optional<unsigned int> x) {
   if (x.has_value()) {
-    unsigned int _x = *x;
+    const unsigned int &_x = *x;
     return true;
   } else {
     return false;

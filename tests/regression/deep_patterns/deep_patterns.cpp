@@ -9,11 +9,11 @@
 __attribute__((pure)) unsigned int DeepPatterns::deep_option(
     const std::optional<std::optional<std::optional<unsigned int>>> x) {
   if (x.has_value()) {
-    std::optional<std::optional<unsigned int>> o = *x;
+    const std::optional<std::optional<unsigned int>> &o = *x;
     if (o.has_value()) {
-      std::optional<unsigned int> o0 = *o;
+      const std::optional<unsigned int> &o0 = *o;
       if (o0.has_value()) {
-        unsigned int n = *o0;
+        const unsigned int &n = *o0;
         return n;
       } else {
         return 1u;
@@ -30,12 +30,12 @@ __attribute__((pure)) unsigned int
 DeepPatterns::deep_pair(const std::pair<std::pair<unsigned int, unsigned int>,
                                         std::pair<unsigned int, unsigned int>>
                             p) {
-  std::pair<unsigned int, unsigned int> p0 = p.first;
-  std::pair<unsigned int, unsigned int> p1 = p.second;
-  unsigned int a = p0.first;
-  unsigned int b = p0.second;
-  unsigned int c = p1.first;
-  unsigned int d = p1.second;
+  const std::pair<unsigned int, unsigned int> &p0 = p.first;
+  const std::pair<unsigned int, unsigned int> &p1 = p.second;
+  const unsigned int &a = p0.first;
+  const unsigned int &b = p0.second;
+  const unsigned int &c = p1.first;
+  const unsigned int &d = p1.second;
   return (((a + b) + c) + d);
 }
 
@@ -112,9 +112,9 @@ __attribute__((pure)) unsigned int DeepPatterns::complex_match(
         std::pair<unsigned int, std::shared_ptr<List<unsigned int>>>>
         x) {
   if (x.has_value()) {
-    std::pair<unsigned int, std::shared_ptr<List<unsigned int>>> p = *x;
-    unsigned int n = p.first;
-    std::shared_ptr<List<unsigned int>> l = p.second;
+    const std::pair<unsigned int, std::shared_ptr<List<unsigned int>>> &p = *x;
+    const unsigned int &n = p.first;
+    const std::shared_ptr<List<unsigned int>> &l = p.second;
     return std::visit(
         Overloaded{
             [&](const typename List<unsigned int>::Nil &) -> unsigned int {
@@ -140,8 +140,8 @@ __attribute__((pure)) unsigned int DeepPatterns::complex_match(
 
 __attribute__((pure)) unsigned int
 DeepPatterns::guarded_match(const std::pair<unsigned int, unsigned int> p) {
-  unsigned int a = p.first;
-  unsigned int b = p.second;
+  const unsigned int &a = p.first;
+  const unsigned int &b = p.second;
   if (a <= b) {
     return (((b - a) > b ? 0 : (b - a)));
   } else {

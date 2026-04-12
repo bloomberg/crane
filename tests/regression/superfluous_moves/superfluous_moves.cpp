@@ -46,7 +46,7 @@ SuperfluousMoves::bad_branch(std::shared_ptr<SuperfluousMoves::loop_state> ls) {
     }
   }
   case Mode::e_FRIGHTENED: {
-    return std::make_pair(false, ls);
+    return std::make_pair(false, std::move(ls));
   }
   default:
     std::unreachable();

@@ -1279,12 +1279,12 @@ struct LoopifyLists {
                 F0 p = _f._s0;
                 const typename list<unsigned int>::Cons _args = _f._s1;
                 F1 q = _f._s2;
-                std::pair<std::shared_ptr<list<unsigned int>>,
-                          std::shared_ptr<list<unsigned int>>>
-                    p0 = _result.first;
-                std::shared_ptr<list<unsigned int>> cs = _result.second;
-                std::shared_ptr<list<unsigned int>> as_ = p0.first;
-                std::shared_ptr<list<unsigned int>> bs = p0.second;
+                const std::pair<std::shared_ptr<list<unsigned int>>,
+                                std::shared_ptr<list<unsigned int>>> &p0 =
+                    _result.first;
+                const std::shared_ptr<list<unsigned int>> &cs = _result.second;
+                const std::shared_ptr<list<unsigned int>> &as_ = p0.first;
+                const std::shared_ptr<list<unsigned int>> &bs = p0.second;
                 if (p(_args.d_a0)) {
                   _result = std::make_pair(
                       std::make_pair(list<unsigned int>::cons(_args.d_a0, as_),
@@ -1557,8 +1557,8 @@ struct LoopifyLists {
                         },
                         [&](const typename list<T1>::Cons &_args) -> void {
                           auto _cs = f(acc, _args.d_a0);
-                          T3 acc_ = _cs.first;
-                          T2 y = _cs.second;
+                          const T3 &acc_ = _cs.first;
+                          const T2 &y = _cs.second;
                           _stack.push_back(_Call1{y});
                           _stack.push_back(_Enter{_args.d_a1, acc_});
                         }},
@@ -1566,8 +1566,8 @@ struct LoopifyLists {
               },
               [&](_Call1 _f) {
                 T2 y = _f._s0;
-                T3 acc__ = _result.first;
-                std::shared_ptr<list<T2>> ys = _result.second;
+                const T3 &acc__ = _result.first;
+                const std::shared_ptr<list<T2>> &ys = _result.second;
                 _result = std::make_pair(acc__, list<T2>::cons(y, ys));
               }},
           _frame);
@@ -1911,16 +1911,16 @@ struct LoopifyLists {
                             _stack.push_back(_Call1{_args});
                             _stack.push_back(_Enter{_args.d_a1});
                           } else {
-                            _result =
-                                std::make_pair(list<unsigned int>::nil(), l);
+                            _result = std::make_pair(list<unsigned int>::nil(),
+                                                     std::move(l));
                           }
                         }},
                     l->v());
               },
               [&](_Call1 _f) {
                 const typename list<unsigned int>::Cons _args = _f._s0;
-                std::shared_ptr<list<unsigned int>> a = _result.first;
-                std::shared_ptr<list<unsigned int>> b = _result.second;
+                const std::shared_ptr<list<unsigned int>> &a = _result.first;
+                const std::shared_ptr<list<unsigned int>> &b = _result.second;
                 _result =
                     std::make_pair(list<unsigned int>::cons(_args.d_a0, a), b);
               }},

@@ -279,7 +279,7 @@ LoopifyStructures::find_first_some(
             },
             [&](const typename List<std::optional<unsigned int>>::Cons &_args) {
               if (_args.d_a0.has_value()) {
-                unsigned int v = *_args.d_a0;
+                const unsigned int &v = *_args.d_a0;
                 _result = std::make_optional<unsigned int>(v);
                 _continue = false;
               } else {

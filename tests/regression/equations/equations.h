@@ -50,8 +50,8 @@ struct Equations {
   template <MapsTo<unsigned int, std::pair<unsigned int, unsigned int>> F1>
   __attribute__((pure)) static unsigned int
   gcd_functional(const std::pair<unsigned int, unsigned int> p, F1 &&gcd0) {
-    unsigned int n = p.first;
-    unsigned int n0 = p.second;
+    const unsigned int &n = p.first;
+    const unsigned int &n0 = p.second;
     if (n <= 0) {
       return n0;
     } else {
@@ -398,20 +398,20 @@ struct Equations {
         f, f0,
         [=](unsigned int, unsigned int, std::shared_ptr<gcd_clause_3_graph>,
             T1 x) mutable {
-          unsigned int _x2 = p.first;
-          unsigned int _x3 = p.second;
+          const unsigned int &_x2 = p.first;
+          const unsigned int &_x3 = p.second;
           return x;
         },
         [=](unsigned int n1, unsigned int n2,
             std::shared_ptr<gcd_graph>) mutable {
-          unsigned int _x0 = p.first;
-          unsigned int _x1 = p.second;
+          const unsigned int &_x0 = p.first;
+          const unsigned int &_x1 = p.second;
           return [=](T1 _pa0) mutable { return f2(n1, n2, _pa0); };
         },
         [=](unsigned int n1, unsigned int n2,
             std::shared_ptr<gcd_graph>) mutable {
-          unsigned int _x0 = p.first;
-          unsigned int _x1 = p.second;
+          const unsigned int &_x0 = p.first;
+          const unsigned int &_x1 = p.second;
           return [=](T1 _pa0) mutable { return f3(n1, n2, _pa0); };
         },
         p, gcd(p), gcd_graph_correct(p));

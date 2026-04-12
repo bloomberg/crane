@@ -207,7 +207,7 @@ template <typename K, typename V> struct CHT {
             [&](const typename List<bsl::pair<T1, T2>>::Nil &)
                 -> bsl::pair<bsl::optional<T2>,
                              bsl::shared_ptr<List<bsl::pair<T1, T2>>>> {
-              return bsl::make_pair(bsl::optional<T2>(), xs);
+              return bsl::make_pair(bsl::optional<T2>(), bsl::move(xs));
             },
             [&](const typename List<bsl::pair<T1, T2>>::Cons &_args)
                 -> bsl::pair<bsl::optional<T2>,

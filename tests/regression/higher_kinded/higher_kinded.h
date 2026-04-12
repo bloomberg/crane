@@ -149,7 +149,7 @@ struct HigherKinded {
   __attribute__((pure)) static std::optional<T2>
   map_option(F0 &&f, const std::optional<T1> o) {
     if (o.has_value()) {
-      T1 x = *o;
+      const T1 &x = *o;
       return std::make_optional<T2>(f(x));
     } else {
       return std::optional<T2>();

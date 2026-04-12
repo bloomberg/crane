@@ -200,8 +200,8 @@ struct NestedTree {
 
   template <typename T1, typename T2, MapsTo<std::shared_ptr<List<T2>>, T1> F0>
   static std::shared_ptr<List<T2>> lift(F0 &&f, const std::pair<T1, T1> p) {
-    T1 x = p.first;
-    T1 y = p.second;
+    const T1 &x = p.first;
+    const T1 &y = p.second;
     return f(x)->app(f(y));
   }
 

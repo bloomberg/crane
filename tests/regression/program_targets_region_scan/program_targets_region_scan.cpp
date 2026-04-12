@@ -37,7 +37,7 @@ __attribute__((pure)) bool ProgramTargetsRegionScan::target_in_layoutb(
     const std::shared_ptr<ProgramTargetsRegionScan::instruction> &i) {
   auto _cs = jump_target(i);
   if (_cs.has_value()) {
-    unsigned int a = *_cs;
+    const unsigned int &a = *_cs;
     return addr_in_regionb(a, l);
   } else {
     return true;

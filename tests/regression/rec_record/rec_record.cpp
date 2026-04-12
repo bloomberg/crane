@@ -20,7 +20,7 @@ RecRecord::rlist_sum(const std::shared_ptr<RecRecord::rlist<unsigned int>> &l) {
 __attribute__((pure)) unsigned int
 RecRecord::rnode_depth(const std::shared_ptr<RecRecord::RNode> &r) {
   if (r->rn_next.has_value()) {
-    std::shared_ptr<RecRecord::RNode> next = *r->rn_next;
+    const std::shared_ptr<RecRecord::RNode> &next = *r->rn_next;
     return (rnode_depth(next) + 1);
   } else {
     return 1u;

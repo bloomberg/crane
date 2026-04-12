@@ -131,35 +131,35 @@ struct Sort {
                                          std::shared_ptr<List<T1>>>
   split(const std::shared_ptr<List<T1>> &ls) {
     return std::visit(
-        Overloaded{[](const typename List<T1>::Nil &)
-                       -> std::pair<std::shared_ptr<List<T1>>,
-                                    std::shared_ptr<List<T1>>> {
-                     return std::make_pair(List<T1>::nil(), List<T1>::nil());
-                   },
-                   [](const typename List<T1>::Cons &_args)
-                       -> std::pair<std::shared_ptr<List<T1>>,
-                                    std::shared_ptr<List<T1>>> {
-                     return std::visit(
-                         Overloaded{
-                             [&](const typename List<T1>::Nil &)
-                                 -> std::pair<std::shared_ptr<List<T1>>,
-                                              std::shared_ptr<List<T1>>> {
-                               return std::make_pair(
-                                   List<T1>::cons(_args.d_a0, List<T1>::nil()),
-                                   List<T1>::nil());
-                             },
-                             [&](const typename List<T1>::Cons &_args0)
-                                 -> std::pair<std::shared_ptr<List<T1>>,
-                                              std::shared_ptr<List<T1>>> {
-                               auto _cs = split<T1>(_args0.d_a1);
-                               std::shared_ptr<List<T1>> ls1 = _cs.first;
-                               std::shared_ptr<List<T1>> ls2 = _cs.second;
-                               return std::make_pair(
-                                   List<T1>::cons(_args.d_a0, ls1),
-                                   List<T1>::cons(_args0.d_a0, ls2));
-                             }},
-                         _args.d_a1->v());
-                   }},
+        Overloaded{
+            [](const typename List<T1>::Nil &)
+                -> std::pair<std::shared_ptr<List<T1>>,
+                             std::shared_ptr<List<T1>>> {
+              return std::make_pair(List<T1>::nil(), List<T1>::nil());
+            },
+            [](const typename List<T1>::Cons &_args)
+                -> std::pair<std::shared_ptr<List<T1>>,
+                             std::shared_ptr<List<T1>>> {
+              return std::visit(
+                  Overloaded{
+                      [&](const typename List<T1>::Nil &)
+                          -> std::pair<std::shared_ptr<List<T1>>,
+                                       std::shared_ptr<List<T1>>> {
+                        return std::make_pair(
+                            List<T1>::cons(_args.d_a0, List<T1>::nil()),
+                            List<T1>::nil());
+                      },
+                      [&](const typename List<T1>::Cons &_args0)
+                          -> std::pair<std::shared_ptr<List<T1>>,
+                                       std::shared_ptr<List<T1>>> {
+                        auto _cs = split<T1>(_args0.d_a1);
+                        const std::shared_ptr<List<T1>> &ls1 = _cs.first;
+                        const std::shared_ptr<List<T1>> &ls2 = _cs.second;
+                        return std::make_pair(List<T1>::cons(_args.d_a0, ls1),
+                                              List<T1>::cons(_args0.d_a0, ls2));
+                      }},
+                  _args.d_a1->v());
+            }},
         ls->v());
   }
 
@@ -210,8 +210,8 @@ struct Sort {
                 -> std::pair<std::shared_ptr<List<T1>>,
                              std::shared_ptr<List<T1>>> {
               auto _cs = split_pivot<T1>(le_dec0, pivot, _args.d_a1);
-              std::shared_ptr<List<T1>> l1 = _cs.first;
-              std::shared_ptr<List<T1>> l2 = _cs.second;
+              const std::shared_ptr<List<T1>> &l1 = _cs.first;
+              const std::shared_ptr<List<T1>> &l2 = _cs.second;
               if (le_dec0(_args.d_a0, pivot)) {
                 return std::make_pair(List<T1>::cons(_args.d_a0, l1), l2);
               } else {

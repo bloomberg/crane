@@ -93,8 +93,8 @@ struct ToString {
             MapsTo<std::string, T2> F1>
   __attribute__((pure)) static std::string
   pair_to_string(F0 &&p1, F1 &&p2, const std::pair<T1, T2> x) {
-    T1 a = x.first;
-    T2 b = x.second;
+    const T1 &a = x.first;
+    const T2 &b = x.second;
     return "("s + p1(a) + ", "s + p2(b) + ")"s;
   }
 

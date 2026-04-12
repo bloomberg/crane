@@ -250,11 +250,11 @@ __attribute__((pure)) unsigned int LoopifyAdvancedPatterns::nested_pattern(
                       [&](const typename List<
                           std::pair<std::pair<unsigned int, unsigned int>,
                                     unsigned int>>::Cons &_args) -> void {
-                        std::pair<unsigned int, unsigned int> p0 =
+                        const std::pair<unsigned int, unsigned int> &p0 =
                             _args.d_a0.first;
-                        unsigned int c = _args.d_a0.second;
-                        unsigned int a = p0.first;
-                        unsigned int b = p0.second;
+                        const unsigned int &c = _args.d_a0.second;
+                        const unsigned int &a = p0.first;
+                        const unsigned int &b = p0.second;
                         _stack.push_back(_Call1{((a + b) + c)});
                         _stack.push_back(_Enter{_args.d_a1});
                       }},
@@ -460,10 +460,10 @@ LoopifyAdvancedPatterns::count_by_shape(
               const typename List<
                   std::shared_ptr<LoopifyAdvancedPatterns::shape>>::Cons _args =
                   _f._s0;
-              std::pair<unsigned int, unsigned int> p = _result.first;
-              unsigned int triangles = _result.second;
-              unsigned int circles = p.first;
-              unsigned int squares = p.second;
+              const std::pair<unsigned int, unsigned int> &p = _result.first;
+              const unsigned int &triangles = _result.second;
+              const unsigned int &circles = p.first;
+              const unsigned int &squares = p.second;
               _result = std::visit(
                   Overloaded{
                       [&](const typename LoopifyAdvancedPatterns::shape::Circle

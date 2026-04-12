@@ -43,8 +43,8 @@ LoopifyListPairing::unzip(
                       [&](const typename List<
                           std::pair<unsigned int, unsigned int>>::Cons &_args)
                           -> void {
-                        unsigned int a = _args.d_a0.first;
-                        unsigned int b = _args.d_a0.second;
+                        const unsigned int &a = _args.d_a0.first;
+                        const unsigned int &b = _args.d_a0.second;
                         _stack.push_back(_Call1{b, a});
                         _stack.push_back(_Enter{_args.d_a1});
                       }},
@@ -53,8 +53,8 @@ LoopifyListPairing::unzip(
             [&](_Call1 _f) {
               unsigned int b = _f._s0;
               unsigned int a = _f._s1;
-              std::shared_ptr<List<unsigned int>> xs = _result.first;
-              std::shared_ptr<List<unsigned int>> ys = _result.second;
+              const std::shared_ptr<List<unsigned int>> &xs = _result.first;
+              const std::shared_ptr<List<unsigned int>> &ys = _result.second;
               _result = std::make_pair(List<unsigned int>::cons(a, xs),
                                        List<unsigned int>::cons(b, ys));
             }},
@@ -102,8 +102,8 @@ LoopifyListPairing::swizzle(const std::shared_ptr<List<unsigned int>> &l) {
             },
             [&](_Call1 _f) {
               const typename List<unsigned int>::Cons _args = _f._s0;
-              std::shared_ptr<List<unsigned int>> odds = _result.first;
-              std::shared_ptr<List<unsigned int>> evens = _result.second;
+              const std::shared_ptr<List<unsigned int>> &odds = _result.first;
+              const std::shared_ptr<List<unsigned int>> &evens = _result.second;
               _result = std::make_pair(
                   List<unsigned int>::cons(_args.d_a0, evens), odds);
             }},
@@ -151,8 +151,8 @@ LoopifyListPairing::partition(const std::shared_ptr<List<unsigned int>> &l) {
             },
             [&](_Call1 _f) {
               const typename List<unsigned int>::Cons _args = _f._s0;
-              std::shared_ptr<List<unsigned int>> yes = _result.first;
-              std::shared_ptr<List<unsigned int>> no = _result.second;
+              const std::shared_ptr<List<unsigned int>> &yes = _result.first;
+              const std::shared_ptr<List<unsigned int>> &no = _result.second;
               if ((2u ? _args.d_a0 % 2u : _args.d_a0) == 0u) {
                 _result = std::make_pair(
                     List<unsigned int>::cons(_args.d_a0, yes), no);
@@ -404,8 +404,8 @@ LoopifyListPairing::split_even_odd(
             },
             [&](_Call1 _f) {
               const typename List<unsigned int>::Cons _args = _f._s0;
-              std::shared_ptr<List<unsigned int>> evens = _result.first;
-              std::shared_ptr<List<unsigned int>> odds = _result.second;
+              const std::shared_ptr<List<unsigned int>> &evens = _result.first;
+              const std::shared_ptr<List<unsigned int>> &odds = _result.second;
               if ((2u ? _args.d_a0 % 2u : _args.d_a0) == 0u) {
                 _result = std::make_pair(
                     List<unsigned int>::cons(_args.d_a0, evens), odds);

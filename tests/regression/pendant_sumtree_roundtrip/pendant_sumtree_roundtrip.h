@@ -630,8 +630,8 @@ struct PendantSumtreeRoundtripCase {
   static inline const bool sample_multi_roundtrip_ok = []() -> bool {
     auto _cs = decode_multi(3u, encode_multi(3u, sample_multi_digits));
     if (_cs.has_value()) {
-      std::shared_ptr<List<std::shared_ptr<T0<std::shared_ptr<T>>>>> decoded =
-          *_cs;
+      const std::shared_ptr<List<std::shared_ptr<T0<std::shared_ptr<T>>>>>
+          &decoded = *_cs;
       return nat_list_eqb(
           decoded->template map<unsigned int>(
               [](const std::shared_ptr<T0<digit>> &_x0) -> unsigned int {
@@ -703,7 +703,7 @@ template <typename T1, typename T2, MapsTo<T2, T1> F0>
 __attribute__((pure)) std::optional<T2>
 Datatypes::option_map(F0 &&f, const std::optional<T1> o) {
   if (o.has_value()) {
-    T1 a = *o;
+    const T1 &a = *o;
     return std::make_optional<T2>(f(a));
   } else {
     return std::optional<T2>();

@@ -20,7 +20,7 @@ PulseParseCertificateCase::first_true(const std::shared_ptr<List<bool>> &xs) {
             } else {
               auto _cs = first_true(_args.d_a1);
               if (_cs.has_value()) {
-                unsigned int idx = *_cs;
+                const unsigned int &idx = *_cs;
                 return std::make_optional<unsigned int>((idx + 1));
               } else {
                 return std::optional<unsigned int>();
@@ -41,7 +41,7 @@ PulseParseCertificateCase::last_true(const std::shared_ptr<List<bool>> &xs) {
               -> std::optional<unsigned int> {
             auto _cs = last_true(_args.d_a1);
             if (_cs.has_value()) {
-              unsigned int idx = *_cs;
+              const unsigned int &idx = *_cs;
               return std::make_optional<unsigned int>((idx + 1));
             } else {
               if (_args.d_a0) {

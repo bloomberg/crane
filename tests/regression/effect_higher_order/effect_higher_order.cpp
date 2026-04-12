@@ -29,7 +29,7 @@ std::string EffectHigherOrder::lookup_or_ask(const std::string name) {
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   if (mv.has_value()) {
-    std::string v = *mv;
+    const std::string &v = *mv;
     return v;
   } else {
     std::cout << "Enter "s + name + ":"s << '\n';

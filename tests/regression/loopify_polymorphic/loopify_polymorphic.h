@@ -522,8 +522,8 @@ struct LoopifyPolymorphic {
                         },
                         [&](const typename List<std::pair<T1, T2>>::Cons &_args)
                             -> void {
-                          T1 a = _args.d_a0.first;
-                          T2 b = _args.d_a0.second;
+                          const T1 &a = _args.d_a0.first;
+                          const T2 &b = _args.d_a0.second;
                           _stack.push_back(_Call1{b, a});
                           _stack.push_back(_Enter{_args.d_a1});
                         }},
@@ -532,8 +532,8 @@ struct LoopifyPolymorphic {
               [&](_Call1 _f) {
                 T2 b = _f._s0;
                 T1 a = _f._s1;
-                std::shared_ptr<List<T1>> as_ = _result.first;
-                std::shared_ptr<List<T2>> bs = _result.second;
+                const std::shared_ptr<List<T1>> &as_ = _result.first;
+                const std::shared_ptr<List<T2>> &bs = _result.second;
                 _result = std::make_pair(List<T1>::cons(a, as_),
                                          List<T2>::cons(b, bs));
               }},
@@ -581,8 +581,8 @@ struct LoopifyPolymorphic {
               [&](_Call1 _f) {
                 F0 p = _f._s0;
                 const typename List<T1>::Cons _args = _f._s1;
-                std::shared_ptr<List<T1>> trues = _result.first;
-                std::shared_ptr<List<T1>> falses = _result.second;
+                const std::shared_ptr<List<T1>> &trues = _result.first;
+                const std::shared_ptr<List<T1>> &falses = _result.second;
                 if (p(_args.d_a0)) {
                   _result =
                       std::make_pair(List<T1>::cons(_args.d_a0, trues), falses);

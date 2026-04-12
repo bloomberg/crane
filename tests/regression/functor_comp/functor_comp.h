@@ -174,9 +174,9 @@ struct FunctorComp {
           unsigned int f = fuel - 1;
           auto _cs = C::pop(c0);
           if (_cs.has_value()) {
-            std::pair<unsigned int, typename C::t> p = *_cs;
-            unsigned int x = p.first;
-            typename C::t c_ = p.second;
+            const std::pair<unsigned int, typename C::t> &p = *_cs;
+            const unsigned int &x = p.first;
+            const typename C::t &c_ = p.second;
             return go(f, List<unsigned int>::cons(x, acc), c_);
           } else {
             return std::move(acc)->rev();

@@ -72,8 +72,8 @@ std::shared_ptr<List<unsigned int>> LoopifyHofs::lookup_all(
             },
             [&](const typename List<std::pair<unsigned int, unsigned int>>::Cons
                     &_args) {
-              unsigned int k = _args.d_a0.first;
-              unsigned int v = _args.d_a0.second;
+              const unsigned int &k = _args.d_a0.first;
+              const unsigned int &v = _args.d_a0.second;
               if (k == key) {
                 auto _cell = List<unsigned int>::cons(v, nullptr);
                 if (_last) {

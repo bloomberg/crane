@@ -107,10 +107,10 @@ LoopifyExpr::count_by_shape(
             [&](_Call1 _f) {
               const typename List<std::shared_ptr<LoopifyExpr::shape>>::Cons
                   _args = _f._s0;
-              std::pair<unsigned int, unsigned int> p = _result.first;
-              unsigned int t = _result.second;
-              unsigned int c = p.first;
-              unsigned int sq = p.second;
+              const std::pair<unsigned int, unsigned int> &p = _result.first;
+              const unsigned int &t = _result.second;
+              const unsigned int &c = p.first;
+              const unsigned int &sq = p.second;
               _result = std::visit(
                   Overloaded{
                       [&](const typename LoopifyExpr::shape::Circle &)

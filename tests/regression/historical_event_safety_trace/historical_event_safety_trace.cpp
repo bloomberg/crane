@@ -69,8 +69,8 @@ HistoricalEventSafetyTraceCase::stage_from_table(
               -> unsigned int { return base_stage; },
           [&](const typename List<std::pair<unsigned int, unsigned int>>::Cons
                   &_args) -> unsigned int {
-            unsigned int q = _args.d_a0.first;
-            unsigned int s = _args.d_a0.second;
+            const unsigned int &q = _args.d_a0.first;
+            const unsigned int &s = _args.d_a0.second;
             unsigned int tail = stage_from_table(_args.d_a1, base_stage, out);
             if (out <= q) {
               return s;

@@ -611,12 +611,12 @@ struct LoopifyPatterns {
                 F0 p = _f._s0;
                 const typename list<unsigned int>::Cons _args = _f._s1;
                 F1 q = _f._s2;
-                std::pair<std::shared_ptr<list<unsigned int>>,
-                          std::shared_ptr<list<unsigned int>>>
-                    p0 = _result.first;
-                std::shared_ptr<list<unsigned int>> cs = _result.second;
-                std::shared_ptr<list<unsigned int>> as_ = p0.first;
-                std::shared_ptr<list<unsigned int>> bs = p0.second;
+                const std::pair<std::shared_ptr<list<unsigned int>>,
+                                std::shared_ptr<list<unsigned int>>> &p0 =
+                    _result.first;
+                const std::shared_ptr<list<unsigned int>> &cs = _result.second;
+                const std::shared_ptr<list<unsigned int>> &as_ = p0.first;
+                const std::shared_ptr<list<unsigned int>> &bs = p0.second;
                 if (p(_args.d_a0)) {
                   _result = std::make_pair(
                       std::make_pair(list<unsigned int>::cons(_args.d_a0, as_),

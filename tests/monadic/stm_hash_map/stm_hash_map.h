@@ -103,7 +103,7 @@ template <typename K, typename V> struct CHT {
                                                    std::move(xs));
     auto _cs = p.first;
     if (_cs.has_value()) {
-      V _x = *_cs;
+      const V &_x = *_cs;
       stm::writeTVar(b, p.second);
       return p.first;
     } else {
@@ -128,7 +128,7 @@ template <typename K, typename V> struct CHT {
   V stm_get_or(const K k, const V dflt) const {
     std::optional<V> v = this->stm_get(k);
     if (v.has_value()) {
-      V x = *v;
+      const V &x = *v;
       return x;
     } else {
       return dflt;
@@ -170,8 +170,8 @@ template <typename K, typename V> struct CHT {
                        -> std::optional<T2> { return std::optional<T2>(); },
                    [&](const typename List<std::pair<T1, T2>>::Cons &_args)
                        -> std::optional<T2> {
-                     T1 k_ = _args.d_a0.first;
-                     T2 v = _args.d_a0.second;
+                     const T1 &k_ = _args.d_a0.first;
+                     const T2 &v = _args.d_a0.second;
                      if (eqb(k, k_)) {
                        return std::make_optional<T2>(v);
                      } else {
@@ -195,8 +195,8 @@ template <typename K, typename V> struct CHT {
             },
             [&](const typename List<std::pair<T1, T2>>::Cons &_args)
                 -> std::shared_ptr<List<std::pair<T1, T2>>> {
-              T1 k_ = _args.d_a0.first;
-              T2 v_ = _args.d_a0.second;
+              const T1 &k_ = _args.d_a0.first;
+              const T2 &v_ = _args.d_a0.second;
               if (eqb(k, k_)) {
                 return List<std::pair<T1, T2>>::cons(std::make_pair(k, v),
                                                      _args.d_a1);
@@ -219,13 +219,13 @@ template <typename K, typename V> struct CHT {
         Overloaded{[&](const typename List<std::pair<T1, T2>>::Nil &)
                        -> std::pair<std::optional<T2>,
                                     std::shared_ptr<List<std::pair<T1, T2>>>> {
-                     return std::make_pair(std::optional<T2>(), xs);
+                     return std::make_pair(std::optional<T2>(), std::move(xs));
                    },
                    [&](const typename List<std::pair<T1, T2>>::Cons &_args)
                        -> std::pair<std::optional<T2>,
                                     std::shared_ptr<List<std::pair<T1, T2>>>> {
-                     T1 k_ = _args.d_a0.first;
-                     T2 v_ = _args.d_a0.second;
+                     const T1 &k_ = _args.d_a0.first;
+                     const T2 &v_ = _args.d_a0.second;
                      if (eqb(k, k_)) {
                        return std::make_pair(std::make_optional<T2>(v_),
                                              _args.d_a1);

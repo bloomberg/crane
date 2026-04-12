@@ -160,7 +160,7 @@ struct PulseParseCertificateCase {
   static inline const unsigned int sample_certificate_first_active =
       []() -> unsigned int {
     if (sample_certificate->certificate_first_active.has_value()) {
-      unsigned int idx = *sample_certificate->certificate_first_active;
+      const unsigned int &idx = *sample_certificate->certificate_first_active;
       return idx;
     } else {
       return 99u;
@@ -169,7 +169,7 @@ struct PulseParseCertificateCase {
   static inline const unsigned int sample_certificate_last_active =
       []() -> unsigned int {
     if (sample_certificate->certificate_last_active.has_value()) {
-      unsigned int idx = *sample_certificate->certificate_last_active;
+      const unsigned int &idx = *sample_certificate->certificate_last_active;
       return idx;
     } else {
       return 99u;

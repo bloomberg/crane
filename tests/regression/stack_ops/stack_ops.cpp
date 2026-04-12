@@ -10,26 +10,26 @@ __attribute__((pure))
 std::pair<std::optional<unsigned int>, std::shared_ptr<StackOps::state_basic>>
 StackOps::pop_stack(std::shared_ptr<StackOps::state_basic> s) {
   return std::visit(
-      Overloaded{[&](const typename List<unsigned int>::Nil &)
-                     -> std::pair<std::optional<unsigned int>,
-                                  std::shared_ptr<StackOps::state_basic>> {
-                   return std::make_pair(std::optional<unsigned int>(), s);
-                 },
-                 [](const typename List<unsigned int>::Cons &_args)
-                     -> std::pair<std::optional<unsigned int>,
-                                  std::shared_ptr<StackOps::state_basic>> {
-                   return std::make_pair(
-                       std::make_optional<unsigned int>(_args.d_a0),
-                       std::make_shared<StackOps::state_basic>(
-                           state_basic{_args.d_a1}));
-                 }},
+      Overloaded{
+          [&](const typename List<unsigned int>::Nil &)
+              -> std::pair<std::optional<unsigned int>,
+                           std::shared_ptr<StackOps::state_basic>> {
+            return std::make_pair(std::optional<unsigned int>(), std::move(s));
+          },
+          [](const typename List<unsigned int>::Cons &_args)
+              -> std::pair<std::optional<unsigned int>,
+                           std::shared_ptr<StackOps::state_basic>> {
+            return std::make_pair(std::make_optional<unsigned int>(_args.d_a0),
+                                  std::make_shared<StackOps::state_basic>(
+                                      state_basic{_args.d_a1}));
+          }},
       s->stack_basic->v());
 }
 
 __attribute__((pure)) bool
 StackOps::is_none(const std::optional<unsigned int> o) {
   if (o.has_value()) {
-    unsigned int _x = *o;
+    const unsigned int &_x = *o;
     return false;
   } else {
     return true;
@@ -39,7 +39,7 @@ StackOps::is_none(const std::optional<unsigned int> o) {
 __attribute__((pure)) unsigned int
 StackOps::option_or_zero(const std::optional<unsigned int> o) {
   if (o.has_value()) {
-    unsigned int n = *o;
+    const unsigned int &n = *o;
     return n;
   } else {
     return 0u;
@@ -50,19 +50,19 @@ __attribute__((pure)) std::pair<std::optional<unsigned int>,
                                 std::shared_ptr<StackOps::state_with_acc>>
 StackOps::pop_stack_acc(std::shared_ptr<StackOps::state_with_acc> s) {
   return std::visit(
-      Overloaded{[&](const typename List<unsigned int>::Nil &)
-                     -> std::pair<std::optional<unsigned int>,
-                                  std::shared_ptr<StackOps::state_with_acc>> {
-                   return std::make_pair(std::optional<unsigned int>(), s);
-                 },
-                 [&](const typename List<unsigned int>::Cons &_args)
-                     -> std::pair<std::optional<unsigned int>,
-                                  std::shared_ptr<StackOps::state_with_acc>> {
-                   return std::make_pair(
-                       std::make_optional<unsigned int>(_args.d_a0),
-                       std::make_shared<StackOps::state_with_acc>(
-                           state_with_acc{_args.d_a1, s->acc}));
-                 }},
+      Overloaded{
+          [&](const typename List<unsigned int>::Nil &)
+              -> std::pair<std::optional<unsigned int>,
+                           std::shared_ptr<StackOps::state_with_acc>> {
+            return std::make_pair(std::optional<unsigned int>(), std::move(s));
+          },
+          [&](const typename List<unsigned int>::Cons &_args)
+              -> std::pair<std::optional<unsigned int>,
+                           std::shared_ptr<StackOps::state_with_acc>> {
+            return std::make_pair(std::make_optional<unsigned int>(_args.d_a0),
+                                  std::make_shared<StackOps::state_with_acc>(
+                                      state_with_acc{_args.d_a1, s->acc}));
+          }},
       s->stack_with_acc->v());
 }
 

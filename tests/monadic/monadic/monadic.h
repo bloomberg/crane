@@ -79,7 +79,7 @@ struct Monadic {
   __attribute__((pure)) static std::optional<T2>
   option_bind(const std::optional<T1> ma, F1 &&f) {
     if (ma.has_value()) {
-      T1 a = *ma;
+      const T1 &a = *ma;
       return f(a);
     } else {
       return std::optional<T2>();
@@ -106,8 +106,8 @@ struct Monadic {
                                                         F1 &&f) {
     return [=](T1 s) mutable {
       auto _cs = ma(s);
-      T2 a = _cs.first;
-      T1 s_ = _cs.second;
+      const T2 &a = _cs.first;
+      const T1 &s_ = _cs.second;
       return f(a)(s_);
     };
   }

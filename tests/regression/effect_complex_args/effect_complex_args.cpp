@@ -67,7 +67,7 @@ void EffectComplexArgs::chain_with_concat(const std::string name) {
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   if (r.has_value()) {
-    std::string v = *r;
+    const std::string &v = *r;
     setenv(("COPY_"s + name).c_str(), v.c_str(), 1);
     return;
   } else {

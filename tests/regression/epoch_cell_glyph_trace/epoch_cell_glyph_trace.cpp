@@ -573,38 +573,40 @@ BinInt::pos_div_eucl(const std::shared_ptr<Positive> &a,
           [&](const typename Positive::XI &_args)
               -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
             auto _cs = BinInt::pos_div_eucl(_args.d_a0, b);
-            std::shared_ptr<Z> q = _cs.first;
-            std::shared_ptr<Z> r = _cs.second;
+            const std::shared_ptr<Z> &q = _cs.first;
+            const std::shared_ptr<Z> &r = _cs.second;
             std::shared_ptr<Z> r_ = BinInt::add(
                 BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), r),
                 Z::zpos(Positive::xh()));
             if (BinInt::ltb(r_, b)) {
               return std::make_pair(
-                  BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q), r_);
+                  BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q),
+                  std::move(r_));
             } else {
               return std::make_pair(
                   BinInt::add(
                       BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q),
                       Z::zpos(Positive::xh())),
-                  BinInt::sub(r_, b));
+                  BinInt::sub(std::move(r_), b));
             }
           },
           [&](const typename Positive::XO &_args)
               -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
             auto _cs = BinInt::pos_div_eucl(_args.d_a0, b);
-            std::shared_ptr<Z> q = _cs.first;
-            std::shared_ptr<Z> r = _cs.second;
+            const std::shared_ptr<Z> &q = _cs.first;
+            const std::shared_ptr<Z> &r = _cs.second;
             std::shared_ptr<Z> r_ =
                 BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), r);
             if (BinInt::ltb(r_, b)) {
               return std::make_pair(
-                  BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q), r_);
+                  BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q),
+                  std::move(r_));
             } else {
               return std::make_pair(
                   BinInt::add(
                       BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q),
                       Z::zpos(Positive::xh())),
-                  BinInt::sub(r_, b));
+                  BinInt::sub(std::move(r_), b));
             }
           },
           [&](const typename Positive::XH &)
@@ -632,7 +634,7 @@ BinInt::div_eucl(std::shared_ptr<Z> a, const std::shared_ptr<Z> &b) {
                 Overloaded{
                     [&](const typename Z::Z0 &)
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
-                      return std::make_pair(Z::z0(), a);
+                      return std::make_pair(Z::z0(), std::move(a));
                     },
                     [&](const typename Z::Zpos &)
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
@@ -642,8 +644,8 @@ BinInt::div_eucl(std::shared_ptr<Z> a, const std::shared_ptr<Z> &b) {
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
                       auto _cs = BinInt::pos_div_eucl(_args.d_a0,
                                                       Z::zpos(_args0.d_a0));
-                      std::shared_ptr<Z> q = _cs.first;
-                      std::shared_ptr<Z> r = _cs.second;
+                      const std::shared_ptr<Z> &q = _cs.first;
+                      const std::shared_ptr<Z> &r = _cs.second;
                       return std::visit(
                           Overloaded{[&](const typename Z::Z0 &)
                                          -> std::pair<std::shared_ptr<Z>,
@@ -669,13 +671,13 @@ BinInt::div_eucl(std::shared_ptr<Z> a, const std::shared_ptr<Z> &b) {
                 Overloaded{
                     [&](const typename Z::Z0 &)
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
-                      return std::make_pair(Z::z0(), a);
+                      return std::make_pair(Z::z0(), std::move(a));
                     },
                     [&](const typename Z::Zpos &)
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
                       auto _cs = BinInt::pos_div_eucl(_args.d_a0, b);
-                      std::shared_ptr<Z> q = _cs.first;
-                      std::shared_ptr<Z> r = _cs.second;
+                      const std::shared_ptr<Z> &q = _cs.first;
+                      const std::shared_ptr<Z> &r = _cs.second;
                       return std::visit(
                           Overloaded{[&](const typename Z::Z0 &)
                                          -> std::pair<std::shared_ptr<Z>,
@@ -697,8 +699,8 @@ BinInt::div_eucl(std::shared_ptr<Z> a, const std::shared_ptr<Z> &b) {
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
                       auto _cs = BinInt::pos_div_eucl(_args.d_a0,
                                                       Z::zpos(_args0.d_a0));
-                      std::shared_ptr<Z> q = _cs.first;
-                      std::shared_ptr<Z> r = _cs.second;
+                      const std::shared_ptr<Z> &q = _cs.first;
+                      const std::shared_ptr<Z> &r = _cs.second;
                       return std::make_pair(q, BinInt::opp(r));
                     }},
                 b->v());
@@ -709,16 +711,16 @@ BinInt::div_eucl(std::shared_ptr<Z> a, const std::shared_ptr<Z> &b) {
 std::shared_ptr<Z> BinInt::div(const std::shared_ptr<Z> &a,
                                const std::shared_ptr<Z> &b) {
   auto _cs = BinInt::div_eucl(a, b);
-  std::shared_ptr<Z> q = _cs.first;
-  std::shared_ptr<Z> _x = _cs.second;
+  const std::shared_ptr<Z> &q = _cs.first;
+  const std::shared_ptr<Z> &_x = _cs.second;
   return q;
 }
 
 std::shared_ptr<Z> BinInt::modulo(const std::shared_ptr<Z> &a,
                                   const std::shared_ptr<Z> &b) {
   auto _cs = BinInt::div_eucl(a, b);
-  std::shared_ptr<Z> _x = _cs.first;
-  std::shared_ptr<Z> r = _cs.second;
+  const std::shared_ptr<Z> &_x = _cs.first;
+  const std::shared_ptr<Z> &r = _cs.second;
   return r;
 }
 

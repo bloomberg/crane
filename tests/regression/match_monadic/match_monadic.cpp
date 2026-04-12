@@ -67,7 +67,7 @@ std::string MatchMonadic::nested_match(const unsigned int n, const bool b) {
 /// 4. Match on option in monadic context
 unsigned int MatchMonadic::handle_option(const std::optional<unsigned int> o) {
   if (o.has_value()) {
-    unsigned int n = *o;
+    const unsigned int &n = *o;
     std::cout << "found"s << '\n';
     return n;
   } else {

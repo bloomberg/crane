@@ -280,12 +280,13 @@ LoopifyGrouping::partition3(const unsigned int pivot,
             [&](_Call1 _f) {
               const unsigned int pivot = _f._s0;
               const typename List<unsigned int>::Cons _args = _f._s1;
-              std::pair<std::shared_ptr<List<unsigned int>>,
-                        std::shared_ptr<List<unsigned int>>>
-                  p = _result.first;
-              std::shared_ptr<List<unsigned int>> greater = _result.second;
-              std::shared_ptr<List<unsigned int>> less = p.first;
-              std::shared_ptr<List<unsigned int>> equal = p.second;
+              const std::pair<std::shared_ptr<List<unsigned int>>,
+                              std::shared_ptr<List<unsigned int>>> &p =
+                  _result.first;
+              const std::shared_ptr<List<unsigned int>> &greater =
+                  _result.second;
+              const std::shared_ptr<List<unsigned int>> &less = p.first;
+              const std::shared_ptr<List<unsigned int>> &equal = p.second;
               if (_args.d_a0 < pivot) {
                 _result = std::make_pair(
                     std::make_pair(List<unsigned int>::cons(_args.d_a0, less),

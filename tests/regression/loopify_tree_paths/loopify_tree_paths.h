@@ -294,7 +294,7 @@ struct LoopifyTreePaths {
                   const unsigned int target = _f._s1;
                   unsigned int new_acc = _f._s2;
                   if (_result.has_value()) {
-                    std::shared_ptr<List<unsigned int>> path = *_result;
+                    const std::shared_ptr<List<unsigned int>> &path = *_result;
                     _result =
                         std::make_optional<std::shared_ptr<List<unsigned int>>>(
                             List<unsigned int>::cons(_args.d_a1, path));
@@ -306,7 +306,7 @@ struct LoopifyTreePaths {
                 [&](_Call2 _f) {
                   const typename tree::Node _args = _f._s0;
                   if (_result.has_value()) {
-                    std::shared_ptr<List<unsigned int>> path = *_result;
+                    const std::shared_ptr<List<unsigned int>> &path = *_result;
                     _result =
                         std::make_optional<std::shared_ptr<List<unsigned int>>>(
                             List<unsigned int>::cons(_args.d_a1, path));

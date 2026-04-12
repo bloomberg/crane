@@ -35,35 +35,35 @@ bool skiplist_test::stm_test_insert_lookup() {
   std::optional<unsigned int> v9 = sl->lookup(nat_lt, nat_eq, 9u);
   bool c1;
   if (v5.has_value()) {
-    unsigned int n = *v5;
+    const unsigned int &n = *v5;
     c1 = n == 50u;
   } else {
     c1 = false;
   }
   bool c2;
   if (v3.has_value()) {
-    unsigned int n = *v3;
+    const unsigned int &n = *v3;
     c2 = n == 30u;
   } else {
     c2 = false;
   }
   bool c3;
   if (v7.has_value()) {
-    unsigned int n = *v7;
+    const unsigned int &n = *v7;
     c3 = n == 70u;
   } else {
     c3 = false;
   }
   bool c4;
   if (v1.has_value()) {
-    unsigned int n = *v1;
+    const unsigned int &n = *v1;
     c4 = n == 10u;
   } else {
     c4 = false;
   }
   bool c5;
   if (v9.has_value()) {
-    unsigned int _x3 = *v9;
+    const unsigned int &_x3 = *v9;
     c5 = false;
   } else {
     c5 = true;
@@ -83,21 +83,21 @@ bool skiplist_test::stm_test_delete() {
   std::optional<unsigned int> v7 = sl->lookup(nat_lt, nat_eq, 7u);
   bool c1;
   if (v5.has_value()) {
-    unsigned int _x3 = *v5;
+    const unsigned int &_x3 = *v5;
     c1 = false;
   } else {
     c1 = true;
   }
   bool c2;
   if (v3.has_value()) {
-    unsigned int n = *v3;
+    const unsigned int &n = *v3;
     c2 = n == 30u;
   } else {
     c2 = false;
   }
   bool c3;
   if (v7.has_value()) {
-    unsigned int n = *v7;
+    const unsigned int &n = *v7;
     c3 = n == 70u;
   } else {
     c3 = false;
@@ -113,7 +113,7 @@ bool skiplist_test::stm_test_update() {
   std::optional<unsigned int> v = sl->lookup(nat_lt, nat_eq, 5u);
   return [&]() -> bool {
     if (v.has_value()) {
-      unsigned int n = *v;
+      const unsigned int &n = *v;
       return n == 500u;
     } else {
       return false;
@@ -130,9 +130,9 @@ bool skiplist_test::stm_test_minimum() {
   std::optional<std::pair<unsigned int, unsigned int>> minOpt = sl->minimum();
   return [&]() -> bool {
     if (minOpt.has_value()) {
-      std::pair<unsigned int, unsigned int> p = *minOpt;
-      unsigned int k = p.first;
-      unsigned int v = p.second;
+      const std::pair<unsigned int, unsigned int> &p = *minOpt;
+      const unsigned int &k = p.first;
+      const unsigned int &v = p.second;
       return (k == 3u && v == 30u);
     } else {
       return false;
@@ -167,14 +167,14 @@ bool skiplist_test::stm_test_front_back() {
       sl->back();
   bool c1;
   if (frontOpt.has_value()) {
-    std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *frontOpt;
+    const std::shared_ptr<SkipNode<unsigned int, unsigned int>> &p = *frontOpt;
     c1 = SkipList<int, int>::template key<unsigned int, unsigned int>(p) == 3u;
   } else {
     c1 = false;
   }
   bool c2;
   if (backOpt.has_value()) {
-    std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *backOpt;
+    const std::shared_ptr<SkipNode<unsigned int, unsigned int>> &p = *backOpt;
     c2 = SkipList<int, int>::template key<unsigned int, unsigned int>(p) == 7u;
   } else {
     c2 = false;
@@ -193,18 +193,18 @@ bool skiplist_test::stm_test_popFront() {
   unsigned int len = sl->length();
   bool c1;
   if (pop1.has_value()) {
-    std::pair<unsigned int, unsigned int> p = *pop1;
-    unsigned int k = p.first;
-    unsigned int v = p.second;
+    const std::pair<unsigned int, unsigned int> &p = *pop1;
+    const unsigned int &k = p.first;
+    const unsigned int &v = p.second;
     c1 = (k == 3u && v == 30u);
   } else {
     c1 = false;
   }
   bool c2;
   if (pop2.has_value()) {
-    std::pair<unsigned int, unsigned int> p = *pop2;
-    unsigned int k = p.first;
-    unsigned int v = p.second;
+    const std::pair<unsigned int, unsigned int> &p = *pop2;
+    const unsigned int &k = p.first;
+    const unsigned int &v = p.second;
     c2 = (k == 5u && v == 50u);
   } else {
     c2 = false;
@@ -224,7 +224,7 @@ bool skiplist_test::stm_test_addUnique() {
   bool c2 = !(r2);
   bool c4;
   if (v5.has_value()) {
-    unsigned int n = *v5;
+    const unsigned int &n = *v5;
     c4 = n == 50u;
   } else {
     c4 = false;
@@ -244,7 +244,7 @@ bool skiplist_test::stm_test_find() {
       sl->find(nat_lt, nat_eq, 9u);
   bool c1;
   if (pairOpt.has_value()) {
-    std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *pairOpt;
+    const std::shared_ptr<SkipNode<unsigned int, unsigned int>> &p = *pairOpt;
     unsigned int k =
         SkipList<int, int>::template key<unsigned int, unsigned int>(p);
     c1 = k == 5u;
@@ -253,7 +253,7 @@ bool skiplist_test::stm_test_find() {
   }
   bool c2;
   if (noneOpt.has_value()) {
-    std::shared_ptr<SkipNode<unsigned int, unsigned int>> _x1 = *noneOpt;
+    const std::shared_ptr<SkipNode<unsigned int, unsigned int>> &_x1 = *noneOpt;
     c2 = false;
   } else {
     c2 = true;
@@ -270,12 +270,14 @@ bool skiplist_test::stm_test_navigation() {
   std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
       frontOpt = sl->front();
   if (frontOpt.has_value()) {
-    std::shared_ptr<SkipNode<unsigned int, unsigned int>> first = *frontOpt;
+    const std::shared_ptr<SkipNode<unsigned int, unsigned int>> &first =
+        *frontOpt;
     std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
         nextOpt = SkipList<int, int>::template next<unsigned int, unsigned int>(
             first);
     if (nextOpt.has_value()) {
-      std::shared_ptr<SkipNode<unsigned int, unsigned int>> second = *nextOpt;
+      const std::shared_ptr<SkipNode<unsigned int, unsigned int>> &second =
+          *nextOpt;
       std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
           prevOpt = std::move(sl)->previous(nat_eq, second);
       bool c1 = SkipList<int, int>::template key<unsigned int, unsigned int>(
@@ -284,7 +286,8 @@ bool skiplist_test::stm_test_navigation() {
                     second) == 3u;
       bool c3;
       if (prevOpt.has_value()) {
-        std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *prevOpt;
+        const std::shared_ptr<SkipNode<unsigned int, unsigned int>> &p =
+            *prevOpt;
         c3 = SkipList<int, int>::template key<unsigned int, unsigned int>(p) ==
              1u;
       } else {
@@ -313,21 +316,21 @@ bool skiplist_test::stm_test_bounds() {
       sl->findUpperBound(nat_lt, nat_eq, 4u);
   bool c1;
   if (lb3.has_value()) {
-    std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *lb3;
+    const std::shared_ptr<SkipNode<unsigned int, unsigned int>> &p = *lb3;
     c1 = SkipList<int, int>::template key<unsigned int, unsigned int>(p) == 4u;
   } else {
     c1 = false;
   }
   bool c2;
   if (lb4.has_value()) {
-    std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *lb4;
+    const std::shared_ptr<SkipNode<unsigned int, unsigned int>> &p = *lb4;
     c2 = SkipList<int, int>::template key<unsigned int, unsigned int>(p) == 4u;
   } else {
     c2 = false;
   }
   bool c3;
   if (ub4.has_value()) {
-    std::shared_ptr<SkipNode<unsigned int, unsigned int>> p = *ub4;
+    const std::shared_ptr<SkipNode<unsigned int, unsigned int>> &p = *ub4;
     c3 = SkipList<int, int>::template key<unsigned int, unsigned int>(p) == 6u;
   } else {
     c3 = false;
@@ -354,57 +357,61 @@ bool skiplist_test::stm_test_bde_api() {
       SkipList<int, int>::template create<unsigned int, unsigned int>(0u, 0u);
   std::pair<std::shared_ptr<SkipNode<unsigned int, unsigned int>>, bool>
       result1 = sl->bde_add(nat_lt, nat_eq, 5u, 50u, 0u);
-  std::shared_ptr<SkipNode<unsigned int, unsigned int>> _x = result1.first;
-  bool front1 = result1.second;
+  const std::shared_ptr<SkipNode<unsigned int, unsigned int>> &_x =
+      result1.first;
+  const bool &front1 = result1.second;
   std::pair<std::shared_ptr<SkipNode<unsigned int, unsigned int>>, bool>
       result2 = sl->bde_add(nat_lt, nat_eq, 3u, 30u, 0u);
-  std::shared_ptr<SkipNode<unsigned int, unsigned int>> _x0 = result2.first;
-  bool front2 = result2.second;
+  const std::shared_ptr<SkipNode<unsigned int, unsigned int>> &_x0 =
+      result2.first;
+  const bool &front2 = result2.second;
   std::pair<std::shared_ptr<SkipNode<unsigned int, unsigned int>>, bool>
       result3 = sl->bde_add(nat_lt, nat_eq, 7u, 70u, 0u);
-  std::shared_ptr<SkipNode<unsigned int, unsigned int>> _x1 = result3.first;
-  bool front3 = result3.second;
+  const std::shared_ptr<SkipNode<unsigned int, unsigned int>> &_x1 =
+      result3.first;
+  const bool &front3 = result3.second;
   bool c3 = !(front3);
   std::pair<
       unsigned int,
       std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>>
       findResult = sl->bde_find(nat_lt, nat_eq, 5u);
-  unsigned int status1 = findResult.first;
-  std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> _x2 =
-      findResult.second;
+  const unsigned int &status1 = findResult.first;
+  const std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
+      &_x2 = findResult.second;
   bool c4 = status1 == SkipList<int, int>::e_SUCCESS;
   std::pair<
       unsigned int,
       std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>>
       findResult2 = sl->bde_find(nat_lt, nat_eq, 9u);
-  unsigned int status2 = findResult2.first;
-  std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> _x3 =
-      findResult2.second;
+  const unsigned int &status2 = findResult2.first;
+  const std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
+      &_x3 = findResult2.second;
   bool c5 = status2 == SkipList<int, int>::e_NOT_FOUND;
   std::pair<std::pair<unsigned int, std::optional<std::shared_ptr<
                                         SkipNode<unsigned int, unsigned int>>>>,
             bool>
       uniqueResult = sl->bde_addUnique(nat_lt, nat_eq, 5u, 500u, 0u);
-  std::pair<
+  const std::pair<
       unsigned int,
-      std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>>
-      p = uniqueResult.first;
-  bool _x4 = uniqueResult.second;
-  unsigned int status3 = p.first;
-  std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>> _x5 =
-      p.second;
+      std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>> &p =
+      uniqueResult.first;
+  const bool &_x4 = uniqueResult.second;
+  const unsigned int &status3 = p.first;
+  const std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
+      &_x5 = p.second;
   bool c6 = status3 == SkipList<int, int>::e_DUPLICATE;
   std::pair<
       unsigned int,
       std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>>
       frontResult = sl->bde_front();
-  unsigned int status4 = frontResult.first;
-  std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
-      frontItem = frontResult.second;
+  const unsigned int &status4 = frontResult.first;
+  const std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
+      &frontItem = frontResult.second;
   bool c7 = status4 == SkipList<int, int>::e_SUCCESS;
   bool c8;
   if (frontItem.has_value()) {
-    std::shared_ptr<SkipNode<unsigned int, unsigned int>> p0 = *frontItem;
+    const std::shared_ptr<SkipNode<unsigned int, unsigned int>> &p0 =
+        *frontItem;
     c8 = SkipList<int, int>::template key<unsigned int, unsigned int>(p0) == 3u;
   } else {
     c8 = false;
@@ -413,13 +420,13 @@ bool skiplist_test::stm_test_bde_api() {
       unsigned int,
       std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>>
       backResult = std::move(sl)->bde_back();
-  unsigned int status5 = backResult.first;
-  std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
-      backItem = backResult.second;
+  const unsigned int &status5 = backResult.first;
+  const std::optional<std::shared_ptr<SkipNode<unsigned int, unsigned int>>>
+      &backItem = backResult.second;
   bool c9 = status5 == SkipList<int, int>::e_SUCCESS;
   bool c10;
   if (backItem.has_value()) {
-    std::shared_ptr<SkipNode<unsigned int, unsigned int>> p0 = *backItem;
+    const std::shared_ptr<SkipNode<unsigned int, unsigned int>> &p0 = *backItem;
     c10 =
         SkipList<int, int>::template key<unsigned int, unsigned int>(p0) == 7u;
   } else {

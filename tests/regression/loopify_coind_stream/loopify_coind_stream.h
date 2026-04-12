@@ -204,8 +204,8 @@ struct LoopifyCoindStream {
       std::visit(Overloaded{[&](_Enter _f) {
                    const T2 seed = _f.seed;
                    auto _cs = f(seed);
-                   T1 a = _cs.first;
-                   T2 s_ = _cs.second;
+                   const T1 &a = _cs.first;
+                   const T2 &s_ = _cs.second;
                    _result = stream<T1>::lazy_(
                        [=]() mutable -> std::shared_ptr<stream<T1>> {
                          return stream<T1>::scons(a, unfold<T1, T2>(f, s_));
@@ -230,8 +230,8 @@ struct LoopifyCoindStream {
   static inline const std::shared_ptr<stream<unsigned int>> fibs =
       unfold<unsigned int, std::pair<unsigned int, unsigned int>>(
           [](std::pair<unsigned int, unsigned int> pat) {
-            unsigned int a = pat.first;
-            unsigned int b = pat.second;
+            const unsigned int &a = pat.first;
+            const unsigned int &b = pat.second;
             return std::make_pair(a, std::make_pair(b, (a + b)));
           },
           std::make_pair(0u, 1u));

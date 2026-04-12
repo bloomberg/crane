@@ -39,7 +39,7 @@ __attribute__((pure)) unsigned int
 LetMatchType::let_match_option(const std::optional<unsigned int> o) {
   unsigned int x;
   if (o.has_value()) {
-    unsigned int n = *o;
+    const unsigned int &n = *o;
     x = n;
   } else {
     x = 0u;

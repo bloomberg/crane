@@ -206,9 +206,9 @@ struct PageOps {
                                     11u, List<unsigned int>::nil())))),
         0u);
     if (_cs.has_value()) {
-      std::pair<std::shared_ptr<instruction>, unsigned int> p = *_cs;
-      std::shared_ptr<instruction> _x = p.first;
-      unsigned int next = p.second;
+      const std::pair<std::shared_ptr<instruction>, unsigned int> &p = *_cs;
+      const std::shared_ptr<instruction> &_x = p.first;
+      const unsigned int &next = p.second;
       return next;
     } else {
       return 0u;

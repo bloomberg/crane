@@ -88,8 +88,8 @@ struct OppositePropertyTransferTraceCase {
       const std::shared_ptr<Triangle1Witness> &h_tri1_op) {
     std::pair<std::function<T2(T1)>, std::function<T1(T2)>> e =
         h_dual(opposite_prestable_category(pS));
-    std::function<T2(T1)> q = e.first;
-    std::function<T1(T2)> _x = e.second;
+    const std::function<T2(T1)> &q = e.first;
+    const std::function<T1(T2)> &_x = e.second;
     return q(h_theorem(opposite_prestable_category(pS), h_left_op, h_tri1_op));
   }
 
@@ -106,12 +106,10 @@ struct OppositePropertyTransferTraceCase {
                     std::function<std::shared_ptr<Triangle1Witness>(
                         std::shared_ptr<Triangle2Witness>)>>
               e = triangle_identity_duality(opposite_prestable_category(pS));
-          std::function<std::shared_ptr<Triangle2Witness>(
-              std::shared_ptr<Triangle1Witness>)>
-              _x = e.first;
-          std::function<std::shared_ptr<Triangle1Witness>(
-              std::shared_ptr<Triangle2Witness>)>
-              s = e.second;
+          const std::function<std::shared_ptr<Triangle2Witness>(
+              std::shared_ptr<Triangle1Witness>)> &_x = e.first;
+          const std::function<std::shared_ptr<Triangle1Witness>(
+              std::shared_ptr<Triangle2Witness>)> &s = e.second;
           return s(h_tri2);
         }());
   }

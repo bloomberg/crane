@@ -177,9 +177,9 @@ struct DisassembleOps {
                                             5u, List<unsigned int>::nil()))))),
         1u);
     if (_cs.has_value()) {
-      std::pair<std::shared_ptr<instruction>, unsigned int> p = *_cs;
-      std::shared_ptr<instruction> _x = p.first;
-      unsigned int next = p.second;
+      const std::pair<std::shared_ptr<instruction>, unsigned int> &p = *_cs;
+      const std::shared_ptr<instruction> &_x = p.first;
+      const unsigned int &next = p.second;
       return next;
     } else {
       return 0u;
@@ -225,9 +225,9 @@ struct DisassembleOps {
                                     11u, List<unsigned int>::nil())))),
         0u);
     if (_cs.has_value()) {
-      std::pair<std::shared_ptr<instruction>, unsigned int> p = *_cs;
-      std::shared_ptr<instruction> _x = p.first;
-      unsigned int next = p.second;
+      const std::pair<std::shared_ptr<instruction>, unsigned int> &p = *_cs;
+      const std::shared_ptr<instruction> &_x = p.first;
+      const unsigned int &next = p.second;
       return next;
     } else {
       return 0u;
@@ -243,7 +243,7 @@ struct DisassembleOps {
   template <typename T1>
   __attribute__((pure)) static bool is_none(const std::optional<T1> o) {
     if (o.has_value()) {
-      T1 _x = *o;
+      const T1 &_x = *o;
       return false;
     } else {
       return true;
@@ -280,9 +280,9 @@ struct DisassembleOps {
                                     11u, List<unsigned int>::nil())))),
         0u);
     if (_cs.has_value()) {
-      std::pair<std::shared_ptr<instruction>, unsigned int> p = *_cs;
-      std::shared_ptr<instruction> _x = p.first;
-      unsigned int next = p.second;
+      const std::pair<std::shared_ptr<instruction>, unsigned int> &p = *_cs;
+      const std::shared_ptr<instruction> &_x = p.first;
+      const unsigned int &next = p.second;
       return next;
     } else {
       return 0u;
@@ -298,9 +298,9 @@ struct DisassembleOps {
                                     11u, List<unsigned int>::nil())))),
         0u);
     if (_cs.has_value()) {
-      std::pair<std::shared_ptr<instruction>, unsigned int> p = *_cs;
-      std::shared_ptr<instruction> _x = p.first;
-      unsigned int next = p.second;
+      const std::pair<std::shared_ptr<instruction>, unsigned int> &p = *_cs;
+      const std::shared_ptr<instruction> &_x = p.first;
+      const unsigned int &next = p.second;
       return next;
     } else {
       return 0u;

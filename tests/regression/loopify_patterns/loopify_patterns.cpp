@@ -284,27 +284,29 @@ LoopifyPatterns::tuple_constr(const unsigned int n) {
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    std::visit(
-        Overloaded{[&](_Enter _f) {
-                     const unsigned int n = _f.n;
-                     if (n <= 0) {
-                       _result = std::make_pair(std::make_pair(0u, 0u), 0u);
-                     } else {
-                       unsigned int m = n - 1;
-                       _stack.push_back(_Call1{n});
-                       _stack.push_back(_Enter{m});
-                     }
-                   },
-                   [&](_Call1 _f) {
-                     const unsigned int n = _f._s0;
-                     std::pair<unsigned int, unsigned int> p = _result.first;
-                     unsigned int c = _result.second;
-                     unsigned int a = p.first;
-                     unsigned int b = p.second;
-                     _result = std::make_pair(std::make_pair((a + 1), (b + n)),
-                                              (c + (n * n)));
-                   }},
-        _frame);
+    std::visit(Overloaded{[&](_Enter _f) {
+                            const unsigned int n = _f.n;
+                            if (n <= 0) {
+                              _result =
+                                  std::make_pair(std::make_pair(0u, 0u), 0u);
+                            } else {
+                              unsigned int m = n - 1;
+                              _stack.push_back(_Call1{n});
+                              _stack.push_back(_Enter{m});
+                            }
+                          },
+                          [&](_Call1 _f) {
+                            const unsigned int n = _f._s0;
+                            const std::pair<unsigned int, unsigned int> &p =
+                                _result.first;
+                            const unsigned int &c = _result.second;
+                            const unsigned int &a = p.first;
+                            const unsigned int &b = p.second;
+                            _result =
+                                std::make_pair(std::make_pair((a + 1), (b + n)),
+                                               (c + (n * n)));
+                          }},
+               _frame);
   }
   return _result;
 }
@@ -367,7 +369,8 @@ LoopifyPatterns::split_by_sign_aux(
     std::visit(
         Overloaded{
             [&](const typename LoopifyPatterns::list<unsigned int>::Nil &) {
-              _result = std::make_pair(_loop_pos, _loop_neg);
+              _result =
+                  std::make_pair(std::move(_loop_pos), std::move(_loop_neg));
               _continue = false;
             },
             [&](const typename LoopifyPatterns::list<unsigned int>::Cons
@@ -685,11 +688,11 @@ __attribute__((pure)) unsigned int LoopifyPatterns::nested_pattern(
                       [&](const typename LoopifyPatterns::list<
                           std::pair<std::pair<unsigned int, unsigned int>,
                                     unsigned int>>::Cons &_args) -> void {
-                        std::pair<unsigned int, unsigned int> p0 =
+                        const std::pair<unsigned int, unsigned int> &p0 =
                             _args.d_a0.first;
-                        unsigned int c = _args.d_a0.second;
-                        unsigned int a = p0.first;
-                        unsigned int b = p0.second;
+                        const unsigned int &c = _args.d_a0.second;
+                        const unsigned int &a = p0.first;
+                        const unsigned int &b = p0.second;
                         _stack.push_back(_Call1{a, b, c});
                         _stack.push_back(_Enter{_args.d_a1});
                       }},

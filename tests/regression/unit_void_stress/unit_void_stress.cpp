@@ -140,7 +140,7 @@ void UnitVoidStress::odd_void(const unsigned int n) {
 
 void UnitVoidStress::match_opt_void(const std::optional<unsigned int> o) {
   if (o.has_value()) {
-    unsigned int n = *o;
+    const unsigned int &n = *o;
     consume(n);
     return;
   } else {

@@ -35,8 +35,9 @@ MergesortFuel::split(const std::shared_ptr<List<unsigned int>> &l) {
                         -> std::pair<std::shared_ptr<List<unsigned int>>,
                                      std::shared_ptr<List<unsigned int>>> {
                       auto _cs = split(_args0.d_a1);
-                      std::shared_ptr<List<unsigned int>> l1 = _cs.first;
-                      std::shared_ptr<List<unsigned int>> l2 = _cs.second;
+                      const std::shared_ptr<List<unsigned int>> &l1 = _cs.first;
+                      const std::shared_ptr<List<unsigned int>> &l2 =
+                          _cs.second;
                       return std::make_pair(
                           List<unsigned int>::cons(_args.d_a0, l1),
                           List<unsigned int>::cons(_args0.d_a0, l2));
@@ -110,9 +111,9 @@ MergesortFuel::msort_go(const unsigned int fuel,
                                [&](const typename List<unsigned int>::Cons &)
                                    -> std::shared_ptr<List<unsigned int>> {
                                  auto _cs = split(l);
-                                 std::shared_ptr<List<unsigned int>> l1 =
+                                 const std::shared_ptr<List<unsigned int>> &l1 =
                                      _cs.first;
-                                 std::shared_ptr<List<unsigned int>> l2 =
+                                 const std::shared_ptr<List<unsigned int>> &l2 =
                                      _cs.second;
                                  return merge(msort_go(fuel_, l1),
                                               msort_go(fuel_, l2));
