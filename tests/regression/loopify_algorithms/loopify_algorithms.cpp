@@ -65,7 +65,6 @@ LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
     } else {
       unsigned int f = _loop_fuel - 1;
       if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-        auto &_rf = std::get<0>(_loop_l->v_mut());
         {
           if (_last) {
             std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
@@ -366,7 +365,6 @@ LoopifyAlgorithms::rotate_left_fuel(const unsigned int fuel,
         }
       } else {
         if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-          auto &_rf = std::get<0>(_loop_l->v_mut());
           {
             _result = _loop_l;
             _continue = false;
@@ -649,7 +647,7 @@ LoopifyAlgorithms::take_impl(const unsigned int k,
 
 std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
 LoopifyAlgorithms::windows_aux(const unsigned int n,
-                               std::shared_ptr<List<unsigned int>> l,
+                               const std::shared_ptr<List<unsigned int>> &l,
                                const unsigned int fuel) {
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _head{};
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _last{};
@@ -721,7 +719,7 @@ LoopifyAlgorithms::windows_aux(const unsigned int n,
 
 std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
 LoopifyAlgorithms::windows(const unsigned int n,
-                           std::shared_ptr<List<unsigned int>> l) {
+                           const std::shared_ptr<List<unsigned int>> &l) {
   return windows_aux(n, l, (len_impl(l) + 1));
 }
 

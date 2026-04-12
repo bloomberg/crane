@@ -141,22 +141,22 @@ struct LoadProgram {
     unsigned int ptr_;
   };
 
-  static std::shared_ptr<state> set_prom_params(std::shared_ptr<state> s,
+  static std::shared_ptr<state> set_prom_params(const std::shared_ptr<state> &s,
                                                 const unsigned int addr,
                                                 const unsigned int data,
                                                 const bool enable);
-  static std::shared_ptr<state> execute_wpm(std::shared_ptr<state> s);
+  static std::shared_ptr<state> execute_wpm(const std::shared_ptr<state> &s);
   static std::shared_ptr<state>
   load_program(std::shared_ptr<state> s, const unsigned int base,
                const std::shared_ptr<List<unsigned int>> &bytes);
   static std::shared_ptr<state_extended>
-  set_prom_params_ext(std::shared_ptr<state_extended> s,
+  set_prom_params_ext(const std::shared_ptr<state_extended> &s,
                       const unsigned int addr, const unsigned int data,
                       const bool enable);
   static std::shared_ptr<state_extended>
-  execute_wpm_ext(std::shared_ptr<state_extended> s);
+  execute_wpm_ext(const std::shared_ptr<state_extended> &s);
   static std::shared_ptr<state_simple>
-  write_byte(std::shared_ptr<state_simple> s, const unsigned int b);
+  write_byte(const std::shared_ptr<state_simple> &s, const unsigned int b);
   static std::shared_ptr<state_simple>
   load_program_simple(std::shared_ptr<state_simple> s,
                       const std::shared_ptr<List<unsigned int>> &bytes);

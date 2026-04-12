@@ -125,7 +125,7 @@ struct LoopifyCoindStream {
 
   template <typename T1>
   static std::shared_ptr<List<T1>> take(const unsigned int n,
-                                        std::shared_ptr<stream<T1>> s) {
+                                        const std::shared_ptr<stream<T1>> &s) {
     std::shared_ptr<List<T1>> _head{};
     std::shared_ptr<List<T1>> _last{};
     std::shared_ptr<stream<T1>> _loop_s = s;
@@ -171,17 +171,17 @@ struct LoopifyCoindStream {
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  static std::shared_ptr<stream<T2>> smap(F0 &&f,
-                                          std::shared_ptr<stream<T1>> s) {
+  static std::shared_ptr<stream<T2>>
+  smap(F0 &&f, const std::shared_ptr<stream<T1>> &s) {
     return stream<T2>::lazy_([=]() mutable -> std::shared_ptr<stream<T2>> {
       return stream<T2>::scons(f(hd<T1>(s)), smap<T1, T2>(f, tl<T1>(s)));
     });
   }
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
-  static std::shared_ptr<stream<T3>> zipWith(F0 &&f,
-                                             std::shared_ptr<stream<T1>> s1,
-                                             std::shared_ptr<stream<T2>> s2) {
+  static std::shared_ptr<stream<T3>>
+  zipWith(F0 &&f, const std::shared_ptr<stream<T1>> &s1,
+          const std::shared_ptr<stream<T2>> &s2) {
     return stream<T3>::lazy_([=]() mutable -> std::shared_ptr<stream<T3>> {
       return stream<T3>::scons(f(hd<T1>(s1), hd<T2>(s2)),
                                zipWith<T1, T2, T3>(f, tl<T1>(s1), tl<T2>(s2)));
@@ -203,8 +203,9 @@ struct LoopifyCoindStream {
       _stack.pop_back();
       std::visit(Overloaded{[&](_Enter _f) {
                    const T2 seed = _f.seed;
-                   T1 a = f(seed).first;
-                   T2 s_ = f(seed).second;
+                   auto _cs = f(seed);
+                   T1 a = _cs.first;
+                   T2 s_ = _cs.second;
                    _result = stream<T1>::lazy_(
                        [=]() mutable -> std::shared_ptr<stream<T1>> {
                          return stream<T1>::scons(a, unfold<T1, T2>(f, s_));

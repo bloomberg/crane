@@ -115,7 +115,8 @@ struct LoopBodyIteration {
 
   __attribute__((pure)) static unsigned int
   get_reg0(const std::shared_ptr<state> &s);
-  static std::shared_ptr<state> count_loop_body(std::shared_ptr<state> s);
+  static std::shared_ptr<state>
+  count_loop_body(const std::shared_ptr<state> &s);
   static std::shared_ptr<state> iterate_body(const unsigned int n,
                                              std::shared_ptr<state> s);
   static inline const std::shared_ptr<state> sample =

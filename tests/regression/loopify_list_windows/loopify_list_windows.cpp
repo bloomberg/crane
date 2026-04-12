@@ -100,7 +100,6 @@ LoopifyListWindows::drop(const unsigned int m,
     } else {
       unsigned int m_ = _loop_m - 1;
       if (_loop_xs.use_count() == 1 && _loop_xs->v().index() == 0) {
-        auto &_rf = std::get<0>(_loop_xs->v_mut());
         {
           _result = _loop_xs;
           _continue = false;
@@ -478,7 +477,7 @@ LoopifyListWindows::take(const unsigned int n,
 
 std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
 LoopifyListWindows::windows_fuel(const unsigned int fuel, const unsigned int n,
-                                 std::shared_ptr<List<unsigned int>> l) {
+                                 const std::shared_ptr<List<unsigned int>> &l) {
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _head{};
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _last{};
   std::shared_ptr<List<unsigned int>> _loop_l = l;
@@ -655,10 +654,9 @@ LoopifyListWindows::group_fuel(const unsigned int fuel,
                 _continue = false;
               },
               [&](const typename List<unsigned int>::Cons _args) {
-                std::shared_ptr<List<unsigned int>> same =
-                    span_eq(_args.d_a0, _args.d_a1).first;
-                std::shared_ptr<List<unsigned int>> rest =
-                    span_eq(_args.d_a0, _args.d_a1).second;
+                auto _cs = span_eq(_args.d_a0, _args.d_a1);
+                std::shared_ptr<List<unsigned int>> same = _cs.first;
+                std::shared_ptr<List<unsigned int>> rest = _cs.second;
                 auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
                     List<unsigned int>::cons(_args.d_a0, same), nullptr);
                 if (_last) {

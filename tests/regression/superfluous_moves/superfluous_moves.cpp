@@ -13,7 +13,7 @@ SuperfluousMoves::tick(std::shared_ptr<SuperfluousMoves::game_state> gs) {
 
 /// Life loss used to create the branch-local gs3 value.
 std::shared_ptr<SuperfluousMoves::game_state> SuperfluousMoves::lose_one_life(
-    std::shared_ptr<SuperfluousMoves::game_state> gs) {
+    const std::shared_ptr<SuperfluousMoves::game_state> &gs) {
   return std::make_shared<SuperfluousMoves::game_state>(
       game_state{std::make_shared<SuperfluousMoves::position>(position{9u}),
                  gs->ghosts, (gs->lives ? gs->lives - 1 : gs->lives)});

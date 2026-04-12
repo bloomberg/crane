@@ -811,7 +811,6 @@ LoopifyPatterns::process_twice_fuel(
               } else {
                 unsigned int f = fuel - 1;
                 if (l.use_count() == 1 && l->v().index() == 0) {
-                  auto &_rf = std::get<0>(l->v_mut());
                   _result = l;
                 } else {
                   std::visit(
@@ -1198,7 +1197,6 @@ LoopifyPatterns::process_twice_alt_fuel(
               } else {
                 unsigned int f = fuel - 1;
                 if (l.use_count() == 1 && l->v().index() == 0) {
-                  auto &_rf = std::get<0>(l->v_mut());
                   _result = l;
                 } else {
                   std::visit(

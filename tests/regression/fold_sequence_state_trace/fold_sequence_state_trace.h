@@ -151,13 +151,13 @@ struct FoldSequenceStateTraceCase {
   static std::shared_ptr<Line> perp_bisector(const std::pair<Real, Real> p1,
                                              const std::pair<Real, Real> p2);
   static std::shared_ptr<Line> perp_through(const std::pair<Real, Real> p,
-                                            std::shared_ptr<Line> l);
+                                            const std::shared_ptr<Line> &l);
   static std::shared_ptr<Fold> fold_O1(const std::pair<Real, Real> p1,
                                        const std::pair<Real, Real> p2);
   static std::shared_ptr<Fold> fold_O2(const std::pair<Real, Real> p1,
                                        const std::pair<Real, Real> p2);
   static std::shared_ptr<Fold> fold_O4(const std::pair<Real, Real> p,
-                                       std::shared_ptr<Line> l);
+                                       const std::shared_ptr<Line> &l);
 
   struct FoldStep {
     // TYPES
@@ -287,7 +287,7 @@ struct FoldSequenceStateTraceCase {
               List<std::shared_ptr<Line>>::cons(
                   line_yaxis, List<std::shared_ptr<Line>>::nil()))});
   static std::shared_ptr<ConstructionState>
-  add_fold_to_state(std::shared_ptr<ConstructionState> st,
+  add_fold_to_state(const std::shared_ptr<ConstructionState> &st,
                     const std::shared_ptr<FoldStep> &step);
   static std::shared_ptr<ConstructionState>
   execute_sequence(std::shared_ptr<ConstructionState> st,

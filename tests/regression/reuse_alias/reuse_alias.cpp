@@ -33,7 +33,8 @@ ReuseAlias::double_use(std::shared_ptr<ReuseAlias::mylist<unsigned int>> l) {
 
 /// Pass the same list to two different functions.
 __attribute__((pure)) std::pair<unsigned int, unsigned int>
-ReuseAlias::double_call(std::shared_ptr<ReuseAlias::mylist<unsigned int>> l) {
+ReuseAlias::double_call(
+    const std::shared_ptr<ReuseAlias::mylist<unsigned int>> &l) {
   return std::make_pair(length<unsigned int>(l),
                         length<unsigned int>(inc_head(l)));
 }

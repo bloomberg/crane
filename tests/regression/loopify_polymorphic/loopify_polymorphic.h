@@ -304,7 +304,6 @@ struct LoopifyPolymorphic {
       } else {
         unsigned int n_ = _loop_n - 1;
         if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-          auto &_rf = std::get<0>(_loop_l->v_mut());
           {
             _result = _loop_l;
             _continue = false;

@@ -50,7 +50,7 @@ struct ITree : public std::enable_shared_from_this<ITree<R>> {
             }
             auto &v = std::get<Vis>(cur->node);
             std::any response = v.effect();
-            cur = v.cont(response);
+            cur = v.cont(std::move(response));
         }
     }
     const variant_t &observe() const { return node; }
@@ -98,7 +98,7 @@ struct ITree<void> {
             }
             auto &v = std::get<Vis>(cur->node);
             std::any response = v.effect();
-            cur = v.cont(response);
+            cur = v.cont(std::move(response));
         }
     }
     const variant_t &observe() const { return node; }

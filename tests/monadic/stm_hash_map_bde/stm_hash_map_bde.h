@@ -97,8 +97,9 @@ template <typename K, typename V> struct CHT {
     bsl::pair<bsl::optional<V>, bsl::shared_ptr<List<bsl::pair<K, V>>>> p =
         CHT<int, int>::template assoc_remove<K, V>(this->CHT::cht_eqb, k,
                                                    bsl::move(xs));
-    if (p.first.has_value()) {
-      V _x = *p.first;
+    auto _cs = p.first;
+    if (_cs.has_value()) {
+      V _x = *_cs;
       stm::writeTVar(b, p.second);
       return p.first;
     } else {

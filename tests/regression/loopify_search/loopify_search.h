@@ -244,7 +244,8 @@ struct LoopifySearch {
   subset_sum_fuel(const unsigned int fuel, const unsigned int target,
                   const std::shared_ptr<List<unsigned int>> &l);
   __attribute__((pure)) static bool
-  subset_sum(const unsigned int target, std::shared_ptr<List<unsigned int>> l);
+  subset_sum(const unsigned int target,
+             const std::shared_ptr<List<unsigned int>> &l);
 
   /// Helper: filter predicate.
   template <MapsTo<bool, unsigned int> F0>
@@ -394,7 +395,7 @@ struct LoopifySearch {
   permutations_fuel(const unsigned int fuel,
                     const std::shared_ptr<List<unsigned int>> &l);
   static std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
-  permutations(std::shared_ptr<List<unsigned int>> l);
+  permutations(const std::shared_ptr<List<unsigned int>> &l);
   /// linear_search x l finds index of first occurrence of x.
   __attribute__((pure)) static std::optional<unsigned int>
   linear_search_aux(const unsigned int x,

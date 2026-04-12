@@ -48,7 +48,8 @@ std::shared_ptr<RecordFieldPatterns::Point> RecordFieldPatterns::id_point(
 }
 
 __attribute__((pure)) std::pair<unsigned int, unsigned int>
-RecordFieldPatterns::point_pair(std::shared_ptr<RecordFieldPatterns::Point> p) {
+RecordFieldPatterns::point_pair(
+    const std::shared_ptr<RecordFieldPatterns::Point> &p) {
   return std::make_pair(p->px, p->py);
 }
 

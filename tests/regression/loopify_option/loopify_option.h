@@ -250,8 +250,9 @@ struct LoopifyOption {
                 _continue = false;
               },
               [&](const typename list<T1>::Cons _args) {
-                if (f(_args.d_a0).has_value()) {
-                  T2 y = *f(_args.d_a0);
+                auto _cs = f(_args.d_a0);
+                if (_cs.has_value()) {
+                  T2 y = *_cs;
                   auto _cell = list<T2>::cons(y, nullptr);
                   if (_last) {
                     std::get<typename list<T2>::Cons>(_last->v_mut()).d_a1 =

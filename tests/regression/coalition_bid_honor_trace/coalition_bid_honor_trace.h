@@ -477,10 +477,11 @@ struct CoalitionBidHonorTraceCase {
 
   static inline const std::shared_ptr<ForceMetrics> empty_metrics =
       std::make_shared<ForceMetrics>(ForceMetrics{0u, 0u, 0u, 0u, 0u, 0u});
-  static std::shared_ptr<ForceMetrics> unit_to_metrics(std::shared_ptr<Unit> u);
   static std::shared_ptr<ForceMetrics>
-  metrics_add(std::shared_ptr<ForceMetrics> m1,
-              std::shared_ptr<ForceMetrics> m2);
+  unit_to_metrics(const std::shared_ptr<Unit> &u);
+  static std::shared_ptr<ForceMetrics>
+  metrics_add(const std::shared_ptr<ForceMetrics> &m1,
+              const std::shared_ptr<ForceMetrics> &m2);
   static std::shared_ptr<ForceMetrics>
   force_metrics(const std::shared_ptr<List<std::shared_ptr<Unit>>> &f);
   __attribute__((pure)) static bool
@@ -556,8 +557,9 @@ struct CoalitionBidHonorTraceCase {
   coalition_lead_commander(
       const std::shared_ptr<List<std::shared_ptr<CoalitionMember>>> &c);
   __attribute__((pure)) static std::optional<std::shared_ptr<ForceBid>>
-  coalition_to_bid(std::shared_ptr<List<std::shared_ptr<CoalitionMember>>> c,
-                   const Side side);
+  coalition_to_bid(
+      const std::shared_ptr<List<std::shared_ptr<CoalitionMember>>> &c,
+      const Side side);
   __attribute__((pure)) static Coalition apply_coalition_member_bid(
       const std::shared_ptr<List<std::shared_ptr<CoalitionMember>>> &c,
       const std::shared_ptr<CoalitionMemberBid> &cbid);
@@ -1578,9 +1580,9 @@ struct CoalitionBidHonorTraceCase {
           radick, Clan::e_CLANWOLF, coalition_force(defender_coalition)});
   static inline const std::shared_ptr<ForceBid> sample_attacker_bid =
       []() -> std::shared_ptr<ForceBid> {
-    if (coalition_to_bid(attacker_coalition, Side::e_ATTACKER).has_value()) {
-      std::shared_ptr<ForceBid> bid =
-          *coalition_to_bid(attacker_coalition, Side::e_ATTACKER);
+    auto _cs = coalition_to_bid(attacker_coalition, Side::e_ATTACKER);
+    if (_cs.has_value()) {
+      std::shared_ptr<ForceBid> bid = *_cs;
       return bid;
     } else {
       return std::make_shared<ForceBid>(ForceBid{
@@ -1589,9 +1591,9 @@ struct CoalitionBidHonorTraceCase {
   }();
   static inline const std::shared_ptr<ForceBid> sample_defender_bid =
       []() -> std::shared_ptr<ForceBid> {
-    if (coalition_to_bid(defender_coalition, Side::e_DEFENDER).has_value()) {
-      std::shared_ptr<ForceBid> bid =
-          *coalition_to_bid(defender_coalition, Side::e_DEFENDER);
+    auto _cs = coalition_to_bid(defender_coalition, Side::e_DEFENDER);
+    if (_cs.has_value()) {
+      std::shared_ptr<ForceBid> bid = *_cs;
       return bid;
     } else {
       return std::make_shared<ForceBid>(ForceBid{
@@ -1609,10 +1611,9 @@ struct CoalitionBidHonorTraceCase {
                                  sample_coalition_member_bid);
   static inline const std::shared_ptr<ForceBid> updated_attacker_bid =
       []() -> std::shared_ptr<ForceBid> {
-    if (coalition_to_bid(updated_attacker_coalition, Side::e_ATTACKER)
-            .has_value()) {
-      std::shared_ptr<ForceBid> bid =
-          *coalition_to_bid(updated_attacker_coalition, Side::e_ATTACKER);
+    auto _cs = coalition_to_bid(updated_attacker_coalition, Side::e_ATTACKER);
+    if (_cs.has_value()) {
+      std::shared_ptr<ForceBid> bid = *_cs;
       return bid;
     } else {
       return sample_attacker_bid;
@@ -1702,13 +1703,10 @@ struct CoalitionBidHonorTraceCase {
       Z::zneg(Positive::xo(Positive::xi(Positive::xo(Positive::xh())))));
   static inline const unsigned int sample_break_bid_actor_id =
       []() -> unsigned int {
-    if (phase_after_initial_bid
-            ->action_actor_in_phase(
-                ProtocolAction::actbreakbid(Side::e_ATTACKER))
-            .has_value()) {
-      std::shared_ptr<Commander> cmd =
-          *phase_after_initial_bid->action_actor_in_phase(
-              ProtocolAction::actbreakbid(Side::e_ATTACKER));
+    auto _cs = phase_after_initial_bid->action_actor_in_phase(
+        ProtocolAction::actbreakbid(Side::e_ATTACKER));
+    if (_cs.has_value()) {
+      std::shared_ptr<Commander> cmd = *_cs;
       return cmd->cmd_id;
     } else {
       return 0u;

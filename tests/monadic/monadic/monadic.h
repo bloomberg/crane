@@ -105,8 +105,9 @@ struct Monadic {
   __attribute__((pure)) static State<T1, T3> state_bind(const State<T1, T2> ma,
                                                         F1 &&f) {
     return [=](T1 s) mutable {
-      T2 a = ma(s).first;
-      T1 s_ = ma(s).second;
+      auto _cs = ma(s);
+      T2 a = _cs.first;
+      T1 s_ = _cs.second;
       return f(a)(s_);
     };
   }

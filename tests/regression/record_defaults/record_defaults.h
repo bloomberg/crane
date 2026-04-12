@@ -23,9 +23,9 @@ struct RecordDefaults {
   static inline const std::shared_ptr<Config> default_config =
       std::make_shared<Config>(Config{80u, 24u, 1u, false});
   static std::shared_ptr<Config> set_width(const unsigned int w,
-                                           std::shared_ptr<Config> c);
+                                           const std::shared_ptr<Config> &c);
   static std::shared_ptr<Config> set_debug(const bool d,
-                                           std::shared_ptr<Config> c);
+                                           const std::shared_ptr<Config> &c);
 
   struct Point {
     unsigned int px;

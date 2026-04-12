@@ -34,10 +34,9 @@ MergesortFuel::split(const std::shared_ptr<List<unsigned int>> &l) {
                     [&](const typename List<unsigned int>::Cons _args0)
                         -> std::pair<std::shared_ptr<List<unsigned int>>,
                                      std::shared_ptr<List<unsigned int>>> {
-                      std::shared_ptr<List<unsigned int>> l1 =
-                          split(_args0.d_a1).first;
-                      std::shared_ptr<List<unsigned int>> l2 =
-                          split(_args0.d_a1).second;
+                      auto _cs = split(_args0.d_a1);
+                      std::shared_ptr<List<unsigned int>> l1 = _cs.first;
+                      std::shared_ptr<List<unsigned int>> l2 = _cs.second;
                       return std::make_pair(
                           List<unsigned int>::cons(_args.d_a0, l1),
                           List<unsigned int>::cons(_args0.d_a0, l2));
@@ -92,7 +91,6 @@ MergesortFuel::msort_go(const unsigned int fuel,
   } else {
     unsigned int fuel_ = fuel - 1;
     if (l.use_count() == 1 && l->v().index() == 0) {
-      auto &_rf = std::get<0>(l->v_mut());
       return l;
     } else {
       return std::visit(
@@ -111,10 +109,11 @@ MergesortFuel::msort_go(const unsigned int fuel,
                                },
                                [&](const typename List<unsigned int>::Cons)
                                    -> std::shared_ptr<List<unsigned int>> {
+                                 auto _cs = split(l);
                                  std::shared_ptr<List<unsigned int>> l1 =
-                                     split(l).first;
+                                     _cs.first;
                                  std::shared_ptr<List<unsigned int>> l2 =
-                                     split(l).second;
+                                     _cs.second;
                                  return merge(msort_go(fuel_, l1),
                                               msort_go(fuel_, l2));
                                }},

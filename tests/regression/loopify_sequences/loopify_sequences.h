@@ -252,7 +252,7 @@ struct LoopifySequences {
   template <typename T1>
   static std::shared_ptr<List<std::shared_ptr<List<T1>>>>
   transpose_fuel(const unsigned int fuel,
-                 std::shared_ptr<List<std::shared_ptr<List<T1>>>> ll) {
+                 const std::shared_ptr<List<std::shared_ptr<List<T1>>>> &ll) {
     std::shared_ptr<List<std::shared_ptr<List<T1>>>> _head{};
     std::shared_ptr<List<std::shared_ptr<List<T1>>>> _last{};
     std::shared_ptr<List<std::shared_ptr<List<T1>>>> _loop_ll = ll;
@@ -470,7 +470,7 @@ struct LoopifySequences {
   run_sum_aux(const unsigned int acc,
               const std::shared_ptr<List<unsigned int>> &l);
   static std::shared_ptr<List<unsigned int>>
-  run_sum(std::shared_ptr<List<unsigned int>> l);
+  run_sum(const std::shared_ptr<List<unsigned int>> &l);
   /// rotate_left n l rotates list left by n positions.
   static std::shared_ptr<List<unsigned int>>
   rotate_left_fuel(const unsigned int fuel, const unsigned int n,

@@ -50,14 +50,14 @@ LoadProgramHeadWrite::update_nth(const unsigned int n, const unsigned int x,
 
 std::shared_ptr<LoadProgramHeadWrite::state>
 LoadProgramHeadWrite::set_prom_params(
-    std::shared_ptr<LoadProgramHeadWrite::state> s, const unsigned int addr,
-    const unsigned int data, const bool enable) {
+    const std::shared_ptr<LoadProgramHeadWrite::state> &s,
+    const unsigned int addr, const unsigned int data, const bool enable) {
   return std::make_shared<LoadProgramHeadWrite::state>(
       state{s->rom, addr, data, enable});
 }
 
 std::shared_ptr<LoadProgramHeadWrite::state> LoadProgramHeadWrite::execute_wpm(
-    std::shared_ptr<LoadProgramHeadWrite::state> s) {
+    const std::shared_ptr<LoadProgramHeadWrite::state> &s) {
   std::shared_ptr<List<unsigned int>> new_rom;
   if (s->prom_enable) {
     new_rom = update_nth(s->prom_addr, s->prom_data, s->rom);

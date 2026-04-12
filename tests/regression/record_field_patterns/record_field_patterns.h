@@ -116,7 +116,7 @@ struct RecordFieldPatterns {
   }
 
   __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  point_pair(std::shared_ptr<Point> p);
+  point_pair(const std::shared_ptr<Point> &p);
   __attribute__((pure)) static unsigned int first_coord(
       const std::shared_ptr<Point>
           &p); /// Record whose field default depends on the section variable.

@@ -84,7 +84,7 @@ struct RdrReadsFromSelectedPort {
     unsigned int sel_rom;
   };
 
-  static std::shared_ptr<state> execute_rdr(std::shared_ptr<state> s);
+  static std::shared_ptr<state> execute_rdr(const std::shared_ptr<state> &s);
   static inline const std::shared_ptr<state> sample = std::make_shared<state>(
       state{0u,
             List<unsigned int>::cons(

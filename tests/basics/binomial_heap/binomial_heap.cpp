@@ -531,12 +531,13 @@ BinomialHeap::delete_max_aux(
                                       std::shared_ptr<List<std::shared_ptr<
                                           BinomialHeap::tree>>>> {
                                 if (_args0.d_a0 < m) {
+                                  auto _cs = delete_max_aux(m, _args.d_a1);
                                   std::shared_ptr<
                                       List<std::shared_ptr<BinomialHeap::tree>>>
-                                      j = delete_max_aux(m, _args.d_a1).first;
+                                      j = _cs.first;
                                   std::shared_ptr<
                                       List<std::shared_ptr<BinomialHeap::tree>>>
-                                      k = delete_max_aux(m, _args.d_a1).second;
+                                      k = _cs.second;
                                   return std::make_pair(
                                       List<
                                           std::shared_ptr<BinomialHeap::tree>>::
@@ -563,10 +564,11 @@ BinomialHeap::delete_max_aux(
                                 List<std::shared_ptr<BinomialHeap::tree>>>,
                             std::shared_ptr<
                                 List<std::shared_ptr<BinomialHeap::tree>>>> {
+                      auto _cs = delete_max_aux(m, _args.d_a1);
                       std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>>
-                          j = delete_max_aux(m, _args.d_a1).first;
+                          j = _cs.first;
                       std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>>
-                          k = delete_max_aux(m, _args.d_a1).second;
+                          k = _cs.second;
                       return std::make_pair(
                           List<std::shared_ptr<BinomialHeap::tree>>::cons(
                               tree::leaf(), j),
@@ -581,12 +583,12 @@ __attribute__((pure))
 std::optional<std::pair<BinomialHeap::key, BinomialHeap::priqueue>>
 BinomialHeap::delete_max(
     const std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> &q) {
-  if (find_max(q).has_value()) {
-    unsigned int m = *find_max(q);
-    std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> p_ =
-        delete_max_aux(m, q).first;
-    std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> q_ =
-        delete_max_aux(m, q).second;
+  auto _cs = find_max(q);
+  if (_cs.has_value()) {
+    unsigned int m = *_cs;
+    auto _cs = delete_max_aux(m, q);
+    std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> p_ = _cs.first;
+    std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> q_ = _cs.second;
     return std::make_optional<
         std::pair<unsigned int,
                   std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>>>>(
@@ -638,10 +640,11 @@ BinomialHeap::make_list(const unsigned int n,
 
 __attribute__((pure)) BinomialHeap::key BinomialHeap::help(
     const std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> &c) {
-  if (delete_max(c).has_value()) {
+  auto _cs = delete_max(c);
+  if (_cs.has_value()) {
     std::pair<unsigned int,
               std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>>>
-        p = *delete_max(c);
+        p = *_cs;
     unsigned int k = p.first;
     std::shared_ptr<List<std::shared_ptr<BinomialHeap::tree>>> _x = p.second;
     return k;

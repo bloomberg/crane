@@ -147,7 +147,7 @@ struct RamInitReset {
           state{ListDef::template repeat<unsigned int>(0u, 16u), 0u, false, 0u,
                 List<unsigned int>::nil(), empty_ram, default_sel,
                 ListDef::template repeat<unsigned int>(0u, 8u)});
-  static std::shared_ptr<state> reset_state(std::shared_ptr<state> s);
+  static std::shared_ptr<state> reset_state(const std::shared_ptr<state> &s);
   __attribute__((pure)) static std::pair<std::optional<unsigned int>,
                                          std::shared_ptr<state>>
   pop_stack(std::shared_ptr<state> s);

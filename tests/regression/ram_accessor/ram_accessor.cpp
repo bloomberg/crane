@@ -18,7 +18,7 @@ RamAccessor::get_stat(const std::shared_ptr<RamAccessor::ram_reg> &rg,
 }
 
 std::shared_ptr<RamAccessor::ram_reg>
-RamAccessor::upd_main_in_reg(std::shared_ptr<RamAccessor::ram_reg> rg,
+RamAccessor::upd_main_in_reg(const std::shared_ptr<RamAccessor::ram_reg> &rg,
                              const unsigned int i, const unsigned int v) {
   return std::make_shared<RamAccessor::ram_reg>(
       ram_reg{update_nth<unsigned int>(i, (16u ? v % 16u : v), rg->reg_main),
@@ -26,7 +26,7 @@ RamAccessor::upd_main_in_reg(std::shared_ptr<RamAccessor::ram_reg> rg,
 }
 
 std::shared_ptr<RamAccessor::ram_reg>
-RamAccessor::upd_stat_in_reg(std::shared_ptr<RamAccessor::ram_reg> rg,
+RamAccessor::upd_stat_in_reg(const std::shared_ptr<RamAccessor::ram_reg> &rg,
                              const unsigned int i, const unsigned int v) {
   return std::make_shared<RamAccessor::ram_reg>(
       ram_reg{rg->reg_main, update_nth<unsigned int>(i, (16u ? v % 16u : v),
@@ -40,16 +40,16 @@ RamAccessor::get_regRAM(const std::shared_ptr<RamAccessor::ram_chip> &ch,
 }
 
 std::shared_ptr<RamAccessor::ram_chip>
-RamAccessor::upd_reg_in_chip(std::shared_ptr<RamAccessor::ram_chip> ch,
+RamAccessor::upd_reg_in_chip(const std::shared_ptr<RamAccessor::ram_chip> &ch,
                              const unsigned int r,
-                             std::shared_ptr<RamAccessor::ram_reg> rg) {
+                             const std::shared_ptr<RamAccessor::ram_reg> &rg) {
   return std::make_shared<RamAccessor::ram_chip>(ram_chip{
       update_nth<std::shared_ptr<RamAccessor::ram_reg>>(r, rg, ch->chip_regs),
       ch->chip_port});
 }
 
 std::shared_ptr<RamAccessor::ram_chip>
-RamAccessor::upd_port_in_chip(std::shared_ptr<RamAccessor::ram_chip> ch,
+RamAccessor::upd_port_in_chip(const std::shared_ptr<RamAccessor::ram_chip> &ch,
                               const unsigned int v) {
   return std::make_shared<RamAccessor::ram_chip>(
       ram_chip{ch->chip_regs, (16u ? v % 16u : v)});
@@ -61,10 +61,9 @@ RamAccessor::get_chip(const std::shared_ptr<RamAccessor::ram_bank> &bk,
   return bk->bank_chips->nth(c, empty_chip);
 }
 
-std::shared_ptr<RamAccessor::ram_bank>
-RamAccessor::upd_chip_in_bank(std::shared_ptr<RamAccessor::ram_bank> bk,
-                              const unsigned int c,
-                              std::shared_ptr<RamAccessor::ram_chip> ch) {
+std::shared_ptr<RamAccessor::ram_bank> RamAccessor::upd_chip_in_bank(
+    const std::shared_ptr<RamAccessor::ram_bank> &bk, const unsigned int c,
+    const std::shared_ptr<RamAccessor::ram_chip> &ch) {
   return std::make_shared<RamAccessor::ram_bank>(
       ram_bank{update_nth<std::shared_ptr<RamAccessor::ram_chip>>(
           c, ch, bk->bank_chips)});

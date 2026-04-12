@@ -1106,34 +1106,26 @@ struct ValidatedVirtualCrossmatchTraceCase {
   static inline const unsigned int sample_lab_id =
       validated_luminex->vmc_config->mfi_cfg_lab_id;
   static inline const bool sample_order_created = []() -> bool {
-    if (create_safe_transfusion_order(
-            100u, 200u,
-            risk_acceptable(full_virtual_crossmatch_safe(
-                validated_luminex, weak_profile, donor_hla)),
-            good_crossmatch, 0u, 1000u, 77u, false)
-            .has_value()) {
-      std::shared_ptr<SafeTransfusionOrder> _x = *create_safe_transfusion_order(
-          100u, 200u,
-          risk_acceptable(full_virtual_crossmatch_safe(
-              validated_luminex, weak_profile, donor_hla)),
-          good_crossmatch, 0u, 1000u, 77u, false);
+    auto _cs = create_safe_transfusion_order(
+        100u, 200u,
+        risk_acceptable(full_virtual_crossmatch_safe(validated_luminex,
+                                                     weak_profile, donor_hla)),
+        good_crossmatch, 0u, 1000u, 77u, false);
+    if (_cs.has_value()) {
+      std::shared_ptr<SafeTransfusionOrder> _x = *_cs;
       return true;
     } else {
       return false;
     }
   }();
   static inline const bool sample_order_blocked = []() -> bool {
-    if (create_safe_transfusion_order(
-            100u, 201u,
-            risk_acceptable(full_virtual_crossmatch_safe(
-                validated_luminex, strong_profile, donor_hla)),
-            bad_crossmatch, 0u, 1000u, 77u, false)
-            .has_value()) {
-      std::shared_ptr<SafeTransfusionOrder> _x = *create_safe_transfusion_order(
-          100u, 201u,
-          risk_acceptable(full_virtual_crossmatch_safe(
-              validated_luminex, strong_profile, donor_hla)),
-          bad_crossmatch, 0u, 1000u, 77u, false);
+    auto _cs = create_safe_transfusion_order(
+        100u, 201u,
+        risk_acceptable(full_virtual_crossmatch_safe(
+            validated_luminex, strong_profile, donor_hla)),
+        bad_crossmatch, 0u, 1000u, 77u, false);
+    if (_cs.has_value()) {
+      std::shared_ptr<SafeTransfusionOrder> _x = *_cs;
       return false;
     } else {
       return true;
@@ -1141,12 +1133,10 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }();
   static inline const bool sample_authorized_order_stays_authorized =
       []() -> bool {
-    if (create_safe_transfusion_order(100u, 202u, true, good_crossmatch, 100u,
-                                      200u, 88u, false)
-            .has_value()) {
-      std::shared_ptr<SafeTransfusionOrder> order =
-          *create_safe_transfusion_order(100u, 202u, true, good_crossmatch,
-                                         100u, 200u, 88u, false);
+    auto _cs = create_safe_transfusion_order(100u, 202u, true, good_crossmatch,
+                                             100u, 200u, 88u, false);
+    if (_cs.has_value()) {
+      std::shared_ptr<SafeTransfusionOrder> order = *_cs;
       return transfusion_order_authorized(order, 200u);
     } else {
       return false;

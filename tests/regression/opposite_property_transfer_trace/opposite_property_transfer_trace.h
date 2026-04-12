@@ -25,7 +25,7 @@ struct OppositePropertyTransferTraceCase {
   };
 
   static std::shared_ptr<PreStableCategory>
-  opposite_prestable_category(std::shared_ptr<PreStableCategory> pS);
+  opposite_prestable_category(const std::shared_ptr<PreStableCategory> &pS);
 
   struct LeftStableWitness {
     unsigned int lsw_seed;
@@ -74,7 +74,7 @@ struct OppositePropertyTransferTraceCase {
       pure)) static EquivT<satisfies_triangle_1, satisfies_triangle_2>
   triangle_identity_duality(const std::shared_ptr<PreStableCategory> &_x);
   static std::shared_ptr<LeftProperty>
-  sample_left_property(std::shared_ptr<PreStableCategory> pS,
+  sample_left_property(const std::shared_ptr<PreStableCategory> &pS,
                        const std::shared_ptr<LeftStableWitness> &h_left,
                        const std::shared_ptr<Triangle1Witness> &_x);
   __attribute__((pure)) static EquivT<std::shared_ptr<LeftProperty>,

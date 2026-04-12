@@ -547,7 +547,6 @@ Coq_Pos::to_nat(const std::shared_ptr<Positive> &x) {
 std::shared_ptr<N> BinNat::sub(std::shared_ptr<N> n,
                                const std::shared_ptr<N> &m) {
   if (n.use_count() == 1 && n->v().index() == 0) {
-    auto &_rf = std::get<0>(n->v_mut());
     return n;
   } else {
     return std::visit(

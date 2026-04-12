@@ -143,7 +143,7 @@ struct PulseParseCertificateCase {
   __attribute__((pure)) static bool pulse_parse_certificate_self_consistent(
       const std::shared_ptr<PulseCertificate> &cert);
   static std::shared_ptr<PulseCertificate>
-  certify_trace(std::shared_ptr<List<bool>> xs);
+  certify_trace(const std::shared_ptr<List<bool>> &xs);
   static inline const Trace sample_trace = List<bool>::cons(
       false,
       List<bool>::cons(

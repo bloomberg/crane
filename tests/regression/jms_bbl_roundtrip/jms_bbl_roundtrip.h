@@ -21,7 +21,7 @@ struct JmsBblRoundtrip {
   };
 
   __attribute__((pure)) static unsigned int addr12_of_nat(const unsigned int n);
-  static std::shared_ptr<state> execute_jms(std::shared_ptr<state> s,
+  static std::shared_ptr<state> execute_jms(const std::shared_ptr<state> &s,
                                             const unsigned int addr);
   static std::shared_ptr<state> execute_bbl(std::shared_ptr<state> s);
   static inline const std::shared_ptr<state> sample =

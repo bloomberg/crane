@@ -218,8 +218,7 @@ Levenshtein::levenshtein_chain(const std::shared_ptr<String> &s,
                                                     Levenshtein::chain>
                                                     r3_ =
                                                         _args4.d_a1->aux_update(
-                                                            s, std::move(t),
-                                                            _args.d_a0,
+                                                            s, t, _args.d_a0,
                                                             _args.d_a1,
                                                             _args0.d_a0,
                                                             _args0.d_a1,

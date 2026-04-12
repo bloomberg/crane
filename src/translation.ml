@@ -1102,6 +1102,52 @@ let stmts_reference_var (target : Id.t) (stmts : cpp_stmt list) : bool =
   try List.iter (fun s -> ignore (visit_stmt s)) stmts; false
   with Found -> true
 
+(** Check if [target] is referenced DIRECTLY in [stmts], without crossing into
+    lambda bodies. References inside [CPPlambda] bodies are excluded because
+    Infer's Pulse analysis cannot trace reads through [std::visit] lambda
+    captures — they appear as dead stores even when the variable is used. *)
+let stmts_reference_var_directly (target : Id.t) (stmts : cpp_stmt list) : bool =
+  let exception Found in
+  let rec ve = function
+    | CPPvar id when Id.equal id target -> raise Found
+    | CPPlambda _ -> ()  (* Don't recurse into lambda bodies *)
+    | CPPfun_call (f, args) -> ve f; List.iter ve args
+    | CPPnamespace (_, e) | CPPderef e | CPPmove e | CPPforward (_, e) -> ve e
+    | CPPget (e, _) | CPPget' (e, _) | CPPmember (e, _) | CPParrow (e, _) -> ve e
+    | CPPqualified (e, _) | CPPshared_ptr_ctor (_, e) | CPPunique_ptr_ctor (_, e) -> ve e
+    | CPPany_cast (_, e) -> ve e
+    | CPPshared_from_this _ -> ()
+    | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
+    | CPPstruct_id (_, _, es) | CPPnew (_, es) -> List.iter ve es
+    | CPPparray (arr, e) -> Array.iter ve arr; ve e
+    | CPPmethod_call (obj, _, args) -> ve obj; List.iter ve args
+    | CPPrequires (_, constraints, _) -> List.iter (fun (e, _) -> ve e) constraints
+    | CPPbinop (_, l, r) -> ve l; ve r
+    | CPPunop (_, e) -> ve e
+    | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _ | CPPstring _
+    | CPPuint _ | CPPfloat _ | CPPconvertible_to _ | CPPabort _ | CPPenum_val _
+    | CPPraw _ | CPPbool _ | CPPint _ | CPPbrace_init | CPPthis -> ()
+  and vs = function
+    | Sreturn (Some e) | Sexpr e -> ve e
+    | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _
+    | Susing _ | Sdecl_init _ | Scontinue -> ()
+    | Sasgn (_, _, e) -> ve e
+    | Sif (c, t, f) -> ve c; List.iter vs t; List.iter vs f
+    | Sswitch (e, _, branches, def) ->
+      ve e;
+      List.iter (fun (_, stmts) -> List.iter vs stmts) branches;
+      Option.iter (List.iter vs) def
+    | Scustom_case (_, e, _, branches, _) ->
+      ve e;
+      List.iter (fun (_, _, stmts) -> List.iter vs stmts) branches
+    | Sassign_field (o, _, e) -> ve o; ve e
+    | Swhile (c, stmts) -> ve c; List.iter vs stmts
+    | Sblock stmts -> List.iter vs stmts
+    | Sblock_custom (_, _, _, _, args, _) -> List.iter ve args
+  in
+  try List.iter vs stmts; false
+  with Found -> true
+
 (** Build extended tvar names covering both signature and body Tvar indices.
     sig_indices: sorted list of Tvar indices from the function signature
     sig_names: corresponding Id.t names for those indices body_tvars:
@@ -4267,8 +4313,15 @@ and gen_cpp_case (typ : ml_type) t env pv =
       in
       (* 6. Return the original scrutinee (reusing the memory cell) *)
       let return_scrut = Sreturn (Some scrut_expr) in
+      (* Only emit _rf when there are field assignments that use it.
+         If assign_stmts is empty (reuse branch just returns the object
+         unchanged), _rf is a dead store and triggers Infer DEAD_STORE. *)
+      let rf_stmts =
+        if assign_stmts = [] then []
+        else [get_field_ref]
+      in
       let reuse_stmts =
-        [get_field_ref]
+        rf_stmts
         @ extract_stmts
         @ prefix_stmts
         @ assign_stmts

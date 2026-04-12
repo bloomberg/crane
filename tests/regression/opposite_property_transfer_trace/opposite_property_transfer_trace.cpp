@@ -7,7 +7,8 @@
 
 std::shared_ptr<OppositePropertyTransferTraceCase::PreStableCategory>
 OppositePropertyTransferTraceCase::opposite_prestable_category(
-    std::shared_ptr<OppositePropertyTransferTraceCase::PreStableCategory> pS) {
+    const std::shared_ptr<OppositePropertyTransferTraceCase::PreStableCategory>
+        &pS) {
   return std::make_shared<OppositePropertyTransferTraceCase::PreStableCategory>(
       PreStableCategory{pS->ps_tag, pS->ps_shift, pS->ps_Loop, pS->ps_Susp,
                         pS->ps_epsilon, pS->ps_eta});
@@ -52,7 +53,8 @@ OppositePropertyTransferTraceCase::triangle_identity_duality(
 
 std::shared_ptr<OppositePropertyTransferTraceCase::LeftProperty>
 OppositePropertyTransferTraceCase::sample_left_property(
-    std::shared_ptr<OppositePropertyTransferTraceCase::PreStableCategory> pS,
+    const std::shared_ptr<OppositePropertyTransferTraceCase::PreStableCategory>
+        &pS,
     const std::shared_ptr<OppositePropertyTransferTraceCase::LeftStableWitness>
         &h_left,
     const std::shared_ptr<OppositePropertyTransferTraceCase::Triangle1Witness>

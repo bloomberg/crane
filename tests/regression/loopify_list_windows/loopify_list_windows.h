@@ -80,7 +80,7 @@ struct LoopifyListWindows {
   take(const unsigned int n, const std::shared_ptr<List<unsigned int>> &l);
   static std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
   windows_fuel(const unsigned int fuel, const unsigned int n,
-               std::shared_ptr<List<unsigned int>> l);
+               const std::shared_ptr<List<unsigned int>> &l);
   static std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
   windows(const unsigned int n, const std::shared_ptr<List<unsigned int>> &l);
   static std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>

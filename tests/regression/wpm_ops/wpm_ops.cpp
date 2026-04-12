@@ -36,7 +36,7 @@ WpmOps::nat_list_eqb(const std::shared_ptr<List<unsigned int>> &xs,
 }
 
 std::shared_ptr<WpmOps::state1>
-WpmOps::execute_wpm1(std::shared_ptr<WpmOps::state1> s) {
+WpmOps::execute_wpm1(const std::shared_ptr<WpmOps::state1> &s) {
   std::shared_ptr<List<unsigned int>> new_rom;
   if (s->prom_enable1) {
     new_rom = update_nth<unsigned int>(s->prom_addr1, s->prom_data1, s->rom1);
@@ -48,7 +48,7 @@ WpmOps::execute_wpm1(std::shared_ptr<WpmOps::state1> s) {
 }
 
 std::shared_ptr<WpmOps::state2>
-WpmOps::execute_wpm2(std::shared_ptr<WpmOps::state2> s) {
+WpmOps::execute_wpm2(const std::shared_ptr<WpmOps::state2> &s) {
   std::shared_ptr<List<unsigned int>> new_rom;
   if (s->prom_enable2) {
     new_rom = update_nth<unsigned int>(s->prom_addr2, s->prom_data2, s->rom2);
@@ -60,7 +60,7 @@ WpmOps::execute_wpm2(std::shared_ptr<WpmOps::state2> s) {
 }
 
 std::shared_ptr<WpmOps::state3>
-WpmOps::execute_wpm3(std::shared_ptr<WpmOps::state3> s) {
+WpmOps::execute_wpm3(const std::shared_ptr<WpmOps::state3> &s) {
   std::shared_ptr<List<unsigned int>> new_rom;
   if (s->prom_enable3) {
     new_rom = update_nth<unsigned int>(s->prom_addr3, s->prom_data3, s->rom3);
@@ -72,7 +72,7 @@ WpmOps::execute_wpm3(std::shared_ptr<WpmOps::state3> s) {
 }
 
 std::shared_ptr<WpmOps::state4>
-WpmOps::execute_wpm4(std::shared_ptr<WpmOps::state4> s) {
+WpmOps::execute_wpm4(const std::shared_ptr<WpmOps::state4> &s) {
   std::shared_ptr<List<unsigned int>> new_rom;
   if (s->prom_enable4) {
     new_rom = update_nth<unsigned int>(s->prom_addr4, s->prom_data4, s->rom4);
@@ -84,7 +84,7 @@ WpmOps::execute_wpm4(std::shared_ptr<WpmOps::state4> s) {
 }
 
 std::shared_ptr<WpmOps::state5>
-WpmOps::execute_wpm5(std::shared_ptr<WpmOps::state5> s) {
+WpmOps::execute_wpm5(const std::shared_ptr<WpmOps::state5> &s) {
   std::shared_ptr<List<unsigned int>> new_rom;
   if (s->prom_enable5) {
     new_rom = update_nth<unsigned int>(s->prom_addr5, s->prom_data5, s->rom5);
@@ -96,7 +96,7 @@ WpmOps::execute_wpm5(std::shared_ptr<WpmOps::state5> s) {
 }
 
 std::shared_ptr<WpmOps::state6>
-WpmOps::execute_wpm6(std::shared_ptr<WpmOps::state6> s) {
+WpmOps::execute_wpm6(const std::shared_ptr<WpmOps::state6> &s) {
   std::shared_ptr<List<unsigned int>> new_rom;
   if (s->prom_enable6) {
     new_rom = update_nth<unsigned int>(s->prom_addr6, s->prom_data6, s->rom6);

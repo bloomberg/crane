@@ -324,7 +324,6 @@ LoopifyHofs::longest_run_fuel(const unsigned int fuel,
     } else {
       unsigned int f = _loop_fuel - 1;
       if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-        auto &_rf = std::get<0>(_loop_l->v_mut());
         {
           if (_last) {
             std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =

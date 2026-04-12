@@ -107,7 +107,7 @@ struct ReuseAlias {
   double_use(std::shared_ptr<mylist<unsigned int>> l);
   /// Pass the same list to two different functions.
   __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  double_call(std::shared_ptr<mylist<unsigned int>> l);
+  double_call(const std::shared_ptr<mylist<unsigned int>> &l);
   /// Alias through let-binding, then use both the alias and the original
   /// in a match.
   __attribute__((pure)) static std::pair<std::shared_ptr<mylist<unsigned int>>,

@@ -35,8 +35,9 @@ __attribute__((pure)) bool ProgramTargetsRegionScan::addr_in_regionb(
 __attribute__((pure)) bool ProgramTargetsRegionScan::target_in_layoutb(
     const std::shared_ptr<ProgramTargetsRegionScan::layout> &l,
     const std::shared_ptr<ProgramTargetsRegionScan::instruction> &i) {
-  if (jump_target(i).has_value()) {
-    unsigned int a = *jump_target(i);
+  auto _cs = jump_target(i);
+  if (_cs.has_value()) {
+    unsigned int a = *_cs;
     return addr_in_regionb(a, l);
   } else {
     return true;

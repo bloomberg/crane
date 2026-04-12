@@ -19,8 +19,9 @@ std::shared_ptr<List<unsigned int>> JumpTargets::collect_targets(
           [](const typename List<
               std::shared_ptr<JumpTargets::instr_collection>>::Cons _args)
               -> std::shared_ptr<List<unsigned int>> {
-            if (_args.d_a0->jump_target_collection().has_value()) {
-              unsigned int a = *_args.d_a0->jump_target_collection();
+            auto _cs = _args.d_a0->jump_target_collection();
+            if (_cs.has_value()) {
+              unsigned int a = *_cs;
               return List<unsigned int>::cons(a, collect_targets(_args.d_a1));
             } else {
               return collect_targets(_args.d_a1);
@@ -38,8 +39,9 @@ JumpTargets::addr_in_region(const unsigned int addr,
 __attribute__((pure)) bool
 JumpTargets::in_layout(const std::shared_ptr<JumpTargets::layout> &l,
                        const std::shared_ptr<JumpTargets::instr_region> &i) {
-  if (i->jump_target_region().has_value()) {
-    unsigned int a = *i->jump_target_region();
+  auto _cs = i->jump_target_region();
+  if (_cs.has_value()) {
+    unsigned int a = *_cs;
     return addr_in_region(a, l);
   } else {
     return true;

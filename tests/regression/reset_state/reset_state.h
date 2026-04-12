@@ -107,7 +107,7 @@ struct ResetState {
   };
 
   static std::shared_ptr<state_full>
-  reset_state_full(std::shared_ptr<state_full> s);
+  reset_state_full(const std::shared_ptr<state_full> &s);
   static inline const unsigned int memory_preserve_test = []() {
     std::shared_ptr<state_full> s = std::make_shared<state_full>(state_full{
         9u,
@@ -127,7 +127,7 @@ struct ResetState {
             s_->stack->length());
   }();
   static std::shared_ptr<state_minimal>
-  reset_state_minimal(std::shared_ptr<state_minimal> s);
+  reset_state_minimal(const std::shared_ptr<state_minimal> &s);
   static inline const unsigned int pc_clear_test =
       reset_state_minimal(
           std::make_shared<state_minimal>(state_minimal{

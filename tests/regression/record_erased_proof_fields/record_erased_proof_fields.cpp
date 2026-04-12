@@ -107,8 +107,9 @@ __attribute__((pure)) unsigned int RecordErasedProofFieldsCase::bucket_code_of(
 }
 
 std::shared_ptr<List<unsigned int>> RecordErasedProofFieldsCase::trace_codes_of(
-    std::shared_ptr<RecordErasedProofFieldsCase::PrimaryRecord> primary,
-    std::shared_ptr<RecordErasedProofFieldsCase::ErasedProofRecord> erased) {
+    const std::shared_ptr<RecordErasedProofFieldsCase::PrimaryRecord> &primary,
+    const std::shared_ptr<RecordErasedProofFieldsCase::ErasedProofRecord>
+        &erased) {
   return List<unsigned int>::cons(
       left_kind_code_of(primary),
       List<unsigned int>::cons(

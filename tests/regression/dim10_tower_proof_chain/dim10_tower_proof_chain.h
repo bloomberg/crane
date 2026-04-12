@@ -57,7 +57,8 @@ struct Dim10TowerProofChainCase {
     unsigned int qpos_denom_pred;
   };
 
-  __attribute__((pure)) static unsigned int qpos_denom(std::shared_ptr<QPos> q);
+  __attribute__((pure)) static unsigned int
+  qpos_denom(const std::shared_ptr<QPos> &q);
   static std::shared_ptr<QPos> nat_to_qpos(const unsigned int n);
   using EventuallyZero = std::shared_ptr<SigT<unsigned int, std::any>>;
   using IsIntegerValued = std::any;
@@ -80,8 +81,8 @@ struct Dim10TowerProofChainCase {
                                              const unsigned int n);
   __attribute__((pure)) static EventuallyZero
   layer_measure_eventually_zero(const unsigned int base_dim);
-  static std::shared_ptr<GradedObj> P_n_obj(const unsigned int n,
-                                            std::shared_ptr<GradedObj> x);
+  static std::shared_ptr<GradedObj>
+  P_n_obj(const unsigned int n, const std::shared_ptr<GradedObj> &x);
   static std::shared_ptr<GradedObj> D_n_obj(const unsigned int _x0,
                                             const unsigned int _x1);
   static std::shared_ptr<QPos> D_n_measure(const unsigned int _x0,

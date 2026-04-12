@@ -168,7 +168,7 @@ struct CpuEmulator {
   set_pair(const std::shared_ptr<state> &s, const unsigned int r,
            const unsigned int v);
   static std::shared_ptr<List<unsigned int>>
-  push_return(std::shared_ptr<state> s, const unsigned int ret);
+  push_return(const std::shared_ptr<state> &s, const unsigned int ret);
 
   struct instr {
     // TYPES
@@ -611,7 +611,7 @@ struct CpuEmulator {
         i->v());
   }
 
-  static std::shared_ptr<state> execute(std::shared_ptr<state> s,
+  static std::shared_ptr<state> execute(const std::shared_ptr<state> &s,
                                         const std::shared_ptr<instr> &i);
   static inline const std::shared_ptr<state> sample =
       std::make_shared<state>(state{

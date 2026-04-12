@@ -1141,7 +1141,7 @@ struct ValidatedPumpDeliveryTraceCase {
   __attribute__((pure)) static unsigned int
   mmol_tenths_to_mg_dL(const unsigned int mmol_tenths);
   static std::shared_ptr<PrecisionInput>
-  convert_mmol_input(std::shared_ptr<MmolPrecisionInput> input);
+  convert_mmol_input(const std::shared_ptr<MmolPrecisionInput> &input);
   static std::shared_ptr<PrecisionResult>
   validated_mmol_bolus(const std::shared_ptr<MmolPrecisionInput> &input,
                        const std::shared_ptr<PrecisionParams> &params);

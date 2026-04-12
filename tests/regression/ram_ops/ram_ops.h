@@ -136,14 +136,16 @@ struct RamOps {
   static std::shared_ptr<ram_reg_main>
   get_reg_main(const std::shared_ptr<ram_chip_main> &ch, const unsigned int r);
   static std::shared_ptr<ram_reg_main>
-  upd_main_in_reg(std::shared_ptr<ram_reg_main> rg, const unsigned int i,
+  upd_main_in_reg(const std::shared_ptr<ram_reg_main> &rg, const unsigned int i,
                   const unsigned int v);
   static std::shared_ptr<ram_chip_main>
-  upd_reg_in_chip_main(std::shared_ptr<ram_chip_main> ch, const unsigned int r,
-                       std::shared_ptr<ram_reg_main> rg);
+  upd_reg_in_chip_main(const std::shared_ptr<ram_chip_main> &ch,
+                       const unsigned int r,
+                       const std::shared_ptr<ram_reg_main> &rg);
   static std::shared_ptr<ram_bank_main>
-  upd_chip_in_bank_main(std::shared_ptr<ram_bank_main> bk, const unsigned int c,
-                        std::shared_ptr<ram_chip_main> ch);
+  upd_chip_in_bank_main(const std::shared_ptr<ram_bank_main> &bk,
+                        const unsigned int c,
+                        const std::shared_ptr<ram_chip_main> &ch);
   static std::shared_ptr<List<std::shared_ptr<ram_bank_main>>>
   upd_bank_in_sys_main(const std::shared_ptr<state_main> &s,
                        const unsigned int b,
@@ -233,8 +235,9 @@ struct RamOps {
   static std::shared_ptr<chip_port>
   upd_port_in_chip(const std::shared_ptr<chip_port> &_x, const unsigned int v);
   static std::shared_ptr<bank_port>
-  upd_chip_in_bank_port(std::shared_ptr<bank_port> bk, const unsigned int c,
-                        std::shared_ptr<chip_port> ch);
+  upd_chip_in_bank_port(const std::shared_ptr<bank_port> &bk,
+                        const unsigned int c,
+                        const std::shared_ptr<chip_port> &ch);
   static std::shared_ptr<List<std::shared_ptr<bank_port>>>
   upd_bank_in_sys_port(const std::shared_ptr<state_port> &s,
                        const unsigned int b,
@@ -320,16 +323,16 @@ struct RamOps {
   get_reg_status(const std::shared_ptr<ram_chip_status> &ch,
                  const unsigned int r);
   static std::shared_ptr<ram_reg_status>
-  upd_status_in_reg(std::shared_ptr<ram_reg_status> rg, const unsigned int i,
-                    const unsigned int v);
+  upd_status_in_reg(const std::shared_ptr<ram_reg_status> &rg,
+                    const unsigned int i, const unsigned int v);
   static std::shared_ptr<ram_chip_status>
-  upd_reg_in_chip_status(std::shared_ptr<ram_chip_status> ch,
+  upd_reg_in_chip_status(const std::shared_ptr<ram_chip_status> &ch,
                          const unsigned int r,
-                         std::shared_ptr<ram_reg_status> rg);
+                         const std::shared_ptr<ram_reg_status> &rg);
   static std::shared_ptr<ram_bank_status>
-  upd_chip_in_bank_status(std::shared_ptr<ram_bank_status> bk,
+  upd_chip_in_bank_status(const std::shared_ptr<ram_bank_status> &bk,
                           const unsigned int c,
-                          std::shared_ptr<ram_chip_status> ch);
+                          const std::shared_ptr<ram_chip_status> &ch);
   static std::shared_ptr<List<std::shared_ptr<ram_bank_status>>>
   upd_bank_in_sys_status(const std::shared_ptr<state_status> &s,
                          const unsigned int b,
@@ -657,7 +660,7 @@ struct RamOps {
   ram_write_main_sys_preserve(const std::shared_ptr<state_preserve> &s,
                               const unsigned int v);
   static std::shared_ptr<state_preserve>
-  execute_write(std::shared_ptr<state_preserve> s, const unsigned int v);
+  execute_write(const std::shared_ptr<state_preserve> &s, const unsigned int v);
   static inline const std::shared_ptr<state_preserve> sample_preserve =
       std::make_shared<state_preserve>(state_preserve{
           List<unsigned int>::cons(
@@ -742,7 +745,8 @@ struct RamOps {
   static std::shared_ptr<reg_nested_bank>
   get_reg0(const std::shared_ptr<chip_nested_bank> &c);
   static std::shared_ptr<state_nested_bank>
-  write_status0(std::shared_ptr<state_nested_bank> s, const unsigned int v);
+  write_status0(const std::shared_ptr<state_nested_bank> &s,
+                const unsigned int v);
   __attribute__((pure)) static unsigned int
   read_status0(const std::shared_ptr<state_nested_bank> &s);
   static inline const std::shared_ptr<state_nested_bank> sample_nested_bank =

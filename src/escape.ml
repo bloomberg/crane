@@ -155,8 +155,14 @@ let escapes k t =
       let k' = k + Array.length ids in
       Array.exists (occurs k') bodies (* Fixpoint capture → escape *)
     | MLcons (_, _, args) ->
-      List.exists (occurs k) args (* Constructor storage → escape *)
-    | MLtuple args -> List.exists (occurs k) args
+      (* Constructor arguments escape if the parameter appears in a truly
+         escaping position.  Use [check k true] instead of [occurs k]: this
+         distinguishes between direct storage ([MLrel k] → escaping) and
+         field-access scrutinee positions ([MLcase(MLrel k, ...)] → safe).
+         E.g., [mkState(s.field1, s.field2)] does not require owned [s]
+         because [s] only appears as a field-access scrutinee, not stored. *)
+      List.exists (check k true) args
+    | MLtuple args -> List.exists (check k true) args
     | MLmagic a -> check k in_tail a
     | MLparray (elts, def) -> Array.exists (occurs k) elts || occurs k def
     | MLglob _

@@ -100,8 +100,8 @@ Sort::merge(std::shared_ptr<List<unsigned int>> l1,
 
 std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
 Sort::merge_prog(const std::shared_ptr<List<unsigned int>> &,
-                 std::shared_ptr<List<unsigned int>> l1,
-                 std::shared_ptr<List<unsigned int>> l2) {
+                 const std::shared_ptr<List<unsigned int>> &l1,
+                 const std::shared_ptr<List<unsigned int>> &l2) {
   return Sig<std::shared_ptr<List<unsigned int>>>::exist(merge(l1, l2));
 }
 
@@ -140,8 +140,8 @@ Sort::msort(const std::shared_ptr<List<unsigned int>> &_x0) {
 std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
 Sort::pair_merge_prog(const unsigned int, const unsigned int,
                       const std::shared_ptr<List<unsigned int>> &,
-                      std::shared_ptr<List<unsigned int>> l_,
-                      std::shared_ptr<List<unsigned int>> l_0) {
+                      const std::shared_ptr<List<unsigned int>> &l_,
+                      const std::shared_ptr<List<unsigned int>> &l_0) {
   return Sig<std::shared_ptr<List<unsigned int>>>::exist(merge(l_0, l_));
 }
 

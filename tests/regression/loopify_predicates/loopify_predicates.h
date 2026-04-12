@@ -111,7 +111,6 @@ struct LoopifyPredicates {
     bool _continue = true;
     while (_continue) {
       if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-        auto &_rf = std::get<0>(_loop_l->v_mut());
         {
           _result = _loop_l;
           _continue = false;

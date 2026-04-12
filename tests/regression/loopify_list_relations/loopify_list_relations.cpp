@@ -88,7 +88,6 @@ __attribute__((pure)) bool LoopifyListRelations::is_suffix_of(
         } else {
           unsigned int n_ = _loop_n - 1;
           if (_loop_xs.use_count() == 1 && _loop_xs->v().index() == 0) {
-            auto &_rf = std::get<0>(_loop_xs->v_mut());
             {
               _result = _loop_xs;
               _continue = false;
@@ -204,14 +203,13 @@ __attribute__((pure)) bool LoopifyListRelations::is_infix_of(
 }
 
 std::shared_ptr<List<unsigned int>> LoopifyListRelations::find_sublists_aux(
-    std::shared_ptr<List<unsigned int>> needle,
+    const std::shared_ptr<List<unsigned int>> &needle,
     const std::shared_ptr<List<unsigned int>> &haystack,
     const unsigned int idx) {
   std::shared_ptr<List<unsigned int>> _head{};
   std::shared_ptr<List<unsigned int>> _last{};
   unsigned int _loop_idx = idx;
   std::shared_ptr<List<unsigned int>> _loop_haystack = haystack;
-  std::shared_ptr<List<unsigned int>> _loop_needle = needle;
   bool _continue = true;
   while (_continue) {
     std::visit(
@@ -226,7 +224,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListRelations::find_sublists_aux(
               _continue = false;
             },
             [&](const typename List<unsigned int>::Cons _args) {
-              if (is_prefix_of(_loop_needle, _loop_haystack)) {
+              if (is_prefix_of(needle, _loop_haystack)) {
                 auto _cell = List<unsigned int>::cons(_loop_idx, nullptr);
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
@@ -242,11 +240,8 @@ std::shared_ptr<List<unsigned int>> LoopifyListRelations::find_sublists_aux(
               } else {
                 unsigned int _next_idx = (_loop_idx + 1u);
                 std::shared_ptr<List<unsigned int>> _next_haystack = _args.d_a1;
-                std::shared_ptr<List<unsigned int>> _next_needle =
-                    std::move(_loop_needle);
                 _loop_idx = std::move(_next_idx);
                 _loop_haystack = std::move(_next_haystack);
-                _loop_needle = std::move(_next_needle);
               }
             }},
         _loop_haystack->v());
@@ -802,10 +797,9 @@ LoopifyListRelations::union_(const std::shared_ptr<List<unsigned int>> &l1,
 
 std::shared_ptr<List<unsigned int>> LoopifyListRelations::intersection(
     const std::shared_ptr<List<unsigned int>> &l1,
-    std::shared_ptr<List<unsigned int>> l2) {
+    const std::shared_ptr<List<unsigned int>> &l2) {
   std::shared_ptr<List<unsigned int>> _head{};
   std::shared_ptr<List<unsigned int>> _last{};
-  std::shared_ptr<List<unsigned int>> _loop_l2 = l2;
   std::shared_ptr<List<unsigned int>> _loop_l1 = l1;
   bool _continue = true;
   while (_continue) {
@@ -872,7 +866,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListRelations::intersection(
                       }
                       return _result;
                     };
-                    return member(_args.d_a0, _loop_l2);
+                    return member(_args.d_a0, l2);
                   }()) {
                 auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);
                 if (_last) {
@@ -884,11 +878,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListRelations::intersection(
                 _last = _cell;
                 _loop_l1 = _args.d_a1;
               } else {
-                std::shared_ptr<List<unsigned int>> _next_l2 =
-                    std::move(_loop_l2);
-                std::shared_ptr<List<unsigned int>> _next_l1 = _args.d_a1;
-                _loop_l2 = std::move(_next_l2);
-                _loop_l1 = std::move(_next_l1);
+                _loop_l1 = _args.d_a1;
               }
             }},
         _loop_l1->v());

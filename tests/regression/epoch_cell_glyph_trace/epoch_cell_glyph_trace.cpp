@@ -559,13 +559,15 @@ __attribute__((pure)) unsigned int BinInt::to_nat(const std::shared_ptr<Z> &z) {
 }
 
 __attribute__((pure)) std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>>
-BinInt::pos_div_eucl(const std::shared_ptr<Positive> &a, std::shared_ptr<Z> b) {
+BinInt::pos_div_eucl(const std::shared_ptr<Positive> &a,
+                     const std::shared_ptr<Z> &b) {
   return std::visit(
       Overloaded{
           [&](const typename Positive::XI _args)
               -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
-            std::shared_ptr<Z> q = BinInt::pos_div_eucl(_args.d_a0, b).first;
-            std::shared_ptr<Z> r = BinInt::pos_div_eucl(_args.d_a0, b).second;
+            auto _cs = BinInt::pos_div_eucl(_args.d_a0, b);
+            std::shared_ptr<Z> q = _cs.first;
+            std::shared_ptr<Z> r = _cs.second;
             std::shared_ptr<Z> r_ = BinInt::add(
                 BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), r),
                 Z::zpos(Positive::xh()));
@@ -582,8 +584,9 @@ BinInt::pos_div_eucl(const std::shared_ptr<Positive> &a, std::shared_ptr<Z> b) {
           },
           [&](const typename Positive::XO _args)
               -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
-            std::shared_ptr<Z> q = BinInt::pos_div_eucl(_args.d_a0, b).first;
-            std::shared_ptr<Z> r = BinInt::pos_div_eucl(_args.d_a0, b).second;
+            auto _cs = BinInt::pos_div_eucl(_args.d_a0, b);
+            std::shared_ptr<Z> q = _cs.first;
+            std::shared_ptr<Z> r = _cs.second;
             std::shared_ptr<Z> r_ =
                 BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), r);
             if (BinInt::ltb(r_, b)) {
@@ -599,8 +602,7 @@ BinInt::pos_div_eucl(const std::shared_ptr<Positive> &a, std::shared_ptr<Z> b) {
           },
           [&](const typename Positive::XH)
               -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
-            if (BinInt::leb(Z::zpos(Positive::xo(Positive::xh())),
-                            std::move(b))) {
+            if (BinInt::leb(Z::zpos(Positive::xo(Positive::xh())), b)) {
               return std::make_pair(Z::z0(), Z::zpos(Positive::xh()));
             } else {
               return std::make_pair(Z::zpos(Positive::xh()), Z::z0());
@@ -610,7 +612,7 @@ BinInt::pos_div_eucl(const std::shared_ptr<Positive> &a, std::shared_ptr<Z> b) {
 }
 
 __attribute__((pure)) std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>>
-BinInt::div_eucl(std::shared_ptr<Z> a, std::shared_ptr<Z> b) {
+BinInt::div_eucl(std::shared_ptr<Z> a, const std::shared_ptr<Z> &b) {
   return std::visit(
       Overloaded{
           [](const typename Z::Z0)
@@ -627,16 +629,14 @@ BinInt::div_eucl(std::shared_ptr<Z> a, std::shared_ptr<Z> b) {
                     },
                     [&](const typename Z::Zpos)
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
-                      return BinInt::pos_div_eucl(_args.d_a0, std::move(b));
+                      return BinInt::pos_div_eucl(_args.d_a0, b);
                     },
                     [&](const typename Z::Zneg _args0)
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
-                      std::shared_ptr<Z> q =
-                          BinInt::pos_div_eucl(_args.d_a0, Z::zpos(_args0.d_a0))
-                              .first;
-                      std::shared_ptr<Z> r =
-                          BinInt::pos_div_eucl(_args.d_a0, Z::zpos(_args0.d_a0))
-                              .second;
+                      auto _cs = BinInt::pos_div_eucl(_args.d_a0,
+                                                      Z::zpos(_args0.d_a0));
+                      std::shared_ptr<Z> q = _cs.first;
+                      std::shared_ptr<Z> r = _cs.second;
                       return std::visit(
                           Overloaded{
                               [&](const typename Z::Z0)
@@ -665,10 +665,9 @@ BinInt::div_eucl(std::shared_ptr<Z> a, std::shared_ptr<Z> b) {
                     },
                     [&](const typename Z::Zpos)
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
-                      std::shared_ptr<Z> q =
-                          BinInt::pos_div_eucl(_args.d_a0, b).first;
-                      std::shared_ptr<Z> r =
-                          BinInt::pos_div_eucl(_args.d_a0, b).second;
+                      auto _cs = BinInt::pos_div_eucl(_args.d_a0, b);
+                      std::shared_ptr<Z> q = _cs.first;
+                      std::shared_ptr<Z> r = _cs.second;
                       return std::visit(
                           Overloaded{
                               [&](const typename Z::Z0)
@@ -687,12 +686,10 @@ BinInt::div_eucl(std::shared_ptr<Z> a, std::shared_ptr<Z> b) {
                     },
                     [&](const typename Z::Zneg _args0)
                         -> std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>> {
-                      std::shared_ptr<Z> q =
-                          BinInt::pos_div_eucl(_args.d_a0, Z::zpos(_args0.d_a0))
-                              .first;
-                      std::shared_ptr<Z> r =
-                          BinInt::pos_div_eucl(_args.d_a0, Z::zpos(_args0.d_a0))
-                              .second;
+                      auto _cs = BinInt::pos_div_eucl(_args.d_a0,
+                                                      Z::zpos(_args0.d_a0));
+                      std::shared_ptr<Z> q = _cs.first;
+                      std::shared_ptr<Z> r = _cs.second;
                       return std::make_pair(q, BinInt::opp(r));
                     }},
                 b->v());
@@ -702,15 +699,17 @@ BinInt::div_eucl(std::shared_ptr<Z> a, std::shared_ptr<Z> b) {
 
 std::shared_ptr<Z> BinInt::div(const std::shared_ptr<Z> &a,
                                const std::shared_ptr<Z> &b) {
-  std::shared_ptr<Z> q = BinInt::div_eucl(a, b).first;
-  std::shared_ptr<Z> _x = BinInt::div_eucl(a, b).second;
+  auto _cs = BinInt::div_eucl(a, b);
+  std::shared_ptr<Z> q = _cs.first;
+  std::shared_ptr<Z> _x = _cs.second;
   return q;
 }
 
 std::shared_ptr<Z> BinInt::modulo(const std::shared_ptr<Z> &a,
                                   const std::shared_ptr<Z> &b) {
-  std::shared_ptr<Z> _x = BinInt::div_eucl(a, b).first;
-  std::shared_ptr<Z> r = BinInt::div_eucl(a, b).second;
+  auto _cs = BinInt::div_eucl(a, b);
+  std::shared_ptr<Z> _x = _cs.first;
+  std::shared_ptr<Z> r = _cs.second;
   return r;
 }
 
@@ -852,7 +851,7 @@ __attribute__((pure)) bool EpochCellGlyphTraceCase::eclipse_possible_at_dial(
 
 std::shared_ptr<EpochCellGlyphTraceCase::MechanismState>
 EpochCellGlyphTraceCase::step(
-    std::shared_ptr<EpochCellGlyphTraceCase::MechanismState> s) {
+    const std::shared_ptr<EpochCellGlyphTraceCase::MechanismState> &s) {
   return std::make_shared<
       EpochCellGlyphTraceCase::MechanismState>(MechanismState{
       BinInt::add(s->crank_position, Z::zpos(Positive::xh())),
@@ -872,7 +871,7 @@ EpochCellGlyphTraceCase::step(
 
 std::shared_ptr<EpochCellGlyphTraceCase::MechanismState>
 EpochCellGlyphTraceCase::step_reverse(
-    std::shared_ptr<EpochCellGlyphTraceCase::MechanismState> s) {
+    const std::shared_ptr<EpochCellGlyphTraceCase::MechanismState> &s) {
   return std::make_shared<EpochCellGlyphTraceCase::MechanismState>(
       MechanismState{
           BinInt::sub(s->crank_position, Z::zpos(Positive::xh())),
@@ -1315,8 +1314,8 @@ __attribute__((pure)) Comparison Datatypes::CompOpp(const Comparison r) {
   }
 }
 
-__attribute__((pure)) bool QArith_base::Qle_bool(std::shared_ptr<Q> x,
-                                                 std::shared_ptr<Q> y) {
+__attribute__((pure)) bool QArith_base::Qle_bool(const std::shared_ptr<Q> &x,
+                                                 const std::shared_ptr<Q> &y) {
   return BinInt::leb(BinInt::mul(x->Qnum, Z::zpos(y->Qden)),
                      BinInt::mul(y->Qnum, Z::zpos(x->Qden)));
 }

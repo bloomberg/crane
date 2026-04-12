@@ -18,7 +18,7 @@ struct StepsCounterUnroll {
     unsigned int pc;
   };
 
-  static std::shared_ptr<state> step(std::shared_ptr<state> s);
+  static std::shared_ptr<state> step(const std::shared_ptr<state> &s);
   static std::shared_ptr<state> steps(const unsigned int n,
                                       std::shared_ptr<state> s);
   static inline const unsigned int t =

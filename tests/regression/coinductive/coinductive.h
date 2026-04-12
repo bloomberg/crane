@@ -83,7 +83,7 @@ struct Coinductive {
   }
 
   static std::shared_ptr<stream> interleave(const std::shared_ptr<stream> &s1,
-                                            std::shared_ptr<stream> s2);
+                                            const std::shared_ptr<stream> &s2);
   static inline const std::shared_ptr<stream> get_zeros = zeros();
   static inline const std::shared_ptr<stream> get_count = count_from(0u);
   static inline const unsigned int test_hd = hd(get_zeros);

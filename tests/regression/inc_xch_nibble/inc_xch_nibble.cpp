@@ -25,7 +25,7 @@ IncXchNibble::get_reg_pair(const std::shared_ptr<IncXchNibble::state> &s,
 }
 
 std::shared_ptr<IncXchNibble::state>
-IncXchNibble::execute_inc(std::shared_ptr<IncXchNibble::state> s,
+IncXchNibble::execute_inc(const std::shared_ptr<IncXchNibble::state> &s,
                           const unsigned int r) {
   return std::make_shared<IncXchNibble::state>(state{
       update_nth<unsigned int>(r, nibble_of_nat((get_reg(s, r) + 1u)), s->regs),
@@ -33,7 +33,7 @@ IncXchNibble::execute_inc(std::shared_ptr<IncXchNibble::state> s,
 }
 
 std::shared_ptr<IncXchNibble::state>
-IncXchNibble::execute_xch(std::shared_ptr<IncXchNibble::state> s,
+IncXchNibble::execute_xch(const std::shared_ptr<IncXchNibble::state> &s,
                           const unsigned int r) {
   return std::make_shared<IncXchNibble::state>(
       state{update_nth<unsigned int>(r, nibble_of_nat(s->acc), s->regs),

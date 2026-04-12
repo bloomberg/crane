@@ -594,8 +594,8 @@ struct HistoricalEventSafetyTraceCase {
             MapsTo<unsigned int, unsigned int> F2>
   static std::shared_ptr<State>
   step_hist(F0 &&inflow, F1 &&ctrl, F2 &&stage_fn,
-            const std::shared_ptr<PlantConfig> &pconf, std::shared_ptr<State> s,
-            const unsigned int t) {
+            const std::shared_ptr<PlantConfig> &pconf,
+            const std::shared_ptr<State> &s, const unsigned int t) {
     unsigned int out =
         std::min((100u ? (pconf->gate_capacity_cm * ctrl(s, t)) / 100u : 0),
                  (s->reservoir_level_cm + inflow(t)));
@@ -643,13 +643,10 @@ struct HistoricalEventSafetyTraceCase {
       return event_to_inflow(event, default_inflow, _x0);
     };
     bool initial_safe = is_safe_bool(pconf, initial_state);
-    std::pair<std::shared_ptr<State>, unsigned int> p =
-        simulate_with_max(inflow, ctrl, stage_fn, pconf, horizon, initial_state,
-                          0u, 0u)
-            .first;
-    unsigned int max_stg = simulate_with_max(inflow, ctrl, stage_fn, pconf,
-                                             horizon, initial_state, 0u, 0u)
-                               .second;
+    auto _cs = simulate_with_max(inflow, ctrl, stage_fn, pconf, horizon,
+                                 initial_state, 0u, 0u);
+    std::pair<std::shared_ptr<State>, unsigned int> p = _cs.first;
+    unsigned int max_stg = _cs.second;
     std::shared_ptr<State> final_state = p.first;
     unsigned int max_lev = p.second;
     bool final_safe = is_safe_bool(pconf, final_state);

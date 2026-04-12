@@ -12,7 +12,7 @@ RegisterPairOps::get_reg(const std::shared_ptr<RegisterPairOps::state> &s,
 }
 
 std::shared_ptr<RegisterPairOps::state>
-RegisterPairOps::set_reg(std::shared_ptr<RegisterPairOps::state> s,
+RegisterPairOps::set_reg(const std::shared_ptr<RegisterPairOps::state> &s,
                          const unsigned int r, const unsigned int v) {
   return std::make_shared<RegisterPairOps::state>(
       state{update_nth<unsigned int>(r, (16u ? v % 16u : v), s->regs)});

@@ -544,7 +544,6 @@ __attribute__((pure)) bool LoopifySearchOpt::binary_search_fuel(
                         unsigned int n_ = _loop_n - 1;
                         if (_loop_xs.use_count() == 1 &&
                             _loop_xs->v().index() == 0) {
-                          auto &_rf = std::get<0>(_loop_xs->v_mut());
                           {
                             _result = _loop_xs;
                             _continue = false;

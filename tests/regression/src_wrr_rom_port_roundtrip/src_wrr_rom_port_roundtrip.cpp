@@ -21,14 +21,15 @@ __attribute__((pure)) unsigned int SrcWrrRomPortRoundtrip::get_reg_pair(
 
 std::shared_ptr<SrcWrrRomPortRoundtrip::state>
 SrcWrrRomPortRoundtrip::execute_src(
-    std::shared_ptr<SrcWrrRomPortRoundtrip::state> s, const unsigned int r) {
+    const std::shared_ptr<SrcWrrRomPortRoundtrip::state> &s,
+    const unsigned int r) {
   return std::make_shared<SrcWrrRomPortRoundtrip::state>(state{
       s->regs, s->acc, s->rom_ports, (16u ? get_reg_pair(s, r) / 16u : 0)});
 }
 
 std::shared_ptr<SrcWrrRomPortRoundtrip::state>
 SrcWrrRomPortRoundtrip::execute_wrr(
-    std::shared_ptr<SrcWrrRomPortRoundtrip::state> s) {
+    const std::shared_ptr<SrcWrrRomPortRoundtrip::state> &s) {
   return std::make_shared<SrcWrrRomPortRoundtrip::state>(state{
       s->regs, s->acc,
       update_nth<unsigned int>(s->sel_rom, s->acc, s->rom_ports), s->sel_rom});

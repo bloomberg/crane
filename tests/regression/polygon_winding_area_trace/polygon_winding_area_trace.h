@@ -115,7 +115,7 @@ struct Q {
 };
 
 struct Rdefinitions {
-  __attribute__((pure)) static Real Q2R(std::shared_ptr<Q> x);
+  __attribute__((pure)) static Real Q2R(const std::shared_ptr<Q> &x);
 };
 
 struct PolygonWindingAreaTraceCase {

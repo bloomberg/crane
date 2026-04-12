@@ -88,11 +88,11 @@ struct PreservesAllPairs {
   __attribute__((pure)) static unsigned int nibble_of_nat(const unsigned int n);
   __attribute__((pure)) static unsigned int
   get_reg_pair(const std::shared_ptr<state> &s, const unsigned int r);
-  static std::shared_ptr<state> execute_add(std::shared_ptr<state> s,
+  static std::shared_ptr<state> execute_add(const std::shared_ptr<state> &s,
                                             const unsigned int r);
-  static std::shared_ptr<state> execute_ld(std::shared_ptr<state> s,
+  static std::shared_ptr<state> execute_ld(const std::shared_ptr<state> &s,
                                            const unsigned int r);
-  static std::shared_ptr<state> execute_sub(std::shared_ptr<state> s,
+  static std::shared_ptr<state> execute_sub(const std::shared_ptr<state> &s,
                                             const unsigned int r);
   static inline const std::shared_ptr<state> sample = std::make_shared<state>(
       state{List<unsigned int>::cons(

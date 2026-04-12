@@ -168,25 +168,16 @@ struct DisassembleOps {
                const unsigned int addr);
   static inline const unsigned int test_disassemble_drop_window =
       []() -> unsigned int {
-    if (disassemble1(
-            List<unsigned int>::cons(
-                1u,
-                List<unsigned int>::cons(
+    auto _cs = disassemble1(
+        List<unsigned int>::cons(
+            1u, List<unsigned int>::cons(
                     2u, List<unsigned int>::cons(
                             3u, List<unsigned int>::cons(
                                     4u, List<unsigned int>::cons(
                                             5u, List<unsigned int>::nil()))))),
-            1u)
-            .has_value()) {
-      std::pair<std::shared_ptr<instruction>, unsigned int> p = *disassemble1(
-          List<unsigned int>::cons(
-              1u,
-              List<unsigned int>::cons(
-                  2u, List<unsigned int>::cons(
-                          3u, List<unsigned int>::cons(
-                                  4u, List<unsigned int>::cons(
-                                          5u, List<unsigned int>::nil()))))),
-          1u);
+        1u);
+    if (_cs.has_value()) {
+      std::pair<std::shared_ptr<instruction>, unsigned int> p = *_cs;
       std::shared_ptr<instruction> _x = p.first;
       unsigned int next = p.second;
       return next;
@@ -205,7 +196,6 @@ struct DisassembleOps {
     } else {
       unsigned int n_ = n - 1;
       if (l.use_count() == 1 && l->v().index() == 0) {
-        auto &_rf = std::get<0>(l->v_mut());
         return l;
       } else {
         return std::visit(
@@ -228,21 +218,15 @@ struct DisassembleOps {
                const unsigned int addr);
   static inline const unsigned int test_disassemble_next_address =
       []() -> unsigned int {
-    if (disassemble2(
-            List<unsigned int>::cons(
-                0u, List<unsigned int>::cons(
-                        7u, List<unsigned int>::cons(
-                                9u, List<unsigned int>::cons(
-                                        11u, List<unsigned int>::nil())))),
-            0u)
-            .has_value()) {
-      std::pair<std::shared_ptr<instruction>, unsigned int> p = *disassemble2(
-          List<unsigned int>::cons(
-              0u, List<unsigned int>::cons(
-                      7u, List<unsigned int>::cons(
-                              9u, List<unsigned int>::cons(
-                                      11u, List<unsigned int>::nil())))),
-          0u);
+    auto _cs = disassemble2(
+        List<unsigned int>::cons(
+            0u, List<unsigned int>::cons(
+                    7u, List<unsigned int>::cons(
+                            9u, List<unsigned int>::cons(
+                                    11u, List<unsigned int>::nil())))),
+        0u);
+    if (_cs.has_value()) {
+      std::pair<std::shared_ptr<instruction>, unsigned int> p = *_cs;
       std::shared_ptr<instruction> _x = p.first;
       unsigned int next = p.second;
       return next;
@@ -289,21 +273,15 @@ struct DisassembleOps {
                 ListDef::template repeat<unsigned int>(0u, 4096u)});
   static inline const unsigned int test_decode_disassemble_1 =
       []() -> unsigned int {
-    if (disassemble4(
-            List<unsigned int>::cons(
-                0u, List<unsigned int>::cons(
-                        7u, List<unsigned int>::cons(
-                                9u, List<unsigned int>::cons(
-                                        11u, List<unsigned int>::nil())))),
-            0u)
-            .has_value()) {
-      std::pair<std::shared_ptr<instruction>, unsigned int> p = *disassemble4(
-          List<unsigned int>::cons(
-              0u, List<unsigned int>::cons(
-                      7u, List<unsigned int>::cons(
-                              9u, List<unsigned int>::cons(
-                                      11u, List<unsigned int>::nil())))),
-          0u);
+    auto _cs = disassemble4(
+        List<unsigned int>::cons(
+            0u, List<unsigned int>::cons(
+                    7u, List<unsigned int>::cons(
+                            9u, List<unsigned int>::cons(
+                                    11u, List<unsigned int>::nil())))),
+        0u);
+    if (_cs.has_value()) {
+      std::pair<std::shared_ptr<instruction>, unsigned int> p = *_cs;
       std::shared_ptr<instruction> _x = p.first;
       unsigned int next = p.second;
       return next;
@@ -313,21 +291,15 @@ struct DisassembleOps {
   }();
   static inline const unsigned int test_decode_disassemble_2 =
       []() -> unsigned int {
-    if (disassemble4(
-            List<unsigned int>::cons(
-                0u, List<unsigned int>::cons(
-                        7u, List<unsigned int>::cons(
-                                9u, List<unsigned int>::cons(
-                                        11u, List<unsigned int>::nil())))),
-            0u)
-            .has_value()) {
-      std::pair<std::shared_ptr<instruction>, unsigned int> p = *disassemble4(
-          List<unsigned int>::cons(
-              0u, List<unsigned int>::cons(
-                      7u, List<unsigned int>::cons(
-                              9u, List<unsigned int>::cons(
-                                      11u, List<unsigned int>::nil())))),
-          0u);
+    auto _cs = disassemble4(
+        List<unsigned int>::cons(
+            0u, List<unsigned int>::cons(
+                    7u, List<unsigned int>::cons(
+                            9u, List<unsigned int>::cons(
+                                    11u, List<unsigned int>::nil())))),
+        0u);
+    if (_cs.has_value()) {
+      std::pair<std::shared_ptr<instruction>, unsigned int> p = *_cs;
       std::shared_ptr<instruction> _x = p.first;
       unsigned int next = p.second;
       return next;

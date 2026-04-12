@@ -107,7 +107,6 @@ struct FetchOps {
     } else {
       unsigned int n_ = n - 1;
       if (l.use_count() == 1 && l->v().index() == 0) {
-        auto &_rf = std::get<0>(l->v_mut());
         return l;
       } else {
         return std::visit(
@@ -141,18 +140,14 @@ struct FetchOps {
   fetch_window(const std::shared_ptr<List<unsigned int>> &rom_data,
                const unsigned int addr);
   static inline const unsigned int fetch_window_test = []() -> unsigned int {
-    if (fetch_window(List<unsigned int>::cons(
-                         9u, List<unsigned int>::cons(
-                                 8u, List<unsigned int>::cons(
-                                         7u, List<unsigned int>::nil()))),
-                     0u)
-            .has_value()) {
-      std::pair<unsigned int, unsigned int> p = *fetch_window(
-          List<unsigned int>::cons(
-              9u,
-              List<unsigned int>::cons(
-                  8u, List<unsigned int>::cons(7u, List<unsigned int>::nil()))),
-          0u);
+    auto _cs = fetch_window(
+        List<unsigned int>::cons(
+            9u,
+            List<unsigned int>::cons(
+                8u, List<unsigned int>::cons(7u, List<unsigned int>::nil()))),
+        0u);
+    if (_cs.has_value()) {
+      std::pair<unsigned int, unsigned int> p = *_cs;
       unsigned int _x = p.first;
       unsigned int next = p.second;
       return next;

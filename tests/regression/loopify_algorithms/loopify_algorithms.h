@@ -137,10 +137,11 @@ struct LoopifyAlgorithms {
   static std::shared_ptr<List<unsigned int>>
   take_impl(const unsigned int k, const std::shared_ptr<List<unsigned int>> &l);
   static std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
-  windows_aux(const unsigned int n, std::shared_ptr<List<unsigned int>> l,
+  windows_aux(const unsigned int n,
+              const std::shared_ptr<List<unsigned int>> &l,
               const unsigned int fuel);
   static std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
-  windows(const unsigned int n, std::shared_ptr<List<unsigned int>> l);
+  windows(const unsigned int n, const std::shared_ptr<List<unsigned int>> &l);
   /// sliding_pairs l returns consecutive pairs: 1,2,3,4 -> (1,2),(2,3),(3,4).
   static std::shared_ptr<List<std::pair<unsigned int, unsigned int>>>
   sliding_pairs(const std::shared_ptr<List<unsigned int>> &l);

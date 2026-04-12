@@ -64,9 +64,9 @@ PendantSumtreeRoundtripCase::list_to_vector_opt(
             },
             [&](const typename List<std::shared_ptr<T>>::Cons0 _args0)
                 -> std::optional<std::shared_ptr<T0<std::shared_ptr<T>>>> {
-              if (list_to_vector_opt(n_, _args0.d_a1).has_value()) {
-                std::shared_ptr<T0<std::shared_ptr<T>>> v =
-                    *list_to_vector_opt(n_, _args0.d_a1);
+              auto _cs = list_to_vector_opt(n_, _args0.d_a1);
+              if (_cs.has_value()) {
+                std::shared_ptr<T0<std::shared_ptr<T>>> v = *_cs;
                 return std::make_optional<
                     std::shared_ptr<T0<std::shared_ptr<T>>>>(
                     T0<std::shared_ptr<T>>::cons(_args0.d_a0, n_, v));
@@ -142,20 +142,14 @@ __attribute__((pure))
 std::optional<std::shared_ptr<T0<PendantSumtreeRoundtripCase::digit>>>
 PendantSumtreeRoundtripCase::pendant_digits(
     const unsigned int n,
-    std::shared_ptr<PendantSumtreeRoundtripCase::CertifiedPendant> p) {
-  if (decode_multi(
-          n, encode_multi(
-                 n, List<std::shared_ptr<T0<std::shared_ptr<T>>>>::cons0(
-                        p->cp_digits,
-                        List<std::shared_ptr<T0<std::shared_ptr<T>>>>::nil0())))
-          .has_value()) {
-    std::shared_ptr<List<std::shared_ptr<T0<std::shared_ptr<T>>>>> l =
-        *decode_multi(
-            n,
-            encode_multi(
-                n, List<std::shared_ptr<T0<std::shared_ptr<T>>>>::cons0(
-                       p->cp_digits,
-                       List<std::shared_ptr<T0<std::shared_ptr<T>>>>::nil0())));
+    const std::shared_ptr<PendantSumtreeRoundtripCase::CertifiedPendant> &p) {
+  auto _cs = decode_multi(
+      n, encode_multi(
+             n, List<std::shared_ptr<T0<std::shared_ptr<T>>>>::cons0(
+                    p->cp_digits,
+                    List<std::shared_ptr<T0<std::shared_ptr<T>>>>::nil0())));
+  if (_cs.has_value()) {
+    std::shared_ptr<List<std::shared_ptr<T0<std::shared_ptr<T>>>>> l = *_cs;
     return std::visit(
         Overloaded{
             [](const typename List<
@@ -239,8 +233,9 @@ PendantSumtreeRoundtripCase::ledger_values(
 __attribute__((pure)) bool PendantSumtreeRoundtripCase::group_sums_validb(
     const unsigned int n,
     const std::shared_ptr<PendantSumtreeRoundtripCase::PendantGroup> &g) {
-  if (pendant_value(n, g->pg_top).has_value()) {
-    unsigned int top_val = *pendant_value(n, g->pg_top);
+  auto _cs = pendant_value(n, g->pg_top);
+  if (_cs.has_value()) {
+    unsigned int top_val = *_cs;
     std::shared_ptr<List<std::optional<unsigned int>>> pendant_vals =
         g->pg_pendants->template map<std::optional<unsigned int>>(
             [=](const std::shared_ptr<

@@ -717,7 +717,8 @@ ValidatedPumpDeliveryTraceCase::mmol_tenths_to_mg_dL(
 
 std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionInput>
 ValidatedPumpDeliveryTraceCase::convert_mmol_input(
-    std::shared_ptr<ValidatedPumpDeliveryTraceCase::MmolPrecisionInput> input) {
+    const std::shared_ptr<ValidatedPumpDeliveryTraceCase::MmolPrecisionInput>
+        &input) {
   return std::make_shared<ValidatedPumpDeliveryTraceCase::PrecisionInput>(
       PrecisionInput{
           input->mpi_carbs_g,
@@ -827,8 +828,9 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::pump_accepts_result(
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PumpState> &pump,
     const ValidatedPumpDeliveryTraceCase::RoundingMode mode,
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionResult> &r) {
-  if (final_delivery(mode, r).has_value()) {
-    unsigned int dose = *final_delivery(mode, r);
+  auto _cs = final_delivery(mode, r);
+  if (_cs.has_value()) {
+    unsigned int dose = *_cs;
     return pump_can_deliver(pump, dose);
   } else {
     return false;
@@ -840,8 +842,9 @@ ValidatedPumpDeliveryTraceCase::pump_reservoir_after_result(
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PumpState> &pump,
     const ValidatedPumpDeliveryTraceCase::RoundingMode mode,
     const std::shared_ptr<ValidatedPumpDeliveryTraceCase::PrecisionResult> &r) {
-  if (final_delivery(mode, r).has_value()) {
-    unsigned int dose = *final_delivery(mode, r);
+  auto _cs = final_delivery(mode, r);
+  if (_cs.has_value()) {
+    unsigned int dose = *_cs;
     return reservoir_after_bolus(pump, dose);
   } else {
     return pump->ps_reservoir_twentieths;

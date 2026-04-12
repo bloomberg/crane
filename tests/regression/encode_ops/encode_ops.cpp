@@ -23,8 +23,9 @@ std::shared_ptr<List<unsigned int>> EncodeOps::encode_list2(
           },
           [](const typename List<std::shared_ptr<EncodeOps::instruction2>>::Cons
                  _args) -> std::shared_ptr<List<unsigned int>> {
-            unsigned int b1 = _args.d_a0->encode2().first;
-            unsigned int b2 = _args.d_a0->encode2().second;
+            auto _cs = _args.d_a0->encode2();
+            unsigned int b1 = _cs.first;
+            unsigned int b2 = _cs.second;
             return List<unsigned int>::cons(
                 b1, List<unsigned int>::cons(b2, encode_list2(_args.d_a1)));
           }},

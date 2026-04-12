@@ -128,7 +128,6 @@ struct ReuseScrutinee {
           tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                      tree::node(tree::leaf(), 30u, tree::leaf()));
       if (t.use_count() == 1 && t->v().index() == 0) {
-        auto &_rf = std::get<0>(t->v_mut());
         return t;
       } else {
         return std::visit(

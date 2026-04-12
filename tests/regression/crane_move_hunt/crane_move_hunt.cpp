@@ -7,7 +7,7 @@
 #include <variant>
 
 std::shared_ptr<CraneMoveHunt::box>
-CraneMoveHunt::clone_box(std::shared_ptr<CraneMoveHunt::box> b) {
+CraneMoveHunt::clone_box(const std::shared_ptr<CraneMoveHunt::box> &b) {
   return std::make_shared<CraneMoveHunt::box>(box{b->payload, b->enabled});
 }
 
@@ -22,7 +22,7 @@ CraneMoveHunt::use_state(const std::shared_ptr<CraneMoveHunt::state> &s) {
 }
 
 std::shared_ptr<CraneMoveHunt::state>
-CraneMoveHunt::render_state(std::shared_ptr<CraneMoveHunt::state> s) {
+CraneMoveHunt::render_state(const std::shared_ptr<CraneMoveHunt::state> &s) {
   return std::make_shared<CraneMoveHunt::state>(
       state{s->core, s->cursor, s->visible});
 }
@@ -34,13 +34,13 @@ CraneMoveHunt::sound_state(const std::shared_ptr<CraneMoveHunt::state> &before,
 }
 
 std::shared_ptr<CraneMoveHunt::state>
-CraneMoveHunt::resolve_state(std::shared_ptr<CraneMoveHunt::state> s) {
+CraneMoveHunt::resolve_state(const std::shared_ptr<CraneMoveHunt::state> &s) {
   return std::make_shared<CraneMoveHunt::state>(
       state{clone_box(s->core), s->cursor, s->visible});
 }
 
 __attribute__((pure)) std::pair<bool, std::shared_ptr<CraneMoveHunt::state>>
-CraneMoveHunt::handle_state(std::shared_ptr<CraneMoveHunt::state> s) {
+CraneMoveHunt::handle_state(const std::shared_ptr<CraneMoveHunt::state> &s) {
   return std::make_pair(s->visible, render_state(s));
 }
 

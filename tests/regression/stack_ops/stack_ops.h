@@ -97,20 +97,12 @@ struct StackOps {
                                          std::shared_ptr<state_with_acc>>
   pop_stack_acc(std::shared_ptr<state_with_acc> s);
   static inline const unsigned int pop_acc_test = []() -> unsigned int {
-    std::optional<unsigned int> o =
-        pop_stack_acc(std::make_shared<state_with_acc>(state_with_acc{
-                          List<unsigned int>::cons(
-                              9u, List<unsigned int>::cons(
-                                      8u, List<unsigned int>::nil())),
-                          3u}))
-            .first;
-    std::shared_ptr<state_with_acc> s_ =
-        pop_stack_acc(std::make_shared<state_with_acc>(state_with_acc{
-                          List<unsigned int>::cons(
-                              9u, List<unsigned int>::cons(
-                                      8u, List<unsigned int>::nil())),
-                          3u}))
-            .second;
+    auto _cs = pop_stack_acc(std::make_shared<state_with_acc>(state_with_acc{
+        List<unsigned int>::cons(
+            9u, List<unsigned int>::cons(8u, List<unsigned int>::nil())),
+        3u}));
+    std::optional<unsigned int> o = _cs.first;
+    std::shared_ptr<state_with_acc> s_ = _cs.second;
     if (o.has_value()) {
       unsigned int a = *o;
       return ((a + s_->stack_with_acc->length()) + s_->acc);

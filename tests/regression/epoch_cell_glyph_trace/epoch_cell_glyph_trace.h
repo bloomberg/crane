@@ -220,9 +220,9 @@ struct BinInt {
                                         const std::shared_ptr<Z> &y);
   __attribute__((pure)) static unsigned int to_nat(const std::shared_ptr<Z> &z);
   __attribute__((pure)) static std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>>
-  pos_div_eucl(const std::shared_ptr<Positive> &a, std::shared_ptr<Z> b);
+  pos_div_eucl(const std::shared_ptr<Positive> &a, const std::shared_ptr<Z> &b);
   __attribute__((pure)) static std::pair<std::shared_ptr<Z>, std::shared_ptr<Z>>
-  div_eucl(std::shared_ptr<Z> a, std::shared_ptr<Z> b);
+  div_eucl(std::shared_ptr<Z> a, const std::shared_ptr<Z> &b);
   static std::shared_ptr<Z> div(const std::shared_ptr<Z> &a,
                                 const std::shared_ptr<Z> &b);
   static std::shared_ptr<Z> modulo(const std::shared_ptr<Z> &a,
@@ -236,8 +236,8 @@ struct Q {
 };
 
 struct QArith_base {
-  __attribute__((pure)) static bool Qle_bool(std::shared_ptr<Q> x,
-                                             std::shared_ptr<Q> y);
+  __attribute__((pure)) static bool Qle_bool(const std::shared_ptr<Q> &x,
+                                             const std::shared_ptr<Q> &y);
 };
 
 struct Datatypes {
@@ -440,9 +440,9 @@ struct EpochCellGlyphTraceCase {
       Z::zpos(Positive::xo(Positive::xo(Positive::xo(Positive::xi(Positive::xo(
           Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))))));
   static std::shared_ptr<MechanismState>
-  step(std::shared_ptr<MechanismState> s);
+  step(const std::shared_ptr<MechanismState> &s);
   static std::shared_ptr<MechanismState>
-  step_reverse(std::shared_ptr<MechanismState> s);
+  step_reverse(const std::shared_ptr<MechanismState> &s);
   static std::shared_ptr<MechanismState>
   step_n(const unsigned int n, std::shared_ptr<MechanismState> s);
   static std::shared_ptr<MechanismState> state_at_cell(std::shared_ptr<Z> cell);

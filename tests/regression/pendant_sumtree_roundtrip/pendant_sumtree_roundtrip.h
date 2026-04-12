@@ -451,7 +451,8 @@ struct PendantSumtreeRoundtripCase {
   };
 
   __attribute__((pure)) static std::optional<std::shared_ptr<T0<digit>>>
-  pendant_digits(const unsigned int n, std::shared_ptr<CertifiedPendant> p);
+  pendant_digits(const unsigned int n,
+                 const std::shared_ptr<CertifiedPendant> &p);
   __attribute__((pure)) static std::optional<unsigned int>
   pendant_value(const unsigned int n,
                 const std::shared_ptr<CertifiedPendant> &p);
@@ -626,9 +627,10 @@ struct PendantSumtreeRoundtripCase {
                       digits_269,
                       List<std::shared_ptr<T0<std::shared_ptr<T>>>>::nil0())));
   static inline const bool sample_multi_roundtrip_ok = []() -> bool {
-    if (decode_multi(3u, encode_multi(3u, sample_multi_digits)).has_value()) {
+    auto _cs = decode_multi(3u, encode_multi(3u, sample_multi_digits));
+    if (_cs.has_value()) {
       std::shared_ptr<List<std::shared_ptr<T0<std::shared_ptr<T>>>>> decoded =
-          *decode_multi(3u, encode_multi(3u, sample_multi_digits));
+          *_cs;
       return nat_list_eqb(
           decoded->template map<unsigned int>(
               [](const std::shared_ptr<T0<digit>> &_x0) -> unsigned int {

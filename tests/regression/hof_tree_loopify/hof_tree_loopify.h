@@ -871,8 +871,9 @@ struct HofTreeLoopify {
                 const typename tree<T1>::Node _args = _f._s1;
                 T3 acc1 = _result.first;
                 std::shared_ptr<tree<T2>> l_ = _result.second;
-                T3 acc2 = f(acc1, _args.d_a1).first;
-                T2 x_ = f(acc1, _args.d_a1).second;
+                auto _cs = f(acc1, _args.d_a1);
+                T3 acc2 = _cs.first;
+                T2 x_ = _cs.second;
                 _stack.push_back(_Call2{x_, l_});
                 _stack.push_back(_Enter{_args.d_a2, acc2});
               },

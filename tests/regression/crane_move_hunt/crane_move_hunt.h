@@ -27,17 +27,17 @@ struct CraneMoveHunt {
     bool visible;
   };
 
-  static std::shared_ptr<box> clone_box(std::shared_ptr<box> b);
+  static std::shared_ptr<box> clone_box(const std::shared_ptr<box> &b);
   static std::shared_ptr<box> keep_box(std::shared_ptr<box> b);
   __attribute__((pure)) static unsigned int
   use_state(const std::shared_ptr<state> &s);
-  static std::shared_ptr<state> render_state(std::shared_ptr<state> s);
+  static std::shared_ptr<state> render_state(const std::shared_ptr<state> &s);
   __attribute__((pure)) static unsigned int
   sound_state(const std::shared_ptr<state> &before,
               const std::shared_ptr<state> &after);
-  static std::shared_ptr<state> resolve_state(std::shared_ptr<state> s);
+  static std::shared_ptr<state> resolve_state(const std::shared_ptr<state> &s);
   __attribute__((pure)) static std::pair<bool, std::shared_ptr<state>>
-  handle_state(std::shared_ptr<state> s);
+  handle_state(const std::shared_ptr<state> &s);
   static inline const std::shared_ptr<box> initial_box =
       std::make_shared<box>(box{41u, true});
   static inline const std::shared_ptr<box> other_box =

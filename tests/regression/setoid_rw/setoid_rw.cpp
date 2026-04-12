@@ -9,10 +9,11 @@ __attribute__((pure)) unsigned int SetoidRw::mod3(const unsigned int n) {
 
 __attribute__((pure)) unsigned int
 SetoidRw::classify_mod3(const unsigned int n) {
-  if (mod3(n) <= 0) {
+  auto _cs = mod3(n);
+  if (_cs <= 0) {
     return 0u;
   } else {
-    unsigned int n0 = mod3(n) - 1;
+    unsigned int n0 = _cs - 1;
     if (n0 <= 0) {
       return 1u;
     } else {

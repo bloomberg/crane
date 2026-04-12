@@ -119,9 +119,9 @@ struct IncXchNibble {
   __attribute__((pure)) static unsigned int nibble_of_nat(const unsigned int n);
   __attribute__((pure)) static unsigned int
   get_reg_pair(const std::shared_ptr<state> &s, const unsigned int r);
-  static std::shared_ptr<state> execute_inc(std::shared_ptr<state> s,
+  static std::shared_ptr<state> execute_inc(const std::shared_ptr<state> &s,
                                             const unsigned int r);
-  static std::shared_ptr<state> execute_xch(std::shared_ptr<state> s,
+  static std::shared_ptr<state> execute_xch(const std::shared_ptr<state> &s,
                                             const unsigned int r);
   static inline const std::shared_ptr<state> sample = std::make_shared<state>(
       state{List<unsigned int>::cons(

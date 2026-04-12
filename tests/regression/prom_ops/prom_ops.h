@@ -167,10 +167,9 @@ struct PromOps {
     bool prom_enable3;
   };
 
-  static std::shared_ptr<state3> set_prom_params3(std::shared_ptr<state3> s,
-                                                  const unsigned int addr,
-                                                  const unsigned int data,
-                                                  const bool enable);
+  static std::shared_ptr<state3>
+  set_prom_params3(const std::shared_ptr<state3> &s, const unsigned int addr,
+                   const unsigned int data, const bool enable);
   static inline const unsigned int test3 = []() {
     return []() {
       std::shared_ptr<state3> s = std::make_shared<state3>(state3{
@@ -229,10 +228,9 @@ struct PromOps {
     bool prom_enable5;
   };
 
-  static std::shared_ptr<state5> set_prom_params5(std::shared_ptr<state5> s,
-                                                  const unsigned int addr,
-                                                  const unsigned int data,
-                                                  const bool enable);
+  static std::shared_ptr<state5>
+  set_prom_params5(const std::shared_ptr<state5> &s, const unsigned int addr,
+                   const unsigned int data, const bool enable);
   static inline const unsigned int test5 = []() {
     return []() {
       std::shared_ptr<state5> s = std::make_shared<state5>(state5{
@@ -263,10 +261,9 @@ struct PromOps {
     bool prom_enable6;
   };
 
-  static std::shared_ptr<state6> set_prom_params6(std::shared_ptr<state6> s,
-                                                  const unsigned int addr,
-                                                  const unsigned int data,
-                                                  const bool enable);
+  static std::shared_ptr<state6>
+  set_prom_params6(const std::shared_ptr<state6> &s, const unsigned int addr,
+                   const unsigned int data, const bool enable);
   static inline const std::shared_ptr<state6> sample6 =
       std::make_shared<state6>(state6{
           List<unsigned int>::cons(
@@ -286,10 +283,9 @@ struct PromOps {
     bool prom_enable7;
   };
 
-  static std::shared_ptr<state7> set_prom_params7(std::shared_ptr<state7> s,
-                                                  const unsigned int addr,
-                                                  const unsigned int data,
-                                                  const bool enable);
+  static std::shared_ptr<state7>
+  set_prom_params7(const std::shared_ptr<state7> &s, const unsigned int addr,
+                   const unsigned int data, const bool enable);
   static inline const std::shared_ptr<state7> sample7 =
       std::make_shared<state7>(state7{
           List<unsigned int>::cons(
@@ -312,10 +308,9 @@ struct PromOps {
     bool prom_enable8;
   };
 
-  static std::shared_ptr<state8> set_prom_params8(std::shared_ptr<state8> s,
-                                                  const unsigned int addr,
-                                                  const unsigned int data,
-                                                  const bool enable);
+  static std::shared_ptr<state8>
+  set_prom_params8(const std::shared_ptr<state8> &s, const unsigned int addr,
+                   const unsigned int data, const bool enable);
   static inline const std::shared_ptr<state8> sample8 =
       std::make_shared<state8>(state8{
           List<unsigned int>::cons(
@@ -335,10 +330,9 @@ struct PromOps {
     bool prom_enable9;
   };
 
-  static std::shared_ptr<state9> set_prom_params9(std::shared_ptr<state9> s,
-                                                  const unsigned int addr,
-                                                  const unsigned int data,
-                                                  const bool enable);
+  static std::shared_ptr<state9>
+  set_prom_params9(const std::shared_ptr<state9> &s, const unsigned int addr,
+                   const unsigned int data, const bool enable);
   static inline const std::shared_ptr<state9> sample9 =
       std::make_shared<state9>(state9{
           List<unsigned int>::cons(
@@ -365,11 +359,11 @@ struct PromOps {
     bool prom_enable10;
   };
 
-  static std::shared_ptr<state10> set_prom_params10(std::shared_ptr<state10> s,
-                                                    const unsigned int addr,
-                                                    const unsigned int data,
-                                                    const bool enable);
-  static std::shared_ptr<state10> execute_wpm10(std::shared_ptr<state10> s);
+  static std::shared_ptr<state10>
+  set_prom_params10(const std::shared_ptr<state10> &s, const unsigned int addr,
+                    const unsigned int data, const bool enable);
+  static std::shared_ptr<state10>
+  execute_wpm10(const std::shared_ptr<state10> &s);
   static inline const std::shared_ptr<state10> sample10 =
       std::make_shared<state10>(state10{
           List<unsigned int>::cons(

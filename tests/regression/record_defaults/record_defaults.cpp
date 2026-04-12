@@ -5,14 +5,14 @@
 
 std::shared_ptr<RecordDefaults::Config>
 RecordDefaults::set_width(const unsigned int w,
-                          std::shared_ptr<RecordDefaults::Config> c) {
+                          const std::shared_ptr<RecordDefaults::Config> &c) {
   return std::make_shared<RecordDefaults::Config>(
       Config{w, c->cfg_height, c->cfg_depth, c->cfg_debug});
 }
 
 std::shared_ptr<RecordDefaults::Config>
 RecordDefaults::set_debug(const bool d,
-                          std::shared_ptr<RecordDefaults::Config> c) {
+                          const std::shared_ptr<RecordDefaults::Config> &c) {
   return std::make_shared<RecordDefaults::Config>(
       Config{c->cfg_width, c->cfg_height, c->cfg_depth, d});
 }

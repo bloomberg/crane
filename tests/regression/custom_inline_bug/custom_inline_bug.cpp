@@ -7,7 +7,8 @@
 #include <variant>
 
 __attribute__((pure)) std::optional<unsigned int>
-CustomInlineBug::bug_some_proj(std::shared_ptr<CustomInlineBug::State> s) {
+CustomInlineBug::bug_some_proj(
+    const std::shared_ptr<CustomInlineBug::State> &s) {
   return std::make_optional<unsigned int>(s->value);
 }
 
@@ -18,7 +19,8 @@ CustomInlineBug::bug_pair_proj(std::shared_ptr<CustomInlineBug::State> s) {
 }
 
 __attribute__((pure)) std::optional<std::optional<unsigned int>>
-CustomInlineBug::bug_nested_option(std::shared_ptr<CustomInlineBug::State> s) {
+CustomInlineBug::bug_nested_option(
+    const std::shared_ptr<CustomInlineBug::State> &s) {
   return std::make_optional<std::optional<unsigned int>>(
       std::make_optional<unsigned int>(s->value));
 }
@@ -98,7 +100,7 @@ CustomInlineBug::pair_multi_proj(std::shared_ptr<CustomInlineBug::State> s) {
 
 __attribute__((pure))
 std::pair<std::shared_ptr<CustomInlineBug::State>, unsigned int>
-CustomInlineBug::pair_chain(std::shared_ptr<CustomInlineBug::State> s1) {
+CustomInlineBug::pair_chain(const std::shared_ptr<CustomInlineBug::State> &s1) {
   std::shared_ptr<CustomInlineBug::State> s2 =
       std::make_shared<CustomInlineBug::State>(State{s1->value, s1->data});
   std::shared_ptr<CustomInlineBug::State> s3 =

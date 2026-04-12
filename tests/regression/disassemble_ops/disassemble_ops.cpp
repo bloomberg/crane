@@ -23,7 +23,6 @@ DisassembleOps::drop_(const unsigned int n,
   } else {
     unsigned int n_ = n - 1;
     if (l.use_count() == 1 && l->v().index() == 0) {
-      auto &_rf = std::get<0>(l->v_mut());
       return l;
     } else {
       return std::visit(

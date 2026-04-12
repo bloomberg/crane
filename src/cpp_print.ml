@@ -1287,9 +1287,26 @@ and pp_cpp_expr env args t =
     str "std::const_pointer_cast<"
     ++ pp_cpp_type false [] ty
     ++ str ">(this->shared_from_this())"
-  | CPPmember (e, id) -> pp_cpp_expr env args e ++ str "." ++ Id.print id
-  | CPParrow (e, id) -> pp_cpp_expr env args e ++ str "->" ++ Id.print id
+  | CPPmember (e, id) ->
+    (* Rewrite std::move(x).field → std::move(x.field): access the field
+       first, then move its value.  This is semantically equivalent and:
+       - Fixes Infer Use-After-Delete (moving a pointer then accessing it is flagged)
+       - Enables the Unnecessary-Copy-Intermediate fix (field value is moved, not copied)
+       For method calls we strip the move instead since methods need a live object. *)
+    ( match e with
+    | CPPmove inner ->
+      str (sn ()).move ++ str "(" ++ pp_cpp_expr env args inner ++ str "." ++ Id.print id ++ str ")"
+    | _ ->
+      pp_cpp_expr env args e ++ str "." ++ Id.print id )
+  | CPParrow (e, id) ->
+    ( match e with
+    | CPPmove inner ->
+      (* std::move(ptr)->field → std::move(ptr->field) *)
+      str (sn ()).move ++ str "(" ++ pp_cpp_expr env args inner ++ str "->" ++ Id.print id ++ str ")"
+    | _ ->
+      pp_cpp_expr env args e ++ str "->" ++ Id.print id )
   | CPPmethod_call (obj, method_name, call_args) ->
+    let obj = match obj with CPPmove inner -> inner | _ -> obj in
     pp_cpp_expr env args obj
     ++ str "->"
     ++ Id.print method_name
@@ -1510,26 +1527,59 @@ and pp_cpp_stmt env args = function
     in
     prlist_with_sep fnl (fun x -> x) (decl_pp :: stmt_pps)
   | Scustom_case (typ, t, tyargs, cases, cmatch) ->
+    (* When the template uses %scrut more than once and the scrutinee is a
+       non-trivial expression (e.g., a function call), cache it in a temporary
+       to avoid double evaluation. This fixes Infer OPTIONAL_EMPTY_ACCESS
+       false positives where the same optional-returning call appears in both
+       the has_value() check and the dereference. *)
+    let scrut_uses =
+      let plen = 6 in
+      let n = String.length cmatch in
+      let rec count i acc =
+        if i + plen > n then acc
+        else if String.sub cmatch i plen = "%scrut" then count (i + plen) (acc + 1)
+        else count (i + 1) acc
+      in
+      count 0 0
+    in
+    let t, cache_decl_opt =
+      if scrut_uses > 1 then
+        match t with
+        | CPPvar _ | CPPget _ | CPPget' _ | CPParrow _ | CPPmember _
+        | CPPqualified _ | CPPderef _ | CPPenum_val _ | CPPglob _ -> (t, None)
+        | _ ->
+          let cache_id = Id.of_string "_cs" in
+          let cache_var = CPPvar cache_id in
+          let decl = Sasgn (cache_id, Some Ttodo, t) in
+          (cache_var, Some decl)
+      else (t, None)
+    in
     let cmds = parse_custom_fixed "scrut" CCscrut cmatch in
     let cmds = expand_custom_fixed "ty" CCty cmds in
     let cmds = expand_numbered_args "t" (fun i -> CCty_arg i) cmds in
     let cmds = expand_numbered_args "br" (fun i -> CCbody i) cmds in
     let cmds = expand_custom_binders "b" "a" (fun i j -> CCbr_var (i, j)) cmds in
     let cmds = expand_custom_binders "b" "t" (fun i j -> CCbr_var_ty (i, j)) cmds in
-    pp_custom
-      ( "custom match for "
-      ^ Pp.string_of_ppcmds (pp_cpp_type false [] typ)
-      ^ " := "
-      ^ cmatch )
-      env
-      (Some typ)
-      (Some t)
-      tyargs
-      cases
-      []
-      []
-      []
-      cmds
+    let case_pp =
+      pp_custom
+        ( "custom match for "
+        ^ Pp.string_of_ppcmds (pp_cpp_type false [] typ)
+        ^ " := "
+        ^ cmatch )
+        env
+        (Some typ)
+        (Some t)
+        tyargs
+        cases
+        []
+        []
+        []
+        cmds
+    in
+    ( match cache_decl_opt with
+    | None -> case_pp
+    | Some decl ->
+      pp_cpp_stmt env [] decl ++ fnl () ++ case_pp )
 
 (** Check if a return type is eligible for __attribute__((pure)). Types that
     involve allocation (shared_ptr, unique_ptr), side effects (void), or are

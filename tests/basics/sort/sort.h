@@ -151,10 +151,9 @@ struct Sort {
                              [&](const typename List<T1>::Cons _args0)
                                  -> std::pair<std::shared_ptr<List<T1>>,
                                               std::shared_ptr<List<T1>>> {
-                               std::shared_ptr<List<T1>> ls1 =
-                                   split<T1>(_args0.d_a1).first;
-                               std::shared_ptr<List<T1>> ls2 =
-                                   split<T1>(_args0.d_a1).second;
+                               auto _cs = split<T1>(_args0.d_a1);
+                               std::shared_ptr<List<T1>> ls1 = _cs.first;
+                               std::shared_ptr<List<T1>> ls2 = _cs.second;
                                return std::make_pair(
                                    List<T1>::cons(_args.d_a0, ls1),
                                    List<T1>::cons(_args0.d_a0, ls2));
@@ -209,10 +208,9 @@ struct Sort {
             [&](const typename List<T1>::Cons _args)
                 -> std::pair<std::shared_ptr<List<T1>>,
                              std::shared_ptr<List<T1>>> {
-              std::shared_ptr<List<T1>> l1 =
-                  split_pivot<T1>(le_dec0, pivot, _args.d_a1).first;
-              std::shared_ptr<List<T1>> l2 =
-                  split_pivot<T1>(le_dec0, pivot, _args.d_a1).second;
+              auto _cs = split_pivot<T1>(le_dec0, pivot, _args.d_a1);
+              std::shared_ptr<List<T1>> l1 = _cs.first;
+              std::shared_ptr<List<T1>> l2 = _cs.second;
               if (le_dec0(_args.d_a0, pivot)) {
                 return std::make_pair(List<T1>::cons(_args.d_a0, l1), l2);
               } else {
@@ -253,15 +251,15 @@ struct Sort {
         const std::shared_ptr<List<unsigned int>> &l2);
   static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
   merge_prog(const std::shared_ptr<List<unsigned int>> &_x,
-             std::shared_ptr<List<unsigned int>> l1,
-             std::shared_ptr<List<unsigned int>> l2);
+             const std::shared_ptr<List<unsigned int>> &l1,
+             const std::shared_ptr<List<unsigned int>> &l2);
   static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
   msort(const std::shared_ptr<List<unsigned int>> &_x0);
   static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
   pair_merge_prog(const unsigned int _x, const unsigned int _x0,
                   const std::shared_ptr<List<unsigned int>> &_x1,
-                  std::shared_ptr<List<unsigned int>> l_,
-                  std::shared_ptr<List<unsigned int>> l_0);
+                  const std::shared_ptr<List<unsigned int>> &l_,
+                  const std::shared_ptr<List<unsigned int>> &l_0);
   static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
   psort(const std::shared_ptr<List<unsigned int>> &_x0);
   static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>

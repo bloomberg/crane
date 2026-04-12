@@ -18,8 +18,9 @@ PulseParseCertificateCase::first_true(const std::shared_ptr<List<bool>> &xs) {
             if (_args.d_a0) {
               return std::make_optional<unsigned int>(0u);
             } else {
-              if (first_true(_args.d_a1).has_value()) {
-                unsigned int idx = *first_true(_args.d_a1);
+              auto _cs = first_true(_args.d_a1);
+              if (_cs.has_value()) {
+                unsigned int idx = *_cs;
                 return std::make_optional<unsigned int>((idx + 1));
               } else {
                 return std::optional<unsigned int>();
@@ -38,8 +39,9 @@ PulseParseCertificateCase::last_true(const std::shared_ptr<List<bool>> &xs) {
           },
           [](const typename List<bool>::Cons _args)
               -> std::optional<unsigned int> {
-            if (last_true(_args.d_a1).has_value()) {
-              unsigned int idx = *last_true(_args.d_a1);
+            auto _cs = last_true(_args.d_a1);
+            if (_cs.has_value()) {
+              unsigned int idx = *_cs;
               return std::make_optional<unsigned int>((idx + 1));
             } else {
               if (_args.d_a0) {
@@ -187,7 +189,8 @@ PulseParseCertificateCase::pulse_parse_certificate_self_consistent(
 }
 
 std::shared_ptr<PulseParseCertificateCase::PulseCertificate>
-PulseParseCertificateCase::certify_trace(std::shared_ptr<List<bool>> xs) {
+PulseParseCertificateCase::certify_trace(
+    const std::shared_ptr<List<bool>> &xs) {
   std::shared_ptr<List<unsigned int>> runs = trace_to_runs(xs);
   unsigned int base = pulse_base_from_runs(runs);
   std::shared_ptr<List<PulseParseCertificateCase::PulseClass>> classes =

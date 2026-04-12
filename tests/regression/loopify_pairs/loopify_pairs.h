@@ -572,8 +572,9 @@ struct LoopifyPairs {
                         },
                         [&](const typename list<unsigned int>::Cons _args)
                             -> void {
-                          unsigned int acc_ = f(acc, _args.d_a0).first;
-                          unsigned int y = f(acc, _args.d_a0).second;
+                          auto _cs = f(acc, _args.d_a0);
+                          unsigned int acc_ = _cs.first;
+                          unsigned int y = _cs.second;
                           _stack.push_back(_Call1{y});
                           _stack.push_back(_Enter{_args.d_a1, acc_});
                         }},

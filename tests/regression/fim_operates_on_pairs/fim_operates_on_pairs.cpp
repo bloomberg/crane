@@ -12,7 +12,7 @@ FimOperatesOnPairs::get_reg(const std::shared_ptr<FimOperatesOnPairs::state> &s,
 }
 
 std::shared_ptr<FimOperatesOnPairs::state>
-FimOperatesOnPairs::set_reg(std::shared_ptr<FimOperatesOnPairs::state> s,
+FimOperatesOnPairs::set_reg(const std::shared_ptr<FimOperatesOnPairs::state> &s,
                             const unsigned int r, const unsigned int v) {
   return std::make_shared<FimOperatesOnPairs::state>(
       state{update_nth<unsigned int>(r, (16u ? v % 16u : v), s->regs)});

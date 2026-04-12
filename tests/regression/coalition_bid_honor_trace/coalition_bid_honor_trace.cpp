@@ -519,7 +519,7 @@ CoalitionBidHonorTraceCase::unit_effective_combat_rating(
 
 std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics>
 CoalitionBidHonorTraceCase::unit_to_metrics(
-    std::shared_ptr<CoalitionBidHonorTraceCase::Unit> u) {
+    const std::shared_ptr<CoalitionBidHonorTraceCase::Unit> &u) {
   return std::make_shared<CoalitionBidHonorTraceCase::ForceMetrics>(
       ForceMetrics{1u, u->unit_tonnage,
                    [&]() -> unsigned int {
@@ -541,8 +541,8 @@ CoalitionBidHonorTraceCase::unit_to_metrics(
 
 std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics>
 CoalitionBidHonorTraceCase::metrics_add(
-    std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics> m1,
-    std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics> m2) {
+    const std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics> &m1,
+    const std::shared_ptr<CoalitionBidHonorTraceCase::ForceMetrics> &m2) {
   return std::make_shared<CoalitionBidHonorTraceCase::ForceMetrics>(
       ForceMetrics{(m1->fm_count + m2->fm_count),
                    (m1->fm_tonnage + m2->fm_tonnage),
@@ -683,13 +683,12 @@ CoalitionBidHonorTraceCase::coalition_lead_commander(
 __attribute__((pure))
 std::optional<std::shared_ptr<CoalitionBidHonorTraceCase::ForceBid>>
 CoalitionBidHonorTraceCase::coalition_to_bid(
-    std::shared_ptr<
-        List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>>
-        c,
+    const std::shared_ptr<
+        List<std::shared_ptr<CoalitionBidHonorTraceCase::CoalitionMember>>> &c,
     const CoalitionBidHonorTraceCase::Side side) {
-  if (coalition_lead_commander(c).has_value()) {
-    std::shared_ptr<CoalitionBidHonorTraceCase::Commander> cmd =
-        *coalition_lead_commander(c);
+  auto _cs = coalition_lead_commander(c);
+  if (_cs.has_value()) {
+    std::shared_ptr<CoalitionBidHonorTraceCase::Commander> cmd = *_cs;
     return std::make_optional<
         std::shared_ptr<CoalitionBidHonorTraceCase::ForceBid>>(
         std::make_shared<CoalitionBidHonorTraceCase::ForceBid>(
@@ -1001,9 +1000,9 @@ __attribute__((pure)) CoalitionBidHonorTraceCase::HonorLedger
 CoalitionBidHonorTraceCase::apply_action_honor(
     const std::shared_ptr<CoalitionBidHonorTraceCase::BatchallState> &state,
     const std::shared_ptr<CoalitionBidHonorTraceCase::ProtocolAction> &action) {
-  if (state->bs_phase->action_actor_in_phase(action).has_value()) {
-    std::shared_ptr<CoalitionBidHonorTraceCase::Commander> actor =
-        *state->bs_phase->action_actor_in_phase(action);
+  auto _cs = state->bs_phase->action_actor_in_phase(action);
+  if (_cs.has_value()) {
+    std::shared_ptr<CoalitionBidHonorTraceCase::Commander> actor = *_cs;
     return update_honor(state->bs_honor, actor, protocol_honor_delta(action));
   } else {
     return state->bs_honor;

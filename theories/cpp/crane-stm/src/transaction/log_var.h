@@ -66,15 +66,15 @@ public:
             if constexpr (std::is_same_v<V, stm::detail::Read> ||
                           std::is_same_v<V, stm::detail::Write> ||
                           std::is_same_v<V, ReadWrite>) {
-                result = v.value;
+                result = std::move(v.value);
             } else if constexpr (std::is_same_v<V, ReadObsoleteWrite>) {
                 result = v.value;
-                // Upgrade to ReadWrite
-                var_ = ReadWrite{v.original, v.value};
+                // Upgrade to ReadWrite (move value since variant is being replaced)
+                var_ = ReadWrite{v.original, std::move(v.value)};
             } else if constexpr (std::is_same_v<V, ReadObsolete>) {
                 result = v.value;
-                // Upgrade to Read
-                var_ = stm::detail::Read{v.value};
+                // Upgrade to Read (move value since variant is being replaced)
+                var_ = stm::detail::Read{std::move(v.value)};
             }
         }, var_);
         return result;

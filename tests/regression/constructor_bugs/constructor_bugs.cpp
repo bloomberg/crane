@@ -38,8 +38,8 @@ ConstructorBugs::bad_direct(
                             packed_state{s2, s2->source_a, s2->source_b}));
 }
 
-std::shared_ptr<ConstructorBugs::source_state>
-ConstructorBugs::step2(std::shared_ptr<ConstructorBugs::source_state> s) {
+std::shared_ptr<ConstructorBugs::source_state> ConstructorBugs::step2(
+    const std::shared_ptr<ConstructorBugs::source_state> &s) {
   return std::make_shared<ConstructorBugs::source_state>(
       source_state{s->source_a, s->source_b, (s->source_flag + 1u)});
 }
@@ -220,8 +220,8 @@ ConstructorBugs::nested_record(std::shared_ptr<ConstructorBugs::Inner> i) {
   return std::make_shared<ConstructorBugs::Outer>(Outer{i, i->inner_val});
 }
 
-std::shared_ptr<ConstructorBugs::Outer>
-ConstructorBugs::self_referential(std::shared_ptr<ConstructorBugs::Outer> o) {
+std::shared_ptr<ConstructorBugs::Outer> ConstructorBugs::self_referential(
+    const std::shared_ptr<ConstructorBugs::Outer> &o) {
   return std::make_shared<ConstructorBugs::Outer>(
       Outer{o->outer_inner, o->outer_inner->inner_val});
 }
@@ -302,7 +302,7 @@ ConstructorBugs::with_cast(std::shared_ptr<ConstructorBugs::Inner> i) {
 __attribute__((pure))
 std::pair<std::pair<std::shared_ptr<ConstructorBugs::Inner>, unsigned int>,
           std::pair<std::shared_ptr<ConstructorBugs::Inner>, unsigned int>>
-ConstructorBugs::chain_lets(std::shared_ptr<ConstructorBugs::Inner> i1) {
+ConstructorBugs::chain_lets(const std::shared_ptr<ConstructorBugs::Inner> &i1) {
   std::shared_ptr<ConstructorBugs::Inner> i2 =
       std::make_shared<ConstructorBugs::Inner>(Inner{i1->inner_val});
   std::shared_ptr<ConstructorBugs::Inner> i3 =
@@ -388,7 +388,7 @@ ConstructorBugs::nested_extract(std::shared_ptr<ConstructorBugs::Inner> i) {
 
 __attribute__((pure))
 std::pair<std::shared_ptr<ConstructorBugs::Outer>, unsigned int>
-ConstructorBugs::update_test(std::shared_ptr<ConstructorBugs::Outer> o) {
+ConstructorBugs::update_test(const std::shared_ptr<ConstructorBugs::Outer> &o) {
   return std::make_pair(std::make_shared<ConstructorBugs::Outer>(
                             Outer{o->outer_inner, (o->outer_data + 1u)}),
                         o->outer_inner->inner_val);
@@ -472,7 +472,7 @@ ConstructorBugs::inline_deep(std::shared_ptr<ConstructorBugs::OuterInline> o) {
 __attribute__((pure))
 std::pair<std::shared_ptr<ConstructorBugs::State>, unsigned int>
 ConstructorBugs::inline_double_proj(
-    std::shared_ptr<ConstructorBugs::OuterInline> o) {
+    const std::shared_ptr<ConstructorBugs::OuterInline> &o) {
   return std::make_pair(o->outer_state, o->outer_state->value_inline);
 }
 

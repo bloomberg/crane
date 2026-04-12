@@ -370,7 +370,6 @@ LoopifyListTransforms::drop(const unsigned int n,
     } else {
       unsigned int n_ = _loop_n - 1;
       if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-        auto &_rf = std::get<0>(_loop_l->v_mut());
         {
           _result = _loop_l;
           _continue = false;
@@ -396,9 +395,9 @@ LoopifyListTransforms::drop(const unsigned int n,
 }
 
 std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
-LoopifyListTransforms::chunks_of_fuel(const unsigned int fuel,
-                                      const unsigned int n,
-                                      std::shared_ptr<List<unsigned int>> l) {
+LoopifyListTransforms::chunks_of_fuel(
+    const unsigned int fuel, const unsigned int n,
+    const std::shared_ptr<List<unsigned int>> &l) {
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _head{};
   std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _last{};
   std::shared_ptr<List<unsigned int>> _loop_l = l;
@@ -501,7 +500,6 @@ LoopifyListTransforms::rotate_left_fuel(const unsigned int fuel,
         }
       } else {
         if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-          auto &_rf = std::get<0>(_loop_l->v_mut());
           {
             _result = _loop_l;
             _continue = false;

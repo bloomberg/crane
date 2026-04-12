@@ -115,8 +115,9 @@ struct FimOperatesOnPairs {
 
   __attribute__((pure)) static unsigned int
   get_reg(const std::shared_ptr<state> &s, const unsigned int r);
-  static std::shared_ptr<state>
-  set_reg(std::shared_ptr<state> s, const unsigned int r, const unsigned int v);
+  static std::shared_ptr<state> set_reg(const std::shared_ptr<state> &s,
+                                        const unsigned int r,
+                                        const unsigned int v);
   __attribute__((pure)) static unsigned int
   get_reg_pair(const std::shared_ptr<state> &s, const unsigned int r);
   static std::shared_ptr<state> set_reg_pair(const std::shared_ptr<state> &s,

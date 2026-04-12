@@ -31,7 +31,7 @@ Dim10TowerProofChainCase::nat_le_of_lt(const unsigned int n,
 }
 
 __attribute__((pure)) unsigned int Dim10TowerProofChainCase::qpos_denom(
-    std::shared_ptr<Dim10TowerProofChainCase::QPos> q) {
+    const std::shared_ptr<Dim10TowerProofChainCase::QPos> &q) {
   return (q->qpos_denom_pred + 1);
 }
 
@@ -90,7 +90,7 @@ Dim10TowerProofChainCase::layer_measure_eventually_zero(
 std::shared_ptr<Dim10TowerProofChainCase::GradedObj>
 Dim10TowerProofChainCase::P_n_obj(
     const unsigned int n,
-    std::shared_ptr<Dim10TowerProofChainCase::GradedObj> x) {
+    const std::shared_ptr<Dim10TowerProofChainCase::GradedObj> &x) {
   return std::make_shared<Dim10TowerProofChainCase::GradedObj>(
       GradedObj{poly_approx_dim(x->go_dim, n)});
 }

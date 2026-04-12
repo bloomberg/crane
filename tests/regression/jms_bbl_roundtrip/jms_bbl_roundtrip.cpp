@@ -10,7 +10,7 @@ JmsBblRoundtrip::addr12_of_nat(const unsigned int n) {
 }
 
 std::shared_ptr<JmsBblRoundtrip::state>
-JmsBblRoundtrip::execute_jms(std::shared_ptr<JmsBblRoundtrip::state> s,
+JmsBblRoundtrip::execute_jms(const std::shared_ptr<JmsBblRoundtrip::state> &s,
                              const unsigned int addr) {
   return std::make_shared<JmsBblRoundtrip::state>(
       state{addr12_of_nat(addr), addr12_of_nat((s->pc + 2u)), true});

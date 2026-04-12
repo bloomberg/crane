@@ -4,8 +4,8 @@
 #include <type_traits>
 #include <utility>
 
-std::shared_ptr<RecordUseAfterMove::box>
-RecordUseAfterMove::clone_box(std::shared_ptr<RecordUseAfterMove::box> b) {
+std::shared_ptr<RecordUseAfterMove::box> RecordUseAfterMove::clone_box(
+    const std::shared_ptr<RecordUseAfterMove::box> &b) {
   return std::make_shared<RecordUseAfterMove::box>(box{b->payload, b->enabled});
 }
 

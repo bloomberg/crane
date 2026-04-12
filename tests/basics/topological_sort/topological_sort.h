@@ -296,7 +296,7 @@ struct TopologicalSort {
 
   template <typename T1, MapsTo<bool, T1, T1> F0>
   __attribute__((pure)) static entry<T1>
-  make_entry(F0 &&eqb_node, std::shared_ptr<List<std::pair<T1, T1>>> l,
+  make_entry(F0 &&eqb_node, const std::shared_ptr<List<std::pair<T1, T1>>> &l,
              const T1 e) {
     return std::make_pair(
         e, l->template fold_right<std::shared_ptr<List<T1>>>(
@@ -330,16 +330,12 @@ struct TopologicalSort {
       F0 &&eqb_node, const T1 elem,
       const std::shared_ptr<List<std::pair<T1, std::shared_ptr<List<T1>>>>>
           &graph0) {
-    if (graph0
-            ->find(
-                [=](std::pair<T1, std::shared_ptr<List<T1>>> entry0) mutable {
-                  return eqb_node(elem, entry0.first);
-                })
-            .has_value()) {
-      std::pair<T1, std::shared_ptr<List<T1>>> p = *graph0->find(
-          [=](std::pair<T1, std::shared_ptr<List<T1>>> entry0) mutable {
-            return eqb_node(elem, entry0.first);
-          });
+    auto _cs = graph0->find(
+        [=](std::pair<T1, std::shared_ptr<List<T1>>> entry0) mutable {
+          return eqb_node(elem, entry0.first);
+        });
+    if (_cs.has_value()) {
+      std::pair<T1, std::shared_ptr<List<T1>>> p = *_cs;
       T1 _x = p.first;
       std::shared_ptr<List<T1>> es = p.second;
       return es;
@@ -351,8 +347,9 @@ struct TopologicalSort {
   template <typename T1, MapsTo<bool, T1, T1> F0>
   __attribute__((pure)) static bool
   contains(F0 &&eqb_node, const T1 elem, const std::shared_ptr<List<T1>> &es) {
-    if (es->find([=](T1 x) mutable { return eqb_node(elem, x); }).has_value()) {
-      T1 _x = *es->find([=](T1 x) mutable { return eqb_node(elem, x); });
+    auto _cs = es->find([=](T1 x) mutable { return eqb_node(elem, x); });
+    if (_cs.has_value()) {
+      T1 _x = *_cs;
       return true;
     } else {
       return false;
@@ -389,7 +386,8 @@ struct TopologicalSort {
   template <typename T1, MapsTo<bool, T1, T1> F0>
   __attribute__((pure)) static std::optional<T1> cycle_entry(
       F0 &&eqb_node,
-      std::shared_ptr<List<std::pair<T1, std::shared_ptr<List<T1>>>>> graph0) {
+      const std::shared_ptr<List<std::pair<T1, std::shared_ptr<List<T1>>>>>
+          &graph0) {
     return std::visit(
         Overloaded{[](const typename List<
                        std::pair<T1, std::shared_ptr<List<T1>>>>::Nil)
@@ -435,8 +433,9 @@ struct TopologicalSort {
       F0 &&eqb_node,
       const std::shared_ptr<List<std::pair<T1, std::shared_ptr<List<T1>>>>>
           &graph0) {
-    if (cycle_entry<T1>(eqb_node, graph0).has_value()) {
-      T1 elem = *cycle_entry<T1>(eqb_node, graph0);
+    auto _cs = cycle_entry<T1>(eqb_node, graph0);
+    if (_cs.has_value()) {
+      T1 elem = *_cs;
       return cycle_extract_aux<T1>(eqb_node, graph0, graph0->length(), elem,
                                    List<T1>::nil());
     } else {

@@ -53,7 +53,7 @@ FoldSequenceStateTraceCase::perp_bisector(const std::pair<Real, Real> p1,
 std::shared_ptr<FoldSequenceStateTraceCase::Line>
 FoldSequenceStateTraceCase::perp_through(
     const std::pair<Real, Real> p,
-    std::shared_ptr<FoldSequenceStateTraceCase::Line> l) {
+    const std::shared_ptr<FoldSequenceStateTraceCase::Line> &l) {
   Real x = p.first;
   Real y = p.second;
   Real c = ((l->A * y) - (l->B * x));
@@ -76,13 +76,13 @@ FoldSequenceStateTraceCase::fold_O2(const std::pair<Real, Real> p1,
 std::shared_ptr<FoldSequenceStateTraceCase::Fold>
 FoldSequenceStateTraceCase::fold_O4(
     const std::pair<Real, Real> p,
-    std::shared_ptr<FoldSequenceStateTraceCase::Line> l) {
+    const std::shared_ptr<FoldSequenceStateTraceCase::Line> &l) {
   return Fold::fold_line_ctor(perp_through(p, l));
 }
 
 std::shared_ptr<FoldSequenceStateTraceCase::ConstructionState>
 FoldSequenceStateTraceCase::add_fold_to_state(
-    std::shared_ptr<FoldSequenceStateTraceCase::ConstructionState> st,
+    const std::shared_ptr<FoldSequenceStateTraceCase::ConstructionState> &st,
     const std::shared_ptr<FoldSequenceStateTraceCase::FoldStep> &step) {
   std::shared_ptr<FoldSequenceStateTraceCase::Line> new_line =
       step->execute_fold_step();

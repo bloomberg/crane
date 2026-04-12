@@ -858,7 +858,7 @@ struct LoopifyLists {
 
   template <typename T1>
   static std::shared_ptr<list<std::shared_ptr<list<T1>>>>
-  chunks_of(const unsigned int n, std::shared_ptr<list<T1>> l) {
+  chunks_of(const unsigned int n, const std::shared_ptr<list<T1>> &l) {
     std::function<unsigned int(std::shared_ptr<list<T1>>)> length;
     length = [&](std::shared_ptr<list<T1>> l0) -> unsigned int {
       struct _Enter {
@@ -1556,8 +1556,9 @@ struct LoopifyLists {
                           _result = std::make_pair(acc, list<T2>::nil());
                         },
                         [&](const typename list<T1>::Cons _args) -> void {
-                          T3 acc_ = f(acc, _args.d_a0).first;
-                          T2 y = f(acc, _args.d_a0).second;
+                          auto _cs = f(acc, _args.d_a0);
+                          T3 acc_ = _cs.first;
+                          T2 y = _cs.second;
                           _stack.push_back(_Call1{y});
                           _stack.push_back(_Enter{_args.d_a1, acc_});
                         }},
@@ -1592,7 +1593,7 @@ struct LoopifyLists {
   windows_aux(const unsigned int fuel, const unsigned int n,
               const std::shared_ptr<list<unsigned int>> &l);
   static std::shared_ptr<list<std::shared_ptr<list<unsigned int>>>>
-  windows(const unsigned int n, std::shared_ptr<list<unsigned int>> l);
+  windows(const unsigned int n, const std::shared_ptr<list<unsigned int>> &l);
   /// is_prefix_of l1 l2 checks if l1 is a prefix of l2.
   __attribute__((pure)) static bool
   is_prefix_of(const std::shared_ptr<list<unsigned int>> &l1,
@@ -1812,10 +1813,10 @@ struct LoopifyLists {
       const std::shared_ptr<list<std::shared_ptr<list<unsigned int>>>> &l);
   __attribute__((pure)) static unsigned int sum_list_lengths(
       const std::shared_ptr<list<std::shared_ptr<list<unsigned int>>>> &l);
-  static std::shared_ptr<list<unsigned int>>
-  flatten_nested(std::shared_ptr<list<std::shared_ptr<list<unsigned int>>>>
-                     l); /// compress l removes consecutive duplicates:
-                         /// 1,1,2,2,2,3 -> 1,2,3.
+  static std::shared_ptr<list<unsigned int>> flatten_nested(
+      const std::shared_ptr<list<std::shared_ptr<list<unsigned int>>>>
+          &l); /// compress l removes consecutive duplicates: 1,1,2,2,2,3 ->
+               /// 1,2,3.
   static std::shared_ptr<list<unsigned int>>
   compress(const std::shared_ptr<list<unsigned int>> &l);
   /// group_pairs l groups consecutive elements into pairs: 1,2,3,4 ->
@@ -1847,7 +1848,7 @@ struct LoopifyLists {
   group_fuel(const unsigned int fuel,
              const std::shared_ptr<list<unsigned int>> &l);
   static std::shared_ptr<list<std::shared_ptr<list<unsigned int>>>>
-  group(std::shared_ptr<list<unsigned int>> l);
+  group(const std::shared_ptr<list<unsigned int>> &l);
   /// Internal helper: reverse a list.
   static std::shared_ptr<list<unsigned int>>
   rev_helper(std::shared_ptr<list<unsigned int>> acc,

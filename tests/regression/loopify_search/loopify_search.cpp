@@ -348,7 +348,6 @@ LoopifySearch::drop_impl(const unsigned int k,
     } else {
       unsigned int m = _loop_k - 1;
       if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-        auto &_rf = std::get<0>(_loop_l->v_mut());
         {
           _result = _loop_l;
           _continue = false;
@@ -705,7 +704,7 @@ LoopifySearch::subset_sum_fuel(const unsigned int fuel,
 
 __attribute__((pure)) bool
 LoopifySearch::subset_sum(const unsigned int target,
-                          std::shared_ptr<List<unsigned int>> l) {
+                          const std::shared_ptr<List<unsigned int>> &l) {
   return subset_sum_fuel((len_impl<unsigned int>(l) + 1), target, l);
 }
 
@@ -732,7 +731,6 @@ LoopifySearch::sieve_fuel(const unsigned int fuel,
     } else {
       unsigned int f = _loop_fuel - 1;
       if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-        auto &_rf = std::get<0>(_loop_l->v_mut());
         {
           if (_last) {
             std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
@@ -832,7 +830,6 @@ LoopifySearch::nub_fuel(const unsigned int fuel,
     } else {
       unsigned int f = _loop_fuel - 1;
       if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-        auto &_rf = std::get<0>(_loop_l->v_mut());
         {
           if (_last) {
             std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
@@ -911,7 +908,6 @@ LoopifySearch::remove_duplicates_fuel(const unsigned int fuel,
     } else {
       unsigned int f = _loop_fuel - 1;
       if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-        auto &_rf = std::get<0>(_loop_l->v_mut());
         {
           if (_last) {
             std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
@@ -1010,7 +1006,6 @@ LoopifySearch::quicksort_fuel(const unsigned int fuel,
               } else {
                 unsigned int f = fuel - 1;
                 if (l.use_count() == 1 && l->v().index() == 0) {
-                  auto &_rf = std::get<0>(l->v_mut());
                   _result = l;
                 } else {
                   std::visit(
@@ -1257,7 +1252,6 @@ LoopifySearch::merge_sort_fuel(const unsigned int fuel,
               } else {
                 unsigned int f = fuel - 1;
                 if (l.use_count() == 1 && l->v().index() == 0) {
-                  auto &_rf = std::get<0>(l->v_mut());
                   _result = l;
                 } else {
                   std::visit(
@@ -1273,10 +1267,11 @@ LoopifySearch::merge_sort_fuel(const unsigned int fuel,
                                         -> void { _result = std::move(l); },
                                     [&](const typename List<unsigned int>::Cons)
                                         -> void {
+                                      auto _cs = split_list(l);
                                       std::shared_ptr<List<unsigned int>> a =
-                                          split_list(l).first;
+                                          _cs.first;
                                       std::shared_ptr<List<unsigned int>> b =
-                                          split_list(l).second;
+                                          _cs.second;
                                       _stack.push_back(_Call1{a, f});
                                       _stack.push_back(_Enter{b, f});
                                     }},
@@ -1511,7 +1506,7 @@ LoopifySearch::permutations_fuel(const unsigned int fuel,
 }
 
 std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
-LoopifySearch::permutations(std::shared_ptr<List<unsigned int>> l) {
+LoopifySearch::permutations(const std::shared_ptr<List<unsigned int>> &l) {
   return permutations_fuel((len_impl<unsigned int>(l) + 1), l);
 }
 

@@ -212,7 +212,7 @@ struct ComprehensivePatterns {
   sigma_reuse(std::shared_ptr<S> s);
   __attribute__((pure)) static std::pair<unsigned int,
                                          std::pair<unsigned int, unsigned int>>
-  multi_proj_arg(std::shared_ptr<S> s);
+  multi_proj_arg(const std::shared_ptr<S> &s);
 
   struct Either {
     // TYPES
@@ -307,7 +307,7 @@ struct ComprehensivePatterns {
   hard_proj_chain(std::shared_ptr<R3> r3);
   __attribute__((pure)) static std::pair<
       std::pair<std::shared_ptr<R2>, std::shared_ptr<R1>>, unsigned int>
-  multi_path(std::shared_ptr<R3> r3);
+  multi_path(const std::shared_ptr<R3> &r3);
   __attribute__((pure)) static std::pair<
       std::pair<std::shared_ptr<R2>, std::shared_ptr<R1>>, unsigned int>
   let_proj(std::shared_ptr<R2> r2);
@@ -346,7 +346,7 @@ struct ComprehensivePatterns {
       std::pair<std::shared_ptr<R3>, std::shared_ptr<R2>>, std::shared_ptr<R1>>
   nested_lets(std::shared_ptr<R3> r3);
   __attribute__((pure)) static std::pair<std::shared_ptr<R1>, unsigned int>
-  double_proj(std::shared_ptr<R3> r3);
+  double_proj(const std::shared_ptr<R3> &r3);
   __attribute__((pure)) static std::pair<
       std::pair<std::shared_ptr<R3>, std::shared_ptr<R2>>, std::shared_ptr<R2>>
   mixed_access(std::shared_ptr<R3> r3);
@@ -360,7 +360,7 @@ struct ComprehensivePatterns {
   all_levels(std::shared_ptr<R3> r3);
   __attribute__((
       pure)) static std::pair<std::shared_ptr<R1>, std::shared_ptr<R1>>
-  let_and_proj(std::shared_ptr<R2> r2);
+  let_and_proj(const std::shared_ptr<R2> &r2);
   __attribute__((
       pure)) static std::pair<std::shared_ptr<R2>, std::shared_ptr<R2>>
   multi_construct(std::shared_ptr<R1> r1);
@@ -405,11 +405,11 @@ struct ComprehensivePatterns {
   nested_match(const std::optional<std::shared_ptr<R>> o1,
                const std::optional<std::shared_ptr<R>> o2);
   __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  both_proj(std::shared_ptr<R> r);
+  both_proj(const std::shared_ptr<R> &r);
   __attribute__((pure)) static unsigned int
   compose_proj(const std::shared_ptr<R> &r);
   __attribute__((pure)) static std::optional<unsigned int>
-  proj_through_option(std::shared_ptr<R> r);
+  proj_through_option(const std::shared_ptr<R> &r);
 
   struct NC {
     unsigned int nc_a;
@@ -541,7 +541,7 @@ struct ComprehensivePatterns {
   __attribute__((pure)) static unsigned int
   return_complex(const std::shared_ptr<StateStmt> &s);
   __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  return_pair(std::shared_ptr<StateStmt> s);
+  return_pair(const std::shared_ptr<StateStmt> &s);
 
   struct InnerStmt {
     unsigned int inner_stmt_val;
@@ -566,7 +566,7 @@ struct ComprehensivePatterns {
   __attribute__((pure)) static unsigned int
   multi_proj_expr(const std::shared_ptr<StateStmt> &s);
   static std::shared_ptr<List<unsigned int>>
-  proj_in_list(std::shared_ptr<StateStmt> s);
+  proj_in_list(const std::shared_ptr<StateStmt> &s);
   __attribute__((pure)) static bool
   compare_projs(const std::shared_ptr<StateStmt> &s);
   __attribute__((pure)) static bool

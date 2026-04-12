@@ -237,7 +237,7 @@ PolygonWindingAreaTraceCase::test_equatorial_square(const Real delta) {
                       nil()))));
 }
 
-__attribute__((pure)) Real Rdefinitions::Q2R(std::shared_ptr<Q> x) {
+__attribute__((pure)) Real Rdefinitions::Q2R(const std::shared_ptr<Q> &x) {
   return (Real::from_z(x->Qnum) *
           r_inv(Real::from_z(static_cast<int64_t>(x->Qden))));
 }

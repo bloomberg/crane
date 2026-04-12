@@ -40,7 +40,7 @@ Coinductive::tl(const std::shared_ptr<Coinductive::stream> &s) {
 
 std::shared_ptr<Coinductive::stream>
 Coinductive::interleave(const std::shared_ptr<Coinductive::stream> &s1,
-                        std::shared_ptr<Coinductive::stream> s2) {
+                        const std::shared_ptr<Coinductive::stream> &s2) {
   return stream::lazy_([=]() mutable -> std::shared_ptr<Coinductive::stream> {
     return std::visit(
         Overloaded{[&](const typename Coinductive::stream::Cons _args)

@@ -6,14 +6,14 @@
 #include <variant>
 
 std::shared_ptr<WrrRdrRoundtrip::state>
-WrrRdrRoundtrip::execute_wrr(std::shared_ptr<WrrRdrRoundtrip::state> s) {
+WrrRdrRoundtrip::execute_wrr(const std::shared_ptr<WrrRdrRoundtrip::state> &s) {
   return std::make_shared<WrrRdrRoundtrip::state>(
       state{s->acc, update_nth<unsigned int>(s->sel_rom, s->acc, s->rom_ports),
             s->sel_rom});
 }
 
 std::shared_ptr<WrrRdrRoundtrip::state>
-WrrRdrRoundtrip::execute_rdr(std::shared_ptr<WrrRdrRoundtrip::state> s) {
+WrrRdrRoundtrip::execute_rdr(const std::shared_ptr<WrrRdrRoundtrip::state> &s) {
   return std::make_shared<WrrRdrRoundtrip::state>(
       state{s->rom_ports->nth(s->sel_rom, 0u), s->rom_ports, s->sel_rom});
 }

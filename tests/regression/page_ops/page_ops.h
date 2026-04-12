@@ -152,7 +152,6 @@ struct PageOps {
     } else {
       unsigned int n_ = n - 1;
       if (l.use_count() == 1 && l->v().index() == 0) {
-        auto &_rf = std::get<0>(l->v_mut());
         return l;
       } else {
         return std::visit(
@@ -200,21 +199,15 @@ struct PageOps {
       pc_inc2(std::make_shared<state>(state{max_addr}));
   static inline const unsigned int test_disassemble_edge =
       []() -> unsigned int {
-    if (disassemble(
-            List<unsigned int>::cons(
-                0u, List<unsigned int>::cons(
-                        7u, List<unsigned int>::cons(
-                                9u, List<unsigned int>::cons(
-                                        11u, List<unsigned int>::nil())))),
-            0u)
-            .has_value()) {
-      std::pair<std::shared_ptr<instruction>, unsigned int> p = *disassemble(
-          List<unsigned int>::cons(
-              0u, List<unsigned int>::cons(
-                      7u, List<unsigned int>::cons(
-                              9u, List<unsigned int>::cons(
-                                      11u, List<unsigned int>::nil())))),
-          0u);
+    auto _cs = disassemble(
+        List<unsigned int>::cons(
+            0u, List<unsigned int>::cons(
+                    7u, List<unsigned int>::cons(
+                            9u, List<unsigned int>::cons(
+                                    11u, List<unsigned int>::nil())))),
+        0u);
+    if (_cs.has_value()) {
+      std::pair<std::shared_ptr<instruction>, unsigned int> p = *_cs;
       std::shared_ptr<instruction> _x = p.first;
       unsigned int next = p.second;
       return next;

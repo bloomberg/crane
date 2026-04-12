@@ -157,7 +157,7 @@ public:
   }
 
   std::shared_ptr<Stream<t_A>>
-  interleave(std::shared_ptr<Stream<t_A>> sb) const {
+  interleave(const std::shared_ptr<Stream<t_A>> &sb) const {
     return Stream<t_A>::lazy_([=, this]() -> std::shared_ptr<Stream<t_A>> {
       return std::visit(Overloaded{[&](const typename Stream<t_A>::Scons _args)
                                        -> std::shared_ptr<Stream<t_A>> {

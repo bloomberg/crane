@@ -81,7 +81,7 @@ struct RegionPatchWrite {
   static std::shared_ptr<List<unsigned int>>
   update_region(const std::shared_ptr<List<unsigned int>> &rom,
                 const unsigned int base,
-                std::shared_ptr<List<unsigned int>> bytes);
+                const std::shared_ptr<List<unsigned int>> &bytes);
   static inline const unsigned int t =
       update_region(
           List<unsigned int>::cons(

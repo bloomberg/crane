@@ -255,8 +255,9 @@ struct LoopifyGenerators {
             _continue = false;
           }
         } else {
-          unsigned int val = f(_loop_seed).first;
-          unsigned int next_seed = f(_loop_seed).second;
+          auto _cs = f(_loop_seed);
+          unsigned int val = _cs.first;
+          unsigned int next_seed = _cs.second;
           {
             auto _cell = List<unsigned int>::cons(val, nullptr);
             if (_last) {

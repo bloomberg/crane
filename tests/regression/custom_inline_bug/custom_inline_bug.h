@@ -64,11 +64,11 @@ struct CustomInlineBug {
   };
 
   __attribute__((pure)) static std::optional<unsigned int>
-  bug_some_proj(std::shared_ptr<State> s);
+  bug_some_proj(const std::shared_ptr<State> &s);
   __attribute__((pure)) static std::pair<std::shared_ptr<State>, unsigned int>
   bug_pair_proj(std::shared_ptr<State> s);
   __attribute__((pure)) static std::optional<std::optional<unsigned int>>
-  bug_nested_option(std::shared_ptr<State> s);
+  bug_nested_option(const std::shared_ptr<State> &s);
   __attribute__((pure)) static std::optional<
       std::pair<std::shared_ptr<State>, unsigned int>>
   bug_option_pair(std::shared_ptr<State> s);
@@ -92,7 +92,7 @@ struct CustomInlineBug {
       std::pair<std::shared_ptr<State>, unsigned int>, unsigned int>
   pair_multi_proj(std::shared_ptr<State> s);
   __attribute__((pure)) static std::pair<std::shared_ptr<State>, unsigned int>
-  pair_chain(std::shared_ptr<State> s1);
+  pair_chain(const std::shared_ptr<State> &s1);
   __attribute__((pure)) static std::pair<
       std::pair<std::shared_ptr<State>, std::shared_ptr<State>>,
       std::pair<unsigned int, unsigned int>>

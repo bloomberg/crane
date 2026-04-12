@@ -775,8 +775,9 @@ LoopifyLists::windows_aux(
 
 std::shared_ptr<
     LoopifyLists::list<std::shared_ptr<LoopifyLists::list<unsigned int>>>>
-LoopifyLists::windows(const unsigned int n,
-                      std::shared_ptr<LoopifyLists::list<unsigned int>> l) {
+LoopifyLists::windows(
+    const unsigned int n,
+    const std::shared_ptr<LoopifyLists::list<unsigned int>> &l) {
   return windows_aux((len_list(l) + 1), n, l);
 }
 
@@ -1113,9 +1114,9 @@ __attribute__((pure)) unsigned int LoopifyLists::sum_list_lengths(
 }
 
 std::shared_ptr<LoopifyLists::list<unsigned int>> LoopifyLists::flatten_nested(
-    std::shared_ptr<
+    const std::shared_ptr<
         LoopifyLists::list<std::shared_ptr<LoopifyLists::list<unsigned int>>>>
-        l) {
+        &l) {
   return flatten_nested_fuel((sum_list_lengths(l) + 1), l);
 }
 
@@ -1556,7 +1557,8 @@ LoopifyLists::group_fuel(
 
 std::shared_ptr<
     LoopifyLists::list<std::shared_ptr<LoopifyLists::list<unsigned int>>>>
-LoopifyLists::group(std::shared_ptr<LoopifyLists::list<unsigned int>> l) {
+LoopifyLists::group(
+    const std::shared_ptr<LoopifyLists::list<unsigned int>> &l) {
   return group_fuel((len_list(l) + 1), l);
 }
 
@@ -1989,7 +1991,6 @@ LoopifyLists::drop(const unsigned int n,
   bool _continue = true;
   while (_continue) {
     if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-      auto &_rf = std::get<0>(_loop_l->v_mut());
       {
         _result = _loop_l;
         _continue = false;
@@ -2267,7 +2268,6 @@ LoopifyLists::rotate_left_fuel(
         }
       } else {
         if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-          auto &_rf = std::get<0>(_loop_l->v_mut());
           {
             _result = _loop_l;
             _continue = false;

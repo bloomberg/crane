@@ -271,8 +271,8 @@ struct RecordErasedProofFieldsCase {
   __attribute__((pure)) static unsigned int
   bucket_code_of(const std::shared_ptr<ErasedProofRecord> &r);
   static std::shared_ptr<List<unsigned int>>
-  trace_codes_of(std::shared_ptr<PrimaryRecord> primary,
-                 std::shared_ptr<ErasedProofRecord> erased);
+  trace_codes_of(const std::shared_ptr<PrimaryRecord> &primary,
+                 const std::shared_ptr<ErasedProofRecord> &erased);
   __attribute__((pure)) static unsigned int
   trace_checksum_of(const std::shared_ptr<PrimaryRecord> &primary,
                     const std::shared_ptr<ErasedProofRecord> &erased);

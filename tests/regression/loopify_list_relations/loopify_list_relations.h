@@ -108,7 +108,7 @@ struct LoopifyListRelations {
   is_infix_of(const std::shared_ptr<List<unsigned int>> &_x0,
               const std::shared_ptr<List<unsigned int>> &_x1);
   static std::shared_ptr<List<unsigned int>>
-  find_sublists_aux(std::shared_ptr<List<unsigned int>> needle,
+  find_sublists_aux(const std::shared_ptr<List<unsigned int>> &needle,
                     const std::shared_ptr<List<unsigned int>> &haystack,
                     const unsigned int idx);
   static std::shared_ptr<List<unsigned int>>
@@ -142,7 +142,7 @@ struct LoopifyListRelations {
          std::shared_ptr<List<unsigned int>> l2);
   static std::shared_ptr<List<unsigned int>>
   intersection(const std::shared_ptr<List<unsigned int>> &l1,
-               std::shared_ptr<List<unsigned int>> l2);
+               const std::shared_ptr<List<unsigned int>> &l2);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_RELATIONS

@@ -23,23 +23,20 @@ __attribute__((pure)) unsigned int PreservesAllPairs::get_reg_pair(
   return ((get_reg(s, base) * 16u) + get_reg(s, (base + 1u)));
 }
 
-std::shared_ptr<PreservesAllPairs::state>
-PreservesAllPairs::execute_add(std::shared_ptr<PreservesAllPairs::state> s,
-                               const unsigned int r) {
+std::shared_ptr<PreservesAllPairs::state> PreservesAllPairs::execute_add(
+    const std::shared_ptr<PreservesAllPairs::state> &s, const unsigned int r) {
   return std::make_shared<PreservesAllPairs::state>(
       state{s->regs, nibble_of_nat((s->acc + get_reg(s, r)))});
 }
 
-std::shared_ptr<PreservesAllPairs::state>
-PreservesAllPairs::execute_ld(std::shared_ptr<PreservesAllPairs::state> s,
-                              const unsigned int r) {
+std::shared_ptr<PreservesAllPairs::state> PreservesAllPairs::execute_ld(
+    const std::shared_ptr<PreservesAllPairs::state> &s, const unsigned int r) {
   return std::make_shared<PreservesAllPairs::state>(
       state{s->regs, get_reg(s, r)});
 }
 
-std::shared_ptr<PreservesAllPairs::state>
-PreservesAllPairs::execute_sub(std::shared_ptr<PreservesAllPairs::state> s,
-                               const unsigned int r) {
+std::shared_ptr<PreservesAllPairs::state> PreservesAllPairs::execute_sub(
+    const std::shared_ptr<PreservesAllPairs::state> &s, const unsigned int r) {
   return std::make_shared<PreservesAllPairs::state>(state{
       s->regs, nibble_of_nat(((((s->acc + 16u) - get_reg(s, r)) > (s->acc + 16u)
                                    ? 0

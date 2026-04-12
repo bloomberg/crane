@@ -21,7 +21,7 @@ StepFetchDecodeExec::decode(const unsigned int b1, const unsigned int b2) {
 }
 
 std::shared_ptr<StepFetchDecodeExec::state> StepFetchDecodeExec::execute(
-    std::shared_ptr<StepFetchDecodeExec::state> s,
+    const std::shared_ptr<StepFetchDecodeExec::state> &s,
     const std::shared_ptr<StepFetchDecodeExec::instruction> &i) {
   return std::visit(
       Overloaded{

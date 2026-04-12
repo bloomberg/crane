@@ -135,7 +135,7 @@ LoopifySequences::run_sum_aux(const unsigned int acc,
 }
 
 std::shared_ptr<List<unsigned int>>
-LoopifySequences::run_sum(std::shared_ptr<List<unsigned int>> l) {
+LoopifySequences::run_sum(const std::shared_ptr<List<unsigned int>> &l) {
   return List<unsigned int>::cons(0u, run_sum_aux(0u, l));
 }
 
@@ -164,7 +164,6 @@ LoopifySequences::rotate_left_fuel(const unsigned int fuel,
         }
       } else {
         if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-          auto &_rf = std::get<0>(_loop_l->v_mut());
           {
             _result = _loop_l;
             _continue = false;
@@ -966,7 +965,6 @@ LoopifySequences::lis(std::shared_ptr<List<unsigned int>> l) {
   bool _continue = true;
   while (_continue) {
     if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-      auto &_rf = std::get<0>(_loop_l->v_mut());
       {
         if (_last) {
           std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =

@@ -19,7 +19,7 @@ __attribute__((pure)) unsigned int SrcUsesPairValue::get_reg_pair(
 }
 
 std::shared_ptr<SrcUsesPairValue::state>
-SrcUsesPairValue::execute_src(std::shared_ptr<SrcUsesPairValue::state> s,
+SrcUsesPairValue::execute_src(const std::shared_ptr<SrcUsesPairValue::state> &s,
                               const unsigned int r) {
   unsigned int pair_val = get_reg_pair(s, r);
   unsigned int hi = (16u ? pair_val / 16u : 0);

@@ -631,7 +631,6 @@ LoopifyTrees::tree_max(std::shared_ptr<LoopifyTrees::tree<unsigned int>> t1,
                       [&](const typename LoopifyTrees::tree<unsigned int>::Leaf)
                           -> void {
                         if (t2.use_count() == 1 && t2->v().index() == 0) {
-                          auto &_rf = std::get<0>(t2->v_mut());
                           _result = t2;
                         } else {
                           _result = std::visit(

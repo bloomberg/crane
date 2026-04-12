@@ -171,24 +171,24 @@ struct RamAccessor {
   get_main(const std::shared_ptr<ram_reg> &rg, const unsigned int i);
   __attribute__((pure)) static unsigned int
   get_stat(const std::shared_ptr<ram_reg> &rg, const unsigned int i);
-  static std::shared_ptr<ram_reg> upd_main_in_reg(std::shared_ptr<ram_reg> rg,
-                                                  const unsigned int i,
-                                                  const unsigned int v);
-  static std::shared_ptr<ram_reg> upd_stat_in_reg(std::shared_ptr<ram_reg> rg,
-                                                  const unsigned int i,
-                                                  const unsigned int v);
+  static std::shared_ptr<ram_reg>
+  upd_main_in_reg(const std::shared_ptr<ram_reg> &rg, const unsigned int i,
+                  const unsigned int v);
+  static std::shared_ptr<ram_reg>
+  upd_stat_in_reg(const std::shared_ptr<ram_reg> &rg, const unsigned int i,
+                  const unsigned int v);
   static std::shared_ptr<ram_reg>
   get_regRAM(const std::shared_ptr<ram_chip> &ch, const unsigned int r);
-  static std::shared_ptr<ram_chip> upd_reg_in_chip(std::shared_ptr<ram_chip> ch,
-                                                   const unsigned int r,
-                                                   std::shared_ptr<ram_reg> rg);
   static std::shared_ptr<ram_chip>
-  upd_port_in_chip(std::shared_ptr<ram_chip> ch, const unsigned int v);
+  upd_reg_in_chip(const std::shared_ptr<ram_chip> &ch, const unsigned int r,
+                  const std::shared_ptr<ram_reg> &rg);
+  static std::shared_ptr<ram_chip>
+  upd_port_in_chip(const std::shared_ptr<ram_chip> &ch, const unsigned int v);
   static std::shared_ptr<ram_chip> get_chip(const std::shared_ptr<ram_bank> &bk,
                                             const unsigned int c);
   static std::shared_ptr<ram_bank>
-  upd_chip_in_bank(std::shared_ptr<ram_bank> bk, const unsigned int c,
-                   std::shared_ptr<ram_chip> ch);
+  upd_chip_in_bank(const std::shared_ptr<ram_bank> &bk, const unsigned int c,
+                   const std::shared_ptr<ram_chip> &ch);
   static std::shared_ptr<ram_bank>
   get_bank_from_sys(const std::shared_ptr<List<std::shared_ptr<ram_bank>>> &sys,
                     const unsigned int b);

@@ -26,7 +26,8 @@ struct SingletonRecord {
   get_value2(const std::shared_ptr<wrapper> &w);
   __attribute__((pure)) static unsigned int
   unwrap(const std::shared_ptr<wrapper> &w);
-  static std::shared_ptr<wrapper> double_wrapped(std::shared_ptr<wrapper> w);
+  static std::shared_ptr<wrapper>
+  double_wrapped(const std::shared_ptr<wrapper> &w);
 
   template <typename t_A> struct box {
     t_A contents;

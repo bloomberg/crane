@@ -111,7 +111,8 @@ struct ConstructorBugs {
   bad_branch(const std::shared_ptr<source_state> &s1);
   __attribute__((pure)) static std::pair<bool, std::shared_ptr<packed_state>>
   bad_direct(const std::shared_ptr<source_state> &s1);
-  static std::shared_ptr<source_state> step2(std::shared_ptr<source_state> s);
+  static std::shared_ptr<source_state>
+  step2(const std::shared_ptr<source_state> &s);
   __attribute__((pure)) static std::pair<bool, std::shared_ptr<packed_state>>
   bad_complex_step(const std::shared_ptr<source_state> &s1);
   __attribute__((pure)) static std::pair<bool, std::shared_ptr<packed_state>>
@@ -195,7 +196,8 @@ struct ConstructorBugs {
   };
 
   static std::shared_ptr<Outer> nested_record(std::shared_ptr<Inner> i);
-  static std::shared_ptr<Outer> self_referential(std::shared_ptr<Outer> o);
+  static std::shared_ptr<Outer>
+  self_referential(const std::shared_ptr<Outer> &o);
   __attribute__((pure)) static std::pair<std::shared_ptr<Inner>, unsigned int>
   pair_with_proj(std::shared_ptr<Inner> i);
   __attribute__((
@@ -284,7 +286,7 @@ struct ConstructorBugs {
   __attribute__((
       pure)) static std::pair<std::pair<std::shared_ptr<Inner>, unsigned int>,
                               std::pair<std::shared_ptr<Inner>, unsigned int>>
-  chain_lets(std::shared_ptr<Inner> i1);
+  chain_lets(const std::shared_ptr<Inner> &i1);
 
   struct Container {
     std::shared_ptr<Outer> cont_outer;
@@ -312,7 +314,7 @@ struct ConstructorBugs {
   __attribute__((pure)) static std::pair<std::shared_ptr<Inner>, unsigned int>
   nested_extract(std::shared_ptr<Inner> i);
   __attribute__((pure)) static std::pair<std::shared_ptr<Outer>, unsigned int>
-  update_test(std::shared_ptr<Outer> o);
+  update_test(const std::shared_ptr<Outer> &o);
 
   struct State {
     unsigned int value_inline;
@@ -350,7 +352,7 @@ struct ConstructorBugs {
       unsigned int>
   inline_deep(std::shared_ptr<OuterInline> o);
   __attribute__((pure)) static std::pair<std::shared_ptr<State>, unsigned int>
-  inline_double_proj(std::shared_ptr<OuterInline> o);
+  inline_double_proj(const std::shared_ptr<OuterInline> &o);
   __attribute__((
       pure)) static std::pair<std::pair<std::shared_ptr<State>, unsigned int>,
                               std::pair<unsigned int, unsigned int>>

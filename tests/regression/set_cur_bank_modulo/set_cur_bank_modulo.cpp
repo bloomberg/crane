@@ -4,9 +4,8 @@
 #include <type_traits>
 #include <utility>
 
-std::shared_ptr<SetCurBankModulo::state>
-SetCurBankModulo::set_cur_bank(std::shared_ptr<SetCurBankModulo::state> s,
-                               const unsigned int b) {
+std::shared_ptr<SetCurBankModulo::state> SetCurBankModulo::set_cur_bank(
+    const std::shared_ptr<SetCurBankModulo::state> &s, const unsigned int b) {
   return std::make_shared<SetCurBankModulo::state>(
       state{(NBANKS ? b % NBANKS : b), s->acc});
 }

@@ -19,7 +19,7 @@ struct RecordUseAfterMove {
     bool enabled;
   };
 
-  static std::shared_ptr<box> clone_box(std::shared_ptr<box> b);
+  static std::shared_ptr<box> clone_box(const std::shared_ptr<box> &b);
   static std::shared_ptr<box> keep_box(std::shared_ptr<box> b);
   __attribute__((pure)) static unsigned int
   use_box(const std::shared_ptr<box> &b);

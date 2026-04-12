@@ -6,7 +6,7 @@
 #include <variant>
 
 std::shared_ptr<LoadProgram::state>
-LoadProgram::set_prom_params(std::shared_ptr<LoadProgram::state> s,
+LoadProgram::set_prom_params(const std::shared_ptr<LoadProgram::state> &s,
                              const unsigned int addr, const unsigned int data,
                              const bool enable) {
   return std::make_shared<LoadProgram::state>(
@@ -14,7 +14,7 @@ LoadProgram::set_prom_params(std::shared_ptr<LoadProgram::state> s,
 }
 
 std::shared_ptr<LoadProgram::state>
-LoadProgram::execute_wpm(std::shared_ptr<LoadProgram::state> s) {
+LoadProgram::execute_wpm(const std::shared_ptr<LoadProgram::state> &s) {
   std::shared_ptr<List<unsigned int>> new_rom;
   if (s->prom_enable) {
     new_rom = update_nth<unsigned int>(s->prom_addr, s->prom_data, s->rom);
@@ -43,16 +43,15 @@ LoadProgram::load_program(std::shared_ptr<LoadProgram::state> s,
       bytes->v());
 }
 
-std::shared_ptr<LoadProgram::state_extended>
-LoadProgram::set_prom_params_ext(std::shared_ptr<LoadProgram::state_extended> s,
-                                 const unsigned int addr,
-                                 const unsigned int data, const bool enable) {
+std::shared_ptr<LoadProgram::state_extended> LoadProgram::set_prom_params_ext(
+    const std::shared_ptr<LoadProgram::state_extended> &s,
+    const unsigned int addr, const unsigned int data, const bool enable) {
   return std::make_shared<LoadProgram::state_extended>(state_extended{
       s->regs_len, s->rom_ext, s->pc, s->stack_len, addr, data, enable});
 }
 
-std::shared_ptr<LoadProgram::state_extended>
-LoadProgram::execute_wpm_ext(std::shared_ptr<LoadProgram::state_extended> s) {
+std::shared_ptr<LoadProgram::state_extended> LoadProgram::execute_wpm_ext(
+    const std::shared_ptr<LoadProgram::state_extended> &s) {
   std::shared_ptr<List<unsigned int>> new_rom;
   if (s->prom_enable_ext) {
     new_rom = update_nth<unsigned int>(s->prom_addr_ext, s->prom_data_ext,
@@ -66,7 +65,7 @@ LoadProgram::execute_wpm_ext(std::shared_ptr<LoadProgram::state_extended> s) {
 }
 
 std::shared_ptr<LoadProgram::state_simple>
-LoadProgram::write_byte(std::shared_ptr<LoadProgram::state_simple> s,
+LoadProgram::write_byte(const std::shared_ptr<LoadProgram::state_simple> &s,
                         const unsigned int b) {
   return std::make_shared<LoadProgram::state_simple>(state_simple{
       update_nth<unsigned int>(s->ptr_, b, s->rom_), (s->ptr_ + 1)});

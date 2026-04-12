@@ -264,7 +264,7 @@ ComprehensivePatterns::sigma_reuse(
 __attribute__((pure))
 std::pair<unsigned int, std::pair<unsigned int, unsigned int>>
 ComprehensivePatterns::multi_proj_arg(
-    std::shared_ptr<ComprehensivePatterns::S> s) {
+    const std::shared_ptr<ComprehensivePatterns::S> &s) {
   return std::make_pair(s->s_a, std::make_pair(s->s_a, s->s_b));
 }
 
@@ -292,7 +292,7 @@ std::pair<std::pair<std::shared_ptr<ComprehensivePatterns::R2>,
                     std::shared_ptr<ComprehensivePatterns::R1>>,
           unsigned int>
 ComprehensivePatterns::multi_path(
-    std::shared_ptr<ComprehensivePatterns::R3> r3) {
+    const std::shared_ptr<ComprehensivePatterns::R3> &r3) {
   return std::make_pair(std::make_pair(r3->r3_r2, r3->r3_r2->r2_inner),
                         r3->r3_r2->r2_inner->r1_val);
 }
@@ -467,7 +467,7 @@ ComprehensivePatterns::nested_lets(
 __attribute__((pure))
 std::pair<std::shared_ptr<ComprehensivePatterns::R1>, unsigned int>
 ComprehensivePatterns::double_proj(
-    std::shared_ptr<ComprehensivePatterns::R3> r3) {
+    const std::shared_ptr<ComprehensivePatterns::R3> &r3) {
   return std::make_pair(r3->r3_r2->r2_inner, r3->r3_r2->r2_inner->r1_val);
 }
 
@@ -503,7 +503,7 @@ ComprehensivePatterns::all_levels(
 __attribute__((pure)) std::pair<std::shared_ptr<ComprehensivePatterns::R1>,
                                 std::shared_ptr<ComprehensivePatterns::R1>>
 ComprehensivePatterns::let_and_proj(
-    std::shared_ptr<ComprehensivePatterns::R2> r2) {
+    const std::shared_ptr<ComprehensivePatterns::R2> &r2) {
   std::shared_ptr<ComprehensivePatterns::R1> r1 = r2->r2_inner;
   return std::make_pair(r1, r2->r2_inner);
 }
@@ -696,7 +696,8 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::nested_match(
 }
 
 __attribute__((pure)) std::pair<unsigned int, unsigned int>
-ComprehensivePatterns::both_proj(std::shared_ptr<ComprehensivePatterns::R> r) {
+ComprehensivePatterns::both_proj(
+    const std::shared_ptr<ComprehensivePatterns::R> &r) {
   return std::make_pair(r->val, r->dat);
 }
 
@@ -711,7 +712,7 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::compose_proj(
 
 __attribute__((pure)) std::optional<unsigned int>
 ComprehensivePatterns::proj_through_option(
-    std::shared_ptr<ComprehensivePatterns::R> r) {
+    const std::shared_ptr<ComprehensivePatterns::R> &r) {
   return std::make_optional<unsigned int>(r->val);
 }
 
@@ -1102,7 +1103,7 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::return_complex(
 
 __attribute__((pure)) std::pair<unsigned int, unsigned int>
 ComprehensivePatterns::return_pair(
-    std::shared_ptr<ComprehensivePatterns::StateStmt> s) {
+    const std::shared_ptr<ComprehensivePatterns::StateStmt> &s) {
   return std::make_pair(s->stmt_value, s->stmt_data);
 }
 
@@ -1127,7 +1128,7 @@ __attribute__((pure)) unsigned int ComprehensivePatterns::multi_proj_expr(
 }
 
 std::shared_ptr<List<unsigned int>> ComprehensivePatterns::proj_in_list(
-    std::shared_ptr<ComprehensivePatterns::StateStmt> s) {
+    const std::shared_ptr<ComprehensivePatterns::StateStmt> &s) {
   return List<unsigned int>::cons(
       s->stmt_value,
       List<unsigned int>::cons(s->stmt_data, List<unsigned int>::nil()));

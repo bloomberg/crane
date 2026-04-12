@@ -591,7 +591,6 @@ struct LoopifyHofs {
       } else {
         unsigned int g = _loop_fuel - 1;
         if (_loop_l.use_count() == 1 && _loop_l->v().index() == 0) {
-          auto &_rf = std::get<0>(_loop_l->v_mut());
           {
             if (_last) {
               std::get<typename List<unsigned int>::Cons>(_last->v_mut()).d_a1 =
@@ -910,8 +909,9 @@ struct LoopifyHofs {
                 const typename List<unsigned int>::Cons _args = _f._s0;
                 F0 f = _f._s1;
                 std::shared_ptr<List<unsigned int>> rest = _result;
-                if (f(_args.d_a0).has_value()) {
-                  unsigned int y = *f(_args.d_a0);
+                auto _cs = f(_args.d_a0);
+                if (_cs.has_value()) {
+                  unsigned int y = *_cs;
                   _result = List<unsigned int>::cons(y, rest);
                 } else {
                   _result = std::move(rest);
@@ -1647,8 +1647,9 @@ struct LoopifyHofs {
                         },
                         [&](const typename List<unsigned int>::Cons _args)
                             -> void {
-                          unsigned int acc_ = f(acc, _args.d_a0).first;
-                          unsigned int y = f(acc, _args.d_a0).second;
+                          auto _cs = f(acc, _args.d_a0);
+                          unsigned int acc_ = _cs.first;
+                          unsigned int y = _cs.second;
                           _stack.push_back(_Call1{y});
                           _stack.push_back(_Enter{_args.d_a1, acc_});
                         }},

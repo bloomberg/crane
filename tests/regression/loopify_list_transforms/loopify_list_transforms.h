@@ -149,7 +149,7 @@ struct LoopifyListTransforms {
   drop(const unsigned int n, std::shared_ptr<List<unsigned int>> l);
   static std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
   chunks_of_fuel(const unsigned int fuel, const unsigned int n,
-                 std::shared_ptr<List<unsigned int>> l);
+                 const std::shared_ptr<List<unsigned int>> &l);
   static std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
   chunks_of(const unsigned int n, const std::shared_ptr<List<unsigned int>> &l);
   static std::shared_ptr<List<unsigned int>>

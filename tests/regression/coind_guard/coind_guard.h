@@ -131,9 +131,9 @@ struct CoindGuard {
   }
 
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
-  static std::shared_ptr<Stream<T3>> zipWith(F0 &&f,
-                                             std::shared_ptr<Stream<T1>> s1,
-                                             std::shared_ptr<Stream<T2>> s2) {
+  static std::shared_ptr<Stream<T3>>
+  zipWith(F0 &&f, const std::shared_ptr<Stream<T1>> &s1,
+          const std::shared_ptr<Stream<T2>> &s2) {
     return Stream<T3>::lazy_([=]() mutable -> std::shared_ptr<Stream<T3>> {
       return Stream<T3>::cons(f(hd<T1>(s1), hd<T2>(s2)),
                               zipWith<T1, T2, T3>(f, tl<T1>(s1), tl<T2>(s2)));
@@ -141,8 +141,8 @@ struct CoindGuard {
   }
 
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  static std::shared_ptr<Stream<T2>> smap(F0 &&f,
-                                          std::shared_ptr<Stream<T1>> s) {
+  static std::shared_ptr<Stream<T2>>
+  smap(F0 &&f, const std::shared_ptr<Stream<T1>> &s) {
     return Stream<T2>::lazy_([=]() mutable -> std::shared_ptr<Stream<T2>> {
       return Stream<T2>::cons(f(hd<T1>(s)), smap<T1, T2>(f, tl<T1>(s)));
     });
@@ -150,8 +150,9 @@ struct CoindGuard {
 
   template <typename T1, typename T2, MapsTo<std::pair<T1, T2>, T2> F0>
   static std::shared_ptr<Stream<T1>> unfold(F0 &&f, const T2 seed) {
-    T1 a = f(seed).first;
-    T2 s_ = f(seed).second;
+    auto _cs = f(seed);
+    T1 a = _cs.first;
+    T2 s_ = _cs.second;
     return Stream<T1>::lazy_([=]() mutable -> std::shared_ptr<Stream<T1>> {
       return Stream<T1>::cons(a, unfold<T1, T2>(f, s_));
     });
@@ -159,7 +160,7 @@ struct CoindGuard {
 
   template <typename T1>
   static std::shared_ptr<List<T1>> take(const unsigned int n,
-                                        std::shared_ptr<Stream<T1>> s) {
+                                        const std::shared_ptr<Stream<T1>> &s) {
     if (n <= 0) {
       return List<T1>::nil();
     } else {

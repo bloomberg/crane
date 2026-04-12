@@ -19,8 +19,8 @@ SingletonRecord::unwrap(const std::shared_ptr<SingletonRecord::wrapper> &w) {
   return w->value;
 }
 
-std::shared_ptr<SingletonRecord::wrapper>
-SingletonRecord::double_wrapped(std::shared_ptr<SingletonRecord::wrapper> w) {
+std::shared_ptr<SingletonRecord::wrapper> SingletonRecord::double_wrapped(
+    const std::shared_ptr<SingletonRecord::wrapper> &w) {
   return std::make_shared<SingletonRecord::wrapper>(wrapper{(2u * w->value)});
 }
 

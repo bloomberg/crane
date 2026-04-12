@@ -111,7 +111,7 @@ struct SuperfluousMoves {
   static std::shared_ptr<game_state> tick(std::shared_ptr<game_state> gs);
   /// Life loss used to create the branch-local gs3 value.
   static std::shared_ptr<game_state>
-  lose_one_life(std::shared_ptr<game_state> gs);
+  lose_one_life(const std::shared_ptr<game_state> &gs);
   /// Forces the same control-flow path as the original bug.
   static inline const Mode forced_mode = Mode::e_CHASE;
   /// Concrete state that makes the game-over branch fire after lose_one_life.

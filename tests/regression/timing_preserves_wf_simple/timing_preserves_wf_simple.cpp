@@ -27,7 +27,7 @@ TimingPreservesWfSimple::cycles(const TimingPreservesWfSimple::Instr i) {
 
 std::shared_ptr<TimingPreservesWfSimple::state>
 TimingPreservesWfSimple::execute(
-    std::shared_ptr<TimingPreservesWfSimple::state> s,
+    const std::shared_ptr<TimingPreservesWfSimple::state> &s,
     const TimingPreservesWfSimple::Instr i) {
   switch (i) {
   case Instr::e_JMS: {

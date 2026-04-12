@@ -56,7 +56,7 @@ PromOps::flagged_sum(const std::shared_ptr<PromOps::state2> &s) {
 }
 
 std::shared_ptr<PromOps::state3>
-PromOps::set_prom_params3(std::shared_ptr<PromOps::state3> s,
+PromOps::set_prom_params3(const std::shared_ptr<PromOps::state3> &s,
                           const unsigned int addr, const unsigned int data,
                           const bool enable) {
   return std::make_shared<PromOps::state3>(
@@ -66,7 +66,7 @@ PromOps::set_prom_params3(std::shared_ptr<PromOps::state3> s,
 }
 
 std::shared_ptr<PromOps::state5>
-PromOps::set_prom_params5(std::shared_ptr<PromOps::state5> s,
+PromOps::set_prom_params5(const std::shared_ptr<PromOps::state5> &s,
                           const unsigned int addr, const unsigned int data,
                           const bool enable) {
   return std::make_shared<PromOps::state5>(
@@ -74,14 +74,14 @@ PromOps::set_prom_params5(std::shared_ptr<PromOps::state5> s,
 }
 
 std::shared_ptr<PromOps::state6>
-PromOps::set_prom_params6(std::shared_ptr<PromOps::state6> s,
+PromOps::set_prom_params6(const std::shared_ptr<PromOps::state6> &s,
                           const unsigned int addr, const unsigned int data,
                           const bool enable) {
   return std::make_shared<PromOps::state6>(state6{s->rom6, addr, data, enable});
 }
 
 std::shared_ptr<PromOps::state7>
-PromOps::set_prom_params7(std::shared_ptr<PromOps::state7> s,
+PromOps::set_prom_params7(const std::shared_ptr<PromOps::state7> &s,
                           const unsigned int addr, const unsigned int data,
                           const bool enable) {
   return std::make_shared<PromOps::state7>(
@@ -89,7 +89,7 @@ PromOps::set_prom_params7(std::shared_ptr<PromOps::state7> s,
 }
 
 std::shared_ptr<PromOps::state8>
-PromOps::set_prom_params8(std::shared_ptr<PromOps::state8> s,
+PromOps::set_prom_params8(const std::shared_ptr<PromOps::state8> &s,
                           const unsigned int addr, const unsigned int data,
                           const bool enable) {
   return std::make_shared<PromOps::state8>(
@@ -97,14 +97,14 @@ PromOps::set_prom_params8(std::shared_ptr<PromOps::state8> s,
 }
 
 std::shared_ptr<PromOps::state9>
-PromOps::set_prom_params9(std::shared_ptr<PromOps::state9> s,
+PromOps::set_prom_params9(const std::shared_ptr<PromOps::state9> &s,
                           const unsigned int addr, const unsigned int data,
                           const bool enable) {
   return std::make_shared<PromOps::state9>(state9{s->rom9, addr, data, enable});
 }
 
 std::shared_ptr<PromOps::state10>
-PromOps::set_prom_params10(std::shared_ptr<PromOps::state10> s,
+PromOps::set_prom_params10(const std::shared_ptr<PromOps::state10> &s,
                            const unsigned int addr, const unsigned int data,
                            const bool enable) {
   return std::make_shared<PromOps::state10>(
@@ -113,7 +113,7 @@ PromOps::set_prom_params10(std::shared_ptr<PromOps::state10> s,
 }
 
 std::shared_ptr<PromOps::state10>
-PromOps::execute_wpm10(std::shared_ptr<PromOps::state10> s) {
+PromOps::execute_wpm10(const std::shared_ptr<PromOps::state10> &s) {
   std::shared_ptr<List<unsigned int>> new_rom;
   if (s->prom_enable10) {
     new_rom =

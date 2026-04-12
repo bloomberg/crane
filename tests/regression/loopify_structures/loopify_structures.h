@@ -777,8 +777,9 @@ struct LoopifyStructures {
                 _continue = false;
               },
               [&](const typename List<unsigned int>::Cons _args) {
-                if (f(_args.d_a0).has_value()) {
-                  unsigned int y = *f(_args.d_a0);
+                auto _cs = f(_args.d_a0);
+                if (_cs.has_value()) {
+                  unsigned int y = *_cs;
                   auto _cell = List<unsigned int>::cons(y, nullptr);
                   if (_last) {
                     std::get<typename List<unsigned int>::Cons>(_last->v_mut())

@@ -399,8 +399,9 @@ struct LoopifyFolds {
                         },
                         [&](const typename List<unsigned int>::Cons _args)
                             -> void {
-                          unsigned int acc_ = f(acc, _args.d_a0).first;
-                          unsigned int y = f(acc, _args.d_a0).second;
+                          auto _cs = f(acc, _args.d_a0);
+                          unsigned int acc_ = _cs.first;
+                          unsigned int y = _cs.second;
                           _stack.push_back(_Call1{y});
                           _stack.push_back(_Enter{_args.d_a1, acc_});
                         }},
@@ -480,8 +481,9 @@ struct LoopifyFolds {
         }
       } else {
         unsigned int fuel_ = _loop_fuel - 1;
-        unsigned int x = f(_loop_seed).first;
-        unsigned int next_seed = f(_loop_seed).second;
+        auto _cs = f(_loop_seed);
+        unsigned int x = _cs.first;
+        unsigned int next_seed = _cs.second;
         {
           auto _cell = List<unsigned int>::cons(x, nullptr);
           if (_last) {

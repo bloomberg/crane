@@ -120,7 +120,7 @@ struct WpmOps {
     bool prom_enable1;
   };
 
-  static std::shared_ptr<state1> execute_wpm1(std::shared_ptr<state1> s);
+  static std::shared_ptr<state1> execute_wpm1(const std::shared_ptr<state1> &s);
   static inline const std::shared_ptr<state1> sample1 =
       std::make_shared<state1>(state1{
           List<unsigned int>::cons(
@@ -144,7 +144,7 @@ struct WpmOps {
     bool prom_enable2;
   };
 
-  static std::shared_ptr<state2> execute_wpm2(std::shared_ptr<state2> s);
+  static std::shared_ptr<state2> execute_wpm2(const std::shared_ptr<state2> &s);
   static inline const std::shared_ptr<state2> sample2 =
       std::make_shared<state2>(state2{
           List<unsigned int>::cons(
@@ -167,7 +167,7 @@ struct WpmOps {
     bool prom_enable3;
   };
 
-  static std::shared_ptr<state3> execute_wpm3(std::shared_ptr<state3> s);
+  static std::shared_ptr<state3> execute_wpm3(const std::shared_ptr<state3> &s);
   static inline const std::shared_ptr<state3> sample3 =
       std::make_shared<state3>(state3{
           List<unsigned int>::cons(
@@ -189,7 +189,7 @@ struct WpmOps {
     bool prom_enable4;
   };
 
-  static std::shared_ptr<state4> execute_wpm4(std::shared_ptr<state4> s);
+  static std::shared_ptr<state4> execute_wpm4(const std::shared_ptr<state4> &s);
   static inline const unsigned int test_wpm_update_gate = []() {
     std::shared_ptr<state4> s = std::make_shared<state4>(state4{
         List<unsigned int>::cons(
@@ -208,7 +208,7 @@ struct WpmOps {
     bool prom_enable5;
   };
 
-  static std::shared_ptr<state5> execute_wpm5(std::shared_ptr<state5> s);
+  static std::shared_ptr<state5> execute_wpm5(const std::shared_ptr<state5> &s);
   static inline const std::shared_ptr<state5> sample5 =
       std::make_shared<state5>(state5{
           List<unsigned int>::cons(
@@ -227,7 +227,7 @@ struct WpmOps {
     bool prom_enable6;
   };
 
-  static std::shared_ptr<state6> execute_wpm6(std::shared_ptr<state6> s);
+  static std::shared_ptr<state6> execute_wpm6(const std::shared_ptr<state6> &s);
   static inline const std::shared_ptr<state6> sample6 =
       std::make_shared<state6>(state6{
           List<unsigned int>::cons(
