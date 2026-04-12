@@ -112,23 +112,23 @@ public:
   std::any eval(const Ty) const {
     return std::visit(
         Overloaded{
-            [](const typename Expr::ENat _args) -> std::any {
+            [](const typename Expr::ENat &_args) -> std::any {
               return _args.d_a0;
             },
-            [](const typename Expr::EBool _args) -> std::any {
+            [](const typename Expr::EBool &_args) -> std::any {
               return _args.d_a0;
             },
-            [](const typename Expr::EAdd _args) -> std::any {
+            [](const typename Expr::EAdd &_args) -> std::any {
               return (
                   std::any_cast<unsigned int>(_args.d_a0->eval(Ty::e_TNAT)) +
                   std::any_cast<unsigned int>(_args.d_a1->eval(Ty::e_TNAT)));
             },
-            [](const typename Expr::EEq _args) -> std::any {
+            [](const typename Expr::EEq &_args) -> std::any {
               return std::any_cast<unsigned int>(
                          _args.d_a0->eval(Ty::e_TNAT)) ==
                      std::any_cast<unsigned int>(_args.d_a1->eval(Ty::e_TNAT));
             },
-            [](const typename Expr::EIf _args) -> std::any {
+            [](const typename Expr::EIf &_args) -> std::any {
               if (std::any_cast<bool>(_args.d_a1->eval(Ty::e_TBOOL))) {
                 return _args.d_a2->eval(_args.d_t);
               } else {

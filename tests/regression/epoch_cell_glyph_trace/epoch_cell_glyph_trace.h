@@ -184,13 +184,13 @@ struct Pos {
   template <typename T1, MapsTo<T1, T1, T1> F0>
   static T1 iter_op(F0 &&op, const std::shared_ptr<Positive> &p, const T1 a) {
     return std::visit(
-        Overloaded{[&](const typename Positive::XI _args) -> T1 {
+        Overloaded{[&](const typename Positive::XI &_args) -> T1 {
                      return op(a, iter_op<T1>(op, _args.d_a0, op(a, a)));
                    },
-                   [&](const typename Positive::XO _args) -> T1 {
+                   [&](const typename Positive::XO &_args) -> T1 {
                      return iter_op<T1>(op, _args.d_a0, op(a, a));
                    },
-                   [&](const typename Positive::XH) -> T1 { return a; }},
+                   [&](const typename Positive::XH &) -> T1 { return a; }},
         p->v());
   }
 

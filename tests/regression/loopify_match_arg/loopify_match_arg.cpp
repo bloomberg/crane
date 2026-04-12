@@ -30,10 +30,10 @@ __attribute__((pure)) unsigned int LoopifyMatchArg::count_dots(
               const std::shared_ptr<List<LoopifyMatchArg::Cell>> xs = _f.xs;
               std::visit(
                   Overloaded{
-                      [&](const typename List<LoopifyMatchArg::Cell>::Nil)
+                      [&](const typename List<LoopifyMatchArg::Cell>::Nil &)
                           -> void { _result = 0u; },
                       [&](const typename List<LoopifyMatchArg::Cell>::Cons
-                              _args) -> void {
+                              &_args) -> void {
                         switch (_args.d_a0) {
                         case Cell::e_DOT: {
                           _stack.push_back(_Call1{1u});
@@ -77,10 +77,10 @@ __attribute__((pure)) unsigned int LoopifyMatchArg::my_length(
               const std::shared_ptr<List<LoopifyMatchArg::Cell>> xs = _f.xs;
               std::visit(
                   Overloaded{
-                      [&](const typename List<LoopifyMatchArg::Cell>::Nil)
+                      [&](const typename List<LoopifyMatchArg::Cell>::Nil &)
                           -> void { _result = 0u; },
                       [&](const typename List<LoopifyMatchArg::Cell>::Cons
-                              _args) -> void {
+                              &_args) -> void {
                         _stack.push_back(_Call1{1u});
                         _stack.push_back(_Enter{_args.d_a1});
                       }},

@@ -18,16 +18,16 @@ __attribute__((pure)) unsigned int
 DoubleInvokeMove::left_value(const std::shared_ptr<DoubleInvokeMove::tree> &t) {
   return std::visit(
       Overloaded{
-          [](const typename DoubleInvokeMove::tree::Leaf) -> unsigned int {
+          [](const typename DoubleInvokeMove::tree::Leaf &) -> unsigned int {
             return 0u;
           },
-          [](const typename DoubleInvokeMove::tree::Node _args)
+          [](const typename DoubleInvokeMove::tree::Node &_args)
               -> unsigned int {
             return std::visit(
                 Overloaded{
-                    [](const typename DoubleInvokeMove::tree::Leaf)
+                    [](const typename DoubleInvokeMove::tree::Leaf &)
                         -> unsigned int { return 0u; },
-                    [](const typename DoubleInvokeMove::tree::Node _args0)
+                    [](const typename DoubleInvokeMove::tree::Node &_args0)
                         -> unsigned int { return _args0.d_a1; }},
                 _args.d_a0->v());
           }},

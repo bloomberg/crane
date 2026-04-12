@@ -16,7 +16,7 @@ LoopifySearchOpt::lis(const std::shared_ptr<List<unsigned int>> &l) {
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil) {
+            [&](const typename List<unsigned int>::Nil &) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::nil();
@@ -25,10 +25,10 @@ LoopifySearchOpt::lis(const std::shared_ptr<List<unsigned int>> &l) {
               }
               _continue = false;
             },
-            [&](const typename List<unsigned int>::Cons _args) {
+            [&](const typename List<unsigned int>::Cons &_args) {
               std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil) {
+                      [&](const typename List<unsigned int>::Nil &) {
                         if (_last) {
                           std::get<typename List<unsigned int>::Cons>(
                               _last->v_mut())
@@ -40,7 +40,7 @@ LoopifySearchOpt::lis(const std::shared_ptr<List<unsigned int>> &l) {
                         }
                         _continue = false;
                       },
-                      [&](const typename List<unsigned int>::Cons _args0) {
+                      [&](const typename List<unsigned int>::Cons &_args0) {
                         if (_args.d_a0 < _args0.d_a0) {
                           auto _cell =
                               List<unsigned int>::cons(_args.d_a0, nullptr);
@@ -84,7 +84,7 @@ std::shared_ptr<List<unsigned int>> LoopifySearchOpt::longest_run_fuel(
       unsigned int fuel_ = _loop_fuel - 1;
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil) {
+              [&](const typename List<unsigned int>::Nil &) {
                 unsigned int len_curr = _loop_current->length();
                 unsigned int len_best = _loop_best->length();
                 if (len_best < len_curr) {
@@ -95,10 +95,10 @@ std::shared_ptr<List<unsigned int>> LoopifySearchOpt::longest_run_fuel(
                   _continue = false;
                 }
               },
-              [&](const typename List<unsigned int>::Cons _args) {
+              [&](const typename List<unsigned int>::Cons &_args) {
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil) {
+                        [&](const typename List<unsigned int>::Nil &) {
                           std::shared_ptr<List<unsigned int>> _next_l =
                               _args.d_a1;
                           std::shared_ptr<List<unsigned int>> _next_best =
@@ -112,7 +112,7 @@ std::shared_ptr<List<unsigned int>> LoopifySearchOpt::longest_run_fuel(
                           _loop_current = std::move(_next_current);
                           _loop_fuel = std::move(_next_fuel);
                         },
-                        [&](const typename List<unsigned int>::Cons _args0) {
+                        [&](const typename List<unsigned int>::Cons &_args0) {
                           if (_args.d_a0 == _args0.d_a0) {
                             std::shared_ptr<List<unsigned int>> _next_l =
                                 _args.d_a1;
@@ -207,10 +207,10 @@ __attribute__((pure)) unsigned int LoopifySearchOpt::knapsack_fuel(
                 std::visit(
                     Overloaded{
                         [&](const typename List<
-                            std::pair<unsigned int, unsigned int>>::Nil)
+                            std::pair<unsigned int, unsigned int>>::Nil &)
                             -> void { _result = 0u; },
                         [&](const typename List<
-                            std::pair<unsigned int, unsigned int>>::Cons _args)
+                            std::pair<unsigned int, unsigned int>>::Cons &_args)
                             -> void {
                           unsigned int weight = _args.d_a0.first;
                           unsigned int value = _args.d_a0.second;
@@ -286,10 +286,10 @@ __attribute__((pure)) bool LoopifySearchOpt::subset_sum_fuel(
                 unsigned int fuel_ = fuel - 1;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil) -> void {
+                        [&](const typename List<unsigned int>::Nil &) -> void {
                           _result = target == 0u;
                         },
-                        [&](const typename List<unsigned int>::Cons _args)
+                        [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
                           if (target < _args.d_a0) {
                             _stack.push_back(_Enter{_args.d_a1, target, fuel_});
@@ -344,9 +344,9 @@ LoopifySearchOpt::majority(const std::shared_ptr<List<unsigned int>> &l) {
                      const std::shared_ptr<List<unsigned int>> l = _f.l;
                      std::visit(
                          Overloaded{
-                             [&](const typename List<unsigned int>::Nil)
+                             [&](const typename List<unsigned int>::Nil &)
                                  -> void { _result = std::make_pair(0u, 0u); },
-                             [&](const typename List<unsigned int>::Cons _args)
+                             [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
                                _stack.push_back(_Call1{_args});
                                _stack.push_back(_Enter{_args.d_a1});
@@ -390,28 +390,28 @@ __attribute__((pure)) bool LoopifySearchOpt::binary_search_fuel(
       unsigned int fuel_ = _loop_fuel - 1;
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil) {
+              [&](const typename List<unsigned int>::Nil &) {
                 _result = false;
                 _continue = false;
               },
-              [&](const typename List<unsigned int>::Cons) {
+              [&](const typename List<unsigned int>::Cons &) {
                 unsigned int len = _loop_l->length();
                 if (len <= 1u) {
                   _result = std::visit(
                       Overloaded{
-                          [](const typename List<unsigned int>::Nil) -> bool {
+                          [](const typename List<unsigned int>::Nil &) -> bool {
                             return false;
                           },
-                          [&](const typename List<unsigned int>::Cons _args0)
+                          [&](const typename List<unsigned int>::Cons &_args0)
                               -> bool {
                             return std::visit(
                                 Overloaded{
-                                    [&](const typename List<unsigned int>::Nil)
-                                        -> bool {
+                                    [&](const typename List<unsigned int>::Nil
+                                            &) -> bool {
                                       return _args0.d_a0 == target;
                                     },
-                                    [](const typename List<unsigned int>::Cons)
-                                        -> bool { return false; }},
+                                    [](const typename List<unsigned int>::Cons
+                                           &) -> bool { return false; }},
                                 _args0.d_a1->v());
                           }},
                       _loop_l->v());
@@ -433,12 +433,12 @@ __attribute__((pure)) bool LoopifySearchOpt::binary_search_fuel(
                       if (_loop_n <= 0) {
                         std::visit(
                             Overloaded{
-                                [&](const typename List<unsigned int>::Nil) {
+                                [&](const typename List<unsigned int>::Nil &) {
                                   _result = 0u;
                                   _continue = false;
                                 },
                                 [&](const typename List<unsigned int>::Cons
-                                        _args1) {
+                                        &_args1) {
                                   _result = _args1.d_a0;
                                   _continue = false;
                                 }},
@@ -447,12 +447,12 @@ __attribute__((pure)) bool LoopifySearchOpt::binary_search_fuel(
                         unsigned int n_ = _loop_n - 1;
                         std::visit(
                             Overloaded{
-                                [&](const typename List<unsigned int>::Nil) {
+                                [&](const typename List<unsigned int>::Nil &) {
                                   _result = 0u;
                                   _continue = false;
                                 },
                                 [&](const typename List<unsigned int>::Cons
-                                        _args2) {
+                                        &_args2) {
                                   std::shared_ptr<List<unsigned int>> _next_xs =
                                       _args2.d_a1;
                                   unsigned int _next_n = n_;
@@ -500,11 +500,11 @@ __attribute__((pure)) bool LoopifySearchOpt::binary_search_fuel(
                                   std::visit(
                                       Overloaded{
                                           [&](const typename List<
-                                              unsigned int>::Nil) -> void {
+                                              unsigned int>::Nil &) -> void {
                                             _result = List<unsigned int>::nil();
                                           },
                                           [&](const typename List<
-                                              unsigned int>::Cons _args3)
+                                              unsigned int>::Cons &_args3)
                                               -> void {
                                             _stack.push_back(
                                                 _Call1{_args3.d_a0});
@@ -551,12 +551,13 @@ __attribute__((pure)) bool LoopifySearchOpt::binary_search_fuel(
                         } else {
                           std::visit(
                               Overloaded{
-                                  [&](const typename List<unsigned int>::Nil) {
+                                  [&](const typename List<unsigned int>::Nil
+                                          &) {
                                     _result = List<unsigned int>::nil();
                                     _continue = false;
                                   },
                                   [&](const typename List<unsigned int>::Cons
-                                          _args4) {
+                                          &_args4) {
                                     std::shared_ptr<List<unsigned int>>
                                         _next_xs = _args4.d_a1;
                                     unsigned int _next_n = n_;

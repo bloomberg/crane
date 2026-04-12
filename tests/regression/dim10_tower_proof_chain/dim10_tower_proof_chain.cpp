@@ -137,10 +137,12 @@ Dim10TowerProofChainCase::graded_goodwillie_layers_stabilize(
     return e;
   } else {
     return std::visit(
-        Overloaded{[](const typename SigT<unsigned int, std::any>::ExistT _args)
-                       -> std::shared_ptr<SigT<unsigned int, std::any>> {
-          return SigT<unsigned int, std::any>::existt(_args.d_x, std::any{});
-        }},
+        Overloaded{
+            [](const typename SigT<unsigned int, std::any>::ExistT &_args)
+                -> std::shared_ptr<SigT<unsigned int, std::any>> {
+              return SigT<unsigned int, std::any>::existt(_args.d_x,
+                                                          std::any{});
+            }},
         e->v());
   }
 }

@@ -69,7 +69,7 @@ std::shared_ptr<LoopifyTmc::list<unsigned int>> LoopifyTmc::prefix_sums(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename LoopifyTmc::list<unsigned int>::Nil) {
+            [&](const typename LoopifyTmc::list<unsigned int>::Nil &) {
               if (_last) {
                 std::get<typename list<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = list<unsigned int>::nil();
@@ -78,7 +78,7 @@ std::shared_ptr<LoopifyTmc::list<unsigned int>> LoopifyTmc::prefix_sums(
               }
               _continue = false;
             },
-            [&](const typename LoopifyTmc::list<unsigned int>::Cons _args) {
+            [&](const typename LoopifyTmc::list<unsigned int>::Cons &_args) {
               unsigned int s = (_loop_acc + _args.d_a0);
               auto _cell = list<unsigned int>::cons(s, nullptr);
               if (_last) {

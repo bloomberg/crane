@@ -104,7 +104,7 @@ struct UnitVoidEdge2 {
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
   static T3 pair_rect(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
     return std::visit(
-        Overloaded{[&](const typename pair<T1, T2>::Pair0 _args) -> T3 {
+        Overloaded{[&](const typename pair<T1, T2>::Pair0 &_args) -> T3 {
           return f(_args.d_a0, _args.d_a1);
         }},
         p->v());
@@ -113,7 +113,7 @@ struct UnitVoidEdge2 {
   template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
   static T3 pair_rec(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
     return std::visit(
-        Overloaded{[&](const typename pair<T1, T2>::Pair0 _args) -> T3 {
+        Overloaded{[&](const typename pair<T1, T2>::Pair0 &_args) -> T3 {
           return f(_args.d_a0, _args.d_a1);
         }},
         p->v());
@@ -125,7 +125,7 @@ struct UnitVoidEdge2 {
   template <typename T1, typename T2>
   static T1 get_fst(const std::shared_ptr<pair<T1, T2>> &p) {
     return std::visit(
-        Overloaded{[](const typename pair<T1, T2>::Pair0 _args) -> T1 {
+        Overloaded{[](const typename pair<T1, T2>::Pair0 &_args) -> T1 {
           return _args.d_a0;
         }},
         p->v());

@@ -59,8 +59,8 @@ public:
   template <typename T1, MapsTo<T1, T1, t_A> F0>
   T1 fold_left(F0 &&f, const T1 a0) const {
     return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil) -> T1 { return a0; },
-                   [&](const typename List<t_A>::Cons _args) -> T1 {
+        Overloaded{[&](const typename List<t_A>::Nil &) -> T1 { return a0; },
+                   [&](const typename List<t_A>::Cons &_args) -> T1 {
                      return _args.d_a1->template fold_left<T1>(
                          f, f(a0, _args.d_a0));
                    }},
@@ -70,9 +70,9 @@ public:
   template <typename T1, MapsTo<T1, t_A> F0>
   std::shared_ptr<List<T1>> map(F0 &&f) const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil)
+        Overloaded{[](const typename List<t_A>::Nil &)
                        -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
-                   [&](const typename List<t_A>::Cons _args)
+                   [&](const typename List<t_A>::Cons &_args)
                        -> std::shared_ptr<List<T1>> {
                      return List<T1>::cons(f(_args.d_a0),
                                            _args.d_a1->template map<T1>(f));

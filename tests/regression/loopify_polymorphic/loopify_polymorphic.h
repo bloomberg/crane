@@ -64,7 +64,7 @@ public:
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil) {
+              [&](const typename List<t_A>::Nil &) {
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
                 } else {
@@ -72,7 +72,7 @@ public:
                 }
                 _continue = false;
               },
-              [&](const typename List<t_A>::Cons _args) {
+              [&](const typename List<t_A>::Cons &_args) {
                 auto _cell = List<t_A>::cons(_args.d_a0, nullptr);
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =
@@ -114,10 +114,10 @@ struct LoopifyPolymorphic {
                 const std::shared_ptr<List<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<T1>::Nil) -> void {
+                        [&](const typename List<T1>::Nil &) -> void {
                           _result = 0u;
                         },
-                        [&](const typename List<T1>::Cons _args) -> void {
+                        [&](const typename List<T1>::Cons &_args) -> void {
                           _stack.push_back(_Call1{1u});
                           _stack.push_back(_Enter{_args.d_a1});
                         }},
@@ -155,10 +155,10 @@ struct LoopifyPolymorphic {
                 const std::shared_ptr<List<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<T1>::Nil) -> void {
+                        [&](const typename List<T1>::Nil &) -> void {
                           _result = List<T1>::nil();
                         },
-                        [&](const typename List<T1>::Cons _args) -> void {
+                        [&](const typename List<T1>::Cons &_args) -> void {
                           _stack.push_back(_Call1{
                               List<T1>::cons(_args.d_a0, List<T1>::nil())});
                           _stack.push_back(_Enter{_args.d_a1});
@@ -182,7 +182,7 @@ struct LoopifyPolymorphic {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<T1>::Nil) {
+              [&](const typename List<T1>::Nil &) {
                 if (_last) {
                   std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 =
                       std::move(l2);
@@ -191,7 +191,7 @@ struct LoopifyPolymorphic {
                 }
                 _continue = false;
               },
-              [&](const typename List<T1>::Cons _args) {
+              [&](const typename List<T1>::Cons &_args) {
                 auto _cell = List<T1>::cons(_args.d_a0, nullptr);
                 if (_last) {
                   std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 =
@@ -215,18 +215,18 @@ struct LoopifyPolymorphic {
     bool _continue = true;
     while (_continue) {
       std::visit(
-          Overloaded{[&](const typename List<T1>::Nil) {
+          Overloaded{[&](const typename List<T1>::Nil &) {
                        _result = std::optional<T1>();
                        _continue = false;
                      },
-                     [&](const typename List<T1>::Cons _args) {
+                     [&](const typename List<T1>::Cons &_args) {
                        std::visit(
-                           Overloaded{[&](const typename List<T1>::Nil) {
+                           Overloaded{[&](const typename List<T1>::Nil &) {
                                         _result =
                                             std::make_optional<T1>(_args.d_a0);
                                         _continue = false;
                                       },
-                                      [&](const typename List<T1>::Cons) {
+                                      [&](const typename List<T1>::Cons &) {
                                         _loop_l = _args.d_a1;
                                       }},
                            _args.d_a1->v());
@@ -259,7 +259,7 @@ struct LoopifyPolymorphic {
         unsigned int n_ = _loop_n - 1;
         std::visit(
             Overloaded{
-                [&](const typename List<T1>::Nil) {
+                [&](const typename List<T1>::Nil &) {
                   if (_last) {
                     std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 =
                         List<T1>::nil();
@@ -268,7 +268,7 @@ struct LoopifyPolymorphic {
                   }
                   _continue = false;
                 },
-                [&](const typename List<T1>::Cons _args) {
+                [&](const typename List<T1>::Cons &_args) {
                   auto _cell = List<T1>::cons(_args.d_a0, nullptr);
                   if (_last) {
                     std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 =
@@ -309,11 +309,11 @@ struct LoopifyPolymorphic {
             _continue = false;
           }
         } else {
-          std::visit(Overloaded{[&](const typename List<T1>::Nil) {
+          std::visit(Overloaded{[&](const typename List<T1>::Nil &) {
                                   _result = List<T1>::nil();
                                   _continue = false;
                                 },
-                                [&](const typename List<T1>::Cons _args) {
+                                [&](const typename List<T1>::Cons &_args) {
                                   std::shared_ptr<List<T1>> _next_l =
                                       _args.d_a1;
                                   unsigned int _next_n = n_;
@@ -336,11 +336,11 @@ struct LoopifyPolymorphic {
     bool _continue = true;
     while (_continue) {
       std::visit(
-          Overloaded{[&](const typename List<T1>::Nil) {
+          Overloaded{[&](const typename List<T1>::Nil &) {
                        _result = std::optional<T1>();
                        _continue = false;
                      },
-                     [&](const typename List<T1>::Cons _args) {
+                     [&](const typename List<T1>::Cons &_args) {
                        if (_loop_n == 0u) {
                          _result = std::make_optional<T1>(_args.d_a0);
                          _continue = false;
@@ -367,7 +367,7 @@ struct LoopifyPolymorphic {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<T1>::Nil) {
+              [&](const typename List<T1>::Nil &) {
                 if (_last) {
                   std::get<typename List<T1>::Cons>(_last->v_mut()).d_a1 =
                       List<T1>::nil();
@@ -376,7 +376,7 @@ struct LoopifyPolymorphic {
                 }
                 _continue = false;
               },
-              [&](const typename List<T1>::Cons _args) {
+              [&](const typename List<T1>::Cons &_args) {
                 if (p(_args.d_a0)) {
                   auto _cell = List<T1>::cons(_args.d_a0, nullptr);
                   if (_last) {
@@ -406,7 +406,7 @@ struct LoopifyPolymorphic {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<T1>::Nil) {
+              [&](const typename List<T1>::Nil &) {
                 if (_last) {
                   std::get<typename List<T2>::Cons>(_last->v_mut()).d_a1 =
                       List<T2>::nil();
@@ -415,7 +415,7 @@ struct LoopifyPolymorphic {
                 }
                 _continue = false;
               },
-              [&](const typename List<T1>::Cons _args) {
+              [&](const typename List<T1>::Cons &_args) {
                 auto _cell = List<T2>::cons(f(_args.d_a0), nullptr);
                 if (_last) {
                   std::get<typename List<T2>::Cons>(_last->v_mut()).d_a1 =
@@ -443,7 +443,7 @@ struct LoopifyPolymorphic {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<T1>::Nil) {
+              [&](const typename List<T1>::Nil &) {
                 if (_last) {
                   std::get<typename List<std::pair<T1, T2>>::Cons>(
                       _last->v_mut())
@@ -453,10 +453,10 @@ struct LoopifyPolymorphic {
                 }
                 _continue = false;
               },
-              [&](const typename List<T1>::Cons _args) {
+              [&](const typename List<T1>::Cons &_args) {
                 std::visit(
                     Overloaded{
-                        [&](const typename List<T2>::Nil) {
+                        [&](const typename List<T2>::Nil &) {
                           if (_last) {
                             std::get<typename List<std::pair<T1, T2>>::Cons>(
                                 _last->v_mut())
@@ -466,7 +466,7 @@ struct LoopifyPolymorphic {
                           }
                           _continue = false;
                         },
-                        [&](const typename List<T2>::Cons _args0) {
+                        [&](const typename List<T2>::Cons &_args0) {
                           auto _cell = List<std::pair<T1, T2>>::cons(
                               std::make_pair(_args.d_a0, _args0.d_a0), nullptr);
                           if (_last) {
@@ -515,12 +515,12 @@ struct LoopifyPolymorphic {
                 const std::shared_ptr<List<std::pair<T1, T2>>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<std::pair<T1, T2>>::Nil)
+                        [&](const typename List<std::pair<T1, T2>>::Nil &)
                             -> void {
                           _result =
                               std::make_pair(List<T1>::nil(), List<T2>::nil());
                         },
-                        [&](const typename List<std::pair<T1, T2>>::Cons _args)
+                        [&](const typename List<std::pair<T1, T2>>::Cons &_args)
                             -> void {
                           T1 a = _args.d_a0.first;
                           T2 b = _args.d_a0.second;
@@ -568,11 +568,11 @@ struct LoopifyPolymorphic {
                 const std::shared_ptr<List<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<T1>::Nil) -> void {
+                        [&](const typename List<T1>::Nil &) -> void {
                           _result =
                               std::make_pair(List<T1>::nil(), List<T1>::nil());
                         },
-                        [&](const typename List<T1>::Cons _args) -> void {
+                        [&](const typename List<T1>::Cons &_args) -> void {
                           _stack.push_back(_Call1{p, _args});
                           _stack.push_back(_Enter{_args.d_a1});
                         }},
@@ -603,11 +603,11 @@ struct LoopifyPolymorphic {
     std::shared_ptr<List<T1>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename List<T1>::Nil) {
+      std::visit(Overloaded{[&](const typename List<T1>::Nil &) {
                               _result = false;
                               _continue = false;
                             },
-                            [&](const typename List<T1>::Cons _args) {
+                            [&](const typename List<T1>::Cons &_args) {
                               if (eq(x, _args.d_a0)) {
                                 _result = true;
                                 _continue = false;

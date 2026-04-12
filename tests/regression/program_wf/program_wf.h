@@ -108,13 +108,13 @@ struct ProgramWf {
   static T1 instruction_rect(F0 &&f, F1 &&f0, const T1 f1,
                              const std::shared_ptr<instruction> &i) {
     return std::visit(
-        Overloaded{[&](const typename instruction::JUN _args) -> T1 {
+        Overloaded{[&](const typename instruction::JUN &_args) -> T1 {
                      return f(_args.d_a0);
                    },
-                   [&](const typename instruction::JMS _args) -> T1 {
+                   [&](const typename instruction::JMS &_args) -> T1 {
                      return f0(_args.d_a0);
                    },
-                   [&](const typename instruction::NOP) -> T1 { return f1; }},
+                   [&](const typename instruction::NOP &) -> T1 { return f1; }},
         i->v());
   }
 
@@ -123,13 +123,13 @@ struct ProgramWf {
   static T1 instruction_rec(F0 &&f, F1 &&f0, const T1 f1,
                             const std::shared_ptr<instruction> &i) {
     return std::visit(
-        Overloaded{[&](const typename instruction::JUN _args) -> T1 {
+        Overloaded{[&](const typename instruction::JUN &_args) -> T1 {
                      return f(_args.d_a0);
                    },
-                   [&](const typename instruction::JMS _args) -> T1 {
+                   [&](const typename instruction::JMS &_args) -> T1 {
                      return f0(_args.d_a0);
                    },
-                   [&](const typename instruction::NOP) -> T1 { return f1; }},
+                   [&](const typename instruction::NOP &) -> T1 { return f1; }},
         i->v());
   }
 

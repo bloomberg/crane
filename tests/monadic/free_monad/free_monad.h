@@ -89,15 +89,15 @@ struct FreeMonad {
                     const std::shared_ptr<IO> &i) {
     return std::visit(
         Overloaded{
-            [&](const typename IO::Pure _args) -> T1 { return f(_args.d_a); },
-            [&](const typename IO::Bind _args) -> T1 {
+            [&](const typename IO::Pure &_args) -> T1 { return f(_args.d_a); },
+            [&](const typename IO::Bind &_args) -> T1 {
               return f0(_args.d_a, IO_rect<T1>(f, f0, f1, f2, _args.d_a),
                         _args.d_b, [=](std::any a) mutable {
                           return IO_rect<T1>(f, f0, f1, f2, _args.d_b(a));
                         });
             },
-            [&](const typename IO::Get_line) -> T1 { return f1; },
-            [&](const typename IO::Print _args) -> T1 {
+            [&](const typename IO::Get_line &) -> T1 { return f1; },
+            [&](const typename IO::Print &_args) -> T1 {
               return f2(_args.d_a0);
             }},
         i->v());
@@ -108,15 +108,15 @@ struct FreeMonad {
                    const std::shared_ptr<IO> &i) {
     return std::visit(
         Overloaded{
-            [&](const typename IO::Pure _args) -> T1 { return f(_args.d_a); },
-            [&](const typename IO::Bind _args) -> T1 {
+            [&](const typename IO::Pure &_args) -> T1 { return f(_args.d_a); },
+            [&](const typename IO::Bind &_args) -> T1 {
               return f0(_args.d_a, IO_rec<T1>(f, f0, f1, f2, _args.d_a),
                         _args.d_b, [=](std::any a) mutable {
                           return IO_rec<T1>(f, f0, f1, f2, _args.d_b(a));
                         });
             },
-            [&](const typename IO::Get_line) -> T1 { return f1; },
-            [&](const typename IO::Print _args) -> T1 {
+            [&](const typename IO::Get_line &) -> T1 { return f1; },
+            [&](const typename IO::Print &_args) -> T1 {
               return f2(_args.d_a0);
             }},
         i->v());

@@ -71,8 +71,8 @@ struct CpsEscape {
     __attribute__((pure)) unsigned int tree_sum() const {
       return std::visit(
           Overloaded{
-              [](const typename tree::Leaf) -> unsigned int { return 0u; },
-              [](const typename tree::Node _args) -> unsigned int {
+              [](const typename tree::Leaf &) -> unsigned int { return 0u; },
+              [](const typename tree::Node &_args) -> unsigned int {
                 return ((_args.d_a0->tree_sum() + _args.d_a1) +
                         _args.d_a2->tree_sum());
               }},
@@ -85,8 +85,8 @@ struct CpsEscape {
                              F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree::Leaf) -> T1 { return f; },
-                   [&](const typename tree::Node _args) -> T1 {
+        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
+                   [&](const typename tree::Node &_args) -> T1 {
                      return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
                                _args.d_a1, _args.d_a2,
                                tree_rect<T1>(f, f0, _args.d_a2));
@@ -99,8 +99,8 @@ struct CpsEscape {
                              F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree::Leaf) -> T1 { return f; },
-                   [&](const typename tree::Node _args) -> T1 {
+        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
+                   [&](const typename tree::Node &_args) -> T1 {
                      return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
                                _args.d_a1, _args.d_a2,
                                tree_rec<T1>(f, f0, _args.d_a2));
@@ -138,7 +138,7 @@ struct CpsEscape {
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 box_rec(F0 &&f) const {
-      return std::visit(Overloaded{[&](const typename box::Box0 _args) -> T1 {
+      return std::visit(Overloaded{[&](const typename box::Box0 &_args) -> T1 {
                           return f(_args.d_a0);
                         }},
                         this->v());
@@ -147,7 +147,7 @@ struct CpsEscape {
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 box_rect(F0 &&f) const {
-      return std::visit(Overloaded{[&](const typename box::Box0 _args) -> T1 {
+      return std::visit(Overloaded{[&](const typename box::Box0 &_args) -> T1 {
                           return f(_args.d_a0);
                         }},
                         this->v());
@@ -179,7 +179,7 @@ struct CpsEscape {
       };
       std::shared_ptr<box> b = store_in_box(adder);
       return std::visit(
-          Overloaded{[](const typename box::Box0 _args) -> unsigned int {
+          Overloaded{[](const typename box::Box0 &_args) -> unsigned int {
             return _args.d_a0(5u);
           }},
           b->v());
@@ -197,7 +197,7 @@ struct CpsEscape {
             return t->make_adder(_x0);
           });
       return std::visit(
-          Overloaded{[](const typename box::Box0 _args) -> unsigned int {
+          Overloaded{[](const typename box::Box0 &_args) -> unsigned int {
             return _args.d_a0(5u);
           }},
           b->v());
@@ -220,10 +220,10 @@ struct CpsEscape {
             return t2->make_adder(_x0);
           });
       return std::visit(
-          Overloaded{[&](const typename box::Box0 _args) -> unsigned int {
+          Overloaded{[&](const typename box::Box0 &_args) -> unsigned int {
             return std::visit(
                 Overloaded{
-                    [&](const typename box::Box0 _args0) -> unsigned int {
+                    [&](const typename box::Box0 &_args0) -> unsigned int {
                       return (_args.d_a0(0u) + _args0.d_a0(0u));
                     }},
                 b2->v());

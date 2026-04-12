@@ -45,7 +45,7 @@ struct BenchLetIn {
 
     template <typename T1, MapsTo<T1, t_A, t_B> F0> T1 pair_rec(F0 &&f) const {
       return std::visit(
-          Overloaded{[&](const typename pair<t_A, t_B>::Pair0 _args) -> T1 {
+          Overloaded{[&](const typename pair<t_A, t_B>::Pair0 &_args) -> T1 {
             return f(_args.d_a0, _args.d_a1);
           }},
           this->v());
@@ -53,7 +53,7 @@ struct BenchLetIn {
 
     template <typename T1, MapsTo<T1, t_A, t_B> F0> T1 pair_rect(F0 &&f) const {
       return std::visit(
-          Overloaded{[&](const typename pair<t_A, t_B>::Pair0 _args) -> T1 {
+          Overloaded{[&](const typename pair<t_A, t_B>::Pair0 &_args) -> T1 {
             return f(_args.d_a0, _args.d_a1);
           }},
           this->v());
@@ -104,7 +104,7 @@ struct BenchLetIn {
     T1 triple_rec(F0 &&f) const {
       return std::visit(
           Overloaded{
-              [&](const typename triple<t_A, t_B, t_C>::Triple0 _args) -> T1 {
+              [&](const typename triple<t_A, t_B, t_C>::Triple0 &_args) -> T1 {
                 return f(_args.d_a0, _args.d_a1, _args.d_a2);
               }},
           this->v());
@@ -114,7 +114,7 @@ struct BenchLetIn {
     T1 triple_rect(F0 &&f) const {
       return std::visit(
           Overloaded{
-              [&](const typename triple<t_A, t_B, t_C>::Triple0 _args) -> T1 {
+              [&](const typename triple<t_A, t_B, t_C>::Triple0 &_args) -> T1 {
                 return f(_args.d_a0, _args.d_a1, _args.d_a2);
               }},
           this->v());

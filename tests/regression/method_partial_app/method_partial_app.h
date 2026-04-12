@@ -70,8 +70,8 @@ struct MethodPartialApp {
     __attribute__((pure)) unsigned int tree_sum() const {
       return std::visit(
           Overloaded{
-              [](const typename tree::Leaf) -> unsigned int { return 0u; },
-              [](const typename tree::Node _args) -> unsigned int {
+              [](const typename tree::Leaf &) -> unsigned int { return 0u; },
+              [](const typename tree::Node &_args) -> unsigned int {
                 return ((_args.d_a0->tree_sum() + _args.d_a1) +
                         _args.d_a2->tree_sum());
               }},
@@ -84,8 +84,8 @@ struct MethodPartialApp {
                              F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree::Leaf) -> T1 { return f; },
-                   [&](const typename tree::Node _args) -> T1 {
+        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
+                   [&](const typename tree::Node &_args) -> T1 {
                      return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
                                _args.d_a1, _args.d_a2,
                                tree_rect<T1>(f, f0, _args.d_a2));
@@ -98,8 +98,8 @@ struct MethodPartialApp {
                              F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree::Leaf) -> T1 { return f; },
-                   [&](const typename tree::Node _args) -> T1 {
+        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
+                   [&](const typename tree::Node &_args) -> T1 {
                      return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
                                _args.d_a1, _args.d_a2,
                                tree_rec<T1>(f, f0, _args.d_a2));
@@ -152,7 +152,7 @@ struct MethodPartialApp {
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 box_rec(F0 &&f) const {
-      return std::visit(Overloaded{[&](const typename box::Box0 _args) -> T1 {
+      return std::visit(Overloaded{[&](const typename box::Box0 &_args) -> T1 {
                           return f(_args.d_a0);
                         }},
                         this->v());
@@ -161,7 +161,7 @@ struct MethodPartialApp {
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 box_rect(F0 &&f) const {
-      return std::visit(Overloaded{[&](const typename box::Box0 _args) -> T1 {
+      return std::visit(Overloaded{[&](const typename box::Box0 &_args) -> T1 {
                           return f(_args.d_a0);
                         }},
                         this->v());
@@ -178,7 +178,7 @@ struct MethodPartialApp {
             return t->add_to_sum(_x0);
           });
       return std::visit(
-          Overloaded{[](const typename box::Box0 _args) -> unsigned int {
+          Overloaded{[](const typename box::Box0 &_args) -> unsigned int {
             return (_args.d_a0(5u) + _args.d_a0(10u));
           }},
           b->v());

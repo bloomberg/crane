@@ -42,17 +42,15 @@ int64_t EffectCrossModule::test_with_greeting() {
 void EffectCrossModule::greet_all(
     const std::shared_ptr<List<std::string>> &names) {
   {
-    std::visit(
-        Overloaded{
-            [](const typename List<std::string>::Nil) -> std::monostate {
-              return std::monostate{};
-            },
-            [](const typename List<std::string>::Cons _args) -> std::monostate {
-              Inner::greet(_args.d_a0);
-              greet_all(_args.d_a1);
-              return std::monostate{};
-            }},
-        names->v());
+    std::visit(Overloaded{[](const typename List<std::string>::Nil &)
+                              -> std::monostate { return std::monostate{}; },
+                          [](const typename List<std::string>::Cons &_args)
+                              -> std::monostate {
+                            Inner::greet(_args.d_a0);
+                            greet_all(_args.d_a1);
+                            return std::monostate{};
+                          }},
+               names->v());
     return;
   }
 }

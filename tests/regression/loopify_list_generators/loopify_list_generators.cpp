@@ -40,10 +40,10 @@ std::shared_ptr<List<unsigned int>> LoopifyListGenerators::cycle_fuel(
                   unsigned int n_ = n - 1;
                   std::visit(
                       Overloaded{
-                          [&](const typename List<unsigned int>::Nil) -> void {
-                            _result = List<unsigned int>::nil();
-                          },
-                          [&](const typename List<unsigned int>::Cons) -> void {
+                          [&](const typename List<unsigned int>::Nil &)
+                              -> void { _result = List<unsigned int>::nil(); },
+                          [&](const typename List<unsigned int>::Cons &)
+                              -> void {
                             _stack.push_back(_Call1{l});
                             _stack.push_back(_Enter{n_, fuel_});
                           }},
@@ -164,10 +164,10 @@ std::shared_ptr<List<unsigned int>> LoopifyListGenerators::replicate_each(
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil) -> void {
+                      [&](const typename List<unsigned int>::Nil &) -> void {
                         _result = List<unsigned int>::nil();
                       },
-                      [&](const typename List<unsigned int>::Cons _args)
+                      [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
                         std::shared_ptr<List<unsigned int>> reps =
                             replicate_elem(n, _args.d_a0);
@@ -193,7 +193,7 @@ LoopifyListGenerators::enumerate_aux(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil) {
+            [&](const typename List<unsigned int>::Nil &) {
               if (_last) {
                 std::get<
                     typename List<std::pair<unsigned int, unsigned int>>::Cons>(
@@ -204,7 +204,7 @@ LoopifyListGenerators::enumerate_aux(
               }
               _continue = false;
             },
-            [&](const typename List<unsigned int>::Cons _args) {
+            [&](const typename List<unsigned int>::Cons &_args) {
               auto _cell = List<std::pair<unsigned int, unsigned int>>::cons(
                   std::make_pair(_loop_idx, _args.d_a0), nullptr);
               if (_last) {

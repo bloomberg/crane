@@ -97,10 +97,10 @@ public:
   std::shared_ptr<List<t_A>> filter(F0 &&f) const {
     return std::visit(
         Overloaded{
-            [](const typename List<t_A>::Nil) -> std::shared_ptr<List<t_A>> {
+            [](const typename List<t_A>::Nil &) -> std::shared_ptr<List<t_A>> {
               return List<t_A>::nil();
             },
-            [&](const typename List<t_A>::Cons _args)
+            [&](const typename List<t_A>::Cons &_args)
                 -> std::shared_ptr<List<t_A>> {
               if (f(_args.d_a0)) {
                 return List<t_A>::cons(_args.d_a0, _args.d_a1->filter(f));

@@ -395,11 +395,11 @@ __attribute__((pure)) unsigned int LoopifyNumericSequences::alternate_sum(
   bool _loop_sign = sign;
   bool _continue = true;
   while (_continue) {
-    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil) {
+    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil &) {
                             _result = _loop_acc;
                             _continue = false;
                           },
-                          [&](const typename List<unsigned int>::Cons _args) {
+                          [&](const typename List<unsigned int>::Cons &_args) {
                             if (_loop_sign) {
                               std::shared_ptr<List<unsigned int>> _next_l =
                                   _args.d_a1;

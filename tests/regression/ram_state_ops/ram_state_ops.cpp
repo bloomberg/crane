@@ -146,12 +146,12 @@ __attribute__((pure))
 std::pair<std::optional<unsigned int>, std::shared_ptr<RamStateOps::state>>
 RamStateOps::pop_stack(std::shared_ptr<RamStateOps::state> s) {
   return std::visit(
-      Overloaded{[&](const typename List<unsigned int>::Nil)
+      Overloaded{[&](const typename List<unsigned int>::Nil &)
                      -> std::pair<std::optional<unsigned int>,
                                   std::shared_ptr<RamStateOps::state>> {
                    return std::make_pair(std::optional<unsigned int>(), s);
                  },
-                 [&](const typename List<unsigned int>::Cons _args)
+                 [&](const typename List<unsigned int>::Cons &_args)
                      -> std::pair<std::optional<unsigned int>,
                                   std::shared_ptr<RamStateOps::state>> {
                    return std::make_pair(

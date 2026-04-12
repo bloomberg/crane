@@ -75,9 +75,9 @@ struct EffectHigherOrder {
   static void for_each_str(F0 &&f,
                            const std::shared_ptr<List<std::string>> &xs) {
     {
-      std::visit(Overloaded{[](const typename List<std::string>::Nil)
+      std::visit(Overloaded{[](const typename List<std::string>::Nil &)
                                 -> std::monostate { return std::monostate{}; },
-                            [&](const typename List<std::string>::Cons _args)
+                            [&](const typename List<std::string>::Cons &_args)
                                 -> std::monostate {
                               f(_args.d_a0);
                               for_each_str(f, _args.d_a1);

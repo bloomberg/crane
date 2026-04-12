@@ -70,10 +70,10 @@ LoopifyGenerators::zip_longest_aux(
       unsigned int f = _loop_fuel - 1;
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil) {
+              [&](const typename List<unsigned int>::Nil &) {
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil) {
+                        [&](const typename List<unsigned int>::Nil &) {
                           if (_last) {
                             std::get<typename List<
                                 std::pair<unsigned int, unsigned int>>::Cons>(
@@ -86,7 +86,7 @@ LoopifyGenerators::zip_longest_aux(
                           }
                           _continue = false;
                         },
-                        [&](const typename List<unsigned int>::Cons _args0) {
+                        [&](const typename List<unsigned int>::Cons &_args0) {
                           auto _cell =
                               List<std::pair<unsigned int, unsigned int>>::cons(
                                   std::make_pair(default0, _args0.d_a0),
@@ -111,10 +111,10 @@ LoopifyGenerators::zip_longest_aux(
                         }},
                     _loop_l2->v());
               },
-              [&](const typename List<unsigned int>::Cons _args) {
+              [&](const typename List<unsigned int>::Cons &_args) {
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil) {
+                        [&](const typename List<unsigned int>::Nil &) {
                           auto _cell =
                               List<std::pair<unsigned int, unsigned int>>::cons(
                                   std::make_pair(_args.d_a0, default0),
@@ -137,7 +137,7 @@ LoopifyGenerators::zip_longest_aux(
                           _loop_l2 = std::move(_next_l2);
                           _loop_l1 = std::move(_next_l1);
                         },
-                        [&](const typename List<unsigned int>::Cons _args0) {
+                        [&](const typename List<unsigned int>::Cons &_args0) {
                           auto _cell =
                               List<std::pair<unsigned int, unsigned int>>::cons(
                                   std::make_pair(_args.d_a0, _args0.d_a0),
@@ -188,9 +188,9 @@ LoopifyGenerators::len_impl(const std::shared_ptr<List<unsigned int>> &l) {
                      const std::shared_ptr<List<unsigned int>> l = _f.l;
                      std::visit(
                          Overloaded{
-                             [&](const typename List<unsigned int>::Nil)
+                             [&](const typename List<unsigned int>::Nil &)
                                  -> void { _result = 0u; },
-                             [&](const typename List<unsigned int>::Cons _args)
+                             [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
                                _stack.push_back(_Call1{});
                                _stack.push_back(_Enter{_args.d_a1});
@@ -282,7 +282,7 @@ LoopifyGenerators::take(const unsigned int n,
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil) {
+            [&](const typename List<unsigned int>::Nil &) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::nil();
@@ -291,7 +291,7 @@ LoopifyGenerators::take(const unsigned int n,
               }
               _continue = false;
             },
-            [&](const typename List<unsigned int>::Cons _args) {
+            [&](const typename List<unsigned int>::Cons &_args) {
               if (_loop_n == 0u) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
@@ -423,10 +423,10 @@ std::shared_ptr<List<unsigned int>> LoopifyGenerators::replicate_each(
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil) -> void {
+                      [&](const typename List<unsigned int>::Nil &) -> void {
                         _result = List<unsigned int>::nil();
                       },
-                      [&](const typename List<unsigned int>::Cons _args)
+                      [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
                         _stack.push_back(
                             _Call1{replicate_single(_args.d_a0, n)});

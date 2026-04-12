@@ -25,12 +25,12 @@ std::shared_ptr<StepFetchDecodeExec::state> StepFetchDecodeExec::execute(
     const std::shared_ptr<StepFetchDecodeExec::instruction> &i) {
   return std::visit(
       Overloaded{
-          [&](const typename StepFetchDecodeExec::instruction::NOP)
+          [&](const typename StepFetchDecodeExec::instruction::NOP &)
               -> std::shared_ptr<StepFetchDecodeExec::state> {
             return std::make_shared<StepFetchDecodeExec::state>(
                 state{s->acc, (s->pc + 1u), s->rom});
           },
-          [&](const typename StepFetchDecodeExec::instruction::ADD_ACC _args)
+          [&](const typename StepFetchDecodeExec::instruction::ADD_ACC &_args)
               -> std::shared_ptr<StepFetchDecodeExec::state> {
             return std::make_shared<StepFetchDecodeExec::state>(state{
                 (16u ? (s->acc + _args.d_a0) % 16u : (s->acc + _args.d_a0)),

@@ -72,25 +72,27 @@ struct IndParam {
     template <typename T1, MapsTo<T1, std::shared_ptr<typename C::t>> F0,
               MapsTo<T1, unsigned int> F1>
     static T1 result_rect(F0 &&f, F1 &&f0, const std::shared_ptr<result> &r) {
-      return std::visit(Overloaded{[&](const typename result::Ok _args) -> T1 {
-                                     return f(_args.d_a0);
-                                   },
-                                   [&](const typename result::Err _args) -> T1 {
-                                     return f0(_args.d_a0);
-                                   }},
-                        r->v());
+      return std::visit(
+          Overloaded{[&](const typename result::Ok &_args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename result::Err &_args) -> T1 {
+                       return f0(_args.d_a0);
+                     }},
+          r->v());
     }
 
     template <typename T1, MapsTo<T1, std::shared_ptr<typename C::t>> F0,
               MapsTo<T1, unsigned int> F1>
     static T1 result_rec(F0 &&f, F1 &&f0, const std::shared_ptr<result> &r) {
-      return std::visit(Overloaded{[&](const typename result::Ok _args) -> T1 {
-                                     return f(_args.d_a0);
-                                   },
-                                   [&](const typename result::Err _args) -> T1 {
-                                     return f0(_args.d_a0);
-                                   }},
-                        r->v());
+      return std::visit(
+          Overloaded{[&](const typename result::Ok &_args) -> T1 {
+                       return f(_args.d_a0);
+                     },
+                     [&](const typename result::Err &_args) -> T1 {
+                       return f0(_args.d_a0);
+                     }},
+          r->v());
     }
 
     static std::shared_ptr<result> make_single(const typename C::elem e) {
@@ -106,10 +108,10 @@ struct IndParam {
     get_size(const std::shared_ptr<result> &r) {
       return std::visit(
           Overloaded{
-              [](const typename result::Ok _args) -> unsigned int {
+              [](const typename result::Ok &_args) -> unsigned int {
                 return C::size(_args.d_a0);
               },
-              [](const typename result::Err) -> unsigned int { return 0u; }},
+              [](const typename result::Err &) -> unsigned int { return 0u; }},
           r->v());
     }
 
@@ -176,11 +178,11 @@ struct IndParam {
     static T1 t_rect(const T1 f, F1 &&f0, F2 &&f1,
                      const std::shared_ptr<t> &t0) {
       return std::visit(
-          Overloaded{[&](const typename t::Empty) -> T1 { return f; },
-                     [&](const typename t::Single _args) -> T1 {
+          Overloaded{[&](const typename t::Empty &) -> T1 { return f; },
+                     [&](const typename t::Single &_args) -> T1 {
                        return f0(_args.d_a0);
                      },
-                     [&](const typename t::Pair _args) -> T1 {
+                     [&](const typename t::Pair &_args) -> T1 {
                        return f1(_args.d_a0, _args.d_a1);
                      }},
           t0->v());
@@ -191,11 +193,11 @@ struct IndParam {
     static T1 t_rec(const T1 f, F1 &&f0, F2 &&f1,
                     const std::shared_ptr<t> &t0) {
       return std::visit(
-          Overloaded{[&](const typename t::Empty) -> T1 { return f; },
-                     [&](const typename t::Single _args) -> T1 {
+          Overloaded{[&](const typename t::Empty &) -> T1 { return f; },
+                     [&](const typename t::Single &_args) -> T1 {
                        return f0(_args.d_a0);
                      },
-                     [&](const typename t::Pair _args) -> T1 {
+                     [&](const typename t::Pair &_args) -> T1 {
                        return f1(_args.d_a0, _args.d_a1);
                      }},
           t0->v());

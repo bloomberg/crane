@@ -100,10 +100,11 @@ struct InductiveInModule {
       static T2 option_rect(const T2 f, F1 &&f0,
                             const std::shared_ptr<option<T1>> &o) {
         return std::visit(
-            Overloaded{[&](const typename option<T1>::None) -> T2 { return f; },
-                       [&](const typename option<T1>::Some _args) -> T2 {
-                         return f0(_args.d_a0);
-                       }},
+            Overloaded{
+                [&](const typename option<T1>::None &) -> T2 { return f; },
+                [&](const typename option<T1>::Some &_args) -> T2 {
+                  return f0(_args.d_a0);
+                }},
             o->v());
       }
 
@@ -111,10 +112,11 @@ struct InductiveInModule {
       static T2 option_rec(const T2 f, F1 &&f0,
                            const std::shared_ptr<option<T1>> &o) {
         return std::visit(
-            Overloaded{[&](const typename option<T1>::None) -> T2 { return f; },
-                       [&](const typename option<T1>::Some _args) -> T2 {
-                         return f0(_args.d_a0);
-                       }},
+            Overloaded{
+                [&](const typename option<T1>::None &) -> T2 { return f; },
+                [&](const typename option<T1>::Some &_args) -> T2 {
+                  return f0(_args.d_a0);
+                }},
             o->v());
       }
 
@@ -122,11 +124,12 @@ struct InductiveInModule {
       static T1 get_or_default(const T1 default0,
                                const std::shared_ptr<option<T1>> &o) {
         return std::visit(
-            Overloaded{
-                [&](const typename option<T1>::None) -> T1 { return default0; },
-                [](const typename option<T1>::Some _args) -> T1 {
-                  return _args.d_a0;
-                }},
+            Overloaded{[&](const typename option<T1>::None &) -> T1 {
+                         return default0;
+                       },
+                       [](const typename option<T1>::Some &_args) -> T1 {
+                         return _args.d_a0;
+                       }},
             o->v());
       }
     };

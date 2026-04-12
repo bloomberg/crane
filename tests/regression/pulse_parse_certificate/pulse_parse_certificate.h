@@ -59,9 +59,9 @@ public:
   template <typename T1, MapsTo<T1, t_A> F0>
   std::shared_ptr<List<T1>> map(F0 &&f) const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil)
+        Overloaded{[](const typename List<t_A>::Nil &)
                        -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
-                   [&](const typename List<t_A>::Cons _args)
+                   [&](const typename List<t_A>::Cons &_args)
                        -> std::shared_ptr<List<T1>> {
                      return List<T1>::cons(f(_args.d_a0),
                                            _args.d_a1->template map<T1>(f));
@@ -72,8 +72,8 @@ public:
   __attribute__((pure)) unsigned int length() const {
     return std::visit(
         Overloaded{
-            [](const typename List<t_A>::Nil) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons _args) -> unsigned int {
+            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
+            [](const typename List<t_A>::Cons &_args) -> unsigned int {
               return (_args.d_a1->length() + 1);
             }},
         this->v());

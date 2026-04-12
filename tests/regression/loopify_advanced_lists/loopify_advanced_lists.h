@@ -64,7 +64,7 @@ public:
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil) {
+              [&](const typename List<t_A>::Nil &) {
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
                 } else {
@@ -72,7 +72,7 @@ public:
                 }
                 _continue = false;
               },
-              [&](const typename List<t_A>::Cons _args) {
+              [&](const typename List<t_A>::Cons &_args) {
                 auto _cell = List<t_A>::cons(_args.d_a0, nullptr);
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =
@@ -128,10 +128,10 @@ struct LoopifyAdvancedLists {
                 const std::shared_ptr<List<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil) -> void {
+                        [&](const typename List<unsigned int>::Nil &) -> void {
                           _result = List<unsigned int>::nil();
                         },
-                        [&](const typename List<unsigned int>::Cons _args)
+                        [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
                           _stack.push_back(_Call1{f(_args.d_a0)});
                           _stack.push_back(_Enter{_args.d_a1});
@@ -168,10 +168,10 @@ struct LoopifyAdvancedLists {
                 const std::shared_ptr<List<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil) -> void {
+                        [&](const typename List<unsigned int>::Nil &) -> void {
                           _result = true;
                         },
-                        [&](const typename List<unsigned int>::Cons _args)
+                        [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
                           _stack.push_back(_Call1{p(_args.d_a0)});
                           _stack.push_back(_Enter{_args.d_a1});
@@ -208,10 +208,10 @@ struct LoopifyAdvancedLists {
                 const std::shared_ptr<List<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil) -> void {
+                        [&](const typename List<unsigned int>::Nil &) -> void {
                           _result = false;
                         },
-                        [&](const typename List<unsigned int>::Cons _args)
+                        [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
                           _stack.push_back(_Call1{p(_args.d_a0)});
                           _stack.push_back(_Enter{_args.d_a1});
@@ -231,20 +231,20 @@ struct LoopifyAdvancedLists {
     std::shared_ptr<List<unsigned int>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename List<unsigned int>::Nil) {
-                              _result = std::optional<unsigned int>();
-                              _continue = false;
-                            },
-                            [&](const typename List<unsigned int>::Cons _args) {
-                              if (p(_args.d_a0)) {
-                                _result = std::make_optional<unsigned int>(
-                                    _args.d_a0);
-                                _continue = false;
-                              } else {
-                                _loop_l = _args.d_a1;
-                              }
-                            }},
-                 _loop_l->v());
+      std::visit(
+          Overloaded{[&](const typename List<unsigned int>::Nil &) {
+                       _result = std::optional<unsigned int>();
+                       _continue = false;
+                     },
+                     [&](const typename List<unsigned int>::Cons &_args) {
+                       if (p(_args.d_a0)) {
+                         _result = std::make_optional<unsigned int>(_args.d_a0);
+                         _continue = false;
+                       } else {
+                         _loop_l = _args.d_a1;
+                       }
+                     }},
+          _loop_l->v());
     }
     return _result;
   }

@@ -105,8 +105,8 @@ struct PString {
   list_to_string(F0 &&p, const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{
-            [](const typename List<T1>::Nil) -> std::string { return "[]"; },
-            [&](const typename List<T1>::Cons _args) -> std::string {
+            [](const typename List<T1>::Nil &) -> std::string { return "[]"; },
+            [&](const typename List<T1>::Cons &_args) -> std::string {
               return p(_args.d_a0) + "::"s + list_to_string<T1>(p, _args.d_a1);
             }},
         l->v());

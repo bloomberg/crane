@@ -112,8 +112,8 @@ struct UniversePoly {
   static T2 poption_rect(const T2 f, F1 &&f0,
                          const std::shared_ptr<poption<T1>> &p) {
     return std::visit(
-        Overloaded{[&](const typename poption<T1>::Pnone) -> T2 { return f; },
-                   [&](const typename poption<T1>::Psome _args) -> T2 {
+        Overloaded{[&](const typename poption<T1>::Pnone &) -> T2 { return f; },
+                   [&](const typename poption<T1>::Psome &_args) -> T2 {
                      return f0(_args.d_a0);
                    }},
         p->v());
@@ -123,8 +123,8 @@ struct UniversePoly {
   static T2 poption_rec(const T2 f, F1 &&f0,
                         const std::shared_ptr<poption<T1>> &p) {
     return std::visit(
-        Overloaded{[&](const typename poption<T1>::Pnone) -> T2 { return f; },
-                   [&](const typename poption<T1>::Psome _args) -> T2 {
+        Overloaded{[&](const typename poption<T1>::Pnone &) -> T2 { return f; },
+                   [&](const typename poption<T1>::Psome &_args) -> T2 {
                      return f0(_args.d_a0);
                    }},
         p->v());
@@ -133,11 +133,11 @@ struct UniversePoly {
   template <typename T1, typename T2, MapsTo<T2, T1> F0>
   static std::shared_ptr<poption<T2>>
   poption_map(F0 &&f, const std::shared_ptr<poption<T1>> &o) {
-    return std::visit(Overloaded{[](const typename poption<T1>::Pnone)
+    return std::visit(Overloaded{[](const typename poption<T1>::Pnone &)
                                      -> std::shared_ptr<poption<T2>> {
                                    return poption<T2>::pnone();
                                  },
-                                 [&](const typename poption<T1>::Psome _args)
+                                 [&](const typename poption<T1>::Psome &_args)
                                      -> std::shared_ptr<poption<T2>> {
                                    return poption<T2>::psome(f(_args.d_a0));
                                  }},
@@ -148,11 +148,11 @@ struct UniversePoly {
             MapsTo<std::shared_ptr<poption<T2>>, T1> F1>
   static std::shared_ptr<poption<T2>>
   poption_bind(const std::shared_ptr<poption<T1>> &o, F1 &&f) {
-    return std::visit(Overloaded{[](const typename poption<T1>::Pnone)
+    return std::visit(Overloaded{[](const typename poption<T1>::Pnone &)
                                      -> std::shared_ptr<poption<T2>> {
                                    return poption<T2>::pnone();
                                  },
-                                 [&](const typename poption<T1>::Psome _args)
+                                 [&](const typename poption<T1>::Psome &_args)
                                      -> std::shared_ptr<poption<T2>> {
                                    return f(_args.d_a0);
                                  }},
@@ -177,8 +177,8 @@ struct UniversePoly {
   poly_length(const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{
-            [](const typename List<T1>::Nil) -> unsigned int { return 0u; },
-            [](const typename List<T1>::Cons _args) -> unsigned int {
+            [](const typename List<T1>::Nil &) -> unsigned int { return 0u; },
+            [](const typename List<T1>::Cons &_args) -> unsigned int {
               return (poly_length<T1>(_args.d_a1) + 1);
             }},
         l->v());

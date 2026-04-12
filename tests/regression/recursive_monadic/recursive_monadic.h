@@ -80,11 +80,11 @@ struct RecursiveMonadic {
   static std::shared_ptr<List<unsigned int>>
   filter_print(F0 &&pred, const std::shared_ptr<List<unsigned int>> &xs) {
     return std::visit(
-        Overloaded{[](const typename List<unsigned int>::Nil)
+        Overloaded{[](const typename List<unsigned int>::Nil &)
                        -> std::shared_ptr<List<unsigned int>> {
                      return List<unsigned int>::nil();
                    },
-                   [&](const typename List<unsigned int>::Cons _args)
+                   [&](const typename List<unsigned int>::Cons &_args)
                        -> std::shared_ptr<List<unsigned int>> {
                      std::shared_ptr<List<unsigned int>> rest_ =
                          filter_print(pred, _args.d_a1);
@@ -109,11 +109,11 @@ struct RecursiveMonadic {
   static std::optional<unsigned int>
   find_first(F0 &&pred, const std::shared_ptr<List<unsigned int>> &xs) {
     return std::visit(
-        Overloaded{[](const typename List<unsigned int>::Nil)
+        Overloaded{[](const typename List<unsigned int>::Nil &)
                        -> std::optional<unsigned int> {
                      return std::optional<unsigned int>();
                    },
-                   [&](const typename List<unsigned int>::Cons _args)
+                   [&](const typename List<unsigned int>::Cons &_args)
                        -> std::optional<unsigned int> {
                      std::cout << "checking"s << '\n';
                      if (pred(_args.d_a0)) {

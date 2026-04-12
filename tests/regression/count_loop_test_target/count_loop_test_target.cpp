@@ -13,9 +13,9 @@ CountLoopTestTarget::count_loop_test(const unsigned int loop_addr) {
 __attribute__((pure)) unsigned int CountLoopTestTarget::target_of(
     const std::shared_ptr<CountLoopTestTarget::instruction> &i) {
   return std::visit(
-      Overloaded{[](const typename CountLoopTestTarget::instruction::ISZ _args)
+      Overloaded{[](const typename CountLoopTestTarget::instruction::ISZ &_args)
                      -> unsigned int { return _args.d_a1; },
-                 [](const typename CountLoopTestTarget::instruction::NOP)
+                 [](const typename CountLoopTestTarget::instruction::NOP &)
                      -> unsigned int { return 0u; }},
       i->v());
 }

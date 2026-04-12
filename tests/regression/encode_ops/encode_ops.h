@@ -58,8 +58,8 @@ public:
   __attribute__((pure)) unsigned int length() const {
     return std::visit(
         Overloaded{
-            [](const typename List<t_A>::Nil) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons _args) -> unsigned int {
+            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
+            [](const typename List<t_A>::Cons &_args) -> unsigned int {
               return (_args.d_a1->length() + 1);
             }},
         this->v());
@@ -183,19 +183,19 @@ struct EncodeOps {
     encode1() const {
       return std::visit(
           Overloaded{
-              [](const typename instruction1::CLB)
+              [](const typename instruction1::CLB &)
                   -> std::pair<unsigned int, unsigned int> {
                 return std::make_pair(240u, 0u);
               },
-              [](const typename instruction1::CMC)
+              [](const typename instruction1::CMC &)
                   -> std::pair<unsigned int, unsigned int> {
                 return std::make_pair(243u, 0u);
               },
-              [](const typename instruction1::DAA)
+              [](const typename instruction1::DAA &)
                   -> std::pair<unsigned int, unsigned int> {
                 return std::make_pair(251u, 0u);
               },
-              [](const typename instruction1::FIM _args)
+              [](const typename instruction1::FIM &_args)
                   -> std::pair<unsigned int, unsigned int> {
                 return std::make_pair(
                     (32u + (((_args.d_a0 -
@@ -205,33 +205,33 @@ struct EncodeOps {
                                     (2u ? _args.d_a0 % 2u : _args.d_a0))))),
                     (256u ? _args.d_a1 % 256u : _args.d_a1));
               },
-              [](const typename instruction1::JUN _args)
+              [](const typename instruction1::JUN &_args)
                   -> std::pair<unsigned int, unsigned int> {
                 return std::make_pair((64u + (256u ? _args.d_a0 / 256u : 0)),
                                       (256u ? _args.d_a0 % 256u : _args.d_a0));
               },
-              [](const typename instruction1::LDM1 _args)
+              [](const typename instruction1::LDM1 &_args)
                   -> std::pair<unsigned int, unsigned int> {
                 return std::make_pair(
                     (208u + (16u ? _args.d_a0 % 16u : _args.d_a0)), 0u);
               },
-              [](const typename instruction1::NOP1)
+              [](const typename instruction1::NOP1 &)
                   -> std::pair<unsigned int, unsigned int> {
                 return std::make_pair(0u, 0u);
               },
-              [](const typename instruction1::RDM)
+              [](const typename instruction1::RDM &)
                   -> std::pair<unsigned int, unsigned int> {
                 return std::make_pair(233u, 0u);
               },
-              [](const typename instruction1::TCS)
+              [](const typename instruction1::TCS &)
                   -> std::pair<unsigned int, unsigned int> {
                 return std::make_pair(249u, 0u);
               },
-              [](const typename instruction1::WPM)
+              [](const typename instruction1::WPM &)
                   -> std::pair<unsigned int, unsigned int> {
                 return std::make_pair(227u, 0u);
               },
-              [](const typename instruction1::WR0)
+              [](const typename instruction1::WR0 &)
                   -> std::pair<unsigned int, unsigned int> {
                 return std::make_pair(228u, 0u);
               }},
@@ -246,23 +246,24 @@ struct EncodeOps {
                               const T1 f7, const T1 f8, const T1 f9,
                               const std::shared_ptr<instruction1> &i) {
     return std::visit(
-        Overloaded{[&](const typename instruction1::CLB) -> T1 { return f; },
-                   [&](const typename instruction1::CMC) -> T1 { return f0; },
-                   [&](const typename instruction1::DAA) -> T1 { return f1; },
-                   [&](const typename instruction1::FIM _args) -> T1 {
-                     return f2(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename instruction1::JUN _args) -> T1 {
-                     return f3(_args.d_a0);
-                   },
-                   [&](const typename instruction1::LDM1 _args) -> T1 {
-                     return f4(_args.d_a0);
-                   },
-                   [&](const typename instruction1::NOP1) -> T1 { return f5; },
-                   [&](const typename instruction1::RDM) -> T1 { return f6; },
-                   [&](const typename instruction1::TCS) -> T1 { return f7; },
-                   [&](const typename instruction1::WPM) -> T1 { return f8; },
-                   [&](const typename instruction1::WR0) -> T1 { return f9; }},
+        Overloaded{
+            [&](const typename instruction1::CLB &) -> T1 { return f; },
+            [&](const typename instruction1::CMC &) -> T1 { return f0; },
+            [&](const typename instruction1::DAA &) -> T1 { return f1; },
+            [&](const typename instruction1::FIM &_args) -> T1 {
+              return f2(_args.d_a0, _args.d_a1);
+            },
+            [&](const typename instruction1::JUN &_args) -> T1 {
+              return f3(_args.d_a0);
+            },
+            [&](const typename instruction1::LDM1 &_args) -> T1 {
+              return f4(_args.d_a0);
+            },
+            [&](const typename instruction1::NOP1 &) -> T1 { return f5; },
+            [&](const typename instruction1::RDM &) -> T1 { return f6; },
+            [&](const typename instruction1::TCS &) -> T1 { return f7; },
+            [&](const typename instruction1::WPM &) -> T1 { return f8; },
+            [&](const typename instruction1::WR0 &) -> T1 { return f9; }},
         i->v());
   }
 
@@ -273,23 +274,24 @@ struct EncodeOps {
                              const T1 f7, const T1 f8, const T1 f9,
                              const std::shared_ptr<instruction1> &i) {
     return std::visit(
-        Overloaded{[&](const typename instruction1::CLB) -> T1 { return f; },
-                   [&](const typename instruction1::CMC) -> T1 { return f0; },
-                   [&](const typename instruction1::DAA) -> T1 { return f1; },
-                   [&](const typename instruction1::FIM _args) -> T1 {
-                     return f2(_args.d_a0, _args.d_a1);
-                   },
-                   [&](const typename instruction1::JUN _args) -> T1 {
-                     return f3(_args.d_a0);
-                   },
-                   [&](const typename instruction1::LDM1 _args) -> T1 {
-                     return f4(_args.d_a0);
-                   },
-                   [&](const typename instruction1::NOP1) -> T1 { return f5; },
-                   [&](const typename instruction1::RDM) -> T1 { return f6; },
-                   [&](const typename instruction1::TCS) -> T1 { return f7; },
-                   [&](const typename instruction1::WPM) -> T1 { return f8; },
-                   [&](const typename instruction1::WR0) -> T1 { return f9; }},
+        Overloaded{
+            [&](const typename instruction1::CLB &) -> T1 { return f; },
+            [&](const typename instruction1::CMC &) -> T1 { return f0; },
+            [&](const typename instruction1::DAA &) -> T1 { return f1; },
+            [&](const typename instruction1::FIM &_args) -> T1 {
+              return f2(_args.d_a0, _args.d_a1);
+            },
+            [&](const typename instruction1::JUN &_args) -> T1 {
+              return f3(_args.d_a0);
+            },
+            [&](const typename instruction1::LDM1 &_args) -> T1 {
+              return f4(_args.d_a0);
+            },
+            [&](const typename instruction1::NOP1 &) -> T1 { return f5; },
+            [&](const typename instruction1::RDM &) -> T1 { return f6; },
+            [&](const typename instruction1::TCS &) -> T1 { return f7; },
+            [&](const typename instruction1::WPM &) -> T1 { return f8; },
+            [&](const typename instruction1::WR0 &) -> T1 { return f9; }},
         i->v());
   }
 
@@ -345,11 +347,11 @@ struct EncodeOps {
     __attribute__((pure)) std::pair<unsigned int, unsigned int>
     encode2() const {
       return std::visit(
-          Overloaded{[](const typename instruction2::NOP2)
+          Overloaded{[](const typename instruction2::NOP2 &)
                          -> std::pair<unsigned int, unsigned int> {
                        return std::make_pair(0u, 0u);
                      },
-                     [](const typename instruction2::LDM2 _args)
+                     [](const typename instruction2::LDM2 &_args)
                          -> std::pair<unsigned int, unsigned int> {
                        return std::make_pair(
                            13u, (16u ? _args.d_a0 % 16u : _args.d_a0));
@@ -362,8 +364,8 @@ struct EncodeOps {
   static T1 instruction2_rect(const T1 f, F1 &&f0,
                               const std::shared_ptr<instruction2> &i) {
     return std::visit(
-        Overloaded{[&](const typename instruction2::NOP2) -> T1 { return f; },
-                   [&](const typename instruction2::LDM2 _args) -> T1 {
+        Overloaded{[&](const typename instruction2::NOP2 &) -> T1 { return f; },
+                   [&](const typename instruction2::LDM2 &_args) -> T1 {
                      return f0(_args.d_a0);
                    }},
         i->v());
@@ -373,8 +375,8 @@ struct EncodeOps {
   static T1 instruction2_rec(const T1 f, F1 &&f0,
                              const std::shared_ptr<instruction2> &i) {
     return std::visit(
-        Overloaded{[&](const typename instruction2::NOP2) -> T1 { return f; },
-                   [&](const typename instruction2::LDM2 _args) -> T1 {
+        Overloaded{[&](const typename instruction2::NOP2 &) -> T1 { return f; },
+                   [&](const typename instruction2::LDM2 &_args) -> T1 {
                      return f0(_args.d_a0);
                    }},
         i->v());
@@ -430,11 +432,11 @@ struct EncodeOps {
     encode3() const {
       return std::visit(
           Overloaded{
-              [](const typename instruction3::NOP3)
+              [](const typename instruction3::NOP3 &)
                   -> std::pair<unsigned int, unsigned int> {
                 return std::make_pair(0u, 0u);
               },
-              [](const typename instruction3::LDM3 _args)
+              [](const typename instruction3::LDM3 &_args)
                   -> std::pair<unsigned int, unsigned int> {
                 return std::make_pair(
                     ((13u * 16u) + (16u ? _args.d_a0 % 16u : _args.d_a0)), 0u);
@@ -447,8 +449,8 @@ struct EncodeOps {
   static T1 instruction3_rect(const T1 f, F1 &&f0,
                               const std::shared_ptr<instruction3> &i) {
     return std::visit(
-        Overloaded{[&](const typename instruction3::NOP3) -> T1 { return f; },
-                   [&](const typename instruction3::LDM3 _args) -> T1 {
+        Overloaded{[&](const typename instruction3::NOP3 &) -> T1 { return f; },
+                   [&](const typename instruction3::LDM3 &_args) -> T1 {
                      return f0(_args.d_a0);
                    }},
         i->v());
@@ -458,8 +460,8 @@ struct EncodeOps {
   static T1 instruction3_rec(const T1 f, F1 &&f0,
                              const std::shared_ptr<instruction3> &i) {
     return std::visit(
-        Overloaded{[&](const typename instruction3::NOP3) -> T1 { return f; },
-                   [&](const typename instruction3::LDM3 _args) -> T1 {
+        Overloaded{[&](const typename instruction3::NOP3 &) -> T1 { return f; },
+                   [&](const typename instruction3::LDM3 &_args) -> T1 {
                      return f0(_args.d_a0);
                    }},
         i->v());

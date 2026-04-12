@@ -59,10 +59,10 @@ public:
   std::shared_ptr<List<t_A>> rev() const {
     return std::visit(
         Overloaded{
-            [](const typename List<t_A>::Nil) -> std::shared_ptr<List<t_A>> {
+            [](const typename List<t_A>::Nil &) -> std::shared_ptr<List<t_A>> {
               return List<t_A>::nil();
             },
-            [](const typename List<t_A>::Cons _args)
+            [](const typename List<t_A>::Cons &_args)
                 -> std::shared_ptr<List<t_A>> {
               return _args.d_a1->rev()->app(
                   List<t_A>::cons(_args.d_a0, List<t_A>::nil()));
@@ -72,9 +72,9 @@ public:
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
     return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil)
+        Overloaded{[&](const typename List<t_A>::Nil &)
                        -> std::shared_ptr<List<t_A>> { return m; },
-                   [&](const typename List<t_A>::Cons _args)
+                   [&](const typename List<t_A>::Cons &_args)
                        -> std::shared_ptr<List<t_A>> {
                      return List<t_A>::cons(_args.d_a0, _args.d_a1->app(m));
                    }},
@@ -92,10 +92,10 @@ std::shared_ptr<List<T2>> better_map(F0 &&f,
            std::shared_ptr<List<T2>> acc) -> std::shared_ptr<List<T2>> {
     return std::visit(
         Overloaded{
-            [&](const typename List<T1>::Nil) -> std::shared_ptr<List<T2>> {
+            [&](const typename List<T1>::Nil &) -> std::shared_ptr<List<T2>> {
               return std::move(acc)->rev();
             },
-            [&](const typename List<T1>::Cons _args)
+            [&](const typename List<T1>::Cons &_args)
                 -> std::shared_ptr<List<T2>> {
               return go(_args.d_a1, List<T2>::cons(f(_args.d_a0), acc));
             }},

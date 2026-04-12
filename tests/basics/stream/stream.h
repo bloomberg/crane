@@ -141,12 +141,12 @@ public:
   std::shared_ptr<List<t_A>> take(const std::shared_ptr<Nat> &n) const {
     return std::visit(
         Overloaded{
-            [](const typename Nat::O) -> std::shared_ptr<List<t_A>> {
+            [](const typename Nat::O &) -> std::shared_ptr<List<t_A>> {
               return List<t_A>::nil();
             },
-            [&](const typename Nat::S _args) -> std::shared_ptr<List<t_A>> {
+            [&](const typename Nat::S &_args) -> std::shared_ptr<List<t_A>> {
               return std::visit(
-                  Overloaded{[&](const typename Stream<t_A>::Scons _args0)
+                  Overloaded{[&](const typename Stream<t_A>::Scons &_args0)
                                  -> std::shared_ptr<List<t_A>> {
                     return List<t_A>::cons(_args0.d_a0,
                                            _args0.d_a1->take(_args.d_a0));
@@ -159,7 +159,7 @@ public:
   std::shared_ptr<Stream<t_A>>
   interleave(const std::shared_ptr<Stream<t_A>> &sb) const {
     return Stream<t_A>::lazy_([=, this]() -> std::shared_ptr<Stream<t_A>> {
-      return std::visit(Overloaded{[&](const typename Stream<t_A>::Scons _args)
+      return std::visit(Overloaded{[&](const typename Stream<t_A>::Scons &_args)
                                        -> std::shared_ptr<Stream<t_A>> {
                           return Stream<t_A>::scons(_args.d_a0,
                                                     sb->interleave(_args.d_a1));

@@ -12,23 +12,23 @@ OptionSomeEscape::sum_values(const std::shared_ptr<OptionSomeEscape::tree> &t,
                              const unsigned int x) {
   return std::visit(
       Overloaded{
-          [&](const typename OptionSomeEscape::tree::Leaf) -> unsigned int {
+          [&](const typename OptionSomeEscape::tree::Leaf &) -> unsigned int {
             return x;
           },
-          [&](const typename OptionSomeEscape::tree::Node _args)
+          [&](const typename OptionSomeEscape::tree::Node &_args)
               -> unsigned int {
             return std::visit(
                 Overloaded{
-                    [&](const typename OptionSomeEscape::tree::Leaf)
+                    [&](const typename OptionSomeEscape::tree::Leaf &)
                         -> unsigned int { return (_args.d_a1 + x); },
-                    [&](const typename OptionSomeEscape::tree::Node _args0)
+                    [&](const typename OptionSomeEscape::tree::Node &_args0)
                         -> unsigned int {
                       return std::visit(
                           Overloaded{
-                              [&](const typename OptionSomeEscape::tree::Leaf)
+                              [&](const typename OptionSomeEscape::tree::Leaf &)
                                   -> unsigned int { return (_args0.d_a1 + x); },
                               [&](const typename OptionSomeEscape::tree::Node
-                                      _args1) -> unsigned int {
+                                      &_args1) -> unsigned int {
                                 return (
                                     ((_args0.d_a1 + _args1.d_a1) + _args.d_a1) +
                                     x);

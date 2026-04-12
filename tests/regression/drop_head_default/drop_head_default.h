@@ -67,16 +67,15 @@ struct DropHeadDefault {
       if (l.use_count() == 1 && l->v().index() == 0) {
         return l;
       } else {
-        return std::visit(
-            Overloaded{
-                [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
-                  return List<T1>::nil();
-                },
-                [&](const typename List<T1>::Cons _args)
-                    -> std::shared_ptr<List<T1>> {
-                  return drop<T1>(n_, _args.d_a1);
-                }},
-            l->v());
+        return std::visit(Overloaded{[](const typename List<T1>::Nil &)
+                                         -> std::shared_ptr<List<T1>> {
+                                       return List<T1>::nil();
+                                     },
+                                     [&](const typename List<T1>::Cons &_args)
+                                         -> std::shared_ptr<List<T1>> {
+                                       return drop<T1>(n_, _args.d_a1);
+                                     }},
+                          l->v());
       }
     }
   }

@@ -11,10 +11,10 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_acc(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<InstructionClassifiers::instr_acc>>::Nil)
+              std::shared_ptr<InstructionClassifiers::instr_acc>>::Nil &)
               -> unsigned int { return 0u; },
           [](const typename List<
-              std::shared_ptr<InstructionClassifiers::instr_acc>>::Cons _args)
+              std::shared_ptr<InstructionClassifiers::instr_acc>>::Cons &_args)
               -> unsigned int {
             return ([&]() -> unsigned int {
               if (_args.d_a0->writes_acc()) {
@@ -33,10 +33,10 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_ram(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<InstructionClassifiers::instr_ram>>::Nil)
+              std::shared_ptr<InstructionClassifiers::instr_ram>>::Nil &)
               -> unsigned int { return 0u; },
           [](const typename List<
-              std::shared_ptr<InstructionClassifiers::instr_ram>>::Cons _args)
+              std::shared_ptr<InstructionClassifiers::instr_ram>>::Cons &_args)
               -> unsigned int {
             return ([&]() -> unsigned int {
               if (_args.d_a0->writes_ram()) {
@@ -55,10 +55,10 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_writes_regs(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<InstructionClassifiers::instr_regs>>::Nil)
+              std::shared_ptr<InstructionClassifiers::instr_regs>>::Nil &)
               -> unsigned int { return 0u; },
           [](const typename List<
-              std::shared_ptr<InstructionClassifiers::instr_regs>>::Cons _args)
+              std::shared_ptr<InstructionClassifiers::instr_regs>>::Cons &_args)
               -> unsigned int {
             return ([&]() -> unsigned int {
               if (_args.d_a0->writes_regs()) {
@@ -77,10 +77,10 @@ __attribute__((pure)) unsigned int InstructionClassifiers::count_jumps(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<InstructionClassifiers::instr_jump>>::Nil)
+              std::shared_ptr<InstructionClassifiers::instr_jump>>::Nil &)
               -> unsigned int { return 0u; },
           [](const typename List<
-              std::shared_ptr<InstructionClassifiers::instr_jump>>::Cons _args)
+              std::shared_ptr<InstructionClassifiers::instr_jump>>::Cons &_args)
               -> unsigned int {
             return ([&]() -> unsigned int {
               if (_args.d_a0->is_jump()) {

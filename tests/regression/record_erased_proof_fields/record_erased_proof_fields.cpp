@@ -39,11 +39,11 @@ __attribute__((pure)) unsigned int RecordErasedProofFieldsCase::tag_code(
   return std::visit(
       Overloaded{
           [](const typename RecordErasedProofFieldsCase::StoredTag::TagPrimary
-                 _args) -> unsigned int {
+                 &_args) -> unsigned int {
             return (10u + kind_code(_args.d_a0));
           },
           [](const typename RecordErasedProofFieldsCase::StoredTag::TagSecondary
-                 _args) -> unsigned int {
+                 &_args) -> unsigned int {
             return (20u + kind_code(_args.d_a0));
           }},
       t->v());

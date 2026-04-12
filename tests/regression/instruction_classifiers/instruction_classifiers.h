@@ -300,8 +300,8 @@ struct InstructionClassifiers {
     __attribute__((pure)) bool writes_acc() const {
       return std::visit(
           Overloaded{
-              [](const typename instr_acc::NOP_acc) -> bool { return false; },
-              [](const auto) -> bool { return true; }},
+              [](const typename instr_acc::NOP_acc &) -> bool { return false; },
+              [](const auto &) -> bool { return true; }},
           this->v());
     }
 
@@ -318,46 +318,46 @@ struct InstructionClassifiers {
                      const T1 f24) const {
       return std::visit(
           Overloaded{
-              [&](const typename instr_acc::LDM _args) -> T1 {
+              [&](const typename instr_acc::LDM &_args) -> T1 {
                 return f(_args.d_a0);
               },
-              [&](const typename instr_acc::LD _args) -> T1 {
+              [&](const typename instr_acc::LD &_args) -> T1 {
                 return f0(_args.d_a0);
               },
-              [&](const typename instr_acc::ADD _args) -> T1 {
+              [&](const typename instr_acc::ADD &_args) -> T1 {
                 return f1(_args.d_a0);
               },
-              [&](const typename instr_acc::SUB _args) -> T1 {
+              [&](const typename instr_acc::SUB &_args) -> T1 {
                 return f2(_args.d_a0);
               },
-              [&](const typename instr_acc::INC _args) -> T1 {
+              [&](const typename instr_acc::INC &_args) -> T1 {
                 return f3(_args.d_a0);
               },
-              [&](const typename instr_acc::XCH _args) -> T1 {
+              [&](const typename instr_acc::XCH &_args) -> T1 {
                 return f4(_args.d_a0);
               },
-              [&](const typename instr_acc::BBL _args) -> T1 {
+              [&](const typename instr_acc::BBL &_args) -> T1 {
                 return f5(_args.d_a0);
               },
-              [&](const typename instr_acc::SBM) -> T1 { return f6; },
-              [&](const typename instr_acc::RDM) -> T1 { return f7; },
-              [&](const typename instr_acc::RDR) -> T1 { return f8; },
-              [&](const typename instr_acc::ADM) -> T1 { return f9; },
-              [&](const typename instr_acc::RD0) -> T1 { return f10; },
-              [&](const typename instr_acc::RD1) -> T1 { return f11; },
-              [&](const typename instr_acc::RD2) -> T1 { return f12; },
-              [&](const typename instr_acc::RD3) -> T1 { return f13; },
-              [&](const typename instr_acc::CLB) -> T1 { return f14; },
-              [&](const typename instr_acc::CMA) -> T1 { return f15; },
-              [&](const typename instr_acc::IAC) -> T1 { return f16; },
-              [&](const typename instr_acc::DAC) -> T1 { return f17; },
-              [&](const typename instr_acc::RAL) -> T1 { return f18; },
-              [&](const typename instr_acc::RAR) -> T1 { return f19; },
-              [&](const typename instr_acc::TCC) -> T1 { return f20; },
-              [&](const typename instr_acc::TCS) -> T1 { return f21; },
-              [&](const typename instr_acc::DAA) -> T1 { return f22; },
-              [&](const typename instr_acc::KBP) -> T1 { return f23; },
-              [&](const typename instr_acc::NOP_acc) -> T1 { return f24; }},
+              [&](const typename instr_acc::SBM &) -> T1 { return f6; },
+              [&](const typename instr_acc::RDM &) -> T1 { return f7; },
+              [&](const typename instr_acc::RDR &) -> T1 { return f8; },
+              [&](const typename instr_acc::ADM &) -> T1 { return f9; },
+              [&](const typename instr_acc::RD0 &) -> T1 { return f10; },
+              [&](const typename instr_acc::RD1 &) -> T1 { return f11; },
+              [&](const typename instr_acc::RD2 &) -> T1 { return f12; },
+              [&](const typename instr_acc::RD3 &) -> T1 { return f13; },
+              [&](const typename instr_acc::CLB &) -> T1 { return f14; },
+              [&](const typename instr_acc::CMA &) -> T1 { return f15; },
+              [&](const typename instr_acc::IAC &) -> T1 { return f16; },
+              [&](const typename instr_acc::DAC &) -> T1 { return f17; },
+              [&](const typename instr_acc::RAL &) -> T1 { return f18; },
+              [&](const typename instr_acc::RAR &) -> T1 { return f19; },
+              [&](const typename instr_acc::TCC &) -> T1 { return f20; },
+              [&](const typename instr_acc::TCS &) -> T1 { return f21; },
+              [&](const typename instr_acc::DAA &) -> T1 { return f22; },
+              [&](const typename instr_acc::KBP &) -> T1 { return f23; },
+              [&](const typename instr_acc::NOP_acc &) -> T1 { return f24; }},
           this->v());
     }
 
@@ -374,46 +374,46 @@ struct InstructionClassifiers {
                       const T1 f24) const {
       return std::visit(
           Overloaded{
-              [&](const typename instr_acc::LDM _args) -> T1 {
+              [&](const typename instr_acc::LDM &_args) -> T1 {
                 return f(_args.d_a0);
               },
-              [&](const typename instr_acc::LD _args) -> T1 {
+              [&](const typename instr_acc::LD &_args) -> T1 {
                 return f0(_args.d_a0);
               },
-              [&](const typename instr_acc::ADD _args) -> T1 {
+              [&](const typename instr_acc::ADD &_args) -> T1 {
                 return f1(_args.d_a0);
               },
-              [&](const typename instr_acc::SUB _args) -> T1 {
+              [&](const typename instr_acc::SUB &_args) -> T1 {
                 return f2(_args.d_a0);
               },
-              [&](const typename instr_acc::INC _args) -> T1 {
+              [&](const typename instr_acc::INC &_args) -> T1 {
                 return f3(_args.d_a0);
               },
-              [&](const typename instr_acc::XCH _args) -> T1 {
+              [&](const typename instr_acc::XCH &_args) -> T1 {
                 return f4(_args.d_a0);
               },
-              [&](const typename instr_acc::BBL _args) -> T1 {
+              [&](const typename instr_acc::BBL &_args) -> T1 {
                 return f5(_args.d_a0);
               },
-              [&](const typename instr_acc::SBM) -> T1 { return f6; },
-              [&](const typename instr_acc::RDM) -> T1 { return f7; },
-              [&](const typename instr_acc::RDR) -> T1 { return f8; },
-              [&](const typename instr_acc::ADM) -> T1 { return f9; },
-              [&](const typename instr_acc::RD0) -> T1 { return f10; },
-              [&](const typename instr_acc::RD1) -> T1 { return f11; },
-              [&](const typename instr_acc::RD2) -> T1 { return f12; },
-              [&](const typename instr_acc::RD3) -> T1 { return f13; },
-              [&](const typename instr_acc::CLB) -> T1 { return f14; },
-              [&](const typename instr_acc::CMA) -> T1 { return f15; },
-              [&](const typename instr_acc::IAC) -> T1 { return f16; },
-              [&](const typename instr_acc::DAC) -> T1 { return f17; },
-              [&](const typename instr_acc::RAL) -> T1 { return f18; },
-              [&](const typename instr_acc::RAR) -> T1 { return f19; },
-              [&](const typename instr_acc::TCC) -> T1 { return f20; },
-              [&](const typename instr_acc::TCS) -> T1 { return f21; },
-              [&](const typename instr_acc::DAA) -> T1 { return f22; },
-              [&](const typename instr_acc::KBP) -> T1 { return f23; },
-              [&](const typename instr_acc::NOP_acc) -> T1 { return f24; }},
+              [&](const typename instr_acc::SBM &) -> T1 { return f6; },
+              [&](const typename instr_acc::RDM &) -> T1 { return f7; },
+              [&](const typename instr_acc::RDR &) -> T1 { return f8; },
+              [&](const typename instr_acc::ADM &) -> T1 { return f9; },
+              [&](const typename instr_acc::RD0 &) -> T1 { return f10; },
+              [&](const typename instr_acc::RD1 &) -> T1 { return f11; },
+              [&](const typename instr_acc::RD2 &) -> T1 { return f12; },
+              [&](const typename instr_acc::RD3 &) -> T1 { return f13; },
+              [&](const typename instr_acc::CLB &) -> T1 { return f14; },
+              [&](const typename instr_acc::CMA &) -> T1 { return f15; },
+              [&](const typename instr_acc::IAC &) -> T1 { return f16; },
+              [&](const typename instr_acc::DAC &) -> T1 { return f17; },
+              [&](const typename instr_acc::RAL &) -> T1 { return f18; },
+              [&](const typename instr_acc::RAR &) -> T1 { return f19; },
+              [&](const typename instr_acc::TCC &) -> T1 { return f20; },
+              [&](const typename instr_acc::TCS &) -> T1 { return f21; },
+              [&](const typename instr_acc::DAA &) -> T1 { return f22; },
+              [&](const typename instr_acc::KBP &) -> T1 { return f23; },
+              [&](const typename instr_acc::NOP_acc &) -> T1 { return f24; }},
           this->v());
     }
   };
@@ -521,9 +521,9 @@ struct InstructionClassifiers {
     __attribute__((pure)) bool writes_ram() const {
       return std::visit(
           Overloaded{
-              [](const typename instr_ram::NOP_ram) -> bool { return false; },
-              [](const typename instr_ram::ADD_ram) -> bool { return false; },
-              [](const auto) -> bool { return true; }},
+              [](const typename instr_ram::NOP_ram &) -> bool { return false; },
+              [](const typename instr_ram::ADD_ram &) -> bool { return false; },
+              [](const auto &) -> bool { return true; }},
           this->v());
     }
   };
@@ -533,16 +533,17 @@ struct InstructionClassifiers {
                            const T1 f3, const T1 f4, const T1 f5, F7 &&f6,
                            const std::shared_ptr<instr_ram> &i) {
     return std::visit(
-        Overloaded{[&](const typename instr_ram::WRM) -> T1 { return f; },
-                   [&](const typename instr_ram::WMP) -> T1 { return f0; },
-                   [&](const typename instr_ram::WR0) -> T1 { return f1; },
-                   [&](const typename instr_ram::WR1) -> T1 { return f2; },
-                   [&](const typename instr_ram::WR2) -> T1 { return f3; },
-                   [&](const typename instr_ram::WR3) -> T1 { return f4; },
-                   [&](const typename instr_ram::NOP_ram) -> T1 { return f5; },
-                   [&](const typename instr_ram::ADD_ram _args) -> T1 {
-                     return f6(_args.d_a0);
-                   }},
+        Overloaded{
+            [&](const typename instr_ram::WRM &) -> T1 { return f; },
+            [&](const typename instr_ram::WMP &) -> T1 { return f0; },
+            [&](const typename instr_ram::WR0 &) -> T1 { return f1; },
+            [&](const typename instr_ram::WR1 &) -> T1 { return f2; },
+            [&](const typename instr_ram::WR2 &) -> T1 { return f3; },
+            [&](const typename instr_ram::WR3 &) -> T1 { return f4; },
+            [&](const typename instr_ram::NOP_ram &) -> T1 { return f5; },
+            [&](const typename instr_ram::ADD_ram &_args) -> T1 {
+              return f6(_args.d_a0);
+            }},
         i->v());
   }
 
@@ -551,16 +552,17 @@ struct InstructionClassifiers {
                           const T1 f3, const T1 f4, const T1 f5, F7 &&f6,
                           const std::shared_ptr<instr_ram> &i) {
     return std::visit(
-        Overloaded{[&](const typename instr_ram::WRM) -> T1 { return f; },
-                   [&](const typename instr_ram::WMP) -> T1 { return f0; },
-                   [&](const typename instr_ram::WR0) -> T1 { return f1; },
-                   [&](const typename instr_ram::WR1) -> T1 { return f2; },
-                   [&](const typename instr_ram::WR2) -> T1 { return f3; },
-                   [&](const typename instr_ram::WR3) -> T1 { return f4; },
-                   [&](const typename instr_ram::NOP_ram) -> T1 { return f5; },
-                   [&](const typename instr_ram::ADD_ram _args) -> T1 {
-                     return f6(_args.d_a0);
-                   }},
+        Overloaded{
+            [&](const typename instr_ram::WRM &) -> T1 { return f; },
+            [&](const typename instr_ram::WMP &) -> T1 { return f0; },
+            [&](const typename instr_ram::WR0 &) -> T1 { return f1; },
+            [&](const typename instr_ram::WR1 &) -> T1 { return f2; },
+            [&](const typename instr_ram::WR2 &) -> T1 { return f3; },
+            [&](const typename instr_ram::WR3 &) -> T1 { return f4; },
+            [&](const typename instr_ram::NOP_ram &) -> T1 { return f5; },
+            [&](const typename instr_ram::ADD_ram &_args) -> T1 {
+              return f6(_args.d_a0);
+            }},
         i->v());
   }
 
@@ -670,10 +672,13 @@ struct InstructionClassifiers {
 
     __attribute__((pure)) bool writes_regs() const {
       return std::visit(
-          Overloaded{
-              [](const typename instr_regs::NOP_regs) -> bool { return false; },
-              [](const typename instr_regs::ADD_regs) -> bool { return false; },
-              [](const auto) -> bool { return true; }},
+          Overloaded{[](const typename instr_regs::NOP_regs &) -> bool {
+                       return false;
+                     },
+                     [](const typename instr_regs::ADD_regs &) -> bool {
+                       return false;
+                     },
+                     [](const auto &) -> bool { return true; }},
           this->v());
     }
 
@@ -685,23 +690,23 @@ struct InstructionClassifiers {
                       F6 &&f5) const {
       return std::visit(
           Overloaded{
-              [&](const typename instr_regs::XCH_regs _args) -> T1 {
+              [&](const typename instr_regs::XCH_regs &_args) -> T1 {
                 return f(_args.d_a0);
               },
-              [&](const typename instr_regs::INC_regs _args) -> T1 {
+              [&](const typename instr_regs::INC_regs &_args) -> T1 {
                 return f0(_args.d_a0);
               },
-              [&](const typename instr_regs::FIM _args) -> T1 {
+              [&](const typename instr_regs::FIM &_args) -> T1 {
                 return f1(_args.d_a0, _args.d_a1);
               },
-              [&](const typename instr_regs::FIN _args) -> T1 {
+              [&](const typename instr_regs::FIN &_args) -> T1 {
                 return f2(_args.d_a0);
               },
-              [&](const typename instr_regs::ISZ _args) -> T1 {
+              [&](const typename instr_regs::ISZ &_args) -> T1 {
                 return f3(_args.d_a0, _args.d_a1);
               },
-              [&](const typename instr_regs::NOP_regs) -> T1 { return f4; },
-              [&](const typename instr_regs::ADD_regs _args) -> T1 {
+              [&](const typename instr_regs::NOP_regs &) -> T1 { return f4; },
+              [&](const typename instr_regs::ADD_regs &_args) -> T1 {
                 return f5(_args.d_a0);
               }},
           this->v());
@@ -715,23 +720,23 @@ struct InstructionClassifiers {
                        F6 &&f5) const {
       return std::visit(
           Overloaded{
-              [&](const typename instr_regs::XCH_regs _args) -> T1 {
+              [&](const typename instr_regs::XCH_regs &_args) -> T1 {
                 return f(_args.d_a0);
               },
-              [&](const typename instr_regs::INC_regs _args) -> T1 {
+              [&](const typename instr_regs::INC_regs &_args) -> T1 {
                 return f0(_args.d_a0);
               },
-              [&](const typename instr_regs::FIM _args) -> T1 {
+              [&](const typename instr_regs::FIM &_args) -> T1 {
                 return f1(_args.d_a0, _args.d_a1);
               },
-              [&](const typename instr_regs::FIN _args) -> T1 {
+              [&](const typename instr_regs::FIN &_args) -> T1 {
                 return f2(_args.d_a0);
               },
-              [&](const typename instr_regs::ISZ _args) -> T1 {
+              [&](const typename instr_regs::ISZ &_args) -> T1 {
                 return f3(_args.d_a0, _args.d_a1);
               },
-              [&](const typename instr_regs::NOP_regs) -> T1 { return f4; },
-              [&](const typename instr_regs::ADD_regs _args) -> T1 {
+              [&](const typename instr_regs::NOP_regs &) -> T1 { return f4; },
+              [&](const typename instr_regs::ADD_regs &_args) -> T1 {
                 return f5(_args.d_a0);
               }},
           this->v());
@@ -854,10 +859,13 @@ struct InstructionClassifiers {
 
     __attribute__((pure)) bool is_jump() const {
       return std::visit(
-          Overloaded{
-              [](const typename instr_jump::ADD_jump) -> bool { return false; },
-              [](const typename instr_jump::NOP_jump) -> bool { return false; },
-              [](const auto) -> bool { return true; }},
+          Overloaded{[](const typename instr_jump::ADD_jump &) -> bool {
+                       return false;
+                     },
+                     [](const typename instr_jump::NOP_jump &) -> bool {
+                       return false;
+                     },
+                     [](const auto &) -> bool { return true; }},
           this->v());
     }
 
@@ -870,28 +878,28 @@ struct InstructionClassifiers {
                       F6 &&f5, const T1 f6) const {
       return std::visit(
           Overloaded{
-              [&](const typename instr_jump::JCN _args) -> T1 {
+              [&](const typename instr_jump::JCN &_args) -> T1 {
                 return f(_args.d_a0, _args.d_a1);
               },
-              [&](const typename instr_jump::JUN _args) -> T1 {
+              [&](const typename instr_jump::JUN &_args) -> T1 {
                 return f0(_args.d_a0);
               },
-              [&](const typename instr_jump::JMS _args) -> T1 {
+              [&](const typename instr_jump::JMS &_args) -> T1 {
                 return f1(_args.d_a0);
               },
-              [&](const typename instr_jump::JIN _args) -> T1 {
+              [&](const typename instr_jump::JIN &_args) -> T1 {
                 return f2(_args.d_a0);
               },
-              [&](const typename instr_jump::BBL_jump _args) -> T1 {
+              [&](const typename instr_jump::BBL_jump &_args) -> T1 {
                 return f3(_args.d_a0);
               },
-              [&](const typename instr_jump::ISZ_jump _args) -> T1 {
+              [&](const typename instr_jump::ISZ_jump &_args) -> T1 {
                 return f4(_args.d_a0, _args.d_a1);
               },
-              [&](const typename instr_jump::ADD_jump _args) -> T1 {
+              [&](const typename instr_jump::ADD_jump &_args) -> T1 {
                 return f5(_args.d_a0);
               },
-              [&](const typename instr_jump::NOP_jump) -> T1 { return f6; }},
+              [&](const typename instr_jump::NOP_jump &) -> T1 { return f6; }},
           this->v());
     }
 
@@ -904,28 +912,28 @@ struct InstructionClassifiers {
                        F6 &&f5, const T1 f6) const {
       return std::visit(
           Overloaded{
-              [&](const typename instr_jump::JCN _args) -> T1 {
+              [&](const typename instr_jump::JCN &_args) -> T1 {
                 return f(_args.d_a0, _args.d_a1);
               },
-              [&](const typename instr_jump::JUN _args) -> T1 {
+              [&](const typename instr_jump::JUN &_args) -> T1 {
                 return f0(_args.d_a0);
               },
-              [&](const typename instr_jump::JMS _args) -> T1 {
+              [&](const typename instr_jump::JMS &_args) -> T1 {
                 return f1(_args.d_a0);
               },
-              [&](const typename instr_jump::JIN _args) -> T1 {
+              [&](const typename instr_jump::JIN &_args) -> T1 {
                 return f2(_args.d_a0);
               },
-              [&](const typename instr_jump::BBL_jump _args) -> T1 {
+              [&](const typename instr_jump::BBL_jump &_args) -> T1 {
                 return f3(_args.d_a0);
               },
-              [&](const typename instr_jump::ISZ_jump _args) -> T1 {
+              [&](const typename instr_jump::ISZ_jump &_args) -> T1 {
                 return f4(_args.d_a0, _args.d_a1);
               },
-              [&](const typename instr_jump::ADD_jump _args) -> T1 {
+              [&](const typename instr_jump::ADD_jump &_args) -> T1 {
                 return f5(_args.d_a0);
               },
-              [&](const typename instr_jump::NOP_jump) -> T1 { return f6; }},
+              [&](const typename instr_jump::NOP_jump &) -> T1 { return f6; }},
           this->v());
     }
   };

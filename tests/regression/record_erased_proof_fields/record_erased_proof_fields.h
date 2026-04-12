@@ -58,8 +58,8 @@ public:
   template <typename T1, MapsTo<T1, T1, t_A> F0>
   T1 fold_left(F0 &&f, const T1 a0) const {
     return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil) -> T1 { return a0; },
-                   [&](const typename List<t_A>::Cons _args) -> T1 {
+        Overloaded{[&](const typename List<t_A>::Nil &) -> T1 { return a0; },
+                   [&](const typename List<t_A>::Cons &_args) -> T1 {
                      return _args.d_a1->template fold_left<T1>(
                          f, f(a0, _args.d_a0));
                    }},
@@ -181,10 +181,10 @@ struct RecordErasedProofFieldsCase {
   static T1 StoredTag_rect(F0 &&f, F1 &&f0,
                            const std::shared_ptr<StoredTag> &s) {
     return std::visit(
-        Overloaded{[&](const typename StoredTag::TagPrimary _args) -> T1 {
+        Overloaded{[&](const typename StoredTag::TagPrimary &_args) -> T1 {
                      return f(_args.d_a0);
                    },
-                   [&](const typename StoredTag::TagSecondary _args) -> T1 {
+                   [&](const typename StoredTag::TagSecondary &_args) -> T1 {
                      return f0(_args.d_a0);
                    }},
         s->v());
@@ -194,10 +194,10 @@ struct RecordErasedProofFieldsCase {
   static T1 StoredTag_rec(F0 &&f, F1 &&f0,
                           const std::shared_ptr<StoredTag> &s) {
     return std::visit(
-        Overloaded{[&](const typename StoredTag::TagPrimary _args) -> T1 {
+        Overloaded{[&](const typename StoredTag::TagPrimary &_args) -> T1 {
                      return f(_args.d_a0);
                    },
-                   [&](const typename StoredTag::TagSecondary _args) -> T1 {
+                   [&](const typename StoredTag::TagSecondary &_args) -> T1 {
                      return f0(_args.d_a0);
                    }},
         s->v());

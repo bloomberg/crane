@@ -48,10 +48,10 @@ std::string EffectOptionMatch::get_first_set(
     const std::shared_ptr<List<std::string>> &names) {
   return std::visit(
       Overloaded{
-          [](const typename List<std::string>::Nil) -> std::string {
+          [](const typename List<std::string>::Nil &) -> std::string {
             return "none";
           },
-          [](const typename List<std::string>::Cons _args) -> std::string {
+          [](const typename List<std::string>::Cons &_args) -> std::string {
             std::optional<std::string> mv =
                 [&]() -> std::optional<std::string> {
               auto *v = std::getenv(_args.d_a0.c_str());
@@ -63,9 +63,9 @@ std::string EffectOptionMatch::get_first_set(
               return v;
             } else {
               return std::visit(
-                  Overloaded{[](const typename List<std::string>::Nil)
+                  Overloaded{[](const typename List<std::string>::Nil &)
                                  -> std::string { return "none"; },
-                             [](const typename List<std::string>::Cons _args0)
+                             [](const typename List<std::string>::Cons &_args0)
                                  -> std::string {
                                std::optional<std::string> mv2 =
                                    [&]() -> std::optional<std::string> {
@@ -105,11 +105,11 @@ bool EffectOptionMatch::set_and_verify(const std::string name,
 /// 5. Recursive function with option matching
 std::optional<std::string> EffectOptionMatch::find_env_value(
     const std::shared_ptr<List<std::string>> &names) {
-  return std::visit(Overloaded{[](const typename List<std::string>::Nil)
+  return std::visit(Overloaded{[](const typename List<std::string>::Nil &)
                                    -> std::optional<std::string> {
                                  return std::optional<std::string>();
                                },
-                               [](const typename List<std::string>::Cons _args)
+                               [](const typename List<std::string>::Cons &_args)
                                    -> std::optional<std::string> {
                                  std::optional<std::string> mv =
                                      [&]() -> std::optional<std::string> {

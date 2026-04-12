@@ -18,8 +18,8 @@ ClosureEscapeMatch::make_prepender_opt(
         std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>>> &l) {
   return std::visit(
       Overloaded{
-          [](const typename ClosureEscapeMatch::mylist<
-              std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>>::Mynil)
+          [](const typename ClosureEscapeMatch::mylist<std::shared_ptr<
+                 ClosureEscapeMatch::mylist<unsigned int>>>::Mynil &)
               -> std::optional<std::function<std::shared_ptr<
                   ClosureEscapeMatch::mylist<unsigned int>>(
                   std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>)>> {
@@ -28,7 +28,7 @@ ClosureEscapeMatch::make_prepender_opt(
                 std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>)>>();
           },
           [](const typename ClosureEscapeMatch::mylist<std::shared_ptr<
-                 ClosureEscapeMatch::mylist<unsigned int>>>::Mycons _args)
+                 ClosureEscapeMatch::mylist<unsigned int>>>::Mycons &_args)
               -> std::optional<std::function<std::shared_ptr<
                   ClosureEscapeMatch::mylist<unsigned int>>(
                   std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>)>> {
@@ -51,14 +51,14 @@ ClosureEscapeMatch::make_pair_fn_opt(
     const std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>> &l) {
   return std::visit(
       Overloaded{
-          [](const typename ClosureEscapeMatch::mylist<unsigned int>::Mynil)
+          [](const typename ClosureEscapeMatch::mylist<unsigned int>::Mynil &)
               -> std::optional<std::function<
                   std::pair<unsigned int, unsigned int>(std::monostate)>> {
             return std::optional<std::function<
                 std::pair<unsigned int, unsigned int>(std::monostate)>>();
           },
           [](const typename ClosureEscapeMatch::mylist<unsigned int>::Mycons
-                 _args)
+                 &_args)
               -> std::optional<std::function<
                   std::pair<unsigned int, unsigned int>(std::monostate)>> {
             return std::make_optional<std::function<
@@ -78,18 +78,18 @@ ClosureEscapeMatch::nested_closure_opt(
     const std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>> &b) {
   return std::visit(
       Overloaded{
-          [&](const typename ClosureEscapeMatch::mylist<unsigned int>::Mynil)
+          [&](const typename ClosureEscapeMatch::mylist<unsigned int>::Mynil &)
               -> std::optional<std::function<unsigned int(unsigned int)>> {
             return std::visit(
                 Overloaded{[](const typename ClosureEscapeMatch::mylist<
-                               unsigned int>::Mynil)
+                               unsigned int>::Mynil &)
                                -> std::optional<
                                    std::function<unsigned int(unsigned int)>> {
                              return std::optional<
                                  std::function<unsigned int(unsigned int)>>();
                            },
                            [](const typename ClosureEscapeMatch::mylist<
-                               unsigned int>::Mycons _args0)
+                               unsigned int>::Mycons &_args0)
                                -> std::optional<
                                    std::function<unsigned int(unsigned int)>> {
                              return std::make_optional<
@@ -101,11 +101,11 @@ ClosureEscapeMatch::nested_closure_opt(
                 b->v());
           },
           [&](const typename ClosureEscapeMatch::mylist<unsigned int>::Mycons
-                  _args)
+                  &_args)
               -> std::optional<std::function<unsigned int(unsigned int)>> {
             return std::visit(
                 Overloaded{[&](const typename ClosureEscapeMatch::mylist<
-                               unsigned int>::Mynil)
+                               unsigned int>::Mynil &)
                                -> std::optional<
                                    std::function<unsigned int(unsigned int)>> {
                              return std::make_optional<
@@ -115,7 +115,7 @@ ClosureEscapeMatch::nested_closure_opt(
                                  });
                            },
                            [&](const typename ClosureEscapeMatch::mylist<
-                               unsigned int>::Mycons _args0)
+                               unsigned int>::Mycons &_args0)
                                -> std::optional<
                                    std::function<unsigned int(unsigned int)>> {
                              return std::make_optional<
@@ -140,19 +140,18 @@ ClosureEscapeMatch::closure_in_pair(
   return std::visit(
       Overloaded{
           [](const typename ClosureEscapeMatch::mylist<
-              std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>>::Mynil)
-              -> std::pair<
-                  unsigned int,
-                  std::function<
-                      std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>(
-                          std::shared_ptr<
-                              ClosureEscapeMatch::mylist<unsigned int>>)>> {
+              std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>>::Mynil
+                 &) -> std::pair<unsigned int,
+                                 std::function<std::shared_ptr<
+                                     ClosureEscapeMatch::mylist<unsigned int>>(
+                                     std::shared_ptr<ClosureEscapeMatch::mylist<
+                                         unsigned int>>)>> {
             return std::make_pair(
                 0u, [](std::shared_ptr<ClosureEscapeMatch::mylist<unsigned int>>
                            x) { return x; });
           },
           [](const typename ClosureEscapeMatch::mylist<std::shared_ptr<
-                 ClosureEscapeMatch::mylist<unsigned int>>>::Mycons _args)
+                 ClosureEscapeMatch::mylist<unsigned int>>>::Mycons &_args)
               -> std::pair<
                   unsigned int,
                   std::function<

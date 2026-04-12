@@ -277,12 +277,12 @@ __attribute__((pure))
 std::pair<std::shared_ptr<ConstructorBugs::Inner>, unsigned int>
 ConstructorBugs::match_sum(const std::shared_ptr<ConstructorBugs::MySum> &s) {
   return std::visit(
-      Overloaded{[](const typename ConstructorBugs::MySum::Left _args)
+      Overloaded{[](const typename ConstructorBugs::MySum::Left &_args)
                      -> std::pair<std::shared_ptr<ConstructorBugs::Inner>,
                                   unsigned int> {
                    return std::make_pair(_args.d_a0, _args.d_a0->inner_val);
                  },
-                 [](const typename ConstructorBugs::MySum::Right _args)
+                 [](const typename ConstructorBugs::MySum::Right &_args)
                      -> std::pair<std::shared_ptr<ConstructorBugs::Inner>,
                                   unsigned int> {
                    return std::make_pair(

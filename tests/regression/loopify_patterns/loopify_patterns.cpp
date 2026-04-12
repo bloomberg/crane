@@ -325,13 +325,13 @@ LoopifyPatterns::sum_prod_count(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename LoopifyPatterns::list<unsigned int>::Nil) {
+            [&](const typename LoopifyPatterns::list<unsigned int>::Nil &) {
               _result = std::make_pair(
                   std::make_pair(_loop_a_sum, _loop_a_prod), _loop_a_count);
               _continue = false;
             },
             [&](const typename LoopifyPatterns::list<unsigned int>::Cons
-                    _args) {
+                    &_args) {
               unsigned int _next_a_count = (_loop_a_count + 1);
               unsigned int _next_a_prod = (_loop_a_prod * _args.d_a0);
               unsigned int _next_a_sum = (_loop_a_sum + _args.d_a0);
@@ -366,12 +366,12 @@ LoopifyPatterns::split_by_sign_aux(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename LoopifyPatterns::list<unsigned int>::Nil) {
+            [&](const typename LoopifyPatterns::list<unsigned int>::Nil &) {
               _result = std::make_pair(_loop_pos, _loop_neg);
               _continue = false;
             },
             [&](const typename LoopifyPatterns::list<unsigned int>::Cons
-                    _args) {
+                    &_args) {
               if (base <= _args.d_a0) {
                 std::shared_ptr<LoopifyPatterns::list<unsigned int>> _next_neg =
                     std::move(_loop_neg);
@@ -420,12 +420,12 @@ __attribute__((pure)) unsigned int LoopifyPatterns::guard_accum(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename LoopifyPatterns::list<unsigned int>::Nil) {
+            [&](const typename LoopifyPatterns::list<unsigned int>::Nil &) {
               _result = _loop_acc;
               _continue = false;
             },
             [&](const typename LoopifyPatterns::list<unsigned int>::Cons
-                    _args) {
+                    &_args) {
               if (100u < _args.d_a0) {
                 std::shared_ptr<LoopifyPatterns::list<unsigned int>> _next_l =
                     _args.d_a1;
@@ -470,7 +470,7 @@ LoopifyPatterns::cons_computed(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename LoopifyPatterns::list<unsigned int>::Nil) {
+            [&](const typename LoopifyPatterns::list<unsigned int>::Nil &) {
               if (_last) {
                 std::get<typename list<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = list<unsigned int>::nil();
@@ -480,7 +480,7 @@ LoopifyPatterns::cons_computed(
               _continue = false;
             },
             [&](const typename LoopifyPatterns::list<unsigned int>::Cons
-                    _args) {
+                    &_args) {
               unsigned int next_n;
               if (0u < _loop_n) {
                 next_n = (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
@@ -605,7 +605,7 @@ LoopifyPatterns::replace_at(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename LoopifyPatterns::list<unsigned int>::Nil) {
+            [&](const typename LoopifyPatterns::list<unsigned int>::Nil &) {
               if (_last) {
                 std::get<typename list<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = list<unsigned int>::nil();
@@ -615,7 +615,7 @@ LoopifyPatterns::replace_at(
               _continue = false;
             },
             [&](const typename LoopifyPatterns::list<unsigned int>::Cons
-                    _args) {
+                    &_args) {
               if (_loop_idx <= 0) {
                 if (_last) {
                   std::get<typename list<unsigned int>::Cons>(_last->v_mut())
@@ -679,12 +679,12 @@ __attribute__((pure)) unsigned int LoopifyPatterns::nested_pattern(
                   Overloaded{
                       [&](const typename LoopifyPatterns::list<
                           std::pair<std::pair<unsigned int, unsigned int>,
-                                    unsigned int>>::Nil) -> void {
+                                    unsigned int>>::Nil &) -> void {
                         _result = 0u;
                       },
                       [&](const typename LoopifyPatterns::list<
                           std::pair<std::pair<unsigned int, unsigned int>,
-                                    unsigned int>>::Cons _args) -> void {
+                                    unsigned int>>::Cons &_args) -> void {
                         std::pair<unsigned int, unsigned int> p0 =
                             _args.d_a0.first;
                         unsigned int c = _args.d_a0.second;
@@ -759,15 +759,16 @@ __attribute__((pure)) unsigned int LoopifyPatterns::list_len(
             [&](_Enter _f) {
               const std::shared_ptr<LoopifyPatterns::list<unsigned int>> l =
                   _f.l;
-              std::visit(
-                  Overloaded{[&](const typename LoopifyPatterns::list<
-                                 unsigned int>::Nil) -> void { _result = 0u; },
-                             [&](const typename LoopifyPatterns::list<
-                                 unsigned int>::Cons _args) -> void {
-                               _stack.push_back(_Call1{});
-                               _stack.push_back(_Enter{_args.d_a1});
-                             }},
-                  l->v());
+              std::visit(Overloaded{[&](const typename LoopifyPatterns::list<
+                                        unsigned int>::Nil &) -> void {
+                                      _result = 0u;
+                                    },
+                                    [&](const typename LoopifyPatterns::list<
+                                        unsigned int>::Cons &_args) -> void {
+                                      _stack.push_back(_Call1{});
+                                      _stack.push_back(_Enter{_args.d_a1});
+                                    }},
+                         l->v());
             },
             [&](_Call1) { _result = (_result + 1); }},
         _frame);
@@ -815,11 +816,11 @@ LoopifyPatterns::process_twice_fuel(
                 } else {
                   std::visit(
                       Overloaded{[&](const typename LoopifyPatterns::list<
-                                     unsigned int>::Nil) -> void {
+                                     unsigned int>::Nil &) -> void {
                                    _result = list<unsigned int>::nil();
                                  },
                                  [&](const typename LoopifyPatterns::list<
-                                     unsigned int>::Cons _args) -> void {
+                                     unsigned int>::Cons &_args) -> void {
                                    _stack.push_back(_Call1{_args, f});
                                    _stack.push_back(_Enter{_args.d_a1, f});
                                  }},
@@ -879,7 +880,7 @@ LoopifyPatterns::as_guard_fuel(
       unsigned int f = _loop_fuel - 1;
       std::visit(
           Overloaded{
-              [&](const typename LoopifyPatterns::list<unsigned int>::Nil) {
+              [&](const typename LoopifyPatterns::list<unsigned int>::Nil &) {
                 if (_last) {
                   std::get<typename list<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = list<unsigned int>::nil();
@@ -889,7 +890,7 @@ LoopifyPatterns::as_guard_fuel(
                 _continue = false;
               },
               [&](const typename LoopifyPatterns::list<unsigned int>::Cons
-                      _args) {
+                      &_args) {
                 std::shared_ptr<LoopifyPatterns::list<unsigned int>> all =
                     list<unsigned int>::cons(_args.d_a0, _args.d_a1);
                 if (3u < list_len(std::move(all))) {
@@ -962,40 +963,40 @@ __attribute__((pure)) unsigned int LoopifyPatterns::quad_sum_pattern(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyPatterns::list<
-                          unsigned int>::Nil) -> void { _result = 0u; },
+                          unsigned int>::Nil &) -> void { _result = 0u; },
                       [&](const typename LoopifyPatterns::list<
-                          unsigned int>::Cons _args) -> void {
+                          unsigned int>::Cons &_args) -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename LoopifyPatterns::list<
-                                    unsigned int>::Nil) -> void {
+                                    unsigned int>::Nil &) -> void {
                                   _result = _args.d_a0;
                                 },
                                 [&](const typename LoopifyPatterns::list<
-                                    unsigned int>::Cons _args0) -> void {
+                                    unsigned int>::Cons &_args0) -> void {
                                   std::visit(
                                       Overloaded{
                                           [&](const typename LoopifyPatterns::
-                                                  list<unsigned int>::Nil)
+                                                  list<unsigned int>::Nil &)
                                               -> void {
                                             _result =
                                                 (_args.d_a0 + _args0.d_a0);
                                           },
                                           [&](const typename LoopifyPatterns::
                                                   list<unsigned int>::Cons
-                                                      _args1) -> void {
+                                                      &_args1) -> void {
                                             std::visit(
                                                 Overloaded{
                                                     [&](const typename LoopifyPatterns::
                                                             list<unsigned int>::
-                                                                Nil) -> void {
+                                                                Nil &) -> void {
                                                       _result = (_args.d_a0 +
                                                                  (_args0.d_a0 +
                                                                   _args1.d_a0));
                                                     },
                                                     [&](const typename LoopifyPatterns::
                                                             list<unsigned int>::
-                                                                Cons _args2)
+                                                                Cons &_args2)
                                                         -> void {
                                                       _stack.push_back(_Call1{
                                                           (_args.d_a0 +
@@ -1042,15 +1043,16 @@ __attribute__((pure)) unsigned int LoopifyPatterns::multi_guard(
             [&](_Enter _f) {
               const std::shared_ptr<LoopifyPatterns::list<unsigned int>> l =
                   _f.l;
-              std::visit(
-                  Overloaded{[&](const typename LoopifyPatterns::list<
-                                 unsigned int>::Nil) -> void { _result = 0u; },
-                             [&](const typename LoopifyPatterns::list<
-                                 unsigned int>::Cons _args) -> void {
-                               _stack.push_back(_Call1{_args});
-                               _stack.push_back(_Enter{_args.d_a1});
-                             }},
-                  l->v());
+              std::visit(Overloaded{[&](const typename LoopifyPatterns::list<
+                                        unsigned int>::Nil &) -> void {
+                                      _result = 0u;
+                                    },
+                                    [&](const typename LoopifyPatterns::list<
+                                        unsigned int>::Cons &_args) -> void {
+                                      _stack.push_back(_Call1{_args});
+                                      _stack.push_back(_Enter{_args.d_a1});
+                                    }},
+                         l->v());
             },
             [&](_Call1 _f) {
               const typename LoopifyPatterns::list<unsigned int>::Cons _args =
@@ -1083,7 +1085,7 @@ LoopifyPatterns::append_lists(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename LoopifyPatterns::list<unsigned int>::Nil) {
+            [&](const typename LoopifyPatterns::list<unsigned int>::Nil &) {
               if (_last) {
                 std::get<typename list<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = std::move(l2);
@@ -1093,7 +1095,7 @@ LoopifyPatterns::append_lists(
               _continue = false;
             },
             [&](const typename LoopifyPatterns::list<unsigned int>::Cons
-                    _args) {
+                    &_args) {
               auto _cell = list<unsigned int>::cons(_args.d_a0, nullptr);
               if (_last) {
                 std::get<typename list<unsigned int>::Cons>(_last->v_mut())
@@ -1137,11 +1139,11 @@ LoopifyPatterns::double_append(
               const std::shared_ptr<LoopifyPatterns::list<unsigned int>> l1 =
                   _f.l1;
               std::visit(Overloaded{[&](const typename LoopifyPatterns::list<
-                                        unsigned int>::Nil) -> void {
+                                        unsigned int>::Nil &) -> void {
                                       _result = std::move(l2);
                                     },
                                     [&](const typename LoopifyPatterns::list<
-                                        unsigned int>::Cons _args) -> void {
+                                        unsigned int>::Cons &_args) -> void {
                                       _stack.push_back(_Call1{_args});
                                       _stack.push_back(
                                           _Enter{std::move(l2), _args.d_a1});
@@ -1201,11 +1203,11 @@ LoopifyPatterns::process_twice_alt_fuel(
                 } else {
                   std::visit(
                       Overloaded{[&](const typename LoopifyPatterns::list<
-                                     unsigned int>::Nil) -> void {
+                                     unsigned int>::Nil &) -> void {
                                    _result = list<unsigned int>::nil();
                                  },
                                  [&](const typename LoopifyPatterns::list<
-                                     unsigned int>::Cons _args) -> void {
+                                     unsigned int>::Cons &_args) -> void {
                                    _stack.push_back(_Call1{_args, f});
                                    _stack.push_back(_Enter{_args.d_a1, f});
                                  }},
@@ -1263,15 +1265,16 @@ __attribute__((pure)) unsigned int LoopifyPatterns::sum_if_positive_else_double(
             [&](_Enter _f) {
               const std::shared_ptr<LoopifyPatterns::list<unsigned int>> l =
                   _f.l;
-              std::visit(
-                  Overloaded{[&](const typename LoopifyPatterns::list<
-                                 unsigned int>::Nil) -> void { _result = 0u; },
-                             [&](const typename LoopifyPatterns::list<
-                                 unsigned int>::Cons _args) -> void {
-                               _stack.push_back(_Call1{_args});
-                               _stack.push_back(_Enter{_args.d_a1});
-                             }},
-                  l->v());
+              std::visit(Overloaded{[&](const typename LoopifyPatterns::list<
+                                        unsigned int>::Nil &) -> void {
+                                      _result = 0u;
+                                    },
+                                    [&](const typename LoopifyPatterns::list<
+                                        unsigned int>::Cons &_args) -> void {
+                                      _stack.push_back(_Call1{_args});
+                                      _stack.push_back(_Enter{_args.d_a1});
+                                    }},
+                         l->v());
             },
             [&](_Call1 _f) {
               const typename LoopifyPatterns::list<unsigned int>::Cons _args =
@@ -1301,7 +1304,7 @@ LoopifyPatterns::merge_alternating(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename LoopifyPatterns::list<unsigned int>::Nil) {
+            [&](const typename LoopifyPatterns::list<unsigned int>::Nil &) {
               if (_last) {
                 std::get<typename list<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = std::move(_loop_l2);
@@ -1311,11 +1314,11 @@ LoopifyPatterns::merge_alternating(
               _continue = false;
             },
             [&](const typename LoopifyPatterns::list<unsigned int>::Cons
-                    _args) {
+                    &_args) {
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyPatterns::list<
-                          unsigned int>::Nil) {
+                          unsigned int>::Nil &) {
                         if (_last) {
                           std::get<typename list<unsigned int>::Cons>(
                               _last->v_mut())
@@ -1326,7 +1329,7 @@ LoopifyPatterns::merge_alternating(
                         _continue = false;
                       },
                       [&](const typename LoopifyPatterns::list<
-                          unsigned int>::Cons _args0) {
+                          unsigned int>::Cons &_args0) {
                         auto _cell =
                             list<unsigned int>::cons(_args.d_a0, nullptr);
                         auto _cell1 =
@@ -1393,35 +1396,35 @@ __attribute__((pure)) unsigned int LoopifyPatterns::four_elem(
               std::visit(
                   Overloaded{
                       [&](const typename LoopifyPatterns::list<
-                          unsigned int>::Nil) -> void { _result = 0u; },
+                          unsigned int>::Nil &) -> void { _result = 0u; },
                       [&](const typename LoopifyPatterns::list<
-                          unsigned int>::Cons _args) -> void {
+                          unsigned int>::Cons &_args) -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename LoopifyPatterns::list<
-                                    unsigned int>::Nil) -> void {
+                                    unsigned int>::Nil &) -> void {
                                   _result = 1u;
                                 },
                                 [&](const typename LoopifyPatterns::list<
-                                    unsigned int>::Cons _args0) -> void {
+                                    unsigned int>::Cons &_args0) -> void {
                                   std::visit(
                                       Overloaded{
                                           [&](const typename LoopifyPatterns::
-                                                  list<unsigned int>::Nil)
+                                                  list<unsigned int>::Nil &)
                                               -> void { _result = 2u; },
                                           [&](const typename LoopifyPatterns::
                                                   list<unsigned int>::Cons
-                                                      _args1) -> void {
+                                                      &_args1) -> void {
                                             std::visit(
                                                 Overloaded{
                                                     [&](const typename LoopifyPatterns::
                                                             list<unsigned int>::
-                                                                Nil) -> void {
+                                                                Nil &) -> void {
                                                       _result = 3u;
                                                     },
                                                     [&](const typename LoopifyPatterns::
                                                             list<unsigned int>::
-                                                                Cons _args2)
+                                                                Cons &_args2)
                                                         -> void {
                                                       _stack.push_back(
                                                           _Call1{_args.d_a0,

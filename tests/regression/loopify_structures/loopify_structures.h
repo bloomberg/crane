@@ -64,7 +64,7 @@ public:
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil) {
+              [&](const typename List<t_A>::Nil &) {
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
                 } else {
@@ -72,7 +72,7 @@ public:
                 }
                 _continue = false;
               },
-              [&](const typename List<t_A>::Cons _args) {
+              [&](const typename List<t_A>::Cons &_args) {
                 auto _cell = List<t_A>::cons(_args.d_a0, nullptr);
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =
@@ -136,12 +136,12 @@ struct LoopifyStructures {
 
     /// nested_flatten n flattens to a regular list.
     std::shared_ptr<List<unsigned int>> nested_flatten() const {
-      return std::visit(Overloaded{[](const typename nested::Elem _args)
+      return std::visit(Overloaded{[](const typename nested::Elem &_args)
                                        -> std::shared_ptr<List<unsigned int>> {
                                      return List<unsigned int>::cons(
                                          _args.d_a0, List<unsigned int>::nil());
                                    },
-                                   [](const typename nested::NList _args)
+                                   [](const typename nested::NList &_args)
                                        -> std::shared_ptr<List<unsigned int>> {
                                      return flatten_nested_list_fuel(
                                          1000u, _args.d_a0);
@@ -153,8 +153,8 @@ struct LoopifyStructures {
     __attribute__((pure)) unsigned int nested_depth() const {
       return std::visit(
           Overloaded{
-              [](const typename nested::Elem) -> unsigned int { return 0u; },
-              [](const typename nested::NList _args) -> unsigned int {
+              [](const typename nested::Elem &) -> unsigned int { return 0u; },
+              [](const typename nested::NList &_args) -> unsigned int {
                 return (depth_nested_list_fuel(1000u, _args.d_a0) + 1);
               }},
           this->v());
@@ -163,10 +163,10 @@ struct LoopifyStructures {
     /// nested_sum n sums all elements in a nested structure.
     __attribute__((pure)) unsigned int nested_sum() const {
       return std::visit(
-          Overloaded{[](const typename nested::Elem _args) -> unsigned int {
+          Overloaded{[](const typename nested::Elem &_args) -> unsigned int {
                        return _args.d_a0;
                      },
-                     [](const typename nested::NList _args) -> unsigned int {
+                     [](const typename nested::NList &_args) -> unsigned int {
                        return sum_nested_list_fuel(1000u, _args.d_a0);
                      }},
           this->v());
@@ -176,10 +176,10 @@ struct LoopifyStructures {
               MapsTo<T1, std::shared_ptr<List<std::shared_ptr<nested>>>> F1>
     T1 nested_rec(F0 &&f, F1 &&f0) const {
       return std::visit(
-          Overloaded{[&](const typename nested::Elem _args) -> T1 {
+          Overloaded{[&](const typename nested::Elem &_args) -> T1 {
                        return f(_args.d_a0);
                      },
-                     [&](const typename nested::NList _args) -> T1 {
+                     [&](const typename nested::NList &_args) -> T1 {
                        return f0(_args.d_a0);
                      }},
           this->v());
@@ -189,10 +189,10 @@ struct LoopifyStructures {
               MapsTo<T1, std::shared_ptr<List<std::shared_ptr<nested>>>> F1>
     T1 nested_rect(F0 &&f, F1 &&f0) const {
       return std::visit(
-          Overloaded{[&](const typename nested::Elem _args) -> T1 {
+          Overloaded{[&](const typename nested::Elem &_args) -> T1 {
                        return f(_args.d_a0);
                      },
-                     [&](const typename nested::NList _args) -> T1 {
+                     [&](const typename nested::NList &_args) -> T1 {
                        return f0(_args.d_a0);
                      }},
           this->v());
@@ -310,10 +310,10 @@ struct LoopifyStructures {
                   const quadtree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename quadtree::QLeaf _args) -> void {
+                          [&](const typename quadtree::QLeaf &_args) -> void {
                             _result = quadtree::qleaf(f(_args.d_a0));
                           },
-                          [&](const typename quadtree::Quad _args) -> void {
+                          [&](const typename quadtree::Quad &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a2.get(),
                                                     _args.d_a1.get(),
                                                     _args.d_a0.get()});
@@ -383,10 +383,10 @@ struct LoopifyStructures {
                   const quadtree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename quadtree::QLeaf) -> void {
+                          [&](const typename quadtree::QLeaf &) -> void {
                             _result = 0u;
                           },
-                          [&](const typename quadtree::Quad _args) -> void {
+                          [&](const typename quadtree::Quad &_args) -> void {
                             _stack.push_back(_Call1{_args});
                             _stack.push_back(_Enter{_args.d_a0.get()});
                           }},
@@ -496,10 +496,10 @@ struct LoopifyStructures {
                   const quadtree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename quadtree::QLeaf _args) -> void {
+                          [&](const typename quadtree::QLeaf &_args) -> void {
                             _result = _args.d_a0;
                           },
-                          [&](const typename quadtree::Quad _args) -> void {
+                          [&](const typename quadtree::Quad &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a2.get(),
                                                     _args.d_a1.get(),
                                                     _args.d_a0.get()});
@@ -592,10 +592,10 @@ struct LoopifyStructures {
                   const quadtree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename quadtree::QLeaf _args) -> void {
+                          [&](const typename quadtree::QLeaf &_args) -> void {
                             _result = f(_args.d_a0);
                           },
-                          [&](const typename quadtree::Quad _args) -> void {
+                          [&](const typename quadtree::Quad &_args) -> void {
                             _stack.push_back(
                                 _Call1{_args.d_a2.get(), _args.d_a1.get(),
                                        _args.d_a0.get(), _args.d_a3, _args.d_a2,
@@ -693,10 +693,10 @@ struct LoopifyStructures {
                   const quadtree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename quadtree::QLeaf _args) -> void {
+                          [&](const typename quadtree::QLeaf &_args) -> void {
                             _result = f(_args.d_a0);
                           },
-                          [&](const typename quadtree::Quad _args) -> void {
+                          [&](const typename quadtree::Quad &_args) -> void {
                             _stack.push_back(
                                 _Call1{_args.d_a2.get(), _args.d_a1.get(),
                                        _args.d_a0.get(), _args.d_a3, _args.d_a2,
@@ -738,20 +738,20 @@ struct LoopifyStructures {
     std::shared_ptr<List<unsigned int>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename List<unsigned int>::Nil) {
-                              _result = std::optional<unsigned int>();
-                              _continue = false;
-                            },
-                            [&](const typename List<unsigned int>::Cons _args) {
-                              if (p(_args.d_a0)) {
-                                _result = std::make_optional<unsigned int>(
-                                    _args.d_a0);
-                                _continue = false;
-                              } else {
-                                _loop_l = _args.d_a1;
-                              }
-                            }},
-                 _loop_l->v());
+      std::visit(
+          Overloaded{[&](const typename List<unsigned int>::Nil &) {
+                       _result = std::optional<unsigned int>();
+                       _continue = false;
+                     },
+                     [&](const typename List<unsigned int>::Cons &_args) {
+                       if (p(_args.d_a0)) {
+                         _result = std::make_optional<unsigned int>(_args.d_a0);
+                         _continue = false;
+                       } else {
+                         _loop_l = _args.d_a1;
+                       }
+                     }},
+          _loop_l->v());
     }
     return _result;
   }
@@ -767,7 +767,7 @@ struct LoopifyStructures {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil) {
+              [&](const typename List<unsigned int>::Nil &) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = List<unsigned int>::nil();
@@ -776,7 +776,7 @@ struct LoopifyStructures {
                 }
                 _continue = false;
               },
-              [&](const typename List<unsigned int>::Cons _args) {
+              [&](const typename List<unsigned int>::Cons &_args) {
                 auto _cs = f(_args.d_a0);
                 if (_cs.has_value()) {
                   unsigned int y = *_cs;
@@ -810,7 +810,7 @@ struct LoopifyStructures {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil) {
+              [&](const typename List<unsigned int>::Nil &) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = List<unsigned int>::nil();
@@ -819,7 +819,7 @@ struct LoopifyStructures {
                 }
                 _continue = false;
               },
-              [&](const typename List<unsigned int>::Cons _args) {
+              [&](const typename List<unsigned int>::Cons &_args) {
                 if (p(_args.d_a0)) {
                   auto _cell = List<unsigned int>::cons(f(_args.d_a0), nullptr);
                   if (_last) {
@@ -929,10 +929,10 @@ struct LoopifyStructures {
                   const ltree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename ltree::LLeaf _args) -> void {
+                          [&](const typename ltree::LLeaf &_args) -> void {
                             _result = f(_args.d_a0);
                           },
-                          [&](const typename ltree::LNode _args) -> void {
+                          [&](const typename ltree::LNode &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a1.get(),
                                                     _args.d_a2, _args.d_a1,
                                                     _args.d_a0});
@@ -990,10 +990,10 @@ struct LoopifyStructures {
                   const ltree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename ltree::LLeaf _args) -> void {
+                          [&](const typename ltree::LLeaf &_args) -> void {
                             _result = f(_args.d_a0);
                           },
-                          [&](const typename ltree::LNode _args) -> void {
+                          [&](const typename ltree::LNode &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a1.get(),
                                                     _args.d_a2, _args.d_a1,
                                                     _args.d_a0});

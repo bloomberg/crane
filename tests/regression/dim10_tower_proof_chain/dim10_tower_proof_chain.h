@@ -115,7 +115,7 @@ struct Dim10TowerProofChainCase {
         } else {
           return std::visit(
               Overloaded{
-                  [](const typename SigT<unsigned int, std::any>::ExistT _args)
+                  [](const typename SigT<unsigned int, std::any>::ExistT &_args)
                       -> std::shared_ptr<SigT<unsigned int, std::any>> {
                     return SigT<unsigned int, std::any>::existt(_args.d_x,
                                                                 std::any{});
@@ -135,7 +135,7 @@ struct Dim10TowerProofChainCase {
         } else {
           return std::visit(
               Overloaded{
-                  [](const typename SigT<unsigned int, std::any>::ExistT _args)
+                  [](const typename SigT<unsigned int, std::any>::ExistT &_args)
                       -> std::shared_ptr<SigT<unsigned int, std::any>> {
                     return SigT<unsigned int, std::any>::existt(_args.d_x,
                                                                 std::any{});
@@ -191,11 +191,11 @@ struct Dim10TowerProofChainCase {
   static inline const unsigned int dim10_d10_dim =
       dim10_bundle->dt_tower->ggt_D(10u)->go_dim;
   static inline const unsigned int dim10_layers_cutoff = std::visit(
-      Overloaded{[](const typename SigT<unsigned int, std::any>::ExistT _args)
+      Overloaded{[](const typename SigT<unsigned int, std::any>::ExistT &_args)
                      -> unsigned int { return _args.d_x; }},
       dim10_bundle->dt_chain->gc_layers_stabilize->v());
   static inline const unsigned int dim10_P_cutoff = std::visit(
-      Overloaded{[](const typename SigT<unsigned int, std::any>::ExistT _args0)
+      Overloaded{[](const typename SigT<unsigned int, std::any>::ExistT &_args0)
                      -> unsigned int { return _args0.d_x; }},
       dim10_bundle->dt_chain->gc_P_stabilize->v());
   static inline const bool dim10_layers_cutoff_matches =

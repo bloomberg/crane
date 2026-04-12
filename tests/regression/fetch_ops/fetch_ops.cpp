@@ -22,19 +22,19 @@ __attribute__((pure)) std::pair<unsigned int, unsigned int>
 FetchOps::fetch_pair(const std::shared_ptr<List<unsigned int>> &rom_data,
                      const unsigned int addr) {
   return std::visit(
-      Overloaded{[](const typename List<unsigned int>::Nil)
+      Overloaded{[](const typename List<unsigned int>::Nil &)
                      -> std::pair<unsigned int, unsigned int> {
                    return std::make_pair(0u, 0u);
                  },
-                 [](const typename List<unsigned int>::Cons _args)
+                 [](const typename List<unsigned int>::Cons &_args)
                      -> std::pair<unsigned int, unsigned int> {
                    return std::visit(
                        Overloaded{
-                           [](const typename List<unsigned int>::Nil)
+                           [](const typename List<unsigned int>::Nil &)
                                -> std::pair<unsigned int, unsigned int> {
                              return std::make_pair(0u, 0u);
                            },
-                           [&](const typename List<unsigned int>::Cons _args0)
+                           [&](const typename List<unsigned int>::Cons &_args0)
                                -> std::pair<unsigned int, unsigned int> {
                              return std::make_pair(_args.d_a0, _args0.d_a0);
                            }},
@@ -48,20 +48,20 @@ FetchOps::fetch_window(const std::shared_ptr<List<unsigned int>> &rom_data,
                        const unsigned int addr) {
   return std::visit(
       Overloaded{
-          [](const typename List<unsigned int>::Nil)
+          [](const typename List<unsigned int>::Nil &)
               -> std::optional<std::pair<unsigned int, unsigned int>> {
             return std::optional<std::pair<unsigned int, unsigned int>>();
           },
-          [&](const typename List<unsigned int>::Cons _args)
+          [&](const typename List<unsigned int>::Cons &_args)
               -> std::optional<std::pair<unsigned int, unsigned int>> {
             return std::visit(
-                Overloaded{[](const typename List<unsigned int>::Nil)
+                Overloaded{[](const typename List<unsigned int>::Nil &)
                                -> std::optional<
                                    std::pair<unsigned int, unsigned int>> {
                              return std::optional<
                                  std::pair<unsigned int, unsigned int>>();
                            },
-                           [&](const typename List<unsigned int>::Cons)
+                           [&](const typename List<unsigned int>::Cons &)
                                -> std::optional<
                                    std::pair<unsigned int, unsigned int>> {
                              return std::make_optional<

@@ -109,15 +109,15 @@ std::string EffectUnitStress::nested_if_monadic(const bool b1, const bool b2) {
 /// 10. Monadic function returning option
 std::optional<unsigned int>
 EffectUnitStress::safe_head(const std::shared_ptr<List<unsigned int>> &xs) {
-  return std::visit(Overloaded{[](const typename List<unsigned int>::Nil)
-                                   -> std::optional<unsigned int> {
-                                 std::cout << "empty!"s << '\n';
-                                 return std::optional<unsigned int>();
-                               },
-                               [](const typename List<unsigned int>::Cons _args)
-                                   -> std::optional<unsigned int> {
-                                 return std::make_optional<unsigned int>(
-                                     _args.d_a0);
-                               }},
-                    xs->v());
+  return std::visit(
+      Overloaded{[](const typename List<unsigned int>::Nil &)
+                     -> std::optional<unsigned int> {
+                   std::cout << "empty!"s << '\n';
+                   return std::optional<unsigned int>();
+                 },
+                 [](const typename List<unsigned int>::Cons &_args)
+                     -> std::optional<unsigned int> {
+                   return std::make_optional<unsigned int>(_args.d_a0);
+                 }},
+      xs->v());
 }

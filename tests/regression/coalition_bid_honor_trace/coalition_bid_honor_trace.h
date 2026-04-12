@@ -59,18 +59,19 @@ public:
   template <MapsTo<bool, t_A> F0>
   __attribute__((pure)) bool existsb(F0 &&f) const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil) -> bool { return false; },
-                   [&](const typename List<t_A>::Cons _args) -> bool {
-                     return (f(_args.d_a0) || _args.d_a1->existsb(f));
-                   }},
+        Overloaded{
+            [](const typename List<t_A>::Nil &) -> bool { return false; },
+            [&](const typename List<t_A>::Cons &_args) -> bool {
+              return (f(_args.d_a0) || _args.d_a1->existsb(f));
+            }},
         this->v());
   }
 
   template <typename T1, MapsTo<T1, t_A, T1> F0>
   T1 fold_right(F0 &&f, const T1 a0) const {
     return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil) -> T1 { return a0; },
-                   [&](const typename List<t_A>::Cons _args) -> T1 {
+        Overloaded{[&](const typename List<t_A>::Nil &) -> T1 { return a0; },
+                   [&](const typename List<t_A>::Cons &_args) -> T1 {
                      return f(_args.d_a0,
                               _args.d_a1->template fold_right<T1>(f, a0));
                    }},
@@ -81,10 +82,10 @@ public:
   std::shared_ptr<List<T1>> flat_map(F0 &&f) const {
     return std::visit(
         Overloaded{
-            [](const typename List<t_A>::Nil) -> std::shared_ptr<List<T1>> {
+            [](const typename List<t_A>::Nil &) -> std::shared_ptr<List<T1>> {
               return List<T1>::nil();
             },
-            [&](const typename List<t_A>::Cons _args)
+            [&](const typename List<t_A>::Cons &_args)
                 -> std::shared_ptr<List<T1>> {
               return f(_args.d_a0)->app(_args.d_a1->template flat_map<T1>(f));
             }},
@@ -95,8 +96,8 @@ public:
     if (n <= 0) {
       return std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil) -> t_A { return default0; },
-              [](const typename List<t_A>::Cons _args) -> t_A {
+              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
+              [](const typename List<t_A>::Cons &_args) -> t_A {
                 return _args.d_a0;
               }},
           this->v());
@@ -104,8 +105,8 @@ public:
       unsigned int m = n - 1;
       return std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil) -> t_A { return default0; },
-              [&](const typename List<t_A>::Cons _args0) -> t_A {
+              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
+              [&](const typename List<t_A>::Cons &_args0) -> t_A {
                 return _args0.d_a1->nth(m, default0);
               }},
           this->v());
@@ -115,9 +116,9 @@ public:
   template <typename T1, MapsTo<T1, t_A> F0>
   std::shared_ptr<List<T1>> map(F0 &&f) const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil)
+        Overloaded{[](const typename List<t_A>::Nil &)
                        -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
-                   [&](const typename List<t_A>::Cons _args)
+                   [&](const typename List<t_A>::Cons &_args)
                        -> std::shared_ptr<List<T1>> {
                      return List<T1>::cons(f(_args.d_a0),
                                            _args.d_a1->template map<T1>(f));
@@ -128,8 +129,8 @@ public:
   __attribute__((pure)) unsigned int length() const {
     return std::visit(
         Overloaded{
-            [](const typename List<t_A>::Nil) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons _args) -> unsigned int {
+            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
+            [](const typename List<t_A>::Cons &_args) -> unsigned int {
               return (_args.d_a1->length() + 1);
             }},
         this->v());
@@ -137,9 +138,9 @@ public:
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
     return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil)
+        Overloaded{[&](const typename List<t_A>::Nil &)
                        -> std::shared_ptr<List<t_A>> { return m; },
-                   [&](const typename List<t_A>::Cons _args)
+                   [&](const typename List<t_A>::Cons &_args)
                        -> std::shared_ptr<List<t_A>> {
                      return List<t_A>::cons(_args.d_a0, _args.d_a1->app(m));
                    }},
@@ -634,8 +635,8 @@ struct CoalitionBidHonorTraceCase {
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 Prize_rect(const T1 f, F1 &&f0, const std::shared_ptr<Prize> &p) {
     return std::visit(
-        Overloaded{[&](const typename Prize::PrizeHonor) -> T1 { return f; },
-                   [&](const typename Prize::PrizeEnclave _args) -> T1 {
+        Overloaded{[&](const typename Prize::PrizeHonor &) -> T1 { return f; },
+                   [&](const typename Prize::PrizeEnclave &_args) -> T1 {
                      return f0(_args.d_enclave_id);
                    }},
         p->v());
@@ -644,8 +645,8 @@ struct CoalitionBidHonorTraceCase {
   template <typename T1, MapsTo<T1, unsigned int> F1>
   static T1 Prize_rec(const T1 f, F1 &&f0, const std::shared_ptr<Prize> &p) {
     return std::visit(
-        Overloaded{[&](const typename Prize::PrizeHonor) -> T1 { return f; },
-                   [&](const typename Prize::PrizeEnclave _args) -> T1 {
+        Overloaded{[&](const typename Prize::PrizeHonor &) -> T1 { return f; },
+                   [&](const typename Prize::PrizeEnclave &_args) -> T1 {
                      return f0(_args.d_enclave_id);
                    }},
         p->v());
@@ -695,10 +696,10 @@ struct CoalitionBidHonorTraceCase {
     T1 Location_rec(F0 &&f, F1 &&f0) const {
       return std::visit(
           Overloaded{
-              [&](const typename Location::LocPlanetSurface _args) -> T1 {
+              [&](const typename Location::LocPlanetSurface &_args) -> T1 {
                 return f(_args.d_world_id, _args.d_region_id);
               },
-              [&](const typename Location::LocEnclave _args) -> T1 {
+              [&](const typename Location::LocEnclave &_args) -> T1 {
                 return f0(_args.d_enclave_id);
               }},
           this->v());
@@ -709,10 +710,10 @@ struct CoalitionBidHonorTraceCase {
     T1 Location_rect(F0 &&f, F1 &&f0) const {
       return std::visit(
           Overloaded{
-              [&](const typename Location::LocPlanetSurface _args) -> T1 {
+              [&](const typename Location::LocPlanetSurface &_args) -> T1 {
                 return f(_args.d_world_id, _args.d_region_id);
               },
-              [&](const typename Location::LocEnclave _args) -> T1 {
+              [&](const typename Location::LocEnclave &_args) -> T1 {
                 return f0(_args.d_enclave_id);
               }},
           this->v());
@@ -783,11 +784,13 @@ struct CoalitionBidHonorTraceCase {
   static T1 RefusalReason_rect(const T1 f, F1 &&f0,
                                const std::shared_ptr<RefusalReason> &r) {
     return std::visit(
-        Overloaded{[&](const typename RefusalReason::RefusalInsufficientRank)
-                       -> T1 { return f; },
-                   [&](const typename RefusalReason::RefusalOther _args) -> T1 {
-                     return f0(_args.d_note);
-                   }},
+        Overloaded{
+            [&](const typename RefusalReason::RefusalInsufficientRank &) -> T1 {
+              return f;
+            },
+            [&](const typename RefusalReason::RefusalOther &_args) -> T1 {
+              return f0(_args.d_note);
+            }},
         r->v());
   }
 
@@ -795,11 +798,13 @@ struct CoalitionBidHonorTraceCase {
   static T1 RefusalReason_rec(const T1 f, F1 &&f0,
                               const std::shared_ptr<RefusalReason> &r) {
     return std::visit(
-        Overloaded{[&](const typename RefusalReason::RefusalInsufficientRank)
-                       -> T1 { return f; },
-                   [&](const typename RefusalReason::RefusalOther _args) -> T1 {
-                     return f0(_args.d_note);
-                   }},
+        Overloaded{
+            [&](const typename RefusalReason::RefusalInsufficientRank &) -> T1 {
+              return f;
+            },
+            [&](const typename RefusalReason::RefusalOther &_args) -> T1 {
+              return f0(_args.d_note);
+            }},
         r->v());
   }
 
@@ -951,29 +956,29 @@ struct CoalitionBidHonorTraceCase {
                                 const std::shared_ptr<ProtocolAction> &p) {
     return std::visit(
         Overloaded{
-            [&](const typename ProtocolAction::ActChallenge _args) -> T1 {
+            [&](const typename ProtocolAction::ActChallenge &_args) -> T1 {
               return f(_args.d_chal);
             },
-            [&](const typename ProtocolAction::ActRespond _args) -> T1 {
+            [&](const typename ProtocolAction::ActRespond &_args) -> T1 {
               return f0(_args.d_resp);
             },
-            [&](const typename ProtocolAction::ActRefuse _args) -> T1 {
+            [&](const typename ProtocolAction::ActRefuse &_args) -> T1 {
               return f1(_args.d_reason);
             },
-            [&](const typename ProtocolAction::ActBid _args) -> T1 {
+            [&](const typename ProtocolAction::ActBid &_args) -> T1 {
               return f2(_args.d_bid);
             },
-            [&](const typename ProtocolAction::ActCoalitionBid _args) -> T1 {
+            [&](const typename ProtocolAction::ActCoalitionBid &_args) -> T1 {
               return f3(_args.d_cbid);
             },
-            [&](const typename ProtocolAction::ActPass _args) -> T1 {
+            [&](const typename ProtocolAction::ActPass &_args) -> T1 {
               return f4(_args.d_side);
             },
-            [&](const typename ProtocolAction::ActClose) -> T1 { return f5; },
-            [&](const typename ProtocolAction::ActWithdraw _args) -> T1 {
+            [&](const typename ProtocolAction::ActClose &) -> T1 { return f5; },
+            [&](const typename ProtocolAction::ActWithdraw &_args) -> T1 {
               return f6(_args.d_side);
             },
-            [&](const typename ProtocolAction::ActBreakBid _args) -> T1 {
+            [&](const typename ProtocolAction::ActBreakBid &_args) -> T1 {
               return f7(_args.d_side);
             }},
         p->v());
@@ -990,29 +995,29 @@ struct CoalitionBidHonorTraceCase {
                                const std::shared_ptr<ProtocolAction> &p) {
     return std::visit(
         Overloaded{
-            [&](const typename ProtocolAction::ActChallenge _args) -> T1 {
+            [&](const typename ProtocolAction::ActChallenge &_args) -> T1 {
               return f(_args.d_chal);
             },
-            [&](const typename ProtocolAction::ActRespond _args) -> T1 {
+            [&](const typename ProtocolAction::ActRespond &_args) -> T1 {
               return f0(_args.d_resp);
             },
-            [&](const typename ProtocolAction::ActRefuse _args) -> T1 {
+            [&](const typename ProtocolAction::ActRefuse &_args) -> T1 {
               return f1(_args.d_reason);
             },
-            [&](const typename ProtocolAction::ActBid _args) -> T1 {
+            [&](const typename ProtocolAction::ActBid &_args) -> T1 {
               return f2(_args.d_bid);
             },
-            [&](const typename ProtocolAction::ActCoalitionBid _args) -> T1 {
+            [&](const typename ProtocolAction::ActCoalitionBid &_args) -> T1 {
               return f3(_args.d_cbid);
             },
-            [&](const typename ProtocolAction::ActPass _args) -> T1 {
+            [&](const typename ProtocolAction::ActPass &_args) -> T1 {
               return f4(_args.d_side);
             },
-            [&](const typename ProtocolAction::ActClose) -> T1 { return f5; },
-            [&](const typename ProtocolAction::ActWithdraw _args) -> T1 {
+            [&](const typename ProtocolAction::ActClose &) -> T1 { return f5; },
+            [&](const typename ProtocolAction::ActWithdraw &_args) -> T1 {
               return f6(_args.d_side);
             },
-            [&](const typename ProtocolAction::ActBreakBid _args) -> T1 {
+            [&](const typename ProtocolAction::ActBreakBid &_args) -> T1 {
               return f7(_args.d_side);
             }},
         p->v());
@@ -1254,34 +1259,34 @@ struct CoalitionBidHonorTraceCase {
     action_actor_in_phase(const std::shared_ptr<ProtocolAction> &action) const {
       return std::visit(
           Overloaded{
-              [](const typename ProtocolAction::ActChallenge _args)
+              [](const typename ProtocolAction::ActChallenge &_args)
                   -> std::optional<std::shared_ptr<Commander>> {
                 return std::make_optional<std::shared_ptr<Commander>>(
                     _args.d_chal->chal_challenger);
               },
-              [](const typename ProtocolAction::ActRespond _args)
+              [](const typename ProtocolAction::ActRespond &_args)
                   -> std::optional<std::shared_ptr<Commander>> {
                 return std::make_optional<std::shared_ptr<Commander>>(
                     _args.d_resp->resp_defender);
               },
-              [](const typename ProtocolAction::ActBid _args)
+              [](const typename ProtocolAction::ActBid &_args)
                   -> std::optional<std::shared_ptr<Commander>> {
                 return std::make_optional<std::shared_ptr<Commander>>(
                     _args.d_bid->bid_commander);
               },
-              [&](const typename ProtocolAction::ActWithdraw _args)
+              [&](const typename ProtocolAction::ActWithdraw &_args)
                   -> std::optional<std::shared_ptr<Commander>> {
                 return std::const_pointer_cast<BatchallPhase>(
                            this->shared_from_this())
                     ->get_side_commander(_args.d_side);
               },
-              [&](const typename ProtocolAction::ActBreakBid _args)
+              [&](const typename ProtocolAction::ActBreakBid &_args)
                   -> std::optional<std::shared_ptr<Commander>> {
                 return std::const_pointer_cast<BatchallPhase>(
                            this->shared_from_this())
                     ->get_side_commander(_args.d_side);
               },
-              [](const auto) -> std::optional<std::shared_ptr<Commander>> {
+              [](const auto &) -> std::optional<std::shared_ptr<Commander>> {
                 return std::optional<std::shared_ptr<Commander>>();
               }},
           action->v());
@@ -1291,7 +1296,7 @@ struct CoalitionBidHonorTraceCase {
     get_side_commander(const Side side) const {
       return std::visit(
           Overloaded{
-              [&](const typename BatchallPhase::PhaseBidding _args)
+              [&](const typename BatchallPhase::PhaseBidding &_args)
                   -> std::optional<std::shared_ptr<Commander>> {
                 switch (side) {
                 case Side::e_ATTACKER: {
@@ -1306,7 +1311,7 @@ struct CoalitionBidHonorTraceCase {
                   std::unreachable();
                 }
               },
-              [](const auto) -> std::optional<std::shared_ptr<Commander>> {
+              [](const auto &) -> std::optional<std::shared_ptr<Commander>> {
                 return std::optional<std::shared_ptr<Commander>>();
               }},
           this->v());
@@ -1314,7 +1319,7 @@ struct CoalitionBidHonorTraceCase {
 
     __attribute__((pure)) unsigned int get_bidding_measure() const {
       return std::visit(
-          Overloaded{[](const typename BatchallPhase::PhaseBidding _args)
+          Overloaded{[](const typename BatchallPhase::PhaseBidding &_args)
                          -> unsigned int {
                        return (
                            (bid_metrics(_args.d_attacker_bid)->fm_total_ecr +
@@ -1333,49 +1338,48 @@ struct CoalitionBidHonorTraceCase {
                              }
                            }());
                      },
-                     [](const auto) -> unsigned int { return 0u; }},
+                     [](const auto &) -> unsigned int { return 0u; }},
           this->v());
     }
 
     __attribute__((pure)) unsigned int phase_depth() const {
       return std::visit(
           Overloaded{
-              [](const typename BatchallPhase::PhaseIdle) -> unsigned int {
+              [](const typename BatchallPhase::PhaseIdle &) -> unsigned int {
                 return 4u;
               },
-              [](const typename BatchallPhase::PhaseChallenged)
+              [](const typename BatchallPhase::PhaseChallenged &)
                   -> unsigned int { return 3u; },
-              [](const typename BatchallPhase::PhaseResponded) -> unsigned int {
-                return 2u;
-              },
-              [](const typename BatchallPhase::PhaseBidding) -> unsigned int {
+              [](const typename BatchallPhase::PhaseResponded &)
+                  -> unsigned int { return 2u; },
+              [](const typename BatchallPhase::PhaseBidding &) -> unsigned int {
                 return 1u;
               },
-              [](const auto) -> unsigned int { return 0u; }},
+              [](const auto &) -> unsigned int { return 0u; }},
           this->v());
     }
 
     __attribute__((pure)) bool is_bidding() const {
       return std::visit(
-          Overloaded{[](const typename BatchallPhase::PhaseBidding) -> bool {
+          Overloaded{[](const typename BatchallPhase::PhaseBidding &) -> bool {
                        return true;
                      },
-                     [](const auto) -> bool { return false; }},
+                     [](const auto &) -> bool { return false; }},
           this->v());
     }
 
     __attribute__((pure)) bool is_terminal() const {
       return std::visit(
-          Overloaded{[](const typename BatchallPhase::PhaseAgreed) -> bool {
+          Overloaded{[](const typename BatchallPhase::PhaseAgreed &) -> bool {
                        return true;
                      },
-                     [](const typename BatchallPhase::PhaseRefused) -> bool {
+                     [](const typename BatchallPhase::PhaseRefused &) -> bool {
                        return true;
                      },
-                     [](const typename BatchallPhase::PhaseAborted) -> bool {
+                     [](const typename BatchallPhase::PhaseAborted &) -> bool {
                        return true;
                      },
-                     [](const auto) -> bool { return false; }},
+                     [](const auto &) -> bool { return false; }},
           this->v());
     }
   };
@@ -1407,27 +1411,27 @@ struct CoalitionBidHonorTraceCase {
                                const std::shared_ptr<BatchallPhase> &b) {
     return std::visit(
         Overloaded{
-            [&](const typename BatchallPhase::PhaseIdle) -> T1 { return f; },
-            [&](const typename BatchallPhase::PhaseChallenged _args) -> T1 {
+            [&](const typename BatchallPhase::PhaseIdle &) -> T1 { return f; },
+            [&](const typename BatchallPhase::PhaseChallenged &_args) -> T1 {
               return f0(_args.d_challenge);
             },
-            [&](const typename BatchallPhase::PhaseResponded _args) -> T1 {
+            [&](const typename BatchallPhase::PhaseResponded &_args) -> T1 {
               return f1(_args.d_challenge, _args.d_response);
             },
-            [&](const typename BatchallPhase::PhaseBidding _args) -> T1 {
+            [&](const typename BatchallPhase::PhaseBidding &_args) -> T1 {
               return f2(_args.d_challenge, _args.d_response,
                         _args.d_attacker_bid, _args.d_defender_bid,
                         _args.d_attacker_coalition, _args.d_defender_coalition,
                         _args.d_bid_history, _args.d_ready);
             },
-            [&](const typename BatchallPhase::PhaseAgreed _args) -> T1 {
+            [&](const typename BatchallPhase::PhaseAgreed &_args) -> T1 {
               return f3(_args.d_challenge, _args.d_response,
                         _args.d_final_attacker, _args.d_final_defender);
             },
-            [&](const typename BatchallPhase::PhaseRefused _args) -> T1 {
+            [&](const typename BatchallPhase::PhaseRefused &_args) -> T1 {
               return f4(_args.d_challenge, _args.d_reason);
             },
-            [&](const typename BatchallPhase::PhaseAborted _args) -> T1 {
+            [&](const typename BatchallPhase::PhaseAborted &_args) -> T1 {
               return f5(_args.d_reason);
             }},
         b->v());
@@ -1460,27 +1464,27 @@ struct CoalitionBidHonorTraceCase {
                               const std::shared_ptr<BatchallPhase> &b) {
     return std::visit(
         Overloaded{
-            [&](const typename BatchallPhase::PhaseIdle) -> T1 { return f; },
-            [&](const typename BatchallPhase::PhaseChallenged _args) -> T1 {
+            [&](const typename BatchallPhase::PhaseIdle &) -> T1 { return f; },
+            [&](const typename BatchallPhase::PhaseChallenged &_args) -> T1 {
               return f0(_args.d_challenge);
             },
-            [&](const typename BatchallPhase::PhaseResponded _args) -> T1 {
+            [&](const typename BatchallPhase::PhaseResponded &_args) -> T1 {
               return f1(_args.d_challenge, _args.d_response);
             },
-            [&](const typename BatchallPhase::PhaseBidding _args) -> T1 {
+            [&](const typename BatchallPhase::PhaseBidding &_args) -> T1 {
               return f2(_args.d_challenge, _args.d_response,
                         _args.d_attacker_bid, _args.d_defender_bid,
                         _args.d_attacker_coalition, _args.d_defender_coalition,
                         _args.d_bid_history, _args.d_ready);
             },
-            [&](const typename BatchallPhase::PhaseAgreed _args) -> T1 {
+            [&](const typename BatchallPhase::PhaseAgreed &_args) -> T1 {
               return f3(_args.d_challenge, _args.d_response,
                         _args.d_final_attacker, _args.d_final_defender);
             },
-            [&](const typename BatchallPhase::PhaseRefused _args) -> T1 {
+            [&](const typename BatchallPhase::PhaseRefused &_args) -> T1 {
               return f4(_args.d_challenge, _args.d_reason);
             },
-            [&](const typename BatchallPhase::PhaseAborted _args) -> T1 {
+            [&](const typename BatchallPhase::PhaseAborted &_args) -> T1 {
               return f5(_args.d_reason);
             }},
         b->v());

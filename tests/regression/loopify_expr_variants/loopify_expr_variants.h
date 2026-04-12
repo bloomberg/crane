@@ -63,7 +63,7 @@ public:
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil) {
+              [&](const typename List<t_A>::Nil &) {
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
                 } else {
@@ -71,7 +71,7 @@ public:
                 }
                 _continue = false;
               },
-              [&](const typename List<t_A>::Cons _args) {
+              [&](const typename List<t_A>::Cons &_args) {
                 auto _cell = List<t_A>::cons(_args.d_a0, nullptr);
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =
@@ -210,14 +210,14 @@ struct LoopifyExprVariants {
                   const cond_expr *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename cond_expr::Lit) -> void {
+                          [&](const typename cond_expr::Lit &) -> void {
                             _result = 1u;
                           },
-                          [&](const typename cond_expr::Add _args) -> void {
+                          [&](const typename cond_expr::Add &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a0.get(), 1u});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename cond_expr::Cond _args) -> void {
+                          [&](const typename cond_expr::Cond &_args) -> void {
                             _stack.push_back(
                                 _Call3{_args.d_a1.get(), _args.d_a0.get(), 1u});
                             _stack.push_back(_Enter{_args.d_a2.get()});
@@ -278,14 +278,14 @@ struct LoopifyExprVariants {
                   const cond_expr *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename cond_expr::Lit _args) -> void {
+                          [&](const typename cond_expr::Lit &_args) -> void {
                             _result = _args.d_a0;
                           },
-                          [&](const typename cond_expr::Add _args) -> void {
+                          [&](const typename cond_expr::Add &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a0.get()});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename cond_expr::Cond _args) -> void {
+                          [&](const typename cond_expr::Cond &_args) -> void {
                             _stack.push_back(_Call3{_args});
                             _stack.push_back(_Enter{_args.d_a0.get()});
                           }},
@@ -376,15 +376,15 @@ struct LoopifyExprVariants {
                   const cond_expr *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename cond_expr::Lit _args) -> void {
+                          [&](const typename cond_expr::Lit &_args) -> void {
                             _result = f(_args.d_a0);
                           },
-                          [&](const typename cond_expr::Add _args) -> void {
+                          [&](const typename cond_expr::Add &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a0.get(),
                                                     _args.d_a1, _args.d_a0});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename cond_expr::Cond _args) -> void {
+                          [&](const typename cond_expr::Cond &_args) -> void {
                             _stack.push_back(
                                 _Call3{_args.d_a1.get(), _args.d_a0.get(),
                                        _args.d_a2, _args.d_a1, _args.d_a0});
@@ -483,15 +483,15 @@ struct LoopifyExprVariants {
                   const cond_expr *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename cond_expr::Lit _args) -> void {
+                          [&](const typename cond_expr::Lit &_args) -> void {
                             _result = f(_args.d_a0);
                           },
-                          [&](const typename cond_expr::Add _args) -> void {
+                          [&](const typename cond_expr::Add &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a0.get(),
                                                     _args.d_a1, _args.d_a0});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename cond_expr::Cond _args) -> void {
+                          [&](const typename cond_expr::Cond &_args) -> void {
                             _stack.push_back(
                                 _Call3{_args.d_a1.get(), _args.d_a0.get(),
                                        _args.d_a2, _args.d_a1, _args.d_a0});
@@ -659,18 +659,18 @@ struct LoopifyExprVariants {
                   const arith_expr *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename arith_expr::ANum) -> void {
+                          [&](const typename arith_expr::ANum &) -> void {
                             _result = 0u;
                           },
-                          [&](const typename arith_expr::AAdd _args) -> void {
+                          [&](const typename arith_expr::AAdd &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a0.get(), 1u});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename arith_expr::AMul _args) -> void {
+                          [&](const typename arith_expr::AMul &_args) -> void {
                             _stack.push_back(_Call3{_args.d_a0.get(), 1u});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename arith_expr::ADiv _args) -> void {
+                          [&](const typename arith_expr::ADiv &_args) -> void {
                             _stack.push_back(_Call5{_args.d_a0.get(), 1u});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           }},
@@ -743,18 +743,18 @@ struct LoopifyExprVariants {
                   const arith_expr *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename arith_expr::ANum _args) -> void {
+                          [&](const typename arith_expr::ANum &_args) -> void {
                             _result = _args.d_a0;
                           },
-                          [&](const typename arith_expr::AAdd _args) -> void {
+                          [&](const typename arith_expr::AAdd &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a0.get()});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename arith_expr::AMul _args) -> void {
+                          [&](const typename arith_expr::AMul &_args) -> void {
                             _stack.push_back(_Call3{_args.d_a0.get()});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename arith_expr::ADiv _args) -> void {
+                          [&](const typename arith_expr::ADiv &_args) -> void {
                             _stack.push_back(_Call5{_args});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           }},
@@ -856,20 +856,20 @@ struct LoopifyExprVariants {
                   const arith_expr *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename arith_expr::ANum _args) -> void {
+                          [&](const typename arith_expr::ANum &_args) -> void {
                             _result = f(_args.d_a0);
                           },
-                          [&](const typename arith_expr::AAdd _args) -> void {
+                          [&](const typename arith_expr::AAdd &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a0.get(),
                                                     _args.d_a1, _args.d_a0});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename arith_expr::AMul _args) -> void {
+                          [&](const typename arith_expr::AMul &_args) -> void {
                             _stack.push_back(_Call3{_args.d_a0.get(),
                                                     _args.d_a1, _args.d_a0});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename arith_expr::ADiv _args) -> void {
+                          [&](const typename arith_expr::ADiv &_args) -> void {
                             _stack.push_back(_Call5{_args.d_a0.get(),
                                                     _args.d_a1, _args.d_a0});
                             _stack.push_back(_Enter{_args.d_a1.get()});
@@ -972,20 +972,20 @@ struct LoopifyExprVariants {
                   const arith_expr *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename arith_expr::ANum _args) -> void {
+                          [&](const typename arith_expr::ANum &_args) -> void {
                             _result = f(_args.d_a0);
                           },
-                          [&](const typename arith_expr::AAdd _args) -> void {
+                          [&](const typename arith_expr::AAdd &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a0.get(),
                                                     _args.d_a1, _args.d_a0});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename arith_expr::AMul _args) -> void {
+                          [&](const typename arith_expr::AMul &_args) -> void {
                             _stack.push_back(_Call3{_args.d_a0.get(),
                                                     _args.d_a1, _args.d_a0});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename arith_expr::ADiv _args) -> void {
+                          [&](const typename arith_expr::ADiv &_args) -> void {
                             _stack.push_back(_Call5{_args.d_a0.get(),
                                                     _args.d_a1, _args.d_a0});
                             _stack.push_back(_Enter{_args.d_a1.get()});
@@ -1162,21 +1162,21 @@ struct LoopifyExprVariants {
                   const bool_expr *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename bool_expr::BTrue) -> void {
+                          [&](const typename bool_expr::BTrue &) -> void {
                             _result = bool_expr::btrue();
                           },
-                          [&](const typename bool_expr::BFalse) -> void {
+                          [&](const typename bool_expr::BFalse &) -> void {
                             _result = bool_expr::bfalse();
                           },
-                          [&](const typename bool_expr::BAnd _args) -> void {
+                          [&](const typename bool_expr::BAnd &_args) -> void {
                             _stack.push_back(_Call1{_args});
                             _stack.push_back(_Enter{_args.d_a0.get()});
                           },
-                          [&](const typename bool_expr::BOr _args) -> void {
+                          [&](const typename bool_expr::BOr &_args) -> void {
                             _stack.push_back(_Call6{_args});
                             _stack.push_back(_Enter{_args.d_a0.get()});
                           },
-                          [&](const typename bool_expr::BNot _args) -> void {
+                          [&](const typename bool_expr::BNot &_args) -> void {
                             _stack.push_back(_Call11{});
                             _stack.push_back(_Enter{_args.d_a0.get()});
                           }},
@@ -1186,26 +1186,26 @@ struct LoopifyExprVariants {
                   const typename bool_expr::BAnd _args = _f._s0;
                   std::visit(
                       Overloaded{
-                          [&](const typename bool_expr::BTrue) -> void {
+                          [&](const typename bool_expr::BTrue &) -> void {
                             _stack.push_back(_Call2{});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename bool_expr::BFalse) -> void {
+                          [&](const typename bool_expr::BFalse &) -> void {
                             _result = bool_expr::bfalse();
                           },
-                          [&](const typename bool_expr::BAnd _args0) -> void {
+                          [&](const typename bool_expr::BAnd &_args0) -> void {
                             std::shared_ptr<bool_expr> a_ =
                                 bool_expr::band(_args0.d_a0, _args0.d_a1);
                             _stack.push_back(_Call3{a_});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename bool_expr::BOr _args0) -> void {
+                          [&](const typename bool_expr::BOr &_args0) -> void {
                             std::shared_ptr<bool_expr> a_ =
                                 bool_expr::bor(_args0.d_a0, _args0.d_a1);
                             _stack.push_back(_Call4{a_});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename bool_expr::BNot _args0) -> void {
+                          [&](const typename bool_expr::BNot &_args0) -> void {
                             std::shared_ptr<bool_expr> a_ =
                                 bool_expr::bnot(_args0.d_a0);
                             _stack.push_back(_Call5{a_});
@@ -1217,21 +1217,21 @@ struct LoopifyExprVariants {
                   std::shared_ptr<bool_expr> a_ = _f._s0;
                   std::visit(
                       Overloaded{
-                          [&](const typename bool_expr::BTrue) -> void {
+                          [&](const typename bool_expr::BTrue &) -> void {
                             _result = bool_expr::btrue();
                           },
-                          [&](const typename bool_expr::BFalse) -> void {
+                          [&](const typename bool_expr::BFalse &) -> void {
                             _result = std::move(a_);
                           },
-                          [&](const typename bool_expr::BAnd _args1) -> void {
+                          [&](const typename bool_expr::BAnd &_args1) -> void {
                             _result = bool_expr::bor(
                                 a_, bool_expr::band(_args1.d_a0, _args1.d_a1));
                           },
-                          [&](const typename bool_expr::BOr _args1) -> void {
+                          [&](const typename bool_expr::BOr &_args1) -> void {
                             _result = bool_expr::bor(
                                 a_, bool_expr::bor(_args1.d_a0, _args1.d_a1));
                           },
-                          [&](const typename bool_expr::BNot _args1) -> void {
+                          [&](const typename bool_expr::BNot &_args1) -> void {
                             _result = bool_expr::bor(
                                 a_, bool_expr::bnot(_args1.d_a0));
                           }},
@@ -1240,21 +1240,21 @@ struct LoopifyExprVariants {
                 [&](_Call11) {
                   std::visit(
                       Overloaded{
-                          [&](const typename bool_expr::BTrue) -> void {
+                          [&](const typename bool_expr::BTrue &) -> void {
                             _result = bool_expr::bfalse();
                           },
-                          [&](const typename bool_expr::BFalse) -> void {
+                          [&](const typename bool_expr::BFalse &) -> void {
                             _result = bool_expr::btrue();
                           },
-                          [&](const typename bool_expr::BAnd _args0) -> void {
+                          [&](const typename bool_expr::BAnd &_args0) -> void {
                             _result = bool_expr::bnot(
                                 bool_expr::band(_args0.d_a0, _args0.d_a1));
                           },
-                          [&](const typename bool_expr::BOr _args0) -> void {
+                          [&](const typename bool_expr::BOr &_args0) -> void {
                             _result = bool_expr::bnot(
                                 bool_expr::bor(_args0.d_a0, _args0.d_a1));
                           },
-                          [&](const typename bool_expr::BNot _args0) -> void {
+                          [&](const typename bool_expr::BNot &_args0) -> void {
                             _result =
                                 bool_expr::bnot(bool_expr::bnot(_args0.d_a0));
                           }},
@@ -1263,19 +1263,19 @@ struct LoopifyExprVariants {
                 [&](_Call2) {
                   std::visit(
                       Overloaded{
-                          [&](const typename bool_expr::BTrue) -> void {
+                          [&](const typename bool_expr::BTrue &) -> void {
                             _result = bool_expr::btrue();
                           },
-                          [&](const typename bool_expr::BFalse) -> void {
+                          [&](const typename bool_expr::BFalse &) -> void {
                             _result = bool_expr::bfalse();
                           },
-                          [&](const typename bool_expr::BAnd _args1) -> void {
+                          [&](const typename bool_expr::BAnd &_args1) -> void {
                             _result = bool_expr::band(_args1.d_a0, _args1.d_a1);
                           },
-                          [&](const typename bool_expr::BOr _args1) -> void {
+                          [&](const typename bool_expr::BOr &_args1) -> void {
                             _result = bool_expr::bor(_args1.d_a0, _args1.d_a1);
                           },
-                          [&](const typename bool_expr::BNot _args1) -> void {
+                          [&](const typename bool_expr::BNot &_args1) -> void {
                             _result = bool_expr::bnot(_args1.d_a0);
                           }},
                       _result->v());
@@ -1284,21 +1284,21 @@ struct LoopifyExprVariants {
                   std::shared_ptr<bool_expr> a_ = _f._s0;
                   std::visit(
                       Overloaded{
-                          [&](const typename bool_expr::BTrue) -> void {
+                          [&](const typename bool_expr::BTrue &) -> void {
                             _result = std::move(a_);
                           },
-                          [&](const typename bool_expr::BFalse) -> void {
+                          [&](const typename bool_expr::BFalse &) -> void {
                             _result = bool_expr::bfalse();
                           },
-                          [&](const typename bool_expr::BAnd _args1) -> void {
+                          [&](const typename bool_expr::BAnd &_args1) -> void {
                             _result = bool_expr::band(
                                 a_, bool_expr::band(_args1.d_a0, _args1.d_a1));
                           },
-                          [&](const typename bool_expr::BOr _args1) -> void {
+                          [&](const typename bool_expr::BOr &_args1) -> void {
                             _result = bool_expr::band(
                                 a_, bool_expr::bor(_args1.d_a0, _args1.d_a1));
                           },
-                          [&](const typename bool_expr::BNot _args1) -> void {
+                          [&](const typename bool_expr::BNot &_args1) -> void {
                             _result = bool_expr::band(
                                 a_, bool_expr::bnot(_args1.d_a0));
                           }},
@@ -1308,21 +1308,21 @@ struct LoopifyExprVariants {
                   std::shared_ptr<bool_expr> a_ = _f._s0;
                   std::visit(
                       Overloaded{
-                          [&](const typename bool_expr::BTrue) -> void {
+                          [&](const typename bool_expr::BTrue &) -> void {
                             _result = std::move(a_);
                           },
-                          [&](const typename bool_expr::BFalse) -> void {
+                          [&](const typename bool_expr::BFalse &) -> void {
                             _result = bool_expr::bfalse();
                           },
-                          [&](const typename bool_expr::BAnd _args1) -> void {
+                          [&](const typename bool_expr::BAnd &_args1) -> void {
                             _result = bool_expr::band(
                                 a_, bool_expr::band(_args1.d_a0, _args1.d_a1));
                           },
-                          [&](const typename bool_expr::BOr _args1) -> void {
+                          [&](const typename bool_expr::BOr &_args1) -> void {
                             _result = bool_expr::band(
                                 a_, bool_expr::bor(_args1.d_a0, _args1.d_a1));
                           },
-                          [&](const typename bool_expr::BNot _args1) -> void {
+                          [&](const typename bool_expr::BNot &_args1) -> void {
                             _result = bool_expr::band(
                                 a_, bool_expr::bnot(_args1.d_a0));
                           }},
@@ -1332,21 +1332,21 @@ struct LoopifyExprVariants {
                   std::shared_ptr<bool_expr> a_ = _f._s0;
                   std::visit(
                       Overloaded{
-                          [&](const typename bool_expr::BTrue) -> void {
+                          [&](const typename bool_expr::BTrue &) -> void {
                             _result = std::move(a_);
                           },
-                          [&](const typename bool_expr::BFalse) -> void {
+                          [&](const typename bool_expr::BFalse &) -> void {
                             _result = bool_expr::bfalse();
                           },
-                          [&](const typename bool_expr::BAnd _args1) -> void {
+                          [&](const typename bool_expr::BAnd &_args1) -> void {
                             _result = bool_expr::band(
                                 a_, bool_expr::band(_args1.d_a0, _args1.d_a1));
                           },
-                          [&](const typename bool_expr::BOr _args1) -> void {
+                          [&](const typename bool_expr::BOr &_args1) -> void {
                             _result = bool_expr::band(
                                 a_, bool_expr::bor(_args1.d_a0, _args1.d_a1));
                           },
-                          [&](const typename bool_expr::BNot _args1) -> void {
+                          [&](const typename bool_expr::BNot &_args1) -> void {
                             _result = bool_expr::band(
                                 a_, bool_expr::bnot(_args1.d_a0));
                           }},
@@ -1356,26 +1356,26 @@ struct LoopifyExprVariants {
                   const typename bool_expr::BOr _args = _f._s0;
                   std::visit(
                       Overloaded{
-                          [&](const typename bool_expr::BTrue) -> void {
+                          [&](const typename bool_expr::BTrue &) -> void {
                             _result = bool_expr::btrue();
                           },
-                          [&](const typename bool_expr::BFalse) -> void {
+                          [&](const typename bool_expr::BFalse &) -> void {
                             _stack.push_back(_Call7{});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename bool_expr::BAnd _args0) -> void {
+                          [&](const typename bool_expr::BAnd &_args0) -> void {
                             std::shared_ptr<bool_expr> a_ =
                                 bool_expr::band(_args0.d_a0, _args0.d_a1);
                             _stack.push_back(_Call8{a_});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename bool_expr::BOr _args0) -> void {
+                          [&](const typename bool_expr::BOr &_args0) -> void {
                             std::shared_ptr<bool_expr> a_ =
                                 bool_expr::bor(_args0.d_a0, _args0.d_a1);
                             _stack.push_back(_Call9{a_});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename bool_expr::BNot _args0) -> void {
+                          [&](const typename bool_expr::BNot &_args0) -> void {
                             std::shared_ptr<bool_expr> a_ =
                                 bool_expr::bnot(_args0.d_a0);
                             _stack.push_back(_Call10{a_});
@@ -1386,19 +1386,19 @@ struct LoopifyExprVariants {
                 [&](_Call7) {
                   std::visit(
                       Overloaded{
-                          [&](const typename bool_expr::BTrue) -> void {
+                          [&](const typename bool_expr::BTrue &) -> void {
                             _result = bool_expr::btrue();
                           },
-                          [&](const typename bool_expr::BFalse) -> void {
+                          [&](const typename bool_expr::BFalse &) -> void {
                             _result = bool_expr::bfalse();
                           },
-                          [&](const typename bool_expr::BAnd _args1) -> void {
+                          [&](const typename bool_expr::BAnd &_args1) -> void {
                             _result = bool_expr::band(_args1.d_a0, _args1.d_a1);
                           },
-                          [&](const typename bool_expr::BOr _args1) -> void {
+                          [&](const typename bool_expr::BOr &_args1) -> void {
                             _result = bool_expr::bor(_args1.d_a0, _args1.d_a1);
                           },
-                          [&](const typename bool_expr::BNot _args1) -> void {
+                          [&](const typename bool_expr::BNot &_args1) -> void {
                             _result = bool_expr::bnot(_args1.d_a0);
                           }},
                       _result->v());
@@ -1407,21 +1407,21 @@ struct LoopifyExprVariants {
                   std::shared_ptr<bool_expr> a_ = _f._s0;
                   std::visit(
                       Overloaded{
-                          [&](const typename bool_expr::BTrue) -> void {
+                          [&](const typename bool_expr::BTrue &) -> void {
                             _result = bool_expr::btrue();
                           },
-                          [&](const typename bool_expr::BFalse) -> void {
+                          [&](const typename bool_expr::BFalse &) -> void {
                             _result = std::move(a_);
                           },
-                          [&](const typename bool_expr::BAnd _args1) -> void {
+                          [&](const typename bool_expr::BAnd &_args1) -> void {
                             _result = bool_expr::bor(
                                 a_, bool_expr::band(_args1.d_a0, _args1.d_a1));
                           },
-                          [&](const typename bool_expr::BOr _args1) -> void {
+                          [&](const typename bool_expr::BOr &_args1) -> void {
                             _result = bool_expr::bor(
                                 a_, bool_expr::bor(_args1.d_a0, _args1.d_a1));
                           },
-                          [&](const typename bool_expr::BNot _args1) -> void {
+                          [&](const typename bool_expr::BNot &_args1) -> void {
                             _result = bool_expr::bor(
                                 a_, bool_expr::bnot(_args1.d_a0));
                           }},
@@ -1431,21 +1431,21 @@ struct LoopifyExprVariants {
                   std::shared_ptr<bool_expr> a_ = _f._s0;
                   std::visit(
                       Overloaded{
-                          [&](const typename bool_expr::BTrue) -> void {
+                          [&](const typename bool_expr::BTrue &) -> void {
                             _result = bool_expr::btrue();
                           },
-                          [&](const typename bool_expr::BFalse) -> void {
+                          [&](const typename bool_expr::BFalse &) -> void {
                             _result = std::move(a_);
                           },
-                          [&](const typename bool_expr::BAnd _args1) -> void {
+                          [&](const typename bool_expr::BAnd &_args1) -> void {
                             _result = bool_expr::bor(
                                 a_, bool_expr::band(_args1.d_a0, _args1.d_a1));
                           },
-                          [&](const typename bool_expr::BOr _args1) -> void {
+                          [&](const typename bool_expr::BOr &_args1) -> void {
                             _result = bool_expr::bor(
                                 a_, bool_expr::bor(_args1.d_a0, _args1.d_a1));
                           },
-                          [&](const typename bool_expr::BNot _args1) -> void {
+                          [&](const typename bool_expr::BNot &_args1) -> void {
                             _result = bool_expr::bor(
                                 a_, bool_expr::bnot(_args1.d_a0));
                           }},
@@ -1497,21 +1497,21 @@ struct LoopifyExprVariants {
                   const bool_expr *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename bool_expr::BTrue) -> void {
+                          [&](const typename bool_expr::BTrue &) -> void {
                             _result = true;
                           },
-                          [&](const typename bool_expr::BFalse) -> void {
+                          [&](const typename bool_expr::BFalse &) -> void {
                             _result = false;
                           },
-                          [&](const typename bool_expr::BAnd _args) -> void {
+                          [&](const typename bool_expr::BAnd &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a0.get()});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename bool_expr::BOr _args) -> void {
+                          [&](const typename bool_expr::BOr &_args) -> void {
                             _stack.push_back(_Call3{_args.d_a0.get()});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename bool_expr::BNot _args) -> void {
+                          [&](const typename bool_expr::BNot &_args) -> void {
                             _stack.push_back(_Call5{});
                             _stack.push_back(_Enter{_args.d_a0.get()});
                           }},
@@ -1588,23 +1588,23 @@ struct LoopifyExprVariants {
                 const std::shared_ptr<bool_expr> b = _f.b;
                 std::visit(
                     Overloaded{
-                        [&](const typename bool_expr::BTrue) -> void {
+                        [&](const typename bool_expr::BTrue &) -> void {
                           _result = f;
                         },
-                        [&](const typename bool_expr::BFalse) -> void {
+                        [&](const typename bool_expr::BFalse &) -> void {
                           _result = f0;
                         },
-                        [&](const typename bool_expr::BAnd _args) -> void {
+                        [&](const typename bool_expr::BAnd &_args) -> void {
                           _stack.push_back(
                               _Call1{_args.d_a0, _args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
                         },
-                        [&](const typename bool_expr::BOr _args) -> void {
+                        [&](const typename bool_expr::BOr &_args) -> void {
                           _stack.push_back(
                               _Call3{_args.d_a0, _args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
                         },
-                        [&](const typename bool_expr::BNot _args) -> void {
+                        [&](const typename bool_expr::BNot &_args) -> void {
                           _stack.push_back(_Call5{_args.d_a0});
                           _stack.push_back(_Enter{_args.d_a0});
                         }},
@@ -1680,23 +1680,23 @@ struct LoopifyExprVariants {
                 const std::shared_ptr<bool_expr> b = _f.b;
                 std::visit(
                     Overloaded{
-                        [&](const typename bool_expr::BTrue) -> void {
+                        [&](const typename bool_expr::BTrue &) -> void {
                           _result = f;
                         },
-                        [&](const typename bool_expr::BFalse) -> void {
+                        [&](const typename bool_expr::BFalse &) -> void {
                           _result = f0;
                         },
-                        [&](const typename bool_expr::BAnd _args) -> void {
+                        [&](const typename bool_expr::BAnd &_args) -> void {
                           _stack.push_back(
                               _Call1{_args.d_a0, _args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
                         },
-                        [&](const typename bool_expr::BOr _args) -> void {
+                        [&](const typename bool_expr::BOr &_args) -> void {
                           _stack.push_back(
                               _Call3{_args.d_a0, _args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
                         },
-                        [&](const typename bool_expr::BNot _args) -> void {
+                        [&](const typename bool_expr::BNot &_args) -> void {
                           _stack.push_back(_Call5{_args.d_a0});
                           _stack.push_back(_Enter{_args.d_a0});
                         }},
@@ -1825,15 +1825,16 @@ struct LoopifyExprVariants {
                   const list_expr *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename list_expr::LCons _args) -> void {
+                          [&](const typename list_expr::LCons &_args) -> void {
                             _stack.push_back(_Call1{1u});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename list_expr::LAppend _args) -> void {
+                          [&](const typename list_expr::LAppend &_args)
+                              -> void {
                             _stack.push_back(_Call2{_args.d_a0.get(), 1u});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const auto) -> void { _result = 1u; }},
+                          [&](const auto &) -> void { _result = 1u; }},
                       _self->v());
                 },
                 [&](_Call1 _f) { _result = (_f._s0 + _result); },
@@ -1880,18 +1881,19 @@ struct LoopifyExprVariants {
                   const list_expr *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename list_expr::LNil) -> void {
+                          [&](const typename list_expr::LNil &) -> void {
                             _result = List<unsigned int>::nil();
                           },
-                          [&](const typename list_expr::LCons _args) -> void {
+                          [&](const typename list_expr::LCons &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a0});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename list_expr::LAppend _args) -> void {
+                          [&](const typename list_expr::LAppend &_args)
+                              -> void {
                             _stack.push_back(_Call2{_args.d_a0.get()});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           },
-                          [&](const typename list_expr::LReplicate _args)
+                          [&](const typename list_expr::LReplicate &_args)
                               -> void {
                             _result = ListDef::template repeat<unsigned int>(
                                 _args.d_a1, _args.d_a0);
@@ -1953,19 +1955,19 @@ struct LoopifyExprVariants {
                 const std::shared_ptr<list_expr> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename list_expr::LNil) -> void {
+                        [&](const typename list_expr::LNil &) -> void {
                           _result = f;
                         },
-                        [&](const typename list_expr::LCons _args) -> void {
+                        [&](const typename list_expr::LCons &_args) -> void {
                           _stack.push_back(_Call1{_args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
                         },
-                        [&](const typename list_expr::LAppend _args) -> void {
+                        [&](const typename list_expr::LAppend &_args) -> void {
                           _stack.push_back(
                               _Call2{_args.d_a0, _args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
                         },
-                        [&](const typename list_expr::LReplicate _args)
+                        [&](const typename list_expr::LReplicate &_args)
                             -> void { _result = f2(_args.d_a0, _args.d_a1); }},
                     l->v());
               },
@@ -2023,19 +2025,19 @@ struct LoopifyExprVariants {
                 const std::shared_ptr<list_expr> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename list_expr::LNil) -> void {
+                        [&](const typename list_expr::LNil &) -> void {
                           _result = f;
                         },
-                        [&](const typename list_expr::LCons _args) -> void {
+                        [&](const typename list_expr::LCons &_args) -> void {
                           _stack.push_back(_Call1{_args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
                         },
-                        [&](const typename list_expr::LAppend _args) -> void {
+                        [&](const typename list_expr::LAppend &_args) -> void {
                           _stack.push_back(
                               _Call2{_args.d_a0, _args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
                         },
-                        [&](const typename list_expr::LReplicate _args)
+                        [&](const typename list_expr::LReplicate &_args)
                             -> void { _result = f2(_args.d_a0, _args.d_a1); }},
                     l->v());
               },

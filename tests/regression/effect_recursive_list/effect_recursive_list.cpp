@@ -29,10 +29,10 @@ EffectRecursiveList::fold_effect(const std::shared_ptr<List<std::string>> &xs,
                                  const std::string acc) {
   return std::visit(
       Overloaded{
-          [&](const typename List<std::string>::Nil) -> std::string {
+          [&](const typename List<std::string>::Nil &) -> std::string {
             return acc;
           },
-          [&](const typename List<std::string>::Cons _args) -> std::string {
+          [&](const typename List<std::string>::Cons &_args) -> std::string {
             std::cout << _args.d_a0 << '\n';
             return fold_effect(_args.d_a1, acc + " "s + _args.d_a0);
           }},
@@ -59,11 +59,11 @@ std::shared_ptr<List<std::optional<std::string>>>
 EffectRecursiveList::collect_envs(
     const std::shared_ptr<List<std::string>> &names) {
   return std::visit(
-      Overloaded{[](const typename List<std::string>::Nil)
+      Overloaded{[](const typename List<std::string>::Nil &)
                      -> std::shared_ptr<List<std::optional<std::string>>> {
                    return List<std::optional<std::string>>::nil();
                  },
-                 [](const typename List<std::string>::Cons _args)
+                 [](const typename List<std::string>::Cons &_args)
                      -> std::shared_ptr<List<std::optional<std::string>>> {
                    std::optional<std::string> val =
                        [&]() -> std::optional<std::string> {

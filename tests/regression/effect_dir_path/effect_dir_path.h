@@ -64,8 +64,8 @@ public:
   __attribute__((pure)) unsigned int length() const {
     return std::visit(
         Overloaded{
-            [](const typename List<t_A>::Nil) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons _args) -> unsigned int {
+            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
+            [](const typename List<t_A>::Cons &_args) -> unsigned int {
               return (_args.d_a1->length() + 1);
             }},
         this->v());

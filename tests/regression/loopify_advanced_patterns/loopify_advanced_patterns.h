@@ -128,13 +128,13 @@ struct LoopifyAdvancedPatterns {
   static T1 shape_rect(F0 &&f, F1 &&f0, F2 &&f1,
                        const std::shared_ptr<shape> &s) {
     return std::visit(
-        Overloaded{[&](const typename shape::Circle _args) -> T1 {
+        Overloaded{[&](const typename shape::Circle &_args) -> T1 {
                      return f(_args.d_a0);
                    },
-                   [&](const typename shape::Square _args) -> T1 {
+                   [&](const typename shape::Square &_args) -> T1 {
                      return f0(_args.d_a0);
                    },
-                   [&](const typename shape::Triangle _args) -> T1 {
+                   [&](const typename shape::Triangle &_args) -> T1 {
                      return f1(_args.d_a0);
                    }},
         s->v());
@@ -145,13 +145,13 @@ struct LoopifyAdvancedPatterns {
   static T1 shape_rec(F0 &&f, F1 &&f0, F2 &&f1,
                       const std::shared_ptr<shape> &s) {
     return std::visit(
-        Overloaded{[&](const typename shape::Circle _args) -> T1 {
+        Overloaded{[&](const typename shape::Circle &_args) -> T1 {
                      return f(_args.d_a0);
                    },
-                   [&](const typename shape::Square _args) -> T1 {
+                   [&](const typename shape::Square &_args) -> T1 {
                      return f0(_args.d_a0);
                    },
-                   [&](const typename shape::Triangle _args) -> T1 {
+                   [&](const typename shape::Triangle &_args) -> T1 {
                      return f1(_args.d_a0);
                    }},
         s->v());

@@ -63,7 +63,7 @@ public:
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil) {
+              [&](const typename List<t_A>::Nil &) {
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
                 } else {
@@ -71,7 +71,7 @@ public:
                 }
                 _continue = false;
               },
-              [&](const typename List<t_A>::Cons _args) {
+              [&](const typename List<t_A>::Cons &_args) {
                 auto _cell = List<t_A>::cons(_args.d_a0, nullptr);
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =
@@ -112,10 +112,10 @@ struct LoopifySorting {
                 const std::shared_ptr<List<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<T1>::Nil) -> void {
+                        [&](const typename List<T1>::Nil &) -> void {
                           _result = 0u;
                         },
-                        [&](const typename List<T1>::Cons _args) -> void {
+                        [&](const typename List<T1>::Cons &_args) -> void {
                           _stack.push_back(_Call1{});
                           _stack.push_back(_Enter{_args.d_a1});
                         }},
@@ -158,20 +158,20 @@ struct LoopifySorting {
                 const std::shared_ptr<List<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<T1>::Nil) -> void {
+                        [&](const typename List<T1>::Nil &) -> void {
                           _result =
                               std::make_pair(List<T1>::nil(), List<T1>::nil());
                         },
-                        [&](const typename List<T1>::Cons _args) -> void {
+                        [&](const typename List<T1>::Cons &_args) -> void {
                           std::visit(
                               Overloaded{
-                                  [&](const typename List<T1>::Nil) -> void {
+                                  [&](const typename List<T1>::Nil &) -> void {
                                     _result = std::make_pair(
                                         List<T1>::cons(_args.d_a0,
                                                        List<T1>::nil()),
                                         List<T1>::nil());
                                   },
-                                  [&](const typename List<T1>::Cons _args0)
+                                  [&](const typename List<T1>::Cons &_args0)
                                       -> void {
                                     _stack.push_back(_Call1{_args0, _args});
                                     _stack.push_back(_Enter{_args0.d_a1});
@@ -246,7 +246,7 @@ struct LoopifySorting {
         unsigned int f = _loop_fuel - 1;
         std::visit(
             Overloaded{
-                [&](const typename List<unsigned int>::Nil) {
+                [&](const typename List<unsigned int>::Nil &) {
                   if (_last) {
                     std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                         .d_a1 = std::move(_loop_l2);
@@ -255,10 +255,10 @@ struct LoopifySorting {
                   }
                   _continue = false;
                 },
-                [&](const typename List<unsigned int>::Cons _args) {
+                [&](const typename List<unsigned int>::Cons &_args) {
                   std::visit(
                       Overloaded{
-                          [&](const typename List<unsigned int>::Nil) {
+                          [&](const typename List<unsigned int>::Nil &) {
                             if (_last) {
                               std::get<typename List<unsigned int>::Cons>(
                                   _last->v_mut())
@@ -268,7 +268,7 @@ struct LoopifySorting {
                             }
                             _continue = false;
                           },
-                          [&](const typename List<unsigned int>::Cons _args0) {
+                          [&](const typename List<unsigned int>::Cons &_args0) {
                             if (cmp(_args.d_a0, _args0.d_a0)) {
                               auto _cell =
                                   List<unsigned int>::cons(_args.d_a0, nullptr);

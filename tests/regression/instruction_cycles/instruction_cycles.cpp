@@ -9,9 +9,9 @@ __attribute__((pure)) unsigned int InstructionCycles::cycles_jms(
     const std::shared_ptr<InstructionCycles::state2> &,
     const std::shared_ptr<InstructionCycles::instruction2> &i) {
   return std::visit(
-      Overloaded{[](const typename InstructionCycles::instruction2::JMS2)
+      Overloaded{[](const typename InstructionCycles::instruction2::JMS2 &)
                      -> unsigned int { return 24u; },
-                 [](const typename InstructionCycles::instruction2::NOP2)
+                 [](const typename InstructionCycles::instruction2::NOP2 &)
                      -> unsigned int { return 8u; }},
       i->v());
 }
@@ -62,15 +62,16 @@ std::shared_ptr<InstructionCycles::state5> InstructionCycles::execute5(
     std::shared_ptr<InstructionCycles::state5> s,
     const std::shared_ptr<InstructionCycles::instruction5> &i) {
   return std::visit(
-      Overloaded{[&](const typename InstructionCycles::instruction5::INC5)
-                     -> std::shared_ptr<InstructionCycles::state5> {
-                   return std::make_shared<InstructionCycles::state5>(
-                       state5{(16u ? (s->acc5 + 1u) % 16u : (s->acc5 + 1u)),
-                              s->carry5, s->test5});
-                 },
-                 [&](const auto) -> std::shared_ptr<InstructionCycles::state5> {
-                   return s;
-                 }},
+      Overloaded{
+          [&](const typename InstructionCycles::instruction5::INC5 &)
+              -> std::shared_ptr<InstructionCycles::state5> {
+            return std::make_shared<InstructionCycles::state5>(
+                state5{(16u ? (s->acc5 + 1u) % 16u : (s->acc5 + 1u)), s->carry5,
+                       s->test5});
+          },
+          [&](const auto &) -> std::shared_ptr<InstructionCycles::state5> {
+            return s;
+          }},
       i->v());
 }
 
@@ -81,10 +82,10 @@ __attribute__((pure)) unsigned int InstructionCycles::program_cycles5(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<InstructionCycles::instruction5>>::Nil)
+              std::shared_ptr<InstructionCycles::instruction5>>::Nil &)
               -> unsigned int { return 0u; },
           [&](const typename List<
-              std::shared_ptr<InstructionCycles::instruction5>>::Cons _args)
+              std::shared_ptr<InstructionCycles::instruction5>>::Cons &_args)
               -> unsigned int {
             return (_args.d_a0->cycles_sum(s) +
                     program_cycles5(execute5(s, _args.d_a0), _args.d_a1));
@@ -103,9 +104,9 @@ __attribute__((pure)) unsigned int InstructionCycles::program_cycles6(
     const std::shared_ptr<List<InstructionCycles::Instruction6>> &prog) {
   return std::visit(
       Overloaded{
-          [](const typename List<InstructionCycles::Instruction6>::Nil)
+          [](const typename List<InstructionCycles::Instruction6>::Nil &)
               -> unsigned int { return 0u; },
-          [&](const typename List<InstructionCycles::Instruction6>::Cons _args)
+          [&](const typename List<InstructionCycles::Instruction6>::Cons &_args)
               -> unsigned int {
             return (cycles6(s, _args.d_a0) + program_cycles6(s, _args.d_a1));
           }},
@@ -123,9 +124,9 @@ __attribute__((pure)) unsigned int InstructionCycles::program_cycles7(
     const std::shared_ptr<List<InstructionCycles::Instruction7>> &prog) {
   return std::visit(
       Overloaded{
-          [](const typename List<InstructionCycles::Instruction7>::Nil)
+          [](const typename List<InstructionCycles::Instruction7>::Nil &)
               -> unsigned int { return 0u; },
-          [&](const typename List<InstructionCycles::Instruction7>::Cons _args)
+          [&](const typename List<InstructionCycles::Instruction7>::Cons &_args)
               -> unsigned int {
             return (cycles7(s, _args.d_a0) + program_cycles7(s, _args.d_a1));
           }},

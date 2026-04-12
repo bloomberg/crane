@@ -17,12 +17,12 @@ std::shared_ptr<List<unsigned int>> EncodeOps::encode_list2(
         &prog) {
   return std::visit(
       Overloaded{
-          [](const typename List<std::shared_ptr<EncodeOps::instruction2>>::Nil)
-              -> std::shared_ptr<List<unsigned int>> {
+          [](const typename List<std::shared_ptr<EncodeOps::instruction2>>::Nil
+                 &) -> std::shared_ptr<List<unsigned int>> {
             return List<unsigned int>::nil();
           },
           [](const typename List<std::shared_ptr<EncodeOps::instruction2>>::Cons
-                 _args) -> std::shared_ptr<List<unsigned int>> {
+                 &_args) -> std::shared_ptr<List<unsigned int>> {
             auto _cs = _args.d_a0->encode2();
             unsigned int b1 = _cs.first;
             unsigned int b2 = _cs.second;
@@ -37,12 +37,12 @@ std::shared_ptr<List<unsigned int>> EncodeOps::encode_list3(
         &prog) {
   return std::visit(
       Overloaded{
-          [](const typename List<std::shared_ptr<EncodeOps::instruction3>>::Nil)
-              -> std::shared_ptr<List<unsigned int>> {
+          [](const typename List<std::shared_ptr<EncodeOps::instruction3>>::Nil
+                 &) -> std::shared_ptr<List<unsigned int>> {
             return List<unsigned int>::nil();
           },
           [](const typename List<std::shared_ptr<EncodeOps::instruction3>>::Cons
-                 _args) -> std::shared_ptr<List<unsigned int>> {
+                 &_args) -> std::shared_ptr<List<unsigned int>> {
             std::pair<unsigned int, unsigned int> p = _args.d_a0->encode3();
             return List<unsigned int>::cons(
                 p.first,

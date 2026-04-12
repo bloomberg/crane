@@ -79,10 +79,10 @@ public:
                 const List *_self = _f._self;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<t_A>::Nil) -> void {
+                        [&](const typename List<t_A>::Nil &) -> void {
                           _result = 0u;
                         },
-                        [&](const typename List<t_A>::Cons _args) -> void {
+                        [&](const typename List<t_A>::Cons &_args) -> void {
                           _stack.push_back(_Call1{});
                           _stack.push_back(_Enter{_args.d_a1.get()});
                         }},

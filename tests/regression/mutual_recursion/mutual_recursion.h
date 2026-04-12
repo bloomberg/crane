@@ -99,17 +99,18 @@ struct MutualRecursion {
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f4,
                       const std::shared_ptr<expr> &e) {
     return std::visit(
-        Overloaded{
-            [&](const typename expr::Val _args) -> T1 { return f(_args.d_a0); },
-            [&](const typename expr::BinOp _args) -> T1 {
-              return f0(_args.d_a0, _args.d_a1,
-                        expr_rect<T1>(f, f0, f4, _args.d_a1), _args.d_a2,
-                        expr_rect<T1>(f, f0, f4, _args.d_a2));
-            },
-            [&](const typename expr::UnOp _args) -> T1 {
-              return f4(_args.d_a0, _args.d_a1,
-                        expr_rect<T1>(f, f0, f4, _args.d_a1));
-            }},
+        Overloaded{[&](const typename expr::Val &_args) -> T1 {
+                     return f(_args.d_a0);
+                   },
+                   [&](const typename expr::BinOp &_args) -> T1 {
+                     return f0(_args.d_a0, _args.d_a1,
+                               expr_rect<T1>(f, f0, f4, _args.d_a1), _args.d_a2,
+                               expr_rect<T1>(f, f0, f4, _args.d_a2));
+                   },
+                   [&](const typename expr::UnOp &_args) -> T1 {
+                     return f4(_args.d_a0, _args.d_a1,
+                               expr_rect<T1>(f, f0, f4, _args.d_a1));
+                   }},
         e->v());
   }
 
@@ -120,17 +121,18 @@ struct MutualRecursion {
             MapsTo<T1, unsigned int, std::shared_ptr<expr>, T1> F2>
   static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f4, const std::shared_ptr<expr> &e) {
     return std::visit(
-        Overloaded{
-            [&](const typename expr::Val _args) -> T1 { return f(_args.d_a0); },
-            [&](const typename expr::BinOp _args) -> T1 {
-              return f0(_args.d_a0, _args.d_a1,
-                        expr_rec<T1>(f, f0, f4, _args.d_a1), _args.d_a2,
-                        expr_rec<T1>(f, f0, f4, _args.d_a2));
-            },
-            [&](const typename expr::UnOp _args) -> T1 {
-              return f4(_args.d_a0, _args.d_a1,
-                        expr_rec<T1>(f, f0, f4, _args.d_a1));
-            }},
+        Overloaded{[&](const typename expr::Val &_args) -> T1 {
+                     return f(_args.d_a0);
+                   },
+                   [&](const typename expr::BinOp &_args) -> T1 {
+                     return f0(_args.d_a0, _args.d_a1,
+                               expr_rec<T1>(f, f0, f4, _args.d_a1), _args.d_a2,
+                               expr_rec<T1>(f, f0, f4, _args.d_a2));
+                   },
+                   [&](const typename expr::UnOp &_args) -> T1 {
+                     return f4(_args.d_a0, _args.d_a1,
+                               expr_rec<T1>(f, f0, f4, _args.d_a1));
+                   }},
         e->v());
   }
 

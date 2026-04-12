@@ -11,15 +11,15 @@ InstructionSequenceExec::execute(
     const std::shared_ptr<InstructionSequenceExec::instruction> &i) {
   return std::visit(
       Overloaded{
-          [&](const typename InstructionSequenceExec::instruction::NOP_)
+          [&](const typename InstructionSequenceExec::instruction::NOP_ &)
               -> std::shared_ptr<InstructionSequenceExec::state> { return s; },
-          [&](const typename InstructionSequenceExec::instruction::INC_PC)
+          [&](const typename InstructionSequenceExec::instruction::INC_PC &)
               -> std::shared_ptr<InstructionSequenceExec::state> {
             return std::make_shared<InstructionSequenceExec::state>(
                 state{(s->pc_ + 1), s->acc_});
           },
           [&](const typename InstructionSequenceExec::instruction::ADD_ACC
-                  _args) -> std::shared_ptr<InstructionSequenceExec::state> {
+                  &_args) -> std::shared_ptr<InstructionSequenceExec::state> {
             return std::make_shared<InstructionSequenceExec::state>(
                 state{s->pc_, (s->acc_ + _args.d_a0)});
           }},
@@ -34,11 +34,11 @@ InstructionSequenceExec::exec_program(
   return std::visit(
       Overloaded{
           [&](const typename List<
-              std::shared_ptr<InstructionSequenceExec::instruction>>::Nil)
+              std::shared_ptr<InstructionSequenceExec::instruction>>::Nil &)
               -> std::shared_ptr<InstructionSequenceExec::state> { return s; },
           [&](const typename List<
               std::shared_ptr<InstructionSequenceExec::instruction>>::Cons
-                  _args) -> std::shared_ptr<InstructionSequenceExec::state> {
+                  &_args) -> std::shared_ptr<InstructionSequenceExec::state> {
             return exec_program(_args.d_a1, execute(std::move(s), _args.d_a0));
           }},
       prog->v());

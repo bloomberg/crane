@@ -108,11 +108,11 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::history_times_valid(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil)
-              -> bool { return true; },
+              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil
+                 &) -> bool { return true; },
           [&](const typename List<
               std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons
-                  _args) -> bool {
+                  &_args) -> bool {
             return (event_time_valid(now, _args.d_a0) &&
                     history_times_valid(now, _args.d_a1));
           }},
@@ -127,11 +127,11 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::history_sorted_from(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil)
-              -> bool { return true; },
+              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil
+                 &) -> bool { return true; },
           [&](const typename List<
               std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons
-                  _args) -> bool {
+                  &_args) -> bool {
             return (
                 _args.d_a0->be_time_minutes <= prev &&
                 history_sorted_from(_args.d_a0->be_time_minutes, _args.d_a1));
@@ -146,11 +146,11 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::history_sorted_desc(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil)
-              -> bool { return true; },
+              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil
+                 &) -> bool { return true; },
           [](const typename List<
               std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons
-                 _args) -> bool {
+                 &_args) -> bool {
             return history_sorted_from(_args.d_a0->be_time_minutes, _args.d_a1);
           }},
       events->v());
@@ -228,11 +228,11 @@ ValidatedPumpDeliveryTraceCase::total_bilinear_iob(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil)
-              -> unsigned int { return 0u; },
+              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil
+                 &) -> unsigned int { return 0u; },
           [&](const typename List<
               std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons
-                  _args) -> unsigned int {
+                  &_args) -> unsigned int {
             return (bilinear_iob_from_bolus(now, _args.d_a0, dia, itype) +
                     total_bilinear_iob(now, _args.d_a1, dia, itype));
           }},
@@ -421,9 +421,9 @@ ValidatedPumpDeliveryTraceCase::apply_suspend(
   return std::visit(
       Overloaded{
           [&](const typename ValidatedPumpDeliveryTraceCase::SuspendDecision::
-                  Suspend_None) -> unsigned int { return proposed; },
+                  Suspend_None &) -> unsigned int { return proposed; },
           [&](const typename ValidatedPumpDeliveryTraceCase::SuspendDecision::
-                  Suspend_Reduce _args) -> unsigned int {
+                  Suspend_Reduce &_args) -> unsigned int {
             if (proposed <= _args.d_a0) {
               return proposed;
             } else {
@@ -431,7 +431,7 @@ ValidatedPumpDeliveryTraceCase::apply_suspend(
             }
           },
           [](const typename ValidatedPumpDeliveryTraceCase::SuspendDecision::
-                 Suspend_Withhold) -> unsigned int { return 0u; }},
+                 Suspend_Withhold &) -> unsigned int { return 0u; }},
       decision->v());
 }
 
@@ -548,11 +548,11 @@ __attribute__((pure)) bool ValidatedPumpDeliveryTraceCase::bolus_too_soon(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil)
-              -> bool { return false; },
+              std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Nil
+                 &) -> bool { return false; },
           [&](const typename List<
               std::shared_ptr<ValidatedPumpDeliveryTraceCase::BolusEvent>>::Cons
-                  _args) -> bool {
+                  &_args) -> bool {
             if (now < _args.d_a0->be_time_minutes) {
               return false;
             } else {
@@ -699,11 +699,11 @@ ValidatedPumpDeliveryTraceCase::prec_result_twentieths(
   return std::visit(
       Overloaded{
           [](const typename ValidatedPumpDeliveryTraceCase::PrecisionResult::
-                 PrecOK _args) -> std::optional<unsigned int> {
+                 PrecOK &_args) -> std::optional<unsigned int> {
             return std::make_optional<unsigned int>(_args.d_a0);
           },
           [](const typename ValidatedPumpDeliveryTraceCase::PrecisionResult::
-                 PrecError) -> std::optional<unsigned int> {
+                 PrecError &) -> std::optional<unsigned int> {
             return std::optional<unsigned int>();
           }},
       r->v());
@@ -779,12 +779,12 @@ ValidatedPumpDeliveryTraceCase::final_delivery(
   return std::visit(
       Overloaded{
           [&](const typename ValidatedPumpDeliveryTraceCase::PrecisionResult::
-                  PrecOK _args) -> std::optional<unsigned int> {
+                  PrecOK &_args) -> std::optional<unsigned int> {
             return std::make_optional<unsigned int>(
                 apply_rounding(mode, _args.d_a0));
           },
           [](const typename ValidatedPumpDeliveryTraceCase::PrecisionResult::
-                 PrecError) -> std::optional<unsigned int> {
+                 PrecError &) -> std::optional<unsigned int> {
             return std::optional<unsigned int>();
           }},
       result->v());
@@ -881,49 +881,49 @@ __attribute__((pure)) unsigned int
 Nat::of_uint_acc(const std::shared_ptr<Uint> &d, const unsigned int acc) {
   return std::visit(
       Overloaded{
-          [&](const typename Uint::Nil) -> unsigned int { return acc; },
-          [&](const typename Uint::D0 _args) -> unsigned int {
+          [&](const typename Uint::Nil &) -> unsigned int { return acc; },
+          [&](const typename Uint::D0 &_args) -> unsigned int {
             return Nat::of_uint_acc(_args.d_a0, Nat::tail_mul(10u, acc));
           },
-          [&](const typename Uint::D1 _args) -> unsigned int {
+          [&](const typename Uint::D1 &_args) -> unsigned int {
             return Nat::of_uint_acc(_args.d_a0, (Nat::tail_mul(10u, acc) + 1));
           },
-          [&](const typename Uint::D2 _args) -> unsigned int {
+          [&](const typename Uint::D2 &_args) -> unsigned int {
             return Nat::of_uint_acc(_args.d_a0,
                                     ((Nat::tail_mul(10u, acc) + 1) + 1));
           },
-          [&](const typename Uint::D3 _args) -> unsigned int {
+          [&](const typename Uint::D3 &_args) -> unsigned int {
             return Nat::of_uint_acc(_args.d_a0,
                                     (((Nat::tail_mul(10u, acc) + 1) + 1) + 1));
           },
-          [&](const typename Uint::D4 _args) -> unsigned int {
+          [&](const typename Uint::D4 &_args) -> unsigned int {
             return Nat::of_uint_acc(
                 _args.d_a0, ((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1));
           },
-          [&](const typename Uint::D5 _args) -> unsigned int {
+          [&](const typename Uint::D5 &_args) -> unsigned int {
             return Nat::of_uint_acc(
                 _args.d_a0,
                 (((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1));
           },
-          [&](const typename Uint::D6 _args) -> unsigned int {
+          [&](const typename Uint::D6 &_args) -> unsigned int {
             return Nat::of_uint_acc(
                 _args.d_a0,
                 ((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
           },
-          [&](const typename Uint::D7 _args) -> unsigned int {
+          [&](const typename Uint::D7 &_args) -> unsigned int {
             return Nat::of_uint_acc(
                 _args.d_a0,
                 (((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                  1));
           },
-          [&](const typename Uint::D8 _args) -> unsigned int {
+          [&](const typename Uint::D8 &_args) -> unsigned int {
             return Nat::of_uint_acc(
                 _args.d_a0,
                 ((((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                   1) +
                  1));
           },
-          [&](const typename Uint::D9 _args) -> unsigned int {
+          [&](const typename Uint::D9 &_args) -> unsigned int {
             return Nat::of_uint_acc(
                 _args.d_a0,
                 (((((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
@@ -943,50 +943,50 @@ __attribute__((pure)) unsigned int
 Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
   return std::visit(
       Overloaded{
-          [&](const typename Uint0::Nil0) -> unsigned int { return acc; },
-          [&](const typename Uint0::D10 _args) -> unsigned int {
+          [&](const typename Uint0::Nil0 &) -> unsigned int { return acc; },
+          [&](const typename Uint0::D10 &_args) -> unsigned int {
             return Nat::of_hex_uint_acc(_args.d_a0, Nat::tail_mul(16u, acc));
           },
-          [&](const typename Uint0::D11 _args) -> unsigned int {
+          [&](const typename Uint0::D11 &_args) -> unsigned int {
             return Nat::of_hex_uint_acc(_args.d_a0,
                                         (Nat::tail_mul(16u, acc) + 1));
           },
-          [&](const typename Uint0::D12 _args) -> unsigned int {
+          [&](const typename Uint0::D12 &_args) -> unsigned int {
             return Nat::of_hex_uint_acc(_args.d_a0,
                                         ((Nat::tail_mul(16u, acc) + 1) + 1));
           },
-          [&](const typename Uint0::D13 _args) -> unsigned int {
+          [&](const typename Uint0::D13 &_args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0, (((Nat::tail_mul(16u, acc) + 1) + 1) + 1));
           },
-          [&](const typename Uint0::D14 _args) -> unsigned int {
+          [&](const typename Uint0::D14 &_args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0, ((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1));
           },
-          [&](const typename Uint0::D15 _args) -> unsigned int {
+          [&](const typename Uint0::D15 &_args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
                 (((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1));
           },
-          [&](const typename Uint0::D16 _args) -> unsigned int {
+          [&](const typename Uint0::D16 &_args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
                 ((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
           },
-          [&](const typename Uint0::D17 _args) -> unsigned int {
+          [&](const typename Uint0::D17 &_args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
                 (((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                  1));
           },
-          [&](const typename Uint0::D18 _args) -> unsigned int {
+          [&](const typename Uint0::D18 &_args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
                 ((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                   1) +
                  1));
           },
-          [&](const typename Uint0::D19 _args) -> unsigned int {
+          [&](const typename Uint0::D19 &_args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
                 (((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
@@ -994,7 +994,7 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
                   1) +
                  1));
           },
-          [&](const typename Uint0::Da _args) -> unsigned int {
+          [&](const typename Uint0::Da &_args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
                 ((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) +
@@ -1004,7 +1004,7 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
                   1) +
                  1));
           },
-          [&](const typename Uint0::Db _args) -> unsigned int {
+          [&](const typename Uint0::Db &_args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
                 (((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) +
@@ -1015,7 +1015,7 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
                   1) +
                  1));
           },
-          [&](const typename Uint0::Dc _args) -> unsigned int {
+          [&](const typename Uint0::Dc &_args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
                 ((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) +
@@ -1027,7 +1027,7 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
                   1) +
                  1));
           },
-          [&](const typename Uint0::Dd _args) -> unsigned int {
+          [&](const typename Uint0::Dd &_args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
                 (((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) +
@@ -1040,7 +1040,7 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
                   1) +
                  1));
           },
-          [&](const typename Uint0::De _args) -> unsigned int {
+          [&](const typename Uint0::De &_args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
                 ((((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) +
@@ -1054,7 +1054,7 @@ Nat::of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc) {
                   1) +
                  1));
           },
-          [&](const typename Uint0::Df _args) -> unsigned int {
+          [&](const typename Uint0::Df &_args) -> unsigned int {
             return Nat::of_hex_uint_acc(
                 _args.d_a0,
                 (((((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) +
@@ -1081,10 +1081,10 @@ Nat::of_hex_uint(const std::shared_ptr<Uint0> &d) {
 __attribute__((pure)) unsigned int
 Nat::of_num_uint(const std::shared_ptr<Uint1> &d) {
   return std::visit(
-      Overloaded{[](const typename Uint1::UIntDecimal _args) -> unsigned int {
+      Overloaded{[](const typename Uint1::UIntDecimal &_args) -> unsigned int {
                    return Nat::of_uint(_args.d_u);
                  },
-                 [](const typename Uint1::UIntHexadecimal _args)
+                 [](const typename Uint1::UIntHexadecimal &_args)
                      -> unsigned int { return Nat::of_hex_uint(_args.d_u); }},
       d->v());
 }

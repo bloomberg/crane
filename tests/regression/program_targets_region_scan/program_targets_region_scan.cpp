@@ -11,15 +11,15 @@ ProgramTargetsRegionScan::jump_target(
     const std::shared_ptr<ProgramTargetsRegionScan::instruction> &i) {
   return std::visit(
       Overloaded{
-          [](const typename ProgramTargetsRegionScan::instruction::JUN _args)
+          [](const typename ProgramTargetsRegionScan::instruction::JUN &_args)
               -> std::optional<unsigned int> {
             return std::make_optional<unsigned int>(_args.d_a0);
           },
-          [](const typename ProgramTargetsRegionScan::instruction::JMS _args)
+          [](const typename ProgramTargetsRegionScan::instruction::JMS &_args)
               -> std::optional<unsigned int> {
             return std::make_optional<unsigned int>(_args.d_a0);
           },
-          [](const typename ProgramTargetsRegionScan::instruction::NOP)
+          [](const typename ProgramTargetsRegionScan::instruction::NOP &)
               -> std::optional<unsigned int> {
             return std::optional<unsigned int>();
           }},

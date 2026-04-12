@@ -250,21 +250,22 @@ struct LargeEnum {
                      const T1 f8, F10 &&f9, const T1 f10,
                      const std::shared_ptr<tok> &t) {
     return std::visit(
-        Overloaded{
-            [&](const typename tok::TNum _args) -> T1 { return f(_args.d_a0); },
-            [&](const typename tok::TPlus) -> T1 { return f0; },
-            [&](const typename tok::TMinus) -> T1 { return f1; },
-            [&](const typename tok::TStar) -> T1 { return f2; },
-            [&](const typename tok::TSlash) -> T1 { return f3; },
-            [&](const typename tok::TLParen) -> T1 { return f4; },
-            [&](const typename tok::TRParen) -> T1 { return f5; },
-            [&](const typename tok::TEq) -> T1 { return f6; },
-            [&](const typename tok::TBang) -> T1 { return f7; },
-            [&](const typename tok::TSemicolon) -> T1 { return f8; },
-            [&](const typename tok::TIdent _args) -> T1 {
-              return f9(_args.d_a0);
-            },
-            [&](const typename tok::TEOF) -> T1 { return f10; }},
+        Overloaded{[&](const typename tok::TNum &_args) -> T1 {
+                     return f(_args.d_a0);
+                   },
+                   [&](const typename tok::TPlus &) -> T1 { return f0; },
+                   [&](const typename tok::TMinus &) -> T1 { return f1; },
+                   [&](const typename tok::TStar &) -> T1 { return f2; },
+                   [&](const typename tok::TSlash &) -> T1 { return f3; },
+                   [&](const typename tok::TLParen &) -> T1 { return f4; },
+                   [&](const typename tok::TRParen &) -> T1 { return f5; },
+                   [&](const typename tok::TEq &) -> T1 { return f6; },
+                   [&](const typename tok::TBang &) -> T1 { return f7; },
+                   [&](const typename tok::TSemicolon &) -> T1 { return f8; },
+                   [&](const typename tok::TIdent &_args) -> T1 {
+                     return f9(_args.d_a0);
+                   },
+                   [&](const typename tok::TEOF &) -> T1 { return f10; }},
         t->v());
   }
 
@@ -275,21 +276,22 @@ struct LargeEnum {
                     const T1 f8, F10 &&f9, const T1 f10,
                     const std::shared_ptr<tok> &t) {
     return std::visit(
-        Overloaded{
-            [&](const typename tok::TNum _args) -> T1 { return f(_args.d_a0); },
-            [&](const typename tok::TPlus) -> T1 { return f0; },
-            [&](const typename tok::TMinus) -> T1 { return f1; },
-            [&](const typename tok::TStar) -> T1 { return f2; },
-            [&](const typename tok::TSlash) -> T1 { return f3; },
-            [&](const typename tok::TLParen) -> T1 { return f4; },
-            [&](const typename tok::TRParen) -> T1 { return f5; },
-            [&](const typename tok::TEq) -> T1 { return f6; },
-            [&](const typename tok::TBang) -> T1 { return f7; },
-            [&](const typename tok::TSemicolon) -> T1 { return f8; },
-            [&](const typename tok::TIdent _args) -> T1 {
-              return f9(_args.d_a0);
-            },
-            [&](const typename tok::TEOF) -> T1 { return f10; }},
+        Overloaded{[&](const typename tok::TNum &_args) -> T1 {
+                     return f(_args.d_a0);
+                   },
+                   [&](const typename tok::TPlus &) -> T1 { return f0; },
+                   [&](const typename tok::TMinus &) -> T1 { return f1; },
+                   [&](const typename tok::TStar &) -> T1 { return f2; },
+                   [&](const typename tok::TSlash &) -> T1 { return f3; },
+                   [&](const typename tok::TLParen &) -> T1 { return f4; },
+                   [&](const typename tok::TRParen &) -> T1 { return f5; },
+                   [&](const typename tok::TEq &) -> T1 { return f6; },
+                   [&](const typename tok::TBang &) -> T1 { return f7; },
+                   [&](const typename tok::TSemicolon &) -> T1 { return f8; },
+                   [&](const typename tok::TIdent &_args) -> T1 {
+                     return f9(_args.d_a0);
+                   },
+                   [&](const typename tok::TEOF &) -> T1 { return f10; }},
         t->v());
   }
 

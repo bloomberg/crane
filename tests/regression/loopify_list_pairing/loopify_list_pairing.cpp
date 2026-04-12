@@ -35,12 +35,13 @@ LoopifyListPairing::unzip(
               std::visit(
                   Overloaded{
                       [&](const typename List<
-                          std::pair<unsigned int, unsigned int>>::Nil) -> void {
+                          std::pair<unsigned int, unsigned int>>::Nil &)
+                          -> void {
                         _result = std::make_pair(List<unsigned int>::nil(),
                                                  List<unsigned int>::nil());
                       },
                       [&](const typename List<
-                          std::pair<unsigned int, unsigned int>>::Cons _args)
+                          std::pair<unsigned int, unsigned int>>::Cons &_args)
                           -> void {
                         unsigned int a = _args.d_a0.first;
                         unsigned int b = _args.d_a0.second;
@@ -88,11 +89,11 @@ LoopifyListPairing::swizzle(const std::shared_ptr<List<unsigned int>> &l) {
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil) -> void {
+                      [&](const typename List<unsigned int>::Nil &) -> void {
                         _result = std::make_pair(List<unsigned int>::nil(),
                                                  List<unsigned int>::nil());
                       },
-                      [&](const typename List<unsigned int>::Cons _args)
+                      [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
                         _stack.push_back(_Call1{_args});
                         _stack.push_back(_Enter{_args.d_a1});
@@ -137,11 +138,11 @@ LoopifyListPairing::partition(const std::shared_ptr<List<unsigned int>> &l) {
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil) -> void {
+                      [&](const typename List<unsigned int>::Nil &) -> void {
                         _result = std::make_pair(List<unsigned int>::nil(),
                                                  List<unsigned int>::nil());
                       },
-                      [&](const typename List<unsigned int>::Cons _args)
+                      [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
                         _stack.push_back(_Call1{_args});
                         _stack.push_back(_Enter{_args.d_a1});
@@ -192,10 +193,10 @@ LoopifyListPairing::zip_longest_fuel(
       unsigned int fuel_ = _loop_fuel - 1;
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil) {
+              [&](const typename List<unsigned int>::Nil &) {
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil) {
+                        [&](const typename List<unsigned int>::Nil &) {
                           if (_last) {
                             std::get<typename List<
                                 std::pair<unsigned int, unsigned int>>::Cons>(
@@ -208,7 +209,7 @@ LoopifyListPairing::zip_longest_fuel(
                           }
                           _continue = false;
                         },
-                        [&](const typename List<unsigned int>::Cons _args0) {
+                        [&](const typename List<unsigned int>::Cons &_args0) {
                           auto _cell =
                               List<std::pair<unsigned int, unsigned int>>::cons(
                                   std::make_pair(default0, _args0.d_a0),
@@ -233,10 +234,10 @@ LoopifyListPairing::zip_longest_fuel(
                         }},
                     _loop_l2->v());
               },
-              [&](const typename List<unsigned int>::Cons _args) {
+              [&](const typename List<unsigned int>::Cons &_args) {
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil) {
+                        [&](const typename List<unsigned int>::Nil &) {
                           auto _cell =
                               List<std::pair<unsigned int, unsigned int>>::cons(
                                   std::make_pair(_args.d_a0, default0),
@@ -259,7 +260,7 @@ LoopifyListPairing::zip_longest_fuel(
                           _loop_l1 = std::move(_next_l1);
                           _loop_fuel = std::move(_next_fuel);
                         },
-                        [&](const typename List<unsigned int>::Cons _args0) {
+                        [&](const typename List<unsigned int>::Cons &_args0) {
                           auto _cell =
                               List<std::pair<unsigned int, unsigned int>>::cons(
                                   std::make_pair(_args.d_a0, _args0.d_a0),
@@ -316,7 +317,7 @@ LoopifyListPairing::zipWith(const std::shared_ptr<List<unsigned int>> &l1,
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil) {
+            [&](const typename List<unsigned int>::Nil &) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::nil();
@@ -325,10 +326,10 @@ LoopifyListPairing::zipWith(const std::shared_ptr<List<unsigned int>> &l1,
               }
               _continue = false;
             },
-            [&](const typename List<unsigned int>::Cons _args) {
+            [&](const typename List<unsigned int>::Cons &_args) {
               std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil) {
+                      [&](const typename List<unsigned int>::Nil &) {
                         if (_last) {
                           std::get<typename List<unsigned int>::Cons>(
                               _last->v_mut())
@@ -338,7 +339,7 @@ LoopifyListPairing::zipWith(const std::shared_ptr<List<unsigned int>> &l1,
                         }
                         _continue = false;
                       },
-                      [&](const typename List<unsigned int>::Cons _args0) {
+                      [&](const typename List<unsigned int>::Cons &_args0) {
                         auto _cell = List<unsigned int>::cons(
                             (_args.d_a0 + _args0.d_a0), nullptr);
                         if (_last) {
@@ -390,11 +391,11 @@ LoopifyListPairing::split_even_odd(
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil) -> void {
+                      [&](const typename List<unsigned int>::Nil &) -> void {
                         _result = std::make_pair(List<unsigned int>::nil(),
                                                  List<unsigned int>::nil());
                       },
-                      [&](const typename List<unsigned int>::Cons _args)
+                      [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
                         _stack.push_back(_Call1{_args});
                         _stack.push_back(_Enter{_args.d_a1});

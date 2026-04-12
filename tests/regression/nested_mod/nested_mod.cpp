@@ -9,11 +9,11 @@ __attribute__((pure)) unsigned int NestedMod::Outer::Inner::area(
     const std::shared_ptr<NestedMod::Outer::Inner::shape> &s) {
   return std::visit(
       Overloaded{
-          [](const typename NestedMod::Outer::Inner::shape::Circle _args)
+          [](const typename NestedMod::Outer::Inner::shape::Circle &_args)
               -> unsigned int { return ((_args.d_a0 * _args.d_a0) * 3u); },
-          [](const typename NestedMod::Outer::Inner::shape::Square _args)
+          [](const typename NestedMod::Outer::Inner::shape::Square &_args)
               -> unsigned int { return (_args.d_a0 * _args.d_a0); },
-          [](const typename NestedMod::Outer::Inner::shape::Triangle _args)
+          [](const typename NestedMod::Outer::Inner::shape::Triangle &_args)
               -> unsigned int {
             return (2u ? (_args.d_a0 * _args.d_a1) / 2u : 0);
           }},

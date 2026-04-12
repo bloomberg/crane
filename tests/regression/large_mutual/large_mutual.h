@@ -332,26 +332,26 @@ struct LargeMutual {
   static T1 stmt_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, const T1 f3,
                       const std::shared_ptr<stmt> &s) {
     return std::visit(
-        Overloaded{[&](const typename stmt::SAssign _args) -> T1 {
+        Overloaded{[&](const typename stmt::SAssign &_args) -> T1 {
                      return f(_args.d_a0, _args.d_a1);
                    },
-                   [&](const typename stmt::SSeq _args) -> T1 {
+                   [&](const typename stmt::SSeq &_args) -> T1 {
                      return f0(_args.d_a0,
                                stmt_rect<T1>(f, f0, f1, f2, f3, _args.d_a0),
                                _args.d_a1,
                                stmt_rect<T1>(f, f0, f1, f2, f3, _args.d_a1));
                    },
-                   [&](const typename stmt::SIf _args) -> T1 {
+                   [&](const typename stmt::SIf &_args) -> T1 {
                      return f1(_args.d_a0, _args.d_a1,
                                stmt_rect<T1>(f, f0, f1, f2, f3, _args.d_a1),
                                _args.d_a2,
                                stmt_rect<T1>(f, f0, f1, f2, f3, _args.d_a2));
                    },
-                   [&](const typename stmt::SWhile _args) -> T1 {
+                   [&](const typename stmt::SWhile &_args) -> T1 {
                      return f2(_args.d_a0, _args.d_a1,
                                stmt_rect<T1>(f, f0, f1, f2, f3, _args.d_a1));
                    },
-                   [&](const typename stmt::SSkip) -> T1 { return f3; }},
+                   [&](const typename stmt::SSkip &) -> T1 { return f3; }},
         s->v());
   }
 
@@ -364,26 +364,26 @@ struct LargeMutual {
   static T1 stmt_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, const T1 f3,
                      const std::shared_ptr<stmt> &s) {
     return std::visit(
-        Overloaded{[&](const typename stmt::SAssign _args) -> T1 {
+        Overloaded{[&](const typename stmt::SAssign &_args) -> T1 {
                      return f(_args.d_a0, _args.d_a1);
                    },
-                   [&](const typename stmt::SSeq _args) -> T1 {
+                   [&](const typename stmt::SSeq &_args) -> T1 {
                      return f0(_args.d_a0,
                                stmt_rec<T1>(f, f0, f1, f2, f3, _args.d_a0),
                                _args.d_a1,
                                stmt_rec<T1>(f, f0, f1, f2, f3, _args.d_a1));
                    },
-                   [&](const typename stmt::SIf _args) -> T1 {
+                   [&](const typename stmt::SIf &_args) -> T1 {
                      return f1(_args.d_a0, _args.d_a1,
                                stmt_rec<T1>(f, f0, f1, f2, f3, _args.d_a1),
                                _args.d_a2,
                                stmt_rec<T1>(f, f0, f1, f2, f3, _args.d_a2));
                    },
-                   [&](const typename stmt::SWhile _args) -> T1 {
+                   [&](const typename stmt::SWhile &_args) -> T1 {
                      return f2(_args.d_a0, _args.d_a1,
                                stmt_rec<T1>(f, f0, f1, f2, f3, _args.d_a1));
                    },
-                   [&](const typename stmt::SSkip) -> T1 { return f3; }},
+                   [&](const typename stmt::SSkip &) -> T1 { return f3; }},
         s->v());
   }
 
@@ -397,25 +397,25 @@ struct LargeMutual {
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                       const std::shared_ptr<expr> &e) {
     return std::visit(
-        Overloaded{[&](const typename expr::ENum _args) -> T1 {
+        Overloaded{[&](const typename expr::ENum &_args) -> T1 {
                      return f(_args.d_a0);
                    },
-                   [&](const typename expr::EVar _args) -> T1 {
+                   [&](const typename expr::EVar &_args) -> T1 {
                      return f0(_args.d_a0);
                    },
-                   [&](const typename expr::EAdd _args) -> T1 {
+                   [&](const typename expr::EAdd &_args) -> T1 {
                      return f1(_args.d_a0,
                                expr_rect<T1>(f, f0, f1, f2, f3, _args.d_a0),
                                _args.d_a1,
                                expr_rect<T1>(f, f0, f1, f2, f3, _args.d_a1));
                    },
-                   [&](const typename expr::EMul _args) -> T1 {
+                   [&](const typename expr::EMul &_args) -> T1 {
                      return f2(_args.d_a0,
                                expr_rect<T1>(f, f0, f1, f2, f3, _args.d_a0),
                                _args.d_a1,
                                expr_rect<T1>(f, f0, f1, f2, f3, _args.d_a1));
                    },
-                   [&](const typename expr::ECond _args) -> T1 {
+                   [&](const typename expr::ECond &_args) -> T1 {
                      return f3(_args.d_a0, _args.d_a1,
                                expr_rect<T1>(f, f0, f1, f2, f3, _args.d_a1),
                                _args.d_a2,
@@ -435,23 +435,23 @@ struct LargeMutual {
                      const std::shared_ptr<expr> &e) {
     return std::visit(
         Overloaded{
-            [&](const typename expr::ENum _args) -> T1 {
+            [&](const typename expr::ENum &_args) -> T1 {
               return f(_args.d_a0);
             },
-            [&](const typename expr::EVar _args) -> T1 {
+            [&](const typename expr::EVar &_args) -> T1 {
               return f0(_args.d_a0);
             },
-            [&](const typename expr::EAdd _args) -> T1 {
+            [&](const typename expr::EAdd &_args) -> T1 {
               return f1(_args.d_a0, expr_rec<T1>(f, f0, f1, f2, f3, _args.d_a0),
                         _args.d_a1,
                         expr_rec<T1>(f, f0, f1, f2, f3, _args.d_a1));
             },
-            [&](const typename expr::EMul _args) -> T1 {
+            [&](const typename expr::EMul &_args) -> T1 {
               return f2(_args.d_a0, expr_rec<T1>(f, f0, f1, f2, f3, _args.d_a0),
                         _args.d_a1,
                         expr_rec<T1>(f, f0, f1, f2, f3, _args.d_a1));
             },
-            [&](const typename expr::ECond _args) -> T1 {
+            [&](const typename expr::ECond &_args) -> T1 {
               return f3(_args.d_a0, _args.d_a1,
                         expr_rec<T1>(f, f0, f1, f2, f3, _args.d_a1), _args.d_a2,
                         expr_rec<T1>(f, f0, f1, f2, f3, _args.d_a2));
@@ -469,27 +469,27 @@ struct LargeMutual {
                        F5 &&f4, F6 &&f5, const std::shared_ptr<bexpr> &b) {
     return std::visit(
         Overloaded{
-            [&](const typename bexpr::BTrue) -> T1 { return f; },
-            [&](const typename bexpr::BFalse) -> T1 { return f0; },
-            [&](const typename bexpr::BEq _args) -> T1 {
+            [&](const typename bexpr::BTrue &) -> T1 { return f; },
+            [&](const typename bexpr::BFalse &) -> T1 { return f0; },
+            [&](const typename bexpr::BEq &_args) -> T1 {
               return f1(_args.d_a0, _args.d_a1);
             },
-            [&](const typename bexpr::BLt _args) -> T1 {
+            [&](const typename bexpr::BLt &_args) -> T1 {
               return f2(_args.d_a0, _args.d_a1);
             },
-            [&](const typename bexpr::BAnd _args) -> T1 {
+            [&](const typename bexpr::BAnd &_args) -> T1 {
               return f3(_args.d_a0,
                         bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a0),
                         _args.d_a1,
                         bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a1));
             },
-            [&](const typename bexpr::BOr _args) -> T1 {
+            [&](const typename bexpr::BOr &_args) -> T1 {
               return f4(_args.d_a0,
                         bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a0),
                         _args.d_a1,
                         bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a1));
             },
-            [&](const typename bexpr::BNot _args) -> T1 {
+            [&](const typename bexpr::BNot &_args) -> T1 {
               return f5(_args.d_a0,
                         bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a0));
             }},
@@ -506,27 +506,27 @@ struct LargeMutual {
                       F5 &&f4, F6 &&f5, const std::shared_ptr<bexpr> &b) {
     return std::visit(
         Overloaded{
-            [&](const typename bexpr::BTrue) -> T1 { return f; },
-            [&](const typename bexpr::BFalse) -> T1 { return f0; },
-            [&](const typename bexpr::BEq _args) -> T1 {
+            [&](const typename bexpr::BTrue &) -> T1 { return f; },
+            [&](const typename bexpr::BFalse &) -> T1 { return f0; },
+            [&](const typename bexpr::BEq &_args) -> T1 {
               return f1(_args.d_a0, _args.d_a1);
             },
-            [&](const typename bexpr::BLt _args) -> T1 {
+            [&](const typename bexpr::BLt &_args) -> T1 {
               return f2(_args.d_a0, _args.d_a1);
             },
-            [&](const typename bexpr::BAnd _args) -> T1 {
+            [&](const typename bexpr::BAnd &_args) -> T1 {
               return f3(_args.d_a0,
                         bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a0),
                         _args.d_a1,
                         bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a1));
             },
-            [&](const typename bexpr::BOr _args) -> T1 {
+            [&](const typename bexpr::BOr &_args) -> T1 {
               return f4(_args.d_a0,
                         bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a0),
                         _args.d_a1,
                         bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a1));
             },
-            [&](const typename bexpr::BNot _args) -> T1 {
+            [&](const typename bexpr::BNot &_args) -> T1 {
               return f5(_args.d_a0,
                         bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_a0));
             }},

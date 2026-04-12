@@ -21,7 +21,8 @@ LoopifyGrouping::prepend_to_groups(
     } else {
       return std::visit(
           Overloaded{
-              [&](const typename List<std::shared_ptr<List<unsigned int>>>::Nil)
+              [&](const typename List<std::shared_ptr<List<unsigned int>>>::Nil
+                      &)
                   -> std::shared_ptr<
                       List<std::shared_ptr<List<unsigned int>>>> {
                 return List<std::shared_ptr<List<unsigned int>>>::cons(
@@ -29,7 +30,7 @@ LoopifyGrouping::prepend_to_groups(
                     List<std::shared_ptr<List<unsigned int>>>::nil());
               },
               [&](const typename List<std::shared_ptr<List<unsigned int>>>::Cons
-                      _args)
+                      &_args)
                   -> std::shared_ptr<
                       List<std::shared_ptr<List<unsigned int>>>> {
                 return List<std::shared_ptr<List<unsigned int>>>::cons(
@@ -74,15 +75,15 @@ LoopifyGrouping::group_fuel(const unsigned int fuel,
                 unsigned int fuel_ = fuel - 1;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil) -> void {
+                        [&](const typename List<unsigned int>::Nil &) -> void {
                           _result =
                               List<std::shared_ptr<List<unsigned int>>>::nil();
                         },
-                        [&](const typename List<unsigned int>::Cons _args)
+                        [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
                           std::visit(
                               Overloaded{
-                                  [&](const typename List<unsigned int>::Nil)
+                                  [&](const typename List<unsigned int>::Nil &)
                                       -> void {
                                     _result = List<
                                         std::shared_ptr<List<unsigned int>>>::
@@ -93,7 +94,7 @@ LoopifyGrouping::group_fuel(const unsigned int fuel,
                                                  List<unsigned int>>>::nil());
                                   },
                                   [&](const typename List<unsigned int>::Cons
-                                          _args0) -> void {
+                                          &_args0) -> void {
                                     _stack.push_back(_Call1{_args, _args0});
                                     _stack.push_back(
                                         _Enter{List<unsigned int>::cons(
@@ -130,11 +131,11 @@ LoopifyGrouping::elem(const unsigned int x,
   std::shared_ptr<List<unsigned int>> _loop_l = l;
   bool _continue = true;
   while (_continue) {
-    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil) {
+    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil &) {
                             _result = false;
                             _continue = false;
                           },
-                          [&](const typename List<unsigned int>::Cons _args) {
+                          [&](const typename List<unsigned int>::Cons &_args) {
                             if (x == _args.d_a0) {
                               _result = true;
                               _continue = false;
@@ -170,10 +171,10 @@ LoopifyGrouping::nub(const std::shared_ptr<List<unsigned int>> &l) {
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil) -> void {
+                      [&](const typename List<unsigned int>::Nil &) -> void {
                         _result = List<unsigned int>::nil();
                       },
-                      [&](const typename List<unsigned int>::Cons _args)
+                      [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
                         _stack.push_back(_Call1{_args});
                         _stack.push_back(_Enter{_args.d_a1});
@@ -204,7 +205,7 @@ LoopifyGrouping::remove_elem(const unsigned int x,
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil) {
+            [&](const typename List<unsigned int>::Nil &) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::nil();
@@ -213,7 +214,7 @@ LoopifyGrouping::remove_elem(const unsigned int x,
               }
               _continue = false;
             },
-            [&](const typename List<unsigned int>::Cons _args) {
+            [&](const typename List<unsigned int>::Cons &_args) {
               if (x == _args.d_a0) {
                 _loop_l = _args.d_a1;
               } else {
@@ -263,13 +264,13 @@ LoopifyGrouping::partition3(const unsigned int pivot,
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil) -> void {
+                      [&](const typename List<unsigned int>::Nil &) -> void {
                         _result = std::make_pair(
                             std::make_pair(List<unsigned int>::nil(),
                                            List<unsigned int>::nil()),
                             List<unsigned int>::nil());
                       },
-                      [&](const typename List<unsigned int>::Cons _args)
+                      [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
                         _stack.push_back(_Call1{pivot, _args});
                         _stack.push_back(_Enter{_args.d_a1});
@@ -331,9 +332,9 @@ LoopifyGrouping::count_elem(const unsigned int x,
                      const std::shared_ptr<List<unsigned int>> l = _f.l;
                      std::visit(
                          Overloaded{
-                             [&](const typename List<unsigned int>::Nil)
+                             [&](const typename List<unsigned int>::Nil &)
                                  -> void { _result = 0u; },
-                             [&](const typename List<unsigned int>::Cons _args)
+                             [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
                                if (x == _args.d_a0) {
                                  _stack.push_back(_Call1{1u});
@@ -359,7 +360,7 @@ LoopifyGrouping::group_pairs(const std::shared_ptr<List<unsigned int>> &l) {
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil) {
+            [&](const typename List<unsigned int>::Nil &) {
               if (_last) {
                 std::get<
                     typename List<std::pair<unsigned int, unsigned int>>::Cons>(
@@ -370,10 +371,10 @@ LoopifyGrouping::group_pairs(const std::shared_ptr<List<unsigned int>> &l) {
               }
               _continue = false;
             },
-            [&](const typename List<unsigned int>::Cons _args) {
+            [&](const typename List<unsigned int>::Cons &_args) {
               std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil) {
+                      [&](const typename List<unsigned int>::Nil &) {
                         if (_last) {
                           std::get<typename List<
                               std::pair<unsigned int, unsigned int>>::Cons>(
@@ -386,10 +387,10 @@ LoopifyGrouping::group_pairs(const std::shared_ptr<List<unsigned int>> &l) {
                         }
                         _continue = false;
                       },
-                      [&](const typename List<unsigned int>::Cons) {
+                      [&](const typename List<unsigned int>::Cons &) {
                         std::visit(
                             Overloaded{
-                                [&](const typename List<unsigned int>::Nil) {
+                                [&](const typename List<unsigned int>::Nil &) {
                                   if (_last) {
                                     std::get<typename List<std::pair<
                                         unsigned int, unsigned int>>::Cons>(
@@ -405,7 +406,7 @@ LoopifyGrouping::group_pairs(const std::shared_ptr<List<unsigned int>> &l) {
                                   _continue = false;
                                 },
                                 [&](const typename List<unsigned int>::Cons
-                                        _args1) {
+                                        &_args1) {
                                   auto _cell = List<
                                       std::pair<unsigned int, unsigned int>>::
                                       cons(std::make_pair(_args.d_a0,

@@ -62,8 +62,8 @@ struct HigherOrder {
             MapsTo<T2, T1, std::shared_ptr<list<T1>>, T2> F1>
   static T2 list_rect(const T2 f, F1 &&f0, const std::shared_ptr<list<T1>> &l) {
     return std::visit(
-        Overloaded{[&](const typename list<T1>::Nil) -> T2 { return f; },
-                   [&](const typename list<T1>::Cons _args) -> T2 {
+        Overloaded{[&](const typename list<T1>::Nil &) -> T2 { return f; },
+                   [&](const typename list<T1>::Cons &_args) -> T2 {
                      return f0(_args.d_a0, _args.d_a1,
                                list_rect<T1, T2>(f, f0, _args.d_a1));
                    }},
@@ -74,8 +74,8 @@ struct HigherOrder {
             MapsTo<T2, T1, std::shared_ptr<list<T1>>, T2> F1>
   static T2 list_rec(const T2 f, F1 &&f0, const std::shared_ptr<list<T1>> &l) {
     return std::visit(
-        Overloaded{[&](const typename list<T1>::Nil) -> T2 { return f; },
-                   [&](const typename list<T1>::Cons _args) -> T2 {
+        Overloaded{[&](const typename list<T1>::Nil &) -> T2 { return f; },
+                   [&](const typename list<T1>::Cons &_args) -> T2 {
                      return f0(_args.d_a0, _args.d_a1,
                                list_rec<T1, T2>(f, f0, _args.d_a1));
                    }},
@@ -88,10 +88,10 @@ struct HigherOrder {
                                        const std::shared_ptr<list<T1>> &l) {
     return std::visit(
         Overloaded{
-            [](const typename list<T1>::Nil) -> std::shared_ptr<list<T2>> {
+            [](const typename list<T1>::Nil &) -> std::shared_ptr<list<T2>> {
               return list<T2>::nil();
             },
-            [&](const typename list<T1>::Cons _args)
+            [&](const typename list<T1>::Cons &_args)
                 -> std::shared_ptr<list<T2>> {
               return list<T2>::cons(f(_args.d_a0), map<T1, T2>(f, _args.d_a1));
             }},
@@ -103,8 +103,8 @@ struct HigherOrder {
   template <typename T1, typename T2, MapsTo<T2, T1, T2> F0>
   static T2 foldr(F0 &&f, const T2 z, const std::shared_ptr<list<T1>> &l) {
     return std::visit(
-        Overloaded{[&](const typename list<T1>::Nil) -> T2 { return z; },
-                   [&](const typename list<T1>::Cons _args) -> T2 {
+        Overloaded{[&](const typename list<T1>::Nil &) -> T2 { return z; },
+                   [&](const typename list<T1>::Cons &_args) -> T2 {
                      return f(_args.d_a0, foldr<T1, T2>(f, z, _args.d_a1));
                    }},
         l->v());
@@ -115,8 +115,8 @@ struct HigherOrder {
   template <typename T1, typename T2, MapsTo<T2, T2, T1> F0>
   static T2 foldl(F0 &&f, const T2 z, const std::shared_ptr<list<T1>> &l) {
     return std::visit(
-        Overloaded{[&](const typename list<T1>::Nil) -> T2 { return z; },
-                   [&](const typename list<T1>::Cons _args) -> T2 {
+        Overloaded{[&](const typename list<T1>::Nil &) -> T2 { return z; },
+                   [&](const typename list<T1>::Cons &_args) -> T2 {
                      return foldl<T1, T2>(f, f(z, _args.d_a0), _args.d_a1);
                    }},
         l->v());

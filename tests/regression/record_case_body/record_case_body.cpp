@@ -143,9 +143,9 @@ __attribute__((pure)) unsigned int RecordCaseBody::sum_list(
     const std::shared_ptr<RecordCaseBody::list<unsigned int>> &l) {
   return std::visit(
       Overloaded{
-          [](const typename RecordCaseBody::list<unsigned int>::Nil)
+          [](const typename RecordCaseBody::list<unsigned int>::Nil &)
               -> unsigned int { return 0u; },
-          [](const typename RecordCaseBody::list<unsigned int>::Cons _args)
+          [](const typename RecordCaseBody::list<unsigned int>::Cons &_args)
               -> unsigned int { return (_args.d_a0 + sum_list(_args.d_a1)); }},
       l->v());
 }

@@ -17,18 +17,20 @@ FunctionVernac::div2_terminate(const unsigned int n) {
     } else {
       unsigned int n1 = n0 - 1;
       return std::visit(
-          Overloaded{[](const typename Sig<unsigned int>::Exist _args) -> auto {
-            return Sig<unsigned int>::exist((_args.d_x + 1));
-          }},
+          Overloaded{
+              [](const typename Sig<unsigned int>::Exist &_args) -> auto {
+                return Sig<unsigned int>::exist((_args.d_x + 1));
+              }},
           div2_terminate(n1)->v());
     }
   }
 }
 
 __attribute__((pure)) unsigned int FunctionVernac::div2(const unsigned int n) {
-  return std::visit(Overloaded{[](const typename Sig<unsigned int>::Exist _args)
-                                   -> unsigned int { return _args.d_x; }},
-                    div2_terminate(n)->v());
+  return std::visit(
+      Overloaded{[](const typename Sig<unsigned int>::Exist &_args)
+                     -> unsigned int { return _args.d_x; }},
+      div2_terminate(n)->v());
 }
 
 std::shared_ptr<FunctionVernac::R_div2>
@@ -61,14 +63,14 @@ std::shared_ptr<Sig<unsigned int>> FunctionVernac::list_sum_terminate(
     const std::shared_ptr<List<unsigned int>> &l) {
   return std::visit(
       Overloaded{
-          [](const typename List<unsigned int>::Nil)
+          [](const typename List<unsigned int>::Nil &)
               -> std::shared_ptr<Sig<unsigned int>> {
             return Sig<unsigned int>::exist(0u);
           },
-          [](const typename List<unsigned int>::Cons _args)
+          [](const typename List<unsigned int>::Cons &_args)
               -> std::shared_ptr<Sig<unsigned int>> {
             return std::visit(
-                Overloaded{[&](const typename Sig<unsigned int>::Exist _args0)
+                Overloaded{[&](const typename Sig<unsigned int>::Exist &_args0)
                                -> auto {
                   return Sig<unsigned int>::exist((_args.d_a0 + _args0.d_x));
                 }},
@@ -79,9 +81,10 @@ std::shared_ptr<Sig<unsigned int>> FunctionVernac::list_sum_terminate(
 
 __attribute__((pure)) unsigned int
 FunctionVernac::list_sum(const std::shared_ptr<List<unsigned int>> &l) {
-  return std::visit(Overloaded{[](const typename Sig<unsigned int>::Exist _args)
-                                   -> unsigned int { return _args.d_x; }},
-                    list_sum_terminate(l)->v());
+  return std::visit(
+      Overloaded{[](const typename Sig<unsigned int>::Exist &_args)
+                     -> unsigned int { return _args.d_x; }},
+      list_sum_terminate(l)->v());
 }
 
 std::shared_ptr<FunctionVernac::R_list_sum>

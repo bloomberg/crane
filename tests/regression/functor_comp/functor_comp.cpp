@@ -18,13 +18,13 @@ std::optional<std::pair<unsigned int, FunctorComp::Stack::t>>
 FunctorComp::Stack::pop(const std::shared_ptr<List<unsigned int>> &s) {
   return std::visit(
       Overloaded{
-          [](const typename List<unsigned int>::Nil)
+          [](const typename List<unsigned int>::Nil &)
               -> std::optional<std::pair<unsigned int,
                                          std::shared_ptr<List<unsigned int>>>> {
             return std::optional<
                 std::pair<unsigned int, std::shared_ptr<List<unsigned int>>>>();
           },
-          [](const typename List<unsigned int>::Cons _args)
+          [](const typename List<unsigned int>::Cons &_args)
               -> std::optional<std::pair<unsigned int,
                                          std::shared_ptr<List<unsigned int>>>> {
             return std::make_optional<
@@ -58,14 +58,14 @@ FunctorComp::Queue::pop(const std::pair<std::shared_ptr<List<unsigned int>>,
   std::shared_ptr<List<unsigned int>> back = q.second;
   return std::visit(
       Overloaded{
-          [&](const typename List<unsigned int>::Nil)
+          [&](const typename List<unsigned int>::Nil &)
               -> std::optional<
                   std::pair<unsigned int,
                             std::pair<std::shared_ptr<List<unsigned int>>,
                                       std::shared_ptr<List<unsigned int>>>>> {
             return std::visit(
                 Overloaded{
-                    [](const typename List<unsigned int>::Nil)
+                    [](const typename List<unsigned int>::Nil &)
                         -> std::optional<std::pair<
                             unsigned int,
                             std::pair<std::shared_ptr<List<unsigned int>>,
@@ -75,7 +75,7 @@ FunctorComp::Queue::pop(const std::pair<std::shared_ptr<List<unsigned int>>,
                           std::pair<std::shared_ptr<List<unsigned int>>,
                                     std::shared_ptr<List<unsigned int>>>>>();
                     },
-                    [](const typename List<unsigned int>::Cons _args0)
+                    [](const typename List<unsigned int>::Cons &_args0)
                         -> std::optional<std::pair<
                             unsigned int,
                             std::pair<std::shared_ptr<List<unsigned int>>,
@@ -91,7 +91,7 @@ FunctorComp::Queue::pop(const std::pair<std::shared_ptr<List<unsigned int>>,
                     }},
                 back->rev()->v());
           },
-          [&](const typename List<unsigned int>::Cons _args)
+          [&](const typename List<unsigned int>::Cons &_args)
               -> std::optional<
                   std::pair<unsigned int,
                             std::pair<std::shared_ptr<List<unsigned int>>,

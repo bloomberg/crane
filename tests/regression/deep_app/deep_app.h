@@ -84,10 +84,10 @@ struct DeepApp {
                 const std::shared_ptr<mylist<T1>> m = _f.m;
                 std::visit(
                     Overloaded{
-                        [&](const typename mylist<T1>::Mynil) -> void {
+                        [&](const typename mylist<T1>::Mynil &) -> void {
                           _result = f;
                         },
-                        [&](const typename mylist<T1>::Mycons _args) -> void {
+                        [&](const typename mylist<T1>::Mycons &_args) -> void {
                           _stack.push_back(_Call1{_args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
                         }},
@@ -125,10 +125,10 @@ struct DeepApp {
                 const std::shared_ptr<mylist<T1>> m = _f.m;
                 std::visit(
                     Overloaded{
-                        [&](const typename mylist<T1>::Mynil) -> void {
+                        [&](const typename mylist<T1>::Mynil &) -> void {
                           _result = f;
                         },
-                        [&](const typename mylist<T1>::Mycons _args) -> void {
+                        [&](const typename mylist<T1>::Mycons &_args) -> void {
                           _stack.push_back(_Call1{_args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
                         }},
@@ -157,7 +157,7 @@ struct DeepApp {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename mylist<T1>::Mynil) {
+              [&](const typename mylist<T1>::Mynil &) {
                 if (_last) {
                   std::get<typename mylist<T1>::Mycons>(_last->v_mut()).d_a1 =
                       std::move(l2);
@@ -166,7 +166,7 @@ struct DeepApp {
                 }
                 _continue = false;
               },
-              [&](const typename mylist<T1>::Mycons _args) {
+              [&](const typename mylist<T1>::Mycons &_args) {
                 auto _cell = mylist<T1>::mycons(_args.d_a0, nullptr);
                 if (_last) {
                   std::get<typename mylist<T1>::Mycons>(_last->v_mut()).d_a1 =
@@ -192,7 +192,7 @@ struct DeepApp {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename mylist<T1>::Mynil) {
+              [&](const typename mylist<T1>::Mynil &) {
                 if (_last) {
                   std::get<typename mylist<T2>::Mycons>(_last->v_mut()).d_a1 =
                       mylist<T2>::mynil();
@@ -201,7 +201,7 @@ struct DeepApp {
                 }
                 _continue = false;
               },
-              [&](const typename mylist<T1>::Mycons _args) {
+              [&](const typename mylist<T1>::Mycons &_args) {
                 auto _cell = mylist<T2>::mycons(f(_args.d_a0), nullptr);
                 if (_last) {
                   std::get<typename mylist<T2>::Mycons>(_last->v_mut()).d_a1 =
@@ -249,10 +249,10 @@ struct DeepApp {
                 const std::shared_ptr<mylist<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename mylist<T1>::Mynil) -> void {
+                        [&](const typename mylist<T1>::Mynil &) -> void {
                           _result = 0u;
                         },
-                        [&](const typename mylist<T1>::Mycons _args) -> void {
+                        [&](const typename mylist<T1>::Mycons &_args) -> void {
                           _stack.push_back(_Call1{});
                           _stack.push_back(_Enter{_args.d_a1});
                         }},

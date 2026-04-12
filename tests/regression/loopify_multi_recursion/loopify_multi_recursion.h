@@ -144,10 +144,10 @@ struct LoopifyMultiRecursion {
                 const std::shared_ptr<quadtree> q = _f.q;
                 std::visit(
                     Overloaded{
-                        [&](const typename quadtree::QLeaf _args) -> void {
+                        [&](const typename quadtree::QLeaf &_args) -> void {
                           _result = f(_args.d_a0);
                         },
-                        [&](const typename quadtree::QQuad _args) -> void {
+                        [&](const typename quadtree::QQuad &_args) -> void {
                           _stack.push_back(_Call1{
                               _args.d_a2, _args.d_a1, _args.d_a0, _args.d_a3,
                               _args.d_a2, _args.d_a1, _args.d_a0});
@@ -242,10 +242,10 @@ struct LoopifyMultiRecursion {
                 const std::shared_ptr<quadtree> q = _f.q;
                 std::visit(
                     Overloaded{
-                        [&](const typename quadtree::QLeaf _args) -> void {
+                        [&](const typename quadtree::QLeaf &_args) -> void {
                           _result = f(_args.d_a0);
                         },
-                        [&](const typename quadtree::QQuad _args) -> void {
+                        [&](const typename quadtree::QQuad &_args) -> void {
                           _stack.push_back(_Call1{
                               _args.d_a2, _args.d_a1, _args.d_a0, _args.d_a3,
                               _args.d_a2, _args.d_a1, _args.d_a0});

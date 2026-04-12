@@ -100,10 +100,10 @@ struct MonadicClosure {
   count_matching(F0 &&pred, const std::shared_ptr<List<std::string>> &xs) {
     return std::visit(
         Overloaded{
-            [](const typename List<std::string>::Nil) -> unsigned int {
+            [](const typename List<std::string>::Nil &) -> unsigned int {
               return 0u;
             },
-            [&](const typename List<std::string>::Cons _args) -> unsigned int {
+            [&](const typename List<std::string>::Cons &_args) -> unsigned int {
               unsigned int n = count_matching(pred, _args.d_a1);
               if (pred(_args.d_a0)) {
                 return (n + 1);

@@ -109,11 +109,12 @@ struct InstructionSequenceExec {
   static T1 instruction_rect(const T1 f, const T1 f0, F2 &&f1,
                              const std::shared_ptr<instruction> &i) {
     return std::visit(
-        Overloaded{[&](const typename instruction::NOP_) -> T1 { return f; },
-                   [&](const typename instruction::INC_PC) -> T1 { return f0; },
-                   [&](const typename instruction::ADD_ACC _args) -> T1 {
-                     return f1(_args.d_a0);
-                   }},
+        Overloaded{
+            [&](const typename instruction::NOP_ &) -> T1 { return f; },
+            [&](const typename instruction::INC_PC &) -> T1 { return f0; },
+            [&](const typename instruction::ADD_ACC &_args) -> T1 {
+              return f1(_args.d_a0);
+            }},
         i->v());
   }
 
@@ -121,11 +122,12 @@ struct InstructionSequenceExec {
   static T1 instruction_rec(const T1 f, const T1 f0, F2 &&f1,
                             const std::shared_ptr<instruction> &i) {
     return std::visit(
-        Overloaded{[&](const typename instruction::NOP_) -> T1 { return f; },
-                   [&](const typename instruction::INC_PC) -> T1 { return f0; },
-                   [&](const typename instruction::ADD_ACC _args) -> T1 {
-                     return f1(_args.d_a0);
-                   }},
+        Overloaded{
+            [&](const typename instruction::NOP_ &) -> T1 { return f; },
+            [&](const typename instruction::INC_PC &) -> T1 { return f0; },
+            [&](const typename instruction::ADD_ACC &_args) -> T1 {
+              return f1(_args.d_a0);
+            }},
         i->v());
   }
 

@@ -83,19 +83,20 @@ struct LoopifyListAccess {
     std::shared_ptr<List<unsigned int>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename List<unsigned int>::Nil) {
-                              _result = 0u;
-                              _continue = false;
-                            },
-                            [&](const typename List<unsigned int>::Cons _args) {
-                              if (p(_args.d_a0)) {
-                                _result = _args.d_a0;
-                                _continue = false;
-                              } else {
-                                _loop_l = _args.d_a1;
-                              }
-                            }},
-                 _loop_l->v());
+      std::visit(
+          Overloaded{[&](const typename List<unsigned int>::Nil &) {
+                       _result = 0u;
+                       _continue = false;
+                     },
+                     [&](const typename List<unsigned int>::Cons &_args) {
+                       if (p(_args.d_a0)) {
+                         _result = _args.d_a0;
+                         _continue = false;
+                       } else {
+                         _loop_l = _args.d_a1;
+                       }
+                     }},
+          _loop_l->v());
     }
     return _result;
   }
@@ -127,10 +128,10 @@ struct LoopifyListAccess {
                 const std::shared_ptr<List<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil) -> void {
+                        [&](const typename List<unsigned int>::Nil &) -> void {
                           _result = 0u;
                         },
-                        [&](const typename List<unsigned int>::Cons _args)
+                        [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
                           if (p(_args.d_a0)) {
                             _stack.push_back(_Call1{1u});

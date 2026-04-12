@@ -54,11 +54,11 @@ struct Sum {
     template <typename T1, MapsTo<T1, t_B> F0>
     std::shared_ptr<either<t_A, T1>> map_right(F0 &&f) const {
       return std::visit(
-          Overloaded{[](const typename either<t_A, t_B>::Left _args)
+          Overloaded{[](const typename either<t_A, t_B>::Left &_args)
                          -> std::shared_ptr<either<t_A, T1>> {
                        return either<t_A, T1>::left(_args.d_a0);
                      },
-                     [&](const typename either<t_A, t_B>::Right _args)
+                     [&](const typename either<t_A, t_B>::Right &_args)
                          -> std::shared_ptr<either<t_A, T1>> {
                        return either<t_A, T1>::right(f(_args.d_a0));
                      }},
@@ -68,11 +68,11 @@ struct Sum {
     template <typename T1, MapsTo<T1, t_A> F0>
     std::shared_ptr<either<T1, t_B>> map_left(F0 &&f) const {
       return std::visit(
-          Overloaded{[&](const typename either<t_A, t_B>::Left _args)
+          Overloaded{[&](const typename either<t_A, t_B>::Left &_args)
                          -> std::shared_ptr<either<T1, t_B>> {
                        return either<T1, t_B>::left(f(_args.d_a0));
                      },
-                     [](const typename either<t_A, t_B>::Right _args)
+                     [](const typename either<t_A, t_B>::Right &_args)
                          -> std::shared_ptr<either<T1, t_B>> {
                        return either<T1, t_B>::right(_args.d_a0);
                      }},
@@ -81,10 +81,10 @@ struct Sum {
 
     __attribute__((pure)) bool is_left() const {
       return std::visit(
-          Overloaded{[](const typename either<t_A, t_B>::Left) -> bool {
+          Overloaded{[](const typename either<t_A, t_B>::Left &) -> bool {
                        return true;
                      },
-                     [](const typename either<t_A, t_B>::Right) -> bool {
+                     [](const typename either<t_A, t_B>::Right &) -> bool {
                        return false;
                      }},
           this->v());
@@ -93,10 +93,10 @@ struct Sum {
     template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1>
     T1 either_rec(F0 &&f, F1 &&f0) const {
       return std::visit(
-          Overloaded{[&](const typename either<t_A, t_B>::Left _args) -> T1 {
+          Overloaded{[&](const typename either<t_A, t_B>::Left &_args) -> T1 {
                        return f(_args.d_a0);
                      },
-                     [&](const typename either<t_A, t_B>::Right _args) -> T1 {
+                     [&](const typename either<t_A, t_B>::Right &_args) -> T1 {
                        return f0(_args.d_a0);
                      }},
           this->v());
@@ -105,10 +105,10 @@ struct Sum {
     template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1>
     T1 either_rect(F0 &&f, F1 &&f0) const {
       return std::visit(
-          Overloaded{[&](const typename either<t_A, t_B>::Left _args) -> T1 {
+          Overloaded{[&](const typename either<t_A, t_B>::Left &_args) -> T1 {
                        return f(_args.d_a0);
                      },
-                     [&](const typename either<t_A, t_B>::Right _args) -> T1 {
+                     [&](const typename either<t_A, t_B>::Right &_args) -> T1 {
                        return f0(_args.d_a0);
                      }},
           this->v());
@@ -173,13 +173,13 @@ struct Sum {
     T1 triple_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       return std::visit(
           Overloaded{
-              [&](const typename triple<t_A, t_B, t_C>::First _args) -> T1 {
+              [&](const typename triple<t_A, t_B, t_C>::First &_args) -> T1 {
                 return f(_args.d_a0);
               },
-              [&](const typename triple<t_A, t_B, t_C>::Second _args) -> T1 {
+              [&](const typename triple<t_A, t_B, t_C>::Second &_args) -> T1 {
                 return f0(_args.d_a0);
               },
-              [&](const typename triple<t_A, t_B, t_C>::Third _args) -> T1 {
+              [&](const typename triple<t_A, t_B, t_C>::Third &_args) -> T1 {
                 return f1(_args.d_a0);
               }},
           this->v());
@@ -190,13 +190,13 @@ struct Sum {
     T1 triple_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       return std::visit(
           Overloaded{
-              [&](const typename triple<t_A, t_B, t_C>::First _args) -> T1 {
+              [&](const typename triple<t_A, t_B, t_C>::First &_args) -> T1 {
                 return f(_args.d_a0);
               },
-              [&](const typename triple<t_A, t_B, t_C>::Second _args) -> T1 {
+              [&](const typename triple<t_A, t_B, t_C>::Second &_args) -> T1 {
                 return f0(_args.d_a0);
               },
-              [&](const typename triple<t_A, t_B, t_C>::Third _args) -> T1 {
+              [&](const typename triple<t_A, t_B, t_C>::Third &_args) -> T1 {
                 return f1(_args.d_a0);
               }},
           this->v());

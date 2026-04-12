@@ -84,11 +84,11 @@ void BlockTemplateStress::block_result_as_arg() {
 /// 9. Block template with %a0 inside a fixpoint
 std::shared_ptr<List<std::string>> BlockTemplateStress::read_files(
     const std::shared_ptr<List<std::string>> &paths) {
-  return std::visit(Overloaded{[](const typename List<std::string>::Nil)
+  return std::visit(Overloaded{[](const typename List<std::string>::Nil &)
                                    -> std::shared_ptr<List<std::string>> {
                                  return List<std::string>::nil();
                                },
-                               [](const typename List<std::string>::Cons _args)
+                               [](const typename List<std::string>::Cons &_args)
                                    -> std::shared_ptr<List<std::string>> {
                                  std::string content;
                                  {

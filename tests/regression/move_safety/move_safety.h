@@ -71,20 +71,20 @@ struct MoveSafety {
     __attribute__((pure)) unsigned int sum_values(const unsigned int x) const {
       return std::visit(
           Overloaded{
-              [&](const typename tree::Leaf) -> unsigned int { return x; },
-              [&](const typename tree::Node _args) -> unsigned int {
+              [&](const typename tree::Leaf &) -> unsigned int { return x; },
+              [&](const typename tree::Node &_args) -> unsigned int {
                 return std::visit(
                     Overloaded{
-                        [&](const typename tree::Leaf) -> unsigned int {
+                        [&](const typename tree::Leaf &) -> unsigned int {
                           return (_args.d_a1 + x);
                         },
-                        [&](const typename tree::Node _args0) -> unsigned int {
+                        [&](const typename tree::Node &_args0) -> unsigned int {
                           return std::visit(
-                              Overloaded{[&](const typename tree::Leaf)
+                              Overloaded{[&](const typename tree::Leaf &)
                                              -> unsigned int {
                                            return (_args0.d_a1 + x);
                                          },
-                                         [&](const typename tree::Node _args1)
+                                         [&](const typename tree::Node &_args1)
                                              -> unsigned int {
                                            return (
                                                ((_args0.d_a1 + _args1.d_a1) +
@@ -133,13 +133,15 @@ struct MoveSafety {
               [&](_Enter _f) {
                 const std::shared_ptr<tree> t = _f.t;
                 std::visit(
-                    Overloaded{
-                        [&](const typename tree::Leaf) -> void { _result = f; },
-                        [&](const typename tree::Node _args) -> void {
-                          _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
-                                                  _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a2});
-                        }},
+                    Overloaded{[&](const typename tree::Leaf &) -> void {
+                                 _result = f;
+                               },
+                               [&](const typename tree::Node &_args) -> void {
+                                 _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
+                                                         _args.d_a1,
+                                                         _args.d_a0});
+                                 _stack.push_back(_Enter{_args.d_a2});
+                               }},
                     t->v());
               },
               [&](_Call1 _f) {
@@ -188,13 +190,15 @@ struct MoveSafety {
               [&](_Enter _f) {
                 const std::shared_ptr<tree> t = _f.t;
                 std::visit(
-                    Overloaded{
-                        [&](const typename tree::Leaf) -> void { _result = f; },
-                        [&](const typename tree::Node _args) -> void {
-                          _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
-                                                  _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a2});
-                        }},
+                    Overloaded{[&](const typename tree::Leaf &) -> void {
+                                 _result = f;
+                               },
+                               [&](const typename tree::Node &_args) -> void {
+                                 _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
+                                                         _args.d_a1,
+                                                         _args.d_a0});
+                                 _stack.push_back(_Enter{_args.d_a2});
+                               }},
                     t->v());
               },
               [&](_Call1 _f) {
@@ -239,7 +243,7 @@ struct MoveSafety {
 
     __attribute__((pure)) unsigned int apply_box(const unsigned int x) const {
       return std::visit(
-          Overloaded{[&](const typename fn_box::Box _args) -> unsigned int {
+          Overloaded{[&](const typename fn_box::Box &_args) -> unsigned int {
             return _args.d_a0(x);
           }},
           this->v());
@@ -248,19 +252,21 @@ struct MoveSafety {
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 fn_box_rec(F0 &&f) const {
-      return std::visit(Overloaded{[&](const typename fn_box::Box _args) -> T1 {
-                          return f(_args.d_a0);
-                        }},
-                        this->v());
+      return std::visit(
+          Overloaded{[&](const typename fn_box::Box &_args) -> T1 {
+            return f(_args.d_a0);
+          }},
+          this->v());
     }
 
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 fn_box_rect(F0 &&f) const {
-      return std::visit(Overloaded{[&](const typename fn_box::Box _args) -> T1 {
-                          return f(_args.d_a0);
-                        }},
-                        this->v());
+      return std::visit(
+          Overloaded{[&](const typename fn_box::Box &_args) -> T1 {
+            return f(_args.d_a0);
+          }},
+          this->v());
     }
   };
 
@@ -318,11 +324,12 @@ struct MoveSafety {
       };
       std::shared_ptr<tree> t2 = tree_id(std::move(t));
       return std::visit(
-          Overloaded{
-              [&](const typename tree::Leaf) -> unsigned int { return f(0u); },
-              [&](const typename tree::Node _args) -> unsigned int {
-                return f(_args.d_a1);
-              }},
+          Overloaded{[&](const typename tree::Leaf &) -> unsigned int {
+                       return f(0u);
+                     },
+                     [&](const typename tree::Node &_args) -> unsigned int {
+                       return f(_args.d_a1);
+                     }},
           t2->v());
     }();
   }();

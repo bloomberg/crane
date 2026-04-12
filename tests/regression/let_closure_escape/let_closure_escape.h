@@ -64,20 +64,20 @@ struct LetClosureEscape {
     __attribute__((pure)) unsigned int sum_values(const unsigned int x) const {
       return std::visit(
           Overloaded{
-              [&](const typename tree::Leaf) -> unsigned int { return x; },
-              [&](const typename tree::Node _args) -> unsigned int {
+              [&](const typename tree::Leaf &) -> unsigned int { return x; },
+              [&](const typename tree::Node &_args) -> unsigned int {
                 return std::visit(
                     Overloaded{
-                        [&](const typename tree::Leaf) -> unsigned int {
+                        [&](const typename tree::Leaf &) -> unsigned int {
                           return (_args.d_a1 + x);
                         },
-                        [&](const typename tree::Node _args0) -> unsigned int {
+                        [&](const typename tree::Node &_args0) -> unsigned int {
                           return std::visit(
-                              Overloaded{[&](const typename tree::Leaf)
+                              Overloaded{[&](const typename tree::Leaf &)
                                              -> unsigned int {
                                            return (_args0.d_a1 + x);
                                          },
-                                         [&](const typename tree::Node _args1)
+                                         [&](const typename tree::Node &_args1)
                                              -> unsigned int {
                                            return (
                                                ((_args0.d_a1 + _args1.d_a1) +
@@ -97,8 +97,8 @@ struct LetClosureEscape {
                              F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree::Leaf) -> T1 { return f; },
-                   [&](const typename tree::Node _args) -> T1 {
+        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
+                   [&](const typename tree::Node &_args) -> T1 {
                      return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
                                _args.d_a1, _args.d_a2,
                                tree_rect<T1>(f, f0, _args.d_a2));
@@ -111,8 +111,8 @@ struct LetClosureEscape {
                              F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree::Leaf) -> T1 { return f; },
-                   [&](const typename tree::Node _args) -> T1 {
+        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
+                   [&](const typename tree::Node &_args) -> T1 {
                      return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
                                _args.d_a1, _args.d_a2,
                                tree_rec<T1>(f, f0, _args.d_a2));
@@ -149,7 +149,7 @@ struct LetClosureEscape {
 
     __attribute__((pure)) unsigned int apply_box(const unsigned int x) const {
       return std::visit(
-          Overloaded{[&](const typename fn_box::Box _args) -> unsigned int {
+          Overloaded{[&](const typename fn_box::Box &_args) -> unsigned int {
             return _args.d_a0(x);
           }},
           this->v());
@@ -158,19 +158,21 @@ struct LetClosureEscape {
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 fn_box_rec(F0 &&f) const {
-      return std::visit(Overloaded{[&](const typename fn_box::Box _args) -> T1 {
-                          return f(_args.d_a0);
-                        }},
-                        this->v());
+      return std::visit(
+          Overloaded{[&](const typename fn_box::Box &_args) -> T1 {
+            return f(_args.d_a0);
+          }},
+          this->v());
     }
 
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 fn_box_rect(F0 &&f) const {
-      return std::visit(Overloaded{[&](const typename fn_box::Box _args) -> T1 {
-                          return f(_args.d_a0);
-                        }},
-                        this->v());
+      return std::visit(
+          Overloaded{[&](const typename fn_box::Box &_args) -> T1 {
+            return f(_args.d_a0);
+          }},
+          this->v());
     }
   };
 

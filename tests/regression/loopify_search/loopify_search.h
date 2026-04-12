@@ -64,7 +64,7 @@ public:
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil) {
+              [&](const typename List<t_A>::Nil &) {
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
                 } else {
@@ -72,7 +72,7 @@ public:
                 }
                 _continue = false;
               },
-              [&](const typename List<t_A>::Cons _args) {
+              [&](const typename List<t_A>::Cons &_args) {
                 auto _cell = List<t_A>::cons(_args.d_a0, nullptr);
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =
@@ -114,10 +114,10 @@ struct LoopifySearch {
                 const std::shared_ptr<List<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<T1>::Nil) -> void {
+                        [&](const typename List<T1>::Nil &) -> void {
                           _result = 0u;
                         },
-                        [&](const typename List<T1>::Cons _args) -> void {
+                        [&](const typename List<T1>::Cons &_args) -> void {
                           _stack.push_back(_Call1{});
                           _stack.push_back(_Enter{_args.d_a1});
                         }},
@@ -175,16 +175,16 @@ struct LoopifySearch {
                 const std::shared_ptr<List<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil) -> void {
+                        [&](const typename List<unsigned int>::Nil &) -> void {
                           _result = 0u;
                         },
-                        [&](const typename List<unsigned int>::Cons _args)
+                        [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
                           std::visit(
                               Overloaded{
-                                  [&](const typename List<unsigned int>::Nil)
+                                  [&](const typename List<unsigned int>::Nil &)
                                       -> void { _result = _args.d_a0; },
-                                  [&](const typename List<unsigned int>::Cons)
+                                  [&](const typename List<unsigned int>::Cons &)
                                       -> void {
                                     _stack.push_back(_Call1{_args, cmp});
                                     _stack.push_back(_Enter{_args.d_a1});
@@ -258,7 +258,7 @@ struct LoopifySearch {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil) {
+              [&](const typename List<unsigned int>::Nil &) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = List<unsigned int>::nil();
@@ -267,7 +267,7 @@ struct LoopifySearch {
                 }
                 _continue = false;
               },
-              [&](const typename List<unsigned int>::Cons _args) {
+              [&](const typename List<unsigned int>::Cons &_args) {
                 if (p(_args.d_a0)) {
                   auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);
                   if (_last) {
@@ -362,11 +362,11 @@ struct LoopifySearch {
                 const std::shared_ptr<List<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil) -> void {
+                        [&](const typename List<unsigned int>::Nil &) -> void {
                           _result =
                               List<std::shared_ptr<List<unsigned int>>>::nil();
                         },
-                        [&](const typename List<unsigned int>::Cons _args)
+                        [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
                           _stack.push_back(_Call1{f(_args.d_a0)});
                           _stack.push_back(_Enter{_args.d_a1});
@@ -493,10 +493,10 @@ struct LoopifySearch {
                        const std::shared_ptr<btree> b = _f.b;
                        std::visit(
                            Overloaded{
-                               [&](const typename btree::BLeaf _args) -> void {
+                               [&](const typename btree::BLeaf &_args) -> void {
                                  _result = f(_args.d_a0);
                                },
-                               [&](const typename btree::BNode _args) -> void {
+                               [&](const typename btree::BNode &_args) -> void {
                                  _stack.push_back(_Call1{_args.d_a0, _args.d_a1,
                                                          _args.d_a0});
                                  _stack.push_back(_Enter{_args.d_a1});
@@ -547,10 +547,10 @@ struct LoopifySearch {
                        const std::shared_ptr<btree> b = _f.b;
                        std::visit(
                            Overloaded{
-                               [&](const typename btree::BLeaf _args) -> void {
+                               [&](const typename btree::BLeaf &_args) -> void {
                                  _result = f(_args.d_a0);
                                },
-                               [&](const typename btree::BNode _args) -> void {
+                               [&](const typename btree::BNode &_args) -> void {
                                  _stack.push_back(_Call1{_args.d_a0, _args.d_a1,
                                                          _args.d_a0});
                                  _stack.push_back(_Enter{_args.d_a1});
@@ -597,10 +597,10 @@ struct LoopifySearch {
                        const std::shared_ptr<btree> t = _f.t;
                        std::visit(
                            Overloaded{
-                               [&](const typename btree::BLeaf _args) -> void {
+                               [&](const typename btree::BLeaf &_args) -> void {
                                  _result = p(_args.d_a0);
                                },
-                               [&](const typename btree::BNode _args) -> void {
+                               [&](const typename btree::BNode &_args) -> void {
                                  _stack.push_back(_Call1{_args.d_a0});
                                  _stack.push_back(_Enter{_args.d_a1});
                                }},
@@ -629,7 +629,7 @@ struct LoopifySearch {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil) {
+              [&](const typename List<unsigned int>::Nil &) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = List<unsigned int>::nil();
@@ -638,7 +638,7 @@ struct LoopifySearch {
                 }
                 _continue = false;
               },
-              [&](const typename List<unsigned int>::Cons _args) {
+              [&](const typename List<unsigned int>::Cons &_args) {
                 if (p(_args.d_a0)) {
                   auto _cell = List<unsigned int>::cons(_loop_idx, nullptr);
                   if (_last) {

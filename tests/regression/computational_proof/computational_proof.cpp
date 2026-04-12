@@ -89,12 +89,12 @@ std::shared_ptr<List<unsigned int>>
 ComputationalProof::insert_dec(const unsigned int x,
                                const std::shared_ptr<List<unsigned int>> &l) {
   return std::visit(
-      Overloaded{[&](const typename List<unsigned int>::Nil)
+      Overloaded{[&](const typename List<unsigned int>::Nil &)
                      -> std::shared_ptr<List<unsigned int>> {
                    return List<unsigned int>::cons(x,
                                                    List<unsigned int>::nil());
                  },
-                 [&](const typename List<unsigned int>::Cons _args)
+                 [&](const typename List<unsigned int>::Cons &_args)
                      -> std::shared_ptr<List<unsigned int>> {
                    if (le_dec(x, _args.d_a0)) {
                      return List<unsigned int>::cons(
@@ -109,14 +109,14 @@ ComputationalProof::insert_dec(const unsigned int x,
 
 std::shared_ptr<List<unsigned int>>
 ComputationalProof::isort_dec(const std::shared_ptr<List<unsigned int>> &l) {
-  return std::visit(Overloaded{[](const typename List<unsigned int>::Nil)
-                                   -> std::shared_ptr<List<unsigned int>> {
-                                 return List<unsigned int>::nil();
-                               },
-                               [](const typename List<unsigned int>::Cons _args)
-                                   -> std::shared_ptr<List<unsigned int>> {
-                                 return insert_dec(_args.d_a0,
-                                                   isort_dec(_args.d_a1));
-                               }},
-                    l->v());
+  return std::visit(
+      Overloaded{[](const typename List<unsigned int>::Nil &)
+                     -> std::shared_ptr<List<unsigned int>> {
+                   return List<unsigned int>::nil();
+                 },
+                 [](const typename List<unsigned int>::Cons &_args)
+                     -> std::shared_ptr<List<unsigned int>> {
+                   return insert_dec(_args.d_a0, isort_dec(_args.d_a1));
+                 }},
+      l->v());
 }

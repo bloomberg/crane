@@ -155,9 +155,9 @@ template <typename K, typename V> struct CHT {
                const bsl::shared_ptr<List<bsl::pair<T1, T2>>> &xs) {
     return bsl::visit(
         bdlf::Overloaded{
-            [](const typename List<bsl::pair<T1, T2>>::Nil)
+            [](const typename List<bsl::pair<T1, T2>>::Nil &)
                 -> bsl::optional<T2> { return bsl::optional<T2>(); },
-            [&](const typename List<bsl::pair<T1, T2>>::Cons _args)
+            [&](const typename List<bsl::pair<T1, T2>>::Cons &_args)
                 -> bsl::optional<T2> {
               T1 k_ = _args.d_a0.first;
               T2 v = _args.d_a0.second;
@@ -176,12 +176,12 @@ template <typename K, typename V> struct CHT {
                           const bsl::shared_ptr<List<bsl::pair<T1, T2>>> &xs) {
     return bsl::visit(
         bdlf::Overloaded{
-            [&](const typename List<bsl::pair<T1, T2>>::Nil)
+            [&](const typename List<bsl::pair<T1, T2>>::Nil &)
                 -> bsl::shared_ptr<List<bsl::pair<T1, T2>>> {
               return List<bsl::pair<T1, T2>>::cons(
                   bsl::make_pair(k, v), List<bsl::pair<T1, T2>>::nil());
             },
-            [&](const typename List<bsl::pair<T1, T2>>::Cons _args)
+            [&](const typename List<bsl::pair<T1, T2>>::Cons &_args)
                 -> bsl::shared_ptr<List<bsl::pair<T1, T2>>> {
               T1 k_ = _args.d_a0.first;
               T2 v_ = _args.d_a0.second;
@@ -204,12 +204,12 @@ template <typename K, typename V> struct CHT {
                bsl::shared_ptr<List<bsl::pair<T1, T2>>> xs) {
     return bsl::visit(
         bdlf::Overloaded{
-            [&](const typename List<bsl::pair<T1, T2>>::Nil)
+            [&](const typename List<bsl::pair<T1, T2>>::Nil &)
                 -> bsl::pair<bsl::optional<T2>,
                              bsl::shared_ptr<List<bsl::pair<T1, T2>>>> {
               return bsl::make_pair(bsl::optional<T2>(), xs);
             },
-            [&](const typename List<bsl::pair<T1, T2>>::Cons _args)
+            [&](const typename List<bsl::pair<T1, T2>>::Cons &_args)
                 -> bsl::pair<bsl::optional<T2>,
                              bsl::shared_ptr<List<bsl::pair<T1, T2>>>> {
               T1 k_ = _args.d_a0.first;

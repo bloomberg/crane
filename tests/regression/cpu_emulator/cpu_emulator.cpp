@@ -52,28 +52,28 @@ CpuEmulator::execute(const std::shared_ptr<CpuEmulator::state> &s,
                      const std::shared_ptr<CpuEmulator::instr> &i) {
   return std::visit(
       Overloaded{
-          [&](const typename CpuEmulator::instr::NOP)
+          [&](const typename CpuEmulator::instr::NOP &)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(
                 state{s->ex_acc, s->ex_regs, s->ex_carry,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::LDM _args)
+          [&](const typename CpuEmulator::instr::LDM &_args)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(state{
                 (16u ? _args.d_n % 16u : _args.d_n), s->ex_regs, s->ex_carry,
                 (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                 s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::LD _args)
+          [&](const typename CpuEmulator::instr::LD &_args)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(
                 state{get_reg(s, _args.d_r), s->ex_regs, s->ex_carry,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::XCH _args)
+          [&](const typename CpuEmulator::instr::XCH &_args)
               -> std::shared_ptr<CpuEmulator::state> {
             unsigned int regv = get_reg(s, _args.d_r);
             return std::make_shared<CpuEmulator::state>(
@@ -81,7 +81,7 @@ CpuEmulator::execute(const std::shared_ptr<CpuEmulator::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::INC _args)
+          [&](const typename CpuEmulator::instr::INC &_args)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(state{
                 s->ex_acc, set_reg(s, _args.d_r, (get_reg(s, _args.d_r) + 1)),
@@ -89,7 +89,7 @@ CpuEmulator::execute(const std::shared_ptr<CpuEmulator::state> &s,
                 (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                 s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::ADD _args)
+          [&](const typename CpuEmulator::instr::ADD &_args)
               -> std::shared_ptr<CpuEmulator::state> {
             unsigned int sum =
                 ((s->ex_acc + get_reg(s, _args.d_r)) + [&]() -> unsigned int {
@@ -104,7 +104,7 @@ CpuEmulator::execute(const std::shared_ptr<CpuEmulator::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::SUB _args)
+          [&](const typename CpuEmulator::instr::SUB &_args)
               -> std::shared_ptr<CpuEmulator::state> {
             unsigned int diff = ((
                 ((s->ex_acc + 16u) - get_reg(s, _args.d_r)) > (s->ex_acc + 16u)
@@ -116,7 +116,7 @@ CpuEmulator::execute(const std::shared_ptr<CpuEmulator::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::IAC)
+          [&](const typename CpuEmulator::instr::IAC &)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(
                 state{(16u ? (s->ex_acc + 1) % 16u : (s->ex_acc + 1)),
@@ -124,7 +124,7 @@ CpuEmulator::execute(const std::shared_ptr<CpuEmulator::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::DAC)
+          [&](const typename CpuEmulator::instr::DAC &)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(
                 state{(16u ? (s->ex_acc + 15u) % 16u : (s->ex_acc + 15u)),
@@ -132,28 +132,28 @@ CpuEmulator::execute(const std::shared_ptr<CpuEmulator::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::CLC)
+          [&](const typename CpuEmulator::instr::CLC &)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(
                 state{s->ex_acc, s->ex_regs, false,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::STC)
+          [&](const typename CpuEmulator::instr::STC &)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(
                 state{s->ex_acc, s->ex_regs, true,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::CMC)
+          [&](const typename CpuEmulator::instr::CMC &)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(
                 state{s->ex_acc, s->ex_regs, !(s->ex_carry),
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::CMA)
+          [&](const typename CpuEmulator::instr::CMA &)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(
                 state{(((15u - s->ex_acc) > 15u ? 0 : (15u - s->ex_acc))),
@@ -161,14 +161,14 @@ CpuEmulator::execute(const std::shared_ptr<CpuEmulator::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::CLB)
+          [&](const typename CpuEmulator::instr::CLB &)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(
                 state{0u, s->ex_regs, false,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::RAL)
+          [&](const typename CpuEmulator::instr::RAL &)
               -> std::shared_ptr<CpuEmulator::state> {
             unsigned int acc_ =
                 (16u ? ((2u * s->ex_acc) + [&]() -> unsigned int {
@@ -198,7 +198,7 @@ CpuEmulator::execute(const std::shared_ptr<CpuEmulator::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::RAR)
+          [&](const typename CpuEmulator::instr::RAR &)
               -> std::shared_ptr<CpuEmulator::state> {
             unsigned int carry_bit;
             if (s->ex_carry) {
@@ -212,7 +212,7 @@ CpuEmulator::execute(const std::shared_ptr<CpuEmulator::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::TCC)
+          [&](const typename CpuEmulator::instr::TCC &)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(
                 state{[&]() -> unsigned int {
@@ -226,7 +226,7 @@ CpuEmulator::execute(const std::shared_ptr<CpuEmulator::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::TCS)
+          [&](const typename CpuEmulator::instr::TCS &)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(
                 state{[&]() -> unsigned int {
@@ -240,7 +240,7 @@ CpuEmulator::execute(const std::shared_ptr<CpuEmulator::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::DAA)
+          [&](const typename CpuEmulator::instr::DAA &)
               -> std::shared_ptr<CpuEmulator::state> {
             unsigned int acc_;
             if (10u <= (s->ex_acc + 1)) {
@@ -253,7 +253,7 @@ CpuEmulator::execute(const std::shared_ptr<CpuEmulator::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::KBP)
+          [&](const typename CpuEmulator::instr::KBP &)
               -> std::shared_ptr<CpuEmulator::state> {
             unsigned int a = s->ex_acc;
             unsigned int out;
@@ -283,21 +283,21 @@ CpuEmulator::execute(const std::shared_ptr<CpuEmulator::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::JUN _args)
+          [&](const typename CpuEmulator::instr::JUN &_args)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(
                 state{s->ex_acc, s->ex_regs, s->ex_carry,
                       (4096u ? _args.d_a % 4096u : _args.d_a), s->ex_stack,
                       s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::JMS _args)
+          [&](const typename CpuEmulator::instr::JMS &_args)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(state{
                 s->ex_acc, s->ex_regs, s->ex_carry,
                 (4096u ? _args.d_a % 4096u : _args.d_a),
                 push_return(s, (s->ex_pc + 2u)), s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::JCN _args)
+          [&](const typename CpuEmulator::instr::JCN &_args)
               -> std::shared_ptr<CpuEmulator::state> {
             bool jump =
                 ((2u ? _args.d_c % 2u : _args.d_c) == 1u && s->ex_carry);
@@ -312,28 +312,28 @@ CpuEmulator::execute(const std::shared_ptr<CpuEmulator::state> &s,
                 }(),
                 s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::FIM _args)
+          [&](const typename CpuEmulator::instr::FIM &_args)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(
                 state{s->ex_acc, set_pair(s, _args.d_r, _args.d_d), s->ex_carry,
                       (4096u ? (s->ex_pc + 2u) % 4096u : (s->ex_pc + 2u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::SRC _args)
+          [&](const typename CpuEmulator::instr::SRC &_args)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(
                 state{s->ex_acc, s->ex_regs, s->ex_carry,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, get_pair(s, _args.d_r), s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::FIN _args)
+          [&](const typename CpuEmulator::instr::FIN &_args)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(state{
                 s->ex_acc, set_pair(s, _args.d_r, s->ex_pair_bus), s->ex_carry,
                 (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                 s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::JIN _args)
+          [&](const typename CpuEmulator::instr::JIN &_args)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(
                 state{s->ex_acc, s->ex_regs, s->ex_carry,
@@ -341,7 +341,7 @@ CpuEmulator::execute(const std::shared_ptr<CpuEmulator::state> &s,
                              : get_pair(s, _args.d_r)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::ISZ _args)
+          [&](const typename CpuEmulator::instr::ISZ &_args)
               -> std::shared_ptr<CpuEmulator::state> {
             unsigned int n = (16u ? (get_reg(s, _args.d_r) + 1) % 16u
                                   : (get_reg(s, _args.d_r) + 1));
@@ -356,7 +356,7 @@ CpuEmulator::execute(const std::shared_ptr<CpuEmulator::state> &s,
                 }(),
                 s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename CpuEmulator::instr::BBL _args)
+          [&](const typename CpuEmulator::instr::BBL &_args)
               -> std::shared_ptr<CpuEmulator::state> {
             return std::make_shared<CpuEmulator::state>(
                 state{(16u ? _args.d_d % 16u : _args.d_d), s->ex_regs,

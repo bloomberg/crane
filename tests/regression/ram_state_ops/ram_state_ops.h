@@ -60,8 +60,8 @@ public:
     if (n <= 0) {
       return std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil) -> t_A { return default0; },
-              [](const typename List<t_A>::Cons _args) -> t_A {
+              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
+              [](const typename List<t_A>::Cons &_args) -> t_A {
                 return _args.d_a0;
               }},
           this->v());
@@ -69,8 +69,8 @@ public:
       unsigned int m = n - 1;
       return std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil) -> t_A { return default0; },
-              [&](const typename List<t_A>::Cons _args0) -> t_A {
+              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
+              [&](const typename List<t_A>::Cons &_args0) -> t_A {
                 return _args0.d_a1->nth(m, default0);
               }},
           this->v());
@@ -91,10 +91,10 @@ struct RamStateOps {
     if (n <= 0) {
       return std::visit(
           Overloaded{
-              [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+              [](const typename List<T1>::Nil &) -> std::shared_ptr<List<T1>> {
                 return List<T1>::nil();
               },
-              [&](const typename List<T1>::Cons _args)
+              [&](const typename List<T1>::Cons &_args)
                   -> std::shared_ptr<List<T1>> {
                 return List<T1>::cons(x, _args.d_a1);
               }},
@@ -103,10 +103,10 @@ struct RamStateOps {
       unsigned int n_ = n - 1;
       return std::visit(
           Overloaded{
-              [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+              [](const typename List<T1>::Nil &) -> std::shared_ptr<List<T1>> {
                 return List<T1>::nil();
               },
-              [&](const typename List<T1>::Cons _args0)
+              [&](const typename List<T1>::Cons &_args0)
                   -> std::shared_ptr<List<T1>> {
                 return List<T1>::cons(_args0.d_a0,
                                       update_nth<T1>(n_, x, _args0.d_a1));

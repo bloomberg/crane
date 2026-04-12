@@ -65,10 +65,10 @@ struct SharedUptrEscape {
     std::shared_ptr<tree> extract_subtree(const unsigned int which) const {
       return std::visit(
           Overloaded{
-              [](const typename tree::Leaf) -> std::shared_ptr<tree> {
+              [](const typename tree::Leaf &) -> std::shared_ptr<tree> {
                 return tree::leaf();
               },
-              [&](const typename tree::Node _args) -> std::shared_ptr<tree> {
+              [&](const typename tree::Node &_args) -> std::shared_ptr<tree> {
                 if (which <= 0) {
                   return _args.d_a0;
                 } else {
@@ -93,8 +93,8 @@ struct SharedUptrEscape {
     __attribute__((pure)) unsigned int tree_sum() const {
       return std::visit(
           Overloaded{
-              [](const typename tree::Leaf) -> unsigned int { return 0u; },
-              [](const typename tree::Node _args) -> unsigned int {
+              [](const typename tree::Leaf &) -> unsigned int { return 0u; },
+              [](const typename tree::Node &_args) -> unsigned int {
                 return ((_args.d_a0->tree_sum() + _args.d_a1) +
                         _args.d_a2->tree_sum());
               }},
@@ -107,8 +107,8 @@ struct SharedUptrEscape {
                              F1>
   static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree::Leaf) -> T1 { return f; },
-                   [&](const typename tree::Node _args) -> T1 {
+        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
+                   [&](const typename tree::Node &_args) -> T1 {
                      return f0(_args.d_a0, tree_rect<T1>(f, f0, _args.d_a0),
                                _args.d_a1, _args.d_a2,
                                tree_rect<T1>(f, f0, _args.d_a2));
@@ -121,8 +121,8 @@ struct SharedUptrEscape {
                              F1>
   static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
     return std::visit(
-        Overloaded{[&](const typename tree::Leaf) -> T1 { return f; },
-                   [&](const typename tree::Node _args) -> T1 {
+        Overloaded{[&](const typename tree::Leaf &) -> T1 { return f; },
+                   [&](const typename tree::Node &_args) -> T1 {
                      return f0(_args.d_a0, tree_rec<T1>(f, f0, _args.d_a0),
                                _args.d_a1, _args.d_a2,
                                tree_rec<T1>(f, f0, _args.d_a2));
@@ -182,18 +182,20 @@ struct SharedUptrEscape {
 
   template <typename T1, MapsTo<T1, std::shared_ptr<tree>> F0>
   static T1 wrapper_rect(F0 &&f, const std::shared_ptr<wrapper> &w) {
-    return std::visit(Overloaded{[&](const typename wrapper::Wrap _args) -> T1 {
-                        return f(_args.d_a0);
-                      }},
-                      w->v());
+    return std::visit(
+        Overloaded{[&](const typename wrapper::Wrap &_args) -> T1 {
+          return f(_args.d_a0);
+        }},
+        w->v());
   }
 
   template <typename T1, MapsTo<T1, std::shared_ptr<tree>> F0>
   static T1 wrapper_rec(F0 &&f, const std::shared_ptr<wrapper> &w) {
-    return std::visit(Overloaded{[&](const typename wrapper::Wrap _args) -> T1 {
-                        return f(_args.d_a0);
-                      }},
-                      w->v());
+    return std::visit(
+        Overloaded{[&](const typename wrapper::Wrap &_args) -> T1 {
+          return f(_args.d_a0);
+        }},
+        w->v());
   }
 
   static std::shared_ptr<wrapper> wrap_tree(std::shared_ptr<tree> t);
@@ -201,7 +203,7 @@ struct SharedUptrEscape {
     std::shared_ptr<tree> t = tree::node(tree::leaf(), 42u, tree::leaf());
     std::shared_ptr<wrapper> w = wrap_tree(std::move(t));
     return std::visit(
-        Overloaded{[](const typename wrapper::Wrap _args) -> unsigned int {
+        Overloaded{[](const typename wrapper::Wrap &_args) -> unsigned int {
           return (_args.d_a0->tree_sum() + _args.d_a0->tree_sum());
         }},
         w->v());

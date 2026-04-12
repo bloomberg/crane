@@ -10,22 +10,22 @@ WpmOps::nat_list_eqb(const std::shared_ptr<List<unsigned int>> &xs,
                      const std::shared_ptr<List<unsigned int>> &ys) {
   return std::visit(
       Overloaded{
-          [&](const typename List<unsigned int>::Nil) -> bool {
+          [&](const typename List<unsigned int>::Nil &) -> bool {
             return std::visit(
-                Overloaded{[](const typename List<unsigned int>::Nil) -> bool {
-                             return true;
-                           },
-                           [](const typename List<unsigned int>::Cons) -> bool {
-                             return false;
-                           }},
+                Overloaded{
+                    [](const typename List<unsigned int>::Nil &) -> bool {
+                      return true;
+                    },
+                    [](const typename List<unsigned int>::Cons &) -> bool {
+                      return false;
+                    }},
                 ys->v());
           },
-          [&](const typename List<unsigned int>::Cons _args) -> bool {
+          [&](const typename List<unsigned int>::Cons &_args) -> bool {
             return std::visit(
-                Overloaded{[](const typename List<unsigned int>::Nil) -> bool {
-                             return false;
-                           },
-                           [&](const typename List<unsigned int>::Cons _args0)
+                Overloaded{[](const typename List<unsigned int>::Nil &)
+                               -> bool { return false; },
+                           [&](const typename List<unsigned int>::Cons &_args0)
                                -> bool {
                              return (_args.d_a0 == _args0.d_a0 &&
                                      nat_list_eqb(_args.d_a1, _args0.d_a1));

@@ -73,7 +73,7 @@ struct Coinductive {
   static std::shared_ptr<stream> smap(F0 &&f,
                                       const std::shared_ptr<stream> &s) {
     return stream::lazy_([=]() mutable -> std::shared_ptr<stream> {
-      return std::visit(Overloaded{[&](const typename stream::Cons _args)
+      return std::visit(Overloaded{[&](const typename stream::Cons &_args)
                                        -> std::shared_ptr<stream> {
                           return stream::cons(f(_args.d_a0),
                                               smap(f, _args.d_a1));

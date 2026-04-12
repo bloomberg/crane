@@ -26,7 +26,7 @@ __attribute__((pure)) unsigned int Currying::pair_add(
   return std::visit(
       Overloaded{
           [](const typename Currying::pair<unsigned int, unsigned int>::Pair0
-                 _args) -> unsigned int { return (_args.d_a0 + _args.d_a1); }},
+                 &_args) -> unsigned int { return (_args.d_a0 + _args.d_a1); }},
       p->v());
 }
 
@@ -44,10 +44,10 @@ __attribute__((pure)) unsigned int Currying::uncurried_add3(
           [](const typename Currying::pair<
               unsigned int,
               std::shared_ptr<Currying::pair<unsigned int, unsigned int>>>::
-                 Pair0 _args) -> unsigned int {
+                 Pair0 &_args) -> unsigned int {
             return std::visit(
                 Overloaded{[&](const typename Currying::pair<
-                               unsigned int, unsigned int>::Pair0 _args0)
+                               unsigned int, unsigned int>::Pair0 &_args0)
                                -> unsigned int {
                   return add3(_args.d_a0, _args0.d_a0, _args0.d_a1);
                 }},

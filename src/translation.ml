@@ -3950,7 +3950,7 @@ and gen_cpp_pat_lambda env (typ : ml_type) rty cname ids dummies body sname =
       body_stmts
       (List.mapi (fun i x -> (i, x)) rev_ids)
   in
-  CPPlambda ([(Tmod (TMconst, constr), Some sname)], Some ret, body_stmts, false)
+  CPPlambda ([(Tref (Tmod (TMconst, constr)), Some sname)], Some ret, body_stmts, false)
 
 (** Generate std::visit-based pattern matching with expression reuse
     optimization. Detects common subexpressions across branches and hoists them
@@ -4138,7 +4138,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
             | _ -> ret
           in
           let wildcard_lambda =
-            CPPlambda ([(Tmod (TMconst, Tauto), Some sname)], Some ret, body_stmts, false)
+            CPPlambda ([(Tref (Tmod (TMconst, Tauto)), Some sname)], Some ret, body_stmts, false)
           in
           [wildcard_lambda]  (* terminal — no more branches after wildcard *)
         | Ptuple _ -> gen_cases cs

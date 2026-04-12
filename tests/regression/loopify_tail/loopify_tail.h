@@ -82,10 +82,10 @@ struct LoopifyTail {
                 const std::shared_ptr<list<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename list<T1>::Nil) -> void {
+                        [&](const typename list<T1>::Nil &) -> void {
                           _result = f;
                         },
-                        [&](const typename list<T1>::Cons _args) -> void {
+                        [&](const typename list<T1>::Cons &_args) -> void {
                           _stack.push_back(_Call1{_args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
                         }},
@@ -122,10 +122,10 @@ struct LoopifyTail {
                 const std::shared_ptr<list<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename list<T1>::Nil) -> void {
+                        [&](const typename list<T1>::Nil &) -> void {
                           _result = f;
                         },
-                        [&](const typename list<T1>::Cons _args) -> void {
+                        [&](const typename list<T1>::Cons &_args) -> void {
                           _stack.push_back(_Call1{_args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
                         }},
@@ -144,11 +144,11 @@ struct LoopifyTail {
     T1 _loop_x = x;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename list<T1>::Nil) {
+      std::visit(Overloaded{[&](const typename list<T1>::Nil &) {
                               _result = _loop_x;
                               _continue = false;
                             },
-                            [&](const typename list<T1>::Cons _args) {
+                            [&](const typename list<T1>::Cons &_args) {
                               std::shared_ptr<list<T1>> _next_l = _args.d_a1;
                               T1 _next_x = _args.d_a0;
                               _loop_l = std::move(_next_l);
@@ -167,11 +167,11 @@ struct LoopifyTail {
     unsigned int _loop_acc = acc;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename list<T1>::Nil) {
+      std::visit(Overloaded{[&](const typename list<T1>::Nil &) {
                               _result = _loop_acc;
                               _continue = false;
                             },
-                            [&](const typename list<T1>::Cons _args) {
+                            [&](const typename list<T1>::Cons &_args) {
                               std::shared_ptr<list<T1>> _next_l = _args.d_a1;
                               unsigned int _next_acc = (_loop_acc + 1);
                               _loop_l = std::move(_next_l);
@@ -205,11 +205,11 @@ struct LoopifyTail {
     T2 _loop_acc = acc;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename list<T1>::Nil) {
+      std::visit(Overloaded{[&](const typename list<T1>::Nil &) {
                               _result = _loop_acc;
                               _continue = false;
                             },
-                            [&](const typename list<T1>::Cons _args) {
+                            [&](const typename list<T1>::Cons &_args) {
                               std::shared_ptr<list<T1>> _next_l = _args.d_a1;
                               T2 _next_acc = f(_loop_acc, _args.d_a0);
                               _loop_l = std::move(_next_l);

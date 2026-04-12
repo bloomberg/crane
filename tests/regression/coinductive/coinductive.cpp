@@ -22,7 +22,7 @@ Coinductive::count_from(const unsigned int n) {
 __attribute__((pure)) unsigned int
 Coinductive::hd(const std::shared_ptr<Coinductive::stream> &s) {
   return std::visit(
-      Overloaded{[](const typename Coinductive::stream::Cons _args)
+      Overloaded{[](const typename Coinductive::stream::Cons &_args)
                      -> unsigned int { return _args.d_a0; }},
       s->v());
 }
@@ -32,7 +32,7 @@ Coinductive::tl(const std::shared_ptr<Coinductive::stream> &s) {
   return stream::lazy_([=]() mutable -> std::shared_ptr<Coinductive::stream> {
     return std::visit(
         Overloaded{
-            [](const typename Coinductive::stream::Cons _args)
+            [](const typename Coinductive::stream::Cons &_args)
                 -> std::shared_ptr<Coinductive::stream> { return _args.d_a1; }},
         s->v());
   });
@@ -43,7 +43,7 @@ Coinductive::interleave(const std::shared_ptr<Coinductive::stream> &s1,
                         const std::shared_ptr<Coinductive::stream> &s2) {
   return stream::lazy_([=]() mutable -> std::shared_ptr<Coinductive::stream> {
     return std::visit(
-        Overloaded{[&](const typename Coinductive::stream::Cons _args)
+        Overloaded{[&](const typename Coinductive::stream::Cons &_args)
                        -> std::shared_ptr<Coinductive::stream> {
           return stream::cons(_args.d_a0, interleave(s2, _args.d_a1));
         }},

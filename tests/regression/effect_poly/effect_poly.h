@@ -91,8 +91,8 @@ struct EffectPoly {
   template <typename T1, typename T2, typename F0>
   static T1 fold_m(F0 &&f, const T1 init, const std::shared_ptr<List<T2>> &xs) {
     return std::visit(
-        Overloaded{[&](const typename List<T2>::Nil) -> T1 { return init; },
-                   [&](const typename List<T2>::Cons _args) -> T1 {
+        Overloaded{[&](const typename List<T2>::Nil &) -> T1 { return init; },
+                   [&](const typename List<T2>::Cons &_args) -> T1 {
                      T1 acc = f(init, _args.d_a0);
                      return fold_m<T1, T2>(f, acc, _args.d_a1);
                    }},

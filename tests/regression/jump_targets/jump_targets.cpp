@@ -12,12 +12,12 @@ std::shared_ptr<List<unsigned int>> JumpTargets::collect_targets(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<JumpTargets::instr_collection>>::Nil)
+              std::shared_ptr<JumpTargets::instr_collection>>::Nil &)
               -> std::shared_ptr<List<unsigned int>> {
             return List<unsigned int>::nil();
           },
           [](const typename List<
-              std::shared_ptr<JumpTargets::instr_collection>>::Cons _args)
+              std::shared_ptr<JumpTargets::instr_collection>>::Cons &_args)
               -> std::shared_ptr<List<unsigned int>> {
             auto _cs = _args.d_a0->jump_target_collection();
             if (_cs.has_value()) {

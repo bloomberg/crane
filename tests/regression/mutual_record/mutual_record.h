@@ -133,7 +133,7 @@ struct MutualRecord {
           F0>
   static T1 department_rect(F0 &&f, const std::shared_ptr<department> &d) {
     return std::visit(
-        Overloaded{[&](const typename department::Mk_department _args) -> T1 {
+        Overloaded{[&](const typename department::Mk_department &_args) -> T1 {
           return f(_args.d_a0, _args.d_a1);
         }},
         d->v());
@@ -145,7 +145,7 @@ struct MutualRecord {
           F0>
   static T1 department_rec(F0 &&f, const std::shared_ptr<department> &d) {
     return std::visit(
-        Overloaded{[&](const typename department::Mk_department _args) -> T1 {
+        Overloaded{[&](const typename department::Mk_department &_args) -> T1 {
           return f(_args.d_a0, _args.d_a1);
         }},
         d->v());
@@ -154,7 +154,7 @@ struct MutualRecord {
   template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
   static T1 employee_rect(F0 &&f, const std::shared_ptr<employee> &e) {
     return std::visit(
-        Overloaded{[&](const typename employee::Mk_employee _args) -> T1 {
+        Overloaded{[&](const typename employee::Mk_employee &_args) -> T1 {
           return f(_args.d_a0, _args.d_a1);
         }},
         e->v());
@@ -163,7 +163,7 @@ struct MutualRecord {
   template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
   static T1 employee_rec(F0 &&f, const std::shared_ptr<employee> &e) {
     return std::visit(
-        Overloaded{[&](const typename employee::Mk_employee _args) -> T1 {
+        Overloaded{[&](const typename employee::Mk_employee &_args) -> T1 {
           return f(_args.d_a0, _args.d_a1);
         }},
         e->v());

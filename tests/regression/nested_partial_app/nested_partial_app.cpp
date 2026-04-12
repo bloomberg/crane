@@ -10,10 +10,10 @@ __attribute__((pure)) unsigned int
 NestedPartialApp::tree_sum(const std::shared_ptr<NestedPartialApp::tree> &t) {
   return std::visit(
       Overloaded{
-          [](const typename NestedPartialApp::tree::Leaf) -> unsigned int {
+          [](const typename NestedPartialApp::tree::Leaf &) -> unsigned int {
             return 0u;
           },
-          [](const typename NestedPartialApp::tree::Node _args)
+          [](const typename NestedPartialApp::tree::Node &_args)
               -> unsigned int {
             return ((tree_sum(_args.d_a0) + _args.d_a1) + tree_sum(_args.d_a2));
           }},

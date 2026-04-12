@@ -114,7 +114,7 @@ public:
 
   t_A projT1() const {
     return std::visit(
-        Overloaded{[](const typename SigT<t_A, t_P>::ExistT _args) -> t_A {
+        Overloaded{[](const typename SigT<t_A, t_P>::ExistT &_args) -> t_A {
           return _args.d_x;
         }},
         this->v());
@@ -135,7 +135,7 @@ struct SigmaTypes {
   static inline const unsigned int test_double_5 = use_nat_double(5u);
   static inline const unsigned int test_positive_3 = get_positive(3u);
   static inline const unsigned int test_double_pos = std::visit(
-      Overloaded{[](const typename Sig<unsigned int>::Exist _args0) -> auto {
+      Overloaded{[](const typename Sig<unsigned int>::Exist &_args0) -> auto {
         return _args0.d_x;
       }},
       double_positive(3u)->v());

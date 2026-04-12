@@ -101,10 +101,10 @@ struct LoopifyTreeVariants {
                   const ternary *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename ternary::TLeaf) -> void {
+                          [&](const typename ternary::TLeaf &) -> void {
                             _result = 0u;
                           },
-                          [&](const typename ternary::TNode _args) -> void {
+                          [&](const typename ternary::TNode &_args) -> void {
                             _stack.push_back(
                                 _Call1{_args.d_a2.get(), _args.d_a0.get(), 1u});
                             _stack.push_back(_Enter{_args.d_a3.get()});
@@ -165,10 +165,10 @@ struct LoopifyTreeVariants {
                   const ternary *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename ternary::TLeaf) -> void {
+                          [&](const typename ternary::TLeaf &) -> void {
                             _result = 0u;
                           },
-                          [&](const typename ternary::TNode _args) -> void {
+                          [&](const typename ternary::TNode &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a2.get(),
                                                     _args.d_a0.get(),
                                                     _args.d_a1});
@@ -243,10 +243,10 @@ struct LoopifyTreeVariants {
                 const std::shared_ptr<ternary> t = _f.t;
                 std::visit(
                     Overloaded{
-                        [&](const typename ternary::TLeaf) -> void {
+                        [&](const typename ternary::TLeaf &) -> void {
                           _result = f;
                         },
-                        [&](const typename ternary::TNode _args) -> void {
+                        [&](const typename ternary::TNode &_args) -> void {
                           _stack.push_back(_Call1{_args.d_a2, _args.d_a0,
                                                   _args.d_a3, _args.d_a2,
                                                   _args.d_a1, _args.d_a0});
@@ -323,10 +323,10 @@ struct LoopifyTreeVariants {
                 const std::shared_ptr<ternary> t = _f.t;
                 std::visit(
                     Overloaded{
-                        [&](const typename ternary::TLeaf) -> void {
+                        [&](const typename ternary::TLeaf &) -> void {
                           _result = f;
                         },
-                        [&](const typename ternary::TNode _args) -> void {
+                        [&](const typename ternary::TNode &_args) -> void {
                           _stack.push_back(_Call1{_args.d_a2, _args.d_a0,
                                                   _args.d_a3, _args.d_a2,
                                                   _args.d_a1, _args.d_a0});
@@ -447,10 +447,10 @@ struct LoopifyTreeVariants {
                   const quadtree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename quadtree::QLeaf _args) -> void {
+                          [&](const typename quadtree::QLeaf &_args) -> void {
                             _result = _args.d_a0;
                           },
-                          [&](const typename quadtree::Quad _args) -> void {
+                          [&](const typename quadtree::Quad &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a2.get(),
                                                     _args.d_a1.get(),
                                                     _args.d_a0.get()});
@@ -543,10 +543,10 @@ struct LoopifyTreeVariants {
                   const quadtree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename quadtree::QLeaf _args) -> void {
+                          [&](const typename quadtree::QLeaf &_args) -> void {
                             _result = f(_args.d_a0);
                           },
-                          [&](const typename quadtree::Quad _args) -> void {
+                          [&](const typename quadtree::Quad &_args) -> void {
                             _stack.push_back(
                                 _Call1{_args.d_a2.get(), _args.d_a1.get(),
                                        _args.d_a0.get(), _args.d_a3, _args.d_a2,
@@ -644,10 +644,10 @@ struct LoopifyTreeVariants {
                   const quadtree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename quadtree::QLeaf _args) -> void {
+                          [&](const typename quadtree::QLeaf &_args) -> void {
                             _result = f(_args.d_a0);
                           },
-                          [&](const typename quadtree::Quad _args) -> void {
+                          [&](const typename quadtree::Quad &_args) -> void {
                             _stack.push_back(
                                 _Call1{_args.d_a2.get(), _args.d_a1.get(),
                                        _args.d_a0.get(), _args.d_a3, _args.d_a2,
@@ -753,10 +753,10 @@ struct LoopifyTreeVariants {
                   const leaf_tree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename leaf_tree::LLeaf _args) -> void {
+                          [&](const typename leaf_tree::LLeaf &_args) -> void {
                             _result = _args.d_a0;
                           },
-                          [&](const typename leaf_tree::LNode _args) -> void {
+                          [&](const typename leaf_tree::LNode &_args) -> void {
                             _stack.push_back(_Call1{_args});
                             _stack.push_back(_Enter{_args.d_a0.get()});
                           }},
@@ -811,10 +811,10 @@ struct LoopifyTreeVariants {
                   const leaf_tree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename leaf_tree::LLeaf _args) -> void {
+                          [&](const typename leaf_tree::LLeaf &_args) -> void {
                             _result = _args.d_a0;
                           },
-                          [&](const typename leaf_tree::LNode _args) -> void {
+                          [&](const typename leaf_tree::LNode &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a0.get()});
                             _stack.push_back(_Enter{_args.d_a1.get()});
                           }},
@@ -867,10 +867,10 @@ struct LoopifyTreeVariants {
                   const leaf_tree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename leaf_tree::LLeaf _args) -> void {
+                          [&](const typename leaf_tree::LLeaf &_args) -> void {
                             _result = f(_args.d_a0);
                           },
-                          [&](const typename leaf_tree::LNode _args) -> void {
+                          [&](const typename leaf_tree::LNode &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a0.get(),
                                                     _args.d_a1, _args.d_a0});
                             _stack.push_back(_Enter{_args.d_a1.get()});
@@ -926,10 +926,10 @@ struct LoopifyTreeVariants {
                   const leaf_tree *_self = _f._self;
                   std::visit(
                       Overloaded{
-                          [&](const typename leaf_tree::LLeaf _args) -> void {
+                          [&](const typename leaf_tree::LLeaf &_args) -> void {
                             _result = f(_args.d_a0);
                           },
-                          [&](const typename leaf_tree::LNode _args) -> void {
+                          [&](const typename leaf_tree::LNode &_args) -> void {
                             _stack.push_back(_Call1{_args.d_a0.get(),
                                                     _args.d_a1, _args.d_a0});
                             _stack.push_back(_Enter{_args.d_a1.get()});

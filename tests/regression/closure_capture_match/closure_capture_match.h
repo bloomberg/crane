@@ -70,8 +70,8 @@ struct ClosureCaptureMatch {
       };
       return std::visit(
           Overloaded{
-              [](const typename tree::Leaf) -> unsigned int { return 0u; },
-              [](const typename tree::Node _args) -> unsigned int {
+              [](const typename tree::Leaf &) -> unsigned int { return 0u; },
+              [](const typename tree::Node &_args) -> unsigned int {
                 return _args.d_a1;
               }},
           f(42u)->v());
@@ -83,20 +83,20 @@ struct ClosureCaptureMatch {
     deep_capture(const unsigned int x) const {
       return std::visit(
           Overloaded{
-              [&](const typename tree::Leaf) -> auto { return x; },
-              [&](const typename tree::Node _args) -> auto {
+              [&](const typename tree::Leaf &) -> auto { return x; },
+              [&](const typename tree::Node &_args) -> auto {
                 return std::visit(
                     Overloaded{
-                        [&](const typename tree::Leaf) -> auto {
+                        [&](const typename tree::Leaf &) -> auto {
                           return (_args.d_a1 + x);
                         },
-                        [&](const typename tree::Node _args0) -> auto {
+                        [&](const typename tree::Node &_args0) -> auto {
                           return std::visit(
                               Overloaded{
-                                  [&](const typename tree::Leaf) -> auto {
+                                  [&](const typename tree::Leaf &) -> auto {
                                     return (_args0.d_a1 + x);
                                   },
-                                  [&](const typename tree::Node _args1)
+                                  [&](const typename tree::Node &_args1)
                                       -> auto {
                                     return (((_args0.d_a1 + _args1.d_a1) +
                                              _args.d_a1) +
@@ -115,10 +115,10 @@ struct ClosureCaptureMatch {
     /// would have dangling references after the match lambda returns.
     std::shared_ptr<tree> make_inserter(const unsigned int v) const {
       return std::visit(
-          Overloaded{[&](const typename tree::Leaf) -> auto {
+          Overloaded{[&](const typename tree::Leaf &) -> auto {
                        return tree::node(tree::leaf(), v, tree::leaf());
                      },
-                     [&](const typename tree::Node _args) -> auto {
+                     [&](const typename tree::Node &_args) -> auto {
                        return tree::node(_args.d_a0, v, _args.d_a2);
                      }},
           this->v());
@@ -159,13 +159,15 @@ struct ClosureCaptureMatch {
               [&](_Enter _f) {
                 const std::shared_ptr<tree> t = _f.t;
                 std::visit(
-                    Overloaded{
-                        [&](const typename tree::Leaf) -> void { _result = f; },
-                        [&](const typename tree::Node _args) -> void {
-                          _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
-                                                  _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a2});
-                        }},
+                    Overloaded{[&](const typename tree::Leaf &) -> void {
+                                 _result = f;
+                               },
+                               [&](const typename tree::Node &_args) -> void {
+                                 _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
+                                                         _args.d_a1,
+                                                         _args.d_a0});
+                                 _stack.push_back(_Enter{_args.d_a2});
+                               }},
                     t->v());
               },
               [&](_Call1 _f) {
@@ -214,13 +216,15 @@ struct ClosureCaptureMatch {
               [&](_Enter _f) {
                 const std::shared_ptr<tree> t = _f.t;
                 std::visit(
-                    Overloaded{
-                        [&](const typename tree::Leaf) -> void { _result = f; },
-                        [&](const typename tree::Node _args) -> void {
-                          _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
-                                                  _args.d_a1, _args.d_a0});
-                          _stack.push_back(_Enter{_args.d_a2});
-                        }},
+                    Overloaded{[&](const typename tree::Leaf &) -> void {
+                                 _result = f;
+                               },
+                               [&](const typename tree::Node &_args) -> void {
+                                 _stack.push_back(_Call1{_args.d_a0, _args.d_a2,
+                                                         _args.d_a1,
+                                                         _args.d_a0});
+                                 _stack.push_back(_Enter{_args.d_a2});
+                               }},
                     t->v());
               },
               [&](_Call1 _f) {
@@ -265,7 +269,7 @@ struct ClosureCaptureMatch {
 
     __attribute__((pure)) unsigned int unbox(const unsigned int x) const {
       return std::visit(
-          Overloaded{[&](const typename fn_box::Box _args) -> unsigned int {
+          Overloaded{[&](const typename fn_box::Box &_args) -> unsigned int {
             return _args.d_a0(x);
           }},
           this->v());
@@ -274,19 +278,21 @@ struct ClosureCaptureMatch {
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 fn_box_rec(F0 &&f) const {
-      return std::visit(Overloaded{[&](const typename fn_box::Box _args) -> T1 {
-                          return f(_args.d_a0);
-                        }},
-                        this->v());
+      return std::visit(
+          Overloaded{[&](const typename fn_box::Box &_args) -> T1 {
+            return f(_args.d_a0);
+          }},
+          this->v());
     }
 
     template <typename T1,
               MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
     T1 fn_box_rect(F0 &&f) const {
-      return std::visit(Overloaded{[&](const typename fn_box::Box _args) -> T1 {
-                          return f(_args.d_a0);
-                        }},
-                        this->v());
+      return std::visit(
+          Overloaded{[&](const typename fn_box::Box &_args) -> T1 {
+            return f(_args.d_a0);
+          }},
+          this->v());
     }
   };
 

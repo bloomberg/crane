@@ -10,11 +10,11 @@ std::shared_ptr<ReuseAlias::mylist<unsigned int>> ReuseAlias::inc_head(
     const std::shared_ptr<ReuseAlias::mylist<unsigned int>> &l) {
   return std::visit(
       Overloaded{
-          [](const typename ReuseAlias::mylist<unsigned int>::Mynil)
+          [](const typename ReuseAlias::mylist<unsigned int>::Mynil &)
               -> std::shared_ptr<ReuseAlias::mylist<unsigned int>> {
             return mylist<unsigned int>::mynil();
           },
-          [](const typename ReuseAlias::mylist<unsigned int>::Mycons _args)
+          [](const typename ReuseAlias::mylist<unsigned int>::Mycons &_args)
               -> std::shared_ptr<ReuseAlias::mylist<unsigned int>> {
             return mylist<unsigned int>::mycons((_args.d_a0 + 1u), _args.d_a1);
           }},
@@ -47,10 +47,10 @@ ReuseAlias::alias_and_match(
     std::shared_ptr<ReuseAlias::mylist<unsigned int>> l) {
   return std::visit(
       Overloaded{
-          [&](const typename ReuseAlias::mylist<unsigned int>::Mynil)
+          [&](const typename ReuseAlias::mylist<unsigned int>::Mynil &)
               -> std::pair<std::shared_ptr<ReuseAlias::mylist<unsigned int>>,
                            unsigned int> { return std::make_pair(l, 0u); },
-          [&](const typename ReuseAlias::mylist<unsigned int>::Mycons _args)
+          [&](const typename ReuseAlias::mylist<unsigned int>::Mycons &_args)
               -> std::pair<std::shared_ptr<ReuseAlias::mylist<unsigned int>>,
                            unsigned int> {
             return std::make_pair(l, _args.d_a0);
@@ -67,13 +67,13 @@ ReuseAlias::scrutinee_in_branch(
     std::shared_ptr<ReuseAlias::mylist<unsigned int>> l) {
   return std::visit(
       Overloaded{
-          [](const typename ReuseAlias::mylist<unsigned int>::Mynil)
+          [](const typename ReuseAlias::mylist<unsigned int>::Mynil &)
               -> std::pair<std::shared_ptr<ReuseAlias::mylist<unsigned int>>,
                            std::shared_ptr<ReuseAlias::mylist<unsigned int>>> {
             return std::make_pair(mylist<unsigned int>::mynil(),
                                   mylist<unsigned int>::mynil());
           },
-          [&](const typename ReuseAlias::mylist<unsigned int>::Mycons _args)
+          [&](const typename ReuseAlias::mylist<unsigned int>::Mycons &_args)
               -> std::pair<std::shared_ptr<ReuseAlias::mylist<unsigned int>>,
                            std::shared_ptr<ReuseAlias::mylist<unsigned int>>> {
             return std::make_pair(l, _args.d_a1);

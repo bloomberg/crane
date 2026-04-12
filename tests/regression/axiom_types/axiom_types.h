@@ -71,10 +71,10 @@ struct AxiomTypes {
   static T1 AxiomInductive_rect(F0 &&f, F1 &&f0,
                                 const std::shared_ptr<AxiomInductive> &a) {
     return std::visit(
-        Overloaded{[&](const typename AxiomInductive::AxConstr1 _args) -> T1 {
+        Overloaded{[&](const typename AxiomInductive::AxConstr1 &_args) -> T1 {
                      return f(_args.d_a0);
                    },
-                   [&](const typename AxiomInductive::AxConstr2 _args) -> T1 {
+                   [&](const typename AxiomInductive::AxConstr2 &_args) -> T1 {
                      return f0(_args.d_a0);
                    }},
         a->v());
@@ -85,10 +85,10 @@ struct AxiomTypes {
   static T1 AxiomInductive_rec(F0 &&f, F1 &&f0,
                                const std::shared_ptr<AxiomInductive> &a) {
     return std::visit(
-        Overloaded{[&](const typename AxiomInductive::AxConstr1 _args) -> T1 {
+        Overloaded{[&](const typename AxiomInductive::AxConstr1 &_args) -> T1 {
                      return f(_args.d_a0);
                    },
-                   [&](const typename AxiomInductive::AxConstr2 _args) -> T1 {
+                   [&](const typename AxiomInductive::AxConstr2 &_args) -> T1 {
                      return f0(_args.d_a0);
                    }},
         a->v());
@@ -145,8 +145,8 @@ struct AxiomTypes {
             MapsTo<T2, T1, std::shared_ptr<list<T1>>, T2> F1>
   static T2 list_rect(const T2 f, F1 &&f0, const std::shared_ptr<list<T1>> &l) {
     return std::visit(
-        Overloaded{[&](const typename list<T1>::Nil) -> T2 { return f; },
-                   [&](const typename list<T1>::Cons _args) -> T2 {
+        Overloaded{[&](const typename list<T1>::Nil &) -> T2 { return f; },
+                   [&](const typename list<T1>::Cons &_args) -> T2 {
                      return f0(_args.d_a0, _args.d_a1,
                                list_rect<T1, T2>(f, f0, _args.d_a1));
                    }},
@@ -157,8 +157,8 @@ struct AxiomTypes {
             MapsTo<T2, T1, std::shared_ptr<list<T1>>, T2> F1>
   static T2 list_rec(const T2 f, F1 &&f0, const std::shared_ptr<list<T1>> &l) {
     return std::visit(
-        Overloaded{[&](const typename list<T1>::Nil) -> T2 { return f; },
-                   [&](const typename list<T1>::Cons _args) -> T2 {
+        Overloaded{[&](const typename list<T1>::Nil &) -> T2 { return f; },
+                   [&](const typename list<T1>::Cons &_args) -> T2 {
                      return f0(_args.d_a0, _args.d_a1,
                                list_rec<T1, T2>(f, f0, _args.d_a1));
                    }},

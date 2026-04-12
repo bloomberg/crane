@@ -63,9 +63,9 @@ void EffectPoly::test_unless() {
 void EffectPoly::sequence_void(
     const std::shared_ptr<List<std::monostate>> &actions) {
   {
-    std::visit(Overloaded{[](const typename List<std::monostate>::Nil)
+    std::visit(Overloaded{[](const typename List<std::monostate>::Nil &)
                               -> std::monostate { return std::monostate{}; },
-                          [](const typename List<std::monostate>::Cons _args)
+                          [](const typename List<std::monostate>::Cons &_args)
                               -> std::monostate {
                             _args.d_a0;
                             sequence_void(_args.d_a1);

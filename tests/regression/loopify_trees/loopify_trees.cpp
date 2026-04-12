@@ -42,10 +42,10 @@ __attribute__((pure)) unsigned int LoopifyTrees::tree_sum(
               const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
               std::visit(
                   Overloaded{
-                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf)
-                          -> void { _result = 0u; },
+                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf
+                              &) -> void { _result = 0u; },
                       [&](const typename LoopifyTrees::tree<unsigned int>::Node
-                              _args) -> void {
+                              &_args) -> void {
                         _stack.push_back(_Call1{_args.d_a0, _args.d_a1});
                         _stack.push_back(_Enter{_args.d_a2});
                       }},
@@ -101,22 +101,22 @@ __attribute__((pure)) unsigned int LoopifyTrees::leaf_sum(
               const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
               std::visit(
                   Overloaded{
-                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf)
-                          -> void { _result = 0u; },
+                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf
+                              &) -> void { _result = 0u; },
                       [&](const typename LoopifyTrees::tree<unsigned int>::Node
-                              _args) -> void {
+                              &_args) -> void {
                         std::visit(
                             Overloaded{
                                 [&](const typename LoopifyTrees::tree<
-                                    unsigned int>::Leaf) -> void {
+                                    unsigned int>::Leaf &) -> void {
                                   std::visit(
                                       Overloaded{
                                           [&](const typename LoopifyTrees::tree<
-                                              unsigned int>::Leaf) -> void {
+                                              unsigned int>::Leaf &) -> void {
                                             _result = _args.d_a1;
                                           },
                                           [&](const typename LoopifyTrees::tree<
-                                              unsigned int>::Node) -> void {
+                                              unsigned int>::Node &) -> void {
                                             _stack.push_back(
                                                 _Call1{_args.d_a0});
                                             _stack.push_back(
@@ -125,7 +125,7 @@ __attribute__((pure)) unsigned int LoopifyTrees::leaf_sum(
                                       _args.d_a2->v());
                                 },
                                 [&](const typename LoopifyTrees::tree<
-                                    unsigned int>::Node) -> void {
+                                    unsigned int>::Node &) -> void {
                                   _stack.push_back(_Call3{_args.d_a0});
                                   _stack.push_back(_Enter{_args.d_a2});
                                 }},
@@ -187,14 +187,14 @@ std::shared_ptr<LoopifyTrees::tree<unsigned int>> LoopifyTrees::insert_bst(
               const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
               std::visit(
                   Overloaded{
-                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf)
-                          -> void {
+                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf
+                              &) -> void {
                         _result = tree<unsigned int>::node(
                             tree<unsigned int>::leaf(), x,
                             tree<unsigned int>::leaf());
                       },
                       [&](const typename LoopifyTrees::tree<unsigned int>::Node
-                              _args) -> void {
+                              &_args) -> void {
                         if (x <= _args.d_a1) {
                           _stack.push_back(_Call1{_args.d_a2, _args.d_a1});
                           _stack.push_back(_Enter{_args.d_a0});
@@ -261,8 +261,8 @@ __attribute__((pure)) unsigned int LoopifyTrees::count_paths(
               const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
               std::visit(
                   Overloaded{
-                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf)
-                          -> void {
+                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf
+                              &) -> void {
                         if (n == 0u) {
                           _result = 1u;
                         } else {
@@ -270,7 +270,7 @@ __attribute__((pure)) unsigned int LoopifyTrees::count_paths(
                         }
                       },
                       [&](const typename LoopifyTrees::tree<unsigned int>::Node
-                              _args) -> void {
+                              &_args) -> void {
                         if (n <= _args.d_a1) {
                           if (n == _args.d_a1) {
                             _stack.push_back(_Call1{0u, _args.d_a0});
@@ -331,10 +331,10 @@ __attribute__((pure)) unsigned int LoopifyTrees::sum_of_max_branches(
               const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
               std::visit(
                   Overloaded{
-                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf)
-                          -> void { _result = 0u; },
+                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf
+                              &) -> void { _result = 0u; },
                       [&](const typename LoopifyTrees::tree<unsigned int>::Node
-                              _args) -> void {
+                              &_args) -> void {
                         _stack.push_back(_Call1{_args});
                         _stack.push_back(_Enter{_args.d_a0});
                       }},
@@ -409,16 +409,15 @@ __attribute__((pure)) unsigned int LoopifyTrees::sum_rose_list_fuel(
                 std::visit(
                     Overloaded{
                         [&](const typename List<
-                            std::shared_ptr<LoopifyTrees::rose>>::Nil) -> void {
-                          _result = 0u;
-                        },
+                            std::shared_ptr<LoopifyTrees::rose>>::Nil &)
+                            -> void { _result = 0u; },
                         [&](const typename List<
-                            std::shared_ptr<LoopifyTrees::rose>>::Cons _args)
+                            std::shared_ptr<LoopifyTrees::rose>>::Cons &_args)
                             -> void {
                           std::visit(
                               Overloaded{
                                   [&](const typename LoopifyTrees::rose::RNode
-                                          _args0) -> void {
+                                          &_args0) -> void {
                                     _stack.push_back(
                                         _Call1{_args0.d_a1, f, _args0.d_a0});
                                     _stack.push_back(_Enter{_args.d_a1, f});
@@ -481,16 +480,15 @@ std::shared_ptr<List<unsigned int>> LoopifyTrees::flatten_rose_list_fuel(
                 std::visit(
                     Overloaded{
                         [&](const typename List<
-                            std::shared_ptr<LoopifyTrees::rose>>::Nil) -> void {
-                          _result = List<unsigned int>::nil();
-                        },
+                            std::shared_ptr<LoopifyTrees::rose>>::Nil &)
+                            -> void { _result = List<unsigned int>::nil(); },
                         [&](const typename List<
-                            std::shared_ptr<LoopifyTrees::rose>>::Cons _args)
+                            std::shared_ptr<LoopifyTrees::rose>>::Cons &_args)
                             -> void {
                           std::visit(
                               Overloaded{
                                   [&](const typename LoopifyTrees::rose::RNode
-                                          _args0) -> void {
+                                          &_args0) -> void {
                                     _stack.push_back(
                                         _Call1{_args0.d_a1, f, _args0.d_a0});
                                     _stack.push_back(_Enter{_args.d_a1, f});
@@ -550,16 +548,15 @@ __attribute__((pure)) unsigned int LoopifyTrees::depth_rose_list_fuel(
                 std::visit(
                     Overloaded{
                         [&](const typename List<
-                            std::shared_ptr<LoopifyTrees::rose>>::Nil) -> void {
-                          _result = 0u;
-                        },
+                            std::shared_ptr<LoopifyTrees::rose>>::Nil &)
+                            -> void { _result = 0u; },
                         [&](const typename List<
-                            std::shared_ptr<LoopifyTrees::rose>>::Cons _args)
+                            std::shared_ptr<LoopifyTrees::rose>>::Cons &_args)
                             -> void {
                           std::visit(
                               Overloaded{
                                   [&](const typename LoopifyTrees::rose::RNode
-                                          _args0) -> void {
+                                          &_args0) -> void {
                                     _stack.push_back(_Call1{_args, f});
                                     _stack.push_back(_Enter{_args0.d_a1, f});
                                   }},
@@ -628,21 +625,21 @@ LoopifyTrees::tree_max(std::shared_ptr<LoopifyTrees::tree<unsigned int>> t1,
               std::shared_ptr<LoopifyTrees::tree<unsigned int>> t1 = _f.t1;
               std::visit(
                   Overloaded{
-                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf)
-                          -> void {
+                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf
+                              &) -> void {
                         if (t2.use_count() == 1 && t2->v().index() == 0) {
                           _result = t2;
                         } else {
                           _result = std::visit(
                               Overloaded{
                                   [](const typename LoopifyTrees::tree<
-                                      unsigned int>::Leaf)
+                                      unsigned int>::Leaf &)
                                       -> std::shared_ptr<
                                           LoopifyTrees::tree<unsigned int>> {
                                     return tree<unsigned int>::leaf();
                                   },
                                   [&](const typename LoopifyTrees::tree<
-                                      unsigned int>::Node)
+                                      unsigned int>::Node &)
                                       -> std::shared_ptr<
                                           LoopifyTrees::tree<unsigned int>> {
                                     return t2;
@@ -651,25 +648,26 @@ LoopifyTrees::tree_max(std::shared_ptr<LoopifyTrees::tree<unsigned int>> t1,
                         }
                       },
                       [&](const typename LoopifyTrees::tree<unsigned int>::Node
-                              _args) -> void {
+                              &_args) -> void {
                         std::visit(
-                            Overloaded{[&](const typename LoopifyTrees::tree<
-                                           unsigned int>::Leaf) -> void {
-                                         _result = std::move(t1);
-                                       },
-                                       [&](const typename LoopifyTrees::tree<
-                                           unsigned int>::Node _args0) -> void {
-                                         unsigned int max_val;
-                                         if (_args.d_a1 <= _args0.d_a1) {
-                                           max_val = _args0.d_a1;
-                                         } else {
-                                           max_val = _args.d_a1;
-                                         }
-                                         _stack.push_back(_Call1{
-                                             _args0.d_a0, _args.d_a0, max_val});
-                                         _stack.push_back(
-                                             _Enter{_args0.d_a2, _args.d_a2});
-                                       }},
+                            Overloaded{
+                                [&](const typename LoopifyTrees::tree<
+                                    unsigned int>::Leaf &) -> void {
+                                  _result = std::move(t1);
+                                },
+                                [&](const typename LoopifyTrees::tree<
+                                    unsigned int>::Node &_args0) -> void {
+                                  unsigned int max_val;
+                                  if (_args.d_a1 <= _args0.d_a1) {
+                                    max_val = _args0.d_a1;
+                                  } else {
+                                    max_val = _args.d_a1;
+                                  }
+                                  _stack.push_back(
+                                      _Call1{_args0.d_a0, _args.d_a0, max_val});
+                                  _stack.push_back(
+                                      _Enter{_args0.d_a2, _args.d_a2});
+                                }},
                             t2->v());
                       }},
                   t1->v());
@@ -699,7 +697,7 @@ std::shared_ptr<List<unsigned int>> LoopifyTrees::extract_tree_values(
     std::visit(
         Overloaded{
             [&](const typename List<
-                std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::Nil) {
+                std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::Nil &) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::nil();
@@ -709,13 +707,13 @@ std::shared_ptr<List<unsigned int>> LoopifyTrees::extract_tree_values(
               _continue = false;
             },
             [&](const typename List<std::shared_ptr<
-                    LoopifyTrees::tree<unsigned int>>>::Cons _args) {
+                    LoopifyTrees::tree<unsigned int>>>::Cons &_args) {
               std::visit(
                   Overloaded{
-                      [&](const typename LoopifyTrees::tree<
-                          unsigned int>::Leaf) { _loop_ts = _args.d_a1; },
+                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf
+                              &) { _loop_ts = _args.d_a1; },
                       [&](const typename LoopifyTrees::tree<unsigned int>::Node
-                              _args0) {
+                              &_args0) {
                         auto _cell =
                             List<unsigned int>::cons(_args0.d_a1, nullptr);
                         if (_last) {
@@ -751,7 +749,7 @@ LoopifyTrees::extract_tree_children(
     std::visit(
         Overloaded{
             [&](const typename List<
-                std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::Nil) {
+                std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::Nil &) {
               if (_last) {
                 std::get<typename List<
                     std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::Cons>(
@@ -765,13 +763,13 @@ LoopifyTrees::extract_tree_children(
               _continue = false;
             },
             [&](const typename List<std::shared_ptr<
-                    LoopifyTrees::tree<unsigned int>>>::Cons _args) {
+                    LoopifyTrees::tree<unsigned int>>>::Cons &_args) {
               std::visit(
                   Overloaded{
-                      [&](const typename LoopifyTrees::tree<
-                          unsigned int>::Leaf) { _loop_ts = _args.d_a1; },
+                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf
+                              &) { _loop_ts = _args.d_a1; },
                       [&](const typename LoopifyTrees::tree<unsigned int>::Node
-                              _args0) {
+                              &_args0) {
                         auto _cell = List<std::shared_ptr<LoopifyTrees::tree<
                             unsigned int>>>::cons(_args0.d_a0, nullptr);
                         auto _cell1 = List<std::shared_ptr<LoopifyTrees::tree<
@@ -828,7 +826,7 @@ LoopifyTrees::tree_levels_fuel(
           extract_tree_values(_loop_trees);
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil) {
+              [&](const typename List<unsigned int>::Nil &) {
                 if (_last) {
                   std::get<
                       typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
@@ -839,7 +837,7 @@ LoopifyTrees::tree_levels_fuel(
                 }
                 _continue = false;
               },
-              [&](const typename List<unsigned int>::Cons) {
+              [&](const typename List<unsigned int>::Cons &) {
                 std::shared_ptr<
                     List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
                     children = extract_tree_children(_loop_trees);
@@ -906,10 +904,10 @@ LoopifyTrees::count_nodes(
               const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
               std::visit(
                   Overloaded{
-                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf)
-                          -> void { _result = std::make_pair(0u, 0u); },
+                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf
+                              &) -> void { _result = std::make_pair(0u, 0u); },
                       [&](const typename LoopifyTrees::tree<unsigned int>::Node
-                              _args) -> void {
+                              &_args) -> void {
                         _stack.push_back(_Call1{_args});
                         _stack.push_back(_Enter{_args.d_a0});
                       }},
@@ -950,7 +948,8 @@ LoopifyTrees::append_list_lists(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<std::shared_ptr<List<unsigned int>>>::Nil) {
+            [&](const typename List<std::shared_ptr<List<unsigned int>>>::Nil
+                    &) {
               if (_last) {
                 std::get<
                     typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
@@ -962,7 +961,7 @@ LoopifyTrees::append_list_lists(
               _continue = false;
             },
             [&](const typename List<std::shared_ptr<List<unsigned int>>>::Cons
-                    _args) {
+                    &_args) {
               auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
                   _args.d_a0, nullptr);
               if (_last) {
@@ -993,7 +992,8 @@ LoopifyTrees::map_cons_to_all(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<std::shared_ptr<List<unsigned int>>>::Nil) {
+            [&](const typename List<std::shared_ptr<List<unsigned int>>>::Nil
+                    &) {
               if (_last) {
                 std::get<
                     typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
@@ -1005,7 +1005,7 @@ LoopifyTrees::map_cons_to_all(
               _continue = false;
             },
             [&](const typename List<std::shared_ptr<List<unsigned int>>>::Cons
-                    _args) {
+                    &_args) {
               auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
                   List<unsigned int>::cons(x, _args.d_a0), nullptr);
               if (_last) {
@@ -1066,8 +1066,8 @@ std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> LoopifyTrees::paths(
               const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
               std::visit(
                   Overloaded{
-                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf)
-                          -> void {
+                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf
+                              &) -> void {
                         _result =
                             List<std::shared_ptr<List<unsigned int>>>::cons(
                                 List<unsigned int>::nil(),
@@ -1075,7 +1075,7 @@ std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> LoopifyTrees::paths(
                                     nil());
                       },
                       [&](const typename LoopifyTrees::tree<unsigned int>::Node
-                              _args) -> void {
+                              &_args) -> void {
                         _stack.push_back(
                             _Call1{_args.d_a0, _args.d_a1, _args.d_a1});
                         _stack.push_back(_Enter{_args.d_a2});
@@ -1131,10 +1131,12 @@ std::shared_ptr<List<unsigned int>> LoopifyTrees::collect_unsorted(
               const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
               std::visit(
                   Overloaded{
-                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf)
-                          -> void { _result = List<unsigned int>::nil(); },
+                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf
+                              &) -> void {
+                        _result = List<unsigned int>::nil();
+                      },
                       [&](const typename LoopifyTrees::tree<unsigned int>::Node
-                              _args) -> void {
+                              &_args) -> void {
                         _stack.push_back(_Call1{_args.d_a0, _args.d_a1});
                         _stack.push_back(_Enter{_args.d_a2});
                       }},
@@ -1163,7 +1165,7 @@ LoopifyTrees::insert_sorted(const unsigned int x,
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil) {
+            [&](const typename List<unsigned int>::Nil &) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 =
@@ -1173,7 +1175,7 @@ LoopifyTrees::insert_sorted(const unsigned int x,
               }
               _continue = false;
             },
-            [&](const typename List<unsigned int>::Cons _args) {
+            [&](const typename List<unsigned int>::Cons &_args) {
               if (x <= _args.d_a0) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
@@ -1225,10 +1227,10 @@ LoopifyTrees::sort_list(const std::shared_ptr<List<unsigned int>> &l) {
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil) -> void {
+                      [&](const typename List<unsigned int>::Nil &) -> void {
                         _result = List<unsigned int>::nil();
                       },
-                      [&](const typename List<unsigned int>::Cons _args)
+                      [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
                         _stack.push_back(_Call1{_args.d_a0});
                         _stack.push_back(_Enter{_args.d_a1});
@@ -1346,10 +1348,10 @@ LoopifyTrees::tree_min_max(
               const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
               std::visit(
                   Overloaded{
-                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf)
-                          -> void { _result = std::make_pair(0u, 0u); },
+                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf
+                              &) -> void { _result = std::make_pair(0u, 0u); },
                       [&](const typename LoopifyTrees::tree<unsigned int>::Node
-                              _args) -> void {
+                              &_args) -> void {
                         _stack.push_back(_Call1{_args});
                         _stack.push_back(_Enter{_args.d_a0});
                       }},
@@ -1431,9 +1433,9 @@ __attribute__((pure)) unsigned int LoopifyTrees::all_paths_sum(
                 std::visit(
                     Overloaded{
                         [&](const typename LoopifyTrees::tree<
-                            unsigned int>::Leaf) -> void { _result = acc; },
+                            unsigned int>::Leaf &) -> void { _result = acc; },
                         [&](const typename LoopifyTrees::tree<
-                            unsigned int>::Node _args) -> void {
+                            unsigned int>::Node &_args) -> void {
                           unsigned int new_acc = (acc + _args.d_a1);
                           _stack.push_back(_Call1{_args.d_a0, new_acc});
                           _stack.push_back(_Enter{_args.d_a2, new_acc});
@@ -1491,10 +1493,10 @@ __attribute__((pure)) bool LoopifyTrees::tree_contains(
               const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
               std::visit(
                   Overloaded{
-                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf)
-                          -> void { _result = false; },
+                      [&](const typename LoopifyTrees::tree<unsigned int>::Leaf
+                              &) -> void { _result = false; },
                       [&](const typename LoopifyTrees::tree<unsigned int>::Node
-                              _args) -> void {
+                              &_args) -> void {
                         _stack.push_back(_Call1{_args.d_a0, x == _args.d_a1});
                         _stack.push_back(_Enter{_args.d_a2});
                       }},

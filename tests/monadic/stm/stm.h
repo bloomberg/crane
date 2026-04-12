@@ -61,9 +61,9 @@ public:
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
     return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil)
+        Overloaded{[&](const typename List<t_A>::Nil &)
                        -> std::shared_ptr<List<t_A>> { return m; },
-                   [&](const typename List<t_A>::Cons _args)
+                   [&](const typename List<t_A>::Cons &_args)
                        -> std::shared_ptr<List<t_A>> {
                      return List<t_A>::cons(_args.d_a0, _args.d_a1->app(m));
                    }},

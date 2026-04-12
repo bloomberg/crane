@@ -83,10 +83,10 @@ struct LoopifyOption {
                 const std::shared_ptr<list<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename list<T1>::Nil) -> void {
+                        [&](const typename list<T1>::Nil &) -> void {
                           _result = f;
                         },
-                        [&](const typename list<T1>::Cons _args) -> void {
+                        [&](const typename list<T1>::Cons &_args) -> void {
                           _stack.push_back(_Call1{_args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
                         }},
@@ -123,10 +123,10 @@ struct LoopifyOption {
                 const std::shared_ptr<list<T1>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename list<T1>::Nil) -> void {
+                        [&](const typename list<T1>::Nil &) -> void {
                           _result = f;
                         },
-                        [&](const typename list<T1>::Cons _args) -> void {
+                        [&](const typename list<T1>::Cons &_args) -> void {
                           _stack.push_back(_Call1{_args.d_a1, _args.d_a0});
                           _stack.push_back(_Enter{_args.d_a1});
                         }},
@@ -146,11 +146,11 @@ struct LoopifyOption {
     std::shared_ptr<list<T1>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename list<T1>::Nil) {
+      std::visit(Overloaded{[&](const typename list<T1>::Nil &) {
                               _result = std::optional<T1>();
                               _continue = false;
                             },
-                            [&](const typename list<T1>::Cons _args) {
+                            [&](const typename list<T1>::Cons &_args) {
                               if (p(_args.d_a0)) {
                                 _result = std::make_optional<T1>(_args.d_a0);
                                 _continue = false;
@@ -172,18 +172,18 @@ struct LoopifyOption {
     bool _continue = true;
     while (_continue) {
       std::visit(
-          Overloaded{[&](const typename list<T1>::Nil) {
+          Overloaded{[&](const typename list<T1>::Nil &) {
                        _result = std::optional<T1>();
                        _continue = false;
                      },
-                     [&](const typename list<T1>::Cons _args) {
+                     [&](const typename list<T1>::Cons &_args) {
                        std::visit(
-                           Overloaded{[&](const typename list<T1>::Nil) {
+                           Overloaded{[&](const typename list<T1>::Nil &) {
                                         _result =
                                             std::make_optional<T1>(_args.d_a0);
                                         _continue = false;
                                       },
-                                      [&](const typename list<T1>::Cons) {
+                                      [&](const typename list<T1>::Cons &) {
                                         _loop_l = _args.d_a1;
                                       }},
                            _args.d_a1->v());
@@ -203,11 +203,11 @@ struct LoopifyOption {
     bool _continue = true;
     while (_continue) {
       std::visit(
-          Overloaded{[&](const typename list<T1>::Nil) {
+          Overloaded{[&](const typename list<T1>::Nil &) {
                        _result = std::optional<T1>();
                        _continue = false;
                      },
-                     [&](const typename list<T1>::Cons _args) {
+                     [&](const typename list<T1>::Cons &_args) {
                        if (_loop_n == 0u) {
                          _result = std::make_optional<T1>(_args.d_a0);
                          _continue = false;
@@ -240,7 +240,7 @@ struct LoopifyOption {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename list<T1>::Nil) {
+              [&](const typename list<T1>::Nil &) {
                 if (_last) {
                   std::get<typename list<T2>::Cons>(_last->v_mut()).d_a1 =
                       list<T2>::nil();
@@ -249,7 +249,7 @@ struct LoopifyOption {
                 }
                 _continue = false;
               },
-              [&](const typename list<T1>::Cons _args) {
+              [&](const typename list<T1>::Cons &_args) {
                 auto _cs = f(_args.d_a0);
                 if (_cs.has_value()) {
                   T2 y = *_cs;
@@ -281,11 +281,11 @@ struct LoopifyOption {
     std::shared_ptr<list<T1>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename list<T1>::Nil) {
+      std::visit(Overloaded{[&](const typename list<T1>::Nil &) {
                               _result = std::optional<unsigned int>();
                               _continue = false;
                             },
-                            [&](const typename list<T1>::Cons _args) {
+                            [&](const typename list<T1>::Cons &_args) {
                               if (p(_args.d_a0)) {
                                 _result =
                                     std::make_optional<unsigned int>(_loop_i);

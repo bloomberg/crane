@@ -17,9 +17,9 @@ LoadProgramHeadWrite::update_nth(const unsigned int n, const unsigned int x,
       return l;
     } else {
       return std::visit(
-          Overloaded{[&](const typename List<unsigned int>::Nil)
+          Overloaded{[&](const typename List<unsigned int>::Nil &)
                          -> std::shared_ptr<List<unsigned int>> { return l; },
-                     [&](const typename List<unsigned int>::Cons _args)
+                     [&](const typename List<unsigned int>::Cons &_args)
                          -> std::shared_ptr<List<unsigned int>> {
                        return List<unsigned int>::cons(x, _args.d_a1);
                      }},
@@ -36,9 +36,9 @@ LoadProgramHeadWrite::update_nth(const unsigned int n, const unsigned int x,
       return l;
     } else {
       return std::visit(
-          Overloaded{[&](const typename List<unsigned int>::Nil)
+          Overloaded{[&](const typename List<unsigned int>::Nil &)
                          -> std::shared_ptr<List<unsigned int>> { return l; },
-                     [&](const typename List<unsigned int>::Cons _args0)
+                     [&](const typename List<unsigned int>::Cons &_args0)
                          -> std::shared_ptr<List<unsigned int>> {
                        return List<unsigned int>::cons(
                            _args0.d_a0, update_nth(n_, x, _args0.d_a1));
@@ -73,9 +73,9 @@ std::shared_ptr<LoadProgramHeadWrite::state> LoadProgramHeadWrite::load_program(
     const std::shared_ptr<List<unsigned int>> &bytes) {
   return std::visit(
       Overloaded{
-          [&](const typename List<unsigned int>::Nil)
+          [&](const typename List<unsigned int>::Nil &)
               -> std::shared_ptr<LoadProgramHeadWrite::state> { return s; },
-          [&](const typename List<unsigned int>::Cons _args)
+          [&](const typename List<unsigned int>::Cons &_args)
               -> std::shared_ptr<LoadProgramHeadWrite::state> {
             std::shared_ptr<LoadProgramHeadWrite::state> s1 =
                 set_prom_params(std::move(s), base, _args.d_a0, true);

@@ -125,9 +125,9 @@ struct DepRecord {
   mfold(const std::shared_ptr<List<typename _tcI0::m_carrier>> &l) {
     return std::visit(
         Overloaded{
-            [&](const typename List<typename _tcI0::m_carrier>::Nil) ->
+            [&](const typename List<typename _tcI0::m_carrier>::Nil &) ->
             typename _tcI0::m_carrier { return _tcI0::m_id(); },
-            [&](const typename List<typename _tcI0::m_carrier>::Cons _args) ->
+            [&](const typename List<typename _tcI0::m_carrier>::Cons &_args) ->
             typename _tcI0::m_carrier {
               return _tcI0::m_op(_args.d_a0, mfold<_tcI0>(_args.d_a1));
             }},

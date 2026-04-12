@@ -49,9 +49,9 @@ std::shared_ptr<DeepApp::mylist<unsigned int>> DeepApp::append_lists(
 __attribute__((pure)) unsigned int
 DeepApp::head_or_zero(const std::shared_ptr<DeepApp::mylist<unsigned int>> &l) {
   return std::visit(
-      Overloaded{[](const typename DeepApp::mylist<unsigned int>::Mynil)
+      Overloaded{[](const typename DeepApp::mylist<unsigned int>::Mynil &)
                      -> unsigned int { return 0u; },
-                 [](const typename DeepApp::mylist<unsigned int>::Mycons _args)
+                 [](const typename DeepApp::mylist<unsigned int>::Mycons &_args)
                      -> unsigned int { return _args.d_a0; }},
       l->v());
 }

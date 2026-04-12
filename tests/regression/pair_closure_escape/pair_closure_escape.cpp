@@ -11,23 +11,25 @@ PairClosureEscape::sum_values(const std::shared_ptr<PairClosureEscape::tree> &t,
                               const unsigned int x) {
   return std::visit(
       Overloaded{
-          [&](const typename PairClosureEscape::tree::Leaf) -> unsigned int {
+          [&](const typename PairClosureEscape::tree::Leaf &) -> unsigned int {
             return x;
           },
-          [&](const typename PairClosureEscape::tree::Node _args)
+          [&](const typename PairClosureEscape::tree::Node &_args)
               -> unsigned int {
             return std::visit(
                 Overloaded{
-                    [&](const typename PairClosureEscape::tree::Leaf)
+                    [&](const typename PairClosureEscape::tree::Leaf &)
                         -> unsigned int { return (_args.d_a1 + x); },
-                    [&](const typename PairClosureEscape::tree::Node _args0)
+                    [&](const typename PairClosureEscape::tree::Node &_args0)
                         -> unsigned int {
                       return std::visit(
                           Overloaded{
-                              [&](const typename PairClosureEscape::tree::Leaf)
-                                  -> unsigned int { return (_args0.d_a1 + x); },
+                              [&](const typename PairClosureEscape::tree::Leaf
+                                      &) -> unsigned int {
+                                return (_args0.d_a1 + x);
+                              },
                               [&](const typename PairClosureEscape::tree::Node
-                                      _args1) -> unsigned int {
+                                      &_args1) -> unsigned int {
                                 return (
                                     ((_args0.d_a1 + _args1.d_a1) + _args.d_a1) +
                                     x);

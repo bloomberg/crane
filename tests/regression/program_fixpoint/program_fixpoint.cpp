@@ -25,15 +25,15 @@ std::shared_ptr<List<unsigned int>> ProgFix::interleave_func(
                     SigT<std::shared_ptr<List<unsigned int>>,
                          std::shared_ptr<List<unsigned int>>>::existt(l3, l4));
         return interleave_func(std::visit(
-            Overloaded{
-                [](const typename Sig<std::shared_ptr<
-                       SigT<std::shared_ptr<List<unsigned int>>,
-                            std::shared_ptr<List<unsigned int>>>>>::Exist _args)
-                    -> std::shared_ptr<
-                        SigT<std::shared_ptr<List<unsigned int>>,
-                             std::shared_ptr<List<unsigned int>>>> {
-                  return _args.d_x;
-                }},
+            Overloaded{[](const typename Sig<std::shared_ptr<
+                              SigT<std::shared_ptr<List<unsigned int>>,
+                                   std::shared_ptr<List<unsigned int>>>>>::Exist
+                              &_args)
+                           -> std::shared_ptr<
+                               SigT<std::shared_ptr<List<unsigned int>>,
+                                    std::shared_ptr<List<unsigned int>>>> {
+              return _args.d_x;
+            }},
             y->v()));
       };
   if (l1.use_count() == 1 && l1->v().index() == 1) {
@@ -45,9 +45,9 @@ std::shared_ptr<List<unsigned int>> ProgFix::interleave_func(
     return l1;
   } else {
     return std::visit(
-        Overloaded{[&](const typename List<unsigned int>::Nil)
+        Overloaded{[&](const typename List<unsigned int>::Nil &)
                        -> std::shared_ptr<List<unsigned int>> { return l2; },
-                   [&](const typename List<unsigned int>::Cons _args)
+                   [&](const typename List<unsigned int>::Cons &_args)
                        -> std::shared_ptr<List<unsigned int>> {
                      return List<unsigned int>::cons(
                          _args.d_a0, interleave0(l2, _args.d_a1));

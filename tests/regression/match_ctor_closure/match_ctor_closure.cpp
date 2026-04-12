@@ -13,11 +13,11 @@
 std::shared_ptr<MatchCtorClosure::fn_box> MatchCtorClosure::match_and_box(
     const std::shared_ptr<MatchCtorClosure::tree> &t) {
   return std::visit(
-      Overloaded{[](const typename MatchCtorClosure::tree::Leaf)
+      Overloaded{[](const typename MatchCtorClosure::tree::Leaf &)
                      -> std::shared_ptr<MatchCtorClosure::fn_box> {
                    return fn_box::box([](unsigned int x) { return x; });
                  },
-                 [](const typename MatchCtorClosure::tree::Node _args)
+                 [](const typename MatchCtorClosure::tree::Node &_args)
                      -> std::shared_ptr<MatchCtorClosure::fn_box> {
                    return fn_box::box(
                        [=](unsigned int _x0) mutable -> unsigned int {

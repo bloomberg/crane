@@ -77,10 +77,10 @@ public:
                 const List *_self = _f._self;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<t_A>::Nil) -> void {
+                        [&](const typename List<t_A>::Nil &) -> void {
                           _result = 0u;
                         },
-                        [&](const typename List<t_A>::Cons _args) -> void {
+                        [&](const typename List<t_A>::Cons &_args) -> void {
                           _stack.push_back(_Call1{});
                           _stack.push_back(_Enter{_args.d_a1.get()});
                         }},
@@ -100,7 +100,7 @@ public:
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil) {
+              [&](const typename List<t_A>::Nil &) {
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
                 } else {
@@ -108,7 +108,7 @@ public:
                 }
                 _continue = false;
               },
-              [&](const typename List<t_A>::Cons _args) {
+              [&](const typename List<t_A>::Cons &_args) {
                 auto _cell = List<t_A>::cons(_args.d_a0, nullptr);
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =

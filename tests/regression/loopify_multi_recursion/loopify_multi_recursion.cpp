@@ -249,10 +249,10 @@ __attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_count_leaves(
               const std::shared_ptr<LoopifyMultiRecursion::quadtree> t = _f.t;
               std::visit(
                   Overloaded{
-                      [&](const typename LoopifyMultiRecursion::quadtree::QLeaf)
-                          -> void { _result = 1u; },
+                      [&](const typename LoopifyMultiRecursion::quadtree::QLeaf
+                              &) -> void { _result = 1u; },
                       [&](const typename LoopifyMultiRecursion::quadtree::QQuad
-                              _args) -> void {
+                              &_args) -> void {
                         _stack.push_back(
                             _Call1{_args.d_a2, _args.d_a1, _args.d_a0});
                         _stack.push_back(_Enter{_args.d_a3});
@@ -326,10 +326,10 @@ __attribute__((pure)) unsigned int LoopifyMultiRecursion::quad_depth(
               const std::shared_ptr<LoopifyMultiRecursion::quadtree> t = _f.t;
               std::visit(
                   Overloaded{
-                      [&](const typename LoopifyMultiRecursion::quadtree::QLeaf)
-                          -> void { _result = 0u; },
+                      [&](const typename LoopifyMultiRecursion::quadtree::QLeaf
+                              &) -> void { _result = 0u; },
                       [&](const typename LoopifyMultiRecursion::quadtree::QQuad
-                              _args) -> void {
+                              &_args) -> void {
                         _stack.push_back(
                             _Call1{_args.d_a2, _args.d_a1, _args.d_a0, 1u});
                         _stack.push_back(_Enter{_args.d_a3});

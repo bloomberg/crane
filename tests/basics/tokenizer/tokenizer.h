@@ -65,10 +65,10 @@ public:
   std::shared_ptr<List<t_A>> rev() const {
     return std::visit(
         Overloaded{
-            [](const typename List<t_A>::Nil) -> std::shared_ptr<List<t_A>> {
+            [](const typename List<t_A>::Nil &) -> std::shared_ptr<List<t_A>> {
               return List<t_A>::nil();
             },
-            [](const typename List<t_A>::Cons _args)
+            [](const typename List<t_A>::Cons &_args)
                 -> std::shared_ptr<List<t_A>> {
               return _args.d_a1->rev()->app(
                   List<t_A>::cons(_args.d_a0, List<t_A>::nil()));
@@ -78,9 +78,9 @@ public:
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
     return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil)
+        Overloaded{[&](const typename List<t_A>::Nil &)
                        -> std::shared_ptr<List<t_A>> { return m; },
-                   [&](const typename List<t_A>::Cons _args)
+                   [&](const typename List<t_A>::Cons &_args)
                        -> std::shared_ptr<List<t_A>> {
                      return List<t_A>::cons(_args.d_a0, _args.d_a1->app(m));
                    }},
@@ -104,16 +104,17 @@ struct ToString {
               const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{
-            [](const typename List<T1>::Nil) -> std::string { return ""; },
-            [&](const typename List<T1>::Cons _args) -> std::string {
+            [](const typename List<T1>::Nil &) -> std::string { return ""; },
+            [&](const typename List<T1>::Cons &_args) -> std::string {
               return std::visit(
-                  Overloaded{[&](const typename List<T1>::Nil) -> std::string {
-                               return sep + p(_args.d_a0);
-                             },
-                             [&](const typename List<T1>::Cons) -> std::string {
-                               return sep + p(_args.d_a0) +
-                                      intersperse<T1>(p, sep, _args.d_a1);
-                             }},
+                  Overloaded{
+                      [&](const typename List<T1>::Nil &) -> std::string {
+                        return sep + p(_args.d_a0);
+                      },
+                      [&](const typename List<T1>::Cons &) -> std::string {
+                        return sep + p(_args.d_a0) +
+                               intersperse<T1>(p, sep, _args.d_a1);
+                      }},
                   _args.d_a1->v());
             }},
         l->v());
@@ -124,17 +125,17 @@ struct ToString {
   list_to_string(F0 &&p, const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{
-            [](const typename List<T1>::Nil) -> std::string { return "[]"; },
-            [&](const typename List<T1>::Cons _args) -> std::string {
+            [](const typename List<T1>::Nil &) -> std::string { return "[]"; },
+            [&](const typename List<T1>::Cons &_args) -> std::string {
               return std::visit(
-                  Overloaded{[&](const typename List<T1>::Nil) -> std::string {
-                               return "["s + p(_args.d_a0) + "]"s;
-                             },
-                             [&](const typename List<T1>::Cons) -> std::string {
-                               return "["s + p(_args.d_a0) +
-                                      intersperse<T1>(p, "; ", _args.d_a1) +
-                                      "]"s;
-                             }},
+                  Overloaded{
+                      [&](const typename List<T1>::Nil &) -> std::string {
+                        return "["s + p(_args.d_a0) + "]"s;
+                      },
+                      [&](const typename List<T1>::Cons &) -> std::string {
+                        return "["s + p(_args.d_a0) +
+                               intersperse<T1>(p, "; ", _args.d_a1) + "]"s;
+                      }},
                   _args.d_a1->v());
             }},
         l->v());
@@ -155,13 +156,14 @@ struct Tokenizer {
   template <typename T1>
   static std::vector<T1> list_to_vec_h(const std::shared_ptr<List<T1>> &l) {
     return std::visit(
-        Overloaded{
-            [](const typename List<T1>::Nil) -> std::vector<T1> { return {}; },
-            [](const typename List<T1>::Cons _args) -> std::vector<T1> {
-              std::vector<T1> v = list_to_vec_h<T1>(_args.d_a1);
-              v.push_back(_args.d_a0);
-              return v;
-            }},
+        Overloaded{[](const typename List<T1>::Nil &) -> std::vector<T1> {
+                     return {};
+                   },
+                   [](const typename List<T1>::Cons &_args) -> std::vector<T1> {
+                     std::vector<T1> v = list_to_vec_h<T1>(_args.d_a1);
+                     v.push_back(_args.d_a0);
+                     return v;
+                   }},
         l->v());
   }
 
@@ -175,8 +177,10 @@ struct Tokenizer {
                                            const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{
-            [](const typename List<T1>::Nil) -> std::vector<T2> { return {}; },
-            [&](const typename List<T1>::Cons _args) -> std::vector<T2> {
+            [](const typename List<T1>::Nil &) -> std::vector<T2> {
+              return {};
+            },
+            [&](const typename List<T1>::Cons &_args) -> std::vector<T2> {
               std::vector<T2> v = list_to_vec_map_h<T1, T2>(f, _args.d_a1);
               v.push_back(f(_args.d_a0));
               return v;

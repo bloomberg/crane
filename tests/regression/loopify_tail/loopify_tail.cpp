@@ -15,11 +15,11 @@ LoopifyTail::member(const unsigned int x,
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename LoopifyTail::list<unsigned int>::Nil) {
+            [&](const typename LoopifyTail::list<unsigned int>::Nil &) {
               _result = false;
               _continue = false;
             },
-            [&](const typename LoopifyTail::list<unsigned int>::Cons _args) {
+            [&](const typename LoopifyTail::list<unsigned int>::Cons &_args) {
               if (x == _args.d_a0) {
                 _result = true;
                 _continue = false;
@@ -44,11 +44,11 @@ LoopifyTail::nth(const unsigned int n,
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename LoopifyTail::list<unsigned int>::Nil) {
+            [&](const typename LoopifyTail::list<unsigned int>::Nil &) {
               _result = default0;
               _continue = false;
             },
-            [&](const typename LoopifyTail::list<unsigned int>::Cons _args) {
+            [&](const typename LoopifyTail::list<unsigned int>::Cons &_args) {
               if (_loop_n == 0u) {
                 _result = _args.d_a0;
                 _continue = false;
@@ -78,12 +78,12 @@ __attribute__((pure)) unsigned int LoopifyTail::lookup(
   while (_continue) {
     std::visit(
         Overloaded{[&](const typename LoopifyTail::list<
-                       std::pair<unsigned int, unsigned int>>::Nil) {
+                       std::pair<unsigned int, unsigned int>>::Nil &) {
                      _result = 0u;
                      _continue = false;
                    },
                    [&](const typename LoopifyTail::list<
-                       std::pair<unsigned int, unsigned int>>::Cons _args) {
+                       std::pair<unsigned int, unsigned int>>::Cons &_args) {
                      if (_args.d_a0.first == key) {
                        _result = _args.d_a0.second;
                        _continue = false;

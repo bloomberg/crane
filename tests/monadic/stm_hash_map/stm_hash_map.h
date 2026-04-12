@@ -166,9 +166,9 @@ template <typename K, typename V> struct CHT {
   assoc_lookup(F0 &&eqb, const T1 k,
                const std::shared_ptr<List<std::pair<T1, T2>>> &xs) {
     return std::visit(
-        Overloaded{[](const typename List<std::pair<T1, T2>>::Nil)
+        Overloaded{[](const typename List<std::pair<T1, T2>>::Nil &)
                        -> std::optional<T2> { return std::optional<T2>(); },
-                   [&](const typename List<std::pair<T1, T2>>::Cons _args)
+                   [&](const typename List<std::pair<T1, T2>>::Cons &_args)
                        -> std::optional<T2> {
                      T1 k_ = _args.d_a0.first;
                      T2 v = _args.d_a0.second;
@@ -188,12 +188,12 @@ template <typename K, typename V> struct CHT {
                           const std::shared_ptr<List<std::pair<T1, T2>>> &xs) {
     return std::visit(
         Overloaded{
-            [&](const typename List<std::pair<T1, T2>>::Nil)
+            [&](const typename List<std::pair<T1, T2>>::Nil &)
                 -> std::shared_ptr<List<std::pair<T1, T2>>> {
               return List<std::pair<T1, T2>>::cons(
                   std::make_pair(k, v), List<std::pair<T1, T2>>::nil());
             },
-            [&](const typename List<std::pair<T1, T2>>::Cons _args)
+            [&](const typename List<std::pair<T1, T2>>::Cons &_args)
                 -> std::shared_ptr<List<std::pair<T1, T2>>> {
               T1 k_ = _args.d_a0.first;
               T2 v_ = _args.d_a0.second;
@@ -216,12 +216,12 @@ template <typename K, typename V> struct CHT {
   assoc_remove(F0 &&eqb, const T1 k,
                std::shared_ptr<List<std::pair<T1, T2>>> xs) {
     return std::visit(
-        Overloaded{[&](const typename List<std::pair<T1, T2>>::Nil)
+        Overloaded{[&](const typename List<std::pair<T1, T2>>::Nil &)
                        -> std::pair<std::optional<T2>,
                                     std::shared_ptr<List<std::pair<T1, T2>>>> {
                      return std::make_pair(std::optional<T2>(), xs);
                    },
-                   [&](const typename List<std::pair<T1, T2>>::Cons _args)
+                   [&](const typename List<std::pair<T1, T2>>::Cons &_args)
                        -> std::pair<std::optional<T2>,
                                     std::shared_ptr<List<std::pair<T1, T2>>>> {
                      T1 k_ = _args.d_a0.first;

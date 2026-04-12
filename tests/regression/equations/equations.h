@@ -215,13 +215,13 @@ struct Equations {
              std::shared_ptr<gcd_graph> g) -> T1 {
       return std::visit(
           Overloaded{
-              [&](const typename gcd_graph::Gcd_graph_equation_1 _args) -> T1 {
+              [&](const typename gcd_graph::Gcd_graph_equation_1 &_args) -> T1 {
                 return f(_args.d_y);
               },
-              [&](const typename gcd_graph::Gcd_graph_equation_2 _args) -> T1 {
+              [&](const typename gcd_graph::Gcd_graph_equation_2 &_args) -> T1 {
                 return f0(_args.d_n);
               },
-              [&](const typename gcd_graph::Gcd_graph_refinement_3 _args)
+              [&](const typename gcd_graph::Gcd_graph_refinement_3 &_args)
                   -> T1 {
                 return f1(
                     _args.d_n, _args.d_n0, _args.d_hind,
@@ -238,7 +238,7 @@ struct Equations {
       return std::visit(
           Overloaded{
               [&](const typename gcd_clause_3_graph::
-                      Gcd_clause_3_graph_equation_1 _args0) -> T2 {
+                      Gcd_clause_3_graph_equation_1 &_args0) -> T2 {
                 return f2(
                     _args0.d_n, _args0.d_n0, _args0.d_hind,
                     [=](unsigned int _pa0,
@@ -261,7 +261,7 @@ struct Equations {
                     });
               },
               [&](const typename gcd_clause_3_graph::
-                      Gcd_clause_3_graph_equation_2 _args0) -> T2 {
+                      Gcd_clause_3_graph_equation_2 &_args0) -> T2 {
                 return f3(
                     _args0.d_n, _args0.d_n0, _args0.d_hind,
                     [=](unsigned int _pa0,
@@ -304,13 +304,13 @@ struct Equations {
              std::shared_ptr<gcd_graph> g) -> T1 {
       return std::visit(
           Overloaded{
-              [&](const typename gcd_graph::Gcd_graph_equation_1 _args) -> T1 {
+              [&](const typename gcd_graph::Gcd_graph_equation_1 &_args) -> T1 {
                 return f(_args.d_y);
               },
-              [&](const typename gcd_graph::Gcd_graph_equation_2 _args) -> T1 {
+              [&](const typename gcd_graph::Gcd_graph_equation_2 &_args) -> T1 {
                 return f0(_args.d_n);
               },
-              [&](const typename gcd_graph::Gcd_graph_refinement_3 _args)
+              [&](const typename gcd_graph::Gcd_graph_refinement_3 &_args)
                   -> T1 {
                 return f1(
                     _args.d_n, _args.d_n0, _args.d_hind,
@@ -327,7 +327,7 @@ struct Equations {
       return std::visit(
           Overloaded{
               [&](const typename gcd_clause_3_graph::
-                      Gcd_clause_3_graph_equation_1 _args0) -> T2 {
+                      Gcd_clause_3_graph_equation_1 &_args0) -> T2 {
                 return f2(
                     _args0.d_n, _args0.d_n0, _args0.d_hind,
                     [=](unsigned int _pa0,
@@ -350,7 +350,7 @@ struct Equations {
                     });
               },
               [&](const typename gcd_clause_3_graph::
-                      Gcd_clause_3_graph_equation_2 _args0) -> T2 {
+                      Gcd_clause_3_graph_equation_2 &_args0) -> T2 {
                 return f3(
                     _args0.d_n, _args0.d_n0, _args0.d_hind,
                     [=](unsigned int _pa0,
@@ -622,11 +622,11 @@ struct Equations {
       return std::visit(
           Overloaded{
               [&](const typename collatz_steps_graph::
-                      Collatz_steps_graph_equation_1) -> T1 { return f; },
+                      Collatz_steps_graph_equation_1 &) -> T1 { return f; },
               [&](const typename collatz_steps_graph::
-                      Collatz_steps_graph_equation_2) -> T1 { return f0; },
+                      Collatz_steps_graph_equation_2 &) -> T1 { return f0; },
               [&](const typename collatz_steps_graph::
-                      Collatz_steps_graph_refinement_3 _args) -> T1 {
+                      Collatz_steps_graph_refinement_3 &_args) -> T1 {
                 return f1(
                     _args.d_n, _args.d_hind,
                     f5(_args.d_n, PeanoNat::even(((_args.d_n + 1) + 1)),
@@ -641,7 +641,7 @@ struct Equations {
       return std::visit(
           Overloaded{
               [&](const typename collatz_steps_clause_3_graph::
-                      Collatz_steps_clause_3_graph_equation_1 _args0) -> T2 {
+                      Collatz_steps_clause_3_graph_equation_1 &_args0) -> T2 {
                 return f2(_args0.d_n, _args0.d_hind,
                           [=](std::shared_ptr<collatz_steps_clause_3_graph>
                                   _pa0) mutable {
@@ -651,7 +651,7 @@ struct Equations {
                           });
               },
               [&](const typename collatz_steps_clause_3_graph::
-                      Collatz_steps_clause_3_graph_equation_2 _args0) -> T2 {
+                      Collatz_steps_clause_3_graph_equation_2 &_args0) -> T2 {
                 return f3(_args0.d_n, _args0.d_hind,
                           [=](std::shared_ptr<collatz_steps_clause_3_graph>
                                   _pa0) mutable {
@@ -687,11 +687,11 @@ struct Equations {
       return std::visit(
           Overloaded{
               [&](const typename collatz_steps_graph::
-                      Collatz_steps_graph_equation_1) -> T1 { return f; },
+                      Collatz_steps_graph_equation_1 &) -> T1 { return f; },
               [&](const typename collatz_steps_graph::
-                      Collatz_steps_graph_equation_2) -> T1 { return f0; },
+                      Collatz_steps_graph_equation_2 &) -> T1 { return f0; },
               [&](const typename collatz_steps_graph::
-                      Collatz_steps_graph_refinement_3 _args) -> T1 {
+                      Collatz_steps_graph_refinement_3 &_args) -> T1 {
                 return f1(
                     _args.d_n, _args.d_hind,
                     f5(_args.d_n, PeanoNat::even(((_args.d_n + 1) + 1)),
@@ -706,7 +706,7 @@ struct Equations {
       return std::visit(
           Overloaded{
               [&](const typename collatz_steps_clause_3_graph::
-                      Collatz_steps_clause_3_graph_equation_1 _args0) -> T2 {
+                      Collatz_steps_clause_3_graph_equation_1 &_args0) -> T2 {
                 return f2(_args0.d_n, _args0.d_hind,
                           [=](std::shared_ptr<collatz_steps_clause_3_graph>
                                   _pa0) mutable {
@@ -716,7 +716,7 @@ struct Equations {
                           });
               },
               [&](const typename collatz_steps_clause_3_graph::
-                      Collatz_steps_clause_3_graph_equation_2 _args0) -> T2 {
+                      Collatz_steps_clause_3_graph_equation_2 &_args0) -> T2 {
                 return f3(_args0.d_n, _args0.d_hind,
                           [=](std::shared_ptr<collatz_steps_clause_3_graph>
                                   _pa0) mutable {

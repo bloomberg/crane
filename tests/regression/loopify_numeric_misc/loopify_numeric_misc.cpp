@@ -28,9 +28,9 @@ LoopifyNumericMisc::sum_abs(const std::shared_ptr<List<unsigned int>> &l) {
                      const std::shared_ptr<List<unsigned int>> l = _f.l;
                      std::visit(
                          Overloaded{
-                             [&](const typename List<unsigned int>::Nil)
+                             [&](const typename List<unsigned int>::Nil &)
                                  -> void { _result = 0u; },
-                             [&](const typename List<unsigned int>::Cons _args)
+                             [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
                                _stack.push_back(_Call1{_args.d_a0});
                                _stack.push_back(_Enter{_args.d_a1});
@@ -108,9 +108,9 @@ LoopifyNumericMisc::count_even(const std::shared_ptr<List<unsigned int>> &l) {
                      const std::shared_ptr<List<unsigned int>> l = _f.l;
                      std::visit(
                          Overloaded{
-                             [&](const typename List<unsigned int>::Nil)
+                             [&](const typename List<unsigned int>::Nil &)
                                  -> void { _result = 0u; },
-                             [&](const typename List<unsigned int>::Cons _args)
+                             [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
                                if ((2u ? _args.d_a0 % 2u : _args.d_a0) == 0u) {
                                  _stack.push_back(_Call1{1u});
@@ -149,9 +149,9 @@ LoopifyNumericMisc::count_odd(const std::shared_ptr<List<unsigned int>> &l) {
                      const std::shared_ptr<List<unsigned int>> l = _f.l;
                      std::visit(
                          Overloaded{
-                             [&](const typename List<unsigned int>::Nil)
+                             [&](const typename List<unsigned int>::Nil &)
                                  -> void { _result = 0u; },
-                             [&](const typename List<unsigned int>::Cons _args)
+                             [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
                                if ((2u ? _args.d_a0 % 2u : _args.d_a0) == 1u) {
                                  _stack.push_back(_Call1{1u});
@@ -191,9 +191,9 @@ LoopifyNumericMisc::product(const std::shared_ptr<List<unsigned int>> &l) {
                      const std::shared_ptr<List<unsigned int>> l = _f.l;
                      std::visit(
                          Overloaded{
-                             [&](const typename List<unsigned int>::Nil)
+                             [&](const typename List<unsigned int>::Nil &)
                                  -> void { _result = 1u; },
-                             [&](const typename List<unsigned int>::Cons _args)
+                             [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
                                _stack.push_back(_Call1{_args.d_a0});
                                _stack.push_back(_Enter{_args.d_a1});
@@ -231,10 +231,10 @@ __attribute__((pure)) unsigned int LoopifyNumericMisc::sum_of_squares(
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil) -> void {
+                      [&](const typename List<unsigned int>::Nil &) -> void {
                         _result = 0u;
                       },
-                      [&](const typename List<unsigned int>::Cons _args)
+                      [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
                         _stack.push_back(_Call1{(_args.d_a0 * _args.d_a0)});
                         _stack.push_back(_Enter{_args.d_a1});
@@ -280,16 +280,16 @@ LoopifyNumericMisc::list_max(const std::shared_ptr<List<unsigned int>> &l) {
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil) -> void {
+                      [&](const typename List<unsigned int>::Nil &) -> void {
                         _result = 0u;
                       },
-                      [&](const typename List<unsigned int>::Cons _args)
+                      [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
                         std::visit(
                             Overloaded{
-                                [&](const typename List<unsigned int>::Nil)
+                                [&](const typename List<unsigned int>::Nil &)
                                     -> void { _result = _args.d_a0; },
-                                [&](const typename List<unsigned int>::Cons)
+                                [&](const typename List<unsigned int>::Cons &)
                                     -> void {
                                   _stack.push_back(_Call1{_args.d_a0});
                                   _stack.push_back(_Enter{_args.d_a1});
@@ -327,16 +327,16 @@ LoopifyNumericMisc::list_min(const std::shared_ptr<List<unsigned int>> &l) {
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil) -> void {
+                      [&](const typename List<unsigned int>::Nil &) -> void {
                         _result = 0u;
                       },
-                      [&](const typename List<unsigned int>::Cons _args)
+                      [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
                         std::visit(
                             Overloaded{
-                                [&](const typename List<unsigned int>::Nil)
+                                [&](const typename List<unsigned int>::Nil &)
                                     -> void { _result = _args.d_a0; },
-                                [&](const typename List<unsigned int>::Cons)
+                                [&](const typename List<unsigned int>::Cons &)
                                     -> void {
                                   _stack.push_back(_Call1{_args});
                                   _stack.push_back(_Enter{_args.d_a1});

@@ -116,10 +116,10 @@ template <OrderedType K, BaseType V> struct MakeMap {
                                      const std::shared_ptr<tree> &m) {
     return std::visit(
         Overloaded{
-            [&](const typename tree::Empty) -> std::shared_ptr<tree> {
+            [&](const typename tree::Empty &) -> std::shared_ptr<tree> {
               return tree::node(tree::empty(), k, v, tree::empty());
             },
-            [&](const typename tree::Node _args) -> std::shared_ptr<tree> {
+            [&](const typename tree::Node &_args) -> std::shared_ptr<tree> {
               switch (K::compare(k, _args.d_a1)) {
               case Comparison::e_EQ: {
                 return tree::node(_args.d_a0, k, v, _args.d_a3);
@@ -143,10 +143,10 @@ template <OrderedType K, BaseType V> struct MakeMap {
   find(const typename K::t k, const std::shared_ptr<tree> &m) {
     return std::visit(
         Overloaded{
-            [](const typename tree::Empty) -> std::optional<typename V::t> {
+            [](const typename tree::Empty &) -> std::optional<typename V::t> {
               return std::optional<typename V::t>();
             },
-            [&](const typename tree::Node _args)
+            [&](const typename tree::Node &_args)
                 -> std::optional<typename V::t> {
               switch (K::compare(k, _args.d_a1)) {
               case Comparison::e_EQ: {

@@ -50,10 +50,10 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::spherical_shoelace_aux(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil)
+              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil &)
               -> Real { return Real::from_z(INT64_C(0)); },
           [&](const typename List<
-              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons _args)
+              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons &_args)
               -> Real {
             unsigned int n = all_pts->length();
             Real lambda_prev =
@@ -130,19 +130,18 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::winding_sum_aux(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil)
+              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil &)
               -> Real { return Real::from_z(INT64_C(0)); },
           [&](const typename List<
-              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons _args)
+              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons &_args)
               -> Real {
             return std::visit(
                 Overloaded{
                     [&](const typename List<std::shared_ptr<
-                            PolygonWindingAreaTraceCase::Point>>::Nil) -> Real {
-                      return segment_angle(p, _args.d_a0, first);
-                    },
+                            PolygonWindingAreaTraceCase::Point>>::Nil &)
+                        -> Real { return segment_angle(p, _args.d_a0, first); },
                     [&](const typename List<std::shared_ptr<
-                            PolygonWindingAreaTraceCase::Point>>::Cons _args0)
+                            PolygonWindingAreaTraceCase::Point>>::Cons &_args0)
                         -> Real {
                       return (segment_angle(p, _args.d_a0, _args0.d_a0) +
                               winding_sum_aux(p, _args.d_a1, first));
@@ -159,10 +158,10 @@ __attribute__((pure)) Real PolygonWindingAreaTraceCase::winding_sum(
   return std::visit(
       Overloaded{
           [](const typename List<
-              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil)
+              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Nil &)
               -> Real { return Real::from_z(INT64_C(0)); },
           [&](const typename List<
-              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons _args)
+              std::shared_ptr<PolygonWindingAreaTraceCase::Point>>::Cons &_args)
               -> Real { return winding_sum_aux(p, poly, _args.d_a0); }},
       poly->v());
 }

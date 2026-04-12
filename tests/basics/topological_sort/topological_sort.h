@@ -63,19 +63,19 @@ public:
   std::shared_ptr<List<std::pair<t_A, T1>>>
   combine(const std::shared_ptr<List<T1>> &l_) const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil)
+        Overloaded{[](const typename List<t_A>::Nil &)
                        -> std::shared_ptr<List<std::pair<t_A, T1>>> {
                      return List<std::pair<t_A, T1>>::nil();
                    },
-                   [&](const typename List<t_A>::Cons _args)
+                   [&](const typename List<t_A>::Cons &_args)
                        -> std::shared_ptr<List<std::pair<t_A, T1>>> {
                      return std::visit(
                          Overloaded{
-                             [](const typename List<T1>::Nil)
+                             [](const typename List<T1>::Nil &)
                                  -> std::shared_ptr<List<std::pair<t_A, T1>>> {
                                return List<std::pair<t_A, T1>>::nil();
                              },
-                             [&](const typename List<T1>::Cons _args0)
+                             [&](const typename List<T1>::Cons &_args0)
                                  -> std::shared_ptr<List<std::pair<t_A, T1>>> {
                                return List<std::pair<t_A, T1>>::cons(
                                    std::make_pair(_args.d_a0, _args0.d_a0),
@@ -91,10 +91,10 @@ public:
   __attribute__((pure)) std::optional<t_A> find(F0 &&f) const {
     return std::visit(
         Overloaded{
-            [](const typename List<t_A>::Nil) -> std::optional<t_A> {
+            [](const typename List<t_A>::Nil &) -> std::optional<t_A> {
               return std::optional<t_A>();
             },
-            [&](const typename List<t_A>::Cons _args) -> std::optional<t_A> {
+            [&](const typename List<t_A>::Cons &_args) -> std::optional<t_A> {
               if (f(_args.d_a0)) {
                 return std::make_optional<t_A>(_args.d_a0);
               } else {
@@ -108,10 +108,10 @@ public:
   std::shared_ptr<List<t_A>> filter(F0 &&f) const {
     return std::visit(
         Overloaded{
-            [](const typename List<t_A>::Nil) -> std::shared_ptr<List<t_A>> {
+            [](const typename List<t_A>::Nil &) -> std::shared_ptr<List<t_A>> {
               return List<t_A>::nil();
             },
-            [&](const typename List<t_A>::Cons _args)
+            [&](const typename List<t_A>::Cons &_args)
                 -> std::shared_ptr<List<t_A>> {
               if (f(_args.d_a0)) {
                 return List<t_A>::cons(_args.d_a0, _args.d_a1->filter(f));
@@ -125,8 +125,8 @@ public:
   template <typename T1, MapsTo<T1, t_A, T1> F0>
   T1 fold_right(F0 &&f, const T1 a0) const {
     return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil) -> T1 { return a0; },
-                   [&](const typename List<t_A>::Cons _args) -> T1 {
+        Overloaded{[&](const typename List<t_A>::Nil &) -> T1 { return a0; },
+                   [&](const typename List<t_A>::Cons &_args) -> T1 {
                      return f(_args.d_a0,
                               _args.d_a1->template fold_right<T1>(f, a0));
                    }},
@@ -136,9 +136,9 @@ public:
   template <typename T1> std::shared_ptr<List<T1>> concat() const {
     return std::visit(
         Overloaded{
-            [](const typename List<std::shared_ptr<List<T1>>>::Nil)
+            [](const typename List<std::shared_ptr<List<T1>>>::Nil &)
                 -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
-            [](const typename List<std::shared_ptr<List<T1>>>::Cons _args)
+            [](const typename List<std::shared_ptr<List<T1>>>::Cons &_args)
                 -> std::shared_ptr<List<T1>> {
               return _args.d_a0->app(_args.d_a1->template concat<T1>());
             }},
@@ -148,9 +148,9 @@ public:
   template <typename T1, MapsTo<T1, t_A> F0>
   std::shared_ptr<List<T1>> map(F0 &&f) const {
     return std::visit(
-        Overloaded{[](const typename List<t_A>::Nil)
+        Overloaded{[](const typename List<t_A>::Nil &)
                        -> std::shared_ptr<List<T1>> { return List<T1>::nil(); },
-                   [&](const typename List<t_A>::Cons _args)
+                   [&](const typename List<t_A>::Cons &_args)
                        -> std::shared_ptr<List<T1>> {
                      return List<T1>::cons(f(_args.d_a0),
                                            _args.d_a1->template map<T1>(f));
@@ -161,8 +161,8 @@ public:
   __attribute__((pure)) unsigned int length() const {
     return std::visit(
         Overloaded{
-            [](const typename List<t_A>::Nil) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons _args) -> unsigned int {
+            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
+            [](const typename List<t_A>::Cons &_args) -> unsigned int {
               return (_args.d_a1->length() + 1);
             }},
         this->v());
@@ -170,9 +170,9 @@ public:
 
   std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
     return std::visit(
-        Overloaded{[&](const typename List<t_A>::Nil)
+        Overloaded{[&](const typename List<t_A>::Nil &)
                        -> std::shared_ptr<List<t_A>> { return m; },
-                   [&](const typename List<t_A>::Cons _args)
+                   [&](const typename List<t_A>::Cons &_args)
                        -> std::shared_ptr<List<t_A>> {
                      return List<t_A>::cons(_args.d_a0, _args.d_a1->app(m));
                    }},
@@ -201,16 +201,17 @@ struct ToString {
               const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{
-            [](const typename List<T1>::Nil) -> std::string { return ""; },
-            [&](const typename List<T1>::Cons _args) -> std::string {
+            [](const typename List<T1>::Nil &) -> std::string { return ""; },
+            [&](const typename List<T1>::Cons &_args) -> std::string {
               return std::visit(
-                  Overloaded{[&](const typename List<T1>::Nil) -> std::string {
-                               return sep + p(_args.d_a0);
-                             },
-                             [&](const typename List<T1>::Cons) -> std::string {
-                               return sep + p(_args.d_a0) +
-                                      intersperse<T1>(p, sep, _args.d_a1);
-                             }},
+                  Overloaded{
+                      [&](const typename List<T1>::Nil &) -> std::string {
+                        return sep + p(_args.d_a0);
+                      },
+                      [&](const typename List<T1>::Cons &) -> std::string {
+                        return sep + p(_args.d_a0) +
+                               intersperse<T1>(p, sep, _args.d_a1);
+                      }},
                   _args.d_a1->v());
             }},
         l->v());
@@ -221,17 +222,17 @@ struct ToString {
   list_to_string(F0 &&p, const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{
-            [](const typename List<T1>::Nil) -> std::string { return "[]"; },
-            [&](const typename List<T1>::Cons _args) -> std::string {
+            [](const typename List<T1>::Nil &) -> std::string { return "[]"; },
+            [&](const typename List<T1>::Cons &_args) -> std::string {
               return std::visit(
-                  Overloaded{[&](const typename List<T1>::Nil) -> std::string {
-                               return "["s + p(_args.d_a0) + "]"s;
-                             },
-                             [&](const typename List<T1>::Cons) -> std::string {
-                               return "["s + p(_args.d_a0) +
-                                      intersperse<T1>(p, "; ", _args.d_a1) +
-                                      "]"s;
-                             }},
+                  Overloaded{
+                      [&](const typename List<T1>::Nil &) -> std::string {
+                        return "["s + p(_args.d_a0) + "]"s;
+                      },
+                      [&](const typename List<T1>::Cons &) -> std::string {
+                        return "["s + p(_args.d_a0) +
+                               intersperse<T1>(p, "; ", _args.d_a1) + "]"s;
+                      }},
                   _args.d_a1->v());
             }},
         l->v());
@@ -256,9 +257,9 @@ struct TopologicalSort {
             std::shared_ptr<List<T1>> h) -> std::shared_ptr<List<T1>> {
       return std::visit(
           Overloaded{
-              [&](const typename List<std::pair<T1, T1>>::Nil)
+              [&](const typename List<std::pair<T1, T1>>::Nil &)
                   -> std::shared_ptr<List<T1>> { return h; },
-              [&](const typename List<std::pair<T1, T1>>::Cons _args)
+              [&](const typename List<std::pair<T1, T1>>::Cons &_args)
                   -> std::shared_ptr<List<T1>> {
                 T1 e1 = _args.d_a0.first;
                 T1 e2 = _args.d_a0.second;
@@ -372,12 +373,13 @@ struct TopologicalSort {
         unsigned int c = counter - 1;
         std::shared_ptr<List<T1>> l = graph_lookup<T1>(eqb_node, elem, graph0);
         return std::visit(
-            Overloaded{[&](const typename List<T1>::Nil) -> T1 { return elem; },
-                       [&](const typename List<T1>::Cons _args) -> T1 {
-                         return cycle_entry_aux<T1>(eqb_node, graph0,
-                                                    List<T1>::cons(elem, seens),
-                                                    _args.d_a0, c);
-                       }},
+            Overloaded{
+                [&](const typename List<T1>::Nil &) -> T1 { return elem; },
+                [&](const typename List<T1>::Cons &_args) -> T1 {
+                  return cycle_entry_aux<T1>(eqb_node, graph0,
+                                             List<T1>::cons(elem, seens),
+                                             _args.d_a0, c);
+                }},
             l->v());
       }
     }
@@ -390,10 +392,10 @@ struct TopologicalSort {
           &graph0) {
     return std::visit(
         Overloaded{[](const typename List<
-                       std::pair<T1, std::shared_ptr<List<T1>>>>::Nil)
+                       std::pair<T1, std::shared_ptr<List<T1>>>>::Nil &)
                        -> std::optional<T1> { return std::optional<T1>(); },
                    [&](const typename List<
-                       std::pair<T1, std::shared_ptr<List<T1>>>>::Cons _args)
+                       std::pair<T1, std::shared_ptr<List<T1>>>>::Cons &_args)
                        -> std::optional<T1> {
                      T1 e = _args.d_a0.first;
                      std::shared_ptr<List<T1>> _x0 = _args.d_a0.second;
@@ -446,8 +448,9 @@ struct TopologicalSort {
   template <typename T1>
   __attribute__((pure)) static bool null(const std::shared_ptr<List<T1>> &xs) {
     return std::visit(
-        Overloaded{[](const typename List<T1>::Nil) -> bool { return true; },
-                   [](const typename List<T1>::Cons) -> bool { return false; }},
+        Overloaded{
+            [](const typename List<T1>::Nil &) -> bool { return true; },
+            [](const typename List<T1>::Cons &) -> bool { return false; }},
         xs->v());
   }
 

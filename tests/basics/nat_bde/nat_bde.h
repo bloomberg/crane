@@ -54,8 +54,8 @@ public:
   __attribute__((pure)) const variant_t &v() const { return d_v_; }
   __attribute__((pure)) int nat_to_int() const {
     return bsl::visit(
-        bdlf::Overloaded{[](const typename Nat::O) -> int { return 0; },
-                         [](const typename Nat::S _args) -> int {
+        bdlf::Overloaded{[](const typename Nat::O &) -> int { return 0; },
+                         [](const typename Nat::S &_args) -> int {
                            return 1 + _args.d_n->nat_to_int();
                          }},
         this->v());
@@ -63,8 +63,8 @@ public:
   template <typename T1, MapsTo<T1, bsl::shared_ptr<Nat>, T1> F1>
   T1 nat_rec(const T1 f, F1 &&f0) const {
     return bsl::visit(
-        bdlf::Overloaded{[&](const typename Nat::O) -> T1 { return f; },
-                         [&](const typename Nat::S _args) -> T1 {
+        bdlf::Overloaded{[&](const typename Nat::O &) -> T1 { return f; },
+                         [&](const typename Nat::S &_args) -> T1 {
                            return f0(_args.d_n,
                                      _args.d_n->template nat_rec<T1>(f, f0));
                          }},
@@ -73,8 +73,8 @@ public:
   template <typename T1, MapsTo<T1, bsl::shared_ptr<Nat>, T1> F1>
   T1 nat_rect(const T1 f, F1 &&f0) const {
     return bsl::visit(
-        bdlf::Overloaded{[&](const typename Nat::O) -> T1 { return f; },
-                         [&](const typename Nat::S _args) -> T1 {
+        bdlf::Overloaded{[&](const typename Nat::O &) -> T1 { return f; },
+                         [&](const typename Nat::S &_args) -> T1 {
                            return f0(_args.d_n,
                                      _args.d_n->template nat_rect<T1>(f, f0));
                          }},
@@ -83,8 +83,8 @@ public:
   bsl::shared_ptr<Nat> add(bsl::shared_ptr<Nat> n) const {
     return bsl::visit(
         bdlf::Overloaded{
-            [&](const typename Nat::O) -> bsl::shared_ptr<Nat> { return n; },
-            [&](const typename Nat::S _args) -> bsl::shared_ptr<Nat> {
+            [&](const typename Nat::O &) -> bsl::shared_ptr<Nat> { return n; },
+            [&](const typename Nat::S &_args) -> bsl::shared_ptr<Nat> {
               return Nat::s(_args.d_n->add(n));
             }},
         this->v());

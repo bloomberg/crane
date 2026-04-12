@@ -60,8 +60,8 @@ public:
   __attribute__((pure)) unsigned int length() const {
     return std::visit(
         Overloaded{
-            [](const typename List<t_A>::Nil) -> unsigned int { return 0u; },
-            [](const typename List<t_A>::Cons _args) -> unsigned int {
+            [](const typename List<t_A>::Nil &) -> unsigned int { return 0u; },
+            [](const typename List<t_A>::Cons &_args) -> unsigned int {
               return (_args.d_a1->length() + 1);
             }},
         this->v());
@@ -110,7 +110,7 @@ struct FoldSequenceStateTraceCase {
 
     std::shared_ptr<Line> fold_line() const {
       return std::visit(
-          Overloaded{[](const typename Fold::Fold_line_ctor _args)
+          Overloaded{[](const typename Fold::Fold_line_ctor &_args)
                          -> std::shared_ptr<Line> { return _args.d_a0; }},
           this->v());
     }
@@ -118,7 +118,7 @@ struct FoldSequenceStateTraceCase {
     template <typename T1, MapsTo<T1, std::shared_ptr<Line>> F0>
     T1 Fold_rec(F0 &&f) const {
       return std::visit(
-          Overloaded{[&](const typename Fold::Fold_line_ctor _args) -> T1 {
+          Overloaded{[&](const typename Fold::Fold_line_ctor &_args) -> T1 {
             return f(_args.d_a0);
           }},
           this->v());
@@ -127,7 +127,7 @@ struct FoldSequenceStateTraceCase {
     template <typename T1, MapsTo<T1, std::shared_ptr<Line>> F0>
     T1 Fold_rect(F0 &&f) const {
       return std::visit(
-          Overloaded{[&](const typename Fold::Fold_line_ctor _args) -> T1 {
+          Overloaded{[&](const typename Fold::Fold_line_ctor &_args) -> T1 {
             return f(_args.d_a0);
           }},
           this->v());
@@ -216,15 +216,15 @@ struct FoldSequenceStateTraceCase {
 
     std::shared_ptr<Line> execute_fold_step() const {
       return std::visit(
-          Overloaded{[](const typename FoldStep::FS_O1 _args)
+          Overloaded{[](const typename FoldStep::FS_O1 &_args)
                          -> std::shared_ptr<Line> {
                        return fold_O1(_args.d_a0, _args.d_a1)->fold_line();
                      },
-                     [](const typename FoldStep::FS_O2 _args)
+                     [](const typename FoldStep::FS_O2 &_args)
                          -> std::shared_ptr<Line> {
                        return fold_O2(_args.d_a0, _args.d_a1)->fold_line();
                      },
-                     [](const typename FoldStep::FS_O4 _args)
+                     [](const typename FoldStep::FS_O4 &_args)
                          -> std::shared_ptr<Line> {
                        return fold_O4(_args.d_a0, _args.d_a1)->fold_line();
                      }},
@@ -239,13 +239,13 @@ struct FoldSequenceStateTraceCase {
   static T1 FoldStep_rect(F0 &&f, F1 &&f0, F2 &&f1,
                           const std::shared_ptr<FoldStep> &f2) {
     return std::visit(
-        Overloaded{[&](const typename FoldStep::FS_O1 _args) -> T1 {
+        Overloaded{[&](const typename FoldStep::FS_O1 &_args) -> T1 {
                      return f(_args.d_a0, _args.d_a1);
                    },
-                   [&](const typename FoldStep::FS_O2 _args) -> T1 {
+                   [&](const typename FoldStep::FS_O2 &_args) -> T1 {
                      return f0(_args.d_a0, _args.d_a1);
                    },
-                   [&](const typename FoldStep::FS_O4 _args) -> T1 {
+                   [&](const typename FoldStep::FS_O4 &_args) -> T1 {
                      return f1(_args.d_a0, _args.d_a1);
                    }},
         f2->v());
@@ -258,13 +258,13 @@ struct FoldSequenceStateTraceCase {
   static T1 FoldStep_rec(F0 &&f, F1 &&f0, F2 &&f1,
                          const std::shared_ptr<FoldStep> &f2) {
     return std::visit(
-        Overloaded{[&](const typename FoldStep::FS_O1 _args) -> T1 {
+        Overloaded{[&](const typename FoldStep::FS_O1 &_args) -> T1 {
                      return f(_args.d_a0, _args.d_a1);
                    },
-                   [&](const typename FoldStep::FS_O2 _args) -> T1 {
+                   [&](const typename FoldStep::FS_O2 &_args) -> T1 {
                      return f0(_args.d_a0, _args.d_a1);
                    },
-                   [&](const typename FoldStep::FS_O4 _args) -> T1 {
+                   [&](const typename FoldStep::FS_O4 &_args) -> T1 {
                      return f1(_args.d_a0, _args.d_a1);
                    }},
         f2->v());

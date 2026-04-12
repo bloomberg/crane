@@ -90,7 +90,7 @@ struct Tuple {
   template <typename T1, typename T2>
   static T1 fst(const std::shared_ptr<Prod<T1, T2>> &p) {
     return std::visit(
-        Overloaded{[](const typename Prod<T1, T2>::Pair _args) -> T1 {
+        Overloaded{[](const typename Prod<T1, T2>::Pair &_args) -> T1 {
           return _args.d_a0;
         }},
         p->v());
@@ -99,7 +99,7 @@ struct Tuple {
   template <typename T1, typename T2>
   static T2 snd(const std::shared_ptr<Prod<T1, T2>> &p) {
     return std::visit(
-        Overloaded{[](const typename Prod<T1, T2>::Pair _args) -> T2 {
+        Overloaded{[](const typename Prod<T1, T2>::Pair &_args) -> T2 {
           return _args.d_a1;
         }},
         p->v());
@@ -108,7 +108,7 @@ struct Tuple {
   template <typename T1, typename T2>
   static std::shared_ptr<Prod<T2, T1>>
   swap(const std::shared_ptr<Prod<T1, T2>> &p) {
-    return std::visit(Overloaded{[](const typename Prod<T1, T2>::Pair _args)
+    return std::visit(Overloaded{[](const typename Prod<T1, T2>::Pair &_args)
                                      -> std::shared_ptr<Prod<T2, T1>> {
                         return Prod<T2, T1>::pair(_args.d_a1, _args.d_a0);
                       }},

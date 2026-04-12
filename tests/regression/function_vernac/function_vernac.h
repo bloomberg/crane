@@ -172,13 +172,13 @@ struct FunctionVernac {
     T1 R_div2_rec(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int,
                   const unsigned int) const {
       return std::visit(
-          Overloaded{[&](const typename R_div2::R_div2_0 _args) -> T1 {
+          Overloaded{[&](const typename R_div2::R_div2_0 &_args) -> T1 {
                        return f(_args.d_n);
                      },
-                     [&](const typename R_div2::R_div2_1 _args) -> T1 {
+                     [&](const typename R_div2::R_div2_1 &_args) -> T1 {
                        return f0(_args.d_n);
                      },
-                     [&](const typename R_div2::R_div2_2 _args) -> T1 {
+                     [&](const typename R_div2::R_div2_2 &_args) -> T1 {
                        return f1(_args.d_n, _args.d_p, _args.d_a2, _args.d__res,
                                  _args.d__res->template R_div2_rec<T1>(
                                      f, f0, f1, _args.d_p, _args.d_a2));
@@ -194,13 +194,13 @@ struct FunctionVernac {
     T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int,
                    const unsigned int) const {
       return std::visit(
-          Overloaded{[&](const typename R_div2::R_div2_0 _args) -> T1 {
+          Overloaded{[&](const typename R_div2::R_div2_0 &_args) -> T1 {
                        return f(_args.d_n);
                      },
-                     [&](const typename R_div2::R_div2_1 _args) -> T1 {
+                     [&](const typename R_div2::R_div2_1 &_args) -> T1 {
                        return f0(_args.d_n);
                      },
-                     [&](const typename R_div2::R_div2_2 _args) -> T1 {
+                     [&](const typename R_div2::R_div2_2 &_args) -> T1 {
                        return f1(_args.d_n, _args.d_p, _args.d_a2, _args.d__res,
                                  _args.d__res->template R_div2_rect<T1>(
                                      f, f0, f1, _args.d_p, _args.d_a2));
@@ -248,13 +248,12 @@ struct FunctionVernac {
   __attribute__((pure)) static unsigned int
   list_sum_F(F0 &&list_sum0, const std::shared_ptr<List<unsigned int>> &l) {
     return std::visit(
-        Overloaded{
-            [](const typename List<unsigned int>::Nil) -> unsigned int {
-              return 0u;
-            },
-            [&](const typename List<unsigned int>::Cons _args) -> unsigned int {
-              return (_args.d_a0 + list_sum0(_args.d_a1));
-            }},
+        Overloaded{[](const typename List<unsigned int>::Nil &)
+                       -> unsigned int { return 0u; },
+                   [&](const typename List<unsigned int>::Cons &_args)
+                       -> unsigned int {
+                     return (_args.d_a0 + list_sum0(_args.d_a1));
+                   }},
         l->v());
   }
 
@@ -331,10 +330,10 @@ struct FunctionVernac {
                       const std::shared_ptr<List<unsigned int>> &,
                       const unsigned int) const {
       return std::visit(
-          Overloaded{[&](const typename R_list_sum::R_list_sum_0 _args) -> T1 {
+          Overloaded{[&](const typename R_list_sum::R_list_sum_0 &_args) -> T1 {
                        return f(_args.d_l);
                      },
-                     [&](const typename R_list_sum::R_list_sum_1 _args) -> T1 {
+                     [&](const typename R_list_sum::R_list_sum_1 &_args) -> T1 {
                        return f0(_args.d_l, _args.d_x, _args.d_xs, _args.d_a3,
                                  _args.d__res,
                                  _args.d__res->template R_list_sum_rec<T1>(
@@ -352,10 +351,10 @@ struct FunctionVernac {
                        const std::shared_ptr<List<unsigned int>> &,
                        const unsigned int) const {
       return std::visit(
-          Overloaded{[&](const typename R_list_sum::R_list_sum_0 _args) -> T1 {
+          Overloaded{[&](const typename R_list_sum::R_list_sum_0 &_args) -> T1 {
                        return f(_args.d_l);
                      },
-                     [&](const typename R_list_sum::R_list_sum_1 _args) -> T1 {
+                     [&](const typename R_list_sum::R_list_sum_1 &_args) -> T1 {
                        return f0(_args.d_l, _args.d_x, _args.d_xs, _args.d_a3,
                                  _args.d__res,
                                  _args.d__res->template R_list_sum_rect<T1>(
@@ -376,15 +375,16 @@ struct FunctionVernac {
                  T1 _pa2) mutable { return f0(l, _pa0, _pa1, _pa2); };
     T1 f2 = f(l);
     return std::visit(
-        Overloaded{
-            [&](const typename List<unsigned int>::Nil) -> auto { return f2; },
-            [&](const typename List<unsigned int>::Cons _args) -> auto {
-              std::function<T1(T1)> f3 = [=](T1 _pa0) mutable {
-                return f1(_args.d_a0, _args.d_a1, _pa0);
-              };
-              T1 hrec = list_sum_rect<T1>(f, f0, _args.d_a1);
-              return f3(hrec);
-            }},
+        Overloaded{[&](const typename List<unsigned int>::Nil &) -> auto {
+                     return f2;
+                   },
+                   [&](const typename List<unsigned int>::Cons &_args) -> auto {
+                     std::function<T1(T1)> f3 = [=](T1 _pa0) mutable {
+                       return f1(_args.d_a0, _args.d_a1, _pa0);
+                     };
+                     T1 hrec = list_sum_rect<T1>(f, f0, _args.d_a1);
+                     return f3(hrec);
+                   }},
         l->v());
   }
 

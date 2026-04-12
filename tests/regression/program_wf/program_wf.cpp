@@ -9,15 +9,15 @@
 __attribute__((pure)) std::optional<unsigned int>
 ProgramWf::jump_target(const std::shared_ptr<ProgramWf::instruction> &i) {
   return std::visit(
-      Overloaded{[](const typename ProgramWf::instruction::JUN _args)
+      Overloaded{[](const typename ProgramWf::instruction::JUN &_args)
                      -> std::optional<unsigned int> {
                    return std::make_optional<unsigned int>(_args.d_a0);
                  },
-                 [](const typename ProgramWf::instruction::JMS _args)
+                 [](const typename ProgramWf::instruction::JMS &_args)
                      -> std::optional<unsigned int> {
                    return std::make_optional<unsigned int>(_args.d_a0);
                  },
-                 [](const typename ProgramWf::instruction::NOP)
+                 [](const typename ProgramWf::instruction::NOP &)
                      -> std::optional<unsigned int> {
                    return std::optional<unsigned int>();
                  }},

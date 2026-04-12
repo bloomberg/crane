@@ -45,9 +45,9 @@ DeepMap::map_inc(const std::shared_ptr<DeepMap::tree<unsigned int>> &t) {
 __attribute__((pure)) unsigned int
 DeepMap::root_or_zero(const std::shared_ptr<DeepMap::tree<unsigned int>> &t) {
   return std::visit(
-      Overloaded{[](const typename DeepMap::tree<unsigned int>::Leaf)
+      Overloaded{[](const typename DeepMap::tree<unsigned int>::Leaf &)
                      -> unsigned int { return 0u; },
-                 [](const typename DeepMap::tree<unsigned int>::Node _args)
+                 [](const typename DeepMap::tree<unsigned int>::Node &_args)
                      -> unsigned int { return _args.d_a1; }},
       t->v());
 }

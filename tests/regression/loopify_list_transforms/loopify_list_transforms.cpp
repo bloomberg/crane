@@ -29,15 +29,15 @@ LoopifyListTransforms::run_length_encode(
               const std::shared_ptr<List<unsigned int>> l = _f.l;
               std::visit(
                   Overloaded{
-                      [&](const typename List<unsigned int>::Nil) -> void {
+                      [&](const typename List<unsigned int>::Nil &) -> void {
                         _result =
                             List<std::pair<unsigned int, unsigned int>>::nil();
                       },
-                      [&](const typename List<unsigned int>::Cons _args)
+                      [&](const typename List<unsigned int>::Cons &_args)
                           -> void {
                         std::visit(
                             Overloaded{
-                                [&](const typename List<unsigned int>::Nil)
+                                [&](const typename List<unsigned int>::Nil &)
                                     -> void {
                                   _result = List<
                                       std::pair<unsigned int, unsigned int>>::
@@ -46,7 +46,7 @@ LoopifyListTransforms::run_length_encode(
                                           List<std::pair<unsigned int,
                                                          unsigned int>>::nil());
                                 },
-                                [&](const typename List<unsigned int>::Cons)
+                                [&](const typename List<unsigned int>::Cons &)
                                     -> void {
                                   _stack.push_back(_Call1{_args});
                                   _stack.push_back(_Enter{_args.d_a1});
@@ -60,7 +60,8 @@ LoopifyListTransforms::run_length_encode(
               std::visit(
                   Overloaded{
                       [&](const typename List<
-                          std::pair<unsigned int, unsigned int>>::Nil) -> void {
+                          std::pair<unsigned int, unsigned int>>::Nil &)
+                          -> void {
                         _result =
                             List<std::pair<unsigned int, unsigned int>>::cons(
                                 std::make_pair(_args.d_a0, 1u),
@@ -68,7 +69,7 @@ LoopifyListTransforms::run_length_encode(
                                                unsigned int>>::nil());
                       },
                       [&](const typename List<
-                          std::pair<unsigned int, unsigned int>>::Cons _args1)
+                          std::pair<unsigned int, unsigned int>>::Cons &_args1)
                           -> void {
                         unsigned int y = _args1.d_a0.first;
                         unsigned int n = _args1.d_a0.second;
@@ -101,7 +102,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListTransforms::prefix_sums(
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil) {
+            [&](const typename List<unsigned int>::Nil &) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::cons(_loop_acc,
@@ -112,7 +113,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListTransforms::prefix_sums(
               }
               _continue = false;
             },
-            [&](const typename List<unsigned int>::Cons _args) {
+            [&](const typename List<unsigned int>::Cons &_args) {
               auto _cell = List<unsigned int>::cons(_loop_acc, nullptr);
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
@@ -155,7 +156,7 @@ LoopifyListTransforms::sliding_pairs_fuel(
       unsigned int fuel_ = _loop_fuel - 1;
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil) {
+              [&](const typename List<unsigned int>::Nil &) {
                 if (_last) {
                   std::get<typename List<
                       std::pair<unsigned int, unsigned int>>::Cons>(
@@ -167,10 +168,10 @@ LoopifyListTransforms::sliding_pairs_fuel(
                 }
                 _continue = false;
               },
-              [&](const typename List<unsigned int>::Cons _args) {
+              [&](const typename List<unsigned int>::Cons &_args) {
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil) {
+                        [&](const typename List<unsigned int>::Nil &) {
                           if (_last) {
                             std::get<typename List<
                                 std::pair<unsigned int, unsigned int>>::Cons>(
@@ -183,7 +184,7 @@ LoopifyListTransforms::sliding_pairs_fuel(
                           }
                           _continue = false;
                         },
-                        [&](const typename List<unsigned int>::Cons _args0) {
+                        [&](const typename List<unsigned int>::Cons &_args0) {
                           auto _cell =
                               List<std::pair<unsigned int, unsigned int>>::cons(
                                   std::make_pair(_args.d_a0, _args0.d_a0),
@@ -249,7 +250,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListTransforms::differences_fuel(
       unsigned int fuel_ = _loop_fuel - 1;
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil) {
+              [&](const typename List<unsigned int>::Nil &) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = List<unsigned int>::nil();
@@ -258,10 +259,10 @@ std::shared_ptr<List<unsigned int>> LoopifyListTransforms::differences_fuel(
                 }
                 _continue = false;
               },
-              [&](const typename List<unsigned int>::Cons _args) {
+              [&](const typename List<unsigned int>::Cons &_args) {
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil) {
+                        [&](const typename List<unsigned int>::Nil &) {
                           if (_last) {
                             std::get<typename List<unsigned int>::Cons>(
                                 _last->v_mut())
@@ -271,7 +272,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListTransforms::differences_fuel(
                           }
                           _continue = false;
                         },
-                        [&](const typename List<unsigned int>::Cons _args0) {
+                        [&](const typename List<unsigned int>::Cons &_args0) {
                           auto _cell = List<unsigned int>::cons(
                               abs_diff(_args.d_a0, _args0.d_a0), nullptr);
                           if (_last) {
@@ -325,7 +326,7 @@ LoopifyListTransforms::take(const unsigned int n,
       unsigned int n_ = _loop_n - 1;
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil) {
+              [&](const typename List<unsigned int>::Nil &) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = List<unsigned int>::nil();
@@ -334,7 +335,7 @@ LoopifyListTransforms::take(const unsigned int n,
                 }
                 _continue = false;
               },
-              [&](const typename List<unsigned int>::Cons _args) {
+              [&](const typename List<unsigned int>::Cons &_args) {
                 auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
@@ -376,11 +377,11 @@ LoopifyListTransforms::drop(const unsigned int n,
         }
       } else {
         std::visit(
-            Overloaded{[&](const typename List<unsigned int>::Nil) {
+            Overloaded{[&](const typename List<unsigned int>::Nil &) {
                          _result = List<unsigned int>::nil();
                          _continue = false;
                        },
-                       [&](const typename List<unsigned int>::Cons _args) {
+                       [&](const typename List<unsigned int>::Cons &_args) {
                          std::shared_ptr<List<unsigned int>> _next_l =
                              _args.d_a1;
                          unsigned int _next_n = n_;
@@ -430,7 +431,7 @@ LoopifyListTransforms::chunks_of_fuel(
         }
       } else {
         std::visit(
-            Overloaded{[&](const typename List<unsigned int>::Nil) {
+            Overloaded{[&](const typename List<unsigned int>::Nil &) {
                          if (_last) {
                            std::get<typename List<
                                std::shared_ptr<List<unsigned int>>>::Cons>(
@@ -443,7 +444,7 @@ LoopifyListTransforms::chunks_of_fuel(
                          }
                          _continue = false;
                        },
-                       [&](const typename List<unsigned int>::Cons) {
+                       [&](const typename List<unsigned int>::Cons &) {
                          auto _cell =
                              List<std::shared_ptr<List<unsigned int>>>::cons(
                                  take(n, _loop_l), nullptr);
@@ -506,11 +507,11 @@ LoopifyListTransforms::rotate_left_fuel(const unsigned int fuel,
           }
         } else {
           std::visit(
-              Overloaded{[&](const typename List<unsigned int>::Nil) {
+              Overloaded{[&](const typename List<unsigned int>::Nil &) {
                            _result = List<unsigned int>::nil();
                            _continue = false;
                          },
-                         [&](const typename List<unsigned int>::Cons _args) {
+                         [&](const typename List<unsigned int>::Cons &_args) {
                            std::shared_ptr<List<unsigned int>> rotated =
                                _args.d_a1->app(List<unsigned int>::cons(
                                    _args.d_a0, List<unsigned int>::nil()));
@@ -558,7 +559,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListTransforms::uniq_sorted_fuel(
       unsigned int fuel_ = _loop_fuel - 1;
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil) {
+              [&](const typename List<unsigned int>::Nil &) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = List<unsigned int>::nil();
@@ -567,10 +568,10 @@ std::shared_ptr<List<unsigned int>> LoopifyListTransforms::uniq_sorted_fuel(
                 }
                 _continue = false;
               },
-              [&](const typename List<unsigned int>::Cons _args) {
+              [&](const typename List<unsigned int>::Cons &_args) {
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil) {
+                        [&](const typename List<unsigned int>::Nil &) {
                           if (_last) {
                             std::get<typename List<unsigned int>::Cons>(
                                 _last->v_mut())
@@ -582,7 +583,7 @@ std::shared_ptr<List<unsigned int>> LoopifyListTransforms::uniq_sorted_fuel(
                           }
                           _continue = false;
                         },
-                        [&](const typename List<unsigned int>::Cons _args0) {
+                        [&](const typename List<unsigned int>::Cons &_args0) {
                           if (_args.d_a0 == _args0.d_a0) {
                             std::shared_ptr<List<unsigned int>> _next_l =
                                 _args.d_a1;
@@ -643,9 +644,9 @@ LoopifyListTransforms::step_sum(const std::shared_ptr<List<unsigned int>> &l) {
                      const std::shared_ptr<List<unsigned int>> l = _f.l;
                      std::visit(
                          Overloaded{
-                             [&](const typename List<unsigned int>::Nil)
+                             [&](const typename List<unsigned int>::Nil &)
                                  -> void { _result = 0u; },
-                             [&](const typename List<unsigned int>::Cons _args)
+                             [&](const typename List<unsigned int>::Cons &_args)
                                  -> void {
                                unsigned int contribution;
                                if ((2u ? _args.d_a0 % 2u : _args.d_a0) == 0u) {

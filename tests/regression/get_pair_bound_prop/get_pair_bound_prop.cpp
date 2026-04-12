@@ -52,28 +52,28 @@ GetPairBoundProp::execute(const std::shared_ptr<GetPairBoundProp::state> &s,
                           const std::shared_ptr<GetPairBoundProp::instr> &i) {
   return std::visit(
       Overloaded{
-          [&](const typename GetPairBoundProp::instr::NOP)
+          [&](const typename GetPairBoundProp::instr::NOP &)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(
                 state{s->ex_acc, s->ex_regs, s->ex_carry,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::LDM _args)
+          [&](const typename GetPairBoundProp::instr::LDM &_args)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(state{
                 (16u ? _args.d_n % 16u : _args.d_n), s->ex_regs, s->ex_carry,
                 (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                 s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::LD _args)
+          [&](const typename GetPairBoundProp::instr::LD &_args)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(
                 state{get_reg(s, _args.d_r), s->ex_regs, s->ex_carry,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::XCH _args)
+          [&](const typename GetPairBoundProp::instr::XCH &_args)
               -> std::shared_ptr<GetPairBoundProp::state> {
             unsigned int regv = get_reg(s, _args.d_r);
             return std::make_shared<GetPairBoundProp::state>(
@@ -81,7 +81,7 @@ GetPairBoundProp::execute(const std::shared_ptr<GetPairBoundProp::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::INC _args)
+          [&](const typename GetPairBoundProp::instr::INC &_args)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(state{
                 s->ex_acc, set_reg(s, _args.d_r, (get_reg(s, _args.d_r) + 1)),
@@ -89,7 +89,7 @@ GetPairBoundProp::execute(const std::shared_ptr<GetPairBoundProp::state> &s,
                 (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                 s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::ADD _args)
+          [&](const typename GetPairBoundProp::instr::ADD &_args)
               -> std::shared_ptr<GetPairBoundProp::state> {
             unsigned int sum =
                 ((s->ex_acc + get_reg(s, _args.d_r)) + [&]() -> unsigned int {
@@ -104,7 +104,7 @@ GetPairBoundProp::execute(const std::shared_ptr<GetPairBoundProp::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::SUB _args)
+          [&](const typename GetPairBoundProp::instr::SUB &_args)
               -> std::shared_ptr<GetPairBoundProp::state> {
             unsigned int diff = ((
                 ((s->ex_acc + 16u) - get_reg(s, _args.d_r)) > (s->ex_acc + 16u)
@@ -116,7 +116,7 @@ GetPairBoundProp::execute(const std::shared_ptr<GetPairBoundProp::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::IAC)
+          [&](const typename GetPairBoundProp::instr::IAC &)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(
                 state{(16u ? (s->ex_acc + 1) % 16u : (s->ex_acc + 1)),
@@ -124,7 +124,7 @@ GetPairBoundProp::execute(const std::shared_ptr<GetPairBoundProp::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::DAC)
+          [&](const typename GetPairBoundProp::instr::DAC &)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(
                 state{(16u ? (s->ex_acc + 15u) % 16u : (s->ex_acc + 15u)),
@@ -132,28 +132,28 @@ GetPairBoundProp::execute(const std::shared_ptr<GetPairBoundProp::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::CLC)
+          [&](const typename GetPairBoundProp::instr::CLC &)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(
                 state{s->ex_acc, s->ex_regs, false,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::STC)
+          [&](const typename GetPairBoundProp::instr::STC &)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(
                 state{s->ex_acc, s->ex_regs, true,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::CMC)
+          [&](const typename GetPairBoundProp::instr::CMC &)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(
                 state{s->ex_acc, s->ex_regs, !(s->ex_carry),
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::CMA)
+          [&](const typename GetPairBoundProp::instr::CMA &)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(
                 state{(((15u - s->ex_acc) > 15u ? 0 : (15u - s->ex_acc))),
@@ -161,14 +161,14 @@ GetPairBoundProp::execute(const std::shared_ptr<GetPairBoundProp::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::CLB)
+          [&](const typename GetPairBoundProp::instr::CLB &)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(
                 state{0u, s->ex_regs, false,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::RAL)
+          [&](const typename GetPairBoundProp::instr::RAL &)
               -> std::shared_ptr<GetPairBoundProp::state> {
             unsigned int acc_ =
                 (16u ? ((2u * s->ex_acc) + [&]() -> unsigned int {
@@ -198,7 +198,7 @@ GetPairBoundProp::execute(const std::shared_ptr<GetPairBoundProp::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::RAR)
+          [&](const typename GetPairBoundProp::instr::RAR &)
               -> std::shared_ptr<GetPairBoundProp::state> {
             unsigned int carry_bit;
             if (s->ex_carry) {
@@ -212,7 +212,7 @@ GetPairBoundProp::execute(const std::shared_ptr<GetPairBoundProp::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::TCC)
+          [&](const typename GetPairBoundProp::instr::TCC &)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(
                 state{[&]() -> unsigned int {
@@ -226,7 +226,7 @@ GetPairBoundProp::execute(const std::shared_ptr<GetPairBoundProp::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::TCS)
+          [&](const typename GetPairBoundProp::instr::TCS &)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(
                 state{[&]() -> unsigned int {
@@ -240,7 +240,7 @@ GetPairBoundProp::execute(const std::shared_ptr<GetPairBoundProp::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::DAA)
+          [&](const typename GetPairBoundProp::instr::DAA &)
               -> std::shared_ptr<GetPairBoundProp::state> {
             unsigned int acc_;
             if (10u <= (s->ex_acc + 1)) {
@@ -253,7 +253,7 @@ GetPairBoundProp::execute(const std::shared_ptr<GetPairBoundProp::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::KBP)
+          [&](const typename GetPairBoundProp::instr::KBP &)
               -> std::shared_ptr<GetPairBoundProp::state> {
             unsigned int a = s->ex_acc;
             unsigned int out;
@@ -283,21 +283,21 @@ GetPairBoundProp::execute(const std::shared_ptr<GetPairBoundProp::state> &s,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::JUN _args)
+          [&](const typename GetPairBoundProp::instr::JUN &_args)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(
                 state{s->ex_acc, s->ex_regs, s->ex_carry,
                       (4096u ? _args.d_a % 4096u : _args.d_a), s->ex_stack,
                       s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::JMS _args)
+          [&](const typename GetPairBoundProp::instr::JMS &_args)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(state{
                 s->ex_acc, s->ex_regs, s->ex_carry,
                 (4096u ? _args.d_a % 4096u : _args.d_a),
                 push_return(s, (s->ex_pc + 2u)), s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::JCN _args)
+          [&](const typename GetPairBoundProp::instr::JCN &_args)
               -> std::shared_ptr<GetPairBoundProp::state> {
             bool jump =
                 ((2u ? _args.d_c % 2u : _args.d_c) == 1u && s->ex_carry);
@@ -312,28 +312,28 @@ GetPairBoundProp::execute(const std::shared_ptr<GetPairBoundProp::state> &s,
                 }(),
                 s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::FIM _args)
+          [&](const typename GetPairBoundProp::instr::FIM &_args)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(
                 state{s->ex_acc, set_pair(s, _args.d_r, _args.d_d), s->ex_carry,
                       (4096u ? (s->ex_pc + 2u) % 4096u : (s->ex_pc + 2u)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::SRC _args)
+          [&](const typename GetPairBoundProp::instr::SRC &_args)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(
                 state{s->ex_acc, s->ex_regs, s->ex_carry,
                       (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                       s->ex_stack, get_pair(s, _args.d_r), s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::FIN _args)
+          [&](const typename GetPairBoundProp::instr::FIN &_args)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(state{
                 s->ex_acc, set_pair(s, _args.d_r, s->ex_pair_bus), s->ex_carry,
                 (4096u ? (s->ex_pc + 1u) % 4096u : (s->ex_pc + 1u)),
                 s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::JIN _args)
+          [&](const typename GetPairBoundProp::instr::JIN &_args)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(
                 state{s->ex_acc, s->ex_regs, s->ex_carry,
@@ -341,7 +341,7 @@ GetPairBoundProp::execute(const std::shared_ptr<GetPairBoundProp::state> &s,
                              : get_pair(s, _args.d_r)),
                       s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::ISZ _args)
+          [&](const typename GetPairBoundProp::instr::ISZ &_args)
               -> std::shared_ptr<GetPairBoundProp::state> {
             unsigned int n = (16u ? (get_reg(s, _args.d_r) + 1) % 16u
                                   : (get_reg(s, _args.d_r) + 1));
@@ -356,7 +356,7 @@ GetPairBoundProp::execute(const std::shared_ptr<GetPairBoundProp::state> &s,
                 }(),
                 s->ex_stack, s->ex_pair_bus, s->ex_ports});
           },
-          [&](const typename GetPairBoundProp::instr::BBL _args)
+          [&](const typename GetPairBoundProp::instr::BBL &_args)
               -> std::shared_ptr<GetPairBoundProp::state> {
             return std::make_shared<GetPairBoundProp::state>(
                 state{(16u ? _args.d_d % 16u : _args.d_d), s->ex_regs,

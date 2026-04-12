@@ -61,16 +61,15 @@ public:
       return std::const_pointer_cast<List<t_A>>(this->shared_from_this());
     } else {
       unsigned int n0 = n - 1;
-      return std::visit(
-          Overloaded{
-              [](const typename List<t_A>::Nil) -> std::shared_ptr<List<t_A>> {
-                return List<t_A>::nil();
-              },
-              [&](const typename List<t_A>::Cons _args)
-                  -> std::shared_ptr<List<t_A>> {
-                return _args.d_a1->skipn(n0);
-              }},
-          this->v());
+      return std::visit(Overloaded{[](const typename List<t_A>::Nil &)
+                                       -> std::shared_ptr<List<t_A>> {
+                                     return List<t_A>::nil();
+                                   },
+                                   [&](const typename List<t_A>::Cons &_args)
+                                       -> std::shared_ptr<List<t_A>> {
+                                     return _args.d_a1->skipn(n0);
+                                   }},
+                        this->v());
     }
   }
 
@@ -81,10 +80,9 @@ public:
       unsigned int n0 = n - 1;
       return std::visit(
           Overloaded{
-              [](const typename List<t_A>::Nil) -> std::shared_ptr<List<t_A>> {
-                return List<t_A>::nil();
-              },
-              [&](const typename List<t_A>::Cons _args)
+              [](const typename List<t_A>::Nil &)
+                  -> std::shared_ptr<List<t_A>> { return List<t_A>::nil(); },
+              [&](const typename List<t_A>::Cons &_args)
                   -> std::shared_ptr<List<t_A>> {
                 return List<t_A>::cons(_args.d_a0, _args.d_a1->firstn(n0));
               }},
@@ -96,8 +94,8 @@ public:
     if (n <= 0) {
       return std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil) -> t_A { return default0; },
-              [](const typename List<t_A>::Cons _args) -> t_A {
+              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
+              [](const typename List<t_A>::Cons &_args) -> t_A {
                 return _args.d_a0;
               }},
           this->v());
@@ -105,8 +103,8 @@ public:
       unsigned int m = n - 1;
       return std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil) -> t_A { return default0; },
-              [&](const typename List<t_A>::Cons _args0) -> t_A {
+              [&](const typename List<t_A>::Nil &) -> t_A { return default0; },
+              [&](const typename List<t_A>::Cons &_args0) -> t_A {
                 return _args0.d_a1->nth(m, default0);
               }},
           this->v());
@@ -122,10 +120,10 @@ struct CpuEmulator {
     if (n <= 0) {
       return std::visit(
           Overloaded{
-              [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+              [](const typename List<T1>::Nil &) -> std::shared_ptr<List<T1>> {
                 return List<T1>::nil();
               },
-              [&](const typename List<T1>::Cons _args)
+              [&](const typename List<T1>::Cons &_args)
                   -> std::shared_ptr<List<T1>> {
                 return List<T1>::cons(x, _args.d_a1);
               }},
@@ -134,10 +132,10 @@ struct CpuEmulator {
       unsigned int n_ = n - 1;
       return std::visit(
           Overloaded{
-              [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+              [](const typename List<T1>::Nil &) -> std::shared_ptr<List<T1>> {
                 return List<T1>::nil();
               },
-              [&](const typename List<T1>::Cons _args0)
+              [&](const typename List<T1>::Cons &_args0)
                   -> std::shared_ptr<List<T1>> {
                 return List<T1>::cons(_args0.d_a0,
                                       update_nth<T1>(n_, x, _args0.d_a1));
@@ -472,64 +470,65 @@ struct CpuEmulator {
                        F22 &&f21, F23 &&f22, F24 &&f23, F25 &&f24, F26 &&f25,
                        F27 &&f26, F28 &&f27, const std::shared_ptr<instr> &i) {
     return std::visit(
-        Overloaded{
-            [&](const typename instr::NOP) -> T1 { return f; },
-            [&](const typename instr::LDM _args) -> T1 {
-              return f0(_args.d_n);
-            },
-            [&](const typename instr::LD _args) -> T1 { return f1(_args.d_r); },
-            [&](const typename instr::XCH _args) -> T1 {
-              return f2(_args.d_r);
-            },
-            [&](const typename instr::INC _args) -> T1 {
-              return f3(_args.d_r);
-            },
-            [&](const typename instr::ADD _args) -> T1 {
-              return f4(_args.d_r);
-            },
-            [&](const typename instr::SUB _args) -> T1 {
-              return f5(_args.d_r);
-            },
-            [&](const typename instr::IAC) -> T1 { return f6; },
-            [&](const typename instr::DAC) -> T1 { return f7; },
-            [&](const typename instr::CLC) -> T1 { return f8; },
-            [&](const typename instr::STC) -> T1 { return f9; },
-            [&](const typename instr::CMC) -> T1 { return f10; },
-            [&](const typename instr::CMA) -> T1 { return f11; },
-            [&](const typename instr::CLB) -> T1 { return f12; },
-            [&](const typename instr::RAL) -> T1 { return f13; },
-            [&](const typename instr::RAR) -> T1 { return f14; },
-            [&](const typename instr::TCC) -> T1 { return f15; },
-            [&](const typename instr::TCS) -> T1 { return f16; },
-            [&](const typename instr::DAA) -> T1 { return f17; },
-            [&](const typename instr::KBP) -> T1 { return f18; },
-            [&](const typename instr::JUN _args) -> T1 {
-              return f19(_args.d_a);
-            },
-            [&](const typename instr::JMS _args) -> T1 {
-              return f20(_args.d_a);
-            },
-            [&](const typename instr::JCN _args) -> T1 {
-              return f21(_args.d_c, _args.d_a);
-            },
-            [&](const typename instr::FIM _args) -> T1 {
-              return f22(_args.d_r, _args.d_d);
-            },
-            [&](const typename instr::SRC _args) -> T1 {
-              return f23(_args.d_r);
-            },
-            [&](const typename instr::FIN _args) -> T1 {
-              return f24(_args.d_r);
-            },
-            [&](const typename instr::JIN _args) -> T1 {
-              return f25(_args.d_r);
-            },
-            [&](const typename instr::ISZ _args) -> T1 {
-              return f26(_args.d_r, _args.d_a);
-            },
-            [&](const typename instr::BBL _args) -> T1 {
-              return f27(_args.d_d);
-            }},
+        Overloaded{[&](const typename instr::NOP &) -> T1 { return f; },
+                   [&](const typename instr::LDM &_args) -> T1 {
+                     return f0(_args.d_n);
+                   },
+                   [&](const typename instr::LD &_args) -> T1 {
+                     return f1(_args.d_r);
+                   },
+                   [&](const typename instr::XCH &_args) -> T1 {
+                     return f2(_args.d_r);
+                   },
+                   [&](const typename instr::INC &_args) -> T1 {
+                     return f3(_args.d_r);
+                   },
+                   [&](const typename instr::ADD &_args) -> T1 {
+                     return f4(_args.d_r);
+                   },
+                   [&](const typename instr::SUB &_args) -> T1 {
+                     return f5(_args.d_r);
+                   },
+                   [&](const typename instr::IAC &) -> T1 { return f6; },
+                   [&](const typename instr::DAC &) -> T1 { return f7; },
+                   [&](const typename instr::CLC &) -> T1 { return f8; },
+                   [&](const typename instr::STC &) -> T1 { return f9; },
+                   [&](const typename instr::CMC &) -> T1 { return f10; },
+                   [&](const typename instr::CMA &) -> T1 { return f11; },
+                   [&](const typename instr::CLB &) -> T1 { return f12; },
+                   [&](const typename instr::RAL &) -> T1 { return f13; },
+                   [&](const typename instr::RAR &) -> T1 { return f14; },
+                   [&](const typename instr::TCC &) -> T1 { return f15; },
+                   [&](const typename instr::TCS &) -> T1 { return f16; },
+                   [&](const typename instr::DAA &) -> T1 { return f17; },
+                   [&](const typename instr::KBP &) -> T1 { return f18; },
+                   [&](const typename instr::JUN &_args) -> T1 {
+                     return f19(_args.d_a);
+                   },
+                   [&](const typename instr::JMS &_args) -> T1 {
+                     return f20(_args.d_a);
+                   },
+                   [&](const typename instr::JCN &_args) -> T1 {
+                     return f21(_args.d_c, _args.d_a);
+                   },
+                   [&](const typename instr::FIM &_args) -> T1 {
+                     return f22(_args.d_r, _args.d_d);
+                   },
+                   [&](const typename instr::SRC &_args) -> T1 {
+                     return f23(_args.d_r);
+                   },
+                   [&](const typename instr::FIN &_args) -> T1 {
+                     return f24(_args.d_r);
+                   },
+                   [&](const typename instr::JIN &_args) -> T1 {
+                     return f25(_args.d_r);
+                   },
+                   [&](const typename instr::ISZ &_args) -> T1 {
+                     return f26(_args.d_r, _args.d_a);
+                   },
+                   [&](const typename instr::BBL &_args) -> T1 {
+                     return f27(_args.d_d);
+                   }},
         i->v());
   }
 
@@ -550,64 +549,65 @@ struct CpuEmulator {
                       F22 &&f21, F23 &&f22, F24 &&f23, F25 &&f24, F26 &&f25,
                       F27 &&f26, F28 &&f27, const std::shared_ptr<instr> &i) {
     return std::visit(
-        Overloaded{
-            [&](const typename instr::NOP) -> T1 { return f; },
-            [&](const typename instr::LDM _args) -> T1 {
-              return f0(_args.d_n);
-            },
-            [&](const typename instr::LD _args) -> T1 { return f1(_args.d_r); },
-            [&](const typename instr::XCH _args) -> T1 {
-              return f2(_args.d_r);
-            },
-            [&](const typename instr::INC _args) -> T1 {
-              return f3(_args.d_r);
-            },
-            [&](const typename instr::ADD _args) -> T1 {
-              return f4(_args.d_r);
-            },
-            [&](const typename instr::SUB _args) -> T1 {
-              return f5(_args.d_r);
-            },
-            [&](const typename instr::IAC) -> T1 { return f6; },
-            [&](const typename instr::DAC) -> T1 { return f7; },
-            [&](const typename instr::CLC) -> T1 { return f8; },
-            [&](const typename instr::STC) -> T1 { return f9; },
-            [&](const typename instr::CMC) -> T1 { return f10; },
-            [&](const typename instr::CMA) -> T1 { return f11; },
-            [&](const typename instr::CLB) -> T1 { return f12; },
-            [&](const typename instr::RAL) -> T1 { return f13; },
-            [&](const typename instr::RAR) -> T1 { return f14; },
-            [&](const typename instr::TCC) -> T1 { return f15; },
-            [&](const typename instr::TCS) -> T1 { return f16; },
-            [&](const typename instr::DAA) -> T1 { return f17; },
-            [&](const typename instr::KBP) -> T1 { return f18; },
-            [&](const typename instr::JUN _args) -> T1 {
-              return f19(_args.d_a);
-            },
-            [&](const typename instr::JMS _args) -> T1 {
-              return f20(_args.d_a);
-            },
-            [&](const typename instr::JCN _args) -> T1 {
-              return f21(_args.d_c, _args.d_a);
-            },
-            [&](const typename instr::FIM _args) -> T1 {
-              return f22(_args.d_r, _args.d_d);
-            },
-            [&](const typename instr::SRC _args) -> T1 {
-              return f23(_args.d_r);
-            },
-            [&](const typename instr::FIN _args) -> T1 {
-              return f24(_args.d_r);
-            },
-            [&](const typename instr::JIN _args) -> T1 {
-              return f25(_args.d_r);
-            },
-            [&](const typename instr::ISZ _args) -> T1 {
-              return f26(_args.d_r, _args.d_a);
-            },
-            [&](const typename instr::BBL _args) -> T1 {
-              return f27(_args.d_d);
-            }},
+        Overloaded{[&](const typename instr::NOP &) -> T1 { return f; },
+                   [&](const typename instr::LDM &_args) -> T1 {
+                     return f0(_args.d_n);
+                   },
+                   [&](const typename instr::LD &_args) -> T1 {
+                     return f1(_args.d_r);
+                   },
+                   [&](const typename instr::XCH &_args) -> T1 {
+                     return f2(_args.d_r);
+                   },
+                   [&](const typename instr::INC &_args) -> T1 {
+                     return f3(_args.d_r);
+                   },
+                   [&](const typename instr::ADD &_args) -> T1 {
+                     return f4(_args.d_r);
+                   },
+                   [&](const typename instr::SUB &_args) -> T1 {
+                     return f5(_args.d_r);
+                   },
+                   [&](const typename instr::IAC &) -> T1 { return f6; },
+                   [&](const typename instr::DAC &) -> T1 { return f7; },
+                   [&](const typename instr::CLC &) -> T1 { return f8; },
+                   [&](const typename instr::STC &) -> T1 { return f9; },
+                   [&](const typename instr::CMC &) -> T1 { return f10; },
+                   [&](const typename instr::CMA &) -> T1 { return f11; },
+                   [&](const typename instr::CLB &) -> T1 { return f12; },
+                   [&](const typename instr::RAL &) -> T1 { return f13; },
+                   [&](const typename instr::RAR &) -> T1 { return f14; },
+                   [&](const typename instr::TCC &) -> T1 { return f15; },
+                   [&](const typename instr::TCS &) -> T1 { return f16; },
+                   [&](const typename instr::DAA &) -> T1 { return f17; },
+                   [&](const typename instr::KBP &) -> T1 { return f18; },
+                   [&](const typename instr::JUN &_args) -> T1 {
+                     return f19(_args.d_a);
+                   },
+                   [&](const typename instr::JMS &_args) -> T1 {
+                     return f20(_args.d_a);
+                   },
+                   [&](const typename instr::JCN &_args) -> T1 {
+                     return f21(_args.d_c, _args.d_a);
+                   },
+                   [&](const typename instr::FIM &_args) -> T1 {
+                     return f22(_args.d_r, _args.d_d);
+                   },
+                   [&](const typename instr::SRC &_args) -> T1 {
+                     return f23(_args.d_r);
+                   },
+                   [&](const typename instr::FIN &_args) -> T1 {
+                     return f24(_args.d_r);
+                   },
+                   [&](const typename instr::JIN &_args) -> T1 {
+                     return f25(_args.d_r);
+                   },
+                   [&](const typename instr::ISZ &_args) -> T1 {
+                     return f26(_args.d_r, _args.d_a);
+                   },
+                   [&](const typename instr::BBL &_args) -> T1 {
+                     return f27(_args.d_d);
+                   }},
         i->v());
   }
 

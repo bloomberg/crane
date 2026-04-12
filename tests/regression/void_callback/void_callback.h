@@ -67,9 +67,9 @@ struct VoidCallback {
   template <MapsTo<void, unsigned int> F0>
   static void for_each(F0 &&f, const std::shared_ptr<List<unsigned int>> &xs) {
     {
-      std::visit(Overloaded{[](const typename List<unsigned int>::Nil)
+      std::visit(Overloaded{[](const typename List<unsigned int>::Nil &)
                                 -> std::monostate { return std::monostate{}; },
-                            [&](const typename List<unsigned int>::Cons _args)
+                            [&](const typename List<unsigned int>::Cons &_args)
                                 -> std::monostate {
                               for_each(f, _args.d_a1);
                               return std::monostate{};
@@ -92,9 +92,9 @@ struct VoidCallback {
   static void for_each_m(F0 &&f,
                          const std::shared_ptr<List<unsigned int>> &xs) {
     {
-      std::visit(Overloaded{[](const typename List<unsigned int>::Nil)
+      std::visit(Overloaded{[](const typename List<unsigned int>::Nil &)
                                 -> std::monostate { return std::monostate{}; },
-                            [&](const typename List<unsigned int>::Cons _args)
+                            [&](const typename List<unsigned int>::Cons &_args)
                                 -> std::monostate {
                               f(_args.d_a0);
                               for_each_m(f, _args.d_a1);
@@ -115,13 +115,12 @@ struct VoidCallback {
   __attribute__((pure)) static unsigned int
   ignore_and_count(F0 &&f, const std::shared_ptr<List<unsigned int>> &xs) {
     return std::visit(
-        Overloaded{
-            [](const typename List<unsigned int>::Nil) -> unsigned int {
-              return 0u;
-            },
-            [&](const typename List<unsigned int>::Cons _args) -> unsigned int {
-              return (ignore_and_count(f, _args.d_a1) + 1);
-            }},
+        Overloaded{[](const typename List<unsigned int>::Nil &)
+                       -> unsigned int { return 0u; },
+                   [&](const typename List<unsigned int>::Cons &_args)
+                       -> unsigned int {
+                     return (ignore_and_count(f, _args.d_a1) + 1);
+                   }},
         xs->v());
   }
 

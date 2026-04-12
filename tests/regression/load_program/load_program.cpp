@@ -30,9 +30,9 @@ LoadProgram::load_program(std::shared_ptr<LoadProgram::state> s,
                           const unsigned int base,
                           const std::shared_ptr<List<unsigned int>> &bytes) {
   return std::visit(
-      Overloaded{[&](const typename List<unsigned int>::Nil)
+      Overloaded{[&](const typename List<unsigned int>::Nil &)
                      -> std::shared_ptr<LoadProgram::state> { return s; },
-                 [&](const typename List<unsigned int>::Cons _args)
+                 [&](const typename List<unsigned int>::Cons &_args)
                      -> std::shared_ptr<LoadProgram::state> {
                    std::shared_ptr<LoadProgram::state> s_ =
                        set_prom_params(std::move(s), base, _args.d_a0, true);
@@ -76,9 +76,9 @@ std::shared_ptr<LoadProgram::state_simple> LoadProgram::load_program_simple(
     const std::shared_ptr<List<unsigned int>> &bytes) {
   return std::visit(
       Overloaded{
-          [&](const typename List<unsigned int>::Nil)
+          [&](const typename List<unsigned int>::Nil &)
               -> std::shared_ptr<LoadProgram::state_simple> { return s; },
-          [&](const typename List<unsigned int>::Cons _args)
+          [&](const typename List<unsigned int>::Cons &_args)
               -> std::shared_ptr<LoadProgram::state_simple> {
             return load_program_simple(write_byte(std::move(s), _args.d_a0),
                                        _args.d_a1);

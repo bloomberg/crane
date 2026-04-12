@@ -50,7 +50,7 @@ LoopifyListGeneration::stutter(const std::shared_ptr<List<unsigned int>> &l) {
   while (_continue) {
     std::visit(
         Overloaded{
-            [&](const typename List<unsigned int>::Nil) {
+            [&](const typename List<unsigned int>::Nil &) {
               if (_last) {
                 std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                     .d_a1 = List<unsigned int>::nil();
@@ -59,7 +59,7 @@ LoopifyListGeneration::stutter(const std::shared_ptr<List<unsigned int>> &l) {
               }
               _continue = false;
             },
-            [&](const typename List<unsigned int>::Cons _args) {
+            [&](const typename List<unsigned int>::Cons &_args) {
               auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);
               auto _cell1 = List<unsigned int>::cons(_args.d_a0, nullptr);
               std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1 =
@@ -177,11 +177,10 @@ std::shared_ptr<List<unsigned int>> LoopifyListGeneration::replicate_list(
               std::visit(
                   Overloaded{
                       [&](const typename List<
-                          std::pair<unsigned int, unsigned int>>::Nil) -> void {
-                        _result = List<unsigned int>::nil();
-                      },
+                          std::pair<unsigned int, unsigned int>>::Nil &)
+                          -> void { _result = List<unsigned int>::nil(); },
                       [&](const typename List<
-                          std::pair<unsigned int, unsigned int>>::Cons _args)
+                          std::pair<unsigned int, unsigned int>>::Cons &_args)
                           -> void {
                         unsigned int n = _args.d_a0.first;
                         unsigned int x = _args.d_a0.second;

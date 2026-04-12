@@ -170,25 +170,25 @@ struct Matcher {
                         const std::shared_ptr<regexp> &r) {
     return std::visit(
         Overloaded{
-            [&](const typename regexp::Any) -> T1 { return f; },
-            [&](const typename regexp::Char _args) -> T1 {
+            [&](const typename regexp::Any &) -> T1 { return f; },
+            [&](const typename regexp::Char &_args) -> T1 {
               return f0(_args.d_c);
             },
-            [&](const typename regexp::Eps) -> T1 { return f1; },
-            [&](const typename regexp::Cat _args) -> T1 {
+            [&](const typename regexp::Eps &) -> T1 { return f1; },
+            [&](const typename regexp::Cat &_args) -> T1 {
               return f2(_args.d_r1,
                         regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r1),
                         _args.d_r2,
                         regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r2));
             },
-            [&](const typename regexp::Alt _args) -> T1 {
+            [&](const typename regexp::Alt &_args) -> T1 {
               return f3(_args.d_r1,
                         regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r1),
                         _args.d_r2,
                         regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r2));
             },
-            [&](const typename regexp::Zero) -> T1 { return f4; },
-            [&](const typename regexp::Star _args) -> T1 {
+            [&](const typename regexp::Zero &) -> T1 { return f4; },
+            [&](const typename regexp::Star &_args) -> T1 {
               return f5(_args.d_r,
                         regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r));
             }},
@@ -204,25 +204,25 @@ struct Matcher {
                        const T1 f4, F6 &&f5, const std::shared_ptr<regexp> &r) {
     return std::visit(
         Overloaded{
-            [&](const typename regexp::Any) -> T1 { return f; },
-            [&](const typename regexp::Char _args) -> T1 {
+            [&](const typename regexp::Any &) -> T1 { return f; },
+            [&](const typename regexp::Char &_args) -> T1 {
               return f0(_args.d_c);
             },
-            [&](const typename regexp::Eps) -> T1 { return f1; },
-            [&](const typename regexp::Cat _args) -> T1 {
+            [&](const typename regexp::Eps &) -> T1 { return f1; },
+            [&](const typename regexp::Cat &_args) -> T1 {
               return f2(_args.d_r1,
                         regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r1),
                         _args.d_r2,
                         regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r2));
             },
-            [&](const typename regexp::Alt _args) -> T1 {
+            [&](const typename regexp::Alt &_args) -> T1 {
               return f3(_args.d_r1,
                         regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r1),
                         _args.d_r2,
                         regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r2));
             },
-            [&](const typename regexp::Zero) -> T1 { return f4; },
-            [&](const typename regexp::Star _args) -> T1 {
+            [&](const typename regexp::Zero &) -> T1 { return f4; },
+            [&](const typename regexp::Star &_args) -> T1 {
               return f5(_args.d_r,
                         regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, _args.d_r));
             }},

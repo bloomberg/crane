@@ -78,10 +78,10 @@ public:
                 const List *_self = _f._self;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<t_A>::Nil) -> void {
+                        [&](const typename List<t_A>::Nil &) -> void {
                           _result = 0u;
                         },
-                        [&](const typename List<t_A>::Cons _args) -> void {
+                        [&](const typename List<t_A>::Cons &_args) -> void {
                           _stack.push_back(_Call1{});
                           _stack.push_back(_Enter{_args.d_a1.get()});
                         }},
@@ -101,7 +101,7 @@ public:
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<t_A>::Nil) {
+              [&](const typename List<t_A>::Nil &) {
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 = m;
                 } else {
@@ -109,7 +109,7 @@ public:
                 }
                 _continue = false;
               },
-              [&](const typename List<t_A>::Cons _args) {
+              [&](const typename List<t_A>::Cons &_args) {
                 auto _cell = List<t_A>::cons(_args.d_a0, nullptr);
                 if (_last) {
                   std::get<typename List<t_A>::Cons>(_last->v_mut()).d_a1 =
@@ -162,22 +162,21 @@ struct LoopifySequences {
                     _f.lists;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<std::shared_ptr<List<T1>>>::Nil)
-                            -> void { _result = List<T1>::nil(); },
+                        [&](const typename List<std::shared_ptr<List<T1>>>::Nil
+                                &) -> void { _result = List<T1>::nil(); },
                         [&](const typename List<std::shared_ptr<List<T1>>>::Cons
-                                _args) -> void {
+                                &_args) -> void {
                           std::visit(
-                              Overloaded{
-                                  [&](const typename List<
-                                      std::shared_ptr<List<T1>>>::Nil) -> void {
-                                    _result = _args.d_a0;
-                                  },
-                                  [&](const typename List<
-                                      std::shared_ptr<List<T1>>>::Cons)
-                                      -> void {
-                                    _stack.push_back(_Call1{_args.d_a0, sep});
-                                    _stack.push_back(_Enter{_args.d_a1});
-                                  }},
+                              Overloaded{[&](const typename List<
+                                             std::shared_ptr<List<T1>>>::Nil &)
+                                             -> void { _result = _args.d_a0; },
+                                         [&](const typename List<
+                                             std::shared_ptr<List<T1>>>::Cons &)
+                                             -> void {
+                                           _stack.push_back(
+                                               _Call1{_args.d_a0, sep});
+                                           _stack.push_back(_Enter{_args.d_a1});
+                                         }},
                               _args.d_a1->v());
                         }},
                     lists->v());
@@ -194,10 +193,10 @@ struct LoopifySequences {
   join_with(const T1 sep, const std::shared_ptr<List<T1>> &l) {
     return std::visit(
         Overloaded{
-            [](const typename List<T1>::Nil) -> std::shared_ptr<List<T1>> {
+            [](const typename List<T1>::Nil &) -> std::shared_ptr<List<T1>> {
               return List<T1>::nil();
             },
-            [&](const typename List<T1>::Cons _args)
+            [&](const typename List<T1>::Cons &_args)
                 -> std::shared_ptr<List<T1>> {
               std::function<std::shared_ptr<List<T1>>(
                   std::shared_ptr<List<T1>>)>
@@ -225,10 +224,9 @@ struct LoopifySequences {
                             std::shared_ptr<List<T1>> rest = _f.rest;
                             std::visit(
                                 Overloaded{
-                                    [&](const typename List<T1>::Nil) -> void {
-                                      _result = List<T1>::nil();
-                                    },
-                                    [&](const typename List<T1>::Cons _args0)
+                                    [&](const typename List<T1>::Nil &)
+                                        -> void { _result = List<T1>::nil(); },
+                                    [&](const typename List<T1>::Cons &_args0)
                                         -> void {
                                       _stack.push_back(
                                           _Call1{sep, _args0.d_a0});
@@ -282,20 +280,21 @@ struct LoopifySequences {
           while (_continue) {
             std::visit(
                 Overloaded{
-                    [&](const typename List<std::shared_ptr<List<T1>>>::Nil) {
+                    [&](const typename List<std::shared_ptr<List<T1>>>::Nil &) {
                       _result = true;
                       _continue = false;
                     },
                     [&](const typename List<std::shared_ptr<List<T1>>>::Cons
-                            _args) {
-                      std::visit(Overloaded{[&](const typename List<T1>::Nil) {
-                                              _loop_l = _args.d_a1;
-                                            },
-                                            [&](const typename List<T1>::Cons) {
-                                              _result = false;
-                                              _continue = false;
-                                            }},
-                                 _args.d_a0->v());
+                            &_args) {
+                      std::visit(
+                          Overloaded{[&](const typename List<T1>::Nil &) {
+                                       _loop_l = _args.d_a1;
+                                     },
+                                     [&](const typename List<T1>::Cons &) {
+                                       _result = false;
+                                       _continue = false;
+                                     }},
+                          _args.d_a0->v());
                     }},
                 _loop_l->v());
           }
@@ -340,21 +339,21 @@ struct LoopifySequences {
                         std::visit(
                             Overloaded{
                                 [&](const typename List<
-                                    std::shared_ptr<List<T1>>>::Nil) -> void {
+                                    std::shared_ptr<List<T1>>>::Nil &) -> void {
                                   _result = List<T1>::nil();
                                 },
                                 [&](const typename List<
-                                    std::shared_ptr<List<T1>>>::Cons _args0)
+                                    std::shared_ptr<List<T1>>>::Cons &_args0)
                                     -> void {
                                   std::visit(
                                       Overloaded{
-                                          [&](const typename List<T1>::Nil)
+                                          [&](const typename List<T1>::Nil &)
                                               -> void {
                                             _stack.push_back(
                                                 _Enter{_args0.d_a1});
                                           },
                                           [&](const typename List<T1>::Cons
-                                                  _args1) -> void {
+                                                  &_args1) -> void {
                                             _stack.push_back(
                                                 _Call1{_args1.d_a0});
                                             _stack.push_back(
@@ -398,22 +397,22 @@ struct LoopifySequences {
                         std::visit(
                             Overloaded{
                                 [&](const typename List<
-                                    std::shared_ptr<List<T1>>>::Nil) -> void {
+                                    std::shared_ptr<List<T1>>>::Nil &) -> void {
                                   _result =
                                       List<std::shared_ptr<List<T1>>>::nil();
                                 },
                                 [&](const typename List<
-                                    std::shared_ptr<List<T1>>>::Cons _args1)
+                                    std::shared_ptr<List<T1>>>::Cons &_args1)
                                     -> void {
                                   std::visit(
                                       Overloaded{
-                                          [&](const typename List<T1>::Nil)
+                                          [&](const typename List<T1>::Nil &)
                                               -> void {
                                             _stack.push_back(
                                                 _Enter{_args1.d_a1});
                                           },
                                           [&](const typename List<T1>::Cons
-                                                  _args2) -> void {
+                                                  &_args2) -> void {
                                             _stack.push_back(
                                                 _Call1{_args2.d_a1});
                                             _stack.push_back(
@@ -606,7 +605,7 @@ struct LoopifySequences {
     while (_continue) {
       std::visit(
           Overloaded{
-              [&](const typename List<unsigned int>::Nil) {
+              [&](const typename List<unsigned int>::Nil &) {
                 if (_last) {
                   std::get<typename List<unsigned int>::Cons>(_last->v_mut())
                       .d_a1 = List<unsigned int>::nil();
@@ -615,7 +614,7 @@ struct LoopifySequences {
                 }
                 _continue = false;
               },
-              [&](const typename List<unsigned int>::Cons _args) {
+              [&](const typename List<unsigned int>::Cons &_args) {
                 if (p(_args.d_a0)) {
                   auto _cell = List<unsigned int>::cons(_args.d_a0, nullptr);
                   if (_last) {
@@ -649,20 +648,21 @@ struct LoopifySequences {
     std::shared_ptr<List<unsigned int>> _loop_l = l;
     bool _continue = true;
     while (_continue) {
-      std::visit(Overloaded{[&](const typename List<unsigned int>::Nil) {
-                              _result = List<unsigned int>::nil();
-                              _continue = false;
-                            },
-                            [&](const typename List<unsigned int>::Cons _args) {
-                              if (p(_args.d_a0)) {
-                                _loop_l = _args.d_a1;
-                              } else {
-                                _result = List<unsigned int>::cons(_args.d_a0,
-                                                                   _args.d_a1);
-                                _continue = false;
-                              }
-                            }},
-                 _loop_l->v());
+      std::visit(
+          Overloaded{[&](const typename List<unsigned int>::Nil &) {
+                       _result = List<unsigned int>::nil();
+                       _continue = false;
+                     },
+                     [&](const typename List<unsigned int>::Cons &_args) {
+                       if (p(_args.d_a0)) {
+                         _loop_l = _args.d_a1;
+                       } else {
+                         _result =
+                             List<unsigned int>::cons(_args.d_a0, _args.d_a1);
+                         _continue = false;
+                       }
+                     }},
+          _loop_l->v());
     }
     return _result;
   }
@@ -718,10 +718,10 @@ struct LoopifySequences {
                 const std::shared_ptr<List<unsigned int>> l = _f.l;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil) -> void {
+                        [&](const typename List<unsigned int>::Nil &) -> void {
                           _result = true;
                         },
-                        [&](const typename List<unsigned int>::Cons _args)
+                        [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
                           _stack.push_back(_Call1{p(_args.d_a0)});
                           _stack.push_back(_Enter{_args.d_a1});

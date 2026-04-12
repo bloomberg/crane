@@ -107,7 +107,7 @@ struct LoopifyCoindStream {
 
   template <typename T1> static T1 hd(const std::shared_ptr<stream<T1>> &s) {
     return std::visit(
-        Overloaded{[](const typename stream<T1>::Scons _args) -> T1 {
+        Overloaded{[](const typename stream<T1>::Scons &_args) -> T1 {
           return _args.d_a0;
         }},
         s->v());
@@ -117,7 +117,7 @@ struct LoopifyCoindStream {
   static std::shared_ptr<stream<T1>> tl(const std::shared_ptr<stream<T1>> &s) {
     return stream<T1>::lazy_([=]() mutable -> std::shared_ptr<stream<T1>> {
       return std::visit(
-          Overloaded{[](const typename stream<T1>::Scons _args)
+          Overloaded{[](const typename stream<T1>::Scons &_args)
                          -> std::shared_ptr<stream<T1>> { return _args.d_a1; }},
           s->v());
     });

@@ -78,12 +78,12 @@ struct WhereClause {
     __attribute__((pure)) unsigned int expr_size() const {
       return std::visit(
           Overloaded{
-              [](const typename Expr::Num) -> unsigned int { return 1u; },
-              [](const typename Expr::Plus _args) -> unsigned int {
+              [](const typename Expr::Num &) -> unsigned int { return 1u; },
+              [](const typename Expr::Plus &_args) -> unsigned int {
                 return ((1u + _args.d_a0->expr_size()) +
                         _args.d_a1->expr_size());
               },
-              [](const typename Expr::Times _args) -> unsigned int {
+              [](const typename Expr::Times &_args) -> unsigned int {
                 return ((1u + _args.d_a0->expr_size()) +
                         _args.d_a1->expr_size());
               }},
@@ -92,13 +92,13 @@ struct WhereClause {
 
     __attribute__((pure)) unsigned int eval() const {
       return std::visit(
-          Overloaded{[](const typename Expr::Num _args) -> unsigned int {
+          Overloaded{[](const typename Expr::Num &_args) -> unsigned int {
                        return _args.d_a0;
                      },
-                     [](const typename Expr::Plus _args) -> unsigned int {
+                     [](const typename Expr::Plus &_args) -> unsigned int {
                        return (_args.d_a0->eval() + _args.d_a1->eval());
                      },
-                     [](const typename Expr::Times _args) -> unsigned int {
+                     [](const typename Expr::Times &_args) -> unsigned int {
                        return (_args.d_a0->eval() * _args.d_a1->eval());
                      }},
           this->v());
@@ -110,16 +110,16 @@ struct WhereClause {
         MapsTo<T1, std::shared_ptr<Expr>, T1, std::shared_ptr<Expr>, T1> F2>
     T1 Expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       return std::visit(
-          Overloaded{[&](const typename Expr::Num _args) -> T1 {
+          Overloaded{[&](const typename Expr::Num &_args) -> T1 {
                        return f(_args.d_a0);
                      },
-                     [&](const typename Expr::Plus _args) -> T1 {
+                     [&](const typename Expr::Plus &_args) -> T1 {
                        return f0(_args.d_a0,
                                  _args.d_a0->template Expr_rec<T1>(f, f0, f1),
                                  _args.d_a1,
                                  _args.d_a1->template Expr_rec<T1>(f, f0, f1));
                      },
-                     [&](const typename Expr::Times _args) -> T1 {
+                     [&](const typename Expr::Times &_args) -> T1 {
                        return f1(_args.d_a0,
                                  _args.d_a0->template Expr_rec<T1>(f, f0, f1),
                                  _args.d_a1,
@@ -134,16 +134,16 @@ struct WhereClause {
         MapsTo<T1, std::shared_ptr<Expr>, T1, std::shared_ptr<Expr>, T1> F2>
     T1 Expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       return std::visit(
-          Overloaded{[&](const typename Expr::Num _args) -> T1 {
+          Overloaded{[&](const typename Expr::Num &_args) -> T1 {
                        return f(_args.d_a0);
                      },
-                     [&](const typename Expr::Plus _args) -> T1 {
+                     [&](const typename Expr::Plus &_args) -> T1 {
                        return f0(_args.d_a0,
                                  _args.d_a0->template Expr_rect<T1>(f, f0, f1),
                                  _args.d_a1,
                                  _args.d_a1->template Expr_rect<T1>(f, f0, f1));
                      },
-                     [&](const typename Expr::Times _args) -> T1 {
+                     [&](const typename Expr::Times &_args) -> T1 {
                        return f1(_args.d_a0,
                                  _args.d_a0->template Expr_rect<T1>(f, f0, f1),
                                  _args.d_a1,
@@ -235,17 +235,18 @@ struct WhereClause {
 
     __attribute__((pure)) bool beval() const {
       return std::visit(
-          Overloaded{[](const typename BExpr::BTrue) -> bool { return true; },
-                     [](const typename BExpr::BFalse) -> bool { return false; },
-                     [](const typename BExpr::BAnd _args) -> bool {
-                       return (_args.d_a0->beval() && _args.d_a1->beval());
-                     },
-                     [](const typename BExpr::BOr _args) -> bool {
-                       return (_args.d_a0->beval() || _args.d_a1->beval());
-                     },
-                     [](const typename BExpr::BNot _args) -> bool {
-                       return !(_args.d_a0->beval());
-                     }},
+          Overloaded{
+              [](const typename BExpr::BTrue &) -> bool { return true; },
+              [](const typename BExpr::BFalse &) -> bool { return false; },
+              [](const typename BExpr::BAnd &_args) -> bool {
+                return (_args.d_a0->beval() && _args.d_a1->beval());
+              },
+              [](const typename BExpr::BOr &_args) -> bool {
+                return (_args.d_a0->beval() || _args.d_a1->beval());
+              },
+              [](const typename BExpr::BNot &_args) -> bool {
+                return !(_args.d_a0->beval());
+              }},
           this->v());
     }
   };
@@ -258,21 +259,21 @@ struct WhereClause {
   static T1 BExpr_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3,
                        const std::shared_ptr<BExpr> &b) {
     return std::visit(
-        Overloaded{[&](const typename BExpr::BTrue) -> T1 { return f; },
-                   [&](const typename BExpr::BFalse) -> T1 { return f0; },
-                   [&](const typename BExpr::BAnd _args) -> T1 {
+        Overloaded{[&](const typename BExpr::BTrue &) -> T1 { return f; },
+                   [&](const typename BExpr::BFalse &) -> T1 { return f0; },
+                   [&](const typename BExpr::BAnd &_args) -> T1 {
                      return f1(_args.d_a0,
                                BExpr_rect<T1>(f, f0, f1, f2, f3, _args.d_a0),
                                _args.d_a1,
                                BExpr_rect<T1>(f, f0, f1, f2, f3, _args.d_a1));
                    },
-                   [&](const typename BExpr::BOr _args) -> T1 {
+                   [&](const typename BExpr::BOr &_args) -> T1 {
                      return f2(_args.d_a0,
                                BExpr_rect<T1>(f, f0, f1, f2, f3, _args.d_a0),
                                _args.d_a1,
                                BExpr_rect<T1>(f, f0, f1, f2, f3, _args.d_a1));
                    },
-                   [&](const typename BExpr::BNot _args) -> T1 {
+                   [&](const typename BExpr::BNot &_args) -> T1 {
                      return f3(_args.d_a0,
                                BExpr_rect<T1>(f, f0, f1, f2, f3, _args.d_a0));
                    }},
@@ -287,21 +288,21 @@ struct WhereClause {
   static T1 BExpr_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3,
                       const std::shared_ptr<BExpr> &b) {
     return std::visit(
-        Overloaded{[&](const typename BExpr::BTrue) -> T1 { return f; },
-                   [&](const typename BExpr::BFalse) -> T1 { return f0; },
-                   [&](const typename BExpr::BAnd _args) -> T1 {
+        Overloaded{[&](const typename BExpr::BTrue &) -> T1 { return f; },
+                   [&](const typename BExpr::BFalse &) -> T1 { return f0; },
+                   [&](const typename BExpr::BAnd &_args) -> T1 {
                      return f1(_args.d_a0,
                                BExpr_rec<T1>(f, f0, f1, f2, f3, _args.d_a0),
                                _args.d_a1,
                                BExpr_rec<T1>(f, f0, f1, f2, f3, _args.d_a1));
                    },
-                   [&](const typename BExpr::BOr _args) -> T1 {
+                   [&](const typename BExpr::BOr &_args) -> T1 {
                      return f2(_args.d_a0,
                                BExpr_rec<T1>(f, f0, f1, f2, f3, _args.d_a0),
                                _args.d_a1,
                                BExpr_rec<T1>(f, f0, f1, f2, f3, _args.d_a1));
                    },
-                   [&](const typename BExpr::BNot _args) -> T1 {
+                   [&](const typename BExpr::BNot &_args) -> T1 {
                      return f3(_args.d_a0,
                                BExpr_rec<T1>(f, f0, f1, f2, f3, _args.d_a0));
                    }},
@@ -374,13 +375,13 @@ struct WhereClause {
 
     __attribute__((pure)) unsigned int aeval() const {
       return std::visit(
-          Overloaded{[](const typename AExpr::ANum _args) -> unsigned int {
+          Overloaded{[](const typename AExpr::ANum &_args) -> unsigned int {
                        return _args.d_a0;
                      },
-                     [](const typename AExpr::APlus _args) -> unsigned int {
+                     [](const typename AExpr::APlus &_args) -> unsigned int {
                        return (_args.d_a0->aeval() + _args.d_a1->aeval());
                      },
-                     [](const typename AExpr::AIf _args) -> unsigned int {
+                     [](const typename AExpr::AIf &_args) -> unsigned int {
                        if (_args.d_a0->beval()) {
                          return _args.d_a1->aeval();
                        } else {
@@ -398,16 +399,16 @@ struct WhereClause {
             F2>
     T1 AExpr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       return std::visit(
-          Overloaded{[&](const typename AExpr::ANum _args) -> T1 {
+          Overloaded{[&](const typename AExpr::ANum &_args) -> T1 {
                        return f(_args.d_a0);
                      },
-                     [&](const typename AExpr::APlus _args) -> T1 {
+                     [&](const typename AExpr::APlus &_args) -> T1 {
                        return f0(_args.d_a0,
                                  _args.d_a0->template AExpr_rec<T1>(f, f0, f1),
                                  _args.d_a1,
                                  _args.d_a1->template AExpr_rec<T1>(f, f0, f1));
                      },
-                     [&](const typename AExpr::AIf _args) -> T1 {
+                     [&](const typename AExpr::AIf &_args) -> T1 {
                        return f1(_args.d_a0, _args.d_a1,
                                  _args.d_a1->template AExpr_rec<T1>(f, f0, f1),
                                  _args.d_a2,
@@ -425,15 +426,15 @@ struct WhereClause {
     T1 AExpr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       return std::visit(
           Overloaded{
-              [&](const typename AExpr::ANum _args) -> T1 {
+              [&](const typename AExpr::ANum &_args) -> T1 {
                 return f(_args.d_a0);
               },
-              [&](const typename AExpr::APlus _args) -> T1 {
+              [&](const typename AExpr::APlus &_args) -> T1 {
                 return f0(
                     _args.d_a0, _args.d_a0->template AExpr_rect<T1>(f, f0, f1),
                     _args.d_a1, _args.d_a1->template AExpr_rect<T1>(f, f0, f1));
               },
-              [&](const typename AExpr::AIf _args) -> T1 {
+              [&](const typename AExpr::AIf &_args) -> T1 {
                 return f1(_args.d_a0, _args.d_a1,
                           _args.d_a1->template AExpr_rect<T1>(f, f0, f1),
                           _args.d_a2,

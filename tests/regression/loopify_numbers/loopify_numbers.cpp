@@ -1170,13 +1170,12 @@ __attribute__((pure)) unsigned int LoopifyNumbers::sum_odd_indices_fuel(
   } else {
     unsigned int f = fuel - 1;
     return std::visit(
-        Overloaded{
-            [](const typename List<unsigned int>::Nil) -> unsigned int {
-              return 0u;
-            },
-            [&](const typename List<unsigned int>::Cons _args) -> unsigned int {
-              return (_args.d_a0 + sum_even_indices_fuel(f, _args.d_a1));
-            }},
+        Overloaded{[](const typename List<unsigned int>::Nil &)
+                       -> unsigned int { return 0u; },
+                   [&](const typename List<unsigned int>::Cons &_args)
+                       -> unsigned int {
+                     return (_args.d_a0 + sum_even_indices_fuel(f, _args.d_a1));
+                   }},
         l->v());
   }
 }
@@ -1211,10 +1210,10 @@ __attribute__((pure)) unsigned int LoopifyNumbers::sum_even_indices_fuel(
                 unsigned int f = fuel - 1;
                 std::visit(
                     Overloaded{
-                        [&](const typename List<unsigned int>::Nil) -> void {
+                        [&](const typename List<unsigned int>::Nil &) -> void {
                           _result = 0u;
                         },
-                        [&](const typename List<unsigned int>::Cons _args)
+                        [&](const typename List<unsigned int>::Cons &_args)
                             -> void {
                           {
                             const std::shared_ptr<List<unsigned int>> &_inl_l =
@@ -1226,12 +1225,10 @@ __attribute__((pure)) unsigned int LoopifyNumbers::sum_even_indices_fuel(
                               unsigned int f = _inl_fuel - 1;
                               std::visit(
                                   Overloaded{
+                                      [&](const typename List<unsigned int>::Nil
+                                              &) -> void { _result = 0u; },
                                       [&](const typename List<
-                                          unsigned int>::Nil) -> void {
-                                        _result = 0u;
-                                      },
-                                      [&](const typename List<
-                                          unsigned int>::Cons _args) -> void {
+                                          unsigned int>::Cons &_args) -> void {
                                         _stack.push_back(_Call1{_args.d_a0});
                                         _stack.push_back(_Enter{_args.d_a1, f});
                                       }},

@@ -63,8 +63,8 @@ struct ReuseAlias {
   static T2 mylist_rect(const T2 f, F1 &&f0,
                         const std::shared_ptr<mylist<T1>> &m) {
     return std::visit(
-        Overloaded{[&](const typename mylist<T1>::Mynil) -> T2 { return f; },
-                   [&](const typename mylist<T1>::Mycons _args) -> T2 {
+        Overloaded{[&](const typename mylist<T1>::Mynil &) -> T2 { return f; },
+                   [&](const typename mylist<T1>::Mycons &_args) -> T2 {
                      return f0(_args.d_a0, _args.d_a1,
                                mylist_rect<T1, T2>(f, f0, _args.d_a1));
                    }},
@@ -76,8 +76,8 @@ struct ReuseAlias {
   static T2 mylist_rec(const T2 f, F1 &&f0,
                        const std::shared_ptr<mylist<T1>> &m) {
     return std::visit(
-        Overloaded{[&](const typename mylist<T1>::Mynil) -> T2 { return f; },
-                   [&](const typename mylist<T1>::Mycons _args) -> T2 {
+        Overloaded{[&](const typename mylist<T1>::Mynil &) -> T2 { return f; },
+                   [&](const typename mylist<T1>::Mycons &_args) -> T2 {
                      return f0(_args.d_a0, _args.d_a1,
                                mylist_rec<T1, T2>(f, f0, _args.d_a1));
                    }},
@@ -89,8 +89,10 @@ struct ReuseAlias {
   length(const std::shared_ptr<mylist<T1>> &l) {
     return std::visit(
         Overloaded{
-            [](const typename mylist<T1>::Mynil) -> unsigned int { return 0u; },
-            [](const typename mylist<T1>::Mycons _args) -> unsigned int {
+            [](const typename mylist<T1>::Mynil &) -> unsigned int {
+              return 0u;
+            },
+            [](const typename mylist<T1>::Mycons &_args) -> unsigned int {
               return (length<T1>(_args.d_a1) + 1);
             }},
         l->v());

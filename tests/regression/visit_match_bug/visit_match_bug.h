@@ -68,10 +68,10 @@ struct VisitMatchBug {
                    std::shared_ptr<Tree>, T1>
                 F1>
   static T1 Tree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<Tree> &t) {
-    return std::visit(Overloaded{[&](const typename Tree::Leaf _args) -> T1 {
+    return std::visit(Overloaded{[&](const typename Tree::Leaf &_args) -> T1 {
                                    return f(_args.d_a0);
                                  },
-                                 [&](const typename Tree::Node _args) -> T1 {
+                                 [&](const typename Tree::Node &_args) -> T1 {
                                    return f0(_args.d_a0,
                                              Tree_rect<T1>(f, f0, _args.d_a0),
                                              _args.d_a1, _args.d_a2,
@@ -85,10 +85,10 @@ struct VisitMatchBug {
                    std::shared_ptr<Tree>, T1>
                 F1>
   static T1 Tree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<Tree> &t) {
-    return std::visit(Overloaded{[&](const typename Tree::Leaf _args) -> T1 {
+    return std::visit(Overloaded{[&](const typename Tree::Leaf &_args) -> T1 {
                                    return f(_args.d_a0);
                                  },
-                                 [&](const typename Tree::Node _args) -> T1 {
+                                 [&](const typename Tree::Node &_args) -> T1 {
                                    return f0(_args.d_a0,
                                              Tree_rec<T1>(f, f0, _args.d_a0),
                                              _args.d_a1, _args.d_a2,

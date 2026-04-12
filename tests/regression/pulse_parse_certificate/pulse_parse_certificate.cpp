@@ -10,10 +10,10 @@ __attribute__((pure)) std::optional<unsigned int>
 PulseParseCertificateCase::first_true(const std::shared_ptr<List<bool>> &xs) {
   return std::visit(
       Overloaded{
-          [](const typename List<bool>::Nil) -> std::optional<unsigned int> {
+          [](const typename List<bool>::Nil &) -> std::optional<unsigned int> {
             return std::optional<unsigned int>();
           },
-          [](const typename List<bool>::Cons _args)
+          [](const typename List<bool>::Cons &_args)
               -> std::optional<unsigned int> {
             if (_args.d_a0) {
               return std::make_optional<unsigned int>(0u);
@@ -34,10 +34,10 @@ __attribute__((pure)) std::optional<unsigned int>
 PulseParseCertificateCase::last_true(const std::shared_ptr<List<bool>> &xs) {
   return std::visit(
       Overloaded{
-          [](const typename List<bool>::Nil) -> std::optional<unsigned int> {
+          [](const typename List<bool>::Nil &) -> std::optional<unsigned int> {
             return std::optional<unsigned int>();
           },
-          [](const typename List<bool>::Cons _args)
+          [](const typename List<bool>::Cons &_args)
               -> std::optional<unsigned int> {
             auto _cs = last_true(_args.d_a1);
             if (_cs.has_value()) {
@@ -57,11 +57,11 @@ PulseParseCertificateCase::last_true(const std::shared_ptr<List<bool>> &xs) {
 __attribute__((pure)) PulseParseCertificateCase::Runs
 PulseParseCertificateCase::trace_to_runs(
     const std::shared_ptr<List<bool>> &xs) {
-  return std::visit(Overloaded{[](const typename List<bool>::Nil)
+  return std::visit(Overloaded{[](const typename List<bool>::Nil &)
                                    -> std::shared_ptr<List<unsigned int>> {
                                  return List<unsigned int>::nil();
                                },
-                               [](const typename List<bool>::Cons _args)
+                               [](const typename List<bool>::Cons &_args)
                                    -> std::shared_ptr<List<unsigned int>> {
                                  if (_args.d_a0) {
                                    return List<unsigned int>::cons(
@@ -78,10 +78,10 @@ __attribute__((pure)) unsigned int
 PulseParseCertificateCase::pulse_base_from_runs(
     const std::shared_ptr<List<unsigned int>> &rs) {
   return std::visit(
-      Overloaded{[](const typename List<unsigned int>::Nil) -> unsigned int {
+      Overloaded{[](const typename List<unsigned int>::Nil &) -> unsigned int {
                    return 1u;
                  },
-                 [](const typename List<unsigned int>::Cons _args)
+                 [](const typename List<unsigned int>::Cons &_args)
                      -> unsigned int { return _args.d_a0; }},
       rs->v());
 }
@@ -143,30 +143,27 @@ __attribute__((pure)) bool PulseParseCertificateCase::pulse_class_list_eqb(
     const std::shared_ptr<List<PulseParseCertificateCase::PulseClass>> &ys) {
   return std::visit(
       Overloaded{
-          [&](const typename List<PulseParseCertificateCase::PulseClass>::Nil)
+          [&](const typename List<PulseParseCertificateCase::PulseClass>::Nil &)
               -> bool {
             return std::visit(
-                Overloaded{
-                    [](const typename List<
-                        PulseParseCertificateCase::PulseClass>::Nil) -> bool {
-                      return true;
-                    },
-                    [](const typename List<
-                        PulseParseCertificateCase::PulseClass>::Cons) -> bool {
-                      return false;
-                    }},
+                Overloaded{[](const typename List<
+                               PulseParseCertificateCase::PulseClass>::Nil &)
+                               -> bool { return true; },
+                           [](const typename List<
+                               PulseParseCertificateCase::PulseClass>::Cons &)
+                               -> bool { return false; }},
                 ys->v());
           },
           [&](const typename List<PulseParseCertificateCase::PulseClass>::Cons
-                  _args) -> bool {
+                  &_args) -> bool {
             return std::visit(
                 Overloaded{
                     [](const typename List<
-                        PulseParseCertificateCase::PulseClass>::Nil) -> bool {
+                        PulseParseCertificateCase::PulseClass>::Nil &) -> bool {
                       return false;
                     },
                     [&](const typename List<
-                        PulseParseCertificateCase::PulseClass>::Cons _args0)
+                        PulseParseCertificateCase::PulseClass>::Cons &_args0)
                         -> bool {
                       return (pulse_class_eqb(_args.d_a0, _args0.d_a0) &&
                               pulse_class_list_eqb(_args.d_a1, _args0.d_a1));
